@@ -33,6 +33,13 @@ interface MacroValue : StayReferrer, OccasionallyHelpful {
     /** Describes the time at which this should be invoked. */
     val functionSpecies: FunctionSpecies get() = FunctionSpecies.Macro
 
+    val stability: ValueStability get() =
+        if (functionSpecies == FunctionSpecies.Pure) {
+            ValueStability.Stable
+        } else {
+            ValueStability.Unstable
+        }
+
     /** This default implementation looks for help information in a [HelpInfo] annotation. */
     override fun prettyPleaseHelp(): Helpful? {
         val clazz = this::class
@@ -61,4 +68,7 @@ interface MacroValue : StayReferrer, OccasionallyHelpful {
 
 interface StaylessMacroValue : MacroValue, Stayless
 
-interface BuiltinStatelessMacroValue : StaylessMacroValue
+interface BuiltinStatelessMacroValue : StaylessMacroValue {
+    override val stability: ValueStability
+        get() = ValueStability.Stable
+}

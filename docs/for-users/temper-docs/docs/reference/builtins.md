@@ -504,306 +504,6 @@ The prefix `!` operator performs [*Boolean*](types.md#type-Boolean) inverse.
 
 <!-- /snippet: builtin/! -->
 
-<!-- snippet: builtin/!= -->
-
-<a name="builtin&#45;&#33;&#61;" class="snippet-anchor-name"></a>
-
-### `!=`
-`a != b` is the [*Boolean*](types.md#type-Boolean) inverse of [`==`](#builtin-==)
-
-<!-- /snippet: builtin/!= -->
-
-<!-- snippet: builtin/< -->
-
-<a name="builtin&#45;&lt;" class="snippet-anchor-name"></a>
-
-### Operator `<`, less-than
-`a < b` is [*true*](#builtin-true) when *a* orders before *b*, and is a compile-time error
-if the two are not mutually comparable.
-
-See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
-especially the [General Comparison Caveats](#general-comparison-caveats).
-
-<!-- snippet: syntax/less-than-space-sensitivity -->
-
-<a name="syntax&#45;less&#45;than&#45;space&#45;sensitivity" class="snippet-anchor-name"></a>
-
-#### Syntactic corner case: `<` ambiguity
-
-Tldr: always put spaces around infix operators like `<`.
-
-The `<` operator means comparison, but in a type expression, it can also be a bracket.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
-
-```temper
-console.log(c < d);  // Compare c to d
-
-let x:      C<D>;    // x's type is C parameterized with D
-// ⏸️
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
-
-Other languages also have two meanings for `<`.  Temper does not want to enforce a
-hard grammatic distinction between types and expressions, and to avoid workarounds
-like extra turbofish syntax.
-
-In Temper the rule is:
-
-> If a `<` token is not preceded by a space or comment, then it is an angle bracket
-> otherwise it is a comparison operator.
-
-(In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
-above to disambiguate because Temper assigns no semantic significance to identifier
-case, to better support non-European identifiers which are mostly in (unicameral)
-writing systems.)
-
-For example:
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
-
-```temper
-// ┏━━━━ This space makes the difference
-f(a < b, c > d);  // pass two booleans to f
-f(A<B, C>);       // pass one type with two parameters to f (a macro?)
-
-class C<T> {}  // A class declaration with a formal type parameter
-
-// Type argument lists can be spread over multiple lines.
-class C< // No space **before**, so this `<` starts C's type argument list.
-  T
-> {}
-
-class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
-
-class C  // ERROR: space before '<'
-<T> {}
-// ⏸️
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
-
-The rule to determine whether a `>` token is an angle bracket or a comparison
-operator is purely made based on preceding tokens.
-
-> If there are zero preceding `<` bracket tokens without a `>` partner then it
-> is a bracket, otherwise it is an infix operator.
-
-This code doesn't mean much, but the parsing rules are clear.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
-
-```temper
-// ┏━━━┓ 3 open `<` brackets
-  A<B<C<D>>>>
-//       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
-//        ┃
-// Make these 3 close `>` brackets
-// ⏸️
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
-
-To avoid confusion, just put spaces around all your infix operators.
-
-<!-- /snippet: syntax/less-than-space-sensitivity -->
-
-<!-- /snippet: builtin/< -->
-
-<!-- snippet: builtin/<= -->
-
-<a name="builtin&#45;&lt;&#61;" class="snippet-anchor-name"></a>
-
-### `<=`
-`a <= b` is [*true*](#builtin-true) when *a* orders with or before *b*, and is a compile-time
-error if the two are not mutually comparable.
-
-See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
-especially the [General Comparison Caveats](#general-comparison-caveats).
-
-<!-- /snippet: builtin/<= -->
-
-<!-- snippet: builtin/<=> -->
-
-<a name="builtin&#45;&lt;&#61;&gt;" class="snippet-anchor-name"></a>
-
-### `<=>`
-`a <=> b` results in an [Int](types.md#type-Int32) based on whether *a* orders before, after, or
-with *b*, and is a compile-time error if the two are not mutually comparable.
-
-- `a <=> b` is `-1` if *a* orders **before** *b*
-- `a <=> b` is `0` if *a* orders **with** *b*
-- `a <=> b` is `1` if *a* orders **after** *b*
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c=$3e/snippet.md/0 -->
-
-```temper
-(   42 <=>   123) == -1 &&  //    42 orders before   123
-(  1.0 <=>   1.0) == 0  &&  //   1.0 orders with     1.0
-("foo" <=> "bar") == 1      // "foo" orders after  "bar"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c=$3e/snippet.md/0 -->
-
-<!-- snippet: general-comparison/algo -->
-
-<a name="general&#45;comparison&#45;algo" class="snippet-anchor-name"></a>
-
-#### General comparison algorithm
-The general comparison algorithm is designed to allow for easy structural comparison of
-data values that work the same regardless of target language.
-
-[*Int32*](types.md#type-Int32)s are compared based on their position on the number line.
-No surprises here.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/0 -->
-
-```temper
--1 < 0 && 0 < 1 && 1 < 2
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/0 -->
-
-[*Float64*](types.md#type-Float64)s are also compared numerically.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/1 -->
-
-```temper
--1.0 < 0.0 && 0.0 < 1.0 && 1.0 < 2.0
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/1 -->
-
-But the default comparison operators are meant to support structural comparison of records
-so see also [caveats](#general-comparison-caveats) for how *Float64* ordering differs
-from other languages.
-
-[*String*](types.md#type-String)s are compared lexicographically based on their code-points.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/2 -->
-
-```temper
-"foo" > "bar"
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/2 -->
-
-See also [caveats](#general-comparison-caveats) for *String* related ordering.
-
-##### Custom comparison for classes
-
-[issue#37](https://github.com/temperlang/temper/issues/37): custom comparison for classes.
-
-<!-- /snippet: general-comparison/algo -->
-
-<!-- snippet: general-comparison/caveats -->
-
-<a name="general&#45;comparison&#45;caveats" class="snippet-anchor-name"></a>
-
-#### General Comparison Caveats
-
-##### String Ordering Caveats
-[*String*](types.md#type-String) ordering based on code-points means that [supplementary code-points]
-(code-points greater than U+10000) sort higher than all [basic plane] code-points,
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/caveats/snippet.md/0 -->
-
-```temper
-"\u{10000}" > "\u{FFFF}" // Hex code-point escapes
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/caveats/snippet.md/0 -->
-
-Developers used to lexicographic [UTF-16] might be surprised since UTF-16 ordering
-treats each supplementary code-point as two [surrogate]s in the range \[0xD800, 0xDFFF\].
-The first string above would be "\uD800\uDC00" if Temper string literals supported
-surrogate pairs. In some languages, that might compare as less than "\u{FFFF}", but
-Temper views all strings in terms of full code-points, or more precisely, in terms of
-Unicode [scalar value]s, which exclude surrogate codes.
-
-##### Float64 Ordering Caveats
-
-<!-- snippet: float64-comparison-details -->
-
-<a name="float64&#45;comparison&#45;details" class="snippet-anchor-name"></a>
-
-[*Float64*](types.md#type-Float64)s are compared on a modified number line where
-`-0.0` precedes `+0.0` and all `NaN` values sort above +&infin;.
-This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
-
-<!-- snippet: temper-code/build-user-docs/build/snippet/float64-comparison-details/snippet.md/0 -->
-
-```temper
--Infinity < -1.0     &&
-     -1.0 <  0.0     &&
-     -0.0 < +0.0     &&  // Positive and negative zero order separately
-      0.0 <  1.0     &&
-      1.0 < Infinity &&
- Infinity < NaN          // NaN is ordered high
-// ✅
-```
-
-<!-- /snippet: temper-code/build-user-docs/build/snippet/float64-comparison-details/snippet.md/0 -->
-
-[IEEE-754 comparison predicate]: https://grouper.ieee.org/groups/msc/ANSI_IEEE-Std-754-2019/background/predicates.txt
-
-<!-- /snippet: float64-comparison-details -->
-
-[basic plane]: https://unicode.org/glossary/#basic_multilingual_plane
-[scalar value]: https://unicode.org/glossary/#unicode_scalar_value
-[supplementary code-points]: https://unicode.org/glossary/#supplementary_code_point
-[surrogate]: https://unicode.org/glossary/#surrogate_code_point
-[UTF-16]: https://unicode.org/glossary/#UTF_16
-
-<!-- /snippet: general-comparison/caveats -->
-
-<!-- /snippet: builtin/<=> -->
-
-<!-- snippet: builtin/== -->
-
-<a name="builtin&#45;&#61;&#61;" class="snippet-anchor-name"></a>
-
-### `==`
-`a == b` is the default equivalence operation.
-
-Two values are equivalent if they have the same type-tag and the same content.
-
-[issue#36](https://github.com/temperlang/temper/issues/36): custom equivalence and default equivalence for record classes
-
-<!-- /snippet: builtin/== -->
-
-<!-- snippet: builtin/> -->
-
-<a name="builtin&#45;&gt;" class="snippet-anchor-name"></a>
-
-### `>`
-`a > b` is [*true*](#builtin-true) when *a* orders after *b*, and is a compile-time
-error if the two are not mutually comparable.
-
-See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
-especially the [General Comparison Caveats](#general-comparison-caveats).
-
-<!-- /snippet: builtin/> -->
-
-<!-- snippet: builtin/>= -->
-
-<a name="builtin&#45;&gt;&#61;" class="snippet-anchor-name"></a>
-
-### `>=`
-`a >= b` is [*true*](#builtin-true) when *a* orders after or with *b*, and is a compile-time
-error if the two are not mutually comparable.
-
-See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
-especially the [General Comparison Caveats](#general-comparison-caveats).
-
-<!-- /snippet: builtin/>= -->
-
 <!-- snippet: builtin/%3F -->
 
 <a name="builtin&#45;&#37;3F" class="snippet-anchor-name"></a>
@@ -854,6 +554,19 @@ console.log(firstEven?.toString() ?? "so odd"); //!outputs "2"
 <!-- /snippet: builtin/%3F -->
 
 ## Operators
+
+<!-- snippet: builtin/!= -->
+
+<a name="builtin&#45;&#33;&#61;" class="snippet-anchor-name"></a>
+
+### `!=`
+`a != b` is the [*Boolean*](types.md#type-Boolean) inverse of [`==`](#builtin-==).
+
+Since `a != b` is syntactic sugar for `!(a == b)`, defining an
+[equivalence operation](#equivalence-classes-and-interfaces) once
+will also enable using `!=` with that type.
+
+<!-- /snippet: builtin/!= -->
 
 <!-- snippet: builtin/%25 : operator `%` -->
 
@@ -1261,6 +974,108 @@ console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
 
 <!-- /snippet: builtin/%2F -->
 
+<!-- snippet: builtin/< -->
+
+<a name="builtin&#45;&lt;" class="snippet-anchor-name"></a>
+
+### Operator `<`, less-than
+`a < b` is [*true*](#builtin-true) when *a* orders before *b*, and is a compile-time error
+if the two are not mutually comparable.
+
+`<` is part of a family of related operators including `<`, `<=`, `>=`, `>`,
+and `<=>`.  Especially see [`<=>`](#builtin-<=>) for details on how
+comparison works for Temper-defined and user-defined types.
+
+See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
+especially the [General Comparison Caveats](#general-comparison-caveats).
+
+<!-- snippet: syntax/less-than-space-sensitivity -->
+
+<a name="syntax&#45;less&#45;than&#45;space&#45;sensitivity" class="snippet-anchor-name"></a>
+
+#### Syntactic corner case: `<` ambiguity
+
+Tldr: always put spaces around infix operators like `<`.
+
+The `<` operator means comparison, but in a type expression, it can also be a bracket.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+```temper
+console.log(c < d);  // Compare c to d
+
+let x:      C<D>;    // x's type is C parameterized with D
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/0 -->
+
+Other languages also have two meanings for `<`.  Temper does not want to enforce a
+hard grammatic distinction between types and expressions, and to avoid workarounds
+like extra turbofish syntax.
+
+In Temper the rule is:
+
+> If a `<` token is not preceded by a space or comment, then it is an angle bracket
+> otherwise it is a comparison operator.
+
+(In Temper, types are upper-case by convention, but we cannot use case as in `C<D>`
+above to disambiguate because Temper assigns no semantic significance to identifier
+case, to better support non-European identifiers which are mostly in (unicameral)
+writing systems.)
+
+For example:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+```temper
+// ┏━━━━ This space makes the difference
+f(a < b, c > d);  // pass two booleans to f
+f(A<B, C>);       // pass one type with two parameters to f (a macro?)
+
+class C<T> {}  // A class declaration with a formal type parameter
+
+// Type argument lists can be spread over multiple lines.
+class C< // No space **before**, so this `<` starts C's type argument list.
+  T
+> {}
+
+class C <T>    // ERROR: trying to compare `class C` to `T` probably won't work
+
+class C  // ERROR: space before '<'
+<T> {}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/1 -->
+
+The rule to determine whether a `>` token is an angle bracket or a comparison
+operator is purely made based on preceding tokens.
+
+> If there are zero preceding `<` bracket tokens without a `>` partner then it
+> is a bracket, otherwise it is an infix operator.
+
+This code doesn't mean much, but the parsing rules are clear.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+```temper
+// ┏━━━┓ 3 open `<` brackets
+  A<B<C<D>>>>
+//       ┗┳┛┗━━━━━━━ This fourth one is an infix comparison operator
+//        ┃
+// Make these 3 close `>` brackets
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/less-than-space-sensitivity/snippet.md/2 -->
+
+To avoid confusion, just put spaces around all your infix operators.
+
+<!-- /snippet: syntax/less-than-space-sensitivity -->
+
+<!-- /snippet: builtin/< -->
+
 <!-- snippet: builtin/<< : `<<` -->
 
 <a name="builtin&#45;&lt;&lt;" class="snippet-anchor-name"></a>
@@ -1288,6 +1103,354 @@ operand are ignored.
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c$3c/snippet.md/0 -->
 
 <!-- /snippet: builtin/<< -->
+
+<!-- snippet: builtin/<= -->
+
+<a name="builtin&#45;&lt;&#61;" class="snippet-anchor-name"></a>
+
+### `<=`
+`a <= b` is [*true*](#builtin-true) when *a* orders with or before *b*,
+and is a compile-time error if the two are not mutually comparable.
+
+`<=` is part of a family of related operators including `<`, `<=`, `>=`, `>`,
+and `<=>`.  Especially see [`<=>`](#builtin-<=>) for details on how
+comparison works for Temper-defined and user-defined types.
+
+See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
+especially the [General Comparison Caveats](#general-comparison-caveats).
+
+<!-- /snippet: builtin/<= -->
+
+<!-- snippet: builtin/<=> -->
+
+<a name="builtin&#45;&lt;&#61;&gt;" class="snippet-anchor-name"></a>
+
+### `<=>`
+`a <=> b` results in an [Int](types.md#type-Int32) based on whether *a* orders before, after, or
+with *b*, and is a compile-time error if the two are not mutually comparable.
+
+- `a <=> b` is `-1` if *a* orders **before** *b*
+- `a <=> b` is `0` if *a* orders **with** *b*
+- `a <=> b` is `1` if *a* orders **after** *b*
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/$3c=$3e/snippet.md/0 -->
+
+```temper
+(   42 <=>   123) == -1 &&  //    42 orders before   123
+(  1.0 <=>   1.0) == 0  &&  //   1.0 orders with     1.0
+("foo" <=> "bar") == 1      // "foo" orders after  "bar"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/$3c=$3e/snippet.md/0 -->
+
+<!-- snippet: general-comparison/algo -->
+
+<a name="general&#45;comparison&#45;algo" class="snippet-anchor-name"></a>
+
+#### General comparison algorithm
+The general comparison algorithm is designed to allow for easy structural comparison of
+data values that work the same regardless of target language.
+
+The whole group of comparison operators (`<`, `<=`, `>=`, `>`) are all syntactic sugar
+for `<=>` whose semantics are defined here.
+
+For example, `a < b` is really syntactic sugar for `(a <=> b) < 0`: an application
+of trinary comparison with its [*Int32*](types.md#type-Int32) result compared using
+a builtin *Int32* to *Int32* comparison.
+
+[*Int32*](types.md#type-Int32)s are compared based on their position on the number line.
+No surprises here.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/0 -->
+
+```temper
+-1 < 0 && 0 < 1 && 1 < 2
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/0 -->
+
+[*Float64*](types.md#type-Float64)s are also compared numerically.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/1 -->
+
+```temper
+-1.0 < 0.0 && 0.0 < 1.0 && 1.0 < 2.0
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/1 -->
+
+But the default comparison operators are meant to support structural comparison of records
+so see also [caveats](#general-comparison-caveats) for how *Float64* ordering differs
+from some other languages.
+
+[*String*](types.md#type-String)s are compared lexicographically based on their code-points.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/2 -->
+
+```temper
+"foo" > "bar"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/algo/snippet.md/2 -->
+
+See also [caveats](#general-comparison-caveats) for *String* related ordering,
+how this differs from some programming language that prefer UTF-16 based ordering.
+
+##### Custom comparison for classes
+
+A user defined class may be made comparable by defining an
+[`@operator("<=>")`](#builtin-@operator) method or function.
+
+It is the implementors responsibility to ensure the usual properties
+of ordering apply: comparison is transitive (a < b && b < c -> a < c),
+asymmetric (a < b -> b > a), and reflexive (a <= a && a >= a && !(a < a)).
+(For asymmetric, only the sign3 of the `<=>` matters, so it may not be the
+ case that `(a <=> b) == -(b <=> a)`, just that
+ `(a <=> b).signum == -((b <=> a).signum)`.
+
+<!-- /snippet: general-comparison/algo -->
+
+<!-- snippet: general-comparison/caveats -->
+
+<a name="general&#45;comparison&#45;caveats" class="snippet-anchor-name"></a>
+
+#### General Comparison Caveats
+
+##### String Ordering Caveats
+[*String*](types.md#type-String) ordering based on code-points means that [supplementary code-points]
+(code-points greater than U+10000) sort higher than all [basic plane] code-points,
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/general-comparison/caveats/snippet.md/0 -->
+
+```temper
+"\u{10000}" > "\u{FFFF}" // Hex code-point escapes
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/general-comparison/caveats/snippet.md/0 -->
+
+Developers used to lexicographic [UTF-16] might be surprised since UTF-16 ordering
+treats each supplementary code-point as two [surrogate]s in the range \[0xD800, 0xDFFF\].
+The first string above would be `"\uD800\uDC00"` written in JSON with each surrogate
+separately escaped. In some languages, that might compare as less than "\u{FFFF}", but
+Temper views all strings in terms of full code-points, or more precisely, in terms of
+Unicode [scalar value]s, which exclude surrogate codes appearing by themselves.
+
+##### Float64 Ordering Caveats
+
+<!-- snippet: float64-comparison-details -->
+
+<a name="float64&#45;comparison&#45;details" class="snippet-anchor-name"></a>
+
+[*Float64*](types.md#type-Float64)s are compared on a modified number line where
+`-0.0` precedes `+0.0` and all `NaN` values sort above +&infin;.
+This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/float64-comparison-details/snippet.md/0 -->
+
+```temper
+-Infinity < -1.0     &&
+     -1.0 <  0.0     &&
+     -0.0 < +0.0     &&  // Positive and negative zero order separately
+      0.0 <  1.0     &&
+      1.0 < Infinity &&
+ Infinity < NaN          // NaN is ordered high
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/float64-comparison-details/snippet.md/0 -->
+
+[IEEE-754 comparison predicate]: https://grouper.ieee.org/groups/msc/ANSI_IEEE-Std-754-2019/background/predicates.txt
+
+<!-- /snippet: float64-comparison-details -->
+
+[basic plane]: https://unicode.org/glossary/#basic_multilingual_plane
+[scalar value]: https://unicode.org/glossary/#unicode_scalar_value
+[supplementary code-points]: https://unicode.org/glossary/#supplementary_code_point
+[surrogate]: https://unicode.org/glossary/#surrogate_code_point
+[UTF-16]: https://unicode.org/glossary/#UTF_16
+
+<!-- /snippet: general-comparison/caveats -->
+
+<!-- /snippet: builtin/<=> -->
+
+<!-- snippet: builtin/== -->
+
+<a name="builtin&#45;&#61;&#61;" class="snippet-anchor-name"></a>
+
+### `==`
+`a == b` is the default equivalence operation.
+
+For builtin types, that underlying check is based on the
+[General comparison algorithm](#general-comparison-algo) even though a type does not need to
+be ordered to be comparable.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/0 -->
+
+```temper
+// Int32
+console.log("0 == 0 -> ${0 == 0}"); //!outputs "0 == 0 -> true"
+console.log("0 == 1 -> ${0 == 1}"); //!outputs "0 == 1 -> false"
+
+// Int64
+console.log("0i64 == 0i64 -> ${0i64 == 0i64}"); //!outputs "0i64 == 0i64 -> true"
+console.log("0i64 == 1i64 -> ${0i64 == 1i64}"); //!outputs "0i64 == 1i64 -> false"
+
+// Float64
+// NaN and signed zero are not corner cases for ==`.`
+console.log("0.0 == 0.0 -> ${0.0 == 0.0}"); //!outputs "0.0 == 0.0 -> true"
+console.log("0.0 == 1.0 -> ${0.0 == 1.0}"); //!outputs "0.0 == 1.0 -> false"
+
+// String
+// Unlike `<=>`, there are no UTF-8 vs UTF-16 caveats for ==`.`
+console.log("'a' == 'a' -> ${'a' == 'a'}"); //!outputs "'a' == 'a' -> true"
+console.log("'a' == 'b' -> ${'a' == 'b'}"); //!outputs "'a' == 'b' -> false"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/0 -->
+
+The related [`!=` operator](#builtin-!=) is just the negation of
+the `==` operator.
+
+Comparing incomparable values is a compile time error.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/1 -->
+
+```temper
+0 == "0"
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/1 -->
+
+But any value may be compared using `==` to `null`.
+
+#### Equivalence to `null`
+
+Only the `null` value is equivalent to itself.
+
+Equivalence is *null-safe*.  I.e., if `a` and `b` could be [*null*](#builtin-null)
+because their types use [Postfix `?`](#builtin-%3F), then `a == b` is equivalent to the
+below where *isNull* is a compiler-internal predicate for testing nullity:
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/2 -->
+
+```temper
+if (isNull(a)) {
+  isNull(b)
+} else {
+  !isNull(b) && a == b
+}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/2 -->
+
+The Temper compiler simplifies such complicated checks using type information
+so `a == null` and `null == a` are equivalent to `isNull(a)`.
+
+The important takeaway, for Temper semantics are that `==` tests equivalence
+using a type-specific equivalence function or method but only *after* checking
+whether the operands are `null`.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/3 -->
+
+```temper
+console.log("null == null -> ${null == null}"); //!outputs "null == null -> true"
+console.log("null == 1234 -> ${null == 1234}"); //!outputs "null == 1234 -> false"
+console.log("1234 == null -> ${1234 == null}"); //!outputs "1234 == null -> false"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/3 -->
+
+<!-- snippet: equivalence/classes-and-interfaces -->
+
+<a name="equivalence&#45;classes&#45;and&#45;interfaces" class="snippet-anchor-name"></a>
+
+##### Equality for user-defined `class`es and `interface`s
+
+For `class` instances, equivalence is just a call to a method or function
+with [`@operator("==")`](#builtin-@operator) metadata.
+Since [`!=`](#builtin-!=) is syntactic sugar for a boolean negation of
+`==` applied to the same arguments, you don't need to define both
+operators, and trying to define `!=` will not help.
+
+All operator `==` implementations should return [*Boolean*](types.md#type-Boolean).
+All such implementations should be reflexive: `a == b -> b == a` and
+`a != b -> b != a` when both `a`'s and `b`'s type's provide.implemenations.
+
+If an implementation is defined on a [`sealed` type modifier](#builtin-@sealed) `interface`
+it should work for comparing all subtypes, perhaps by checking types and
+delegating to subtype specific implementations.
+
+TODO: auto-derived structural equality.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/equivalence/classes-and-interfaces/snippet.md/0 -->
+
+```temper
+class C {
+  @operator("==")
+  public equals(other: C?): Boolean { true } // Not a lot of difference.
+}
+
+let c = new C();
+let d = new C();
+
+console.log("c == c -> ${c == c}"); //!outputs "c == c -> true"
+console.log("c == d -> ${c == d}"); //!outputs "c == d -> true"
+// You can't call a method on `null`, but `==` is null safe.
+console.log("null == c -> ${null == c}"); //!outputs "null == c -> false"
+// Even though C.equals accepts null inputs, the null check happens
+// before the method call, so this is false.
+console.log("c == null -> ${c == null}"); //!outputs "c == null -> false"
+// ✅
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/equivalence/classes-and-interfaces/snippet.md/0 -->
+
+<!-- /snippet: equivalence/classes-and-interfaces -->
+
+<!-- /snippet: builtin/== -->
+
+<!-- snippet: builtin/> -->
+
+<a name="builtin&#45;&gt;" class="snippet-anchor-name"></a>
+
+### `>`
+`a > b` is [*true*](#builtin-true) when *a* orders after *b*, and is a compile-time
+error if the two are not mutually comparable.
+
+`>` is part of a family of related operators including `<`, `<=`, `>=`, `>`,
+and `<=>`.  Especially see [`<=>`](#builtin-<=>) for details on how
+comparison works for Temper-defined and user-defined types.
+
+See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
+especially the [General Comparison Caveats](#general-comparison-caveats).
+
+<!-- /snippet: builtin/> -->
+
+<!-- snippet: builtin/>= -->
+
+<a name="builtin&#45;&gt;&#61;" class="snippet-anchor-name"></a>
+
+### `>=`
+`a >= b` is [*true*](#builtin-true) when *a* orders after or with *b*, and is a compile-time
+error if the two are not mutually comparable.
+
+`>=` is part of a family of related operators including `<`, `<=`, `>=`, `>`,
+and `<=>`.  Especially see [`<=>`](#builtin-<=>) for details on how
+comparison works for Temper-defined and user-defined types.
+
+See the [General comparison algorithm](#general-comparison-algo) for details of how they are compiled and
+especially the [General Comparison Caveats](#general-comparison-caveats).
+
+<!-- /snippet: builtin/>= -->
 
 <!-- snippet: builtin/>> : `>>` -->
 
@@ -4188,7 +4351,7 @@ class C {
 }
 let c = new C();
 c.isSame(c)
-// ✅
+// ❌
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/keyword/this/snippet.md/0 -->

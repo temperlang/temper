@@ -6,7 +6,6 @@ import lang.temper.env.InterpMode
 import lang.temper.format.SimplifyingTokenSink
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.log.MessageTemplate
-import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
 import lang.temper.name.SourceName
 import lang.temper.name.Symbol
@@ -24,12 +23,12 @@ import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
 import lang.temper.value.Planting
 import lang.temper.value.PseudoCodeDetail
-import lang.temper.value.RightNameLeaf
 import lang.temper.value.TString
 import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
+import lang.temper.value.calleeBuiltinName
 import lang.temper.value.dotBuiltinName
 import lang.temper.value.eqBuiltinName
 import lang.temper.value.freeTree
@@ -67,7 +66,7 @@ internal object AssertMacro : BuiltinMacro("assert", null) {
         }
         val call = macroEnv.call!!
         val testName = findTestName(call) ?: run {
-            // No matching function, so the assert macro isn't placed right.
+            // No matching function, so the `assert` macro isn't placed right.
             macroEnv.failLog.fail(MessageTemplate.InvalidBlockContent, call.pos, emptyList())
             return@invoke Fail
         }
@@ -97,11 +96,10 @@ internal object AssertMacro : BuiltinMacro("assert", null) {
 
 private fun buildValueMessageMaybe(call: Tree): Boolean {
     val condition = (call.child(1) as? CallTree) ?: return false
-    val conditionCallee = (condition.child(0) as? RightNameLeaf) ?: return false
-    val opName = (conditionCallee.content as? BuiltinName) ?: return false
-    if (!(opName == eqBuiltinName && condition.size == EQ_SIZE)) {
+    if (condition.calleeBuiltinName() != eqBuiltinName.builtinKey || condition.size < EQ_SIZE) {
         return false
     }
+    val conditionCallee = condition.child(0)
     // Capture actual text expression while it's still in original form.
     val originalActual = condition.child(1)
     val actualText = originalActual.toSimplePseudoCode()
@@ -120,12 +118,15 @@ private fun buildValueMessageMaybe(call: Tree): Boolean {
                     Replant(freeTree(conditionCallee))
                     Rn(actualName)
                     Rn(expectedName)
+                    for (i in EQ_SIZE..<condition.size) {
+                        Replant(freeTree(condition.child(i)))
+                    }
                 }
                 Fn {
                     Call {
                         // Requires toString on compared values.
                         V(vStringCatMacro)
-                        V(Value("expected $actualText ${opName.builtinKey} (", TString))
+                        V(Value("expected $actualText ${eqBuiltinName.builtinKey} (", TString))
                         Rn(expectedName)
                         V(Value(") not (", TString))
                         Rn(actualName)
@@ -140,11 +141,11 @@ private fun buildValueMessageMaybe(call: Tree): Boolean {
 
 private fun Planting.extractTemporary(nameHint: String, tree: Tree): TemperName {
     var result: TemperName? = null
-    Decl {
+    Decl(tree.pos) {
         Ln { it.unusedTemporaryName(nameHint).also { name -> result = name } }
         V(vInitSymbol)
         Replant(freeTree(tree))
-        V(vSsaSymbol)
+        V(tree.pos.rightEdge, vSsaSymbol)
         V(TVoid.value)
     }
     return result!!
@@ -177,7 +178,7 @@ private fun findTestName(call: Tree): TemperName? {
 /** Return the decl name if it's effectively named "test" or typed "Test". */
 private fun nameIfTest(declTree: DeclTree): TemperName? {
     val name = declTree.parts?.name?.content ?: return null
-    // We get either a SoureName or Temporary, depending on how explicit.
+    // We get either a SourceName or Temporary, depending on how explicit.
     val baseName = when (name) {
         is SourceName -> name.baseName.nameText
         is Temporary -> name.nameHint

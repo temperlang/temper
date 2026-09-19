@@ -3,7 +3,7 @@ let console#4;
 console#4 = getConsole();
 @fn let parseZero__1;
 parseZero__1 = (@stay fn parseZero(s__2 /* aka s */: String) /* return__0 */: (Int32 | Bubble) {
-    if (s__2 != "0") {
+    if (!(s__2 == "0")) {
       bubble()
     };
     return__0 = 0

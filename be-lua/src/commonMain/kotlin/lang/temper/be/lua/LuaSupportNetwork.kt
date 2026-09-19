@@ -2,6 +2,7 @@ package lang.temper.be.lua
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -12,6 +13,7 @@ import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.RuntimeTypeOperation
@@ -27,6 +29,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.emptyValue
 import lang.temper.value.getStaticBuiltinName
 import lang.temper.value.internalGetStaticBuiltinName
 
@@ -69,34 +72,20 @@ internal fun operatorToName(
     BuiltinOperatorId.TimesIntInt -> "int32_mul"
     BuiltinOperatorId.TimesIntInt64 -> "int64_mul"
     BuiltinOperatorId.TimesFltFlt -> "mul"
-    BuiltinOperatorId.LtFltFlt -> "float_lt"
-    BuiltinOperatorId.LtIntInt -> "generic_lt"
-    BuiltinOperatorId.LtStrStr -> "str_lt"
-    BuiltinOperatorId.LtGeneric -> "generic_lt"
-    BuiltinOperatorId.LeFltFlt -> "float_le"
-    BuiltinOperatorId.LeIntInt -> "generic_le"
-    BuiltinOperatorId.LeStrStr -> "str_le"
-    BuiltinOperatorId.LeGeneric -> "generic_le"
-    BuiltinOperatorId.GtFltFlt -> "float_gt"
-    BuiltinOperatorId.GtIntInt -> "generic_gt"
-    BuiltinOperatorId.GtStrStr -> "str_gt"
-    BuiltinOperatorId.GtGeneric -> "generic_gt"
-    BuiltinOperatorId.GeFltFlt -> "float_ge"
-    BuiltinOperatorId.GeIntInt -> "generic_ge"
-    BuiltinOperatorId.GeStrStr -> "str_ge"
-    BuiltinOperatorId.GeGeneric -> "generic_ge"
+    BuiltinOperatorId.LtIntInt -> "int32_lt"
+    BuiltinOperatorId.LeIntInt -> "int32_le"
+    BuiltinOperatorId.GtIntInt -> "int32_gt"
+    BuiltinOperatorId.GeIntInt -> "int32_ge"
     BuiltinOperatorId.EqFltFlt -> "float_eq"
-    BuiltinOperatorId.EqIntInt -> "generic_eq"
+    BuiltinOperatorId.EqIntInt -> "int_eq"
     BuiltinOperatorId.EqStrStr -> "str_eq"
-    BuiltinOperatorId.EqGeneric -> "generic_eq"
-    BuiltinOperatorId.NeFltFlt -> "float_ne"
-    BuiltinOperatorId.NeIntInt -> "generic_ne"
-    BuiltinOperatorId.NeStrStr -> "str_ne"
-    BuiltinOperatorId.NeGeneric -> "generic_ne"
+    BuiltinOperatorId.EqBoolBool -> "bool_eq"
+    BuiltinOperatorId.EqLongLong -> "int64_eq"
     BuiltinOperatorId.CmpFltFlt -> "float_cmp"
     BuiltinOperatorId.CmpIntInt -> "int_cmp"
     BuiltinOperatorId.CmpStrStr -> "str_cmp"
-    BuiltinOperatorId.CmpGeneric -> "generic_cmp"
+    BuiltinOperatorId.CmpLongLong -> "int64_cmp"
+    BuiltinOperatorId.CmpBoolBool -> "bool_cmp"
     BuiltinOperatorId.Bubble, BuiltinOperatorId.Panic -> "bubble"
     BuiltinOperatorId.Print -> "print"
     BuiltinOperatorId.StrCat -> "concat"
@@ -230,21 +219,6 @@ internal object LuaSupportNetwork : SupportNetwork {
                         args[1],
                     )
                 }
-                BuiltinOperatorId.NeIntInt -> InlineLua(
-                    builtin.builtinOperatorId.toString(),
-                    builtin.builtinOperatorId,
-                ) { pos, args ->
-                    Lua.BinaryExpr(
-                        pos,
-                        args[0],
-                        Lua.BinaryOp(
-                            pos,
-                            BinaryOpEnum.NotEq,
-                            LuaOperatorDefinition.Ne,
-                        ),
-                        args[1],
-                    )
-                }
                 BuiltinOperatorId.LtIntInt -> InlineLua(
                     builtin.builtinOperatorId.toString(),
                     builtin.builtinOperatorId,
@@ -369,26 +343,6 @@ internal object LuaSupportNetwork : SupportNetwork {
                 // Inline string comparisons as native Lua operators (lexicographic, same as Temper).
                 BuiltinOperatorId.EqStrStr -> inlineBinaryOp(
                     builtin.builtinOperatorId.toString(), BinaryOpEnum.Eq, LuaOperatorDefinition.Eq,
-                    builtin.builtinOperatorId,
-                )
-                BuiltinOperatorId.NeStrStr -> inlineBinaryOp(
-                    builtin.builtinOperatorId.toString(), BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne,
-                    builtin.builtinOperatorId,
-                )
-                BuiltinOperatorId.LtStrStr -> inlineBinaryOp(
-                    builtin.builtinOperatorId.toString(), BinaryOpEnum.Lt, LuaOperatorDefinition.Lt,
-                    builtin.builtinOperatorId,
-                )
-                BuiltinOperatorId.LeStrStr -> inlineBinaryOp(
-                    builtin.builtinOperatorId.toString(), BinaryOpEnum.LtEq, LuaOperatorDefinition.Le,
-                    builtin.builtinOperatorId,
-                )
-                BuiltinOperatorId.GtStrStr -> inlineBinaryOp(
-                    builtin.builtinOperatorId.toString(), BinaryOpEnum.Gt, LuaOperatorDefinition.Gt,
-                    builtin.builtinOperatorId,
-                )
-                BuiltinOperatorId.GeStrStr -> inlineBinaryOp(
-                    builtin.builtinOperatorId.toString(), BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge,
                     builtin.builtinOperatorId,
                 )
                 else -> InlineLua(builtin.builtinOperatorId.toString(), builtin.builtinOperatorId) { pos, args ->
@@ -521,20 +475,10 @@ internal object LuaSupportNetwork : SupportNetwork {
         "core.type StringIndexOption.compareTo()" -> InlineLua(connectedKey) { pos, args ->
             Lua.BinaryExpr(pos, args[0], Lua.BinaryOp(pos, BinaryOpEnum.Sub, LuaOperatorDefinition.Sub), args[1])
         }
-        "core.type StringIndexOption.compareTo()::eq" ->
+        "core.type StringIndexOption.eq()" ->
             inlineBinaryOp(connectedKey, BinaryOpEnum.Eq, LuaOperatorDefinition.Eq)
-        "core.type StringIndexOption.compareTo()::ne" ->
-            inlineBinaryOp(connectedKey, BinaryOpEnum.NotEq, LuaOperatorDefinition.Ne)
-        "core.type StringIndexOption.compareTo()::lt" ->
-            inlineBinaryOp(connectedKey, BinaryOpEnum.Lt, LuaOperatorDefinition.Lt)
-        "core.type StringIndexOption.compareTo()::le" ->
-            inlineBinaryOp(connectedKey, BinaryOpEnum.LtEq, LuaOperatorDefinition.Le)
-        "core.type StringIndexOption.compareTo()::gt" ->
-            inlineBinaryOp(connectedKey, BinaryOpEnum.Gt, LuaOperatorDefinition.Gt)
-        "core.type StringIndexOption.compareTo()::ge" ->
-            inlineBinaryOp(connectedKey, BinaryOpEnum.GtEq, LuaOperatorDefinition.Ge)
 
-        else if connectedKey.startsWith("core.") || connectedKey.startsWith("std/") ->
+        else if (connectedKey.startsWith("core.") || connectedKey.startsWith("std/")) ->
             temperMethod(
                 connectedKey,
                 connectedKey
@@ -579,6 +523,63 @@ internal object LuaSupportNetwork : SupportNetwork {
         return temperMethod(
             "${rto.name}$name",
             "$prefix$methodSuffix",
+        )
+    }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } ?: return null
+        val supportCodeName = (supportCode as? NamedSupportCode)?.baseName
+        if (supportCodeName?.nameText == "core.type StringIndexOption.compareTo()") {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpBoolBool,
+                -> {}
+                // String and Float builtins require adjustment.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        val (binOp, opDef) = when (comparisonKind) {
+            ComparisonKind.LessThan -> BinaryOpEnum.Lt to LuaOperatorDefinition.Lt
+            ComparisonKind.LessThanOrEqual -> BinaryOpEnum.LtEq to LuaOperatorDefinition.Le
+            ComparisonKind.GreaterThanOrEqual -> BinaryOpEnum.GtEq to LuaOperatorDefinition.Ge
+            ComparisonKind.GreaterThan -> BinaryOpEnum.Gt to LuaOperatorDefinition.Gt
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                InlineLua(
+                    "simple${comparisonKind.name}",
+                    null,
+                ) { pos, args ->
+                    Lua.BinaryExpr(
+                        pos,
+                        args[0],
+                        Lua.BinaryOp(fn.pos, binOp, opDef),
+                        args[1],
+                    )
+                },
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
         )
     }
 }

@@ -2,11 +2,11 @@
     "C": {
         "properties": [
             {
-                "name": "j__2",
+                "name": "j__3",
                 "visibility": "public",
                 "abstract": false,
-                "getter": "getj__8",
-                "setter": "setj__11",
+                "getter": "getj__10",
+                "setter": "setj__13",
                 "metadata": {
                     "var": [
                         "void: Void"
@@ -14,36 +14,36 @@
                 }
             },
             {
-                "name": "k__3",
+                "name": "k__4",
                 "abstract": false,
                 "visibility": "public",
-                "getter": "getk__12"
+                "getter": "getk__17"
             }
         ],
         "methods": [
             {
-                "name": "getj__8",
+                "name": "getj__10",
                 "symbol": "j",
                 "visibility": "public",
                 "kind": "Getter",
                 "open": false
             },
             {
-                "name": "setj__11",
+                "name": "setj__13",
                 "symbol": "j",
                 "visibility": "public",
                 "kind": "Setter",
                 "open": false
             },
             {
-                "name": "getk__12",
+                "name": "getk__17",
                 "symbol": "k",
                 "visibility": "public",
                 "kind": "Getter",
                 "open": false
             },
             {
-                "name": "constructor__4",
+                "name": "constructor__5",
                 "visibility": "public",
                 "kind": "Constructor",
                 "open": false

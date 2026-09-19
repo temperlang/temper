@@ -96,7 +96,7 @@ export const clampInt64 = (x) => {
 };
 
 /**
- * Implements extension method core.type Int64.max()
+ * Implements extension method `core.type Int64.max()`
  * @param {bigint} a
  * @param {bigint} b
  * @returns {bigint}
@@ -106,7 +106,7 @@ export const int64Max = (a, b) => {
 }
 
 /**
- * Implements extension method core.type Int64.min()
+ * Implements extension method `core.type Int64.min()`
  * @param {bigint} a
  * @param {bigint} b
  * @returns {bigint}
@@ -116,7 +116,7 @@ export const int64Min = (a, b) => {
 }
 
 /**
- * Implements extension method core.type Int64.toInt32()
+ * Implements extension method `core.type Int64.toInt32()`
  * @param {bigint} n
  * @returns {number}
  */
@@ -128,7 +128,7 @@ export const int64ToInt32 = (n) => {
 }
 
 /**
- * Implements extension method core.type Int64.toInt32Unsafe()
+ * Implements extension method `core.type Int64.toInt32Unsafe()`
  * @param {bigint} n
  * @returns {number}
  */
@@ -137,7 +137,7 @@ export const int64ToInt32Unsafe = (n) => {
 }
 
 /**
- * Implements extension method core.type Int64.toFloat64()
+ * Implements extension method `core.type Int64.toFloat64()`
  * @param {bigint} n
  * @returns {number}
  */
@@ -149,7 +149,7 @@ export const int64ToFloat64 = (n) => {
 }
 
 /**
- * Implements extension method core.type Int64.toFloat63Unsafe()
+ * Implements extension method `core.type Int64.toFloat63Unsafe()`
  * @param {bigint} n
  * @returns {number}
  */
@@ -158,7 +158,8 @@ export const int64ToFloat64Unsafe = (n) => {
 }
 
 /**
- * Compare two Strings.
+ * Ternary comparison of two strings lexicographically by code-point,
+ * not UTF-16.
  * @param {string} a
  * @param {string} b
  * @return {number}
@@ -183,12 +184,13 @@ export const cmpString = (a, b) => {
 };
 
 /**
- * Compare two Numbers, accounting for signedness of zero.
+ * Ternary comparison of two numbers, treating -0 as less than +0,
+ * and treating all `NaN`s as equivalent per Temper Float64 semantics.
  * @param {number} a
  * @param {number} b
  * @return {number}
  */
-export const cmpFloat = (a, b) => {
+export const cmpFloat64 = (a, b) => {
   if (Object.is(a, b)) {
     return 0;
   }
@@ -204,24 +206,38 @@ export const cmpFloat = (a, b) => {
 };
 
 /**
- * @template {string | number | boolean} T
- * @param {T} a
- * @param {T} b
- * @returns {number}
+ * Equality check consistent with cmpFloat64.
+ * @param {number} a
+ * @param {number} b
+ * @return {boolean}
  */
-export const cmpGeneric = (a, b) => {
-  if (typeof a === "string" && typeof b === "string") {
-    return cmpString(a, b);
-  }
-  if (typeof a === "number" && typeof b === "number") {
-    return cmpFloat(a, b);
-  }
-  if (typeof a === "boolean" && typeof b === "boolean") {
-    // @ts-ignore
-    return a - b;
-  }
-  bubble();
-};
+export const eqFloat64 = (a, b) => cmpFloat64(a, b) === 0
+
+/**
+ * Ternary comparison of two Numbers representing Temper Int32s
+ * which are in the JS safe-integer range.
+ * @param {number} a
+ * @param {number} b
+ * @return {number}
+ */
+export const cmpInt32 = (a, b) => Math.sign(a - b);
+
+/**
+ * Ternary comparison of two `bigint`s representing Temper Int64s.
+ * @param {bigint} a
+ * @param {bigint} b
+ * @return {-1 | 0 | 1}
+ */
+export const cmpInt64 = (a, b) =>
+  a < b ? -1 : a === b ? 0 : 1;
+
+/**
+ * Compare two Booleans ordering false before true.
+ * @param {number} a
+ * @param {number} b
+ * @return {number}
+ */
+export const cmpBoolean = (a, b) => +a - +b;
 
 /**
  * @returns {never}
@@ -248,11 +264,11 @@ export const print = (a) => {
 /**
  * Takes a JSON adapter and a value that it can adapt.
  * This is called when JavaScript code calls JSON.stringify on a Temper type instance
- * that has a zero argument jsonAdapter static method.
+ * that has a zero-argument jsonAdapter static method.
  *
  * @return any
  */
-export let marshalToJsonObject = (jsonAdapter, value) => {
+export const marshalToJsonObject = (jsonAdapter, value) => {
   /** @type {any[]} */
   const stack = [[]];
   let pendingKey = null;

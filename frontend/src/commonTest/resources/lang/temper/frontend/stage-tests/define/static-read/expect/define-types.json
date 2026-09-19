@@ -8,7 +8,7 @@
         ],
         "methods": [
             {
-                "name": "constructor__0",
+                "name": "constructor__4",
                 "visibility": "public",
                 "kind": "Constructor",
                 "open": false
@@ -16,7 +16,7 @@
         ],
         "staticProperties": [
             {
-                "name": "foo__0",
+                "name": "foo__3",
                 "visibility": "public"
             }
         ]

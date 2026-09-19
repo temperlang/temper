@@ -13,57 +13,57 @@
         ],
         "methods": [
             {
-                "name": "getx__0",
+                "name": "getx__14",
                 "symbol": "x",
                 "visibility": "public",
                 "kind": "Getter",
                 "open": false
             },
             {
-                "name": "gety__0",
+                "name": "gety__17",
                 "symbol": "y",
                 "visibility": "public",
                 "kind": "Getter",
                 "open": false
             },
             {
-                "name": "toString__0",
+                "name": "toString__7",
                 "visibility": "public",
                 "open": false
             },
             {
-                "name": "constructor__1",
+                "name": "constructor__9",
                 "visibility": "public",
                 "open": false,
                 "kind": "Constructor"
             },
             {
-                "name": "encodeToJson__1",
+                "name": "encodeToJson__42",
                 "visibility": "public",
                 "open": false
             }
         ],
         "properties": [
             {
-                "name": "x__0",
+                "name": "x__5",
                 "visibility": "public",
                 "abstract": false,
-                "getter": "getx__0"
+                "getter": "getx__14"
             },
             {
-                "name": "y__0",
+                "name": "y__6",
                 "visibility": "public",
                 "abstract": false,
-                "getter": "gety__0"
+                "getter": "gety__17"
             }
         ],
         "staticProperties": [
             {
-                "name": "decodeFromJson__1",
+                "name": "decodeFromJson__44",
                 "visibility": "public"
             },
             {
-                "name": "jsonAdapter__0",
+                "name": "jsonAdapter__46",
                 "visibility": "public"
             }
         ],
@@ -86,17 +86,17 @@
         ],
         "methods": [
             {
-                "name": "encodeToJson__0",
+                "name": "encodeToJson__48",
                 "visibility": "public",
                 "open": false
             },
             {
-                "name": "decodeFromJson__0",
+                "name": "decodeFromJson__50",
                 "visibility": "public",
                 "open": false
             },
             {
-                "name": "constructor__0",
+                "name": "constructor__52",
                 "visibility": "public",
                 "open": false,
                 "kind": "Constructor"

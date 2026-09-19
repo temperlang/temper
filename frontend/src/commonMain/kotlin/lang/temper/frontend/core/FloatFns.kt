@@ -6,6 +6,7 @@ import lang.temper.value.ActualValues
 import lang.temper.value.Fail
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.PartialResult
+import lang.temper.value.TBoolean
 import lang.temper.value.TFloat64
 import lang.temper.value.TInt
 import lang.temper.value.TInt64
@@ -226,6 +227,17 @@ internal object FloatFns {
     object Tanh : SigFnBuilder("core.type Float64.tanh()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return Value(tanh(TFloat64.unpackContent(args[0])), TFloat64)
+        }
+    }
+
+    object Eq : SigFnBuilder("core.type Float64.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return TBoolean.value(
+                0 == TFloat64.comparator.compare(
+                    TFloat64.unpackContent(args[0]),
+                    TFloat64.unpackContent(args[1]),
+                ),
+            )
         }
     }
 }

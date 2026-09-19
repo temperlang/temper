@@ -77,23 +77,16 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
     when (builtinOperatorId) {
         BuiltinOperatorId.DivIntInt, BuiltinOperatorId.DivIntInt64 -> divIntInt
         BuiltinOperatorId.DivIntIntSafe, BuiltinOperatorId.DivIntInt64Safe -> divIntIntSafe
-        BuiltinOperatorId.EqGeneric -> eqGeneric
         BuiltinOperatorId.EqIntInt -> eqIntInt
-        BuiltinOperatorId.GeGeneric -> geGeneric
         BuiltinOperatorId.GeIntInt -> geIntInt
-        BuiltinOperatorId.GtGeneric -> gtGeneric
         BuiltinOperatorId.GtIntInt -> gtIntInt
-        BuiltinOperatorId.LeGeneric -> leGeneric
         BuiltinOperatorId.LeIntInt -> leIntInt
-        BuiltinOperatorId.LtGeneric -> ltGeneric
         BuiltinOperatorId.LtIntInt -> ltIntInt
         BuiltinOperatorId.Listify -> Listify
         BuiltinOperatorId.MinusInt, BuiltinOperatorId.MinusInt64 -> minusInt
         BuiltinOperatorId.MinusIntInt, BuiltinOperatorId.MinusIntInt64 -> minusIntInt
         BuiltinOperatorId.ModIntInt, BuiltinOperatorId.ModIntInt64 -> modIntInt
         BuiltinOperatorId.ModIntIntSafe, BuiltinOperatorId.ModIntInt64Safe -> modIntIntSafe
-        BuiltinOperatorId.NeGeneric -> neGeneric
-        BuiltinOperatorId.NeIntInt -> neIntInt
         BuiltinOperatorId.PlusIntInt, BuiltinOperatorId.PlusIntInt64 -> plusIntInt
         BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> timesIntInt
         BuiltinOperatorId.StrCat -> strCat
@@ -259,7 +252,8 @@ private object Listify : CppInlineSupportCode("Listify") {
         translator: CppTranslator,
         cpp: CppBuilder,
     ): Cpp.Tree = run {
-        val itemType = returnType.bindings.firstOrNull() ?: return cpp.literal("TODO $returnType")
+        val itemType = returnType.bindings.firstOrNull()
+            ?: return@run cpp.literal("TODO $returnType")
         val itemTypeCpp = translator.translateType(itemType)
         cpp.callExpr(
             cpp.template(cpp.name("temper", "core", "listify"), itemTypeCpp),
@@ -274,28 +268,21 @@ private val strCat = FunctionCall("cat", listOf("StrCat"))
 
 private val divIntInt = FunctionCall("div_checked", listOf("DivIntInt"), BuiltinOperatorId.DivIntInt)
 private val divIntIntSafe = FunctionCall("div", listOf("DivIntIntSafe"), BuiltinOperatorId.DivIntIntSafe)
-private val eqGeneric = Infix("EqGeneric", BinaryOpEnum.Eq, BuiltinOperatorId.EqGeneric)
 private val eqIntInt = Infix("EqIntInt", BinaryOpEnum.Eq, BuiltinOperatorId.EqIntInt)
-private val geGeneric = Infix("GeGeneric", BinaryOpEnum.Ge, BuiltinOperatorId.GeGeneric)
 private val geIntInt = Infix("GeIntInt", BinaryOpEnum.Ge, BuiltinOperatorId.GeIntInt)
-private val gtGeneric = Infix("GtGeneric", BinaryOpEnum.Gt, BuiltinOperatorId.GtGeneric)
 private val gtIntInt = Infix("GtIntInt", BinaryOpEnum.Gt, BuiltinOperatorId.GtIntInt)
 private val intMax = FunctionCall("max", listOf("core.type Int32.max()", "core.type Int64.max()"), namespace = "std")
 private val intMin = FunctionCall("min", listOf("core.type Int32.min()", "core.type Int64.min()"), namespace = "std")
 private val int32ToInt64 = FunctionCall("int64_t", listOf("core.type Int32.toInt64()"), namespace = null)
 private val int64ToInt32Unsafe = FunctionCall("int32_t", listOf("core.type Int64.toInt32Unsafe()"), namespace = null)
-private val leGeneric = Infix("LeGeneric", BinaryOpEnum.Le, BuiltinOperatorId.LeGeneric)
 private val leIntInt = Infix("LeIntInt", BinaryOpEnum.Le, BuiltinOperatorId.LeIntInt)
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 private val listedIsEmpty = MethodCall("empty", listedTypes.map { "core.type $it.get isEmpty()" })
-private val ltGeneric = Infix("LtGeneric", BinaryOpEnum.Lt, BuiltinOperatorId.LtGeneric)
 private val ltIntInt = Infix("LtIntInt", BinaryOpEnum.Lt, BuiltinOperatorId.LtIntInt)
 private val minusInt = FunctionCall("neg", listOf("MinusInt"), BuiltinOperatorId.MinusInt)
 private val minusIntInt = FunctionCall("sub", listOf("MinusIntInt"), BuiltinOperatorId.MinusIntInt)
 private val modIntInt = FunctionCall("mod_checked", listOf("ModIntInt"), BuiltinOperatorId.ModIntInt)
 private val modIntIntSafe = FunctionCall("mod", listOf("ModIntIntSafe"), BuiltinOperatorId.ModIntIntSafe)
-private val neGeneric = Infix("NeGeneric", BinaryOpEnum.Ne, BuiltinOperatorId.NeGeneric)
-private val neIntInt = Infix("NeIntInt", BinaryOpEnum.Ne, BuiltinOperatorId.NeIntInt)
 private val plusIntInt = FunctionCall("add", listOf("PlusIntInt"), BuiltinOperatorId.PlusIntInt)
 private val timesIntInt = FunctionCall("mul", listOf("TimesIntInt"), BuiltinOperatorId.TimesIntInt)
 private val toString = FunctionCall("to_string", listOf("core.type Int32.toString()", "core.type Int64.toString()"))

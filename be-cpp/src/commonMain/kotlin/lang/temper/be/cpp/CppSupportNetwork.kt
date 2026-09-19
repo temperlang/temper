@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -11,6 +12,7 @@ import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.format.TokenSink
@@ -22,6 +24,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.emptyValue
 import lang.temper.value.pureVirtualBuiltinName
 
 internal const val TEMPER_CORE_NAMESPACE = "temper::core"
@@ -87,34 +90,20 @@ internal object CppSupportNetwork : SupportNetwork {
         BuiltinOperatorId.TimesIntInt64 -> Like.core("Int64::mul")
         BuiltinOperatorId.TimesFltFlt -> Like.binary("*")
         BuiltinOperatorId.PowFltFlt -> Like.core("Float64::pow")
-        BuiltinOperatorId.LtFltFlt -> Like.core("Float64::lt")
         BuiltinOperatorId.LtIntInt -> Like.binary("<")
-        BuiltinOperatorId.LtStrStr -> Like.core("Compare::lt")
-        BuiltinOperatorId.LtGeneric -> Like.core("Compare::lt")
-        BuiltinOperatorId.LeFltFlt -> Like.core("Float64::le")
         BuiltinOperatorId.LeIntInt -> Like.binary("<=")
-        BuiltinOperatorId.LeStrStr -> Like.core("Compare::le")
-        BuiltinOperatorId.LeGeneric -> Like.core("Compare::le")
-        BuiltinOperatorId.GtFltFlt -> Like.core("Float64::gt")
         BuiltinOperatorId.GtIntInt -> Like.binary(">")
-        BuiltinOperatorId.GtStrStr -> Like.core("Compare::gt")
-        BuiltinOperatorId.GtGeneric -> Like.core("Compare::gt")
-        BuiltinOperatorId.GeFltFlt -> Like.core("Float64::ge")
         BuiltinOperatorId.GeIntInt -> Like.binary(">=")
-        BuiltinOperatorId.GeStrStr -> Like.core("Compare::ge")
-        BuiltinOperatorId.GeGeneric -> Like.core("Compare::ge")
+        BuiltinOperatorId.EqBoolBool -> Like.binary("==")
         BuiltinOperatorId.EqFltFlt -> Like.core("Float64::eq")
         BuiltinOperatorId.EqIntInt -> Like.binary("==")
+        BuiltinOperatorId.EqLongLong -> Like.binary("==")
         BuiltinOperatorId.EqStrStr -> Like.core("Compare::eq")
-        BuiltinOperatorId.EqGeneric -> Like.core("Compare::eq")
-        BuiltinOperatorId.NeFltFlt -> Like.core("Float64::ne")
-        BuiltinOperatorId.NeIntInt -> Like.binary("!=")
-        BuiltinOperatorId.NeStrStr -> Like.core("Compare::ne")
-        BuiltinOperatorId.NeGeneric -> Like.core("Compare::ne")
+        BuiltinOperatorId.CmpBoolBool -> Like.binary("Compare::cmp")
         BuiltinOperatorId.CmpFltFlt -> Like.core("Float64::cmp")
         BuiltinOperatorId.CmpIntInt -> Like.core("Compare::cmp")
+        BuiltinOperatorId.CmpLongLong -> Like.core("Compare::cmp")
         BuiltinOperatorId.CmpStrStr -> Like.core("Compare::cmp")
-        BuiltinOperatorId.CmpGeneric -> Like.core("Compare::cmp")
         BuiltinOperatorId.Bubble -> handle(builtinOperatorId) {
             // bubble() is template<class T = void> — need explicit type when used in expression context
             val cppRetType = translator.translateType2(retType)
@@ -156,7 +145,7 @@ internal object CppSupportNetwork : SupportNetwork {
             "awakeUpon" -> Like.core("awake_upon")
             "getPromiseResultSync" -> Like.core("get_promise_result_sync")
             // No C++ support code for this builtin: per the SupportNetwork contract, null means
-            // "not handled here" and the caller falls back (e.g. to a normal method call).
+            // "not handled here" and the caller falls back (e.g., to a normal method call).
             else -> null
         }
 
@@ -187,7 +176,7 @@ internal object CppSupportNetwork : SupportNetwork {
         buildMap {
             // Fail loudly on a duplicate key rather than silently letting a later entry win:
             // the table is built from many loops and individual entries, so an accidental
-            // collision (e.g. a name added both by a loop and an explicit cased override)
+            // collision (e.g., a name added both by a loop and an explicit cased override)
             // would otherwise be invisible. This local `put` shadows MutableMap.put for the
             // unqualified calls below.
             val table = this
@@ -241,12 +230,7 @@ internal object CppSupportNetwork : SupportNetwork {
             put("core.type String.fromCodePoints()", Like.core("String::fromCodepoints"))
             put("core.type StringIndex.none", Like.core("String::none"))
             put("core.type StringIndexOption.compareTo()", Like.core("Compare::cmp"))
-            for ((op, sym) in listOf(
-                "eq" to "==", "ne" to "!=", "lt" to "<",
-                "le" to "<=", "gt" to ">", "ge" to ">=",
-            )) {
-                put("core.type StringIndexOption.compareTo()::$op", Like.binary(sym))
-            }
+            put("core.type StringIndexOption.eq()", Like.binary("=="))
             put("core.type StringBuilder.constructor()", Like.coreWithRetTypeArgs("StringBuilder::make"))
             put("core.type StringBuilder.get end()", Like.core("StringBuilder::end"))
             for (fn in listOf("append", "appendBetween", "toString", "clear")) {
@@ -432,6 +416,39 @@ internal object CppSupportNetwork : SupportNetwork {
                 else -> notNull(dynamicPtrCast(dest))
             }
         }
+    }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? CppInlineSupportCode ?: return null
+
+        if (!supportCode.desc.endsWith("temper::core::Compare::cmp")) {
+            // Not a straightforward comparison.
+            return null
+        }
+
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                Like.binary(comparisonKind.intInfixer.kind.outputToken.text),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
     }
 }
 

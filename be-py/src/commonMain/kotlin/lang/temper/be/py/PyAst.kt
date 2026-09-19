@@ -39,8 +39,13 @@ fun Py.Assign.Companion.self(pos: Position, attr: String, init: Py.Expr) = Py.As
     value = init,
 )
 
-operator fun BinaryOpEnum.invoke(left: Py.Expr, right: Py.Expr, pos: Position = left.pos) =
-    Py.BinExpr(pos, left, this.atom(left.pos), right)
+operator fun BinaryOpEnum.invoke(
+    left: Py.Expr,
+    right: Py.Expr,
+    pos: Position = left.pos,
+    calleePos: Position = left.pos.rightEdge,
+) =
+    Py.BinExpr(pos, left, this.atom(calleePos), right)
 operator fun UnaryOpEnum.invoke(value: Py.Expr, pos: Position = value.pos) =
     Py.UnaryExpr(pos, this.atom(pos), value)
 

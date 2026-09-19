@@ -23,6 +23,7 @@ import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.extractAtoms
 import lang.temper.value.CallTree
+import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.TFloat64
 import lang.temper.value.TInt
 import lang.temper.value.TInt64
@@ -61,25 +62,20 @@ internal fun simplifyDotHelper(
     }
 
     // Give preference to members over extensions
-    var lastNonExtensionResolution: VariantResolution? = null
-    var lastResolution: VariantResolution? = null
-    for ((variantType, resolution) in variants.reversed()) {
+    var chosenVariantResolution: VariantResolution? = null
+    for ((variantType, resolution) in variants) {
         if (variantType equivalent variantMatch || variantType equivalent variantMatchRefined) {
-            lastResolution = resolution
-            if (resolution is Either.Left) {
-                lastNonExtensionResolution = resolution
-            }
+            chosenVariantResolution = chooseVariantResolution(chosenVariantResolution, resolution)
         }
     }
 
-    val chosenVariantResolution = lastNonExtensionResolution ?: lastResolution
     when (chosenVariantResolution) {
         null,
         is Either.Left,
         -> {
             val updatedType = when {
                 // If the resolution is to a method, not an extension, but to a different method, refine it.
-                lastNonExtensionResolution?.let { DotMember(it.leftOrNull!!.symbol) != dotHelper.member } == true -> {
+                chosenVariantResolution?.let { DotMember(it.leftOrNull.symbol) != dotHelper.member } == true -> {
                     // An overload now resolved to an individually named method.
                     variantMatchRefined ?: variantMatch
                 }
@@ -215,3 +211,46 @@ private val inlineHelpersForSuccAndPred = mapOf(
     (WellKnownTypes.float64Type2 to succDotMember) to (BuiltinFuns.plusFloatFloatFn to Value(1.0, TFloat64)),
     (WellKnownTypes.float64Type2 to predDotMember) to (BuiltinFuns.minusFloatFloatFn to Value(1.0, TFloat64)),
 )
+
+/**
+ * Given two possible resolutions, picks the higher priority one.
+ *
+ * We prefer builtin resolutions like [BuiltinFuns.eqIntFn] over
+ * method calls like `Int32.eq`.
+ */
+private fun chooseVariantResolution(
+    previousChoice: VariantResolution?,
+    candidate: VariantResolution,
+): VariantResolution {
+    if (previousChoice == null) {
+        return candidate
+    }
+    val previousClassification = classifyVariantResolution(previousChoice)
+    val candidateClassification = classifyVariantResolution(candidate)
+    return if (candidateClassification > previousClassification) {
+        candidate
+    } else {
+        previousChoice
+    }
+}
+
+private enum class VariantResolutionClassification {
+    Extension,
+    DefinedByTypeAuthor,
+    Builtin,
+}
+
+private fun classifyVariantResolution(r: VariantResolution): VariantResolutionClassification =
+    when (r) {
+        is Either.Left<VisibleMemberShape> -> VariantResolutionClassification.DefinedByTypeAuthor
+        is Either.Right<ExtensionResolution> -> {
+            when (val er = r.item) {
+                is FunctionResolution -> if (er.fn is NamedBuiltinFun) {
+                    VariantResolutionClassification.Builtin
+                } else {
+                    VariantResolutionClassification.Extension
+                }
+                is ExtensionResolution -> VariantResolutionClassification.Extension
+            }
+        }
+    }

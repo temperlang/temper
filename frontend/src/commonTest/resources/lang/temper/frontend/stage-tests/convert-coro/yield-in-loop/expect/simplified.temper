@@ -13,7 +13,7 @@
         i__1 = 0;
         caseIndex#6 = 1
       } else if (caseIndexLocal#8 == 1) {
-        if (i__1 < 10) {
+        if (i__1 <=> 10 < 0) {
           caseIndex#6 = 2
         } else {
           caseIndex#6 = 3

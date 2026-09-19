@@ -1,18 +1,18 @@
-@typeDecl(MyFunction<T__0, U__0>) @stay @functionalInterface let `test//`.MyFunction;
+@typeDecl(MyFunction<T__0, U__1>) @stay @functionalInterface let `test//`.MyFunction;
 `test//`.MyFunction = type (MyFunction);
 do {};
-@typeFormal(\T) @typeDefined(T__0) @fromType(MyFunction<T__0, U__0>) let T__0;
+@typeFormal(\T) @typeDefined(T__0) @fromType(MyFunction<T__0, U__1>) let T__0;
 T__0 = type (T__0);
-@typeFormal(\U) @typeDefined(U__0) @fromType(MyFunction<T__0, U__0>) let U__0;
-U__0 = type (U__0);
-MyFunction<T__0, U__0> extends AnyValue;
-@fn @stay @fromType(MyFunction<T__0, U__0>) let apply__0;
-apply__0 = fn apply(x__0 /* aka x */: T__0, y__0 /* aka y */: U__0) /* return__0 */: Boolean {
-  fn__0: do {
-    pureVirtual()
-  }
-};
-interface(\word, \MyFunction, void, void, void, void, \concrete, false, @typeDefined(MyFunction<T__0, U__0>) fn {
+@typeFormal(\U) @typeDefined(U__1) @fromType(MyFunction<T__0, U__1>) let U__1;
+U__1 = type (U__1);
+MyFunction<T__0, U__1> extends AnyValue;
+@fn @stay @fromType(MyFunction<T__0, U__1>) let apply__4;
+apply__4 = (@stay fn apply(x__5 /* aka x */: T__0, y__6 /* aka y */: U__1) /* return__3 */: Boolean {
+    fn__7: do {
+      pureVirtual()
+    }
+});
+interface(\word, \MyFunction, void, void, void, void, \concrete, false, @typeDefined(MyFunction<T__0, U__1>) @stay fn {
     do {};
     do {};
     do {};

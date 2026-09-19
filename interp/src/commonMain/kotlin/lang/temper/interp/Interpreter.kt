@@ -2579,13 +2579,12 @@ private fun functionStability(ast: FunTree, env: Environment): FunctionStability
                     }
                 } else {
                     val calleeValue = callee?.functionContained
-                    // Calls to pure functions and stable functions allowed.
-                    when (calleeValue?.functionSpecies) {
-                        FunctionSpecies.Pure, FunctionSpecies.Special -> Unit
-                        else -> {
+                    when (calleeValue?.stability) {
+                        ValueStability.Unstable, null -> {
                             updateStability(FunctionStability.Unstable)
                             return
                         }
+                        ValueStability.Stable -> {}
                     }
                 }
             }

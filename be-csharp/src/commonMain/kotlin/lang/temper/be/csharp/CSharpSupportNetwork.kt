@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -15,6 +16,7 @@ import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportCodeRequirement
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.toSigBestEffort
 import lang.temper.builtin.RuntimeTypeOperation
@@ -26,7 +28,6 @@ import lang.temper.name.DashedIdentifier
 import lang.temper.name.ParsedName
 import lang.temper.name.name
 import lang.temper.type.MethodShape
-import lang.temper.type.TypeFormal
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.excludeNullAndBubble
 import lang.temper.type2.DefinedNonNullType
@@ -38,6 +39,7 @@ import lang.temper.type2.passTypeOf
 import lang.temper.type2.withNullity
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.emptyValue
 import lang.temper.value.listBuiltinName
 import lang.temper.value.pureVirtualBuiltinName
 import kotlin.lazy
@@ -168,9 +170,9 @@ object CSharpSupportNetwork : SupportNetwork {
 
             val valueFormals = unadjustedSignature.allValueFormals
             for (i in valueFormals.indices) {
-                // Identify where a specialized sub-type method parameter is a value type
+                // Identify where a specialized subtype method parameter is a value type
                 // and the corresponding super-type method parameter is a formal in the enclosing type.
-                // For example, `Int` in the subtype and `<T>` in the super.
+                // For example, `Int` in the subtype and `<T>` in the supertype.
                 val paramType = valueFormals[i].type
                 if (
                     i != 0 && // Skip this
@@ -235,11 +237,60 @@ object CSharpSupportNetwork : SupportNetwork {
             needsOptional -> WrapAsOptional(
                 fromActualPassType.withNullity(Nullity.NonNull) as NonNullType,
             )
-            // receiver has no expectations about the value.  Possibly an is-null check or other RTTI operator.
+            // receiver has no expectations about the value.  Possibly an is-null check or another RTTI operator.
             toDeclaredPassType.definition == WellKnownTypes.anyValueTypeDefinition -> null
             // unwrap optional
             else -> UnwrapOptional(toActualPassType.withNullity(Nullity.NonNull) as NonNullType)
         }
+    }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? CSharpSupportCode ?: return null
+        if (supportCode.baseName.nameText == "core.type StringIndexOption.compareTo()") {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpBoolBool,
+                -> {}
+                // String and Float builtins require adjustment.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                CSharpInfixInline(
+                    "simple${comparisonKind.name}",
+                    null,
+                    when (comparisonKind) {
+                        ComparisonKind.LessThan -> CSharpOperator.LessThan
+                        ComparisonKind.LessThanOrEqual -> CSharpOperator.LessEquals
+                        ComparisonKind.GreaterThanOrEqual -> CSharpOperator.GreaterEquals
+                        ComparisonKind.GreaterThan -> CSharpOperator.GreaterThan
+                    },
+                ),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
     }
 }
 
@@ -270,34 +321,20 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> timesIntInt
         BuiltinOperatorId.TimesFltFlt -> timesFltFlt
         BuiltinOperatorId.PowFltFlt -> powFltFlt
-        BuiltinOperatorId.LtFltFlt -> ltFltFlt
         BuiltinOperatorId.LtIntInt -> ltIntInt
-        BuiltinOperatorId.LtStrStr -> ltStrStr
-        BuiltinOperatorId.LtGeneric -> ltGeneric
-        BuiltinOperatorId.LeFltFlt -> leFltFlt
         BuiltinOperatorId.LeIntInt -> leIntInt
-        BuiltinOperatorId.LeStrStr -> leStrStr
-        BuiltinOperatorId.LeGeneric -> leGeneric
-        BuiltinOperatorId.GtFltFlt -> gtFltFlt
         BuiltinOperatorId.GtIntInt -> gtIntInt
-        BuiltinOperatorId.GtStrStr -> gtStrStr
-        BuiltinOperatorId.GtGeneric -> gtGeneric
-        BuiltinOperatorId.GeFltFlt -> geFltFlt
         BuiltinOperatorId.GeIntInt -> geIntInt
-        BuiltinOperatorId.GeStrStr -> geStrStr
-        BuiltinOperatorId.GeGeneric -> geGeneric
+        BuiltinOperatorId.EqBoolBool -> eqBoolBool
         BuiltinOperatorId.EqFltFlt -> eqFltFlt
         BuiltinOperatorId.EqIntInt -> eqIntInt
+        BuiltinOperatorId.EqLongLong -> eqInt64Int64
         BuiltinOperatorId.EqStrStr -> eqStrStr
-        BuiltinOperatorId.EqGeneric -> EqGeneric // for bool, null, generics, what else?
-        BuiltinOperatorId.NeFltFlt -> neFltFlt
-        BuiltinOperatorId.NeIntInt -> neIntInt
-        BuiltinOperatorId.NeStrStr -> neStrStr
-        BuiltinOperatorId.NeGeneric -> neGeneric // only for `!= null` these days?
-        BuiltinOperatorId.CmpFltFlt -> TODO()
-        BuiltinOperatorId.CmpIntInt -> TODO()
-        BuiltinOperatorId.CmpStrStr -> TODO()
-        BuiltinOperatorId.CmpGeneric -> cmpGeneric
+        BuiltinOperatorId.CmpBoolBool -> cmpBoolBool
+        BuiltinOperatorId.CmpFltFlt -> cmpFltFlt
+        BuiltinOperatorId.CmpIntInt -> cmpIntInt
+        BuiltinOperatorId.CmpLongLong -> cmpInt64Int64
+        BuiltinOperatorId.CmpStrStr -> cmpStrStr
         BuiltinOperatorId.Bubble, BuiltinOperatorId.Panic -> bubble
         BuiltinOperatorId.Print -> TODO()
         BuiltinOperatorId.StrCat -> StrCat
@@ -519,7 +556,11 @@ internal class StaticCall(
         get() = listOf(member.type)
 }
 
-private class StaticMember(baseName: String, val member: MemberName) : CSharpInlineSupportCode(baseName) {
+private class StaticMember(
+    baseName: String,
+    val member: MemberName,
+    id: BuiltinOperatorId? = null,
+) : CSharpInlineSupportCode(baseName, id) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<CSharp.Tree>>,
@@ -604,41 +645,6 @@ private object GetConsole : CSharpInlineSupportCode("core.getConsole()") {
     }
 }
 
-/** Invokes StringUtil.CompareStringsByCodePoint with an optional comparison to zero where a boolean is needed */
-private class StringComparison(
-    override val builtinOperatorId: BuiltinOperatorId,
-    val operator: CSharpOperator?,
-) : CSharpInlineSupportCode(builtinOperatorId.name) {
-    override fun inlineToTree(
-        pos: Position,
-        arguments: List<TypedArg<CSharp.Tree>>,
-        returnType: Type2,
-        translator: CSharpTranslator,
-    ): CSharp.Tree {
-        val call = CSharp.InvocationExpression(
-            pos,
-            StandardNames.temperCoreStringUtilCompareStringsByCodePoint.toStaticMember(pos.leftEdge),
-            args = arguments.map { it.asExpr() },
-        )
-        return if (operator != null) {
-            // If operator is `<`, this becomes `CompareStrings(...) < 0`
-            val rightPos = pos.rightEdge
-            CSharp.Operation(
-                pos,
-                call,
-                CSharp.Operator(rightPos, operator),
-                CSharp.NumberLiteral(rightPos, 0),
-            )
-        } else {
-            call
-        }
-    }
-}
-private val geStrStr = StringComparison(BuiltinOperatorId.GeStrStr, CSharpOperator.GreaterEquals)
-private val gtStrStr = StringComparison(BuiltinOperatorId.GtStrStr, CSharpOperator.GreaterThan)
-private val leStrStr = StringComparison(BuiltinOperatorId.LeStrStr, CSharpOperator.LessEquals)
-private val ltStrStr = StringComparison(BuiltinOperatorId.LtStrStr, CSharpOperator.LessThan)
-
 private val denseBitVectorConstructor =
     ObjectCreation("core.type DenseBitVector.constructor()", StandardNames.systemCollectionsBitArray)
 private val denseBitVectorGet = StaticCall("core.type DenseBitVector.get()", StandardNames.temperCoreCoreBitGet)
@@ -653,7 +659,7 @@ private val empty = StaticCall("core.empty()", StandardNames.temperCoreCoreEmpty
 private class Float64Compare(
     baseName: String,
     builtinOperatorId: BuiltinOperatorId? = null,
-    val operator: CSharpOperator,
+    val operator: CSharpOperator?,
 ) : CSharpInlineSupportCode(baseName, builtinOperatorId) {
     override fun inlineToTree(
         pos: Position,
@@ -661,13 +667,17 @@ private class Float64Compare(
         returnType: Type2,
         translator: CSharpTranslator,
     ): CSharp.Tree {
+        val comparisonExpr = CSharp.InvocationExpression(
+            pos,
+            expr = StandardNames.temperCoreFloat64Compare.toStaticMember(pos),
+            args = arguments.map { it.asExpr() },
+        )
+        if (operator == null) {
+            return comparisonExpr
+        }
         return CSharp.Operation(
             pos,
-            left = CSharp.InvocationExpression(
-                pos,
-                expr = StandardNames.temperCoreFloat64Compare.toStaticMember(pos),
-                args = arguments.map { it.asExpr() },
-            ),
+            left = comparisonExpr,
             operator = CSharp.Operator(pos, operator),
             right = CSharp.NumberLiteral(pos, 0.0),
         )
@@ -822,7 +832,7 @@ private val int64ToString = StaticCall("core.type Int64.toString()", StandardNam
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
 // Provide a ReadOnlyCollection for immutability, but in typing, we'll represent both List and
-// Listed as IReadOnlyList because that's closer to intended Temper semantics vs copy on write.
+// Listed as IReadOnlyList because that's closer to intended Temper semantics vs. copy-on-write.
 // And this helper method returns an IReadOnlyList for clarity in typing.
 // And we need to guess type args because the list might be empty, and C# needs to know the type.
 internal val listify = StaticCall(
@@ -1115,6 +1125,10 @@ private val stringIndexOptionCompareTo = MethodCall(
     listOf("core.type StringIndexOption.compareTo()"),
     "CompareTo",
 )
+private val stringIndexOptionEq = MethodCall(
+    listOf("core.type StringIndexOption.eq()"),
+    "Equals",
+)
 private val requireStringIndex = StaticCall(
     "requireStringIndex",
     StandardNames.temperCoreStringUtilRequireStringIndex,
@@ -1144,7 +1158,7 @@ private val stdNetSend = StaticCall(
 
 private class CSharpInfixInline(
     baseName: String,
-    builtinOperatorId: BuiltinOperatorId,
+    builtinOperatorId: BuiltinOperatorId?,
     private val operator: CSharpOperator,
 ) : CSharpInlineSupportCode(baseName, builtinOperatorId) {
     override fun inlineToTree(
@@ -1208,46 +1222,6 @@ private object BooleanNegationInliner : CSharpInlineSupportCode(
     }
 }
 
-/** Applies for bool, null, generics, what else? */
-private object EqGeneric : CSharpInlineSupportCode("EqGeneric", BuiltinOperatorId.EqGeneric) {
-    var infixOp = CSharpInfixInline(baseName.nameText, BuiltinOperatorId.EqGeneric, CSharpOperator.Equals)
-
-    override fun inlineToTree(
-        pos: Position,
-        arguments: List<TypedArg<CSharp.Tree>>,
-        returnType: Type2,
-        translator: CSharpTranslator,
-    ): CSharp.Tree {
-        return when (val type = (arguments[0].type as? NonNullType)?.definition) {
-            // We can't just use `==` for type parameters in C#.
-            is TypeFormal -> {
-                CSharp.InvocationExpression(
-                    pos = pos,
-                    // Two-deep member access and constructed type make this different from other cases.
-                    expr = CSharp.MemberAccess(
-                        pos = pos,
-                        expr = CSharp.MemberAccess(
-                            pos = pos,
-                            expr = CSharp.ConstructedType(
-                                pos = pos,
-                                type = StandardNames.systemCollectionsGenericEqualityComparer.toTypeName(pos),
-                                args = listOf(
-                                    CSharp.TypeArgRef(translator.translateId(TmpL.Id(pos, type.name)), type),
-                                ),
-                            ),
-                            id = "Default".toIdentifier(pos.rightEdge),
-                        ),
-                        id = "Equals".toIdentifier(pos.rightEdge),
-                    ),
-                    args = arguments.map { it.asExpr() },
-                )
-            }
-
-            else -> infixOp.inlineToTree(pos, arguments, returnType, translator)
-        }
-    }
-}
-
 private object TestBail : CSharpInlineSupportCode("std/testing.type Test.bail()") {
     override fun inlineToTree(
         pos: Position,
@@ -1297,8 +1271,6 @@ private val bitwiseNegation = CSharpPrefixInline(
     BuiltinOperatorId.BitwiseNegation32,
     CSharpOperator.BitwiseComplement,
 )
-private val cmpGeneric = // Does this need to do something similar to EqGeneric?
-    StaticCall("CmpGeneric", StandardNames.temperCoreCoreCompare, builtinOperatorId = BuiltinOperatorId.CmpGeneric)
 private val divFltFlt = CSharpInfixInline("DivFltFlt", BuiltinOperatorId.DivFltFlt, CSharpOperator.Division)
 private val divIntInt =
     StaticCall("DivIntInt", StandardNames.temperCoreCoreDiv, builtinOperatorId = BuiltinOperatorId.DivIntInt)
@@ -1307,20 +1279,23 @@ private val divIntIntSafe = StaticCall(
     StandardNames.temperCoreCoreDivSafe,
     builtinOperatorId = BuiltinOperatorId.DivIntIntSafe,
 )
+private val cmpBoolBool = MethodCall("CmpBoolBool", "CompareTo", BuiltinOperatorId.CmpLongLong)
+private val cmpFltFlt = Float64Compare("CmpFltFlt", BuiltinOperatorId.CmpFltFlt, null)
+private val cmpIntInt = MethodCall("CmpIntInt", "CompareTo", BuiltinOperatorId.CmpIntInt)
+private val cmpInt64Int64 = MethodCall("CmpInt64Int64", "CompareTo", BuiltinOperatorId.CmpLongLong)
+private val cmpStrStr = StaticCall(
+    "CmpStrStr", StandardNames.temperCoreStringUtilCompareStringsByCodePoint,
+    guessTypeArgs = false,
+    BuiltinOperatorId.CmpStrStr,
+)
+private val eqBoolBool = CSharpInfixInline("EqBoolBool", BuiltinOperatorId.EqBoolBool, CSharpOperator.Equals)
 private val eqFltFlt = Float64Compare("EqFltFlt", BuiltinOperatorId.EqFltFlt, CSharpOperator.Equals)
 private val eqIntInt = CSharpInfixInline("EqIntInt", BuiltinOperatorId.EqIntInt, CSharpOperator.Equals)
+private val eqInt64Int64 = CSharpInfixInline("EqInt64Int64", BuiltinOperatorId.EqLongLong, CSharpOperator.Equals)
 private val eqStrStr = CSharpInfixInline("EqStrStr", BuiltinOperatorId.EqStrStr, CSharpOperator.Equals)
-private val geFltFlt = Float64Compare("GeFltFlt", BuiltinOperatorId.GeFltFlt, CSharpOperator.GreaterEquals)
-private val geGeneric = CSharpInfixInline("GeGeneric", BuiltinOperatorId.GeGeneric, CSharpOperator.GreaterEquals)
 private val geIntInt = CSharpInfixInline("GeIntInt", BuiltinOperatorId.GeIntInt, CSharpOperator.GreaterEquals)
-private val gtFltFlt = Float64Compare("GtFltFlt", BuiltinOperatorId.GtFltFlt, CSharpOperator.GreaterThan)
-private val gtGeneric = CSharpInfixInline("GtGeneric", BuiltinOperatorId.GtGeneric, CSharpOperator.GreaterThan)
 private val gtIntInt = CSharpInfixInline("GtIntInt", BuiltinOperatorId.GtIntInt, CSharpOperator.GreaterThan)
-private val leFltFlt = Float64Compare("LeFltFlt", BuiltinOperatorId.LeFltFlt, CSharpOperator.LessEquals)
-private val leGeneric = CSharpInfixInline("LeGeneric", BuiltinOperatorId.LeGeneric, CSharpOperator.LessEquals)
 private val leIntInt = CSharpInfixInline("LeIntInt", BuiltinOperatorId.LeIntInt, CSharpOperator.LessEquals)
-private val ltFltFlt = Float64Compare("LtFltFlt", BuiltinOperatorId.LtFltFlt, CSharpOperator.LessThan)
-private val ltGeneric = CSharpInfixInline("LtGeneric", BuiltinOperatorId.LtGeneric, CSharpOperator.LessThan)
 private val ltIntInt = CSharpInfixInline("LtIntInt", BuiltinOperatorId.LtIntInt, CSharpOperator.LessThan)
 private val minusFlt = CSharpPrefixInline("MinusFlt", BuiltinOperatorId.MinusInt, CSharpOperator.Minus)
 private val minusInt = CSharpPrefixInline("MinusInt", BuiltinOperatorId.MinusInt, CSharpOperator.Minus)
@@ -1334,10 +1309,6 @@ private val modIntIntSafe = StaticCall(
     StandardNames.temperCoreCoreModSafe,
     builtinOperatorId = BuiltinOperatorId.ModIntIntSafe,
 )
-private val neFltFlt = Float64Compare("NeFltFlt", BuiltinOperatorId.NeFltFlt, CSharpOperator.NotEquals)
-private val neGeneric = CSharpInfixInline("NeGeneric", BuiltinOperatorId.NeGeneric, CSharpOperator.NotEquals)
-private val neIntInt = CSharpInfixInline("NeIntInt", BuiltinOperatorId.NeIntInt, CSharpOperator.NotEquals)
-private val neStrStr = CSharpInfixInline("NeStrStr", BuiltinOperatorId.NeStrStr, CSharpOperator.NotEquals)
 private val plusFltFlt = CSharpInfixInline("PlusFltFlt", BuiltinOperatorId.PlusFltFlt, CSharpOperator.Addition)
 private val plusIntInt = CSharpInfixInline("PlusIntInt", BuiltinOperatorId.PlusIntInt, CSharpOperator.Addition)
 private val timesFltFlt = CSharpInfixInline("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, CSharpOperator.Multiplication)
@@ -1530,6 +1501,7 @@ private val connectedReferences = listOf(
     stringHasAtLeast,
     stringHasIndex,
     stringIndexOptionCompareTo,
+    stringIndexOptionEq,
     stringIsEmpty,
     stringNext,
     stringPrev,

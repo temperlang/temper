@@ -213,7 +213,7 @@ but you can use an underscore to separate digit groups.
 ```temper
 [123,456,789] == [123 , 456 , 789] &&  // Commas separate elements
 [123_456_789] == [123456789]
-// ✅
+// ❌
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->

@@ -15,6 +15,8 @@ interface TranslationAssistant {
         connectedKey: String? = null,
     ): TmpL.FnReference
 
+    fun supportCodeFromReference(id: TmpL.Id): SupportCode?
+
     fun translateType(pos: Position, type: Type2): TmpL.Type
 }
 
@@ -33,4 +35,7 @@ internal class TranslationAssistantImpl(
 
     override fun translateType(pos: Position, type: Type2): TmpL.Type =
         translator.translateType(pos, type)
+
+    override fun supportCodeFromReference(id: TmpL.Id): SupportCode? =
+        translator.pool.getSupportCodeReferenceForName(id.name)
 }

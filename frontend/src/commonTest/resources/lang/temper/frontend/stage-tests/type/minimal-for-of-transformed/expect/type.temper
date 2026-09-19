@@ -9,7 +9,7 @@
   n__6 = do_get_length(this__4);
   var i__7;
   i__7 = 0;
-  while (i__7 < n__6) {
+  while (i__7 <=> n__6 < 0) {
     let el__8: String;
     el__8 = do_call_get(this__4, i__7);
     i__7 = i__7 + 1;

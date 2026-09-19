@@ -2,6 +2,8 @@ package lang.temper.frontend.typestage
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.name.BuiltinName
+import lang.temper.type.DotHelper
+import lang.temper.type.OperatorMember
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
@@ -90,9 +92,13 @@ private fun decomposeNullCheck(t: CallTree): Triple<Boolean, Tree, ValueLeaf?>? 
                 }
                 null
             }
-            BuiltinFuns.equalsFn -> "=="
-            BuiltinFuns.notEqualsFn -> "!="
-            else -> (fn as? NamedBuiltinFun)?.name
+            is DotHelper -> when ((fn.member as? OperatorMember)?.operatorSpecifier) {
+                "_==_" -> "=="
+                "_!=_" -> "!="
+                else -> null
+            }
+            is NamedBuiltinFun -> fn.name
+            else -> null
         }
     }
     val positivity = when (fnBuiltinKey) {

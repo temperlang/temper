@@ -23,7 +23,7 @@
             [
                 [
                     "LeftName",
-                    "constructor__3"
+                    "constructor__6"
                 ],
                 [
                     "Value",
@@ -99,7 +99,7 @@
                 ],
                 [
                     "LeftName",
-                    "constructor__3"
+                    "constructor__6"
                 ],
                 [
                     "Fun",
@@ -109,7 +109,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "this__4"
+                                    "this__1"
                                 ],
                                 [
                                     "Value",
@@ -154,7 +154,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__0"
+                                    "return__2"
                                 ],
                                 [
                                     "Value",
@@ -297,6 +297,26 @@
                             "Value",
                             "C__0: Type"
                         ],
+                        {
+                            "type": "Value",
+                            "loc": "test/test.temper",
+                            "left": 8,
+                            "right": 8,
+                            "content": {
+                                "stateVector": "stay",
+                                "typeTag": "Symbol",
+                                "abbrev": "\\stay: Symbol"
+                            },
+                            "typeInferences": null
+                        },
+                        {
+                            "type": "Stay",
+                            "loc": "test/test.temper",
+                            "left": 8,
+                            "right": 8,
+                            "content": "kotlin.Unit",
+                            "typeInferences": null
+                        },
                         [
                             "Block",
                             [
@@ -319,7 +339,7 @@
             [
                 [
                     "LeftName",
-                    "alias__5"
+                    "alias__3"
                 ],
                 [
                     "Value",
@@ -348,7 +368,7 @@
                 ],
                 [
                     "LeftName",
-                    "alias__5"
+                    "alias__3"
                 ],
                 [
                     "Value",
@@ -365,7 +385,7 @@
             [
                 [
                     "LeftName",
-                    "o__6"
+                    "o__4"
                 ],
                 [
                     "Value",
@@ -398,7 +418,7 @@
             [
                 [
                     "LeftName",
-                    "p__7"
+                    "p__5"
                 ],
                 [
                     "Value",

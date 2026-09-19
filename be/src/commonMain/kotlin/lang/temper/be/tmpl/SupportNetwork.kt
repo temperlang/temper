@@ -18,7 +18,6 @@ import lang.temper.value.CoverFunction
 import lang.temper.value.FunTree
 import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
-import lang.temper.value.TInt
 import lang.temper.value.Value
 
 /**
@@ -172,6 +171,37 @@ interface SupportNetwork {
         }
         return null
     }
+
+    /**
+     * Given a translated call that is possibly a translation of a three-way comparison,
+     * allow substituting an idiomatic boolean infix operation.
+     *
+     * This allows converting `(x <=> y) < 0`, a three-way (less-than, equivalent, greater-than)
+     * comparison that returns an int which is then compared to zero using the builtin two-way
+     * Int32 comparison, into a two-way comparison native to the type of `x` and `y`.
+     *
+     * For example, Java only supports three-way comparison for *String*s via
+     * `java.lang.String.compareTo(String)`, but it allows for infix comparison of primitive
+     * `int`s and other numeric types.
+     * This method in the Java backend would return `null` given a string comparison, but
+     * for `int` and `long`, it might substitute a simpler primitive operator that does not
+     * require boxing primitives as objects.  For Java `double`, it might call out to a
+     * library function that does `double` comparison in a way that matches Temper semantics
+     * around `NaN` and `-0` vs `+0`.
+     *
+     * This method may be called with [tmpl] that does not do a three-way comparison semantically
+     * but just happens to return an *Int32* that is immediately compared to `0`.
+     *
+     * This default implementation does nothing.
+     *
+     * @return non-null only when [tmpl] can be adjusted to do boolean comparison instead of
+     * three-way that returns an *Int32*.
+     */
+    fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? = null
 
     val needsLocalNameForExternallyDefinedType: Boolean get() = false
     val needsLocalNameForExternallyDefinedFunction: Boolean get() = false
@@ -328,7 +358,7 @@ private fun compareToZero(
         pos,
         operand,
         TmpL.InfixOperator(rPos, operator),
-        TmpL.ValueReference(rPos, Value(0, TInt), 0),
+        TmpL.ValueReference(rPos, vZero, 0),
     )
 }
 
