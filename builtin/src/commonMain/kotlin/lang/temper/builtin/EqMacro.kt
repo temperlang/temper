@@ -49,7 +49,7 @@ object EqMacro : BuiltinMacro(
     run {
         // Having a type formal allows propagating information from one
         // argument to the other.  For example: `returnsListOfStrings() == []`.
-        val (f, t) = makeTypeFormal(
+        val (f, t) = makeTypeFormal2(
             "eq",
             "T",
             listOf(WellKnownTypes.anyValueOrNullType2),

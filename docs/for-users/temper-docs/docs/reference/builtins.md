@@ -4346,12 +4346,14 @@ you can use `this` to refer to the instance on which the method was called.
 <!-- snippet: temper-code/build-user-docs/build/snippet/keyword/this/snippet.md/0 -->
 
 ```temper
-class C {
-  public isSame(x: C): Boolean { this == x }
+class C(public who: String) {
+  public sayHello(): Void {
+    console.log("Hello, ${this.who}!");
+  }
 }
-let c = new C();
-c.isSame(c)
-// ❌
+let c = new C("World");
+c.sayHello() //!outputs "Hello, World!"
+// ✅
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/keyword/this/snippet.md/0 -->

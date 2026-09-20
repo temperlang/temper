@@ -48,8 +48,13 @@ fun unpackValue(
          * but you can use an underscore to separate digit groups.
          *
          * ```temper
-         * [123,456,789] == [123 , 456 , 789] &&  // Commas separate elements
-         * [123_456_789] == [123456789]
+         * let commas =      [123,456,789];  // Commas separate list elements
+         * let underscores = [123_456_789];  // Underscores make long numbers easier to read
+         *
+         * //!outputs  "commas has 3 elements"
+         * console.log("commas has ${commas.length} elements");
+         * //!outputs  "underscores has 1 element"
+         * console.log("underscores has ${underscores.length} element");
          * ```
          *
          * Exponential notation is fine for floating point values, but not for integers.

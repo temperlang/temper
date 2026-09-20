@@ -74,11 +74,13 @@ val reservedWords = setOf(
      * you can use `this` to refer to the instance on which the method was called.
      *
      * ```temper
-     * class C {
-     *   public isSame(x: C): Boolean { this == x }
+     * class C(public who: String) {
+     *   public sayHello(): Void {
+     *     console.log("Hello, ${this.who}!");
+     *   }
      * }
-     * let c = new C();
-     * c.isSame(c)
+     * let c = new C("World");
+     * c.sayHello() //!outputs "Hello, World!"
      * ```
      *
      * `this` cannot be used outside a type definition.

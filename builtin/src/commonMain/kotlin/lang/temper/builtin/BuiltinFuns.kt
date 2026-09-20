@@ -1226,22 +1226,32 @@ object BuiltinFuns {
     val vDoPure = Value(doPure)
 }
 
-fun makeTypeFormal(
+fun makeTypeFormal2(
     fnName: String,
     nameSuffix: String,
     upperBounds: List<Type2>,
 ): Pair<TypeFormal, Type2> =
     makeTypeFormal(
         fnName, nameSuffix,
-        *upperBounds.map {
+        upperBounds.map {
             hackMapNewStyleToOld(it.withNullity(Nullity.NonNull)) as NominalType
-        }.toTypedArray(),
+        },
     )
 
 fun makeTypeFormal(
     fnName: String,
     nameSuffix: String,
     vararg upperBounds: NominalType,
+): Pair<TypeFormal, Type2> = makeTypeFormal(
+    fnName = fnName,
+    nameSuffix = nameSuffix,
+    upperBounds = upperBounds.toList(),
+)
+
+fun makeTypeFormal(
+    fnName: String,
+    nameSuffix: String,
+    upperBounds: List<NominalType>,
 ): Pair<TypeFormal, Type2> {
     val nameKey = "$fnName$nameSuffix"
     val upperBoundsList = if (upperBounds.isEmpty()) {
