@@ -66,6 +66,7 @@ import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.Wildcard
 import lang.temper.type.isNullType
+import lang.temper.type2.Type2
 
 /**
  * Generates code that looks kind of like Temper-code for diagnostic purposes.
@@ -530,7 +531,7 @@ internal class PseudoTreeBuilder(
                 }
                 PseudoClassValue(pos, typeTag, pseudoRecord)
             }
-            TType -> PseudoType(pos, TType.unpack(value).type)
+            TType -> PseudoType(pos, TType.unpack(value).type2)
             else -> PseudoValueLeaf(pos, value)
         }
 
@@ -634,7 +635,7 @@ internal class PseudoTreeBuilder(
                 if (it is PseudoType) {
                     // TODO: Do we need to limit this to List/Listed
                     val underlyingType =
-                        (it.type as? NominalType)?.bindings?.firstOrNull() as? StaticType
+                        it.type.bindings.firstOrNull()
                     underlyingType?.let { itemType ->
                         PseudoType(it.pos, itemType)
                     }
@@ -1590,7 +1591,7 @@ internal class PseudoDecl(
         return opTree
     }
 }
-internal class PseudoType(override val pos: Position, val type: TypeActual) : PseudoTree() {
+internal class PseudoType(override val pos: Position, val type: Type2) : PseudoTree() {
     override fun toString() = "(PseudoType $type)"
 
     override fun reduce(): OpTree = reduce(inTypeContext = false)
@@ -1614,7 +1615,7 @@ internal class PseudoType(override val pos: Position, val type: TypeActual) : Ps
     }
 
     companion object {
-        internal fun reduceTypeActual(pos: Position, t: TypeActual): OpTree = when (t) {
+        internal fun reduceType2(pos: Position, t: Type2): OpTree = when (t) {
             Wildcard -> Tok(pos, OutToks.prefixStar)
             TopType -> Tok(pos, OutToks.topWord)
             BubbleType -> Tok(pos, OutToks.bubbleWord)
