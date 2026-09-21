@@ -373,7 +373,7 @@ class BuildTest {
             assertContains(text, "temper_std.testing")
             assertContains(text, "def test___twiceWorks")
             assertContains(text, "class _Something")
-            assertContains(text, "def halve_value_in")
+            assertContains(text, "def _halve_value_in")
             assertNotContains(text, "nobody_wants_me")
         }
     }

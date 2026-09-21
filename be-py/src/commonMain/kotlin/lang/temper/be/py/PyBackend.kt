@@ -287,7 +287,11 @@ class PyBackend private constructor(
     private var pyNames: PyNames? = null
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
-        val pyNames = PyNames(LookupNameVisitor().visit(finished), abbreviated = config.abbreviated)
+        val pyNames = PyNames(
+            visit = LookupNameVisitor().visit(finished),
+            abbreviated = config.abbreviated,
+            genre = finished.genre,
+        )
         this.pyNames = pyNames
 
         val libraryConfigurationMap = libraryConfigurations.byLibraryName

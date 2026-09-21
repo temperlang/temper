@@ -993,7 +993,13 @@ LocalFunctionDeclaration;
 YieldingOperator = YieldStatement | AwaitExpression;
 
 enum IdKind = Type | TypeFormal | Value;
-enum IdReach = External | Internal;
+
+/**
+ * This meshes export or not with public or private.
+ * Export and public are visible externally.
+ * Internal is visible within a module, but private only inside an instance.
+ */
+enum IdReach = External | Internal | Private;
 
 enum TypeDeclarationKind = Class | Interface | Enum;
 
