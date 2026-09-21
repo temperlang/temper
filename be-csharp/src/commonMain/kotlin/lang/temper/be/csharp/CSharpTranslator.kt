@@ -1513,17 +1513,33 @@ internal class CSharpTranslator(
         // TODO Prepass with user configuration infrastructure.
         val effective = imports[name] ?: name
         var actualStyle = style
-        val nameText = when (effective) {
-            setterValueName -> "value"
-            is ExportedName -> return translateExportedGlobalName(pos, name = effective)
-            // 3 "_" on temps for better uniqueness.
-            is Temporary -> "${effective.nameHint.cleaned()}___${effective.uid}"
-            else -> {
-                actualStyle = when {
-                    name in functionContextStack.last().optionals -> NameStyle.PrettyCamel
-                    else -> style
+        val nameText = run nameText@{
+            when (effective) {
+                setterValueName -> "value"
+                is ExportedName -> return translateExportedGlobalName(pos, name = effective)
+                // 3 "_" on temps for better uniqueness.
+                is Temporary -> "${effective.nameHint.cleaned()}___${effective.uid}"
+                else -> {
+                    actualStyle = when {
+                        name in functionContextStack.last().optionals -> NameStyle.PrettyCamel
+                        else -> {
+                            // Try to claim pretty and reserve a pretty name in case it's used by connected code.
+                            // Pretty also just looks nicer.
+                            actualStyle = when (names.nameLookup.lookupDeclDescriptor(loc, name)?.node) {
+                                is TmpL.FunctionLike -> NameStyle.PrettyPascal
+                                else -> NameStyle.PrettyCamel
+                            }
+                            val pretty = effective.toStyle(actualStyle)
+                            val reserved = names.reserveName(loc, name, pretty)
+                            when {
+                                // Short-circuit with the name we've already formatted.
+                                reserved -> return@nameText pretty
+                                else -> style
+                            }
+                        }
+                    }
+                    effective.toStyle(actualStyle)
                 }
-                effective.toStyle(actualStyle)
             }
         }
         if (actualStyle != NameStyle.Ugly) {

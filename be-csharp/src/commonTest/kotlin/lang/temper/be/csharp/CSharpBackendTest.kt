@@ -391,18 +391,18 @@ class CSharpBackendTest {
             """.trimMargin(),
             csharp = """
                 |internal static C::ILoggingConsole console___0;
-                |internal static int calc__0()
+                |internal static int Calc()
                 |{
                 |    console___0.Log("Bye!");
                 |    return 123;
                 |}
-                |internal static int value__0;
+                |internal static int @value;
                 |static TestGlobal()
                 |{
                 |    console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
                 |    console___0.Log("Hi!");
-                |    value__0 = calc__0();
-                |    console___0.Log(C::Core.ConvertToString(value__0, 16));
+                |    @value = Calc();
+                |    console___0.Log(C::Core.ConvertToString(@value, 16));
                 |}
             """.trimMargin(),
         )
