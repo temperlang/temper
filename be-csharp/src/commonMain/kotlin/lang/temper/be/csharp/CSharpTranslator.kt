@@ -1510,6 +1510,8 @@ internal class CSharpTranslator(
 
     private fun translateName(pos: Position, name: ResolvedName, style: NameStyle = NameStyle.Ugly): CSharp.Expression {
         // Styling depends on a variety of matters, including context.
+        // TODO See if we want to conform more to the official guidelines:
+        // https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names
         // TODO Prepass with user configuration infrastructure.
         val effective = imports[name] ?: name
         var actualStyle = style
@@ -1525,9 +1527,13 @@ internal class CSharpTranslator(
                         else -> {
                             // Try to claim pretty and reserve a pretty name in case it's used by connected code.
                             // Pretty also just looks nicer.
-                            actualStyle = when (names.nameLookup.lookupDeclDescriptor(loc, name)?.node) {
-                                is TmpL.FunctionLike -> NameStyle.PrettyPascal
-                                else -> NameStyle.PrettyCamel
+                            //
+                            val decl = names.nameLookup.lookupDeclDescriptor(loc, name)?.node
+                            actualStyle = when (decl) {
+                                // TODO Adjust static property naming sometime? Wrap in accessors?
+                                is TmpL.FunctionLike, is TmpL.StaticProperty -> NameStyle.PrettyPascal
+                                is TmpL.Property -> NameStyle.PrettyCamel
+                                else -> style
                             }
                             val pretty = effective.toStyle(actualStyle)
                             val reserved = names.reserveName(loc, name, pretty)
