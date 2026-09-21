@@ -1527,7 +1527,6 @@ internal class CSharpTranslator(
                         else -> {
                             // Try to claim pretty and reserve a pretty name in case it's used by connected code.
                             // Pretty also just looks nicer.
-                            //
                             val decl = names.nameLookup.lookupDeclDescriptor(loc, name)?.node
                             actualStyle = when (decl) {
                                 // TODO Adjust static property naming sometime? Wrap in accessors?
