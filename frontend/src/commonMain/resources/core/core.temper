@@ -646,7 +646,7 @@ export class String extends MapKey<String> {
 
   @connected
   @operator("==")
-  public eq(other: builtins.String): builtins.Boolean { content == other }
+  public eq(other: builtins.String): builtins.Boolean;
 }
 
 /**
@@ -1418,7 +1418,7 @@ export class Boolean extends Equatable<Boolean> {
 
   @connected
   @operator("==")
-  public eq(other: builtins.Boolean): builtins.Boolean { content == other }
+  public eq(other: builtins.Boolean): builtins.Boolean;
 }
 
 /**
@@ -1530,7 +1530,7 @@ export class Int32 extends MapKey<Int32> {
 
   @connected
   @operator("==")
-  public eq(other: builtins.Int32): builtins.Boolean { content == other }
+  public eq(other: builtins.Int32): builtins.Boolean;
 }
 
 /**
@@ -1593,7 +1593,7 @@ export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
 
   @connected
   @operator("==")
-  public eq(other: builtins.Int64): builtins.Boolean { content == other }
+  public eq(other: builtins.Int64): builtins.Boolean;
 }
 
 /**
@@ -1738,7 +1738,7 @@ export class Float64 extends Equatable<Float64> {
 
   @connected
   @operator("==")
-  public eq(other: builtins.Float64): builtins.Boolean { content == other }
+  public eq(other: builtins.Float64): builtins.Boolean;
 }
 
 /**

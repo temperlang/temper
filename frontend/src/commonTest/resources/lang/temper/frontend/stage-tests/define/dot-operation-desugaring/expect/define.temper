@@ -8,18 +8,18 @@ I__0 extends AnyValue;
 I__0 = type (I__0);
 @typeDecl(C__1) @stay let C__1;
 C__1 = type (C__1);
-interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+interface(\word, \I, \concrete, false, @typeDefined(I__0) @stay fn {
     do {};
     do {}
 });
 C__1 extends I__0;
 @constructorProperty @property(\i) @visibility(\private) @stay @fromType(C__1) let i__12;
 @method(\f) @visibility(\public) @fn @stay @fromType(C__1) let f__13;
-f__13 = fn f(@impliedThis(C__1) this__2: C__1) {
-  fn__14: do {
-    getp(i__12, this__2)
-  }
-};
+f__13 = (@stay fn f(@impliedThis(C__1) this__2: C__1) {
+    fn__14: do {
+      getp(i__12, this__2)
+    }
+});
 @property(\next) @visibility(\public) @stay @fromType(C__1) let next__5;
 @method(\next) @getter @visibility(\public) @fn @stay @fromType(C__1) let nym`get.next__15`;
 nym`get.next__15` = fn nym`get.next`(@impliedThis(C__1) this__3: C__1) /* return__8 */{
@@ -31,32 +31,32 @@ nym`get.next__15` = fn nym`get.next`(@impliedThis(C__1) this__3: C__1) /* return
   }
 };
 @method(\next) @setter @visibility(\private) @fn @stay @fromType(C__1) let nym`set.next__17`;
-nym`set.next__17` = fn nym`set.next`(@impliedThis(C__1) this__4: C__1, newVal__18 /* aka newVal */) /* return__9 */: Void {
-  fn__19: do {
-    do {
-      let t#23;
-      setp(i__12, this__4, t#23 = newVal__18 - 1);
-      t#23
+nym`set.next__17` = (@stay fn nym`set.next`(@impliedThis(C__1) this__4: C__1, newVal__18 /* aka newVal */) /* return__9 */: Void {
+    fn__19: do {
+      do {
+        let t#23;
+        setp(i__12, this__4, t#23 = newVal__18 - 1);
+        t#23
+      }
     }
-  }
-};
+});
 @fn @method(\constructor) @visibility(\public) @stay @fromType(C__1) let constructor__20;
-constructor__20 = fn constructor(@impliedThis(C__1) this__6: C__1, @optional(true) i__25 /* aka i */) /* return__7 */: Void {
-  let i__21 /* aka i */;
-  i__21 = {
-    if (isNull(i__25)) {
-      0
-    } else {
-      notNull(i__25)
-    }
-  };
-  void;
-  do {
-    let t#22;
-    setp(i__12, this__6, t#22 = i__21);
-    t#22
-  };
-};
+constructor__20 = (@stay fn constructor(@impliedThis(C__1) this__6: C__1, @optional(true) i__25 /* aka i */) /* return__7 */: Void {
+    let i__21 /* aka i */;
+    i__21 = {
+      if (isNull(i__25)) {
+        0
+      } else {
+        notNull(i__25)
+      }
+    };
+    void;
+    do {
+      let t#22;
+      setp(i__12, this__6, t#22 = i__21);
+      t#22
+    };
+});
 class(\word, \C, \concrete, true, @typeDefined(C__1) fn {
     do {};
     do {};

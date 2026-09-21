@@ -36,6 +36,7 @@ import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeNullAndBubble
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
@@ -120,7 +121,7 @@ class JavaTranslator(
     )
 
     inner class ModuleScope(
-        private val names: JavaNames,
+        val names: JavaNames,
         private val programMeta: J.ProgramMeta,
         private val dependenciesBuilder: Dependencies.Builder<JavaBackend>?,
     ) {
@@ -1907,13 +1908,26 @@ class JavaTranslator(
         }
 
         private fun notNullExpr(x: TmpL.Expression): J.Expression {
-            // TODO: Should this be calling an inlinable method like the below if
-            // nonNullType corresponds to a Java reference type.
-            //     static <@Nonnull T> @Nonnull T notNull(@Nullable T x) {
-            //       return (@Nonnull T) x;
+            // Whether the Java type is boxed or not affects how operators apply to it.
+            // For example, if we have the notNull below, we might need to unbox it so
+            // the `==` operator has the numeric equality meaning.
+            //
+            //     export let f(x: Int?, y: Int?): Boolean { x == y }
+            //
+            // That might correspond to Java like the below:
+            //
+            //     public static boolean f(x: Integer?, y: Integer?) {
+            //       if (x == null) { ... }
+            //       if (y == null) { ... }
+            //       return x.intValue() == y.intValue();
             //     }
-            // Or use Object.requireNotNull?
-            return expr(x)
+            //
+            var jsExpr = expr(x)
+            val type = JavaType.fromFrontend(excludeNullAndBubble(x.type), names)
+            if (type is Primitive) {
+                jsExpr = unboxToPrimitive(jsExpr, type)
+            }
+            return jsExpr
         }
 
         private fun awaitExpr(e: TmpL.AwaitExpression): J.Expression {

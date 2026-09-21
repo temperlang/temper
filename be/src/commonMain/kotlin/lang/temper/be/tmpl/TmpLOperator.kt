@@ -45,13 +45,13 @@ sealed class TmpLOperator(
     /** `<=` applied to Ints */
     object LeInt : Infix(WellKnownTypes.booleanType2, TmpLOperatorDefinition.Le)
 
-    /** `<=` applied to Ints */
+    /** `<` applied to Ints */
     object LtInt : Infix(WellKnownTypes.booleanType2, TmpLOperatorDefinition.Lt)
 
-    /** `<=` applied to Ints */
+    /** `>=` applied to Ints */
     object GeInt : Infix(WellKnownTypes.booleanType2, TmpLOperatorDefinition.Ge)
 
-    /** `<=` applied to Ints */
+    /** `>` applied to Ints */
     object GtInt : Infix(WellKnownTypes.booleanType2, TmpLOperatorDefinition.Gt)
 
     /** `+` applied to Ints */

@@ -1,10 +1,10 @@
 let return__14;
 @fn @stay @fromType(I__0) let method__6;
-method__6 = fn method(@impliedThis(I__0) this__1: I__0) /* return__15 */{
-  fn__7: do {
-    pureVirtual()
-  }
-};
+method__6 = (@stay fn method(@impliedThis(I__0) this__1: I__0) /* return__15 */{
+    fn__7: do {
+      pureVirtual()
+    }
+});
 @typeDecl(I__0) @stay let I__0;
 I__0 = type (I__0);
 @typeDecl(C__2) @stay let C__2;

@@ -2,6 +2,7 @@ package lang.temper.be.rust
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -12,8 +13,8 @@ import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
@@ -32,6 +33,7 @@ import lang.temper.type2.withType
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PureVirtual
+import lang.temper.value.emptyValue
 import lang.temper.value.pureVirtualBuiltinName
 
 object RustSupportNetwork : SupportNetwork {
@@ -96,6 +98,58 @@ object RustSupportNetwork : SupportNetwork {
             else -> null
         }
     }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? RustSupportCode ?: return null
+        if (supportCode.baseName.nameText == "core.type StringIndexOption.compareTo()") {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                // Unlike many backends, Rust's UTF-8 lexicographic order matches
+                // USV order, so string comparison is supported here.
+                BuiltinOperatorId.CmpBoolBool,
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpStrStr,
+                -> {}
+                // f64 is PartialOrd around NaN.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                Infix(
+                    "simple${comparisonKind.name}",
+                    null,
+                    when (comparisonKind) {
+                        ComparisonKind.LessThan -> RustOperator.LessThan
+                        ComparisonKind.LessThanOrEqual -> RustOperator.LessEquals
+                        ComparisonKind.GreaterThanOrEqual -> RustOperator.GreaterEquals
+                        ComparisonKind.GreaterThan -> RustOperator.GreaterThan
+                    },
+                ),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
+    }
 }
 
 private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): SupportCode? {
@@ -130,34 +184,20 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.TimesIntInt, BuiltinOperatorId.TimesIntInt64 -> timesIntInt
         BuiltinOperatorId.TimesFltFlt -> timesFltFlt
         BuiltinOperatorId.PowFltFlt -> powFltFlt
-        BuiltinOperatorId.LtFltFlt -> ltFltFlt
         BuiltinOperatorId.LtIntInt -> ltIntInt
-        BuiltinOperatorId.LtStrStr -> ltStrStr
-        BuiltinOperatorId.LtGeneric -> ltGeneric
-        BuiltinOperatorId.LeFltFlt -> leFltFlt
         BuiltinOperatorId.LeIntInt -> leIntInt
-        BuiltinOperatorId.LeStrStr -> leStrStr
-        BuiltinOperatorId.LeGeneric -> leGeneric
-        BuiltinOperatorId.GtFltFlt -> gtFltFlt
         BuiltinOperatorId.GtIntInt -> gtIntInt
-        BuiltinOperatorId.GtStrStr -> gtStrStr
-        BuiltinOperatorId.GtGeneric -> gtGeneric
-        BuiltinOperatorId.GeFltFlt -> geFltFlt
         BuiltinOperatorId.GeIntInt -> geIntInt
-        BuiltinOperatorId.GeStrStr -> geStrStr
-        BuiltinOperatorId.GeGeneric -> geGeneric
+        BuiltinOperatorId.EqBoolBool -> eqBoolBool
         BuiltinOperatorId.EqFltFlt -> eqFltFlt
         BuiltinOperatorId.EqIntInt -> eqIntInt
+        BuiltinOperatorId.EqLongLong -> eqI64I64
         BuiltinOperatorId.EqStrStr -> eqStrStr
-        BuiltinOperatorId.EqGeneric -> eqGeneric
-        BuiltinOperatorId.NeFltFlt -> neFltFlt
-        BuiltinOperatorId.NeIntInt -> neIntInt
-        BuiltinOperatorId.NeStrStr -> neStrStr
-        BuiltinOperatorId.NeGeneric -> neGeneric
+        BuiltinOperatorId.CmpBoolBool -> cmpBoolBool
         BuiltinOperatorId.CmpFltFlt -> cmpFltFlt
-        BuiltinOperatorId.CmpIntInt -> CmpIntInt
+        BuiltinOperatorId.CmpIntInt -> cmpIntInt
+        BuiltinOperatorId.CmpLongLong -> cmpI64I64
         BuiltinOperatorId.CmpStrStr -> CmpStrStrOrdering
-        BuiltinOperatorId.CmpGeneric -> CmpGeneric
         BuiltinOperatorId.Bubble -> bubble
         BuiltinOperatorId.Panic -> panic
         BuiltinOperatorId.Print -> print
@@ -283,13 +323,9 @@ private class Float64Compare(
         returnType: Type2,
         translator: RustTranslator,
     ): Rust.Expr {
-        val cmpFn = when (operator) {
-            RustOperator.Equals, RustOperator.NotEquals -> "cmp_option"
-            else -> "cmp"
-        }
         return Rust.Call(
-            pos,
-            callee = "temper_core".toKeyId(pos.leftEdge).extendWith(listOf("float64", cmpFn)),
+            pos = pos,
+            callee = "temper_core".toKeyId(pos.leftEdge).extendWith(listOf("float64", "cmp")),
             args = arguments.map { it.expr as Rust.Expr },
         ).infix(operator, Rust.NumberLiteral(pos, 0L))
     }
@@ -410,7 +446,7 @@ private fun MutableList<Rust.Expr>.addArg(
 
 private open class Infix(
     baseName: String,
-    builtinOperatorId: BuiltinOperatorId,
+    builtinOperatorId: BuiltinOperatorId?,
     private val operator: RustOperator,
     avoidTypeWrapping: Boolean = false,
 ) : RustInlineSupportCode(baseName, builtinOperatorId, cloneEvenIfFirst = true, avoidTypeWrapping = avoidTypeWrapping) {
@@ -420,11 +456,13 @@ private open class Infix(
         returnType: Type2,
         translator: RustTranslator,
     ): Rust.Tree {
+        val left = arguments[0].expr as Rust.Expr
+        val right = arguments[1].expr as Rust.Expr
         return Rust.Operation(
             pos,
-            left = arguments[0].expr as Rust.Expr,
-            operator = Rust.Operator(pos, operator),
-            right = arguments[1].expr as Rust.Expr,
+            left = left,
+            operator = Rust.Operator(left.pos.rightEdge, operator),
+            right = right,
         )
     }
 }
@@ -679,8 +717,8 @@ private val booleanNegation =
     Prefix("BooleanNegation", BuiltinOperatorId.BooleanNegation, RustOperator.BoolComplement)
 
 /** Probably need to customize for floats and strings in the future. */
-private object CmpGeneric : MethodCall(
-    listOf("CmpGeneric", "core.type StringIndexOption.compareTo()"),
+private object StringIndexOptionCompareTo : MethodCall(
+    listOf("core.type StringIndexOption.compareTo()"),
     "cmp",
     cloneEvenIfFirst = true, // Hack around for this being typed to type awareness. Effectively treat as operator here.
     mapArg = { it.ref() },
@@ -698,7 +736,7 @@ private object CmpGeneric : MethodCall(
 
 private val cmpFltFlt = FunctionCall("CmpFltFlt", "temper_core::float64::cmp", BuiltinOperatorId.CmpFltFlt)
 
-private object CmpIntInt : RustInlineSupportCode("CmpIntInt", BuiltinOperatorId.CmpIntInt, cloneEvenIfFirst = true) {
+private class DotCmp(id: BuiltinOperatorId) : RustInlineSupportCode(id.name, id, cloneEvenIfFirst = true) {
     override fun inlineToTree(
         pos: Position,
         arguments: List<TypedArg<Rust.Tree>>,
@@ -711,6 +749,10 @@ private object CmpIntInt : RustInlineSupportCode("CmpIntInt", BuiltinOperatorId.
         return left.methodCall("cmp", listOf(right)).infix(RustOperator.As, "i32".toId(pos))
     }
 }
+
+private val cmpBoolBool = DotCmp(BuiltinOperatorId.CmpBoolBool)
+private val cmpIntInt = DotCmp(BuiltinOperatorId.CmpIntInt)
+private val cmpI64I64 = DotCmp(BuiltinOperatorId.CmpLongLong)
 
 private object CmpStrStrOrdering :
     RustInlineSupportCode("CmpStrStr", BuiltinOperatorId.CmpStrStr, cloneEvenIfFirst = true) {
@@ -774,27 +816,9 @@ object Empty : RustInlineSupportCode("core.empty()") {
 
 private val eqFltFlt = Float64Compare("EqFltFlt", BuiltinOperatorId.EqFltFlt, RustOperator.Equals)
 
-private class EqNeGeneric(
-    baseName: String,
-    builtinOperatorId: BuiltinOperatorId,
-    operator: RustOperator,
-) : Infix(baseName, builtinOperatorId, operator, avoidTypeWrapping = true) {
-    override fun translateArg(actual: TmpL.Actual, wantedType: Type2?, translator: RustTranslator): Rust.Expr? {
-        return when {
-            translator.isIdentifiable(actual.typeOrInvalid) -> {
-                val expr = translator.translateExpression(actual as TmpL.Expression, avoidClone = true)
-                // TODO Even if we keep ptr_id, call as `temper_core::AnyValueTrait::ptr_id(&*actual)`?
-                // TODO We might need such trait call style throughout translation to avoid name collisions.
-                expr.methodCall("ptr_id")
-            }
-            // Avoids type wrapping because this depends for now on types just already being PartialEq.
-            else -> null
-        }
-    }
-}
-
-private val eqGeneric = EqNeGeneric("EqGeneric", BuiltinOperatorId.EqGeneric, RustOperator.Equals)
+private val eqBoolBool = Infix("EqBoolBool", BuiltinOperatorId.EqBoolBool, RustOperator.Equals)
 private val eqIntInt = Infix("EqIntInt", BuiltinOperatorId.EqIntInt, RustOperator.Equals)
+private val eqI64I64 = Infix("EqI64I64", BuiltinOperatorId.EqLongLong, RustOperator.Equals)
 private val eqStrStr = CmpStrStr("EqStrStr", BuiltinOperatorId.EqStrStr, RustOperator.Equals)
 private val float64Expm1 = MethodCall("core.type Float64.expm1()", "exp_m1")
 private val float64Log = MethodCall("core.type Float64.log()", "ln")
@@ -824,14 +848,8 @@ private object Float64ToInt64Unsafe : Cast("core.type Float64.toInt64Unsafe()") 
     override fun buildType(pos: Position) = "i64".toId(pos)
 }
 
-private val geFltFlt = Float64Compare("GeFltFlt", BuiltinOperatorId.GeFltFlt, RustOperator.GreaterEquals)
-private val geGeneric = Infix("GeGeneric", BuiltinOperatorId.GeGeneric, RustOperator.GreaterEquals)
 private val geIntInt = Infix("GeIntInt", BuiltinOperatorId.GeIntInt, RustOperator.GreaterEquals)
-private val geStrStr = Infix("GeStrStr", BuiltinOperatorId.GeStrStr, RustOperator.GreaterEquals)
-private val gtFltFlt = Float64Compare("GtFltFlt", BuiltinOperatorId.GtFltFlt, RustOperator.GreaterThan)
-private val gtGeneric = Infix("GtGeneric", BuiltinOperatorId.GtGeneric, RustOperator.GreaterThan)
 private val gtIntInt = Infix("GtIntInt", BuiltinOperatorId.GtIntInt, RustOperator.GreaterThan)
-private val gtStrStr = Infix("GtStrStr", BuiltinOperatorId.GtStrStr, RustOperator.GreaterThan)
 private val ignore = FunctionCall("core.ignore()", "temper_core::ignore")
 
 private object IntToFloat64 : Cast("core.type Int32.toFloat64()") {
@@ -856,10 +874,7 @@ private val int64ToInt32 = FunctionCall("core.type Int64.toInt32()", "temper_cor
 internal val int64ToString = FunctionCall("core.type Int64.toString()", "temper_core::int64_to_string")
 private val isNonNull = MethodCall("IsNonNull", "is_some")
 private val isNull = MethodCall("IsNull", "is_none")
-private val leFltFlt = Float64Compare("LeFltFlt", BuiltinOperatorId.LeFltFlt, RustOperator.LessEquals)
-private val leGeneric = Infix("LeGeneric", BuiltinOperatorId.LeGeneric, RustOperator.LessEquals)
 private val leIntInt = Infix("LeIntInt", BuiltinOperatorId.LeIntInt, RustOperator.LessEquals)
-private val leStrStr = Infix("LeStrStr", BuiltinOperatorId.LeStrStr, RustOperator.LessEquals)
 
 private val listedTypes = listOf("Listed", "List", "ListBuilder")
 
@@ -923,10 +938,7 @@ internal object Listify : RustInlineSupportCode("Listify", cloneEvenIfFirst = tr
     ).wrapArc()
 }
 
-private val ltFltFlt = Float64Compare("LtFltFlt", BuiltinOperatorId.LtFltFlt, RustOperator.LessThan)
-private val ltGeneric = Infix("LtGeneric", BuiltinOperatorId.LtGeneric, RustOperator.LessThan)
 private val ltIntInt = Infix("LtIntInt", BuiltinOperatorId.LtIntInt, RustOperator.LessThan)
-private val ltStrStr = Infix("LtStrStr", BuiltinOperatorId.LtStrStr, RustOperator.LessThan)
 private val mapConstructor = FunctionCall("core.type Map.constructor()", "temper_core::Map::new")
 private val mapBuilderClear = FunctionCall("core.type MapBuilder.clear()", "temper_core::MapBuilder::clear")
 private val mapBuilderConstructor =
@@ -969,10 +981,6 @@ private val modFltFlt = FunctionCall("ModFltFlt", "temper_core::float64::rem", B
 private object ModIntInt : FunctionCall("ModIntInt", "temper_core::int_rem", BuiltinOperatorId.ModIntInt)
 private val modIntIntSafe = MethodCall("ModIntIntSafe", "wrapping_rem", BuiltinOperatorId.ModIntIntSafe)
 private object ModIntInt64 : FunctionCall("ModIntInt64", "temper_core::int64_rem", BuiltinOperatorId.ModIntInt64)
-private val neFltFlt = Float64Compare("NeFltFlt", BuiltinOperatorId.NeFltFlt, RustOperator.NotEquals)
-private val neGeneric = EqNeGeneric("NeGeneric", BuiltinOperatorId.NeGeneric, RustOperator.NotEquals)
-private val neIntInt = Infix("NeIntInt", BuiltinOperatorId.NeIntInt, RustOperator.NotEquals)
-private val neStrStr = CmpStrStr("NeStrStr", BuiltinOperatorId.NeStrStr, RustOperator.NotEquals)
 private val netSend = FunctionCall("std/net.sendRequest()", "send_request", cloneEvenIfFirst = true)
 
 internal object PairConstructor : RustInlineSupportCode(
@@ -1108,6 +1116,12 @@ private val stringBuilderToString =
 private object StringIndexNone : Constant("core.type StringIndex.none") {
     override fun value(pos: Position) = "()".toId(pos)
 }
+private object StringIndexOptionEq : MethodCall(
+    "core.type StringIndexOption.eq()",
+    "eq",
+    cloneEvenIfFirst = true, // Hack around for this being typed to type awareness. Effectively treat as operator here.
+    mapArg = { it.ref() },
+)
 
 internal object TestBail : RustInlineSupportCode("std/testing.type Test.bail()") {
     override fun inlineToTree(
@@ -1173,7 +1187,6 @@ private val unpackOkResult = MethodCall(
 )
 
 private val connectedReferences = listOf(
-    CmpGeneric,
     ConsoleLog,
     dateToday,
     denseBitVectorConstructor,
@@ -1286,6 +1299,8 @@ private val connectedReferences = listOf(
     stringBuilderClear,
     stringBuilderEnd,
     stringBuilderToString,
+    StringIndexOptionCompareTo,
+    StringIndexOptionEq,
     StringIndexNone,
     TestBail,
     valueResultConstructor,

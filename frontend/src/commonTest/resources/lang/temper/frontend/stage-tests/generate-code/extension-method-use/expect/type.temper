@@ -5,9 +5,9 @@ stringIsPalindrome__1 = (@stay fn stringIsPalindrome(s__2 /* aka s */: String) /
       i__4 = getStatic(String, \begin);
       var j__5;
       j__5 = do_get_end(s__2);
-      while (i__4 < j__5) {
+      while (do_call_compareTo(i__4, j__5) < 0) {
         j__5 = do_call_prev(s__2, j__5);
-        if (do_call_get(s__2, i__4) != do_call_get(s__2, j__5)) {
+        if (!(do_call_get(s__2, i__4) == do_call_get(s__2, j__5))) {
           return__0 = false;
           break fn__3;
         };

@@ -89,7 +89,7 @@ class CppBackendTest {
                 |        return temper::core::Int::div_wrap(x, y);
                 |      }
                 |    } catch (const temper::core::TemperBubble&) {
-                |      if (x != 0) {
+                |      if (!(x == 0)) {
                 |        {
                 |          return x;
                 |        }
@@ -411,8 +411,8 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                // A plain (rootless) struct carries its own CRTP enable_shared_from_this so
-                // borrow_this can hand out an owning shared_ptr for `this`.
+                // A plain (rootless) struct carries its own CRTP `enable_shared_from_this` so
+                // `borrow_this` can hand out an owning `shared_ptr` for `this`.
                 "struct Point : public std::enable_shared_from_this<Point>",
                 "int32_t get_x()",
                 "int32_t get_y()",

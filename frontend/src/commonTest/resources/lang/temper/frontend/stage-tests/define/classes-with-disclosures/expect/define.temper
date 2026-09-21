@@ -1,77 +1,77 @@
-@fn let f__6;
+@fn let f__11;
 ClosesOverNothing__0 extends AnyValue;
-@fn @method(\constructor) @visibility(\public) @stay @fromType(ClosesOverNothing__0) let constructor__10;
-constructor__10 = (@stay fn constructor(@impliedThis(ClosesOverNothing__0) this__11: ClosesOverNothing__0) /* return__0 */: Void {});
+@fn @method(\constructor) @visibility(\public) @stay @fromType(ClosesOverNothing__0) let constructor__14;
+constructor__14 = (@stay fn constructor(@impliedThis(ClosesOverNothing__0) this__5: ClosesOverNothing__0) /* return__6 */: Void {});
 ClosesOverX__1 extends AnyValue;
-@property(\p) @visibility(\public) @stay @fromType(ClosesOverX__1) let p__13;
-@method(\p) @getter @fn @stay @fromType(ClosesOverX__1) let nym`get.p__14`;
-nym`get.p__14` = fn nym`get.p`(@impliedThis(ClosesOverX__1) this__3: ClosesOverX__1) {
-  fn__15: do {
-    getCR(getp(cr__23, this__3), 0)
+@property(\p) @visibility(\public) @stay @fromType(ClosesOverX__1) let p__7;
+@method(\p) @getter @fn @stay @fromType(ClosesOverX__1) let nym`get.p__15`;
+nym`get.p__15` = fn nym`get.p`(@impliedThis(ClosesOverX__1) this__2: ClosesOverX__1) {
+  fn__16: do {
+    getCR(getp(cr__25, this__2), 0)
   }
 };
-@property(\cr__23) @visibility(\protected) @stay @synthetic @fromType(ClosesOverX__1) let cr__23: ClosRec;
-ClosesOverY__2 extends ClosesOverX__1;
-@property(\q) @visibility(\public) @stay @fromType(ClosesOverY__2) let q__18;
-@method(\q) @getter @visibility(\public) @fn @stay @fromType(ClosesOverY__2) let nym`get.q__19`;
-nym`get.q__19` = fn nym`get.q`(@impliedThis(ClosesOverY__2) this__4: ClosesOverY__2) {
-  fn__20: do {
-    getCR(getp(cr__24, this__4), 0)
+@property(\cr__25) @visibility(\protected) @stay @synthetic @fromType(ClosesOverX__1) let cr__25: ClosRec;
+ClosesOverY__3 extends ClosesOverX__1;
+@property(\q) @visibility(\public) @stay @fromType(ClosesOverY__3) let q__8;
+@method(\q) @getter @visibility(\public) @fn @stay @fromType(ClosesOverY__3) let nym`get.q__18`;
+nym`get.q__18` = fn nym`get.q`(@impliedThis(ClosesOverY__3) this__4: ClosesOverY__3) {
+  fn__19: do {
+    getCR(getp(cr__30, this__4), 0)
   }
 };
-@fn @method(\constructor) @visibility(\public) @stay @fromType(ClosesOverY__2) let constructor__21;
-constructor__21 = (@stay fn constructor(@impliedThis(ClosesOverY__2) this__22: ClosesOverY__2, cr__25: ClosRec, cr__26: ClosRec) /* return__1 */: Void {
-    setp(cr__27, this__22, cr__25);
-    setp(cr__24, this__22, cr__26)
+@fn @method(\constructor) @visibility(\public) @stay @fromType(ClosesOverY__3) let constructor__20;
+constructor__20 = (@stay fn constructor(@impliedThis(ClosesOverY__3) this__9: ClosesOverY__3, cr__31: ClosRec, cr__32: ClosRec) /* return__10 */: Void {
+    setp(cr__26, this__9, cr__31);
+    setp(cr__30, this__9, cr__32)
 });
-@property(\cr__27) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__2) let cr__27: ClosRec;
-@property(\cr__23) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__2) let cr__28: ClosRec;
-@method(\cr__23) @getter @visibility(\protected) @stay @synthetic @fn @fromType(ClosesOverY__2) let nym`get.cr__29`;
-nym`get.cr__29` = fn (@impliedThis(ClosesOverY__2) this__30: ClosesOverY__2) {
-  getp(cr__27, this__30)
+@property(\cr__26) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__3) let cr__26: ClosRec;
+@property(\cr__25) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__3) let cr__27: ClosRec;
+@method(\cr__25) @getter @visibility(\protected) @stay @synthetic @fn @fromType(ClosesOverY__3) let nym`get.cr__28`;
+nym`get.cr__28` = fn (@impliedThis(ClosesOverY__3) this__29: ClosesOverY__3) {
+  getp(cr__26, this__29)
 };
-@property(\cr__24) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__2) let cr__24: ClosRec;
-f__6 = fn f(x__7 /* aka x */) {
-  fn__8: do {
-    let cr#31;
-    cr#31 = makeCR(\word, x__7, \setter, fn (v#32) {
-        x__7 = v#32
-    });
-    @typeDecl(ClosesOverNothing__0) @stay let ClosesOverNothing__0;
-    ClosesOverNothing__0 = type (ClosesOverNothing__0);
-    @typeDecl(ClosesOverX__1) @stay let ClosesOverX__1;
-    ClosesOverX__1 = type (ClosesOverX__1);
-    class(\word, \ClosesOverNothing, \concrete, true, @typeDefined(ClosesOverNothing__0) fn {
-        do {};
-        do {}
-    });
-    interface(\word, \ClosesOverX, \concrete, false, @typeDefined(ClosesOverX__1) fn {
-        do {};
-        do {};
-        do {};
-        do {}
-    });
-    do (fn {
-        let cr#33;
-        cr#33 = makeCR(\word, y__16, \setter, fn (v#34) {
-            y__16 = v#34
-        });
-        @typeDecl(ClosesOverY__2) @stay let ClosesOverY__2;
-        ClosesOverY__2 = type (ClosesOverY__2);
-        let y__16;
-        y__16 = x__7 + 1;
-        class(\word, \ClosesOverY, \concrete, true, @typeDefined(ClosesOverY__2) fn {
-            do {};
-            do {};
-            do {};
-            do {};
-            do {};
-            do {};
-            do {};
-            do {}
-        });
-        new ClosesOverY__2(cr#31, cr#33)
-    });
-    new ClosesOverNothing__0();
-  }
-};
+@property(\cr__30) @visibility(\private) @stay @synthetic @fromType(ClosesOverY__3) let cr__30: ClosRec;
+f__11 = (@stay fn f(x__12 /* aka x */) {
+    fn__13: do {
+      let cr#21;
+      cr#21 = makeCR(\word, x__12, \setter, fn (v#22) {
+          x__12 = v#22
+      });
+      @typeDecl(ClosesOverNothing__0) @stay let ClosesOverNothing__0;
+      ClosesOverNothing__0 = type (ClosesOverNothing__0);
+      @typeDecl(ClosesOverX__1) @stay let ClosesOverX__1;
+      ClosesOverX__1 = type (ClosesOverX__1);
+      class(\word, \ClosesOverNothing, \concrete, true, @typeDefined(ClosesOverNothing__0) @stay fn {
+          do {};
+          do {}
+      });
+      interface(\word, \ClosesOverX, \concrete, false, @typeDefined(ClosesOverX__1) fn {
+          do {};
+          do {};
+          do {};
+          do {}
+      });
+      do (fn {
+          let cr#23;
+          cr#23 = makeCR(\word, y__17, \setter, fn (v#24) {
+              y__17 = v#24
+          });
+          @typeDecl(ClosesOverY__3) @stay let ClosesOverY__3;
+          ClosesOverY__3 = type (ClosesOverY__3);
+          let y__17;
+          y__17 = x__12 + 1;
+          class(\word, \ClosesOverY, \concrete, true, @typeDefined(ClosesOverY__3) fn {
+              do {};
+              do {};
+              do {};
+              do {};
+              do {};
+              do {};
+              do {};
+              do {}
+          });
+          new ClosesOverY__3(cr#21, cr#23)
+      });
+      new ClosesOverNothing__0();
+    }
+});

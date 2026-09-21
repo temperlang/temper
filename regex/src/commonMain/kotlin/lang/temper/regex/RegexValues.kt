@@ -81,9 +81,9 @@ private fun addCodeSetToRanges(codeSet: CodeSet, ranges: MutableList<IntRange>) 
         when (part) {
             is CodePoints -> decodeUtf16Iter(part.value).forEach { ranges.add(it..it) }
             is CodeRange -> { ranges.add(part.min..part.max) }
-            Digit -> addCodeSetToRanges(asciiDigitCodeSet, ranges)
-            Space -> addCodeSetToRanges(spaceCodeSet, ranges)
-            Word -> addCodeSetToRanges(asciiWordCodeSet, ranges)
+            DigitSpecial -> addCodeSetToRanges(asciiDigitCodeSet, ranges)
+            SpaceSpecial -> addCodeSetToRanges(spaceCodeSet, ranges)
+            WordSpecial -> addCodeSetToRanges(asciiWordCodeSet, ranges)
         }
     }
 }

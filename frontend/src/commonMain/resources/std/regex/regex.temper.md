@@ -143,19 +143,19 @@ export class CodePoints(
 A number of special match forms exist. In the data model, these are empty
 classes.
 
-- `.` - `Dot` In default mode, matches any Unicode code point except newline.
-- `^` - `Begin` in default mode matches zero-length at the beginning of a
+- `.` - `DotSpecial` In default mode, matches any Unicode code point except newline.
+- `^` - `BeginSpecial` in default mode matches zero-length at the beginning of a
   string.
-- `$` - `End` in default mode matches zero-length at the end of a string.
-- `\b` - `WordBoundary` matches zero-length at the boundary between word and
+- `$` - `EndSpecial` in default mode matches zero-length at the end of a string.
+- `\b` - `WordBoundarySpecial` matches zero-length at the boundary between word and
   non-word code points. More sophisticated Unicode compliance is TBD.
-- `\s` (negated as `\S`) - `Space` matches any horizontal space code point.
+- `\s` (negated as `\S`) - `SpaceSpecial` matches any horizontal space code point.
   Details are TBD.
-- `\w` (negated as `\W`) - `Word` matches any word code point. Details are TBD.
+- `\w` (negated as `\W`) - `WordSpecial` matches any word code point. Details are TBD.
   This is currently defined in terms of old ASCII definitions because those are
   clear. Perhaps this will stay that way, and Unicode properties like `\p{L}`
   will be used for human language needs.
-- `\X` - `GraphemeCluster` might not be supported, but [here is some discussion
+- `\X` - `GraphemeClusterSpecial` might not be supported, but [here is some discussion
   of how to implement it](
   https://github.com/rust-lang/regex/issues/54#issuecomment-661905060).
 
@@ -163,27 +163,26 @@ classes.
 
 ```
 export interface Special extends RegexNode {}
-export let Begin: Special = doPure { (): Special => class Begin extends Special {}; new Begin() };
-export let Dot: Special = doPure { (): Special => class Dot extends Special {}; new Dot() };
-export let End: Special = doPure { (): Special => class End extends Special {}; new End() };
+class BeginSpecial extends Special {}
+export let Begin: Special = doPure { (): Special => new BeginSpecial() };
+class DotSpecial extends Special {}
+export let Dot: Special = doPure { (): Special => new DotSpecial() };
+class EndSpecial extends Special {}
+export let End: Special = doPure { (): Special => new EndSpecial() };
 // TODO(tjp, regex): We can't easily support this at present across backends.
 // export let GraphemeCluster = doPure { (): Special =>
 //   class GraphemeCluster extends Special {}; new GraphemeCluster()
 // };
-export let WordBoundary: Special = doPure { (): Special =>
-  class WordBoundary extends Special {}; new WordBoundary()
-};
+class WordBoundarySpecial extends Special {}
+export let WordBoundary: Special = doPure { (): Special => new WordBoundarySpecial() };
 
 export interface SpecialSet extends CodePart & Special {}
-export let Digit: SpecialSet = doPure { (): SpecialSet =>
-  class Digit extends SpecialSet {}; new Digit()
-};
-export let Space: SpecialSet = doPure { (): SpecialSet =>
-  class Space extends SpecialSet {}; new Space()
-};
-export let Word: SpecialSet = doPure { (): SpecialSet =>
-  class Word extends SpecialSet {}; new Word()
-};
+class DigitSpecial extends SpecialSet {}
+export let Digit: SpecialSet = doPure { (): SpecialSet => new DigitSpecial() };
+class SpaceSpecial extends SpecialSet {}
+export let Space: SpecialSet = doPure { (): SpecialSet => new SpaceSpecial() };
+class WordSpecial extends SpecialSet {}
+export let Word: SpecialSet = doPure { (): SpecialSet => new WordSpecial() };
 ```
 
 </details>
@@ -463,14 +462,14 @@ class RegexFormatter {
       is Sequence -> pushSequence(regex);
       // Specials.
       // Some of these will need to be customized on future backends.
-      Begin -> out.append("^");
-      Dot -> out.append(".");
-      End -> out.append("$");
-      WordBoundary -> out.append("\\b");
+      is BeginSpecial -> out.append("^");
+      is DotSpecial -> out.append(".");
+      is EndSpecial -> out.append("$");
+      is WordBoundarySpecial -> out.append("\\b");
       // Special sets.
-      Digit -> out.append("\\d");
-      Space -> out.append("\\s");
-      Word -> out.append("\\w");
+      is DigitSpecial -> out.append("\\d");
+      is SpaceSpecial -> out.append("\\s");
+      is WordSpecial -> out.append("\\w");
       // ...
     }
   }
@@ -681,9 +680,9 @@ class RegexFormatter {
       }
       // Others below are easy for now.
       is CodeRange -> codePart.max;
-      Digit -> Codes.digit9;
-      Space -> Codes.space;
-      Word -> Codes.lowerZ;
+      is DigitSpecial -> Codes.digit9;
+      is SpaceSpecial -> Codes.space;
+      is WordSpecial -> Codes.lowerZ;
       // Actually unexpected, ever, but eh.
       else -> null;
     }

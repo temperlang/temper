@@ -172,7 +172,7 @@ class RegexMatchGenTest {
     @Test
     fun wordBoundarySimple() = withRandomForTest { random ->
         val wordAndNon = CodeRange(' '.code, 'z'.code)
-        val pattern = Seq(listOf(wordAndNon, WordBoundary, wordAndNon))
+        val pattern = Seq(listOf(wordAndNon, WordBoundarySpecial, wordAndNon))
         // Can fail because we don't choose "or" branches carefully.
         // Maybe not worth fixing separate from a more general regex engine.
         // val pattern = Seq(listOf(wordAndNon, WordBoundary, Or(listOf(wordAndNon, Word))))

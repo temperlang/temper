@@ -1,0 +1,24 @@
+export let a(x: Int32, y: Int32, z: Int32?, w: Int32?): List<Boolean> {
+  [
+    x == y,
+    x != y,
+    x <  y,
+    x <= y,
+    x >= y,
+    x >  y,
+    (x <=> y) != 0,
+
+    // Explicit nulls
+    x == null,
+    null != y,
+
+    // Nullable types
+    x == z,
+    x != z,
+    z == x,
+    z != x,
+    z == w,
+    z != w,
+    w == null,
+  ]
+}

@@ -140,12 +140,12 @@ def make_bubble_exception() -> Exception:
 
 
 def bubble() -> Any:
-    "Raises an exception for Temper bubbling."
+    """Raises an exception for Temper bubbling."""
     raise make_bubble_exception()
 
 
 def float_cmp(left: float, right: float) -> int:
-    "Three way compares floats, caring about nan and sign of zeroes."
+    """Three-way compares floats, caring about nan and sign of zeroes."""
     if isnan(left):
         return 0 if isnan(right) else 1
     if isnan(right):
@@ -156,90 +156,16 @@ def float_cmp(left: float, right: float) -> int:
     return (left > right) - (left < right)
 
 
+def bool_cmp(left: bool, right: bool) -> int:
+    """Three-way compares booleans."""
+    return left - right
+
+
 def float_eq(left: float, right: float) -> bool:
-    "Checks if two floats are exactly equal, caring about nan and sign of zeros."
+    """Checks if two floats are exactly equal, caring about nan and sign of zeros."""
     return (left == right and copysign(1.0, left) == copysign(1.0, right)) or (
         isnan(left) and isnan(right)
     )
-
-
-def float_not_eq(left: float, right: float) -> bool:
-    "Checks if two floats not are exactly equal, caring about nan and sign of zeros."
-    return (left != right or copysign(1.0, left) != copysign(1.0, right)) and not (
-        isnan(left) and isnan(right)
-    )
-
-
-def float_lt_eq(left: float, right: float) -> bool:
-    "Checks if left <= right, caring about sign of zeros."
-    return float_cmp(left, right) <= 0
-
-
-def float_lt(left: float, right: float) -> bool:
-    "Checks if left < right, caring about sign of zeros."
-    return float_cmp(left, right) < 0
-
-
-def float_gt_eq(left: float, right: float) -> bool:
-    "Checks if left >= right, caring about sign of zeros."
-    return float_cmp(left, right) >= 0
-
-
-def float_gt(left: float, right: float) -> bool:
-    "Checks if left > right, caring about sign of zeros."
-    return float_cmp(left, right) > 0
-
-
-def generic_cmp(left: C, right: C) -> int:
-    "Three way compares objects, caring about the sign of zeroes of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_cmp(left, right)
-    return (left > right) - (left < right)
-
-
-def generic_eq(left: T, right: T) -> bool:
-    "Checks if two objects are exactly equal, caring about the sign of zeros of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_eq(left, right)
-    return left == right
-
-
-def generic_not_eq(left: T, right: T) -> bool:
-    """
-    Checks if two objects are not exactly equal, caring about the sign of zeros of
-    floats.
-    """
-    if isinstance(left, float) and isinstance(right, float):
-        return float_not_eq(left, right)
-    return left != right
-
-
-def generic_lt_eq(left: C, right: C) -> bool:
-    "Checks if two left <= right, caring about the sign of zeros of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_lt_eq(left, right)
-    return left <= right
-
-
-def generic_lt(left: C, right: C) -> bool:
-    "Checks if left < right, caring about the sign of zeros of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_lt(left, right)
-    return left < right
-
-
-def generic_gt_eq(left: C, right: C) -> bool:
-    "Checks if two left >= right, caring about the sign of zeros of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_gt_eq(left, right)
-    return left >= right
-
-
-def generic_gt(left: C, right: C) -> bool:
-    "Checks if two left > right, caring about the sign of zeros of floats."
-    if isinstance(left, float) and isinstance(right, float):
-        return float_gt(left, right)
-    return left > right
 
 
 def arith_dub_div(dividend: float, divisor: float) -> float:
@@ -263,6 +189,12 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     if (dividend ^ divisor) < 0 and q * divisor != dividend:
         q += 1
     return dividend - divisor * q
+
+
+def int64_cmp(left: bool, right: bool) -> int:
+    """Three-way compares booleans."""
+    return left - right
+
 
 def arith_bit_shl32(n: int, shift: int) -> int:
     """

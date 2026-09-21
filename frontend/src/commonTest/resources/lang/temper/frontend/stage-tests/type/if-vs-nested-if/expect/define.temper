@@ -1,10 +1,10 @@
 @fn let `test//`.useIf, @fn `test//`.useIfElse;
 `test//`.useIf = fn useIf(i__5 /* aka i */: Int32) {
   fn__6: do {
-    if(i__5 < 0, @stay fn {
+    if(i__5 <=> 0 < 0, @stay fn {
         -1
       }, \else_if, fn (f#1) {
-        f#1(i__5 > 0, @stay fn {
+        f#1(i__5 <=> 0 > 0, @stay fn {
             1
           }, \else, fn (f#0) {
             f#0(@stay fn {
@@ -16,11 +16,11 @@
 };
 `test//`.useIfElse = fn useIfElse(i__7 /* aka i */: Int32) {
   fn__8: do {
-    if(i__7 < 0, @stay fn {
+    if(i__7 <=> 0 < 0, @stay fn {
         -1
       }, \else, fn (f#3) {
         f#3(fn {
-            if(i__7 > 0, @stay fn {
+            if(i__7 <=> 0 > 0, @stay fn {
                 1
               }, \else, fn (f#2) {
                 f#2(@stay fn {

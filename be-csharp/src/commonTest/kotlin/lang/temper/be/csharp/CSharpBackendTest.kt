@@ -1101,7 +1101,14 @@ class CSharpBackendTest {
                         |    }
                         |    bool f__0(int ? x__3)
                         |    {
-                        |        return x__3 == 0;
+                        |        if (x__3 == null)
+                        |        {
+                        |            return false;
+                        |        }
+                        |        else
+                        |        {
+                        |            return x__3.Value == 0;
+                        |        }
                         |    }
                         |    public Boo()
                         |    {
@@ -1448,7 +1455,6 @@ class CSharpBackendTest {
             |            content: ```
             |              using U = Microsoft.VisualStudio.TestTools.UnitTesting;
             |              using S = System;
-            |              using C = TemperLang.Core;
             |              using T = TemperLang.Std.Testing;
             |              namespace MyTestLibrary.Test
             |              {
@@ -1467,7 +1473,7 @@ class CSharpBackendTest {
             |                          {
             |                              string fn__0()
             |                              {
-            |                                  return "expected 1 == (" + C::Core.ConvertToString(1) + ") not (" + C::Core.ConvertToString(1) + ")";
+            |                                  return "expected true";
             |                              }
             |                              test___0.Assert(true, (S::Func<string>) fn__0);
             |                          }
