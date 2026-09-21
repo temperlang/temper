@@ -404,26 +404,11 @@
                             "Value",
                             "C__0\u003cT__1\u003e: Type"
                         ],
-                        {
-                            "type": "Value",
-                            "loc": "test/test.temper",
-                            "left": 11,
-                            "right": 11,
-                            "content": {
-                                "stateVector": "stay",
-                                "typeTag": "Symbol",
-                                "abbrev": "\\stay: Symbol"
-                            },
-                            "typeInferences": null
-                        },
-                        {
-                            "type": "Stay",
-                            "loc": "test/test.temper",
-                            "left": 11,
-                            "right": 11,
-                            "content": "kotlin.Unit",
-                            "typeInferences": null
-                        },
+                        [
+                            "Value",
+                            "\\stay: Symbol"
+                        ],
+                        [ "Stay" ],
                         [
                             "Block",
                             [
