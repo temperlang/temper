@@ -20,7 +20,7 @@ IncludeLocal ::= `CppToks.hashInclude` & path%LiteralExpr & "\n";
 Define ::= `CppToks.hashDefine` & name%SingleName & value%Expr? & "\n";
 Undef ::= `CppToks.hashUndef` & name%SingleName & "\n";
 Pragma ::= `CppToks.hashPragma` & text%Raw & "\n";
-IncludeGuard ::= `CppToks.hashIf` & "!" & "defined" & "(" & name%SingleName & ")" & "\n"
+IncludeGuard ::= `CppToks.hashIf` & `CppToks.prefixBang` & "defined" & "(" & name%SingleName & ")" & "\n"
     & `CppToks.hashDefine` & name & "\n" & program%Program & `CppToks.hashEndif`;
 
 // C Spec allows specifically for "constant-expression" on `#if`, but meh.

@@ -35,7 +35,8 @@ internal class CppFormattingHints : FormattingHints {
 
         if (preceding.type == OutputTokenType.Word && following == CppToks.leftAngle) {
             // #include <
-            return true
+            // template<
+            return preceding.text != "template"
         }
         return super.spaceBetween(preceding, following)
     }

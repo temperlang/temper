@@ -3458,12 +3458,12 @@ object Cpp {
             ),
         )
 
-    /** ``CppToks.hashIf` ! defined ( {{0}} ) \n `CppToks.hashDefine` {{0}} \n {{1}} `CppToks.hashEndif`` */
+    /** ``CppToks.hashIf` `CppToks.prefixBang` defined ( {{0}} ) \n `CppToks.hashDefine` {{0}} \n {{1}} `CppToks.hashEndif`` */
     private val sharedCodeFormattingTemplate17 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(CppToks.hashIf),
-                CodeFormattingTemplate.LiteralToken("!", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.prefixBang),
                 CodeFormattingTemplate.LiteralToken("defined", OutputTokenType.Word),
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),

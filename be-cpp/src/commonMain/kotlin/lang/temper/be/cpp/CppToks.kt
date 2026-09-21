@@ -33,6 +33,9 @@ data object CppToks {
     /** Infix colon is in the middle, like `class Sub : Super`. */
     val infixColon = OutputToken(":", OutputTokenType.Punctuation, TokenAssociation.Infix)
 
+    /** Prefix bang attaches to the right, like `!predicate`. */
+    val prefixBang = OutToks.prefixBang
+
     /** Colons are specially recognized as tight separators like `.`: no spaces in `a.b.c` nor in `A::B::C`. */
     val colons = OutputToken("::", OutputTokenType.Punctuation, TokenAssociation.Infix)
 
