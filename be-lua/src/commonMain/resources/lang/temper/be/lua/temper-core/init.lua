@@ -1015,122 +1015,78 @@ function temper.float_eq(a, b)
     return a == b
 end
 
-function temper.float_ne(a, b)
-    if (a ~= a) ~= (b ~= b) then
-        return true
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) ~= 0
-    end
-    return a ~= b
-end
-
-function temper.float_lt(a, b)
-    if b ~= b then
-        return a == a
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) < 0
-    end
-    return a < b
-end
-
-function temper.float_le(a, b)
-    if b ~= b then
-        return true
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) <= 0
-    end
-    return a <= b
-end
-
-function temper.float_gt(a, b)
+function temper.float_cmp(a, b)
     if a ~= a then
-        return b == b
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) > 0
-    end
-    return a > b
-end
-
-function temper.float_ge(a, b)
-    if a ~= a then
-        return true
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) >= 0
-    end
-    return a >= b
-end
-
-function temper.generic_cmp(a, b)
-    if temper.generic_lt(a, b) then
+        if b ~= b then
+            return 0
+        else
+            return 1
+        end
+    elseif b ~= b then
         return -1
-    elseif temper.generic_gt(a, b) then
-        return 1
+    end
+    if a == b then
+        if a == 0 then
+            return zero_cmp(a, b)
+        else
+            return 0
+        end
+    end
+    if a < b then
+        return -1
     else
-        return 0
+        return 1
     end
 end
 
-function temper.generic_eq(a, b)
-    if a ~= a and b ~= b then
-        return true
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) == 0
-    end
+function temper.int_eq(a, b)
     return a == b
 end
 
-function temper.generic_ne(a, b)
-    if a ~= a and b ~= b then
-        return false
-    end
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) ~= 0
-    end
-    return a ~= b
-end
-
-function temper.generic_lt(a, b)
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) < 0
-    end
+function temper.int_lt(a, b)
     return a < b
 end
 
-function temper.generic_le(a, b)
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) <= 0
-    end
+function temper.int_le(a, b)
     return a <= b
 end
 
-function temper.generic_gt(a, b)
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) > 0
-    end
+function temper.int_gt(a, b)
     return a > b
 end
 
-function temper.generic_ge(a, b)
-    if a == 0 and b == 0 then
-        return zero_cmp(a, b) >= 0
-    end
+function temper.int_ge(a, b)
     return a >= b
 end
 
-function temper.float_cmp(a, b)
-    if temper.float_lt(a, b) then
+function temper.int64_eq(a, b)
+    return a == b
+end
+
+function temper.int64_cmp(a, b)
+    if a < b then
         return -1
-    elseif temper.float_gt(a, b) then
-        return 1
-    else
+        end
+    if a == b then
         return 0
     end
+    return 1
+end
+
+function temper.bool_eq(a, b)
+    return a == b
+end
+
+function temper.bool_cmp(a, b)
+    local ai = 0;
+    local bi = 0;
+    if a then
+        ai = 1
+    end
+    if b then
+        bi = 1
+    end
+    return ai - bi
 end
 
 function temper.int_cmp(a, b)
@@ -1155,26 +1111,6 @@ end
 
 function temper.str_eq(a, b)
     return a == b
-end
-
-function temper.str_ne(a, b)
-    return a ~= b
-end
-
-function temper.str_lt(a, b)
-    return a < b
-end
-
-function temper.str_le(a, b)
-    return a <= b
-end
-
-function temper.str_gt(a, b)
-    return a > b
-end
-
-function temper.str_ge(a, b)
-    return a >= b
 end
 
 function temper.unm(a)

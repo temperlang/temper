@@ -75,21 +75,6 @@ namespace TemperLang.Core
             return Math.Max(min, Math.Min(i, max));
         }
 
-        // TODO Make this generic instead of object?
-        public static int Compare(object a, object b)
-        {
-            // Approximately based on the Python implementation.
-            if (a is double && b is double)
-            {
-                return Float64.Compare((double)a, (double)b);
-            }
-            else
-            {
-                // Just let it crash on bad casts.
-                return Math.Sign(((IComparable)a).CompareTo((IComparable)b));
-            }
-        }
-
         public static int Div(this int a, int b)
         {
             if (b == 0)

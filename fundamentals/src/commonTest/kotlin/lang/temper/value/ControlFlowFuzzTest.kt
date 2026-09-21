@@ -275,7 +275,7 @@ private class Randomizer(val rng: Random) {
             val counter = countersInScope[rng.nextInt(countersInScope.size)]
             withLoopVar(counter)
             val limit = rng.nextInt(0, 10)
-            Call(BuiltinFuns.lessEqualsFn) {
+            Call(BuiltinFuns.leIntFn) {
                 Rn(counter)
                 V(Value(limit, TInt))
             }

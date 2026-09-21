@@ -2,6 +2,7 @@ package lang.temper.be.java
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -14,6 +15,7 @@ import lang.temper.be.tmpl.SeparatelyCompiledSupportCode
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.GetStaticOp
 import lang.temper.builtin.RuntimeTypeOperation
@@ -27,6 +29,7 @@ import lang.temper.name.DashedIdentifier
 import lang.temper.name.ParsedName
 import lang.temper.name.name
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeNullAndBubble
 import lang.temper.type2.Descriptor
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -34,6 +37,7 @@ import lang.temper.type2.withType
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PureVirtual
+import lang.temper.value.emptyValue
 import lang.temper.be.java.Java as J
 import lang.temper.be.java.JavaSimpleType as Jst
 
@@ -70,31 +74,17 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
             BuiltinOperatorId.CmpIntInt -> integerCmp
             BuiltinOperatorId.CmpFltFlt -> doubleCmp
             BuiltinOperatorId.CmpStrStr -> comparableCmp
-            BuiltinOperatorId.CmpGeneric -> genericCmp
+            BuiltinOperatorId.CmpLongLong -> int64Cmp
+            BuiltinOperatorId.CmpBoolBool -> boolCmp
             BuiltinOperatorId.GtIntInt -> operatorGt
-            BuiltinOperatorId.GtFltFlt -> doubleGt
-            BuiltinOperatorId.GtStrStr -> comparableGt
-            BuiltinOperatorId.GtGeneric -> genericGt
             BuiltinOperatorId.LtIntInt -> operatorLt
-            BuiltinOperatorId.LtFltFlt -> doubleLt
-            BuiltinOperatorId.LtStrStr -> comparableLt
-            BuiltinOperatorId.LtGeneric -> genericLt
             BuiltinOperatorId.GeIntInt -> operatorGe
-            BuiltinOperatorId.GeFltFlt -> doubleGe
-            BuiltinOperatorId.GeStrStr -> comparableGe
-            BuiltinOperatorId.GeGeneric -> genericGe
             BuiltinOperatorId.LeIntInt -> operatorLe
-            BuiltinOperatorId.LeFltFlt -> doubleLe
-            BuiltinOperatorId.LeStrStr -> comparableLe
-            BuiltinOperatorId.LeGeneric -> genericLe
             BuiltinOperatorId.EqIntInt -> operatorEq
             BuiltinOperatorId.EqFltFlt -> doubleEq
             BuiltinOperatorId.EqStrStr -> comparableEq
-            BuiltinOperatorId.EqGeneric -> genericEq
-            BuiltinOperatorId.NeIntInt -> operatorNe
-            BuiltinOperatorId.NeFltFlt -> doubleNe
-            BuiltinOperatorId.NeStrStr -> comparableNe
-            BuiltinOperatorId.NeGeneric -> genericNe
+            BuiltinOperatorId.EqBoolBool -> operatorEq
+            BuiltinOperatorId.EqLongLong -> operatorEq
             BuiltinOperatorId.PlusIntInt, BuiltinOperatorId.PlusIntInt64 -> plusIntInt
             BuiltinOperatorId.PlusFltFlt -> plusDubDub
             BuiltinOperatorId.MinusIntInt, BuiltinOperatorId.MinusIntInt64 -> minusIntInt
@@ -189,6 +179,50 @@ class JavaSupportNetwork private constructor(private val javaLang: JavaLang) : S
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? JavaSupportCode ?: return null
+        if (supportCode.baseName.nameText == "core.type StringIndexOption.compareTo()") {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpBoolBool,
+                -> {}
+                // String and Float builtins require adjustment.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                javaLang.inlineSupport(
+                    "simple${comparisonKind.name}",
+                    arity = 2,
+                    factory = operatorRelational(comparisonKind, calleePos = fn.pos),
+                ),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
+    }
+
     companion object {
         private val supportNetworks = JavaLang.entries.associateWith { JavaSupportNetwork(it) }
 
@@ -211,11 +245,25 @@ sealed class JavaSupportCode(
         tokenSink.name(baseName, inOperatorPosition = false)
 }
 
-typealias ExprFactory = JavaLang.(pos: Position, args: List<J.Expression>) -> J.Expression
+typealias ExprFactory = JavaLang.(
+    pos: Position,
+    args: List<J.Expression>,
+    translator: JavaTranslator.ModuleScope,
+) -> J.Expression
 typealias ExprFactoryTyped =
-    JavaLang.(pos: Position, args: List<TypedArg<J.Expression>>, type: Type2) -> J.Expression
+    JavaLang.(
+        pos: Position,
+        args: List<TypedArg<J.Expression>>,
+        type: Type2,
+        translator: JavaTranslator.ModuleScope,
+    ) -> J.Expression
 typealias TreeFactoryTyped =
-    JavaLang.(pos: Position, args: List<TypedArg<J.Expression>>, type: Type2) -> J.Tree
+    JavaLang.(
+        pos: Position,
+        args: List<TypedArg<J.Expression>>,
+        type: Type2,
+        translator: JavaTranslator.ModuleScope,
+    ) -> J.Tree
 
 open class JavaInlineSupportCode(
     lang: JavaLang,
@@ -253,6 +301,7 @@ open class JavaInlineSupportCode(
                     TypedArg(it.expr as J.Expression, it.type)
                 },
                 returnType,
+                translator,
             )
         }
 }
@@ -261,7 +310,12 @@ sealed class JavaSeparate(
     lang: JavaLang,
     val qualifiedName: QualifiedName,
     opId: BuiltinOperatorId?,
-) : JavaSupportCode(lang = lang, baseName = ParsedName(qualifiedName.fullyQualified), builtinOperatorId = opId),
+    connectedKey: String? = null,
+) : JavaSupportCode(
+    lang = lang,
+    baseName = ParsedName(connectedKey ?: qualifiedName.fullyQualified),
+    builtinOperatorId = opId,
+),
     SeparatelyCompiledSupportCode {
     override val source: DashedIdentifier get() = DashedIdentifier.temperCoreLibraryIdentifier
     override val stableKey: ParsedName get() = baseName
@@ -272,11 +326,24 @@ class JavaSeparateStatic(
     lang: JavaLang,
     qualifiedName: QualifiedName,
     opId: BuiltinOperatorId? = null,
-) : JavaSeparate(lang, qualifiedName, opId) {
+    connectedKey: String? = null,
+) : JavaSeparate(lang, qualifiedName, opId, connectedKey) {
     override fun toString(): String = "JavaSeparateStatic($baseName)"
 }
 
-typealias StaticArgBuilder = (ModuleInfo, Position) -> List<J.Argument>
+internal fun JavaSupportCtx.inlineSupport(
+    arity: Int,
+    builtinOperatorId: BuiltinOperatorId? = null,
+    needsSelf: Boolean = false,
+    factory: ExprFactoryTyped,
+) = JavaInlineSupportCode(
+    baseName = baseName,
+    arity = arity,
+    lang = lang,
+    builtinOperatorId = builtinOperatorId,
+    needsSelf = needsSelf,
+    factory = factory,
+)
 
 fun JavaLang.inlineSupport(
     baseName: String,
@@ -317,8 +384,23 @@ fun JavaLang.inlineSupport(
     lang = this,
     builtinOperatorId = builtinOperatorId,
     needsSelf = needsSelf,
-    factory = { p, a, _ -> factory(p, a.map { it.expr }) },
+    factory = { p, a, _, t -> factory(p, a.map { it.expr }, t) },
 )
+
+internal fun JavaSupportCtx.inlineSupport(
+    arity: Int,
+    builtinOperatorId: BuiltinOperatorId? = null,
+    needsSelf: Boolean = false,
+    factory: ExprFactory,
+) = JavaInlineSupportCode(
+    baseName = baseName,
+    arity = arity,
+    lang = lang,
+    builtinOperatorId = builtinOperatorId,
+    needsSelf = needsSelf,
+    factory = { p, a, _, t -> factory(p, a.map { it.expr }, t) },
+)
+
 fun JavaLang.inlineSupport(
     builtinOperatorId: BuiltinOperatorId,
     arity: Int,
@@ -330,118 +412,71 @@ fun JavaLang.inlineSupport(
     lang = this,
     builtinOperatorId = builtinOperatorId,
     needsSelf = needsSelf,
-    factory = { p, a, _ -> factory(p, a.map { it.expr }) },
+    factory = { p, a, _, t -> factory(p, a.map { it.expr }, t) },
 )
 
 fun JavaLang.separateCode(
     methodName: QualifiedName,
     builtinOperatorId: BuiltinOperatorId? = null,
+    connectedKey: String? = null,
 ) = JavaSeparateStatic(
     lang = this,
     qualifiedName = methodName,
     opId = builtinOperatorId,
+    connectedKey = connectedKey,
 )
 
-internal fun strongestType(args: List<TypedArg<*>>, resultType: Type2): Jst {
-    var out = simpleType(resultType)
-    for (arg in args) {
-        out = out.strongest(simpleType(arg.type))
-    }
-    return out
-}
+internal fun JavaSupportCtx.separateCode(
+    methodName: QualifiedName,
+    builtinOperatorId: BuiltinOperatorId? = null,
+) = JavaSeparateStatic(
+    lang = lang,
+    qualifiedName = methodName,
+    opId = builtinOperatorId,
+    connectedKey = connectedKey,
+)
 
 private fun Iterable<TypedArg<J.Expression>>.unpackArgs() = map { it.expr.asArgument() }
 private fun Iterable<TypedArg<J.Expression>>.unpackExpr() = map { it.expr }
 
 // Relational operations
-val JavaLang.genericCmp by receiver {
-    inlineSupport(BuiltinOperatorId.CmpGeneric, 2) { pos, args, resultType ->
-        val name: QualifiedName = when (strongestType(args, resultType)) {
-            Jst.JstBool -> javaLangBooleanCompare
-            Jst.JstDouble -> javaLangDoubleCompare
-            Jst.JstInt -> javaLangIntegerCompare
-            else -> temperGenericCompare
-        }
-        name.staticMethod(args.unpackArgs(), pos)
-    }
+val JavaLang.integerCmp by receiver {
+    separateCode(javaLangIntegerCompare, BuiltinOperatorId.CmpIntInt)
 }
-val JavaLang.integerCmp by receiver { separateCode(javaLangIntegerCompare) }
-val JavaLang.doubleCmp by receiver { separateCode(javaLangDoubleCompare) }
+val JavaLang.doubleCmp by receiver {
+    separateCode(javaLangDoubleCompare, BuiltinOperatorId.CmpFltFlt)
+}
+val JavaLang.int64Cmp by receiver {
+    separateCode(javaLangLongCompare, BuiltinOperatorId.CmpLongLong)
+}
+val JavaLang.boolCmp by receiver {
+    separateCode(javaLangBooleanCompare, BuiltinOperatorId.CmpBoolBool)
+}
 val JavaLang.comparableCmp by receiver {
-    inlineSupport("comparableCmp", 2) { pos, args ->
+    inlineSupport("comparableCmp", 2) { pos, args, _ ->
         args[0].method("compareTo", args[1], pos = pos)
     }
 }
 
-private fun genericRelational(
-    op: JavaOperator,
-): ExprFactoryTyped =
-    { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "$op", "Unexpected void in argument")
-            Jst.JstObject -> op.infix(
-                temperGenericCompare.staticMethod(
-                    args[0].expr,
-                    args[1].expr,
-                    pos = pos,
-                ),
-                J.IntegerLiteral(pos, 0),
-                pos = pos,
-            )
-            Jst.JstBool -> op.infix(
-                javaLangBooleanCompare.staticMethod(
-                    args[0].expr,
-                    args[1].expr,
-                    pos = pos,
-                ),
-                J.IntegerLiteral(pos, 0),
-                pos = pos,
-            )
-            Jst.JstDouble -> doubleRelational(op, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong -> operatorRelational(op)(pos, args.unpackExpr())
-        }
-    }
-val JavaLang.genericGt by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.GreaterThan))
-}
-val JavaLang.genericGe by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.GreaterEquals))
-}
-val JavaLang.genericLt by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.LessThan))
-}
-val JavaLang.genericLe by receiver {
-    inlineSupport(BuiltinOperatorId.GtGeneric, 2, factory = genericRelational(JavaOperator.LessEquals))
-}
-val JavaLang.genericEq by receiver {
-    inlineSupport(BuiltinOperatorId.EqGeneric, 2) { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "genericEq", "unexpected void in argument")
-            Jst.JstObject -> javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos)
-            Jst.JstDouble -> doubleRelational(JavaOperator.Equals, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong, Jst.JstBool -> operatorRelational(JavaOperator.Equals)(pos, args.unpackExpr())
-        }
-    }
-}
-val JavaLang.genericNe by receiver {
-    inlineSupport(BuiltinOperatorId.NeGeneric, 2) { pos, args, resultType ->
-        when (strongestType(args, resultType)) {
-            Jst.JstVoid -> garbageExpr(pos, "genericNe", "unexpected void in argument")
-            Jst.JstObject -> JavaOperator.BoolComplement.prefix(
-                javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos),
-            )
-            Jst.JstDouble -> doubleRelational(JavaOperator.NotEquals, pos, args.unpackExpr())
-            Jst.JstInt, Jst.JstLong, Jst.JstBool ->
-                operatorRelational(JavaOperator.NotEquals)(pos, args.unpackExpr())
-        }
-    }
-}
+private fun operatorRelational(
+    kind: ComparisonKind,
+    calleePos: Position? = null,
+) = operatorRelational(
+    when (kind) {
+        ComparisonKind.LessThan -> JavaOperator.LessThan
+        ComparisonKind.LessThanOrEqual -> JavaOperator.LessEquals
+        ComparisonKind.GreaterThanOrEqual -> JavaOperator.GreaterEquals
+        ComparisonKind.GreaterThan -> JavaOperator.GreaterThan
+    },
+    calleePos = calleePos,
+)
 
 private fun operatorRelational(
     op: JavaOperator,
+    calleePos: Position? = null,
 ): ExprFactory =
-    { pos, args ->
-        op.infix(args[0], args[1], pos = pos)
+    { pos, args, _ ->
+        op.infix(args[0], args[1], pos = pos, calleePos = calleePos)
     }
 val JavaLang.operatorGt by receiver {
     inlineSupport("operatorGt", 2, factory = operatorRelational(JavaOperator.GreaterThan))
@@ -456,24 +491,44 @@ val JavaLang.operatorLe by receiver {
     inlineSupport("operatorLe", 2, factory = operatorRelational(JavaOperator.LessEquals))
 }
 
-private fun operatorEquality(pos: Position, args: List<TypedArg<J.Expression>>): J.Expression {
-    val null0 = args[0].isNullable
-    val null1 = args[1].isNullable
-    return when {
-        !null0 && !null1 -> JavaOperator.Equals.infix(args[0].expr, args[1].expr, pos = pos)
-        null0 && null1 -> javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos)
-        null0 -> temperBoxedEq.staticMethod(args.unpackArgs(), pos = pos)
-        else -> temperBoxedEqRev.staticMethod(args.unpackArgs(), pos = pos)
+private fun operatorEquality(pos: Position, args: List<TypedArg<J.Expression>>, names: JavaNames): J.Expression {
+    // JLS 15.21.1 Numerical Equality Operators == and !=
+    // says:
+    // > f the operands of an equality operator are both of numeric type, or one
+    // > is of numeric type and the other is convertible (§5.1.8) to numeric type,
+    // > binary numeric promotion is performed on the operands (§5.6.2).
+    //
+    // §5.1.8 is the section on "Unboxing conversion."
+
+    // That means that the first two `==`s below does numeric comparison,
+    // but the last does not.
+    //
+    //      Integer a = new Integer(123);
+    //      Integer b = new Integer(123);
+    //
+    //      a == 123;  // integer equality
+    //      123 == b;  // integer equality
+    //      a == b;    // reference equality
+
+    val (leftArg, rightArg) = args
+    val ref0 = leftArg.isReferenceType(names)
+    val ref1 = rightArg.isReferenceType(names)
+    val left = leftArg.expr
+    var right = rightArg.expr
+    if (ref0 && ref1) {
+        val primitiveType = JavaType.fromFrontend(excludeNullAndBubble(rightArg.type), names)
+        if (primitiveType is Primitive) {
+            right = unboxToPrimitive(right, primitiveType)
+        } else {
+            // Fallback to Objects.equals instead.
+            return javaUtilObjectsEquals.staticMethod(left, right, pos = pos)
+        }
     }
+    return JavaOperator.Equals.infix(left, right, pos = pos)
 }
 val JavaLang.operatorEq by receiver {
-    inlineSupport("operatorEq", 2) { pos, args, _ ->
-        operatorEquality(pos, args)
-    }
-}
-val JavaLang.operatorNe by receiver {
-    inlineSupport("operatorNe", 2) { pos, args, _ ->
-        simplifiedComplement(operatorEquality(pos, args))
+    inlineSupport("operatorEq", 2) { pos, args, _, t ->
+        operatorEquality(pos, args, t.names)
     }
 }
 
@@ -493,65 +548,15 @@ private fun doubleRelational(
         ),
     )
 }
-val JavaLang.doubleGt by receiver {
-    inlineSupport("doubleGt", 2) { pos, args ->
-        doubleRelational(JavaOperator.GreaterThan, pos, args)
-    }
-}
-val JavaLang.doubleGe by receiver {
-    inlineSupport("doubleGe", 2) { pos, args ->
-        doubleRelational(JavaOperator.GreaterEquals, pos, args)
-    }
-}
-val JavaLang.doubleLt by receiver {
-    inlineSupport("doubleLt", 2) { pos, args ->
-        doubleRelational(JavaOperator.LessThan, pos, args)
-    }
-}
-val JavaLang.doubleLe by receiver {
-    inlineSupport("doubleLe", 2) { pos, args ->
-        doubleRelational(JavaOperator.LessEquals, pos, args)
-    }
-}
 private fun doubleEquality(pos: Position, args: List<TypedArg<J.Expression>>): J.Expression {
-    val null0 = args[0].isNullable
-    val null1 = args[1].isNullable
-    return when {
-        !null0 && !null1 -> doubleRelational(JavaOperator.Equals, pos, args.unpackExpr())
-        null0 && null1 -> javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos)
-        null0 -> temperBoxedEq.staticMethod(args.unpackArgs(), pos = pos)
-        else -> temperBoxedEqRev.staticMethod(args.unpackArgs(), pos = pos)
-    }
+    return doubleRelational(JavaOperator.Equals, pos, args.unpackExpr())
 }
 val JavaLang.doubleEq by receiver {
-    inlineSupport("doubleEq", 2) { pos, args, _ ->
+    inlineSupport("doubleEq", 2) { pos, args, _, _ ->
         doubleEquality(pos, args)
     }
 }
-val JavaLang.doubleNe by receiver {
-    inlineSupport("doubleNe", 2) { pos, args, _ ->
-        simplifiedComplement(doubleEquality(pos, args))
-    }
-}
 
-private fun comparableRelational(
-    op: JavaOperator,
-): ExprFactory =
-    { pos, args ->
-        op.infix(args[0].method("compareTo", args[1], pos = pos), J.IntegerLiteral(pos, 0))
-    }
-val JavaLang.comparableGt by receiver {
-    inlineSupport("comparableGt", 2, factory = comparableRelational(JavaOperator.GreaterThan))
-}
-val JavaLang.comparableGe by receiver {
-    inlineSupport("comparableGe", 2, factory = comparableRelational(JavaOperator.GreaterEquals))
-}
-val JavaLang.comparableLt by receiver {
-    inlineSupport("comparableLt", 2, factory = comparableRelational(JavaOperator.LessThan))
-}
-val JavaLang.comparableLe by receiver {
-    inlineSupport("comparableLe", 2, factory = comparableRelational(JavaOperator.LessEquals))
-}
 private fun comparableEquality(pos: Position, args: List<TypedArg<J.Expression>>): J.Expression =
     if (!args[0].isNullable) {
         args[0].expr.method("equals", args[1].expr, pos = pos)
@@ -559,23 +564,19 @@ private fun comparableEquality(pos: Position, args: List<TypedArg<J.Expression>>
         javaUtilObjectsEquals.staticMethod(args.unpackArgs(), pos = pos)
     }
 val JavaLang.comparableEq by receiver {
-    inlineSupport("comparableEq", 2) { pos, args, _ ->
+    inlineSupport("comparableEq", 2) { pos, args, _, _ ->
         comparableEquality(pos, args)
-    }
-}
-val JavaLang.comparableNe by receiver {
-    inlineSupport("comparableNe", 2) { pos, args, _ ->
-        simplifiedComplement(comparableEquality(pos, args))
     }
 }
 
 // Miscellany
 
 /** Just be yourself. */
-val JavaLang.identity by receiver { inlineSupport("identity", 1) { _, args -> args[0] } }
+internal val JavaLang.identity by receiver { inlineSupport("identity", 1) { _, args, _ -> args[0] } }
+internal val JavaSupportCtx.identity by receiver { lang.identity }
 
-val JavaLang.isNull by receiver {
-    inlineSupport("isNull", 1, BuiltinOperatorId.IsNull) { pos, args ->
+internal val JavaLang.isNull by receiver {
+    inlineSupport("isNull", 1, BuiltinOperatorId.IsNull) { pos, args, _ ->
         J.InfixExpr(
             pos,
             args[0],
@@ -599,261 +600,269 @@ val JavaLang.safeAdaptGeneratorFn by receiver { separateCode(temperSafeAdaptGene
 
 // Typed arithmetic
 val JavaLang.booleanNegation by receiver {
-    inlineSupport(BuiltinOperatorId.BooleanNegation, 1) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BooleanNegation, 1) { pos, args, _ ->
         simplifiedComplement(args[0], pos = pos)
     }
 }
 val JavaLang.plusIntInt by receiver {
-    inlineSupport(BuiltinOperatorId.PlusIntInt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.PlusIntInt, 2) { pos, args, _ ->
         JavaOperator.Addition.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.plusDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.PlusFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.PlusFltFlt, 2) { pos, args, _ ->
         JavaOperator.Addition.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.minusIntInt by receiver {
-    inlineSupport(BuiltinOperatorId.MinusIntInt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.MinusIntInt, 2) { pos, args, _ ->
         JavaOperator.Subtraction.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.minusDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.MinusFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.MinusFltFlt, 2) { pos, args, _ ->
         JavaOperator.Subtraction.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.minusInt by receiver {
-    inlineSupport(BuiltinOperatorId.MinusInt, 1) { pos, args ->
+    inlineSupport(BuiltinOperatorId.MinusInt, 1) { pos, args, _ ->
         JavaOperator.Minus.prefix(args[0], pos = pos)
     }
 }
 val JavaLang.minusDub by receiver {
-    inlineSupport(BuiltinOperatorId.MinusFlt, 1) { pos, args ->
+    inlineSupport(BuiltinOperatorId.MinusFlt, 1) { pos, args, _ ->
         JavaOperator.Minus.prefix(args[0], pos = pos)
     }
 }
 val JavaLang.timesIntInt by receiver {
-    inlineSupport(BuiltinOperatorId.TimesIntInt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.TimesIntInt, 2) { pos, args, _ ->
         JavaOperator.Multiplication.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.timesDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.TimesFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.TimesFltFlt, 2) { pos, args, _ ->
         JavaOperator.Multiplication.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.powDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.PowFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.PowFltFlt, 2) { pos, args, _ ->
         javaMathPow.staticMethod(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.divIntInt by receiver { separateCode(temperDivIntInt, BuiltinOperatorId.DivIntInt) }
 val JavaLang.divIntIntSafe by receiver {
-    inlineSupport(BuiltinOperatorId.DivIntIntSafe, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.DivIntIntSafe, 2) { pos, args, _ ->
         JavaOperator.Division.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.divDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.DivFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.DivFltFlt, 2) { pos, args, _ ->
         JavaOperator.Division.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.modIntInt by receiver { separateCode(temperModIntInt, BuiltinOperatorId.ModIntInt) }
 val JavaLang.modIntIntSafe by receiver {
-    inlineSupport(BuiltinOperatorId.ModIntIntSafe, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.ModIntIntSafe, 2) { pos, args, _ ->
         JavaOperator.Remainder.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.modDubDub by receiver {
-    inlineSupport(BuiltinOperatorId.ModFltFlt, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.ModFltFlt, 2) { pos, args, _ ->
         JavaOperator.Remainder.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseAnd by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseAnd32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseAnd32, 2) { pos, args, _ ->
         JavaOperator.And.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseOr by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseOr32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseOr32, 2) { pos, args, _ ->
         JavaOperator.InclusiveOr.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseXor by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseXor32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseXor32, 2) { pos, args, _ ->
         JavaOperator.ExclusiveOr.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseNegation by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseNegation32, 1) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseNegation32, 1) { pos, args, _ ->
         JavaOperator.BitwiseComplement.prefix(args[0], pos = pos)
     }
 }
 val JavaLang.bitwiseShl by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseShl32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseShl32, 2) { pos, args, _ ->
         JavaOperator.LeftShift.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseShr by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseShr32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseShr32, 2) { pos, args, _ ->
         JavaOperator.RightShift.infix(args[0], args[1], pos = pos)
     }
 }
 val JavaLang.bitwiseUShr by receiver {
-    inlineSupport(BuiltinOperatorId.BitwiseShrUnsigned32, 2) { pos, args ->
+    inlineSupport(BuiltinOperatorId.BitwiseShrUnsigned32, 2) { pos, args, _ ->
         JavaOperator.LogicalRightShift.infix(args[0], args[1], pos = pos)
     }
 }
-val JavaLang.booleanToString by receiver {
-    inlineSupport("core.type Boolean.toString()", 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.booleanToString by receiver {
+    inlineSupport(1, needsSelf = true) { pos, args, _ ->
         javaLangBooleanToString.staticMethod(listOf(args[0].asArgument()), pos = pos)
     }
 }
-val JavaLang.intToFloat64 by receiver {
-    inlineSupport("core.type Int32.toFloat64()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.intToFloat64 by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaDouble.cast(args[0], pos)
     }
 }
-val JavaLang.intToInt64 by receiver {
-    inlineSupport("core.type Int32.toInt64()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.intToInt64 by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaLong.cast(args[0], pos)
     }
 }
-val JavaLang.intToString by receiver {
-    inlineSupport("core.type Int32.toString()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.intToString by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         javaLangIntegerToString.staticMethod(args.map(J.Expression::asArgument), pos = pos)
     }
 }
-val JavaLang.int64ToFloat64 by receiver { separateCode(temperInt64ToFloat64) }
-val JavaLang.int64ToFloat64Unsafe by receiver {
-    inlineSupport("core.type Int64.toFloat64Unsafe()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.int64ToFloat64 by receiver { separateCode(temperInt64ToFloat64) }
+internal val JavaSupportCtx.int64ToFloat64Unsafe by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaDouble.cast(args[0], pos)
     }
 }
-val JavaLang.int64ToInt32 by receiver { separateCode(temperInt64ToInt) }
-val JavaLang.int64ToInt32Unsafe by receiver {
-    inlineSupport("core.type Int64.toInt32Unsafe()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.int64ToInt32 by receiver { separateCode(temperInt64ToInt) }
+internal val JavaSupportCtx.int64ToInt32Unsafe by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaInt.cast(args[0], pos)
     }
 }
-val JavaLang.int64ToString by receiver {
-    inlineSupport("core.type Int64.toString()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.int64ToString by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         javaLangLongToString.staticMethod(args.map(J.Expression::asArgument), pos = pos)
     }
 }
-val JavaLang.float64E by receiver {
-    inlineSupport("core.type Float64.e", 0) { pos, _ -> javaMathE.toNameExpr(pos) }
+internal val JavaSupportCtx.float64E by receiver {
+    inlineSupport(0) { pos, _, _ -> javaMathE.toNameExpr(pos) }
 }
-val JavaLang.float64Pi by receiver {
-    inlineSupport("core.type Float64.pi", 0) { pos, _ -> javaMathPi.toNameExpr(pos) }
+internal val JavaSupportCtx.float64Pi by receiver {
+    inlineSupport(0) { pos, _, _ -> javaMathPi.toNameExpr(pos) }
 }
-val JavaLang.float64Abs by receiver {
-    inlineSupport("core.type Float64.abs()", 1) { pos, args -> javaMathAbs.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Abs by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathAbs.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Acos by receiver {
-    inlineSupport("core.type Float64.acos()", 1) { pos, args -> javaMathAcos.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Acos by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathAcos.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Asin by receiver {
-    inlineSupport("core.type Float64.asin()", 1) { pos, args -> javaMathAsin.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Asin by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathAsin.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Atan by receiver {
-    inlineSupport("core.type Float64.atan()", 1) { pos, args -> javaMathAtan.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Atan by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathAtan.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Atan2 by receiver {
-    inlineSupport("core.type Float64.atan2()", 2) { pos, args ->
+internal val JavaSupportCtx.float64Atan2 by receiver {
+    inlineSupport(2) { pos, args, _ ->
         javaMathAtan2.staticMethod(args[0], args[1], pos = pos)
     }
 }
-val JavaLang.float64Ceil by receiver {
-    inlineSupport("core.type Float64.ceil()", 1) { pos, args -> javaMathCeil.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Ceil by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathCeil.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Cos by receiver {
-    inlineSupport("core.type Float64.cos()", 1) { pos, args -> javaMathCos.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Cos by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathCos.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Cosh by receiver {
-    inlineSupport("core.type Float64.cosh()", 1) { pos, args -> javaMathCosh.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Cosh by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathCosh.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Exp by receiver {
-    inlineSupport("core.type Float64.exp()", 1) { pos, args -> javaMathExp.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Exp by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathExp.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Expm1 by receiver {
-    inlineSupport("core.type Float64.expm1()", 1) { pos, args -> javaMathExpm1.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Expm1 by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathExpm1.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Floor by receiver {
-    inlineSupport("core.type Float64.floor()", 1) { pos, args -> javaMathFloor.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Floor by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathFloor.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Log by receiver {
-    inlineSupport("core.type Float64.log()", 1) { pos, args -> javaMathLog.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Log by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathLog.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Log10 by receiver {
-    inlineSupport("core.type Float64.log10()", 1) { pos, args -> javaMathLog10.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Log10 by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathLog10.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Log1p by receiver {
-    inlineSupport("core.type Float64.log1p()", 1) { pos, args -> javaMathLog1p.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Log1p by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathLog1p.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Max by receiver {
-    inlineSupport("core.type Float64.max()", 2) { pos, args -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.float64Max by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
 }
-val JavaLang.float64Min by receiver {
-    inlineSupport("core.type Float64.min()", 2) { pos, args -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.float64Min by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
 }
-val JavaLang.float64Near by receiver { separateCode(temperFloat64Near) }
-val JavaLang.float64Round by receiver {
-    inlineSupport("core.type Float64.round()", 1) { pos, args -> javaMathRound.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Near by receiver { separateCode(temperFloat64Near) }
+internal val JavaSupportCtx.float64Round by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathRound.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Sign by receiver {
-    inlineSupport("core.type Float64.sign()", 1) { pos, args -> javaMathSignum.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Sign by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathSignum.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Sin by receiver {
-    inlineSupport("core.type Float64.sin()", 1) { pos, args -> javaMathSin.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Sin by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathSin.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Sinh by receiver {
-    inlineSupport("core.type Float64.sinh()", 1) { pos, args -> javaMathSinh.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Sinh by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathSinh.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Sqrt by receiver {
-    inlineSupport("core.type Float64.sqrt()", 1) { pos, args -> javaMathSqrt.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Sqrt by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathSqrt.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Tan by receiver {
-    inlineSupport("core.type Float64.tan()", 1) { pos, args -> javaMathTan.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Tan by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathTan.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64Tanh by receiver {
-    inlineSupport("core.type Float64.tanh()", 1) { pos, args -> javaMathTanh.staticMethod(args[0], pos = pos) }
+internal val JavaSupportCtx.float64Tanh by receiver {
+    inlineSupport(1) { pos, args, _ -> javaMathTanh.staticMethod(args[0], pos = pos) }
 }
-val JavaLang.float64ToInt by receiver { separateCode(temperFloat64ToInt) }
-val JavaLang.float64ToIntUnsafe by receiver {
-    inlineSupport("core.type Float64.toInt32Unsafe()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.float64ToInt by receiver { separateCode(temperFloat64ToInt) }
+internal val JavaSupportCtx.float64ToIntUnsafe by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaInt.cast(args[0], pos)
     }
 }
-val JavaLang.float64ToInt64 by receiver { separateCode(temperFloat64ToInt64) }
-val JavaLang.float64ToInt64Unsafe by receiver {
-    inlineSupport("core.type Float64.toInt64Unsafe()", -1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.float64ToInt64 by receiver { separateCode(temperFloat64ToInt64) }
+internal val JavaSupportCtx.float64ToInt64Unsafe by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
         Primitive.JavaLong.cast(args[0], pos)
     }
 }
-val JavaLang.float64ToString by receiver { separateCode(temperFloat64ToString) }
-val JavaLang.genericIsEmpty by receiver {
-    inlineSupport("*::isEmpty", 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.float64ToString by receiver { separateCode(temperFloat64ToString) }
+internal val JavaSupportCtx.genericIsEmpty by receiver {
+    lang.genericIsEmpty
+}
+internal val JavaLang.genericIsEmpty by receiver {
+    inlineSupport("*::isEmpty", 1, needsSelf = true) { pos, args, _ ->
         args[0].method("isEmpty", pos = pos)
     }
 }
-val JavaLang.intMax by receiver {
-    inlineSupport("core.type Int32.max()", 2) { pos, args -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.intMax by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
 }
-val JavaLang.intMin by receiver {
-    inlineSupport("core.type Int32.min()", 2) { pos, args -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.intMin by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
 }
-val JavaLang.int64Max by receiver {
-    inlineSupport("core.type Int64.max()", 2) { pos, args -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.intSignum by receiver {
+    inlineSupport(-1, needsSelf = true) { pos, args, _ ->
+        javaLangIntegerSignum.staticMethod(args[0], pos = pos)
+    }
 }
-val JavaLang.int64Min by receiver {
-    inlineSupport("core.type Int64.min()", 2) { pos, args -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
+internal val JavaSupportCtx.int64Max by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMax.staticMethod(args[0], args[1], pos = pos) }
+}
+internal val JavaSupportCtx.int64Min by receiver {
+    inlineSupport(2) { pos, args, _ -> javaMathMin.staticMethod(args[0], args[1], pos = pos) }
 }
 
 // String operations
 val JavaLang.strCatExpr by receiver {
-    inlineSupport("strcat", -1, BuiltinOperatorId.StrCat) { pos, args ->
+    inlineSupport("strcat", -1, BuiltinOperatorId.StrCat) { pos, args, _ ->
         when (args.size) {
             0 -> J.StringLiteral(pos, "")
             else -> args.subListToEnd(1).fold(args[0]) {
@@ -863,95 +872,80 @@ val JavaLang.strCatExpr by receiver {
         }
     }
 }
-val JavaLang.stringFromCodePoint by receiver { separateCode(temperStringFromCodePoint) }
-val JavaLang.stringFromCodePoints by receiver { separateCode(temperStringFromCodePoints) }
-val JavaLang.stringSplit by receiver { separateCode(temperStringSplit) }
-val JavaLang.stringToFloat64 by receiver { separateCode(temperStringToFloat64) }
-val JavaLang.stringToInt by receiver { separateCode(temperStringToInt) }
-val JavaLang.stringToInt64 by receiver { separateCode(temperStringToInt64) }
-val JavaLang.stringEnd by receiver {
-    inlineSupport("core.type String.get end()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringFromCodePoint by receiver { separateCode(temperStringFromCodePoint) }
+internal val JavaSupportCtx.stringFromCodePoints by receiver { separateCode(temperStringFromCodePoints) }
+internal val JavaSupportCtx.stringSplit by receiver { separateCode(temperStringSplit) }
+internal val JavaSupportCtx.stringToFloat64 by receiver { separateCode(temperStringToFloat64) }
+internal val JavaSupportCtx.stringToInt by receiver { separateCode(temperStringToInt) }
+internal val JavaSupportCtx.stringToInt64 by receiver { separateCode(temperStringToInt64) }
+internal val JavaSupportCtx.stringEnd by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("length", pos = pos)
     }
 }
-val JavaLang.stringBegin by receiver {
-    inlineSupport("core.type String.begin", 0) { pos, _ ->
+internal val JavaSupportCtx.stringBegin by receiver {
+    inlineSupport(0) { pos, _, _ ->
         J.IntegerLiteral(pos, 0)
     }
 }
-val JavaLang.stringIndexNone by receiver {
-    inlineSupport("core.type StringIndex.none", 0) { pos, _ ->
+internal val JavaSupportCtx.stringIndexNone by receiver {
+    inlineSupport(0) { pos, _, _ ->
         J.IntegerLiteral(pos, -1)
     }
 }
-val JavaLang.stringGet by receiver {
-    inlineSupport("core.type String.get()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringGet by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("codePointAt", args[1], pos = pos)
     }
 }
-val JavaLang.stringCountBetween by receiver { separateCode(temperStringCountBetween) }
-val JavaLang.stringForEach by receiver { separateCode(temperStringForEach) }
-val JavaLang.stringHasAtLeast by receiver { separateCode(temperStringHasAtLeast) }
-val JavaLang.stringHasIndex by receiver { separateCode(temperStringHasIndex) }
-val JavaLang.stringNext by receiver { separateCode(temperStringNext) }
-val JavaLang.stringPrev by receiver { separateCode(temperStringPrev) }
-val JavaLang.stringStep by receiver { separateCode(temperStringStep) }
-val JavaLang.stringSlice by receiver { separateCode(temperStringSlice) }
-val JavaLang.stringBuilderConstructor by receiver {
-    inlineSupport("core.type StringBuilder.constructor()", arity = -1) { pos, _ ->
+internal val JavaSupportCtx.stringCountBetween by receiver { separateCode(temperStringCountBetween) }
+internal val JavaSupportCtx.stringForEach by receiver { separateCode(temperStringForEach) }
+internal val JavaSupportCtx.stringHasAtLeast by receiver { separateCode(temperStringHasAtLeast) }
+internal val JavaSupportCtx.stringHasIndex by receiver { separateCode(temperStringHasIndex) }
+internal val JavaSupportCtx.stringNext by receiver { separateCode(temperStringNext) }
+internal val JavaSupportCtx.stringPrev by receiver { separateCode(temperStringPrev) }
+internal val JavaSupportCtx.stringStep by receiver { separateCode(temperStringStep) }
+internal val JavaSupportCtx.stringSlice by receiver { separateCode(temperStringSlice) }
+internal val JavaSupportCtx.stringBuilderConstructor by receiver {
+    inlineSupport(arity = -1) { pos, _, _ ->
         J.InstanceCreationExpr(pos, type = javaLangStringBuilder.toClassType(pos), args = emptyList())
     }
 }
-val JavaLang.stringBuilderAppend by receiver {
-    inlineSupport("core.type StringBuilder.append()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringBuilderAppend by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("append", args[1], pos = pos)
     }
 }
-val JavaLang.stringBuilderAppendBetween by receiver {
+internal val JavaSupportCtx.stringBuilderAppendBetween by receiver {
     separateCode(temperStringBuilderAppendBetween)
 }
-val JavaLang.stringBuilderAppendCodePoint by receiver {
+internal val JavaSupportCtx.stringBuilderAppendCodePoint by receiver {
     separateCode(temperStringBuilderAppendCodePoint)
 }
-val JavaLang.stringBuilderClear by receiver {
-    inlineSupport("core.type StringBuilder.clear()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringBuilderClear by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("setLength", J.IntegerLiteral(pos.rightEdge, 0), pos = pos)
     }
 }
-val JavaLang.stringBuilderEnd by receiver {
-    inlineSupport("core.type StringBuilder.get end()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringBuilderEnd by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("length", pos = pos)
     }
 }
-val JavaLang.stringBuilderToString by receiver {
-    inlineSupport("core.type StringBuilder.toString()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.stringBuilderToString by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("toString", pos = pos)
     }
 }
-val JavaLang.stringIndexOptionCompareTo by receiver {
+internal val JavaSupportCtx.stringIndexOptionCompareTo by receiver {
     separateCode(javaLangIntegerCompare)
 }
 private fun JavaLang.comparison(baseName: String, operator: JavaOperator): JavaInlineSupportCode =
-    inlineSupport(baseName, arity = 2, needsSelf = true) { pos, (a, b) ->
+    inlineSupport(baseName, arity = 2, needsSelf = true) { pos, (a, b), _ ->
         J.InfixExpr(pos, a, J.Operator(pos.leftEdge, operator), b)
     }
-val JavaLang.stringIndexOptionCompareToEq by receiver {
-    comparison("core.type StringIndexOption.compareTo()::eq", JavaOperator.Equals)
-}
-val JavaLang.stringIndexOptionCompareToGe by receiver {
-    comparison("core.type StringIndexOption.compareTo()::ge", JavaOperator.GreaterEquals)
-}
-val JavaLang.stringIndexOptionCompareToGt by receiver {
-    comparison("core.type StringIndexOption.compareTo()::gt", JavaOperator.GreaterThan)
-}
-val JavaLang.stringIndexOptionCompareToLe by receiver {
-    comparison("core.type StringIndexOption.compareTo()::le", JavaOperator.LessEquals)
-}
-val JavaLang.stringIndexOptionCompareToLt by receiver {
-    comparison("core.type StringIndexOption.compareTo()::lt", JavaOperator.LessThan)
-}
-val JavaLang.stringIndexOptionCompareToNe by receiver {
-    comparison("core.type StringIndexOption.compareTo()::ne", JavaOperator.NotEquals)
+internal val JavaSupportCtx.stringIndexOptionCompareToEq by receiver {
+    lang.comparison(baseName, JavaOperator.Equals)
 }
 val JavaLang.requireNoStringIndex by receiver {
     separateCode(temperRequireNoStringIndex)
@@ -961,59 +955,59 @@ val JavaLang.requireStringIndex by receiver {
 }
 
 // Regex support
-val JavaLang.regexFormat by receiver { separateCode(temperRegexFormat) }
-val JavaLang.regexCompiledFormatted by receiver { separateCode(temperRegexCompiledFormatted) }
-val JavaLang.regexCompiledFind by receiver { separateCode(temperRegexCompiledFind) }
-val JavaLang.regexCompiledFound by receiver { separateCode(temperRegexCompiledFound) }
-val JavaLang.regexCompiledReplace by receiver { separateCode(temperRegexCompiledReplace) }
-val JavaLang.regexCompiledSplit by receiver { separateCode(temperRegexCompiledSplit) }
-val JavaLang.regexFormatterPushCodeTo by receiver { separateCode(temperRegexFormatterPushCodeTo) }
+internal val JavaSupportCtx.regexFormat by receiver { separateCode(temperRegexFormat) }
+internal val JavaSupportCtx.regexCompiledFormatted by receiver { separateCode(temperRegexCompiledFormatted) }
+internal val JavaSupportCtx.regexCompiledFind by receiver { separateCode(temperRegexCompiledFind) }
+internal val JavaSupportCtx.regexCompiledFound by receiver { separateCode(temperRegexCompiledFound) }
+internal val JavaSupportCtx.regexCompiledReplace by receiver { separateCode(temperRegexCompiledReplace) }
+internal val JavaSupportCtx.regexCompiledSplit by receiver { separateCode(temperRegexCompiledSplit) }
+internal val JavaSupportCtx.regexFormatterPushCodeTo by receiver { separateCode(temperRegexFormatterPushCodeTo) }
 
 // Temporal support
-val JavaLang.dateConstructor by receiver {
-    inlineSupport("std/temporal.type Date.constructor()", arity = 3) { pos, args ->
+internal val JavaSupportCtx.dateConstructor by receiver {
+    inlineSupport(arity = 3) { pos, args, _ ->
         // docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html#of-int-int-int-
         javaTimeLocalDateOf.staticMethod(args[0], args[1], args[2], pos = pos)
     }
 }
-val JavaLang.dateToString by receiver {
-    inlineSupport("std/temporal.type Date.toString()", arity = 1) { pos, args ->
+internal val JavaSupportCtx.dateToString by receiver {
+    inlineSupport(arity = 1) { pos, args, _ ->
         args[0].method("toString", pos = pos)
     }
 }
-val JavaLang.dateGetYear by receiver {
-    inlineSupport("std/temporal.type Date.year", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.dateGetYear by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         // LocalDate.getYear returns a proleptic year.  2 BC and before are negative.
         args[0].method("getYear", pos = pos)
     }
 }
-val JavaLang.dateGetMonth by receiver {
-    inlineSupport("std/temporal.type Date.month", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.dateGetMonth by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         // LocalDate.getMonth returns an instance of the Month enumeration
         // .getMonthValue returns an int.
         args[0].method("getMonthValue", pos = pos)
     }
 }
-val JavaLang.dateGetDay by receiver {
-    inlineSupport("std/temporal.type Date.day", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.dateGetDay by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("getDayOfMonth", pos = pos)
     }
 }
 
-val JavaLang.dateGetDayOfWeek by receiver {
-    inlineSupport("std/temporal.type Date.get dayOfWeek()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.dateGetDayOfWeek by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("getDayOfWeek", pos = pos)
             .method("getValue", pos = pos.rightEdge)
     }
 }
-val JavaLang.dateFromIsoString by receiver {
-    inlineSupport("std/temporal.type Date.fromIsoString()", arity = 1) { pos, args ->
+internal val JavaSupportCtx.dateFromIsoString by receiver {
+    inlineSupport(arity = 1) { pos, args, _ ->
         javaTimeLocalDateParse.staticMethod(args[0], pos = pos)
     }
 }
 
-val JavaLang.dateToday by receiver {
-    inlineSupport("std/temporal.type Date.today()", arity = 0, needsSelf = false) { pos, _ ->
+internal val JavaSupportCtx.dateToday by receiver {
+    inlineSupport(arity = 0, needsSelf = false) { pos, _, _ ->
         // java.time.ZoneId.ofOffset("UTC", java.time.ZoneOffset.UTC)
         val rightEdge = pos.rightEdge
         javaTimeLocalDateNow.staticMethod(
@@ -1027,8 +1021,8 @@ val JavaLang.dateToday by receiver {
     }
 }
 
-val JavaLang.dateYearsBetween by receiver {
-    inlineSupport("std/temporal.type Date.yearsBetween()", arity = 2, needsSelf = false) { pos, args ->
+internal val JavaSupportCtx.dateYearsBetween by receiver {
+    inlineSupport(arity = 2, needsSelf = false) { pos, args, _ ->
         J.CastExpr(
             // ChronoUnit.between returns a long because you might be asking about nanoseconds.
             // Here, we're asking about years which fit in 31b.
@@ -1045,8 +1039,8 @@ val JavaLang.dateYearsBetween by receiver {
 }
 
 // Promise support
-val JavaLang.promiseBuilderBreakPromise by receiver {
-    inlineSupport("core.type PromiseBuilder.breakPromise()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.promiseBuilderBreakPromise by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method(
             pos = pos,
             methodName = "completeExceptionally",
@@ -1056,13 +1050,13 @@ val JavaLang.promiseBuilderBreakPromise by receiver {
         )
     }
 }
-val JavaLang.promiseBuilderComplete by receiver {
-    inlineSupport("core.type PromiseBuilder.complete()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.promiseBuilderComplete by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("complete", args[1], pos = pos)
     }
 }
-val JavaLang.promiseBuilderGetPromise by receiver {
-    inlineSupport("core.type PromiseBuilder.get promise()", arity = 1, needsSelf = true) { _, args ->
+internal val JavaSupportCtx.promiseBuilderGetPromise by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { _, args, _ ->
         // PromiseBuilder and Promise both connect to CompletableFuture, so
         // `myPromiseBuilder.getPromise()` is just `myPromiseBuilder`.
         args[0]
@@ -1070,15 +1064,15 @@ val JavaLang.promiseBuilderGetPromise by receiver {
 }
 
 // Testing support
-val JavaLang.bail by receiver {
-    inlineSupport("std/testing.type Test.bail()", arity = 1) { pos, args ->
+internal val JavaSupportCtx.bail by receiver {
+    inlineSupport(arity = 1) { pos, args, _ ->
         temperThrowAssertionError.staticMethod(args[0].method("messagesCombined"), pos = pos)
     }
 }
 
 val JavaLang.printFunction by receiver { separateCode(temperPrint, BuiltinOperatorId.Print) }
-val JavaLang.getConsole by receiver {
-    object : JavaInlineSupportCode(this, "core.getConsole()", arity = -1) {
+internal val JavaSupportCtx.getConsole by receiver {
+    object : JavaInlineSupportCode(lang, baseName, arity = -1) {
         override fun inlineToTree(
             pos: Position,
             arguments: List<TypedArg<J.Tree>>,
@@ -1097,34 +1091,34 @@ val JavaLang.getConsole by receiver {
         }
     }
 }
-val JavaLang.doNothing by receiver { separateCode(temperDoNothing) }
+internal val JavaSupportCtx.doNothing by receiver { separateCode(temperDoNothing) }
 
-val JavaLang.empty by receiver {
-    inlineSupport("core.empty()", arity = 0) { pos, _ ->
+internal val JavaSupportCtx.empty by receiver {
+    inlineSupport(arity = 0) { pos, _, _ ->
         javaUtilOptionalEmpty.staticMethod(emptyList(), pos)
     }
 }
 
 // Dense bit vectors
-val JavaLang.denseBitVectorConstructor by receiver {
-    inlineSupport("core.type DenseBitVector.constructor()", arity = -1) { pos, args ->
+internal val JavaSupportCtx.denseBitVectorConstructor by receiver {
+    inlineSupport(arity = -1) { pos, args, _ ->
         J.InstanceCreationExpr(pos, type = javaUtilBitSet.toClassType(pos), args = args.map(J.Expression::asArgument))
     }
 }
-val JavaLang.denseBitVectorGet by receiver {
-    inlineSupport("core.type DenseBitVector.get()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.denseBitVectorGet by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("get", args[1], pos = pos)
     }
 }
-val JavaLang.denseBitVectorSet by receiver {
-    inlineSupport("core.type DenseBitVector.set()", arity = 3, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.denseBitVectorSet by receiver {
+    inlineSupport(arity = 3, needsSelf = true) { pos, args, _ ->
         args[0].method("set", args[1], args[2], pos = pos)
     }
 }
 
 // Deques
-val JavaLang.dequeConstructor by receiver {
-    inlineSupport("core.type Deque.constructor()", arity = -1) { pos, args, resultType ->
+internal val JavaSupportCtx.dequeConstructor by receiver {
+    inlineSupport(arity = -1) { pos, args, resultType, _ ->
         val implementation = if (resultType.hasNullableTypeActual) javaUtilLinkedList else javaUtilArrayDeque
         J.InstanceCreationExpr(
             pos,
@@ -1133,18 +1127,18 @@ val JavaLang.dequeConstructor by receiver {
         )
     }
 }
-val JavaLang.dequeAdd by receiver {
-    inlineSupport("core.type Deque.add()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.dequeAdd by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("addLast", args[1], pos = pos)
     }
 }
-val JavaLang.dequeRemoveFirst by receiver { separateCode(temperDequeRemoveFirst) }
+internal val JavaSupportCtx.dequeRemoveFirst by receiver { separateCode(temperDequeRemoveFirst) }
 
 // Listed, List, ListBuilder
 val JavaLang.listify: JavaSupportCode by receiver {
     if (atLeastJdk(JAVA9)) {
         // The Java immutable collections API, unfortunately, does not allow null elements.
-        inlineSupport("listify", arity = -1) { pos, args, resultType ->
+        inlineSupport("listify", arity = -1) { pos, args, resultType, _ ->
             val implementation = if (resultType.hasNullableTypeActual) temperListOf else javaUtilListOf
             implementation.staticMethod(args.unpackArgs(), pos)
         }
@@ -1154,21 +1148,21 @@ val JavaLang.listify: JavaSupportCode by receiver {
 }
 
 // Generator support
-val JavaLang.generatorNext by receiver {
-    inlineSupport("core.type Generator.next()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.generatorNext by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("get", pos = pos)
     }
 }
 
-val JavaLang.doneResult by receiver {
+internal val JavaSupportCtx.doneResult by receiver {
     separateCode(temperGeneratorDoneResultGet)
 }
 
 // Async support
-val JavaLang.runAsync by receiver { separateCode(temperRunAsync) }
+internal val JavaLang.runAsync by receiver { separateCode(temperRunAsync) }
 
 // std/net support
-val JavaLang.netCoreStdNetSend by receiver { separateCode(temperNetCoreStdNetSend) }
+internal val JavaSupportCtx.netCoreStdNetSend by receiver { separateCode(temperNetCoreStdNetSend) }
 
 /** Get the input and output types of a simple lambda. */
 private fun functionSimpleArgumentTypes(descriptor: Descriptor, inputIndex: Int = 0): Pair<Jst, Jst> {
@@ -1192,8 +1186,8 @@ private fun functionSimpleArgumentTypes(descriptor: Descriptor, inputIndex: Int 
     return input to output
 }
 
-val JavaLang.listFilter by receiver {
-    inlineSupport("core.type List.filter()", 2, needsSelf = true) { pos, args, _ ->
+internal val JavaSupportCtx.listFilter by receiver {
+    inlineSupport(2, needsSelf = true) { pos, args, _, _ ->
         // listFilter(0=List<T>, 1=fun (T): Boolean)
         val sourceType: Jst = functionSimpleArgumentTypes(args[1].type).first
         temperListFilter.suffix(sourceType.shortCamelName).staticMethod(args.unpackArgs(), pos)
@@ -1201,15 +1195,15 @@ val JavaLang.listFilter by receiver {
 }
 
 @Suppress("MagicNumber") // arity
-val JavaLang.listJoin by receiver {
-    inlineSupport("core.type List.join()", 3, needsSelf = true) { pos, args, _ ->
+internal val JavaSupportCtx.listJoin by receiver {
+    inlineSupport(3, needsSelf = true) { pos, args, _, _ ->
         // listJoin(0=List<T>, 1=delimiter, 2=fun (T): String)
         val sourceType: Jst = functionSimpleArgumentTypes(args[2].type).first
         temperListJoin.suffix(sourceType.shortCamelName).staticMethod(args.unpackArgs(), pos)
     }
 }
-val JavaLang.listMap by receiver {
-    inlineSupport("core.type List.map()", 2, needsSelf = true) { pos, args, _ ->
+internal val JavaSupportCtx.listMap by receiver {
+    inlineSupport(2, needsSelf = true) { pos, args, _, _ ->
         // listMap(0=List<T>, 1=fun (T): U)
         val (inType, outType) = functionSimpleArgumentTypes(args[1].type)
         val fromType = when (val name = inType.shortCamelName) {
@@ -1221,34 +1215,34 @@ val JavaLang.listMap by receiver {
             .staticMethod(args.unpackArgs(), pos)
     }
 }
-val JavaLang.listedReduce by receiver {
-    inlineSupport("core.type Listed.reduce()", 2, needsSelf = true) inline@{ pos, args, _ ->
+internal val JavaSupportCtx.listedReduce by receiver {
+    inlineSupport(2, needsSelf = true) inline@{ pos, args, _, _ ->
         // listedReduce(0=List<T>, 1=fun (T, T): T)
         val (adjustedArgs, fnType) = adaptFn(args)
-            ?: return@inline garbageExpr(pos, "core.type Listed.reduce()", "$args")
+            ?: return@inline garbageExpr(pos, connectedKey!!, "$args")
         val type = functionSimpleArgumentTypes(fnType).first
         // See `fun simpleType` for expected names.
         temperListedReduce.suffix(type.shortCamelName)
             .staticMethod(adjustedArgs, pos)
     }
 }
-val JavaLang.listedReduceFrom by receiver {
+internal val JavaSupportCtx.listedReduceFrom by receiver {
     @Suppress("MagicNumber")
-    inlineSupport("core.type Listed.reduceFrom()", 3, needsSelf = true) inline@{ pos, args, _ ->
+    inlineSupport(3, needsSelf = true) inline@{ pos, args, _, _ ->
         // listedReduce(0=List<T>, 1=U, 2=fun (U, T): U)
         val (adjustedArgs, fnType) = adaptFn(args)
-            ?: return@inline garbageExpr(pos, "core.type Listed.reduceFrom()", "$args")
+            ?: return@inline garbageExpr(pos, connectedKey!!, "$args")
         val (inType, outType) = functionSimpleArgumentTypes(fnType, inputIndex = 1)
         temperListedReduce.suffix("${inType.shortCamelName}To${outType.shortCamelName}")
             .staticMethod(adjustedArgs, pos)
     }
 }
-val JavaLang.listSlice by receiver { separateCode(temperListSlice) }
-val JavaLang.listSorted by receiver {
+internal val JavaSupportCtx.listSlice by receiver { separateCode(temperListSlice) }
+internal val JavaSupportCtx.listSorted by receiver {
     // TODO This could potentially be factored along with core.type ListBuilder.sort().
-    inlineSupport("core.type Listed.sorted()", 2, needsSelf = true) inline@{ pos, args, _ ->
+    inlineSupport(2, needsSelf = true) inline@{ pos, args, _, _ ->
         val (adjustedArgs, fnType) = adaptFn(args)
-            ?: return@inline garbageExpr(pos, "core.type Listed.sorted()", "$args")
+            ?: return@inline garbageExpr(pos, connectedKey!!, "$args")
         val (inType, _) = functionSimpleArgumentTypes(fnType)
         when (inType) {
             Jst.JstInt -> temperListSorted.suffix(inType.shortCamelName).staticMethod(args.unpackArgs(), pos)
@@ -1256,16 +1250,16 @@ val JavaLang.listSorted by receiver {
         }
     }
 }
-val JavaLang.listGet by receiver { separateCode(temperListGet) }
-val JavaLang.listGetOr by receiver { separateCode(temperListGetOr) }
-val JavaLang.listLength by receiver {
-    inlineSupport("core.type List.get length()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.listGet by receiver { separateCode(temperListGet) }
+internal val JavaSupportCtx.listGetOr by receiver { separateCode(temperListGetOr) }
+internal val JavaSupportCtx.listLength by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("size", pos = pos)
     }
 }
-val JavaLang.listCopyOf by receiver {
-    if (atLeastJdk(JAVA9)) {
-        inlineSupport("listCopyOf", arity = 1) { pos, args, resultType ->
+internal val JavaSupportCtx.listCopyOf by receiver {
+    if (lang.atLeastJdk(JAVA9)) {
+        inlineSupport(arity = 1) { pos, args, resultType, _ ->
             val implementation = if (resultType.hasNullableTypeActual) temperListCopyOf else javaUtilListCopyOf
             implementation.staticMethod(args.unpackArgs(), pos)
         }
@@ -1273,16 +1267,16 @@ val JavaLang.listCopyOf by receiver {
         separateCode(temperListCopyOf)
     }
 }
-val JavaLang.listedToList by receiver { separateCode(temperListedToList) }
-val JavaLang.listBuilderMake by receiver {
-    inlineSupport("core.type ListBuilder.constructor()", arity = 0) { pos, _ ->
+internal val JavaSupportCtx.listedToList by receiver { separateCode(temperListedToList) }
+internal val JavaSupportCtx.listBuilderMake by receiver {
+    inlineSupport(arity = 0) { pos, _, _ ->
         J.InstanceCreationExpr(pos, javaUtilArrayList.toClassType(pos, args = J.TypeArguments(pos)), args = listOf())
     }
 }
-val JavaLang.listBuilderAdd by receiver { separateCode(temperListAdd) }
-val JavaLang.listBuilderAddAll by receiver { separateCode(temperListAddAll) }
-val JavaLang.listBuilderCopyOf by receiver {
-    inlineSupport("core.type ListBuilder.toListBuilder()", arity = 1, needsSelf = false) { pos, args ->
+internal val JavaSupportCtx.listBuilderAdd by receiver { separateCode(temperListAdd) }
+internal val JavaSupportCtx.listBuilderAddAll by receiver { separateCode(temperListAddAll) }
+internal val JavaSupportCtx.listBuilderCopyOf by receiver {
+    inlineSupport(arity = 1, needsSelf = false) { pos, args, _ ->
         J.InstanceCreationExpr(
             pos,
             javaUtilArrayList.toClassType(pos, args = J.TypeArguments(pos)),
@@ -1290,11 +1284,11 @@ val JavaLang.listBuilderCopyOf by receiver {
         )
     }
 }
-val JavaLang.listBuilderRemoveLast by receiver { separateCode(temperListRemoveLast) }
-val JavaLang.listBuilderReverse by receiver { separateCode(javaUtilCollectionsReverse) }
-val JavaLang.listBuilderSort by receiver {
+internal val JavaSupportCtx.listBuilderRemoveLast by receiver { separateCode(temperListRemoveLast) }
+internal val JavaSupportCtx.listBuilderReverse by receiver { separateCode(javaUtilCollectionsReverse) }
+internal val JavaSupportCtx.listBuilderSort by receiver {
     // TODO This could potentially be factored along with core.type Listed.sorted().
-    inlineSupport("core.type ListBuilder.sort()", 2, needsSelf = true) inline@{ pos, args, _ ->
+    inlineSupport(2, needsSelf = true) inline@{ pos, args, _, _ ->
         val (adjustedArgs, fnType) = adaptFn(args)
             ?: return@inline garbageExpr(pos, "core.type ListBuilder.sort()", "$args")
         val (inType, _) = functionSimpleArgumentTypes(fnType)
@@ -1304,12 +1298,12 @@ val JavaLang.listBuilderSort by receiver {
         }
     }
 }
-val JavaLang.listBuilderSplice by receiver { separateCode(temperListSplice) }
+internal val JavaSupportCtx.listBuilderSplice by receiver { separateCode(temperListSplice) }
 
 // Map, MapBuilder
-val JavaLang.mapConstructor by receiver { separateCode(temperMapConstructor) }
-val JavaLang.pairConstructor by receiver {
-    inlineSupport("core.type Pair.constructor()", arity = 2) { pos, args ->
+internal val JavaSupportCtx.mapConstructor by receiver { separateCode(temperMapConstructor) }
+internal val JavaSupportCtx.pairConstructor by receiver {
+    inlineSupport(arity = 2) { pos, args, _ ->
         J.InstanceCreationExpr(
             pos,
             type = javaUtilSimpleImmutableEntry.toClassType(pos, J.TypeArguments(pos)),
@@ -1317,24 +1311,24 @@ val JavaLang.pairConstructor by receiver {
         )
     }
 }
-val JavaLang.mappedLength by receiver {
-    inlineSupport("core.type Mapped.get length()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedLength by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         args[0].method("size", pos = pos)
     }
 }
-val JavaLang.mappedGet by receiver { separateCode(temperMappedGet) }
-val JavaLang.mappedGetOr by receiver {
-    inlineSupport("core.type Mapped.getOr()", arity = 3, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedGet by receiver { separateCode(temperMappedGet) }
+internal val JavaSupportCtx.mappedGetOr by receiver {
+    inlineSupport(arity = 3, needsSelf = true) { pos, args, _ ->
         args[0].method("getOrDefault", args[1], args[2], pos = pos)
     }
 }
-val JavaLang.mappedHas by receiver {
-    inlineSupport("core.type Mapped.has()", arity = 2, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedHas by receiver {
+    inlineSupport(arity = 2, needsSelf = true) { pos, args, _ ->
         args[0].method("containsKey", args[1], pos = pos)
     }
 }
-val JavaLang.mappedKeys by receiver {
-    inlineSupport("core.type Mapped.keys()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedKeys by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         J.InstanceCreationExpr(
             pos = pos,
             type = javaUtilArrayList.toClassType(pos, J.TypeArguments(pos)),
@@ -1347,8 +1341,8 @@ val JavaLang.mappedKeys by receiver {
         )
     }
 }
-val JavaLang.mappedValues by receiver {
-    inlineSupport("core.type Mapped.values()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedValues by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         J.InstanceCreationExpr(
             pos = pos,
             type = javaUtilArrayList.toClassType(pos, J.TypeArguments(pos)),
@@ -1361,9 +1355,9 @@ val JavaLang.mappedValues by receiver {
         )
     }
 }
-val JavaLang.mappedToMap by receiver { separateCode(temperMappedToMap) }
-val JavaLang.mappedToMapBuilder by receiver {
-    inlineSupport("core.type Mapped.toMapBuilder()", arity = 1, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedToMap by receiver { separateCode(temperMappedToMap) }
+internal val JavaSupportCtx.mappedToMapBuilder by receiver {
+    inlineSupport(arity = 1, needsSelf = true) { pos, args, _ ->
         J.InstanceCreationExpr(
             pos = pos,
             type = javaUtilLinkedHashMap.toClassType(pos, J.TypeArguments(pos)),
@@ -1371,19 +1365,19 @@ val JavaLang.mappedToMapBuilder by receiver {
         )
     }
 }
-val JavaLang.mappedToList by receiver { separateCode(temperMappedToList) }
-val JavaLang.mappedToListBuilder by receiver { separateCode(temperMappedToListBuilder) }
-val JavaLang.mappedToListWith by receiver { separateCode(temperMappedToListWith) }
-val JavaLang.mappedToListBuilderWith by receiver { separateCode(temperMappedToListBuilderWith) }
-val JavaLang.mappedForEach by receiver { separateCode(temperMappedForEach) }
-val JavaLang.mapBuilderRemove by receiver { separateCode(temperMapBuilderRemove) }
-val JavaLang.mapBuilderSet by receiver {
-    inlineSupport("core.type MapBuilder.set()", arity = 3, needsSelf = true) { pos, args ->
+internal val JavaSupportCtx.mappedToList by receiver { separateCode(temperMappedToList) }
+internal val JavaSupportCtx.mappedToListBuilder by receiver { separateCode(temperMappedToListBuilder) }
+internal val JavaSupportCtx.mappedToListWith by receiver { separateCode(temperMappedToListWith) }
+internal val JavaSupportCtx.mappedToListBuilderWith by receiver { separateCode(temperMappedToListBuilderWith) }
+internal val JavaSupportCtx.mappedForEach by receiver { separateCode(temperMappedForEach) }
+internal val JavaSupportCtx.mapBuilderRemove by receiver { separateCode(temperMapBuilderRemove) }
+internal val JavaSupportCtx.mapBuilderSet by receiver {
+    inlineSupport(arity = 3, needsSelf = true) { pos, args, _ ->
         args[0].method("put", args[1], args[2], pos = pos)
     }
 }
-val JavaLang.mapBuilderConstructor by receiver {
-    inlineSupport("core.type MapBuilder.constructor()", arity = 0) { pos, _ ->
+internal val JavaSupportCtx.mapBuilderConstructor by receiver {
+    inlineSupport(arity = 0) { pos, _, _ ->
         J.InstanceCreationExpr(pos, javaUtilLinkedHashMap.toClassType(pos, J.TypeArguments(pos)), args = listOf())
     }
 }
@@ -1397,22 +1391,6 @@ internal val JavaLang.getPromiseResultSyncSupport by receiver {
 }
 internal val JavaLang.convertedCoroutineAwakeUponSupport by receiver {
     separateCode(coroAwakeUpon)
-}
-
-fun JavaLang.notSupported(name: String, builtin: NamedBuiltinFun, what: String = ""): JavaSupportCode {
-    val msg = mutableListOf<String>()
-    msg.add("Builtin(${builtin.name}, ${builtin.builtinOperatorId}, species=${builtin.functionSpecies})")
-    if (what.isNotEmpty()) {
-        msg.add(what)
-    }
-
-    return inlineSupport(
-        name,
-        arity = -1,
-        needsSelf = false,
-    ) { pos, _ ->
-        garbageExpr(pos, "notSupported($name)", msg.joinToString("; "))
-    }
 }
 
 /** If possible, always wraps the last arg as an instance method reference. */
@@ -1440,166 +1418,173 @@ internal fun adaptFn(args: List<TypedArg<J.Expression>>): Pair<List<J.Argument>,
     return adjustedArgs to fnType
 }
 
-private val connections: Map<String, ((JavaLang) -> SupportCode)> = mapOf(
-    "core.getConsole()" to { it.getConsole },
-    "core.type Boolean.toString()" to { it.booleanToString },
+private val connections: Map<String, ((JavaLang) -> JavaSupportCode)> = buildMap {
+    fun define(connectedKey: String, factory: (JavaSupportCtx) -> JavaSupportCode) {
+        this[connectedKey] = { factory(JavaSupportCtx(it, connectedKey, null)) }
+    }
+    define("core.getConsole()") { it.getConsole }
+    define("core.type Boolean.toString()") { it.booleanToString }
     // "core.type Console.log()" to null,
-    "std/temporal.type Date.constructor()" to { it.dateConstructor },
-    "std/temporal.type Date.fromIsoString()" to { it.dateFromIsoString },
-    "std/temporal.type Date.day" to { it.dateGetDay },
-    "std/temporal.type Date.get dayOfWeek()" to { it.dateGetDayOfWeek },
-    "std/temporal.type Date.month" to { it.dateGetMonth },
-    "std/temporal.type Date.year" to { it.dateGetYear },
-    "std/temporal.type Date.toString()" to { it.dateToString },
-    "std/temporal.type Date.today()" to { it.dateToday },
-    "std/temporal.type Date.yearsBetween()" to { it.dateYearsBetween },
-    "core.type DenseBitVector.constructor()" to { it.denseBitVectorConstructor },
-    "core.type DenseBitVector.get()" to { it.denseBitVectorGet },
-    "core.type DenseBitVector.set()" to { it.denseBitVectorSet },
-    "core.type Deque.add()" to { it.dequeAdd },
-    "core.type Deque.constructor()" to { it.dequeConstructor },
-    "core.type Deque.get isEmpty()" to { it.genericIsEmpty },
-    "core.type Deque.removeFirst()" to { it.dequeRemoveFirst },
-    "core.type Float64.abs()" to { it.float64Abs },
-    "core.type Float64.acos()" to { it.float64Acos },
-    "core.type Float64.asin()" to { it.float64Asin },
-    "core.type Float64.atan()" to { it.float64Atan },
-    "core.type Float64.atan2()" to { it.float64Atan2 },
-    "core.type Float64.ceil()" to { it.float64Ceil },
-    "core.type Float64.cos()" to { it.float64Cos },
-    "core.type Float64.cosh()" to { it.float64Cosh },
-    "core.type Float64.e" to { it.float64E },
-    "core.type Float64.exp()" to { it.float64Exp },
-    "core.type Float64.expm1()" to { it.float64Expm1 },
-    "core.type Float64.floor()" to { it.float64Floor },
-    "core.type Float64.log()" to { it.float64Log },
-    "core.type Float64.log10()" to { it.float64Log10 },
-    "core.type Float64.log1p()" to { it.float64Log1p },
-    "core.type Float64.max()" to { it.float64Max },
-    "core.type Float64.min()" to { it.float64Min },
-    "core.type Float64.near()" to { it.float64Near },
-    "core.type Float64.pi" to { it.float64Pi },
-    "core.type Float64.round()" to { it.float64Round },
-    "core.type Float64.sign()" to { it.float64Sign },
-    "core.type Float64.sin()" to { it.float64Sin },
-    "core.type Float64.sinh()" to { it.float64Sinh },
-    "core.type Float64.sqrt()" to { it.float64Sqrt },
-    "core.type Float64.tan()" to { it.float64Tan },
-    "core.type Float64.tanh()" to { it.float64Tanh },
-    "core.type Float64.toInt32()" to { it.float64ToInt },
-    "core.type Float64.toInt32Unsafe()" to { it.float64ToIntUnsafe },
-    "core.type Float64.toInt64()" to { it.float64ToInt64 },
-    "core.type Float64.toInt64Unsafe()" to { it.float64ToInt64Unsafe },
-    "core.type Float64.toString()" to { it.float64ToString },
-    "core.type Generator.next()" to { it.generatorNext },
-    "core.type Int32.max()" to { it.intMax },
-    "core.type Int32.min()" to { it.intMin },
-    "core.type Int32.toFloat64()" to { it.intToFloat64 },
-    "core.type Int32.toInt64()" to { it.intToInt64 },
-    "core.type Int32.toString()" to { it.intToString },
-    "core.type Int64.max()" to { it.int64Max },
-    "core.type Int64.min()" to { it.int64Min },
-    "core.type Int64.toInt32()" to { it.int64ToInt32 },
-    "core.type Int64.toInt32Unsafe()" to { it.int64ToInt32Unsafe },
-    "core.type Int64.toFloat64()" to { it.int64ToFloat64 },
-    "core.type Int64.toFloat64Unsafe()" to { it.int64ToFloat64Unsafe },
-    "core.type Int64.toString()" to { it.int64ToString },
-    "core.type List.get()" to { it.listGet },
-    "core.type List.get length()" to { it.listLength },
-    "core.type List.toList()" to { it.identity },
-    "core.type List.toListBuilder()" to { it.listBuilderCopyOf },
-    "core.type ListBuilder.add()" to { it.listBuilderAdd },
-    "core.type ListBuilder.addAll()" to { it.listBuilderAddAll },
-    "core.type ListBuilder.constructor()" to { it.listBuilderMake },
-    "core.type ListBuilder.get length()" to { it.listLength },
-    "core.type ListBuilder.removeLast()" to { it.listBuilderRemoveLast },
-    "core.type ListBuilder.reverse()" to { it.listBuilderReverse },
-    "core.type ListBuilder.sort()" to { it.listBuilderSort },
-    "core.type ListBuilder.splice()" to { it.listBuilderSplice },
-    "core.type ListBuilder.toList()" to { it.listCopyOf },
-    "core.type ListBuilder.toListBuilder()" to { it.listBuilderCopyOf },
-    "core.type Listed.filter()" to { it.listFilter },
-    "core.type Listed.get()" to { it.listGet },
-    "core.type Listed.getOr()" to { it.listGetOr },
-    "core.type Listed.get isEmpty()" to { it.genericIsEmpty },
-    "core.type Listed.join()" to { it.listJoin },
-    "core.type Listed.get length()" to { it.listLength },
-    "core.type Listed.map()" to { it.listMap },
-    "core.type Listed.reduce()" to { it.listedReduce },
-    "core.type Listed.reduceFrom()" to { it.listedReduceFrom },
-    "core.type Listed.slice()" to { it.listSlice },
-    "core.type Listed.sorted()" to { it.listSorted },
-    "core.type Listed.toList()" to { it.listedToList },
-    "core.type Listed.toListBuilder()" to { it.listBuilderCopyOf },
-    "core.type Map.constructor()" to { it.mapConstructor },
-    "core.type MapBuilder.constructor()" to { it.mapBuilderConstructor },
-    "core.type MapBuilder.remove()" to { it.mapBuilderRemove },
-    "core.type MapBuilder.set()" to { it.mapBuilderSet },
-    "core.type Mapped.forEach()" to { it.mappedForEach },
-    "core.type Mapped.get()" to { it.mappedGet },
-    "core.type Mapped.getOr()" to { it.mappedGetOr },
-    "core.type Mapped.has()" to { it.mappedHas },
-    "core.type Mapped.keys()" to { it.mappedKeys },
-    "core.type Mapped.get length()" to { it.mappedLength },
-    "core.type Mapped.toList()" to { it.mappedToList },
-    "core.type Mapped.toListBuilder()" to { it.mappedToListBuilder },
-    "core.type Mapped.toListBuilderWith()" to { it.mappedToListBuilderWith },
-    "core.type Mapped.toListWith()" to { it.mappedToListWith },
-    "core.type Mapped.toMap()" to { it.mappedToMap },
-    "core.type Mapped.toMapBuilder()" to { it.mappedToMapBuilder },
-    "core.type Mapped.values()" to { it.mappedValues },
-    "core.type Pair.constructor()" to { it.pairConstructor },
-    "core.type PromiseBuilder.breakPromise()" to { it.promiseBuilderBreakPromise },
-    "core.type PromiseBuilder.complete()" to { it.promiseBuilderComplete },
-    "core.type PromiseBuilder.get promise()" to { it.promiseBuilderGetPromise },
-    "std/regex.type RegexFormatter.regexCompileFormatted()" to { it.regexCompiledFormatted },
-    "std/regex.type Regex.compiledFind()" to { it.regexCompiledFind },
-    "std/regex.type Regex.compiledFound()" to { it.regexCompiledFound },
-    "std/regex.type Regex.compiledReplace()" to { it.regexCompiledReplace },
-    "std/regex.type Regex.compiledSplit()" to { it.regexCompiledSplit },
-    "std/regex.type Regex.format()" to { it.regexFormat },
+    define("std/temporal.type Date.constructor()") { it.dateConstructor }
+    define("std/temporal.type Date.fromIsoString()") { it.dateFromIsoString }
+    define("std/temporal.type Date.day") { it.dateGetDay }
+    define("std/temporal.type Date.get dayOfWeek()") { it.dateGetDayOfWeek }
+    define("std/temporal.type Date.month") { it.dateGetMonth }
+    define("std/temporal.type Date.year") { it.dateGetYear }
+    define("std/temporal.type Date.toString()") { it.dateToString }
+    define("std/temporal.type Date.today()") { it.dateToday }
+    define("std/temporal.type Date.yearsBetween()") { it.dateYearsBetween }
+    define("core.type DenseBitVector.constructor()") { it.denseBitVectorConstructor }
+    define("core.type DenseBitVector.get()") { it.denseBitVectorGet }
+    define("core.type DenseBitVector.set()") { it.denseBitVectorSet }
+    define("core.type Deque.add()") { it.dequeAdd }
+    define("core.type Deque.constructor()") { it.dequeConstructor }
+    define("core.type Deque.get isEmpty()") { it.genericIsEmpty }
+    define("core.type Deque.removeFirst()") { it.dequeRemoveFirst }
+    define("core.type Float64.abs()") { it.float64Abs }
+    define("core.type Float64.acos()") { it.float64Acos }
+    define("core.type Float64.asin()") { it.float64Asin }
+    define("core.type Float64.atan()") { it.float64Atan }
+    define("core.type Float64.atan2()") { it.float64Atan2 }
+    define("core.type Float64.ceil()") { it.float64Ceil }
+    define("core.type Float64.cos()") { it.float64Cos }
+    define("core.type Float64.cosh()") { it.float64Cosh }
+    define("core.type Float64.e") { it.float64E }
+    define("core.type Float64.exp()") { it.float64Exp }
+    define("core.type Float64.expm1()") { it.float64Expm1 }
+    define("core.type Float64.floor()") { it.float64Floor }
+    define("core.type Float64.log()") { it.float64Log }
+    define("core.type Float64.log10()") { it.float64Log10 }
+    define("core.type Float64.log1p()") { it.float64Log1p }
+    define("core.type Float64.max()") { it.float64Max }
+    define("core.type Float64.min()") { it.float64Min }
+    define("core.type Float64.near()") { it.float64Near }
+    define("core.type Float64.pi") { it.float64Pi }
+    define("core.type Float64.round()") { it.float64Round }
+    define("core.type Float64.sign()") { it.float64Sign }
+    define("core.type Float64.sin()") { it.float64Sin }
+    define("core.type Float64.sinh()") { it.float64Sinh }
+    define("core.type Float64.sqrt()") { it.float64Sqrt }
+    define("core.type Float64.tan()") { it.float64Tan }
+    define("core.type Float64.tanh()") { it.float64Tanh }
+    define("core.type Float64.toInt32()") { it.float64ToInt }
+    define("core.type Float64.toInt32Unsafe()") { it.float64ToIntUnsafe }
+    define("core.type Float64.toInt64()") { it.float64ToInt64 }
+    define("core.type Float64.toInt64Unsafe()") { it.float64ToInt64Unsafe }
+    define("core.type Float64.toString()") { it.float64ToString }
+    define("core.type Generator.next()") { it.generatorNext }
+    define("core.type Int32.max()") { it.intMax }
+    define("core.type Int32.min()") { it.intMin }
+    define("core.type Int32.signum()") { it.intSignum }
+    define("core.type Int32.toFloat64()") { it.intToFloat64 }
+    define("core.type Int32.toInt64()") { it.intToInt64 }
+    define("core.type Int32.toString()") { it.intToString }
+    define("core.type Int64.max()") { it.int64Max }
+    define("core.type Int64.min()") { it.int64Min }
+    define("core.type Int64.toInt32()") { it.int64ToInt32 }
+    define("core.type Int64.toInt32Unsafe()") { it.int64ToInt32Unsafe }
+    define("core.type Int64.toFloat64()") { it.int64ToFloat64 }
+    define("core.type Int64.toFloat64Unsafe()") { it.int64ToFloat64Unsafe }
+    define("core.type Int64.toString()") { it.int64ToString }
+    define("core.type List.get()") { it.listGet }
+    define("core.type List.get length()") { it.listLength }
+    define("core.type List.toList()") { it.identity }
+    define("core.type List.toListBuilder()") { it.listBuilderCopyOf }
+    define("core.type ListBuilder.add()") { it.listBuilderAdd }
+    define("core.type ListBuilder.addAll()") { it.listBuilderAddAll }
+    define("core.type ListBuilder.constructor()") { it.listBuilderMake }
+    define("core.type ListBuilder.get length()") { it.listLength }
+    define("core.type ListBuilder.removeLast()") { it.listBuilderRemoveLast }
+    define("core.type ListBuilder.reverse()") { it.listBuilderReverse }
+    define("core.type ListBuilder.sort()") { it.listBuilderSort }
+    define("core.type ListBuilder.splice()") { it.listBuilderSplice }
+    define("core.type ListBuilder.toList()") { it.listCopyOf }
+    define("core.type ListBuilder.toListBuilder()") { it.listBuilderCopyOf }
+    define("core.type Listed.filter()") { it.listFilter }
+    define("core.type Listed.get()") { it.listGet }
+    define("core.type Listed.getOr()") { it.listGetOr }
+    define("core.type Listed.get isEmpty()") { it.genericIsEmpty }
+    define("core.type Listed.join()") { it.listJoin }
+    define("core.type Listed.get length()") { it.listLength }
+    define("core.type Listed.map()") { it.listMap }
+    define("core.type Listed.reduce()") { it.listedReduce }
+    define("core.type Listed.reduceFrom()") { it.listedReduceFrom }
+    define("core.type Listed.slice()") { it.listSlice }
+    define("core.type Listed.sorted()") { it.listSorted }
+    define("core.type Listed.toList()") { it.listedToList }
+    define("core.type Listed.toListBuilder()") { it.listBuilderCopyOf }
+    define("core.type Map.constructor()") { it.mapConstructor }
+    define("core.type MapBuilder.constructor()") { it.mapBuilderConstructor }
+    define("core.type MapBuilder.remove()") { it.mapBuilderRemove }
+    define("core.type MapBuilder.set()") { it.mapBuilderSet }
+    define("core.type Mapped.forEach()") { it.mappedForEach }
+    define("core.type Mapped.get()") { it.mappedGet }
+    define("core.type Mapped.getOr()") { it.mappedGetOr }
+    define("core.type Mapped.has()") { it.mappedHas }
+    define("core.type Mapped.keys()") { it.mappedKeys }
+    define("core.type Mapped.get length()") { it.mappedLength }
+    define("core.type Mapped.toList()") { it.mappedToList }
+    define("core.type Mapped.toListBuilder()") { it.mappedToListBuilder }
+    define("core.type Mapped.toListBuilderWith()") { it.mappedToListBuilderWith }
+    define("core.type Mapped.toListWith()") { it.mappedToListWith }
+    define("core.type Mapped.toMap()") { it.mappedToMap }
+    define("core.type Mapped.toMapBuilder()") { it.mappedToMapBuilder }
+    define("core.type Mapped.values()") { it.mappedValues }
+    define("core.type Pair.constructor()") { it.pairConstructor }
+    define("core.type PromiseBuilder.breakPromise()") { it.promiseBuilderBreakPromise }
+    define("core.type PromiseBuilder.complete()") { it.promiseBuilderComplete }
+    define("core.type PromiseBuilder.get promise()") { it.promiseBuilderGetPromise }
+    define("std/regex.type RegexFormatter.regexCompileFormatted()") { it.regexCompiledFormatted }
+    define("std/regex.type Regex.compiledFind()") { it.regexCompiledFind }
+    define("std/regex.type Regex.compiledFound()") { it.regexCompiledFound }
+    define("std/regex.type Regex.compiledReplace()") { it.regexCompiledReplace }
+    define("std/regex.type Regex.compiledSplit()") { it.regexCompiledSplit }
+    define("std/regex.type Regex.format()") { it.regexFormat }
     // "std/regex.type RegexFormatter.adjustCodeSet()" to null,
     // "std/regex.type RegexFormatter.pushCaptureName()" to null,
-    "std/regex.type RegexFormatter.pushCodeTo()" to { it.regexFormatterPushCodeTo },
-    "core.type SafeGenerator.next()" to { it.generatorNext },
-    "core.type SafeGenerator.nextSafe()" to { it.generatorNext },
-    "core.type String.begin" to { it.stringBegin },
-    "core.type String.countBetween()" to { it.stringCountBetween },
-    "core.type String.get end()" to { it.stringEnd },
-    "core.type String.forEach()" to { it.stringForEach },
-    "core.type String.fromCodePoint()" to { it.stringFromCodePoint },
-    "core.type String.fromCodePoints()" to { it.stringFromCodePoints },
-    "core.type String.get()" to { it.stringGet },
-    "core.type String.hasAtLeast()" to { it.stringHasAtLeast },
-    "core.type String.hasIndex()" to { it.stringHasIndex },
-    "core.type String.get isEmpty()" to { it.genericIsEmpty },
-    "core.type String.next()" to { it.stringNext },
-    "core.type String.prev()" to { it.stringPrev },
-    "core.type String.step()" to { it.stringStep },
-    "core.type String.slice()" to { it.stringSlice },
-    "core.type String.split()" to { it.stringSplit },
-    "core.type String.toFloat64()" to { it.stringToFloat64 },
-    "core.type String.toInt32()" to { it.stringToInt },
-    "core.type String.toInt64()" to { it.stringToInt64 },
-    "core.type String.toString()" to { it.identity },
-    "core.type StringBuilder.append()" to { it.stringBuilderAppend },
-    "core.type StringBuilder.appendBetween()" to { it.stringBuilderAppendBetween },
-    "core.type StringBuilder.appendCodePoint()" to { it.stringBuilderAppendCodePoint },
-    "core.type StringBuilder.clear()" to { it.stringBuilderClear },
-    "core.type StringBuilder.constructor()" to { it.stringBuilderConstructor },
-    "core.type StringBuilder.get end()" to { it.stringBuilderEnd },
-    "core.type StringBuilder.toString()" to { it.stringBuilderToString },
-    "core.type StringIndex.none" to { it.stringIndexNone },
-    "core.type StringIndexOption.compareTo()" to { it.stringIndexOptionCompareTo },
-    "core.type StringIndexOption.compareTo()::eq" to { it.stringIndexOptionCompareToEq },
-    "core.type StringIndexOption.compareTo()::ge" to { it.stringIndexOptionCompareToGe },
-    "core.type StringIndexOption.compareTo()::gt" to { it.stringIndexOptionCompareToGt },
-    "core.type StringIndexOption.compareTo()::le" to { it.stringIndexOptionCompareToLe },
-    "core.type StringIndexOption.compareTo()::lt" to { it.stringIndexOptionCompareToLt },
-    "core.type StringIndexOption.compareTo()::ne" to { it.stringIndexOptionCompareToNe },
-    "std/testing.type Test.bail()" to { it.bail },
-    "core.doneResult()" to { it.doneResult },
-    "core.empty()" to { it.empty },
-    "core.ignore()" to { it.doNothing },
-    "std/net.sendRequest()" to { it.netCoreStdNetSend },
-)
+    define("std/regex.type RegexFormatter.pushCodeTo()") { it.regexFormatterPushCodeTo }
+    define("core.type SafeGenerator.next()") { it.generatorNext }
+    define("core.type SafeGenerator.nextSafe()") { it.generatorNext }
+    define("core.type String.begin") { it.stringBegin }
+    define("core.type String.countBetween()") { it.stringCountBetween }
+    define("core.type String.get end()") { it.stringEnd }
+    define("core.type String.forEach()") { it.stringForEach }
+    define("core.type String.fromCodePoint()") { it.stringFromCodePoint }
+    define("core.type String.fromCodePoints()") { it.stringFromCodePoints }
+    define("core.type String.get()") { it.stringGet }
+    define("core.type String.hasAtLeast()") { it.stringHasAtLeast }
+    define("core.type String.hasIndex()") { it.stringHasIndex }
+    define("core.type String.get isEmpty()") { it.genericIsEmpty }
+    define("core.type String.next()") { it.stringNext }
+    define("core.type String.prev()") { it.stringPrev }
+    define("core.type String.step()") { it.stringStep }
+    define("core.type String.slice()") { it.stringSlice }
+    define("core.type String.split()") { it.stringSplit }
+    define("core.type String.toFloat64()") { it.stringToFloat64 }
+    define("core.type String.toInt32()") { it.stringToInt }
+    define("core.type String.toInt64()") { it.stringToInt64 }
+    define("core.type String.toString()") { it.identity }
+    define("core.type StringBuilder.append()") { it.stringBuilderAppend }
+    define("core.type StringBuilder.appendBetween()") { it.stringBuilderAppendBetween }
+    define("core.type StringBuilder.appendCodePoint()") { it.stringBuilderAppendCodePoint }
+    define("core.type StringBuilder.clear()") { it.stringBuilderClear }
+    define("core.type StringBuilder.constructor()") { it.stringBuilderConstructor }
+    define("core.type StringBuilder.get end()") { it.stringBuilderEnd }
+    define("core.type StringBuilder.toString()") { it.stringBuilderToString }
+    define("core.type StringIndex.none") { it.stringIndexNone }
+    define("core.type StringIndexOption.compareTo()") { it.stringIndexOptionCompareTo }
+    define("core.type StringIndexOption.eq()") { it.stringIndexOptionCompareToEq }
+    define("std/testing.type Test.bail()") { it.bail }
+    define("core.doneResult()") { it.doneResult }
+    define("core.empty()") { it.empty }
+    define("core.ignore()") { it.doNothing }
+    define("std/net.sendRequest()") { it.netCoreStdNetSend }
+}
+
+internal data class JavaSupportCtx(
+    val lang: JavaLang,
+    val connectedKey: String?,
+    val builtinOperatorId: BuiltinOperatorId?,
+) {
+    val baseName: String get() = connectedKey ?: builtinOperatorId!!.name
+}

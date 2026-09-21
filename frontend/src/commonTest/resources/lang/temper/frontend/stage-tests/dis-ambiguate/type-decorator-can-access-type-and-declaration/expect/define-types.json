@@ -22,23 +22,31 @@
     "Empty": {
         "supers": [
             "AnyValue__0",
-            ["Nominal", "Equatable__0", "Empty__0"]
+            [
+                "Nominal",
+                "Equatable__11",
+                "Empty__10"
+            ]
         ],
         "methods": [
             {
-                "name": "constructor__0",
+                "name": "constructor__467",
                 "visibility": "private",
                 "kind": "Constructor",
                 "open": false
             },
             {
-                "name": "eq__0",
+                "name": "eq__469",
                 "visibility": "public",
                 "kind": "Normal",
                 "open": false,
                 "metadata": {
-                    "connected": ["void: Void"],
-                    "operator": ["\"_==_\": String"]
+                    "connected": [
+                        "void: Void"
+                    ],
+                    "operator": [
+                        "\u0022_==_\u0022: String"
+                    ]
                 }
             }
         ],

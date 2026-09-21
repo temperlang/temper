@@ -1,31 +1,31 @@
 C__0 extends I;
-@constructorProperty @property(\j) @visibility(\public) @stay @fromType(C__0) var j__2;
-@constructorProperty @property(\k) @visibility(\public) @stay @fromType(C__0) let k__3;
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__4;
-constructor__4 = fn constructor(@impliedThis(C__0) this__5: C__0, j__6 /* aka j */, k__7 /* aka k */) /* return__0 */: Void {
-  do {
-    let t#0;
-    setp(j__2, this__5, t#0 = j__6);
-    t#0
-  };
-  do {
-    let t#1;
-    setp(k__3, this__5, t#1 = k__7);
-    t#1
-  };
+@constructorProperty @property(\j) @visibility(\public) @stay @fromType(C__0) var j__3;
+@constructorProperty @property(\k) @visibility(\public) @stay @fromType(C__0) let k__4;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__5;
+constructor__5 = (@stay fn constructor(@impliedThis(C__0) this__1: C__0, j__6 /* aka j */, k__7 /* aka k */) /* return__2 */: Void {
+    do {
+      let t#9;
+      setp(j__3, this__1, t#9 = j__6);
+      t#9
+    };
+    do {
+      let t#8;
+      setp(k__4, this__1, t#8 = k__7);
+      t#8
+    };
+});
+@getter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let getj__10;
+getj__10 = fn (@impliedThis(C__0) this__11: C__0) /* return__12 */{
+  return__12 = getp(j__3, this__11)
 };
-@getter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let getj__8;
-getj__8 = fn (@impliedThis(C__0) this__9: C__0) /* return__10 */{
-  return__10 = getp(j__2, this__9)
+@setter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let setj__13;
+setj__13 = fn (@impliedThis(C__0) this__15: C__0, newJ__14) /* return__16 */: Void {
+  setp(j__3, this__15, newJ__14);
+  return__16 = void
 };
-@setter @method(\j) @fn @visibility(\public) @stay @fromType(C__0) let setj__11;
-setj__11 = fn (@impliedThis(C__0) this__12: C__0, newJ__13) /* return__14 */: Void {
-  setp(j__2, this__12, newJ__13);
-  return__14 = void
-};
-@getter @method(\k) @fn @visibility(\public) @stay @fromType(C__0) let getk__12;
-getk__12 = fn (@impliedThis(C__0) this__13: C__0) /* return__15 */{
-  return__15 = getp(k__3, this__13)
+@getter @method(\k) @fn @visibility(\public) @stay @fromType(C__0) let getk__17;
+getk__17 = fn (@impliedThis(C__0) this__18: C__0) /* return__19 */{
+  return__19 = getp(k__4, this__18)
 };
 @typeDecl(C__0) @stay let C__0;
 C__0 = type (C__0);

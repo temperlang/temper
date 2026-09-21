@@ -6,7 +6,7 @@
     n__4 = do_get_length(strs__1);
     var i__5;
     i__5 = 0;
-    while (i__5 < n__4) {
+    while (i__5 <=> n__4 < 0) {
       let el__6: String;
       el__6 = get(i__5);
       i__5 = i__5 + 1;

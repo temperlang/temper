@@ -40,9 +40,21 @@ class JavaBackendTest {
                 | * is it 1?
                 | */
                 |public static boolean t(@Nullable Integer x__0) {
-                |    return Core.boxedEq(x__0, 1);
+                |    if (x__0 == null) {
+                |        return false;
+                |    } else {
+                |        return x__0.intValue() == 1;
+                |    }
                 |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
+            // The `x__0 == 1` is ok.
+            // JLS 15.21.1 Numerical Equality Operators == and !=
+            // says:
+            // > f the operands of an equality operator are both of numeric type, or one
+            // > is of numeric type and the other is convertible (§5.1.8) to numeric type,
+            // > binary numeric promotion is performed on the operands (§5.6.2).
+            //
+            // §5.1.8 is the section on "Unboxing conversion."
         )
     }
 
@@ -52,9 +64,13 @@ class JavaBackendTest {
             "export let t(x: Int?): Boolean { return 1 == x; }",
             """
             |public static boolean t(@Nullable Integer x__0) {
-            |    return Core.boxedEqRev(1, x__0);
+            |    if (x__0 == null) {
+            |        return false;
+            |    } else {
+            |        return 1 == x__0.intValue();
+            |    }
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -64,9 +80,15 @@ class JavaBackendTest {
             "export let t(x: Int?, y: Int?): Boolean { return x == y; }",
             """
             |public static boolean t(@Nullable Integer x__0, @Nullable Integer y__0) {
-            |    return Objects.equals(x__0, y__0);
+            |    if (x__0 == null) {
+            |        return y__0 == null;
+            |    } else if (y__0 == null) {
+            |        return false;
+            |    } else {
+            |        return x__0.intValue() == y__0.intValue();
+            |    }
             |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -88,9 +110,15 @@ class JavaBackendTest {
             "export let t(x: Int?): Boolean { return x != 1; }",
             """
             |public static boolean t(@Nullable Integer x__0) {
-            |    return !Core.boxedEq(x__0, 1);
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = x__0.intValue() == 1;
+            |    }
+            |    return !t_3;
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -100,9 +128,15 @@ class JavaBackendTest {
             "export let t(x: Int?): Boolean { return 1 != x; }",
             """
             |public static boolean t(@Nullable Integer x__0) {
-            |    return !Core.boxedEqRev(1, x__0);
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = 1 == x__0.intValue();
+            |    }
+            |    return !t_3;
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -112,9 +146,21 @@ class JavaBackendTest {
             "export let t(x: Int?, y: Int?): Boolean { return x != y; }",
             """
             |public static boolean t(@Nullable Integer x__0, @Nullable Integer y__0) {
-            |    return !Objects.equals(x__0, y__0);
+            |    boolean t_4;
+            |    if (x__0 == null) {
+            |        t_4 = y__0 == null;
+            |    } else {
+            |        boolean t_5;
+            |        if (y__0 == null) {
+            |            t_5 = false;
+            |        } else {
+            |            t_5 = x__0.intValue() == y__0.intValue();
+            |        }
+            |        t_4 = t_5;
+            |    }
+            |    return !t_4;
             |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -136,9 +182,13 @@ class JavaBackendTest {
             "export let t(x: Float64?): Boolean { return x == 1.5; }",
             """
             |public static boolean t(@Nullable Double x__0) {
-            |    return Core.boxedEq(x__0, 1.5D);
+            |    if (x__0 == null) {
+            |        return false;
+            |    } else {
+            |        return Double.doubleToLongBits(x__0.doubleValue()) == Double.doubleToLongBits(1.5D);
+            |    }
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -148,9 +198,13 @@ class JavaBackendTest {
             "export let t(x: Float64?): Boolean { return 1.5 == x; }",
             """
             |public static boolean t(@Nullable Double x__0) {
-            |    return Core.boxedEqRev(1.5D, x__0);
+            |    if (x__0 == null) {
+            |        return false;
+            |    } else {
+            |        return Double.doubleToLongBits(1.5D) == Double.doubleToLongBits(x__0.doubleValue());
+            |    }
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -160,9 +214,15 @@ class JavaBackendTest {
             "export let t(x: Float64?, y: Float64?): Boolean { return x == y; }",
             """
             |public static boolean t(@Nullable Double x__0, @Nullable Double y__0) {
-            |    return Objects.equals(x__0, y__0);
+            |    if (x__0 == null) {
+            |        return y__0 == null;
+            |    } else if (y__0 == null) {
+            |        return false;
+            |    } else {
+            |        return Double.doubleToLongBits(x__0.doubleValue()) == Double.doubleToLongBits(y__0.doubleValue());
+            |    }
             |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -184,9 +244,15 @@ class JavaBackendTest {
             "export let t(x: Float64?): Boolean { return x != 1.5; }",
             """
             |public static boolean t(@Nullable Double x__0) {
-            |    return !Core.boxedEq(x__0, 1.5D);
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = Double.doubleToLongBits(x__0.doubleValue()) == Double.doubleToLongBits(1.5D);
+            |    }
+            |    return !t_3;
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -196,9 +262,15 @@ class JavaBackendTest {
             "export let t(x: Float64?): Boolean { return 1.5 != x; }",
             """
             |public static boolean t(@Nullable Double x__0) {
-            |    return !Core.boxedEqRev(1.5D, x__0);
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = Double.doubleToLongBits(1.5D) == Double.doubleToLongBits(x__0.doubleValue());
+            |    }
+            |    return !t_3;
             |}
-            """.javaMethod("import temper.core.Core;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -208,9 +280,21 @@ class JavaBackendTest {
             "export let t(x: Float64?, y: Float64?): Boolean { return x != y; }",
             """
             |public static boolean t(@Nullable Double x__0, @Nullable Double y__0) {
-            |    return !Objects.equals(x__0, y__0);
+            |    boolean t_4;
+            |    if (x__0 == null) {
+            |        t_4 = y__0 == null;
+            |    } else {
+            |        boolean t_5;
+            |        if (y__0 == null) {
+            |            t_5 = false;
+            |        } else {
+            |            t_5 = Double.doubleToLongBits(x__0.doubleValue()) == Double.doubleToLongBits(y__0.doubleValue());
+            |        }
+            |        t_4 = t_5;
+            |    }
+            |    return !t_4;
             |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -232,9 +316,13 @@ class JavaBackendTest {
             "export let t(x: String?): Boolean { return x == \"foo\"; }",
             """
             |public static boolean t(@Nullable String x__0) {
-            |    return Objects.equals(x__0, "foo");
+            |    if (x__0 == null) {
+            |        return false;
+            |    } else {
+            |        return x__0.equals("foo");
+            |    }
             |}
-            """.javaMethod("import java.util.Objects;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -244,7 +332,11 @@ class JavaBackendTest {
             "export let t(x: String?): Boolean { return \"foo\" == x; }",
             """
             |public static boolean t(@Nullable String x__0) {
-            |    return "foo".equals(x__0);
+            |    if (x__0 == null) {
+            |        return false;
+            |    } else {
+            |        return "foo".equals(x__0);
+            |    }
             |}
             """.javaMethod("import temper.core.Nullable;"),
         )
@@ -256,9 +348,15 @@ class JavaBackendTest {
             "export let t(x: String?, y: String?): Boolean { return x == y; }",
             """
             |public static boolean t(@Nullable String x__0, @Nullable String y__0) {
-            |    return Objects.equals(x__0, y__0);
+            |    if (x__0 == null) {
+            |        return y__0 == null;
+            |    } else if (y__0 == null) {
+            |        return false;
+            |    } else {
+            |        return x__0.equals(y__0);
+            |    }
             |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -280,9 +378,15 @@ class JavaBackendTest {
             "export let t(x: String?): Boolean { return x != \"foo\"; }",
             """
             |public static boolean t(@Nullable String x__0) {
-            |    return !Objects.equals(x__0, "foo");
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = x__0.equals("foo");
+            |    }
+            |    return !t_3;
             |}
-            """.javaMethod("import java.util.Objects;", "import temper.core.Nullable;"),
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -292,7 +396,13 @@ class JavaBackendTest {
             "export let t(x: String?): Boolean { return \"foo\" != x; }",
             """
             |public static boolean t(@Nullable String x__0) {
-            |    return !"foo".equals(x__0);
+            |    boolean t_3;
+            |    if (x__0 == null) {
+            |        t_3 = false;
+            |    } else {
+            |        t_3 = "foo".equals(x__0);
+            |    }
+            |    return !t_3;
             |}
             """.javaMethod("import temper.core.Nullable;"),
         )
@@ -303,10 +413,22 @@ class JavaBackendTest {
         assertGeneratedJava(
             "export let t(x: String?, y: String?): Boolean { return x != y; }",
             """
-            |public static boolean t(@Nullable String x__0, @Nullable String y__0) {
-            |    return !Objects.equals(x__0, y__0);
-            |}
-            """.javaMethod("import temper.core.Nullable;", "import java.util.Objects;"),
+                |public static boolean t(@Nullable String x__0, @Nullable String y__0) {
+            |    boolean t_4;
+            |    if (x__0 == null) {
+            |        t_4 = y__0 == null;
+            |    } else {
+            |        boolean t_5;
+            |        if (y__0 == null) {
+            |            t_5 = false;
+            |        } else {
+            |            t_5 = x__0.equals(y__0);
+            |        }
+            |        t_4 = t_5;
+            |    }
+            |    return !t_4;
+                |}
+            """.javaMethod("import temper.core.Nullable;"),
         )
     }
 
@@ -775,7 +897,7 @@ class JavaBackendTest {
                 |                                if (kiwi__0 == null) {
                 |                                    kiwi__1 = 2;
                 |                                } else {
-                |                                    kiwi__1 = kiwi__0;
+                |                                    kiwi__1 = kiwi__0.intValue();
                 |                                }
                 |                                this.grape = grape__0;
                 |                                this.honeydew = honeydew__0;
@@ -2147,7 +2269,7 @@ class JavaBackendTest {
             |                    if (bonus__0 == null) {
             |                        bonus__1 = 0;
             |                    } else {
-            |                        bonus__1 = bonus__0;
+            |                        bonus__1 = bonus__0.intValue();
             |                    }
             |                    return SubConnected.sum(i__0, j__0, bonus__1);
             |                }
@@ -2221,7 +2343,7 @@ class JavaBackendTest {
             |        if (x__0 == null) {
             |            throw Core.bubble();
             |        } else {
-            |            return x__0;
+            |            return x__0.intValue();
             |        }
             |    } else {
             |        return 0;

@@ -7,6 +7,7 @@ import lang.temper.be.BackendSetup
 import lang.temper.be.BaseOutTree
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.cli.RunnerSpecifics
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.MimeType
 import lang.temper.common.asciiTitleCase
 import lang.temper.common.console
@@ -157,8 +158,13 @@ internal open class TestSupportNetwork(
         genre: Genre,
     ): SupportCode {
         val builtinOperatorId = builtin.builtinOperatorId
-        if (builtinOperatorId == BuiltinOperatorId.BooleanNegation) {
-            return BooleanNegationTestSupportCode
+        when (builtinOperatorId) {
+            BuiltinOperatorId.BooleanNegation -> return BooleanNegationTestSupportCode
+            BuiltinOperatorId.LtIntInt -> return intLessThanTestSupportCode
+            BuiltinOperatorId.GtIntInt -> return intGreaterThanTestSupportCode
+            BuiltinOperatorId.LeIntInt -> return intLessEqualsTestSupportCode
+            BuiltinOperatorId.GeIntInt -> return intGreaterEqualsTestSupportCode
+            else -> {}
         }
         val sigs = builtin.sigs
         val soleSig = if (sigs?.size == 1) {
@@ -188,6 +194,57 @@ internal open class TestSupportNetwork(
             "std/testing.type Test.assert()" -> InlineTestSupportCode(baseName = ParsedName("assert_true"))
             else -> TestSupportCode(baseName = baseName, signature = null)
         }
+    }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn as? TmpL.FnReference ?: return null
+        val supportCode = translationAssistant.supportCodeFromReference(fn.id)
+
+        if (supportCode is FunctionSupportCode) {
+            fun releaseParameters(): Pair<TmpL.Expression, TmpL.Expression> {
+                val (left, right) = tmpl.parameters
+                tmpl.parameters = listOf(
+                    TmpL.ValueReference(left.pos, vZero),
+                    TmpL.ValueReference(left.pos, vZero),
+                )
+                return left as TmpL.Expression to right as TmpL.Expression
+            }
+
+            val altSig = when (supportCode.builtinOperatorId) {
+                BuiltinOperatorId.CmpBoolBool -> BuiltinFuns.eqBooleanFn.sigs!![0]
+                BuiltinOperatorId.CmpLongLong -> BuiltinFuns.eqInt64Fn.sigs!![0]
+                BuiltinOperatorId.CmpIntInt -> {
+                    val (left, right) = releaseParameters()
+                    val op = TmpL.InfixOperator(fn.pos, comparisonKind.intInfixer)
+                    return TmpL.InfixOperation(tmpl.pos, left, op, right)
+                }
+                else -> return null
+            }
+            val infixer = comparisonKind.intInfixer.kind.outputToken.text
+            val altCallee = translationAssistant.supportCodeReference(
+                fn.pos,
+                TestFnSupportCode(
+                    ParsedName(
+                        "$infixer(${altSig.requiredInputTypes[0]})",
+                    ),
+                    altSig,
+                    null,
+                ),
+                altSig,
+            )
+            val (left, right) = releaseParameters()
+            return TmpL.CallExpression(
+                tmpl.pos,
+                altCallee,
+                TmpL.ImplicitCallTypeActuals(tmpl.pos.leftEdge, listOf(), mapOf()),
+                listOf(left, right),
+            )
+        }
+        return null
     }
 
     private fun mungeQName(qname: String): String = qname
@@ -318,6 +375,47 @@ private object BooleanNegationTestSupportCode : NamedSupportCode, FunctionSuppor
         tokenSink.emit(OutToks.prefixBang)
     }
 }
+
+private class TmpLInfixSupportCode(
+    val infixer: TmpLOperator.Infix,
+) : NamedSupportCode, FunctionSupportCode, InlineTmpLSupportCode {
+    override val baseName = ParsedName(infixer.kind.outputToken.text)
+
+    override val needsThisEquivalent: Boolean = false
+
+    override fun inlineToTree(
+        pos: Position,
+        arguments: List<TypedArg<TmpL.Tree>>,
+        returnType: Type2,
+        translator: TmpLTranslator,
+    ): TmpL.Expression {
+        if (arguments.size == 2) {
+            val left = arguments.getOrNull(0)?.expr as? TmpL.Expression
+            val right = arguments.getOrNull(1)?.expr as? TmpL.Expression
+            if (left != null && right != null) {
+                return TmpL.InfixOperation(
+                    pos,
+                    left,
+                    TmpL.InfixOperator(
+                        pos.leftEdge,
+                        infixer,
+                    ),
+                    right,
+                )
+            }
+        }
+        return TmpL.GarbageExpression(TmpL.Diagnostic(pos, "Wrong arguments to $this"))
+    }
+
+    override fun renderTo(tokenSink: TokenSink) {
+        tokenSink.emit(OutToks.prefixBang)
+    }
+}
+
+private val intLessThanTestSupportCode = TmpLInfixSupportCode(TmpLOperator.LtInt)
+private val intLessEqualsTestSupportCode = TmpLInfixSupportCode(TmpLOperator.LeInt)
+private val intGreaterThanTestSupportCode = TmpLInfixSupportCode(TmpLOperator.GtInt)
+private val intGreaterEqualsTestSupportCode = TmpLInfixSupportCode(TmpLOperator.GeInt)
 
 private data class InlineTestSupportCode(
     override val baseName: ParsedName,

@@ -36,9 +36,11 @@ import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.log.excerpt
 import lang.temper.log.toReadablePosition
+import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.name.Symbol
+import lang.temper.name.TemperName
 import lang.temper.parser.parse
 import lang.temper.stage.Stage
 import lang.temper.type.TypeFormal
@@ -219,44 +221,51 @@ class InterpreterTest {
     fun fibonacci() = assertResult(
         expectedJson = """ "55: Int32" """,
         input = """
-        function fib(n) {
-          var i = n;
-          var a = 0;
-          var b = 1;
-          while (i > 0) {
-            let c = a + b;
-            a = b;
-            b = c;
-            i = i - 1
-          }
-          a
-        }
-        fib(10)
-        """,
+            |function fib(n) {
+            |  var i = n;
+            |  var a = 0;
+            |  var b = 1;
+            |  while (i > 0) {
+            |    let c = a + b;
+            |    a = b;
+            |    b = c;
+            |    i = i - 1
+            |  }
+            |  a
+            |}
+            |fib(10)
+        """.trimMargin(),
+        overrides = mapOf(
+            BuiltinName(">") to Value(BuiltinFuns.gtIntFn),
+            ParsedName(">") to Value(BuiltinFuns.gtIntFn),
+        ),
     )
 
     @Test
     fun fibonacciVariousArgumentPassingConventions() = assertResult(
         expectedJson = """ "[55, 34, 21]: List" """,
         input = """
-        let fib(n: Int = 8): Int {
-          var i = n;
-          var a = 0;
-          var b = 1;
-          while (i > 0) {
-            let c = a + b;
-            a = b;
-            b = c;
-            i = i - 1
-          }
-          a
-        }
-        [fib(10), fib(\n, 9), fib()]
-        """,
-        // TODO: once disambiguation done,
-        //     fib(\i, 9)
-        // can become
-        //     fib(i = 9)
+            |let fib(n: Int = 8): Int {
+            |  var i = n;
+            |  var a = 0;
+            |  var b = 1;
+            |  while (i > 0) {
+            |    let c = a + b;
+            |    a = b;
+            |    b = c;
+            |    i = i - 1
+            |  }
+            |  a
+            |}
+            |[fib(10), fib(\n, 9), fib()]
+        """.trimMargin(),
+        // In the disambiguation stage, `fib(n = 9)` becomes `fib(\n, 9)`
+        // but this test harness is just interpretation so we use the latter,
+        // obscure syntax above.
+        overrides = mapOf(
+            BuiltinName(">") to Value(BuiltinFuns.gtIntFn),
+            ParsedName(">") to Value(BuiltinFuns.gtIntFn),
+        ),
     )
 
     @Test
@@ -817,6 +826,7 @@ class InterpreterTest {
                         EmptyEnvironment,
                         Genre.Library,
                     ),
+                    mapOf(),
                 ),
             ),
             InterpMode.Partial,
@@ -842,10 +852,12 @@ class InterpreterTest {
         expectedJson: String,
         input: String,
         expectedFailLog: String? = null,
+        overrides: Map<TemperName, Value<*>> = mapOf(),
     ) = assertResult(
         expectedJson,
         inputText = input,
         expectedFailLog = expectedFailLog,
+        overrides = overrides,
     ) { logSink, context ->
         // Lex the input
         val lexer = Lexer(context.loc, logSink, input)
@@ -873,6 +885,7 @@ class InterpreterTest {
         verbose: Boolean = false,
         stage: Stage = Stage.Run,
         interpMode: InterpMode = InterpMode.Full,
+        overrides: Map<TemperName, Value<*>> = mapOf(),
         /**
          * May be overridden to derive the value to compare to [expectedJson] from the interpreter result and the
          * state of the tree after interpretation.  By default, just returns the interpreter result.
@@ -907,21 +920,18 @@ class InterpreterTest {
         // coverage by not wrapping.
         val root = BlockTree.wrap(ast)
 
+        val env = testEnvironment(
+            builtinOnlyEnvironment(
+                EmptyEnvironment,
+                Genre.Library,
+            ),
+            overrides = overrides,
+        )
+
         // Run the interpreter.
         val got = try {
             afterInterpretationAssembleOutput(
-                interpreter.interpret(
-                    root,
-                    BlockEnvironment(
-                        testEnvironment(
-                            builtinOnlyEnvironment(
-                                EmptyEnvironment,
-                                Genre.Library,
-                            ),
-                        ),
-                    ),
-                    interpMode,
-                ),
+                interpreter.interpret(root, env, interpMode),
                 root,
             )
         } catch (_: Abort) {
@@ -1090,10 +1100,10 @@ private fun makeFunValue(f: (ActualValues, InterpreterCallback) -> PartialResult
     TFunction,
 )
 
-private fun testEnvironment(parent: Environment): Environment =
+private fun testEnvironment(parent: Environment, overrides: Map<TemperName, Value<*>>): Environment =
     immutableEnvironment(
         parent,
-        mapOf(
+        overrides + mapOf(
             ParsedName(Operator.OrElse.text!!) to makeSpecialValue {
                 val args = it.args
                 if (args.size == 2) {

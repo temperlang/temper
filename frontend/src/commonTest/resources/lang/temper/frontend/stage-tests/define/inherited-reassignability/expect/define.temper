@@ -1,40 +1,40 @@
 I__0 extends AnyValue;
-@property(\m) @stay @fromType(I__0) var m__7;
-@property(\p) @stay @fromType(I__0) let p__8;
+@property(\m) @stay @fromType(I__0) var m__8;
+@property(\p) @stay @fromType(I__0) let p__9;
 @typeDecl(I__0) @stay let I__0;
 I__0 = type (I__0);
 @typeDecl(J__1) @stay let J__1;
 J__1 = type (J__1);
-@typeDecl(K__2) @stay let K__2;
-K__2 = type (K__2);
-interface(\word, \I, \concrete, false, @typeDefined(I__0) fn {
+@typeDecl(K__3) @stay let K__3;
+K__3 = type (K__3);
+interface(\word, \I, \concrete, false, @typeDefined(I__0) @stay fn {
     do {};
     do {};
     do {}
 });
 J__1 extends AnyValue;
-@property(\n) @visibility(\public) @stay @fromType(J__1) let n__10;
-@method(\n) @setter @fn @stay @fromType(J__1) let nym`set.n__11`;
-nym`set.n__11` = (@stay fn nym`set.n`(@impliedThis(J__1) this__3: J__1) /* return__0 */: Void {
-    fn__12: do {}
+@property(\n) @visibility(\public) @stay @fromType(J__1) let n__5;
+@method(\n) @setter @fn @stay @fromType(J__1) let nym`set.n__10`;
+nym`set.n__10` = (@stay fn nym`set.n`(@impliedThis(J__1) this__2: J__1) /* return__6 */: Void {
+    fn__11: do {}
 });
-interface(\word, \J, \concrete, false, @typeDefined(J__1) fn {
+interface(\word, \J, \concrete, false, @typeDefined(J__1) @stay fn {
     do {};
     do {};
     do {}
 });
-K__2 extends I__0;
-K__2 extends J__1;
-@property(\m) @stay @fromType(K__2) var m__14;
-@property(\n) @stay @fromType(K__2) var n__15;
-@property(\o) @stay @fromType(K__2) var o__16;
-@property(\p) @stay @fromType(K__2) let p__17;
-@property(\q) @stay @fromType(K__2) let q__18;
-@method(\o) @setter @fn @stay @fromType(K__2) let nym`set.o__19`;
-nym`set.o__19` = (@stay fn nym`set.o`(@impliedThis(K__2) this__4: K__2) /* return__1 */: Void {
-    fn__20: do {}
+K__3 extends I__0;
+K__3 extends J__1;
+@property(\m) @stay @fromType(K__3) var m__12;
+@property(\n) @stay @fromType(K__3) var n__13;
+@property(\o) @stay @fromType(K__3) var o__14;
+@property(\p) @stay @fromType(K__3) let p__15;
+@property(\q) @stay @fromType(K__3) let q__16;
+@method(\o) @setter @fn @stay @fromType(K__3) let nym`set.o__17`;
+nym`set.o__17` = (@stay fn nym`set.o`(@impliedThis(K__3) this__4: K__3) /* return__7 */: Void {
+    fn__18: do {}
 });
-interface(\word, \K, \concrete, false, @typeDefined(K__2) fn {
+interface(\word, \K, \concrete, false, @typeDefined(K__3) @stay fn {
     do {};
     do {};
     do {};
@@ -44,4 +44,4 @@ interface(\word, \K, \concrete, false, @typeDefined(K__2) fn {
     do {};
     do {}
 });
-type (K__2)
+type (K__3)

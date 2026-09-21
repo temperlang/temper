@@ -2,23 +2,23 @@
 `test//`.Stringer = type (Stringer);
 @fn let `test//`.stringifyLists ⦂(fn (Stringer, Int32, List<Int32>, List<String>): String);
 @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32__7 ⦂(fn (Stringer, Int32): String);
-stringifyInt32__7 = fn stringifyInt32(@impliedThis(Stringer) this__0: Stringer, int__8 /* aka int */: Int32) /* return__3 */: String {
-  fn__9: do {
-    pureVirtual ⋖ String ⋗()
-  }
-};
+stringifyInt32__7 = (@stay fn stringifyInt32(@impliedThis(Stringer) this__0: Stringer, int__8 /* aka int */: Int32) /* return__3 */: String {
+    fn__9: do {
+      pureVirtual ⋖ String ⋗()
+    }
+});
 @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyInt32List__10 ⦂(fn (Stringer, Listed<Int32>): String);
-stringifyInt32List__10 = fn stringifyInt32List(@impliedThis(Stringer) this__1: Stringer, ints__11 /* aka ints */: Listed<Int32>) /* return__4 */: String {
-  fn__12: do {
-    pureVirtual ⋖ String ⋗()
-  }
-};
+stringifyInt32List__10 = (@stay fn stringifyInt32List(@impliedThis(Stringer) this__1: Stringer, ints__11 /* aka ints */: Listed<Int32>) /* return__4 */: String {
+    fn__12: do {
+      pureVirtual ⋖ String ⋗()
+    }
+});
 @visibility(\public) @overload("stringify") @fn @stay @fromType(Stringer) let stringifyStringList__13 ⦂(fn (Stringer, Listed<String>): String);
-stringifyStringList__13 = fn stringifyStringList(@impliedThis(Stringer) this__2: Stringer, string__14 /* aka string */: Listed<String>) /* return__5 */: String {
-  fn__15: do {
-    pureVirtual ⋖ String ⋗()
-  }
-};
+stringifyStringList__13 = (@stay fn stringifyStringList(@impliedThis(Stringer) this__2: Stringer, string__14 /* aka string */: Listed<String>) /* return__5 */: String {
+    fn__15: do {
+      pureVirtual ⋖ String ⋗()
+    }
+});
 `test//`.stringifyLists = (@stay fn stringifyLists(stringer__16 /* aka stringer */: Stringer, int__17 /* aka int */: Int32, ints__18 /* aka ints */: List<Int32>, strings__19 /* aka strings */: List<String>) /* return__6 */: String {
     fn__20: do {
       return__6 = cat(str(do_call_stringifyInt32(stringer__16, int__17)), ", ", str(do_call_stringifyInt32List(stringer__16, ints__18)), ", ", str(do_call_stringifyStringList(stringer__16, strings__19)))

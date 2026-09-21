@@ -814,8 +814,8 @@ class ReplTest {
             Regex(
                 """
                     |interactive#0: void
-                    |interactive#1: \{class: Regex, data: \{class: Dot__\d+}, compiled: ƒ}
-                    |interactive#2: \{class: Regex, data: \{class: Dot__\d+}, compiled: ƒ}
+                    |interactive#1: \{class: Regex, data: \{class: DotSpecial__\d+}, compiled: ƒ}
+                    |interactive#2: \{class: Regex, data: \{class: DotSpecial__\d+}, compiled: ƒ}
                     |
                 """.trimMargin(),
             ),

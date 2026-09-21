@@ -196,14 +196,14 @@ fun PatternFormatContext.format(regex: RegexNode) {
         is Or -> return format(regex)
         is Repeat -> return format(regex)
         is Seq -> return format(regex)
-        Begin -> "^"
-        Digit -> formatter.digit
-        Dot -> formatter.dot
-        End -> "$"
-        GraphemeCluster -> "\\X"
-        Space -> formatter.space
-        Word -> formatter.word
-        WordBoundary -> formatter.wordBoundary
+        BeginSpecial -> "^"
+        DigitSpecial -> formatter.digit
+        DotSpecial -> formatter.dot
+        EndSpecial -> "$"
+        GraphemeClusterSpecial -> "\\X"
+        SpaceSpecial -> formatter.space
+        WordSpecial -> formatter.word
+        WordBoundarySpecial -> formatter.wordBoundary
     }.let { out.append(it) }
 }
 

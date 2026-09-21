@@ -45,15 +45,15 @@ private fun Document.packRegex(regex: RegexNode): Value<*> {
         is Repeat -> makeRepeat(regex)
         is Seq -> makeSequence(regex)
         // Special
-        Begin -> makeEmpty(Begin::class)
-        Dot -> makeEmpty(Dot::class)
-        End -> makeEmpty(End::class)
-        GraphemeCluster -> makeEmpty(GraphemeCluster::class)
-        WordBoundary -> makeEmpty(WordBoundary::class)
+        BeginSpecial -> makeEmpty(BeginSpecial::class)
+        DotSpecial -> makeEmpty(DotSpecial::class)
+        EndSpecial -> makeEmpty(EndSpecial::class)
+        GraphemeClusterSpecial -> makeEmpty(GraphemeClusterSpecial::class)
+        WordBoundarySpecial -> makeEmpty(WordBoundarySpecial::class)
         // SpecialSet
-        Digit -> makeEmpty(Digit::class)
-        Space -> makeEmpty(Space::class)
-        Word -> makeEmpty(Word::class)
+        DigitSpecial -> makeEmpty(DigitSpecial::class)
+        SpaceSpecial -> makeEmpty(SpaceSpecial::class)
+        WordSpecial -> makeEmpty(WordSpecial::class)
     }
 }
 

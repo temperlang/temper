@@ -209,11 +209,12 @@ internal class PseudoTreeBuilder(
                 val typeArgs = mutableListOf<PseudoTree>()
                 var typeArgsInferred = false
                 var argListStart = 1 // Index into children where arguments start.
+                var argListEnd = tree.size - 1
 
                 if ( // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
                     detail.resugarDotHelpers > Freq3.Never &&
                     calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
-                    tree.size > 1
+                    argListEnd != 0
                 ) {
                     calleeTree = tree.child(1)
                     argListStart = 2
@@ -233,7 +234,7 @@ internal class PseudoTreeBuilder(
                 fun findTypeArgs() {
                     if (typeArgs.isEmpty()) {
                         // Consume type arguments into the pre-allocated list.
-                        while (argListStart + 1 < tree.size) {
+                        while (argListStart + 1 <= argListEnd) {
                             val childAtArgListStart = tree.child(argListStart)
                             if (childAtArgListStart.symbolContained != typeArgSymbol) {
                                 break
@@ -263,7 +264,7 @@ internal class PseudoTreeBuilder(
                     }
                 }
 
-                fun buildValueArgs() = (argListStart until tree.size).map {
+                fun buildValueArgs() = (argListStart..argListEnd).map {
                     buildPseudoTree(tree.child(it))
                 }
 
@@ -325,13 +326,24 @@ internal class PseudoTreeBuilder(
                         }
                     }
                 } else {
+                    val calleeBuiltinKey = calleeTree.probableBuiltinName
+                    if (
+                        detail.resugarDotHelpers != Freq3.Never &&
+                        calleeBuiltinKey == eqBuiltinName.builtinKey &&
+                        argListEnd == BINARY_OP_CALL_ARG_COUNT &&
+                        tree.child(argListEnd).functionContained is DotHelper
+                    ) {
+                        // Ignore the DotHelper
+                        // (Call EqMacro a b (DotHelper ...))
+                        argListEnd -= 1
+                    }
                     var args: List<PseudoTree>? = null
                     // Special case `.` operator since its right operand is a symbol but
                     // should render as a bare name.
                     var callee: PseudoTree? = null
                     if (
-                        tree.size == BINARY_OP_CALL_ARG_COUNT &&
-                        calleeTree isProbablyBuiltinFunNamed "."
+                        argListEnd + 1 == BINARY_OP_CALL_ARG_COUNT &&
+                        calleeBuiltinKey == "."
                     ) {
                         val right = tree.child(2)
                         val rightSymbol = right.symbolContained
@@ -341,10 +353,10 @@ internal class PseudoTreeBuilder(
                                 PseudoNameLeaf(right.pos, ParsedName(rightSymbol.text)),
                             )
                         }
-                        argListStart = tree.size // all done
+                        argListStart = argListEnd + 1 // all done
                     } else if (
-                        calleeTree isProbablyBuiltinFunNamed "new" &&
-                        tree.size >= 2 && symbolTextFor(tree.child(1)) == null
+                        calleeBuiltinKey == "new" &&
+                        argListEnd >= 1 && symbolTextFor(tree.child(1)) == null
                     ) {
                         // Reshuffle
                         //     new(TypeToCreate, ConstructorArg0)
@@ -372,7 +384,7 @@ internal class PseudoTreeBuilder(
                         // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
                         detail.resugarDotHelpers > Freq3.Never &&
                         calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
-                        tree.size > 1
+                        argListEnd >= 1
                     ) {
                         argListStart = 2
                     }
@@ -2484,13 +2496,16 @@ private fun isStandaloneDecl(metadata: MetadataMultimap): Boolean =
     // Class and interface members should not be grouped into a comma list.
     typeDeclSymbol in metadata || typeMemberMetadataSymbols.any { it in metadata }
 
-private infix fun (Tree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
+private val (Tree).probableBuiltinName: String? get() =
     when (this) {
-        is NameLeaf -> content.builtinKey == desiredName
+        is NameLeaf -> content.builtinKey
         is ValueLeaf ->
-            (TFunction.unpackOrNull(content) as? NamedBuiltinFun)?.name == desiredName
-        else -> false
+            (TFunction.unpackOrNull(content) as? NamedBuiltinFun)?.name
+        else -> null
     }
+
+private infix fun (Tree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
+    probableBuiltinName == desiredName
 
 private infix fun (PseudoTree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
     when (this) {

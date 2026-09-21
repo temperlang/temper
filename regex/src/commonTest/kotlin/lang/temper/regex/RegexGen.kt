@@ -33,15 +33,15 @@ private fun Context.regex(): RegexNode {
     // Try everything else at equal weight to main kinds.
     return when (item(OtherKind.values())) {
         OtherKind.CodeRange -> begunContext.codeRange()
-        OtherKind.Begin -> Begin // Might be bad form here, but also provided more naturally in seq.
-        OtherKind.Digit -> Digit
-        OtherKind.Dot -> Dot
-        OtherKind.End -> End
+        OtherKind.Begin -> BeginSpecial // Might be bad form here, but also provided more naturally in seq.
+        OtherKind.Digit -> DigitSpecial
+        OtherKind.Dot -> DotSpecial
+        OtherKind.End -> EndSpecial
         // OtherKind.GraphemeCluster -> GraphemeCluster // Not yet properly handled for match generation.
         OtherKind.GraphemeCluster -> regex() // Reject for now. TODO(tjp, regex): Support in match generation.
-        OtherKind.Space -> Space
-        OtherKind.Word -> Word
-        OtherKind.WordBoundary -> WordBoundary
+        OtherKind.Space -> SpaceSpecial
+        OtherKind.Word -> WordSpecial
+        OtherKind.WordBoundary -> WordBoundarySpecial
     }
 }
 
@@ -53,8 +53,8 @@ private fun Context.capture(): Capture {
 private fun Context.codePart(): CodePart = when (item(CodePartKind.values())) {
     CodePartKind.CodePoints -> codePoints()
     CodePartKind.CodeRange -> codeRange()
-    CodePartKind.Space -> Space
-    CodePartKind.Word -> Word
+    CodePartKind.Space -> SpaceSpecial
+    CodePartKind.Word -> WordSpecial
 }
 
 private fun Context.codePoint(codeKind: CodeKind) = when (codeKind) {
@@ -105,7 +105,7 @@ private fun Context.seq(): Seq {
     val begunContext = copy(begun = true)
     val patterns = mutableListOf<RegexNode>()
     if (!begun && coin()) {
-        patterns.add(Begin)
+        patterns.add(BeginSpecial)
     }
     repeat(sizeBig()) {
         patterns.add(
@@ -116,7 +116,7 @@ private fun Context.seq(): Seq {
         )
     }
     if (!begun && coin()) {
-        patterns.add(End)
+        patterns.add(EndSpecial)
     }
     return Seq(patterns)
 }

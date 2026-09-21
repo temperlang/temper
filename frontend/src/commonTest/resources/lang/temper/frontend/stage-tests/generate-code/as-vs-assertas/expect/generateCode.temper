@@ -1,26 +1,26 @@
   @fn let `test//`.f, @fn `test//`.g, @fn `test//`.h;
-  `test//`.f = (@stay fn f(x__0 /* aka x */: StringIndexOption?) /* return__0 */: (Boolean | Bubble) {
-      let t#0;
-      if (isNull(x__0)) {
+  `test//`.f = (@stay fn f(x__4 /* aka x */: StringIndexOption?) /* return__1 */: (Boolean | Bubble) {
+      let t#13;
+      if (isNull(x__4)) {
         bubble()
       } else {
 ## Even once null is ruled out, casting from StringIndexOption to StringIndex
 ## requires a check.
-        t#0 = x__0 as StringIndex
+        t#13 = x__4 as StringIndex
       };
-      return__0 = t#0 > getStatic(String, \begin)
+      return__1 = do_call_compareTo(t#13, getStatic(String, \begin)) > 0
   });
-  `test//`.g = (@stay fn g(x__1 /* aka x */: StringIndex?) /* return__1 */: (Boolean | Bubble) {
-      if (isNull(x__1)) {
+  `test//`.g = (@stay fn g(x__6 /* aka x */: StringIndex?) /* return__2 */: (Boolean | Bubble) {
+      if (isNull(x__6)) {
         bubble()
       };
 ## Once null is rulled out, only StringIndex remains, so this is a safe up-cast.
-      return__1 = assertAs(x__1, StringIndex) > getStatic(String, \begin)
+      return__2 = do_call_compareTo(assertAs(x__6, StringIndex), getStatic(String, \begin)) > 0
   });
-  `test//`.h = (@stay fn h(x__2 /* aka x */: StringIndex?) /* return__2 */: Boolean {
-      if (isNull(x__2)) {
-        return__2 = false
+  `test//`.h = (@stay fn h(x__8 /* aka x */: StringIndex?) /* return__3 */: Boolean {
+      if (isNull(x__8)) {
+        return__3 = false
       } else {
-        return__2 = assertAs(notNull(x__2), StringIndex) > getStatic(String, \begin)
+        return__3 = do_call_compareTo(assertAs(notNull(x__8), StringIndex), getStatic(String, \begin)) > 0
       }
   })
