@@ -6,6 +6,7 @@ import lang.temper.be.cpp.Cpp
 import lang.temper.be.cpp.CppBuilder
 import lang.temper.be.cpp.UnaryOpEnum
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -15,6 +16,8 @@ import lang.temper.be.tmpl.OptionalSupportCodeKind
 import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
+import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
@@ -22,10 +25,12 @@ import lang.temper.lexer.Genre
 import lang.temper.log.Position
 import lang.temper.name.ParsedName
 import lang.temper.name.name
+import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.emptyValue
 
 object CppSupportNetwork : SupportNetwork {
     override val backendDescription = "C++ Backend"
@@ -71,6 +76,54 @@ object CppSupportNetwork : SupportNetwork {
     ): Pair<TargetLanguageTypeName, List<Type2>>? = run {
         null
     }
+
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? CppSupportCode ?: return null
+        if (supportCode.baseName.nameText == "core.type StringIndexOption.compareTo()") {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpBoolBool,
+                -> {}
+                // String and Float builtins require adjustment.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                Infix(
+                    "simpleComparison$comparisonKind",
+                    when (comparisonKind) {
+                        ComparisonKind.LessThan -> BinaryOpEnum.Lt
+                        ComparisonKind.LessThanOrEqual -> BinaryOpEnum.Le
+                        ComparisonKind.GreaterThanOrEqual -> BinaryOpEnum.Ge
+                        ComparisonKind.GreaterThan -> BinaryOpEnum.Gt
+                    },
+                ),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
+    }
 }
 
 private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): SupportCode? = run {
@@ -82,6 +135,11 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
         BuiltinOperatorId.GtIntInt -> gtIntInt
         BuiltinOperatorId.LeIntInt -> leIntInt
         BuiltinOperatorId.LtIntInt -> ltIntInt
+        BuiltinOperatorId.CmpBoolBool -> cmpBoolBool
+        BuiltinOperatorId.CmpFltFlt -> cmpFltFlt
+        BuiltinOperatorId.CmpIntInt -> cmpIntInt
+        BuiltinOperatorId.CmpLongLong -> cmpLongLong
+        BuiltinOperatorId.CmpStrStr -> cmpStrStr
         BuiltinOperatorId.Listify -> Listify
         BuiltinOperatorId.MinusInt, BuiltinOperatorId.MinusInt64 -> minusInt
         BuiltinOperatorId.MinusIntInt, BuiltinOperatorId.MinusIntInt64 -> minusIntInt
@@ -105,7 +163,7 @@ open class CppSupportCode(
     val connectedNames: List<String>,
     override val builtinOperatorId: BuiltinOperatorId? = null,
 ) : NamedSupportCode {
-    override val baseName = ParsedName(connectedNames.first())
+    override val baseName = ParsedName(connectedNames.firstOrNull() ?: builtinOperatorId!!.name)
     override fun renderTo(tokenSink: TokenSink) = tokenSink.name(baseName, inOperatorPosition = false)
 
     final override fun hashCode(): Int = baseName.hashCode()
@@ -268,6 +326,11 @@ private val strCat = FunctionCall("cat", listOf("StrCat"))
 
 private val divIntInt = FunctionCall("div_checked", listOf("DivIntInt"), BuiltinOperatorId.DivIntInt)
 private val divIntIntSafe = FunctionCall("div", listOf("DivIntIntSafe"), BuiltinOperatorId.DivIntIntSafe)
+private val cmpBoolBool = FunctionCall("cmp_bool", listOf(), BuiltinOperatorId.CmpBoolBool)
+private val cmpFltFlt = FunctionCall("cmp_float64", listOf(), BuiltinOperatorId.CmpFltFlt)
+private val cmpIntInt = FunctionCall("cmp_int32", listOf(), BuiltinOperatorId.CmpIntInt)
+private val cmpLongLong = FunctionCall("cmp_int64", listOf(), BuiltinOperatorId.CmpLongLong)
+private val cmpStrStr = FunctionCall("cmp_str", listOf(), BuiltinOperatorId.CmpStrStr)
 private val eqIntInt = Infix("EqIntInt", BinaryOpEnum.Eq, BuiltinOperatorId.EqIntInt)
 private val geIntInt = Infix("GeIntInt", BinaryOpEnum.Ge, BuiltinOperatorId.GeIntInt)
 private val gtIntInt = Infix("GtIntInt", BinaryOpEnum.Gt, BuiltinOperatorId.GtIntInt)
