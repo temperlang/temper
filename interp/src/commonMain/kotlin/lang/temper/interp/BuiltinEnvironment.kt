@@ -17,7 +17,6 @@ import lang.temper.interp.importExport.ImportMacro
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
-import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
@@ -875,9 +874,6 @@ internal class BuiltinEnvironment(
 
 private fun nameOf(f: MacroValue): String = when (f) {
     is NamedBuiltinFun -> f.name
-    is CoverFunction -> nameOf(f.covered.first()).also { name ->
-        check(f.covered.all { nameOf(it) == name })
-    }
     else -> error("$f")
 }
 

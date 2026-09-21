@@ -7,7 +7,7 @@ import lang.temper.value.TInt64
 import lang.temper.value.Tree
 import lang.temper.value.valueContained
 
-internal fun doExtraCoverFunctionVariantRefinement(
+internal fun doExtraFunctionVariantRefinement(
     calleeFn: MacroValue,
     argTrees: List<Tree>,
 ): MacroValue? {

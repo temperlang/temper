@@ -8,7 +8,6 @@ import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TextOutput
 import lang.temper.common.TriState
 import lang.temper.common.abbreviate
-import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.mapInterleaving
 import lang.temper.common.subListToEnd
 import lang.temper.common.temperEscaper
@@ -1293,10 +1292,6 @@ internal class PseudoCall(
                 val value = callee.value
                 when (val f = TFunction.unpackOrNull(value)) {
                     is NamedBuiltinFun -> BuiltinName(f.name)
-                    is CoverFunction ->
-                        f.covered.allMapToSameElseNull {
-                            if (it is NamedBuiltinFun) BuiltinName(it.name) else null
-                        }
                     else -> null
                 }
             }

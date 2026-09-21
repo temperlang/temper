@@ -114,7 +114,7 @@ internal fun simplifyDotHelper(
             val doc = calleeEdge.target.document
             val extensionCalleeLeaf = when (extensionResolution) {
                 is FunctionResolution -> {
-                    doExtraCoverFunctionVariantRefinement(
+                    doExtraFunctionVariantRefinement(
                         extensionResolution.fn,
                         call.children.subListToEnd(dotHelper.memberAccessor.firstArgumentIndex + 1),
                     )?.let { refinement ->

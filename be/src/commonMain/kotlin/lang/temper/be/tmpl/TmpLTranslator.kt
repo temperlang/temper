@@ -95,7 +95,6 @@ import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.CoverFunction
 import lang.temper.value.DeclTree
 import lang.temper.value.DependencyCategory
 import lang.temper.value.Document
@@ -2760,7 +2759,6 @@ class TmpLTranslator internal constructor(
                 is BuiltinStatelessMacroValue -> true
                 is LongLivedUserFunction ->
                     !f.hasYielded && f.closedOverEnvironment is EmptyEnvironment
-                is CoverFunction -> f.covered.all { shouldPool(Value(it)) }
                 else -> false
             }
             is TClass -> false

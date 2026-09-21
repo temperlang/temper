@@ -14,7 +14,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BuiltinOperatorId
-import lang.temper.value.CoverFunction
 import lang.temper.value.FunTree
 import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
@@ -73,32 +72,12 @@ interface SupportNetwork {
         genre: Genre,
     ): SupportCode?
 
-    /**
-     * Allows substituting a pre-existing function for a combination of builtins, e.g., infix `-`.
-     */
-    fun getSupportCode(
-        pos: Position,
-        /** The cover function for which we need support code. */
-        coverFunction: CoverFunction,
-        genre: Genre,
-    ): SupportCode? {
-        val covered = coverFunction.covered
-        if (covered.size == 1) {
-            val fn = covered[0]
-            if (fn is NamedBuiltinFun) {
-                return getSupportCode(pos, fn, genre)
-            }
-        }
-        return null
-    }
-
     fun getSupportCode(
         pos: Position,
         fn: MacroValue,
         genre: Genre,
     ): SupportCode? = when (fn) {
         is NamedBuiltinFun -> getSupportCode(pos, fn, genre)
-        is CoverFunction -> getSupportCode(pos, fn, genre)
         is LongLivedUserFunction -> (fn.stayLeaf.incoming?.source as? FunTree)?.parts?.connectedKey?.let { key ->
             translateConnectedReference(pos, key, genre)
         }
