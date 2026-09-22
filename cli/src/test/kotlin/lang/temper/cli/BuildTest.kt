@@ -371,7 +371,7 @@ class BuildTest {
             // Keep decoration and reachability tests. Prod should be here but not test.
             assertContains(text, "keep_me_for_prod")
             assertNotContains(text, "keep_me_for_test")
-            assertNotContains(text, "prune_me")
+            assertNotContainsRegex(text, "prune.*me", ignoreCase = true)
         }
         topDir.withTextOf("temper.out/py/banana/tests/test_banana.py") { text ->
             assertContains(text, "temper_std.testing")
@@ -382,7 +382,7 @@ class BuildTest {
             // Keep decoration and reachability tests. Now test should be here but not prod.
             assertNotContains(text, "keep_me_for_prod")
             assertContains(text, "keep_me_for_test")
-            assertNotContains(text, "prune_me")
+            assertNotContainsRegex(text, "prune.*me", ignoreCase = true)
         }
     }
 
@@ -555,28 +555,65 @@ data class ContextualizedFileContent(
 
     fun assertNotContains(
         text: String,
-        wantedSubstring: String,
+        unwantedSubstring: String,
         ignoreCase: Boolean = false,
     ) {
-        val index = text.indexOf(wantedSubstring, ignoreCase = ignoreCase)
-        if (index >= 0) {
-            console.log(
-                "Expected the char sequence from <$source> to not contain the substring${
-                    if (ignoreCase) ", case insensitively" else ""
-                }",
-            )
-            console.group("CharSequence") {
-                val n = wantedSubstring.length
-                console.textOutput.emitLineChunk(text.substring(0, index))
-                console.textOutput.startStyle(Style.ErrorToken)
-                console.textOutput.emitLineChunk(text.substring(index, index + n))
-                console.textOutput.endStyle()
-                console.textOutput.emitLineChunk(text.substring(index + n))
-            }
-            console.group("Substring") {
-                console.log(wantedSubstring)
-            }
-            fail("\nContent from source <$source> contains substring it shouldn't")
+        val index = text.indexOf(unwantedSubstring, ignoreCase = ignoreCase)
+        val range = when {
+            index >= 0 -> index..<index + unwantedSubstring.length
+            else -> null
         }
+        assertNotContains(
+            range = range,
+            text = text,
+            unwantedLabel = "substring",
+            unwantedThing = unwantedSubstring,
+            ignoreCase = ignoreCase,
+        )
+    }
+
+    fun assertNotContainsRegex(
+        text: String,
+        unwantedPattern: String,
+        ignoreCase: Boolean = false,
+    ) {
+        val options = when {
+            ignoreCase -> setOf(RegexOption.IGNORE_CASE)
+            else -> setOf()
+        }
+        assertNotContains(
+            range = Regex(unwantedPattern, options).find(text)?.range,
+            text = text,
+            unwantedLabel = "regex",
+            unwantedThing = unwantedPattern,
+            ignoreCase = ignoreCase,
+        )
+    }
+
+    private fun assertNotContains(
+        range: IntRange?,
+        text: String,
+        unwantedLabel: String,
+        unwantedThing: String,
+        ignoreCase: Boolean,
+    ) {
+        range == null && return
+        console.log(
+            "Expected the char sequence from <$source> to exclude the $unwantedLabel${
+                if (ignoreCase) ", case insensitively" else ""
+            }",
+        )
+        console.group("char sequence") {
+            val n = unwantedThing.length
+            console.textOutput.emitLineChunk(text.substring(0, range.first))
+            console.textOutput.startStyle(Style.ErrorToken)
+            console.textOutput.emitLineChunk(text.substring(range))
+            console.textOutput.endStyle()
+            console.textOutput.emitLineChunk(text.substring(range.last + 1))
+        }
+        console.group(unwantedLabel) {
+            console.log(unwantedThing)
+        }
+        fail("\nContent from source <$source> contains $unwantedLabel it shouldn't")
     }
 }
