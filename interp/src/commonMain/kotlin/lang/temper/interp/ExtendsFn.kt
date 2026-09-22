@@ -94,7 +94,6 @@ object ExtendsFn : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     MacroValueFormal(null, typeType, ValueFormalKind.Required),
                     MacroValueFormal(null, typeType, ValueFormalKind.Required),
                 ),
-                restValuesFormal = null,
             ),
         )
     }

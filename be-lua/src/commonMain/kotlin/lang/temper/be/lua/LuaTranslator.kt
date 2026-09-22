@@ -468,37 +468,6 @@ private class ModuleParts(
             )
         }
         is TmpL.Reference -> translateReference(expr)
-        is TmpL.RestParameterCountExpression -> Lua.FunctionCallExpr(
-            expr.pos,
-            Lua.Name(expr.pos, name("select")),
-            Lua.Args(
-                expr.pos,
-                Lua.Exprs(
-                    expr.pos,
-                    listOf(
-                        Lua.Str(expr.pos, "#"),
-                        Lua.RestExpr(expr.pos),
-                    ),
-                ),
-            ),
-        )
-        is TmpL.RestParameterExpression -> Lua.FunctionCallExpr(
-            expr.pos,
-            Lua.DotIndexExpr(
-                expr.pos,
-                Lua.Name(expr.pos, name("temper")),
-                Lua.Name(expr.pos, name("listof")),
-            ),
-            Lua.Args(
-                expr.pos,
-                Lua.Exprs(
-                    expr.pos,
-                    listOf(
-                        Lua.RestExpr(expr.pos),
-                    ),
-                ),
-            ),
-        )
         is TmpL.This -> Lua.Name(expr.pos, luaNames.name(expr.id))
         is TmpL.ValueReference -> expr.value.let { value ->
             when (value.typeTag) {
@@ -601,17 +570,12 @@ private class ModuleParts(
     )
 
     private fun translateParameters(
-        parameters: List<TmpL.Actual>,
+        parameters: List<TmpL.Expression>,
     ): List<Lua.Expr> {
         val goodParams = parameters.filter {
             it !is TmpL.ValueReference || it.value.typeTag != TSymbol
         }
-        return goodParams.map {
-            when (it) {
-                is TmpL.Expression -> translateExpr(it)
-                is TmpL.RestSpread -> Lua.RestExpr(it.pos)
-            }
-        }
+        return goodParams.map { translateExpr(it) }
     }
 
     private fun translateAssignmentBase(
@@ -1700,7 +1664,6 @@ private class ModuleParts(
     private fun handleSpecialParams(parameters: TmpL.Parameters): List<Lua.Stmt> {
         return buildList {
             handleNullDefaults(this, parameters.parameters)
-            handleRest(this, parameters.restParameter)
         }
     }
 
@@ -1745,48 +1708,6 @@ private class ModuleParts(
                 els = null,
             ).also { stmts.add(it) }
         }
-    }
-
-    private fun handleRest(stmts: MutableList<Lua.Stmt>, rest: TmpL.RestFormal?) {
-        if (rest == null) {
-            return
-        }
-        stmts.add(
-            Lua.LocalStmt(
-                rest.pos,
-                Lua.SetTargets(
-                    rest.pos,
-                    listOf(
-                        Lua.NameSetTarget(
-                            rest.pos,
-                            Lua.Name(rest.pos, luaNames.name(rest.name)),
-                        ),
-                    ),
-                ),
-                Lua.Exprs(
-                    rest.pos,
-                    listOf(
-                        Lua.FunctionCallExpr(
-                            rest.pos,
-                            Lua.DotIndexExpr(
-                                rest.pos,
-                                Lua.Name(rest.pos, name("temper")),
-                                Lua.Name(rest.pos, name("listof")),
-                            ),
-                            Lua.Args(
-                                rest.pos,
-                                Lua.Exprs(
-                                    rest.pos,
-                                    listOf(
-                                        Lua.RestExpr(rest.pos),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        )
     }
 
     private fun translateTopLevel(
@@ -2004,10 +1925,6 @@ private class ModuleParts(
                     Lua.Name(formal.pos, luaNames.name(formal.name)),
                 ),
             )
-        }
-        val rest = parameters.restParameter
-        if (rest != null) {
-            add(Lua.RestExpr(rest.pos))
         }
     }
 

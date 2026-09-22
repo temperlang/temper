@@ -57,7 +57,6 @@ import lang.temper.type2.InterpValueFormal
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.ValueFormalKind
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.Abort
 import lang.temper.value.ActualValues
 import lang.temper.value.Actuals
@@ -131,7 +130,6 @@ import lang.temper.value.labelSymbol
 import lang.temper.value.matches
 import lang.temper.value.optionalAsTriState
 import lang.temper.value.optionalSymbol
-import lang.temper.value.restFormalSymbol
 import lang.temper.value.returnDeclSymbol
 import lang.temper.value.returnParsedName
 import lang.temper.value.ssaSymbol
@@ -1651,27 +1649,25 @@ class Interpreter(
 
             @Suppress("UNCHECKED_CAST")
             val defaultExprFn = declParts.defaultExpr as Value<MacroValue>?
-            if (!declParts.isRestFormal()) {
-                if (impliedThisSymbol in declParts.metadataMap) {
-                    hasThisFormal = true
-                }
-                interpFormals.add(
-                    InterpValueFormal(
-                        symbol = declParts.symbol,
-                        reifiedType = reifiedType,
-                        // Safe because of flag to evaluateDeclParts
-                        kind = if (declParts.isOptional.elseTrue || defaultExprFn != null) {
-                            ValueFormalKind.Optional
-                        } else {
-                            ValueFormalKind.Required
-                        },
-                        constness = declParts.constness,
-                        defaultExpr = defaultExprFn,
-                        missing = declParts.missing,
-                    ),
-                )
-                formalNamesByIndex.add(name)
+            if (impliedThisSymbol in declParts.metadataMap) {
+                hasThisFormal = true
             }
+            interpFormals.add(
+                InterpValueFormal(
+                    symbol = declParts.symbol,
+                    reifiedType = reifiedType,
+                    // Safe because of flag to evaluateDeclParts
+                    kind = if (declParts.isOptional.elseTrue || defaultExprFn != null) {
+                        ValueFormalKind.Optional
+                    } else {
+                        ValueFormalKind.Required
+                    },
+                    constness = declParts.constness,
+                    defaultExpr = defaultExprFn,
+                    missing = declParts.missing,
+                ),
+            )
+            formalNamesByIndex.add(name)
         }
 
         // Consider metadata (symbol, value) pairs
@@ -1777,17 +1773,12 @@ class Interpreter(
         }
 
         val parts = ast.parts
-        val restType = parts?.restFormal?.let {
-            formalNamesByIndex.add(it.name)
-            ReifiedType(hackMapOldStyleToNew(it.type))
-        }
         val requiredInputTypes = mutableListOf<Type2>()
         val optionalInputTypes = mutableListOf<Type2>()
         for (interpFormal in interpFormals) {
             val ls = when (interpFormal.kind) {
                 ValueFormalKind.Required -> requiredInputTypes
                 ValueFormalKind.Optional -> optionalInputTypes
-                ValueFormalKind.Rest -> error("$interpFormal")
             }
             ls.add(interpFormal.type ?: WellKnownTypes.anyValueOrNullType2)
         }
@@ -1796,7 +1787,6 @@ class Interpreter(
             hasThisFormal = hasThisFormal,
             requiredInputTypes = requiredInputTypes.toList(),
             optionalInputTypes = optionalInputTypes.toList(),
-            restInputsType = restType?.type2,
             typeFormals = typeFormals.toList(),
         )
         val connected = connection(parts?.connectedKey)?.let { it(signature) }
@@ -2055,9 +2045,7 @@ class Interpreter(
                 val formal = signature.valueFormalForActual(formalIndex)
                     ?: return Fail
                 val name = formalNamesByIndex[formalIndex]
-                val typeAsValue = if (formal.kind == ValueFormalKind.Rest && inputType != null) {
-                    Types.vList
-                } else if (inputType is ReifiedType) {
+                val typeAsValue = if (inputType is ReifiedType) {
                     Value(inputType)
                 } else {
                     null
@@ -2501,7 +2489,6 @@ private class EvaluatedDeclParts(
     val metadataMap: Map<Symbol, Value<*>?>,
 ) {
     val isOptional: TriState get() = optionalAsTriState(metadataMap[optionalSymbol])
-    fun isRestFormal(): Boolean = metadataMap.containsKey(restFormalSymbol)
 }
 
 private fun calleeName(tree: Tree?): TemperName? {
@@ -2732,7 +2719,6 @@ internal fun interpSignatureOf(sig: Signature2, interpFormals: List<InterpValueF
     return InterpSignature(
         returnType = sig.returnType,
         requiredAndOptionalValueFormals = interpFormals,
-        restInputsType = sig.restInputsType,
         typeFormals = sig.typeFormals,
     )
 }

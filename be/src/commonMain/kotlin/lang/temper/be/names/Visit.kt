@@ -96,10 +96,6 @@ private fun NameVisitor.visitParams(px: TmpL.Parameters) {
         formalVarDecl(p.name.name, p)
         visitTypeUse(p.type)
     }
-    px.restParameter?.let { p ->
-        formalVarDecl(p.name.name, p)
-        visitTypeUse(p.type)
-    }
 }
 
 private fun subjectTypeName(s: TmpL.Subject): ResolvedName? = when (s) {
@@ -208,10 +204,6 @@ private fun NameVisitor.visitStmt(s: TmpL.Statement): Unit = when (s) {
             n.formalVarDecl(p.name.name, p)
             n.typeUse(typeName(p.type.ot), p.type.ot)
         }
-        px.restParameter?.let { p ->
-            n.formalVarDecl(p.name.name, p)
-            n.typeUse(typeName(p.type.ot), p.type.ot)
-        }
         n.typeUse(typeName(s.returnType.ot), s.returnType.ot)
         n.visitStmt(s.body)
     }
@@ -267,11 +259,6 @@ private fun NameVisitor.visitCallable(e: TmpL.Callable): Unit = when (e) {
     is TmpL.FunInterfaceCallable -> visitExpr(e.expr)
 }
 
-private fun NameVisitor.visitActual(e: TmpL.Actual): Unit = when (e) {
-    is TmpL.Expression -> visitExpr(e)
-    is TmpL.RestSpread -> varUseMisc(e.parameterName.name, e)
-}
-
 private fun NameVisitor.visitExpr(e: TmpL.Expression): Unit = when (e) {
     is TmpL.BubbleSentinel,
     is TmpL.ValueReference,
@@ -283,7 +270,7 @@ private fun NameVisitor.visitExpr(e: TmpL.Expression): Unit = when (e) {
     is TmpL.CallExpression -> {
         calling(e).visitCallable(e.fn)
         for (p in e.parameters) {
-            visitActual(p)
+            visitExpr(p)
         }
     }
     is TmpL.CheckedRttiExpression -> {
@@ -297,8 +284,6 @@ private fun NameVisitor.visitExpr(e: TmpL.Expression): Unit = when (e) {
     }
     is TmpL.PrefixOperation -> visitExpr(e.operand)
     is TmpL.AnyReference -> varUse(e.id.name, e)
-    is TmpL.RestParameterCountExpression -> varUseMisc(e.parameterName.name, e)
-    is TmpL.RestParameterExpression -> varUseMisc(e.parameterName.name, e)
     is TmpL.SupportCodeWrapper -> supportCodeUse(e)
     is TmpL.This -> receiverUse(e.id.name, e)
     is TmpL.UncheckedNotNullExpression -> {

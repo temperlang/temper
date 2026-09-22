@@ -2,7 +2,6 @@ package lang.temper.value
 
 import lang.temper.common.AtomicCounter
 import lang.temper.common.Log
-import lang.temper.cst.NameConstants
 import lang.temper.env.InterpMode
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -46,7 +45,7 @@ object BubbleFn : NullaryNeverFn {
 }
 
 /**
- * Specifically so far, this is inserted for missing else clauses. This should
+ * Specifically, so far, this is inserted for missing else clauses. This should
  * stay panic if the else is found unreachable based on type information.
  * Otherwise, it should become void. The value formals are the value being
  * checked and the static type it needs to have for the check to be exhaustive.
@@ -62,6 +61,8 @@ object VoidishPanicFn : NullaryNeverFn {
     override val sigs = nullaryNeverReturnsSigs(
         requiredInputTypes = listOf(WKT.anyValueType2, WKT.typeType2),
     ) { it }
+
+    override val builtinOperatorId = BuiltinOperatorId.Panic
 }
 
 /**
@@ -81,7 +82,7 @@ object PanicFn : NullaryNeverFn {
     override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode) =
         throw Panic()
 
-    override val builtinOperatorId get() = BuiltinOperatorId.Panic
+    override val builtinOperatorId = BuiltinOperatorId.Panic
 
     override val callMayFailPerSe: Boolean get() = false
 }
@@ -139,9 +140,15 @@ fun Tree?.isPureVirtualBody(): Boolean = when (this) {
  *
  * An AST that contains a call to this function is not ready for production.
  */
-object ErrorFn : NullaryNeverFn, TokenSerializable {
-    override val name: String = errorBuiltinName.builtinKey
-
+object ErrorFn :
+    NAryFn(
+        errorBuiltinName,
+        nullaryNeverReturnsSigs(errorBuiltinName.builtinKey) { it },
+        null,
+        WKT.anyValueOrNullType2,
+    ),
+    NullaryNeverFn,
+    TokenSerializable {
     override fun invoke(
         args: ActualValues,
         cb: InterpreterCallback,
@@ -181,9 +188,6 @@ object ErrorFn : NullaryNeverFn, TokenSerializable {
     // Does not follow normal failure path during runtime.
     override val callMayFailPerSe: Boolean = false
 
-    override val sigs: List<Signature2> = this.nullaryNeverReturnsSigs { it }
-        .map { it.copy(restInputsType = WKT.anyValueOrNullType2) }
-
     val voidSig: Signature2 = sigs[0]
     val genericSig: Signature2 = sigs[1]
 
@@ -199,8 +203,13 @@ object ErrorFn : NullaryNeverFn, TokenSerializable {
 private fun NamedBuiltinFun.nullaryNeverReturnsSigs(
     requiredInputTypes: List<Type2> = listOf(),
     makeReturnType: (Type2) -> Type2,
+): List<Signature2> = nullaryNeverReturnsSigs(name, requiredInputTypes, makeReturnType)
+
+private fun nullaryNeverReturnsSigs(
+    nameKey: String,
+    requiredInputTypes: List<Type2> = listOf(),
+    makeReturnType: (Type2) -> Type2,
 ): List<Signature2> {
-    val nameKey = "${name}T"
     val typeFormal = TypeFormal(
         Position(CoreCodeLocation, 0, 0),
         BuiltinName(nameKey),
@@ -244,17 +253,14 @@ fun isErrorCall(t: Tree) =
 
 /**
  * True for [NullaryNeverFn]s like `panic()`, and `bubble()`,
- * builtin zero argument calls whose return type is never, but
+ * builtin zero argument calls whose return type is *Never*, but
  * whose exact variant depends on the context in which they're called.
  */
 fun isNullaryNeverCall(t: Tree): Boolean {
     if (t !is CallTree) { return false }
     var callee = t.childOrNull(0)
-    if (callee is CallTree) {
-        val calleeCallee = callee.childOrNull(0)?.functionContained
-        if (calleeCallee is NamedBuiltinFun && calleeCallee.name == NameConstants.Angle) {
-            callee = callee.childOrNull(1)
-        }
+    if (callee != null && isTypeAngleCall(callee)) {
+        callee = callee.childOrNull(1)
     }
     return callee?.functionContained is NullaryNeverFn
 }

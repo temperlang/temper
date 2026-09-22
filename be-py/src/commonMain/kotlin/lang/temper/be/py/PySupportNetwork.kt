@@ -374,7 +374,6 @@ val CONCURRENT_FUTURES = PyDottedIdentifier.dotted(
 val DATE_TIME = PyDottedIdentifier("datetime")
 val MATH = PyDottedIdentifier("math")
 val UNITTEST = PyDottedIdentifier("unittest")
-val URLLIB_RESPONSE = PyDottedIdentifier("urllib.response")
 
 val AbstractBaseClassMeta = PySeparateCode("ABCMeta", SYS_ABC)
 val AbstractMethod = PySeparateCode("abstractmethod", SYS_ABC)
@@ -902,7 +901,6 @@ val AdaptGeneratorFactory = PySeparateCode(
     RUNTIME,
     BuiltinOperatorId.Async,
 )
-val AwaitSafeToExit = PySeparateCode("await_safe_to_exit", RUNTIME)
 val ConcurrentFuturesFuture = PyConnectedType("Future", CONCURRENT_FUTURES)
 val PromiseBuilderBreakPromise = PySeparateCode("break_promise", RUNTIME)
 val PromiseBuilderComplete = PySeparateCode("complete_promise", RUNTIME)
@@ -983,10 +981,10 @@ object DocConsoleLogInliner : InlineTmpLSupportCode {
         translator: TmpLTranslator,
     ): TmpL.Expression {
         val console = arguments[0].expr as TmpL.Expression
-        val args = arguments.subListToEnd(1).mapNotNull { it.expr as? TmpL.Actual }
+        val args = arguments.subListToEnd(1).mapNotNull { it.expr as? TmpL.Expression }
         // Call `print` only for very direct usage of `console.log`.
         val printSig =
-            Signature2(WellKnownTypes.voidType2, false, listOf(), restInputsType = WellKnownTypes.anyValueType2)
+            Signature2(WellKnownTypes.voidType2, false, listOf(WellKnownTypes.stringType2))
         val callee = when (console is TmpL.Reference && console.id.name == consoleBuiltinName) {
             true -> TmpL.FnReference(
                 pos,

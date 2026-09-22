@@ -858,39 +858,6 @@ class TypeSolverTest {
     }
 
     @Test
-    fun zeroArgVariadicWithContext() = withTypeTestHarness {
-        runSolverTest {
-            val result = TypeVar("ʼr")
-            val pass = TypeVar("ʼp")
-            val fail = SimpleVar("ʼf")
-            val actuals = SimpleVar("ʼa")
-            val choice = SimpleVar("ʼc")
-
-            val elementDeclaredType = "MapKey"
-
-            result sameAs pass
-            type2("Listed<$elementDeclaredType>") assignableFrom pass
-            regularCall {
-                callee(sig("fn<T extends AnyValue>(...T): List<T>"))
-                result(pass, fail)
-                typeActualsList(actuals)
-                chosenCallee(choice)
-            }
-
-            solve()
-
-            assertSolutions(
-                mapOf(
-                    actuals to "[$elementDeclaredType]",
-                    pass to "List<$elementDeclaredType>",
-                    choice to "0",
-                    result to "List<$elementDeclaredType>",
-                ),
-            )
-        }
-    }
-
-    @Test
     fun functionalInterfaceApplication() = withTypeTestHarness {
         runSolverTest {
             val a = unusedTypeVar("a")
@@ -1321,7 +1288,7 @@ class TypeSolverTest {
     fun nullaryFnIntertwined() = withTypeTestHarness {
         runSolverTest {
             // Two calls.   One a nullary never call nested in a variadic any function.
-            val outerCallee = sig("fn(...AnyValue): Void")
+            val outerCallee = sig("fn(AnyValue): Void")
 
             // Two callees.  One with a void return type and one without.
             // Based on the context type alone, we filter out one callee.

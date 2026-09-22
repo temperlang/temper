@@ -59,7 +59,6 @@ import lang.temper.value.impliedThisSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.optionalSymbol
-import lang.temper.value.restFormalSymbol
 import lang.temper.value.spanningPosition
 import lang.temper.value.surpriseMeSymbol
 import lang.temper.value.symbolContained
@@ -69,7 +68,6 @@ import lang.temper.value.typeSymbol
 import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vResolutionSymbol
-import lang.temper.value.vRestFormalSymbol
 import lang.temper.value.vStaySymbol
 import lang.temper.value.vTypeArgSymbol
 import lang.temper.value.vTypeFormalSymbol
@@ -314,6 +312,7 @@ internal fun formalizeArgs(
     isDeclaration: Boolean,
 ): PartialResult {
     val args = macroEnv.args
+    val logSink = macroEnv.logSink
     val rawTreeList = args.rawTreeList
 
     var result: PartialResult = NotYet
@@ -351,7 +350,7 @@ internal fun formalizeArgs(
                                 )
                             } else {
                                 result = Fail
-                                macroEnv.logSink.log(
+                                logSink.log(
                                     level = Log.Error,
                                     template = MessageTemplate.MalformedTypeDeclaration,
                                     pos = typeFormalEdge.target.pos,
@@ -368,7 +367,7 @@ internal fun formalizeArgs(
             val edge = tree.incoming
             if (edge != null) {
                 if (isFunctionConstructor) {
-                    pending.add { formalizeArg(edge) }
+                    pending.add { formalizeArg(edge, logSink) }
                 } else { // is type constructor
                     pending.add { splitComplexArgIntoWordAndType(edge) }
                 }
@@ -384,7 +383,7 @@ internal fun formalizeArgs(
     return result
 }
 
-internal fun formalizeArg(e: TEdge) {
+internal fun formalizeArg(e: TEdge, logSink: LogSink) {
     val tree = e.target
     val doc = tree.document
     when (tree) {
@@ -404,7 +403,7 @@ internal fun formalizeArg(e: TEdge) {
             // Look through annotations
             val decorated = lookThroughDecorations(e)
             if (decorated != e) {
-                formalizeArg(decorated)
+                formalizeArg(decorated, logSink)
             }
         }
         is DeclTree -> requireWordMetadata(tree)
@@ -422,16 +421,21 @@ internal fun formalizeArg(e: TEdge) {
                         }
                     } else {
                         // If it is a key not a value in the metadata pairs
-                        // take any surpriseMeSymbol (...) and swap it for the more informative
-                        // varArgsSymbol
-                        val keySymbol = if (!lastWasKeySymbol) t.symbolContained else null
-                        children.add(
-                            if (keySymbol == surpriseMeSymbol) {
-                                ValueLeaf(t.document, t.pos, vRestFormalSymbol)
-                            } else {
-                                t
-                            },
-                        )
+                        // take any surpriseMeSymbol (...) and treat it as
+                        // old rest argument syntax.
+                        // We might want to do something with rest formal
+                        // syntax in the future, but for now error on it.
+                        val keySymbol = if (lastWasKeySymbol) { null } else { t.symbolContained }
+                        if (keySymbol == surpriseMeSymbol) {
+                            logSink.log(
+                                Log.Error,
+                                MessageTemplate.IllegalRestParameter,
+                                t.pos,
+                                listOf(),
+                            )
+                        } else {
+                            children.add(t)
+                        }
                         lastWasKeySymbol = keySymbol != null
                     }
                 }
@@ -471,7 +475,6 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
         // Look at metadata
         // TODO: If there is a default expression, maybe that indicates
         // optionality.
-        var isRest = false
         var isOptional = false
         for ((keySymbol, valueIndex) in SymbolPairsNonMutating(tree, startIndex = 2)) {
             when (keySymbol) {
@@ -479,7 +482,6 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
                     type = tree.child(valueIndex)
                     break
                 }
-                surpriseMeSymbol -> isRest = true
                 initSymbol -> isOptional = true
             }
         }
@@ -497,10 +499,6 @@ private fun splitComplexArgIntoWordAndType(e: TEdge) {
                 Replant(freeTree(nameOrType))
             }
             val rightEdge = pos.rightEdge
-            if (isRest) {
-                V(rightEdge, restFormalSymbol)
-                V(rightEdge, void)
-            }
             if (isOptional) {
                 V(optionalSymbol)
                 V(rightEdge, void)

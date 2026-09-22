@@ -186,6 +186,7 @@ enum class MessageTemplate(
     SignatureMismatch("Arguments did not match function signature", CompilationPhase.Interpreter),
     InvalidBlockContent("Invalid block content", CompilationPhase.Interpreter),
     InvalidCaseCondition("Invalid case condition", CompilationPhase.Interpreter),
+    IllegalRestParameter("Illegal rest parameter syntax", CompilationPhase.Interpreter),
     ElseMustBeLast("Other cases are invalid after else", CompilationPhase.Interpreter),
     MissingCaseValue("Missing case value", CompilationPhase.Interpreter),
     UnableToEvaluate("Unable to evaluate", CompilationPhase.Interpreter),
@@ -242,10 +243,6 @@ enum class MessageTemplate(
     ),
     UserConnectedNotFun(
         "At this time, users can connect only top-level functions",
-        CompilationPhase.CodeGeneration,
-    ),
-    UserConnectedFunHasRest(
-        "At this time, rest parameters aren't supported in user connected functions",
         CompilationPhase.CodeGeneration,
     ),
     CannotExtend(

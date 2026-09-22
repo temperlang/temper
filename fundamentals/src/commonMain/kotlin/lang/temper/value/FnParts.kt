@@ -1,11 +1,9 @@
 package lang.temper.value
 
 import lang.temper.common.EnumRange
-import lang.temper.common.safeLet
 import lang.temper.stage.Stage
 import lang.temper.type.AndType
 import lang.temper.type.NominalType
-import lang.temper.type.RestFormal
 import lang.temper.type.StaticType
 import lang.temper.type.SuperTypeTree
 import lang.temper.type.TypeFormal
@@ -19,12 +17,11 @@ class FnParts internal constructor(
     val formals: List<DeclTree>,
     // Since the actual type of the varArg from the caller's perspective doesn't exist as
     // a declaration, we need a more advanced type here.
-    val restFormal: RestFormal?,
     val connected: Boolean,
     metadataSymbolMultimap: MetadataMultimap,
     val body: Tree,
 ) : AbstractParts(metadataSymbolMultimap) {
-    private val superTypesLazy = lazy {
+    private val superTypesLazy by lazy {
         val incomplete = mutableListOf<TEdge>()
         val superTypes = mutableSetOf<NominalType>()
         metadataSymbolMultimap[superSymbol]?.forEach { valueEdge ->
@@ -48,7 +45,7 @@ class FnParts internal constructor(
         }
         SuperTypeParts(SuperTypeTree(superTypes), incomplete = incomplete.toList())
     }
-    val superTypes get() = superTypesLazy.value
+    val superTypes get() = superTypesLazy
 
     val connectedKey: String? = when {
         connected -> metadataSymbolMap[qNameSymbol]?.valueContained(TString)
@@ -128,30 +125,13 @@ internal fun decomposeFun(tree: FunTree, metadataMultimap: LiveMetadataMap): FnP
     }
     val body = tree.child(childIndex)
 
-    val (formals, restFormal) = allFormals.toList().partition { it.parts?.isRestFormal == false }
-
     return FnParts(
         typeFormals = typeFormals,
-        formals = formals,
-        restFormal = typeOfList(restFormal.firstOrNull()),
+        formals = allFormals.toList(),
         connected = connectedSymbol in metadataMultimap,
         metadataSymbolMultimap = metadataMultimap,
         body = body,
     )
-}
-
-private fun typeOfList(tree: DeclTree?): RestFormal? {
-    val typeN = tree?.parts?.type?.target?.staticTypeContained?.let { listType ->
-        val nominalType = listType as? NominalType
-        nominalType?.bindings?.firstOrNull() as? StaticType
-    }
-    val nameN = tree?.parts?.name?.content
-
-    val posN = tree?.pos
-
-    return safeLet(typeN, nameN, posN, tree) { type, name, pos, t ->
-        RestFormal(name, type, pos, t)
-    }
 }
 
 /**

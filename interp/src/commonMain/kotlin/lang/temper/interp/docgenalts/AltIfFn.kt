@@ -32,7 +32,7 @@ object AltIfFn : NamedBuiltinFun, SpecialFunction, DocGenAltIfFn {
             returnType2 = WellKnownTypes.voidType2,
             hasThisFormal = false,
             requiredInputTypes = listOf(WellKnownTypes.booleanType2, WellKnownTypes.anyValueOrNullType2),
-            restInputsType = WellKnownTypes.anyValueOrNullType2,
+            optionalInputTypes = listOf(WellKnownTypes.anyValueType2),
         ),
     )
 

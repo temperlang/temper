@@ -83,7 +83,7 @@ internal object JsSupportNetwork : SupportNetwork {
         val jsonAdapterMethod = members.firstOrNull {
             it is TmpL.StaticMethod && it.dotName.dotNameText == jsonAdapterDotName.dotName.text &&
                 !it.mayYield && it.typeParameters.ot.typeParameters.isEmpty() &&
-                it.parameters.parameters.isEmpty() && it.parameters.restParameter == null
+                it.parameters.parameters.isEmpty()
         }
         val hasToJson = members.any {
             it is TmpL.InstanceMember &&
@@ -138,7 +138,6 @@ internal object JsSupportNetwork : SupportNetwork {
                                     type,
                                 ),
                             ),
-                            null,
                         ),
                         returnType = TmpL.NominalType(
                             pos = p,

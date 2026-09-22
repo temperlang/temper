@@ -30,6 +30,7 @@ import lang.temper.frontend.NameCaptureResult
 import lang.temper.frontend.RandomBool
 import lang.temper.frontend.RandomInt
 import lang.temper.frontend.StagingFlags
+import lang.temper.frontend.staging.makeContinueCondition
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.lexer.StandaloneLanguageConfig
 import lang.temper.log.CodeLocation
@@ -470,9 +471,9 @@ class TyperTest {
             |///                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : List<Fruit>
             |      );
             |    let unbound = List.of;
-            |///     ┗━━━━━┛               : fn<listT extends AnyValue>(...listT): List<listT>
+            |///     ┗━━━━━┛               : fn<listT extends AnyValue>: List<listT>
             |    let bound = List.of<Int>;
-            |///     ┗━━━┛                 : fn (...Int32): List<Int32>
+            |///     ┗━━━┛                 : fn: List<Int32>
         """.trimMargin(),
     )
 
@@ -2283,11 +2284,7 @@ class TyperTest {
     ): Triple<BlockTree, List<Pair<Position, String>>, CaptureInfo> {
         val logSink = ListBackedLogSink()
         val projectLogSink = ValueSimplifyingLogSink(logSink, nameSimplifying = nameSimplifying)
-        var kTicks = 10
-        val continueCondition = {
-            kTicks -= 1
-            kTicks > 0
-        }
+        val continueCondition = makeContinueCondition()
 
         var treeAfterTyper: BlockTree? = null
         var captureInfo = CaptureInfo.empty

@@ -21,6 +21,7 @@ import lang.temper.name.ExportedName
 import lang.temper.name.InternalModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTypeInferences
@@ -478,7 +479,8 @@ internal class UseBeforeInit(
                             ErrorFn.voidSig
                         } else {
                             ErrorFn.genericSig
-                        }
+                        } // Extend nary type with arg
+                            .copy(requiredInputTypes = listOf(WellKnownTypes.anyValueOrNullType2))
                         CallTypeInferences(
                             type,
                             typeFromSignature(sig),

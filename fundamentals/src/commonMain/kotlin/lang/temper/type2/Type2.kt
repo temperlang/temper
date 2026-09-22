@@ -677,7 +677,6 @@ sealed class AnySignature : StayReferrer, TokenSerializable {
     abstract val optionalValueFormals: List<AnyValueFormal>
     abstract val requiredAndOptionalValueFormals: List<AnyValueFormal>
     abstract val allValueFormals: List<AnyValueFormal>
-    abstract val restValuesFormal: AnyValueFormal?
     abstract val returnType: BaseReifiedType?
     abstract val typeFormals: List<TypeFormal>
 
@@ -723,9 +722,6 @@ sealed class AnySignature : StayReferrer, TokenSerializable {
                 ValueFormalKind.Required -> {}
                 ValueFormalKind.Optional -> {
                     tokenSink.emit(OutputToken("optional", OutputTokenType.Word))
-                }
-                ValueFormalKind.Rest -> {
-                    tokenSink.emit(OutToks.prefixEllipses)
                 }
             }
 
@@ -775,7 +771,6 @@ data class Signature2(
     val hasThisFormal: Boolean,
     val requiredInputTypes: List<Type2>,
     val optionalInputTypes: List<Type2> = emptyList(),
-    val restInputsType: Type2? = null,
     override val typeFormals: List<TypeFormal> = emptyList(),
 ) : AnySignature(), Descriptor {
     override val returnType get() = ReifiedType(returnType2)
@@ -784,7 +779,6 @@ data class Signature2(
         MappingListView(requiredInputTypes) { ValueFormal2(it, ValueFormalKind.Required) }
     override val optionalValueFormals get() =
         MappingListView(optionalInputTypes) { ValueFormal2(it, ValueFormalKind.Optional) }
-    override val restValuesFormal get() = restInputsType?.let { ValueFormal2(it, ValueFormalKind.Rest) }
 
     override val requiredAndOptionalValueFormals: List<ValueFormal2>
         get() {
@@ -798,11 +792,7 @@ data class Signature2(
 
     override val allValueFormals: List<ValueFormal2> get() {
         val reqAndOpt = requiredAndOptionalValueFormals
-        return if (restInputsType != null) {
-            ConcatenatedListView(reqAndOpt, listOfNotNull(restValuesFormal))
-        } else {
-            reqAndOpt
-        }
+        return reqAndOpt
     }
 
     override fun renderTo(tokenSink: TokenSink) {
@@ -830,11 +820,7 @@ data class Signature2(
 
     val arityRange: IntRange get() {
         val min = requiredInputTypes.size
-        val max = if (restInputsType != null) {
-            Integer.MAX_VALUE
-        } else {
-            min + optionalInputTypes.size
-        }
+        val max = min + optionalInputTypes.size
         return min..max
     }
 
@@ -847,7 +833,7 @@ data class Signature2(
         if (indexInOptional in optionalInputTypes.indices) {
             return ValueFormal2(optionalInputTypes[indexInOptional], ValueFormalKind.Optional)
         }
-        return restInputsType?.let { ValueFormal2(it, ValueFormalKind.Rest) }
+        return null
     }
 }
 
@@ -859,7 +845,6 @@ data class MacroSignature(
     override val returnType: BaseReifiedType?,
     override val requiredValueFormals: List<AnyValueFormal>,
     override val optionalValueFormals: List<AnyValueFormal> = listOf(),
-    override val restValuesFormal: AnyValueFormal? = null,
     override val typeFormals: List<TypeFormal> = emptyList(),
 ) : AnySignature() {
     init { checkSymbolsDistinct() }
@@ -867,8 +852,7 @@ data class MacroSignature(
     override val requiredAndOptionalValueFormals: List<AnyValueFormal> get() =
         ConcatenatedListView(requiredValueFormals, optionalValueFormals)
 
-    override val allValueFormals: List<AnyValueFormal> get() =
-        ConcatenatedListView(requiredAndOptionalValueFormals, listOfNotNull(restValuesFormal))
+    override val allValueFormals: List<AnyValueFormal> get() = requiredAndOptionalValueFormals
 }
 
 /**
@@ -878,20 +862,14 @@ data class MacroSignature(
 data class InterpSignature(
     override val returnType: BaseReifiedType?,
     override val requiredAndOptionalValueFormals: List<InterpValueFormal>,
-    val restInputsType: Type2?,
     override val typeFormals: List<TypeFormal>,
 ) : AnySignature() {
     override val requiredValueFormals: List<AnyValueFormal> =
         requiredAndOptionalValueFormals.filter { it.kind == ValueFormalKind.Required }
     override val optionalValueFormals: List<AnyValueFormal> =
         requiredAndOptionalValueFormals.filter { it.kind == ValueFormalKind.Optional }
-    override val restValuesFormal get() = restInputsType?.let {
-        ValueFormal2(it, ValueFormalKind.Rest)
-    }
     override val allValueFormals: List<AnyValueFormal>
-        get() = restValuesFormal?.let {
-            ConcatenatedListView(requiredAndOptionalValueFormals, listOf(it))
-        } ?: requiredAndOptionalValueFormals
+        get() = requiredAndOptionalValueFormals
 }
 
 /** A minimal description of a function argument. */
@@ -903,9 +881,7 @@ interface IValueFormal {
     val kind: ValueFormalKind
     val isOptional: Boolean get() = when (kind) {
         ValueFormalKind.Required -> false
-        ValueFormalKind.Optional,
-        ValueFormalKind.Rest,
-        -> true
+        ValueFormalKind.Optional -> true
     }
 }
 
@@ -956,9 +932,6 @@ data class ValueFormal2(
     override val kind: ValueFormalKind,
 ) : TokenSerializable, AnyValueFormal {
     override fun renderTo(tokenSink: TokenSink) {
-        if (kind == ValueFormalKind.Rest) {
-            tokenSink.emit(OutToks.prefixEllipses)
-        }
         type.renderTo(tokenSink)
         if (kind == ValueFormalKind.Optional) {
             tokenSink.emit(OutToks.eq)

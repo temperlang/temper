@@ -42,7 +42,7 @@ object DoPureFn : SpecialFunction, NamedBuiltinFun {
     override val sigs = run {
         val (tf, t) = makeTypeFormal("doPure", "T")
         val noneToT = hackMapOldStyleToNew(
-            MkType.fn(listOf(), listOf(), null, MkType.nominal(tf)),
+            MkType.fn(listOf(), listOf(), MkType.nominal(tf)),
         )
         listOf(
             Signature2(

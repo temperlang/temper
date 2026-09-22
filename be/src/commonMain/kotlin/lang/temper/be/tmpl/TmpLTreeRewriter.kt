@@ -46,8 +46,6 @@ internal interface TmpLTreeRewriter {
         is TmpL.InstanceOfExpression -> rewriteInstanceOfExpression(x)
         is TmpL.CastExpression -> rewriteCastExpression(x)
         is TmpL.UncheckedNotNullExpression -> rewriteUncheckedNotNullExpression(x)
-        is TmpL.RestParameterExpression -> rewriteRestParameterExpression(x)
-        is TmpL.RestParameterCountExpression -> rewriteRestParameterCountExpression(x)
         is TmpL.GetProperty -> rewriteGetProperty(x)
         is TmpL.FunInterfaceExpression -> rewriteFunInterfaceExpression(x)
     }
@@ -124,7 +122,7 @@ internal interface TmpLTreeRewriter {
             pos = x.pos,
             fn = rewriteCallable(x.fn),
             typeActuals = rewriteCallTypeActuals(x.typeActuals),
-            parameters = x.parameters.map { rewriteActual(it) },
+            parameters = x.parameters.map { rewriteExpression(it) },
         )
     }
 
@@ -188,22 +186,6 @@ internal interface TmpLTreeRewriter {
             pos = x.pos,
             expression = rewriteExpression(x.expression),
             passType = x.passType,
-        )
-    }
-
-    fun rewriteRestParameterExpression(x: TmpL.RestParameterExpression): TmpL.Expression {
-        return TmpL.RestParameterExpression(
-            pos = x.pos,
-            parameterName = rewriteId(x.parameterName),
-            index = x.index.deepCopy(),
-            passType = x.passType,
-        )
-    }
-
-    fun rewriteRestParameterCountExpression(x: TmpL.RestParameterCountExpression): TmpL.Expression {
-        return TmpL.RestParameterCountExpression(
-            pos = x.pos,
-            parameterName = rewriteId(x.parameterName),
         )
     }
 
@@ -470,14 +452,6 @@ internal interface TmpLTreeRewriter {
         is TmpL.GarbageCallable -> rewriteGarbageCallable(x)
     }
 
-    fun rewriteActual(x: TmpL.Actual): TmpL.Actual = when (x) {
-        is TmpL.Expression -> rewriteExpression(x)
-        is TmpL.RestSpread -> rewriteRestSpread(x)
-    }
-
-    fun rewriteRestSpread(x: TmpL.RestSpread): TmpL.Actual =
-        TmpL.RestSpread(pos = x.pos, parameterName = rewriteId(x.parameterName))
-
     fun rewriteTopLevel(x: TmpL.TopLevel): TmpL.TopLevel = when (x) {
         is TmpL.BoilerplateCodeFoldBoundary -> rewriteBoilerplateCodeFoldBoundary(x)
         is TmpL.EmbeddedComment -> rewriteEmbeddedComment(x)
@@ -529,7 +503,6 @@ internal interface TmpLTreeRewriter {
         TmpL.ValueFormalList(
             pos = x.pos,
             formals = x.formals.map { rewriteValueFormal(it) },
-            rest = x.rest?.let { rewriteRestFormal(it) },
         )
 
     fun rewriteValueFormal(x: TmpL.ValueFormal): TmpL.ValueFormal =
@@ -540,24 +513,13 @@ internal interface TmpLTreeRewriter {
             isOptional = x.isOptional,
         )
 
-    fun rewriteRestFormal(x: TmpL.AType): TmpL.AType = rewriteAType(x)
-
     fun rewriteParameters(x: TmpL.Parameters): TmpL.Parameters = TmpL.Parameters(
         pos = x.pos,
         thisName = x.thisName?.let { rewriteId(it) },
         parameters = x.parameters.map { rewriteFormal(it) },
-        restParameter = x.restParameter?.let { rewriteRestFormal(it) },
     )
 
     fun rewriteFormal(x: TmpL.Formal): TmpL.Formal = TmpL.Formal(
-        pos = x.pos,
-        metadata = rewriteDeclarationMetadataList(x.metadata),
-        name = rewriteId(x.name),
-        type = rewriteAType(x.type),
-        descriptor = x.descriptor,
-    )
-
-    fun rewriteRestFormal(x: TmpL.RestFormal): TmpL.RestFormal = TmpL.RestFormal(
         pos = x.pos,
         metadata = rewriteDeclarationMetadataList(x.metadata),
         name = rewriteId(x.name),

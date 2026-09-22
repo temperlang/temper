@@ -29,7 +29,7 @@ class StaticTypeTest {
             "Bubble",
             toStringViaTokenSink { BubbleType.renderTo(it) },
         )
-        val strToVoid = MkType.fn(listOf(), listOf(WellKnownTypes.stringType), null, WellKnownTypes.voidType)
+        val strToVoid = MkType.fn(listOf(), listOf(WellKnownTypes.stringType), WellKnownTypes.voidType)
         assertStringsEqual(
             "fn (String): Void",
             toStringViaTokenSink { strToVoid.renderTo(it) },
@@ -42,7 +42,7 @@ class StaticTypeTest {
         val (typeParamRefT) = makeTypeFormalsForTest("T" to WellKnownTypes.anyValueType)
         val genericFnType = MkType.fn(
             listOf(typeParamRefT.definition),
-            listOf(hackMapNewStyleToOld(typeParamRefT)), null, WellKnownTypes.voidType,
+            listOf(hackMapNewStyleToOld(typeParamRefT)), WellKnownTypes.voidType,
         )
         assertStringsEqual(
             "fn<T extends AnyValue>(T): Void",

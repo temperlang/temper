@@ -47,7 +47,6 @@ object AsyncFn : NamedBuiltinFun, SpecialFunction {
                     MkType.fnDetails(
                         emptyList(),
                         listOf(),
-                        null,
                         returnType = MkType.nominal(
                             WellKnownTypes.safeGeneratorTypeDefinition,
                             listOf(WellKnownTypes.emptyType),

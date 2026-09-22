@@ -55,7 +55,6 @@ internal object CompileLog : BuiltinStatelessMacroValue, NamedBuiltinFun {
                     ValueFormalKind.Required,
                 ),
             ),
-            restValuesFormal = null,
         ),
         Signature2(
             returnType2 = WellKnownTypes.voidType2,

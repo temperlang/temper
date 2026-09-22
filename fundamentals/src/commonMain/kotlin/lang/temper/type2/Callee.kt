@@ -24,9 +24,6 @@ enum class ValueFormalKind {
      * or in later default expressions, may be treated as non-nullable.
      */
     Optional,
-
-    /** Captures the rest of the arguments in a list representing the varargs arguments. */
-    Rest,
 }
 
 fun Signature2.mapType(m: Map<TypeFormal, Type2>): Signature2 {
@@ -38,7 +35,6 @@ fun Signature2.mapType(m: Map<TypeFormal, Type2>): Signature2 {
         hasThisFormal = hasThisFormal,
         requiredInputTypes = requiredInputTypes.map { it.mapType(m) },
         optionalInputTypes = optionalInputTypes.map { it.mapType(m) },
-        restInputsType = restInputsType?.mapType(m),
         typeFormals = typeFormals,
     )
 }
@@ -51,7 +47,7 @@ data class Callee(
 
     val functionType: FunctionType get() = MkType.fnDetails(
         sig.typeFormals,
-        buildList {
+        valueFormals = buildList {
             sig.requiredInputTypes.mapTo(this) {
                 FunctionType.ValueFormal(
                     null,
@@ -67,10 +63,7 @@ data class Callee(
                 )
             }
         },
-        sig.restInputsType?.let {
-            hackMapNewStyleToOld(it)
-        },
-        hackMapNewStyleToOld(sig.returnType2),
+        returnType = hackMapNewStyleToOld(sig.returnType2),
     )
 
     override fun renderTo(tokenSink: TokenSink) {

@@ -404,7 +404,7 @@ private fun fakeBlockReceiverBuiltins(args: List<Type2>): Map<TemperName, Value<
                         requiredInputTypes = listOf(
                             hackMapOldStyleToNew(
                                 MkType.fn(
-                                    listOf(), argsOld, null,
+                                    listOf(), argsOld,
                                     returnType = MkType.nominal(
                                         WellKnownTypes.safeGeneratorTypeDefinition,
                                         listOf(hackMapNewStyleToOld(tT)),
@@ -436,7 +436,7 @@ private fun fakeBlockReceiverBuiltins(args: List<Type2>): Map<TemperName, Value<
                         requiredInputTypes = listOf(
                             hackMapOldStyleToNew(
                                 MkType.fn(
-                                    listOf(), argsOld, null,
+                                    listOf(), argsOld,
                                     returnType = MkType.nominal(
                                         WellKnownTypes.generatorTypeDefinition,
                                         listOf(hackMapNewStyleToOld(tT)),

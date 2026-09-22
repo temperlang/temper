@@ -133,6 +133,7 @@ import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.LeftNameLeaf
+import lang.temper.value.NAryFn
 import lang.temper.value.NameLeaf
 import lang.temper.value.NoTypeInferencesTree
 import lang.temper.value.PreserveFn
@@ -915,6 +916,10 @@ internal class Typer(
                         Callee(it, CalleePriority.Default)
                     }
                 }
+            } else if (typedVariants is SigVariants) {
+                typedVariants.sigs.mapTo(this) {
+                    Callee(it, CalleePriority.Default)
+                }
             } else if (typedVariants != null) {
                 for (fnType in typedVariants.fnTypes) {
                     hackTryStaticTypeToSig(fnType)?.let { sig ->
@@ -942,8 +947,8 @@ internal class Typer(
             priorProblems = priorProblems,
             calleeVariants = calleeVariants,
             callTree = tree,
-            isNewCall = isNewCall,
             isRttiCall = calleeFn is RttiCheckFunction,
+            isNewCall = isNewCall,
             typeActualsAndPositions = explicitActualTypesAndPositions,
             inputTrees = inputTrees,
             contextType = contextType,
@@ -1659,7 +1664,7 @@ internal class Typer(
                 tree,
                 Decision(
                     InvalidType,
-                    MkType.fn(listOf(), listOf(InvalidType, InvalidType), null, InvalidType),
+                    MkType.fn(listOf(), listOf(InvalidType, InvalidType), InvalidType),
                     explanations = listOf(
                         TypeReason(
                             LogEntry(Log.Error, MessageTemplate.MalformedAssignment, left.pos, listOf()),
@@ -1723,7 +1728,6 @@ internal class Typer(
                         variant = MkType.fn(
                             typeFormals = emptyList(),
                             valueFormals = listOf(type, type),
-                            restValuesFormal = null,
                             returnType = type,
                         ),
                     ),
@@ -1827,8 +1831,12 @@ internal class Typer(
                 maybeBoundType,
                 variant = MkType.fn(
                     typeFormals = emptyList(),
-                    valueFormals = listOf(generalType),
-                    restValuesFormal = WellKnownTypes.typeType,
+                    valueFormals = buildList {
+                        add(generalType)
+                        repeat(tree.size - 2) {
+                            add(WellKnownTypes.typeType)
+                        }
+                    },
                     returnType = generalType,
                 ),
             )
@@ -1887,7 +1895,6 @@ internal class Typer(
                 )
                 ignore(superTypes) // TODO: fold super types into function type.
                 val valueDecls = parts.formals
-                val restValuesFormal: StaticType? = parts.restFormal?.type
                 val returnDecl = parts.returnDecl
                 val typeFormals = parts.typeFormals.map {
                     it.second ?: run {
@@ -1981,7 +1988,6 @@ internal class Typer(
                 MkType.fnDetails(
                     typeFormals = typeFormals,
                     valueFormals = valueFormals,
-                    restValuesFormal = restValuesFormal,
                     returnType = returnType,
                 )
             }
@@ -2080,7 +2086,6 @@ internal class Typer(
                     variant = MkType.fn(
                         typeFormals = emptyList(),
                         valueFormals = listOf(anyValueType, type),
-                        restValuesFormal = null,
                         returnType = type,
                     ),
                     bindings = mapOf(PreserveFn.sig.typeFormals[0] to type),
@@ -2198,7 +2203,6 @@ internal class Typer(
                             variant = MkType.fn(
                                 typeFormals = emptyList(),
                                 valueFormals = listOf(rightTypeOrInvalid, rightTypeOrInvalid),
-                                restValuesFormal = null,
                                 returnType = rightTypeOrInvalid,
                             ),
                             bindings = emptyMap(),
@@ -2280,32 +2284,39 @@ internal class Typer(
     }
 
     private fun fixupCalleeType(t: CallTree): ITypedVariants? {
-        val callee = t.childOrNull(0)
-        val callable = callee?.functionContained ?: return null
-        val variants: ITypedVariants? = when (callable) {
+        val callee = t.childOrNull(0) ?: return null
+        val callable = if (isTypeAngleCall(callee)) {
+            callee.childOrNull(1)
+        } else {
+            callee
+        }?.functionContained
+
+        val variants: ITypedVariants = when (callable) {
             BuiltinFuns.getpFn -> typeForGetp(t)
             BuiltinFuns.setpFn -> typeForSetp(t)
             is GetStaticOp -> typeForGets(t, callable)
             is RttiCheckFunction -> typeForRttiCheck(t, callable)
             BuiltinFuns.commaFn -> typeForComma(t)
             is DotHelper -> typeForDotHelper(t, callable)
+            is NAryFn -> typeForNAryFun(t, callable)
             else -> null
-        }
-        if (variants != null) {
-            val (fixedTypes, problems) = variants
-            val fixedType = MkType.and(fixedTypes)
+        } ?: return null
+
+        val explanations =
+            (ti.decision(t)?.explanations ?: emptyList()) + variants.reasons
+        if (variants !is SigVariants || variants.reasons.isNotEmpty()) {
+            val fixedType = MkType.and(variants.fnTypes)
             if (DEBUG) {
                 console.group(
                     "Fixed callee type of ${
                         abbreviate(t.toLispy())
                     } from ${ti.decisionType(callee)} to $fixedType",
                 ) {
-                    problems.forEach {
+                    variants.reasons.forEach {
                         console.log("- $it")
                     }
                 }
             }
-            val explanations = (ti.decision(t)?.explanations ?: emptyList()) + problems
             if (isPreserveCall(callee)) {
                 check(callee is CallTree)
                 val reduced = callee.child(2) as ValueLeaf
@@ -2361,7 +2372,6 @@ internal class Typer(
                 propertyReferenceType,
                 thisType ?: InvalidType,
             ),
-            restValuesFormal = null,
             returnType = propertyReferenceType,
         )
         return TypedVariants(listOf(fnType), listOf())
@@ -2409,7 +2419,6 @@ internal class Typer(
                 thisType,
                 rightType,
             ),
-            restValuesFormal = null,
             returnType = rightType,
         )
         return TypedVariants(listOf(fnType), problems.toList())
@@ -2533,7 +2542,6 @@ internal class Typer(
                 MkType.fn(
                     typeFormals = emptyList(),
                     valueFormals = extraArgs,
-                    restValuesFormal = null,
                     returnType = simpleType,
                 )
             } else {
@@ -2542,7 +2550,6 @@ internal class Typer(
                     is FunctionType -> MkType.fnDetails(
                         t.typeFormals,
                         extraArgs.map { FunctionType.ValueFormal(null, it) } + t.valueFormals,
-                        t.restValuesFormal,
                         t.returnType,
                     )
                     else -> InvalidType
@@ -2636,6 +2643,13 @@ internal class Typer(
         /** For each variant, the associated member shape or extension function name. */
         val typedCandidates: List<Pair<StaticType, Either<VisibleMemberShape, ExtensionResolution>>> = emptyList(),
     ) : ITypedVariants
+
+    private class SigVariants(
+        val sigs: List<Signature2>,
+        override val reasons: List<TypeReasonElement>,
+    ) : ITypedVariants {
+        override val fnTypes: List<StaticType> get() = listOf()
+    }
 
     private fun typeForDotHelper(
         t: CallTree,
@@ -2886,7 +2900,6 @@ internal class Typer(
                                         MkType.fn(
                                             typeFormals = emptyList(),
                                             valueFormals = listOfNotNull(containingType, nominalType, memberShapeType),
-                                            restValuesFormal = null,
                                             returnType = Types.void.type,
                                         )
                                     } else {
@@ -2894,7 +2907,6 @@ internal class Typer(
                                         MkType.fn(
                                             typeFormals = emptyList(),
                                             valueFormals = listOfNotNull(containingType, nominalType),
-                                            restValuesFormal = null,
                                             returnType = memberShapeType,
                                         )
                                     }
@@ -3011,6 +3023,45 @@ internal class Typer(
         }
     }
 
+    private fun typeForNAryFun(t: CallTree, fn: NAryFn): ITypedVariants {
+        // If we have a signature like strCat's
+        // `(optional String) -> String`
+        // and the call takes three arguments, explode the signature's actuals to
+        // `(String, String, String) -> String`.
+
+        var nArgs = 0
+        val limit = t.size
+        var i = 1
+        while (i < limit) {
+            if (i + 1 < limit && t.child(i).symbolContained != null) {
+                i += 1
+            }
+            i += 1
+            nArgs += 1
+        }
+
+        val extraInputType = fn.extraInputType
+        val adjustedSigs = fn.sigs.map { sig ->
+            val nRequired = sig.requiredInputTypes.size
+
+            val requiredInputTypes = buildList {
+                // TODO: do we need to do anything special for \type ElementType in listify calls?
+                addAll(sig.requiredInputTypes)
+                repeat(nArgs - nRequired) {
+                    add(extraInputType)
+                }
+            }
+
+            val adjustedSig = sig.copy(
+                requiredInputTypes = requiredInputTypes,
+                optionalInputTypes = listOf(),
+            )
+
+            adjustedSig
+        }
+        return SigVariants(adjustedSigs, listOf())
+    }
+
     private fun matchesOverload(symbol: Symbol, member: MemberShape): Boolean {
         return (member.metadata[overloadSymbol] ?: listOf()).any { v ->
             symbol.text == TString.unpackOrNull(v)
@@ -3049,7 +3100,6 @@ internal class Typer(
                         }
                         add(FunctionType.ValueFormal(null, typeT, isOptional = false))
                     },
-                    restValuesFormal = null,
                     returnType = typeT,
                 ),
             ),
@@ -3073,7 +3123,6 @@ internal class Typer(
             variant = MkType.fn(
                 typeFormals = emptyList(),
                 valueFormals = listOf(leftType, leftType),
-                restValuesFormal = null,
                 returnType = leftType,
             ),
         )

@@ -14,7 +14,6 @@ class DeclParts internal constructor(
 ) : DeclPartsNameless(metadataSymbolMultimap) {
     /** Use `.elseTrue` for simple usage because [TriState.OTHER] means optional but defaulting to null. */
     val isOptional: TriState get() = optionalAsTriState(this.optional)
-    val isRestFormal: Boolean get() = restFormalSymbol in metadataSymbolMap
     val connectedKey: String? get() = when {
         connectedSymbol in metadataSymbolMap -> metadataSymbolMap[qNameSymbol]?.valueContained(TString)
         else -> null

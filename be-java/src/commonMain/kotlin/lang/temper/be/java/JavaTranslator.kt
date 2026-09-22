@@ -19,7 +19,6 @@ import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.mapGenericIndexed
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNull
 import lang.temper.common.charCount
 import lang.temper.common.decodeUtf16
@@ -396,15 +395,6 @@ class JavaTranslator(
                             ),
                         )
                     }
-                    funcType.restInputsType?.let { type ->
-                        add(
-                            J.VariableArityParameter(
-                                pos,
-                                type = JavaType.fromFrontend(type, names).toTypeAst(pos),
-                                name = J.Identifier(pos, "arg${pCount++}"),
-                            ),
-                        )
-                    }
                 }
                 val typeParams = J.TypeParameters(
                     pos,
@@ -501,7 +491,6 @@ class JavaTranslator(
             add(Overload(originalFormals, originalBody))
             for (idx in px.parameters.lastIndex downTo 0) {
                 val overloadParameters = px.deepCopy()
-                overloadParameters.restParameter = null
                 // Stop generating overloads once we have a required parameter.
                 if (!overloadParameters.parameters[idx].optional) {
                     break
@@ -671,8 +660,6 @@ class JavaTranslator(
         ): J.ClassDeclaration? {
             // If only `this` plus up to 1 more, don't bother with builder. TODO Instead checked named/optional?
             fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return null
-            // And for now, skip those with rest parameters. TODO Extract to list value?
-            fn.parameters.restParameter != null && return null
             // Build the builder.
             val pos = fn.pos
             val builderName = OutName("Builder", null).toIdentifier(pos)
@@ -1273,7 +1260,6 @@ class JavaTranslator(
 
         /** Create an object containing the method parameters and necessary preamble statements. */
         private fun parameters(px: TmpL.Parameters): ParamsPreamble {
-            val rest = px.restParameter
             val params = mutableListOf<J.MethodParameter>()
             val preamble = mutableListOf<J.BlockLevelStatement>()
             val thisName = px.thisName?.name
@@ -1291,35 +1277,6 @@ class JavaTranslator(
                     tmpLIdToParamName[p.name] = names.formal(p.name).outName
                     params.add(J.FormalParameter(p.pos, type = type, name = name))
                 }
-            }
-            if (rest != null) {
-                // rest.type should be the element type
-                val paramType = JavaType.fromTmpL(rest.type, names)
-                val paramName = names.restFormal(rest.name)
-                val localName = names.formal(rest.name)
-                val localType = javaUtilList.toClassType(
-                    rest.pos,
-                    J.TypeArguments(rest.pos, listOf(paramType.asReferenceType().toTypeArgAst(rest.pos))),
-                )
-                tmpLIdToParamName[rest.name] = paramName.outName
-                params.add(
-                    J.VariableArityParameter(
-                        rest.pos,
-                        type = paramType.toTypeAst(rest.pos),
-                        name = paramName,
-                    ),
-                )
-                preamble.add(
-                    J.LocalVariableDeclaration(
-                        rest.pos,
-                        type = localType,
-                        name = localName,
-                        expr = javaUtilArraysAsList.staticMethod(
-                            listOf(paramName.asNameExpr().asArgument()),
-                            pos = rest.pos,
-                        ),
-                    ),
-                )
             }
             return ParamsPreamble(params, preamble, tmpLIdToParamName.toMap())
         }
@@ -1583,9 +1540,6 @@ class JavaTranslator(
                         add(names.formal(p.name))
                     }
                 }
-                px.restParameter?.let { p ->
-                    add(names.formal(p.name))
-                }
             }
 
             /** the overall function type as a static Temper type */
@@ -1840,8 +1794,6 @@ class JavaTranslator(
             is TmpL.InfixOperation -> infixOp(x)
             is TmpL.PrefixOperation -> prefixOp(x)
             is TmpL.Reference -> reference(x)
-            is TmpL.RestParameterCountExpression -> TODO()
-            is TmpL.RestParameterExpression -> TODO()
             is TmpL.This -> J.ThisExpr(x.pos)
             is TmpL.ValueReference -> value(x.pos, x.value)
         }
@@ -1949,7 +1901,7 @@ class JavaTranslator(
                     is JavaInlineSupportCode ->
                         sc.inlineToTree(
                             call.pos,
-                            call.parameters.mapGeneric { TypedArg(actualExpr(it), it.typeOrInvalid) },
+                            call.parameters.mapGeneric { TypedArg(expr(it), it.passType) },
                             call.passType,
                             this,
                         ) as J.Expression
@@ -1973,14 +1925,8 @@ class JavaTranslator(
             is TmpL.GarbageCallable -> garbageExpr(call.pos, "$call", fn.diagnostic?.text)
         }
 
-        private fun actualExpr(p: TmpL.Actual): J.Expression =
-            when (p) {
-                is TmpL.Expression -> expr(p)
-                is TmpL.RestSpread -> names.lookupRegularLocalNameObj(p.parameterName).asExpr(names, p)
-            }
-
         private fun callActuals(
-            actuals: List<TmpL.Actual>,
+            actuals: List<TmpL.Expression>,
             calleeType: Signature2?,
             treatAsStatic: Boolean = false,
         ): List<J.Argument> {
@@ -1989,15 +1935,13 @@ class JavaTranslator(
                 else -> calleeType?.valueFormalsExceptThis
             }
             return actuals.mapGenericIndexed { idx, actual ->
-                var expr = actualExpr(actual)
+                var expr = expr(actual)
                 if (calleeFormals != null && validInstanceMethodReferenceSubject(expr)) {
-                    val actualSig = (actual as? TmpL.Expression)?.passType?.let {
-                        withType(
-                            it,
-                            fn = { _, sig, _ -> sig },
-                            fallback = { null },
-                        )
-                    }
+                    val actualSig = withType(
+                        actual.passType,
+                        fn = { _, sig, _ -> sig },
+                        fallback = { null },
+                    )
                     if (actualSig != null) {
                         val formalSig = withType(
                             calleeFormals[idx].type.simplify(),
@@ -2094,7 +2038,7 @@ class JavaTranslator(
 
         private fun callReference(
             pos: Position,
-            actuals: List<TmpL.Actual>,
+            actuals: List<TmpL.Expression>,
             fn: TmpL.FnReference,
         ): J.Expression =
             when (val declNode = names.findDeclNode(fn.id)) {
@@ -2115,7 +2059,6 @@ class JavaTranslator(
 
                 is TmpL.LocalDeclaration,
                 is TmpL.Formal,
-                is TmpL.RestFormal,
                 is TmpL.ModuleLevelDeclaration,
                 is TmpL.PooledValueDeclaration,
                 -> callFunctionValue(pos, actuals, fn)
@@ -2146,7 +2089,7 @@ class JavaTranslator(
                     return module.qualify(field).toNameExpr(ref.pos)
                 }
                 is TmpL.PooledValueDeclaration,
-                is TmpL.LocalDeclaration, is TmpL.LocalFunctionDeclaration, is TmpL.Formal, is TmpL.RestFormal,
+                is TmpL.LocalDeclaration, is TmpL.LocalFunctionDeclaration, is TmpL.Formal,
                 ->
                     return names.lookupLocalOrExternalNameObj(refId).asExpr(names, ref)
                 is TmpL.FunctionDeclaration -> {
@@ -2177,19 +2120,19 @@ class JavaTranslator(
 
         private fun callFunctionValue(
             pos: Position,
-            parameters: List<TmpL.Actual>,
+            parameters: List<TmpL.Expression>,
             fn: TmpL.FnReference,
         ): J.Expression = callFunctionValue(pos, parameters, fn.type, reference(fn))
 
         private fun callFunctionValue(
             pos: Position,
-            parameters: List<TmpL.Actual>,
+            parameters: List<TmpL.Expression>,
             fn: TmpL.FunInterfaceCallable,
         ): J.Expression = callFunctionValue(pos, parameters, fn.type, expr(fn.expr))
 
         private fun callFunctionValue(
             pos: Position,
-            parameters: List<TmpL.Actual>,
+            parameters: List<TmpL.Expression>,
             sig: Signature2,
             callable: J.Expression,
         ): J.Expression {
@@ -2255,8 +2198,8 @@ class JavaTranslator(
                     //     awakeUpon(promise, generator)
                     // ->
                     //     promise.handle((_, _) -> generator.get())
-                    val promise = expr(parameters[0] as TmpL.Expression)
-                    val generator = expr(parameters[1] as TmpL.Expression)
+                    val promise = expr(parameters[0])
+                    val generator = expr(parameters[1])
                     val leftPos = pos.leftEdge
                     J.ExpressionStatement(
                         J.InstanceMethodInvocationExpr(
@@ -2310,7 +2253,7 @@ class JavaTranslator(
                     //       // to any orelse handler looking for an RTE.
                     //       ...
                     //     }
-                    val promise = expr(parameters[0] as TmpL.Expression)
+                    val promise = expr(parameters[0])
                     val getCall: J.ExpressionStatementExpr =
                         temperCoreGetPromiseResult.staticMethod(promise, pos = pos)
                     when {
@@ -2338,7 +2281,7 @@ class JavaTranslator(
 
         private fun callLiftedFunction(
             pos: Position,
-            parameters: List<TmpL.Actual>,
+            parameters: List<TmpL.Expression>,
             fn: TmpL.FnReference,
         ): J.Expression = when (val localName = names.lookupLocalNameObj(fn.id)) {
             is RecursiveFuncName -> {

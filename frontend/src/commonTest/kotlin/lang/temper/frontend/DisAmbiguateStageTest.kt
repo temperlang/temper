@@ -193,4 +193,9 @@ class DisAmbiguateStageTest {
         pseudoCodeDetail = PseudoCodeDetail(resugarDotHelpers = Freq3.Never),
         stagingFlags = setOf(StagingFlags.skipImportCore),
     )
+
+    @Test
+    fun errorOnOldVarArgSyntax() = assertModuleAtStage(
+        stageTestDir = StageTestDir("dis-ambiguate/error-on-old-vararg-syntax"),
+    )
 }

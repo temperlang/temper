@@ -6,7 +6,6 @@ import lang.temper.common.Either.Right
 import lang.temper.common.KBitSet
 import lang.temper.common.KBitSetHelpers.contains
 import lang.temper.common.allIndexed
-import lang.temper.common.bitIndices
 import lang.temper.common.clearBitIndices
 import lang.temper.name.Symbol
 import lang.temper.type.FunctionType
@@ -25,7 +24,7 @@ import lang.temper.type2.ValueFormalKind
  */
 data class IdentityActualOrder(override val size: Int) : AbstractList<Int>() {
     override fun get(index: Int): Int {
-        require(index in (0 until size))
+        require(index in indices)
         return index
     }
 
@@ -61,7 +60,6 @@ fun applicationOrderForActuals(
 ): Either<List<Int?>, ResolutionProblem> = applicationOrderForActuals(
     valueActuals = valueActuals,
     valueFormals = sig.valueFormals,
-    hasRest = sig.restValuesFormal != null,
 )
 
 /**
@@ -86,7 +84,6 @@ fun applicationOrderForActuals(
 ): Either<List<Int?>, ResolutionProblem> = applicationOrderForActuals(
     valueActuals = valueActuals,
     valueFormals = sig.requiredAndOptionalValueFormals,
-    hasRest = sig.restValuesFormal != null,
 )
 
 /**
@@ -118,7 +115,6 @@ fun applicationOrderForActuals(
             ValueFormal2(it, ValueFormalKind.Optional)
         }
     },
-    hasRest = sig.restInputsType != null,
 )
 
 /**
@@ -140,7 +136,6 @@ fun applicationOrderForActuals(
      */
     valueActuals: List<Either<Symbol, TFunction>?>,
     valueFormals: List<IValueFormal>,
-    hasRest: Boolean,
 ): Either<List<Int?>, ResolutionProblem> {
     val nActuals = valueActuals.size
     val nFormals = valueFormals.size
@@ -167,7 +162,6 @@ fun applicationOrderForActuals(
 
     val arityOk = when {
         nActuals < nRequired -> false
-        hasRest -> true
         else -> nActuals <= nFormals
     }
     if (!arityOk && noNamed) {
@@ -247,13 +241,12 @@ fun applicationOrderForActuals(
         )
     }
 
-    return applicationOrderForActualsSlow(valueActuals, valueFormals, hasRest = hasRest)
+    return applicationOrderForActualsSlow(valueActuals, valueFormals)
 }
 
 internal fun applicationOrderForActualsSlow(
     valueActuals: List<Either<Symbol, TFunction>?>,
     valueFormals: List<IValueFormal>,
-    hasRest: Boolean,
 ): Either<List<Int?>, ResolutionProblem> {
     // See if we can assign the actual input values we've got to the input parameters.
     // Step 1. Pair actuals with names to formals.
@@ -287,7 +280,6 @@ internal fun applicationOrderForActualsSlow(
     //    d. Pair unused (optional) formals to unused positional actuals in order as long as
     //       either (there is no rest values parameter) or
     //       (the next optional formal's type is consistent).
-    //    e. Pair remaining unbound positional actuals to the rest values formal.
     // Step 3. See if everything that was not paired off has an initializer or is marked optional.
     // If not, return an appropriate *ResolutionProblem*.
 
@@ -330,7 +322,7 @@ internal fun applicationOrderForActualsSlow(
         }
     }
 
-    if (nPositionalActuals > (valueFormals.size - usedFormals.cardinality()) && !hasRest) {
+    if (nPositionalActuals > (valueFormals.size - usedFormals.cardinality())) {
         return Right(
             ResolutionProblem.ArgumentListSizeMismatch(
                 nPositionalActuals = nPositionalActuals,
@@ -421,18 +413,6 @@ internal fun applicationOrderForActualsSlow(
             usedActuals.set(actualIndex)
         }
     }
-    // Step 2.e Required group to rest values parameter
-    val restActualIndices = KBitSet()
-    if (hasRest && usedActuals.cardinality() < valueActuals.size) {
-        var actualIndex = 0
-        while (actualIndex <= lastActualIndex) {
-            if (actualIndex !in usedActuals) {
-                restActualIndices.set(actualIndex)
-                usedActuals.set(actualIndex)
-            }
-            actualIndex += 1
-        }
-    }
     // Step 3
     if (
         usedFormals.clearBitIndices(valueFormals.indices).any { formalIndex ->
@@ -445,7 +425,7 @@ internal fun applicationOrderForActualsSlow(
     }
     // TODO is this needed with ArgumentListSizeMismatch check above?
     for (actualIndex in valueActuals.indices) {
-        if (actualIndex !in usedActuals && actualIndex !in restActualIndices) {
+        if (actualIndex !in usedActuals) {
             return Right(ResolutionProblem.NoFormalForActual(actualIndex))
         }
     }
@@ -460,9 +440,6 @@ internal fun applicationOrderForActualsSlow(
     }
     repeat(valueFormals.size - actualOrder.size) {
         actualOrder.add(null)
-    }
-    for (actualIndex in restActualIndices.bitIndices) {
-        actualOrder.add(actualIndex)
     }
 
     return Left(

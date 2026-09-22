@@ -9,11 +9,7 @@ val FunctionType.arityRange: IntRange
     get() {
         // TODO(tjp): Unify some with Signature if we can work out the differences.
         val min = valueFormals.count { !it.isOptional }
-        val max = if (restValuesFormal != null) {
-            Int.MAX_VALUE
-        } else {
-            valueFormals.size
-        }
+        val max = valueFormals.size
         return min..max
     }
 

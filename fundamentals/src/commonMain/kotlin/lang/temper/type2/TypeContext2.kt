@@ -709,10 +709,8 @@ class TypeContext2 {
      */
     internal fun overloadSpecificity(a: Signature2, b: Signature2): OverloadSpecificity? =
         overloadSpecificityMemoTable.getOrPut(a to b) computeSpecificity@{
-            val nToCheckA = a.requiredInputTypes.size + a.optionalInputTypes.size +
-                (if (a.restInputsType != null) 1 else 0)
-            val nToCheckB = b.requiredInputTypes.size + b.optionalInputTypes.size +
-                (if (b.restInputsType != null) 1 else 0)
+            val nToCheckA = a.requiredInputTypes.size + a.optionalInputTypes.size
+            val nToCheckB = b.requiredInputTypes.size + b.optionalInputTypes.size
 
             // We'll walk over the arguments pairwise making sure we try one rest argument
             // if appropriate.

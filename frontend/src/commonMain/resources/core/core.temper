@@ -1029,7 +1029,7 @@ export class List<@out T> extends Listed<T> {
   private let content: builtins.List<T>;
 
   /** Same as `[...]` syntax but provides an explicit type argument. */
-  public static nym`of`<T>(...content: List<T>): List<T> { content }
+  public static nym`of` = builtins._listify;
 
   @connected
   public get length(): builtins.Int;

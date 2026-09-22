@@ -296,15 +296,10 @@ class TypeContext {
             if (t is FunctionType && u is FunctionType) {
                 // If type parameters and arity are compatible, then check input and output types.
                 val tValueFormals = t.valueFormals
-                if (
-                    tValueFormals.size == u.valueFormals.size &&
-                    (t.restValuesFormal == null) == (u.restValuesFormal == null)
-                ) {
+                if (tValueFormals.size == u.valueFormals.size) {
                     val uCompatible = formalCompatibleFunctionType(u, t.typeFormals)
                     if (uCompatible != null) {
                         val uValueFormals = uCompatible.valueFormals
-                        val tRestValuesFormal = t.restValuesFormal
-                        val uRestValuesFormal = uCompatible.restValuesFormal
                         if (t.typeFormals == uCompatible.typeFormals) {
                             return isSubType(t.returnType, uCompatible.returnType) &&
                                 tValueFormals.indices.all { valueFormalIndex ->
@@ -314,10 +309,7 @@ class TypeContext {
                                         uValueFormals[valueFormalIndex].staticType,
                                         tValueFormals[valueFormalIndex].staticType,
                                     )
-                                } && (
-                                    tRestValuesFormal == null ||
-                                        isSubType(uRestValuesFormal!!, tRestValuesFormal)
-                                    )
+                                }
                         }
                     }
                 }

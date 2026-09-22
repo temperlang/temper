@@ -146,6 +146,7 @@ internal fun typeDisambiguateMacro(
     val macroCall = macroEnv.call
         // We can't do much if this is not a macro call rooted in the AST
         ?: return Fail
+    val logSink = macroEnv.logSink
 
     val genre = doc.context.genre
     fun valueLeaf(pos: Position, content: Value<*>) = ValueLeaf(doc, pos, content)
@@ -395,7 +396,7 @@ internal fun typeDisambiguateMacro(
         }
         if (abstractness == Abstractness.Abstract) {
             for (classValueFormal in classValueFormals) {
-                macroEnv.logSink.log(
+                logSink.log(
                     Log.Error,
                     MessageTemplate.ConstructorArgumentInInterfaceType,
                     classValueFormal.pos,
@@ -406,7 +407,7 @@ internal fun typeDisambiguateMacro(
             for (classValueFormal in classValueFormals) {
                 classBody.add(classValueFormal)
                 val argEdge = lookThroughDecorations(classValueFormal.incoming!!)
-                formalizeArg(argEdge)
+                formalizeArg(argEdge, logSink)
                 val arg = argEdge.target
                 if (arg is DeclTree) {
                     val leftPos = arg.pos.leftEdge
@@ -514,7 +515,7 @@ internal fun typeDisambiguateMacro(
                     val symbol = name.content.toSymbol()
                     if (symbol == null || (isConstructorProperty && isStatic)) {
                         maybeVarDecls.remove(memberTree)
-                        macroEnv.logSink.log(
+                        logSink.log(
                             Log.Error,
                             MessageTemplate.MalformedDeclaration, memberTree.pos, emptyList(),
                         )
@@ -913,7 +914,7 @@ internal fun typeDisambiguateMacro(
             }
             for (problem in problems) {
                 errorNodes.add(errorNodeFor(freeTarget(nextEdge), problem))
-                problem.logTo(macroEnv.logSink)
+                problem.logTo(logSink)
             }
 
             val formalSymbol = (formalName as? NameLeaf)?.content?.toSymbol()
@@ -927,7 +928,7 @@ internal fun typeDisambiguateMacro(
                     emptyList(),
                 )
                 errorNodes.add(errorNodeFor(nextEdge.target, problem))
-                problem.logTo(macroEnv.logSink)
+                problem.logTo(logSink)
             } else {
                 val predefinedFormalDefinition = try {
                     predefinedFormalDecls?.first {
@@ -947,7 +948,7 @@ internal fun typeDisambiguateMacro(
                 val formalDefinition = when {
                     predefinedFormalDefinition != null -> {
                         if (predefinedFormalDefinition.variance != variance) {
-                            macroEnv.logSink.log(
+                            logSink.log(
                                 Log.Error,
                                 MessageTemplate.InternalInterpreterError,
                                 formalPos,

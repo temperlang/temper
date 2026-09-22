@@ -987,17 +987,6 @@ class CppTranslator(
                 cpp.unaryExpr(cpp.unaryOp(expr.op.kind.outputToken.text), translateExpression(expr.operand))
             }
             is TmpL.Reference -> translateReference(expr)
-            is TmpL.RestParameterCountExpression -> cpp.callExpr(
-                cpp.name(TEMPER_CORE_NAMESPACE, "List", "length"),
-                listOf(cpp.name(expr.parameterName)),
-            )
-            is TmpL.RestParameterExpression -> cpp.callExpr(
-                cpp.name(TEMPER_CORE_NAMESPACE, "List", "get"),
-                listOf(
-                    cpp.name(expr.parameterName),
-                    cpp.literal(cpp.raw(expr.index.index.toString())),
-                ),
-            )
             is TmpL.This -> cpp.name(expr.id)
             is TmpL.UncheckedNotNullExpression -> cpp.callExpr(
                 cpp.name(TEMPER_CORE_NAMESPACE, "not_null"),
@@ -1026,9 +1015,7 @@ class CppTranslator(
                 when (val supportCode = fn.supportCode) {
                     is CppInlineSupportCode -> supportCode.inlineToTree(
                         expr.pos,
-                        expr.mapParameters { actual, staticType, _ ->
-                            val actualExpr = actual as? TmpL.Expression
-                                ?: error("expected expression in inline support code args")
+                        expr.mapParameters { actualExpr, staticType, _ ->
                             TypedArg(
                                 translateExpression(actualExpr),
                                 staticType ?: WellKnownTypes.anyValueType2,
@@ -1067,8 +1054,7 @@ class CppTranslator(
                 )
                 cpp.callExpr(
                     callable,
-                    expr.parameters.mapIndexed { idx, actual ->
-                        val actualExpr = actual as TmpL.Expression
+                    expr.parameters.mapIndexed { idx, actualExpr ->
                         val optionalIdx = idx - numRequired
                         val isOptionalParam = optionalIdx >= 0
                         val isNullLiteral = actualExpr is TmpL.ValueReference &&
@@ -1103,7 +1089,7 @@ class CppTranslator(
                     val paramTypes = sig.requiredInputTypes.drop(
                         if (sig.hasThisFormal) 1 else 0,
                     )
-                    expr.parameters.filterIsInstance<TmpL.Expression>().withIndex().any { (idx, arg) ->
+                    expr.parameters.withIndex().any { (idx, arg) ->
                         val paramType = paramTypes.getOrNull(idx) ?: return@any false
                         isTypeMismatch2(paramType, arg)
                     }
@@ -1141,9 +1127,6 @@ class CppTranslator(
                         base
                     }
                 }
-                val restType = sig.restInputsType
-                val numNonRest = numRequired +
-                    optionalTypes.size
                 val isSuperCall = (fn as? TmpL.MethodReference)?.subject is TmpL.SuperSubject
                 val paramTypes = ctxSig.requiredInputTypes
                 val translatedArgs = mutableListOf<Cpp.Expr>()
@@ -1151,17 +1134,7 @@ class CppTranslator(
                     isSuperCall -> expr.parameters.subListToEnd(1) // called on (borrowed) `this`
                     else -> expr.parameters
                 }
-                for ((idx, actual) in parameters.withIndex()) {
-                    if (actual is TmpL.RestSpread) {
-                        translatedArgs.add(
-                            cpp.name(actual.parameterName),
-                        )
-                        continue
-                    }
-                    val actualExpr = actual as TmpL.Expression
-                    if (restType != null && idx >= numNonRest) {
-                        continue
-                    }
+                for ((idx, actualExpr) in parameters.withIndex()) {
                     val optionalIdx = idx - numRequired
                     val isOptionalParam = optionalIdx >= 0
                     val isNullLiteral =
@@ -1195,26 +1168,6 @@ class CppTranslator(
                             ),
                         )
                     }
-                }
-                // Wrap rest args into a list
-                if (restType != null) {
-                    val restArgs = expr.parameters
-                        .drop(numNonRest)
-                        .filterIsInstance<TmpL.Expression>()
-                    val elemType = translateType2(restType)
-                    val listExpr = cpp.callExpr(
-                        cpp.template(
-                            cpp.name(
-                                TEMPER_CORE_NAMESPACE,
-                                "List", "make",
-                            ),
-                            listOf(elemType),
-                        ),
-                        restArgs.map {
-                            translateExpression(it)
-                        },
-                    )
-                    translatedArgs.add(listExpr)
                 }
                 cpp.callExpr(callableExpr, translatedArgs)
             }
@@ -2878,31 +2831,17 @@ class CppTranslator(
         val paramTypes = formals.map {
             translateParamType(it)
         }
-        val restParam =
-            topLevel.parameters.restParameter
-        val allParamTypes = if (restParam != null) {
-            val elemType =
-                translateType(restParam.type)
-            paramTypes + sharedPtr(stdVector(elemType))
-        } else {
-            paramTypes
-        }
-        val allParamNames = if (restParam != null) {
-            formals.map { cpp.name(it.name) } +
-                cpp.name(restParam.name)
-        } else {
-            formals.map { cpp.name(it.name) }
-        }
+        val paramNames = formals.map { cpp.name(it.name) }
         val block = when {
             topLevel.metadata.any { it.key.symbol == connectedSymbol } && !mod!!.isStdLib ->
-                translateConnectedBody(topLevel, allParamNames)
+                translateConnectedBody(topLevel, paramNames)
             else -> translateBlock(topLevel.body)
         }
         val func = cpp.func(
             cpp.name(topLevel.name),
             translateType(topLevel.returnType),
-            allParamTypes,
-            allParamNames,
+            paramTypes,
+            paramNames,
             block,
         )
         if (typeFormals.isNotEmpty()) {

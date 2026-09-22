@@ -157,7 +157,6 @@ internal object SetLocalFn : SpecialFunction, NamedBuiltinFun {
                     kind = ValueFormalKind.Required,
                 ),
             ),
-            restValuesFormal = null,
             returnType = null,
         ),
     )

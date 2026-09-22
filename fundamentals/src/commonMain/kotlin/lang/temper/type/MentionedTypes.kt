@@ -14,7 +14,6 @@ fun addTypeNamesMentionedTo(typeActual: TypeActual, out: MutableSet<ResolvedName
         }
         is FunctionType -> {
             typeActual.valueFormals.forEach { addTypeNamesMentionedTo(it.type, out) }
-            typeActual.restValuesFormal?.let { addTypeNamesMentionedTo(it, out) }
             addTypeNamesMentionedTo(typeActual.returnType, out)
         }
         InvalidType -> Unit

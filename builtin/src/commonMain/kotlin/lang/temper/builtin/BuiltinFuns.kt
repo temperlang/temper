@@ -38,6 +38,7 @@ import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.InternalFeatureKey
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.MacroValue
+import lang.temper.value.NAryFn
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotFn
 import lang.temper.value.NotYet
@@ -60,7 +61,6 @@ import lang.temper.value.TString
 import lang.temper.value.Value
 import lang.temper.value.VoidishPanicFn
 import lang.temper.value.listBuiltinName
-import lang.temper.value.typeSymbol
 import lang.temper.value.unpackOrFail
 import lang.temper.value.unpackPositionedOr
 import lang.temper.value.unpackValue
@@ -517,19 +517,19 @@ object StringIndexSupport {
  */
 @HelpSnippet("concatenates strings", "builtin/cat")
 private object StrCatFn :
-    BuiltinFun(
-        "cat",
-        Signature2(
-            returnType2 = WKT.stringType2,
-            requiredInputTypes = listOf(),
-            hasThisFormal = false,
-            restInputsType = WKT.stringType2,
+    NAryFn(
+        builtinName = BuiltinName("cat"),
+        sigs = listOf(
+            Signature2(
+                returnType2 = WKT.stringType2,
+                requiredInputTypes = listOf(),
+                hasThisFormal = false,
+            ),
         ),
+        builtinOperatorId = BuiltinOperatorId.StrCat,
+        extraInputType = WKT.stringType2,
     ),
     PureCallableValue {
-
-    override val builtinOperatorId get() = BuiltinOperatorId.StrCat
-
     override fun invoke(
         args: ActualValues,
         cb: InterpreterCallback,
@@ -617,51 +617,44 @@ private object CharTagFn : NamedBuiltinFun, PureCallableValue {
     )
 }
 
-private object ListifyFn :
-    BuiltinFun(
+private val listifySig = run {
+    // fn <T>(): List<T>
+    // but the argument list is exploded out by the typer per NAryFn rules.
+    val (defT, typeT) = makeTypeFormal(
         listBuiltinName.builtinKey,
-        run {
-            // fn <T>(...: T): List<T>
-            val (defT, typeT) = makeTypeFormal(
-                listBuiltinName.builtinKey,
-                "T",
-            )
-            Signature2(
-                returnType2 = MkType2(WKT.listTypeDefinition)
-                    .actuals(listOf(typeT))
-                    .get(),
-                requiredInputTypes = listOf(),
-                hasThisFormal = false,
-                restInputsType = typeT,
-                typeFormals = listOf(defT),
-            )
-        },
+        "T",
+    )
+    Signature2(
+        returnType2 = MkType2(WKT.listTypeDefinition)
+            .actuals(listOf(typeT))
+            .get(),
+        requiredInputTypes = listOf(),
+        hasThisFormal = false,
+        typeFormals = listOf(defT),
+    )
+}
+private object ListifyFn :
+    NAryFn(
+        builtinName = listBuiltinName,
+        sigs = listOf(listifySig),
+        builtinOperatorId = BuiltinOperatorId.Listify,
+        // list element type
+        extraInputType = listifySig.returnType2.bindings[0],
     ),
     PureCallableValue {
-
     override fun invoke(
         args: ActualValues,
         cb: InterpreterCallback,
         interpMode: InterpMode,
     ): Result {
-        val elements = mutableListOf<Value<*>>()
-        var i = 0
-        val n = args.size
-        if (i < n && args.key(i) == typeSymbol) {
-            // type=... specifies the element type, not an element.
-            i += 1
-        }
-        while (i < n) {
-            if (args.key(i) != null) { return Fail } // TODO: explain
-            elements.add(args[i])
-            i += 1
+        val elements = args.indices.map { index ->
+            if (args.key(index) != null) { return@invoke Fail } // TODO: explain
+            args[index]
         }
         return Value(elements, TList)
     }
 
     override val callMayFailPerSe: Boolean get() = false
-
-    override val builtinOperatorId: BuiltinOperatorId get() = BuiltinOperatorId.Listify
 }
 
 /**
@@ -961,7 +954,7 @@ object BuiltinFuns {
         a / b
     }
 
-    /** A specialization of the integer division where we know that the divisor is non-zero. */
+    /** A specialization of integer division where we know that the divisor is non-zero. */
     val divIntIntSafeFn: CallableValue = IntIntToIntFun(
         "/",
         BuiltinOperatorId.DivIntIntSafe,

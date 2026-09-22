@@ -445,7 +445,6 @@ private object ImpureIgnoreFn : NamedBuiltinFun, CallableValue {
                     MkType.fn(
                         typeFormals = emptyList(),
                         valueFormals = emptyList(),
-                        restValuesFormal = null,
                         returnType = Types.void.type,
                     ),
                 ),

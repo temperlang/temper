@@ -18,7 +18,6 @@ import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
 import lang.temper.type2.bindingMap
 import lang.temper.type2.mapType
-import kotlin.math.min
 
 internal fun filterOutMaskedMembers(
     membersGrouped: MutableMap<NominalType, MutableSet<VisibleMemberShape>>,
@@ -141,7 +140,7 @@ internal fun filterOutDeeperMembers(
                 // Now we get A's descriptor in the context of the common subtype, and similarly B's descriptor.
                 val aDescInContext = aDesc.mapType(aBindings)
                 val bDescInContext = bDesc.mapType(bBindings)
-                // Assuming type formals are equivalent, and ignoring this args, are they the same.
+                // Assuming type formals are equivalent, and ignoring `this` args, are they the same.
                 if (equivalentForOverridePurposes(aDescInContext, bDescInContext)) {
                     if (aIsShallower) {
                         eliminated[j] = true
@@ -181,7 +180,6 @@ internal fun equivalentForOverridePurposes(
         if (aReqs.size != bReqs.size) { return false }
         if (a.typeFormals.size != b.typeFormals.size) { return false }
         if (a.optionalInputTypes.size != b.optionalInputTypes.size) { return false }
-        if ((a.restInputsType != null) != (b.restInputsType != null)) { return false }
         val formalEquivalences = buildMap {
             for ((x, y) in a.typeFormals zip b.typeFormals) {
                 this[x] = y
@@ -204,12 +202,6 @@ internal fun equivalentForOverridePurposes(
             ) {
                 return false
             }
-        }
-        if (
-            a.restInputsType != null &&
-            !equivalentForOverridePurposes(a.restInputsType!!, b.restInputsType!!, formalEquivalences)
-        ) {
-            return false
         }
         return true
     }

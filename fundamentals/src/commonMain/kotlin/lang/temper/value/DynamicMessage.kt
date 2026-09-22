@@ -3,7 +3,6 @@ package lang.temper.value
 import lang.temper.common.Either
 import lang.temper.common.KBitSet
 import lang.temper.common.Log
-import lang.temper.common.bitIndices
 import lang.temper.common.structure.Hints
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
@@ -19,7 +18,6 @@ import lang.temper.type2.AbstractValueFormal
 import lang.temper.type2.AnySignature
 import lang.temper.type2.AnyValueFormal
 import lang.temper.type2.IValueFormal
-import lang.temper.type2.ValueFormalKind
 
 /** Bundles the parts of a function or method call used at runtime. */
 data class DynamicMessage(val valueActuals: Actuals, val interpMode: InterpMode)
@@ -53,7 +51,6 @@ fun unify(
 
     val (valueActuals, interpMode) = dynamicMessage
     val valueFormals = signature.requiredAndOptionalValueFormals
-    val restValuesFormal = signature.restValuesFormal
 
     // See if we can assign the actual input values we've got to the input parameters.
     // Step 1. Get the parameter ordering
@@ -110,21 +107,12 @@ fun unify(
             break
         }
     }
-    if (restValuesFormal != null) {
-        for (restActualIndex in restActualIndices.bitIndices) {
-            resolutions.checkCompatible(restValuesFormal, valueActuals, restActualIndex, interpMode)
-            if (resolutions.contradiction) {
-                break
-            }
-        }
-    }
     return if (resolutions.contradiction) {
         null
     } else {
         val formalIndexToActualIndex = formalActualPairs.toMap()
         UnifiedArguments(
             valueFormals = valueFormals,
-            restValuesFormal = restValuesFormal,
             valueActuals = valueActuals,
             interpMode = interpMode,
             formalIndexToActualIndex = formalIndexToActualIndex,
@@ -135,37 +123,21 @@ fun unify(
 
 private class UnifiedArguments(
     val valueFormals: List<AnyValueFormal>,
-    val restValuesFormal: AnyValueFormal?,
     val valueActuals: Actuals,
     val interpMode: InterpMode,
     val formalIndexToActualIndex: Map<Int, Int>,
     val restActuals: KBitSet,
 ) : Arguments {
     private val allFormalsCount
-        get() = valueFormals.size + if (restValuesFormal != null) { 1 } else { 0 }
+        get() = valueFormals.size
 
-    private val allValueFormals get() = if (restValuesFormal != null) {
-        valueFormals + restValuesFormal
-    } else {
-        valueFormals
-    }
+    private val allValueFormals get() = valueFormals
 
     private fun valueFor(
         formalIndex: Int,
         cb: InterpreterCallback,
     ): Pair<Result, Int?>? {
-        if (restValuesFormal != null && formalIndex == valueFormals.size) {
-            val elements = buildList {
-                for (givenIndex in restActuals.bitIndices) {
-                    add(
-                        valueActuals.result(givenIndex, interpMode) as? Value<*>
-                            ?: return@valueFor null,
-                    )
-                }
-            }
-            return Value(elements.toMutableList(), TList) to null
-        }
-        val formal = valueFormals[formalIndex]
+        val formal = valueFormals.getOrNull(formalIndex) ?: return null
         val givenIndex = formalIndexToActualIndex[formalIndex]
         var result: Result? = if (givenIndex != null) {
             valueActuals.result(givenIndex, interpMode) as? Value<*>
@@ -214,8 +186,7 @@ private class UnifiedArguments(
             val initial = if (
                 formal.isOptional &&
                 formal.defaultExpr == null &&
-                formalIndex !in formalIndexToActualIndex &&
-                formal.kind != ValueFormalKind.Rest
+                formalIndex !in formalIndexToActualIndex
             ) {
                 // It's ok if an optional value is not mapped.  See builtin isSet
                 null
@@ -262,7 +233,7 @@ private class UnifiedArguments(
     }
 
     override fun toString() =
-        "(UnifiedArguments $valueFormals $restValuesFormal $valueActuals $interpMode ${
+        "(UnifiedArguments $valueFormals $valueActuals $interpMode ${
             ""
         } $formalIndexToActualIndex $restActuals)"
 }

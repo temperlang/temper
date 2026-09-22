@@ -2,6 +2,7 @@ package lang.temper.value
 
 import lang.temper.common.AtomicCounter
 import lang.temper.lexer.Genre
+import lang.temper.log.CodeLocationKey
 import lang.temper.log.ConfigurationKey
 import lang.temper.log.FilePath
 import lang.temper.log.FilePositions
@@ -36,12 +37,12 @@ interface DocumentContext : ConfigurationKey.Holder {
 
     /** Useful for debugging. */
     fun formatPosition(pos: Position): String {
-        val sourceFile = (pos.loc as? FileRelatedCodeLocation)?.sourceFile
-        if (sourceFile != null) {
-            val positions = filePositions[sourceFile]
-            positions?.spanning(pos)?.toReadablePosition(sourceFile.diagnostic)?.let {
-                return@formatPosition it
-            }
+        val loc = pos.loc
+        val positions = (loc as? FileRelatedCodeLocation)?.let {
+            filePositions[it.sourceFile]
+        } ?: sharedLocationContext.get(loc, CodeLocationKey.FilePositionsKey)
+        positions?.spanning(pos)?.toReadablePosition(loc.diagnostic)?.let {
+            return@formatPosition it
         }
         return "$pos"
     }

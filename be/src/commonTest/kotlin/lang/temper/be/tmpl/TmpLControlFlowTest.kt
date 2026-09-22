@@ -171,7 +171,7 @@ class TmpLControlFlowTest {
         val t2 = nameMaker.unusedTemporaryName("t")
         TypeTestHarness("").run {
             val intType = WellKnownTypes.intType
-            val noneToInt = MkType.fn(listOf(), listOf(), null, intType)
+            val noneToInt = MkType.fn(listOf(), listOf(), intType)
             Block {
                 Decl { Ln(t1, intType) }
                 Decl { Ln(t2, intType) }

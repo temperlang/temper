@@ -197,7 +197,7 @@ class JavaNames private constructor(
      */
     private fun isLocalMutablyCaptured(name: ResolvedName, decl: DescriptorChain): Boolean {
         var assigns = when (val declNode = decl.node as TmpL.VarLike) {
-            is TmpL.Formal, is TmpL.RestFormal -> 1
+            is TmpL.Formal -> 1
             is TmpL.ModuleOrLocalDeclaration -> when (declNode.init) {
                 null -> 0
                 else -> 1
@@ -271,7 +271,7 @@ class JavaNames private constructor(
             is TmpL.ModuleLevelDeclaration, is TmpL.PooledValueDeclaration,
             ->
                 ModuleLevelName(qualifiedFullName(name, descr))
-            is TmpL.Formal, is TmpL.RestFormal, is TmpL.LocalDeclaration -> RegularVarName(
+            is TmpL.Formal, is TmpL.LocalDeclaration -> RegularVarName(
                 distinctOutName(name),
                 isMutablyCaptured =
                 isLocalMutablyCaptured(name, descr),

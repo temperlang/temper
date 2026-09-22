@@ -112,7 +112,6 @@ sealed interface InputBound : Positioned, TokenSerializable {
                     (typeSolver[b] as? Type2)?.let { hackMapNewStyleToOld(it) }
                         ?: InvalidType
                 },
-                null,
                 returnBound?.let { typeBoundary ->
                     (typeSolver[typeBoundary] as? Type2)?.let { hackMapNewStyleToOld(it) }
                 } ?: InvalidType,

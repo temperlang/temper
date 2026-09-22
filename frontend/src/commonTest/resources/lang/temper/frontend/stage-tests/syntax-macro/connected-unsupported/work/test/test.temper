@@ -8,9 +8,6 @@ export class NoConnectedTypesForNow {
 }
 
 @connected
-export let alsoNoRestArgsYet(i: Int, ...more: List<Int>);
-
-@connected
 export let alsoNoOtherDeclsYet: Int = 5;
 
 // For now, this is the only case in this file without errors. Support like this

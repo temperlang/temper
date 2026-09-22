@@ -578,7 +578,7 @@ internal fun String.toPath(pos: Position, current: ModuleName, names: RustNames,
     }
 }
 
-internal fun TmpL.Actual.stripToString(): TmpL.Actual {
+internal fun TmpL.Expression.stripToString(): TmpL.Expression {
     return when (this) {
         is TmpL.CallExpression -> when (val fn = this.fn) {
             is TmpL.SupportCodeWrapper -> when (fn.supportCode) {
@@ -599,7 +599,7 @@ internal fun TmpL.Actual.stripToString(): TmpL.Actual {
     }
 }
 
-internal fun TmpL.Actual.supportCode() =
+internal fun TmpL.Expression.supportCode() =
     ((this as? TmpL.CallExpression)?.fn as? TmpL.InlineSupportCodeWrapper)?.supportCode
 
 internal fun TmpL.BlockStatement?.isPureVirtual() = isPureVirtual(PureVirtualBuiltin)

@@ -650,7 +650,6 @@ fun TypeTestHarness.sig(s: String): Signature2 {
         hasThisFormal = hasThisFormal,
         requiredInputTypes = requiredValueFormals.toList(),
         optionalInputTypes = optionalValueFormals.toList(),
-        restInputsType = t.restValuesFormal?.let { hackMapOldStyleToNew(it) },
         typeFormals = t.typeFormals,
     )
 }

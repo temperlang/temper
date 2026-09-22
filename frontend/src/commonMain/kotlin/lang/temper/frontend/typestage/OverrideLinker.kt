@@ -64,7 +64,7 @@ fun findOverrides(
     // Walk the super-type tree breadth-first.
     // Each step through the loop below looks at the direct super-types of the type
     // on the Deque, so we put enclosingType on the deque knowing that we will not
-    // look at member as possibly overriding itself.
+    // look at the member as possibly overriding itself.
     superTypeTree.forEachSuperType { superType ->
         val overriddenByMember = overriddenIn(member, superType, typeContext, logSink)
         if (overriddenByMember != null) {
@@ -110,7 +110,7 @@ private fun overriddenIn(
         superTypeMember.visibility != Visibility.Private &&
             superTypeMember.symbol == subTypeMember.symbol
 
-    // Find the same kind of thing as the sub-type member.
+    // Find the same kind of thing as the subtype member.
     val candidates = when (subTypeMember) {
         is MethodShape -> typeShape.methods.filter {
             it.methodKind == subTypeMember.methodKind && isOverrideCandidate(it)
@@ -189,17 +189,15 @@ fun memberOverrideFor2(
     superFnType: Signature2? = superTypeMember.descriptor as? Signature2,
 ): MemberOverride2? {
     val superMemberType = superTypeMember.descriptor
-    // recast the super-type member's signature in terms of the sub-type's parameter bindings
+    // recast the super-type member's signature in terms of the subtype's parameter bindings
     val bindingMap = mutableMapOf<TypeFormal, Type2>()
-    // If the member is a method, make sure it has the same number of formals, and
+    // If the member is a method, make sure it has the same number of formals and
     // relate its formals to the formals in the super-type version.
     if (superTypeMember is MethodShape) {
         if (superFnType == null || subFnType == null) { return null }
 
         // Early out of this loop iteration if the arity differs.
-        if (subFnType.allValueFormals.size != superFnType.allValueFormals.size ||
-            (subFnType.restInputsType == null) != (superFnType.restInputsType == null)
-        ) {
+        if (subFnType.allValueFormals.size != superFnType.allValueFormals.size) {
             return null
         }
         val n = min(subFnType.typeFormals.size, superFnType.typeFormals.size)
@@ -218,7 +216,7 @@ fun memberOverrideFor2(
     }
 
     // Use the binding map to relate the type of the super to the type of the sub.
-    // If they match, ignoring output type, then there's an override.
+    // If they match, ignoring the output type, then there's an override.
     val superTypeInSubContext = if (superMemberType == null) {
         return null
     } else if (bindingMap.isEmpty()) {
@@ -244,26 +242,19 @@ fun memberOverrideFor2(
             // If the contextualized argument types of the super type are non-strictly
             // wider, then it overrides.
             // Storing the contextualized type lets us later detect errors like the
-            // return type being narrower, or differing type parameters.
+            // return type being narrower or differing type parameters.
             check(subFnType != null && superFnType != null) // If not, continued above
             val superFnTypeContextualized = superTypeInSubContext
             check(superFnTypeContextualized.allValueFormals.size == superFnType.allValueFormals.size)
             val thisArgIndices = 0..0 // TODO: Ideally base on arg declaration metadata
             for (i in 0 until (subFnType.requiredInputTypes.size + subFnType.optionalInputTypes.size)) {
                 if (i in thisArgIndices) {
-                    // The this-arg for sub-type narrows whereas the other parameters are allowed to widen.
+                    // The this-arg for subtype narrows, whereas the other parameters are allowed to widen.
                     continue
                 }
                 val subArg = subFnType.valueFormalForActual(i)!!
                 val superArg = superFnTypeContextualized.valueFormalForActual(i)!!
                 if (!typeContext.isSubType(superArg.type, subArg.type)) {
-                    return null
-                }
-            }
-            val subRestType = subFnType.restInputsType
-            if (subRestType != null) {
-                val superRestType = superFnType.restInputsType!!
-                if (!typeContext.isSubType(superRestType, subRestType)) {
                     return null
                 }
             }

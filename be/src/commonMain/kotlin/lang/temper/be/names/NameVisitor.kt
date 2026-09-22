@@ -40,7 +40,6 @@ interface NameVisitor {
     // Local declarations
     fun typeFormalDecl(name: ResolvedName, decl: TmpL.TypeFormal) {}
     fun formalVarDecl(name: ResolvedName, decl: TmpL.Formal) {}
-    fun formalVarDecl(name: ResolvedName, decl: TmpL.RestFormal) {}
     fun formalVarDecl(name: TmpL.OriginalName?, decl: TmpL.ValueFormal) {}
 
     // fun formalVarDecl(name: ResolvedName, decl: TmpL.RestFormal) {}
@@ -52,9 +51,6 @@ interface NameVisitor {
     // Usage
     fun varUse(name: ResolvedName, use: TmpL.Assignment) {}
     fun varUse(name: ResolvedName, use: TmpL.AnyReference) {}
-    fun varUseMisc(name: ResolvedName, use: TmpL.RestSpread) {}
-    fun varUseMisc(name: ResolvedName, use: TmpL.RestParameterExpression) {}
-    fun varUseMisc(name: ResolvedName, use: TmpL.RestParameterCountExpression) {}
     fun propertyUse(subject: ResolvedName?, property: TmpL.PropertyId, use: TmpL.SetProperty) {}
     fun propertyUse(subject: ResolvedName?, property: TmpL.PropertyId, use: TmpL.GetProperty) {}
     fun methodUse(subject: ResolvedName?, dotName: String, use: TmpL.MethodReference) {}
@@ -234,10 +230,6 @@ open class LookupNameVisitor private constructor(
         super.formalVarDecl(name, decl)
         declareWithContext(name, decl)
     }
-    override fun formalVarDecl(name: ResolvedName, decl: TmpL.RestFormal) {
-        super.formalVarDecl(name, decl)
-        declareWithContext(name, decl)
-    }
     override fun localVarDecl(name: ResolvedName, decl: TmpL.LocalDeclaration) {
         super.localVarDecl(name, decl)
         declareWithContext(name, decl, decl.metadata)
@@ -262,18 +254,6 @@ open class LookupNameVisitor private constructor(
     }
     override fun varUse(name: ResolvedName, use: TmpL.AnyReference) {
         super.varUse(name, use)
-        use(name, use)
-    }
-    override fun varUseMisc(name: ResolvedName, use: TmpL.RestSpread) {
-        super.varUseMisc(name, use)
-        use(name, use)
-    }
-    override fun varUseMisc(name: ResolvedName, use: TmpL.RestParameterExpression) {
-        super.varUseMisc(name, use)
-        use(name, use)
-    }
-    override fun varUseMisc(name: ResolvedName, use: TmpL.RestParameterCountExpression) {
-        super.varUseMisc(name, use)
         use(name, use)
     }
     override fun propertyUse(subject: ResolvedName?, property: TmpL.PropertyId, use: TmpL.SetProperty) {

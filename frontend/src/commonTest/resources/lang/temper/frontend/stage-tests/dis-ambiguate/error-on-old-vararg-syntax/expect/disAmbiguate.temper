@@ -1,0 +1,7 @@
+nym`@export`(let(\word, sumAll, let[inconceivable], \outType, Int32, fn {
+      var total = 0;
+      xs.forEach(fn (x) {
+          total = total + x;
+      });
+      total
+}))

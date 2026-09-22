@@ -61,27 +61,6 @@ class ApplicationOrderForActualsTest {
     )
 
     @Test
-    fun noRest() = assertApplicationOrder(
-        "_, _",
-        "a, b=, ...",
-        "0, 1",
-    )
-
-    @Test
-    fun oneRest() = assertApplicationOrder(
-        "_, _, _",
-        "a, b=, ...",
-        "0, 1, 2",
-    )
-
-    @Test
-    fun someRest() = assertApplicationOrder(
-        "_, _, _, _",
-        "a, b=, ...",
-        "0, 1, 2, 3",
-    )
-
-    @Test
     fun fnRequired0() = assertApplicationOrder(
         "_, _, fn",
         "a:Fn, b, c",
@@ -152,27 +131,6 @@ class ApplicationOrderForActualsTest {
     )
 
     @Test
-    fun fnBeforeResty() = assertApplicationOrder(
-        "_, _, _, fn",
-        "a, b:Fn, ...",
-        "0, 3, 1, 2",
-    )
-
-    @Test
-    fun fnNotResty() = assertApplicationOrder(
-        "_, fn",
-        "a, b:Fn, ...",
-        "0, 1",
-    )
-
-    @Test
-    fun fnResty() = assertApplicationOrder(
-        "_, fn",
-        "a, ...",
-        "0, 1",
-    )
-
-    @Test
     fun namedInOrder() = assertApplicationOrder(
         "a=, b=",
         "a, b",
@@ -200,13 +158,6 @@ class ApplicationOrderForActualsTest {
         "1, 0",
     )
 
-    @Test
-    fun someNamedSomeNot() = assertApplicationOrder(
-        "_, _, a=, _",
-        "a, b=, ...",
-        "2, 0, 1, 3",
-    )
-
     private fun assertApplicationOrder(
         /**
          * Split on comma.  `foo=` means the actual has a name.  `fn` means the actual is a lambda.
@@ -216,8 +167,6 @@ class ApplicationOrderForActualsTest {
         /**
          * Split on comma.  `foo` is a formal name.  `foo=` means the formal is optional.
          * `:Fn` at the end means the formal is function like.
-         *
-         * ", ..." at the end means there's a rest parameter.
          */
         commaSeparatedFormals: String,
         /**
@@ -239,22 +188,16 @@ class ApplicationOrderForActualsTest {
                 }
             }
 
-        var hasRest = false
         val valueFormals = buildList {
             val parts = commaSeparatedFormals.split0(",")
                 .map { it.trim() }
-            for ((i, part) in parts.withIndex()) {
-                if (i == parts.lastIndex && part == "...") {
-                    hasRest = true
-                    continue
-                }
-
+            for (part in parts) {
                 var s = part
 
                 var type: Type2? = null
                 if (s.endsWith(":Fn")) {
                     type = hackMapOldStyleToNew(
-                        MkType.fn(listOf(), listOf(), null, WellKnownTypes.voidType),
+                        MkType.fn(listOf(), listOf(), WellKnownTypes.voidType),
                     )
                     s = s.dropLast(3).trim()
                 }
@@ -279,13 +222,11 @@ class ApplicationOrderForActualsTest {
                 applicationOrderForActuals(
                     valueActuals = valueActuals,
                     valueFormals = valueFormals,
-                    hasRest = hasRest,
                 )
             } else {
                 applicationOrderForActualsSlow(
                     valueActuals = valueActuals,
                     valueFormals = valueFormals,
-                    hasRest = hasRest,
                 )
             }
 
@@ -314,9 +255,9 @@ class ApplicationOrderForActualsTest {
                     }
                 }
                 val idempotentResult = if (useFastPath) {
-                    applicationOrderForActuals(reorderedActuals, valueFormals, hasRest = hasRest)
+                    applicationOrderForActuals(reorderedActuals, valueFormals)
                 } else {
-                    applicationOrderForActualsSlow(reorderedActuals, valueFormals, hasRest = hasRest)
+                    applicationOrderForActualsSlow(reorderedActuals, valueFormals)
                 }
                 assertIs<Either.Left<List<Int?>>>(idempotentResult, "idempotent check $message")
                 val idempotentOrder = idempotentResult.item

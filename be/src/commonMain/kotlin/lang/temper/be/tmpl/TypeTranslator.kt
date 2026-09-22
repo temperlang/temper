@@ -88,7 +88,6 @@ internal class TypeTranslator(
                     }
                 }
             },
-            rest = sig.restInputsType?.let { translateType(pos, it).aType },
         )
         val returnType = translateType(pos, sig.returnType2)
 

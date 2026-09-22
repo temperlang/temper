@@ -376,7 +376,6 @@ private fun callTypeForCheck(targetType: Type2, expr: Tree): CallTypeInferences?
     val variant = MkType.fn(
         emptyList(),
         listOf(exprType),
-        null,
         targetTypeOrBubble,
     )
     return CallTypeInferences(targetTypeOrBubble, variant, mapOf(), listOf())

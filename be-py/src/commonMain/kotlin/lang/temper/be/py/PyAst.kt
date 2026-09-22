@@ -67,7 +67,7 @@ fun Py.Expr.stmt(pos: Position = this.pos) = Py.ExprStmt(pos, this)
 fun Py.Expr.booleanNegate(pos: Position = this.pos): Py.Expr =
     when (this) {
         is Py.BinExpr -> when (this.op.opEnum) {
-            // Don't do de Morgan's as it may change semantics of short-circuiting operators.
+            // Don't do de Morgan's as it may change the semantics of short-circuiting operators.
             // BinaryOpEnum.BoolOr -> BinaryOpEnum.BoolAnd(left.booleanNegate(), right.booleanNegate())
             // BinaryOpEnum.BoolAnd -> BinaryOpEnum.BoolOr(left.booleanNegate(), right.booleanNegate())
             BinaryOpEnum.Lt -> BinaryOpEnum.GtEq(left, right, pos = pos)
@@ -98,7 +98,7 @@ fun Py.Expr.booleanNegate(pos: Position = this.pos): Py.Expr =
         else -> null
     } ?: UnaryOpEnum.BoolNot(this, pos = pos)
 
-/** Test whether a body of python statements need a pass appended. */
+/** Test whether a body of python statements needs a pass appended. */
 fun Iterable<Py.Stmt>.needsPass() = all { it is Py.CommentLine }
 
 fun Py.Import.Companion.simple(
@@ -210,10 +210,6 @@ fun TmpL.Parameters.forEachFormal(func: (pos: Position, name: TmpL.Id, type: Tmp
             else -> ArgKind.Required
         }
         func(it.pos, it.name, it.type.ot, kind)
-    }
-
-    this.restParameter?.let {
-        func(it.pos, it.name, it.type.ot, ArgKind.Rest)
     }
 }
 

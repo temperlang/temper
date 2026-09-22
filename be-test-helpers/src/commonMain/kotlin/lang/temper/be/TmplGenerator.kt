@@ -155,7 +155,7 @@ class TmplGenerator(
     fun call(
         which: ResolvedName,
         calleeType: Signature2,
-        vararg args: TmpL.Actual,
+        vararg args: TmpL.Expression,
     ): TmpL.CallExpression =
         TmpL.CallExpression(
             pos = p0,
@@ -166,7 +166,7 @@ class TmplGenerator(
     fun call(
         which: String,
         calleeType: Signature2,
-        vararg args: TmpL.Actual,
+        vararg args: TmpL.Expression,
     ): TmpL.CallExpression = call(makeParsedName(which), calleeType, *args)
 
     fun label(label: ResolvedName, stmt: TmpL.Statement) =
@@ -319,7 +319,6 @@ class ModuleGenerator(
                                     null
                                 }
                             },
-                            restInputsType = it.restFormal?.second,
                             typeFormals = it.typeFormals.toList(),
                         ),
                     ),
@@ -504,7 +503,6 @@ class MethodFuncGenerator(
     var thisName: ResolvedName? = null
     val formals = mutableListOf<TmpL.Formal>()
     val sigFormals = mutableListOf<ValueFormal2>()
-    val restFormal: Pair<ResolvedName, Type2>? = null
     var body: TmpL.BlockStatement? = null
     var mayYield: Boolean = false
     var returnType: Type2 = WellKnownTypes.voidType2
@@ -544,9 +542,6 @@ class MethodFuncGenerator(
         p0,
         thisName = thisName?.let { tmplGen.makeId(it) },
         parameters = formals,
-        restParameter = restFormal?.let { (n, t) ->
-            TmpL.RestFormal(p0, emptyList(), tmplGen.makeId(n), t.asTmpLType().aType, t)
-        },
     )
 
     fun typeParameters() = TmpL.ATypeParameters(

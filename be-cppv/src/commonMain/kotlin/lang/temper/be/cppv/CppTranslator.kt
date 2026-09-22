@@ -167,8 +167,6 @@ open class CppTranslator(
         }
     }
 
-    private fun translateActual(actual: TmpL.Actual) = translateExpression(actual as TmpL.Expression)
-
     private fun translateAssignment(stmt: TmpL.Assignment): Cpp.Stmt = cpp.pos(stmt) {
         cpp.binaryExpr(
             translateId(stmt.left),
@@ -202,7 +200,7 @@ open class CppTranslator(
                     expr.pos,
                     expr.mapParameters { actual, staticType, _ ->
                         TypedArg(
-                            translateExpression(actual as TmpL.Expression),
+                            translateExpression(actual),
                             staticType ?: WellKnownTypes.anyValueType2,
                         )
                     },
@@ -212,7 +210,7 @@ open class CppTranslator(
             }
             else -> cpp.callExpr(
                 translateCallable(callable),
-                expr.parameters.map { translateActual(it) },
+                expr.parameters.map { translateExpression(it) },
             )
         }
     }

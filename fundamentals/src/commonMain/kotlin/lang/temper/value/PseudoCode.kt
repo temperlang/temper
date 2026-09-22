@@ -58,7 +58,6 @@ import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
 import lang.temper.type.OrType
 import lang.temper.type.SetMemberAccessor
-import lang.temper.type.StaticType
 import lang.temper.type.TopType
 import lang.temper.type.TypeActual
 import lang.temper.type.TypeFormal
@@ -419,10 +418,7 @@ internal class PseudoTreeBuilder(
                         PseudoError(edge.target.pos)
                     }
                 }
-                val singularFormals = parts.formals.map { buildDecl(it, DeclKind.Formal) }
-                val formals = parts.restFormal?.let {
-                    singularFormals + buildDecl(it.tree, DeclKind.Formal)
-                } ?: singularFormals
+                val formals = parts.formals.map { buildDecl(it, DeclKind.Formal) }
                 val superTypes = mutableListOf<PseudoTree>()
                 val annotations = buildAnnotationList(
                     tree.pos,
@@ -432,7 +428,6 @@ internal class PseudoTreeBuilder(
                             in typeMemberMetadataSymbols -> detail.showTypeMemberMetadata
                             qNameSymbol -> detail.showQNames
                             returnedFromSymbol,
-                            restFormalSymbol,
                             typeFormalSymbol,
                             -> false
 
@@ -547,7 +542,6 @@ internal class PseudoTreeBuilder(
         var afterEquals: PseudoTree? = null
         var word: PseudoTree? = null
         var constness = Constness.Const
-        var restFormal = false
 
         // When printing a declaration that is a formal function parameter, the default expression
         // goes after an equal ('=') sign.  Otherwise, the init expression goes there.
@@ -582,11 +576,6 @@ internal class PseudoTreeBuilder(
 
                     varSymbol -> {
                         constness = Constness.NotConst
-                        null
-                    }
-
-                    restFormalSymbol -> {
-                        restFormal = true
                         null
                     }
 
@@ -628,25 +617,6 @@ internal class PseudoTreeBuilder(
             }
         }
 
-        // if it is a rest pseudo declaration, unwrap the list type.
-        if (restFormal) {
-            val proposedNewType = type?.let {
-                if (it is PseudoType) {
-                    // TODO: Do we need to limit this to List/Listed
-                    val underlyingType =
-                        (it.type as? NominalType)?.bindings?.firstOrNull() as? StaticType
-                    underlyingType?.let { itemType ->
-                        PseudoType(it.pos, itemType)
-                    }
-                } else {
-                    it
-                }
-            }
-            proposedNewType?.let {
-                type = it
-            }
-        }
-
         return PseudoDecl(
             pos,
             constness = constness,
@@ -656,7 +626,6 @@ internal class PseudoTreeBuilder(
             typeIsInferred = typeIsInferred,
             afterEquals = afterEquals,
             annotations = annotations,
-            restFormal = restFormal,
             isStandalone = isStandaloneDecl(metadata),
         )
     }
@@ -1284,7 +1253,7 @@ internal class PseudoCall(
     val typeArgsInferred: Boolean = false,
 ) : PseudoTree() {
     override fun reduce(): OpTree {
-        // See if we can represent as an unary/binary operator.  If not, use a normal parenthetical
+        // See if we can represent as a unary/binary operator.  If not, use a normal parenthetical
         // call operator.
         val possibleOperatorName = when (callee) {
             is PseudoNameLeaf -> callee.name
@@ -1499,7 +1468,6 @@ internal class PseudoDecl(
     val typeIsInferred: Boolean,
     val afterEquals: PseudoTree?,
     val annotations: List<Pair<PseudoNameLeaf, PseudoTree>>,
-    val restFormal: Boolean,
     /** True if it should not be folded into a comma-separated declaration list */
     val isStandalone: Boolean,
 ) : PseudoTree() {
@@ -1526,13 +1494,8 @@ internal class PseudoDecl(
             emitDeclKeyword == TriState.OTHER -> null
             else -> OutToks.letWord
         }
-        val varArg = if (restFormal) {
-            OutToks.prefixEllipses
-        } else {
-            null
-        }
 
-        val beforeList = listOfNotNull(keyword, varArg)
+        val beforeList = listOfNotNull(keyword)
         var opTree: OpTree =
             if (declared is PseudoNameLeaf) {
                 declared.reduce().surround(
@@ -1655,21 +1618,6 @@ internal class PseudoType(override val pos: Position, val type: TypeActual) : Ps
                 val parenChildren = mutableListOf(reduced, Tok(pos, OutToks.leftParen))
                 t.valueFormals.mapOpTreeJoiningTo(parenChildren, OutToks.comma) {
                     reduceTypeActual(pos, it.staticType)
-                }
-                if (t.restValuesFormal != null) {
-                    if (parenChildren.isNotEmpty()) {
-                        parenChildren.add(Tok(pos, OutToks.comma))
-                    }
-                    parenChildren.add(
-                        OpInner(
-                            pos,
-                            Operator.Ellipsis,
-                            listOf(
-                                Tok(pos, OutToks.prefixEllipses),
-                                reduceTypeActual(pos, t.restValuesFormal),
-                            ),
-                        ),
-                    )
                 }
                 parenChildren.add(Tok(pos, OutToks.rightParen))
                 reduced = OpInner(pos, Operator.Paren, parenChildren.toList())
@@ -2384,10 +2332,8 @@ object TemperFormattingHints : FormattingHints {
         return super.spaceBetween(preceding, following)
     }
 
-    override fun shouldBreakAfter(token: OutputToken): Boolean {
-        if (isInlineSentinel(token)) { return false }
-        return super.shouldBreakAfter(token)
-    }
+    override fun shouldBreakAfter(token: OutputToken): Boolean =
+        !isInlineSentinel(token) && super.shouldBreakAfter(token)
 
     override fun shouldBreakBefore(token: OutputToken): Boolean {
         if (isInlineSentinel(token)) { return false }
@@ -2501,14 +2447,6 @@ private val (Tree).probableBuiltinName: String? get() =
 
 private infix fun (Tree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
     probableBuiltinName == desiredName
-
-private infix fun (PseudoTree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
-    when (this) {
-        is PseudoNameLeaf -> name.builtinKey == desiredName
-        is PseudoValueLeaf ->
-            (TFunction.unpackOrNull(value) as? NamedBuiltinFun)?.name == desiredName
-        else -> false
-    }
 
 private fun (OpTree).surround(
     pos: Position,

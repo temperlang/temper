@@ -309,7 +309,7 @@ internal object TranslateDotHelper {
                             TmpL.CallExpression(
                                 pos = pos,
                                 fn = callable,
-                                parameters = parameters.map { it.expr as TmpL.Actual },
+                                parameters = parameters.map { it.expr as TmpL.Expression },
                                 typeActuals = typeActuals,
                             ),
                         ),
@@ -388,7 +388,7 @@ internal object TranslateDotHelper {
             is GetMemberAccessor -> if (otherArgs.isEmpty()) {
                 translation = TmpL.GetAbstractProperty(
                     pos = pos,
-                    subject = subject.translate(translator) as TmpL.Expression,
+                    subject = subject.translate(translator),
                     property = propertyId(),
                     type = callType,
                 )
@@ -400,10 +400,10 @@ internal object TranslateDotHelper {
                         pos = pos,
                         left = TmpL.PropertyLValue(
                             pos = subject.tree.pos,
-                            subject = subject.translate(translator) as TmpL.Expression,
+                            subject = subject.translate(translator),
                             property = propertyId(),
                         ),
-                        right = newValue.translate(translator) as TmpL.Expression,
+                        right = newValue.translate(translator),
                     ),
                 )
             }
@@ -488,7 +488,7 @@ internal object TranslateDotHelper {
                 pos = pos,
                 fn = TmpL.MethodReference(
                     calleePos,
-                    subject.translate(translator) as TmpL.Expression,
+                    subject.translate(translator),
                     dotName,
                     sig,
                     method,
