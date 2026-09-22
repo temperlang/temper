@@ -1524,6 +1524,7 @@ internal class CSharpTranslator(
                 else -> {
                     actualStyle = when {
                         name in functionContextStack.last().optionals -> NameStyle.PrettyCamel
+                        style != NameStyle.Ugly -> style
                         else -> {
                             // Try to claim pretty and reserve a pretty name in case it's used by connected code.
                             // Pretty also just looks nicer.
@@ -1543,7 +1544,12 @@ internal class CSharpTranslator(
                             }
                         }
                     }
-                    effective.toStyle(actualStyle)
+                    effective.toStyle(actualStyle).also { nameText ->
+                        // We only get here if we didn't short-circuit on reserving a name above, anyway.
+                        if (actualStyle != NameStyle.Ugly) {
+                            names.reserveName(loc, name, nameText)
+                        }
+                    }
                 }
             }
         }
