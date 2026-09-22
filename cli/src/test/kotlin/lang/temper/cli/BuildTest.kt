@@ -604,7 +604,6 @@ data class ContextualizedFileContent(
             }",
         )
         console.group("char sequence") {
-            val n = unwantedThing.length
             console.textOutput.emitLineChunk(text.substring(0, range.first))
             console.textOutput.startStyle(Style.ErrorToken)
             console.textOutput.emitLineChunk(text.substring(range))
