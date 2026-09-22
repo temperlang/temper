@@ -31,7 +31,6 @@
 | [FunctionsDefaulting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsNamedArgs][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [FunctionsRestFormal][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsSimpleLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ImportsFunctions][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ImportsTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -104,7 +103,6 @@
 [FunctionsDefaulting]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/defaulting/defaulting.temper.md
 [FunctionsLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/locals/locals.temper.md
 [FunctionsNamedArgs]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/named-args/named-args.temper.md
-[FunctionsRestFormal]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/rest-formal/rest-formal.temper.md
 [FunctionsSimpleLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/functions/simple-locals/simple-locals.temper.md
 [ImportsFunctions]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/functions/functions.temper.md
 [ImportsTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/types/types.temper.md

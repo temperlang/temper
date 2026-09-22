@@ -3825,7 +3825,7 @@ Panic on index out of bounds.
 
 <a name="type&#45;List&#45;static&#45;of&#45;sig" class="snippet-anchor-name"></a>
 
-`static` `:` `fn<`*T*`>(`\.\.\.*T*`):` [*List*](#type-List)&lt;*T*&gt;
+`static` `:` `fn(``):` [*List*](#type-List)&lt;*listT*&gt;
 
 <!-- /snippet: type/List/static/of/sig -->
 
