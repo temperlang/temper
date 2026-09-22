@@ -1,20 +1,55 @@
+// Various reachability things.
+
 export let exportedInt = 1;
 let unreachableInt = 2;
+
 export let exportedFunction(b: Boolean): Void { if (b) { conditionallyExportReachable() } }
+
 let conditionallyExportReachable(): Void { console.log("") }
 let transitivelyTestReachable(): Void { console.log("") }
 let exportAndTestReachable(): Void { console.log("") }
 let initReachable(): Void { transitivelyInitReachable(); console.log("") }
 let transitivelyInitReachable(): Void { console.log("") }
 let unreachableFunction(): Void { console.log("") }
+
 export class ExportedClass(
   private let propertyOfExportedClass: UsedOnlyAsPropertyType
 ) {
   private let methodOfExportedClass(): Void { exportAndTestReachable() }
 }
+
 class TestReachableClass {
-  private let methodOfTestReachable(): Void { transitivelyTestReachable(); exportAndTestReachable() }
+  private let methodOfTestReachable(): Void {
+    transitivelyTestReachable();
+    exportAndTestReachable();
+  }
 }
-@test("testCase") let testCase(): Void { new TestReachableClass(); }
+
+@test("testCase") let testCase(): Void {
+  new TestReachableClass();
+  testKeptAndTestCalled();
+}
+
 class UsedOnlyAsPropertyType {}
+
 initReachable();
+
+// Now also try out decorations for keeping.
+
+let keepReachable(): Void { console.log(""); }
+let testKeepReachable(): Void { console.log(""); }
+
+@keep
+let kept(): Void { keepReachable(); }
+
+@keep
+class KeptClass {
+  public keptClassMethod(): Void {}
+}
+
+@keepTest
+let testKept(): Void { testKeepReachable(); }
+
+// Double-checking this one doesn't get marked test-reachable twice.
+@keepTest
+let testKeptAndTestCalled(): Void { console.log(""); }
