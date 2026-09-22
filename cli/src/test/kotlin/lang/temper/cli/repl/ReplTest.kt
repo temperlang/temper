@@ -40,6 +40,8 @@ class ReplTest {
 
     @BeforeTest
     fun setupRepl() {
+        writeToPendingConsole.textOutput.flush()
+        pending.clear()
         initializeRepl()
     }
 
@@ -55,6 +57,7 @@ class ReplTest {
     @AfterTest
     fun closeRepl() {
         _repl?.close()
+        writeToPendingConsole.textOutput.flush()
         assertPending("") // No un-flushed content.
         pending.clear()
     }
@@ -811,8 +814,8 @@ class ReplTest {
             Regex(
                 """
                     |interactive#0: void
-                    |interactive#1: \{class: Regex, data: \{class: Dot__\d+}, compiled: ƒ}
-                    |interactive#2: \{class: Regex, data: \{class: Dot__\d+}, compiled: ƒ}
+                    |interactive#1: \{class: Regex, data: \{class: DotSpecial__\d+}, compiled: ƒ}
+                    |interactive#2: \{class: Regex, data: \{class: DotSpecial__\d+}, compiled: ƒ}
                     |
                 """.trimMargin(),
             ),
@@ -1150,8 +1153,8 @@ class ReplTest {
         assertPending(
             """
                 |1: new Map([5])
-                |           ┗━┛
-                |[interactive#0:1+8-11]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [List<Int32>]
+                |   ┗━━━━━━━━━━┛
+                |[interactive#0:1+0-12]@G: Could not infer type actuals for <in K__33 extends MapKey<K__33>, out V__34 extends AnyValue>(List<Pair<K__33, V__34>>) -> Map<K__33, V__34> given [List<Int32>] in context unknown
                 |interactive#0: fail
                 |
             """.trimMargin(),
@@ -1161,8 +1164,8 @@ class ReplTest {
         assertPending(
             """
                 |1: new Map(5)
-                |           ⇧
-                |[interactive#1:1+8-9]@G: Actual arguments do not match signature: <in K__32 extends AnyValue & MapKey, out V__33 extends AnyValue>(List<Pair<K__32, V__33>>) -> Map<K__32, V__33> expected [List<Pair<MapKey, AnyValue>>], but got [Int32]
+                |   ┗━━━━━━━━┛
+                |[interactive#1:1+0-10]@G: Could not infer type actuals for <in K__33 extends MapKey<K__33>, out V__34 extends AnyValue>(List<Pair<K__33, V__34>>) -> Map<K__33, V__34> given [Int32] in context unknown
                 |interactive#1: fail
                 |
             """.trimMargin(),

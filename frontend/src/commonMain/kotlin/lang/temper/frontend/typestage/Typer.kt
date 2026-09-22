@@ -24,7 +24,6 @@ import lang.temper.common.logIf
 import lang.temper.common.putMultiList
 import lang.temper.common.putMultiSet
 import lang.temper.common.removeMatching
-import lang.temper.common.soleElementOrNull
 import lang.temper.common.subListToEnd
 import lang.temper.env.Environment
 import lang.temper.format.logTokens
@@ -129,14 +128,11 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.CallTypeInferencesTree
-import lang.temper.value.CallableValue
-import lang.temper.value.CoverFunction
 import lang.temper.value.DeclTree
 import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.LeftNameLeaf
-import lang.temper.value.MacroValue
 import lang.temper.value.NameLeaf
 import lang.temper.value.NoTypeInferencesTree
 import lang.temper.value.PreserveFn
@@ -174,7 +170,6 @@ import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
-import lang.temper.value.typeForFunctionValue
 import lang.temper.value.typeForValue
 import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
@@ -821,7 +816,6 @@ internal class Typer(
         }
 
         val calleeFn = effectiveCallee?.functionContained
-        val coverFn = calleeFn as? CoverFunction
         val calleeFnSigs = calleeFn?.sigs
 
         var inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
@@ -921,10 +915,6 @@ internal class Typer(
                         Callee(it, CalleePriority.Default)
                     }
                 }
-            } else if (coverFn != null) {
-                val (mainCalleeType, fallbackCalleeType) = splitCoverFnType(coverFn)
-                explodeCalleeType(mainCalleeType, CalleePriority.Default, ::specialize)
-                fallbackCalleeType?.let { explodeCalleeType(it, CalleePriority.Fallback, ::specialize) }
             } else if (typedVariants != null) {
                 for (fnType in typedVariants.fnTypes) {
                     hackTryStaticTypeToSig(fnType)?.let { sig ->
@@ -959,18 +949,6 @@ internal class Typer(
             contextType = contextType,
         )
     }
-
-    private val splitCoverFnCache = mutableMapOf<CoverFunction, Pair<StaticType, StaticType?>>()
-
-    /** Split the fallback function type from the main cover function variants. */
-    private fun splitCoverFnType(coverFunction: CoverFunction) =
-        splitCoverFnCache.getOrPut(coverFunction) {
-            MkType.and(
-                coverFunction.covered.map {
-                    typeForFunctionValue(it)
-                },
-            ) to coverFunction.otherwise?.let { typeForFunctionValue(it) }
-        }
 
     /**
      * Any context in which the call happens that bounds the return type.
@@ -1428,9 +1406,7 @@ internal class Typer(
                     val variantType = decision.variant ?: InvalidType
                     val callee = callSite.child(0)
                     val storedCalleeType = ti.decisionType(callee)
-                    val calleeFn = callee.functionContained
-                    if (variantType != storedCalleeType || calleeFn is CoverFunction) {
-                        maybeRefineCallee(callee.incoming!!, variantType, callSite)
+                    if (variantType != storedCalleeType) {
                         if (!variantType.mentionsInvalid) {
                             when (callee as TypeInferencesHaver) {
                                 is BasicTypeInferencesTree -> ti.decide(
@@ -2236,78 +2212,6 @@ internal class Typer(
             }
             // Make sure we fill in left names before looking at assignments
             .visitPostOrder()
-    }
-
-    private fun maybeRefineCallee(
-        calleeEdge: TEdge,
-        refinedCalleeType: StaticType,
-        call: CallTree,
-    ) {
-        val callee = calleeEdge.target
-        console.groupIf(DEBUG, "Refining callee") {
-            if (DEBUG) {
-                console.log(
-                    "Variants are $refinedCalleeType for ${callee.pos}/${
-                        abbreviate(callee.toLispy())
-                    }",
-                )
-            }
-            if (refinedCalleeType.mentionsInvalid) {
-                return@maybeRefineCallee
-            }
-            val fn = callee.functionContained
-            if (fn is CoverFunction) {
-                val looseRefinedCalleeType = looseType(refinedCalleeType)
-                val eligibleVariants = buildList<MacroValue> {
-                    for (candidateFunction in fn.covered) {
-                        val candidateType = typeForValue(Value(candidateFunction))
-                            ?: continue
-                        val looseCandidateType = looseType(candidateType)
-                        if (typeContext.isSubType(looseRefinedCalleeType, looseCandidateType)) {
-                            add(candidateFunction)
-                        }
-                    }
-                    if (isEmpty() && fn.otherwise != null) {
-                        add(fn.otherwise!!)
-                    }
-
-                    soleElementOrNull?.let { soleVariant ->
-                        val replacement = doExtraCoverFunctionVariantRefinement(
-                            soleVariant,
-                            call.children.subListToEnd(call.firstArgumentIndex),
-                        )
-                        if (replacement != null) {
-                            clear()
-                            add(replacement)
-                        }
-                    }
-                }
-                if (DEBUG) {
-                    console.log("Eligible variants are in $looseRefinedCalleeType")
-                }
-                if (eligibleVariants.isNotEmpty()) {
-                    val eligibleVariantFn = when {
-                        eligibleVariants.size == 1 -> eligibleVariants[0]
-                        fn.otherwise != null -> fn.otherwise
-                        eligibleVariants.size != fn.covered.size -> null
-                        else -> CoverFunction(eligibleVariants.map { it as CallableValue })
-                    }
-                    if (eligibleVariantFn != null) {
-                        var edgeToReplace = calleeEdge
-                        if (callee is CallTree && isPreserveCall(callee)) {
-                            edgeToReplace = callee.edge(2)
-                        }
-                        edgeToReplace.replace {
-                            V(callee.pos, Value(eligibleVariantFn))
-                        }
-                        val newCallee = edgeToReplace.target as ValueLeaf
-                        preTypeValueLeaf(newCallee)
-                    }
-                }
-            }
-
-            // TODO: Refine method references
-        }
     }
 
     /**
@@ -3224,9 +3128,7 @@ private fun typeBindingMapper(basis: NominalType): ((StaticType) -> StaticType)?
     val formalToActual =
         (formals zip actuals).associate { it.first.name to it.second }
     val mapper = TypeBindingMapper(formalToActual)
-    return { t ->
-        MkType.map(t, mapper, mutableMapOf())
-    }
+    return { t -> MkType.map(t, mapper) }
 }
 
 private val Tree.isDirectlyNestedCallParameter: Boolean

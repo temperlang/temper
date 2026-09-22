@@ -214,24 +214,8 @@ object TFloat64 : ComparableTypeTag<Double>("Float64", ConsistentDoubleComparato
  * for all [snippet/type/FunctionTypes].
  */
 object TFunction : TypeTag<MacroValue>(FUNCTION_TYPE_NAME_TEXT) {
-    override fun stabilityOf(value: MacroValue): ValueStability = when (value) {
-        is BuiltinStatelessMacroValue -> ValueStability.Stable
-        is CoverFunction ->
-            if (
-                value.covered.all {
-                    stabilityOf(it) == ValueStability.Stable
-                }
-            ) {
-                ValueStability.Stable
-            } else {
-                ValueStability.Unstable
-            }
-        else -> if (value.functionSpecies == FunctionSpecies.Pure) {
-            ValueStability.Stable
-        } else {
-            ValueStability.Unstable
-        }
-    }
+    override fun stabilityOf(value: MacroValue): ValueStability =
+        value.stability
 
     override fun renderValue(
         value: MacroValue,

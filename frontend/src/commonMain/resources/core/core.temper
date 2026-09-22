@@ -13,7 +13,10 @@ export interface AnyValue {}
  * User-defined types can't currently extend Equatable, but we expect to support
  * this in the future.
  */
-export sealed interface Equatable {}
+export sealed interface Equatable<EQ extends AnyValue> {
+  @operator("==")
+  eq(other: EQ): builtins.Boolean;
+}
 
 /**
  * *Bubble* is a type that represents failure to compute a value.
@@ -79,8 +82,11 @@ export sealed interface Never<@out T> {}
  */
 @imu
 @mayDowncastTo(true)
-export class Null extends Equatable {
+export class Null extends Equatable<Null> {
   private constructor(): Void {}
+
+  @operator("==")
+  public eq(other: Null): builtins.Boolean { true }
 }
 
 /**
@@ -110,8 +116,12 @@ export class Null extends Equatable {
  */
 @imu
 @connected
-export class Empty extends Equatable {
+export class Empty extends Equatable<Empty> {
   private constructor(): Void {}
+
+  @connected
+  @operator("==")
+  public eq(other: Empty): builtins.Boolean { true }
 }
 let emptySingleton: Empty = doPure { (): Empty => new Empty() };
 @connected
@@ -178,7 +188,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * would get [snippet/builtin/true].
    */
   @connected
-  public done: Boolean;
+  public done: builtins.Boolean;
   /**
    * Should be called once it is realized that
    * [snippet/type/Generator/method/next] is not going to be called
@@ -248,7 +258,7 @@ export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneRes
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
 extends Generator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
-  private var _done: Boolean = false;
+  private var _done: builtins.Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Bubble) {
     this.generatorFn = generatorFn;
@@ -267,7 +277,7 @@ extends Generator<YIELD> {
     return result;
   }
 
-  public get done(): Boolean { this._done }
+  public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -280,7 +290,7 @@ extends Generator<YIELD> {
 class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
 extends SafeGenerator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD>;
-  private var _done: Boolean = false;
+  private var _done: builtins.Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD>) {
     this.generatorFn = generatorFn;
@@ -299,7 +309,7 @@ extends SafeGenerator<YIELD> {
     return result;
   }
 
-  public get done(): Boolean { this._done }
+  public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -348,7 +358,7 @@ export class PromiseBuilder<R extends AnyValue> {
  * user-implementable in the future.
  */
 @imu
-export /*sealed*/ interface MapKey extends Equatable {}
+export /*sealed*/ interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
 
 /**
  * A *String* is a chunk of textual content.
@@ -372,7 +382,7 @@ export /*sealed*/ interface MapKey extends Equatable {}
  * ⎀ syntax/string/interpolation -heading
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
-export class String extends MapKey {
+export class String extends MapKey<String> {
   private let content: builtins.String;
 
   /**
@@ -435,7 +445,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public hasIndex(index: StringIndex): Boolean;
+  public hasIndex(index: StringIndex): builtins.Boolean;
 
   /**
    * The first index of *target* if found, starting from *start*.
@@ -555,7 +565,7 @@ export class String extends MapKey {
    * ```
    */
   @connected
-  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): Boolean;
+  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): builtins.Boolean;
 
   /**
    * The count of codepoints between *begin* and *end*.
@@ -633,6 +643,10 @@ export class String extends MapKey {
 
   @connected
   public toString(): builtins.String { content }
+
+  @connected
+  @operator("==")
+  public eq(other: builtins.String): builtins.Boolean;
 }
 
 /**
@@ -648,7 +662,7 @@ export class String extends MapKey {
  */
 @imu
 @connected
-export sealed interface StringIndexOption extends Equatable {
+export sealed interface StringIndexOption extends Equatable<StringIndexOption> {
   /**
    * Sorts [snippet/type/StringIndex/static/none] before every valid string index.
    *
@@ -659,6 +673,10 @@ export sealed interface StringIndexOption extends Equatable {
   @operator("<=>")
   @connected
   public compareTo(other: StringIndexOption): Int;
+
+  @operator("==")
+  @connected
+  public eq(other: StringIndexOption): builtins.Boolean;
 }
 
 /**
@@ -962,7 +980,7 @@ export sealed interface Listed<T> {
   public map<O>(transform: fn (T): O): List<O>;
 
   @connected
-  public filter(predicate: fn (T): Boolean): List<T>;
+  public filter(predicate: fn (T): builtins.Boolean): List<T>;
 
   /**
    * Reduce to a single value, starting from the first item in this list.
@@ -1136,7 +1154,7 @@ export class Pair<@out K, @out V> {
  * A *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
  * `MapBuilder`.
  */
-export sealed interface Mapped<@in K extends MapKey, V> {
+export sealed interface Mapped<@in K extends MapKey<K>, V> {
   /**
    * The number of key value pairs in the [snippet/type/Mapped].
    */
@@ -1290,7 +1308,7 @@ export sealed interface Mapped<@in K extends MapKey, V> {
  */
 @partialImu
 @mayDowncastTo(false) // Just use core.type Mapped.toMap() if immutable wanted.
-export class Map<@in K extends MapKey, @out V> extends Mapped<K, V> {
+export class Map<@in K extends MapKey<K>, @out V> extends Mapped<K, V> {
   // The content is used only from extension functions.
   private content: AnyValue;
 
@@ -1310,7 +1328,7 @@ export class Map<@in K extends MapKey, @out V> extends Mapped<K, V> {
  * objects. Preserves insertion order when accessed from Temper code.
  */
 @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
-export class MapBuilder<K extends MapKey, V> extends Mapped<K, V> {
+export class MapBuilder<K extends MapKey<K>, V> extends Mapped<K, V> {
   // The content is used only from connected functions.
   private content: AnyValue;
 
@@ -1386,7 +1404,7 @@ export class Deque<T> {
  */
 @imu
 @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
-export class Boolean extends Equatable {
+export class Boolean extends Equatable<Boolean> {
   private let content: builtins.Boolean;
 
   /**
@@ -1397,6 +1415,10 @@ export class Boolean extends Equatable {
   public toString(): builtins.String {
     if (content) { "true" } else { "false" }
   }
+
+  @connected
+  @operator("==")
+  public eq(other: builtins.Boolean): builtins.Boolean;
 }
 
 /**
@@ -1469,7 +1491,7 @@ export let Int = Int32;
  * ⎀ syntax/int32/examples
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
-export class Int32 extends MapKey {
+export class Int32 extends MapKey<Int32> {
   private let content: builtins.Int;
 
   @connected
@@ -1499,6 +1521,16 @@ export class Int32 extends MapKey {
   /** `this - 1`, the predecessor value used by [snippet/builtin/--]. */
   @connected
   public pred(): builtins.Int32 { content - 1 }
+
+  /** `-1` if `this < 0`, `0` if `this == 0`, or otherwise `1`. */
+  @connected
+  public get signum(): builtins.Int32 {
+    (content >> 31) | (-content >>> 31)
+  }
+
+  @connected
+  @operator("==")
+  public eq(other: builtins.Int32): builtins.Boolean;
 }
 
 /**
@@ -1510,7 +1542,7 @@ export class Int32 extends MapKey {
  */
 @imu
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
-export class Int64 extends Equatable { // TODO extends MapKey?
+export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
   private let content: builtins.Int64;
 
   /** Bubbles if the result isn't within the exponent error of the original. */
@@ -1558,6 +1590,10 @@ export class Int64 extends Equatable { // TODO extends MapKey?
   /** `this - 1i64`, the predecessor value used by [snippet/builtin/--]. */
   @connected
   public pred(): builtins.Int64 { content - 1i64 }
+
+  @connected
+  @operator("==")
+  public eq(other: builtins.Int64): builtins.Boolean;
 }
 
 /**
@@ -1572,7 +1608,7 @@ export class Int64 extends Equatable { // TODO extends MapKey?
  */
 @imu
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
-export class Float64 extends Equatable {
+export class Float64 extends Equatable<Float64> {
   private let content: builtins.Float64;
 
   /**
@@ -1699,6 +1735,10 @@ export class Float64 extends Equatable {
   /** `this - 1.0`, the predecessor value used by [snippet/builtin/--]. */
   @connected
   public pred(): builtins.Float64 { content - 1.0 }
+
+  @connected
+  @operator("==")
+  public eq(other: builtins.Float64): builtins.Boolean;
 }
 
 /**

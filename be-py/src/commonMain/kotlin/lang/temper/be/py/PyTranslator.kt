@@ -1148,17 +1148,13 @@ class PyTranslator(
             // Call the connected function with defaults applied.
             Py.Name(func.pos, PyIdentifierName("_connected")).method(
                 name = pyNames.choosePrettyName(func.name.name as ResolvedParsedName, TmpL.IdKind.Value),
-                args = buildList {
-                    for ((tmpl, py) in func.parameters.parameters.zip(args.args)) {
-                        when {
-                            tmpl.optional -> name(
-                                pos = tmpl.pos,
-                                name = defaulting.parameterMapping.getValue(tmpl.name.name),
-                            )
-                            else -> py.arg?.asName() // where null might be `/`, so unexpected here
-                        }?.also { add(it) }
-                    }
-                },
+                args = defaulting.buildConnectedArgs(
+                    fn = func,
+                    backendParams = args.args,
+                    tmplToArg = { pos, name -> name(pos, name) },
+                    // Where null might be `/`, so unexpected here.
+                    backendToArg = { it.arg?.asName() },
+                ),
                 // And in Python, void as None is always returnable, so just always return here.
                 // TODO Anything special for generators?
             ).also { add(Py.Return(func.pos, it)) }

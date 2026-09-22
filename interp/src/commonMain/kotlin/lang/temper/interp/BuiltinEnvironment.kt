@@ -17,7 +17,6 @@ import lang.temper.interp.importExport.ImportMacro
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
-import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
@@ -55,14 +54,6 @@ private object Builtins {
     val nameKeyToValue: Map<String, Value<*>>
     init {
         val m = mutableMapOf(
-            "<" to Value(BuiltinFuns.lessThanFn),
-            ">" to Value(BuiltinFuns.greaterThanFn),
-            "<=" to Value(BuiltinFuns.lessEqualsFn),
-            ">=" to Value(BuiltinFuns.greaterEqualsFn),
-            "==" to Value(BuiltinFuns.equalsFn),
-            "!=" to Value(BuiltinFuns.notEqualsFn),
-            "<=>" to Value(BuiltinFuns.cmpFn),
-
             "=" to BuiltinFuns.vSetLocalFn,
 
             keyPair(BuiltinFuns.vNotFn),
@@ -902,9 +893,6 @@ internal class BuiltinEnvironment(
 
 private fun nameOf(f: MacroValue): String = when (f) {
     is NamedBuiltinFun -> f.name
-    is CoverFunction -> nameOf(f.covered.first()).also { name ->
-        check(f.covered.all { nameOf(it) == name })
-    }
     else -> error("$f")
 }
 

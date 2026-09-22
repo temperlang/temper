@@ -101,8 +101,10 @@ data class FunctionResolution(
 class DotHelper(
     val memberAccessor: MemberAccessor,
     val member: Member,
-    /** Resolutions of the relevant extension function in scope with the same symbol. */
-    val extensions: List<ExtensionResolution> = emptyList(),
+    /**
+     * Resolutions of the relevant extension function in scope with the same symbol.
+     */
+    val extensions: List<ExtensionResolution> = listOf(),
 ) : SpecialFunction, NamedBuiltinFun, BuiltinStatelessMacroValue, TokenSerializable {
     override val name: String get() = buildString {
         append("do_")

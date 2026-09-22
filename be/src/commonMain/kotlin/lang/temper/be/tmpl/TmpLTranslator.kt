@@ -88,7 +88,6 @@ import lang.temper.type2.isVoidLike
 import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
-import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.BreakOrContinue
@@ -96,7 +95,6 @@ import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
-import lang.temper.value.CoverFunction
 import lang.temper.value.DeclTree
 import lang.temper.value.DependencyCategory
 import lang.temper.value.Document
@@ -107,7 +105,6 @@ import lang.temper.value.FunTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.JumpSpecifier
 import lang.temper.value.LeftNameLeaf
-import lang.temper.value.MacroValue
 import lang.temper.value.MetadataMap
 import lang.temper.value.MetadataMultimap
 import lang.temper.value.MetadataValueMultimap
@@ -1069,7 +1066,7 @@ class TmpLTranslator internal constructor(
             isSetPropertyCall(tree) -> translateSetP(tree)
             isBubbleCall(tree) -> OneStmt(TmpL.ThrowStatement(tree.pos))
             isRemCall(tree) -> translatedEmbeddedComment(tree)
-            // Setter invocations are statement-like but the others
+            // Setter invocations are statement-like, but the others
             // go through translateCall which consolidates parameterized
             // call handling.
             isSetterCall(tree) -> translateDotHelperCall(tree)
@@ -1125,7 +1122,7 @@ class TmpLTranslator internal constructor(
 
         if (rightExpr is TmpL.ValueReference) {
             // Value-references do not have constructors, so there is no opportunity
-            // to insert implicit casts but some values, especially `null` could
+            // to insert implicit casts, but some values, especially `null` could
             // benefit from reinterpretation.
             // Simulate an output cast injection here to catch that case.
             rightExpr = maybeInjectCastForOutput(
@@ -1244,7 +1241,7 @@ class TmpLTranslator internal constructor(
                     // - function inputs with a functional interface type
                     // - reads of class/interface properties with a functional interface type
                     // - calls to functions that return a functional interface value
-                    // - references to a named function, e.g. returning an inner function as a functional interface
+                    // - references to a named function, e.g., returning an inner function as a functional interface
                     // - narrowing or widening casts of one of the above to a functional interface type
                     // - possibly other uses
 
@@ -1367,7 +1364,7 @@ class TmpLTranslator internal constructor(
     private fun translateBuiltinName(
         pos: Position,
         name: BuiltinName,
-        /** The value exported from core */
+        /** The value exported from `core`. */
         value: Value<*>?,
         type: Descriptor,
     ): TmpL.ExpressionOrCallable = when (genre) {
@@ -1609,8 +1606,9 @@ class TmpLTranslator internal constructor(
         }
 
         val effectiveCallee = tentativeCallee
-        val builtinOperatorId = (effectiveCallee.functionContained as? NamedBuiltinFun)
-            ?.builtinOperatorId
+        val fnValue = effectiveCallee.functionContained
+        val builtinOperatorId =
+            (fnValue as? NamedBuiltinFun)?.builtinOperatorId
 
         // First, unpack special calls that are themselves called.
         //
@@ -1830,7 +1828,7 @@ class TmpLTranslator internal constructor(
                 BuiltinFuns.pureVirtualFn -> {
                     // The Java backend relies on propagating the actual pure virtual function to detect
                     // whether an interface method should be `default` or `abstract`.
-                    // Other backends can return a sensible "pure virtual" value, e.g. Python can return
+                    // Other backends can return a sensible "pure virtual" value, e.g., Python can return
                     // `NotImplemented`.
                 }
                 BuiltinFuns.await -> {
@@ -1863,19 +1861,15 @@ class TmpLTranslator internal constructor(
         }
 
         if (translation == null) {
+            val args = tree.children.subList(1, tree.size)
             val callable: TmpL.Callable = calleeTranslation ?: run findCalleeExpr@{
-                var fnValue: MacroValue? = null
                 var connectedKey: String? = null
                 when (effectiveCallee) {
-                    is ValueLeaf -> fnValue = TFunction.unpackOrNull(effectiveCallee.content)
                     is RightNameLeaf -> {
                         val calleeName = effectiveCallee.content
                         connectedKey = pool.sharedNameTables.declarationMetadataForName[calleeName].connectedKey()
                     }
                     else -> {}
-                }
-                if (fnValue != null) {
-                    connectedKey = genericComparisonHackaround(tree, fnValue)
                 }
 
                 var supportCode: SupportCode? = null
@@ -1886,6 +1880,7 @@ class TmpLTranslator internal constructor(
                     supportCode =
                         supportNetwork.getSupportCode(effectiveCallee.pos, fnValue, genre)
                 }
+
                 if (supportCode is InlineSupportCode<*, *>) {
                     pool.poolRequirements(originalCallee.pos, supportCode)
                     return@findCalleeExpr TmpL.InlineSupportCodeWrapper(
@@ -1913,35 +1908,59 @@ class TmpLTranslator internal constructor(
                     )
             }
             val declaredCalleeType = hackTryStaticTypeToSig(typeInferences?.variant)
-            translation = TmpL.CallExpression(
-                pos = tree.pos,
-                fn = callable,
-                typeActuals = translateCallTypeActuals(
-                    pos = callable.pos.rightEdge,
-                    typeActualTrees = typeActuals,
-                    callInferences = tree.typeInferences,
-                    sig = callable.type,
-                ),
-                parameters = (1 until tree.size).map { i ->
-                    val arg = tree.child(i)
-                    maybeInjectCastForInput(
-                        expr = translateExpression(arg),
-                        argIndex = i - 1,
-                        actualCalleeType = actualCalleeType,
-                        declaredCalleeType = declaredCalleeType,
-                        adjustments = null,
-                        builtinOperatorId = builtinOperatorId,
-                    )
-                },
+
+            val typeActuals = translateCallTypeActuals(
+                pos = callable.pos.rightEdge,
+                typeActualTrees = typeActuals,
+                callInferences = tree.typeInferences,
+                sig = callable.type,
             )
 
-            translation = maybeInjectCastForOutput(
-                expr = maybeInline(translation),
-                actualCalleeType = effectiveCallee.sig,
-                declaredCalleeType = declaredCalleeType,
-                adjustments = null,
-                builtinOperatorId = builtinOperatorId,
-            )
+            val parameters = args.mapIndexed { i, arg ->
+                maybeInjectCastForInput(
+                    expr = translateExpression(arg),
+                    argIndex = i,
+                    actualCalleeType = actualCalleeType,
+                    declaredCalleeType = declaredCalleeType,
+                    adjustments = null,
+                    builtinOperatorId = builtinOperatorId,
+                )
+            }
+
+            // Resugar things like `(x <=> y) >= 0` to `(x >= y)`
+            if (args.size == 2 && args[1].valueContained == vZero) {
+                val comparisonKind = ComparisonKind.forPrimitiveIntOp(fnValue)
+                if (comparisonKind != null) {
+                    val parameter0 = parameters[0]
+                    if (parameter0 is TmpL.CallExpression) {
+                        // Often a call to a three-way comparison.
+                        translation = supportNetwork.simplifyPossibleComparison(
+                            parameter0,
+                            comparisonKind,
+                            translationAssistant,
+                        )
+                    }
+                }
+            }
+
+            if (translation == null) {
+                translation = TmpL.CallExpression(
+                    pos = tree.pos,
+                    fn = callable,
+                    typeActuals = typeActuals,
+                    parameters = parameters,
+                )
+            }
+
+            if (translation is TmpL.CallExpression) {
+                translation = maybeInjectCastForOutput(
+                    expr = maybeInline(translation),
+                    actualCalleeType = effectiveCallee.sig,
+                    declaredCalleeType = declaredCalleeType,
+                    adjustments = null,
+                    builtinOperatorId = builtinOperatorId,
+                )
+            }
         }
 
         return translation
@@ -2004,7 +2023,7 @@ class TmpLTranslator internal constructor(
          * We could infer this from tree structure:
          * If it's a call, either the parent is the call or the parent is an application of `<>`, attaching
          * explicit type actuals to the callee.
-         * But, the translation path needs to extract the required kind so this bit is passed in.
+         * But the translation path needs to extract the required kind, so this bit is passed in.
          */
         returnCallable: Boolean,
     ): TmpL.ExpressionOrCallable {
@@ -2106,7 +2125,7 @@ class TmpLTranslator internal constructor(
         val subject = translateTypeName(
             typeChild.pos,
             type,
-            // Non-connected statics still need to be put on a Temper generated type.
+            // Non-connected statics still need to be put on a Temper-generated type.
             followConnected = false,
         )
         val dotName = TmpL.DotName(
@@ -2351,7 +2370,7 @@ class TmpLTranslator internal constructor(
             val type = retTypeForFn(fnSig, returnDecl)
             val retType = translateType(typePos, type)
 
-            // If we have unwrapped a coroutine to get at the body, but will need to
+            // If we have unwrapped a coroutine to get at the body but will need to
             // re-wrap it, then make sure we have that type too.
             if (mayYield) {
                 val unwrappedType = retTypeForFn(origFnType, fnParts.returnDecl)
@@ -2444,7 +2463,7 @@ class TmpLTranslator internal constructor(
             val type: TmpL.AType
             val descriptor: Type2
             if (d is TranslatedDeclaration) {
-                check(d.isSimple) // Since function declarations not allowed
+                check(d.isSimple) // Since function declarations are not allowed.
                 val localDecl = d.declaringStatement as TmpL.LocalDeclaration
                 name = d.declaredName.deepCopy()
                 type = localDecl.type
@@ -2659,10 +2678,10 @@ class TmpLTranslator internal constructor(
             pos,
             lines.mapIndexed { index, s ->
                 // Reduce confusion between comment lines and
-                // she-bangs or pre-processor directives, so that
-                //     // !/usr/bin/echo
-                // does not get naively mapped to
-                //     #!/usr/bin/echo
+                // she-bangs or pre-processor directives so that
+                // `// !/usr/bin/echo`  does not get naively mapped to
+                // a comment like `#!/usr/bin/echo` that might be treated
+                // as special by tools.
                 val sSafe = hashWord.replace(s, "$1_$2")
                 TmpL.EmbeddedComment(if (index == 0) { pos } else { posRight }, sSafe)
             },
@@ -2740,7 +2759,6 @@ class TmpLTranslator internal constructor(
                 is BuiltinStatelessMacroValue -> true
                 is LongLivedUserFunction ->
                     !f.hasYielded && f.closedOverEnvironment is EmptyEnvironment
-                is CoverFunction -> f.covered.all { shouldPool(Value(it)) }
                 else -> false
             }
             is TClass -> false
@@ -3064,7 +3082,7 @@ private fun (TmpLTranslator).groupImportsIn(
     val reachabilities = mutableMapOf<QName, TmpL.DeclarationMetadata>()
     fun lookForNames(t: TmpL.Tree) {
         fun allowDefinition(definition: TypeDefinition): Boolean =
-            // Backends should assume well known types are ambiently available
+            // Backends should assume well-known types are ambiently available
             definition is TypeShape && !WellKnownTypes.isWellKnown(definition)
 
         val name = when (t) {
@@ -3145,7 +3163,7 @@ private fun (TmpLTranslator).groupImportsIn(
     requiredLibraries.remove(libraryConfigurations.currentLibraryConfiguration.libraryName)
     val libraryReqs = requiredLibraries.sortedBy { it.text }
         .map {
-            // !! is safe because if there's a requirement it must've been inside a top-level
+            // !! is safe because if there's a requirement, it must've been inside a top-level
             TmpL.LibraryDependency(reqPos!!, it)
         }
 
@@ -3224,9 +3242,9 @@ private fun exportedNameForStay(
     stayLeaf: StayLeaf,
     selfLoc: ModuleLocation,
 ): ExportedName? {
-    // If a function value or other value that has a StayLeaf, is being
+    // If a function value or other value that has a StayLeaf is being
     // referenced across module boundaries, look for the canonical name
-    // by which it was exported, so that we can rewrite the name to a local
+    // by which it was exported. That lets us rewrite the name to a local
     // name after the imports are gathered.
     // See FinishTmpLImports for where that happens.
 
@@ -3389,45 +3407,6 @@ private fun extractPureVirtualCall(tree: Tree): CallTree? {
     return null
 }
 
-private fun genericComparisonHackaround(
-    call: CallTree,
-    callee: MacroValue,
-): String? {
-    if (call.size != BINARY_OP_CALL_ARG_COUNT) { return null }
-    // This hack is equivalent to the one in generic comparison that connects StringIndex
-    // comparison to StringIndexOption.compareTo.
-    // Here, we rewrite to a method application so that our normal connection machinery
-    // can specialize it.
-    val builtinOperatorId = (callee as? NamedBuiltinFun)?.builtinOperatorId
-        ?: return null
-    val (_, leftArg, rightArg) = call.children
-    val leftType = hackMapOldStyleToNewOrNull(leftArg.typeInferences?.type)
-    val rightType = hackMapOldStyleToNewOrNull(rightArg.typeInferences?.type)
-    if (leftType.isStringIndexOptionType && rightType.isStringIndexOptionType) {
-        // Turn generic comparison operations on StringIndex and StringIndexOption and NoStringIndex into
-        when (builtinOperatorId) {
-            BuiltinOperatorId.LtGeneric -> return "core.type StringIndexOption.compareTo()::lt"
-            BuiltinOperatorId.LeGeneric -> return "core.type StringIndexOption.compareTo()::le"
-            BuiltinOperatorId.GeGeneric -> return "core.type StringIndexOption.compareTo()::ge"
-            BuiltinOperatorId.GtGeneric -> return "core.type StringIndexOption.compareTo()::gt"
-            BuiltinOperatorId.EqGeneric -> return "core.type StringIndexOption.compareTo()::eq"
-            BuiltinOperatorId.NeGeneric -> return "core.type StringIndexOption.compareTo()::ne"
-            BuiltinOperatorId.CmpGeneric -> return "core.type StringIndexOption.compareTo()"
-            else -> {}
-        }
-    }
-    return null
-}
-
-private val Type2?.isStringIndexOptionType get() =
-    // TODO: does not account for <T extends StringIndexOption>
-    this?.nullity == NonNull && this.definition in stringIndexOptionTypes
-private val stringIndexOptionTypes = setOf(
-    WellKnownTypes.stringIndexOptionTypeDefinition,
-    WellKnownTypes.stringIndexTypeDefinition,
-    WellKnownTypes.noStringIndexTypeDefinition,
-)
-
 private fun <BE : Backend<BE>> MetadataDependencyResolver<BE>.getQNameMap(
     libraryName: DashedIdentifier,
 ): Map<ResolvedName, QName> {
@@ -3458,3 +3437,5 @@ private val globalConsoleClassTag = TClass(WellKnownTypes.globalConsoleTypeDefin
 
 private val Tree.isModuleMetadataDecl get() =
     this is DeclTree && true == this.parts?.metadataSymbolMultimap?.containsKey(topLevelMetadataSymbol)
+
+internal val vZero = Value(0, TInt)

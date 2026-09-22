@@ -377,7 +377,7 @@ class BuildTest {
             assertContains(text, "temper_std.testing")
             assertContains(text, "def test___twiceWorks")
             assertContains(text, "class _Something")
-            assertContains(text, "def halve_value_in")
+            assertContains(text, "def _halve_value_in")
             assertNotContains(text, "nobody_wants_me")
             // Keep decoration and reachability tests. Now test should be here but not prod.
             assertNotContains(text, "keep_me_for_prod")

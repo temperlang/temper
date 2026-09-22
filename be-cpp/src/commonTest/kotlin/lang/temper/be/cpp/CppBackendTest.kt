@@ -89,7 +89,7 @@ class CppBackendTest {
                 |        return temper::core::Int::div_wrap(x, y);
                 |      }
                 |    }catch(const temper::core::TemperBubble & ) {
-                |      if(x != 0) {
+                |      if( ! (x == 0)) {
                 |        {
                 |          return x;
                 |        }
@@ -411,8 +411,8 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                // A plain (rootless) struct carries its own CRTP enable_shared_from_this so
-                // borrow_this can hand out an owning shared_ptr for `this`.
+                // A plain (rootless) struct carries its own CRTP `enable_shared_from_this` so
+                // `borrow_this` can hand out an owning `shared_ptr` for `this`.
                 "struct Point : public std::enable_shared_from_this<Point>",
                 "int32_t get_x()",
                 "int32_t get_y()",
@@ -715,6 +715,9 @@ class CppBackendTest {
                     |export let inc(i: Int): Int {
                     |    sum(i, 1)
                     |}
+                    |
+                    |@connected
+                    |export let length(s: String? = null): Int;
                 """.trimMargin(),
                 filePath("something", "deeper", "more-fun.temper") to """
                     |export let prod(i: Int, j: Int): Int {
@@ -765,27 +768,33 @@ class CppBackendTest {
                 |                  #include <my-test-library/something.hpp>
                 |                  #include "something/_connected.hpp"
                 |                  namespace my_test_library {
-                |                    int32_t twice(int32_t i_4) {
-                |                      return my_test_library::prod(i_4, 2);
+                |                    int32_t twice(int32_t i_5) {
+                |                      return my_test_library::prod(i_5, 2);
                 |                    }
-                |                    int32_t sum(int32_t i_6, int32_t j_7, temper::core::NullableParam<int32_t> bonus) {
-                |                      int32_t bonus_8;
+                |                    int32_t sum(int32_t i_7, int32_t j_8, temper::core::NullableParam<int32_t> bonus) {
+                |                      int32_t bonus_9;
                 |                      if(temper::core::is_null(bonus)) {
                 |                        {
-                |                          bonus_8 = 0;
+                |                          bonus_9 = 0;
                 |                        }
                 |                      }else {
                 |                        {
-                |                          bonus_8 = temper::core::not_null(bonus);
+                |                          bonus_9 = temper::core::not_null(bonus);
                 |                        }
                 |                      }
-                |                      return _connected::sum(i_6, j_7, bonus_8);
+                |                      return _connected::sum(i_7, j_8, bonus_9);
                 |                    }
-                |                    int32_t sum(int32_t i_6, int32_t j_7) {
-                |                      return sum(i_6, j_7, nullptr);
+                |                    int32_t sum(int32_t i_7, int32_t j_8) {
+                |                      return sum(i_7, j_8, nullptr);
                 |                    }
-                |                    int32_t inc(int32_t i_10) {
-                |                      return sum(i_10, 1);
+                |                    int32_t inc(int32_t i_11) {
+                |                      return sum(i_11, 1);
+                |                    }
+                |                    int32_t length(temper::core::NullableParam<std::string> s) {
+                |                      return _connected::length(s);
+                |                    }
+                |                    int32_t length() {
+                |                      return length(nullptr);
                 |                    }
                 |                    void global_init_something() {
                 |                      static bool initialized = false;
@@ -809,6 +818,8 @@ class CppBackendTest {
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);
                 |                    int32_t inc(int32_t);
+                |                    int32_t length(temper::core::NullableParam<std::string>);
+                |                    int32_t length();
                 |                    void global_init_something();
                 |                  }
                 |

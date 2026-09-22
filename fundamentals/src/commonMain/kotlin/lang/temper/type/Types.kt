@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // in hashCode implementations
+
 package lang.temper.type
 
 import lang.temper.common.defensiveListCopy
@@ -35,19 +37,46 @@ enum class TypeOpPrecedence {
 }
 
 sealed class TypeActual : StayReferrer, Structured, TokenSerializable {
-    override fun toString(): String = toStringViaTokenSink {
+    final override fun toString(): String = toStringViaTokenSink {
         this.renderTo(it)
+    }
+
+    internal abstract fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean
+    internal abstract fun hashCode(bnr: ButNotRecursively): Int
+    internal abstract fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively)
+    internal abstract fun destructure(structureSink: StructureSink, bnr: ButNotRecursively)
+
+    internal data object TypeActualEquals : ButNotRecursively.TaskKey<Pair<TypeActual, TypeActual>, Boolean>
+    internal data object TypeActualHashCode : ButNotRecursively.TaskKey<TypeActual, Int>
+    internal data object TypeActualsRenderTo : ButNotRecursively.TaskKey<Any, Boolean>
+    internal data object TypeActualsDestructure : ButNotRecursively.TaskKey<Any, Boolean>
+
+    final override fun equals(other: Any?) = this === other ||
+        other is TypeActual && equals(other, ButNotRecursively())
+
+    final override fun hashCode(): Int = hashCode(ButNotRecursively())
+
+    final override fun renderTo(tokenSink: TokenSink) {
+        renderTo(tokenSink, ButNotRecursively())
+    }
+
+    final override fun destructure(structureSink: StructureSink) {
+        destructure(structureSink, ButNotRecursively())
     }
 }
 
 object Wildcard : TypeActual(), Stayless {
-    override fun destructure(structureSink: StructureSink) {
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
         structureSink.value("*")
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         tokenSink.emit(OutToks.prefixStar)
     }
+
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean = other is Wildcard
+
+    override fun hashCode(bnr: ButNotRecursively): Int = -0x1b5d360c
 }
 
 /**
@@ -91,7 +120,7 @@ object Wildcard : TypeActual(), Stayless {
  *
  * There is a *Top* type at the top which is the super-type of all types.
  *
- * At the bottom is *Never* which is the bottom type, a sub-type of
+ * At the bottom is *Never* which is the bottom type, a subtype of
  * all types, and an appropriate type for computations that never complete like
  *
  * ```temper inert
@@ -105,7 +134,7 @@ object Wildcard : TypeActual(), Stayless {
  * *Top* branches into *AnyValue*, *Void*, and *Bubble*.  This represents the
  * three ways a computation can complete, either by
  *
- * - producing an actual value (it produces a sub-type of *AnyValue*),
+ * - producing an actual value (it produces a subtype of *AnyValue*),
  * - finishing normally but without a usable value, or
  * - bubbling up the call stack until replaced with a value by `orelse`.
  *
@@ -149,13 +178,18 @@ sealed class StaticType : TypeActual() {
 
 sealed class SimpleType : StaticType()
 
-private fun renderParenthesized(outer: TypeOpPrecedence, inner: StaticType, tokenSink: TokenSink) {
+private fun renderParenthesized(
+    outer: TypeOpPrecedence,
+    inner: StaticType,
+    tokenSink: TokenSink,
+    bnr: ButNotRecursively,
+) {
     if (inner.precedence <= outer) {
         tokenSink.emit(OutToks.leftParen)
-        inner.renderTo(tokenSink)
+        inner.renderTo(tokenSink, bnr)
         tokenSink.emit(OutToks.rightParen)
     } else {
-        inner.renderTo(tokenSink)
+        inner.renderTo(tokenSink, bnr)
     }
 }
 
@@ -172,13 +206,18 @@ private fun renderParenthesized(outer: TypeOpPrecedence, inner: StaticType, toke
  * A name that may be used to reference the special [snippet/type/Top] type.
  */
 object TopType : SimpleType(), Stayless {
-    override fun destructure(structureSink: StructureSink) {
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
         structureSink.value(OutToks.topWord.text)
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         tokenSink.emit(OutToks.topWord)
     }
+
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean =
+        other is TopType
+
+    override fun hashCode(bnr: ButNotRecursively): Int = 0x2daad58c
 }
 
 /**
@@ -190,13 +229,18 @@ object TopType : SimpleType(), Stayless {
  * A name that may be used to reference the special [snippet/type/Bubble] type.
  */
 object BubbleType : SimpleType(), Stayless {
-    override fun destructure(structureSink: StructureSink) {
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
         structureSink.value(OutToks.bubbleWord.text)
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         tokenSink.emit(OutToks.bubbleWord)
     }
+
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean =
+        other is BubbleType
+
+    override fun hashCode(bnr: ButNotRecursively): Int = -0x55cb44bd
 }
 
 /**
@@ -205,13 +249,18 @@ object BubbleType : SimpleType(), Stayless {
  * A name that may be used to reference the special [snippet/type/Invalid] type.
  */
 object InvalidType : StaticType(), Stayless {
-    override fun destructure(structureSink: StructureSink) {
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
         structureSink.value(OutToks.invalidWord.text)
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         tokenSink.emit(OutToks.invalidWord)
     }
+
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean =
+        other is InvalidType
+
+    override fun hashCode(bnr: ButNotRecursively): Int = 0x79690832
 }
 
 /** A named type with any actual bindings for type parameters. */
@@ -219,40 +268,78 @@ class NominalType private constructor(
     val definition: TypeDefinition,
     val bindings: List<TypeActual>,
 ) : SimpleType() {
-    override fun equals(other: Any?): Boolean =
-        this === other ||
-            other is NominalType &&
-            definition === other.definition &&
-            bindings == other.bindings
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean {
+        if (this === other) { return true }
+        if (other !is NominalType) { return false }
+        if (this.definition !== other.definition) { return false }
 
-    override fun hashCode(): Int = definition.hashCode() + 31 * bindings.hashCode()
+        val aBindings = bindings
+        val bBindings = other.bindings
+        if (aBindings.size != bBindings.size) { return false }
 
-    override fun destructure(structureSink: StructureSink) =
+        return bnr.compute(
+            TypeActualEquals,
+            this to other,
+            true,
+        ) {
+            for (i in aBindings.indices) {
+                val a = aBindings[i]
+                val b = bBindings[i]
+                if (!a.equals(b, bnr)) {
+                    return@compute false
+                }
+            }
+            true
+        }
+    }
+
+    override fun hashCode(bnr: ButNotRecursively): Int =
+        bnr.compute(TypeActualHashCode, this, 0) {
+            var hc = definition.hashCode()
+            for (b in bindings) {
+                hc = hc * 31 + b.hashCode(bnr)
+            }
+            hc
+        }
+
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
         if (bindings.isEmpty()) {
             structureSink.value(definition.name)
         } else {
-            structureSink.arr {
-                value("Nominal")
-                value(definition.name)
-                bindings.forEach {
-                    value(it)
+            val done = bnr.compute(TypeActualsDestructure, this, false) {
+                structureSink.arr {
+                    value("Nominal")
+                    value(definition.name)
+                    bindings.forEach {
+                        it.destructure(this, bnr)
+                    }
                 }
+                true
             }
-        }
-
-    override fun renderTo(tokenSink: TokenSink) {
-        definition.renderName(tokenSink)
-        if (bindings.isNotEmpty()) {
-            tokenSink.emit(OutToks.leftAngle)
-            for (i in bindings.indices) {
-                if (i != 0) {
-                    tokenSink.emit(OutToks.comma)
-                }
-                bindings[i].renderTo(tokenSink)
+            if (!done) {
+                structureSink.value("...")
             }
-            tokenSink.emit(OutToks.rightAngle)
         }
     }
+
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(TypeActualsRenderTo, this, false) {
+            definition.renderName(tokenSink)
+            if (bindings.isNotEmpty()) {
+                tokenSink.emit(OutToks.leftAngle)
+                for (i in bindings.indices) {
+                    if (i != 0) {
+                        tokenSink.emit(OutToks.comma)
+                    }
+                    bindings[i].renderTo(tokenSink, bnr)
+                }
+                tokenSink.emit(OutToks.rightAngle)
+            }
+            true
+        }
+        if (!done) { tokenSink.emit(OutToks.ellipses) }
+    }
+
     override fun addStays(s: StaySink) {
         definition.addStays(s)
         for (binding in bindings) {
@@ -260,7 +347,7 @@ class NominalType private constructor(
         }
     }
 
-    /** If no bindings exist for formals. Empty formals also means not unbound. */
+    /** If no bindings exist for formals. Having empty formals also means not unbound. */
     fun isUnbound() = bindings.isEmpty() && definition.hasFormals
 
     companion object {
@@ -318,20 +405,67 @@ class FunctionType private constructor(
     // to distinguish between the two.
     // We will need to box enough information to allow casting to the right variant.
 
-    override fun equals(other: Any?): Boolean = other is FunctionType &&
-        this.typeFormals == other.typeFormals &&
-        this.valueFormals == other.valueFormals &&
-        this.restValuesFormal == other.restValuesFormal &&
-        this.returnType == other.returnType
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean {
+        if (this === other) { return true }
+        if (other !is FunctionType) { return false }
 
-    override fun hashCode(): Int =
-        typeFormals.hashCode() +
-            31 * (
-                valueFormals.hashCode() + 31 * (
-                    (restValuesFormal?.hashCode() ?: 0) +
-                        31 * returnType.hashCode()
-                    )
-                )
+        val aTypeFormals = this.typeFormals
+        val bTypeFormals = other.typeFormals
+        if (aTypeFormals.size != bTypeFormals.size) { return false }
+
+        val aValueFormals = this.valueFormals
+        val bValueFormals = other.valueFormals
+        if (aValueFormals.size != bValueFormals.size) { return false }
+
+        return bnr.compute(TypeActualEquals, this to other, true) {
+            val aRestValuesFormal = this.restValuesFormal
+            val bRestValuesFormal = other.restValuesFormal
+            if (aRestValuesFormal != null) {
+                if (bRestValuesFormal == null) { return@compute false }
+                if (!aRestValuesFormal.equals(bRestValuesFormal, bnr)) {
+                    return@compute false
+                }
+            } else if (bRestValuesFormal != null) {
+                return@compute false
+            }
+            val aReturnType = returnType
+            val bReturnType = other.returnType
+            if (!aReturnType.equals(bReturnType, bnr)) {
+                return@compute false
+            }
+            for (i in aTypeFormals.indices) {
+                val a = aTypeFormals[i].internal
+                val b = bTypeFormals[i].internal
+                if (!a.equals(b, bnr)) { return@compute false }
+            }
+            for (i in aValueFormals.indices) {
+                val a = aValueFormals[i]
+                val b = bValueFormals[i]
+                if (!a.equals(b, bnr)) { return@compute false }
+            }
+            true
+        }
+    }
+
+    override fun hashCode(bnr: ButNotRecursively): Int = bnr.compute(
+        TypeActualHashCode,
+        this,
+        0,
+    ) {
+        var hc = -0x68630b7a
+        for (tf in typeFormals) {
+            hc = hc * 31 + tf.hashCode()
+        }
+        for (vf in valueFormals) {
+            hc = hc * 31 + vf.hashCode(bnr)
+        }
+        hc *= 31
+        if (restValuesFormal != null) {
+            hc += restValuesFormal.hashCode(bnr)
+        }
+        hc = hc * 31 + returnType.hashCode(bnr)
+        hc
+    }
 
     override fun addStays(s: StaySink) {
         s.whenUnvisited(this) {
@@ -342,48 +476,40 @@ class FunctionType private constructor(
         }
     }
 
-    override fun destructure(structureSink: StructureSink) = structureSink.obj {
-        key("typeFormals", isDefault = typeFormals.isEmpty()) {
-            arr {
-                typeFormals.forEach { value(it) }
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(TypeActualsDestructure, this, false) {
+            structureSink.obj {
+                key("typeFormals", isDefault = typeFormals.isEmpty()) {
+                    arr {
+                        typeFormals.forEach { it.internal.destructure(this, bnr) }
+                    }
+                }
+                key("valueFormals") {
+                    arr {
+                        valueFormals.forEach { it.destructure(this, bnr) }
+                    }
+                }
+                key("restValuesFormal", isDefault = restValuesFormal == null) {
+                    if (restValuesFormal != null) {
+                        restValuesFormal.destructure(this, bnr)
+                    } else {
+                        nil()
+                    }
+                }
+                key("returnType") {
+                    returnType.destructure(this)
+                }
             }
+            true
         }
-        key("valueFormals") {
-            arr {
-                valueFormals.forEach { value(it) }
-            }
-        }
-        key("restValuesFormal", isDefault = restValuesFormal == null) {
-            value(restValuesFormal)
-        }
-        key("returnType") {
-            returnType.destructure(this)
+        if (!done) {
+            structureSink.value("...")
         }
     }
 
-    override fun renderTo(tokenSink: TokenSink) = renderFunctionType(
-        tokenSink,
-        typeFormals = typeFormals,
-        valueFormals = valueFormals,
-        restValuesFormal = restValuesFormal,
-        returnType = returnType,
-        returnTypeOpPrecedence = returnType.precedence,
-    )
-
-    override val precedence: TypeOpPrecedence
-        // So `?` suffix doesn't spuriously attach to return type.
-        get() = TypeOpPrecedence.Fn
-
-    companion object {
-        internal fun renderFunctionType(
-            tokenSink: TokenSink,
-            typeFormals: List<TokenSerializable>,
-            valueFormals: List<TokenSerializable>,
-            restValuesFormal: TokenSerializable?,
-            returnType: TokenSerializable,
-            returnTypeOpPrecedence: TypeOpPrecedence,
-        ) {
-            // As long as we render this way TypeOpPrecedence.SelfContained works.
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(TypeActualsRenderTo, this, false) {
+            // As long as we render this way, TypeOpPrecedence.SelfContained works.
             // If this changes to do arrow style rendering, then we'll need a TypeOpPrecedence.Arrow
             tokenSink.emit(OutToks.fnWord)
 
@@ -394,7 +520,7 @@ class FunctionType private constructor(
                     if (i != 0) {
                         tokenSink.emit(OutToks.comma)
                     }
-                    el.renderTo(tokenSink)
+                    el.internal.renderTo(tokenSink, bnr)
                 }
                 tokenSink.emit(OutToks.rightAngle)
             }
@@ -406,14 +532,14 @@ class FunctionType private constructor(
                     if (i != 0) {
                         tokenSink.emit(OutToks.comma)
                     }
-                    el.renderTo(tokenSink)
+                    el.renderTo(tokenSink, bnr)
                 }
                 if (restValuesFormal != null) {
                     if (valueFormals.isNotEmpty()) {
                         tokenSink.emit(OutToks.comma)
                     }
                     tokenSink.emit(OutToks.ellipses)
-                    restValuesFormal.renderTo(tokenSink)
+                    restValuesFormal.renderTo(tokenSink, bnr)
                 }
                 tokenSink.emit(OutToks.rightParen)
             }
@@ -422,15 +548,27 @@ class FunctionType private constructor(
             //     let f: fn: Int = fn { 0 }
             // works?
             tokenSink.emit(OutToks.colon)
+
+            val returnTypeOpPrecedence = returnType.precedence
             if (returnTypeOpPrecedence >= TypeOpPrecedence.Postfixed) {
-                returnType.renderTo(tokenSink)
+                returnType.renderTo(tokenSink, bnr)
             } else {
                 tokenSink.emit(OutToks.leftParen)
-                returnType.renderTo(tokenSink)
+                returnType.renderTo(tokenSink, bnr)
                 tokenSink.emit(OutToks.rightParen)
             }
+            true
         }
+        if (!done) {
+            tokenSink.emit(OutToks.ellipses)
+        }
+    }
 
+    override val precedence: TypeOpPrecedence
+        // So `?` suffix doesn't spuriously attach to return type.
+        get() = TypeOpPrecedence.Fn
+
+    companion object {
         internal fun makeInternalOnly(
             typeFormals: List<TypeFormal>,
             valueFormals: List<ValueFormal>,
@@ -455,21 +593,43 @@ class FunctionType private constructor(
             get() = if (isOptional) ValueFormalKind.Optional else ValueFormalKind.Required
         override val reifiedType get() = ReifiedType(type)
 
-        override fun destructure(structureSink: StructureSink) = structureSink.obj {
-            key("symbol") { value(symbol) }
-            key("type") { value(staticType) }
-            key("isOptional") { value(isOptional) }
+        override fun destructure(structureSink: StructureSink) {
+            destructure(structureSink, ButNotRecursively())
         }
 
-        override fun renderTo(tokenSink: TokenSink) {
+        internal fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
+            structureSink.obj {
+                key("symbol") { value(symbol) }
+                key("type") { staticType.destructure(this, bnr) }
+                key("isOptional") { value(isOptional) }
+            }
+        }
+
+        override fun renderTo(tokenSink: TokenSink) = renderTo(tokenSink, ButNotRecursively())
+
+        internal fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
             if (isOptional) {
                 // For now, render as named just those that are optional.
                 tokenSink.emit(OutputToken(symbol?.text ?: "_", OutputTokenType.Name))
                 tokenSink.postfixOp("?")
                 tokenSink.emit(OutToks.colon)
             }
-            staticType.renderTo(tokenSink)
+            staticType.renderTo(tokenSink, bnr)
         }
+
+        override fun equals(other: Any?): Boolean =
+            this === other || other is ValueFormal && equals(other, ButNotRecursively())
+
+        override fun hashCode(): Int = hashCode(ButNotRecursively())
+
+        internal fun equals(other: ValueFormal, bnr: ButNotRecursively): Boolean {
+            if (this.symbol != other.symbol) { return false }
+            if (this.isOptional != other.isOptional) { return false }
+            return staticType.equals(other.staticType, bnr)
+        }
+
+        internal fun hashCode(bnr: ButNotRecursively): Int =
+            symbol.hashCode() + 31 * (isOptional.hashCode() + 31 * staticType.hashCode(bnr))
     }
 }
 
@@ -477,20 +637,46 @@ class FunctionType private constructor(
 class OrType private constructor(val members: Set<StaticType>) : StaticType() {
     override val precedence get() = TypeOpPrecedence.Or
 
-    override fun equals(other: Any?): Boolean =
-        this === other ||
-            other is OrType && members == other.members
-
-    override fun hashCode(): Int = members.hashCode() xor -0x71153C33
-
-    override fun destructure(structureSink: StructureSink) = structureSink.arr {
-        value("Or")
-        members.forEach {
-            value(it)
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean {
+        if (this === other) { return true }
+        if (other !is OrType) { return false }
+        val aMembers = this.members
+        val bMembers = other.members
+        if (aMembers.size != bMembers.size) { return false }
+        return bnr.compute(TypeActualEquals, this to other, true) {
+            for ((a, b) in aMembers zip bMembers) {
+                if (!a.equals(b, bnr)) { return@compute false }
+            }
+            true
         }
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun hashCode(bnr: ButNotRecursively): Int = bnr.compute(
+        TypeActualHashCode, this, 0,
+    ) {
+        var hc = -0x71153C33
+        for (m in members) {
+            hc = hc * 31 + m.hashCode(bnr)
+        }
+        hc
+    }
+
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(TypeActualsDestructure, this, false) {
+            structureSink.arr {
+                value("Or")
+                members.forEach {
+                    it.destructure(this, bnr)
+                }
+            }
+            true
+        }
+        if (!done) {
+            structureSink.value("...")
+        }
+    }
+
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         var hasNull = false
         val membersToRender = buildSet {
             members.filterTo(this) { member ->
@@ -509,7 +695,7 @@ class OrType private constructor(val members: Set<StaticType>) : StaticType() {
                 1 -> membersToRender.first()
                 else -> OrType(membersToRender)
             }
-            renderParenthesized(TypeOpPrecedence.Postfixed, t, tokenSink)
+            renderParenthesized(TypeOpPrecedence.Postfixed, t, tokenSink, bnr)
             tokenSink.emit(OutToks.postfixQMark)
             return
         }
@@ -523,7 +709,7 @@ class OrType private constructor(val members: Set<StaticType>) : StaticType() {
             if (i != 0) {
                 tokenSink.emit(OutToks.bar)
             }
-            renderParenthesized(precedence, member, tokenSink)
+            renderParenthesized(precedence, member, tokenSink, bnr)
         }
     }
 
@@ -557,25 +743,51 @@ class OrType private constructor(val members: Set<StaticType>) : StaticType() {
 class AndType private constructor(val members: Set<StaticType>) : StaticType() {
     override val precedence get() = TypeOpPrecedence.And
 
-    override fun equals(other: Any?): Boolean =
-        this === other ||
-            other is AndType && members == other.members
-
-    override fun hashCode(): Int = members.hashCode() xor 0x3922FF90
-
-    override fun destructure(structureSink: StructureSink) = structureSink.arr {
-        value("And")
-        members.forEach {
-            value(it)
+    override fun equals(other: TypeActual, bnr: ButNotRecursively): Boolean {
+        if (this === other) { return true }
+        if (other !is AndType) { return false }
+        val aMembers = this.members
+        val bMembers = other.members
+        if (aMembers.size != bMembers.size) { return false }
+        return bnr.compute(TypeActualEquals, this to other, true) {
+            for ((a, b) in aMembers zip bMembers) {
+                if (!a.equals(b, bnr)) { return@compute false }
+            }
+            true
         }
     }
 
-    override fun renderTo(tokenSink: TokenSink) {
+    override fun hashCode(bnr: ButNotRecursively): Int = bnr.compute(
+        TypeActualHashCode, this, 0,
+    ) {
+        var hc = 0x3922FF90
+        for (m in members) {
+            hc = hc * 31 + m.hashCode(bnr)
+        }
+        hc
+    }
+
+    override fun destructure(structureSink: StructureSink, bnr: ButNotRecursively) {
+        val done = bnr.compute(TypeActualsDestructure, this, false) {
+            structureSink.arr {
+                value("And")
+                members.forEach {
+                    value(it)
+                }
+            }
+            true
+        }
+        if (!done) {
+            structureSink.value("...")
+        }
+    }
+
+    override fun renderTo(tokenSink: TokenSink, bnr: ButNotRecursively) {
         members.forEachIndexed { i, member ->
             if (i != 0) {
                 tokenSink.emit(OutToks.amp)
             }
-            renderParenthesized(precedence, member, tokenSink)
+            renderParenthesized(precedence, member, tokenSink, bnr)
         }
     }
 
@@ -608,107 +820,6 @@ class AndType private constructor(val members: Set<StaticType>) : StaticType() {
                 else -> AndType(flat.toSet())
             }
         }
-    }
-}
-
-/**
- * A mutable type actual subclass that may be assigned a backing actual once.
- * This class enables construction of infinite types.
- */
-class InfiniBinding : TypeActual() {
-    private var binding: TypeActual? = null
-    val isInitialized get() = binding != null
-
-    /**
-     * @return a type actual that is not an InfiniBinding.
-     *     If this is initialized to an InfiniBinding, returns that's binding if possible.
-     *     If unbound, returns alternative, unless it is an Infinibinding in which case it
-     *     returns alternative's binding.
-     *     If both this and alternative are ultimately unbound, returns [InvalidType].
-     */
-    operator fun get(alternative: TypeActual = InvalidType): TypeActual {
-        var ib = this
-        var fallback = alternative
-        while (true) {
-            val bOrNull = ib.binding
-            val b: TypeActual
-            if (bOrNull == null) {
-                b = fallback
-                // If alternative is an Infinibinding that is ultimately uninitialized,
-                // do not start back at the beginning
-                fallback = InvalidType
-            } else {
-                b = bOrNull
-            }
-            if (b is InfiniBinding) {
-                ib = b
-            } else {
-                return b
-            }
-        }
-    }
-    fun set(newBound: TypeActual) {
-        check(binding == null)
-        if (newBound is InfiniBinding) {
-            // Clients are responsible for avoiding cycles.
-            val seen = mutableSetOf(this)
-            var ib: InfiniBinding = newBound
-            while (true) {
-                require(ib !in seen) { "Set would create an InfiniBound only cycle" }
-                val next = ib.get()
-                if (next is InfiniBinding) {
-                    ib = next
-                } else {
-                    break
-                }
-            }
-        }
-        binding = newBound
-    }
-
-    override fun addStays(s: StaySink) {
-        s.whenUnvisited(this) {
-            binding?.addStays(s)
-        }
-    }
-
-    override fun destructure(structureSink: StructureSink) {
-        val infinibound = this
-        structureSink.arr {
-            value("Infinibound")
-            if (!isInitialized) {
-                value("?")
-            } else if (infinibound !in rendering) {
-                rendering.add(infinibound)
-                try {
-                    value(get())
-                } finally {
-                    rendering.remove(infinibound)
-                }
-            } else {
-                value("...")
-            }
-        }
-    }
-
-    override fun renderTo(tokenSink: TokenSink) {
-        val infinibound = this
-        if (!isInitialized) {
-            tokenSink.emit(OutToks.uninitializedInfiniBindingCommentToken)
-        } else if (infinibound !in rendering) {
-            rendering.add(infinibound)
-            try {
-                get().renderTo(tokenSink)
-            } finally {
-                rendering.remove(infinibound)
-            }
-        } else {
-            tokenSink.emit(OutToks.ellipses)
-        }
-    }
-
-    companion object {
-        private val rendering = mutableSetOf<InfiniBinding>()
     }
 }
 
@@ -775,24 +886,23 @@ object MkType {
     fun map(
         t: StaticType,
         m: TypePartMapper,
-        ibs: MutableMap<InfiniBinding, InfiniBinding> = mutableMapOf(),
     ): StaticType {
         val subMapped = when (t) {
             InvalidType, BubbleType, TopType -> t
             is NominalType ->
-                nominal(m.mapDefinition(t.definition), t.bindings.map { map(it, m, ibs) })
+                nominal(m.mapDefinition(t.definition), t.bindings.map { map(it, m) })
             is FunctionType -> fnDetails(
                 typeFormals = t.typeFormals.map { typeFormal ->
                     m.mapDefinition(typeFormal) as TypeFormal
                 },
                 valueFormals = t.valueFormals.map { valueFormal ->
-                    valueFormal.copy(staticType = map(valueFormal.staticType, m, ibs))
+                    valueFormal.copy(staticType = map(valueFormal.staticType, m))
                 },
-                restValuesFormal = t.restValuesFormal?.let { map(it, m, ibs) },
-                returnType = map(t.returnType, m, ibs),
+                restValuesFormal = t.restValuesFormal?.let { map(it, m) },
+                returnType = map(t.returnType, m),
             )
-            is OrType -> or(t.members.map { map(it, m, ibs) })
-            is AndType -> and(t.members.map { map(it, m, ibs) })
+            is OrType -> or(t.members.map { map(it, m) })
+            is AndType -> and(t.members.map { map(it, m) })
         }
         return m.mapType(subMapped)
     }
@@ -800,23 +910,9 @@ object MkType {
     fun map(
         b: TypeActual,
         m: TypePartMapper,
-        ibs: MutableMap<InfiniBinding, InfiniBinding> = mutableMapOf(),
     ): TypeActual {
         val subMapped = when (b) {
-            is StaticType -> map(b, m, ibs)
-            is InfiniBinding -> {
-                val ib = ibs[b]
-                if (ib == null) {
-                    val newIb = InfiniBinding()
-                    ibs[b] = newIb
-                    if (b.isInitialized) {
-                        newIb.set(map(b.get(), m, ibs))
-                    }
-                    newIb
-                } else {
-                    ib
-                }
-            }
+            is StaticType -> map(b, m)
             Wildcard -> b
         }
         return m.mapBinding(subMapped)
@@ -913,8 +1009,8 @@ val StaticType.nullity: Nullity get() = when (this) {
 }
 
 /**
- * Simplifies a type by removing annotation types like `Null` or `Bubble`, if present. See [SimplifyStaticType] for
- * details.
+ * Simplifies a type by removing annotation types like `Null` or `Bubble`, if present.
+ * See [SimplifyStaticType] for details.
  */
 fun Type2.simplify() = SimplifyStaticType(this).principal
 
@@ -935,13 +1031,13 @@ enum class TAnnotation {
 
 /**
  * Some languages make a distinction between "real" types and types that exist as annotations, or that
- * are simply ignored. For example, Java has no explicit "null" type, rather, it's indicated through `@Nullable`
+ * are simply ignored. For example, Java has no explicit "null" type. Rather, it's indicated through `@Nullable`
  * annotations.
  *
  * This class assumes that types can be decomposed into a single principal type, usually a nominal type, and some
  * number of annotations including Null, Bubble, Never, etc.
  *
- * Not all annotation types are bottom-like, especially, the Void type is a principal type. These distinctions are
+ * Not all annotation types are bottom-like, especially the Void type is a principal type. These distinctions are
  * fairly arbitrary and based on specification or even mere convention in the backend.
  */
 data class SimplifyStaticType(

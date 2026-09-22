@@ -2976,15 +2976,12 @@ class CppTranslator(
             }
             cpp.callExpr(
                 expr = cpp.name(cpp.name("_connected"), cpp.name(fn.name)),
-                args = buildList {
-                    for ((tmpl, cppName) in fn.parameters.parameters.zip(paramNames)) {
-                        when {
-                            tmpl.optional ->
-                                cpp.name(defaulting.parameterMapping.getValue(tmpl.name.name))
-                            else -> cppName
-                        }.also { add(it) }
-                    }
-                },
+                args = defaulting.buildConnectedArgs(
+                    fn = fn,
+                    backendParams = paramNames,
+                    tmplToArg = { pos, name -> cpp.pos(pos) { cpp.name(name) } },
+                    backendToArg = { it },
+                ),
             ).let { call ->
                 when ((fn.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
                     WellKnownTypes.voidTypeDefinition -> cpp.exprStmt(call)

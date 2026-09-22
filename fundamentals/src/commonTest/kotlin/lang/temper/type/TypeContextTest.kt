@@ -37,7 +37,7 @@ class TypeContextTest {
         """.trimMargin(),
     ) {
         // Temporarily treat all fun interfaces with the same signature as
-        // subtypes of one another at least until we aren't doing FunctionType<->Type2
+        // subtypes of one-another at least until we aren't doing FunctionType<->Type2
         // conversions back and forth which launder the specific interface type.
         val t1 = type("StringSink")
         val t2 = type("fn (String): Void")
@@ -98,7 +98,7 @@ class TypeContextTest {
             Triple(false, strType, BubbleType),
             Triple(false, BubbleType, intType),
             Triple(false, BubbleType, strType),
-            // Top is equivalent to (AnyValue throws Bubble)
+            // Top is equivalent to `AnyValue throws Bubble`
             Triple(true, TopType, anyThrowsBubble),
             Triple(true, anyThrowsBubble, TopType),
         )
@@ -373,16 +373,18 @@ class TypeContextTest {
             mutCount,
         )
         // Use indirection so T can appear in its own upper bound.
-        val tBinding = InfiniBinding()
         val tDefinition = TypeFormal(
             testPos,
             nameMaker.unusedSourceName(ParsedName("T")),
             Symbol("T"),
             Variance.Covariant, // extends
             mutCount,
-            upperBounds = listOf(MkType.nominal(comparableDefinition, listOf(tBinding))),
+        ).internal
+
+        tDefinition.upperBounds.add(
+            MkType.nominal(comparableDefinition, listOf(MkType.nominal(tDefinition))),
         )
-        tBinding.set(MkType.nominal(tDefinition))
+
         comparableDefinition.typeParameters.add(
             TypeParameterShape(comparableDefinition, tDefinition, tDefinition.word!!, null),
         )
@@ -444,8 +446,71 @@ class TypeContextTest {
         }
     }
 
+    @Test
+    fun recursiveTypeFormal() {
+        val testPos = Position(testCodeLocation, 0, 0)
+        val nameMaker = ResolvedNameMaker(
+            object : NamingContext() {
+                override val loc = testModuleName
+            },
+            Genre.Library,
+        )
+        val mutCount = AtomicCounter()
+
+        fun defExtendsMapKeyOf(baseName: ParsedName, actual: (TypeFormal) -> StaticType): TypeFormal {
+            val name = nameMaker.unusedSourceName(baseName)
+            val def = TypeFormal(
+                testPos, name, Symbol(baseName.nameText), Variance.Contravariant, mutCount,
+            ).internal
+            def.upperBounds.add(
+                MkType.nominal(
+                    WellKnownTypes.mapKeyTypeDefinition,
+                    listOf(actual(def)), // <-- possible recursive use
+                ),
+            )
+            return def
+        }
+
+        // T extends MapKey<T>
+        val tDef = defExtendsMapKeyOf(ParsedName("T")) {
+            MkType.nominal(it)
+        }
+
+        // U extends MapKey<U>
+        val uDef = defExtendsMapKeyOf(ParsedName("U")) {
+            MkType.nominal(it)
+        }
+
+        // V extends MapKey<T> ; NOT RECURSIVE
+        val vDef = defExtendsMapKeyOf(ParsedName("V")) {
+            MkType.nominal(tDef)
+        }
+
+        assertSubTypeTable(
+            listOf(MkType.nominal(tDef), MkType.nominal(uDef), MkType.nominal(vDef)),
+            """
+                |╔═╦═╦═╦═╗
+                |║ ║T║U║V║
+                |╠═╬═╬═╬═╣
+                |║T║✓║✓║✕║
+                |╠═╬═╬═╬═╣
+                |║U║✓║✓║✕║
+                |╠═╬═╬═╬═╣
+                |║V║✓║✕║✓║
+                |╚═╩═╩═╩═╝
+            """.trimMargin(),
+        ) { tc, actual, formalType ->
+            val formal = (formalType as NominalType).definition as TypeFormal
+            tc.checkCanBindTo(
+                actual = actual,
+                formal = formal,
+                allBindings = TypeBindingMapper(mapOf(formal.name to actual)),
+            ).isEmpty()
+        }
+    }
+
     /**
-     * ✓ below when the top is a sub-type of the left.
+     * ✓ below when the top is a subtype of the left.
      *
      * |                    | `fn (Int): T` | `fn (String): T` | `fn (AnyValue): T` |
      * | ------------------ | ------------- | ---------------- | ------------------ |
@@ -453,7 +518,7 @@ class TypeContextTest {
      * | `fn (String):   T` | ✕             | ✓                | ✓                  |
      * | `fn (AnyValue): T` | ✕             | ✕                | ✓                  |
      *
-     * A sub-type can be assigned to a cell that allows the super-type.
+     * A subtype can be assigned to a cell that allows the super-type.
      *
      *      var f: fn (Int):      Void = fn (x: Int):      Void {};
      *      var g: fn (AnyValue): Void = fn (x: AnyValue): Void {};
@@ -461,12 +526,12 @@ class TypeContextTest {
      *      // Since a function that can take any value can also accept any Int argument, the below
      *      // is allowed.
      *      f = g; // ✓
-     *      // fn (AnyValue): Void   is a sub-type of   fn (Int): Void
+     *      // fn (AnyValue): Void   is a subtype of   fn (Int): Void
      *
      *      // But a function that only accepts Ints cannot handle everything passed as an AnyValue,
      *      // so the below is prohibited.
      *      g = f; // ✕
-     *      // fn (Int): Void    is not a sub-type of   fn (AnyValue): Void
+     *      // fn (Int): Void    is not a subtype of   fn (AnyValue): Void
      */
     @Test
     fun fnTypesDifferByParameter() {
@@ -528,7 +593,7 @@ class TypeContextTest {
     }
 
     /**
-     * ✓ below when the top is a sub-type of the left.
+     * ✓ below when the top is a subtype of the left.
      *
      * |                    | `fn (I): Int` | `fn (I): String` | `fn (I): AnyValue` |
      * | ------------------ | ------------- | ---------------- | ------------------ |
@@ -536,7 +601,7 @@ class TypeContextTest {
      * | `fn (I): String`   | ✕             | ✓                | ✕                  |
      * | `fn (I): AnyValue` | ✓             | ✓                | ✓                  |
      *
-     * A sub-type can be assigned to a cell that allows the super-type.
+     * A subtype can be assigned to a cell that allows the super-type.
      *
      *      var f: fn (I):      Int = fn (x: I):      Int { 0 };
      *      var g: fn (I): AnyValue = fn (x: I): AnyValue { x };
@@ -544,12 +609,12 @@ class TypeContextTest {
      *      // Since the result of a function that only ever returns an Int will fit anywhere
      *      // the caller is prepared for any value, the below is allowed.
      *      g = f; // ✓
-     *      // fn (I): Int            is a sub-type of   fn (I): AnyValue
+     *      // fn (I): Int            is a subtype of   fn (I): AnyValue
      *
      *      // But a function that can return any value cannot be relied upon to produce an Int, so
      *      // the below is prohibited.
      *      f = g; // ✕
-     *      // fn (I): AnyValue   is not a sub-type of   fn (I): Int
+     *      // fn (I): AnyValue   is not a subtype of   fn (I): Int
      */
     @Test
     fun fnTypesDifferByReturnType() {
@@ -620,8 +685,8 @@ class TypeContextTest {
             |║fn (A | B): C        ║✕        ║✕        ║✕                    ║✓            ║
             |╚═════════════════════╩═════════╩═════════╩═════════════════════╩═════════════╝
             """.trimMargin(),
-            // `fn (A | B): C` is a subtype of the union of functions because it's a sub-type of
-            // at least one member.  It is actually a sub-type of both, but it needs be of only one.
+            // `fn (A | B): C` is a subtype of the union of functions because it's a subtype of
+            // at least one member.  It is actually a subtype of both, but it needs to be of only one.
         )
     }
 
@@ -784,7 +849,7 @@ class TypeContextTest {
         assertSubTypeTable(
             listOf(
                 type("I<String, Int>"),
-                // I<String, Int> is a super type of C<Int, String>.
+                // `I<String, Int>` is a super type of `C<Int, String>`.
                 type("C<Int, String>"),
                 // Not so for C<String, Int>.
                 type("C<String, Int>"),
@@ -806,6 +871,8 @@ class TypeContextTest {
     private fun assertSubTypeTable(
         types: List<StaticType>,
         want: String,
+        cellCheck: (TypeContext, StaticType, StaticType) -> Boolean =
+            { tc, a, b -> tc.isSubType(a, b) },
     ) {
         fun typeToCell(type: StaticType): MultilineOutput = type.asMultilineOutput
 
@@ -814,7 +881,7 @@ class TypeContextTest {
             otherRows = types.map { rowType ->
                 listOf(typeToCell(rowType)) +
                     types.map { columnType ->
-                        val text = if (tc.isSubType(columnType, rowType)) {
+                        val text = if (cellCheck(tc, columnType, rowType)) {
                             "✓"
                         } else {
                             "✕"
@@ -823,8 +890,8 @@ class TypeContextTest {
                     }
             },
         )
-        val got = table.toString()
-        assertStringsEqual(want, got)
+        val got = "$table"
+        assertStringsEqual(want.trimEnd(), got.trimEnd())
     }
 }
 

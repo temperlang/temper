@@ -57,6 +57,7 @@ import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.docStringSymbol
 import lang.temper.value.noneSymbol
+import lang.temper.value.optionalSymbol
 import lang.temper.value.qNameSymbol
 import lang.temper.value.reachSymbol
 import lang.temper.value.testSymbol
@@ -230,7 +231,24 @@ fun <T> TmpL.CallExpression.mapParameters(
 data class DefaultStatementsInfo(
     val defaultStatements: List<TmpL.Statement>,
     val parameterMapping: Map<ResolvedName, ResolvedName>,
-)
+) {
+    inline fun <BACKEND_PARAM, ARG> buildConnectedArgs(
+        fn: TmpL.FunctionDeclaration,
+        backendParams: List<BACKEND_PARAM>,
+        tmplToArg: (Position, ResolvedName) -> ARG,
+        backendToArg: (BACKEND_PARAM) -> ARG?,
+    ): List<ARG> {
+        return buildList {
+            for ((tmpl, backend) in fn.parameters.parameters.zip(backendParams)) {
+                val arg = when {
+                    tmpl.optional -> parameterMapping[tmpl.name.name]?.let { tmplToArg(tmpl.pos, it) }
+                    else -> null
+                } ?: backendToArg(backend)
+                arg?.also { add(it) }
+            }
+        }
+    }
+}
 
 /**
  * Return just the statements needed to provide defaults to optional parameters,
@@ -253,11 +271,16 @@ fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatements
     val defaultStatements = mutableListOf<TmpL.Statement>()
     val parameterMapping = buildMap parameterMapping@{ // TODO If nullable with default null, what happens here?
         parameters@ for (parameter in parameters.parameters) {
+            parameter.optional || continue@parameters
+            // Defaulting to null doesn't actually assign anything, so skip nulls.
+            val value = parameter.metadata.find { it.key.symbol == optionalSymbol }?.value as? TmpL.ValueData
+            value?.value == TNull.value && continue@parameters
             // Start out with original names, but replace them later.
-            if (parameter.optional) {
-                this[parameter.name.name] = parameter.name.name
-            }
+            this[parameter.name.name] = parameter.name.name
         }
+        // If all the optionals were null defaulting, then get out easy anyway.
+        isEmpty() && return@parameterMapping
+        // Here down, we actually have defaulting to work with.
         var foundCount = 0
         statements@ for (statement in body.statements) {
             // Add all statements until all the defaulting is done.
@@ -335,13 +358,13 @@ fun TmpL.FunctionDeclaration.idReach() = when (name.name) {
 fun Visibility.idReach() = if (this >= Visibility.Protected) {
     TmpL.IdReach.External
 } else {
-    TmpL.IdReach.Internal
+    TmpL.IdReach.Private
 }
 
 fun TmpL.Visibility.idReach() = if (this.ordinal >= TmpL.Visibility.Protected.ordinal) {
     TmpL.IdReach.External
 } else {
-    TmpL.IdReach.Internal
+    TmpL.IdReach.Private
 }
 
 fun TmpL.VisibilityModifier.idReach() = visibility.idReach()

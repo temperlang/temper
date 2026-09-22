@@ -464,6 +464,9 @@ class LuaBackendTest {
                 |export let inc(i: Int): Int {
                 |    sum(i, 1)
                 |}
+                |
+                |@connected
+                |export let length(s: String? = null): Int;
             """.trimMargin(),
             filePath("something", "deeper", "more-fun.temper") to """
                 |export let prod(i: Int, j: Int): Int {
@@ -494,7 +497,7 @@ class LuaBackendTest {
             |            "something.lua": {
             |                "content": ```
             |                  local temper = require('temper-core');
-            |                  local prod, twice, sum, inc, exports;
+            |                  local prod, twice, sum, inc, length, exports;
             |## Inline connected code *after* locals are defined to allow access from connected code.
             |                  local _connected = {}
             |                  do
@@ -520,10 +523,17 @@ class LuaBackendTest {
             |                  inc = function(i__2)
             |                    return sum(i__2, 1);
             |                  end;
+            |                  length = function(s__0)
+            |                    if (s__0 == nil) then
+            |                      s__0 = temper.null;
+            |                    end
+            |                    return _connected.length(s__0);
+            |                  end;
             |                  exports = {};
             |                  exports.twice = twice;
             |                  exports.sum = sum;
             |                  exports.inc = inc;
+            |                  exports.length = length;
             |                  return exports;
             |
             |                  ```

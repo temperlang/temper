@@ -11,5 +11,10 @@ namespace Work
         {
             return new MoreSupport().Prod(hidden.I, j);
         }
+
+        internal static int Length(string? s)
+        {
+            return s?.Length ?? -1;
+        }
     }
 }

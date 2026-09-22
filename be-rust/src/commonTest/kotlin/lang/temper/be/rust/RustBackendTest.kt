@@ -200,6 +200,9 @@ class RustBackendTest {
                 |      export let inc(i: Int): Int {
                 |          sum(i, 1)
                 |      }
+                |
+                |      @connected
+                |      export let length(s: String? = null): Int;
                 |      ```,
                 |    _connected.rs: ```
                 |## This submodule declaration in connected code is why we make a subdir later.
@@ -251,6 +254,10 @@ class RustBackendTest {
             |              }
             |              pub fn inc(i__1: i32) -> i32 {
             |                  return sum(i__1, 1, None);
+            |              }
+            |              pub fn length(s__0: Option<impl temper_core::ToArcString>) -> i32 {
+            |## It might be nice to stringify all semi-string before calling connected functions.
+            |                  _connected::length(s__0)
             |              }
             |
             |              ```
@@ -649,7 +656,7 @@ class RustBackendTest {
             |            let closure_group = closure_group.clone();
             |            std::sync::Arc::new(move | | closure_group.fn__1())
             |        };
-            |        test___0.assert(Some(actual___0) == Some(3), fn__1.clone());
+            |        test___0.assert(actual___0 == 3, fn__1.clone());
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -766,7 +773,7 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn f(a__0: f64, b__0: f64) -> bool {
-            |    if temper_core::float64::cmp_option(Some(a__0), Some(b__0)) != 0 {
+            |    if ! (temper_core::float64::cmp(a__0, b__0) == 0) {
             |        return temper_core::float64::cmp(a__0, b__0 + 1.0f64) < 0;
             |    } else {
             |        return false;
@@ -893,7 +900,7 @@ class RustBackendTest {
             |            struct ClosureGroup___0 {}
             |            impl ClosureGroup___0 {
             |                fn fn__0(& self) -> std::sync::Arc<String> {
-            |                    return std::sync::Arc::new("expected i < nums.length".to_string());
+            |                    return std::sync::Arc::new("expected i <=> nums.length < 0".to_string());
             |                }
             |            }
             |            let closure_group = ClosureGroup___0 {};
@@ -920,8 +927,8 @@ class RustBackendTest {
             |let things = [1, 2] as List<AnyValue>; // making a list of ints but expect list of AnyValue
             |let more = [1 as AnyValue, 2 as AnyValue]; // cast elided in frontend?
             |let still: List<AnyValue> = [1, 2]; // again list of ints treated as list of AnyValue
-            |let yet = [1, "two"];
-            |let yetAgain: List<MapKey> = yet; // MapKey only supported for constraint, not yet explicit value type
+            |let yet = ["one", "two"];
+            |let yetAgain: List<MapKey<String>> = yet; // MapKey only supported for constraint, not yet explicit value type
         """.trimMargin(),
         // TODO Some would be fixed by changes recommended in `TyperTest.typeContextWinsOverInsidesButNotYet` comments.
         // TODO But especially trying to `ok_or_else` with no Result-producing code probably needs some RustTranslator
@@ -935,8 +942,8 @@ class RustBackendTest {
             |            let things__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]).unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
-            |            let yet__0: temper_core::List<temper_core::MapKey> = std::sync::Arc::new(vec![temper_core::MapKey::new(1), temper_core::MapKey::new(std::sync::Arc::new("two".to_string()))]);
-            |            let yetAgain__0: temper_core::List<temper_core::MapKey> = yet__0.clone();
+            |            let yet__0: temper_core::List<std::sync::Arc<String>> = std::sync::Arc::new(vec![std::sync::Arc::new("one".to_string()), std::sync::Arc::new("two".to_string())]);
+            |            let yetAgain__0: temper_core::List<temper_core::MapKey<std::sync::Arc<String>>> = yet__0.clone();
             |            Ok(())
             |    }).clone()
             |}
@@ -1962,7 +1969,7 @@ class RustBackendTest {
         assertGenerateWanted(
             // Both required and optional constructor params here.
             temper = """
-                |export class Hi<T, U extends MapKey>(
+                |export class Hi<T, U extends MapKey<U>>(
                 |  public t: T?,
                 |  private u: U,
                 |  public i: Int = 42,

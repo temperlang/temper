@@ -92,9 +92,15 @@ object TmpL {
         Value,
     }
 
+    /**
+     * This meshes export or not with public or private.
+     * Export and public are visible externally.
+     * Internal is visible within a module, but private only inside an instance.
+     */
     enum class IdReach : FormattableEnum {
         External,
         Internal,
+        Private,
     }
 
     enum class TypeDeclarationKind : FormattableEnum {

@@ -8,7 +8,6 @@ import lang.temper.common.NoneShortOrLong
 import lang.temper.common.TextOutput
 import lang.temper.common.TriState
 import lang.temper.common.abbreviate
-import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.mapInterleaving
 import lang.temper.common.subListToEnd
 import lang.temper.common.temperEscaper
@@ -54,7 +53,6 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.InfiniBinding
 import lang.temper.type.InvalidType
 import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
@@ -210,11 +208,12 @@ internal class PseudoTreeBuilder(
                 val typeArgs = mutableListOf<PseudoTree>()
                 var typeArgsInferred = false
                 var argListStart = 1 // Index into children where arguments start.
+                var argListEnd = tree.size - 1
 
                 if ( // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
                     detail.resugarDotHelpers > Freq3.Never &&
                     calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
-                    tree.size > 1
+                    argListEnd != 0
                 ) {
                     calleeTree = tree.child(1)
                     argListStart = 2
@@ -234,7 +233,7 @@ internal class PseudoTreeBuilder(
                 fun findTypeArgs() {
                     if (typeArgs.isEmpty()) {
                         // Consume type arguments into the pre-allocated list.
-                        while (argListStart + 1 < tree.size) {
+                        while (argListStart + 1 <= argListEnd) {
                             val childAtArgListStart = tree.child(argListStart)
                             if (childAtArgListStart.symbolContained != typeArgSymbol) {
                                 break
@@ -264,7 +263,7 @@ internal class PseudoTreeBuilder(
                     }
                 }
 
-                fun buildValueArgs() = (argListStart until tree.size).map {
+                fun buildValueArgs() = (argListStart..argListEnd).map {
                     buildPseudoTree(tree.child(it))
                 }
 
@@ -326,13 +325,24 @@ internal class PseudoTreeBuilder(
                         }
                     }
                 } else {
+                    val calleeBuiltinKey = calleeTree.probableBuiltinName
+                    if (
+                        detail.resugarDotHelpers != Freq3.Never &&
+                        calleeBuiltinKey == eqBuiltinName.builtinKey &&
+                        argListEnd == BINARY_OP_CALL_ARG_COUNT &&
+                        tree.child(argListEnd).functionContained is DotHelper
+                    ) {
+                        // Ignore the DotHelper
+                        // (Call EqMacro a b (DotHelper ...))
+                        argListEnd -= 1
+                    }
                     var args: List<PseudoTree>? = null
                     // Special case `.` operator since its right operand is a symbol but
                     // should render as a bare name.
                     var callee: PseudoTree? = null
                     if (
-                        tree.size == BINARY_OP_CALL_ARG_COUNT &&
-                        calleeTree isProbablyBuiltinFunNamed "."
+                        argListEnd + 1 == BINARY_OP_CALL_ARG_COUNT &&
+                        calleeBuiltinKey == "."
                     ) {
                         val right = tree.child(2)
                         val rightSymbol = right.symbolContained
@@ -342,10 +352,10 @@ internal class PseudoTreeBuilder(
                                 PseudoNameLeaf(right.pos, ParsedName(rightSymbol.text)),
                             )
                         }
-                        argListStart = tree.size // all done
+                        argListStart = argListEnd + 1 // all done
                     } else if (
-                        calleeTree isProbablyBuiltinFunNamed "new" &&
-                        tree.size >= 2 && symbolTextFor(tree.child(1)) == null
+                        calleeBuiltinKey == "new" &&
+                        argListEnd >= 1 && symbolTextFor(tree.child(1)) == null
                     ) {
                         // Reshuffle
                         //     new(TypeToCreate, ConstructorArg0)
@@ -373,7 +383,7 @@ internal class PseudoTreeBuilder(
                         // desugarOperation(nym`+`, x, y) -> nym`+`(x, y)
                         detail.resugarDotHelpers > Freq3.Never &&
                         calleeTree.isProbablyBuiltinFunNamed("desugarOperation") &&
-                        tree.size > 1
+                        argListEnd >= 1
                     ) {
                         argListStart = 2
                     }
@@ -1282,10 +1292,6 @@ internal class PseudoCall(
                 val value = callee.value
                 when (val f = TFunction.unpackOrNull(value)) {
                     is NamedBuiltinFun -> BuiltinName(f.name)
-                    is CoverFunction ->
-                        f.covered.allMapToSameElseNull {
-                            if (it is NamedBuiltinFun) BuiltinName(it.name) else null
-                        }
                     else -> null
                 }
             }
@@ -1714,9 +1720,6 @@ internal class PseudoType(override val pos: Position, val type: TypeActual) : Ps
                 Operator.Amp,
                 t.members.mapOpTreeJoining(OutToks.amp) { reduceTypeActual(pos, it) },
             )
-            is InfiniBinding ->
-                // TODO maybe scan first so we can refer back to rendered chunk?
-                Tok(pos, OutputToken("∞", OutputTokenType.Punctuation))
         }
     }
 }
@@ -2488,13 +2491,16 @@ private fun isStandaloneDecl(metadata: MetadataMultimap): Boolean =
     // Class and interface members should not be grouped into a comma list.
     typeDeclSymbol in metadata || typeMemberMetadataSymbols.any { it in metadata }
 
-private infix fun (Tree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
+private val (Tree).probableBuiltinName: String? get() =
     when (this) {
-        is NameLeaf -> content.builtinKey == desiredName
+        is NameLeaf -> content.builtinKey
         is ValueLeaf ->
-            (TFunction.unpackOrNull(content) as? NamedBuiltinFun)?.name == desiredName
-        else -> false
+            (TFunction.unpackOrNull(content) as? NamedBuiltinFun)?.name
+        else -> null
     }
+
+private infix fun (Tree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
+    probableBuiltinName == desiredName
 
 private infix fun (PseudoTree).isProbablyBuiltinFunNamed(desiredName: String): Boolean =
     when (this) {

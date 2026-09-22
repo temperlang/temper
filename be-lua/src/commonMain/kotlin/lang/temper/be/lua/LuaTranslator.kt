@@ -1866,20 +1866,17 @@ private class ModuleParts(
                 is ResolvedParsedName -> name.baseName.nameText
                 else -> name.displayName
             }.let { "_connected".asName(pos).dot(it) }.call(
-                buildList {
-                    for ((tmpl, lua) in stmt.parameters.parameters.zip(params.params)) {
-                        when {
-                            tmpl.optional -> {
-                                val name = defaulting.parameterMapping.getValue(tmpl.name.name)
-                                Lua.Name(pos, luaNames.name(name))
-                            }
-                            else -> when (lua) {
-                                is Lua.Param -> lua.name.deepCopy()
-                                is Lua.RestExpr -> lua.deepCopy() // TODO Good rest handling or frontend errors.
-                            }
-                        }.also { add(it) }
-                    }
-                },
+                defaulting.buildConnectedArgs(
+                    fn = stmt,
+                    backendParams = params.params,
+                    tmplToArg = { pos, name -> Lua.Name(pos, luaNames.name(name)) },
+                    backendToArg = { arg ->
+                        when (arg) {
+                            is Lua.Param -> arg.name.deepCopy()
+                            is Lua.RestExpr -> arg.deepCopy() // TODO Good rest handling or frontend errors.
+                        }
+                    },
+                ),
             ).also { call ->
                 when ((stmt.returnType.ot as? TmpL.NominalType)?.typeName?.sourceDefinition) {
                     WellKnownTypes.voidTypeDefinition -> add(Lua.CallStmt(pos, call))

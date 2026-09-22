@@ -1,6 +1,7 @@
 package lang.temper.builtin
 
 import lang.temper.env.InterpMode
+import lang.temper.lexer.OperatorType
 import lang.temper.log.FailLog
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -8,6 +9,7 @@ import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
+import lang.temper.type.OperatorMember
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
@@ -80,10 +82,10 @@ internal object WhenMacro : BuiltinMacro("when", null, nameIsKeyword = true) {
         if (interpMode != InterpMode.Partial) {
             return macroEnv.fail(MessageTemplate.CannotInvokeMacroAsFunction, macroEnv.pos)
         }
-        // During SyntaxMacro stage, we should remove comments.  REM(...) calls in
+        // During the SyntaxMacro stage, we should remove comments.  REM(...) calls in
         // class bodies and when blocks are problematic since they are not runs of
         // statements.
-        // We do the bulk of the work during define stage, where we have name
+        // We do the bulk of the work during the Define stage, where we have name
         // resolution which helps for swapping out vars.
         if (macroEnv.stage > Stage.Define) {
             macroEnv.replaceMacroCallWithErrorNode()
@@ -366,10 +368,13 @@ private fun Planting.growCase(subject: NameLeaf, postponedCaseCall: Tree): TreeT
 }
 
 private fun Planting.growEq(subject: NameLeaf, test: Tree) = Call(test.pos) {
-    V(test.pos, Value(BuiltinFuns.equalsFn))
+    V(test.pos, EqMacro.value)
     Rn(subject.pos, subject.content)
     Replant(freeTree(test))
+    V(Value(dotHelperForOperator(eqMember)))
 }
+
+private val eqMember = OperatorMember.from("==", OperatorType.Infix)
 
 private fun Planting.growJoin(join: Pair<Symbol, FunTree>?) {
     join ?: return

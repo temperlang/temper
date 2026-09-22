@@ -52,10 +52,18 @@ data class PseudoCodeDetail(
      * which are otherwise unwieldy in output.
      *
      * [Freq3.Always] to also resugar property and method accesses.
+     *
+     * This also affects the rendering of some `==` operations that have
+     * extra dot-helper metadata, specifically uses of the `==` macro.
+     * During intermediate processing, `==` can be represented like
+     * `==(a, b, DotHelper(InternalCall, OperationMember("_==_"), extensions))` which
+     * will not render nicely as infix due to the extra arg that carries
+     * extensions until there's enough type info to pick a subject-type appropriate
+     * and null-safe strategy for checking equivalence.
      */
     val resugarDotHelpers: Freq3 = Freq3.Sometimes,
     /**
-     * True for any tree that should be marked with comments to draw viewers
+     * True for any tree that should be marked with comments to draw viewers'
      * attention.
      *
      * This aids debugging by allowing highlighting a particular node in the

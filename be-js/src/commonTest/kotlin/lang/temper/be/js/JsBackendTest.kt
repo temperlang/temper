@@ -270,7 +270,7 @@ class JsBackendTest {
             |          "content":
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0
+            |            globalConsole as globalConsole_0, cmpInt32 as cmpInt32_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
             |          export const console_0 = globalConsole_0;
@@ -761,6 +761,63 @@ class JsBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun comparingStrings() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  src: {
+                |    stringy: {
+                |      stringy.temper: ```
+                |        export let lt(a: String, b: String): Boolean { a < b }
+                |        export let cmp(a: String, b: String): Int32 { a <=> b }
+                |        ```
+                |    }
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  js: {
+            |    my-test-library: {
+            |      src: {
+            |        stringy.internal.js: {
+            |          content: ```
+            |            import {
+            |              cmpString as cmpString_0
+            |            } from "@temperlang/core";
+            |            /**
+            |             * @param {string} a_0
+            |             * @param {string} b_0
+            |             * @returns {boolean}
+            |             */
+            |            export function lt(a_0, b_0) {
+            |## The library function is used because JS `<` on strings is UTF16-lexicographic.
+            |              return cmpString_0(a_0, b_0) < 0;
+            |            };
+            |            /**
+            |             * @param {string} a_1
+            |             * @param {string} b_1
+            |             * @returns {number}
+            |             */
+            |            export function cmp(a_1, b_1) {
+            |              return cmpString_0(a_1, b_1);
+            |            };
+            |
+            |            ```
+            |        },
+            |        stringy.js: "__DO_NOT_CARE__",
+            |        stringy.js.map: "__DO_NOT_CARE__",
+            |        stringy.internal.js.map: "__DO_NOT_CARE__",
+            |      },
+            |$OUTPUT_BOILERPLATE
+            |    }
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
     @Test
@@ -2456,6 +2513,9 @@ class JsBackendTest {
                 |        export let inc(i: Int): Int {
                 |            sum(i, 1)
                 |        }
+                |
+                |        @connected
+                |        export let length(s: String? = null): Int;
                 |        ```,
                 |      _connected.js: ```
                 |        // Importing with "../" required here. See layout later for more.
@@ -2523,6 +2583,13 @@ class JsBackendTest {
             |             */
             |            export function inc(i_2) {
             |              return sum(i_2, 1);
+            |            };
+            |            /**
+            |             * @param {string | null} [s_0]
+            |             * @returns {number}
+            |             */
+            |            export function length(s_0) {
+            |              return _connected.length(s_0);
             |            };
             |
             |            ```

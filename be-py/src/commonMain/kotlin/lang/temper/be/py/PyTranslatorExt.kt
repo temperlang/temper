@@ -48,14 +48,15 @@ fun PyTranslator.dotName(name: TmpL.DotName, source: ResolvedName? = null): OutN
 fun PyTranslator.dotName(member: TmpL.DotAccessible, source: ResolvedName? = null): OutName {
     return when (member.visibility.idReach()) {
         TmpL.IdReach.External -> dotName(member.dotName, source)
-        TmpL.IdReach.Internal -> pyNames.name(member.name)
+        TmpL.IdReach.Internal, TmpL.IdReach.Private -> pyNames.name(member.name)
     }
 }
 
 fun PyTranslator.methodReferenceNameText(method: TmpL.MethodReference): String {
     return method.method?.let { methodShape ->
         when (methodShape.visibility.idReach()) {
-            TmpL.IdReach.Internal -> (methodShape.name as? ResolvedName)?.let { pyNames.name(it).outputNameText }
+            TmpL.IdReach.Internal, TmpL.IdReach.Private ->
+                (methodShape.name as? ResolvedName)?.let { pyNames.name(it).outputNameText }
             TmpL.IdReach.External -> null
         }
     } ?: temperToPython(method.methodName.dotNameText) // default to public view

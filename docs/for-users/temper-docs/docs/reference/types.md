@@ -41,7 +41,7 @@ A *Boolean* is a truth value that may be used in `if` and loop conditions.
 
 <a name="type&#45;Boolean&#45;sig" class="snippet-anchor-name"></a>
 
-*Boolean* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*Boolean* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Boolean*](#type-Boolean)&gt;
 
 <!-- /snippet: type/Boolean/sig -->
 
@@ -116,6 +116,28 @@ For [*true*](builtins.md#builtin-true), the string `"true"`.
 
 <!-- /snippet: type/Boolean/method/toString -->
 
+<!-- snippet: type/Boolean/method/eq -->
+
+<a name="type&#45;Boolean&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Boolean.eq`
+
+<!-- snippet: type/Boolean/method/eq/sig -->
+
+<a name="type&#45;Boolean&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Boolean*](#type-Boolean), [*Boolean*](#type-Boolean)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Boolean/method/eq/sig -->
+
+<!-- snippet: type/Boolean/method/eq/commentary -->
+
+<a name="type&#45;Boolean&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Boolean/method/eq/commentary -->
+
+<!-- /snippet: type/Boolean/method/eq -->
+
 <!-- /snippet: type/Boolean/methods -->
 
 <!-- snippet: type/Boolean/statics -->
@@ -189,8 +211,13 @@ but you can use an underscore to separate digit groups.
 <!-- snippet: temper-code/build-user-docs/build/snippet/syntax/int32/examples/snippet.md/3 -->
 
 ```temper
-[123,456,789] == [123 , 456 , 789] &&  // Commas separate elements
-[123_456_789] == [123456789]
+let commas =      [123,456,789];  // Commas separate list elements
+let underscores = [123_456_789];  // Underscores make long numbers easier to read
+
+//!outputs  "commas has 3 elements"
+console.log("commas has ${commas.length} elements");
+//!outputs  "underscores has 1 element"
+console.log("underscores has ${underscores.length} element");
 // ✅
 ```
 
@@ -229,7 +256,7 @@ modeling.
 
 <a name="type&#45;Int32&#45;sig" class="snippet-anchor-name"></a>
 
-*Int32* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)
+*Int32* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)&lt;[*Int32*](#type-Int32)&gt;
 
 <!-- /snippet: type/Int32/sig -->
 
@@ -248,6 +275,32 @@ modeling.
 <!-- snippet: type/Int32/properties -->
 
 <a name="type&#45;Int32&#45;properties" class="snippet-anchor-name"></a>
+
+### properties
+
+<!-- snippet: type/Int32/property/signum -->
+
+<a name="type&#45;Int32&#45;property&#45;signum" class="snippet-anchor-name"></a>
+
+#### `Int32.signum`
+
+<!-- snippet: type/Int32/property/signum/sig -->
+
+<a name="type&#45;Int32&#45;property&#45;signum&#45;sig" class="snippet-anchor-name"></a>
+
+`:` [*Int32*](#type-Int32)
+
+<!-- /snippet: type/Int32/property/signum/sig -->
+
+<!-- snippet: type/Int32/property/signum/commentary -->
+
+<a name="type&#45;Int32&#45;property&#45;signum&#45;commentary" class="snippet-anchor-name"></a>
+
+`-1` if `this < 0`, `0` if `this == 0`, or otherwise `1`.
+
+<!-- /snippet: type/Int32/property/signum/commentary -->
+
+<!-- /snippet: type/Int32/property/signum -->
 
 <!-- /snippet: type/Int32/properties -->
 
@@ -439,6 +492,28 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <!-- /snippet: type/Int32/method/pred -->
 
+<!-- snippet: type/Int32/method/eq -->
+
+<a name="type&#45;Int32&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Int32.eq`
+
+<!-- snippet: type/Int32/method/eq/sig -->
+
+<a name="type&#45;Int32&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int32*](#type-Int32), [*Int32*](#type-Int32)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Int32/method/eq/sig -->
+
+<!-- snippet: type/Int32/method/eq/commentary -->
+
+<a name="type&#45;Int32&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Int32/method/eq/commentary -->
+
+<!-- /snippet: type/Int32/method/eq -->
+
 <!-- /snippet: type/Int32/methods -->
 
 <!-- snippet: type/Int32/statics -->
@@ -491,7 +566,7 @@ let my64: Int64 = 1i64;
 
 <a name="type&#45;Int64&#45;sig" class="snippet-anchor-name"></a>
 
-*Int64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*Int64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Int64*](#type-Int64)&gt;
 
 <!-- /snippet: type/Int64/sig -->
 
@@ -757,6 +832,28 @@ Supports radix 2 through 36. Doesn't prefix `+` for positive.
 
 <!-- /snippet: type/Int64/method/pred -->
 
+<!-- snippet: type/Int64/method/eq -->
+
+<a name="type&#45;Int64&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Int64.eq`
+
+<!-- snippet: type/Int64/method/eq/sig -->
+
+<a name="type&#45;Int64&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Int64*](#type-Int64), [*Int64*](#type-Int64)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Int64/method/eq/sig -->
+
+<!-- snippet: type/Int64/method/eq/commentary -->
+
+<a name="type&#45;Int64&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Int64/method/eq/commentary -->
+
+<!-- /snippet: type/Int64/method/eq -->
+
 <!-- /snippet: type/Int64/methods -->
 
 <!-- snippet: type/Int64/statics -->
@@ -905,7 +1002,7 @@ Temper also does not recognize all C's number suffixes.
 
 <a name="type&#45;Float64&#45;sig" class="snippet-anchor-name"></a>
 
-*Float64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*Float64* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Float64*](#type-Float64)&gt;
 
 <!-- /snippet: type/Float64/sig -->
 
@@ -1658,6 +1755,28 @@ Matches semantics of Python's *math.isclose*.
 
 <!-- /snippet: type/Float64/method/pred -->
 
+<!-- snippet: type/Float64/method/eq -->
+
+<a name="type&#45;Float64&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Float64.eq`
+
+<!-- snippet: type/Float64/method/eq/sig -->
+
+<a name="type&#45;Float64&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Float64*](#type-Float64), [*Float64*](#type-Float64)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Float64/method/eq/sig -->
+
+<!-- snippet: type/Float64/method/eq/commentary -->
+
+<a name="type&#45;Float64&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Float64/method/eq/commentary -->
+
+<!-- /snippet: type/Float64/method/eq -->
+
 <!-- /snippet: type/Float64/methods -->
 
 <!-- snippet: type/Float64/statics -->
@@ -2112,7 +2231,7 @@ See [Multi-quoted strings](#syntax-multi-quoted-strings) for more details on tha
 
 <a name="type&#45;String&#45;sig" class="snippet-anchor-name"></a>
 
-*String* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)
+*String* `extends` [*AnyValue*](#type-AnyValue), [*MapKey*](#type-MapKey)&lt;[*String*](#type-String)&gt;
 
 <!-- /snippet: type/String/sig -->
 
@@ -2718,6 +2837,28 @@ Supports integer JSON format, plus any radix 2 through 36.
 
 <!-- /snippet: type/String/method/toString -->
 
+<!-- snippet: type/String/method/eq -->
+
+<a name="type&#45;String&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `String.eq`
+
+<!-- snippet: type/String/method/eq/sig -->
+
+<a name="type&#45;String&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*String*](#type-String), [*String*](#type-String)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/String/method/eq/sig -->
+
+<!-- snippet: type/String/method/eq/commentary -->
+
+<a name="type&#45;String&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/String/method/eq/commentary -->
+
+<!-- /snippet: type/String/method/eq -->
+
 <!-- /snippet: type/String/methods -->
 
 <!-- snippet: type/String/statics -->
@@ -3107,7 +3248,7 @@ that typically translates to an idiomatic integer.
 
 <a name="type&#45;StringIndexOption&#45;sig" class="snippet-anchor-name"></a>
 
-*StringIndexOption* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*StringIndexOption* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*StringIndexOption*](#type-StringIndexOption)&gt;
 
 <!-- /snippet: type/StringIndexOption/sig -->
 
@@ -3162,6 +3303,28 @@ with different internal string representations.
 <!-- /snippet: type/StringIndexOption/method/compareTo/commentary -->
 
 <!-- /snippet: type/StringIndexOption/method/compareTo -->
+
+<!-- snippet: type/StringIndexOption/method/eq -->
+
+<a name="type&#45;StringIndexOption&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `StringIndexOption.eq`
+
+<!-- snippet: type/StringIndexOption/method/eq/sig -->
+
+<a name="type&#45;StringIndexOption&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*StringIndexOption*](#type-StringIndexOption), [*StringIndexOption*](#type-StringIndexOption)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/StringIndexOption/method/eq/sig -->
+
+<!-- snippet: type/StringIndexOption/method/eq/commentary -->
+
+<a name="type&#45;StringIndexOption&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/StringIndexOption/method/eq/commentary -->
+
+<!-- /snippet: type/StringIndexOption/method/eq -->
 
 <!-- /snippet: type/StringIndexOption/methods -->
 
@@ -4555,7 +4718,7 @@ A *Map* is a read-only key-value collection.
 
 <a name="type&#45;Map&#45;typeFormal&#45;K&#45;sig" class="snippet-anchor-name"></a>
 
-`in` `extends` [*AnyValue*](#type-AnyValue) \& [*MapKey*](#type-MapKey)
+`in` `extends` [*MapKey*](#type-MapKey)&lt;[*K*](#type-Map-typeFormal-K)&gt;
 
 <!-- /snippet: type/Map/typeFormal/K/sig -->
 
@@ -4674,7 +4837,7 @@ objects. Preserves insertion order when accessed from Temper code.
 
 <a name="type&#45;MapBuilder&#45;typeFormal&#45;K&#45;sig" class="snippet-anchor-name"></a>
 
-`extends` [*AnyValue*](#type-AnyValue) \& [*MapKey*](#type-MapKey)
+`extends` [*MapKey*](#type-MapKey)&lt;[*K*](#type-MapBuilder-typeFormal-K)&gt;
 
 <!-- /snippet: type/MapBuilder/typeFormal/K/sig -->
 
@@ -4861,7 +5024,7 @@ A *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
 
 <a name="type&#45;Mapped&#45;typeFormal&#45;K&#45;sig" class="snippet-anchor-name"></a>
 
-`in` `extends` [*AnyValue*](#type-AnyValue) \& [*MapKey*](#type-MapKey)
+`in` `extends` [*MapKey*](#type-MapKey)&lt;[*K*](#type-Mapped-typeFormal-K)&gt;
 
 <!-- /snippet: type/Mapped/typeFormal/K/sig -->
 
@@ -5420,7 +5583,7 @@ user-implementable in the future.
 
 <a name="type&#45;MapKey&#45;sig" class="snippet-anchor-name"></a>
 
-*MapKey* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*MapKey* `<`[*EQ*](#type-MapKey-typeFormal-EQ)`>` `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*EQ*](#type-MapKey-typeFormal-EQ)&gt;
 
 <!-- /snippet: type/MapKey/sig -->
 
@@ -5433,6 +5596,24 @@ user-implementable in the future.
 <!-- snippet: type/MapKey/typeFormals -->
 
 <a name="type&#45;MapKey&#45;typeFormals" class="snippet-anchor-name"></a>
+
+### typeFormals
+
+<!-- snippet: type/MapKey/typeFormal/EQ -->
+
+<a name="type&#45;MapKey&#45;typeFormal&#45;EQ" class="snippet-anchor-name"></a>
+
+#### `MapKey.<EQ>`
+
+<!-- snippet: type/MapKey/typeFormal/EQ/sig -->
+
+<a name="type&#45;MapKey&#45;typeFormal&#45;EQ&#45;sig" class="snippet-anchor-name"></a>
+
+`extends` [*AnyValue*](#type-AnyValue)
+
+<!-- /snippet: type/MapKey/typeFormal/EQ/sig -->
+
+<!-- /snippet: type/MapKey/typeFormal/EQ -->
 
 <!-- /snippet: type/MapKey/typeFormals -->
 
@@ -5961,7 +6142,7 @@ this in the future.
 
 <a name="type&#45;Equatable&#45;sig" class="snippet-anchor-name"></a>
 
-*Equatable* `extends` [*AnyValue*](#type-AnyValue)
+*Equatable* `<`[*EQ*](#type-Equatable-typeFormal-EQ)`>` `extends` [*AnyValue*](#type-AnyValue)
 
 <!-- /snippet: type/Equatable/sig -->
 
@@ -5975,6 +6156,24 @@ this in the future.
 
 <a name="type&#45;Equatable&#45;typeFormals" class="snippet-anchor-name"></a>
 
+### typeFormals
+
+<!-- snippet: type/Equatable/typeFormal/EQ -->
+
+<a name="type&#45;Equatable&#45;typeFormal&#45;EQ" class="snippet-anchor-name"></a>
+
+#### `Equatable.<EQ>`
+
+<!-- snippet: type/Equatable/typeFormal/EQ/sig -->
+
+<a name="type&#45;Equatable&#45;typeFormal&#45;EQ&#45;sig" class="snippet-anchor-name"></a>
+
+`extends` [*AnyValue*](#type-AnyValue)
+
+<!-- /snippet: type/Equatable/typeFormal/EQ/sig -->
+
+<!-- /snippet: type/Equatable/typeFormal/EQ -->
+
 <!-- /snippet: type/Equatable/typeFormals -->
 
 <!-- snippet: type/Equatable/properties -->
@@ -5986,6 +6185,30 @@ this in the future.
 <!-- snippet: type/Equatable/methods -->
 
 <a name="type&#45;Equatable&#45;methods" class="snippet-anchor-name"></a>
+
+### methods
+
+<!-- snippet: type/Equatable/method/eq -->
+
+<a name="type&#45;Equatable&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Equatable.eq`
+
+<!-- snippet: type/Equatable/method/eq/sig -->
+
+<a name="type&#45;Equatable&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Equatable*](#type-Equatable)&lt;[*EQ*](#type-Equatable-typeFormal-EQ)&gt;, [*EQ*](#type-Equatable-typeFormal-EQ)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Equatable/method/eq/sig -->
+
+<!-- snippet: type/Equatable/method/eq/commentary -->
+
+<a name="type&#45;Equatable&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Equatable/method/eq/commentary -->
+
+<!-- /snippet: type/Equatable/method/eq -->
 
 <!-- /snippet: type/Equatable/methods -->
 
@@ -6026,7 +6249,7 @@ input that might refer to either *null* or a string value.
 
 <a name="type&#45;Null&#45;sig" class="snippet-anchor-name"></a>
 
-*Null* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*Null* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Null*](#type-Null)&gt;
 
 <!-- /snippet: type/Null/sig -->
 
@@ -6051,6 +6274,30 @@ input that might refer to either *null* or a string value.
 <!-- snippet: type/Null/methods -->
 
 <a name="type&#45;Null&#45;methods" class="snippet-anchor-name"></a>
+
+### methods
+
+<!-- snippet: type/Null/method/eq -->
+
+<a name="type&#45;Null&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Null.eq`
+
+<!-- snippet: type/Null/method/eq/sig -->
+
+<a name="type&#45;Null&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Null*](#type-Null), [*Null*](#type-Null)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Null/method/eq/sig -->
+
+<!-- snippet: type/Null/method/eq/commentary -->
+
+<a name="type&#45;Null&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Null/method/eq/commentary -->
+
+<!-- /snippet: type/Null/method/eq -->
 
 <!-- /snippet: type/Null/methods -->
 
@@ -6111,7 +6358,7 @@ console.log("Empty is not null: ${e != null}");
 
 <a name="type&#45;Empty&#45;sig" class="snippet-anchor-name"></a>
 
-*Empty* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)
+*Empty* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Empty*](#type-Empty)&gt;
 
 <!-- /snippet: type/Empty/sig -->
 
@@ -6136,6 +6383,30 @@ console.log("Empty is not null: ${e != null}");
 <!-- snippet: type/Empty/methods -->
 
 <a name="type&#45;Empty&#45;methods" class="snippet-anchor-name"></a>
+
+### methods
+
+<!-- snippet: type/Empty/method/eq -->
+
+<a name="type&#45;Empty&#45;method&#45;eq" class="snippet-anchor-name"></a>
+
+#### `Empty.eq`
+
+<!-- snippet: type/Empty/method/eq/sig -->
+
+<a name="type&#45;Empty&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
+
+`:` `fn(`[*Empty*](#type-Empty), [*Empty*](#type-Empty)`):` [*Boolean*](#type-Boolean)
+
+<!-- /snippet: type/Empty/method/eq/sig -->
+
+<!-- snippet: type/Empty/method/eq/commentary -->
+
+<a name="type&#45;Empty&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
+
+<!-- /snippet: type/Empty/method/eq/commentary -->
+
+<!-- /snippet: type/Empty/method/eq -->
 
 <!-- /snippet: type/Empty/methods -->
 
@@ -7322,7 +7593,7 @@ Arrows point from supertypes to subtypes.
 
 There is a *Top* type at the top which is the super-type of all types.
 
-At the bottom is *Never* which is the bottom type, a sub-type of
+At the bottom is *Never* which is the bottom type, a subtype of
 all types, and an appropriate type for computations that never complete like
 
 <!-- snippet: temper-code/build-user-docs/build/snippet/type/relationships/snippet.md/0 -->
@@ -7341,7 +7612,7 @@ a subtype of any other nor vice versa.
 *Top* branches into *AnyValue*, *Void*, and *Bubble*.  This represents the
 three ways a computation can complete, either by
 
-- producing an actual value (it produces a sub-type of *AnyValue*),
+- producing an actual value (it produces a subtype of *AnyValue*),
 - finishing normally but without a usable value, or
 - bubbling up the call stack until replaced with a value by `orelse`.
 

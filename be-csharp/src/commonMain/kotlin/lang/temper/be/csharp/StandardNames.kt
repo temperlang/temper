@@ -79,7 +79,6 @@ object StandardNames {
     val temperCoreCoreBitSet = temperCoreCore.member("BitSet")
     val temperCoreCoreBubble = temperCoreCore.member("Bubble")
     val temperCoreCoreCastToNonNull = temperCoreCore.member("CastToNonNull", extension = true)
-    val temperCoreCoreCompare = temperCoreCore.member("Compare", extension = true)
     val temperCoreCoreDiv = temperCoreCore.member("Div", extension = true)
     val temperCoreCoreDivSafe = temperCoreCore.member("DivSafe", extension = true)
     val temperCoreCoreGarbage = temperCoreCore.member("Garbage", extension = true)

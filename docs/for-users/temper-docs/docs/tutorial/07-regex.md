@@ -143,7 +143,7 @@ We might also move toward insignificant whitespace in the default dialect.
 ## Unicode
 
 As Temper regex support gets built out, we expect to keep Unicode in mind. For
-example, `Dot` (as seen above, or as `.` in regex source text) always means a
+example, `DotSpecial` (as seen above, or as `.` in regex source text) always means a
 full Unicode code point in Temper. We also plan to support Unicode character
 class references (such as `\p{L}` for "letters" across all scripts, see
 [issue#9](https://github.com/temperlang/temper/issues/9)). This is at the planning stage only, but we're hopeful we can work

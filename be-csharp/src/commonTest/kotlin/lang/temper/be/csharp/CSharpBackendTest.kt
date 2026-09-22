@@ -1101,7 +1101,14 @@ class CSharpBackendTest {
                         |    }
                         |    bool f__0(int ? x__3)
                         |    {
-                        |        return x__3 == 0;
+                        |        if (x__3 == null)
+                        |        {
+                        |            return false;
+                        |        }
+                        |        else
+                        |        {
+                        |            return x__3.Value == 0;
+                        |        }
                         |    }
                         |    public Boo()
                         |    {
@@ -1448,7 +1455,6 @@ class CSharpBackendTest {
             |            content: ```
             |              using U = Microsoft.VisualStudio.TestTools.UnitTesting;
             |              using S = System;
-            |              using C = TemperLang.Core;
             |              using T = TemperLang.Std.Testing;
             |              namespace MyTestLibrary.Test
             |              {
@@ -1467,7 +1473,7 @@ class CSharpBackendTest {
             |                          {
             |                              string fn__0()
             |                              {
-            |                                  return "expected 1 == (" + C::Core.ConvertToString(1) + ") not (" + C::Core.ConvertToString(1) + ")";
+            |                                  return "expected true";
             |                              }
             |                              test___0.Assert(true, (S::Func<string>) fn__0);
             |                          }
@@ -1551,6 +1557,9 @@ class CSharpBackendTest {
                     |export let inc(i: Int): Int {
                     |    sum(i, 1)
                     |}
+                    |
+                    |@connected
+                    |export let length(s: String? = null): Int;
                 """.trimMargin(),
                 filePath("test", "IgnoreMe.txt") to """
                     |Hi there!!!
@@ -1578,6 +1587,10 @@ class CSharpBackendTest {
                     |    public static int Inc(int i__1)
                     |    {
                     |        return Sum(i__1, 1);
+                    |    }
+                    |    public static int Length(string ? s = null)
+                    |    {
+                    |        return TestConnected.Length(s);
                     |    }
                     |}
                     """.trimMargin(),

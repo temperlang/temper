@@ -246,7 +246,7 @@ It was the worst of times.
 ### Word boundaries
 
 Define a regex for simple identifiers with word boundaries. For this case, be
-explicit rather than using `Word` for content.
+explicit rather than using `WordSpecial` for content.
 
 TODO Use regex interpolation once we have that.
 

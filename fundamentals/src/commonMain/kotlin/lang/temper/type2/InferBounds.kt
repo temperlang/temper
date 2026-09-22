@@ -11,6 +11,7 @@ import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.type.BubbleType
 import lang.temper.type.MkType
+import lang.temper.type.TypeBindingMapper
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -269,16 +270,19 @@ fun inferBounds(
                 is TypeListSolution -> {
                     val (sig) = callee
                     val n = min(solution.types.size, sig.typeFormals.size)
-                    call.bindings = (0 until n).associate { i ->
-                        val typeFormal = sig.typeFormals[i]
-                        val actual2 = when (val solutionI = solution.types[i]) {
-                            is Type2 -> solutionI
-                            is Unsolvable -> WKT.invalidType2
-                        }
-                        val actualOldStyle = hackMapNewStyleToOld(actual2)
-                        val outOfBounds = typeFormal.upperBounds.filter { upperBound ->
-                            !typeContext.isSubType(actualOldStyle, upperBound)
-                        }
+                    val bindingMap = (0 until n).associate { i ->
+                        sig.typeFormals[i] to
+                            when (val solutionI = solution.types[i]) {
+                                is Type2 -> solutionI
+                                is Unsolvable -> WKT.invalidType2
+                            }
+                    }
+                    val bindings = bindingMap.mapValues { (_, actual2) -> hackMapNewStyleToOld(actual2) }
+                    call.bindings = bindings
+                    val bindingsMapper = TypeBindingMapper(bindings.entries)
+                    for ((typeFormal, actual2) in bindingMap) {
+                        val actualOldStyle = bindings.getValue(typeFormal)
+                        val outOfBounds = typeContext.checkCanBindTo(actualOldStyle, typeFormal, bindingsMapper)
                         if (outOfBounds.isNotEmpty()) {
                             explanations.add(
                                 TypeReason(
@@ -292,16 +296,8 @@ fun inferBounds(
                             )
                             calleeHasProblems = true
                         }
-                        typeFormal to actualOldStyle
                     }
 
-                    val bindingMap = buildMap {
-                        for ((t, f) in solution.types zip callee.sig.typeFormals) {
-                            if (t is Type2) {
-                                this[f] = t
-                            }
-                        }
-                    }
                     val sigInContext = callee.sig.mapType(bindingMap)
                     val badArgIndices = mutableListOf<Int>()
                     val applicationOrderResult =

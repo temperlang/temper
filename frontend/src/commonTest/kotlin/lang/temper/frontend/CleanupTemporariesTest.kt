@@ -1483,7 +1483,7 @@ class CleanupTemporariesTest {
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
-                |    while (i__0 < 3) {
+                |    while (i__0 <=> 3 < 0) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = postfixReturn#0 + 1;
@@ -1499,7 +1499,7 @@ class CleanupTemporariesTest {
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
-                |    while (i__0 < 3) {
+                |    while (i__0 <=> 3 < 0) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = postfixReturn#0 + 1;
@@ -1538,7 +1538,7 @@ class CleanupTemporariesTest {
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
-                |    while (i__0 < 3) {
+                |    while (i__0 <=> 3 < 0) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = postfixReturn#0 + 1;
@@ -1556,7 +1556,7 @@ class CleanupTemporariesTest {
                 |    });
                 |    var i__0;
                 |    i__0 = 0;
-                |    while (i__0 < 3) {
+                |    while (i__0 <=> 3 < 0) {
                 |      let postfixReturn#0;
                 |      postfixReturn#0 = i__0;
                 |      i__0 = postfixReturn#0 + 1;
@@ -1843,7 +1843,7 @@ class CleanupTemporariesTest {
                 |    var i__0;
                 |    i__0 = 0;
                 |    outer__0: for (;
-                |      i__0 < 4;
+                |      i__0 <=> 4 < 0;
                 |      {
                 |        i__0 = i__0 + 1;
                 |    }) {
@@ -1857,7 +1857,7 @@ class CleanupTemporariesTest {
                 |        n__0 = postfixReturn#0 + 1;
                 |## The postfix-return needs to be distinct from n where it's stringified here
                 |        str__0 = cat(str(str__0), " ", str(postfixReturn#0));
-                |        if (i__0 <= j__0) {
+                |        if (i__0 <=> j__0 <= 0) {
                 |          do_call_log(console#0, str__0);
                 |          continue outer__0;
                 |        };

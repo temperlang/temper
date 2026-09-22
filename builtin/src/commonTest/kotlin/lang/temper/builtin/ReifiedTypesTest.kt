@@ -27,7 +27,11 @@ class ReifiedTypesTest {
 
     @Test
     fun mapKeyValuePredicateAcceptsInt() {
-        val mapKeyType = ReifiedType(WellKnownTypes.mapKeyType2)
+        val mapKeyType = ReifiedType(
+            MkType2(WellKnownTypes.mapKeyTypeDefinition)
+                .actuals(listOf(WellKnownTypes.intType2))
+                .get(),
+        )
         assertTrue(mapKeyType.valuePredicate(Value(0, TInt)))
     }
 

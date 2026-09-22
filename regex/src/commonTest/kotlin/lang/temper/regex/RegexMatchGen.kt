@@ -38,14 +38,14 @@ private fun MatchGenContext.regex(regex: RegexNode) {
         is Or -> this.regex(random.nextItem(regex.items)) // TODO(tjp, tooling): Choose carefully if `ended`?
         is Repeat -> repeat(regex)
         is Seq -> regex.items.forEach { this.regex(it) }
-        Begin -> check(builder.isEmpty()) { "Begin requested after: $builder" }
-        Digit -> codeSet(asciiDigitCodeSet)
-        Dot -> codeSet(dotCodeSet)
-        End -> ended = true
-        GraphemeCluster -> codeSet(asciiWordCodeSet) // TODO(tjp, regex): Something more interesting.
-        Space -> codeSet(spaceCodeSet)
-        Word -> codeSet(asciiWordCodeSet)
-        WordBoundary -> needsWordBoundary = true
+        BeginSpecial -> check(builder.isEmpty()) { "Begin requested after: $builder" }
+        DigitSpecial -> codeSet(asciiDigitCodeSet)
+        DotSpecial -> codeSet(dotCodeSet)
+        EndSpecial -> ended = true
+        GraphemeClusterSpecial -> codeSet(asciiWordCodeSet) // TODO(tjp, regex): Something more interesting.
+        SpaceSpecial -> codeSet(spaceCodeSet)
+        WordSpecial -> codeSet(asciiWordCodeSet)
+        WordBoundarySpecial -> needsWordBoundary = true
     }
 }
 

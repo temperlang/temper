@@ -18,4 +18,14 @@ do
     local support = s.Support.new()
     return support:prod(hidden.i, j)
   end
+
+  ---@param s string|nil Or actually temper.null instead of nil ...
+  ---@return integer
+  function _connected.length(s)
+    if s == temper.null then
+      return -1
+    else
+      return #s
+    end
+  end
 end

@@ -11,7 +11,7 @@ let f<T>(
   b: Boolean,
   bon: Boolean?,
   n: Never<Int>?,
-  k: MapKey,
+  k: MapKey<Int>,
 ): Void throws Bubble {
   // Illegal.  Multiple other types could connect to target language string type
   a as String orelse do {};
