@@ -323,7 +323,7 @@ internal class JsTranslator(
         }
         // Now cache pretty type names where we don't hit exporteds.
         t.topLevels.forEach topLevels@{ topLevel ->
-            topLevel is TmpL.TypeDeclaration || return@topLevels
+            topLevel is TmpL.Declaration || return@topLevels
             val name = topLevel.name.name
             // Exported names are pretty anyway, so don't bother to rename to pretty.
             name is ExportedName && return@topLevels
