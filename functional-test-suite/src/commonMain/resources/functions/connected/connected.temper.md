@@ -4,6 +4,26 @@ Interfaces support calling backend code from Temper, buy requires a separate
 client project to provide that. It's much more flexible if a Temper library can
 just include and use backend code as needed.
 
+## Kept definitions
+
+TODO Use this for backends as we provide stable naming for unexported things.
+
+Some connected code might want to use a unexported helper written in Temper in
+the same module, so a `@keep` decorator prevents such from being pruned.
+
+    @keep
+    let sumOf3(a: Int, b: Int, c: Int): Int {
+      a + b + c
+    }
+
+There's also a `@keepTest` decorator to retain code for connected code for tests
+only, but we don't test testing here.
+
+And we define this early, so top-level code below can access it through
+connected code calls, including in dynamic backends. Since it's only called from
+connected code, that means our module sorting needs to be stable. Otherwise, we
+can't depend on this being kept in place.
+
 ## Top-level connected-only functions
 
 This function has no Temper implementation, so it needs connected on all
@@ -78,18 +98,3 @@ And reuse the same hider instance just for fun.
 new Hider(3).plus(4): 7
 new Hider(3).times(4): 12
 ```
-
-## Kept definitions
-
-TODO Use this for backends as we provide stable naming for unexported things.
-
-Some connected code might want to use a unexported helper written in Temper in
-the same module, so a `@keep` decorator prevents such from being pruned.
-
-    @keep
-    let sumOf3(a: Int, b: Int, c: Int): Int {
-      a + b + c
-    }
-
-There's also a `@keepTest` decorator to retain code for connected code for tests
-only, but we don't test testing here.
