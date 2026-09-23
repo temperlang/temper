@@ -152,9 +152,6 @@ internal fun translateTypeDeclaration(
                         )
                     }
                 },
-                sig?.restInputsType?.let {
-                    translator.translateType(opos, it).aType
-                },
             ),
             returnType = translator.translateType(opos, sig?.returnType2.orInvalid).aType,
             memberOverride = memberOverride,
@@ -453,7 +450,6 @@ internal fun translateTypeDeclaration(
                                         internalType,
                                     ),
                                 ),
-                                null,
                             ),
                             returnType = type.deepCopy().aType,
                             body = null,
@@ -504,7 +500,6 @@ internal fun translateTypeDeclaration(
                                         descriptor,
                                     ),
                                 ),
-                                null,
                             ),
                             returnType = translator.translateType(lPos, WellKnownTypes.voidType2).aType,
                             body = null,

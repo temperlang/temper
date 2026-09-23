@@ -11,7 +11,6 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.initSymbol
-import lang.temper.value.restFormalSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.void
@@ -37,22 +36,10 @@ internal val connectedDecorator = MetadataDecorator(
             typeDeclSymbol in metadata -> {
                 log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
             }
-            else -> when (val init = metadata[initSymbol]?.target) {
-                is FunTree -> when {
+            else -> when (metadata[initSymbol]?.target) {
+                is FunTree -> {
                     // Neither instance nor static methods get in here because of different tree structures.
                     // That's good for now.
-                    // Also, we don't get formal params yet when this macro is called, so loop trees.
-                    init.children.any { maybeParam ->
-                        when (val maybeParamParts = (maybeParam as? DeclTree)?.parts) {
-                            null -> false
-                            else -> restFormalSymbol in maybeParamParts.metadataSymbolMap
-                        }
-                    } -> {
-                        log(Log.Error, MessageTemplate.UserConnectedFunHasRest, pos, listOf())
-                    }
-                    else -> {
-                        // We support connected functions without rest params at this time.
-                    }
                 }
                 else -> {
                     log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())

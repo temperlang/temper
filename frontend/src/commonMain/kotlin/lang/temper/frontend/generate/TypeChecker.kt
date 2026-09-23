@@ -492,13 +492,11 @@ internal class TypeChecker(
                                     isOptional = unbound.isOptional,
                                 )
                             },
-                            restValuesFormal = calleeType.restValuesFormal?.let { bind(it) },
                             returnType = bind(calleeType.returnType),
                         )
                     }
 
                     val valueFormals = boundCalleeType.valueFormals
-                    val restValuesFormal = boundCalleeType.restValuesFormal
 
                     if (actuals.size !in boundCalleeType.arityRange) {
                         logSink.log(
@@ -524,9 +522,7 @@ internal class TypeChecker(
                                 values = listOf(actual.symbol.text),
                             )
                         }
-                        val formalType = formal?.staticType
-                            ?: restValuesFormal
-                            ?: break
+                        val formalType = formal?.staticType ?: break
                         if (failsValidSubtypeCheck(actual.type, formalType)) {
                             // Preserve can do whatever it wants, especially for storing void args.
                             // TODO Figure out how not to special-case it?

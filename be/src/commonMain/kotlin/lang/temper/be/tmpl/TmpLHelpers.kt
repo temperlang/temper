@@ -8,8 +8,6 @@ import lang.temper.common.mapFirst
 import lang.temper.format.TokenSink
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
-import lang.temper.lexer.withTemperAwareExtension
-import lang.temper.library.LibraryConfigurations
 import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
@@ -80,7 +78,7 @@ fun garbageCallable(pos: Position, msg: String) =
     TmpL.GarbageCallable(pos, TmpL.Diagnostic(pos, msg))
 
 fun nontranslatableExpr(pos: Position, msg: String) =
-    TmpL.GarbageExpression(pos, TmpL.Diagnostic(pos, "Nontranslatable: $msg"))
+    TmpL.GarbageExpression(pos, TmpL.Diagnostic(pos, "Untranslatable: $msg"))
 
 fun garbageStatement(pos: Position, msg: String) =
     TmpL.GarbageStatement(pos, TmpL.Diagnostic(pos, msg))
@@ -116,8 +114,6 @@ fun garbageModule(
         result = null,
     )
 
-const val TESTING_BASENAME = "testing"
-
 val DashedIdentifier.isStdLib: Boolean get() = this == DashedIdentifier.temperStandardLibraryIdentifier
 
 val TmpL.Module.isStdLib: Boolean
@@ -134,29 +130,13 @@ val TmpL.Module.libraryName: DashedIdentifier?
         return parent.libraryConfigurations.currentLibraryConfiguration.libraryName
     }
 
-fun matchesStdTesting(
-    moduleName: ModuleName,
-    libraryConfigurations: LibraryConfigurations,
-): Boolean {
-    if (moduleName.isPreface) {
-        return false
-    }
-    val config = libraryConfigurations.byLibraryRoot[moduleName.libraryRoot()]
-    if (config?.libraryName == DashedIdentifier.temperStandardLibraryIdentifier) {
-        val baseName = moduleName.sourceFile.lastOrNull()
-            ?.withTemperAwareExtension("")?.baseName
-        return baseName == TESTING_BASENAME
-    }
-    return false
-}
-
 /**
- * Maps [TmpL.Actual] arguments, ignoring symbols provided for names.
+ * Maps [TmpL.CallExpression] parameters, ignoring symbols provided for names.
  *
  * This duplicates a subset of the logic in LazyActualsList init and also TypeChecker extractTypedActuals.
  * At present, this version is the simplest of the three, retaining no symbol information for now.
  */
-inline fun <T> List<TmpL.Actual>.mapGeneric(translateActual: (TmpL.Actual) -> T) = buildList {
+inline fun <T> List<TmpL.Expression>.mapGeneric(translateActual: (TmpL.Expression) -> T) = buildList {
     var check = true
     for (actual in this@mapGeneric) {
         if (check && actual is TmpL.ValueReference && actual.value.typeTag == TSymbol) {
@@ -169,12 +149,12 @@ inline fun <T> List<TmpL.Actual>.mapGeneric(translateActual: (TmpL.Actual) -> T)
 }
 
 /**
- * Maps [TmpL.Actual] arguments, ignoring symbols provided for names.
+ * Maps [TmpL.CallExpression] parameters, ignoring symbols provided for names.
  *
  * This duplicates a subset of the logic in LazyActualsList init and also TypeChecker extractTypedActuals.
  * At present, this version is the simplest of the three, retaining no symbol information for now.
  */
-inline fun <T> List<TmpL.Actual>.mapGenericIndexed(translateActual: (Int, TmpL.Actual) -> T) = buildList {
+inline fun <T> List<TmpL.Expression>.mapGenericIndexed(translateActual: (Int, TmpL.Expression) -> T) = buildList {
     var check = true
     var index = 0
     for (actual in this@mapGenericIndexed) {
@@ -192,7 +172,7 @@ fun <T> TmpL.CallExpression.mapParameters(
     keepsThis: Boolean = false,
     optionalAsNullable: Boolean = false,
     /** If in rest args, the value formal will have that kind. */
-    translate: (TmpL.Actual, Type2?, ValueFormal2?) -> T,
+    translate: (TmpL.Expression, Type2?, ValueFormal2?) -> T,
 ): List<T> {
     val adjustedSig = adjustedSig(keepThis = keepsThis)
     fun formalType(formal: ValueFormal2?): Type2? {
@@ -275,7 +255,7 @@ fun TmpL.FunctionDeclaration.parameterDefaultStatementsInfo(): DefaultStatements
             // Defaulting to null doesn't actually assign anything, so skip nulls.
             val value = parameter.metadata.find { it.key.symbol == optionalSymbol }?.value as? TmpL.ValueData
             value?.value == TNull.value && continue@parameters
-            // Start out with original names, but replace them later.
+            // Start out with original names but replace them later.
             this[parameter.name.name] = parameter.name.name
         }
         // If all the optionals were null defaulting, then get out easy anyway.
@@ -336,13 +316,7 @@ fun TmpL.CallExpression.adjustedSig(keepThis: Boolean = false): Signature2 {
     }
 }
 
-fun TmpL.Actual.isNullValue() = this is TmpL.ValueReference && value.typeTag is TNull
-
-val TmpL.Actual.typeOrInvalid
-    get() = when (this) {
-        is TmpL.Expression -> passType
-        is TmpL.RestSpread -> WellKnownTypes.invalidType2
-    }
+fun TmpL.Expression.isNullValue() = this is TmpL.ValueReference && value.typeTag is TNull
 
 fun TmpL.FunctionDeclaration.idKind() = when {
     metadata.any { it.key.symbol == typeDeclSymbol } -> TmpL.IdKind.Type
@@ -438,9 +412,6 @@ fun TmpL.Tree.findDeclaration(
             is TmpL.FunctionLike -> {
                 if (match(node)) return modToDecl(node)
                 val params = node.parameters
-                params.restParameter?.let {
-                    if (match(it)) return@findDeclaration modToDecl(it)
-                }
                 for (arg in params.parameters) {
                     if (match(arg)) return modToDecl(arg)
                 }
@@ -1005,8 +976,7 @@ fun TmpL.Expression?.isVoidish(): Boolean = when (this) {
     is TmpL.CallExpression -> when (val callee = fn) {
         is TmpL.SupportCodeWrapper ->
             callee.supportCode.builtinOperatorId == BuiltinOperatorId.PackOkResult &&
-                parameters.size == 1 &&
-                (parameters.first() as? TmpL.Expression)?.isVoidConstant == true
+                parameters.size == 1 && parameters.first().isVoidConstant
         else -> false
     }
     null -> true
@@ -1079,33 +1049,20 @@ internal fun <BE : Backend<BE>> TmpL.TypeDeclaration.injectSuperCallMethods(
         val dotName = TmpL.DotName(pos, method.symbol.text)
         val name = TmpL.Id(pos, method.name as ResolvedName) // Unique if we don't have overloading.
         val metadata = translator.translateDeclarationMetadataValueMultimap(method.metadata)
-        val parameters = funType.allValueFormals.mapIndexedNotNull { i, valueFormal ->
+        val parameters = funType.allValueFormals.mapIndexed { i, valueFormal ->
             // TODO Unify with logic in TypeTranslator?
-            if (valueFormal.kind == ValueFormalKind.Rest) {
-                null
-            } else {
-                val nameHint = nameHints.getOrNull(i)?.text ?: "inp"
-                TmpL.Formal(
-                    pos = pos,
-                    metadata = emptyList(),
-                    name = TmpL.Id(pos, nameMaker.unusedTemporaryName(nameHint)),
-                    type = typeTranslator.translateType(pos, valueFormal.type).aType,
-                    descriptor = valueFormal.type,
-                )
-            }
+            val nameHint = nameHints.getOrNull(i)?.text ?: "inp"
+            TmpL.Formal(
+                pos = pos,
+                metadata = emptyList(),
+                name = TmpL.Id(pos, nameMaker.unusedTemporaryName(nameHint)),
+                type = typeTranslator.translateType(pos, valueFormal.type).aType,
+                descriptor = valueFormal.type,
+            )
         }.let { parameters ->
             TmpL.Parameters(
                 pos = pos,
                 parameters = parameters,
-                restParameter = funType.restInputsType?.let { restValuesFormal ->
-                    TmpL.RestFormal(
-                        pos = pos,
-                        metadata = emptyList(),
-                        name = TmpL.Id(pos, nameMaker.unusedTemporaryName("rest")),
-                        type = typeTranslator.translateType(pos, restValuesFormal).aType,
-                        descriptor = restValuesFormal,
-                    )
-                },
                 thisName = parameters[0].name.deepCopy(),
             )
         }

@@ -181,10 +181,6 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.FunctionsNamedArgs)
 
     @Test
-    fun functionsRestFormal() =
-        runFunctionalTest(Ft.FunctionsRestFormal)
-
-    @Test
     fun functionsSimpleLocals() =
         runFunctionalTest(Ft.FunctionsSimpleLocals)
 

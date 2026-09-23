@@ -979,38 +979,6 @@ class TmpLBackendTest {
     )
 
     @Test
-    fun restFormal() = assertGeneratedCode(
-        inputs = inputFileMapFromJson(
-            """
-                |{
-                |  restFormal: {
-                |    restFormal.temper: "fn (...s: List<String>): Boolean { false }"
-                |  }
-                |}
-            """.trimMargin(),
-        ),
-        moduleNeedsResult = true,
-        want = """
-        {
-            "tmpl": {
-                "restFormal.tmpl": {
-                    "content":
-                    ```
-                    //// work//restFormal/ => restFormal.tmpl
-                    let return__0(@QName("test-library/restFormal.s") @restFormal ...s__1: String): Boolean {
-                      return false;
-                    }
-                    export return__0;
-
-                    ```
-                },
-                "restFormal.tmpl.map": "__DO_NOT_CARE__"
-            },
-        }
-        """,
-    )
-
-    @Test
     fun defaultExpressionForParameter() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
@@ -1864,7 +1832,7 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
-            |        let cat#0 = builtins.cat /* (...String) -> String */;
+            |        let cat#0 = builtins.cat /* () -> String */;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.emphatically()") let emphatically(@QName("test-library/foo.emphatically().(s)") s__0: String): String {
@@ -2726,7 +2694,7 @@ class TmpLBackendTest {
                                     TmpL.Id(pos, BuiltinName("myDateToday"), null),
                                     Signature2(returnType2 = returnType, false, listOf()),
                                 ),
-                                parameters = arguments.map { it.expr as TmpL.Actual },
+                                parameters = arguments.map { it.expr as TmpL.Expression },
                             )
                         }
 
@@ -3468,7 +3436,7 @@ class TmpLBackendTest {
             |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
             |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
             |        let panic#0 = builtins.panic;
-            |        let cat#0 = builtins.cat /* (...String) -> String */;
+            |        let cat#0 = builtins.cat /* () -> String */;
             |        let DoneResult#0 = builtins.DoneResult;
             |        let adaptGeneratorFnSafe#0 = builtins.adaptGeneratorFnSafe /* <adaptGeneratorFnSafeYIELD extends AnyValue>(Fn__0<GeneratorResult<adaptGeneratorFnSafeYIELD>>) -> SafeGenerator<adaptGeneratorFnSafeYIELD> */;
             |        let async#0 = builtins.async /* (Fn__0<SafeGenerator<Empty>>) -> Void */;
@@ -3677,7 +3645,7 @@ class TmpLBackendTest {
             |    "foo.tmpl": {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
-            |        let list#0 = builtins.list /* <listT extends AnyValue>(...listT) -> List<listT> */;
+            |        let list#0 = builtins.list /* <listT extends AnyValue>() -> List<listT> */;
             |        @QName("test-library/foo.makeAList()") let makeAList__0<T__0 extends AnyValue>(): List<T__0> {
             |          return list#0();
             |        }
@@ -3766,7 +3734,7 @@ class TmpLBackendTest {
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
-            |        let cat#0 = builtins.cat /* (...String) -> String */;
+            |        let cat#0 = builtins.cat /* () -> String */;
             |        let CA#0 = builtins.CA;
             |        let CConstructor#0 = builtins.CConstructor;
             |        let console#0: Console = GetConsole#0();

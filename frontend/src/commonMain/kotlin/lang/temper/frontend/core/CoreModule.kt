@@ -1,5 +1,6 @@
 package lang.temper.frontend.core
 
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.AppendingTextOutput
 import lang.temper.common.Console
 import lang.temper.common.Log
@@ -90,10 +91,15 @@ object CoreModule {
             continueCondition = NeverStop,
             namingContext = WellKnownTypes.anyValueTypeDefinition.name.origin,
         )
+        // List.of provides a way to use listify with explicit type actuals.
+        // It needs the listify NAryFun.
+        module.addEnvironmentBindings(
+            mapOf(BuiltinName("_listify") to BuiltinFuns.vListifyFn),
+        )
 
         module.deliverContent(
             ModuleSource(
-                filePath = filePath("core", "core.temper"),
+                filePath = coreCodeModuleSourcePath,
                 fetchedContent = content,
                 languageConfig = StandaloneLanguageConfig,
             ),
@@ -180,12 +186,13 @@ private class FailFastLogSink(private val code: CharSequence) : LogSink {
             (values.getOrNull(0) as? Stage)?.let { this.stage = it }
         }
         if (level >= Log.Warn) {
+            val loc = pos.loc
             val posInfo = CoreModule.coreFilePositions
             val posStr = posInfo.filePositionAtOffset(pos.left)
-            val messageStr = "$stagePrefixString$posStr: ${template.format(values)}"
+            val messageStr = "$stagePrefixString${loc.diagnostic}:$posStr: ${template.format(values)}"
 
             console.log(messageStr, level)
-            if (pos.loc == CoreCodeLocation) {
+            if (loc == CoreCodeLocation || loc == coreCodeModuleSourcePath) {
                 excerpt(pos, code, console.textOutput)
             }
             check(level < Log.Error) { "Error boot-strapping core.  $messageStr" }
@@ -230,3 +237,5 @@ fun builtinEnvironment(
 private object NeverStop : ContinueCondition {
     override fun shouldContinue(): Boolean = true // Go off, you
 }
+
+private val coreCodeModuleSourcePath = filePath("core", "core.temper")

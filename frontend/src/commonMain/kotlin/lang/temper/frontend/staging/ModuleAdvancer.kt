@@ -173,7 +173,7 @@ class ModuleAdvancer(
      * Specifies the configuration for the library at its root.
      * Does not clobber previously given configurations for the same library root.
      *
-     * If the advancer advances a configuration file to export stage, then it will
+     * If the advancer advances a configuration file to the export stage, then it will
      * overwrite this configuration returned by [getAllLibraryConfigurations].
      */
     override fun configureLibrary(libraryConfiguration: LibraryConfiguration): Boolean =
@@ -674,7 +674,7 @@ private class GroupOfModulesToAdvanceTogether(
             val lastStageCompleted = m.stageCompleted
             val isConfigModule = m.isConfigModule
             if (lastStageCompleted == stageBeforeRun && readyToRun != null && !isConfigModule) {
-                readyToRun!!.add(m)
+                readyToRun.add(m)
                 continue
             }
             val shouldAdvance = when {
@@ -1268,7 +1268,7 @@ private val stageBeforeRun = Stage.before(Stage.Run)!!
 private fun addInOrder(modules: Iterable<Module>, out: MutableCollection<Module>) {
     val afterMap = mutableMapOf<Module, MutableSet<Module>>()
     for (m in modules) {
-        afterMap[m] = mutableSetOf<Module>()
+        afterMap[m] = mutableSetOf()
     }
     for (m in modules) {
         for (ir in m.importRecords) {

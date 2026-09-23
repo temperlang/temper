@@ -420,13 +420,6 @@ val vTypeFormalSymbol = Value(typeFormalSymbol)
 val sealedTypeSymbol = Symbol("sealedType")
 val vSealedTypeSymbol = Value(sealedTypeSymbol)
 
-/**
- * That the associated argument is a variable length argument that the caller supplies as a comma separated set of
- * arguments that the function itself sees as a list
- */
-val restFormalSymbol = Symbol("restFormal")
-val vRestFormalSymbol = Value(restFormalSymbol)
-
 /** Indicates that the associated declaration may be assigned more than once. */
 val varSymbol = Symbol("var")
 val vVarSymbol = Value(varSymbol)

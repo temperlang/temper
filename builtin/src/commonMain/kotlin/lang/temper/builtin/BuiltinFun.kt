@@ -48,7 +48,6 @@ abstract class BuiltinFun(
                 when (f.kind) {
                     ValueFormalKind.Required -> {}
                     ValueFormalKind.Optional -> append("=")
-                    ValueFormalKind.Rest -> append("...")
                 }
             }
             append(')')

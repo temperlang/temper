@@ -166,7 +166,6 @@ private data class HackFnInterop(
     val formals: List<TypeFormal>,
     val nRequired: Int,
     val nOptional: Int,
-    val hasRest: Boolean,
     val bubbly: Boolean,
 )
 private val hackFnTypeDefs = mutableMapOf<HackFnInterop, TypeShape>()
@@ -224,9 +223,8 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
         is FunctionType -> {
             val nOptional = t.valueFormals.count { it.isOptional }
             val nRequired = t.valueFormals.size - nOptional
-            val hasRest = t.restValuesFormal != null
             val bubbly = t.returnType is OrType && t.returnType.members.any { it is BubbleType }
-            val key = HackFnInterop(t.typeFormals, nRequired, nOptional, hasRest = hasRest, bubbly = bubbly)
+            val key = HackFnInterop(t.typeFormals, nRequired, nOptional, bubbly = bubbly)
             val defn = synchronized(hackFnTypeDefs) {
                 hackFnTypeDefs.getOrPut(key) {
                     val nameMaker = ResolvedNameMaker(invalidTypeDefinition.name.origin, Genre.Library)
@@ -266,11 +264,6 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
                                 add(makeTypeFormal("I", Variance.Contravariant))
                             }
                         }
-                        val restInput = if (key.hasRest) {
-                            makeTypeFormal("REST", Variance.Contravariant)
-                        } else {
-                            null
-                        }
                         val output = makeTypeFormal("O", Variance.Covariant)
 
                         it.superTypes.add(WellKnownTypes.functionType)
@@ -278,7 +271,6 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
                             buildList {
                                 addAll(requiredInputs)
                                 addAll(optionalInputs)
-                                restInput?.let { add(it) }
                                 add(output)
                             },
                         )
@@ -308,7 +300,6 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
                             hasThisFormal = false, // arguably this is the function, not an arg
                             requiredInputTypes = requiredInputs.map { MkType2(it.definition).get() },
                             optionalInputTypes = optionalInputs.map { MkType2(it.definition).get() },
-                            restInputsType = restInput?.let { MkType2(it.definition).get() },
                             typeFormals = emptyList(), // The type formals are on the interface
                         )
 
@@ -331,7 +322,6 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
                 for (v in t.valueFormals) {
                     add(v.type)
                 }
-                t.restValuesFormal?.let { add(hackMapOldStyleToNew(it)) }
                 val returnTypeNoBubbles = if (bubbly) {
                     MkType.or(t.returnType.members.filter { it !is BubbleType })
                 } else {
@@ -383,13 +373,11 @@ fun hackMapNewStyleToOld(t: Type2): StaticType {
 
         fnInterop != null -> {
             val returnIndex = t.bindings.lastIndex
-            val restIndex = if (fnInterop.hasRest) { returnIndex - 1 } else { null }
-            val lastRegularInputIndex = (restIndex ?: returnIndex) - 1
+            val lastRegularInputIndex = returnIndex - 1
             val nRequired = lastRegularInputIndex + 1 - fnInterop.nOptional
             val valueFormals = (0..lastRegularInputIndex).map { i ->
                 FunctionType.ValueFormal(null, hackMapNewStyleToOld(t.bindings[i]), isOptional = i >= nRequired)
             }
-            val restValuesFormal = restIndex?.let { hackMapNewStyleToOld(t.bindings[it]) }
             var returnType = hackMapNewStyleToOld(t.bindings[returnIndex])
             if (fnInterop.bubbly) {
                 returnType = MkType.or(returnType, BubbleType)
@@ -397,7 +385,6 @@ fun hackMapNewStyleToOld(t: Type2): StaticType {
             MkType.fnDetails(
                 typeFormals = fnInterop.formals,
                 valueFormals = valueFormals,
-                restValuesFormal = restValuesFormal,
                 returnType = returnType,
             )
         }
@@ -464,7 +451,6 @@ fun hackTryStaticTypeToSig(st: StaticType?): Signature2? {
         hasThisFormal = hasThisFormal,
         requiredInputTypes = required.toList(),
         optionalInputTypes = optional.toList(),
-        restInputsType = ft.restValuesFormal?.let { hackMapOldStyleToNew(it) },
         typeFormals = ft.typeFormals,
     )
 }
@@ -483,5 +469,4 @@ val invalidSig = Signature2(
     returnType2 = WellKnownTypes.invalidType2,
     hasThisFormal = false,
     requiredInputTypes = listOf(),
-    restInputsType = WellKnownTypes.invalidType2,
 )

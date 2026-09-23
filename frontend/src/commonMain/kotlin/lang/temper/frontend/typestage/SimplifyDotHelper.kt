@@ -53,7 +53,6 @@ internal fun simplifyDotHelper(
             typeInferences.type in andType.members -> MkType.fnDetails(
                 typeFormals = variantFunctionType.typeFormals,
                 valueFormals = variantFunctionType.valueFormals,
-                restValuesFormal = variantFunctionType.restValuesFormal,
                 // Specialize the return type to the actually determined type.
                 returnType = typeInferences.type,
             )
@@ -185,7 +184,6 @@ private infix fun StaticType?.equivalent(other: StaticType?): Boolean =
         val tvf = this.valueFormals
         val ovf = other.valueFormals
         var same = this.returnType == other.returnType &&
-            this.restValuesFormal == other.restValuesFormal &&
             tvf.size == ovf.size &&
             this.typeFormals == other.typeFormals
         if (same) {

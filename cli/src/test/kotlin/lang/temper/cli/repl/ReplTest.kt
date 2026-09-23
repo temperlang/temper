@@ -595,25 +595,34 @@ class ReplTest {
 
     @Test
     fun describeConcreteSyntaxTree() {
-        repl.processLine("let f(a, ...rest) {}")
+        repl.processLine("let f(a: Int32, b: Int32): Void {}")
         pending.clear()
         describeState(0, Debug.Frontend.ParseStage.Before)
         assertPending(
             """
             |Describe interactive#0 @ frontend.parseStage.before
             |  {/*Curly*/
-            |    {/*Paren*/
-            |      ["let", "f"];
-            |      "(";
-            |      {/*Comma*/
-            |        ["a"];
-            |        ",";
-            |        {/*Ellipsis*/
-            |          "...";
-            |          ["rest"]
-            |        }
+            |    {/*HighColon*/
+            |      {/*Paren*/
+            |        ["let", "f"];
+            |        "(";
+            |        {/*Comma*/
+            |          {/*HighColon*/
+            |            ["a"];
+            |            ":";
+            |            ["Int32"]
+            |          };
+            |          ",";
+            |          {/*HighColon*/
+            |            ["b"];
+            |            ":";
+            |            ["Int32"]
+            |          }
+            |        };
+            |        ")"
             |      };
-            |      ")"
+            |      ":";
+            |      ["Void"]
             |    };
             |    "{";
             |    "}"

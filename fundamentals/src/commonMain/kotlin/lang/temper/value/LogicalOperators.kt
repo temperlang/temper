@@ -28,13 +28,11 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
     val oneBoolToBoolType = MkType.fn(
         emptyList(),
         listOf(booleanType),
-        null,
         booleanType,
     )
     val twoBoolsToBoolType = MkType.fn(
         emptyList(),
         listOf(booleanType, booleanType),
-        null,
         booleanType,
     )
 

@@ -16,6 +16,7 @@ import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.withTypeTestHarness
 import lang.temper.value.MacroValue
+import lang.temper.value.NAryFn
 import lang.temper.value.TBoolean
 import lang.temper.value.TInt
 import lang.temper.value.TList
@@ -127,13 +128,20 @@ class TypeSolverTest {
         val formal = TypeVar("ʼformal")
         val actualsVar = SimpleVar("ʼcallTypeActuals")
 
+        // Listify is variadic, so we need to customize it to the
+        // parameter list size
+        val listifyFn = BuiltinFuns.listifyFn as NAryFn
+        val listifySig1 = listifyFn.sigs[0].let { sig ->
+            sig.copy(requiredInputTypes = sig.requiredInputTypes + listOf(listifyFn.extraInputType))
+        }
+
         a assignableFrom callPass
         formal assignableFrom b
         b assignableFrom ValueBound(Value("", TString))
         regularCall {
             chosenCallee(callee)
 
-            callee(BuiltinFuns.listifyFn)
+            callee(listifySig1)
             typeActualsList(actualsVar)
 
             arg(b)
@@ -858,39 +866,6 @@ class TypeSolverTest {
     }
 
     @Test
-    fun zeroArgVariadicWithContext() = withTypeTestHarness {
-        runSolverTest {
-            val result = TypeVar("ʼr")
-            val pass = TypeVar("ʼp")
-            val fail = SimpleVar("ʼf")
-            val actuals = SimpleVar("ʼa")
-            val choice = SimpleVar("ʼc")
-
-            val elementDeclaredType = "MapKey"
-
-            result sameAs pass
-            type2("Listed<$elementDeclaredType>") assignableFrom pass
-            regularCall {
-                callee(sig("fn<T extends AnyValue>(...T): List<T>"))
-                result(pass, fail)
-                typeActualsList(actuals)
-                chosenCallee(choice)
-            }
-
-            solve()
-
-            assertSolutions(
-                mapOf(
-                    actuals to "[$elementDeclaredType]",
-                    pass to "List<$elementDeclaredType>",
-                    choice to "0",
-                    result to "List<$elementDeclaredType>",
-                ),
-            )
-        }
-    }
-
-    @Test
     fun functionalInterfaceApplication() = withTypeTestHarness {
         runSolverTest {
             val a = unusedTypeVar("a")
@@ -1321,7 +1296,7 @@ class TypeSolverTest {
     fun nullaryFnIntertwined() = withTypeTestHarness {
         runSolverTest {
             // Two calls.   One a nullary never call nested in a variadic any function.
-            val outerCallee = sig("fn(...AnyValue): Void")
+            val outerCallee = sig("fn(AnyValue): Void")
 
             // Two callees.  One with a void return type and one without.
             // Based on the context type alone, we filter out one callee.

@@ -18,13 +18,6 @@ fun typeFromSignature(signature: Signature2): FunctionType {
         )
         FunctionType.ValueFormal(symbol = it.symbol, staticType = type, isOptional = it.isOptional)
     }
-    val restValuesFormal = signature.restValuesFormal?.let {
-        val reifiedType = it.reifiedType
-        typeOr(
-            reifiedType,
-            fallback = WellKnownTypes.anyValueType,
-        )
-    }
     val returnType = typeOr(
         signature.returnType,
         fallback = TopType,
@@ -32,7 +25,6 @@ fun typeFromSignature(signature: Signature2): FunctionType {
     return MkType.fnDetails(
         typeFormals = signature.typeFormals,
         valueFormals = valueFormals,
-        restValuesFormal = restValuesFormal,
         returnType = returnType,
     )
 }
@@ -91,6 +83,5 @@ fun factorySignatureFromConstructorSignature(constructorSig: Signature2): Signat
         hasThisFormal = false, // We're intentionally leaving `this` off required below.
         requiredInputTypes = valueFormalsSansThis,
         optionalInputTypes = constructorSig.optionalInputTypes,
-        restInputsType = constructorSig.restInputsType,
     )
 }

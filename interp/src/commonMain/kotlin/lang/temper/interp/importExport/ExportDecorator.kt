@@ -55,7 +55,6 @@ object ExportDecorator : NamedBuiltinFun, BuiltinStatelessMacroValue {
                     ValueFormalKind.Required,
                 ),
             ),
-            restValuesFormal = null,
             returnType = Types.void,
         ),
     )

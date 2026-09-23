@@ -89,7 +89,6 @@ class AdaptGeneratorFn private constructor(
             MkType.fn(
                 typeFormals = listOf(),
                 valueFormals = listOf(),
-                restValuesFormal = null,
                 returnType = hackMapNewStyleToOld(
                     if (mayBubble) {
                         MkType2.result(generatorResultType, WellKnownTypes.bubbleType2).get()
@@ -166,7 +165,7 @@ fun isAdaptGeneratorFnCall(t: Tree) =
 
 /**
  * Given a function returns a callable that closes over the generator
- * and just invokes its next method ignoring the result.
+ * and just invokes its `next` method ignoring the result.
  *
  * This is just an implementation convenience used when interpreting
  * async calls and should not persist in the AST.
@@ -177,7 +176,7 @@ object GeneratorStepperFn : CallableValue, StaylessMacroValue {
     final override val sigs: List<Signature2> = listOf(
         makeGeneratorSig(NAME) { _, generatorType -> // Fn (Generator<YIELDED>): Fn (): Void
             Signature2(
-                returnType2 = hackMapOldStyleToNew(MkType.fn(emptyList(), emptyList(), null, WellKnownTypes.voidType)),
+                returnType2 = hackMapOldStyleToNew(MkType.fn(emptyList(), emptyList(), WellKnownTypes.voidType)),
                 hasThisFormal = false,
                 requiredInputTypes = listOf(generatorType),
             )

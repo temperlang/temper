@@ -264,8 +264,11 @@ abstract class RustInlineSupportCode(
 
     open fun argType(returnType: Type2): Type2? = null
 
-    open fun translateArg(actual: TmpL.Actual, wantedType: Type2? = null, translator: RustTranslator): Rust.Expr? =
-        null
+    open fun translateArg(
+        actual: TmpL.Expression,
+        wantedType: Type2? = null,
+        translator: RustTranslator,
+    ): Rust.Expr? = null
 }
 
 internal object AwakeUponSupportCode : RustInlineSupportCode(ConvertedCoroutineAwakeUponFn.name) {
@@ -560,7 +563,7 @@ private class CmpStrStr(
     builtinOperatorId: BuiltinOperatorId,
     operator: RustOperator,
 ) : Infix(baseName, builtinOperatorId, operator) {
-    override fun translateArg(actual: TmpL.Actual, wantedType: Type2?, translator: RustTranslator): Rust.Expr? {
+    override fun translateArg(actual: TmpL.Expression, wantedType: Type2?, translator: RustTranslator): Rust.Expr? {
         // Our options are making a separate helper function, or heap-allocating literals when present, or customizing
         // `&str` access here. The latter seems doable and more efficient than needless heap allocation.
         // Anyway, string literals are handled elsewhere.
@@ -568,9 +571,8 @@ private class CmpStrStr(
         actual is TmpL.ValueReference && return null
         // Anything else is presumably a wrapped string (when no frontend errors), so get the string out.
         // And propagate `wantedType` because it might be nullable.
-        val expr = (actual as? TmpL.Expression) ?: return null
-        val outExpr = translator.translateExpression(expr, avoidClone = true).methodCall("as_str")
-        return outExpr.maybeWrap(given = expr.passType, wanted = wantedType, translator = translator)
+        val outExpr = translator.translateExpression(actual, avoidClone = true).methodCall("as_str")
+        return outExpr.maybeWrap(given = actual.passType, wanted = wantedType, translator = translator)
     }
 }
 

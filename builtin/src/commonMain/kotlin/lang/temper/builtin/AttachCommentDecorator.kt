@@ -46,7 +46,7 @@ object AttachCommentDecorator : NamedBuiltinFun {
                 MacroValueFormal(
                     null,
                     TreeTypeStructureExpectation(
-                        // Declarations and functions accept directly metadata.
+                        // Declarations and functions accept metadata directly.
                         // Blocks can be complex arguments.
                         setOf(InnerTreeType.Block, InnerTreeType.Decl, InnerTreeType.Fun),
                     ),
@@ -59,7 +59,6 @@ object AttachCommentDecorator : NamedBuiltinFun {
                     kind = ValueFormalKind.Required,
                 ),
             ),
-            restValuesFormal = null,
         ),
     )
 
@@ -186,7 +185,7 @@ private val firstParagraphEndRegex = Regex(
  *
  * We apply the following rules:
  * 1. If there is a non-semilit paragraph, use that as the comment
- * 2. If all are semilit paragraph, do the following:
+ * 2. If all are semilit paragraphs, do the following:
  *   i. Look for a semilit paragraph that starts with the declaration's parsed name
  *      case-insensitively.
  *   ii. If found, concatenate the contents of that paragraph and all following separated
@@ -258,7 +257,7 @@ private fun combineRems(rems: List<RemUnpacked>): RemUnpacked {
 }
 
 /**
- * Markdown characters to ignore around a declared name.
+ * These are Markdown characters to ignore around a declared name.
  * These are often used for Markdown formatting,
  * for example, to set something apart as a foreign term or bold it.
  */

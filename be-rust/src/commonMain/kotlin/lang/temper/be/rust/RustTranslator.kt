@@ -22,7 +22,6 @@ import lang.temper.be.tmpl.orInvalid
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
 import lang.temper.be.tmpl.splitConstructorBody
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.ModuleNamingContext
@@ -62,7 +61,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
-import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
@@ -355,8 +353,6 @@ class RustTranslator(
         // TODO Share this exclusion logic with Java & Js.
         // If only `this` plus up to 1 more, don't bother with builder.
         fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return
-        // And for now, skip those with rest parameters. TODO Extract to list value?
-        fn.parameters.restParameter != null && return
         // Build the builder.
         // Here we make `WhateverBuilder` for requireds and/or `WhateverOptions` structs for optionals.
         // Alternatively, could make a Java-style builder, which is common in Rust, but it takes less advantage of
@@ -1534,7 +1530,7 @@ class RustTranslator(
     }
 
     private fun translateActual(
-        actual: TmpL.Actual,
+        actual: TmpL.Expression,
         avoidClone: Boolean = false,
         needFull: Boolean = false,
         wantedType: Type2? = null,
@@ -1554,7 +1550,7 @@ class RustTranslator(
 
             else -> false
         }
-        val type = (actual as TmpL.Expression).type // TODO Could crash on RestSpread
+        val type = actual.type
         val pos = actual.pos
         return when {
             !needFull && actual.supportCode() == Listify -> {
@@ -1756,32 +1752,16 @@ class RustTranslator(
             else -> null
         } ?: run {
             val callee = translateCallable(fn)
-            val rest = mutableListOf<Rust.Expr>()
             // Calls to trait methods and closures can't use conversion overloads.
             val limited = when (fn) {
                 // TODO How to check from here if the method is static? We could avoid `needFull` in such cases.
                 is TmpL.MethodReference -> fn.method?.enclosingType?.let { it.abstractness == Abstractness.Abstract }
                 else -> isClosure(callee)
             } ?: false
-            val allArgs = call.mapParameters(optionalAsNullable = true) { arg, wantedType, f ->
-                val isResty = f?.kind == ValueFormalKind.Rest
-                val needFull = isResty || limited || wantedType is TypeParamRef
+            val args = call.mapParameters(optionalAsNullable = true) { arg, wantedType, f ->
+                val needFull = limited || wantedType is TypeParamRef
                 val actual = translateActual(arg, needFull = needFull, wantedType = wantedType)
-                if (isResty) {
-                    rest.add(actual)
-                }
                 actual
-            }
-            val args = when (fn.type.restInputsType) {
-                null -> allArgs
-                else -> buildList {
-                    allArgs.subList(0, allArgs.size - rest.size).also { addAll(it) }
-                    Rust.MacroCall(
-                        call.pos,
-                        path = "vec!".toId(call.pos),
-                        args = Rust.Array(call.pos, values = rest),
-                    ).also { add(it) }
-                }
             }
             if (fn is TmpL.FunInterfaceCallable) {
                 Rust.Call(call.pos, callee = callee, args = args, needsParens = true)
@@ -1809,7 +1789,7 @@ class RustTranslator(
                     wantedType is NonNullType && wantedType.isFunctionType
                 }
                 supportCode.translateArg(arg, wantedType = wantedType, translator = this)?.let { custom ->
-                    return@mapParameters TypedArg(custom, arg.typeOrInvalid)
+                    return@mapParameters TypedArg(custom, arg.passType)
                 }
                 val adjustedArg = when {
                     wantUnstrung -> arg.stripToString()
@@ -1837,7 +1817,7 @@ class RustTranslator(
                     wantedType = actualWantedType,
                 )
                 // The type might be a lie if we stripped toString, but rust support codes cope.
-                TypedArg(actual, arg.typeOrInvalid)
+                TypedArg(actual, arg.passType)
             },
             returnType = call.contextualizedSig.returnType2,
             translator = this,
@@ -2143,8 +2123,6 @@ class RustTranslator(
             is TmpL.InfixOperation -> translateInfixOperation(expression)
             is TmpL.PrefixOperation -> translatePrefixOperation(expression)
             is TmpL.Reference -> translateReference(expression, avoidClone = avoidClone)
-            is TmpL.RestParameterCountExpression -> TODO()
-            is TmpL.RestParameterExpression -> TODO()
             is TmpL.This -> translateThis(expression, avoidClone = avoidClone)
             is TmpL.UncheckedNotNullExpression -> translateExpression(expression.expression).methodCall("unwrap")
             is TmpL.ValueReference -> translateValueReference(expression)
@@ -2799,21 +2777,6 @@ class RustTranslator(
                         },
                     )
                 }.also { add(it) }
-            }
-            parameters.restParameter?.let { rest ->
-                val restName = rest.name.name
-                val listStaticType = varTypes[restName] as? Type2 ?: WellKnownTypes.invalidType2
-                decls[restName] = DeclInfo(
-                    decl = rest,
-                    local = true,
-                    type = translateType(listStaticType, rest.pos),
-                    typeFrom = listStaticType,
-                )
-                Rust.FunctionParam(
-                    rest.pos,
-                    pattern = translateDeclNamePattern(rest),
-                    type = translateType(listStaticType, rest.pos, isFlex = true),
-                ).also { add(it) }
             }
         }
     }

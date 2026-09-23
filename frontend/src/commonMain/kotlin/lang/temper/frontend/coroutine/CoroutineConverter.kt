@@ -1595,7 +1595,6 @@ private val voidBubbleTypeInferences = CallTypeInferences(
     MkType.fn(
         listOf(),
         listOf(),
-        null,
         hackMapNewStyleToOld(
             MkType2(WKT.resultTypeDefinition)
                 .actuals(listOf(WKT.voidType2, WKT.booleanType2))

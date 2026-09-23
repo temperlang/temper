@@ -19,7 +19,6 @@ import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toTmpL
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutBubbleOrNull
 import lang.temper.common.Either
 import lang.temper.common.Either.Companion.partition
@@ -812,8 +811,6 @@ internal class JsTranslator(
             },
         )
         is TmpL.UncheckedNotNullExpression -> translateExpression(e.expression)
-        is TmpL.RestParameterExpression -> TODO("$e")
-        is TmpL.RestParameterCountExpression -> TODO("$e")
         is TmpL.GetProperty -> {
             val (subject, propertyId) = when (val subject = e.subject) {
                 is TmpL.Expression -> translateExpression(subject) to e.property
@@ -913,17 +910,11 @@ internal class JsTranslator(
         }
     }
 
-    private fun translateParameters(parameters: List<TmpL.Actual>) =
-        parameters.mapGeneric(::translateActual)
+    private fun translateParameters(parameters: List<TmpL.Expression>) =
+        parameters.mapGeneric(::translateExpression)
 
-    private fun translateParametersTyped(parameters: List<TmpL.Actual>) =
-        parameters.mapGeneric { TypedArg<Js.Tree>(translateActual(it), it.typeOrInvalid) }
-
-    private fun translateActual(actual: TmpL.Actual): Js.Actual = when (actual) {
-        is TmpL.Expression -> translateExpression(actual)
-        is TmpL.RestSpread ->
-            Js.SpreadElement(actual.pos, translateId(actual.parameterName))
-    }
+    private fun translateParametersTyped(parameters: List<TmpL.Expression>) =
+        parameters.mapGeneric { TypedArg<Js.Tree>(translateExpression(it), it.passType) }
 
     /**
      * An expression that can be used to refer to [id].
@@ -1044,8 +1035,6 @@ internal class JsTranslator(
         // TODO Unify any logic with JavaTranslator.classBuilder?
         // If only `this` plus up to 1 more, don't bother with builder. TODO Instead checked named/optional?
         fn.parameters.parameters.count { it.name != fn.parameters.thisName } <= 1 && return null
-        // And for now, skip those with rest parameters. TODO Extract to list value?
-        fn.parameters.restParameter != null && return null
         // Build the builder, starting with parameters.
         val pos = fn.pos
         val objectParamId = Js.Identifier(pos, JsIdentifierName("props"), null)
@@ -1593,14 +1582,6 @@ internal class JsTranslator(
                     (translateId(formal.name, useThisStack = true) as? Js.Identifier)?.let { identifier ->
                         Js.Param(formal.pos, identifier)
                     }
-                }
-                d.parameters.restParameter?.let { restFormal ->
-                    add(
-                        Js.Param(
-                            restFormal.pos,
-                            Js.RestElement(restFormal.pos, translateIdStrict(restFormal.name)),
-                        ),
-                    )
                 }
             }
             JsFnParts(

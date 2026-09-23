@@ -1365,8 +1365,7 @@ internal class CleanupTemporaries private constructor(
                 when (val parent = oneRoot.incoming?.source) {
                     is FunTree -> {
                         val parts = parent.parts
-                        inputParameters = (parts?.formals ?: emptyList()) +
-                            listOfNotNull(parts?.restFormal?.tree)
+                        inputParameters = (parts?.formals ?: emptyList())
                         returnDecl = parts?.returnDecl
                     }
                     null -> {

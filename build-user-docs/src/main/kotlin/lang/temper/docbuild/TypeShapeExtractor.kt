@@ -1040,12 +1040,10 @@ private fun typeToMarkdownOnto(
             var sawFormalInParens = false
             for (valueFormal in t.allValueFormals) {
                 if (sawFormalInParens) { onto.append(", ") }
-                val (before, after) = when (valueFormal.kind) {
-                    ValueFormalKind.Required -> null to null
-                    ValueFormalKind.Optional -> null to " \\= \\.\\.\\."
-                    ValueFormalKind.Rest -> "\\.\\.\\." to null
+                val after = when (valueFormal.kind) {
+                    ValueFormalKind.Required -> null
+                    ValueFormalKind.Optional -> " \\= \\.\\.\\."
                 }
-                before?.let { onto.append(it) }
                 typeToMarkdownOnto(valueFormal.type, containingTypeFor, onto)
                 after?.let { onto.append(it) }
                 sawFormalInParens = true

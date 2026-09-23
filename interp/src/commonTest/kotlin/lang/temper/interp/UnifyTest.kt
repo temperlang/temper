@@ -1,6 +1,5 @@
 package lang.temper.interp
 
-import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.assertStructure
@@ -15,13 +14,11 @@ import lang.temper.name.Symbol
 import lang.temper.stage.Readiness
 import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.withTypeTestHarness
 import lang.temper.type2.AnySignature
 import lang.temper.type2.MacroSignature
 import lang.temper.type2.MacroValueFormal
 import lang.temper.type2.Signature2
 import lang.temper.type2.ValueFormalKind
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.ActualValues
 import lang.temper.value.CallableValue
 import lang.temper.value.DynamicMessage
@@ -29,7 +26,6 @@ import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKey
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.Promises
-import lang.temper.value.ReifiedType
 import lang.temper.value.Resolutions
 import lang.temper.value.Result
 import lang.temper.value.StaySink
@@ -184,7 +180,6 @@ class UnifyTest {
                 requiredValueFormals = listOf(
                     MacroValueFormal(Symbol("b"), Types.int, ValueFormalKind.Required),
                 ),
-                restValuesFormal = null,
                 returnType = null,
                 typeFormals = emptyList(),
             ),
@@ -247,7 +242,6 @@ class UnifyTest {
                 interpMode = InterpMode.Full,
             ),
             MacroSignature(
-                restValuesFormal = null,
                 returnType = null,
                 requiredValueFormals = listOf(
                     MacroValueFormal(Symbol("a"), Types.int, ValueFormalKind.Required),
@@ -537,182 +531,6 @@ class UnifyTest {
                 returnType2 = Types.boolean.type2,
                 hasThisFormal = false,
                 requiredInputTypes = listOf(),
-            ),
-        )
-    }
-
-    @Test
-    fun restParameterBindsTo3() {
-        assertResolution(
-            """
-                |{
-                |  args: [
-                |    ["[0, 1, 2]: List"],
-                |  ],
-                |  resolutions: {
-                |    contradiction: false
-                |  }
-                |}
-            """.trimMargin(),
-            DynamicMessage(
-                valueActuals = ActualValues.from(
-                    listOf(
-                        Value(0, TInt),
-                        Value(1, TInt),
-                        Value(2, TInt),
-                    ),
-                ),
-                interpMode = InterpMode.Full,
-            ),
-            MacroSignature(
-                returnType = null,
-                requiredValueFormals = emptyList(),
-                restValuesFormal = MacroValueFormal(null, Types.int, ValueFormalKind.Rest),
-            ),
-        )
-    }
-
-    @Test
-    fun restParameterBindsTo2Of4() {
-        assertResolution(
-            """
-                |{
-                |  args: [
-                |    [ "0: Int32" ],
-                |    [ "1: Int32" ],
-                |    [ "[2, 3]: List" ],
-                |  ],
-                |  resolutions: {
-                |    contradiction: false
-                |  }
-                |}
-            """.trimMargin(),
-            DynamicMessage(
-                valueActuals = ActualValues.from(
-                    listOf(
-                        Value(0, TInt),
-                        Value(1, TInt),
-                        Value(2, TInt),
-                        Value(3, TInt),
-                    ),
-                ),
-                interpMode = InterpMode.Full,
-            ),
-            MacroSignature(
-                requiredValueFormals = listOf(
-                    MacroValueFormal(null, Types.int, kind = ValueFormalKind.Required),
-                    MacroValueFormal(null, Types.int, kind = ValueFormalKind.Required),
-                ),
-                restValuesFormal = MacroValueFormal(null, Types.int, ValueFormalKind.Rest),
-                returnType = null,
-            ),
-        )
-    }
-
-    @Test
-    fun restParameterTypeCanContradict() {
-        assertResolution(
-            """
-                |{
-                |  args: null,
-                |  resolutions: {
-                |    contradiction: true
-                |  },
-                |  problem: {
-                |    name: "TypeValueMismatch",
-                |    actualIndex: 1,
-                |    type: "Int32"
-                |  }
-                |}
-            """.trimMargin(),
-            DynamicMessage(
-                valueActuals = ActualValues.from(
-                    listOf(
-                        Value(0, TInt),
-                        Value("1", TString), // Does not match type
-                        Value(2, TInt),
-                    ),
-                ),
-                interpMode = InterpMode.Full,
-            ),
-            MacroSignature(
-                returnType = null,
-                requiredValueFormals = emptyList(),
-                restValuesFormal = MacroValueFormal(null, Types.int, ValueFormalKind.Rest),
-            ),
-        )
-    }
-
-    @Test
-    fun optionalParameterSupersedesRest() {
-        assertResolution(
-            """
-                |{
-                |  args: [
-                |    ["0: Int32"],
-                |    ["[1, 2]: List"],
-                |  ],
-                |  resolutions: {
-                |    contradiction: false
-                |  }
-                |}
-            """.trimMargin(),
-            DynamicMessage(
-                valueActuals = ActualValues.from(
-                    listOf(
-                        Value(0, TInt),
-                        Value(1, TInt),
-                        Value(2, TInt),
-                    ),
-                ),
-                interpMode = InterpMode.Full,
-            ),
-            MacroSignature(
-                returnType = null,
-                requiredValueFormals = listOf(),
-                optionalValueFormals = listOf(
-                    MacroValueFormal(null, Types.int, kind = ValueFormalKind.Optional),
-                ),
-                restValuesFormal = MacroValueFormal(null, Types.int, ValueFormalKind.Rest),
-            ),
-        )
-    }
-
-    @Test
-    fun trailingBlockNotMatchedByRest() = withTypeTestHarness {
-        // f(0, 1, 2) { x => print(x) }
-        val printFnType = ReifiedType(hackMapOldStyleToNew(type("fn (String): Void")))
-        assertResolution(
-            """
-                |{
-                |  args: [
-                |    ["0: Int32"],
-                |    ["print: Function"],
-                |    ["[1, 2]: List"],
-                |  ],
-                |  resolutions: {
-                |    contradiction: false
-                |  }
-                |}
-            """.trimMargin(),
-            DynamicMessage(
-                valueActuals = ActualValues.from(
-                    listOf(
-                        Value(0, TInt),
-                        Value(1, TInt),
-                        Value(2, TInt),
-                        BuiltinFuns.vPrint,
-                    ),
-                ),
-                interpMode = InterpMode.Full,
-            ),
-            MacroSignature(
-                requiredValueFormals = listOf(
-                    MacroValueFormal(null, Types.int, kind = ValueFormalKind.Required),
-                    MacroValueFormal(null, printFnType, kind = ValueFormalKind.Required),
-                ),
-                restValuesFormal = MacroValueFormal(null, Types.int, ValueFormalKind.Rest),
-                returnType = null,
             ),
         )
     }

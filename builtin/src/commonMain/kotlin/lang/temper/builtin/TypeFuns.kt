@@ -59,7 +59,6 @@ import lang.temper.value.isBuiltinName
 import lang.temper.value.mayDowncastToSymbol
 import lang.temper.value.optionalSymbol
 import lang.temper.value.outTypeSymbol
-import lang.temper.value.restFormalSymbol
 import lang.temper.value.sealedTypeSymbol
 import lang.temper.value.throwsBuiltinName
 import lang.temper.value.typeFormalSymbol
@@ -260,13 +259,10 @@ object TypeAngleFn : BuiltinFun(NameConstants.Angle, null), PureCallableValue {
 
     override fun mayReplaceCallWithArgs(args: ActualValues): Boolean {
         val n = args.size
-        if (n == 0) {
-            return false
-        }
         // If we're dealing with explicit type parameters to a generic function, preserve those
         // in the AST until the last Typer pass can eliminate them.
         // But allow inlining of type expressions.
-        return asReifiedType(args[0]) != null
+        return n > 0 && asReifiedType(args[0]) != null
     }
 }
 
@@ -323,7 +319,6 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
     ): PartialResult {
         val typeFormals = mutableListOf<TypeFormal>()
         val valueFormals = mutableListOf<FunctionType.ValueFormal>()
-        var restValuesFormal: StaticType? = null // TODO
         var returnType: StaticType? = null
         var problemIndex = -1
 
@@ -351,7 +346,6 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
 
                     var symbol: Symbol? = null
                     var isOptional = false
-                    var isResty = false
                     // Expect metadata following type like
                     // \word \nameOfArg \optional void \restFormal void
                     while (argIndexCounter < lastArgIndex) {
@@ -365,18 +359,11 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
                                 symbol = name
                             }
                             optionalSymbol -> isOptional = true
-                            restFormalSymbol -> isResty = true
                             else -> break
                         }
                         argIndexCounter += 1
                     }
-                    if (!isResty) {
-                        valueFormals.add(FunctionType.ValueFormal(symbol, type, isOptional))
-                    } else if (restValuesFormal == null) {
-                        restValuesFormal = type
-                    } else {
-                        problemIndex = argIndex
-                    }
+                    valueFormals.add(FunctionType.ValueFormal(symbol, type, isOptional))
                 }
                 outTypeSymbol -> {
                     if (type == null || returnType != null) {
@@ -397,7 +384,6 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
             val functionType = constructType(
                 typeFormals = typeFormals.toList(),
                 valueFormals = valueFormals.toList(),
-                restValuesFormal = restValuesFormal,
                 returnType = returnType,
             )
             Value(ReifiedType(hackMapOldStyleToNew(functionType)))
@@ -416,7 +402,6 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
     abstract fun constructType(
         typeFormals: List<TypeFormal>,
         valueFormals: List<FunctionType.ValueFormal>,
-        restValuesFormal: StaticType?,
         returnType: StaticType?,
     ): StaticType
 }
@@ -439,12 +424,10 @@ internal object FnTypeFn : AbstractFnTypeFn(FN_TYPE_NAME) {
     override fun constructType(
         typeFormals: List<TypeFormal>,
         valueFormals: List<FunctionType.ValueFormal>,
-        restValuesFormal: StaticType?,
         returnType: StaticType?,
     ): FunctionType = MkType.fnDetails(
         typeFormals = typeFormals,
         valueFormals = valueFormals,
-        restValuesFormal = restValuesFormal,
         returnType = returnType ?: Types.void.type,
     )
 }

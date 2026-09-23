@@ -92,9 +92,6 @@ fun suggestSamName(type: Signature2): String = buildString {
     for (param in type.valueFormalsExceptThis) {
         append(suggestSimpleTypeName(param.type))
     }
-    type.restInputsType ?. let { suggestSimpleTypeName(it) }?. let {
-        append(it)
-    }
     if (this.isEmpty()) {
         append(SIMPLE_NAME_NO_PARAMS)
     }
@@ -124,7 +121,6 @@ private fun suggestSimpleTypeName(type: Type2): String = withType(
 
 const val SIMPLE_NAME_FUNCTION = "Function"
 const val SIMPLE_NAME_ANY = "Any"
-const val SIMPLE_RETURN_MARKER = "To"
 const val SIMPLE_NAME_VOID_RETURN = "Procedure"
 const val SIMPLE_NAME_BOOLEAN_RETURN = "Predicate"
 const val SIMPLE_NAME_NO_PARAMS = "Nullary"
@@ -182,7 +178,6 @@ internal enum class JavaSimpleType(
             SimpleSignature(
                 returnType = getByAbbrev(sig.last()),
                 formals = sig.dropLast(1).map { getByAbbrev(it) },
-                varArg = null,
             )
         fun methodName(sig: String) = getByAbbrev(sig.last()).samMethodName
     }
@@ -192,7 +187,6 @@ internal enum class JavaSimpleType(
 internal data class SimpleSignature(
     val returnType: JavaSimpleType,
     val formals: List<JavaSimpleType>,
-    val varArg: JavaSimpleType?,
     val requiredCount: Int = formals.size,
 )
 
@@ -277,9 +271,6 @@ sealed interface JavaType : TargetLanguageTypeName {
                             isOptional = it.isOptional,
                         )
                     },
-                    restValuesFormal = t.valueFormals.rest?.let {
-                        hackMapNewStyleToOld(toFrontend(it.ot))
-                    },
                     returnType = hackMapNewStyleToOld(toFrontend(t.returnType.ot)),
                 ),
             )
@@ -337,9 +328,6 @@ sealed interface JavaType : TargetLanguageTypeName {
                             requiredValueFormals.add(toFrontend(vf.type.ot))
                         }
                     }
-                    val restValuesFormal: Type2? = type.valueFormals.rest?.let {
-                        toFrontend(it.ot)
-                    }
 
                     val sig = Signature2(
                         returnType2 = toFrontend(type.returnType.ot),
@@ -348,7 +336,6 @@ sealed interface JavaType : TargetLanguageTypeName {
                         } ?: false,
                         requiredInputTypes = requiredValueFormals,
                         optionalInputTypes = optionalValueFormals,
-                        restInputsType = restValuesFormal,
                         typeFormals = type.typeParameters.ot.typeParameters.map {
                             it.definition
                         },
@@ -370,7 +357,7 @@ sealed interface JavaType : TargetLanguageTypeName {
                     if (hasNull && principal != null) {
                         principal = principal.makeNullable()
                     }
-                    return principal ?: fromFrontend(WKT.invalidType2, names)
+                    principal ?: fromFrontend(WKT.invalidType2, names)
                 }
                 is TmpL.GarbageType -> fromFrontend(WKT.invalidType2, names)
                 is TmpL.NominalType -> fromFrontend(
@@ -399,9 +386,6 @@ sealed interface JavaType : TargetLanguageTypeName {
                             if (sam.sig.formals[idx] == JstObject) {
                                 this.add(JavaTypeArg.fromFormal(formal, names))
                             }
-                        }
-                        if (sam.sig.varArg == JstObject) {
-                            this.add(JavaTypeArg.fromStatic(funcType.restInputsType!!, names))
                         }
                         if (sam.sig.returnType == JstObject) {
                             this.add(JavaTypeArg.fromStatic(funcType.returnType2, names))
@@ -558,11 +542,6 @@ data class JavaTypeFormal(
     override fun toString(): String = name.toString()
 }
 
-object Wildcard : JavaTypeArg {
-    override fun toTypeArgAst(pos: Position): J.TypeArgument =
-        J.WildcardTypeArgument(pos)
-}
-
 data class BoundedWildcard(
     val dir: Dir,
     val bound: JavaType,
@@ -642,7 +621,6 @@ internal fun signature(func: Signature2): SimpleSignature {
                 simpleType(it.type)
             }
         },
-        varArg = func.restInputsType ?. let(::simpleType),
         requiredCount = valueFormals.countUntilMatch {
             it.kind == ValueFormalKind.Optional
         },

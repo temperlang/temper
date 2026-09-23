@@ -893,7 +893,6 @@ NameDeclaration =
     | Formal
     | Member
     | ModuleOrLocalDeclaration
-    | RestFormal
     | StaticMember
     | TypeFormal
     | VarLike
@@ -908,7 +907,6 @@ MaybeAssignable(name%Id, assignOnce%`Boolean`);
 VarLike =
       Formal
     | ModuleOrLocalDeclaration
-    | RestFormal
     ;
 VarLike(metadata%DeclarationMetadata*"", name%Id, assignOnce%`Boolean`, descriptor%`Type2!`);
 
@@ -924,15 +922,11 @@ Parameters ::=
        || ())
     & ((needCommaAfterThis==true => ",") || ())
     & parameters%Formal*", "
-    & ((needCommaAfterParameters==true => ",") || ())
-    & ((restParameter%RestFormal => restParameter) || ())
     & ")"
     ;
- // TODO: make these two private
+// TODO: make this private
 Parameters.needCommaAfterThis =
-    `thisName != null && (parameters.isNotEmpty() || restParameter != null)`;
-Parameters.needCommaAfterParameters =
-    `restParameter != null && parameters.isNotEmpty()`;
+    `thisName != null && parameters.isNotEmpty()`;
 Parameters.operatorDefinition = `TmpLOperatorDefinition.ParenGroup`;
 
 FunctionLike = FunctionDeclarationOrMethod | Test;
@@ -1098,10 +1092,6 @@ Formal(optionalState%`TriState`, descriptor%`Type2!`);
 Formal.assignOnce.default = `true`;
 Formal.optionalState.default = `TriState.FALSE`;
 Formal.optional%`Boolean` = `optionalState.elseTrue`;
-
-RestFormal ::= metadata*"" & "..." & name%Id & ":" & type%AType;
-RestFormal(descriptor%`Type2!`);
-RestFormal.assignOnce.default = `true`;
 
 Statement =
       ExpressionStatement
@@ -1358,8 +1348,6 @@ Expression =
     | UncheckedNotNullExpression
     | FunInterfaceExpression
     | GarbageExpression
-    | RestParameterExpression
-    | RestParameterCountExpression
     | GetProperty
     | AwaitExpression
     ;
@@ -1378,7 +1366,7 @@ Expression(
 CallExpression ::=
       fn%Callable
     & typeActuals%CallTypeActuals
-    & "(" & parameters%Actual*", " & ")"
+    & "(" & parameters%Expression*", " & ")"
     ;
 CallExpression.operatorDefinition = `TmpLOperatorDefinition.Paren`;
 CallExpression.contextualizedSig%`Signature2` = `contextualizeSig(fn, typeActuals.bindings)`;
@@ -1389,7 +1377,7 @@ CallExpression {
 constructor(
     pos: Position,
     fn: Callable,
-    parameters: Iterable<Actual>,
+    parameters: Iterable<Expression>,
 ) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters)
 `
 };
@@ -1427,11 +1415,6 @@ ImplicitCallTypeActuals {
   constructor(src: CallTypeActuals) : this(src.pos, src.types.deepCopy(), src.bindings)
   `
 };
-
-/**
- * An input to a [call][CallExpression].
- */
-Actual = Expression | RestSpread;
 
 Operation =
       InfixOperation
@@ -1618,29 +1601,6 @@ CastExpression.type = `
 UncheckedNotNullExpression ::= "notNull" & "(" & expression%Expression & ")";
 UncheckedNotNullExpression.type = `passType`;
 
-/**
- * A reference to a specific position within a rest argument list
- * In the body of
- *
- *     let f(...rest) {
- *         return rest[2];
- *     };
- *
- * The `...rest` is the rest formal definition and `rest[2]` is a rest
- * parameter expression that refers to index 2 of it.
- */
-RestParameterExpression ::= parameterName%Id & "[" & index%ConstIndex & "]";
-RestParameterExpression.operatorDefinition = `TmpLOperatorDefinition.Square`;
-RestParameterExpression.type = `passType`;
-
-RestParameterCountExpression ::= parameterName%Id & "." & "length";
-RestParameterCountExpression.operatorDefinition = `TmpLOperatorDefinition.Dot`;
-RestParameterCountExpression.passType = `WellKnownTypes.intType2`;
-RestParameterCountExpression.type = `WellKnownTypes.intType2`;
-
-RestSpread ::= "..." & parameterName%Id;
-RestSpread.operatorDefinition = `TmpLOperatorDefinition.Ellipsis`;
-
 ConstIndex(index%`Int`);
 ConstIndex.renderTo = `
 tokenSink.emit(OutputToken("$index", OutputTokenType.NumericValue))
@@ -1805,13 +1765,7 @@ FunctionType ::=
 FunctionType.operatorDefinition = `TmpLOperatorDefinition.Colon`;
 
 /** Describes the types and other requirements for inputs to a function type. */
-ValueFormalList ::=
-      "(" & (
-          (formals => formals%ValueFormal+"," & ((rest%AType => "," & "..." & rest) || ()))
-          || ((rest => "..." & rest) || ())
-          )
-    & ")"
-    ;
+ValueFormalList ::= "(" & formals%ValueFormal*"," & ")";
 ValueFormalList.operatorDefinition = `TmpLOperatorDefinition.ParenGroup`;
 ValueFormal ::=
     ((isOptional == true => (name%OriginalName || "_") & "?" & ":") || ())

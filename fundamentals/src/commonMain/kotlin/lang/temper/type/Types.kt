@@ -381,11 +381,6 @@ class FunctionType private constructor(
     /** Input types.  Never types and [BubbleType] make little sense here. */
     val valueFormals: List<ValueFormal>,
     /**
-     * If the function typed accepts value arguments besides those in [valueFormals] the type of
-     * those additional arguments.
-     */
-    val restValuesFormal: StaticType?,
-    /**
      * The type of result returned.
      * Never types make sense here for functions whose calls cannot complete.
      * [BubbleType] makes sense here by itself or in a union for functions whose calls
@@ -418,16 +413,6 @@ class FunctionType private constructor(
         if (aValueFormals.size != bValueFormals.size) { return false }
 
         return bnr.compute(TypeActualEquals, this to other, true) {
-            val aRestValuesFormal = this.restValuesFormal
-            val bRestValuesFormal = other.restValuesFormal
-            if (aRestValuesFormal != null) {
-                if (bRestValuesFormal == null) { return@compute false }
-                if (!aRestValuesFormal.equals(bRestValuesFormal, bnr)) {
-                    return@compute false
-                }
-            } else if (bRestValuesFormal != null) {
-                return@compute false
-            }
             val aReturnType = returnType
             val bReturnType = other.returnType
             if (!aReturnType.equals(bReturnType, bnr)) {
@@ -459,10 +444,6 @@ class FunctionType private constructor(
         for (vf in valueFormals) {
             hc = hc * 31 + vf.hashCode(bnr)
         }
-        hc *= 31
-        if (restValuesFormal != null) {
-            hc += restValuesFormal.hashCode(bnr)
-        }
         hc = hc * 31 + returnType.hashCode(bnr)
         hc
     }
@@ -471,7 +452,6 @@ class FunctionType private constructor(
         s.whenUnvisited(this) {
             typeFormals.forEach { it.addStays(s) }
             valueFormals.forEach { it.staticType.addStays(s) }
-            restValuesFormal?.addStays(s)
             returnType.addStays(s)
         }
     }
@@ -487,13 +467,6 @@ class FunctionType private constructor(
                 key("valueFormals") {
                     arr {
                         valueFormals.forEach { it.destructure(this, bnr) }
-                    }
-                }
-                key("restValuesFormal", isDefault = restValuesFormal == null) {
-                    if (restValuesFormal != null) {
-                        restValuesFormal.destructure(this, bnr)
-                    } else {
-                        nil()
                     }
                 }
                 key("returnType") {
@@ -526,20 +499,13 @@ class FunctionType private constructor(
             }
 
             // Render value formals inside (...)
-            if (valueFormals.isNotEmpty() || restValuesFormal != null) {
+            if (valueFormals.isNotEmpty()) {
                 tokenSink.emit(OutToks.leftParen)
                 valueFormals.forEachIndexed { i, el ->
                     if (i != 0) {
                         tokenSink.emit(OutToks.comma)
                     }
                     el.renderTo(tokenSink, bnr)
-                }
-                if (restValuesFormal != null) {
-                    if (valueFormals.isNotEmpty()) {
-                        tokenSink.emit(OutToks.comma)
-                    }
-                    tokenSink.emit(OutToks.ellipses)
-                    restValuesFormal.renderTo(tokenSink, bnr)
                 }
                 tokenSink.emit(OutToks.rightParen)
             }
@@ -572,12 +538,10 @@ class FunctionType private constructor(
         internal fun makeInternalOnly(
             typeFormals: List<TypeFormal>,
             valueFormals: List<ValueFormal>,
-            restValuesFormal: StaticType?,
             returnType: StaticType,
         ): FunctionType = FunctionType(
             typeFormals = typeFormals,
             valueFormals = valueFormals,
-            restValuesFormal = restValuesFormal,
             returnType = returnType,
         )
     }
@@ -833,20 +797,17 @@ object MkType {
     fun fnDetails(
         typeFormals: List<TypeFormal>,
         valueFormals: List<FunctionType.ValueFormal>,
-        restValuesFormal: StaticType?,
         returnType: StaticType,
-    ): FunctionType = FunctionType.makeInternalOnly(typeFormals, valueFormals, restValuesFormal, returnType)
+    ): FunctionType = FunctionType.makeInternalOnly(typeFormals, valueFormals, returnType)
     fun fn(
         typeFormals: List<TypeFormal>,
         valueFormals: List<StaticType>,
-        restValuesFormal: StaticType?,
         returnType: StaticType,
     ) = fnDetails(
         typeFormals = typeFormals,
         valueFormals = valueFormals.map {
             FunctionType.ValueFormal(symbol = null, staticType = it, isOptional = false)
         },
-        restValuesFormal = restValuesFormal,
         returnType = returnType,
     )
     private val nominalTypeNull = lazy { nominal(WellKnownTypes.nullTypeDefinition) }
@@ -874,7 +835,6 @@ object MkType {
                     // Remove replaced function type formals to avoid confusion.
                     typeFormals = result.typeFormals - bindings.keys,
                     valueFormals = result.valueFormals,
-                    restValuesFormal = result.restValuesFormal,
                     returnType = result.returnType,
                 )
                 else -> result
@@ -898,7 +858,6 @@ object MkType {
                 valueFormals = t.valueFormals.map { valueFormal ->
                     valueFormal.copy(staticType = map(valueFormal.staticType, m))
                 },
-                restValuesFormal = t.restValuesFormal?.let { map(it, m) },
                 returnType = map(t.returnType, m),
             )
             is OrType -> or(t.members.map { map(it, m) })
@@ -925,8 +884,7 @@ val StaticType.mentionsInvalid: Boolean get() = when (this) {
     BubbleType -> false
     is NominalType -> bindings.any { it is StaticType && it.mentionsInvalid }
     is FunctionType ->
-        returnType.mentionsInvalid || valueFormals.any { it.staticType.mentionsInvalid } ||
-            restValuesFormal?.mentionsInvalid == true
+        returnType.mentionsInvalid || valueFormals.any { it.staticType.mentionsInvalid }
     InvalidType -> true
     is OrType -> members.any { it.mentionsInvalid }
     is AndType -> members.any { it.mentionsInvalid }

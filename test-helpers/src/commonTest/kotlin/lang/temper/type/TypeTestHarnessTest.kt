@@ -83,7 +83,6 @@ class TypeTestHarnessTest {
             MkType.fn(
                 emptyList(),
                 listOf(WellKnownTypes.anyValueType),
-                null,
                 WellKnownTypes.stringType,
             ),
             type("fn (AnyValue): String"),
@@ -95,18 +94,13 @@ class TypeTestHarnessTest {
                     TopType,
                     MkType.nominal(WellKnownTypes.anyValueTypeDefinition),
                 ),
-                null,
                 MkType.nominal(WellKnownTypes.voidTypeDefinition),
             ),
             type("fn (Top, AnyValue): Void"),
         )
         assertStringsEqual(
             "fn<IN__0, OUT__1>(IN__0): OUT__1",
-            type("fn<IN, OUT>(IN): OUT").toString(),
-        )
-        assertStringsEqual(
-            "fn (Int32, ...Int32): Int32",
-            type("fn (Int, ...Int): Int").toString(),
+            "${type("fn<IN, OUT>(IN): OUT")}",
         )
     }
 
@@ -119,7 +113,6 @@ class TypeTestHarnessTest {
                     FunctionType.ValueFormal(Symbol("x"), WellKnownTypes.booleanType),
                     FunctionType.ValueFormal(null, WellKnownTypes.stringType, isOptional = true),
                 ),
-                restValuesFormal = null,
                 returnType = WellKnownTypes.intType,
             ),
             type("fn (x: Boolean, _? : String): Int"),
@@ -186,7 +179,7 @@ class TypeTestHarnessTest {
 
         val method = defn.methods.soleMatchingOrNull { it.methodKind == MethodKind.Normal }
         assertNotNull(method)
-        assertEquals(method.name.toSymbol()?.text, "apply")
+        assertEquals("apply", method.name.toSymbol()?.text)
         assertEquals("(T__1) -> Boolean", method.descriptor?.toString())
     }
 

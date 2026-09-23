@@ -546,13 +546,6 @@ object TmpL {
     }
 
     /**
-     * An input to a [call][CallExpression].
-     */
-    sealed interface Actual : Tree {
-        override fun deepCopy(): Actual
-    }
-
-    /**
      * A subject may have properties and methods.
      *
      * This is either an expression, for [InstanceProperty] and [InstanceMethod]s,
@@ -562,7 +555,7 @@ object TmpL {
         override fun deepCopy(): Subject
     }
 
-    sealed interface Expression : Tree, ExpressionOrCallable, Actual, Subject {
+    sealed interface Expression : Tree, ExpressionOrCallable, Subject {
         val passType: Type2
         val type: Type2
         override fun deepCopy(): Expression
@@ -4548,73 +4541,6 @@ object TmpL {
         override fun deepCopy(): Member
     }
 
-    class RestFormal(
-        pos: Position,
-        metadata: Iterable<DeclarationMetadata>,
-        name: Id,
-        type: AType,
-        override var descriptor: Type2,
-        override var assignOnce: Boolean = true,
-    ) : BaseTree(pos), NameDeclaration, VarLike {
-        override val operatorDefinition: TmpLOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate113
-        override val formatElementCount
-            get() = 3
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> FormattableTreeGroup(this.metadata)
-                1 -> this.name
-                2 -> this.type
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private val _metadata: MutableList<DeclarationMetadata> = mutableListOf()
-        override var metadata: List<DeclarationMetadata>
-            get() = _metadata
-            set(newValue) { _metadata.replaceSubList(0, _metadata.size, newValue) }
-        private var _name: Id
-        override var name: Id
-            get() = _name
-            set(newValue) { _name = updateTreeConnection(_name, newValue) }
-        private var _type: AType
-        var type: AType
-            get() = _type
-            set(newValue) { _type = updateTreeConnection(_type, newValue) }
-        override fun deepCopy(): RestFormal {
-            return RestFormal(pos, metadata = this.metadata, name = this.name.deepCopy(), type = this.type.deepCopy(), descriptor = this.descriptor, assignOnce = this.assignOnce)
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is RestFormal && this.metadata == other.metadata && this.name == other.name && this.type == other.type && this.descriptor == other.descriptor && this.assignOnce == other.assignOnce
-        }
-        override fun hashCode(): Int {
-            var hc = metadata.hashCode()
-            hc = 31 * hc + name.hashCode()
-            hc = 31 * hc + type.hashCode()
-            hc = 31 * hc + descriptor.hashCode()
-            hc = 31 * hc + assignOnce.hashCode()
-            return hc
-        }
-        init {
-            this._metadata.addAll(metadata)
-            this._name = updateTreeConnection(null, name)
-            this._type = updateTreeConnection(null, type)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as RestFormal).name },
-                { n -> (n as RestFormal).type },
-            )
-        }
-    }
-
     /**
      * Something that can be accessed via a dot operator.
      * Any method except constructors which are accessed, indirectly via `new`.
@@ -4636,13 +4562,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (assignOnce && sameDotName) {
-                    sharedCodeFormattingTemplate114
+                    sharedCodeFormattingTemplate113
                 } else if (assignOnce) {
-                    sharedCodeFormattingTemplate115
+                    sharedCodeFormattingTemplate114
                 } else if (sameDotName) {
-                    sharedCodeFormattingTemplate116
+                    sharedCodeFormattingTemplate115
                 } else {
-                    sharedCodeFormattingTemplate117
+                    sharedCodeFormattingTemplate116
                 }
         override val formatElementCount
             get() = 4
@@ -4676,54 +4602,28 @@ object TmpL {
         pos: Position,
         thisName: Id?,
         parameters: Iterable<Formal>,
-        restParameter: RestFormal?,
     ) : BaseTree(pos) {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.ParenGroup
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
-                if (thisName != null && needCommaAfterThis && needCommaAfterParameters && restParameter != null) {
-                    sharedCodeFormattingTemplate118
-                } else if (thisName != null && needCommaAfterThis && needCommaAfterParameters) {
-                    sharedCodeFormattingTemplate119
-                } else if (thisName != null && needCommaAfterThis && restParameter != null) {
-                    sharedCodeFormattingTemplate120
-                } else if (thisName != null && needCommaAfterThis) {
-                    sharedCodeFormattingTemplate121
-                } else if (thisName != null && needCommaAfterParameters && restParameter != null) {
-                    sharedCodeFormattingTemplate122
-                } else if (thisName != null && needCommaAfterParameters) {
-                    sharedCodeFormattingTemplate123
-                } else if (thisName != null && restParameter != null) {
-                    sharedCodeFormattingTemplate124
+                if (thisName != null && needCommaAfterThis) {
+                    sharedCodeFormattingTemplate117
                 } else if (thisName != null) {
-                    sharedCodeFormattingTemplate125
-                } else if (needCommaAfterThis && needCommaAfterParameters && restParameter != null) {
-                    sharedCodeFormattingTemplate126
-                } else if (needCommaAfterThis && needCommaAfterParameters) {
-                    sharedCodeFormattingTemplate127
-                } else if (needCommaAfterThis && restParameter != null) {
-                    sharedCodeFormattingTemplate128
+                    sharedCodeFormattingTemplate118
                 } else if (needCommaAfterThis) {
-                    sharedCodeFormattingTemplate129
-                } else if (needCommaAfterParameters && restParameter != null) {
-                    sharedCodeFormattingTemplate130
-                } else if (needCommaAfterParameters) {
-                    sharedCodeFormattingTemplate131
-                } else if (restParameter != null) {
-                    sharedCodeFormattingTemplate132
+                    sharedCodeFormattingTemplate119
                 } else {
-                    sharedCodeFormattingTemplate133
+                    sharedCodeFormattingTemplate120
                 }
         override val formatElementCount
-            get() = 3
+            get() = 2
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
                 0 -> this.thisName ?: FormattableTreeGroup.empty
                 1 -> FormattableTreeGroup(this.parameters)
-                2 -> this.restParameter ?: FormattableTreeGroup.empty
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -4735,40 +4635,31 @@ object TmpL {
         var parameters: List<Formal>
             get() = _parameters
             set(newValue) { updateTreeConnections(_parameters, newValue) }
-        private var _restParameter: RestFormal?
-        var restParameter: RestFormal?
-            get() = _restParameter
-            set(newValue) { _restParameter = updateTreeConnection(_restParameter, newValue) }
         val needCommaAfterThis: Boolean
-            get() = thisName != null && (parameters.isNotEmpty() || restParameter != null)
-        val needCommaAfterParameters: Boolean
-            get() = restParameter != null && parameters.isNotEmpty()
+            get() = thisName != null && parameters.isNotEmpty()
         override fun deepCopy(): Parameters {
-            return Parameters(pos, thisName = this.thisName?.deepCopy(), parameters = this.parameters.deepCopy(), restParameter = this.restParameter?.deepCopy())
+            return Parameters(pos, thisName = this.thisName?.deepCopy(), parameters = this.parameters.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is Parameters && this.thisName == other.thisName && this.parameters == other.parameters && this.restParameter == other.restParameter
+            return other is Parameters && this.thisName == other.thisName && this.parameters == other.parameters
         }
         override fun hashCode(): Int {
             var hc = thisName.hashCode()
             hc = 31 * hc + parameters.hashCode()
-            hc = 31 * hc + restParameter.hashCode()
             return hc
         }
         init {
             this._thisName = updateTreeConnection(null, thisName)
             updateTreeConnections(this._parameters, parameters)
-            this._restParameter = updateTreeConnection(null, restParameter)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
                 { n -> (n as Parameters).thisName },
                 { n -> (n as Parameters).parameters },
-                { n -> (n as Parameters).restParameter },
             )
         }
     }
@@ -4786,7 +4677,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate134
+            get() = sharedCodeFormattingTemplate121
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -4936,7 +4827,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate135
+            get() = sharedCodeFormattingTemplate122
         override val formatElementCount
             get() = 0
         override fun deepCopy(): YieldStatement {
@@ -4969,7 +4860,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate136
+            get() = sharedCodeFormattingTemplate123
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -5122,7 +5013,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate137
+            get() = sharedCodeFormattingTemplate124
         override val formatElementCount
             get() = 6
         override fun formatElement(
@@ -5289,7 +5180,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate138
+            get() = sharedCodeFormattingTemplate125
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -5337,7 +5228,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Eq
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate139
+            get() = sharedCodeFormattingTemplate126
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5399,9 +5290,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (label != null) {
-                    sharedCodeFormattingTemplate140
+                    sharedCodeFormattingTemplate127
                 } else {
-                    sharedCodeFormattingTemplate141
+                    sharedCodeFormattingTemplate128
                 }
         override val formatElementCount
             get() = 1
@@ -5449,9 +5340,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (label != null) {
-                    sharedCodeFormattingTemplate142
+                    sharedCodeFormattingTemplate129
                 } else {
-                    sharedCodeFormattingTemplate143
+                    sharedCodeFormattingTemplate130
                 }
         override val formatElementCount
             get() = 1
@@ -5500,7 +5391,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate144
+            get() = sharedCodeFormattingTemplate131
         override val formatElementCount
             get() = 0
         override fun deepCopy(): ModuleInitFailed {
@@ -5530,9 +5421,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expression != null) {
-                    sharedCodeFormattingTemplate145
+                    sharedCodeFormattingTemplate132
                 } else {
-                    sharedCodeFormattingTemplate146
+                    sharedCodeFormattingTemplate133
                 }
         override val formatElementCount
             get() = 1
@@ -5578,7 +5469,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Eq
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate139
+            get() = sharedCodeFormattingTemplate126
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5613,7 +5504,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate147
+            get() = sharedCodeFormattingTemplate134
         override val formatElementCount
             get() = 0
         override fun deepCopy(): ThrowStatement {
@@ -5653,7 +5544,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate148
+            get() = sharedCodeFormattingTemplate135
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -5725,11 +5616,11 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (isElseIf) {
-                    sharedCodeFormattingTemplate149
+                    sharedCodeFormattingTemplate136
                 } else if (hasElse) {
-                    sharedCodeFormattingTemplate150
+                    sharedCodeFormattingTemplate137
                 } else {
-                    sharedCodeFormattingTemplate151
+                    sharedCodeFormattingTemplate138
                 }
         override val formatElementCount
             get() = 3
@@ -5801,7 +5692,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate152
+            get() = sharedCodeFormattingTemplate139
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5864,7 +5755,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate153
+            get() = sharedCodeFormattingTemplate140
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5921,7 +5812,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate154
+            get() = sharedCodeFormattingTemplate141
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -6025,7 +5916,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate155
+            get() = sharedCodeFormattingTemplate142
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -6079,7 +5970,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate156
+            get() = sharedCodeFormattingTemplate143
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -6295,7 +6186,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate157
+            get() = sharedCodeFormattingTemplate144
         override val formatElementCount
             get() = 0
         override val passType: Type2
@@ -6362,7 +6253,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate158
+            get() = sharedCodeFormattingTemplate145
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -6409,12 +6300,12 @@ object TmpL {
         pos: Position,
         fn: Callable,
         typeActuals: CallTypeActuals,
-        parameters: Iterable<Actual>,
+        parameters: Iterable<Expression>,
     ) : BaseTree(pos), Expression {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Paren
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate159
+            get() = sharedCodeFormattingTemplate146
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -6435,8 +6326,8 @@ object TmpL {
         var typeActuals: CallTypeActuals
             get() = _typeActuals
             set(newValue) { _typeActuals = updateTreeConnection(_typeActuals, newValue) }
-        private val _parameters: MutableList<Actual> = mutableListOf()
-        var parameters: List<Actual>
+        private val _parameters: MutableList<Expression> = mutableListOf()
+        var parameters: List<Expression>
             get() = _parameters
             set(newValue) { updateTreeConnections(_parameters, newValue) }
         override val passType: Type2
@@ -6476,7 +6367,7 @@ object TmpL {
         constructor(
             pos: Position,
             fn: Callable,
-            parameters: Iterable<Actual>,
+            parameters: Iterable<Expression>,
         ) : this(pos, fn, CallTypeActuals.empty(fn.pos.rightEdge), parameters)
     }
 
@@ -6507,7 +6398,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate160
+            get() = sharedCodeFormattingTemplate147
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -6558,7 +6449,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.As
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate161
+            get() = sharedCodeFormattingTemplate148
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -6601,130 +6492,11 @@ object TmpL {
         }
     }
 
-    /**
-     * A reference to a specific position within a rest argument list
-     * In the body of
-     *
-     *     let f(...rest) {
-     *         return rest[2];
-     *     };
-     *
-     * The `...rest` is the rest formal definition and `rest[2]` is a rest
-     * parameter expression that refers to index 2 of it.
-     */
-    class RestParameterExpression(
-        pos: Position,
-        parameterName: Id,
-        index: ConstIndex,
-        override var passType: Type2,
-    ) : BaseTree(pos), Expression {
-        override val operatorDefinition
-            get() = TmpLOperatorDefinition.Square
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate162
-        override val formatElementCount
-            get() = 2
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.parameterName
-                1 -> this.index
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _parameterName: Id
-        var parameterName: Id
-            get() = _parameterName
-            set(newValue) { _parameterName = updateTreeConnection(_parameterName, newValue) }
-        private var _index: ConstIndex
-        var index: ConstIndex
-            get() = _index
-            set(newValue) { _index = updateTreeConnection(_index, newValue) }
-        override val type: Type2
-            get() = passType
-        override fun deepCopy(): RestParameterExpression {
-            return RestParameterExpression(pos, parameterName = this.parameterName.deepCopy(), index = this.index.deepCopy(), passType = this.passType)
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is RestParameterExpression && this.parameterName == other.parameterName && this.index == other.index && this.passType == other.passType
-        }
-        override fun hashCode(): Int {
-            var hc = parameterName.hashCode()
-            hc = 31 * hc + index.hashCode()
-            hc = 31 * hc + passType.hashCode()
-            return hc
-        }
-        init {
-            this._parameterName = updateTreeConnection(null, parameterName)
-            this._index = updateTreeConnection(null, index)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as RestParameterExpression).parameterName },
-                { n -> (n as RestParameterExpression).index },
-            )
-        }
-    }
-
-    class RestParameterCountExpression(
-        pos: Position,
-        parameterName: Id,
-    ) : BaseTree(pos), Expression {
-        override val operatorDefinition
-            get() = TmpLOperatorDefinition.Dot
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate163
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.parameterName
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _parameterName: Id
-        var parameterName: Id
-            get() = _parameterName
-            set(newValue) { _parameterName = updateTreeConnection(_parameterName, newValue) }
-        override val passType: Type2
-            get() = WellKnownTypes.intType2
-        override val type: Type2
-            get() = WellKnownTypes.intType2
-        override fun deepCopy(): RestParameterCountExpression {
-            return RestParameterCountExpression(pos, parameterName = this.parameterName.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is RestParameterCountExpression && this.parameterName == other.parameterName
-        }
-        override fun hashCode(): Int {
-            return parameterName.hashCode()
-        }
-        init {
-            this._parameterName = updateTreeConnection(null, parameterName)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as RestParameterCountExpression).parameterName },
-            )
-        }
-    }
-
     sealed interface PropertyReference : Tree {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Dot
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate164
+            get() = sharedCodeFormattingTemplate149
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -6871,51 +6643,6 @@ object TmpL {
         }
     }
 
-    class RestSpread(
-        pos: Position,
-        parameterName: Id,
-    ) : BaseTree(pos), Actual {
-        override val operatorDefinition
-            get() = TmpLOperatorDefinition.Ellipsis
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate165
-        override val formatElementCount
-            get() = 1
-        override fun formatElement(
-            index: Int,
-        ): IndexableFormattableTreeElement {
-            return when (index) {
-                0 -> this.parameterName
-                else -> throw IndexOutOfBoundsException("$index")
-            }
-        }
-        private var _parameterName: Id
-        var parameterName: Id
-            get() = _parameterName
-            set(newValue) { _parameterName = updateTreeConnection(_parameterName, newValue) }
-        override fun deepCopy(): RestSpread {
-            return RestSpread(pos, parameterName = this.parameterName.deepCopy())
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is RestSpread && this.parameterName == other.parameterName
-        }
-        override fun hashCode(): Int {
-            return parameterName.hashCode()
-        }
-        init {
-            this._parameterName = updateTreeConnection(null, parameterName)
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships(
-                { n -> (n as RestSpread).parameterName },
-            )
-        }
-    }
-
     class InfixOperation(
         pos: Position,
         left: Expression,
@@ -6923,7 +6650,7 @@ object TmpL {
         right: Expression,
     ) : BaseTree(pos), Operation {
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate166
+            get() = sharedCodeFormattingTemplate150
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -6984,7 +6711,7 @@ object TmpL {
         operand: Expression,
     ) : BaseTree(pos), Operation {
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate167
+            get() = sharedCodeFormattingTemplate151
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -7091,7 +6818,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.As
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate168
+            get() = sharedCodeFormattingTemplate152
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -7146,7 +6873,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Dot
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate164
+            get() = sharedCodeFormattingTemplate149
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -7206,7 +6933,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate169
+            get() = sharedCodeFormattingTemplate153
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7270,7 +6997,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate170
+            get() = sharedCodeFormattingTemplate154
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7375,7 +7102,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Instanceof
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate171
+            get() = sharedCodeFormattingTemplate155
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -7440,9 +7167,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (canFail) {
-                    sharedCodeFormattingTemplate172
+                    sharedCodeFormattingTemplate156
                 } else {
-                    sharedCodeFormattingTemplate173
+                    sharedCodeFormattingTemplate157
                 }
         override val formatElementCount
             get() = 2
@@ -7811,7 +7538,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Colon
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate174
+            get() = sharedCodeFormattingTemplate158
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -7873,7 +7600,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Bar
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate175
+            get() = sharedCodeFormattingTemplate159
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7918,7 +7645,7 @@ object TmpL {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.Amp
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate176
+            get() = sharedCodeFormattingTemplate160
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7962,7 +7689,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate177
+            get() = sharedCodeFormattingTemplate161
         override val formatElementCount
             get() = 0
         override fun deepCopy(): TopType {
@@ -7989,7 +7716,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate178
+            get() = sharedCodeFormattingTemplate162
         override val formatElementCount
             get() = 0
         override fun deepCopy(): BubbleType {
@@ -8016,7 +7743,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate179
+            get() = sharedCodeFormattingTemplate163
         override val formatElementCount
             get() = 0
         override fun deepCopy(): NeverType {
@@ -8130,29 +7857,18 @@ object TmpL {
     class ValueFormalList(
         pos: Position,
         formals: Iterable<ValueFormal>,
-        rest: AType?,
     ) : BaseTree(pos) {
         override val operatorDefinition
             get() = TmpLOperatorDefinition.ParenGroup
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() =
-                if (formals.isNotEmpty() && rest != null) {
-                    sharedCodeFormattingTemplate180
-                } else if (formals.isNotEmpty()) {
-                    sharedCodeFormattingTemplate65
-                } else if (rest != null) {
-                    sharedCodeFormattingTemplate181
-                } else {
-                    sharedCodeFormattingTemplate182
-                }
+            get() = sharedCodeFormattingTemplate65
         override val formatElementCount
-            get() = 2
+            get() = 1
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
             return when (index) {
                 0 -> FormattableTreeGroup(this.formals)
-                1 -> this.rest ?: FormattableTreeGroup.empty
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -8160,33 +7876,25 @@ object TmpL {
         var formals: List<ValueFormal>
             get() = _formals
             set(newValue) { updateTreeConnections(_formals, newValue) }
-        private var _rest: AType?
-        var rest: AType?
-            get() = _rest
-            set(newValue) { _rest = updateTreeConnection(_rest, newValue) }
         override fun deepCopy(): ValueFormalList {
-            return ValueFormalList(pos, formals = this.formals.deepCopy(), rest = this.rest?.deepCopy())
+            return ValueFormalList(pos, formals = this.formals.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is ValueFormalList && this.formals == other.formals && this.rest == other.rest
+            return other is ValueFormalList && this.formals == other.formals
         }
         override fun hashCode(): Int {
-            var hc = formals.hashCode()
-            hc = 31 * hc + rest.hashCode()
-            return hc
+            return formals.hashCode()
         }
         init {
             updateTreeConnections(this._formals, formals)
-            this._rest = updateTreeConnection(null, rest)
         }
         companion object {
             private val cmr = ChildMemberRelationships(
                 { n -> (n as ValueFormalList).formals },
-                { n -> (n as ValueFormalList).rest },
             )
         }
     }
@@ -8202,11 +7910,11 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (isOptional && name != null) {
-                    sharedCodeFormattingTemplate183
+                    sharedCodeFormattingTemplate164
                 } else if (isOptional) {
-                    sharedCodeFormattingTemplate184
+                    sharedCodeFormattingTemplate165
                 } else {
-                    sharedCodeFormattingTemplate185
+                    sharedCodeFormattingTemplate166
                 }
         override val formatElementCount
             get() = 2
@@ -8373,9 +8081,9 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName) {
-                    sharedCodeFormattingTemplate186
+                    sharedCodeFormattingTemplate167
                 } else {
-                    sharedCodeFormattingTemplate187
+                    sharedCodeFormattingTemplate168
                 }
         override val formatElementCount
             get() = 5
@@ -8484,13 +8192,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate188
+                    sharedCodeFormattingTemplate169
                 } else if (sameDotName) {
-                    sharedCodeFormattingTemplate189
+                    sharedCodeFormattingTemplate170
                 } else if (body != null) {
-                    sharedCodeFormattingTemplate190
+                    sharedCodeFormattingTemplate171
                 } else {
-                    sharedCodeFormattingTemplate191
+                    sharedCodeFormattingTemplate172
                 }
         override val formatElementCount
             get() = 7
@@ -8603,7 +8311,7 @@ object TmpL {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate192
+            get() = sharedCodeFormattingTemplate173
         override val formatElementCount
             get() = 5
         override fun formatElement(
@@ -8713,13 +8421,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate193
+                    sharedCodeFormattingTemplate174
                 } else if (sameDotName) {
-                    sharedCodeFormattingTemplate194
+                    sharedCodeFormattingTemplate175
                 } else if (body != null) {
-                    sharedCodeFormattingTemplate195
+                    sharedCodeFormattingTemplate176
                 } else {
-                    sharedCodeFormattingTemplate196
+                    sharedCodeFormattingTemplate177
                 }
         override val formatElementCount
             get() = 7
@@ -8851,13 +8559,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate197
+                    sharedCodeFormattingTemplate178
                 } else if (sameDotName) {
-                    sharedCodeFormattingTemplate198
+                    sharedCodeFormattingTemplate179
                 } else if (body != null) {
-                    sharedCodeFormattingTemplate199
+                    sharedCodeFormattingTemplate180
                 } else {
-                    sharedCodeFormattingTemplate200
+                    sharedCodeFormattingTemplate181
                 }
         override val formatElementCount
             get() = 7
@@ -8981,13 +8689,13 @@ object TmpL {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (sameDotName && body != null) {
-                    sharedCodeFormattingTemplate201
+                    sharedCodeFormattingTemplate182
                 } else if (sameDotName) {
-                    sharedCodeFormattingTemplate202
+                    sharedCodeFormattingTemplate183
                 } else if (body != null) {
-                    sharedCodeFormattingTemplate203
+                    sharedCodeFormattingTemplate184
                 } else {
-                    sharedCodeFormattingTemplate204
+                    sharedCodeFormattingTemplate185
                 }
         override val formatElementCount
             get() = 6
@@ -11542,23 +11250,8 @@ object TmpL {
             ),
         )
 
-    /** `{{0*}} ... {{1}} : {{2}}` */
-    private val sharedCodeFormattingTemplate113 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.empty,
-                ),
-                CodeFormattingTemplate.LiteralToken("...", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(2),
-            ),
-        )
-
     /** `{{0*}} let {{2}} : {{3}} ;` */
-    private val sharedCodeFormattingTemplate114 =
+    private val sharedCodeFormattingTemplate113 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -11574,7 +11267,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{1}} {{2}} : {{3}} ;` */
-    private val sharedCodeFormattingTemplate115 =
+    private val sharedCodeFormattingTemplate114 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -11591,7 +11284,7 @@ object TmpL {
         )
 
     /** `{{0*}} var {{2}} : {{3}} ;` */
-    private val sharedCodeFormattingTemplate116 =
+    private val sharedCodeFormattingTemplate115 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -11607,7 +11300,7 @@ object TmpL {
         )
 
     /** `{{0*}} var {{1}} {{2}} : {{3}} ;` */
-    private val sharedCodeFormattingTemplate117 =
+    private val sharedCodeFormattingTemplate116 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -11623,7 +11316,24 @@ object TmpL {
             ),
         )
 
-    /** `( this = {{0}} , {{1*,}} , {{2}} )` */
+    /** `( this = {{0}} , {{1*,}} )` */
+    private val sharedCodeFormattingTemplate117 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
+    /** `( this = {{0}} {{1*,}} )` */
     private val sharedCodeFormattingTemplate118 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -11631,186 +11341,16 @@ object TmpL {
                 CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
                 CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} , {{1*,}} , )` */
-    private val sharedCodeFormattingTemplate119 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} , {{1*,}} {{2}} )` */
-    private val sharedCodeFormattingTemplate120 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} , {{1*,}} )` */
-    private val sharedCodeFormattingTemplate121 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} {{1*,}} , {{2}} )` */
-    private val sharedCodeFormattingTemplate122 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} {{1*,}} , )` */
-    private val sharedCodeFormattingTemplate123 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} {{1*,}} {{2}} )` */
-    private val sharedCodeFormattingTemplate124 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( this = {{0}} {{1*,}} )` */
-    private val sharedCodeFormattingTemplate125 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( , {{1*,}} , {{2}} )` */
-    private val sharedCodeFormattingTemplate126 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( , {{1*,}} , )` */
-    private val sharedCodeFormattingTemplate127 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( , {{1*,}} {{2}} )` */
-    private val sharedCodeFormattingTemplate128 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 
     /** `( , {{1*,}} )` */
-    private val sharedCodeFormattingTemplate129 =
+    private val sharedCodeFormattingTemplate119 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -11819,55 +11359,12 @@ object TmpL {
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( {{1*,}} , {{2}} )` */
-    private val sharedCodeFormattingTemplate130 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( {{1*,}} , )` */
-    private val sharedCodeFormattingTemplate131 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( {{1*,}} {{2}} )` */
-    private val sharedCodeFormattingTemplate132 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 
     /** `( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate133 =
+    private val sharedCodeFormattingTemplate120 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -11880,7 +11377,7 @@ object TmpL {
         )
 
     /** `\{ \n {{0*\n}} \n \}` */
-    private val sharedCodeFormattingTemplate134 =
+    private val sharedCodeFormattingTemplate121 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
@@ -11895,7 +11392,7 @@ object TmpL {
         )
 
     /** `yield ;` */
-    private val sharedCodeFormattingTemplate135 =
+    private val sharedCodeFormattingTemplate122 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("yield", OutputTokenType.Word),
@@ -11904,7 +11401,7 @@ object TmpL {
         )
 
     /** `await ( {{0}} )` */
-    private val sharedCodeFormattingTemplate136 =
+    private val sharedCodeFormattingTemplate123 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("await", OutputTokenType.Word),
@@ -11915,7 +11412,7 @@ object TmpL {
         )
 
     /** `super {{0}} . {{1}} {{2}} {{3}} {{4}} : {{5}}` */
-    private val sharedCodeFormattingTemplate137 =
+    private val sharedCodeFormattingTemplate124 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("super", OutputTokenType.Word),
@@ -11931,7 +11428,7 @@ object TmpL {
         )
 
     /** `{{0}} ;` */
-    private val sharedCodeFormattingTemplate138 =
+    private val sharedCodeFormattingTemplate125 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -11940,7 +11437,7 @@ object TmpL {
         )
 
     /** `{{0}} = {{1}} ;` */
-    private val sharedCodeFormattingTemplate139 =
+    private val sharedCodeFormattingTemplate126 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -11951,7 +11448,7 @@ object TmpL {
         )
 
     /** `break {{0}} ;` */
-    private val sharedCodeFormattingTemplate140 =
+    private val sharedCodeFormattingTemplate127 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
@@ -11961,7 +11458,7 @@ object TmpL {
         )
 
     /** `break ;` */
-    private val sharedCodeFormattingTemplate141 =
+    private val sharedCodeFormattingTemplate128 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("break", OutputTokenType.Word),
@@ -11970,7 +11467,7 @@ object TmpL {
         )
 
     /** `continue {{0}} ;` */
-    private val sharedCodeFormattingTemplate142 =
+    private val sharedCodeFormattingTemplate129 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
@@ -11980,7 +11477,7 @@ object TmpL {
         )
 
     /** `continue ;` */
-    private val sharedCodeFormattingTemplate143 =
+    private val sharedCodeFormattingTemplate130 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("continue", OutputTokenType.Word),
@@ -11989,7 +11486,7 @@ object TmpL {
         )
 
     /** `abortLoad ( ) ;` */
-    private val sharedCodeFormattingTemplate144 =
+    private val sharedCodeFormattingTemplate131 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("abortLoad", OutputTokenType.Word),
@@ -12000,7 +11497,7 @@ object TmpL {
         )
 
     /** `return {{0}} ;` */
-    private val sharedCodeFormattingTemplate145 =
+    private val sharedCodeFormattingTemplate132 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -12010,7 +11507,7 @@ object TmpL {
         )
 
     /** `return ;` */
-    private val sharedCodeFormattingTemplate146 =
+    private val sharedCodeFormattingTemplate133 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -12019,7 +11516,7 @@ object TmpL {
         )
 
     /** `throw ;` */
-    private val sharedCodeFormattingTemplate147 =
+    private val sharedCodeFormattingTemplate134 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
@@ -12028,7 +11525,7 @@ object TmpL {
         )
 
     /** `when ( {{0}} ) \{ \n {{1*\n}} \n {{2}} \n \}` */
-    private val sharedCodeFormattingTemplate148 =
+    private val sharedCodeFormattingTemplate135 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("when", OutputTokenType.Word),
@@ -12049,7 +11546,7 @@ object TmpL {
         )
 
     /** `if ( {{0}} ) \{ \n {{1}} \n \} else {{2}}` */
-    private val sharedCodeFormattingTemplate149 =
+    private val sharedCodeFormattingTemplate136 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
@@ -12067,7 +11564,7 @@ object TmpL {
         )
 
     /** `if ( {{0}} ) \{ \n {{1}} \n \} else \{ \n {{2}} \n \}` */
-    private val sharedCodeFormattingTemplate150 =
+    private val sharedCodeFormattingTemplate137 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
@@ -12089,7 +11586,7 @@ object TmpL {
         )
 
     /** `if ( {{0}} ) \{ \n {{1}} \n \}` */
-    private val sharedCodeFormattingTemplate151 =
+    private val sharedCodeFormattingTemplate138 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
@@ -12105,7 +11602,7 @@ object TmpL {
         )
 
     /** `{{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate152 =
+    private val sharedCodeFormattingTemplate139 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12115,7 +11612,7 @@ object TmpL {
         )
 
     /** `try \{ \n {{0}} \n \} catch \{ \n {{1}} \n \}` */
-    private val sharedCodeFormattingTemplate153 =
+    private val sharedCodeFormattingTemplate140 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -12134,7 +11631,7 @@ object TmpL {
         )
 
     /** `while ( {{0}} ) \{ \n {{1}} \n \}` */
-    private val sharedCodeFormattingTemplate154 =
+    private val sharedCodeFormattingTemplate141 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
@@ -12150,7 +11647,7 @@ object TmpL {
         )
 
     /** `{{0*,}} -> do {{1}}` */
-    private val sharedCodeFormattingTemplate155 =
+    private val sharedCodeFormattingTemplate142 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12164,7 +11661,7 @@ object TmpL {
         )
 
     /** `else -> do {{0}}` */
-    private val sharedCodeFormattingTemplate156 =
+    private val sharedCodeFormattingTemplate143 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
@@ -12175,11 +11672,11 @@ object TmpL {
         )
 
     /** `failure` */
-    private val sharedCodeFormattingTemplate157 =
+    private val sharedCodeFormattingTemplate144 =
         CodeFormattingTemplate.LiteralToken("failure", OutputTokenType.Word)
 
     /** ``OutputToken("/\* this *\/", OutputTokenType.OtherValue)` {{0}}` */
-    private val sharedCodeFormattingTemplate158 =
+    private val sharedCodeFormattingTemplate145 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(OutputToken("/* this */", OutputTokenType.OtherValue)),
@@ -12188,7 +11685,7 @@ object TmpL {
         )
 
     /** `{{0}} {{1}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate159 =
+    private val sharedCodeFormattingTemplate146 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12203,7 +11700,7 @@ object TmpL {
         )
 
     /** `notNull ( {{0}} )` */
-    private val sharedCodeFormattingTemplate160 =
+    private val sharedCodeFormattingTemplate147 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("notNull", OutputTokenType.Word),
@@ -12214,7 +11711,7 @@ object TmpL {
         )
 
     /** `{{0}} as @ fun {{1}}` */
-    private val sharedCodeFormattingTemplate161 =
+    private val sharedCodeFormattingTemplate148 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12225,48 +11722,18 @@ object TmpL {
             ),
         )
 
-    /** `{{0}} [ {{1}} ]` */
-    private val sharedCodeFormattingTemplate162 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `{{0}} . length` */
-    private val sharedCodeFormattingTemplate163 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("length", OutputTokenType.Word),
-            ),
-        )
-
     /** `{{0}} . {{1}}` */
-    private val sharedCodeFormattingTemplate164 =
+    private val sharedCodeFormattingTemplate149 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.OneSubstitution(1),
-            ),
-        )
-
-    /** `... {{0}}` */
-    private val sharedCodeFormattingTemplate165 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("...", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
             ),
         )
 
     /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate166 =
+    private val sharedCodeFormattingTemplate150 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12276,7 +11743,7 @@ object TmpL {
         )
 
     /** `{{0}} {{1}}` */
-    private val sharedCodeFormattingTemplate167 =
+    private val sharedCodeFormattingTemplate151 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12285,7 +11752,7 @@ object TmpL {
         )
 
     /** `{{0}} as {{1}}` */
-    private val sharedCodeFormattingTemplate168 =
+    private val sharedCodeFormattingTemplate152 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12295,7 +11762,7 @@ object TmpL {
         )
 
     /** `/\*new*\/ {{0}}` */
-    private val sharedCodeFormattingTemplate169 =
+    private val sharedCodeFormattingTemplate153 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("/*new*/", OutputTokenType.Comment),
@@ -12304,7 +11771,7 @@ object TmpL {
         )
 
     /** `super {{0}}` */
-    private val sharedCodeFormattingTemplate170 =
+    private val sharedCodeFormattingTemplate154 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("super", OutputTokenType.Word),
@@ -12313,7 +11780,7 @@ object TmpL {
         )
 
     /** `{{0}} instanceof {{1}}` */
-    private val sharedCodeFormattingTemplate171 =
+    private val sharedCodeFormattingTemplate155 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12323,7 +11790,7 @@ object TmpL {
         )
 
     /** `cast ( {{0}} , {{1}} )` */
-    private val sharedCodeFormattingTemplate172 =
+    private val sharedCodeFormattingTemplate156 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("cast", OutputTokenType.Word),
@@ -12336,7 +11803,7 @@ object TmpL {
         )
 
     /** `safeCast ( {{0}} , {{1}} )` */
-    private val sharedCodeFormattingTemplate173 =
+    private val sharedCodeFormattingTemplate157 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("safeCast", OutputTokenType.Word),
@@ -12349,7 +11816,7 @@ object TmpL {
         )
 
     /** `fn {{0}} {{1}} : {{2}}` */
-    private val sharedCodeFormattingTemplate174 =
+    private val sharedCodeFormattingTemplate158 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
@@ -12361,69 +11828,33 @@ object TmpL {
         )
 
     /** `{{0*|}}` */
-    private val sharedCodeFormattingTemplate175 =
+    private val sharedCodeFormattingTemplate159 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
         )
 
     /** `{{0*&}}` */
-    private val sharedCodeFormattingTemplate176 =
+    private val sharedCodeFormattingTemplate160 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
         )
 
     /** `Top` */
-    private val sharedCodeFormattingTemplate177 =
+    private val sharedCodeFormattingTemplate161 =
         CodeFormattingTemplate.LiteralToken("Top", OutputTokenType.Word)
 
     /** `Bubble` */
-    private val sharedCodeFormattingTemplate178 =
+    private val sharedCodeFormattingTemplate162 =
         CodeFormattingTemplate.LiteralToken("Bubble", OutputTokenType.Word)
 
     /** `Never` */
-    private val sharedCodeFormattingTemplate179 =
+    private val sharedCodeFormattingTemplate163 =
         CodeFormattingTemplate.LiteralToken("Never", OutputTokenType.Word)
 
-    /** `( {{0*,}} , ... {{1}} )` */
-    private val sharedCodeFormattingTemplate180 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("...", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( ... {{1}} )` */
-    private val sharedCodeFormattingTemplate181 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken("...", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `( )` */
-    private val sharedCodeFormattingTemplate182 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
     /** `{{0}} ? : {{1}}` */
-    private val sharedCodeFormattingTemplate183 =
+    private val sharedCodeFormattingTemplate164 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -12434,7 +11865,7 @@ object TmpL {
         )
 
     /** `_ ? : {{1}}` */
-    private val sharedCodeFormattingTemplate184 =
+    private val sharedCodeFormattingTemplate165 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("_", OutputTokenType.Word),
@@ -12445,11 +11876,11 @@ object TmpL {
         )
 
     /** `{{1}}` */
-    private val sharedCodeFormattingTemplate185 =
+    private val sharedCodeFormattingTemplate166 =
         CodeFormattingTemplate.OneSubstitution(1)
 
     /** `{{0*}} static let {{2}} : {{3}} = {{4}} ;` */
-    private val sharedCodeFormattingTemplate186 =
+    private val sharedCodeFormattingTemplate167 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12468,7 +11899,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} : {{3}} = {{4}} ;` */
-    private val sharedCodeFormattingTemplate187 =
+    private val sharedCodeFormattingTemplate168 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12488,7 +11919,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate188 =
+    private val sharedCodeFormattingTemplate169 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12507,7 +11938,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate189 =
+    private val sharedCodeFormattingTemplate170 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12526,7 +11957,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate190 =
+    private val sharedCodeFormattingTemplate171 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12546,7 +11977,7 @@ object TmpL {
         )
 
     /** `{{0*}} static let {{1}} {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate191 =
+    private val sharedCodeFormattingTemplate172 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12566,7 +11997,7 @@ object TmpL {
         )
 
     /** `{{0*}} {{1}} {{2}} {{3}} {{4}}` */
-    private val sharedCodeFormattingTemplate192 =
+    private val sharedCodeFormattingTemplate173 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12581,7 +12012,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate193 =
+    private val sharedCodeFormattingTemplate174 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12599,7 +12030,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate194 =
+    private val sharedCodeFormattingTemplate175 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12617,7 +12048,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{1}} {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate195 =
+    private val sharedCodeFormattingTemplate176 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12636,7 +12067,7 @@ object TmpL {
         )
 
     /** `{{0*}} let {{1}} {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate196 =
+    private val sharedCodeFormattingTemplate177 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12655,7 +12086,7 @@ object TmpL {
         )
 
     /** `{{0*}} get {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate197 =
+    private val sharedCodeFormattingTemplate178 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12673,7 +12104,7 @@ object TmpL {
         )
 
     /** `{{0*}} get {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate198 =
+    private val sharedCodeFormattingTemplate179 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12691,7 +12122,7 @@ object TmpL {
         )
 
     /** `{{0*}} get . {{1}} -> {{2}} {{3}} {{4}} : {{5}} {{6}}` */
-    private val sharedCodeFormattingTemplate199 =
+    private val sharedCodeFormattingTemplate180 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12712,7 +12143,7 @@ object TmpL {
         )
 
     /** `{{0*}} get . {{1}} -> {{2}} {{3}} {{4}} : {{5}} ;` */
-    private val sharedCodeFormattingTemplate200 =
+    private val sharedCodeFormattingTemplate181 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12733,7 +12164,7 @@ object TmpL {
         )
 
     /** `{{0*}} set {{2}} {{3}} : {{4}} {{5}}` */
-    private val sharedCodeFormattingTemplate201 =
+    private val sharedCodeFormattingTemplate182 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12750,7 +12181,7 @@ object TmpL {
         )
 
     /** `{{0*}} set {{2}} {{3}} : {{4}} ;` */
-    private val sharedCodeFormattingTemplate202 =
+    private val sharedCodeFormattingTemplate183 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12767,7 +12198,7 @@ object TmpL {
         )
 
     /** `{{0*}} set . {{1}} -> {{2}} {{3}} : {{4}} {{5}}` */
-    private val sharedCodeFormattingTemplate203 =
+    private val sharedCodeFormattingTemplate184 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -12787,7 +12218,7 @@ object TmpL {
         )
 
     /** `{{0*}} set . {{1}} -> {{2}} {{3}} : {{4}} ;` */
-    private val sharedCodeFormattingTemplate204 =
+    private val sharedCodeFormattingTemplate185 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(

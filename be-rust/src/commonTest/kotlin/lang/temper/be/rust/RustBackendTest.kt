@@ -2449,29 +2449,6 @@ class RustBackendTest {
     )
 
     @Test
-    fun restParam() = assertGenerateWanted(
-        temper = """
-            |hi(1, "a", "b");
-            |export let hi(n: Int, ...things: List<String>): Int {
-            |  n + things.length
-            |}
-        """.trimMargin(),
-        rust = """
-            |pub (crate) fn init() -> temper_core::Result<()> {
-            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
-            |    INIT_ONCE.get_or_init(| |{
-            |            hi(1, vec![std::sync::Arc::new("a".to_string()), std::sync::Arc::new("b".to_string())]);
-            |            Ok(())
-            |    }).clone()
-            |}
-            |pub fn hi(n__0: i32, things__0: impl temper_core::ToList<std::sync::Arc<String>>) -> i32 {
-            |    let things__0 = things__0.to_list();
-            |    return n__0.wrapping_add(temper_core::ListedTrait::len( & things__0));
-            |}
-        """.trimMargin(),
-    )
-
-    @Test
     fun staticProperty() = assertGenerateWanted(
         temper = """
             |console.log(Something.here);

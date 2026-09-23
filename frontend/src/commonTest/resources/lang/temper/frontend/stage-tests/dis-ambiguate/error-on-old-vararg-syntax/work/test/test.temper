@@ -1,0 +1,7 @@
+export let sumAll(...xs: Int32): Int32 {
+  var total = 0;
+  for (let x of xs) {
+    total += x;
+  }
+  total
+}

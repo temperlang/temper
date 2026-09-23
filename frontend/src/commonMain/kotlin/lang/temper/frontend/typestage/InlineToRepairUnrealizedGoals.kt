@@ -408,7 +408,6 @@ private class InlineToRepairUnrealizedGoals(
                                     val eqType = MkType.fn(
                                         typeFormals = emptyList(),
                                         valueFormals = listOf(typeAssigned, typeAssigned),
-                                        restValuesFormal = null,
                                         returnType = typeAssigned,
                                     )
                                     assign.typeInferences = BasicTypeInferences(eqType, emptyList())
@@ -588,7 +587,7 @@ private class InlineToRepairUnrealizedGoals(
                                 V(
                                     leftPos,
                                     BuiltinFuns.vSetLocalFn,
-                                    type = MkType.fn(emptyList(), listOf(paramType, paramType), null, paramType),
+                                    type = MkType.fn(emptyList(), listOf(paramType, paramType), paramType),
                                 )
                                 Ln(leftPos, inlinedName, paramType)
                                 Replant(initializer)

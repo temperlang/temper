@@ -738,28 +738,6 @@ class PseudoCodeTest {
     }
 
     @Test
-    fun restFormal() {
-        assertPseudoCode(want = "fn (...x: String) {}\n") { doc, pos ->
-            val stringList = MkType2(WellKnownTypes.listTypeDefinition)
-                .actuals(listOf(WellKnownTypes.stringType2))
-                .get()
-
-            doc.treeFarm.grow(pos) {
-                Fn {
-                    Decl {
-                        Ln(ParsedName("x"))
-                        V(vRestFormalSymbol)
-                        V(void)
-                        V(vTypeSymbol)
-                        V(Value(ReifiedType(stringList, hasExplicitActuals = true)))
-                    }
-                    Block {}
-                }
-            }
-        }
-    }
-
-    @Test
     fun nestedBlocksGetDo() = assertPseudoCode(
         want = """
             |foo;

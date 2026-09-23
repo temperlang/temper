@@ -61,7 +61,6 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     FunctionsDefaulting(markdown("functions/defaulting/defaulting.temper.md", "FunctionsDefaulting")),
     FunctionsLocals(markdown("functions/locals/locals.temper.md", "FunctionsLocals")),
     FunctionsNamedArgs(markdown("functions/named-args/named-args.temper.md", "FunctionsNamedArgs")),
-    FunctionsRestFormal(markdown("functions/rest-formal/rest-formal.temper.md", "FunctionsRestFormal")),
     FunctionsSimpleLocals(markdown("functions/simple-locals/simple-locals.temper.md", "FunctionsSimpleLocals")),
     ImportsFunctions(markdown("imports/functions/functions.temper.md", "ImportsFunctions")),
     ImportsTypes(markdown("imports/types/types.temper.md", "ImportsTypes")),

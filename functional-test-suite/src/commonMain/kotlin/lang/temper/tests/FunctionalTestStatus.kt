@@ -54,7 +54,7 @@ fun MutableMap<Ft, IssueCheckList>.issue(test: Ft, vararg issues: IssueCheck) {
 }
 
 /**
- * When creating a new backend it will only pass a few tests. To indicate this:
+ * When creating a new backend, it will only pass a few tests. To indicate this:
  *
  *     val functionalTestStatus: blah blah {
  *        onlyPasses(intercal(1234), Ft.AlgosHelloWorld, ft.TypeString)

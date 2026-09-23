@@ -2,7 +2,6 @@
 
 package lang.temper.be.py
 
-import lang.temper.ast.OutTree
 import lang.temper.ast.anyChildRecursive
 import lang.temper.ast.boundaryDescent
 import lang.temper.ast.deepCopy
@@ -22,7 +21,6 @@ import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.common.buildListMultimap
 import lang.temper.common.isNotEmpty
 import lang.temper.common.putMultiList
@@ -375,7 +373,7 @@ class PyTranslator(
             undefinedError: (() -> Py.Expr)? = null,
         ): List<Py.Stmt> = buildList {
             // TODO: substitute python parameter names for TmpL names
-            // See be-java's javadoc(...) helpers.
+            // See be-java's `javadoc(...)` helpers.
             val fnDocumentation = s.documentation.prettyPleaseHelp()
             if (fnDocumentation != null) {
                 add(translateDocString(fnDocumentation, s.pos))
@@ -1244,10 +1242,6 @@ class PyTranslator(
                     locals.add(t.name.name)
                     true
                 }
-                is TmpL.RestFormal -> {
-                    locals.add(t.name.name)
-                    true
-                }
                 // Recognize a declared name or even a function, but don't descend
                 is TmpL.LocalDeclaration -> {
                     locals.add(t.name.name)
@@ -1438,8 +1432,6 @@ class PyTranslator(
         is TmpL.InstanceOfExpression -> exprInstanceOf(x.pos, x.expr, x.checkedType.ot)
         is TmpL.CastExpression -> castExpr(x.pos, x.expr, x.checkedType.ot)
         is TmpL.UncheckedNotNullExpression -> notNullExpr(x.expression)
-        is TmpL.RestParameterExpression -> todo(x)
-        is TmpL.RestParameterCountExpression -> todo(x)
         is TmpL.GetAbstractProperty -> getProperty(x)
         is TmpL.GetBackedProperty -> getProperty(x)
         is TmpL.SupportCodeWrapper -> supportCode(x)
@@ -1458,7 +1450,7 @@ class PyTranslator(
                     sc.inlineToTree(
                         x.pos,
                         x.parameters.mapGeneric {
-                            TypedArg(translateParamExpr(it), it.typeOrInvalid)
+                            TypedArg(expr(it), it.passType)
                         },
                         x.passType,
                         this,
@@ -1583,12 +1575,7 @@ class PyTranslator(
             garbageExpr(f.pos, "${f.javaClass.name}: $f", f.diagnostic?.text)
     }
 
-    private fun translateParam(p: TmpL.Actual): Py.CallArg = Py.CallArg(p.pos, value = translateParamExpr(p))
-
-    private fun translateParamExpr(p: TmpL.Actual): Py.Expr = when (p) {
-        is TmpL.Expression -> expr(p)
-        is TmpL.RestSpread -> Py.Starred(p.pos, name(p.parameterName))
-    }
+    private fun translateParam(p: TmpL.Expression): Py.CallArg = Py.CallArg(p.pos, value = expr(p))
 
     private fun translateFunctionType(type: TmpL.FunctionType, argless: Boolean = false): Py.Expr {
         val callable = request(CallableType).asRName(type.pos)
@@ -1596,7 +1583,7 @@ class PyTranslator(
             argless -> callable
             else -> {
                 val args = mutableListOf<Py.Expr>()
-                type.valueFormals.formals.map { formal ->
+                type.valueFormals.formals.forEach { formal ->
                     if (formal.name?.symbol != impliedThisSymbol) {
                         args.add(translateType(formal.type))
                     }
@@ -1798,9 +1785,6 @@ class PyTranslator(
             TClosureRecord -> todo(pos, rt, v)
             is TClass -> todo(pos, rt, v)
         }
-
-    private inline fun <reified T : OutTree<*>> todo(t: T, msg: String? = null): Py.Expr =
-        garbageExpr(t.pos, "${t.javaClass.name}: $t", msg)
 
     private inline fun <reified T : Any, reified U : Any> todo(
         pos: Position,

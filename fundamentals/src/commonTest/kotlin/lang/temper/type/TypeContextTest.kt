@@ -542,9 +542,9 @@ class TypeContextTest {
 
         assertSubTypeTable(
             listOf(
-                MkType.fn(emptyList(), listOf(intType), null, voidType),
-                MkType.fn(emptyList(), listOf(stringType), null, voidType),
-                MkType.fn(emptyList(), listOf(anyValueType), null, voidType),
+                MkType.fn(emptyList(), listOf(intType), voidType),
+                MkType.fn(emptyList(), listOf(stringType), voidType),
+                MkType.fn(emptyList(), listOf(anyValueType), voidType),
             ),
             """
             |╔═══════════════════╦════════════════╦═════════════════╦═══════════════════╗
@@ -556,38 +556,6 @@ class TypeContextTest {
             |╠═══════════════════╬════════════════╬═════════════════╬═══════════════════╣
             |║fn (AnyValue): Void║✕               ║✕                ║✓                  ║
             |╚═══════════════════╩════════════════╩═════════════════╩═══════════════════╝
-            """.trimMargin(),
-        )
-    }
-
-    @Test
-    fun fnTypesDifferByRestType() {
-        val anyValueType = MkType.nominal(WellKnownTypes.anyValueTypeDefinition)
-        val functionType = MkType.nominal(WellKnownTypes.functionTypeDefinition)
-        val intType = MkType.nominal(WellKnownTypes.intTypeDefinition)
-        val stringType = MkType.nominal(WellKnownTypes.stringTypeDefinition)
-        val voidType = MkType.nominal(WellKnownTypes.voidTypeDefinition)
-
-        @Suppress("LongLine") // Table
-        assertSubTypeTable(
-            listOf(
-                MkType.fn(emptyList(), emptyList(), intType, voidType),
-                MkType.fn(emptyList(), emptyList(), stringType, voidType),
-                MkType.fn(emptyList(), emptyList(), anyValueType, voidType),
-                functionType,
-            ),
-            """
-            |╔══════════════════════╦═══════════════════╦════════════════════╦══════════════════════╦════════╗
-            |║                      ║fn (...Int32): Void║fn (...String): Void║fn (...AnyValue): Void║Function║
-            |╠══════════════════════╬═══════════════════╬════════════════════╬══════════════════════╬════════╣
-            |║fn (...Int32): Void   ║✓                  ║✕                   ║✓                     ║✕       ║
-            |╠══════════════════════╬═══════════════════╬════════════════════╬══════════════════════╬════════╣
-            |║fn (...String): Void  ║✕                  ║✓                   ║✓                     ║✕       ║
-            |╠══════════════════════╬═══════════════════╬════════════════════╬══════════════════════╬════════╣
-            |║fn (...AnyValue): Void║✕                  ║✕                   ║✓                     ║✕       ║
-            |╠══════════════════════╬═══════════════════╬════════════════════╬══════════════════════╬════════╣
-            |║Function              ║✓                  ║✓                   ║✓                     ║✓       ║
-            |╚══════════════════════╩═══════════════════╩════════════════════╩══════════════════════╩════════╝
             """.trimMargin(),
         )
     }
@@ -626,9 +594,9 @@ class TypeContextTest {
         @Suppress("LongLine") // Table
         assertSubTypeTable(
             listOf(
-                MkType.fn(emptyList(), listOf(intType), null, intType),
-                MkType.fn(emptyList(), listOf(intType), null, stringType),
-                MkType.fn(emptyList(), listOf(intType), null, anyValueType),
+                MkType.fn(emptyList(), listOf(intType), intType),
+                MkType.fn(emptyList(), listOf(intType), stringType),
+                MkType.fn(emptyList(), listOf(intType), anyValueType),
                 functionType,
             ),
             """
@@ -660,10 +628,10 @@ class TypeContextTest {
         val bType = type("B")
         val cType = type("C")
 
-        val aToC = MkType.fn(emptyList(), listOf(aType), null, cType)
-        val bToC = MkType.fn(emptyList(), listOf(bType), null, cType)
+        val aToC = MkType.fn(emptyList(), listOf(aType), cType)
+        val bToC = MkType.fn(emptyList(), listOf(bType), cType)
         val unionOfFunctionTypes = MkType.or(aToC, bToC)
-        val functionTypeOfUnions = MkType.fn(emptyList(), listOf(MkType.or(aType, bType)), null, cType)
+        val functionTypeOfUnions = MkType.fn(emptyList(), listOf(MkType.or(aType, bType)), cType)
 
         assertSubTypeTable(
             listOf(

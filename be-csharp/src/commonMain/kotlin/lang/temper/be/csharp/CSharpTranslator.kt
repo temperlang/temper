@@ -17,7 +17,6 @@ import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.orInvalid
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.toSigBestEffort
-import lang.temper.be.tmpl.typeOrInvalid
 import lang.temper.be.tmpl.withoutNullOrBubble
 import lang.temper.common.ParseDouble
 import lang.temper.common.compatRemoveLast
@@ -330,10 +329,6 @@ internal class CSharpTranslator(
 
     private fun findMainType(type: Type2) = type.definition
 
-    private fun findRest(function: TmpL.FunctionLike) {
-        function.parameters.restParameter?.let { functionContextStack.last().restFormal = it }
-    }
-
     private fun findRootNamespace(name: ExportedName): String {
         val nameRootNamespace = when (val other = name.origin.loc) {
             is ModuleName -> when (val otherRoot = other.libraryRoot()) {
@@ -352,36 +347,6 @@ internal class CSharpTranslator(
             expr = StandardNames.temperCoreCoreIgnore.toStaticMember(expr.pos),
             args = listOf(expr),
         )
-    }
-
-    private fun makeRestAssignment(): List<CSharp.Statement> {
-        return when (val formal = functionContextStack.last().restFormal) {
-            null -> listOf()
-
-            // Declare a local for wrapping the rest/params array in a readonly list for local use.
-            else -> listOf(
-                CSharp.LocalVariableDecl(
-                    formal.pos,
-                    type = CSharp.ConstructedType(
-                        formal.pos,
-                        type = StandardNames.systemCollectionsGenericIReadOnlyList.toTypeName(formal.pos),
-                        args = listOf(translateType(formal.type)),
-                    ),
-                    variables = listOf(
-                        CSharp.VariableDeclarator(
-                            formal.pos,
-                            // The local gets the name that the rest of the body expects.
-                            variable = translateId(formal.name),
-                            initializer = CSharp.InvocationExpression(
-                                formal.pos,
-                                expr = StandardNames.systemArrayAsReadOnly.toStaticMember(formal.pos),
-                                args = listOf(paramsify(translateId(formal.name))),
-                            ),
-                        ),
-                    ),
-                ),
-            )
-        }
     }
 
     private fun makeSafeName(wantedName: String) = "${wantedName}_" // TODO Explore better safety options.
@@ -448,7 +413,6 @@ internal class CSharpTranslator(
     ): List<CSharp.MethodDecl> {
         return withFunctionContext {
             functionContextStack.last().returnType = decl.sig.returnType2
-            findRest(decl)
             markVoidish(decl)
 
             val id = translateId(decl.name)
@@ -458,7 +422,7 @@ internal class CSharpTranslator(
             var body = when {
                 decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
                     translateConnectedBody(decl, parameters) // TODO Rest param?
-                else -> translateBlockStatement(decl.body, prelude = makeRestAssignment())
+                else -> translateBlockStatement(decl.body)
             }
 
             buildList {
@@ -813,16 +777,8 @@ internal class CSharpTranslator(
         }
     }
 
-    private fun translateActual(actual: TmpL.Actual, wantedType: Type2? = null): CSharp.Arg {
-        // Mostly here to support named args explicitly. Maybe get around to that sometime.
-        return translateActualExpression(actual, wantedType = wantedType)
-    }
-
-    private fun translateActualExpression(actual: TmpL.Actual, wantedType: Type2? = null): CSharp.Expression {
-        return when {
-            actual is TmpL.Expression -> translateExpression(actual, castIfFunction = true, wantedType = wantedType)
-            else -> TODO()
-        }
+    private fun translateActualExpression(actual: TmpL.Expression, wantedType: Type2? = null): CSharp.Expression {
+        return translateExpression(actual, castIfFunction = true, wantedType = wantedType)
     }
 
     private fun translateAssignment(statement: TmpL.Assignment): CSharp.Statement =
@@ -908,7 +864,7 @@ internal class CSharpTranslator(
                 is CSharpInlineSupportCode -> supportCode.inlineToTree(
                     call.pos,
                     arguments = call.mapParameters { arg, wantedType, _ ->
-                        TypedArg(translateActual(arg, wantedType = wantedType), arg.typeOrInvalid)
+                        TypedArg(translateActualExpression(arg, wantedType = wantedType), arg.passType)
                     },
                     returnType = call.passType,
                     translator = this,
@@ -920,7 +876,9 @@ internal class CSharpTranslator(
             else -> CSharp.InvocationExpression(
                 call.pos,
                 expr = translateCallable(fn),
-                args = call.mapParameters { arg, wantedType, _ -> translateActual(arg, wantedType = wantedType) },
+                args = call.mapParameters { arg, wantedType, _ ->
+                    translateActualExpression(arg, wantedType = wantedType)
+                },
             )
         }
     }
@@ -1114,7 +1072,9 @@ internal class CSharpTranslator(
         return CSharp.ObjectCreationExpression(
             call.pos,
             type = type,
-            args = call.mapParameters { arg, wantedType, _ -> translateActual(arg, wantedType = wantedType) },
+            args = call.mapParameters { arg, wantedType, _ ->
+                translateActualExpression(arg, wantedType = wantedType)
+            },
         )
     }
 
@@ -1163,8 +1123,6 @@ internal class CSharpTranslator(
             is TmpL.InfixOperation -> translateInfixOperation(expr)
             is TmpL.PrefixOperation -> translatePrefixOperation(expr)
             is TmpL.Reference -> translateReference(expr, castIfFunction = castIfFunction)
-            is TmpL.RestParameterCountExpression -> TODO()
-            is TmpL.RestParameterExpression -> TODO()
             is TmpL.This -> translateThis(expr)
             is TmpL.ValueReference -> translateValueReference(expr, wantedType)
         }
@@ -1481,7 +1439,7 @@ internal class CSharpTranslator(
     private fun translateMethodBody(body: TmpL.BlockStatement?): CSharp.BlockStatement? {
         return when (body.isPureVirtual()) {
             true -> null
-            false -> body?.let { translateBlockStatement(it, prelude = makeRestAssignment()) }
+            false -> body?.let { translateBlockStatement(it) }
         }
     }
 
@@ -1622,7 +1580,6 @@ internal class CSharpTranslator(
 
                 else -> wantedId
             }
-            findRest(method)
             markVoidish(method)
             val pos = method.pos
             val (typeParameters, whereConstraints) = translateTypeParameters(method.typeParameters)
@@ -1768,7 +1725,6 @@ internal class CSharpTranslator(
                     add(translateFormal(parameter, preventOptional = hasRequiredAfterOptional))
                 }
             }
-            parameters.restParameter?.let { add(translateRestFormal(it)) }
         }
     }
 
@@ -1863,14 +1819,6 @@ internal class CSharpTranslator(
                 ref
             }
         }
-    }
-
-    private fun translateRestFormal(formal: TmpL.RestFormal): CSharp.MethodParameter {
-        return CSharp.ParameterArray(
-            formal.pos,
-            name = paramsify(translateId(formal.name)),
-            type = translateType(formal.type),
-        )
     }
 
     private fun translateReturnStatement(ret: TmpL.ReturnStatement): CSharp.Statement? {
@@ -2455,8 +2403,7 @@ internal class CSharpTranslator(
                 // If the null has type `T?`, then it should actually be a reference to the
                 // None optional.
                 if (wantedType != null) {
-                    val type = wantedType
-                    val csharpType = translateTypeFromFrontend(expr.pos, type)
+                    val csharpType = translateTypeFromFrontend(expr.pos, wantedType)
                     if (csharpType.isOptionalTypeArg) {
                         // C::Optional<T>.None
                         translation = CSharp.MemberAccess(
@@ -2554,7 +2501,6 @@ internal class CSharpTranslator(
 private class FunctionContext {
     var optionals = setOf<ResolvedName>()
     var voidish: Boolean = false
-    var restFormal: TmpL.RestFormal? = null
     var returnType: Type2? = null
 }
 
@@ -2576,12 +2522,6 @@ private fun makeNamespaceAndGlobalName(
     val fullNamespace: List<String> = rootNamespace.split(".") + subspace
     val qualifiedGlobalClassName: List<String> = fullNamespace + listOf(makeGlobalName(fullNamespace))
     return fullNamespace to qualifiedGlobalClassName
-}
-
-/** Returns the id modified to use as a `params` parameter array name. */
-private fun paramsify(id: CSharp.Identifier): CSharp.Identifier {
-    id.outName = OutName("${id.outName.outputNameText}_params", id.outName.sourceName)
-    return id
 }
 
 fun returnVoidishToCSharpFunctionNamedType(pos: Position, voidish: Boolean): CSharp.QualTypeName {

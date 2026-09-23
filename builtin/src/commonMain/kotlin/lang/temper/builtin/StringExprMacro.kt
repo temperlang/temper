@@ -3,7 +3,6 @@ package lang.temper.builtin
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.common.Log
-import lang.temper.common.soleElementOrNull
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
@@ -11,6 +10,7 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
+import lang.temper.name.BuiltinName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
@@ -25,6 +25,8 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
 import lang.temper.type.excludeBubble
 import lang.temper.type2.AnySignature
+import lang.temper.type2.InterpSignature
+import lang.temper.type2.MacroSignature
 import lang.temper.type2.Signature2
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BasicTypeInferences
@@ -37,6 +39,7 @@ import lang.temper.value.FunTree
 import lang.temper.value.FunctionSpecies
 import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
+import lang.temper.value.NAryFn
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
@@ -501,7 +504,7 @@ private fun pointAppendsAtAccumulator(funTree: FunTree, isTagged: Boolean) {
         vAppendDotHelper
     }
 
-    // Accumulate a list of edits then play them in reverse order to avoid
+    // Accumulate a list of edits, then play them in reverse order to avoid
     // colliding edits.
     data class Edit(
         val parent: BlockTree,
@@ -609,22 +612,24 @@ val accumulatedDotName = DotMember(Symbol("accumulated"))
 /**
  * Desugars to a simple string concatenation when we have the time.
  */
-internal object StringCatMacro : BuiltinMacro("cat", null), SpecialFunction {
-    override val builtinOperatorId get() = BuiltinOperatorId.StrCat
-
-    override val sigs: List<Signature2> = listOf(
-        Signature2(
-            returnType2 = WellKnownTypes.stringType2,
-            hasThisFormal = false,
-            requiredInputTypes = listOf(),
-            restInputsType = WellKnownTypes.anyValueOrNullType2,
+internal object StringCatMacro :
+    NAryFn(
+        builtinName = BuiltinName("cat"),
+        sigs = listOf(
+            Signature2(
+                returnType2 = WellKnownTypes.stringType2,
+                hasThisFormal = false,
+                requiredInputTypes = listOf(),
+            ),
         ),
-    )
-
+        builtinOperatorId = BuiltinOperatorId.StrCat,
+        extraInputType = WellKnownTypes.anyValueOrNullType2,
+    ),
+    SpecialFunction {
     override fun invoke(macroEnv: MacroEnvironment, interpMode: InterpMode): PartialResult {
         // Figure out if we already have a simple string value for immediate use.
         val args = macroEnv.args
-        val argRange = 0..<args.size
+        val argRange = args.indices
 
         if (interpMode == InterpMode.Full) {
             return collapseToString(macroEnv, interpMode)
@@ -667,7 +672,7 @@ internal object StrRawMacro : BuiltinMacro(rawBuiltinName.builtinKey, null) {
         // Convert calls to `raw` into calls to `cat` by interleaving the lists.
         val args = macroEnv.args
         if (macroEnv.stage == Stage.Import) {
-            // Let any interpolate work out first.
+            // Let any interpolation work out first.
             return NotYet
         }
         // We support only calls to `raw` with a pair of list literals, which `raw"..."` syntax provides.
@@ -738,9 +743,25 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                 if (type == null && arg is CallTree) {
                     val callee = arg.childOrNull(0)
                     val fn = callee?.functionContained
-                    val sig = fn?.sigs?.soleElementOrNull as? Signature2
-                    if (sig != null) {
-                        type = hackMapNewStyleToOld(excludeBubble(sig.returnType2))
+                    val sigs = fn?.sigs
+                    if (sigs != null) {
+                        var allHaveReturnType = true
+                        val passTypes = buildSet {
+                            for (sig in sigs) {
+                                when (sig) {
+                                    is Signature2 -> add(excludeBubble(sig.returnType2))
+                                    is InterpSignature,
+                                    is MacroSignature,
+                                    -> {
+                                        allHaveReturnType = false
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        if (allHaveReturnType && passTypes.size == 1) {
+                            type = hackMapNewStyleToOld(passTypes.first())
+                        }
                     }
                 }
                 val value = arg.valueContained
@@ -862,7 +883,7 @@ private fun collapseToString(
 ): PartialResult {
     val args = macroEnv.args
     val content = buildString {
-        for (i in 0..<args.size) {
+        for (i in args.indices) {
             val str: String = when (val result = args.evaluate(i, interpMode)) {
                 is NotYet, is Fail -> return@collapseToString result
                 is Value<*> -> when (

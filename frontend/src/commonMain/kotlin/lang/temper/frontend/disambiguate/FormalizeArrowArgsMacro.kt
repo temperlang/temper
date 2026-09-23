@@ -43,6 +43,7 @@ internal object FormalizeArrowArgsMacro : StaylessMacroValue {
             )
         }
 
+        val logSink = macroEnv.logSink
         val args = macroEnv.args
         if (args.size != 2 || args.key(0) != null || args.key(1) != null) { // Args, Body
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(2))
@@ -50,7 +51,7 @@ internal object FormalizeArrowArgsMacro : StaylessMacroValue {
         val argTree = args.valueTree(0)
         val bodyTree = args.valueTree(1)
         if (isComplexArg(argTree)) {
-            formalizeArg(argTree.incoming!!)
+            formalizeArg(argTree.incoming!!, logSink)
         } else if (argTree is BlockTree) {
             var i = 0
             val n = argTree.size
@@ -64,7 +65,7 @@ internal object FormalizeArrowArgsMacro : StaylessMacroValue {
                 } else {
                     val edge = child.incoming
                     if (edge != null) {
-                        formalizeArg(edge)
+                        formalizeArg(edge, logSink)
                     }
                 }
                 i += 1

@@ -42,7 +42,6 @@ internal object DesugarPun :
         name = "desugarPun",
         signature = MacroSignature(
             requiredValueFormals = listOf(),
-            restValuesFormal = null,
             returnType = null,
         ),
     ),

@@ -78,7 +78,7 @@ abstract class TranslatorTests(
     /** Translate a module. */
     abstract fun translateTmplToBackend(ast: TmpL.Module): List<OutTree<*>>
 
-    /** Translate a top level statement. */
+    /** Translate a top-level statement. */
     open fun translateTmplToBackend(ast: TmpL.TopLevel): List<OutTree<*>> = translateTmplToBackend(
         gen.module {
             topLevels.add(ast)
@@ -673,7 +673,6 @@ abstract class TranslatorTests(
                                         TmpL.ValueFormal(p0, null, WKT.stringType2.asTmpLType().aType, false),
                                         TmpL.ValueFormal(p0, null, WKT.stringType2.asTmpLType().aType, false),
                                     ),
-                                    null,
                                 ),
                                 returnType = typeParamRefX.asTmpLType().aType,
                             ).aType,
@@ -766,7 +765,7 @@ abstract class TranslatorTests(
                         typeParameters = TmpL.ATypeParameters(
                             TmpL.TypeParameters(p0, emptyList()),
                         ),
-                        parameters = TmpL.Parameters(p0, null, emptyList(), null),
+                        parameters = TmpL.Parameters(p0, null, emptyList()),
                         returnType = TmpL.NominalType(
                             p0,
                             TmpL.TemperTypeName(p0, WKT.safeGeneratorTypeDefinition),

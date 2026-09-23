@@ -120,7 +120,7 @@ class TypeTestHarness(
         for (definition in preexisting) {
             registerTopLevel(definition)
         }
-        // Register common top level aliases
+        // Register common top-level aliases
         registerTopLevel(WellKnownTypes.intTypeDefinition, BuiltinName("Int"))
 
         processTypeDefinition(toCst(sourceCodeForPseudoDeclarations))
@@ -301,27 +301,15 @@ class TypeTestHarness(
                         extraDefinitions,
                         ExtraDefinitions.from(typeFormals),
                     )
-                    var restValuesFormal: StaticType? = null
                     if (valueFormalsTree != null) {
-                        var sawEllipsis = false
                         forEachCommaSeparated(valueFormalsTree) {
-                            check(!sawEllipsis) { "... parameter not last" }
-                            if (
-                                it.childCount == 2 &&
-                                it.child(0).tokenText == Operator.Ellipsis.text
-                            ) {
-                                sawEllipsis = true
-                                restValuesFormal = type(it.child(1), allExtraDefinitions)
-                            } else {
-                                valueFormals.add(valueFormal(it, allExtraDefinitions))
-                            }
+                            valueFormals.add(valueFormal(it, allExtraDefinitions))
                         }
                     }
                     val returnType = type(returnTypeTree, allExtraDefinitions)
                     return MkType.fnDetails(
                         typeFormals.toList(),
                         valueFormals.toList(),
-                        restValuesFormal,
                         returnType,
                     )
                 }
@@ -668,7 +656,6 @@ class TypeTestHarness(
             hasThisFormal = false,
             requiredInputTypes = requiredFormals.toList(),
             optionalInputTypes = listOf(),
-            restInputsType = null,
         )
         applyMethod.descriptor = sig
 

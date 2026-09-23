@@ -260,7 +260,7 @@ class InterpreterTest {
             |[fib(10), fib(\n, 9), fib()]
         """.trimMargin(),
         // In the disambiguation stage, `fib(n = 9)` becomes `fib(\n, 9)`
-        // but this test harness is just interpretation so we use the latter,
+        // but this test harness just does interpretation, so we use the latter,
         // obscure syntax above.
         overrides = mapOf(
             BuiltinName(">") to Value(BuiltinFuns.gtIntFn),
@@ -357,14 +357,6 @@ class InterpreterTest {
         "[1, 2, 3]: List"
         """,
         input = "[1, 2, 3]",
-    )
-
-    @Test
-    fun listConstructor() = assertResult(
-        """
-        "[0]: List"
-        """,
-        "[Int; 0]",
     )
 
     @Test
