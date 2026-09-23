@@ -3,6 +3,7 @@ package lang.temper.builtin
 import lang.temper.ast.TreeVisit
 import lang.temper.ast.VisitCue
 import lang.temper.common.Log
+import lang.temper.common.soleElementOrNull
 import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.format.OutToks
@@ -22,8 +23,10 @@ import lang.temper.type.InvalidType
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
+import lang.temper.type.excludeBubble
 import lang.temper.type2.AnySignature
 import lang.temper.type2.Signature2
+import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.BuiltinOperatorId
@@ -54,6 +57,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.and
 import lang.temper.value.freeTree
 import lang.temper.value.funStringSymbol
+import lang.temper.value.functionContained
 import lang.temper.value.interpolateSymbol
 import lang.temper.value.isErrorCall
 import lang.temper.value.newBuiltinName
@@ -730,7 +734,15 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
             }
             InterpMode.Partial -> {
                 val arg = args.valueTree(0)
-                val type = arg.typeInferences?.type
+                var type = arg.typeInferences?.type
+                if (type == null && arg is CallTree) {
+                    val callee = arg.childOrNull(0)
+                    val fn = callee?.functionContained
+                    val sig = fn?.sigs?.soleElementOrNull as? Signature2
+                    if (sig != null) {
+                        type = hackMapNewStyleToOld(excludeBubble(sig.returnType2))
+                    }
+                }
                 val value = arg.valueContained
                 val stage = macroEnv.stage
                 if (type != null) {

@@ -14,10 +14,12 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
+import lang.temper.type.Member
 import lang.temper.type.OperatorMember
 import lang.temper.type2.AnySignature
 import lang.temper.value.CallTree
 import lang.temper.value.MacroEnvironment
+import lang.temper.value.MacroValue
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
@@ -27,6 +29,7 @@ import lang.temper.value.RightNameLeaf
 import lang.temper.value.SpecialFunction
 import lang.temper.value.StaylessMacroValue
 import lang.temper.value.TEdge
+import lang.temper.value.TInt
 import lang.temper.value.Tree
 import lang.temper.value.TreeTemplate
 import lang.temper.value.Value
@@ -127,10 +130,19 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                     if (simpleOp != null) {
                         return@classify simpleOp to OpClassification.CompoundAssignment
                     }
+                    when (nameText) {
+                        "==" -> return@classify "==" to OpClassification.Eq
+                        "!=" -> return@classify "==" to OpClassification.Ne
+                        "<" -> return@classify "<=>" to OpClassification.Lt
+                        "<=" -> return@classify "<=>" to OpClassification.Le
+                        ">=" -> return@classify "<=>" to OpClassification.Ge
+                        ">" -> return@classify "<=>" to OpClassification.Gt
+                        "<=>" -> return@classify "<=>" to OpClassification.Cmp
+                    }
                 }
                 1 -> when (nameText) {
-                    "--", "_--" -> return@classify "pred" to OpClassification.IncrOrDecr
-                    "++", "_++" -> return@classify "succ" to OpClassification.IncrOrDecr
+                    "--", "_--" -> return@classify "pred" to OpClassification.Incr
+                    "++", "_++" -> return@classify "succ" to OpClassification.Decr
                     else -> {}
                 }
                 else -> {}
@@ -139,7 +151,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             nameText to OpClassification.Simple
         }
 
-        val isDefined = cf == OpClassification.Simple && when (operator) {
+        val isDefined = when (operator) {
             is ValueLeaf -> true
             is NameLeaf -> {
                 val name = operator.content
@@ -169,7 +181,7 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
 
         if (op == null || call?.incoming == null) { return NotYet }
 
-        val operatorSpecifier = if (cf == OpClassification.IncrOrDecr) {
+        val operatorSpecifier = if (cf is OpClassification.IncrOrDecr) {
             null
         } else {
             when (operands.size) {
@@ -179,23 +191,21 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
             }
         }
         val member = when {
+            cf is OpClassification.IncrOrDecr -> DotMember(Symbol(op))
             operatorSpecifier != null -> OperatorMember(operatorSpecifier)
-            cf == OpClassification.IncrOrDecr -> DotMember(Symbol(op))
             else -> null
         }
 
         // We have a lookup list of extensions for basic types like Int32 and String
         // so that evaluation of them can work even before core.temper has staged
         // to the point where we can dispatch to methods on well-known types'.
-        val builtins = builtinOperatorSpecs[operatorSpecifier] ?: listOf()
         if (member != null) {
-            val extensions = builtins.map { FunctionResolution(it) }
-            val helper = DotHelper(ExternalCall, member, extensions)
+            val helper = dotHelperForOperator(member)
             val vHelper = Value(helper)
             if (interpMode == InterpMode.Partial) {
                 when (cf) {
-                    OpClassification.CompoundAssignment, OpClassification.IncrOrDecr -> {
-                        val preCapture = cf == OpClassification.IncrOrDecr && nameText?.startsWith("_") == true
+                    OpClassification.CompoundAssignment, is OpClassification.IncrOrDecr -> {
+                        val preCapture = cf is OpClassification.IncrOrDecr && nameText?.startsWith("_") == true
                         val needsRecursiveDesugar = cf == OpClassification.CompoundAssignment
                         desugarCompoundOperation(
                             macroEnv,
@@ -230,10 +240,51 @@ object DesugarOperation : SpecialFunction, StaylessMacroValue, NamedBuiltinFun {
                                 }
                             }
                         }
+                    is OpClassification.Equivalence -> {
+                        val negated = cf.negated
+                        macroEnv.replaceMacroCallWith {
+                            MaybeNot(call.pos, negated = negated) {
+                                Call(call.pos) {
+                                    V(operator.pos, EqMacro.value)
+                                    operands.forEach {
+                                        Replant(freeTarget(it))
+                                    }
+                                    // The macro needs information about resolutions
+                                    V(operator.pos, vHelper)
+                                }
+                            }
+                        }
+                    }
+                    is OpClassification.Comparison -> {
+                        // Desugars to a three-way comparison, a `<=>` call.
+                        fun Planting.plantCmp() {
+                            Call(call.pos) {
+                                V(operator.pos, vHelper)
+                                operands.forEach {
+                                    Replant(freeTarget(it))
+                                }
+                            }
+                        }
+                        // But for `<` and friends we need a boolean, so we need
+                        // to perform a primitive integer comparison operation on
+                        // the result of that.
+                        val primCmp = cf.primCmp
+                        macroEnv.replaceMacroCallWith {
+                            if (primCmp != null) {
+                                Call(call.pos) {
+                                    V(operator.pos.rightEdge, primCmp)
+                                    plantCmp()
+                                    V(call.pos.rightEdge, vZero)
+                                }
+                            } else {
+                                plantCmp()
+                            }
+                        }
+                    }
                 }
             }
             val leftName = operands.firstOrNull()?.target as? NameLeaf
-            if (cf != OpClassification.IncrOrDecr && (cf == OpClassification.Simple || leftName != null)) {
+            if (cf !is OpClassification.IncrOrDecr && (cf == OpClassification.Simple || leftName != null)) {
                 val helperTree = ValueLeaf(macroEnv.document, operator.pos, vHelper)
                 val operandTrees = operands.map { it.target }
                 var result = macroEnv.dispatchCallTo(helperTree, vHelper, operandTrees, interpMode)
@@ -307,7 +358,7 @@ fun desugarCompoundOperation(
     // instead of its getter as for the second use.
     //
     // But first, we pull out temporaries.
-    // We don't have enough context here to know that `left` stays stable
+    // We lack sufficient context here to know that `left` stays stable
     // across all uses above.  Consider the below:
     //
     //      left[do { left = otherLeft; i++ }] += 1
@@ -386,25 +437,47 @@ fun isKnownStable(t: Tree?) = when (t) {
     else -> false
 }
 
-private enum class OpClassification {
+private sealed class OpClassification {
     /**
      * Like `+`.
      */
-    Simple,
+    data object Simple : OpClassification()
 
     /** Like `+=`.  The simple op is `+` */
-    CompoundAssignment,
+    data object CompoundAssignment : OpClassification()
 
     /**
      * Like `++` or `--`.
      * The simple op is a method name: `pred` (predecessor) or `succ` (successor).
      */
-    IncrOrDecr,
+    sealed class IncrOrDecr : OpClassification()
+    data object Incr : IncrOrDecr()
+    data object Decr : IncrOrDecr()
+
+    /**
+     * `==` and `!=` are equivalance checks that need additional null-safety
+     * handling via the [EquivalenceDesugarMacro].
+     */
+    sealed class Equivalence(val negated: Boolean) : OpClassification()
+    data object Eq : Equivalence(false)
+    data object Ne : Equivalence(true)
+
+    /**
+     * The related family of operators like `<`, `<=`, `>=`, `>` are syntactic
+     * sugar around applications of the ternary comparison operator: `<=>`.
+     */
+    sealed class Comparison(val primCmp: Value<MacroValue>?) : OpClassification()
+
+    data object Lt : Comparison(BuiltinFuns.vLtIntFn)
+    data object Le : Comparison(BuiltinFuns.vLeIntFn)
+    data object Ge : Comparison(BuiltinFuns.vGeIntFn)
+    data object Gt : Comparison(BuiltinFuns.vGtIntFn)
+    data object Cmp : Comparison(null)
 }
 
 private fun Planting.maybePrecapture(
     macroEnv: MacroEnvironment,
-    /** Plant the operation, but if the operatoion was [pre-read][plantPreRead], into a temporary, use that instead. */
+    /** Plant the operation, but if the operation was [pre-read][plantPreRead], into a temporary, use that instead. */
     plantOperation: Planting.(Temporary?) -> TreeTemplate<CallTree>,
     preCapture: Boolean,
     /** If we need to read the result early, plant an expression that does that. */
@@ -423,3 +496,14 @@ private fun Planting.maybePrecapture(
     } else {
         plantOperation(null)
     }
+
+private val vZero = Value(0, TInt)
+
+internal fun dotHelperForOperator(member: Member): DotHelper {
+    val builtins = when (member) {
+        is OperatorMember -> builtinOperatorSpecs[member.operatorSpecifier]
+        is DotMember -> null
+    } ?: listOf()
+    val extensions = builtins.map { FunctionResolution(it) }
+    return DotHelper(ExternalCall, member, extensions)
+}

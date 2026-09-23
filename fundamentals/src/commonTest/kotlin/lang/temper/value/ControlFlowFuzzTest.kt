@@ -275,7 +275,7 @@ private class Randomizer(val rng: Random) {
             val counter = countersInScope[rng.nextInt(countersInScope.size)]
             withLoopVar(counter)
             val limit = rng.nextInt(0, 10)
-            Call(BuiltinFuns.lessEqualsFn) {
+            Call(BuiltinFuns.leIntFn) {
                 Rn(counter)
                 V(Value(limit, TInt))
             }
@@ -429,13 +429,7 @@ private class JavaControlFlowConverter(
         is CallTree -> {
             val calleeName: String? = when (val callee = t.child(0)) {
                 is NameLeaf -> callee.content.builtinKey
-                is ValueLeaf -> {
-                    var fn = callee.functionContained
-                    while (fn is CoverFunction) {
-                        fn = fn.covered.first()
-                    }
-                    (fn as NamedBuiltinFun).name
-                }
+                is ValueLeaf -> (callee.functionContained as NamedBuiltinFun).name
                 else -> untranslatable(callee.toLispy())
             }
             when (calleeName) {

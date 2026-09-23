@@ -3,6 +3,7 @@ package lang.temper.value
 import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.BuiltinLogicalOperators
+import lang.temper.builtin.Not
 import lang.temper.common.LeftOrRight
 import lang.temper.common.ListBackedLogSink
 import lang.temper.common.Log
@@ -741,7 +742,7 @@ class ControlFlowTest {
                 bindings("n" to value(n)) to ExpectValue(n in somePrimes)
             }
         },
-    ) {
+    ) { pos ->
         val n = BuiltinName("n")
         val matched = ParsedName("matched")
         val prime = ParsedName("prime")
@@ -864,9 +865,11 @@ class ControlFlowTest {
                                 //       }
                                 If(
                                     cond = {
-                                        Call(BuiltinFuns.neIntFn) {
-                                            Rn(prime)
-                                            V(value(2))
+                                        Not(pos) {
+                                            Call(BuiltinFuns.eqIntFn) {
+                                                Rn(prime)
+                                                V(value(2))
+                                            }
                                         }
                                     },
                                     thn = {
@@ -891,9 +894,11 @@ class ControlFlowTest {
                                 //       }
                                 If(
                                     cond = {
-                                        Call(BuiltinFuns.neIntFn) {
-                                            Rn(prime)
-                                            V(value(3))
+                                        Not(pos) {
+                                            Call(BuiltinFuns.eqIntFn) {
+                                                Rn(prime)
+                                                V(value(3))
+                                            }
                                         }
                                     },
                                     thn = {
@@ -918,9 +923,11 @@ class ControlFlowTest {
                                 //       }
                                 If(
                                     cond = {
-                                        Call(BuiltinFuns.neIntFn) {
-                                            Rn(prime)
-                                            V(value(5))
+                                        Not(pos) {
+                                            Call(BuiltinFuns.eqIntFn) {
+                                                Rn(prime)
+                                                V(value(5))
+                                            }
                                         }
                                     },
                                     thn = {
@@ -945,9 +952,11 @@ class ControlFlowTest {
                                 //       }
                                 If(
                                     cond = {
-                                        Call(BuiltinFuns.neIntFn) {
-                                            Rn(prime)
-                                            V(value(7))
+                                        Not(pos) {
+                                            Call(BuiltinFuns.eqIntFn) {
+                                                Rn(prime)
+                                                V(value(7))
+                                            }
                                         }
                                     },
                                     thn = {
@@ -1739,12 +1748,13 @@ class ControlFlowTest {
     private fun assertResultsOfInterpretation(
         cases: List<Pair<Map<TemperName, Value<*>>, Expectation>>,
         beforeSimplest: (ControlFlow, BlockTree) -> Unit = { _, _ -> },
-        plantBlockContents: BlockPlanting.() -> Unit,
+        plantBlockContents: BlockPlanting.(Position) -> Unit,
     ) {
         val doc = Document(TestDocumentContext())
-        val block = doc.treeFarm.grow(Position(doc.nameMaker.namingContext.loc, 0, 0)) {
+        val pos = Position(doc.nameMaker.namingContext.loc, 0, 0)
+        val block = doc.treeFarm.grow(pos) {
             Block {
-                plantBlockContents()
+                plantBlockContents(pos)
             }
         }
         val variants = listOf("simple" to null, "simpler" to false, "simplest" to true)

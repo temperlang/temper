@@ -656,7 +656,7 @@ class RustBackendTest {
             |            let closure_group = closure_group.clone();
             |            std::sync::Arc::new(move | | closure_group.fn__1())
             |        };
-            |        test___0.assert(Some(actual___0) == Some(3), fn__1.clone());
+            |        test___0.assert(actual___0 == 3, fn__1.clone());
             |        test___0.soft_fail_to_hard()
             |    }
             |    use super::*;
@@ -773,7 +773,7 @@ class RustBackendTest {
             |    }).clone()
             |}
             |pub fn f(a__0: f64, b__0: f64) -> bool {
-            |    if temper_core::float64::cmp_option(Some(a__0), Some(b__0)) != 0 {
+            |    if ! (temper_core::float64::cmp(a__0, b__0) == 0) {
             |        return temper_core::float64::cmp(a__0, b__0 + 1.0f64) < 0;
             |    } else {
             |        return false;
@@ -900,7 +900,7 @@ class RustBackendTest {
             |            struct ClosureGroup___0 {}
             |            impl ClosureGroup___0 {
             |                fn fn__0(& self) -> std::sync::Arc<String> {
-            |                    return std::sync::Arc::new("expected i < nums.length".to_string());
+            |                    return std::sync::Arc::new("expected i <=> nums.length < 0".to_string());
             |                }
             |            }
             |            let closure_group = ClosureGroup___0 {};

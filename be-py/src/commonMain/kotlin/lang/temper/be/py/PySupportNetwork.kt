@@ -4,6 +4,7 @@ package lang.temper.be.py
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -18,6 +19,7 @@ import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.common.subListToEnd
@@ -40,6 +42,7 @@ import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.consoleBuiltinName
+import lang.temper.value.emptyValue
 import lang.temper.value.getStaticBuiltinName
 import lang.temper.value.internalGetStaticBuiltinName
 import lang.temper.value.listBuiltinName
@@ -75,31 +78,17 @@ internal object PySupportNetwork : SupportNetwork {
             BuiltinOperatorId.CmpIntInt -> IntCmp
             BuiltinOperatorId.CmpFltFlt -> DubCmp
             BuiltinOperatorId.CmpStrStr -> StrCmp
-            BuiltinOperatorId.CmpGeneric -> GenericCmp
+            BuiltinOperatorId.CmpBoolBool -> BoolCmp
+            BuiltinOperatorId.CmpLongLong -> Int64Cmp
             BuiltinOperatorId.GtIntInt -> IntGt
-            BuiltinOperatorId.GtFltFlt -> DubGt
-            BuiltinOperatorId.GtStrStr -> StrGt
-            BuiltinOperatorId.GtGeneric -> GenericGt
             BuiltinOperatorId.LtIntInt -> IntLt
-            BuiltinOperatorId.LtFltFlt -> DubLt
-            BuiltinOperatorId.LtStrStr -> StrLt
-            BuiltinOperatorId.LtGeneric -> GenericLt
             BuiltinOperatorId.GeIntInt -> IntGtEq
-            BuiltinOperatorId.GeFltFlt -> DubGtEq
-            BuiltinOperatorId.GeStrStr -> StrGtEq
-            BuiltinOperatorId.GeGeneric -> GenericGtEq
             BuiltinOperatorId.LeIntInt -> IntLtEq
-            BuiltinOperatorId.LeFltFlt -> DubLtEq
-            BuiltinOperatorId.LeStrStr -> StrLtEq
-            BuiltinOperatorId.LeGeneric -> GenericLtEq
             BuiltinOperatorId.EqIntInt -> IntEq
             BuiltinOperatorId.EqFltFlt -> DubEq
             BuiltinOperatorId.EqStrStr -> StrEq
-            BuiltinOperatorId.EqGeneric -> GenericEq
-            BuiltinOperatorId.NeIntInt -> IntNotEq
-            BuiltinOperatorId.NeFltFlt -> DubNotEq
-            BuiltinOperatorId.NeStrStr -> StrNotEq
-            BuiltinOperatorId.NeGeneric -> GenericNotEq
+            BuiltinOperatorId.EqLongLong -> Int64Eq
+            BuiltinOperatorId.EqBoolBool -> BoolEq
             BuiltinOperatorId.DivFltFlt -> ArithDubDiv
             BuiltinOperatorId.DivIntInt -> ArithIntDiv
             BuiltinOperatorId.DivIntInt64 -> ArithInt64Div
@@ -208,9 +197,49 @@ internal object PySupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? PySupportCode ?: return null
+        if (supportCode.baseName.nameText == STRING_INDEX_OPTION_COMPARE_TO) {
+            // They're represented as ints, so just use the simple comparison below
+        } else {
+            when (supportCode.builtinOperatorId) {
+                // These are ok to just replace with `<`, `<=, etc. below.
+                BuiltinOperatorId.CmpIntInt,
+                BuiltinOperatorId.CmpLongLong,
+                BuiltinOperatorId.CmpBoolBool,
+                -> {}
+                // String and Float builtins require adjustment.
+                else -> return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                simpleComparison(fn.pos, comparisonKind),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
+    }
+
     override val bubbleStrategy = BubbleBranchStrategy.Exceptions
 
-    // Technically, None is void in Python, but too many things are statements only, such as assert.
+    // Technically, None is void in Python, but too many things are statements only, such as `assert`.
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid =
         RepresentationOfVoid.DoNotReifyVoid
 }
@@ -366,7 +395,7 @@ val Ignore = PyInlineSupportCode("ignore", 1) { pos, args ->
     when (val arg = args[0]) {
         // If we could be sure we aren't used as an expression, we could say `pass` instead.
         is Py.Name -> PyConstant.None.at(pos)
-        // We always expect names today, but support others just in case.
+        // We always expect names today but support others just in case.
         // If we could be sure we aren't used as an expression, we could say `arg` all by itself.
         else -> pyCommaOp(listOf(arg, PyConstant.None.at(pos)), pos)
     }
@@ -383,7 +412,6 @@ val FloatType = PySeparateCode("float", SYS_BUILTINS)
 val ListType = PyConnectedType("list", SYS_BUILTINS)
 val TupleType = PySeparateCode("tuple", SYS_BUILTINS)
 val TypeType = PySeparateCode("type", SYS_BUILTINS)
-val DictType = PySeparateCode("dict", SYS_BUILTINS)
 val MappingProxyType = PySeparateCode("MappingProxyType", SYS_TYPES)
 val DateConstructor = PySeparateCode("date", DATE_TIME)
 val DateType = PyConnectedType("date", DATE_TIME)
@@ -397,10 +425,7 @@ val DateGetDayOfWeek = PyInlineSupportCode(
 ) { pos, arg ->
     arg[0].method("isoweekday", pos = pos)
 }
-val IsInstanceInt = PySeparateCode("isinstance_int", RUNTIME)
-val CallableTest = PySeparateCode("callable", SYS_BUILTINS)
 val CastByType = PySeparateCode("cast_by_type", RUNTIME)
-val CastByTest = PySeparateCode("cast_by_test", RUNTIME)
 val CastNone = PySeparateCode("cast_none", RUNTIME)
 val LoggingConsoleType = PySeparateCode("LoggingConsole", RUNTIME)
 
@@ -542,19 +567,10 @@ private fun stringIndexOptionComparer(
         Py.BinExpr(pos, a, op, b)
     }
 
-val StringIndexOptionCompareTo = stringIndexOptionComparer("core.type StringIndexOption.compareTo()", BinaryOpEnum.Sub)
+private const val STRING_INDEX_OPTION_COMPARE_TO = "core.type StringIndexOption.compareTo()"
+val StringIndexOptionCompareTo = stringIndexOptionComparer(STRING_INDEX_OPTION_COMPARE_TO, BinaryOpEnum.Sub)
 val StringIndexOptionCompareToEq =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::eq", BinaryOpEnum.Eq)
-val StringIndexOptionCompareToGe =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ge", BinaryOpEnum.GtEq)
-val StringIndexOptionCompareToGt =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::gt", BinaryOpEnum.Gt)
-val StringIndexOptionCompareToLe =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::le", BinaryOpEnum.LtEq)
-val StringIndexOptionCompareToLt =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::lt", BinaryOpEnum.Lt)
-val StringIndexOptionCompareToNe =
-    stringIndexOptionComparer("core.type StringIndexOption.compareTo()::ne", BinaryOpEnum.NotEq)
+    stringIndexOptionComparer("core.type StringIndexOption.eq()", BinaryOpEnum.Eq)
 val RequireStringIndex = PySeparateCode("require_string_index", RUNTIME)
 val RequireNoStringIndex = PySeparateCode("require_no_string_index", RUNTIME)
 
@@ -602,7 +618,7 @@ val ArithDubNegate = PyInlineSupportCode("arith_dub_negate", 1, BuiltinOperatorI
     UnaryOpEnum.UnarySub(arg[0], pos = pos)
 }
 val ArithIntTimes = PySeparateCode("int_mul", RUNTIME, BuiltinOperatorId.TimesIntInt)
-val ArithInt64Times = PySeparateCode("int64_mul", RUNTIME, BuiltinOperatorId.TimesIntInt)
+val ArithInt64Times = PySeparateCode("int64_mul", RUNTIME, BuiltinOperatorId.TimesIntInt64)
 val ArithDubTimes = PyInlineSupportCode("arith_dub_times", 2, BuiltinOperatorId.TimesFltFlt) { pos, arg ->
     BinaryOpEnum.Mult(arg[0], arg[1], pos = pos)
 }
@@ -648,22 +664,16 @@ val IsNull = PyInlineSupportCode("is_none", 1, BuiltinOperatorId.IsNull) { pos, 
     BinaryOpEnum.Is(args[0], Py.Name(pos, PyIdentifierName("None"), null), pos = pos)
 }
 
-val GenericCmp = PySeparateCode("generic_cmp", RUNTIME, BuiltinOperatorId.CmpGeneric)
-val GenericEq = PySeparateCode("generic_eq", RUNTIME, BuiltinOperatorId.EqGeneric)
-val GenericNotEq = PySeparateCode("generic_not_eq", RUNTIME, BuiltinOperatorId.NeGeneric)
-val GenericLtEq = PySeparateCode("generic_lt_eq", RUNTIME, BuiltinOperatorId.LeGeneric)
-val GenericLt = PySeparateCode("generic_lt", RUNTIME, BuiltinOperatorId.LtGeneric)
-val GenericGtEq = PySeparateCode("generic_gt_eq", RUNTIME, BuiltinOperatorId.GeGeneric)
-val GenericGt = PySeparateCode("generic_gt", RUNTIME, BuiltinOperatorId.GtGeneric)
-
-val IntCmp = PyInlineSupportCode("int_cmp", -1, BuiltinOperatorId.EqIntInt) { pos, args ->
-    BinaryOpEnum.Sub(args[0], args[1], pos = pos)
-}
-val IntEq = PyInlineSupportCode("int_lt", -1, BuiltinOperatorId.EqIntInt) { pos, args ->
+val BoolCmp = PySeparateCode("bool_cmp", RUNTIME, BuiltinOperatorId.CmpBoolBool)
+val BoolEq = PyInlineSupportCode("bool_eq", -1, BuiltinOperatorId.EqBoolBool) { pos, args ->
     BinaryOpEnum.Eq(args[0], args[1], pos = pos)
 }
-val IntNotEq = PyInlineSupportCode("int_not_eq", -1, BuiltinOperatorId.EqIntInt) { pos, args ->
-    BinaryOpEnum.NotEq(args[0], args[1], pos = pos)
+
+val IntCmp = PyInlineSupportCode("int_cmp", -1, BuiltinOperatorId.CmpIntInt) { pos, args ->
+    BinaryOpEnum.Sub(args[0], args[1], pos = pos)
+}
+val IntEq = PyInlineSupportCode("int_eq", -1, BuiltinOperatorId.EqIntInt) { pos, args ->
+    BinaryOpEnum.Eq(args[0], args[1], pos = pos)
 }
 val IntLt = PyInlineSupportCode("int_lt", -1, BuiltinOperatorId.LtIntInt) { pos, args ->
     BinaryOpEnum.Lt(args[0], args[1], pos = pos)
@@ -678,15 +688,15 @@ val IntGtEq = PyInlineSupportCode("int_ge", -1, BuiltinOperatorId.GeIntInt) { po
     BinaryOpEnum.GtEq(args[0], args[1], pos = pos)
 }
 
+val Int64Eq = PyInlineSupportCode("int64_eq", -1, BuiltinOperatorId.EqLongLong) { pos, args ->
+    BinaryOpEnum.Eq(args[0], args[1], pos = pos)
+}
+val Int64Cmp = PySeparateCode("int64_cmp", RUNTIME, BuiltinOperatorId.CmpLongLong)
+
 val DubCmp = PySeparateCode("float_cmp", RUNTIME, BuiltinOperatorId.CmpFltFlt)
 val DubEq = PySeparateCode("float_eq", RUNTIME, BuiltinOperatorId.EqFltFlt)
-val DubNotEq = PySeparateCode("float_not_eq", RUNTIME, BuiltinOperatorId.NeFltFlt)
-val DubLtEq = PySeparateCode("float_lt_eq", RUNTIME, BuiltinOperatorId.LeFltFlt)
-val DubLt = PySeparateCode("float_lt", RUNTIME, BuiltinOperatorId.LtFltFlt)
-val DubGtEq = PySeparateCode("float_gt_eq", RUNTIME, BuiltinOperatorId.GeFltFlt)
-val DubGt = PySeparateCode("float_gt", RUNTIME, BuiltinOperatorId.GtFltFlt)
 
-val StrCmp = PyInlineSupportCode("str_cmp", -1, BuiltinOperatorId.EqStrStr) { pos, args ->
+val StrCmp = PyInlineSupportCode("str_cmp", -1, BuiltinOperatorId.CmpStrStr) { pos, args ->
     BinaryOpEnum.Sub(
         BinaryOpEnum.Gt(args[0], args[1], pos = pos),
         BinaryOpEnum.Lt(args[0], args[1], pos = pos),
@@ -694,21 +704,6 @@ val StrCmp = PyInlineSupportCode("str_cmp", -1, BuiltinOperatorId.EqStrStr) { po
 }
 val StrEq = PyInlineSupportCode("str_eq", -1, BuiltinOperatorId.EqStrStr) { pos, args ->
     BinaryOpEnum.Eq(args[0], args[1], pos = pos)
-}
-val StrNotEq = PyInlineSupportCode("str_not_eq", -1, BuiltinOperatorId.NeStrStr) { pos, args ->
-    BinaryOpEnum.NotEq(args[0], args[1], pos = pos)
-}
-val StrLt = PyInlineSupportCode("str_lt", -1, BuiltinOperatorId.LtStrStr) { pos, args ->
-    BinaryOpEnum.Lt(args[0], args[1], pos = pos)
-}
-val StrLtEq = PyInlineSupportCode("str_le", -1, BuiltinOperatorId.LeStrStr) { pos, args ->
-    BinaryOpEnum.LtEq(args[0], args[1], pos = pos)
-}
-val StrGt = PyInlineSupportCode("str_gt", -1, BuiltinOperatorId.GtStrStr) { pos, args ->
-    BinaryOpEnum.Gt(args[0], args[1], pos = pos)
-}
-val StrGtEq = PyInlineSupportCode("str_ge", -1, BuiltinOperatorId.GeStrStr) { pos, args ->
-    BinaryOpEnum.GtEq(args[0], args[1], pos = pos)
 }
 val StringFromCodePoint = PySeparateCode("string_from_code_point", RUNTIME)
 val StringFromCodePoints = PySeparateCode("string_from_code_points", RUNTIME)
@@ -935,7 +930,23 @@ val StdNetSend = PySeparateCode("std_net_send", RUNTIME)
 val mathInf = PySeparateCode("inf", MATH)
 val mathNan = PySeparateCode("nan", MATH)
 
-fun notSupported(name: String, builtin: NamedBuiltinFun, what: String = ""): PySupportCode {
+private fun simpleComparison(calleePos: Position, kind: ComparisonKind): PyInlineSupportCode {
+    val op = when (kind) {
+        ComparisonKind.LessThan -> BinaryOpEnum.Lt
+        ComparisonKind.LessThanOrEqual -> BinaryOpEnum.LtEq
+        ComparisonKind.GreaterThanOrEqual -> BinaryOpEnum.GtEq
+        ComparisonKind.GreaterThan -> BinaryOpEnum.Gt
+    }
+    return PyInlineSupportCode(
+        kind.name,
+        arity = 2,
+        needsSelf = true,
+    ) { pos, args ->
+        op(args[0], args[1], pos = pos, calleePos = calleePos)
+    }
+}
+
+internal fun notSupported(name: String, builtin: NamedBuiltinFun, what: String = ""): PySupportCode {
     val msg = mutableListOf<String>()
     msg.add("Builtin(${builtin.name}, ${builtin.builtinOperatorId}, species=${builtin.functionSpecies})")
     if (what.isNotEmpty()) {
@@ -961,7 +972,7 @@ val docPrintInliner = PyInlineSupportCode("print", 1, BuiltinOperatorId.Print) {
 
 /**
  * [PyInlineSupportCode] doesn't work here because of the context.
- * [lang.temper.be.tmpl.TmpLTranslator] tries to store things in temporaries then docgen complains.
+ * [lang.temper.be.tmpl.TmpLTranslator] tries to store things in temporaries, then docgen complains.
  * So go to the effort of using [InlineTmpLSupportCode].
  */
 object DocConsoleLogInliner : InlineTmpLSupportCode {
@@ -1038,7 +1049,8 @@ internal val BailCall = PyInlineSupportCode(
                 null -> null
                 else -> Py.Call(
                     pos,
-                    // Call `str` for unexpected case of None. Could do better, but again, this is unexpected.
+                    // Call `str` for the unexpected case of None.
+                    // Could do better, but again, this is unexpected.
                     translator.request(StrType).asPyName(pos),
                     listOf(
                         Py.CallArg(pos, value = test.method("messages_combined")),
@@ -1227,13 +1239,8 @@ private val pyConnections = mapOf(
     "core.type StringBuilder.constructor()" to StringBuilderConstructor,
     "core.type StringBuilder.toString()" to StringBuilderToString,
     "core.type StringIndex.none" to StringIndexNone,
-    "core.type StringIndexOption.compareTo()" to StringIndexOptionCompareTo,
-    "core.type StringIndexOption.compareTo()::eq" to StringIndexOptionCompareToEq,
-    "core.type StringIndexOption.compareTo()::ge" to StringIndexOptionCompareToGe,
-    "core.type StringIndexOption.compareTo()::gt" to StringIndexOptionCompareToGt,
-    "core.type StringIndexOption.compareTo()::le" to StringIndexOptionCompareToLe,
-    "core.type StringIndexOption.compareTo()::lt" to StringIndexOptionCompareToLt,
-    "core.type StringIndexOption.compareTo()::ne" to StringIndexOptionCompareToNe,
+    STRING_INDEX_OPTION_COMPARE_TO to StringIndexOptionCompareTo,
+    "core.type StringIndexOption.eq()" to StringIndexOptionCompareToEq,
     "std/testing.type Test.bail()" to BailCall,
     "core.empty()" to EmptyInliner,
     "core.ignore()" to Ignore,

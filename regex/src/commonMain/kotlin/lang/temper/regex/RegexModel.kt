@@ -70,17 +70,18 @@ sealed class Special : RegexNode {
     override fun toString() = this::class.simpleName ?: super.toString()
 }
 
-object Begin : Special()
-object End : Special()
-object GraphemeCluster : Special() // TODO(tjp, regex): Can we support grapheme cluster in core dialect?
-object WordBoundary : Special()
+// The export is named `Special` but the underlying, unexported type is `Begin`.
+object BeginSpecial : Special()
+object EndSpecial : Special()
+object GraphemeClusterSpecial : Special() // TODO(tjp, regex): Can we support grapheme cluster in core dialect?
+object WordBoundarySpecial : Special()
 
 /**
  * Dot is like a code set but not usable in CodeSet.
  * JS (MDN): "Matches any single character except line terminators: \n, \r, \u2028 or \u2029."
  * Python: "In the default mode, this matches any character except a newline."
  */
-object Dot : Special()
+object DotSpecial : Special()
 
 /** SpecialSet is a tailored set of code points that's also usable in [CodeSet]. */
 sealed class SpecialSet : CodePart, Special() {
@@ -88,18 +89,18 @@ sealed class SpecialSet : CodePart, Special() {
 }
 
 /** Expect that Indo-Arabic numerals are useful even in Unicode. */
-object Digit : SpecialSet() {
+object DigitSpecial : SpecialSet() {
     override val values get() = asciiDigitIntRangeSet
 }
 
 /**
- * Current code intends to match the Python ascii definition.
+ * The current code intends to match the Python ascii definition.
  * In JS and Java: [ \f\n\r\t\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]
  * In .NET: [ \f\n\r\t\v\u0085\p{Z}]
  * In Python (ascii mode): [ \t\n\r\f\v]
  * See also: https://en.wikipedia.org/wiki/Template:Whitespace_(Unicode)
  */
-object Space : SpecialSet() {
+object SpaceSpecial : SpecialSet() {
     override val values get() = spaceIntRangeSet
 }
 
@@ -113,7 +114,7 @@ object Space : SpecialSet() {
  * - regex: Supports `\p`, maybe compatible with JS. Doesn't support PyPy.
  * TODO(tjp, tooling): Compare whatever Python implements with our IdParts.Continue and Unicode property sets.
  */
-object Word : SpecialSet() {
+object WordSpecial : SpecialSet() {
     // TODO(tjp, tooling): Some mode hinting for ascii vs unicode? Would need to be in SpecialSet.
     override val values get() = asciiWordIntRangeSet
 }

@@ -88,12 +88,25 @@ fun DescriptorChain.idKind(): TmpL.IdKind = when (node) {
     else -> TmpL.IdKind.Value
 }
 
-/** Determine if this name is internal or is presented to external modules. */
+/**
+ * Determine if this name is private to a scope, is internal to a module, or is
+ * presented to external modules. Private scope includes private type members.
+ */
 fun DescriptorChain.idReach(ignoreImport: Boolean = false): TmpL.IdReach = when (val n = this.node) {
     is TmpL.Formal if parent?.node is TmpL.Constructor -> TmpL.IdReach.External
     is TmpL.FunctionDeclaration -> n.idReach()
     is TmpL.Import if !ignoreImport -> TmpL.IdReach.External
     else -> TmpL.IdReach.Internal
+}.let { reach ->
+    when (reach) {
+        TmpL.IdReach.Internal -> when {
+            // Private for imports fails at least for be-py handling. Not sure yet about others.
+            // node is TmpL.Import -> TmpL.IdReach.Private
+            node is TmpL.TopLevelDeclaration -> TmpL.IdReach.Internal
+            else -> TmpL.IdReach.Private
+        }
+        else -> reach
+    }
 }
 
 /** Determine if this construct is used in production or test. */

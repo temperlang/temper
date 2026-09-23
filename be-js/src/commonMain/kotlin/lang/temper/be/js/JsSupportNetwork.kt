@@ -2,6 +2,7 @@ package lang.temper.be.js
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -64,6 +65,7 @@ import lang.temper.type2.Type2
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.TType
+import lang.temper.value.emptyValue
 import lang.temper.value.jsonSymbol
 import lang.temper.value.thisParsedName
 
@@ -306,12 +308,7 @@ internal object JsSupportNetwork : SupportNetwork {
             "core.type String.hasIndex()" -> stringHasIndexExpander
             "core.type String.slice()" -> stringSliceExpander
             "core.type StringIndexOption.compareTo()" -> stringIndexOptionCompareToExpander
-            "core.type StringIndexOption.compareTo()::eq" -> stringIndexOptionCompareToExpanderEq
-            "core.type StringIndexOption.compareTo()::ge" -> stringIndexOptionCompareToExpanderGe
-            "core.type StringIndexOption.compareTo()::gt" -> stringIndexOptionCompareToExpanderGt
-            "core.type StringIndexOption.compareTo()::le" -> stringIndexOptionCompareToExpanderLe
-            "core.type StringIndexOption.compareTo()::lt" -> stringIndexOptionCompareToExpanderLt
-            "core.type StringIndexOption.compareTo()::ne" -> stringIndexOptionCompareToExpanderNe
+            "core.type StringIndexOption.eq()" -> stringIndexOptionCompareToExpanderEq
             "core.type StringIndex.none" -> stringIndexNoneExpander
             "core.type StringBuilder.constructor()" -> stringBuilderConstructorExpander
             "core.type StringBuilder.append()" -> stringBuilderAppendExpander
@@ -384,6 +381,52 @@ internal object JsSupportNetwork : SupportNetwork {
         return super.translateRuntimeTypeOperation(pos, rto, sourceType, targetType)
     }
 
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } ?: return null
+        when (supportCode) {
+            // StringIndexOptions are represented as small integers, so just convert to `<`, `<=`, etc.
+            is InlinedJs if supportCode.factory == stringIndexOptionCompareToExpander -> {}
+            is JsExternalFunctionReference -> {
+                when (supportCode.builtinOperatorId) {
+                    // These are ok to just replace with `<`, `<=, etc. below.
+                    BuiltinOperatorId.CmpIntInt,
+                    BuiltinOperatorId.CmpLongLong,
+                    BuiltinOperatorId.CmpBoolBool,
+                    -> {}
+                    // String and Float builtins require adjustment.
+                    else -> return null
+                }
+            }
+
+            else -> {
+                return null
+            }
+        }
+        val freeParameters = tmpl.parameters.toList()
+        tmpl.parameters = freeParameters.map {
+            TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue)
+        }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                simpleComparison(fn.pos, comparisonKind),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = freeParameters,
+        )
+    }
+
     override val bubbleStrategy = BubbleBranchStrategy.Exceptions
     override val coroutineStrategy = CoroutineStrategy.TranslateToGenerator
     override val functionTypeStrategy = FunctionTypeStrategy.ToFunctionType
@@ -397,12 +440,20 @@ internal object JsSupportNetwork : SupportNetwork {
 }
 
 private val supportedAutoConnecteds = setOf(
+    "core.type DenseBitVector.constructor()",
+    "core.type DenseBitVector.get()",
+    "core.type DenseBitVector.set()",
+    "core.type Deque.constructor()",
+    "core.type Deque.add()",
+    "core.type Deque.get isEmpty()",
+    "core.type Deque.removeFirst()",
     "core.type Float64.near()",
     "core.type Float64.toInt32()",
     "core.type Float64.toInt32Unsafe()",
     "core.type Float64.toInt64()",
     "core.type Float64.toInt64Unsafe()",
     "core.type Float64.toString()",
+    "core.type Int32.signum()",
     "core.type Int64.max()",
     "core.type Int64.min()",
     "core.type Int64.toFloat64()",
@@ -430,7 +481,6 @@ private val supportedAutoConnecteds = setOf(
     "core.type MapBuilder.constructor()",
     "core.type MapBuilder.remove()",
     "core.type MapBuilder.set()",
-    "core.type Pair.constructor()",
     "core.type Mapped.get length()",
     "core.type Mapped.get()",
     "core.type Mapped.getOr()",
@@ -444,13 +494,7 @@ private val supportedAutoConnecteds = setOf(
     "core.type Mapped.toListBuilder()",
     "core.type Mapped.toListBuilderWith()",
     "core.type Mapped.forEach()",
-    "core.type DenseBitVector.constructor()",
-    "core.type DenseBitVector.get()",
-    "core.type DenseBitVector.set()",
-    "core.type Deque.constructor()",
-    "core.type Deque.add()",
-    "core.type Deque.get isEmpty()",
-    "core.type Deque.removeFirst()",
+    "core.type Pair.constructor()",
     "core.type PromiseBuilder",
     "std/regex.type RegexFormatter.regexCompileFormatted()",
     "std/regex.type Regex.compiledFind()",
@@ -1036,16 +1080,6 @@ private val stringIndexOptionCompareToExpander =
     stringIndexOptionCompareToHandler("-")
 private val stringIndexOptionCompareToExpanderEq =
     stringIndexOptionCompareToHandler("===")
-private val stringIndexOptionCompareToExpanderGe =
-    stringIndexOptionCompareToHandler(">=")
-private val stringIndexOptionCompareToExpanderGt =
-    stringIndexOptionCompareToHandler(">")
-private val stringIndexOptionCompareToExpanderLe =
-    stringIndexOptionCompareToHandler("<=")
-private val stringIndexOptionCompareToExpanderLt =
-    stringIndexOptionCompareToHandler("<")
-private val stringIndexOptionCompareToExpanderNe =
-    stringIndexOptionCompareToHandler("!==")
 
 /** `StringIndex.none` -> `-1` */
 private val stringIndexNoneExpander = { pos: Position, arguments: List<Js.Tree>, strict: Boolean, _: JsTranslator? ->
@@ -1458,7 +1492,7 @@ private val assertStrict = JsUnInlinedExternalFunctionReference(
     source = DashedIdentifier("assert"),
     // Among other things, conveniently doesn't need default import.
     // Also, this existed since before `node` supported `import` imports, so should be fine to use.
-    // See for example: https://nodejs.org/docs/latest-v15.x/api/assert.html#assert_strict_assertion_mode
+    // See, for example: https://nodejs.org/docs/latest-v15.x/api/assert.html#assert_strict_assertion_mode
     stableName = JsIdentifierName("strict"),
 )
 
@@ -1621,54 +1655,6 @@ private val mathDotIMul = OtherSupportCodeRequirement(
         listOf(WellKnownTypes.intType2, WellKnownTypes.intType2),
     ),
 )
-
-private val coreCmpGeneric = JsUnInlinedExternalFunctionReference(
-    source = DashedIdentifier.temperCoreLibraryIdentifier,
-    stableName = JsIdentifierName("cmpGeneric"),
-    builtinOperatorId = BuiltinOperatorId.CmpGeneric,
-)
-
-private val coreCmpFloat = JsUnInlinedExternalFunctionReference(
-    source = DashedIdentifier.temperCoreLibraryIdentifier,
-    stableName = JsIdentifierName("cmpFloat"),
-    builtinOperatorId = BuiltinOperatorId.CmpGeneric,
-)
-
-private val coreCmpString = JsUnInlinedExternalFunctionReference(
-    source = DashedIdentifier.temperCoreLibraryIdentifier,
-    stableName = JsIdentifierName("cmpString"),
-    builtinOperatorId = BuiltinOperatorId.CmpGeneric,
-)
-
-private fun cmpFromCoreCmp(
-    supportCode: JsExternalReference,
-): (Position, JsTranslator?, Js.Expression, Js.Expression) -> Js.Expression = { pos, translator, left, right ->
-    Js.CallExpression(
-        pos,
-        Js.Identifier(
-            pos,
-            translator?.requireExternalReference(supportCode)
-                ?: JsIdentifierName(JsIdentifierGrammar.massageJsIdentifier(supportCode.baseName.nameText)),
-            null,
-        ),
-        listOf(left, right),
-    )
-}
-
-private fun cmpToOperator(
-    id: BuiltinOperatorId,
-    operatorTokenText: String,
-    generateCmp: (pos: Position, translator: JsTranslator?, left: Js.Expression, right: Js.Expression) -> Js.Expression,
-): Pair<BuiltinOperatorId, InlinedJs> {
-    return runtimeLibraryBackedSupportCode(id, requires = listOf()) { pos, args, translator ->
-        Js.BinaryExpression(
-            pos,
-            generateCmp(pos, translator, args.getExprSafe(0, pos.leftEdge), args.getExprSafe(1, pos.rightEdge)),
-            Js.Operator(pos, operatorTokenText),
-            Js.NumericLiteral(pos, 0),
-        )
-    }
-}
 
 private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNull { id ->
     when (id) {
@@ -1923,87 +1909,24 @@ private val builtinOperatorIdToSupportCode = BuiltinOperatorId.entries.mapNotNul
             )
         }
 
-        BuiltinOperatorId.EqIntInt -> makeIntCmp(id, "===")
-        BuiltinOperatorId.NeIntInt -> makeIntCmp(id, "!==")
-        BuiltinOperatorId.LtIntInt -> makeIntCmp(id, "<")
-        BuiltinOperatorId.GtIntInt -> makeIntCmp(id, ">")
-        BuiltinOperatorId.LeIntInt -> makeIntCmp(id, "<=")
-        BuiltinOperatorId.GeIntInt -> makeIntCmp(id, ">=")
-        BuiltinOperatorId.CmpIntInt -> runtimeLibraryBackedSupportCode(id) { pos, args ->
-            arity2(args)?.let { (lhs, rhs) ->
-                Js.BinaryExpression(pos, lhs, Js.Operator(pos, "-"), rhs)
-            }
-        }
+        BuiltinOperatorId.EqIntInt -> makeComparisonOperation(id, "===")
+        BuiltinOperatorId.LtIntInt -> makeComparisonOperation(id, "<")
+        BuiltinOperatorId.GtIntInt -> makeComparisonOperation(id, ">")
+        BuiltinOperatorId.LeIntInt -> makeComparisonOperation(id, "<=")
+        BuiltinOperatorId.GeIntInt -> makeComparisonOperation(id, ">=")
+        BuiltinOperatorId.CmpIntInt -> runtimeLibraryReference(id, "cmpInt32")
 
-        BuiltinOperatorId.EqFltFlt -> cmpToOperator(id, "===", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.NeFltFlt -> cmpToOperator(id, "!==", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.LtFltFlt -> cmpToOperator(id, "<", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.GtFltFlt -> cmpToOperator(id, ">", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.LeFltFlt -> cmpToOperator(id, "<=", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.GeFltFlt -> cmpToOperator(id, ">=", cmpFromCoreCmp(coreCmpFloat))
-        BuiltinOperatorId.CmpFltFlt -> id to coreCmpFloat
+        BuiltinOperatorId.EqBoolBool -> makeComparisonOperation(id, "===")
+        BuiltinOperatorId.CmpBoolBool -> runtimeLibraryReference(id, "cmpBoolean")
 
-        BuiltinOperatorId.EqStrStr -> runtimeLibraryBackedSupportCode(id) { pos, args ->
-            arity2(args)?.let { (lhs, rhs) ->
-                Js.BinaryExpression(
-                    pos,
-                    lhs,
-                    Js.Operator(pos, "==="),
-                    rhs,
-                )
-            }
-        }
-        BuiltinOperatorId.NeStrStr -> runtimeLibraryBackedSupportCode(id) { pos, args ->
-            arity2(args)?.let { (lhs, rhs) ->
-                Js.BinaryExpression(
-                    pos,
-                    lhs,
-                    Js.Operator(pos, "!=="),
-                    rhs,
-                )
-            }
-        }
-        BuiltinOperatorId.LtStrStr -> cmpToOperator(id, "<", cmpFromCoreCmp(coreCmpString))
-        BuiltinOperatorId.GtStrStr -> cmpToOperator(id, ">", cmpFromCoreCmp(coreCmpString))
-        BuiltinOperatorId.LeStrStr -> cmpToOperator(id, "<=", cmpFromCoreCmp(coreCmpString))
-        BuiltinOperatorId.GeStrStr -> cmpToOperator(id, ">=", cmpFromCoreCmp(coreCmpString))
-        BuiltinOperatorId.CmpStrStr -> id to coreCmpString
+        BuiltinOperatorId.EqFltFlt -> runtimeLibraryReference(id, "eqFloat64")
+        BuiltinOperatorId.CmpFltFlt -> runtimeLibraryReference(id, "cmpFloat64")
 
-        BuiltinOperatorId.EqGeneric -> runtimeLibraryBackedSupportCode(id) { pos, args ->
-            arity2(args)?.let { (lhs, rhs) ->
-                Js.CallExpression(
-                    pos,
-                    Js.MemberExpression(
-                        pos,
-                        Js.Identifier(pos, JsIdentifierName("Object"), null),
-                        Js.Identifier(pos, JsIdentifierName("is"), null),
-                    ),
-                    listOf(lhs, rhs),
-                )
-            }
-        }
-        BuiltinOperatorId.NeGeneric -> runtimeLibraryBackedSupportCode(id) { pos, args ->
-            arity2(args)?.let { (lhs, rhs) ->
-                Js.UnaryExpression(
-                    pos,
-                    Js.Operator(pos, "!"),
-                    Js.CallExpression(
-                        pos,
-                        Js.MemberExpression(
-                            pos,
-                            Js.Identifier(pos, JsIdentifierName("Object"), null),
-                            Js.Identifier(pos, JsIdentifierName("is"), null),
-                        ),
-                        listOf(lhs, rhs),
-                    ),
-                )
-            }
-        }
-        BuiltinOperatorId.LtGeneric -> cmpToOperator(id, "<", cmpFromCoreCmp(coreCmpGeneric))
-        BuiltinOperatorId.GtGeneric -> cmpToOperator(id, ">", cmpFromCoreCmp(coreCmpGeneric))
-        BuiltinOperatorId.LeGeneric -> cmpToOperator(id, "<=", cmpFromCoreCmp(coreCmpGeneric))
-        BuiltinOperatorId.GeGeneric -> cmpToOperator(id, ">=", cmpFromCoreCmp(coreCmpGeneric))
-        BuiltinOperatorId.CmpGeneric -> id to coreCmpGeneric
+        BuiltinOperatorId.EqLongLong -> makeComparisonOperation(id, "===")
+        BuiltinOperatorId.CmpLongLong -> runtimeLibraryReference(id, "cmpInt64")
+
+        BuiltinOperatorId.EqStrStr -> makeComparisonOperation(id, "===")
+        BuiltinOperatorId.CmpStrStr -> runtimeLibraryReference(id, "cmpString")
 
         BuiltinOperatorId.Bubble,
         BuiltinOperatorId.Panic,
@@ -2169,7 +2092,7 @@ private val jsProblematicYearRange = 0L..99L
 private const val DEFAULT_FULL_YEAR = 1900
 private const val DATE_CONSTRUCTOR_ARITY = 3 // year, month, day
 
-private fun makeIntCmp(
+private fun makeComparisonOperation(
     id: BuiltinOperatorId,
     operatorTokenText: String,
 ) = runtimeLibraryBackedSupportCode(id) { pos, args ->
@@ -2191,3 +2114,24 @@ private fun List<Js.Tree>.getExprSafe(i: Int, fallbackPos: Position): Js.Express
 
 /** JSON.stringify assigns special significance to this method name */
 private const val JAVASCRIPT_TOJSON_SPECIAL_NAME = "toJSON"
+
+/**
+ * Outputs an infix `<` for [ComparisonKind.LessThan] and the corresponding JS comparison
+ * operator for the others.
+ *
+ * This is used to simplify Temper representations of comparison like `(x <=> y) < 0` to
+ * JS like `x < y` where the ternary semantics matches JS's abstraction comparison.
+ */
+private fun simpleComparison(calleePos: Position, k: ComparisonKind) = InlinedJs(
+    DashedIdentifier.temperCoreLibraryIdentifier,
+    JsIdentifierName("simpleCompare"),
+    needsThisEquivalent = false,
+    builtinOperatorId = null,
+) { pos: Position, arguments: List<Js.Tree>, _, _ ->
+    Js.InfixExpression(
+        pos,
+        arguments.getExprSafe(0, pos.leftEdge),
+        Js.Operator(calleePos, k.intInfixer.kind.outputToken.text),
+        arguments.getExprSafe(1, pos.rightEdge),
+    )
+}

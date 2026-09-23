@@ -1,6 +1,5 @@
 package lang.temper.be.tmpl
 
-import lang.temper.common.allMapToSameElseNull
 import lang.temper.common.asciiTitleCase
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
@@ -14,7 +13,6 @@ import lang.temper.type2.Descriptor
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
-import lang.temper.value.CoverFunction
 import lang.temper.value.MetadataMap
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.StayLeaf
@@ -252,14 +250,6 @@ internal fun baseNameFor(poolable: Poolable): ParsedName = when (poolable) {
             TFunction -> when (val funOrNull = TFunction.unpack(poolable.value)) {
                 // It helps to be able to distinguish these from other functions
                 is NamedBuiltinFun -> ParsedName("f${funOrNull.name.asciiTitleCase()}")
-                is CoverFunction -> {
-                    // If it's a cover of builtins with the same name, use that.
-                    val commonName = funOrNull.covered.allMapToSameElseNull {
-                        (it as? NamedBuiltinFun)?.name
-                    }
-                    commonName?.let { ParsedName("f${it.asciiTitleCase()}") }
-                }
-
                 else -> null // Fallback to generic value of type indicator below
             }
             TType -> ParsedName(

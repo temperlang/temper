@@ -69,7 +69,7 @@ class JsFunctionalTest : FunctionalTestRunner<JsBackend>(JsBackend.Factory) {
                     val junitXml = effort.auxOut[Aux.JunitXml]
                     val parsedResults = parseJunitResults(junitXml)
 
-                    // lowercase both side to remove any inconsistencies between platforms and naming strategies
+                    // lowercase both sides to remove any inconsistencies between platforms and naming strategies
                     assertEquals(
                         test.expectedTestFailures.map { it.key.lowercase() }.sorted(),
                         parsedResults.failures.map { it.name.lowercase() }.sorted(),

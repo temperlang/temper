@@ -296,6 +296,14 @@ internal object StringFns {
         }
     }
 
+    object Eq : SigFnBuilder("core.type String.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            val a = TString.unpackContent(args[0])
+            val b = TString.unpackContent(args[1])
+            return TBoolean.value(a == b)
+        }
+    }
+
     object GetNone : SigFnBuilder("core.type StringIndex.none") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return packNoStringIndex()
@@ -305,6 +313,12 @@ internal object StringFns {
     object StringIndexOptionCompareTo : SigFnBuilder("core.type StringIndexOption.compareTo()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return StringIndexSupport.compare(args, cb, interpMode)
+        }
+    }
+
+    object StringIndexOptionEq : SigFnBuilder("core.type StringIndexOption.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            return StringIndexSupport.equals(args, cb, interpMode)
         }
     }
 }

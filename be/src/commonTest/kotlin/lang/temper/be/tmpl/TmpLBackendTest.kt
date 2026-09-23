@@ -162,11 +162,11 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//for/ => for.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
+                    let nym`<=>#1` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/for.x=") var x__0: Int32 = 0;
                     module init {
-                      while (nym`<#1`(x__0, 10)) {
+                      while (x__0 < 10) {
                         x__0 = nym`+#2`(x__0, 1);
                       }
                     }
@@ -382,13 +382,13 @@ class TmpLBackendTest {
                 |            "content":
                 |            ```
                 |            //// work//fib/ => fib.tmpl
-                |            let nym`>#9` = builtins.nym`>` /* (Int32, Int32) -> Boolean */;
+                |            let nym`<=>#9` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
                 |            let nym`+#10` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                 |            let nym`-#11` = builtins.nym`-` /* (Int32, Int32) -> Int32 */;
                 |            @QName("test-library/fib.fib()") let fib__0(@QName("test-library/fib.fib().(i)") var i__0: Int32): Int32 {
                 |              @QName("test-library/fib.fib().a=") var a__0: Int32 = 0;
                 |              @QName("test-library/fib.fib().b=") var b__0: Int32 = 1;
-                |              while (nym`>#9`(i__0, 0)) {
+                |              while (i__0 > 0) {
                 |                @QName("test-library/fib.fib().c=") let c__0: Int32 = nym`+#10`(a__0, b__0);
                 |                a__0 = b__0;
                 |                b__0 = c__0;
@@ -635,12 +635,52 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//do-nothing/ => do-nothing.tmpl
-                    let nym`<#1` = builtins.nym`<` /* (Int32, Int32) -> Boolean */;
+                    let nym`<=>#1` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
                     let nym`+#2` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
                     @QName("test-library/do-nothing.i") var i__0: Int32 = 0;
                     module init {
-                      while (nym`<#1`(i__0, 3)) {
+                      while (i__0 < 3) {
                         i__0 = nym`+#2`(i__0, 1);
+                      }
+                    }
+
+                    ```
+                },
+                "do-nothing.tmpl.map": "__DO_NOT_CARE__"
+            }
+        }
+        """.trimIndent(),
+    )
+
+    @Test
+    fun simpleDoNothingLoopInt64() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            // See GenerateCodeTest.simpleDoNothingLoop
+            """
+                |{
+                |  do-nothing: {
+                |    foo.temper: ```
+                |      var i = 0i64;
+                |      while (i < 3i64) { i += 1i64; }
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+        {
+            "tmpl": {
+                "do-nothing.tmpl": {
+                    "content":
+                    ```
+                    //// work//do-nothing/ => do-nothing.tmpl
+                    let nym`<=>#0` = builtins.nym`<=>` /* (Int64, Int64) -> Int32 */;
+                    let nym`<(Int64)#0` = builtins.nym`<(Int64)` /* (Int64, Int64) -> Boolean */;
+                    let nym`+#0` = builtins.nym`+` /* (Int64, Int64) -> Int64 */;
+                    @QName("test-library/do-nothing.i") var i__0: Int64 = 0;
+                    module init {
+                      while (nym`<(Int64)#0`(i__0, 3)) {
+                        i__0 = nym`+#0`(i__0, 1);
                       }
                     }
 
@@ -756,7 +796,7 @@ class TmpLBackendTest {
                     "content":
                     ```
                     //// work//foo/ => foo.tmpl
-                    let nym`==#3` = builtins.nym`==` /* (String?, String?) -> Boolean */;
+                    let nym`==#3` = builtins.nym`==` /* (String, String) -> Boolean */;
                     @QName("test-library/foo.foo()") let foo(@QName("test-library/foo.foo().(bar)") bar__0: String): Boolean {
                       return nym`==#3`(bar__0, "");
                     }
@@ -2129,22 +2169,21 @@ class TmpLBackendTest {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
             |        let GetConsole#0 = builtins.GetConsole;
-            |        let nym`<=#28` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
+            |        let nym`<=>#1` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
             |        let ConsoleLog#0 = builtins.ConsoleLog;
             |        let nym`+#30` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
-            |        let nym`>=#31` = builtins.nym`>=` /* (Int32, Int32) -> Boolean */;
             |        let console#0: Console = GetConsole#0();
             |        @QName("test-library/foo.f()") @reach(\none) let f__0(): Void {
             |          @QName("test-library/foo.f().data=") var data__0: Int32 = 0;
             |          @QName("test-library/foo.f().x=") var x__0: Int32 = 0;
-            |          while (nym`<=#28`(x__0, 1)) {
+            |          while (x__0 <= 1) {
             |            ConsoleLog#0(console#0, "a");
             |            @QName("test-library/foo.f().y=") var y__0: Int32 = 75;
-            |            while (nym`<=#28`(y__0, 77)) {
+            |            while (y__0 <= 77) {
             |              ConsoleLog#0(console#0, "b");
             |              let postfixReturn#0: Int32 = data__0;
             |              data__0 = nym`+#30`(postfixReturn#0, 1);
-            |              if (nym`>=#31`(postfixReturn#0, 76)) {
+            |              if (postfixReturn#0 >= 76) {
             |                ConsoleLog#0(console#0, "c");
             |                break;
             |              }
@@ -3240,7 +3279,7 @@ class TmpLBackendTest {
             |      content:
             |      ```
             |      //// work//bubble-ordering/ => bubble-ordering.tmpl
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
+            |      let nym`<=>#1` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
             |        @QName("test-library/bubble-ordering.type Apple.maybe()") let maybe__0(this = this__0, @QName("test-library/bubble-ordering.type Apple.maybe().(this)") @impliedThis(Apple) this__0: Apple): Apple | Bubble {
             |          return /* this */ this__0;
@@ -3252,7 +3291,7 @@ class TmpLBackendTest {
             |      @QName("test-library/bubble-ordering.fuji") let fuji: Apple = /*new*/ Apple().maybe();
             |      @QName("test-library/bubble-ordering.gala") let gala: Apple = /*new*/ Apple().maybe();
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
-            |        if (nym`<=#24`(some__0, 0)) {
+            |        if (some__0 <= 0) {
             |          return fuji;
             |        } else {
             |          return gala;
@@ -3280,7 +3319,7 @@ class TmpLBackendTest {
             |      let packOkResult#0 = builtins.packOkResult /* <packOkResultPASS extends AnyValue, packOkResultFAIL extends AnyValue>(packOkResultPASS) -> Result<packOkResultPASS, packOkResultFAIL> */;
             |      let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
             |      let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
-            |      let nym`<=#24` = builtins.nym`<=` /* (Int32, Int32) -> Boolean */;
+            |      let nym`<=>#24` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
             |      @QName("test-library/bubble-ordering.type Apple") class Apple / Apple {
             |        @QName("test-library/bubble-ordering.type Apple.maybe()") let maybe__0(this = this__0, @QName("test-library/bubble-ordering.type Apple.maybe().(this)") @impliedThis(Apple) this__0: Apple): Apple | Bubble {
             |          return packOkResult#0(/* this */ this__0);
@@ -3304,7 +3343,7 @@ class TmpLBackendTest {
             |      }
             |      @QName("test-library/bubble-ordering.gala") let gala: Apple = unpackOkResult#0(gala#0);
             |      @QName("test-library/bubble-ordering.juggle()") let juggle(@QName("test-library/bubble-ordering.juggle().(some)") some__0: Int32): Apple {
-            |        if (nym`<=#24`(some__0, 0)) {
+            |        if (some__0 <= 0) {
             |          return fuji;
             |        } else {
             |          return gala;
@@ -3550,7 +3589,7 @@ class TmpLBackendTest {
             |    "foo.tmpl": {
             |      content: ```
             |        //// work//foo/ => foo.tmpl
-            |        let nym`==#7` = builtins.nym`==` /* (Int32?, Int32?) -> Boolean */;
+            |        let nym`==#7` = builtins.nym`==` /* (Int32, Int32) -> Boolean */;
             |        let nym`%#8` = builtins.nym`%` /* (Int32, Int32) -> Result<Int32, Bubble> */;
             |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
             |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
@@ -4094,22 +4133,19 @@ class TmpLBackendTest {
             |      content:
             |        ```
             |        //// work//foo/ => foo.tmpl
-            |        let StringIndexOptionCompareToLt#15 = builtins.StringIndexOptionCompareToLt;
-            |        let StringIndexOptionCompareToGe#16 = builtins.StringIndexOptionCompareToGe;
-            |        let StringIndexOptionCompareToLe#17 = builtins.StringIndexOptionCompareToLe;
-            |        let StringIndexOptionCompareToGt#18 = builtins.StringIndexOptionCompareToGt;
+            |        let StringIndexOptionCompareTo#15 = builtins.StringIndexOptionCompareTo;
             |        let StringIndexNone#0 = builtins.StringIndexNone;
             |        @QName("test-library/foo.f1()") let f1(@QName("test-library/foo.f1().(a)") a__0: StringIndexOption, @QName("test-library/foo.f1().(b)") b__0: StringIndexOption): Boolean {
-            |          return StringIndexOptionCompareToLt#15(a__0, b__0);
+            |          return StringIndexOptionCompareTo#15(a__0, b__0) < 0;
             |        }
             |        @QName("test-library/foo.f2()") let f2(@QName("test-library/foo.f2().(a)") a__1: StringIndexOption, @QName("test-library/foo.f2().(b)") b__1: StringIndex): Boolean {
-            |          return StringIndexOptionCompareToGe#16(a__1, b__1);
+            |          return StringIndexOptionCompareTo#15(a__1, b__1) >= 0;
             |        }
             |        @QName("test-library/foo.f3()") let f3(@QName("test-library/foo.f3().(a)") a__2: StringIndex, @QName("test-library/foo.f3().(b)") b__2: StringIndex): Boolean {
-            |          return StringIndexOptionCompareToLe#17(a__2, b__2);
+            |          return StringIndexOptionCompareTo#15(a__2, b__2) <= 0;
             |        }
             |        @QName("test-library/foo.f4()") let f4(@QName("test-library/foo.f4().(a)") a__3: StringIndex): Boolean {
-            |          return StringIndexOptionCompareToGt#18(a__3, StringIndexNone#0);
+            |          return StringIndexOptionCompareTo#15(a__3, StringIndexNone#0) > 0;
             |        }
             |
             |        ```

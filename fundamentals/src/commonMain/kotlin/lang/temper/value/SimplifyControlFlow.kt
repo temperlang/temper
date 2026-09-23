@@ -1024,6 +1024,5 @@ private class DepthCounter {
 
 private fun isNotOperator(fn: MacroValue): Boolean = when (fn) {
     is NamedBuiltinFun -> fn.builtinOperatorId == BuiltinOperatorId.BooleanNegation
-    is CoverFunction -> fn.covered.all { isNotOperator(it) }
     else -> false
 }

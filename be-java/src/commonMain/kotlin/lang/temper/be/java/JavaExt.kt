@@ -276,6 +276,8 @@ fun J.Expression.asArgument(pos: Position = this.pos): J.Argument = J.Argument(p
 
 val TypedArg<J.Expression>.arg get() = expr.asArgument()
 val TypedArg<J.Expression>.isNullable get() = TypeContext2().admitsNull(type)
+fun TypedArg<J.Expression>.isReferenceType(names: JavaNames) =
+    JavaType.fromFrontend(type, names) !is Primitive
 
 /** Convenience method for creating method invocations. */
 fun J.Expression.method(methodName: String, vararg args: J.Expression, source: Name? = null, pos: Position = this.pos) =
@@ -353,8 +355,13 @@ fun J.Operator.isPostfix() = operator.isPostfix()
 fun J.Operator.isInfix() = operator.isInfix()
 
 /** Convenience method to construct infix binary operations. */
-fun JavaOperator.infix(left: J.Expression, right: J.Expression, pos: Position = right.pos) =
-    J.InfixExpr(pos, left, J.Operator(pos, this), right)
+fun JavaOperator.infix(
+    left: J.Expression,
+    right: J.Expression,
+    pos: Position = right.pos,
+    calleePos: Position? = null,
+) =
+    J.InfixExpr(pos, left, J.Operator(calleePos ?: left.pos.rightEdge, this), right)
 
 /** Convenience method to construct prefix unary operations. */
 fun JavaOperator.prefix(value: J.Expression, pos: Position = value.pos) =

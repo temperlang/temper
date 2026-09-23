@@ -13,7 +13,6 @@ import lang.temper.common.TriState
 import lang.temper.common.compatRemoveLast
 import lang.temper.common.compatReversed
 import lang.temper.common.console
-import lang.temper.common.ignore
 import lang.temper.common.rangesOfSetBits
 import lang.temper.common.subListToEnd
 import lang.temper.env.ChildEnvironment
@@ -70,7 +69,6 @@ import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.CallableValue
 import lang.temper.value.ControlFlow
-import lang.temper.value.CoverFunction
 import lang.temper.value.DeclParts
 import lang.temper.value.DeclTree
 import lang.temper.value.DynamicMessage
@@ -926,28 +924,13 @@ class Interpreter(
         val actuals = LazyActualsList(argTrees, this, env, im)
         val pos = ast?.pos ?: argTrees.spanningPosition(calleeTree.pos)
         val cb = callbackFor(pos)
-        val (f, arguments) = when (val cf = TFunction.unpackOrNull(calleeValue)) {
-            is CoverFunction ->
-                try {
-                    CoverFunction.uncover(actuals, cb, im, cf.covered, cf.otherwise)
-                } catch (panic: Panic) { // TODO: is this necessary?
-                    ignore(panic)
-                    null
-                }
-                    ?: return NotYet
-            else -> calleeValue to null
-        }
 
-        if (f !is Value<*>) {
-            return Fail
-        }
-
-        val fUnpacked = TFunction.unpackOrNull(f)
+        val fUnpacked = TFunction.unpackOrNull(calleeValue)
             ?: run {
                 failLog.explain(
                     MessageTemplate.ExpectedValueOfType,
                     calleeTree.pos,
-                    listOf(f.typeTag),
+                    listOf(calleeValue.typeTag),
                 )
                 return@dispatchCall Fail
             }
@@ -966,7 +949,7 @@ class Interpreter(
         val strategy = callStrategies.getValue(Pair(functionSpecies, im))
         if (beSpammy(SPAMMY_DISPATCH)) {
             console.log(
-                "$stage: Using call strategy $strategy for ($f):${
+                "$stage: Using call strategy $strategy for ($calleeValue):${
                     fUnpacked.functionSpecies}/$im at ${ast?.pos}",
             )
             if (beSpammy(SPAMMY)) {
@@ -982,25 +965,19 @@ class Interpreter(
                 // they can internally call isSet.
                 val asUserFn = fUnpacked as? UserFunction
 
-                val actualActuals = when {
-                    arguments == null -> {
-                        val values = actuals.indices.map {
-                            when (val result = actuals.result(it)) {
-                                is Fail, NotYet -> {
-                                    if (ast != null) {
-                                        maybeVisitChildren(ast, env, im)
-                                    }
-                                    return@dispatchCall result
-                                }
-                                is Value<*> -> result
+                val values = actuals.indices.map {
+                    when (val result = actuals.result(it)) {
+                        is Fail, NotYet -> {
+                            if (ast != null) {
+                                maybeVisitChildren(ast, env, im)
                             }
+                            return@dispatchCall result
                         }
-                        // We presumably don't get here for cover functions, so sigs is likely singular.
-                        PrecomputedActualValues(actuals, values, fUnpacked.sigs?.firstOrNull())
+                        is Value<*> -> result
                     }
-                    asUserFn != null -> arguments.toFullyNamedActualsInOrder(cb)
-                    else -> arguments.toPositionalActuals(cb) ?: return Fail
                 }
+                // We presumably don't get here for cover functions, so sigs is likely singular.
+                val actualActuals = PrecomputedActualValues(actuals, values, fUnpacked.sigs?.firstOrNull())
 
                 if (isPureInlineAttempt) {
                     if (
@@ -2579,13 +2556,12 @@ private fun functionStability(ast: FunTree, env: Environment): FunctionStability
                     }
                 } else {
                     val calleeValue = callee?.functionContained
-                    // Calls to pure functions and stable functions allowed.
-                    when (calleeValue?.functionSpecies) {
-                        FunctionSpecies.Pure, FunctionSpecies.Special -> Unit
-                        else -> {
+                    when (calleeValue?.stability) {
+                        ValueStability.Unstable, null -> {
                             updateStability(FunctionStability.Unstable)
                             return
                         }
+                        ValueStability.Stable -> {}
                     }
                 }
             }

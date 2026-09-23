@@ -14,7 +14,7 @@
                 ],
                 [
                     "Value",
-                    "C__0\u003cT__0\u003e: Type"
+                    "C__0\u003cT__1\u003e: Type"
                 ],
                 [
                     "Value",
@@ -64,7 +64,7 @@
             [
                 [
                     "LeftName",
-                    "f__0"
+                    "f__6"
                 ],
                 [
                     "Value",
@@ -97,7 +97,7 @@
             [
                 [
                     "LeftName",
-                    "T__0"
+                    "T__1"
                 ],
                 [
                     "Value",
@@ -121,7 +121,7 @@
                 ],
                 [
                     "Value",
-                    "T__0: Type"
+                    "T__1: Type"
                 ],
                 [
                     "Value",
@@ -145,7 +145,7 @@
                 ],
                 [
                     "Value",
-                    "C__0\u003cT__0\u003e: Type"
+                    "C__0\u003cT__1\u003e: Type"
                 ]
             ]
         ],
@@ -158,11 +158,11 @@
                 ],
                 [
                     "LeftName",
-                    "T__0"
+                    "T__1"
                 ],
                 [
                     "Value",
-                    "T__0: Type"
+                    "T__1: Type"
                 ]
             ]
         ],
@@ -175,7 +175,7 @@
                 ],
                 [
                     "Value",
-                    "C__0\u003cT__0\u003e: Type"
+                    "C__0\u003cT__1\u003e: Type"
                 ],
                 [
                     "Value",
@@ -188,7 +188,7 @@
             [
                 [
                     "LeftName",
-                    "constructor__0"
+                    "constructor__7"
                 ],
                 [
                     "Value",
@@ -251,7 +251,7 @@
                 ],
                 [
                     "Value",
-                    "C__0\u003cT__0\u003e: Type"
+                    "C__0\u003cT__1\u003e: Type"
                 ]
             ]
         ],
@@ -264,7 +264,7 @@
                 ],
                 [
                     "LeftName",
-                    "constructor__0"
+                    "constructor__7"
                 ],
                 [
                     "Fun",
@@ -274,7 +274,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "this__0"
+                                    "this__3"
                                 ],
                                 [
                                     "Value",
@@ -282,7 +282,7 @@
                                 ],
                                 [
                                     "Value",
-                                    "C__0\u003cT__0\u003e: Type"
+                                    "C__0\u003cT__1\u003e: Type"
                                 ],
                                 [
                                     "Value",
@@ -290,7 +290,7 @@
                                 ],
                                 [
                                     "Value",
-                                    "C__0\u003cT__0\u003e: Type"
+                                    "C__0\u003cT__1\u003e: Type"
                                 ],
                                 [
                                     "Value",
@@ -319,7 +319,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__0"
+                                    "return__4"
                                 ],
                                 [
                                     "Value",
@@ -402,8 +402,13 @@
                         ],
                         [
                             "Value",
-                            "C__0\u003cT__0\u003e: Type"
+                            "C__0\u003cT__1\u003e: Type"
                         ],
+                        [
+                            "Value",
+                            "\\stay: Symbol"
+                        ],
+                        [ "Stay" ],
                         [
                             "Block",
                             [
@@ -430,7 +435,7 @@
             [
                 [
                     "LeftName",
-                    "U__0"
+                    "U__2"
                 ],
                 [
                     "Value",
@@ -446,7 +451,7 @@
                 ],
                 [
                     "Value",
-                    "U__0: Type"
+                    "U__2: Type"
                 ],
                 [
                     "Value",
@@ -475,11 +480,11 @@
                 ],
                 [
                     "LeftName",
-                    "U__0"
+                    "U__2"
                 ],
                 [
                     "Value",
-                    "U__0: Type"
+                    "U__2: Type"
                 ]
             ]
         ],
@@ -492,7 +497,7 @@
                 ],
                 [
                     "LeftName",
-                    "f__0"
+                    "f__6"
                 ],
                 [
                     "Fun",
@@ -506,7 +511,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__1"
+                                    "return__5"
                                 ],
                                 [
                                     "Value",
@@ -514,7 +519,7 @@
                                 ],
                                 [
                                     "Value",
-                                    "C__0\u003cU__0\u003e: Type"
+                                    "C__0\u003cU__2\u003e: Type"
                                 ],
                                 [
                                     "Value",
@@ -556,7 +561,7 @@
                         ],
                         [
                             "Value",
-                            "U__0: Type"
+                            "U__2: Type"
                         ],
                         [
                             "Value",
@@ -582,7 +587,7 @@
                                 ],
                                 [
                                     "LeftName",
-                                    "fn__0"
+                                    "fn__8"
                                 ]
                             ]
                         ]

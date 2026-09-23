@@ -46,14 +46,14 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "moduleMinimal" to "",
             "moduleWithImport" to
                 "from other import frobnicate as frobnicate_7, lunar_wayneshaft as lunar_wayneshaft_8",
-            "moduleWithTopLevel" to "example_name_7: 'str0' = 'example assigned value'",
+            "moduleWithTopLevel" to "_example_name_7: 'str0' = 'example assigned value'",
             "moduleWithResult" to "export = 'example module result'",
             "importNoLocalName" to "",
             "importOne" to "from other import pi as pi_7",
             "importThree" to
                 "from other import math as math_7, pie_charts as pie_charts_8, magic as magic_9",
             "expressionStatement" to "42",
-            "assignmentToValue" to "maybe_value_7 = False",
+            "assignmentToValue" to "_maybe_value_7 = False",
             "blockStatementEmpty" to
                 """
                     |if True:
@@ -62,142 +62,142 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "blockStatementOne" to
                 """
                     |if True:
-                    |    do_thing_7('one')
+                    |    _do_thing_7('one')
                 """.trimMargin(),
             "blockStatementThree" to
                 """
                     |if True:
-                    |    do_thing_7('one')
-                    |    do_thing_7('two')
-                    |    do_thing_7('three')
+                    |    _do_thing_7('one')
+                    |    _do_thing_7('two')
+                    |    _do_thing_7('three')
                 """.trimMargin(),
             "blockStatementBreaking" to
                 """
                     |with Label0() as label_8:
-                    |    do_thing_7('one')
-                    |    do_thing_7('two')
+                    |    _do_thing_7('one')
+                    |    _do_thing_7('two')
                     |    label_8.break_()
-                    |    do_thing_7('three')
+                    |    _do_thing_7('three')
                 """.trimMargin(),
             "whileReturnEarly" to
                 """
-                    |before_loop_7()
-                    |while loop_predicate_8():
-                    |    before_test_9()
-                    |    if early_predicate_10():
-                    |        before_return_11()
+                    |_before_loop_7()
+                    |while _loop_predicate_8():
+                    |    _before_test_9()
+                    |    if _early_predicate_10():
+                    |        _before_return_11()
                     |        return 49
-                    |    after_test_12()
-                    |after_loop_13()
+                    |    _after_test_12()
+                    |_after_loop_13()
                     |return 42
                 """.trimMargin(),
             "whileReturnEarlySimple" to
                 """
-                    |while loop_predicate_7():
-                    |    if early_predicate_8():
+                    |while _loop_predicate_7():
+                    |    if _early_predicate_8():
                     |        return 49
                     |return 42
                 """.trimMargin(),
             "whileBreakEarly" to
                 """
-                    |before_loop_7()
-                    |while loop_predicate_8():
-                    |    before_test_9()
-                    |    if early_predicate_10():
-                    |        before_break_11()
+                    |_before_loop_7()
+                    |while _loop_predicate_8():
+                    |    _before_test_9()
+                    |    if _early_predicate_10():
+                    |        _before_break_11()
                     |        break
-                    |    after_test_12()
-                    |after_loop_13()
+                    |    _after_test_12()
+                    |_after_loop_13()
                     |return 42
                 """.trimMargin(),
             "whileBreakEarlySimple" to
                 """
-                    |while loop_predicate_7():
-                    |    if early_predicate_8():
+                    |while _loop_predicate_7():
+                    |    if _early_predicate_8():
                     |        break
                     |return 42
                     |
                 """.trimMargin(),
             "whileBreakNested" to
                 """
-                    |before_outer_8()
+                    |_before_outer_8()
                     |with Label0() as outer_7:
-                    |    while outer_predicate_9():
-                    |        before_inner_10()
-                    |        while inner_predicate_11():
-                    |            before_inner_12()
-                    |            if early_predicate_13():
-                    |                before_break_14()
+                    |    while _outer_predicate_9():
+                    |        _before_inner_10()
+                    |        while _inner_predicate_11():
+                    |            _before_inner_12()
+                    |            if _early_predicate_13():
+                    |                _before_break_14()
                     |                outer_7.break_()
-                    |            after_test_15()
-                    |        after_inner_16()
-                    |after_outer_17()
+                    |            _after_test_15()
+                    |        _after_inner_16()
+                    |_after_outer_17()
                     |return 42
                 """.trimMargin(),
             "whileBreakNestedSimple" to
                 """
                     |with Label0() as outer_7:
-                    |    while outer_predicate_8():
-                    |        while inner_predicate_9():
-                    |            if early_predicate_10():
+                    |    while _outer_predicate_8():
+                    |        while _inner_predicate_9():
+                    |            if _early_predicate_10():
                     |                outer_7.break_()
                     |return 42
                 """.trimMargin(),
             "whileContinueSkip" to
                 """
-                    |before_loop_7()
-                    |while loop_predicate_8():
-                    |    before_test_9()
-                    |    if skip_predicate_10():
-                    |        before_continue_11()
+                    |_before_loop_7()
+                    |while _loop_predicate_8():
+                    |    _before_test_9()
+                    |    if _skip_predicate_10():
+                    |        _before_continue_11()
                     |        continue
-                    |    after_test_12()
-                    |after_loop_13()
+                    |    _after_test_12()
+                    |_after_loop_13()
                     |return 42
                 """.trimMargin(),
             "whileContinueSkipSimple" to
                 """
-                    |while loop_predicate_7():
-                    |    if skip_predicate_8():
+                    |while _loop_predicate_7():
+                    |    if _skip_predicate_8():
                     |        continue
                     |return 42
                 """.trimMargin(),
             "whileContinueNested" to
                 """
-                    |before_outer_8()
+                    |_before_outer_8()
                     |outer_7 = Label0()
-                    |while outer_predicate_9():
+                    |while _outer_predicate_9():
                     |    with outer_7:
-                    |        before_inner_10()
-                    |        while inner_predicate_11():
-                    |            before_inner_12()
-                    |            if skip_predicate_13():
-                    |                before_continue_14()
+                    |        _before_inner_10()
+                    |        while _inner_predicate_11():
+                    |            _before_inner_12()
+                    |            if _skip_predicate_13():
+                    |                _before_continue_14()
                     |                outer_7.continue_()
-                    |            after_test_15()
-                    |        after_inner_16()
-                    |after_outer_17()
+                    |            _after_test_15()
+                    |        _after_inner_16()
+                    |_after_outer_17()
                     |return 42
                 """.trimMargin(),
             "whileContinueNestedSimple" to
                 """
                     |outer_7 = Label0()
-                    |while outer_predicate_8():
+                    |while _outer_predicate_8():
                     |    with outer_7:
-                    |        while inner_predicate_9():
-                    |            if skip_predicate_10():
+                    |        while _inner_predicate_9():
+                    |            if _skip_predicate_10():
                     |                outer_7.continue_()
                     |return 42
                 """.trimMargin(),
             "whileNestedBreakContinue" to
                 """
                     |with LabelPair0() as outer_7:
-                    |    while outer_predicate_8():
+                    |    while _outer_predicate_8():
                     |        with outer_7.continuing:
-                    |            while inner_predicate_9():
-                    |                if skip_predicate_10():
+                    |            while _inner_predicate_9():
+                    |                if _skip_predicate_10():
                     |                    outer_7.continue_()
-                    |                if early_predicate_11():
+                    |                if _early_predicate_11():
                     |                    outer_7.break_()
                     |return 42
                 """.trimMargin(),
@@ -208,9 +208,9 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "unexportedClass" to
                 """
                     |class _Thing:
-                    |    prop_name_9: 'str0'
-                    |    __slots__ = ('prop_name_9',)
-                    |    def __init__(blah: 'str0', /) -> None:
+                    |    _prop_name_9: 'str0'
+                    |    __slots__ = ('_prop_name_9',)
+                    |    def __init__(blah_12: 'str0', /) -> None:
                     |        pass
                     |    def fun_name(required_arg_17: 'str0', optional_arg_15: 'Union1[int2, None]' = None, /) -> 'int2':
                     |        _optional_arg_15: 'Union1[int2, None]' = optional_arg_15
@@ -219,7 +219,7 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
                     |            _optional_arg_15 = 1
                     |        return_16 = _optional_arg_15
                     |        return return_16
-                    |    def private_method_10() -> 'None':
+                    |    def _private_method_10() -> 'None':
                     |        raise NotImplementedError3
                 """.trimMargin(),
             "exportedFun" to
@@ -235,19 +235,19 @@ class PyTranslatorTest : TranslatorTests(PyBackend.Python3.backendMeta, PySuppor
             "funLambdaArgs" to
                 """
                     |X_7 = TypeVar0('X_7')
-                    |def function_8(alpha_9: 'str1', beta_10: 'int2', gamma_11: 'Callable3[[str1, str1], X_7]', /) -> 'str1':
+                    |def _function_8(alpha_9: 'str1', beta_10: 'int2', gamma_11: 'Callable3[[str1, str1], X_7]', /) -> 'str1':
                     |    pass
                 """.trimMargin(),
             "simpleGenerator" to
                 """
                     |@adapt_generator_factory0
-                    |def simple_generator_7(do_await_1) -> 'Generator2[empty, None, None]':
+                    |def _simple_generator_7(do_await_1) -> 'Generator2[empty, None, None]':
                     |    yield
                     |    return ()
                 """.trimMargin(),
             "trailingRequiredArgs" to
                 """
-                    |def function_7(alpha_8: 'int0', beta_9: 'Union1[int0, None]' = None, gamma_10: Optional2['int0'] = None, /) -> 'int0':
+                    |def _function_7(alpha_8: 'int0', beta_9: 'Union1[int0, None]' = None, gamma_10: Optional2['int0'] = None, /) -> 'int0':
                     |    _beta_9: 'Union1[int0, None]' = beta_9
                     |    _gamma_10: Optional2['int0'] = gamma_10
                     |    return_11: 'int0'

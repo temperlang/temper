@@ -267,8 +267,8 @@ class WeaverTest {
                     }
                 },
             )
-            plantCallWithTypeInfo(BuiltinFuns.eqGenericFn) {
-                plantCallWithTypeInfo(BuiltinFuns.eqGenericFn) {
+            plantCallWithTypeInfo(BuiltinFuns.eqBooleanFn) {
+                plantCallWithTypeInfo(BuiltinFuns.eqBooleanFn) {
                     Rn(x, WKT.booleanType)
                     Rn(y, WKT.booleanType)
                 }

@@ -15,7 +15,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.withNullity
 
 /**
- * Simplified from `x == null`, `x != null`, and flipped variants.
+ * Typically simplified from `x == null`, `x != null`, and flipped variants.
  */
 object IsNullFn : NamedBuiltinFun, CallableValue {
     val sig = run {

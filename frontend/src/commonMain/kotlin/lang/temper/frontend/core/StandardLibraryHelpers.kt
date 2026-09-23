@@ -35,6 +35,7 @@ import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PartialResult
 import lang.temper.value.Resolutions
 import lang.temper.value.Stayless
+import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TFloat64
 import lang.temper.value.TInt
@@ -146,6 +147,7 @@ inline fun <V : Any> (TypeTag<V>).unpackWithNullDefault(
 }
 
 fun builtinLibraryConnecteds() = listOf(
+    BooleanFns.Eq,
     ConsoleFns.GlobalLog,
     DequeFns.Add,
     DequeFns.Constructor,
@@ -161,6 +163,7 @@ fun builtinLibraryConnecteds() = listOf(
     FloatFns.Cosh,
     FloatFns.Exp,
     FloatFns.Expm1,
+    FloatFns.Eq,
     FloatFns.Floor,
     FloatFns.Log,
     FloatFns.Log10,
@@ -181,11 +184,13 @@ fun builtinLibraryConnecteds() = listOf(
     FloatFns.ToInt64,
     FloatFns.ToInt64Unsafe,
     FloatFns.ToString,
+    IntFns.Eq,
     IntFns.Pred,
     IntFns.Succ,
     IntFns.ToFloat64,
     IntFns.ToInt64,
     IntFns.ToString,
+    Int64Fns.Eq,
     Int64Fns.Pred,
     Int64Fns.Succ,
     Int64Fns.ToFloat64,
@@ -230,6 +235,7 @@ fun builtinLibraryConnecteds() = listOf(
     PromiseBuilderFns.Complete,
     PromiseBuilderFns.Constructor,
     StringFns.CountBetween,
+    StringFns.Eq,
     StringFns.FromCodePoint,
     StringFns.FromCodePoints,
     StringFns.Get,
@@ -246,6 +252,7 @@ fun builtinLibraryConnecteds() = listOf(
     StringFns.ToInt64,
     StringFns.GetNone,
     StringFns.StringIndexOptionCompareTo,
+    StringFns.StringIndexOptionEq,
 ).associate<SigFnBuilder, String, (Signature2) -> Value<*>> { it.name to { sig -> it.fn(sig) } }
 
 fun standardLibraryConnecteds() = builtinLibraryConnecteds() + mapOf(
@@ -275,6 +282,16 @@ internal object ConsoleFns {
     object GlobalLog : SigFnBuilder("core.type GlobalConsole.globalLog()") {
         override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
             return (BuiltinFuns.print as CallableValue).invoke(ActualValues.from(args[1]), cb, interpMode)
+        }
+    }
+}
+
+internal object BooleanFns {
+    object Eq : SigFnBuilder("core.type Boolean.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            val a = TBoolean.unpackContent(args[0])
+            val b = TBoolean.unpackContent(args[1])
+            return TBoolean.value(a == b)
         }
     }
 }
@@ -310,6 +327,14 @@ internal object IntFns {
             val radix = TInt.unpackWithNullDefault(args, 1, 10, cb, interpMode) { return@invoke it }
             radix in MIN_INT_RADIX..MAX_INT_RADIX || return Fail
             return Value(TInt.unpackContent(args[0]).toString(radix = radix), TString)
+        }
+    }
+
+    object Eq : SigFnBuilder("core.type Int32.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            val a = TInt.unpackContent(args[0])
+            val b = TInt.unpackContent(args[1])
+            return TBoolean.value(a == b)
         }
     }
 }
@@ -367,6 +392,14 @@ internal object Int64Fns {
             val radix = TInt.unpackWithNullDefault(args, 1, 10, cb, interpMode) { return@invoke it }
             radix in MIN_INT_RADIX..MAX_INT_RADIX || return Fail
             return Value(TInt64.unpackContent(args[0]).toString(radix = radix), TString)
+        }
+    }
+
+    object Eq : SigFnBuilder("core.type Int64.eq()") {
+        override fun invoke(args: ActualValues, cb: InterpreterCallback, interpMode: InterpMode): PartialResult {
+            val a = TInt64.unpackContent(args[0])
+            val b = TInt64.unpackContent(args[1])
+            return TBoolean.value(a == b)
         }
     }
 }

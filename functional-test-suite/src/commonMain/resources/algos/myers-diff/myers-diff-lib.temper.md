@@ -40,11 +40,11 @@ A patch is a list of [changes][Change].
 The diff function compares two inputs, and computes a [Patch]: the changes
 from [left] required to derive [right].
 
-    export let diff<T extends Equatable<T> /*-| Change<T> | List<T> | Patch<T> */>(
+    export let diff<T /*-| Change<T> | List<T> | Patch<T> */>(
       left: List<T>,
       right: List<T>,
       /** Are two items the same? */
-      eq: fn (T, T): Boolean = fn (a: T, b: T): Boolean { a == b }
+      eq: fn (T, T): Boolean,
     ): Patch<T> throws Bubble {
 
 <details><summary>implementation of Myers's diff algorithm</summary>

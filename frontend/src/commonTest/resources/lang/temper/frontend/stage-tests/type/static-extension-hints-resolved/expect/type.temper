@@ -1,5 +1,5 @@
 let return__5, @fn @staticExtension({
-    class: Pair__42, key: type (Int32), value: "isZero"
+    class: Pair__43, key: type (Int32), value: "isZero"
 }) isZero__2;
 isZero__2 = (@stay fn isZero(x__3 /* aka x */: Int32) /* return__1 */: Boolean {
     fn__4: do {
@@ -7,7 +7,7 @@ isZero__2 = (@stay fn isZero(x__3 /* aka x */: Int32) /* return__1 */: Boolean {
     };
 });
 if (isZero__2(0)) {
-  return__5 = true
+  return__5 = (fn isZero)(0)
 } else {
   return__5 = false
 };

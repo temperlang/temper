@@ -17,7 +17,6 @@ import lang.temper.interp.importExport.ImportMacro
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
-import lang.temper.value.CoverFunction
 import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
@@ -35,6 +34,8 @@ import lang.temper.value.Value
 import lang.temper.value.extensionSymbol
 import lang.temper.value.inlineUnrealizedGoalSymbol
 import lang.temper.value.jsonSymbol
+import lang.temper.value.keepSymbol
+import lang.temper.value.keepTestSymbol
 import lang.temper.value.mayDowncastToSymbol
 import lang.temper.value.maybeVarSymbol
 import lang.temper.value.noPropertySymbol
@@ -53,14 +54,6 @@ private object Builtins {
     val nameKeyToValue: Map<String, Value<*>>
     init {
         val m = mutableMapOf(
-            "<" to Value(BuiltinFuns.lessThanFn),
-            ">" to Value(BuiltinFuns.greaterThanFn),
-            "<=" to Value(BuiltinFuns.lessEqualsFn),
-            ">=" to Value(BuiltinFuns.greaterEqualsFn),
-            "==" to Value(BuiltinFuns.equalsFn),
-            "!=" to Value(BuiltinFuns.notEqualsFn),
-            "<=>" to Value(BuiltinFuns.cmpFn),
-
             "=" to BuiltinFuns.vSetLocalFn,
 
             keyPair(BuiltinFuns.vNotFn),
@@ -180,6 +173,23 @@ private object Builtins {
             keyPair(
                 MetadataDecorator(visibilitySymbol, "@public") { Value(publicSymbol) },
             ),
+
+            /**
+             * <!-- snippet: builtin/@keep -->
+             * # `@keep` decorator
+             * Mark a non-exported item for being treated as reachable so it's kept in
+             * translations for backend connected code to access.
+             * See also [snippet/builtin/@keepTest].
+             */
+            keyPair(MetadataDecorator(keepSymbol, "@keep") { void }),
+
+            /**
+             * <!-- snippet: builtin/@keepTest -->
+             * # `@keepTest` decorator
+             * Acts like [snippet/builtin/@keep] but for test reachability.
+             */
+            keyPair(MetadataDecorator(keepTestSymbol, "@keepTest") { void }),
+
             /**
              * <!-- snippet: builtin/@const -->
              * # `@const` decorator
@@ -883,9 +893,6 @@ internal class BuiltinEnvironment(
 
 private fun nameOf(f: MacroValue): String = when (f) {
     is NamedBuiltinFun -> f.name
-    is CoverFunction -> nameOf(f.covered.first()).also { name ->
-        check(f.covered.all { nameOf(it) == name })
-    }
     else -> error("$f")
 }
 
