@@ -2143,7 +2143,10 @@ class JavaBackendTest {
                 |  config.temper.md: ```
                 |    # My test library
                 |
-                |        export let javaPackage = "com.example";
+                |        export let java = {
+                |          class: JavaConfig,
+                |          package: "com.example",
+                |        };
                 |    ```,
                 |  top.temper: "export class InPackageComExample {}",
                 |  foo: {

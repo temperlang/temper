@@ -16,7 +16,6 @@ import lang.temper.fs.runWithTemporaryDirCopyOf
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.interpBackendId
-import lang.temper.supportedBackends.defaultBackend
 import lang.temper.tooling.buildrun.BuildDoneResult
 import lang.temper.tooling.buildrun.BuildInitFailed
 import lang.temper.tooling.buildrun.BuildNotNeededResult
@@ -115,19 +114,17 @@ class RunTest {
     fun runWithImportJsBackend() = runRunTest("runWithImport", JsBackend.Factory.backendId)
 
     @Test
-    fun runWithStdImportDefaultBackend() {
-        val defaultBackend = defaultBackend.value
+    fun runWithStdImportJsBackend() {
         val path = resourcePath("/runWithStdImport/input")
         // Clean up in case someone ran a build in the source tree.
         removeDirRecursive(path.resolve(TEMPER_OUT_NAME))
-        runWithTemporaryDirCopyOf("RunWithStdImportDefaultBackend", path) { tempDir ->
+        runWithTemporaryDirCopyOf("RunWithStdImportJsBackend", path) { tempDir ->
             val result = doRun(
                 RunTask(
-                    // default == js
-                    backends = setOf(defaultBackend.backendId),
+                    backends = setOf(JsBackend.Factory.backendId),
                     request = RunLibraryRequest(
                         DashedIdentifier.from("a")!!,
-                        taskName = "RunWithStdImportDefaultBackend",
+                        taskName = "RunWithStdImportJsBackend",
                     ),
                 ),
                 workRoot = tempDir,
@@ -146,19 +143,17 @@ class RunTest {
     fun runLuaBackendWithImport() = runRunTest("runWithImport", LuaBackend.Lua51.backendId)
 
     @Test
-    fun runWithPathedModuleDefaultBackend() {
-        val defaultBackend = defaultBackend.value
+    fun runWithPathedModuleJsBackend() {
         val path = resourcePath("/pathedModuleRun")
         // Clean up in case someone ran a build in the source tree.
         removeDirRecursive(path.resolve(TEMPER_OUT_NAME))
-        runWithTemporaryDirCopyOf("RunWithPathedModuleDefaultBackend", path) { tempDir ->
+        runWithTemporaryDirCopyOf("RunWithPathedModuleJsBackend", path) { tempDir ->
             val result = doRun(
                 RunTask(
-                    // default == js
-                    backends = setOf(defaultBackend.backendId),
+                    backends = setOf(JsBackend.Factory.backendId),
                     request = RunLibraryRequest(
                         DashedIdentifier.from("a")!!,
-                        taskName = "RunWithPathedModuleDefaultBackend",
+                        taskName = "RunWithPathedModuleJsBackend",
                     ),
                 ),
                 workRoot = tempDir,

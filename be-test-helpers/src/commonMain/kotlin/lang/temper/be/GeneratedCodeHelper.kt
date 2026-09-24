@@ -94,6 +94,8 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
         lookupFactory = lookupFactory,
         onError = { error(it) },
     )
+    // We only get here from backend-specific test classes, so no need for other backends.
+    backendOrganization.addSharedStdConfigInjectors(listOf())
     for (bucket in backendOrganization.backendBuckets) {
         for (backendId in bucket) {
             generateCode(
@@ -130,13 +132,15 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     val outputDir = outputRoot.makeDirs(backendLib)
     val moduleConfig = ModuleConfig(
         moduleCustomizeHook = { module, isNew ->
-            for (activeFactory in activeFactories) {
-                module.addEnvironmentBindings(activeFactory.environmentBindings)
-            }
-            if (isNew && (module.loc as? ModuleName)?.isPreface == false) {
-                module.addEnvironmentBindings(
-                    mapOf(StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded)),
-                )
+            if (isNew) {
+                for (activeFactory in activeFactories) {
+                    activeFactory.addEnvironmentBindings(module)
+                }
+                if ((module.loc as? ModuleName)?.isPreface == false) {
+                    module.addEnvironmentBindings(
+                        mapOf(StagingFlags.moduleResultNeeded to TBoolean.value(moduleResultNeeded)),
+                    )
+                }
             }
         },
     )
