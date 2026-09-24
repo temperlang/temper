@@ -25,7 +25,6 @@ import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
-import lang.temper.type.InvalidType
 import lang.temper.type.MethodShape
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
@@ -332,11 +331,9 @@ private class InlineToRepairUnrealizedGoals(
             val calleeBody = calleeParts.body
             val formalBindings = call.typeInferences!!.bindings2 +
                 thisBindings
-            val variantType = callToInline.methodShape.descriptor?.let { sig ->
+            val variantSig = callToInline.methodShape.descriptor?.let { sig ->
                 sig.mapType(
-                    formalBindings.mapValues { (_, actual) ->
-                        hackMapOldStyleToNew(actual as? StaticType ?: InvalidType)
-                    },
+                    formalBindings.mapValues { (_, actual) -> actual },
                 )
             } ?: continue
 
@@ -522,10 +519,10 @@ private class InlineToRepairUnrealizedGoals(
                 }
             }
 
-            val isVoidLike = variantType.returnType2.isVoidLike
+            val isVoidLike = variantSig.returnType2.isVoidLike
             val returnParts = calleeParts.returnDecl?.parts!!
             val returnName = returnParts.name.content as InternalModularName
-            val variantReturnType = variantType.returnType2
+            val variantReturnType = variantSig.returnType2
 
             val localReturnName: TemperName?
             val convertingDeclarations: List<Triple<InternalModularName, Type2, Tree?>> = buildList {
@@ -540,7 +537,7 @@ private class InlineToRepairUnrealizedGoals(
                     val callChildIndex = formalIndex // Skip over callee
                     val formalName = formal.parts!!.name.content as InternalModularName
                     val paramType =
-                        variantType.valueFormalForActual(formalIndex)?.type
+                        variantSig.valueFormalForActual(formalIndex)?.type
                             ?: WellKnownTypes.invalidType2
 
                     if (formalName in formalNameToArg) {

@@ -49,7 +49,6 @@ import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
-import lang.temper.type.InvalidType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.mentionsInvalid
 import lang.temper.type2.AdHocArrowTypes
@@ -2569,7 +2568,7 @@ private fun isProbablyMadeUp(t: Tree) =
         // Assignments to temporaries that fail are captured in the error list,
         // so look at the right-hand-side to help diagnose partial success.
         (
-            t.typeInferences?.type == InvalidType &&
+            t.typeInferences?.type == WellKnownTypes.invalidType2 &&
                 isAssignment(t) && (t.child(1) as? LeftNameLeaf)?.content is Temporary
             ) ||
         // Metadata on a declaration or function is probably not what the test author

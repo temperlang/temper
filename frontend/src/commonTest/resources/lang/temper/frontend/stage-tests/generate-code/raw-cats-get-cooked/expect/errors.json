@@ -1,3 +1,4 @@
 [
-    "No declaration for what!"
+    "No declaration for what!",
+    "Expected subtype of String, but got Invalid!"
 ]
