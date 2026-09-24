@@ -1,5 +1,5 @@
-let return__4 ⦂ String, @fn `test//`.f ⦂(fn (): String | Bubble);
-`test//`.f = (@stay fn f /* return__0 */: (String | Bubble) {
+let return__4 ⦂ String, @fn `test//`.f ⦂(fn (): String throws Bubble);
+`test//`.f = (@stay fn f /* return__0 */: String throws Bubble {
     fn__2: do {
       bubble ⋖ String ⋗()
     }

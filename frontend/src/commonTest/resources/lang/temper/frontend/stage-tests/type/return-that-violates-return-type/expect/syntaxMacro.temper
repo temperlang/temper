@@ -1,4 +1,4 @@
-fn /* return__0 */: (Boolean) {
+fn /* return__0 */: Boolean {
   fn__1: do {
     do {
       return__0 = 42;

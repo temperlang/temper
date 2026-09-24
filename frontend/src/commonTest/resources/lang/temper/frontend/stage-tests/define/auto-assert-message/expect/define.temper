@@ -1,7 +1,7 @@
 @stay @imported(\(`std//testing/`.Test)) let Test__2;
 Test__2 = type (Test);
 @fn @test("hi") let hi__7;
-hi__7 = fn hi(test#0: Test) /* return__3 */: (Void | Bubble) {
+hi__7 = fn hi(test#0: Test) /* return__3 */: Void throws Bubble {
   let num__4;
   num__4 = 4;
   do {
@@ -15,7 +15,7 @@ hi__7 = fn hi(test#0: Test) /* return__3 */: (Void | Bubble) {
   };
 };
 @fn @test("ha") let ha__10;
-ha__10 = fn ha(test#1: Test) /* return__5 */: (Void | Bubble) {
+ha__10 = fn ha(test#1: Test) /* return__5 */: Void throws Bubble {
   let condition__6;
   condition__6 = false;
   do_call_assert(test#1, false, @stay fn {

@@ -11,13 +11,13 @@ import lang.temper.log.Position
 import lang.temper.name.InternalModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
-import lang.temper.type.StaticType
-import lang.temper.type.TypeContext
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.excludeBubble
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
-import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -110,7 +110,7 @@ private enum class ResultNeeded(val yes: Boolean) {
  */
 internal class CaptureBlockResultsInTemporaries(
     private val root: BlockTree,
-    private val typeContext: TypeContext,
+    private val typeContext: TypeContext2,
     private val varNames: Set<ResolvedName>,
     private val resultsAlreadyCaptured: Boolean,
 ) {
@@ -468,8 +468,8 @@ internal class CaptureBlockResultsInTemporaries(
                                                 listOf(),
                                             )
                                             Call(errorFnTypeInferences) {
-                                                V(Value(ErrorFn), errorFnTypeInferences.variant)
-                                                V(Value(problem, TProblem), WellKnownTypes.problemType)
+                                                V(Value(ErrorFn), AdHocArrowTypes.definedTypeForSig(errorFnTypeInferences.variant))
+                                                V(Value(problem, TProblem), WellKnownTypes.problemType2)
                                             }
                                         }
                                     }
@@ -494,7 +494,7 @@ internal class CaptureBlockResultsInTemporaries(
             }
             is ControlFlow.StmtBlock -> {
                 var result: CaptureResult? = null
-                val undeclared = mutableMapOf<InternalModularName, StaticType?>()
+                val undeclared = mutableMapOf<InternalModularName, Type2?>()
                 val mightBeReassigned = mutableSetOf<InternalModularName>()
                 var i = 0
                 val stmts = cf.stmts
@@ -691,7 +691,7 @@ internal class CaptureBlockResultsInTemporaries(
                 val lub = when {
                     elseType == null -> thenType
                     thenType == null -> elseType
-                    else -> typeContext.lub(thenType, elseType, simplify = true)
+                    else -> typeContext.simpleLub(thenType, elseType)
                 }
                 allUndeclared.add(PendingDeclaration(tmpName, lub))
                 NameCaptureResult(tmpName, lub)
@@ -826,7 +826,7 @@ internal class CaptureBlockResultsInTemporaries(
         val newCondEdgeIndex = block.size
         val condTree = ValueLeaf(block.document, cf.condition.pos.leftEdge, TBoolean.valueTrue)
             .also {
-                it.typeInferences = BasicTypeInferences(WellKnownTypes.booleanType, listOf())
+                it.typeInferences = BasicTypeInferences(WellKnownTypes.booleanType2, listOf())
             }
         block.add(condTree)
         val newCondition = BlockChildReference(newCondEdgeIndex, condTree.pos)
@@ -879,24 +879,24 @@ internal class CaptureBlockResultsInTemporaries(
 
 private data class PendingDeclaration(
     val name: InternalModularName,
-    val type: StaticType?,
+    val type: Type2?,
 )
 
 internal sealed class CaptureResult {
-    abstract val type: StaticType?
+    abstract val type: Type2?
     companion object {
-        val voidCaptureResult = KnownValueCaptureResult(void, WellKnownTypes.voidType)
+        val voidCaptureResult = KnownValueCaptureResult(void, WellKnownTypes.voidType2)
     }
 }
 
 internal data class NameCaptureResult(
     val capturedIn: InternalModularName,
-    override val type: StaticType?,
+    override val type: Type2?,
 ) : CaptureResult()
 
 internal data class KnownValueCaptureResult(
     val value: Value<*>,
-    override val type: StaticType?,
+    override val type: Type2?,
 ) : CaptureResult()
 
 private data class CaptureDetails(
@@ -910,7 +910,7 @@ private data class CaptureDetails(
 ) {
     operator fun plus(other: CaptureDetails): CaptureDetails {
         val sameResult = this.result == other.result
-        val allUndeclared = mutableMapOf<InternalModularName, StaticType?>()
+        val allUndeclared = mutableMapOf<InternalModularName, Type2?>()
         val allMightBeReassigned = mutableSetOf<InternalModularName>()
         for (cd in listOf(this@CaptureDetails, other)) {
             for ((tmp, type) in cd.undeclared) {
@@ -956,7 +956,7 @@ private data class CaptureDetails(
     }
 }
 
-private val Tree.passType: StaticType? get() =
+private val Tree.passType: Type2? get() =
     this.typeInferences?.type?.let {
         excludeBubble(it)
     }
@@ -967,7 +967,7 @@ private val errorFnTypeInferences: CallTypeInferences = run {
         .actuals(listOf(problemType))
         .get()
     CallTypeInferences(
-        hackMapNewStyleToOld(neverProblem),
+        neverProblem,
         Signature2(
             returnType2 = neverProblem,
             hasThisFormal = false,

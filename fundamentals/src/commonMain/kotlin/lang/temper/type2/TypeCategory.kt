@@ -156,7 +156,7 @@ inline fun <T> withType(
  * Helper for [withType].
  * Assumes [t]'s definition is a functional interface type and returns the corresponding signature.
  * If the underlying definition is not complete, for example, it lacks a method with [applyDotName],
- * or there is a mismatch in number of type parameters, returns null.
+ * or there is a mismatch in the number of type parameters, returns null.
  */
 fun sigForFunInterfaceType(t: DefinedType): Signature2? {
     val (fnTypeShape, bindings) = t

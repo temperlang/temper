@@ -15,6 +15,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.type.Member
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
+import lang.temper.type2.Type2
 import lang.temper.type2.TypeReason
 import lang.temper.value.AbstractTypeReasonElement
 import lang.temper.value.CallTree
@@ -93,8 +94,8 @@ internal class BecauseUnresolvedFunctionSignaturePart(
 
 internal class BecauseIllegalAssignment(
     override val pos: Position,
-    val leftType: StaticType,
-    val rightType: StaticType,
+    val leftType: Type2,
+    val rightType: Type2,
 ) : TypeReasonElement {
     override fun logTo(logSink: LogSink) {
         logSink.log(

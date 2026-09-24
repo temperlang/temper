@@ -173,13 +173,7 @@
                                         "abbrev": "void: Void"
                                     },
                                     "typeInferences": {
-                                        "type": {
-                                            "type": "SourceName",
-                                            "module": "core",
-                                            "uid": 70,
-                                            "nameHint": "Void",
-                                            "abbrev": "Void__70"
-                                        },
+                                        "type": "Void",
                                         "explanation": []
                                     }
                                 }

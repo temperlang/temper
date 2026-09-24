@@ -38,7 +38,7 @@ class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefine
         };
       }
     };
-    @visibility(\public) @fn let f__27 = fn f(@impliedThis(HasConstructorAndInitializedProperty__2) this__4: HasConstructorAndInitializedProperty__2) /* return__13 */: (Int32) {
+    @visibility(\public) @fn let f__27 = fn f(@impliedThis(HasConstructorAndInitializedProperty__2) this__4: HasConstructorAndInitializedProperty__2) /* return__13 */: Int32 {
       fn__28: do {
         do {
           let t#37;

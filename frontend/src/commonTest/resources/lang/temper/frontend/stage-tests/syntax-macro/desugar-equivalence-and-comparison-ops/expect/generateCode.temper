@@ -2,7 +2,7 @@
 ## the syntaxMacro.temper output.
 ## Inline below are the pre-sugared expressions.
   @fn let `test//`.a;
-  `test//`.a = (@stay fn a(x__1 /* aka x */: Int32, y__2 /* aka y */: Int32, z__3 /* aka z */: Int32?, w__4 /* aka w */: Int32?) /* return__0 */: (List<Boolean>) {
+  `test//`.a = (@stay fn a(x__1 /* aka x */: Int32, y__2 /* aka y */: Int32, z__3 /* aka z */: Int32?, w__4 /* aka w */: Int32?) /* return__0 */: List<Boolean> {
       let t#6, t#8, t#9, t#10, t#11, t#12, t#13, t#14, t#15, t#17, t#19, t#20, t#22, t#25, t#26;
 ## x == y;  Neither is nullable, so it's just int comparison.
       t#8 = x__1 == y__2;

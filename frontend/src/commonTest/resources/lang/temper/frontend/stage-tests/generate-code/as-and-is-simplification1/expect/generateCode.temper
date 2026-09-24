@@ -1,5 +1,5 @@
 @fn @reach(\none) let f__2;
-f__2 = (@stay fn f(i__3 /* aka i */: StringIndexOption?) /* return__1 */: (Int32 | Bubble) {
+f__2 = (@stay fn f(i__3 /* aka i */: StringIndexOption?) /* return__1 */: Int32 throws Bubble {
     let t#6;
     if (!isNull(i__3)) {
       t#6 = i__3 is StringIndex

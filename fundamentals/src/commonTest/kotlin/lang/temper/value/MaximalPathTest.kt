@@ -11,6 +11,7 @@ import lang.temper.frontend.structureBlock
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
+import lang.temper.type2.AdHocArrowTypes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -438,7 +439,7 @@ class MaximalPathTest {
                     Ln(t2)
                     Call {
                         val div = BuiltinFuns.divIntIntFn
-                        val divType = typeFromSignature(div.sigs!!.soleElement!!)
+                        val divType = AdHocArrowTypes.definedTypeForSig(div.sigs!!.soleElement!!)
                         V(Value(div), divType)
                         Rn(x)
                         Rn(y)

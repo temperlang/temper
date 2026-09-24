@@ -11,7 +11,7 @@
   var subject#10: String?;
   subject#10 = null;
   let convertedCoroutine#24;
-  convertedCoroutine#24 = fn (generator#20: SafeGenerator<Empty>) /* return__4 */: (GeneratorResult<Empty>) {
+  convertedCoroutine#24 = fn (generator#20: SafeGenerator<Empty>) /* return__4 */: GeneratorResult<Empty> {
     fn__22: do {
       while (true) {
         let caseIndexLocal#23: Int32;

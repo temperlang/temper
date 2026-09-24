@@ -15,9 +15,11 @@ import lang.temper.format.TokenSink
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.name.Symbol
 import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.Descriptor
 import lang.temper.type2.IValueFormal
 import lang.temper.type2.NonNullType
 import lang.temper.type2.Nullity
+import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.ValueFormalKind
 import lang.temper.type2.hackMapOldStyleToNew
@@ -891,6 +893,13 @@ val StaticType.mentionsInvalid: Boolean get() = when (this) {
 }
 
 /** Determine if any component is invalid. */
+val Descriptor.mentionsInvalid: Boolean get() = when (this) {
+    is Type2 -> this.mentionsInvalid
+    is Signature2 -> this.mentionsInvalid
+}
+val Signature2.mentionsInvalid: Boolean get() = this.returnType2.mentionsInvalid ||
+    this.requiredInputTypes.any { it.mentionsInvalid } ||
+    this.optionalInputTypes.any { it.mentionsInvalid }
 val Type2.mentionsInvalid: Boolean get() = this.mentions { it == WellKnownTypes.invalidTypeDefinition }
 fun Type2.mentions(definitionPredicate: (TypeDefinition) -> Boolean): Boolean =
     definitionPredicate(this.definition) || this.bindings.any { it.mentions(definitionPredicate) }
@@ -936,6 +945,13 @@ val StaticType.isVoidAllowing: Boolean get() = when (this) {
     is TopType -> true
     else -> false
 }
+
+val Type2.isVoidAllowing: Boolean get() = withType(
+    this,
+    result = { passType, _, _ -> passType.isVoidAllowing },
+    never = { param, _, _ -> param.isVoidAllowing },
+    fallback = { it == WellKnownTypes.voidType2 },
+)
 
 val StaticType.isBubbly: Boolean get() = when (this) {
     is BubbleType -> true

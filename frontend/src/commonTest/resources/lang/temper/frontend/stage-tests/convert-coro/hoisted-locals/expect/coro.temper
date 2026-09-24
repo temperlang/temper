@@ -5,7 +5,7 @@ z__3 = 0;
 var sb__5: StringBuilder?;
 sb__5 = null;
 let convertedCoroutine#13;
-convertedCoroutine#13 = fn (generator#9: SafeGenerator<String>) /* return__2 */: (GeneratorResult<String>) {
+convertedCoroutine#13 = fn (generator#9: SafeGenerator<String>) /* return__2 */: GeneratorResult<String> {
   fn__11: do {
     let caseIndexLocal#12: Int32;
     caseIndexLocal#12 = caseIndex#10;

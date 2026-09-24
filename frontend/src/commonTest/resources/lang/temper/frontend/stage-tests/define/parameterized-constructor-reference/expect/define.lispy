@@ -408,7 +408,9 @@
                             "Value",
                             "\\stay: Symbol"
                         ],
-                        [ "Stay" ],
+                        [
+                            "Stay"
+                        ],
                         [
                             "Block",
                             [

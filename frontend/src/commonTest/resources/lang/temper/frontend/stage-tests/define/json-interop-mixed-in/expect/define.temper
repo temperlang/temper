@@ -5,7 +5,7 @@
       do_call_encodeToJson(x__33, p__34)
   });
   @visibility(\public) @fn @stay @fromType(PointJsonAdapter__23) let decodeFromJson__50;
-  decodeFromJson__50 = fn (@impliedThis(PointJsonAdapter__23) this__39: PointJsonAdapter__23, t__35: JsonSyntaxTree, ic__36: InterchangeContext) /* return__51 */: (Point__0 | Bubble) {
+  decodeFromJson__50 = fn (@impliedThis(PointJsonAdapter__23) this__39: PointJsonAdapter__23, t__35: JsonSyntaxTree, ic__36: InterchangeContext) /* return__51 */: Point__0 throws Bubble {
     getStatic(Point__0, \decodeFromJson)(t__35, ic__36)
   };
 ## It's got an implied constructor even though that wasn't mentioned in the JsonInteropPass
@@ -67,7 +67,7 @@
     do_call_endObject(p__30);
   };
   @static @visibility(\public) @fn @stay @fromType(Point__0) let decodeFromJson__44;
-  decodeFromJson__44 = (@stay fn (t__20: JsonSyntaxTree, ic__21: InterchangeContext) /* return__45 */: (Point__0 | Bubble) {
+  decodeFromJson__44 = (@stay fn (t__20: JsonSyntaxTree, ic__21: InterchangeContext) /* return__45 */: Point__0 throws Bubble {
       let obj__22;
       obj__22 = t__20 as JsonObject;
       let x__31: Int32, y__32: Int32;
@@ -76,7 +76,7 @@
       new Point__0(x__31, y__32)
   });
   @static @visibility(\public) @fn @stay @fromType(Point__0) let jsonAdapter__46;
-  jsonAdapter__46 = (@stay fn /* return__47 */: (JsonAdapter<Point__0>) {
+  jsonAdapter__46 = (@stay fn /* return__47 */: JsonAdapter<Point__0> {
       new PointJsonAdapter__23()
   });
   class(\word, \Point, \concrete, true, @typeDefined(Point__0) @stay fn {

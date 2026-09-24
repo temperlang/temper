@@ -46,25 +46,24 @@ import lang.temper.name.ResolvedParsedName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
-import lang.temper.type.AndType
-import lang.temper.type.BubbleType
 import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.InvalidType
-import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
-import lang.temper.type.OrType
 import lang.temper.type.SetMemberAccessor
-import lang.temper.type.TopType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.Wildcard
-import lang.temper.type.isNullType
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.Nullity
+import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.ValueFormalKind
+import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.withNullity
+import lang.temper.type2.withType
 
 /**
  * Generates code that looks kind of like Temper-code for diagnostic purposes.
@@ -245,8 +244,9 @@ internal class PseudoTreeBuilder(
                     // ask for them.
                     if (typeArgs.isEmpty() && detail.showInferredTypes) {
                         val calleeType = calleeTree.typeInferences?.type
-                        val variant = calleeType as? FunctionType
-                            ?: tree.typeInferences?.variant as? FunctionType
+                        val variant = (calleeType as? DefinedNonNullType)
+                            ?.let { AdHocArrowTypes.reverseToSig(it) }
+                            ?: tree.typeInferences?.variant
                         val bindings = tree.typeInferences?.bindings2
                         if (variant != null && variant.typeFormals.isNotEmpty() && bindings != null) {
                             val inferredTypeArgs = variant.typeFormals.map {
@@ -525,7 +525,7 @@ internal class PseudoTreeBuilder(
                 }
                 PseudoClassValue(pos, typeTag, pseudoRecord)
             }
-            TType -> PseudoType(pos, TType.unpack(value).type)
+            TType -> PseudoType(pos, TType.unpack(value).type2)
             else -> PseudoValueLeaf(pos, value)
         }
 
@@ -1145,7 +1145,7 @@ internal class PseudoValueLeaf(
         TType ->
             // Do not route complex type expressions to the "parenthesize if more than 1 token"
             // branch below.
-            PseudoType(pos, TType.unpack(value).type).reduce()
+            PseudoType(pos, TType.unpack(value).type2).reduce()
         else -> reduceViaTokenList()
     }
 
@@ -1553,13 +1553,13 @@ internal class PseudoDecl(
         return opTree
     }
 }
-internal class PseudoType(override val pos: Position, val type: TypeActual) : PseudoTree() {
+internal class PseudoType(override val pos: Position, val type: Type2) : PseudoTree() {
     override fun toString() = "(PseudoType $type)"
 
     override fun reduce(): OpTree = reduce(inTypeContext = false)
 
     fun reduce(inTypeContext: Boolean): OpTree {
-        val typeTree = reduceTypeActual(pos, type)
+        val typeTree = reduceType2(pos, type)
         return if (inTypeContext) {
             typeTree
         } else {
@@ -1577,97 +1577,125 @@ internal class PseudoType(override val pos: Position, val type: TypeActual) : Ps
     }
 
     companion object {
-        internal fun reduceTypeActual(pos: Position, t: TypeActual): OpTree = when (t) {
-            Wildcard -> Tok(pos, OutToks.prefixStar)
-            TopType -> Tok(pos, OutToks.topWord)
-            BubbleType -> Tok(pos, OutToks.bubbleWord)
-            InvalidType -> Tok(pos, OutToks.invalidWord)
-            is NominalType -> {
-                val definition = t.definition
-                val typeName =
-                    if (definition is TypeShape && WellKnownTypes.isWellKnown(definition)) {
-                        Tok(pos, OutputToken(definition.word!!.text, OutputTokenType.Word))
-                    } else {
-                        Tok(pos, definition.name.toToken(inOperatorPosition = false))
-                    }
-                if (t.bindings.isEmpty()) {
-                    typeName
-                } else {
-                    val children = mutableListOf<OpTree>()
-                    children.add(typeName)
-                    children.add(Tok(pos, OutToks.leftAngle))
-                    t.bindings.mapOpTreeJoiningTo(children, OutToks.comma) {
-                        reduceTypeActual(pos, it)
-                    }
-                    children.add(Tok(pos, OutToks.rightAngle))
-                    OpInner(pos, Operator.Angle, children.toList())
+        private fun attachNullity(opTree: OpTree, nullity: Nullity): OpTree = when (nullity) {
+            Nullity.NonNull -> opTree
+            Nullity.OrNull -> OpInner(
+                opTree.pos,
+                Operator.PostQuest,
+                listOf(
+                    opTree,
+                    Tok(opTree.pos.rightEdge, OutToks.postfixQMark),
+                ),
+            )
+        }
+
+        internal fun reduceSig(pos: Position, sig: Signature2): OpTree {
+            var reduced: OpTree = Tok(pos, OutToks.fnWord)
+            // Generic parameters between angle brackets
+            if (sig.typeFormals.isNotEmpty()) {
+                val angleChildren = mutableListOf(reduced, Tok(pos, OutToks.leftAngle))
+                sig.typeFormals.mapOpTreeJoiningTo(angleChildren, OutToks.comma) {
+                    PseudoTypeFormal(pos, it).reduce()
                 }
+                angleChildren.add(Tok(pos, OutToks.rightAngle))
+                reduced = OpInner(pos, Operator.Angle, angleChildren.toList())
             }
-            is FunctionType -> {
-                var reduced: OpTree = Tok(pos, OutToks.fnWord)
-                // Generic parameters between angle brackets
-                if (t.typeFormals.isNotEmpty()) {
-                    val angleChildren = mutableListOf(reduced, Tok(pos, OutToks.leftAngle))
-                    t.typeFormals.mapOpTreeJoiningTo(angleChildren, OutToks.comma) {
-                        PseudoTypeFormal(pos, it).reduce()
-                    }
-                    angleChildren.add(Tok(pos, OutToks.rightAngle))
-                    reduced = OpInner(pos, Operator.Angle, angleChildren.toList())
-                }
-                // Input types between parentheses
-                val parenChildren = mutableListOf(reduced, Tok(pos, OutToks.leftParen))
-                t.valueFormals.mapOpTreeJoiningTo(parenChildren, OutToks.comma) {
-                    reduceTypeActual(pos, it.staticType)
-                }
-                parenChildren.add(Tok(pos, OutToks.rightParen))
-                reduced = OpInner(pos, Operator.Paren, parenChildren.toList())
-                // Return type
-                reduced = OpInner(
-                    pos,
-                    Operator.HighColon,
-                    listOf(
-                        reduced,
-                        Tok(pos, OutToks.colon),
-                        reduceTypeActual(pos, t.returnType),
-                    ),
-                )
-                reduced
-            }
-            is OrType -> if (t.members.isEmpty()) {
-                Tok(pos, OutToks.neverWord)
-            } else {
-                var hasNull = false
-                val members = t.members.filter { t ->
-                    val isNullType = t.isNullType
-                    if (isNullType) {
-                        hasNull = true
-                    }
-                    !isNullType
-                }
-                val op = when (members.size) {
-                    0 -> return Tok(pos, OutToks.nullTypeWord)
-                    1 -> reduceTypeActual(pos, members[0])
-                    else -> OpInner(
-                        pos,
-                        Operator.Bar,
-                        t.members.mapOpTreeJoining(OutToks.bar) { reduceTypeActual(pos, it) },
+            // Input types between parentheses
+            val parenChildren = mutableListOf(reduced, Tok(pos, OutToks.leftParen))
+            sig.allValueFormals.mapOpTreeJoiningTo(parenChildren, OutToks.comma) { vf ->
+                val typeOpTree = reduceType2(pos, vf.type)
+                when (vf.kind) {
+                    ValueFormalKind.Required -> typeOpTree
+                    ValueFormalKind.Optional -> OpInner(
+                        typeOpTree.pos,
+                        Operator.LowColon,
+                        listOf(
+                            OpInner(
+                                typeOpTree.pos.leftEdge,
+                                Operator.Eq,
+                                listOf(
+                                    Tok(typeOpTree.pos.leftEdge, OutToks.underScore),
+                                    Tok(typeOpTree.pos.leftEdge, OutToks.eq),
+                                ),
+                            ),
+                            Tok(typeOpTree.pos.leftEdge, OutToks.colon),
+                            typeOpTree,
+                        ),
                     )
                 }
-                if (hasNull) {
+            }
+            parenChildren.add(Tok(pos, OutToks.rightParen))
+            reduced = OpInner(pos, Operator.Paren, parenChildren.toList())
+            // Return type
+            reduced = OpInner(
+                pos,
+                Operator.HighColon,
+                listOf(
+                    reduced,
+                    Tok(pos, OutToks.colon),
+                    reduceType2(pos, sig.returnType2),
+                ),
+            )
+            return reduced
+        }
+
+        internal fun reduceType2(pos: Position, t: Type2): OpTree {
+            val pos = (t as? Positioned)?.pos ?: pos
+            if (AdHocArrowTypes.isAdhocArrowTypeDefinition(t.definition)) {
+                val (sig, nullity) = withType(
+                    t,
+                    fallback = { null to Nullity.NonNull },
+                    fn = { n, sig, _ -> sig to n },
+                )
+                if (sig != null) {
+                    return attachNullity(reduceSig(pos, sig), nullity)
+                }
+            }
+
+            val nullity = t.nullity
+            val opTree = withType(
+                t.withNullity(Nullity.NonNull),
+                result = { passType, fails, _ ->
                     OpInner(
                         pos,
-                        Operator.PostQuest,
-                        listOf(op, Tok(pos.rightEdge, OutToks.postfixQMark)),
+                        Operator.Throws,
+                        buildList {
+                            add(reduceType2(pos, passType))
+                            val fPos = pos.rightEdge
+                            add(Tok(fPos, OutToks.throwsWord))
+                            for (i in fails.indices) {
+                                if (i != 0) {
+                                    add(Tok(fPos, OutToks.comma))
+                                }
+                                add(reduceType2(fPos, fails[i]))
+                            }
+                        },
                     )
-                } else {
-                    op
-                }
-            }
-            is AndType -> OpInner(
-                pos,
-                Operator.Amp,
-                t.members.mapOpTreeJoining(OutToks.amp) { reduceTypeActual(pos, it) },
+                },
+                invalid = { Tok(pos, OutToks.invalidWord) },
+                fallback = {
+                    val definition = t.definition
+                    val typeName =
+                        if (definition is TypeShape && WellKnownTypes.isWellKnown(definition)) {
+                            Tok(pos, OutputToken(definition.word!!.text, OutputTokenType.Word))
+                        } else {
+                            Tok(pos, definition.name.toToken(inOperatorPosition = false))
+                        }
+                    if (t.bindings.isEmpty()) {
+                        typeName
+                    } else {
+                        val children = mutableListOf<OpTree>()
+                        children.add(typeName)
+                        children.add(Tok(pos, OutToks.leftAngle))
+                        t.bindings.mapOpTreeJoiningTo(children, OutToks.comma) {
+                            reduceType2(pos, it)
+                        }
+                        children.add(Tok(pos, OutToks.rightAngle))
+                        OpInner(pos, Operator.Angle, children.toList())
+                    }
+                },
             )
+            return attachNullity(opTree, nullity)
         }
     }
 }
@@ -1696,7 +1724,7 @@ internal class PseudoTypeFormal(
                         pos,
                         Operator.Amp,
                         typeFormal.upperBounds.mapOpTreeJoining(OutToks.amp) {
-                            PseudoType.reduceTypeActual(pos, it)
+                            PseudoType.reduceType2(pos, hackMapOldStyleToNew(it))
                         },
                     ),
                 ),
@@ -1808,7 +1836,7 @@ internal class PseudoFun(
         if (returnDeclReduced != null) {
             opTree = OpInner(
                 returnTree!!.pos,
-                Operator.Paren,
+                Operator.HighColon,
                 listOf(opTree) + returnDeclReduced,
             )
         }

@@ -7,7 +7,7 @@ p__1 = do_get_promise(pb__0);
 let fn__8;
 fn__8 = (@stay fn /* return__4 */{
     let fn__7;
-    fn__7 = (@wrappedGeneratorFn fn /* return__2 */: (GeneratorResult<Empty>) implements GeneratorFn {
+    fn__7 = (@wrappedGeneratorFn fn /* return__2 */: GeneratorResult<Empty> implements GeneratorFn {
         do_call_complete(pb__0, "Hello, World!");
         return__2 = (fn doneResult)<Empty>()
     });

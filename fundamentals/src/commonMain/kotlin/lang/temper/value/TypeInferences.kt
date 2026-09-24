@@ -4,15 +4,13 @@ import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureSink
 import lang.temper.common.structure.Structured
 import lang.temper.common.toStringViaBuilder
-import lang.temper.type.FunctionType
-import lang.temper.type.StaticType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeFormal
-import lang.temper.type.isVoidLike
+import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
 
 sealed class TypeInferences : Structured {
-    abstract val type: StaticType
+    abstract val type: Type2
     abstract val explanations: List<TypeReasonElement>
 
     override fun destructure(structureSink: StructureSink) = structureSink.obj {
@@ -33,7 +31,7 @@ sealed class TypeInferences : Structured {
 }
 
 data class BasicTypeInferences(
-    override val type: StaticType,
+    override val type: Type2,
     override val explanations: List<TypeReasonElement>,
 ) : TypeInferences() {
     override fun destructureUncommonProperties(propertySink: PropertySink) = Unit
@@ -50,19 +48,12 @@ data class BasicTypeInferences(
 }
 
 data class CallTypeInferences(
-    override val type: StaticType,
+    override val type: Type2,
     /** The callee type filtered by applicable cover-function variants */
-    val variant: StaticType,
-    val bindings2: Map<TypeFormal, TypeActual>,
+    val variant: Signature2,
+    val bindings2: Map<TypeFormal, Type2>,
     override val explanations: List<TypeReasonElement>,
 ) : TypeInferences() {
-    constructor(
-        type: StaticType,
-        variant: Signature2,
-        bindings2: Map<TypeFormal, TypeActual>,
-        explanations: List<TypeReasonElement>,
-    ) : this(type, typeFromSignature(variant), bindings2, explanations)
-
     override fun destructureUncommonProperties(propertySink: PropertySink) = propertySink.run {
         key("variant") { value(variant) }
         key("bindings", isDefault = bindings2.isNotEmpty()) { value(bindings2) }
@@ -94,7 +85,14 @@ data class CallTypeInferences(
 
 val CallTypeInferences?.returnsVoid: Boolean
     get() {
-        return (this?.variant as? FunctionType)?.returnType?.isVoidLike ?: false
+        var returnType = this?.variant?.returnType2
+        if (returnType?.definition == WellKnownTypes.resultTypeDefinition) {
+            returnType = returnType.bindings.getOrNull(0)
+        }
+        if (returnType?.definition == WellKnownTypes.neverTypeDefinition) {
+            returnType = returnType.bindings.getOrNull(0)
+        }
+        return returnType?.definition == WellKnownTypes.voidTypeDefinition
     }
 
 val CallTree.returnsVoidClearly: Boolean

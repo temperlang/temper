@@ -1,5 +1,5 @@
 @fn @reach(\none) let other__8, @fn @reach(\none) something__9;
-other__8 = (@stay fn other(i__10 /* aka i */: Int32) /* return__6 */: (Int32 | Bubble) {
+other__8 = (@stay fn other(i__10 /* aka i */: Int32) /* return__6 */: Int32 throws Bubble {
     if (i__10 % 2 == 0) {
       bubble()
     } else {

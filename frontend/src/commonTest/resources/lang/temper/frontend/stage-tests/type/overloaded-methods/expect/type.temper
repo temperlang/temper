@@ -1,15 +1,15 @@
 @typeDecl(IntMaker) @stay let `test//`.IntMaker ⦂ Type;
 `test//`.IntMaker = type (IntMaker);
-@fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 | Bubble);
+@fn let `test//`.crazySum ⦂(fn (IntMaker, Int64, String): Int32 throws Bubble);
 @constructorProperty @visibility(\public) @stay @fromType(IntMaker) let radix__9: Int32;
-@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__10 ⦂(fn (IntMaker, Int64): Int32 | Bubble);
-int64ToInt__10 = (@stay fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__11 /* aka int */: Int64) /* return__5 */: (Int32 | Bubble) {
+@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let int64ToInt__10 ⦂(fn (IntMaker, Int64): Int32 throws Bubble);
+int64ToInt__10 = (@stay fn int64ToInt(@impliedThis(IntMaker) this__0: IntMaker, int__11 /* aka int */: Int64) /* return__5 */: Int32 throws Bubble {
     fn__12: do {
       return__5 = do_call_toInt32(int__11)
     };
 });
-@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__13 ⦂(fn (IntMaker, String): Int32 | Bubble);
-stringToInt__13 = (@stay fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__14 /* aka string */: String) /* return__6 */: (Int32 | Bubble) {
+@visibility(\public) @overload("toInt") @fn @stay @fromType(IntMaker) let stringToInt__13 ⦂(fn (IntMaker, String): Int32 throws Bubble);
+stringToInt__13 = (@stay fn stringToInt(@impliedThis(IntMaker) this__1: IntMaker, string__14 /* aka string */: String) /* return__6 */: Int32 throws Bubble {
     fn__15: do {
       return__6 = do_call_toInt32(string__14, getp(radix__9, this__1))
     };
@@ -29,7 +29,7 @@ constructor__19 = (@stay fn constructor(@impliedThis(IntMaker) this__3: IntMaker
 getradix__28 = (@stay fn (@impliedThis(IntMaker) this__29: IntMaker) /* return__30 */: Int32 {
     return__30 = getp(radix__9, this__29);
 });
-`test//`.crazySum = (@stay fn crazySum(intMaker__21 /* aka intMaker */: IntMaker, int__22 /* aka int */: Int64, string__23 /* aka string */: String) /* return__8 */: (Int32 | Bubble) {
+`test//`.crazySum = (@stay fn crazySum(intMaker__21 /* aka intMaker */: IntMaker, int__22 /* aka int */: Int64, string__23 /* aka string */: String) /* return__8 */: Int32 throws Bubble {
     fn__24: do {
       let intInt__25 ⦂ Int32;
       intInt__25 = do_call_int64ToInt(intMaker__21, int__22);

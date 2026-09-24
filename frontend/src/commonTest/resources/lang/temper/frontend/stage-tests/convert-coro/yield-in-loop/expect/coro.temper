@@ -3,7 +3,7 @@ caseIndex#6 = 0;
 var i__1: Int32;
 i__1 = 0;
 let convertedCoroutine#9;
-convertedCoroutine#9 = fn (generator#5: SafeGenerator<Int32>) /* return__0 */: (GeneratorResult<Int32>) {
+convertedCoroutine#9 = fn (generator#5: SafeGenerator<Int32>) /* return__0 */: GeneratorResult<Int32> {
   fn__7: do {
     while (true) {
       let caseIndexLocal#8: Int32;

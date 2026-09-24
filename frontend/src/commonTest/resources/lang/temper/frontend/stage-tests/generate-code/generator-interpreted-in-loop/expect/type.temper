@@ -20,7 +20,7 @@
   };
   runItThrice__1(fn /* return__7 */{
 ## Adapt call specialized to adaptGeneratorFnSafe
-      return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: (GeneratorResult<Empty>) implements GeneratorFn {
+      return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: GeneratorResult<Empty> implements GeneratorFn {
           while (true) {
             do_call_log(console#6, "Pausing");
             yield();

@@ -29,13 +29,15 @@ import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.MkType
 import lang.temper.type.MutableTypeShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.MkType2
+import lang.temper.type2.Nullity
+import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -1127,7 +1129,7 @@ private class ClosureConvertClasses(
 
                             decl.insert {
                                 V(decl.pos.rightEdge, vParameterNameSymbolsListSymbol)
-                                V(symbolsList, type = symbolOrNullList.value)
+                                V(symbolsList, type = symbolOrNullList)
                             }
                         }
                     }
@@ -1346,9 +1348,8 @@ private class ClosureConvertClasses(
     }
 }
 
-private val symbolOrNullList = lazy {
-    MkType.nominal(
-        WellKnownTypes.listTypeDefinition,
-        listOf(MkType.nullable(WellKnownTypes.symbolType)),
-    )
+private val symbolOrNullList by lazy {
+    MkType2(WellKnownTypes.listTypeDefinition)
+        .actuals(listOf(WellKnownTypes.symbolType2.withNullity(Nullity.OrNull)))
+        .get()
 }

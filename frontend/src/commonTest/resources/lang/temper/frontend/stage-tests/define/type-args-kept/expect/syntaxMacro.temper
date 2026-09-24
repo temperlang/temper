@@ -6,7 +6,7 @@ class(\word, \What, \concrete, true, @typeDefined(What__0<Thing__1>) fn {
     @constructorProperty @property(\ints) @maybeVar @visibility(\public) let ints__8: typeof_ints#4;
     let typeof_things#5 = List<Thing__1>;
     @constructorProperty @property(\things) @maybeVar @visibility(\public) let things__9: typeof_things#5;
-    @method(\work) @visibility(\public) @fn let work__10 = fn work(@impliedThis(What__0<Thing__1>) this__2: What__0<Thing__1>, that__11 /* aka that */: Thing__1) /* return__7 */: (Void) {
+    @method(\work) @visibility(\public) @fn let work__10 = fn work(@impliedThis(What__0<Thing__1>) this__2: What__0<Thing__1>, that__11 /* aka that */: Thing__1) /* return__7 */: Void {
       fn__12: do {
         let another__13: What__0 = this(What__0<Thing__1>), more__14: List = do_iget_things(type (What__0<Thing__1>), this(What__0<Thing__1>));
       }

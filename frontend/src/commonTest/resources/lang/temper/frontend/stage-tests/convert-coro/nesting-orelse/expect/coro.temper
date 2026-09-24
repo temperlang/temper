@@ -1,7 +1,7 @@
 var caseIndex#15: Int32;
 caseIndex#15 = 0;
 let convertedCoroutine#18;
-convertedCoroutine#18 = fn (generator#14: Generator<Boolean>) /* return__2 */: (GeneratorResult<Boolean> | Bubble) {
+convertedCoroutine#18 = fn (generator#14: Generator<Boolean>) /* return__2 */: GeneratorResult<Boolean> throws Bubble {
   fn__16: do {
     while (true) {
       let caseIndexLocal#17: Int32;

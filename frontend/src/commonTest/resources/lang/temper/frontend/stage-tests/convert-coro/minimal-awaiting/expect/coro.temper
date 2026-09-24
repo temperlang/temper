@@ -3,7 +3,7 @@
   var awaited#6: Promise<Empty>?;
   awaited#6 = null;
   let convertedCoroutine#11;
-  convertedCoroutine#11 = fn (generator#7: SafeGenerator<Empty>) /* return__1 */: (GeneratorResult<Empty>) {
+  convertedCoroutine#11 = fn (generator#7: SafeGenerator<Empty>) /* return__1 */: GeneratorResult<Empty> {
     fn__9: do {
       while (true) {
         let caseIndexLocal#10: Int32;

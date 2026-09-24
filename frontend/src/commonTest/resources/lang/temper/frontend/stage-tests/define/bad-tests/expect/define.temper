@@ -2,12 +2,12 @@
 Test__3 = type (Test);
 test();
 test("hi");
-test("", @stay fn (test#0: Test) /* return__4 */: (Void | Bubble) {});
-test(1, @stay fn (test#1: Test) /* return__5 */: (Void | Bubble) {});
+test("", @stay fn (test#0: Test) /* return__4 */: Void throws Bubble {});
+test(1, @stay fn (test#1: Test) /* return__5 */: Void throws Bubble {});
 test("hi", 2);
-test(hi, @stay fn (test#2: Test) /* return__6 */: (Void | Bubble) {});
+test(hi, @stay fn (test#2: Test) /* return__6 */: Void throws Bubble {});
 @fn @test("hi") let hi__9;
-hi__9 = (@stay fn hi(hi__7 /* aka hi */: String) /* return__8 */: (Void | Bubble) {
+hi__9 = (@stay fn hi(hi__7 /* aka hi */: String) /* return__8 */: Void throws Bubble {
     assert(true, @stay fn {
         "nope"
     })

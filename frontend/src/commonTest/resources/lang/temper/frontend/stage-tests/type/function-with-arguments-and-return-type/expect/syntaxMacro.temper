@@ -1,6 +1,6 @@
 do {
   @fn let sum2i__1;
-  sum2i__1 = fn sum2i(x__2 /* aka x */: Int, y__3 /* aka y */: Int) /* return__0 */: (Int) {
+  sum2i__1 = fn sum2i(x__2 /* aka x */: Int, y__3 /* aka y */: Int) /* return__0 */: Int {
     fn__4: do {
       do {
         return__0 = x__2 + y__3;

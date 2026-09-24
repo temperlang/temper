@@ -3,7 +3,7 @@
   @stay @imported(\(`std//testing/`.Test)) @reach(\test) let Test__2;
   Test__2 = type (Test);
   @fn @test("to be or not to be null") let toBeOrNotToBeNull__5;
-  toBeOrNotToBeNull__5 = (@stay fn toBeOrNotToBeNull(test#0: Test) /* return__3 */: (Void | Bubble) {
+  toBeOrNotToBeNull__5 = (@stay fn toBeOrNotToBeNull(test#0: Test) /* return__3 */: Void throws Bubble {
       let t#12;
       return__3 = void;
       let c0__4;

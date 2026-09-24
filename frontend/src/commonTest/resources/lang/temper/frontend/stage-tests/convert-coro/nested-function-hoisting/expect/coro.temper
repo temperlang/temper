@@ -11,7 +11,7 @@
       return__1 = negSum__9 / 2
   });
   let convertedCoroutine#18;
-  convertedCoroutine#18 = fn (generator#14: SafeGenerator<Int32>) /* return__4 */: (GeneratorResult<Int32>) {
+  convertedCoroutine#18 = fn (generator#14: SafeGenerator<Int32>) /* return__4 */: GeneratorResult<Int32> {
     fn__16: do {
       let caseIndexLocal#17: Int32;
       caseIndexLocal#17 = caseIndex#15;

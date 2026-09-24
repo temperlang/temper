@@ -3,10 +3,9 @@ package lang.temper.frontend
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.frontend.syntax.isAssignment
 import lang.temper.frontend.syntax.isCommaCall
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type2.hackMapNewStyleToOld
-import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Type2
 import lang.temper.type2.mapType
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
@@ -26,7 +25,6 @@ import lang.temper.value.calleeReturnsResult
 import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
-import lang.temper.value.typeFromSignature
 import kotlin.collections.listOf
 
 /**
@@ -128,14 +126,14 @@ internal class MagicSecurityDust {
                                 Call(rhs.pos.rightEdge, ti) {
                                     if (ti != null) {
                                         Call(BuiltinFuns.vAngleFn) {
-                                            V(BuiltinFuns.vPanic, ti.variant)
+                                            V(BuiltinFuns.vPanic, AdHocArrowTypes.definedTypeForSig(ti.variant))
                                             for ((_, t) in ti.bindings2) {
                                                 V(
                                                     Value(
-                                                        ReifiedType(hackMapOldStyleToNew(t as StaticType)),
+                                                        ReifiedType(t),
                                                         TType,
                                                     ),
-                                                    WellKnownTypes.typeType,
+                                                    WellKnownTypes.typeType2,
                                                 )
                                             }
                                         }
@@ -280,13 +278,12 @@ fun isBubbleCallMaybeParameterized(t: Tree): Boolean {
     return callee?.functionContained is BubbleFn
 }
 
-private fun panicCallTypeInferences(t: StaticType): CallTypeInferences {
+private fun panicCallTypeInferences(t: Type2): CallTypeInferences {
     val sig = PanicFn.sigs[1]
     val bindings = mapOf(sig.typeFormals[0] to t)
-    val bindings2 = bindings.mapValues { hackMapOldStyleToNew(it.value) }
     return CallTypeInferences(
-        hackMapNewStyleToOld(sig.returnType2.mapType(bindings2)),
-        typeFromSignature(sig),
+        sig.returnType2.mapType(bindings),
+        sig,
         bindings,
         listOf(),
     )

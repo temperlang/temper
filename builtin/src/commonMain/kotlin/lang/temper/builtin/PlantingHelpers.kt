@@ -3,11 +3,12 @@ package lang.temper.builtin
 import lang.temper.log.Position
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.excludeNull
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
-import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.Type2
+import lang.temper.type2.withNullity
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockPlanting
 import lang.temper.value.CallTree
@@ -27,12 +28,12 @@ import lang.temper.value.freeTree
 @Suppress("FunctionName") // By convention, names of fns that plant things are capitalized.
 fun Planting.Assign(
     name: ResolvedName,
-    type: StaticType?,
+    type: Type2?,
     assigned: Planting.() -> UnpositionedTreeTemplate<*>,
 ): UnpositionedTreeTemplate<CallTree> {
     val callType = typeInferencesForAssign(type)
     return Call(type = callType) {
-        V(BuiltinFuns.vSetLocalFn, type = callType?.variant)
+        V(BuiltinFuns.vSetLocalFn, type = callType?.variant?.let(AdHocArrowTypes::definedTypeForSig))
         Ln(name = name, type = type)
         assigned()
     }
@@ -42,12 +43,12 @@ fun Planting.Assign(
 fun Planting.Assign(
     pos: Position,
     name: ResolvedName,
-    type: StaticType?,
+    type: Type2?,
     assigned: Planting.() -> UnpositionedTreeTemplate<*>,
 ): TreeTemplate<CallTree> {
     val callType = typeInferencesForAssign(type)
     return Call(pos, type = callType) {
-        V(BuiltinFuns.vSetLocalFn, type = callType?.variant)
+        V(BuiltinFuns.vSetLocalFn, type = callType?.variant?.let(AdHocArrowTypes::definedTypeForSig))
         Ln(pos.leftEdge, name = name, type = type)
         assigned()
     }
@@ -57,16 +58,16 @@ fun Planting.Assign(
 fun Planting.IsNullCall(
     pos: Position,
     calleePos: Position = pos.leftEdge,
-    argType: StaticType? = null,
+    argType: Type2? = null,
     plantArgument: Planting.() -> UnpositionedTreeTemplate<*>,
 ): TreeTemplate<CallTree> {
     val sig = IsNullFn.sig
-    val argTypeNn = argType?.let { excludeNull(it) }
+    val argTypeNn = argType?.withNullity(Nullity.NonNull)
     val callType = argTypeNn?.let {
-        CallTypeInferences(WellKnownTypes.booleanType, sig, mapOf(sig.typeFormals[0] to it), listOf())
+        CallTypeInferences(WellKnownTypes.booleanType2, sig, mapOf(sig.typeFormals[0] to it), listOf())
     }
     return Call(pos, callType) {
-        V(calleePos, Value(IsNullFn), callType?.variant)
+        V(calleePos, Value(IsNullFn), callType?.variant?.let(AdHocArrowTypes::definedTypeForSig))
         plantArgument()
     }
 }
@@ -77,7 +78,7 @@ fun Planting.Not(
     plantArg: Planting.() -> UnpositionedTreeTemplate<*>,
 ): TreeTemplate<CallTree> =
     Call(pos, notCallType) {
-        V(pos.leftEdge, BuiltinFuns.vNotFn, notCallType.variant)
+        V(pos.leftEdge, BuiltinFuns.vNotFn, AdHocArrowTypes.definedTypeForSig(notCallType.variant))
         plantArg()
     }
 
@@ -92,12 +93,11 @@ fun Planting.MaybeNot(
     } else {
         plantArg()
     }
-private val notCallType = CallTypeInferences(WellKnownTypes.booleanType, NotFn.sig, mapOf(), listOf())
+private val notCallType = CallTypeInferences(WellKnownTypes.booleanType2, NotFn.sig, mapOf(), listOf())
 
-private fun typeInferencesForAssign(type: StaticType?): CallTypeInferences? {
+private fun typeInferencesForAssign(type: Type2?): CallTypeInferences? {
     if (type == null) { return null }
-    val type2 = hackMapOldStyleToNew(type)
-    val sig = Signature2(type2, false, listOf(type2, type2))
+    val sig = Signature2(type, false, listOf(type, type))
     return CallTypeInferences(type, sig, mapOf(), listOf())
 }
 

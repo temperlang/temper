@@ -32,10 +32,9 @@ import lang.temper.name.SourceName
 import lang.temper.name.StableTemperName
 import lang.temper.name.Symbol
 import lang.temper.name.Temporary
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
-import lang.temper.type.isVoidLikeButNotOldStyleNever
+import lang.temper.type2.Type2
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -92,7 +91,7 @@ internal class CleanupTemporaries private constructor(
     private val beforeResultsExplicit: Boolean,
     private val inputParameters: List<DeclTree>,
     private val returnDecl: DeclTree?,
-    private val typeInfo: Map<ResolvedName, StaticType?>,
+    private val typeInfo: Map<ResolvedName, Type2?>,
 ) {
     internal object DebugAstSnapshotKey : SnapshotKey<DataTablesList> {
         override val databaseKeyText: String get() = "debugCleanupTemporaries"
@@ -252,7 +251,7 @@ internal class CleanupTemporaries private constructor(
         val decl: DeclTree,
         val metadataKey: Symbol,
         val metadataValue: Value<*>,
-        val metadataType: StaticType,
+        val metadataType: Type2,
     ) : Edit(lineNo, description)
 
     private fun simplifyVoidAssignments(readsAndWrites: ReadsAndWrites): List<Edit> = buildList {
@@ -260,7 +259,7 @@ internal class CleanupTemporaries private constructor(
 
         for ((name, writesToName) in readsAndWrites.writes) {
             val type = typeInfo[name]
-            if (type?.isVoidLikeButNotOldStyleNever == true) {
+            if (type?.isVoidLike == true) {
                 for (write in writesToName) {
                     if (write.writeKind != WriteKind.SimpleAssignment) { continue }
                     val stmt = write.containingPathElement ?: continue
@@ -280,7 +279,7 @@ internal class CleanupTemporaries private constructor(
                             lineNo = lineFor(stmt.ref),
                             description = "split void assignment of $name",
                             write = write,
-                        ) { V(void, WellKnownTypes.voidType) },
+                        ) { V(void, WellKnownTypes.voidType2) },
                     )
                 }
             }
@@ -642,7 +641,7 @@ internal class CleanupTemporaries private constructor(
                         description = "$y=... -> no-op",
                         edgeToReplace = writeEdge,
                     ) {
-                        V(void, WellKnownTypes.voidType)
+                        V(void, WellKnownTypes.voidType2)
                     },
                 )
             }
@@ -748,7 +747,7 @@ internal class CleanupTemporaries private constructor(
                             description = "read $name -> no-op",
                             edgeToReplace = edge,
                         ) {
-                            V(void, WellKnownTypes.voidType)
+                            V(void, WellKnownTypes.voidType2)
                         },
                     )
                 }
@@ -806,7 +805,7 @@ internal class CleanupTemporaries private constructor(
                         edgeToReplace = writeEdge,
                     ) {
                         if (assigned is ValueLeaf || assigned is NameLeaf) {
-                            V(void, WellKnownTypes.voidType) // If there's no side effect, it can be a no-op.
+                            V(void, WellKnownTypes.voidType2) // If there's no side effect, it can be a no-op.
                         } else {
                             Replant(freeTree(assigned))
                         }
@@ -959,7 +958,7 @@ internal class CleanupTemporaries private constructor(
                                 description = "$y = ... -> no-op",
                                 edgeToReplace = writeToYTree.incoming!!,
                             ) {
-                                V(void, type = WellKnownTypes.voidType)
+                                V(void, type = WellKnownTypes.voidType2)
                             },
                         )
                     }
@@ -1096,7 +1095,7 @@ internal class CleanupTemporaries private constructor(
                             description = "inlined assignment of $name -> no-op",
                             edgeToReplace = assignmentEdge,
                         ) {
-                            V(void, type = WellKnownTypes.voidType)
+                            V(void, type = WellKnownTypes.voidType2)
                         },
                     )
                     // Move the assigned in place of the read
@@ -1172,7 +1171,7 @@ internal class CleanupTemporaries private constructor(
                         description = "${read.name} = getStatic -> noOp",
                         edgeToReplace = assignmentEdge,
                     ) {
-                        V(void, WellKnownTypes.voidType)
+                        V(void, WellKnownTypes.voidType2)
                     },
                 )
                 // Inline the getStatic call where it's needed.
@@ -1205,7 +1204,7 @@ internal class CleanupTemporaries private constructor(
                             description = "let $name -> no-op",
                             edgeToReplace = declTree.incoming!!,
                         ) {
-                            V(void, WellKnownTypes.voidType)
+                            V(void, WellKnownTypes.voidType2)
                         },
                     )
                 }
@@ -1229,7 +1228,7 @@ internal class CleanupTemporaries private constructor(
                         decl = decl,
                         metadataKey = varSymbol,
                         metadataValue = void,
-                        metadataType = WellKnownTypes.voidType,
+                        metadataType = WellKnownTypes.voidType2,
                     ),
                 )
             }
@@ -1259,7 +1258,7 @@ internal class CleanupTemporaries private constructor(
                 is AddMetadata -> {
                     val decl = edit.decl
                     decl.replace(decl.size until decl.size) {
-                        V(decl.pos.rightEdge, Value(edit.metadataKey), type = Types.symbol.type)
+                        V(decl.pos.rightEdge, Value(edit.metadataKey), type = Types.symbol.type2)
                         V(decl.pos.rightEdge, edit.metadataValue, type = edit.metadataType)
                     }
                 }
@@ -1335,7 +1334,7 @@ internal class CleanupTemporaries private constructor(
                             nonConstDecl,
                             metadataKey = varSymbol,
                             metadataValue = void,
-                            metadataType = WellKnownTypes.voidType,
+                            metadataType = WellKnownTypes.voidType2,
                         ),
                     )
                 }

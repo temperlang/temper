@@ -18,6 +18,7 @@ import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.SourceName
 import lang.temper.type.TypeActual
+import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.InnerTreeType
@@ -604,7 +605,7 @@ fun extractTypes(tree: Tree) = treeToPosMap(tree) { node, _ ->
     }
     TypeInfo(
         treeType = node.treeType,
-        type = node.typeInferences?.type,
+        type = node.typeInferences?.type?.let { hackMapNewStyleToOld(it) },
         typeDecl = typeDecl,
     )
 }

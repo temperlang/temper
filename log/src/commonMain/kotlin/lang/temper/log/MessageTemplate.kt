@@ -365,6 +365,10 @@ enum class MessageTemplate(
         "Void expressions cannot be used as values",
         CompilationPhase.Interpreter,
     ),
+    TypeNotAllowedAsInput(
+        "Type %s not allowed as an input to a function call",
+        CompilationPhase.Interpreter,
+    ),
     ExpectedNoBubble(
         "Cannot bubble from a function without Bubble in its return type",
         CompilationPhase.Interpreter,

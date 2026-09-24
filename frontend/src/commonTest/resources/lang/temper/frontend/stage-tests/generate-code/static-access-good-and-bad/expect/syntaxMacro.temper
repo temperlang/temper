@@ -6,32 +6,32 @@ class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     @static @visibility(\public) let a__14: Int = ap__13 + igetStatic(C__0, \ap);
     @maybeVar @visibility(\private) let bp__15: Int;
     @maybeVar @visibility(\private) let b__16: Int;
-    @fn @static @visibility(\public) let f__17 = fn f(i__18 /* aka i */: Int) /* return__5 */: (Int) {
+    @fn @static @visibility(\public) let f__17 = fn f(i__18 /* aka i */: Int) /* return__5 */: Int {
       fn__19: do {
         i__18 + a__14 + igetStatic(C__0, \a) + ap__13 + igetStatic(C__0, \ap)
       }
     };
-    @fn @static @visibility(\private) let fp__20 = fn fp(i__21 /* aka i */: Int) /* return__6 */: (Int) {
+    @fn @static @visibility(\private) let fp__20 = fn fp(i__21 /* aka i */: Int) /* return__6 */: Int {
       fn__22: do {
         i__21 + 1
       }
     };
-    @visibility(\public) @fn let g__23 = fn g(@impliedThis(C__0) this__1: C__0, i__24 /* aka i */: Int) /* return__7 */: (Int) {
+    @visibility(\public) @fn let g__23 = fn g(@impliedThis(C__0) this__1: C__0, i__24 /* aka i */: Int) /* return__7 */: Int {
       fn__25: do {
         2 * igetStatic(C__0, \f)(i__24) * igetStatic(C__0, \fp)(i__24) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0)) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0))
       }
     };
-    @visibility(\public) @fn let h__26 = fn h(@impliedThis(C__0) this__2: C__0, i__27 /* aka i */: Int) /* return__8 */: (Int) {
+    @visibility(\public) @fn let h__26 = fn h(@impliedThis(C__0) this__2: C__0, i__27 /* aka i */: Int) /* return__8 */: Int {
       fn__28: do {
         2 * f__17(i__27) * fp__20(i__27) * do_icall_g(type (C__0), this(C__0), i__27) * do_icall_g(type (C__0), this(C__0), i__27)
       }
     };
-    @fn @static @visibility(\public) let g2__29 = fn g2(i__30 /* aka i */: Int) /* return__9 */: (Int) {
+    @fn @static @visibility(\public) let g2__29 = fn g2(i__30 /* aka i */: Int) /* return__9 */: Int {
       fn__31: do {
         2 * igetStatic(C__0, \f)(i__30) * igetStatic(C__0, \fp)(i__30)
       }
     };
-    @fn @static @visibility(\public) let h2__32 = fn h2(i__33 /* aka i */: Int) /* return__10 */: (Int) {
+    @fn @static @visibility(\public) let h2__32 = fn h2(i__33 /* aka i */: Int) /* return__10 */: Int {
       fn__34: do {
         2 * f__17(i__33) * fp__20(i__33)
       }
@@ -48,7 +48,7 @@ class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
       };
     };
 });
-g3__12 = fn g3(i__36 /* aka i */: Int) /* return__11 */: (Int) {
+g3__12 = fn g3(i__36 /* aka i */: Int) /* return__11 */: Int {
   fn__37: do {
     2 * do_call_f(C__0, i__36) * do_call_g(new C__0(), i__36) * do_get_a(C__0) * do_get_ap(C__0)
   }

@@ -1,5 +1,5 @@
 @fn let a__1;
-a__1 = (@stay fn a(i__2 /* aka i */: List<Int32>) /* return__0 */: (List<Int32>) {
+a__1 = (@stay fn a(i__2 /* aka i */: List<Int32>) /* return__0 */: List<Int32> {
     fn__3: do {
       if (do_get_length(i__2) == 0) {
         return__0 = list();

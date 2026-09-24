@@ -4,26 +4,26 @@
   class(\word, \Point, \concrete, true, @typeDefined(Point__0) fn {
       Point__0 extends AnyValue;
 ## x's docs don't talk about the factory
-      @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__0: Float64;
-      @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__0: Float64;
+      @docString((["x is the x coordinate.", "x is the x coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let x__5: Float64;
+      @docString((["y is the y coordinate.", "y is the y coordinate.", "test/test.temper.md"])) @constructorProperty @maybeVar @visibility(\public) let y__6: Float64;
       REM("magnitude is the distance of this point from the origin.", true, true);
       REM("It is always >= 0.", true, true);
 ## magnitude has its doc string
-      @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: (Float64) {
-          fn__0: do {
+      @fn let magnitude__7 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__1: Point__0) /* return__4 */: Float64 {
+          fn__8: do {
             do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
           }
       });
-      @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Point__0) this__1: Point__0, x__1 /* aka x */: Float64, y__1 /* aka y */: Float64) /* return__1 */: Void {
+      @visibility(\public) let constructor__9 = fn constructor(@impliedThis(Point__0) this__2: Point__0, x__10 /* aka x */: Float64, y__11 /* aka y */: Float64) /* return__3 */: Void {
         do {
-          let t#0;
-          do_iset_x(type (Point__0), this(Point__0), t#0 = x__1);
-          t#0
+          let t#13;
+          do_iset_x(type (Point__0), this(Point__0), t#13 = x__10);
+          t#13
         };
         do {
-          let t#1;
-          do_iset_y(type (Point__0), this(Point__0), t#1 = y__1);
-          t#1
+          let t#12;
+          do_iset_y(type (Point__0), this(Point__0), t#12 = y__11);
+          t#12
         };
       };
   });

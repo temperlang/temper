@@ -20,7 +20,7 @@ attempt2__16 = (@stay fn attempt2<H__4 extends Hidden__0>(@impliedThis(Exported<
     return__9 = hmm__17
 });
 @fn @static @visibility(\public) @stay @fromType(Exported<HI__1>) let subvert__19;
-subvert__19 = (@stay fn subvert /* return__10 */: (Map<String, Hidden__0>) {
+subvert__19 = (@stay fn subvert /* return__10 */: Map<String, Hidden__0> {
     return__10 = `test//`.more
 });
 @visibility(\private) @stay @fromType(Exported<HI__1>) let ha__21: Hidden__0;
@@ -36,7 +36,7 @@ constructor__22 = (@stay fn constructor(@impliedThis(Exported<HI__1>) this__6: E
 gethi__30 = (@stay fn (@impliedThis(Exported<HI__1>) this__31: Exported<HI__1>) /* return__32 */: Hidden__0 {
     return__32 = getp(hi__13, this__31)
 });
-`test//`.consider = (@stay fn consider(hu__24 /* aka hu */: Hidden__0) /* return__11 */: (Hidden__0?) {
+`test//`.consider = (@stay fn consider(hu__24 /* aka hu */: Hidden__0) /* return__11 */: Hidden__0?{
     return__11 = hu__24
 });
 @typeFormal(\H) @typeDecl(H__5) let H__5;

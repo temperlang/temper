@@ -18,6 +18,7 @@ import lang.temper.common.testCodeLocation
 import lang.temper.common.testModuleName
 import lang.temper.common.toStringViaBuilder
 import lang.temper.common.toStringViaTextOutput
+import lang.temper.format.OutToks
 import lang.temper.format.ValueSimplifyingLogSink
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.frontend.AstSnapshotKey
@@ -47,14 +48,17 @@ import lang.temper.name.SourceName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
-import lang.temper.type.BubbleType
 import lang.temper.type.DotHelper
-import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
-import lang.temper.type.MkType
-import lang.temper.type.StaticType
-import lang.temper.type.isBubbly
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.mentionsInvalid
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.DefinedType
+import lang.temper.type2.Descriptor
+import lang.temper.type2.MkType2
+import lang.temper.type2.Nullity
+import lang.temper.type2.Type2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BasicTypeInferencesTree
 import lang.temper.value.BlockTree
@@ -80,7 +84,7 @@ import lang.temper.value.symbolContained
 import lang.temper.value.thisParsedName
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
-import lang.temper.value.typeForValue
+import lang.temper.value.type2ForValue
 import lang.temper.value.typeSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.void
@@ -116,7 +120,7 @@ class TyperTest {
         |///        ┗━┛            : Type
         |
         |///     ╻                 : Int32
-        |///     ┃        ┏━━━━━┓  : Never
+        |///     ┃        ┏━━━━━┓  : Never<Int32>
         |    let j: Int = panic();
         |///        ┗━┛            : Type
         |
@@ -152,7 +156,7 @@ class TyperTest {
     @Test
     fun formalTypes() = assertTypes(
         """
-        |///     ╻                   :  fn (Int32): Top
+        |///     ╻                   :  (Int32) -> AnyValue?
         |    let f(arg: Int) { arg }
         |///       ┗━┛         ┗━┛   :  Int32
         """.trimMargin(),
@@ -176,18 +180,18 @@ class TyperTest {
         |    let addTwoIntegers(a: Int, b: Int): Int {
         |///     ┏━━━┓ : Int32
         |        a + b
-        |///       ╹    : fn (Int32, Int32): Int32
+        |///       ╹    : (Int32, Int32) -> Int32
         |    }
         |
         |    let addTwoFloats(a: Float64, b: Float64): Float64 {
         |///     ┏━━━┓ : Float64
         |        a + b
-        |///       ╹    : fn (Float64, Float64): Float64
+        |///       ╹    : (Float64, Float64) -> Float64
         |    }
         |
-        |/// ┏━━━━━━━━━━━━┓ : fn (Int32, Int32): Int32
+        |/// ┏━━━━━━━━━━━━┓ : (Int32, Int32) -> Int32
         |    addTwoIntegers;
-        |/// ┏━━━━━━━━━━┓ : fn (Float64, Float64): Float64
+        |/// ┏━━━━━━━━━━┓ : (Float64, Float64) -> Float64
         |    addTwoFloats;
         """.trimMargin(),
     )
@@ -260,7 +264,7 @@ class TyperTest {
         """
         |    let identityOrNull<T extends AnyValue>(x: T): (T?) { if (panic()) { x } else { null } }
         |
-        |/// ┏━━━━━━━━━━━━┓ : fn<T extends AnyValue>(T): (T?)
+        |/// ┏━━━━━━━━━━━━┓ : <T extends AnyValue>(T) -> T?
         |    identityOrNull("");
         |/// ┗━━━━━━━━━━━━━━━━┛ : String?
         |
@@ -273,7 +277,7 @@ class TyperTest {
         wantErrors = listOf(
             // Explicitly specified `<String>` but input is `null`.
             "10+27-31: Actual arguments do not match signature: <T extends AnyValue>(T) -> T? expected [String], but got [String?]!",
-            "10+4-32: Invalid variant: Invalid mentions Invalid",
+            "10+4-32: Invalid variant: () -> Invalid mentions Invalid",
         ),
     )
 
@@ -293,7 +297,7 @@ class TyperTest {
         |    class C { public constructor(): Void throws Bubble {} }
         |
         |    new C()
-        |/// ┗━━━━━┛ : C | Bubble
+        |/// ┗━━━━━┛ : Result<C, Bubble>
         """.trimMargin(),
     )
 
@@ -326,7 +330,7 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "7+4-28: Type formal <T extends I> cannot bind to C which does not fit upper bounds [I]!",
-            "7+4-28: Invalid variant: Invalid mentions Invalid",
+            "7+4-28: Invalid variant: () -> Invalid mentions Invalid",
         ),
     )
 
@@ -354,7 +358,7 @@ class TyperTest {
         |    let nothing<T>(): C<T> { panic() }
         |
         |    nothing;
-        |/// ┗━━━━━┛ : fn<T extends AnyValue>: C<T>
+        |/// ┗━━━━━┛ : <T extends AnyValue>() -> C<T>
         |
         |    nothing();
         |/// ┗━━━━━━━┛ : C<AnyValue>
@@ -471,9 +475,9 @@ class TyperTest {
             |///                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : List<Fruit>
             |      );
             |    let unbound = List.of;
-            |///     ┗━━━━━┛               : fn<listT extends AnyValue>: List<listT>
+            |///     ┗━━━━━┛               : <listT extends AnyValue>() -> List<listT>
             |    let bound = List.of<Int>;
-            |///     ┗━━━┛                 : fn: List<Int32>
+            |///     ┗━━━┛                 : () -> List<Int32>
         """.trimMargin(),
     )
 
@@ -707,11 +711,11 @@ class TyperTest {
     @Test
     fun functionAssignedToFunctionType() = assertTypes(
         """
-        |///                             ┏━━━━━━━━━━━━━━━━━━┓  : fn<T extends AnyValue>(T): T
+        |///                             ┏━━━━━━━━━━━━━━━━━━┓  : <T extends AnyValue>(T) -> T
         |    let identity: fn<T>(T): T = fn<T>(x: T): T { x }
-        |///     ┗━━━━━━┛ : fn<T extends AnyValue>(T): T
+        |///     ┗━━━━━━┛ : <T extends AnyValue>(T) -> T
         |    identity
-        |/// ┗━━━━━━┛ : fn<T extends AnyValue>(T): T
+        |/// ┗━━━━━━┛ : <T extends AnyValue>(T) -> T
         """.trimMargin(),
     )
 
@@ -819,7 +823,7 @@ class TyperTest {
         """
         |    let f(g: fn (Int): String): String { g(0) }
         |    f { (i: Int): String => i.toString() }
-        |///   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+        |///   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> String
         """.trimMargin(),
     )
 
@@ -828,7 +832,7 @@ class TyperTest {
         """
         |    let f(g: fn (Int): String): String { g(0) }
         |    f { i => i.toString() }
-        |///   ┗━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+        |///   ┗━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> String
         """.trimMargin(),
     )
 
@@ -864,7 +868,7 @@ class TyperTest {
         |   }
         |   f(
         |       true,
-        |///    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ : fn (Int32?): String
+        |///    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ : (Int32?) -> String
         |       fn(t: Int?): String { if (t == null) { "aha!" } else { t.toString() } },
         |       fn(u: String?): Int { if (u == null) {  -1 } else { u[String.begin] } },
         |   )
@@ -879,7 +883,7 @@ class TyperTest {
     fun assignedFnWithInferredSigTypes() = assertTypes(
         """
         |    let f: fn (Int): String = fn (i) { i.toString() };
-        |///                           ┗━━━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+        |///                           ┗━━━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> String
         """.trimMargin(),
     )
 
@@ -910,7 +914,7 @@ class TyperTest {
         |
         |///             ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ :           String
         |    console.log(ls.join(", ") { (x: Int): String => x.toString()});
-        |///                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+        |///                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> String
         """.trimMargin(),
     )
 
@@ -920,7 +924,7 @@ class TyperTest {
         |    let ls: List<Int> = [4];
         |
         |    ls.map { (x: Int): Int => -x }
-        |/// ┃      ┗━━━━━━━━━━━━━━━━━━━━━┫ : fn (Int32): Int32
+        |/// ┃      ┗━━━━━━━━━━━━━━━━━━━━━┫ : (Int32) -> Int32
         |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : List<Int32>
         """.trimMargin(),
     )
@@ -929,7 +933,7 @@ class TyperTest {
     fun genericMethodBrief() = assertTypes(
         """
         |    [0].map { (x: Int): Int => -x }
-        |///         ┗━━━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): Int32
+        |///         ┗━━━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> Int32
         """.trimMargin(),
     )
 
@@ -937,7 +941,7 @@ class TyperTest {
     fun genericMethodBriefBlockInferredTypes() = assertTypes(
         """
         |    [0].map { (x): Int => -x }
-        |///         ┗━━━━━━━━━━━━━━━━┛ : fn (Int32): Int32
+        |///         ┗━━━━━━━━━━━━━━━━┛ : (Int32) -> Int32
         """.trimMargin(),
     )
 
@@ -955,7 +959,7 @@ class TyperTest {
         // Not even sure what this ought to mean, but it documents current results.
         """
         |    [0].map { (x): Int => -x }
-        |///         ┗━━━━━━━━━━━━━━━━┛ : fn (Int32): Int32
+        |///         ┗━━━━━━━━━━━━━━━━┛ : (Int32) -> Int32
         """.trimMargin(),
     )
 
@@ -963,7 +967,7 @@ class TyperTest {
     fun fnWithExtensionMethod() = assertTypes(
         """
         |    fn (s: String): Boolean { s.isEmpty }
-        |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : fn (String): Boolean
+        |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : (String) -> Boolean
         """.trimMargin(),
     )
 
@@ -971,7 +975,7 @@ class TyperTest {
     fun fnWithExtensionMethodAndComplexSubject() = assertTypes(
         """
         |    fn (s: String): Boolean { "foo#{s}bar".isEmpty }
-        |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : fn (String): Boolean
+        |/// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : (String) -> Boolean
         """.trimMargin().replace('#', '$'),
     )
 
@@ -1029,7 +1033,7 @@ class TyperTest {
         """
         |//                                        The innermost expressions have type String.
         |    let f(x: AnyValue): String throws Bubble { x as String }
-        |/// ┏━━━━━━━━━━━━━━━━━━┓                       ┗━━━━━━━━━┛   : String | Bubble
+        |/// ┏━━━━━━━━━━━━━━━━━━┓                       ┗━━━━━━━━━┛   : Result<String, Bubble>
         |    f(panic<AnyValue>());
         """.trimMargin(),
     )
@@ -1247,7 +1251,7 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "2+4-9: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!",
-            "2+4-9: Invalid variant: Invalid mentions Invalid",
+            "2+4-9: Invalid variant: () -> Invalid mentions Invalid",
         ),
     )
 
@@ -1255,7 +1259,7 @@ class TyperTest {
     fun declarationThatIsNeitherInitializedNorRead() = assertTypes(
         """
         |    let unused;
-        |///     ┗━━━━┛ : Top
+        |///     ┗━━━━┛ : AnyValue?
         """.trimMargin(),
     )
 
@@ -1373,10 +1377,10 @@ class TyperTest {
         """
         |    let sign(x: Int): Int { if (x == 0) { 0 } else if (x < 0) { -1 } else { 1 } }
         |///                                         ┏━━━━━━━━━━━━━━━━┓   : Boolean
-        |///                                         ┣━━━┓            ┃   : fn (Int32): Boolean
+        |///                                         ┣━━━┓            ┃   : (Int32) -> Boolean
         |    let isEven(x: Int): Boolean { x == 0 || isOdd(x - sign(x)) }
         |    let isOdd(x: Int): Boolean { !isEven(x) }
-        |///                               ┣━━━━┛  ┃                      : fn (Int32): Boolean
+        |///                               ┣━━━━┛  ┃                      : (Int32) -> Boolean
         |///                               ┗━━━━━━━┛                      : Boolean
         """.trimMargin(),
     )
@@ -1435,7 +1439,7 @@ class TyperTest {
         |    let something(x: Int?): String? {
         |///    ╻                                : Int32?
         |      (x as Int).toString() orelse null
-        |///   ┃┗━━━━━━┛           ┃           ┃ : Int32 | Bubble
+        |///   ┃┗━━━━━━┛           ┃           ┃ : Result<Int32, Bubble>
         |///   ┣━━━━━━━━━━━━━━━━━━━┛           ┃ : String
         |///   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ : String?
         |    }
@@ -1470,6 +1474,8 @@ class TyperTest {
         """.trimMargin(),
         wantErrors = listOf(
             "2+23-35: No member toString in AnyValue!",
+            "2+23-35: Cannot assign to String? from Invalid!",
+            "2+23: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",
         ),
@@ -1518,10 +1524,10 @@ class TyperTest {
     fun constructorAndSetterDefaultToVoid() = assertTypes(
         """
         |    class Something {
-        |///          ┏━━━━━━━━━┓         : fn (Something): Void
+        |///          ┏━━━━━━━━━┓         : (Something) -> Void
         |      public constructor() {}
         |      public set blah(x: Int) {}
-        |///              ┗━━┛            : fn (Something, Int32): Void
+        |///              ┗━━┛            : (Something, Int32) -> Void
         |    }
         """.trimMargin(),
     )
@@ -1542,9 +1548,9 @@ class TyperTest {
     fun divAndModSpecialization() = assertTypes(
         """
         |    let f(a: Int): Int               { a / 2 }
-        |///                                      ╹     : fn (Int32, Int32): Int32
+        |///                                      ╹     : (Int32, Int32) -> Int32
         |    let g(a: Int): Int throws Bubble { a / a }
-        |///                                      ╹     : fn (Int32, Int32): (Int32 | Bubble)
+        |///                                      ╹     : (Int32, Int32) -> Result<Int32, Bubble>
         """.trimMargin(),
     )
 
@@ -1621,7 +1627,7 @@ class TyperTest {
         |    let banjo = avocado as Thing;
         |///             ┗━━━━━┛ : Invalid
         |    let cobra: Commander;
-        |///     ┗━━━┛ : Top
+        |///     ┗━━━┛ : AnyValue?
         """.trimMargin(),
         wantErrors = listOf(
             "2+27-32: Expected value of type Type not `Thing`!",
@@ -1629,6 +1635,7 @@ class TyperTest {
             "2+27-32: No declaration for Thing!",
             "4+15-24: No declaration for Commander!",
             "2+8-13: Type Invalid mentions Invalid",
+            "2+16: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
             "2+16-32: Type Invalid mentions Invalid",
             "2+24-26: Type Invalid mentions Invalid",
@@ -1809,10 +1816,10 @@ class TyperTest {
         // Nullary never-ish functions like bubble and panic are a tad tricky.
         """
             |    let f(): String throws Bubble { bubble() }
-            |///                                 ┗━━━━━━┛ : Bubble
+            |///                                 ┗━━━━━━┛ : Result<Never<String>, Bubble>
             |
             |    let x = f() orelse panic();
-            |///     ┃              ┗━━━━━┛ : Never
+            |///     ┃              ┗━━━━━┛ : Never<String>
             |///     ╹                      : String
         """.trimMargin(), // Eventually `Never` becomes `Never<String>`
     )
@@ -1824,13 +1831,13 @@ class TyperTest {
             |      when (x) {
             |        is String -> x;
             |        else -> bubble();
-            |///             ┗━━━━━━┛ : Bubble
+            |///             ┗━━━━━━┛ : Result<Never<String>, Bubble>
             |      }
             |    }
             |
             |    let bail(): Void throws Bubble {
             |      bubble()
-            |///   ┗━━━━━━┛ : Bubble
+            |///   ┗━━━━━━┛ : Result<Never<Void>, Bubble>
             |    }
         """.trimMargin(),
         // Eventually the first `Bubble` becomes `Never<String> throws Bubble`
@@ -1914,7 +1921,7 @@ class TyperTest {
             |///             ╹          ┗┛             : Int32
             |        .join(", ") { x => x.toString() }
             |///                 ┃ ╹    ╹            ┃ : Int32
-            |///                 ┗━━━━━━━━━━━━━━━━━━━┛ : fn (Int32): String
+            |///                 ┗━━━━━━━━━━━━━━━━━━━┛ : (Int32) -> String
             |
         """.trimMargin(),
     )
@@ -2039,6 +2046,7 @@ class TyperTest {
         wantErrors = listOf(
             "5+4-15: No callee matches inputs [D] among [(A) -> Void, (C) -> String]!",
             "1+4: Type Invalid mentions Invalid",
+            "5+4: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
             "5+4-15: Type Invalid mentions Invalid",
         ),
     )
@@ -2118,9 +2126,30 @@ class TyperTest {
         val replacements = typeColonChunkToRequirements.map { (chunk, reqs) ->
             var replacementTexts = reqs.map { req ->
                 val typeGotten = requirementsToInferences[req]?.type
-                if (typeGotten != null) {
+                var nullityAdjust = false
+                var descriptorGotten: Descriptor? = typeGotten
+                if (
+                    typeGotten is DefinedType &&
+                    AdHocArrowTypes.isAdhocArrowTypeDefinition(typeGotten.definition)
+                ) {
+                    val sig = AdHocArrowTypes.reverseToSig(typeGotten)
+                    if (sig != null) {
+                        descriptorGotten = sig
+                        nullityAdjust = typeGotten.nullity == Nullity.OrNull
+                    }
+                }
+                if (descriptorGotten != null) {
                     fixupTypeNames(
-                        toStringViaTokenSink { tokenSink -> typeGotten.renderTo(tokenSink) },
+                        toStringViaTokenSink { tokenSink ->
+                            if (nullityAdjust) {
+                                tokenSink.emit(OutToks.leftParen)
+                            }
+                            descriptorGotten.renderTo(tokenSink)
+                            if (nullityAdjust) {
+                                tokenSink.emit(OutToks.rightParen)
+                                tokenSink.emit(OutToks.postfixQMark)
+                            }
+                        },
                     )
                 } else {
                     "???"
@@ -2380,7 +2409,7 @@ class TyperTest {
                 } else if (typeInferences is CallTypeInferences) {
                     typeInferences.bindings2.forEach { (typeFormal, binding) ->
                         val name = typeFormal.name
-                        if (binding is StaticType && binding.mentionsInvalid) {
+                        if (binding is DefinedNonNullType && binding.mentionsInvalid) {
                             invalidPositions.putMultiSet(t.pos, "Binding from $name to $binding")
                             hasProblem = true
                         }
@@ -2434,7 +2463,8 @@ class TyperTest {
         }
     }
 
-    private val invalidTypeInferences = BasicTypeInferences(InvalidType, listOf())
+    private val invalidTypeInferences =
+        BasicTypeInferences(WellKnownTypes.invalidType2, listOf())
 
     /**
      * The tests allow us to find the narrowest node that has a type inferred.
@@ -2622,7 +2652,7 @@ private class TypeInfoByPosition(
     val positionToInference: Map<Position, Pair<NonsenseGradient, TypeInferences>>
 
     init {
-        val typeForName = mutableMapOf<ResolvedName, StaticType>()
+        val typeForName = mutableMapOf<ResolvedName, Type2>()
         val byPosition = mutableMapOf<Position, Pair<NonsenseGradient, TypeInferences>>()
         // Walk over the tree with TypeInferences attached and check requirements.
         TreeVisit.startingAt(root)
@@ -2647,9 +2677,10 @@ private class TypeInfoByPosition(
                         }
                         if (typeInferences is CallTypeInferences) {
                             val calleeType = typeInferences.variant
-                            if (calleeType is FunctionType && calleeType.returnType.isBubbly) {
+                            if (calleeType.returnType2.definition == WellKnownTypes.resultTypeDefinition) {
                                 typeInferences = BasicTypeInferences(
-                                    MkType.or(typeInferences.type, BubbleType),
+                                    MkType2.result(typeInferences.type, WellKnownTypes.bubbleType2)
+                                        .get(),
                                     typeInferences.explanations,
                                 )
                             }
@@ -2670,7 +2701,7 @@ private class TypeInfoByPosition(
                 val type = result.type
                     ?: when (result) {
                         is NameCaptureResult -> typeForName[result.capturedIn]
-                        is KnownValueCaptureResult -> typeForValue(result.value)
+                        is KnownValueCaptureResult -> type2ForValue(result.value)
                     }
                 val nonsenseLevel = NonsenseGradient.PossibleNonsense
                 if (type != null && (byPosition[pos]?.first ?: NonsenseGradient.TotalNonsense) < nonsenseLevel) {

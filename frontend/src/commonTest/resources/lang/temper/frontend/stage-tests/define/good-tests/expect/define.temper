@@ -1,20 +1,20 @@
-@stay @imported(\(`std//testing/`.Test)) let Test__0;
-Test__0 = type (Test);
-@fn @test("- does / this : work?") let doesThisWork__0;
-doesThisWork__0 = fn doesThisWork(test#0: Test) /* return__0 */: (Void | Bubble) {
+@stay @imported(\(`std//testing/`.Test)) let Test__1;
+Test__1 = type (Test);
+@fn @test("- does / this : work?") let doesThisWork__7;
+doesThisWork__7 = fn doesThisWork(test#0: Test) /* return__2 */: Void throws Bubble {
   do_call_assert(test#0, true, @stay fn {
       "or what?"
   })
 };
-@fn @test("does\tthis\nwork") let doesThisWork__1;
-doesThisWork__1 = fn doesThisWork(test__0 /* aka test */: Test) /* return__1 */: (Void | Bubble) {
-  do_call_assert(test__0, false, @stay fn {
+@fn @test("does\tthis\nwork") let doesThisWork__8;
+doesThisWork__8 = fn doesThisWork(test__3 /* aka test */: Test) /* return__4 */: Void throws Bubble {
+  do_call_assert(test__3, false, @stay fn {
       "or that"
   })
 };
-@fn @test("again") let again__0;
-again__0 = fn again(t__0 /* aka t */: Test) /* return__2 */: (Void | Bubble) {
-  do_call_assert(t__0, true, @stay fn {
+@fn @test("again") let again__9;
+again__9 = fn again(t__5 /* aka t */: Test) /* return__6 */: Void throws Bubble {
+  do_call_assert(t__5, true, @stay fn {
       "whatever"
   })
 };

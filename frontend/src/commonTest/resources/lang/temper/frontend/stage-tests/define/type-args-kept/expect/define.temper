@@ -30,11 +30,11 @@ constructor__15 = (@stay fn constructor(@impliedThis(What__0<Thing__1>) this__3:
     };
 });
 @getter @method(\ints) @fn @visibility(\public) @stay @fromType(What__0<Thing__1>) let getints__20;
-getints__20 = fn (@impliedThis(What__0<Thing__1>) this__21: What__0<Thing__1>) /* return__22 */: (List<Int32>) {
+getints__20 = fn (@impliedThis(What__0<Thing__1>) this__21: What__0<Thing__1>) /* return__22 */: List<Int32> {
   return__22 = getp(ints__8, this__21)
 };
 @getter @method(\things) @fn @visibility(\public) @stay @fromType(What__0<Thing__1>) let getthings__23;
-getthings__23 = fn (@impliedThis(What__0<Thing__1>) this__24: What__0<Thing__1>) /* return__25 */: (List<Thing__1>) {
+getthings__23 = fn (@impliedThis(What__0<Thing__1>) this__24: What__0<Thing__1>) /* return__25 */: List<Thing__1> {
   return__25 = getp(things__9, this__24)
 };
 @typeDecl(What__0<Thing__1>) @stay let What__0;

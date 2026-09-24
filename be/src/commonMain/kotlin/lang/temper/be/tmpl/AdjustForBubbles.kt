@@ -4,9 +4,7 @@ import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedParsedName
-import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
-import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.withType
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.CallTree
@@ -38,10 +36,6 @@ internal fun adjustForBubbles(
     (bubblyCall.assigned?.content as? ResolvedParsedName)?.let { nameHint = it.baseName }
     val resultVarName = goalTranslator.translator.unusedName(nameHint)
     val resultType = bubblyCall.resultType
-    val resultTypeOld = MkType.nominal(
-        WellKnownTypes.resultTypeDefinition,
-        resultType.bindings.map { hackMapNewStyleToOld(it) },
-    )
 
     val resultDeclPos = bubblyCall.pos.leftEdge
     val afterCallPos = bubblyCall.pos.rightEdge
@@ -53,9 +47,9 @@ internal fun adjustForBubbles(
             PreTranslated.TreeWrapper(
                 doc.treeFarm.grow(resultDeclPos) {
                     Decl {
-                        Ln(resultVarName, resultTypeOld)
+                        Ln(resultVarName, resultType)
                         V(typeSymbol)
-                        V(Value(ReifiedType(resultType), TType), WellKnownTypes.typeType)
+                        V(Value(ReifiedType(resultType), TType), WellKnownTypes.typeType2)
                     }
                 },
             ),
@@ -65,7 +59,7 @@ internal fun adjustForBubbles(
         add(
             PreTranslated.TreeWrapper(
                 doc.treeFarm.grow {
-                    Assign(bubblyCall.bubbles.pos, resultVarName, resultTypeOld) {
+                    Assign(bubblyCall.bubbles.pos, resultVarName, resultType) {
                         Replant(bubblyCall.bubbles.copy(copyInferences = true))
                     }
                 },
@@ -80,7 +74,7 @@ internal fun adjustForBubbles(
             ResultHelperFnPlaceholders.IsOkResult,
             listOf(
                 RightNameLeaf(doc, afterCallPos, resultVarName).also {
-                    it.typeInferences = BasicTypeInferences(resultTypeOld, listOf())
+                    it.typeInferences = BasicTypeInferences(resultType, listOf())
                 },
             ),
             null,
@@ -96,7 +90,7 @@ internal fun adjustForBubbles(
                     // TODO: maybe have FreeFailure take the result variable name and
                     // adjust goal translators to do this where applicable.
                     var resultExpr: Tree = RightNameLeaf(doc, afterCallPos, resultVarName).also {
-                        it.typeInferences = BasicTypeInferences(resultTypeOld, listOf())
+                        it.typeInferences = BasicTypeInferences(resultType, listOf())
                     }
                     if (resultType != bodyFor.sig.returnType2) {
                         val (bodyCallPassType, bodyCallFailType) =
@@ -165,9 +159,9 @@ internal fun adjustForBubbles(
                                 synthesizeCall(
                                     doc, afterCallPos, ResultHelperFnPlaceholders.UnpackOkResult,
                                     listOf(
-                                        doc.treeFarm.grow { Rn(afterCallPos, resultVarName, resultTypeOld) },
+                                        doc.treeFarm.grow { Rn(afterCallPos, resultVarName, resultType) },
                                     ),
-                                    returnType = hackMapNewStyleToOld(bubblyCall.passType),
+                                    returnType = bubblyCall.passType,
                                     typeActuals = listOf(bubblyCall.passType, bubblyCall.failType),
                                 ),
                             )

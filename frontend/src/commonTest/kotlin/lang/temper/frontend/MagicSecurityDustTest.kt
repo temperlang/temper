@@ -14,6 +14,7 @@ import lang.temper.name.PseudoCodeNameRenumberer
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.plantCallWithTypeInfo
 import lang.temper.type.plantTypedCallee
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.value.BlockTree
@@ -24,7 +25,6 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.returnParsedName
 import lang.temper.value.toPseudoCode
-import lang.temper.value.typeFromSignature
 import lang.temper.value.vLabelSymbol
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +32,7 @@ import kotlin.test.assertNotNull
 
 class MagicSecurityDustTest {
     private val pos = Position(testCodeLocation, 0, 0)
-    private val intToVoid = typeFromSignature(
+    private val intToVoid = AdHocArrowTypes.definedTypeForSig(
         Signature2(
             returnType2 = WellKnownTypes.voidType2,
             hasThisFormal = false,
@@ -151,7 +151,7 @@ class MagicSecurityDustTest {
 
     @Test
     fun bubblyCallsInConditions() = runSprinkleTest { doc, _ ->
-        val intToBoolOrBubble = typeFromSignature(
+        val intToBoolOrBubble = AdHocArrowTypes.definedTypeForSig(
             Signature2(
                 MkType2(WellKnownTypes.resultTypeDefinition)
                     .actuals(
@@ -326,7 +326,7 @@ class MagicSecurityDustTest {
         val root = doc.treeFarm.grow(pos) {
             Block {
                 Call(BuiltinFuns.vSetLocalFn) {
-                    Ln(returnName, WellKnownTypes.intType)
+                    Ln(returnName, WellKnownTypes.intType2)
                     Call {
                         Call(BuiltinFuns.vAngleFn) {
                             plantTypedCallee(BubbleFn)

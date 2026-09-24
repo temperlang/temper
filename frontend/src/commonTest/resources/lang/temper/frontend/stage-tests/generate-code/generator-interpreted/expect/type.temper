@@ -17,7 +17,7 @@ runItThrice__1 = fn runItThrice(factory__2 /* aka factory */: (fn (): SafeGenera
   }
 };
 runItThrice__1(fn /* return__7 */{
-    return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: (GeneratorResult<Empty>) implements GeneratorFn {
+    return__7 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__5 */: GeneratorResult<Empty> implements GeneratorFn {
         do_call_log(console#6, "First");
         yield();
         do_call_log(console#6, "Second");

@@ -1,6 +1,7 @@
 package lang.temper.frontend.typestage
 
 import lang.temper.ast.TreeVisit
+import lang.temper.builtin.Assign
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.common.Cons
 import lang.temper.common.Log
@@ -20,26 +21,29 @@ import lang.temper.type.DotHelper
 import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
-import lang.temper.type.FunctionType
 import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
 import lang.temper.type.InvalidType
 import lang.temper.type.MethodShape
-import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
-import lang.temper.type.SuperTypeTree
-import lang.temper.type.TypeActual
-import lang.temper.type.TypeBindingMapper
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
-import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.DefinedType
+import lang.temper.type2.Nullity
+import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
+import lang.temper.type2.TypeParamRef
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.mapType
+import lang.temper.type2.withNullity
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -88,7 +92,7 @@ internal fun inlineToRepairUnrealizedGoals(
     root: BlockTree,
     logSink: LogSink,
 ): List<TEdge> {
-    val inliner = InlineToRepairUnrealizedGoals(root, logSink)
+    val inliner = InlineToRepairUnrealizedGoals(root, logSink, TypeContext2())
     inliner.findFunctions()
     if (inliner.findCallsToInline()) {
         inliner.doInlining()
@@ -100,6 +104,7 @@ internal fun inlineToRepairUnrealizedGoals(
 private class InlineToRepairUnrealizedGoals(
     val root: BlockTree,
     val logSink: LogSink,
+    val typeContext2: TypeContext2,
 ) {
     private val reparableFns = mutableSetOf<FunTree>()
     fun findFunctions() {
@@ -160,7 +165,7 @@ private class InlineToRepairUnrealizedGoals(
          * If the method is defined on C<T> and the type of `this` in the call is `C<Foo>`,
          * then this relates <T> to Foo.
          */
-        val thisTypeBindings: Map<TypeFormal, TypeActual>,
+        val thisTypeBindings: Map<TypeFormal, Type2>,
         /**
          * The method shape of the definition to inline
          */
@@ -174,7 +179,7 @@ private class InlineToRepairUnrealizedGoals(
          */
         val formalNameToFunArg: Map<TemperName, FunArg>,
         /** The function type of the callee ignoring any marker interfaces. */
-        val variantFunctionType: FunctionType,
+        val variantSig: Signature2,
     )
     private val callsToInline = mutableMapOf<CallTree, CallToInline>()
 
@@ -210,7 +215,7 @@ private class InlineToRepairUnrealizedGoals(
         // - to use a reparable arg in at most one place in an immediate call.
         call_loop@
         for ((call, args) in callsReceivingReparableFns) {
-            val variantType = variantFunctionType(call.typeInferences?.variant) ?: continue
+            val variantSig = call.typeInferences?.variant ?: continue
             val calleeDefinition = getDefinitionOfCallee(call)
             val definingFn = calleeDefinition?.definition
             val definingFnParts = definingFn?.parts ?: continue
@@ -270,14 +275,14 @@ private class InlineToRepairUnrealizedGoals(
                     // to type actuals on the thisType
                     val definingTypeShape = calleeDefinition.definingTypeShape
                     val thisType = calleeDefinition.thisType
-                    val thisTypeBindings: Map<TypeFormal, TypeActual>? = when {
+                    val thisTypeBindings: Map<TypeFormal, Type2>? = when {
                         definingTypeShape == null && thisType == null -> emptyMap()
                         definingTypeShape != null && thisType != null -> {
                             // Use a super-type tree so that if the type of `this` is List<T>
                             // and the method is defined in a super-type, Listed<T>, we get
                             // bindings in the context of the <T> on Listed because that is
                             // what will appear in the definition body.
-                            val stt = SuperTypeTree.of(thisType)
+                            val stt = typeContext2.superTypeTreeOf(thisType)
                             stt[definingTypeShape].firstOrNull()?.let { contextualizedThisType ->
                                 val bindingsZipFormal =
                                     contextualizedThisType.bindings zip definingTypeShape.formals
@@ -302,7 +307,7 @@ private class InlineToRepairUnrealizedGoals(
                             methodShape = calleeDefinition.methodShape,
                             definition = definingFn,
                             formalNameToFunArg = formalNameToFunArg.toMap(),
-                            variantFunctionType = variantType,
+                            variantSig = variantSig,
                         )
                     }
                 }
@@ -327,7 +332,6 @@ private class InlineToRepairUnrealizedGoals(
             val calleeBody = calleeParts.body
             val formalBindings = call.typeInferences!!.bindings2 +
                 thisBindings
-            val typeMapper = TypeBindingMapper(formalToActual = formalBindings.entries)
             val variantType = callToInline.methodShape.descriptor?.let { sig ->
                 sig.mapType(
                     formalBindings.mapValues { (_, actual) ->
@@ -343,16 +347,15 @@ private class InlineToRepairUnrealizedGoals(
             val leftPos = call.pos.leftEdge
             val rightPos = call.pos.rightEdge
 
-            fun adaptType(t: StaticType): StaticType = MkType.map(t, typeMapper)
-
-            fun adaptTypeActual(t: TypeActual): TypeActual = MkType.map(t, typeMapper)
+            fun adaptType(t: Type2) = t.mapType(formalBindings)
+            fun adaptSig(s: Signature2) = s.mapType(formalBindings)
 
             fun adaptCallTypeInferences(ti: CallTypeInferences?): CallTypeInferences? {
                 if (ti == null) { return null }
                 return CallTypeInferences(
                     type = adaptType(ti.type),
-                    variant = adaptType(ti.variant),
-                    bindings2 = ti.bindings2.mapValues { adaptTypeActual(it.value) },
+                    variant = adaptSig(ti.variant),
+                    bindings2 = ti.bindings2.mapValues { adaptType(it.value) },
                     explanations = ti.explanations,
                 )
             }
@@ -389,7 +392,7 @@ private class InlineToRepairUnrealizedGoals(
                         val blockReturnDecl = funPartsToInline.returnDecl
                         val blockReturnNameTree = blockReturnDecl?.parts?.name
                         val blockReturnType = blockReturnNameTree?.typeInferences?.type
-                            ?: WellKnownTypes.voidType
+                            ?: WellKnownTypes.voidType2
                         val isBlockVoidLike = blockReturnType.isVoidLike
                         if (!isBlockVoidLike) {
                             inlinedChildren.add(blockReturnDecl!!)
@@ -403,13 +406,14 @@ private class InlineToRepairUnrealizedGoals(
                                 if (formalParts != null) {
                                     val actualLeft = inlinedActual.pos.leftEdge
                                     val left = formalParts.name.copy(doc, copyInferences = true)
-                                    val typeAssigned = left.typeInferences?.type ?: InvalidType
+                                    val typeAssigned = left.typeInferences?.type ?: WellKnownTypes.invalidType2
                                     val assign = ValueLeaf(doc, actualLeft, BuiltinFuns.vSetLocalFn)
-                                    val eqType = MkType.fn(
-                                        typeFormals = emptyList(),
-                                        valueFormals = listOf(typeAssigned, typeAssigned),
-                                        returnType = typeAssigned,
+                                    val eqSig = Signature2(
+                                        returnType2 = typeAssigned,
+                                        hasThisFormal = false,
+                                        requiredInputTypes = listOf(typeAssigned, typeAssigned),
                                     )
+                                    val eqType = AdHocArrowTypes.definedTypeForSig(eqSig)
                                     assign.typeInferences = BasicTypeInferences(eqType, emptyList())
                                     val initializer = CallTree(
                                         doc,
@@ -418,7 +422,7 @@ private class InlineToRepairUnrealizedGoals(
                                     )
                                     initializer.typeInferences = CallTypeInferences(
                                         type = typeAssigned,
-                                        variant = eqType,
+                                        variant = eqSig,
                                         bindings2 = emptyMap(),
                                         explanations = emptyList(),
                                     )
@@ -437,7 +441,7 @@ private class InlineToRepairUnrealizedGoals(
                         val terminalPos = funPartsToInline.body.pos.rightEdge
                         if (isBlockVoidLike) {
                             val terminalValue = ValueLeaf(doc, terminalPos, void)
-                            terminalValue.typeInferences = BasicTypeInferences(WellKnownTypes.voidType, emptyList())
+                            terminalValue.typeInferences = BasicTypeInferences(WellKnownTypes.voidType2, emptyList())
                             inlinedChildren.add(terminalValue)
 
                             // Remove any `return__123 = void` statements.
@@ -509,7 +513,7 @@ private class InlineToRepairUnrealizedGoals(
                     var value = t.content
                     val valueAsType = TType.unpackOrNull(value)
                     if (valueAsType is ReifiedType) {
-                        val adaptedType = hackMapOldStyleToNew(adaptType(valueAsType.type))
+                        val adaptedType = adaptType(valueAsType.type2)
                         value = Value(ReifiedType(adaptedType), TType)
                     }
                     val copy = ValueLeaf(doc, t.pos, value)
@@ -521,10 +525,10 @@ private class InlineToRepairUnrealizedGoals(
             val isVoidLike = variantType.returnType2.isVoidLike
             val returnParts = calleeParts.returnDecl?.parts!!
             val returnName = returnParts.name.content as InternalModularName
-            val variantReturnType = hackMapNewStyleToOld(variantType.returnType2)
+            val variantReturnType = variantType.returnType2
 
             val localReturnName: TemperName?
-            val convertingDeclarations: List<Triple<InternalModularName, StaticType, Tree?>> = buildList {
+            val convertingDeclarations: List<Triple<InternalModularName, Type2, Tree?>> = buildList {
                 // First, emit local declarations for each parameter.
                 // For each formal parameter `x__1` and actual parameter `123`.
                 //
@@ -535,10 +539,9 @@ private class InlineToRepairUnrealizedGoals(
                 for ((formalIndex, formal) in calleeParts.formals.withIndex()) {
                     val callChildIndex = formalIndex // Skip over callee
                     val formalName = formal.parts!!.name.content as InternalModularName
-                    val paramType = hackMapNewStyleToOld(
+                    val paramType =
                         variantType.valueFormalForActual(formalIndex)?.type
-                            ?: WellKnownTypes.invalidType2,
-                    )
+                            ?: WellKnownTypes.invalidType2
 
                     if (formalName in formalNameToArg) {
                         // We'll inline it, so no need for a local name.
@@ -573,23 +576,17 @@ private class InlineToRepairUnrealizedGoals(
                     for ((inlinedName, paramType, initializer) in convertingDeclarations) {
                         Decl(leftPos) {
                             Ln(leftPos, inlinedName, type = paramType)
-                            V(Value(typeSymbol), type = WellKnownTypes.symbolType)
+                            V(Value(typeSymbol), type = WellKnownTypes.symbolType2)
                             V(
-                                Value(ReifiedType(hackMapOldStyleToNew(paramType), hasExplicitActuals = true)),
-                                type = WellKnownTypes.typeType,
+                                Value(ReifiedType(paramType, hasExplicitActuals = true)),
+                                type = WellKnownTypes.typeType2,
                             )
-                            V(Value(ssaSymbol), type = WellKnownTypes.symbolType)
-                            V(void, type = WellKnownTypes.voidType)
+                            V(Value(ssaSymbol), type = WellKnownTypes.symbolType2)
+                            V(void, type = WellKnownTypes.voidType2)
                         }
 
                         if (initializer != null) {
-                            Call(leftPos) {
-                                V(
-                                    leftPos,
-                                    BuiltinFuns.vSetLocalFn,
-                                    type = MkType.fn(emptyList(), listOf(paramType, paramType), paramType),
-                                )
-                                Ln(leftPos, inlinedName, paramType)
+                            Assign(leftPos, inlinedName, paramType) {
                                 Replant(initializer)
                             }
                         }
@@ -608,7 +605,7 @@ private class InlineToRepairUnrealizedGoals(
                     if (localReturnName != null) {
                         Rn(rightPos, localReturnName, type = variantReturnType)
                     } else {
-                        V(rightPos, void, type = WellKnownTypes.voidType)
+                        V(rightPos, void, type = WellKnownTypes.voidType2)
                     }
                 }
             }
@@ -642,7 +639,7 @@ private class InlineToRepairUnrealizedGoals(
         val definition: FunTree,
         val definingTypeShape: TypeShape?,
         val methodShape: MethodShape,
-        val thisType: NominalType?,
+        val thisType: Type2?,
         val thisArg: Tree,
     )
 
@@ -668,7 +665,7 @@ private class InlineToRepairUnrealizedGoals(
         // of names back to a named function declaration or exported name.
         if (dotHelper != null && dotHelper.memberAccessor is ExternalCall) {
             val thisType = thisArg?.typeInferences?.type ?: return null
-            val thisShape = representativeTypeShapeFor(listOf(thisType)) ?: return null
+            val thisShape = representativeTypeShapeFor(thisType) ?: return null
 
             val members = dotHelper.publicMembers(thisShape).toList() // Public since ExternalCall
             if (members.size == 1) {
@@ -681,7 +678,7 @@ private class InlineToRepairUnrealizedGoals(
                             definition = definition,
                             definingTypeShape = member.enclosingType,
                             methodShape = member,
-                            thisType = representativeNominalValueType(listOf(thisType)),
+                            thisType = representativeNominalValueType(thisType),
                             thisArg = thisArg,
                         )
                     }
@@ -690,6 +687,14 @@ private class InlineToRepairUnrealizedGoals(
         }
         return null
     }
+}
+
+private fun representativeNominalValueType(t: Type2): DefinedNonNullType? = when (t) {
+    is DefinedNonNullType -> t
+    is DefinedType -> t.withNullity(Nullity.NonNull) as DefinedNonNullType
+    is TypeParamRef -> representativeNominalValueType(t.definition.upperBounds)?.let {
+        hackMapOldStyleToNew(it)
+    } as? DefinedNonNullType
 }
 
 private fun representativeNominalValueType(ts: Iterable<StaticType>): NominalType? {
@@ -712,6 +717,11 @@ private fun representativeNominalValueType(ts: Iterable<StaticType>): NominalTyp
 
 private fun representativeTypeShapeFor(ts: Iterable<StaticType>): TypeShape? =
     representativeNominalValueType(ts)?.definition as TypeShape?
+
+private fun representativeTypeShapeFor(t: Type2): TypeShape? = when (t) {
+    is DefinedType -> t.definition
+    is TypeParamRef -> representativeTypeShapeFor(t.definition.upperBounds)
+}
 
 /**
  * Conservative.  True if the given method is not overridden by any subtype of [typeShape].
@@ -752,24 +762,6 @@ fun findSoleInitializer(decl: DeclTree?): Tree? {
         }
     }
     return null
-}
-
-private fun variantFunctionType(variantType: StaticType?): FunctionType? = when (variantType) {
-    is FunctionType -> variantType
-    is AndType -> {
-        var ft: FunctionType? = null
-        for (member in variantType.members) {
-            if (member is FunctionType) {
-                if (ft != null) {
-                    ft = null
-                    break
-                }
-                ft = member
-            }
-        }
-        ft
-    }
-    else -> null
 }
 
 private fun convertMemberUseToExternal(

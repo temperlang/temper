@@ -1,5 +1,5 @@
   @fn @reach(\none) let maybeLength__1;
-  maybeLength__1 = (@stay fn maybeLength(a__2 /* aka a */: String?) /* return__0 */: (Int32?) {
+  maybeLength__1 = (@stay fn maybeLength(a__2 /* aka a */: String?) /* return__0 */: Int32?{
       if (isNull(a__2)) {
         return__0 = null
       } else {

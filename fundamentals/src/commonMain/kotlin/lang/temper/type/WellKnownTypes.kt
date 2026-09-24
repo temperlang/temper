@@ -120,6 +120,7 @@ object WellKnownTypes {
     val float64Type: NominalType
     val float64Type2: DefinedNonNullType
     val functionType: NominalType
+    val functionType2: DefinedNonNullType
     val intType: NominalType
     val intType2: DefinedNonNullType
     val int64Type: NominalType
@@ -132,6 +133,7 @@ object WellKnownTypes {
     val stringType2: DefinedNonNullType
     val stringIndexOptionType: NominalType
     val symbolType: NominalType
+    val symbolType2: DefinedNonNullType
     val typeType: NominalType
     val typeType2: DefinedNonNullType
     val voidType: NominalType
@@ -314,6 +316,7 @@ object WellKnownTypes {
         float64Type = MkType.nominal(float64TypeDefinition)
         float64Type2 = MkType2(float64TypeDefinition).get() as DefinedNonNullType
         functionType = MkType.nominal(functionTypeDefinition)
+        functionType2 = MkType2(functionTypeDefinition).get() as DefinedNonNullType
         intType = MkType.nominal(intTypeDefinition)
         intType2 = MkType2(intTypeDefinition).get() as DefinedNonNullType
         int64Type = MkType.nominal(int64TypeDefinition)
@@ -329,6 +332,7 @@ object WellKnownTypes {
         stringType2 = MkType2(stringTypeDefinition).get() as DefinedNonNullType
         stringIndexOptionType = MkType.nominal(stringIndexOptionTypeDefinition)
         symbolType = MkType.nominal(symbolTypeDefinition)
+        symbolType2 = MkType2(symbolTypeDefinition).get() as DefinedNonNullType
         typeType = MkType.nominal(typeTypeDefinition)
         typeType2 = MkType2(typeTypeDefinition).get() as DefinedNonNullType
         voidType = MkType.nominal(voidTypeDefinition)

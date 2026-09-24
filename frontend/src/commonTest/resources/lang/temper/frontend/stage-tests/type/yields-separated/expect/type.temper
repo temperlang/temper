@@ -1,5 +1,5 @@
 ignore(fn /* return__1 */{
-    return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__0 */: (GeneratorResult<Empty>) implements GeneratorFn {
+    return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__0 */: GeneratorResult<Empty> implements GeneratorFn {
         while (true) {
           cat(str(123));
           yield()

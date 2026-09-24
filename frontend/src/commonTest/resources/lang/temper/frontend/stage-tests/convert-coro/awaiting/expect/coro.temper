@@ -5,7 +5,7 @@ awaited#11 = null;
 var s__2: String;
 s__2 = "";
 let convertedCoroutine#16;
-convertedCoroutine#16 = fn (generator#12: SafeGenerator<Empty>) /* return__1 */: (GeneratorResult<Empty>) {
+convertedCoroutine#16 = fn (generator#12: SafeGenerator<Empty>) /* return__1 */: GeneratorResult<Empty> {
   fn__14: do {
     while (true) {
       let caseIndexLocal#15: Int32;

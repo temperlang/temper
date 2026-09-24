@@ -1,58 +1,58 @@
-  var caseIndex#0: Int32;
-  caseIndex#0 = 0;
-  var awaited#0: Promise<String>?;
-  awaited#0 = null;
-  var t#0: String;
-  t#0 = "";
-  var b__0: PromiseBuilder<String>?;
-  b__0 = null;
-  let convertedCoroutine#0;
-  convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: (GeneratorResult<Empty>) {
-    fn__0: do {
+  var caseIndex#11: Int32;
+  caseIndex#11 = 0;
+  var awaited#9: Promise<String>?;
+  awaited#9 = null;
+  var t#6: String;
+  t#6 = "";
+  var b__1: PromiseBuilder<String>?;
+  b__1 = null;
+  let convertedCoroutine#14;
+  convertedCoroutine#14 = fn (generator#10: SafeGenerator<Empty>) /* return__0 */: GeneratorResult<Empty> {
+    fn__12: do {
       while (true) {
-        let caseIndexLocal#0: Int32;
-        caseIndexLocal#0 = caseIndex#0;
-        caseIndex#0 = -1;
-        if (caseIndexLocal#0 == 0) {
-          caseIndex#0 = 1
-        } else if (caseIndexLocal#0 == 1) {
-          orElse#0: {
-            b__0 = new PromiseBuilder<String>();
+        let caseIndexLocal#13: Int32;
+        caseIndexLocal#13 = caseIndex#11;
+        caseIndex#11 = -1;
+        if (caseIndexLocal#13 == 0) {
+          caseIndex#11 = 1
+        } else if (caseIndexLocal#13 == 1) {
+          orElse#15: {
+            b__1 = new PromiseBuilder<String>();
 ## b__0 needs null adjustment so it needs notNull in
 ## each of the next two lines.
-            do_call_complete(notNull(b__0), "Completed synchronously");
-            awaited#0 = do_get_promise(notNull(b__0));
-            caseIndex#0 = 2;
-            awakeUpon(notNull(awaited#0), generator#0);
-            return__0 = new ValueResult<Empty>({class: Empty__0});
-            break fn__0;
+            do_call_complete(notNull(b__1), "Completed synchronously");
+            awaited#9 = do_get_promise(notNull(b__1));
+            caseIndex#11 = 2;
+            awakeUpon(notNull(awaited#9), generator#10);
+            return__0 = new ValueResult<Empty>({class: Empty__10});
+            break fn__12;
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#11 = 3
           }
-        } else if (caseIndexLocal#0 == 2) {
-          orElse#1: {
-            t#0 = getPromiseResultSync(notNull(awaited#0));
-            caseIndex#0 = 4
+        } else if (caseIndexLocal#13 == 2) {
+          orElse#16: {
+            t#6 = getPromiseResultSync(notNull(awaited#9));
+            caseIndex#11 = 4
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#11 = 3
           }
-        } else if (caseIndexLocal#0 == 3) {
+        } else if (caseIndexLocal#13 == 3) {
           panic()
-        } else if (caseIndexLocal#0 == 4) {
-          orElse#2: {
-            do_call_log(console#0, t#0);
-            caseIndex#0 = 5
+        } else if (caseIndexLocal#13 == 4) {
+          orElse#17: {
+            do_call_log(console#2, t#6);
+            caseIndex#11 = 5
           } orelse {
-            caseIndex#0 = 3
+            caseIndex#11 = 3
           }
-        } else if (caseIndexLocal#0 == 5) {
+        } else if (caseIndexLocal#13 == 5) {
           return__0 = core.doneResult();
-          break fn__0;
+          break fn__12;
         } else {
           return__0 = core.doneResult();
-          break fn__0;
+          break fn__12;
         }
       }
     }
   };
-  return__1 = adaptGeneratorFnSafe(convertedCoroutine#0)
+  return__3 = adaptGeneratorFnSafe(convertedCoroutine#14)

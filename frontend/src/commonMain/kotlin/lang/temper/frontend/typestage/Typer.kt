@@ -87,7 +87,9 @@ import lang.temper.type.WellKnownTypes.anyValueType
 import lang.temper.type.WellKnownTypes.booleanType
 import lang.temper.type.WellKnownTypes.booleanType2
 import lang.temper.type.WellKnownTypes.functionType
+import lang.temper.type.WellKnownTypes.functionType2
 import lang.temper.type.WellKnownTypes.invalidType2
+import lang.temper.type.WellKnownTypes.typeType2
 import lang.temper.type.WellKnownTypes.voidType2
 import lang.temper.type.addTypeNamesMentionedTo
 import lang.temper.type.excludeBubble
@@ -98,6 +100,7 @@ import lang.temper.type.isNullType
 import lang.temper.type.matches
 import lang.temper.type.mentions
 import lang.temper.type.mentionsInvalid
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.Callee
 import lang.temper.type2.CalleePriority
 import lang.temper.type2.DefinedNonNullType
@@ -115,6 +118,7 @@ import lang.temper.type2.TypeVar
 import lang.temper.type2.UntypedCall
 import lang.temper.type2.at
 import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.hackMapOldStyleActualsToNew
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.type2.inferBounds
@@ -171,6 +175,7 @@ import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
+import lang.temper.value.type2ForValue
 import lang.temper.value.typeForValue
 import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
@@ -256,12 +261,90 @@ internal class Typer(
             "InitializerInfo(typedMask=$checkedMask, assignedNullable=$assignedNullable)"
     }
 
-    private data class Decision(
-        val type: StaticType,
-        val variant: FunctionType? = null,
-        val bindings: Map<TypeFormal, TypeActual>? = null,
-        val explanations: List<TypeReasonElement> = listOf(),
-    )
+    private class Decision private constructor(
+        // This class allows storing either old or new style type info
+        // and retrieving either old or new style type info, as an
+        // intermediate step towards dealing with only new style info.
+        private val types: Pair<Lazy<StaticType>, Lazy<Type2>>,
+        private val variants: Pair<Lazy<FunctionType>, Lazy<Signature2>>?,
+        private val bindingMaps: Pair<Lazy<Map<TypeFormal, TypeActual>>, Lazy<Map<TypeFormal, Type2>>>?,
+        val explanations: List<TypeReasonElement>,
+    ) {
+        val type: StaticType get() = types.first.value
+        val type2: Type2 get() = types.second.value
+
+        val variant: FunctionType? get() = variants?.first?.value
+        val variant2: Signature2? get() = variants?.second?.value
+
+        val bindings: Map<TypeFormal, TypeActual>? get() = bindingMaps?.first?.value
+        val bindings2: Map<TypeFormal, Type2>? get() = bindingMaps?.second?.value
+
+        override fun toString(): String = buildString {
+            append("Decision(type=")
+            val (t1, t2) = types
+            append(if (t1.isInitialized()) { "($t1, " } else { "(???, " })
+            append(if (t2.isInitialized()) { "$t2)" } else { "???)" })
+            if (variants != null) {
+                val (v1, v2) = variants
+                append(", variant=")
+                append(if (v1.isInitialized()) { "($v1, " } else { "(???, " })
+                append(if (v2.isInitialized()) { "$v2)" } else { "???)" })
+            }
+            if (bindingMaps != null) {
+                val (b1, b2) = bindingMaps
+                append(", bindings=")
+                append(if (b1.isInitialized()) { "($b1, " } else { "(???, " })
+                append(if (b2.isInitialized()) { "$b2)" } else { "???)" })
+            }
+            if (explanations.isNotEmpty()) {
+                append(", explanations=$explanations")
+            }
+            append(")")
+        }
+
+        fun copy(type: Type2) = Decision(
+            types = Pair(lazy { hackMapNewStyleToOld(type) }, lazyOf(type)),
+            variants = variants,
+            bindingMaps = bindingMaps,
+            explanations = explanations,
+        )
+
+        fun copy(explanations: List<TypeReasonElement>) = Decision(
+            types = types,
+            variants = variants,
+            bindingMaps = bindingMaps,
+            explanations = explanations,
+        )
+
+        constructor(
+            type: StaticType,
+            variant: FunctionType? = null,
+            bindings: Map<TypeFormal, TypeActual>? = null,
+            explanations: List<TypeReasonElement> = listOf(),
+        ) : this(
+            types = Pair(lazyOf(type), lazy { hackMapOldStyleToNew(type) }),
+            variants = variant?.let { Pair(lazyOf(it), lazy { hackTryStaticTypeToSig(it)!! }) },
+            bindingMaps = bindings?.let { Pair(lazyOf(it), lazy { hackMapOldStyleActualsToNew(it) }) },
+            explanations = explanations,
+        )
+
+        constructor(
+            type: Type2,
+            variant: Signature2? = null,
+            bindings: Map<TypeFormal, Type2>? = null,
+            explanations: List<TypeReasonElement> = listOf(),
+        ) : this(
+            types = Pair(lazy { hackMapNewStyleToOld(type) }, lazyOf(type)),
+            variants = variant?.let { Pair(lazy { typeFromSignature(it) }, lazyOf(it)) },
+            bindingMaps = bindings?.let {
+                Pair(
+                    lazy { it.mapValues { (_, v) -> hackMapNewStyleToOld(v) } },
+                    lazyOf(it),
+                )
+            },
+            explanations = explanations,
+        )
+    }
 
     private inner class TypingInfo(val typerPlan: TyperPlan) {
         private val bindings = mutableMapOf<ResolvedName, StaticType>()
@@ -364,6 +447,7 @@ internal class Typer(
 
         fun binding(name: ResolvedName) = bindings[name]
         fun decisionType(tree: Tree?) = decisions[tree]?.type
+        fun decisionType2(tree: Tree?) = decisions[tree]?.type2
         fun decision(tree: Tree) = decisions[tree]
 
         fun extensionReceiverTypes(name: ResolvedName) = extensionReceiverTypes[name] ?: emptyList()
@@ -704,23 +788,23 @@ internal class Typer(
                 when (t) {
                     is NoTypeInferencesTree -> {}
                     is BasicTypeInferencesTree -> if (decision != null) {
-                        t.typeInferences = BasicTypeInferences(decision.type, decision.explanations)
+                        t.typeInferences = BasicTypeInferences(decision.type2, decision.explanations)
                     } else if (t.needsTypeInfo && !t.isMetadataValue) {
-                        val (e, type) = invalidBecauseMissingType(t, "expr")
+                        val (e, type) = invalid2BecauseMissingType(t, "expr")
                         t.typeInferences = BasicTypeInferences(type, listOf(e))
                     }
                     is CallTypeInferencesTree -> if (decision != null) {
                         t.typeInferences = CallTypeInferences(
-                            decision.type,
-                            decision.variant ?: InvalidType,
-                            decision.bindings ?: emptyMap(),
+                            decision.type2,
+                            decision.variant2 ?: invalidSig,
+                            decision.bindings2 ?: emptyMap(),
                             decision.explanations,
                         )
                     } else if (t.needsTypeInfo) {
-                        val (e, type) = invalidBecauseMissingType(t, "expr")
+                        val (e, type) = invalid2BecauseMissingType(t, "expr")
                         t.typeInferences = CallTypeInferences(
                             type,
-                            InvalidType,
+                            invalidSig,
                             emptyMap(),
                             listOf(e),
                         )
@@ -856,22 +940,6 @@ internal class Typer(
             }
 
         val effectiveCalleeType = effectiveCallee?.let { ti.decisionType(it) }
-        if (effectiveCalleeType != null && !isNewCall) {
-            if (effectiveCalleeType is InvalidType) {
-                // Already reported as a problem elsewhere
-            } else if (!isCallable(effectiveCalleeType)) {
-                priorProblems.add(
-                    TypeReason(
-                        LogEntry(
-                            Log.Error,
-                            MessageTemplate.ExpectedFunctionType,
-                            effectiveCallee.pos,
-                            listOf(effectiveCalleeType),
-                        ),
-                    ),
-                )
-            }
-        }
 
         fun specialize(sig: Signature2): Signature2 {
             val explicitActualTypesAndPositions = explicitActualTypesAndPositions
@@ -931,7 +999,22 @@ internal class Typer(
                     (anySig as? Signature2)?.let { Callee(it, CalleePriority.Default) }
                 }
             } else if (effectiveCalleeType != null) {
-                explodeCalleeType(effectiveCalleeType, CalleePriority.Default, ::specialize)
+                if (effectiveCalleeType is InvalidType) {
+                    // Already reported as a problem elsewhere
+                } else if (!isCallable(effectiveCalleeType)) {
+                    priorProblems.add(
+                        TypeReason(
+                            LogEntry(
+                                Log.Error,
+                                MessageTemplate.ExpectedFunctionType,
+                                effectiveCallee.pos,
+                                listOf(effectiveCalleeType),
+                            ),
+                        ),
+                    )
+                } else {
+                    explodeCalleeType(effectiveCalleeType, CalleePriority.Default, ::specialize)
+                }
             }
         }.toList()
 
@@ -940,6 +1023,21 @@ internal class Typer(
                 reorderArgsHelper.buildPositionalArgs(tree, callee.functionType)
             if (reordered != null) {
                 inputTrees = reordered
+            }
+        }
+        c?.group("effectiveCallee=$effectiveCallee, isNewCall=$isNewCall") {
+            c.group("tree") {
+                tree.toPseudoCode(c.textOutput)
+            }
+            c.group("actualTypes") {
+                explicitActualTypesAndPositions?.forEach {
+                    c.log("- $it")
+                }
+            }
+            c.group("variants") {
+                calleeVariants.forEach {
+                    c.log("- $it")
+                }
             }
         }
 
@@ -952,7 +1050,13 @@ internal class Typer(
             typeActualsAndPositions = explicitActualTypesAndPositions,
             inputTrees = inputTrees,
             contextType = contextType,
-        )
+        ).also {
+            c?.group("After") {
+                c.log("call decision=${ti.decision(tree)}")
+                c.log("callee decision=${ti.decision(tree.child(0))}")
+                c.log("effective callee decision=${effectiveCallee?.let { ti.decision(it) }}")
+            }
+        }
     }
 
     /**
@@ -1271,8 +1375,8 @@ internal class Typer(
             ti.decide(
                 callTree,
                 Decision(
-                    type = hackMapNewStyleToOld(excludeBubble(variant.sig.returnType2)),
-                    variant = variant.functionType,
+                    type = excludeBubble(variant.sig.returnType2),
+                    variant = variant.sig,
                     explanations = problems.toList(),
                 ),
             )
@@ -1288,9 +1392,9 @@ internal class Typer(
                     ti.decide(
                         inputTree,
                         if (formal != null) {
-                            Decision(hackMapNewStyleToOld(formal.type))
+                            Decision(formal.type)
                         } else {
-                            Decision(InvalidType, explanations = listOf(becauseRedundantArgument(inputTree)))
+                            Decision(invalidType2, explanations = listOf(becauseRedundantArgument(inputTree)))
                         },
                     )
                 }
@@ -1349,8 +1453,8 @@ internal class Typer(
                         add(TypeReason(problem))
                     }
                     val decision = Decision(
-                        type = call.passType ?: InvalidType,
-                        variant = invalidSigFnType,
+                        type = call.passType ?: invalidType2,
+                        variant = invalidSig,
                         bindings = call.bindings ?: emptyMap(),
                         explanations = allExplanations,
                     )
@@ -1366,9 +1470,9 @@ internal class Typer(
                     explanations = explanations + problems
                 }
                 val chosenCallee = call.chosenCallee?.let { i -> call.calleeVariants[i] }
-                val variant = chosenCallee?.functionType
+                val variant = chosenCallee?.sig
                 val decision = Decision(
-                    type = call.passType ?: InvalidType,
+                    type = call.passType ?: invalidType2,
                     variant = variant,
                     bindings = call.bindings ?: emptyMap(),
                     explanations = explanations,
@@ -1378,9 +1482,7 @@ internal class Typer(
                 // Now that we have an exact variant and bindings, type any remaining function trees.
 
                 if (chosenCallee != null && call.inputTrees.any { it is FunTree && ti.isUndecided(it) }) {
-                    val bindings2 = (call.bindings ?: emptyMap()).mapValues {
-                        hackMapOldStyleToNew(it.value)
-                    }
+                    val bindings2 = (call.bindings ?: emptyMap())
                     val sigInContext = chosenCallee.sig.mapType(bindings2)
                     for ((index, inputTree) in call.inputTrees.withIndex()) {
                         if (inputTree is FunTree && ti.isUndecided(inputTree)) {
@@ -1408,9 +1510,9 @@ internal class Typer(
 
                 // Store the actual variant chosen with the callee now that we know it.
                 if (!isNewCall(callSite)) {
-                    val variantType = decision.variant ?: InvalidType
+                    val variantType = AdHocArrowTypes.definedTypeForSig(decision.variant2 ?: invalidSig)
                     val callee = callSite.child(0)
-                    val storedCalleeType = ti.decisionType(callee)
+                    val storedCalleeType = ti.decisionType2(callee)
                     if (variantType != storedCalleeType) {
                         if (!variantType.mentionsInvalid) {
                             when (callee as TypeInferencesHaver) {
@@ -1543,8 +1645,8 @@ internal class Typer(
         //    a. <T> is not mentioned in F's return type OR there is no context type, AND
         //    b. there does not exist an input type in F that
         //       i. mentions <T> AND
-        //       ii. corresponds to a supplied input AND
-        //       iii. that input is not itself a late typed call, i.e. inter-twined with this call
+        //       ii. corresponds to a supplied input, AND
+        //       iii. that input is not itself a late typed call, i.e., inter-twined with this call
         // We do some of these checks out of order so that we can distinguish between the cases
         // where we do not need to inter-twine because we have enough information from inputs (3.b)
         // and we only have enough information because of the context type (3.a).
@@ -1672,8 +1774,10 @@ internal class Typer(
                     ),
                 ),
             )
+            fixupAssignmentCallee(tree)
             return
         }
+
         if (ti.isUndecided(right) && right is FunTree) {
             val wantedType = ti.binding(name)
             if (wantedType != null) {
@@ -1779,6 +1883,18 @@ internal class Typer(
                         ti.decide(left, basics)
                     }
                 }
+            }
+            fixupAssignmentCallee(tree)
+        }
+    }
+
+    private fun fixupAssignmentCallee(tree: CallTree) {
+        val callee = tree.child(0)
+        val calleeType = ti.decisionType2(callee)
+        if (calleeType == null || calleeType == functionType2) {
+            val variant = ti.decision(tree)?.variant2
+            if (variant != null) {
+                ti.decide(callee, Decision(AdHocArrowTypes.definedTypeForSig(variant)))
             }
         }
     }
@@ -1928,7 +2044,9 @@ internal class Typer(
                 val previousFunctionType = ti.decisionType(t) as? FunctionType
                     // Reuse a good return type for the function previously
                     // (during Type stage, and now we're in GenerateCodeStage).
-                    ?: t.typeInferences?.type as? FunctionType
+                    ?: t.typeInferences?.type?.let { type ->
+                        AdHocArrowTypes.reverseToSig(type)?.let { typeFromSignature(it) }
+                    }
                 val variants = listOfNotNull(wantedSig?.let { Callee(it, CalleePriority.Default) })
                 val valueFormals = valueDecls.mapIndexed { declIndex, decl ->
                     val declParts = decl.parts!!
@@ -2019,21 +2137,21 @@ internal class Typer(
         return decision != null
     }
 
-    private fun typeForNonLocalName(name: ResolvedName): StaticType? = when (name) {
+    private fun typeForNonLocalName(name: ResolvedName): Type2? = when (name) {
         is BuiltinName -> {
             val metadata = env.declarationMetadata(name)
             val reifiedType = TType.unpackOrNull(metadata?.reifiedType)
             if (reifiedType != null) {
-                reifiedType.type
+                reifiedType.type2
             } else {
                 val result = env[name, InterpreterCallback.NullInterpreterCallback]
                 if (result is Value<*>) {
                     // TODO(tjp, frontend): Mike would like to revisit this handling of types for values. Discussion:
                     // - https://temperlang.slack.com/archives/D02SXMB2MJT/p1651184227932089
                     // - https://github.com/temperlang/temper/pull/613#discussion_r863200494
-                    val valueType = typeForValue(result)
+                    val valueType = type2ForValue(result)
                     when (valueType) {
-                        functionType -> {
+                        functionType2 -> {
                             // Vague type, so give implicits a try for more detail.
                             val implicits = if (isProcessingCore) {
                                 module.exports
@@ -2145,7 +2263,7 @@ internal class Typer(
                             else -> false
                         }
                         if (copyTypeRightward) {
-                            val leftType = ti.decisionType(left)
+                            val leftType = ti.decisionType2(left)
                             if (leftType != null && !leftType.mentionsInvalid) {
                                 val rightExplanations =
                                     ti.decision(right)?.explanations ?: listOf()
@@ -2165,11 +2283,11 @@ internal class Typer(
                     // requirement that the right be a subtype of the left.
                     // Checking this here means that we don't eliminate failure branches for
                     // guards that we shouldn't.
-                    val leftType = ti.decisionType(left)
-                    val rightType = ti.decisionType(right)?.let { excludeBubble(it) }
+                    val leftType = ti.decisionType2(left)
+                    val rightType = ti.decisionType2(right)?.let { excludeBubble(it) }
                     if (
                         ti.decisionType(t) == null && leftType != null && rightType != null &&
-                        typeContext.isSubType(rightType, leftType) && !leftType.mentionsInvalid
+                        typeContext2.isSubType(rightType, leftType) && !leftType.mentionsInvalid
                     ) {
                         ti.decide(t, assignmentDecision(leftType = leftType))
                     }
@@ -2177,15 +2295,15 @@ internal class Typer(
                     if (
                         type == null || !type.mentionsInvalid && (
                             leftType == null || rightType == null ||
-                                !typeContext.isSubType(rightType, leftType)
+                                !typeContext2.isSubType(rightType, leftType)
                             )
                     ) {
-                        val rightTypeOrInvalid = rightType ?: InvalidType
+                        val rightTypeOrInvalid = rightType ?: invalidType2
                         val contradictions =
                             (ti.decision(t)?.explanations ?: emptyList()) +
                                 BecauseIllegalAssignment(
                                     t.pos,
-                                    leftType ?: InvalidType,
+                                    leftType ?: invalidType2,
                                     rightTypeOrInvalid,
                                 )
                         if (DEBUG) {
@@ -2199,11 +2317,11 @@ internal class Typer(
                         val decisionWithError = ti.decision(t)?.let {
                             it.copy(explanations = it.explanations + contradictions)
                         } ?: Decision(
-                            InvalidType,
-                            variant = MkType.fn(
-                                typeFormals = emptyList(),
-                                valueFormals = listOf(rightTypeOrInvalid, rightTypeOrInvalid),
-                                returnType = rightTypeOrInvalid,
+                            invalidType2,
+                            variant = Signature2(
+                                returnType2 = rightTypeOrInvalid,
+                                hasThisFormal = false,
+                                requiredInputTypes = listOf(rightTypeOrInvalid, rightTypeOrInvalid),
                             ),
                             bindings = emptyMap(),
                             explanations = contradictions,
@@ -2270,6 +2388,7 @@ internal class Typer(
                 dotHelperCall,
                 dotHelper,
                 typeForDotHelper(dotHelperCall, dotHelper).typedCandidates,
+                typeContext2,
             ) { tree ->
                 fun retype(t: Tree) {
                     t.children.forEach { retype(it) }
@@ -2305,7 +2424,11 @@ internal class Typer(
         val explanations =
             (ti.decision(t)?.explanations ?: emptyList()) + variants.reasons
         if (variants !is SigVariants || variants.reasons.isNotEmpty()) {
-            val fixedType = MkType.and(variants.fnTypes)
+            val fixedType = if (variants.fnTypes.size == 1) {
+                variants.fnTypes[0]
+            } else {
+                functionType
+            }
             if (DEBUG) {
                 console.group(
                     "Fixed callee type of ${
@@ -2346,7 +2469,7 @@ internal class Typer(
                     hasThisFormal = false,
                     requiredInputTypes = buildList {
                         // New calls have their type constructed as an argument.
-                        add(WellKnownTypes.typeType2)
+                        add(typeType2)
                         addAll(sig.requiredInputTypes)
                     },
                 )
@@ -3118,12 +3241,12 @@ internal class Typer(
             upperBounds = listOf(anyValueType),
         )
 
-        private fun assignmentDecision(leftType: StaticType) = Decision(
+        private fun assignmentDecision(leftType: Type2) = Decision(
             leftType,
-            variant = MkType.fn(
-                typeFormals = emptyList(),
-                valueFormals = listOf(leftType, leftType),
-                returnType = leftType,
+            variant = Signature2(
+                returnType2 = leftType,
+                hasThisFormal = false,
+                requiredInputTypes = listOf(leftType, leftType),
             ),
         )
     }
@@ -3520,5 +3643,3 @@ internal fun isCallable(t: StaticType): Boolean = when (t) {
     )
     TopType -> false
 }
-
-private val invalidSigFnType = typeFromSignature(invalidSig)
