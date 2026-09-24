@@ -1468,20 +1468,47 @@ internal class CSharpTranslator(
 
     private fun translateName(pos: Position, name: ResolvedName, style: NameStyle = NameStyle.Ugly): CSharp.Expression {
         // Styling depends on a variety of matters, including context.
+        // TODO See if we want to conform more to the official guidelines:
+        // https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names
         // TODO Prepass with user configuration infrastructure.
         val effective = imports[name] ?: name
         var actualStyle = style
-        val nameText = when (effective) {
-            setterValueName -> "value"
-            is ExportedName -> return translateExportedGlobalName(pos, name = effective)
-            // 3 "_" on temps for better uniqueness.
-            is Temporary -> "${effective.nameHint.cleaned()}___${effective.uid}"
-            else -> {
-                actualStyle = when {
-                    name in functionContextStack.last().optionals -> NameStyle.PrettyCamel
-                    else -> style
+        val nameText = run nameText@{
+            when (effective) {
+                setterValueName -> "value"
+                is ExportedName -> return translateExportedGlobalName(pos, name = effective)
+                // 3 "_" on temps for better uniqueness.
+                is Temporary -> "${effective.nameHint.cleaned()}___${effective.uid}"
+                else -> {
+                    actualStyle = when {
+                        name in functionContextStack.last().optionals -> NameStyle.PrettyCamel
+                        style != NameStyle.Ugly -> style
+                        else -> {
+                            // Try to claim pretty and reserve a pretty name in case it's used by connected code.
+                            // Pretty also just looks nicer.
+                            val decl = names.nameLookup.lookupDeclDescriptor(loc, name)?.node
+                            actualStyle = when (decl) {
+                                // TODO Adjust static property naming sometime? Wrap in accessors?
+                                is TmpL.FunctionLike, is TmpL.StaticProperty -> NameStyle.PrettyPascal
+                                is TmpL.Property -> NameStyle.PrettyCamel
+                                else -> style
+                            }
+                            val pretty = effective.toStyle(actualStyle)
+                            val reserved = names.reserveName(loc, name, pretty)
+                            when {
+                                // Short-circuit with the name we've already formatted.
+                                reserved -> return@nameText pretty
+                                else -> style
+                            }
+                        }
+                    }
+                    effective.toStyle(actualStyle).also { nameText ->
+                        // We only get here if we didn't short-circuit on reserving a name above, anyway.
+                        if (actualStyle != NameStyle.Ugly) {
+                            names.reserveName(loc, name, nameText)
+                        }
+                    }
                 }
-                effective.toStyle(actualStyle)
             }
         }
         if (actualStyle != NameStyle.Ugly) {

@@ -78,7 +78,7 @@ class BuildTest {
         runBuild(backends = listOf(CSharpBackend.Factory.backendId), workRoot = topDir)
         topDir.withTextOf("temper.keep/csharp/apple/name-selection.json") { text ->
             val selections = NameSelectionFile.fromJson(text).selectionsAsMap()
-            assertEquals("Name", selections[QName.fromString("apple/avocado.type Person.name").result!!])
+            assertEquals("name", selections[QName.fromString("apple/avocado.type Person.name").result!!])
             // We expect 12 at the moment, but be a little flexible. We definitely don't expect an explosion in number.
             // We only save publicly visible names for now in be-csharp.
             @Suppress("MagicNumber")
@@ -105,8 +105,8 @@ class BuildTest {
         }
         topDir.withTextOf("temper.out/csharp/banana/tests/BananaTests.cs") { text ->
             assertContains(text, """TemperLang.Std.Testing""")
-            assertContains(text, """public void twiceWorks""")
-            assertContains(text, """internal static void halveValueIn""")
+            assertContains(text, """public void TwiceWorks""")
+            assertContains(text, """internal static void HalveValueIn""")
             assertNotContains(text, "nobodyWantsMe")
         }
         assertTrue(
