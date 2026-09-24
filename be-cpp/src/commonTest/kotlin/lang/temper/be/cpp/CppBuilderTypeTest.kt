@@ -35,7 +35,7 @@ class CppBuilderTypeTest {
     @Test
     fun spaces() {
         assertType(
-            "std::pair<std::string * const, std::vector<std::set<ptrdiff_t const> const>> * const *",
+            "std::pair<std::string* const, std::vector<std::set<ptrdiff_t const> const>>* const*",
             "std :: pair < std:: string *const, std :: vector< const  std::set<ptrdiff_t const >> >* const*",
         )
     }
@@ -44,9 +44,4 @@ class CppBuilderTypeTest {
 internal fun assertType(expected: String, actual: String) {
     val cpp = CppBuilder(CppNames())
     assertEquals(expected, cpp.type(actual).toString())
-}
-
-internal fun assertSameType(expected: String, actual: String) {
-    val cpp = CppBuilder(CppNames())
-    assertEquals(cpp.type(expected).toString(), cpp.type(actual).toString())
 }

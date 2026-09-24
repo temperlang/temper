@@ -92,7 +92,7 @@ class CppBackendTest {
             |            temper::core::Expected<int32_t> why(int32_t i) {
             |              int32_t return_;
             |              temper::core::Expected<int32_t> fail_5 = temper::core::div_checked(-2147483647 - 1, i);
-            |              if( ! fail_5.has_value())return temper::core::Unexpected(fail_5.error());
+            |              if ( ! fail_5.has_value())return temper::core::Unexpected(fail_5.error());
             |              return_ = * fail_5;
             |              return return_;
             |            }
@@ -182,7 +182,7 @@ class CppBackendTest {
             |            int32_t fib(int32_t i) {
             |              int32_t a = 0;
             |              int32_t b = 1;
-            |              while(i> 0) {
+            |              while (i > 0) {
             |                int32_t c = temper::core::add(a, b);
             |                a = b;
             |                b = c;
@@ -277,9 +277,9 @@ class CppBackendTest {
             |          #include <temper-core/core.hpp>
             |          namespace my_test_library {
             |            void f(std::shared_ptr<std::vector<int32_t> const> b) {
-            |              if(b->empty()) {
+            |              if (b->empty()) {
             |                temper::core::log(std::make_shared<std::string const>("empty", 5));
-            |              }else {
+            |              } else {
             |                temper::core::log(std::make_shared<std::string const>("not empty", 9));
             |              }
             |            }

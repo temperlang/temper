@@ -7,8 +7,8 @@ import kotlin.test.assertEquals
 
 /**
  * Golden tests for the C++ AST formatter. The expected strings assert the formatter's *raw* token
- * stream, so some spacing looks unidiomatic for hand-written C++ (e.g. `}else {`, `if(x)`,
- * `[ = , & x]`). That is expected: generated code is passed through clang-format downstream, so the
+ * stream, so some spacing looks unidiomatic for handwritten C++ (e.g. `[= , &x]`).
+ * That is expected: generated code is passed through clang-format downstream, so the
  * formatter only needs to emit syntactically faithful tokens, not pretty ones.
  */
 class CppGrammarTest {
@@ -87,7 +87,7 @@ class CppGrammarTest {
     @Test
     fun pointerType() {
         assertCodeSingleLine(
-            "int *",
+            "int*",
             cpp.ptr(cpp.type("int")),
         )
     }
@@ -171,7 +171,7 @@ class CppGrammarTest {
     @Test
     fun castExpr() {
         assertCodeSingleLine(
-            "(int)x",
+            "(int) x",
             cpp.cast(cpp.type("int"), cpp.singleName("x")),
         )
     }
@@ -218,7 +218,7 @@ class CppGrammarTest {
     @Test
     fun ifStmt() {
         assertCode(
-            "if(x) {}",
+            "if (x) {}",
             cpp.ifStmt(
                 cpp.singleName("x"),
                 cpp.blockStmt(emptyList()),
@@ -230,7 +230,7 @@ class CppGrammarTest {
     fun ifStmtWithBody() {
         assertCode(
             """
-            if(x) {
+            if (x) {
               return 1;
             }
             """.trimIndent(),
@@ -245,9 +245,9 @@ class CppGrammarTest {
     fun ifElseStmt() {
         assertCode(
             """
-            if(x) {
+            if (x) {
               return 1;
-            }else {
+            } else {
               return 2;
             }
             """.trimIndent(),
@@ -262,7 +262,7 @@ class CppGrammarTest {
     @Test
     fun whileStmt() {
         assertCode(
-            "while(cond) {}",
+            "while (cond) {}",
             cpp.whileStmt(
                 cpp.singleName("cond"),
                 cpp.blockStmt(emptyList()),
@@ -285,7 +285,7 @@ class CppGrammarTest {
     @Test
     fun comment() {
         assertCode(
-            "//hello",
+            "// hello",
             cpp.comment("hello"),
         )
     }
@@ -521,7 +521,7 @@ class CppGrammarTest {
             """
             try {
               return 1;
-            }catch(const temper::core::TemperBubble & ) {
+            } catch (const temper::core::TemperBubble&) {
               return 2;
             }
             """.trimIndent(),
@@ -541,11 +541,14 @@ class CppGrammarTest {
     fun switchStmt() {
         assertCode(
             """
-            switch(s) {
-              case 0 : case 1 : {
+            switch (s) {
+              case 0:
+              case 1:
+              {
                 return 1;
               }
-              default : {
+              default:
+              {
                 return 2;
               }
             }
@@ -567,7 +570,7 @@ class CppGrammarTest {
     fun lambdaExpr() {
         assertCode(
             """
-            [ = , & x](int32_t y)->int32_t {
+            [= , &x](int32_t y) -> int32_t {
               return 1;
             }
             """.trimIndent(),
@@ -584,7 +587,7 @@ class CppGrammarTest {
     @Test
     fun lambdaExprMutableNoCaptures() {
         assertCode(
-            "[ = ]()mutable->void {}",
+            "[=]() mutable -> void {}",
             cpp.lambda(
                 captures = emptyList(),
                 params = emptyList(),
@@ -614,7 +617,7 @@ class CppGrammarTest {
     @Test
     fun unaryExpr() {
         assertCodeSingleLine(
-            "! x",
+            "!x",
             cpp.unaryExpr(cpp.unaryOp("!"), cpp.singleName("x")),
         )
     }

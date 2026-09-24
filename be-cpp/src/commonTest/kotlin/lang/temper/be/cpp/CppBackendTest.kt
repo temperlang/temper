@@ -37,7 +37,7 @@ class CppBackendTest {
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -88,19 +88,19 @@ class CppBackendTest {
                 |      {
                 |        return temper::core::Int::div_wrap(x, y);
                 |      }
-                |    }catch(const temper::core::TemperBubble & ) {
-                |      if( ! (x == 0)) {
+                |    } catch (const temper::core::TemperBubble&) {
+                |      if (!(x == 0)) {
                 |        {
                 |          return x;
                 |        }
-                |      }else {
+                |      } else {
                 |        throw temper::core::TemperBubble();
                 |      }
                 |    }
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -146,7 +146,7 @@ class CppBackendTest {
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -178,7 +178,7 @@ class CppBackendTest {
                 |  int32_t x;
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -211,11 +211,11 @@ class CppBackendTest {
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
                 |  bool isPositive(int32_t x) {
-                |    return x> 0;
+                |    return x > 0;
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -251,7 +251,7 @@ class CppBackendTest {
                 |  }
                 |  void global_init_something() {
                 |    static bool initialized = false;
-                |    if(initialized) {
+                |    if (initialized) {
                 |      return;
                 |    }
                 |    initialized = true;
@@ -336,7 +336,7 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 "int32_t abs(int32_t x)",
-                "if(x<0)",
+                "if (x < 0)",
                 // Unary negation lowers to the overflow-defined core helper, not native `-x`.
                 "temper::core::Int::neg(x)",
             ),
@@ -356,8 +356,8 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                "while(",
-                "i> 0",
+                "while (",
+                "i > 0",
                 // Subtraction lowers to the overflow-defined core helper, not native `i - 1`.
                 "i = temper::core::Int::sub(i, 1)",
             ),
@@ -598,7 +598,7 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 """
-                    |  int32_t Apple::twiceThing(int32_t i_8)const {
+                    |  int32_t Apple::twiceThing(int32_t i_8) const {
                     |    auto this_1 = temper::core::borrow_this(this);
                     |    return temper::core::Int::mul(2, this_1->thing(i_8));
                     |  }
@@ -773,11 +773,11 @@ class CppBackendTest {
                 |                    }
                 |                    int32_t sum(int32_t i_7, int32_t j_8, temper::core::NullableParam<int32_t> bonus) {
                 |                      int32_t bonus_9;
-                |                      if(temper::core::is_null(bonus)) {
+                |                      if (temper::core::is_null(bonus)) {
                 |                        {
                 |                          bonus_9 = 0;
                 |                        }
-                |                      }else {
+                |                      } else {
                 |                        {
                 |                          bonus_9 = temper::core::not_null(bonus);
                 |                        }
@@ -798,7 +798,7 @@ class CppBackendTest {
                 |                    }
                 |                    void global_init_something() {
                 |                      static bool initialized = false;
-                |                      if(initialized) {
+                |                      if (initialized) {
                 |                        return;
                 |                      }
                 |                      initialized = true;
