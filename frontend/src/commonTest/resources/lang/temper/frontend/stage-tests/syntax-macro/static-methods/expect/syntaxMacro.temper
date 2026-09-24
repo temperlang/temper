@@ -1,7 +1,7 @@
 @typeDecl(C__0) @stay let C__0 = type (C__0);
 class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     C__0 extends AnyValue;
-    @staticProperty(\f) @fn @static @visibility(\public) let f__0 = fn f(i__0 /* aka i */: Int) /* return__0 */: (Int) {
+    @staticProperty(\f) @fn @static @visibility(\public) let f__0 = fn f(i__0 /* aka i */: Int) /* return__0 */: Int {
       fn__0: do {
         i__0 + 1
       }

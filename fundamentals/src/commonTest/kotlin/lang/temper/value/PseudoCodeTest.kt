@@ -161,6 +161,32 @@ class PseudoCodeTest {
     }
 
     @Test
+    fun fnWithThrows() = assertPseudoCode(
+        want = """
+            |fn (x) /* return */: Void throws Bubble {}
+            |
+        """.trimMargin(),
+    ) { doc, pos ->
+        doc.treeFarm.grow(pos) {
+            Fn {
+                Decl(ParsedName("x")) {}
+                V(returnDeclSymbol)
+                Decl(ParsedName("return")) {
+                    V(typeSymbol)
+                    V(
+                        Value(
+                            ReifiedType(
+                                MkType2.result(WellKnownTypes.voidType2, WellKnownTypes.bubbleType2).get(),
+                            ),
+                        ),
+                    )
+                }
+                Block {}
+            }
+        }
+    }
+
+    @Test
     fun fnWithVarActual() = assertPseudoCode(
         want = "fn (var x) {}\n",
     ) { doc, pos ->

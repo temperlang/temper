@@ -1,5 +1,5 @@
   @fn let `test//`.f;
-  `test//`.f = fn f(ls__0 /* aka ls */: ListBuilder<Int32>, j__0 /* aka j */: Int32) /* return__0 */: (Void) {
+  `test//`.f = fn f(ls__0 /* aka ls */: ListBuilder<Int32>, j__0 /* aka j */: Int32) /* return__0 */: Void {
     fn__0: do {
       var i__0 = j__0;
 ## To do `ls[i++]--`, first we need to get the index `i++`.

@@ -1,18 +1,18 @@
-@typeDecl(C__0<T__1>) @stay let C__0;
+@typeDecl(C__0<T__0>) @stay let C__0;
 C__0 = type (C__0);
-@fn let f__6;
-@typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__1) @fromType(C__0<T__1>) let T__1;
-T__1 = type (T__1);
-C__0<T__1> extends AnyValue;
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0<T__1>) let constructor__7;
-constructor__7 = (@stay fn constructor(@impliedThis(C__0<T__1>) this__3: C__0<T__1>) /* return__4 */: Void {});
-class(\word, \C, \concrete, true, @typeDefined(C__0<T__1>) @stay fn {
+@fn let f__0;
+@typeFormal(\T) @memberTypeFormal(\T) @typeDefined(T__0) @fromType(C__0<T__0>) let T__0;
+T__0 = type (T__0);
+C__0<T__0> extends AnyValue;
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0<T__0>) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0<T__0>) this__0: C__0<T__0>) /* return__0 */: Void {});
+class(\word, \C, \concrete, true, @typeDefined(C__0<T__0>) @stay fn {
     do {};
     do {};
     do {}
 });
-@typeFormal(\U) @typeDecl(U__2) let U__2;
-U__2 = type (U__2);
-f__6 = (@stay fn f<U__2 extends AnyValue> /* return__5 */: (C__0<U__2>) {
-    fn__8: do {}
+@typeFormal(\U) @typeDecl(U__0) let U__0;
+U__0 = type (U__0);
+f__0 = (@stay fn f<U__0 extends AnyValue> /* return__1 */: C__0<U__0> {
+    fn__0: do {}
 });

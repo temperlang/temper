@@ -1,8 +1,8 @@
-fn /* return__0 */: (Boolean) {
-  fn__1: do {
+fn /* return__1 */: Boolean {
+  fn__0: do {
     do {
-      return__0 = 42;
-      break(\label, fn__1)
+      return__1 = 42;
+      break(\label, fn__0)
     }
   }
 }
