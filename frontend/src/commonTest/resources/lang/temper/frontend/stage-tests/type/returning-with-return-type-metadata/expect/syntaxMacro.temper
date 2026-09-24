@@ -1,8 +1,8 @@
 fn /* return__0 */: Int {
-  fn__1: do {
+  fn__0: do {
     do {
       return__0 = 42;
-      break(\label, fn__1)
+      break(\label, fn__0)
     }
   }
 }

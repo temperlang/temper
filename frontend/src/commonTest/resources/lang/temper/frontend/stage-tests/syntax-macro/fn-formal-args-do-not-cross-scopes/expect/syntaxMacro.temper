@@ -1,9 +1,9 @@
-@fn let f__2, T__3 = "T";
-@typeFormal(\T) @typeDecl(T__0) let T__0 = type (T__0);
-T__0 extends AnyValue;
-f__2 = fn f<T__0>(x__5 /* aka x */: T__0) /* return__1 */: T__0 {
-  fn__6: do {
-    x__5
+@fn let f__0, T__0 = "T";
+@typeFormal(\T) @typeDecl(T__1) let T__1 = type (T__1);
+T__1 extends AnyValue;
+f__0 = fn f<T__1>(x__0 /* aka x */: T__1) /* return__0 */: T__1 {
+  fn__0: do {
+    x__0
   }
 };
-let t__4 = T__3;
+let t__0 = T__0;

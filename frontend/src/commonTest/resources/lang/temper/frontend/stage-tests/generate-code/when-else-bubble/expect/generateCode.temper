@@ -1,16 +1,16 @@
 @fn let `test//`.something ⦂(fn (String?): String throws Bubble);
-`test//`.something = (@stay fn something(x__1 /* aka x */: String?) /* return__0 */: String throws Bubble {
-    let t#5 ⦂ Boolean;
-    if (!isNull ⋖ String ⋗(x__1)) {
-      t#5 = x__1 is String
+`test//`.something = (@stay fn something(x__0 /* aka x */: String?) /* return__0 */: String throws Bubble {
+    let t#0 ⦂ Boolean;
+    if (!isNull ⋖ String ⋗(x__0)) {
+      t#0 = x__0 is String
     } else {
-      t#5 = false
+      t#0 = false
     };
-    if (t#5) {
-      if (isNull ⋖ String ⋗(x__1)) {
+    if (t#0) {
+      if (isNull ⋖ String ⋗(x__0)) {
         return__0 = panic ⋖ String ⋗()
       } else {
-        return__0 = assertAs ⋖ String ⋗(x__1, String)
+        return__0 = assertAs ⋖ String ⋗(x__0, String)
       }
     } else {
       bubble ⋖ String ⋗()

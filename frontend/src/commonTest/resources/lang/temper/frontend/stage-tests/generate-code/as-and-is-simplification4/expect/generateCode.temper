@@ -1,42 +1,42 @@
-@fn @reach(\none) let f__3;
-f__3 = (@stay fn f(i__4 /* aka i */: StringIndexOption?) /* return__2 */: Int32 throws Bubble {
-    let t#10;
-    if (isNull(i__4)) {
-      t#10 = true
+@fn @reach(\none) let f__0;
+f__0 = (@stay fn f(i__0 /* aka i */: StringIndexOption?) /* return__0 */: Int32 throws Bubble {
+    let t#0;
+    if (isNull(i__0)) {
+      t#0 = true
     } else {
-      t#10 = i__4 is StringIndex
+      t#0 = i__0 is StringIndex
     };
-    if (t#10) {
-      let t#12;
-      if (isNull(i__4)) {
-        t#12 = null
+    if (t#0) {
+      let t#1;
+      if (isNull(i__0)) {
+        t#1 = null
       } else {
-        t#12 = assertAs(i__4, StringIndex)
+        t#1 = assertAs(i__0, StringIndex)
       };
-      let j__6;
-      if (isNull(t#12)) {
-        j__6 = null
+      let j__0;
+      if (isNull(t#1)) {
+        j__0 = null
       } else {
-        j__6 = assertAs(t#12, StringIndex)
+        j__0 = assertAs(t#1, StringIndex)
       };
-      let t#16;
-      if (!isNull(j__6)) {
-        t#16 = j__6 is StringIndex
+      let t#2;
+      if (!isNull(j__0)) {
+        t#2 = j__0 is StringIndex
       } else {
-        t#16 = false
+        t#2 = false
       };
-      if (t#16) {
-        return__2 = 1
+      if (t#2) {
+        return__0 = 1
       } else {
-        return__2 = 2
+        return__0 = 2
       }
     } else {
-      let n__7;
-      if (isNull(i__4)) {
-        n__7 = null
+      let n__0;
+      if (isNull(i__0)) {
+        n__0 = null
       } else {
         bubble()
       };
-      return__2 = 3
+      return__0 = 3
     }
 })

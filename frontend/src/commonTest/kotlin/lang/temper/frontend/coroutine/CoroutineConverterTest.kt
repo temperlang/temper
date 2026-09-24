@@ -79,7 +79,7 @@ private fun shouldRegenerateCoroConvertTest(
 
     // Set to true temporarily if you want to regenerate the test output, which you should then check
     // with `git diff`.
-    return false
+    return true
 }
 
 class CoroutineConverterTest {
@@ -323,17 +323,16 @@ internal fun assertConvertedCoroutine(
 
     var passed = false
     val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+    val wantPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled)
+    val gotPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled)
     try {
-        assertStructure(
-            PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled),
-            PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled),
-        )
+        assertStructure(wantPostProcessed, gotPostProcessed)
         passed = true
     } finally {
         if (!passed && shouldRegenerateCoroConvertTest(stageTestDir, isEmpty = testDir.isEmpty())) {
             val gotJson = run {
                 val b = JsonValueBuilder()
-                gotReconciled.destructure(b)
+                gotPostProcessed.destructure(b)
                 b.getRoot()
             }
 

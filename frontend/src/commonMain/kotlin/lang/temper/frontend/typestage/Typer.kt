@@ -1025,21 +1025,6 @@ internal class Typer(
                 inputTrees = reordered
             }
         }
-        c?.group("effectiveCallee=$effectiveCallee, isNewCall=$isNewCall") {
-            c.group("tree") {
-                tree.toPseudoCode(c.textOutput)
-            }
-            c.group("actualTypes") {
-                explicitActualTypesAndPositions?.forEach {
-                    c.log("- $it")
-                }
-            }
-            c.group("variants") {
-                calleeVariants.forEach {
-                    c.log("- $it")
-                }
-            }
-        }
 
         typeCallByParts2(
             priorProblems = priorProblems,
@@ -1050,13 +1035,7 @@ internal class Typer(
             typeActualsAndPositions = explicitActualTypesAndPositions,
             inputTrees = inputTrees,
             contextType = contextType,
-        ).also {
-            c?.group("After") {
-                c.log("call decision=${ti.decision(tree)}")
-                c.log("callee decision=${ti.decision(tree.child(0))}")
-                c.log("effective callee decision=${effectiveCallee?.let { ti.decision(it) }}")
-            }
-        }
+        )
     }
 
     /**

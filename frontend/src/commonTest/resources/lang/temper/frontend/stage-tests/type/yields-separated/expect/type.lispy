@@ -20,7 +20,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__1"
+                                    "return__0"
                                 ],
                                 [
                                     "Value",
@@ -44,7 +44,7 @@
                                         ],
                                         [
                                             "LeftName",
-                                            "return__1"
+                                            "return__0"
                                         ],
                                         [
                                             "Call",
@@ -65,7 +65,7 @@
                                                             [
                                                                 [
                                                                     "LeftName",
-                                                                    "return__0"
+                                                                    "return__1"
                                                                 ],
                                                                 [
                                                                     "Value",
@@ -173,7 +173,25 @@
                                         "abbrev": "void: Void"
                                     },
                                     "typeInferences": {
+<<<<<<< HEAD
                                         "type": "Void",
+||||||| 3ab53e9c3
+                                        "type": {
+                                            "type": "SourceName",
+                                            "module": "core",
+                                            "uid": 70,
+                                            "nameHint": "Void",
+                                            "abbrev": "Void__70"
+                                        },
+=======
+                                        "type": {
+                                            "type": "SourceName",
+                                            "module": "core",
+                                            "uid": 70,
+                                            "nameHint": "Void",
+                                            "abbrev": "Void__0"
+                                        },
+>>>>>>> pseudocode-uses-throws-syntax
                                         "explanation": []
                                     }
                                 }

@@ -1,51 +1,51 @@
-@typeDecl(NeedsConstructor__1) @stay let NeedsConstructor__1 = type (NeedsConstructor__1);
-@typeDecl(HasConstructorAndInitializedProperty__2) @stay let HasConstructorAndInitializedProperty__2 = type (HasConstructorAndInitializedProperty__2);
-@typeDecl(HasTooManyConstructors__5) @stay let HasTooManyConstructors__5 = type (HasTooManyConstructors__5);
-@typeDecl(HasConstructorAndParenthesizedArguments__8) @stay let HasConstructorAndParenthesizedArguments__8 = type (HasConstructorAndParenthesizedArguments__8);
+@typeDecl(NeedsConstructor__0) @stay let NeedsConstructor__0 = type (NeedsConstructor__0);
+@typeDecl(HasConstructorAndInitializedProperty__0) @stay let HasConstructorAndInitializedProperty__0 = type (HasConstructorAndInitializedProperty__0);
+@typeDecl(HasTooManyConstructors__0) @stay let HasTooManyConstructors__0 = type (HasTooManyConstructors__0);
+@typeDecl(HasConstructorAndParenthesizedArguments__0) @stay let HasConstructorAndParenthesizedArguments__0 = type (HasConstructorAndParenthesizedArguments__0);
 REM("OK", null, false);
-class(\word, \NeedsConstructor, \concrete, true, @typeDefined(NeedsConstructor__1) fn {
-    NeedsConstructor__1 extends AnyValue;
+class(\word, \NeedsConstructor, \concrete, true, @typeDefined(NeedsConstructor__0) fn {
+    NeedsConstructor__0 extends AnyValue;
     do {};
-    @constructorProperty @maybeVar @visibility(\public) let j__17: Int32;
-    @maybeVar @visibility(\public) let k__18: Int32;
-    @visibility(\public) let constructor__19 = fn constructor(@impliedThis(NeedsConstructor__1) this__10: NeedsConstructor__1, @constructorProperty i__20 /* aka i */: Int32, j__21 /* aka j */: Int32 = 1) /* return__11 */: Void {
+    @constructorProperty @maybeVar @visibility(\public) let j__0: Int32;
+    @maybeVar @visibility(\public) let k__0: Int32;
+    @visibility(\public) let constructor__0 = fn constructor(@impliedThis(NeedsConstructor__0) this__0: NeedsConstructor__0, @constructorProperty i__0 /* aka i */: Int32, j__1 /* aka j */: Int32 = 1) /* return__0 */: Void {
       do {
-        let t#40;
-        do_iset_j(type (NeedsConstructor__1), this(NeedsConstructor__1), t#40 = j__21);
-        t#40
+        let t#0;
+        do_iset_j(type (NeedsConstructor__0), this(NeedsConstructor__0), t#0 = j__1);
+        t#0
       };
       do {
-        let t#39;
-        do_iset_k(type (NeedsConstructor__1), this(NeedsConstructor__1), t#39 = i__20 + 1);
-        t#39
+        let t#1;
+        do_iset_k(type (NeedsConstructor__0), this(NeedsConstructor__0), t#1 = i__0 + 1);
+        t#1
       };
     };
 });
 REM("OK", null, false);
-class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefined(HasConstructorAndInitializedProperty__2) fn {
-    HasConstructorAndInitializedProperty__2 extends AnyValue;
+class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefined(HasConstructorAndInitializedProperty__0) fn {
+    HasConstructorAndInitializedProperty__0 extends AnyValue;
     REM("This initializer should be pulled into the constructor.", null, false);
-    @visibility(\private) var b__22: Boolean;
-    @visibility(\private) let i__23: Int32;
-    @visibility(\public) @fn let constructor__24 = fn constructor(@impliedThis(HasConstructorAndInitializedProperty__2) this__3: HasConstructorAndInitializedProperty__2, i__25 /* aka i */: Int32) /* return__12 */: Void {
-      fn__26: do {
-        do_iset_b(type (HasConstructorAndInitializedProperty__2), this__3, false);
+    @visibility(\private) var b__0: Boolean;
+    @visibility(\private) let i__1: Int32;
+    @visibility(\public) @fn let constructor__1 = fn constructor(@impliedThis(HasConstructorAndInitializedProperty__0) this__1: HasConstructorAndInitializedProperty__0, i__2 /* aka i */: Int32) /* return__1 */: Void {
+      fn__0: do {
+        do_iset_b(type (HasConstructorAndInitializedProperty__0), this__1, false);
         void;
         do {
-          let t#38;
-          do_iset_i(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2), t#38 = i__25);
-          t#38
+          let t#2;
+          do_iset_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#2 = i__2);
+          t#2
         };
       }
     };
-    @visibility(\public) @fn let f__27 = fn f(@impliedThis(HasConstructorAndInitializedProperty__2) this__4: HasConstructorAndInitializedProperty__2) /* return__13 */: Int32 {
-      fn__28: do {
+    @visibility(\public) @fn let f__0 = fn f(@impliedThis(HasConstructorAndInitializedProperty__0) this__2: HasConstructorAndInitializedProperty__0) /* return__2 */: Int32 {
+      fn__1: do {
         do {
-          let t#37;
-          do_iset_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2), t#37 = !do_iget_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)));
-          t#37
+          let t#3;
+          do_iset_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#3 = !do_iget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)));
+          t#3
         };
-        do_iget_i(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)) + if(do_iget_b(type (HasConstructorAndInitializedProperty__2), this(HasConstructorAndInitializedProperty__2)), fn {
+        do_iget_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)) + if(do_iget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)), fn {
             1
           }, \else, fn (f#0) {
             f#0(fn {
@@ -55,31 +55,31 @@ class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefine
       }
     };
 });
-class(\word, \HasTooManyConstructors, \concrete, true, @typeDefined(HasTooManyConstructors__5) fn {
-    HasTooManyConstructors__5 extends AnyValue;
+class(\word, \HasTooManyConstructors, \concrete, true, @typeDefined(HasTooManyConstructors__0) fn {
+    HasTooManyConstructors__0 extends AnyValue;
     REM("The initializer here would need to be copied into multiple constructors,\nbut we do not want to copy code that is potentially large, so just ban it.", null, false);
     error (MultipleConstructorsIncompatibleWIthInitializer);
-    @visibility(\public) @fn let constructor__29 = fn constructor(@impliedThis(HasTooManyConstructors__5) this__6: HasTooManyConstructors__5) /* return__14 */: Void {
-      fn__30: do {}
+    @visibility(\public) @fn let constructor__2 = fn constructor(@impliedThis(HasTooManyConstructors__0) this__3: HasTooManyConstructors__0) /* return__3 */: Void {
+      fn__2: do {}
     };
-    @visibility(\public) @fn let constructor__31 = fn constructor(@impliedThis(HasTooManyConstructors__5) this__7: HasTooManyConstructors__5, c__32 /* aka c */: Boolean) /* return__15 */: Void {
-      fn__33: do {
-        if(c__32, fn {
+    @visibility(\public) @fn let constructor__3 = fn constructor(@impliedThis(HasTooManyConstructors__0) this__4: HasTooManyConstructors__0, c__0 /* aka c */: Boolean) /* return__4 */: Void {
+      fn__3: do {
+        if(c__0, fn {
             do {
-              let t#36;
-              do_iset_b(type (HasTooManyConstructors__5), this(HasTooManyConstructors__5), t#36 = !do_iget_b(type (HasTooManyConstructors__5), this(HasTooManyConstructors__5)));
-              t#36
+              let t#4;
+              do_iset_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0), t#4 = !do_iget_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0)));
+              t#4
             };
         })
       }
     };
 });
 REM("Not clear how to fold parenthesized constructor arguments into an existing\nconstructor.", null, false);
-class(\word, \HasConstructorAndParenthesizedArguments, \concrete, true, @typeDefined(HasConstructorAndParenthesizedArguments__8) fn {
-    HasConstructorAndParenthesizedArguments__8 extends AnyValue;
+class(\word, \HasConstructorAndParenthesizedArguments, \concrete, true, @typeDefined(HasConstructorAndParenthesizedArguments__0) fn {
+    HasConstructorAndParenthesizedArguments__0 extends AnyValue;
     error (ExplicitConstructorIncompatibleWithInput);
-    @visibility(\public) @fn let constructor__34 = fn constructor(@impliedThis(HasConstructorAndParenthesizedArguments__8) this__9: HasConstructorAndParenthesizedArguments__8) /* return__16 */: Void {
-      fn__35: do {}
+    @visibility(\public) @fn let constructor__4 = fn constructor(@impliedThis(HasConstructorAndParenthesizedArguments__0) this__5: HasConstructorAndParenthesizedArguments__0) /* return__5 */: Void {
+      fn__4: do {}
     };
 });
-HasConstructorAndParenthesizedArguments__8
+HasConstructorAndParenthesizedArguments__0

@@ -1,20 +1,20 @@
-var caseIndex#7: Int32;
-caseIndex#7 = 0;
-let convertedCoroutine#10;
-convertedCoroutine#10 = fn (generator#6: SafeGenerator<Empty>) /* return__0 */: GeneratorResult<Empty> {
-  fn__8: do {
-    let caseIndexLocal#9: Int32;
-    caseIndexLocal#9 = caseIndex#7;
-    caseIndex#7 = -1;
-    if (caseIndexLocal#9 == 0) {
-      do_call_log(console#1, "foo");
-      do_call_log(console#1, "bar");
+var caseIndex#0: Int32;
+caseIndex#0 = 0;
+let convertedCoroutine#0;
+convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: GeneratorResult<Empty> {
+  fn__0: do {
+    let caseIndexLocal#0: Int32;
+    caseIndexLocal#0 = caseIndex#0;
+    caseIndex#0 = -1;
+    if (caseIndexLocal#0 == 0) {
+      do_call_log(console#0, "foo");
+      do_call_log(console#0, "bar");
       return__0 = core.doneResult();
-      break fn__8;
+      break fn__0;
     } else {
       return__0 = core.doneResult();
-      break fn__8;
+      break fn__0;
     }
   }
 };
-return__2 = adaptGeneratorFnSafe(convertedCoroutine#10)
+return__1 = adaptGeneratorFnSafe(convertedCoroutine#0)

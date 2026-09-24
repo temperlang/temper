@@ -51,7 +51,7 @@ class JsonInteropTest {
             |      jsonAdapter: {
             |        static: true,
             |        body: ```
-            |          fn: (JsonAdapter<MyType>) {
+            |          fn: JsonAdapter<MyType> {
             |            new MyTypeJsonAdapter()
             |          }
             |          ```,
@@ -75,7 +75,7 @@ class JsonInteropTest {
             |          visibility: "public",
             |          static: false,
             |          body: ```
-            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): (MyType | Bubble) {
+            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): MyType throws Bubble {
             |              type (MyType).decodeFromJson(t, ic)
             |            }
             |            ```
@@ -120,7 +120,7 @@ class JsonInteropTest {
             |        visibility: "public",
             |        static: true,
             |        body: ```
-            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): (Point | Bubble) {
+            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): Point throws Bubble {
             |            let obj = t as JsonObject, x: Int32, y: Int32;
             |            x = (obj.propertyValueOrBubble("x") as JsonNumeric).asInt32();
             |            y = (obj.propertyValueOrBubble("y") as JsonNumeric).asInt32();
@@ -131,7 +131,7 @@ class JsonInteropTest {
             |      jsonAdapter: {
             |        static: true,
             |        body: ```
-            |          fn: (JsonAdapter<Point>) {
+            |          fn: JsonAdapter<Point> {
             |            new PointJsonAdapter()
             |          }
             |          ```,
@@ -155,7 +155,7 @@ class JsonInteropTest {
             |          visibility: "public",
             |          static: false,
             |          body: ```
-            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): (Point | Bubble) {
+            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): Point throws Bubble {
             |              type (Point).decodeFromJson(t, ic)
             |            }
             |            ```
@@ -198,7 +198,7 @@ class JsonInteropTest {
             |        visibility: "public",
             |        static: true,
             |        body: ```
-            |          fn<T>(t: JsonSyntaxTree, ic: InterchangeContext, adapterForT: JsonAdapter<T>): (Box<T> | Bubble) {
+            |          fn<T>(t: JsonSyntaxTree, ic: InterchangeContext, adapterForT: JsonAdapter<T>): Box<T> throws Bubble {
             |            let obj = t as JsonObject, content: T;
             |            content = adapterForT.decodeFromJson(obj.propertyValueOrBubble("content"), ic);
             |            new Box<T>(\content, content)
@@ -208,7 +208,7 @@ class JsonInteropTest {
             |      jsonAdapter: {
             |        static: true,
             |        body: ```
-            |          fn<T>(adapterForT: JsonAdapter<T>): (JsonAdapter<Box<T>>) {
+            |          fn<T>(adapterForT: JsonAdapter<T>): JsonAdapter<Box<T>> {
             |            new BoxJsonAdapter<T>(adapterForT)
             |          }
             |          ```,
@@ -244,7 +244,7 @@ class JsonInteropTest {
             |          visibility: "public",
             |          static: false,
             |          body: ```
-            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): (Box<T> | Bubble) {
+            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): Box<T> throws Bubble {
             |              type (Box).decodeFromJson(t, ic, adapterForT)
             |            }
             |            ```
@@ -287,7 +287,7 @@ class JsonInteropTest {
             |        visibility: "public",
             |        static: true,
             |        body: ```
-            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): (Strings | Bubble) {
+            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): Strings throws Bubble {
             |            let obj = t as JsonObject, strings: List<String>;
             |            strings = type (List).jsonAdapter(type (String).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("strings"), ic);
             |            new Strings(\strings, strings)
@@ -297,7 +297,7 @@ class JsonInteropTest {
             |      jsonAdapter: {
             |        static: true,
             |        body: ```
-            |          fn: (JsonAdapter<Strings>) {
+            |          fn: JsonAdapter<Strings> {
             |            new StringsJsonAdapter()
             |          }
             |          ```,
@@ -321,7 +321,7 @@ class JsonInteropTest {
             |          visibility: "public",
             |          static: false,
             |          body: ```
-            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): (Strings | Bubble) {
+            |            fn (t: JsonSyntaxTree, ic: InterchangeContext): Strings throws Bubble {
             |              type (Strings).decodeFromJson(t, ic)
             |            }
             |            ```
@@ -390,7 +390,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (S | Bubble) {
+            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): S throws Bubble {
             |          let obj = t as JsonObject, valueForX = obj.propertyValueOrNull("x");
             |          do {
             |## Here's the decision tree.
@@ -421,7 +421,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn: (JsonAdapter<S>) {
+            |        fn: JsonAdapter<S> {
             |          new SJsonAdapter()
             |        }
             |        ```
@@ -459,7 +459,7 @@ class JsonInteropTest {
             |          static: false,
             |          body:
             |          ```
-            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): (S | Bubble) {
+            |          fn (t: JsonSyntaxTree, ic: InterchangeContext): S throws Bubble {
             |            type (S).decodeFromJson(t, ic)
             |          }
             |          ```
@@ -534,7 +534,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (SI | Bubble) {
+            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): SI throws Bubble {
             |## Instances of class A cannot be distinguished from instances of
             |## class B based on their properties, so instead the decoding switches
             |## on the extraProperty("class") because it is known to have distinct
@@ -587,7 +587,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (A | Bubble) {
+            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): A throws Bubble {
             |## We don't actually care about the known property when decoding.
             |## We could though.
             |          let obj = t as JsonObject, i: Int32;
@@ -619,7 +619,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (B | Bubble) {
+            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): B throws Bubble {
             |          let obj = t as JsonObject, i: Int32;
             |          i = (obj.propertyValueOrBubble("i") as JsonNumeric).asInt32();
             |          new B(\i, i)
@@ -680,7 +680,7 @@ class JsonInteropTest {
             |        static: true,
             |        body:
             |        ```
-            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): (C | Bubble) {
+            |        fn (t: JsonSyntaxTree, ic: InterchangeContext): C throws Bubble {
             |          let obj = t as JsonObject, i: Int32?, c: C?;
             |          i = new OrNullJsonAdapter<Int32>(type (Int32).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("i"), ic);
             |          c = new OrNullJsonAdapter<C>(type (C).jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("c"), ic);

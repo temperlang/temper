@@ -468,7 +468,10 @@ internal class CaptureBlockResultsInTemporaries(
                                                 listOf(),
                                             )
                                             Call(errorFnTypeInferences) {
-                                                V(Value(ErrorFn), AdHocArrowTypes.definedTypeForSig(errorFnTypeInferences.variant))
+                                                V(
+                                                    Value(ErrorFn),
+                                                    AdHocArrowTypes.definedTypeForSig(errorFnTypeInferences.variant),
+                                                )
                                                 V(Value(problem, TProblem), WellKnownTypes.problemType2)
                                             }
                                         }
