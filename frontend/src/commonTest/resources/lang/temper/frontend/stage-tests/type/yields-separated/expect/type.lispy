@@ -162,39 +162,10 @@
                                         ]
                                     ]
                                 ],
-                                {
-                                    "type": "Value",
-                                    "loc": "test/test.temper",
-                                    "left": 108,
-                                    "right": 108,
-                                    "content": {
-                                        "stateVector": null,
-                                        "typeTag": "Void",
-                                        "abbrev": "void: Void"
-                                    },
-                                    "typeInferences": {
-<<<<<<< HEAD
-                                        "type": "Void",
-||||||| 3ab53e9c3
-                                        "type": {
-                                            "type": "SourceName",
-                                            "module": "core",
-                                            "uid": 70,
-                                            "nameHint": "Void",
-                                            "abbrev": "Void__70"
-                                        },
-=======
-                                        "type": {
-                                            "type": "SourceName",
-                                            "module": "core",
-                                            "uid": 70,
-                                            "nameHint": "Void",
-                                            "abbrev": "Void__0"
-                                        },
->>>>>>> pseudocode-uses-throws-syntax
-                                        "explanation": []
-                                    }
-                                }
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
                             ],
                             "StructuredFlow"
                         ]

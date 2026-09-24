@@ -3,7 +3,7 @@
       return__0 = getConsole();
   });
 ## Start inlined forEach
-  let this__0: List<Invalid>;
+  let this__0: List<String>;
   this__0 = list("foo");
   let n__0;
   n__0 = do_get_length(this__0);

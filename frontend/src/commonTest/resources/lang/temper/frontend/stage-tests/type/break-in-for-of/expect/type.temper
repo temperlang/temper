@@ -2,7 +2,7 @@
   console#0 = doPure ⋖ Console ⋗(@stay fn /* return__0 */: Console {
       return__0 = getConsole();
   });
-  let this__0: List<Invalid>;
+  let this__0: List<String>;
   this__0 = list ⋖ String ⋗("a", "b", "c", "d");
 ## Here we start the inlined callee body.
   let n__0 ⦂ Int32;

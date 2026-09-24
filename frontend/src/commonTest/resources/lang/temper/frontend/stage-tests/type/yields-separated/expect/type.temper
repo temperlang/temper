@@ -1,13 +1,5 @@
-<<<<<<< HEAD
-ignore(fn /* return__1 */{
-    return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__0 */: GeneratorResult<Empty> implements GeneratorFn {
-||||||| 3ab53e9c3
-ignore(fn /* return__1 */{
-    return__1 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__0 */: (GeneratorResult<Empty>) implements GeneratorFn {
-=======
 ignore(fn /* return__0 */{
     return__0 = adaptGeneratorFnSafe(@wrappedGeneratorFn fn /* return__1 */: GeneratorResult<Empty> implements GeneratorFn {
->>>>>>> pseudocode-uses-throws-syntax
         while (true) {
           cat(str(123));
           yield()
