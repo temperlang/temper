@@ -13,14 +13,14 @@ class LuaBackendTest {
         assertGenerated(
             temper = """
                 |// Bubble return type had a bad impact here before.
-                |let fuji = new Apple().maybe();
-                |export class Apple {
+                |@keep let fuji = new Apple().maybe();
+                |@keep class Apple {
                 |  public maybe(): Apple throws Bubble { this }
                 |}
             """.trimMargin(),
             lua = """
                 |local temper = require('temper-core');
-                |local Apple, fuji__0, exports;
+                |local Apple, fuji, exports;
                 |Apple = temper.type('Apple');
                 |Apple.methods.maybe = function(this__0)
                 |  return this__0;
@@ -28,9 +28,8 @@ class LuaBackendTest {
                 |Apple.constructor = function(this__1)
                 |  return nil;
                 |end;
-                |fuji__0 = Apple():maybe();
+                |fuji = Apple():maybe();
                 |exports = {};
-                |exports.Apple = Apple;
                 |return exports;
                 |
             """.trimMargin(),
@@ -76,7 +75,7 @@ class LuaBackendTest {
     fun ifElse() {
         assertGenerated(
             temper = """
-                |export let signText(i: Int): String {
+                |@keep let signText(i: Int): String {
                 |  if (i < 0) {
                 |    "negative"
                 |  } else if (i > 0) {
@@ -103,7 +102,6 @@ class LuaBackendTest {
                 |  end
                 |end;
                 |exports = {};
-                |exports.signText = signText;
                 |return exports;
                 |
             """.trimMargin(),
@@ -293,18 +291,18 @@ class LuaBackendTest {
         """.trimMargin(),
         lua = """
             |local temper = require('temper-core');
-            |local console_0, f__0, fn__0, exports;
+            |local console_0, f, fn, exports;
             |console_0 = 0.0;
-            |f__0 = function(generatorFactory__0)
+            |f = function(generatorFactory__0)
             |  temper.generator_next(generatorFactory__0());
             |  return nil;
             |end;
-            |fn__0 = temper.adapt_generator_fn(function()
+            |fn = temper.adapt_generator_fn(function()
             |  temper.log('foo');
             |  temper.yield();
             |  temper.log('bar');
             |end);
-            |f__0(fn__0);
+            |f(fn);
             |exports = {};
             |return exports;
             |
@@ -395,18 +393,18 @@ class LuaBackendTest {
             |            "something-internal.lua": {
             |                "content": ```
             |                  local temper = require('temper-core');
-            |                  local console_0, sum__0, inc, exports;
+            |                  local console_0, sum, inc, exports;
             |                  console_0 = 0.0;
-            |                  sum__0 = function(i__0, j__0)
+            |                  sum = function(i__0, j__0)
             |                    temper.log('hi');
             |                    return temper.int32_add(i__0, j__0);
             |                  end;
             |                  inc = function(i__1)
-            |                    return sum__0(i__1, 1);
+            |                    return sum(i__1, 1);
             |                  end;
             |                  exports = {};
             |                  exports.inc = inc;
-            |                  exports.sum__0 = sum__0;
+            |                  exports.sum = sum;
             |                  return exports;
             |
             |                  ```
@@ -415,8 +413,8 @@ class LuaBackendTest {
             |                "something-test.lua": {
             |                    content: ```
             |                      local temper = require('temper-core');
-            |                      local sum__0, local_3, local_4, exports;
-            |                      sum__0 = temper.import('my-test-library/something-internal', 'sum__0');
+            |                      local sum, local_3, local_4, exports;
+            |                      sum = temper.import('my-test-library/something-internal', 'sum');
             |                      local_3 = (unpack or table.unpack);
             |                      local_4 = require('luaunit');
             |                      local_4.FAILURE_PREFIX = temper.test_failure_prefix;
@@ -424,7 +422,7 @@ class LuaBackendTest {
             |                      Test_.test_sum__0 = function()
             |                        temper.test('sum', function(test_1)
             |                          local actual_2, fn__0;
-            |                          actual_2 = sum__0(1, 2);
+            |                          actual_2 = sum(1, 2);
             |                          fn__0 = function()
             |                            return temper.concat('expected sum(1, 2) == (', temper.int32_tostring(3), ') not (', temper.int32_tostring(actual_2), ')');
             |                          end;
@@ -494,7 +492,7 @@ class LuaBackendTest {
             |{
             |    "lua": {
             |        "my-test-library": {
-            |            "something.lua": {
+            |            "something-internal.lua": {
             |                "content": ```
             |                  local temper = require('temper-core');
             |                  local prod, twice, sum, inc, length, exports;
@@ -544,7 +542,9 @@ class LuaBackendTest {
             |                "_support.lua": "__DO_NOT_CARE__",
             |            },
             |            "init.lua": "__DO_NOT_CARE__",
+            |            "something.lua": "__DO_NOT_CARE__",
             |            "something.lua.map": "__DO_NOT_CARE__",
+            |            "something-internal.lua.map": "__DO_NOT_CARE__",
             |            "my-test-library-dev-1.rockspec": "__DO_NOT_CARE__",
             |        }
             |    }
