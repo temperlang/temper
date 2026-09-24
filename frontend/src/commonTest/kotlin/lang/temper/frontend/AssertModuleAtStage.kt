@@ -107,7 +107,7 @@ private fun shouldRegenerateStageTest(
 
     // Set to true temporarily if you want to regenerate test output, which you should then check
     // with `git diff`.
-    return true
+    return false
 }
 
 /** The URL for reading test resource files. A `file:` URL that allows enumerating resources. */

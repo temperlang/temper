@@ -79,7 +79,7 @@ private fun shouldRegenerateCoroConvertTest(
 
     // Set to true temporarily if you want to regenerate the test output, which you should then check
     // with `git diff`.
-    return true
+    return false
 }
 
 class CoroutineConverterTest {
