@@ -3,12 +3,14 @@ package lang.temper.interp
 import lang.temper.env.BindingNamingContext
 import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
+import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
 import lang.temper.type.NominalType
 import lang.temper.type.TypeShape
 import lang.temper.type2.Signature2
 import lang.temper.value.CallableValue
 import lang.temper.value.CoverFunction
+import lang.temper.value.DeclTree
 import lang.temper.value.Fail
 import lang.temper.value.InstancePropertyRecord
 import lang.temper.value.MacroEnvironment
@@ -23,6 +25,7 @@ import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.cherryPicker
 import lang.temper.value.constructorSymbol
+import lang.temper.value.imuSymbol
 
 /**
  * <!-- snippet: builtin/new -->
@@ -43,8 +46,8 @@ object New : NamedBuiltinFun, SpecialFunction {
             macroEnv.explain(MessageTemplate.ArityMismatch, values = listOf(1))
             return Fail
         }
-        if (interpMode == InterpMode.Partial) {
-            // TODO: this may change once partial records are a thing
+        if (macroEnv.stage < Stage.Type) {
+            // I haven't seen it run properly before type stage, anyway, so this reduces compute.
             return NotYet
         }
         val typeResult = args.evaluate(0, interpMode)
@@ -72,6 +75,11 @@ object New : NamedBuiltinFun, SpecialFunction {
         if (typeShape.abstractness != Abstractness.Concrete) {
             macroEnv.explain(MessageTemplate.NotConstructible, values = listOf(typeResult))
             return Fail
+        }
+        // TODO Also need to check for imu parameterizations of partialImu types.
+        // TODO Maybe can factor some logic in ImuChecker.
+        if (interpMode == InterpMode.Partial && !typeShape.isImu()) {
+            return NotYet
         }
 
         // Group the constructors into an umbrella.
@@ -149,4 +157,8 @@ object New : NamedBuiltinFun, SpecialFunction {
     }
 
     override fun toString(): String = "builtin New"
+}
+
+private fun TypeShape.isImu(): Boolean {
+    return (stayLeaf?.incoming?.source as? DeclTree)?.parts?.let { imuSymbol in it.metadataSymbolMap } == true
 }

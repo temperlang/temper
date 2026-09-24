@@ -108,15 +108,19 @@ interface WritableFileSystem : FileSystem {
     fun systemReadAccess(defaultCwd: FilePath, cancelGroup: CancelGroup): AsyncSystemReadAccess
 }
 
-fun copyRecursive(from: FileSystem, to: WritableFileSystem) =
-    copyRecursive(from = from, fromPath = dirPath(), to = to, toPath = dirPath())
+typealias FileMunger = (FilePath, ByteArray) -> ByteArray
+
+fun copyRecursive(from: FileSystem, to: WritableFileSystem, munger: FileMunger? = null) =
+    copyRecursive(from = from, fromPath = dirPath(), to = to, toPath = dirPath(), munger = munger)
 
 fun copyRecursive(
     from: FileSystem,
     fromPath: FilePath,
     to: WritableFileSystem,
     toPath: FilePath,
+    munger: FileMunger? = null,
 ): RResult<Unit, IOException> {
+    val munge = munger ?: { _, bytes -> bytes }
     check(fromPath.isDir) { "$fromPath" }
     when (to.classify(toPath)) {
         FileClassification.DoesNotExist -> to.ensureDir(toPath)
@@ -139,7 +143,7 @@ fun copyRecursive(
                     is RSuccess -> {
                         to.write(
                             path = toPath.resolve(fromKid.segments.last(), isDir = false),
-                            bytes = it.result.copyOf(),
+                            bytes = munge(fromKid, it.result.copyOf()),
                         )
                     }
                 }
