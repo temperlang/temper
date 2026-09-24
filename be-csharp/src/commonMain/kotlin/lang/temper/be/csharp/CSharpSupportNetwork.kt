@@ -37,11 +37,12 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.passTypeOf
 import lang.temper.type2.withNullity
+import lang.temper.value.AbstractPanic
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.PureVirtual
 import lang.temper.value.emptyValue
 import lang.temper.value.listBuiltinName
-import lang.temper.value.pureVirtualBuiltinName
 import kotlin.lazy
 
 object CSharpSupportNetwork : SupportNetwork {
@@ -54,10 +55,10 @@ object CSharpSupportNetwork : SupportNetwork {
     override val simplifyOrTypes: Boolean get() = true
 
     override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? {
-        return runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse {
+        return builtinNames[builtin.name] ?: run {
             // Useful for placing a breakpoint.
             null
-        } ?: builtinNames[builtin.name] ?: run {
+        } ?: runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse {
             // Also useful.
             null
         }
@@ -356,12 +357,13 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
 
 private val bubble =
     Throwing("bubble", StandardNames.temperCoreCoreBubble, builtinOperatorId = BuiltinOperatorId.Bubble)
-internal val pureVirtualBuiltin = Throwing(pureVirtualBuiltinName.builtinKey, StandardNames.temperCoreCorePureVirtual)
+internal val pureVirtualBuiltin = Throwing(PureVirtual.name, StandardNames.temperCoreCorePureVirtual)
 
 private val builtinNames = listOf(
     // getStaticBuiltinName to ???,
-    pureVirtualBuiltinName to pureVirtualBuiltin,
-).associate { (key, value) -> key.builtinKey to value as CSharpSupportCode }
+    AbstractPanic.name to pureVirtualBuiltin,
+    PureVirtual.name to pureVirtualBuiltin,
+).associate { (key, value) -> key to value as CSharpSupportCode }
 
 open class CSharpSupportCode(
     val connectedNames: List<String>,

@@ -569,6 +569,7 @@ class RustTranslator(
     }
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
+        // TODO Combine this structural logic with CSharpTranslator's similar handling?
         val connectedBlock = when {
             decl.metadata.any { it.key.symbol == connectedSymbol } -> when {
                 module.isStdLib -> when {
