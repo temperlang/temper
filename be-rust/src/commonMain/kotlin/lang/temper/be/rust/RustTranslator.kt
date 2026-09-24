@@ -41,6 +41,7 @@ import lang.temper.name.ModularName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.name.ResolvedNameMaker
+import lang.temper.name.SourceName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
@@ -569,8 +570,13 @@ class RustTranslator(
 
     private fun processModuleFunctionDeclaration(decl: TmpL.ModuleFunctionDeclaration) {
         val connectedBlock = when {
-            decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
-                translateConnectedBody(decl)
+            decl.metadata.any { it.key.symbol == connectedSymbol } -> when {
+                module.isStdLib -> when {
+                    decl.body.isPureVirtual() -> return // Just erase std pure virtual connecteds for now.
+                    else -> null
+                }
+                else -> translateConnectedBody(decl)
+            }
             else -> null
         }
         moduleItems.add(translateFunctionDeclarationOrMethod(decl, block = connectedBlock))
@@ -1449,6 +1455,8 @@ class RustTranslator(
             is ExportedName -> Rust.VisibilityPub(pos)
             else -> when {
                 considerMember -> (decl as? TmpL.Member)?.let { chooseVisibilityForMember(it, forTrait = false) }
+                decl.parent is TmpL.Module ->
+                    Rust.VisibilityPub(pos, scope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate))
                 else -> null
             }
         }
@@ -2320,7 +2328,13 @@ class RustTranslator(
                 }
                 effectiveName.displayName
             }
-
+            is SourceName if effectiveStyle == null && decl?.decl is TmpL.FunctionLike -> {
+                val pretty = effectiveName.baseName.nameText.camelToSnake()
+                when (names.reserveName(effectiveName, pretty)) {
+                    effectiveName -> return pathify(pretty)
+                    else -> "$effectiveName"
+                }
+            }
             is Temporary -> "${effectiveName.nameHint}___${effectiveName.uid}" // 3 "_" on temps for better uniqueness
             else -> when (effectiveStyle) {
                 null, NameStyle.Ugly -> "$effectiveName"

@@ -7,13 +7,22 @@ import lang.temper.format.TokenSink
 import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.FilePath
+import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.value.TString
 
 class RustNames(
     val packageNaming: PackageNaming,
     val packageNamingsByRoot: Map<FilePath, PackageNaming>,
-)
+) {
+    /** Not keyed on module because we only reserve source names for the current module. */
+    private val reservedNames = mutableMapOf<String, SourceName>()
+
+    /** Returns the owner of [text], which might be [sourceName] if not a previous owner. */
+    fun reserveName(sourceName: SourceName, text: String): SourceName {
+        return reservedNames.getOrPut(text) { sourceName }
+    }
+}
 
 data class PackageNaming(
     val packageName: String,
