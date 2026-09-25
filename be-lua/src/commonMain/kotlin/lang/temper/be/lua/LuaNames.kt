@@ -35,6 +35,7 @@ class LuaNames {
     private var labelCounter = 0
 
     private val map = mutableMapOf<ResolvedName, LuaName>()
+    private val reservedMap = mutableMapOf<LuaName, ResolvedName>()
     private val onBreaks = mutableMapOf<String, LuaName>()
     private val onContinues = mutableMapOf<String, LuaName>()
     private val pendingImports = mutableMapOf<Pair<ModuleName, ResolvedName>, MutableList<(LuaName) -> Unit>>()
@@ -60,11 +61,20 @@ class LuaNames {
 
     fun name(
         name: ResolvedName,
+        tryPretty: Boolean = false,
     ): LuaName {
         val luaName = map.getOrPut(name) {
             when (name) {
                 is ExportedName -> LuaName(fixName(name.baseName.nameText))
-                is SourceName -> LuaName(fixName("${name.baseName.nameText}__${name.uid}"))
+                is SourceName -> when {
+                    tryPretty -> LuaName(fixName(name.baseName.nameText)).let { pretty ->
+                        when (reservedMap.getOrPut(pretty) { name }) {
+                            name -> pretty
+                            else -> null
+                        }
+                    }
+                    else -> null
+                } ?: LuaName(fixName("${name.baseName.nameText}__${name.uid}"))
                 is Temporary -> LuaName(fixName("${name.nameHint}_${nameCounter++}"))
                 is BuiltinName -> LuaName(fixName(name.builtinKey))
             }
@@ -80,7 +90,8 @@ class LuaNames {
 
     fun name(
         id: TmpL.Id,
-    ): LuaName = name(id.name)
+        tryPretty: Boolean = false,
+    ): LuaName = name(id.name, tryPretty = tryPretty)
 
     fun onBreak(
         key: String,

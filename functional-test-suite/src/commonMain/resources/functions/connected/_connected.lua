@@ -8,7 +8,7 @@ do
   ---@param bonus integer
   ---@return integer
   function _connected.sum(i, j, bonus)
-    return i + j + bonus
+    return sumOf3(i, j, bonus)
   end
 
   ---@param hidden work.Hidden TODO Actually define types in our Lua.
