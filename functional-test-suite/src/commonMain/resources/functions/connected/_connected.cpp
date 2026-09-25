@@ -5,7 +5,7 @@ namespace work {
 namespace _connected {
 
 std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus) {
-    return i + j + bonus;
+    return work::sumOf3(i, j, bonus);
 }
 
 std::int32_t prod(std::shared_ptr<Hidden> const& hidden, std::int32_t j) {

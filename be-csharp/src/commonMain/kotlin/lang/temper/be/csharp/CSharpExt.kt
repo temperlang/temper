@@ -7,6 +7,7 @@ import lang.temper.format.TokenSink
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.name.OutName
+import lang.temper.name.ResolvedParsedName
 import lang.temper.name.TemperName
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.Abstractness
@@ -179,17 +180,22 @@ fun String.toInterfaceName() = "I$this"
 
 fun String.toOutName() = OutName(this, null)
 
+/** Provide a nice, not-even-escaped display name to the extent we can. */
+private fun TemperName.baseName(): String {
+    return (this as? ResolvedParsedName)?.baseName?.nameText ?: displayName
+}
+
 internal fun TemperName.toStyle(style: NameStyle): String {
     return when (style) {
         NameStyle.PrettyCamel -> {
-            val pretty = displayName
+            val pretty = baseName()
             when {
                 pretty in csharpAllKeywords -> "@$pretty"
                 else -> pretty
             }
         }
 
-        NameStyle.PrettyPascal -> displayName.camelToPascal()
+        NameStyle.PrettyPascal -> baseName().camelToPascal()
         NameStyle.Ugly -> "$this"
     }
 }

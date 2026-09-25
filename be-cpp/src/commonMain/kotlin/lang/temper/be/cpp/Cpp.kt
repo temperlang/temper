@@ -1388,7 +1388,7 @@ object Cpp {
         override fun renderTo(
             tokenSink: TokenSink,
         ) {
-            tokenSink.word(outName.toToken(inOperatorPosition = false).text)
+            tokenSink.emit(outName.toToken(inOperatorPosition = false))
         }
         override val codeFormattingTemplate: CodeFormattingTemplate?
             get() = null
@@ -3297,13 +3297,13 @@ object Cpp {
             ),
         )
 
-    /** `struct {{0}} : {{1*,}} \{ {{2*}} \} ;` */
+    /** `struct {{0}} `CppToks.infixColon` {{1*,}} \{ {{2*}} \} ;` */
     private val sharedCodeFormattingTemplate5 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("struct", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.infixColon),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
@@ -3318,17 +3318,17 @@ object Cpp {
             ),
         )
 
-    /** `template < {{0*,}} > {{1}}` */
+    /** `template `CppToks.leftAngle` {{0*,}} `CppToks.rightAngle` {{1}}` */
     private val sharedCodeFormattingTemplate6 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("template", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.leftAngle),
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.rightAngle),
                 CodeFormattingTemplate.OneSubstitution(1),
             ),
         )
@@ -3427,92 +3427,83 @@ object Cpp {
             ),
         )
 
-    /** `# define {{0}} {{1}} \n` */
+    /** ``CppToks.hashDefine` {{0}} {{1}} \n` */
     private val sharedCodeFormattingTemplate14 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("define", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashDefine),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.OneSubstitution(1),
                 CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `# undef {{0}} \n` */
+    /** ``CppToks.hashUndef` {{0}} \n` */
     private val sharedCodeFormattingTemplate15 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("undef", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashUndef),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `# pragma {{0}} \n` */
+    /** ``CppToks.hashPragma` {{0}} \n` */
     private val sharedCodeFormattingTemplate16 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("pragma", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashPragma),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `# if ! defined ( {{0}} ) \n # define {{0}} \n {{1}} # endif` */
+    /** ``CppToks.hashIf` `CppToks.prefixBang` defined ( {{0}} ) \n `CppToks.hashDefine` {{0}} \n {{1}} `CppToks.hashEndif`` */
     private val sharedCodeFormattingTemplate17 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("!", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashIf),
+                CodeFormattingTemplate.LiteralToken(CppToks.prefixBang),
                 CodeFormattingTemplate.LiteralToken("defined", OutputTokenType.Word),
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.NewLine,
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("define", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashDefine),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("endif", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashEndif),
             ),
         )
 
-    /** `# include < {{0}} > \n` */
+    /** ``CppToks.hashInclude` `CppToks.leftAngle` {{0}} `CppToks.rightAngle` \n` */
     private val sharedCodeFormattingTemplate18 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("include", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashInclude),
+                CodeFormattingTemplate.LiteralToken(CppToks.leftAngle),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.rightAngle),
                 CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `# include {{0}} \n` */
+    /** ``CppToks.hashInclude` {{0}} \n` */
     private val sharedCodeFormattingTemplate19 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("include", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashInclude),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
             ),
         )
 
-    /** `# if {{0}} \n {{1}} \n {{2*}} # else \n {{3}} # endif` */
+    /** ``CppToks.hashIf` {{0}} \n {{1}} \n {{2*}} `CppToks.hashElse` \n {{3}} `CppToks.hashEndif`` */
     private val sharedCodeFormattingTemplate20 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashIf),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -3521,21 +3512,18 @@ object Cpp {
                     2,
                     CodeFormattingTemplate.empty,
                 ),
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashElse),
                 CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(3),
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("endif", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashEndif),
             ),
         )
 
-    /** `# if {{0}} \n {{1}} \n {{2*}} # endif` */
+    /** ``CppToks.hashIf` {{0}} \n {{1}} \n {{2*}} `CppToks.hashEndif`` */
     private val sharedCodeFormattingTemplate21 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashIf),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -3544,8 +3532,7 @@ object Cpp {
                     2,
                     CodeFormattingTemplate.empty,
                 ),
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("endif", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashEndif),
             ),
         )
 
@@ -3553,12 +3540,11 @@ object Cpp {
     private val sharedCodeFormattingTemplate22 =
         CodeFormattingTemplate.OneSubstitution(0)
 
-    /** `# elif {{0}} \n {{1}}` */
+    /** ``CppToks.hashElif` {{0}} \n {{1}}` */
     private val sharedCodeFormattingTemplate23 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("#", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("elif", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(CppToks.hashElif),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -3649,26 +3635,26 @@ object Cpp {
             ),
         )
 
-    /** `{{0}} *` */
+    /** `{{0}} `CppToks.postfixStar`` */
     private val sharedCodeFormattingTemplate32 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("*", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.postfixStar),
             ),
         )
 
-    /** `{{0}} < {{1*,}} >` */
+    /** `{{0}} `CppToks.leftAngle` {{1*,}} `CppToks.rightAngle`` */
     private val sharedCodeFormattingTemplate33 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.leftAngle),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.rightAngle),
             ),
         )
 
@@ -3681,12 +3667,12 @@ object Cpp {
             ),
         )
 
-    /** `{{0}} : {{1}}` */
+    /** `{{0}} `CppToks.postfixColon` {{1}}` */
     private val sharedCodeFormattingTemplate35 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.postfixColon),
                 CodeFormattingTemplate.OneSubstitution(1),
             ),
         )
@@ -3730,7 +3716,7 @@ object Cpp {
             ),
         )
 
-    /** `try {{0}} catch ( const temper :: core :: TemperBubble & ) {{1}}` */
+    /** `try {{0}} catch ( const temper `CppToks.colons` core `CppToks.colons` TemperBubble `CppToks.postfixAmp` ) {{1}}` */
     private val sharedCodeFormattingTemplate40 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3740,11 +3726,11 @@ object Cpp {
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.LiteralToken("const", OutputTokenType.Word),
                 CodeFormattingTemplate.LiteralToken("temper", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.colons),
                 CodeFormattingTemplate.LiteralToken("core", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.colons),
                 CodeFormattingTemplate.LiteralToken("TemperBubble", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.postfixAmp),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(1),
             ),
@@ -3759,7 +3745,7 @@ object Cpp {
             ),
         )
 
-    /** `switch ( {{0}} ) \{ {{1*}} default : {{2}} \}` */
+    /** `switch ( {{0}} ) \{ {{1*}} default `CppToks.postfixColon` {{2}} \}` */
     private val sharedCodeFormattingTemplate42 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3773,7 +3759,7 @@ object Cpp {
                     CodeFormattingTemplate.empty,
                 ),
                 CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.postfixColon),
                 CodeFormattingTemplate.OneSubstitution(2),
                 CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
             ),
@@ -3829,13 +3815,13 @@ object Cpp {
             ),
         )
 
-    /** `case {{0}} :` */
+    /** `case {{0}} `CppToks.postfixColon`` */
     private val sharedCodeFormattingTemplate47 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.postfixColon),
             ),
         )
 
@@ -3888,7 +3874,7 @@ object Cpp {
     private val sharedCodeFormattingTemplate52 =
         CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word)
 
-    /** `[ = {{0*}} ] ( {{1*,}} ) {{2}} -> {{3}} {{4}}` */
+    /** `[ = {{0*}} ] ( {{1*,}} ) {{2}} `CppToks.returnTypeArrow` {{3}} {{4}}` */
     private val sharedCodeFormattingTemplate53 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3906,28 +3892,28 @@ object Cpp {
                 ),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.returnTypeArrow),
                 CodeFormattingTemplate.OneSubstitution(3),
                 CodeFormattingTemplate.OneSubstitution(4),
             ),
         )
 
-    /** `, & {{0}}` */
+    /** `, `CppToks.prefixAmp` {{0}}` */
     private val sharedCodeFormattingTemplate54 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.prefixAmp),
                 CodeFormattingTemplate.OneSubstitution(0),
             ),
         )
 
-    /** `{{0}} :: {{1}}` */
+    /** `{{0}} `CppToks.colons` {{1}}` */
     private val sharedCodeFormattingTemplate55 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(CppToks.colons),
                 CodeFormattingTemplate.OneSubstitution(1),
             ),
         )

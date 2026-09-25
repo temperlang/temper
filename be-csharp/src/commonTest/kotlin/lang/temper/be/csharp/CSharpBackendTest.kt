@@ -302,16 +302,16 @@ class CSharpBackendTest {
                     decls = """
                         |public class Hi<T__0>
                         |{
-                        |    readonly S::Func<T__0, T__0> ha__0;
-                        |    public Hi(S::Func<T__0, T__0> ha__1)
+                        |    readonly S::Func<T__0, T__0> ha;
+                        |    public Hi(S::Func<T__0, T__0> ha__0)
                         |    {
-                        |        this.ha__0 = ha__1;
+                        |        this.ha = ha__0;
                         |    }
                         |    public S::Func<T__0, T__0> Ha
                         |    {
                         |        get
                         |        {
-                        |            return this.ha__0;
+                        |            return this.ha;
                         |        }
                         |    }
                         |}
@@ -324,25 +324,25 @@ class CSharpBackendTest {
                     decls = """
                         |public static class TestGlobal
                         |{
-                        |    public static Hi<T__1> MakeHi<T__1>(S::Func<T__1, T__1> ha__2)
+                        |    public static Hi<T__1> MakeHi<T__1>(S::Func<T__1, T__1> ha__1)
                         |    {
-                        |        return new Hi<T__1>((S::Func<T__1, T__1>) ha__2);
+                        |        return new Hi<T__1>((S::Func<T__1, T__1>) ha__1);
                         |    }
                         |    public static Hi<int> MakeIntHi(int j__0)
                         |    {
-                        |        int fn__0(int i__0)
+                        |        int Fn(int i__0)
                         |        {
                         |            return i__0 + j__0;
                         |        }
-                        |        return MakeHi((S::Func<int, int>) fn__0);
+                        |        return MakeHi((S::Func<int, int>) Fn);
                         |    }
                         |    public static Hi<int> NewIntHi(int j__1)
                         |    {
-                        |        int fn__1(int i__1)
+                        |        int fn__0(int i__1)
                         |        {
                         |            return i__1 + j__1;
                         |        }
-                        |        return new Hi<int>((S::Func<int, int>) fn__1);
+                        |        return new Hi<int>((S::Func<int, int>) fn__0);
                         |    }
                         |}
                     """.trimMargin(),
@@ -391,7 +391,7 @@ class CSharpBackendTest {
             """.trimMargin(),
             csharp = """
                 |internal static C::ILoggingConsole console___0;
-                |internal static int calc__0()
+                |internal static int Calc()
                 |{
                 |    console___0.Log("Bye!");
                 |    return 123;
@@ -401,7 +401,7 @@ class CSharpBackendTest {
                 |{
                 |    console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
                 |    console___0.Log("Hi!");
-                |    value__0 = calc__0();
+                |    value__0 = Calc();
                 |    console___0.Log(C::Core.ConvertToString(value__0, 16));
                 |}
             """.trimMargin(),
@@ -559,7 +559,7 @@ class CSharpBackendTest {
             csharp = """
                 |public class Test
                 |{
-                |    string name__0;
+                |    string name;
                 |    public string That
                 |    {
                 |        get
@@ -569,25 +569,25 @@ class CSharpBackendTest {
                 |    }
                 |    public string Thing()
                 |    {
-                |        return this.Punctuate("Hi, " + this.name__0);
+                |        return this.Punctuate("Hi, " + this.name);
                 |    }
                 |    string Punctuate(string message__0)
                 |    {
                 |        return message__0 + "!";
                 |    }
-                |    public Test(string name__1)
+                |    public Test(string name__0)
                 |    {
-                |        this.name__0 = name__1;
+                |        this.name = name__0;
                 |    }
                 |    public string Name
                 |    {
                 |        get
                 |        {
-                |            return this.name__0;
+                |            return this.name;
                 |        }
                 |        set
                 |        {
-                |            this.name__0 = value;
+                |            this.name = value;
                 |        }
                 |    }
                 |}
@@ -609,7 +609,7 @@ class CSharpBackendTest {
             """.trimMargin(),
             csharp = """
                 |internal static C::ILoggingConsole console___0;
-                |internal static int hi__0(int ? i = null)
+                |internal static int Hi(int ? i = null)
                 |{
                 |    int i__0;
                 |    if (i == null)
@@ -634,7 +634,7 @@ class CSharpBackendTest {
                 |    {
                 |        s__0 = s!;
                 |    }
-                |    hi__0();
+                |    Hi();
                 |    return s__0 + "bug";
                 |}
                 |static TestGlobal()
@@ -684,24 +684,24 @@ class CSharpBackendTest {
         """.trimMargin(),
         csharp = """
             |internal static C::ILoggingConsole console___0;
-            |internal static void callIt__0(S1::Func<G::IEnumerable<S1::Tuple<object ?>>> f__0)
+            |internal static void CallIt(S1::Func<G::IEnumerable<S1::Tuple<object ?>>> f__0)
             |{
             |    C::Core.GeneratorNext(f__0());
             |}
-            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperfn__0()
+            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperFn()
             |{
             |    console___0.Log("foo");
             |    yield return null;
             |    console___0.Log("bar");
             |}
-            |internal static C::IGenerator<S1::Tuple<object ?>> fn__0()
+            |internal static C::IGenerator<S1::Tuple<object ?>> Fn()
             |{
-            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperfn__0);
+            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperFn);
             |}
             |static TestGlobal()
             |{
             |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
-            |    callIt__0((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) fn__0);
+            |    CallIt((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) Fn);
             |}
         """.trimMargin(),
     )
@@ -737,19 +737,19 @@ class CSharpBackendTest {
         """.trimMargin(),
         csharp = """
             |internal static C::ILoggingConsole console___0;
-            |internal static void callIt__0(S1::Func<G::IEnumerable<S1::Tuple<object ?>>> f__0)
+            |internal static void CallIt(S1::Func<G::IEnumerable<S1::Tuple<object ?>>> f__0)
             |{
             |    C::Core.GeneratorNext(f__0());
             |}
-            |internal static void mayFail__0(string s__0)
+            |internal static void MayFail(string s__0)
             |{
             |    console___0.Log(s__0);
             |}
-            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperfn__0()
+            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperFn()
             |{
             |    try
             |    {
-            |        mayFail__0("foo");
+            |        MayFail("foo");
             |    }
             |    catch
             |    {
@@ -758,7 +758,7 @@ class CSharpBackendTest {
             |    yield return null;
             |    try
             |    {
-            |        mayFail__0("bar");
+            |        MayFail("bar");
             |    }
             |    catch
             |    {
@@ -773,14 +773,14 @@ class CSharpBackendTest {
             |    {
             |    }
             |}
-            |internal static C::IGenerator<S1::Tuple<object ?>> fn__0()
+            |internal static C::IGenerator<S1::Tuple<object ?>> Fn()
             |{
-            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperfn__0);
+            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperFn);
             |}
             |static TestGlobal()
             |{
             |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
-            |    callIt__0((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) fn__0);
+            |    CallIt((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) Fn);
             |}
         """.trimMargin(),
     )
@@ -804,7 +804,7 @@ class CSharpBackendTest {
         csharp = """
             |internal static C::ILoggingConsole console___0;
             |internal static T::TaskCompletionSource<string> pb__0;
-            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperfn__0()
+            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperFn()
             |{
             |    string t___0;
             |    T::Task<string> promise___0;
@@ -835,15 +835,15 @@ class CSharpBackendTest {
             |    }
             |    console___0.Log(t___0);
             |}
-            |internal static C::IGenerator<S1::Tuple<object ?>> fn__0()
+            |internal static C::IGenerator<S1::Tuple<object ?>> Fn()
             |{
-            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperfn__0);
+            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperFn);
             |}
             |static TestGlobal()
             |{
             |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
             |    pb__0 = new T::TaskCompletionSource<string>();
-            |    C::Async.LaunchGeneratorAsync((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) fn__0);
+            |    C::Async.LaunchGeneratorAsync((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) Fn);
             |}
         """.trimMargin(),
     )
@@ -867,7 +867,7 @@ class CSharpBackendTest {
         csharp = """
             |internal static C::ILoggingConsole console___0;
             |internal static T::TaskCompletionSource<string> pb__0;
-            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperfn__0()
+            |static G::IEnumerable<S1::Tuple<object ?>> coroHelperFn()
             |{
             |    if (false)
             |    {
@@ -875,15 +875,15 @@ class CSharpBackendTest {
             |    }
             |    console___0.Log("Logged async");
             |}
-            |internal static C::IGenerator<S1::Tuple<object ?>> fn__0()
+            |internal static C::IGenerator<S1::Tuple<object ?>> Fn()
             |{
-            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperfn__0);
+            |    return C::Core.AdaptGenerator<S1::Tuple<object ?>>(coroHelperFn);
             |}
             |static TestGlobal()
             |{
             |    console___0 = S0::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
             |    pb__0 = new T::TaskCompletionSource<string>();
-            |    C::Async.LaunchGeneratorAsync((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) fn__0);
+            |    C::Async.LaunchGeneratorAsync((S1::Func<G::IEnumerable<S1::Tuple<object ?>>>) Fn);
             |}
         """.trimMargin(),
     )
@@ -952,18 +952,18 @@ class CSharpBackendTest {
         csharp = """
             |public class Test
             |{
-            |    readonly int x__0;
-            |    int y__0;
+            |    readonly int x;
+            |    int y;
             |    public int P
             |    {
             |        get
             |        {
-            |            return this.y__0 - this.x__0;
+            |            return this.y - this.x;
             |        }
             |        private set
             |        {
             |            int t___0 = value + 1;
-            |            this.y__0 = t___0;
+            |            this.y = t___0;
             |        }
             |    }
             |    public int Incr()
@@ -973,10 +973,10 @@ class CSharpBackendTest {
             |        this.P = return__0;
             |        return return__0;
             |    }
-            |    public Test(int x__1)
+            |    public Test(int x__0)
             |    {
-            |        this.x__0 = x__1;
-            |        this.y__0 = 1;
+            |        this.x = x__0;
+            |        this.y = 1;
             |    }
             |}
         """.trimMargin(),
@@ -1237,7 +1237,7 @@ class CSharpBackendTest {
                     |public static class TestGlobal
                     |{
                     |    internal static C::ILoggingConsole console___0;
-                    |    internal static void logStringOrNot__0(string ? s__0)
+                    |    internal static void LogStringOrNot(string ? s__0)
                     |    {
                     |        string t___0;
                     |        string ? t__0 = C::Optional.OrNull<string>(new Identity<string>().Identity_(C::Optional.Of<string>(s__0)));
@@ -1254,7 +1254,7 @@ class CSharpBackendTest {
                     |    static TestGlobal()
                     |    {
                     |        console___0 = S::Logging.LoggingConsoleFactory.CreateConsole("MyTestLibrary.Test");
-                    |        logStringOrNot__0("Hello, World!");
+                    |        LogStringOrNot("Hello, World!");
                     |    }
                     |}
                 """.trimMargin(),
@@ -1462,7 +1462,7 @@ class CSharpBackendTest {
             |                  public class TestTests
             |                  {
             |                      [U::TestMethod]
-            |                      public void customTestName__0()
+            |                      public void CustomTestName()
             |                      {
             |## TODO: Could we make this Test instance into a U.TestContext object that is
             |## stored globally and create it in a [TestInitialize] Setup() method?
@@ -1471,11 +1471,11 @@ class CSharpBackendTest {
             |                          T::Test test___0 = new T::Test();
             |                          try
             |                          {
-            |                              string fn__0()
+            |                              string Fn()
             |                              {
             |                                  return "expected true";
             |                              }
-            |                              test___0.Assert(true, (S::Func<string>) fn__0);
+            |                              test___0.Assert(true, (S::Func<string>) Fn);
             |                          }
             |                          finally
             |                          {

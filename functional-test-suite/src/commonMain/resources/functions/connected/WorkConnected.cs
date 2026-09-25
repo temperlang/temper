@@ -4,7 +4,7 @@ namespace Work
     {
         internal static int Sum(int i, int j, int bonus)
         {
-            return i + j + bonus;
+            return WorkGlobal.SumOf3(i, j, bonus);
         }
 
         internal static int Prod(Hidden hidden, int j)

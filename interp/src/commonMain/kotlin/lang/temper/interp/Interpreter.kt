@@ -1821,6 +1821,7 @@ class Interpreter(
             goingOutOfStyle -> true
             (stageRange != null && stage in stageRange) -> true
             // Produce exports
+            stage == Stage.Export -> true
             stage == Stage.GenerateCode -> true
             else -> false
         }
