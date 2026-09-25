@@ -12,6 +12,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.fs.KCharsets
 import lang.temper.fs.ResourceDescriptor
@@ -197,6 +198,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 ).also { add(it) }
             }
             // Proj.
+            val csharpConfig = CSharpLibraryConfig(libraryConfig)
             val rootNamespaceByName = names.rootNamespaces.associate { it.first.libraryName.text to it.second }
             val proj = CsProj(
                 authors = libraryConfig.authors(),
@@ -206,7 +208,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 packageProjectUrl = libraryConfig.repository(),
                 packageReferences = when {
                     isStd -> listOf(PackageReference.microsoftNetTestSdk, PackageReference.msTestTestFramework)
-                    else -> listOf()
+                    else -> csharpConfig.dependencies()
                 },
                 projectReferences = buildList {
                     // Use relative references because they'll be transformed to global ones when packed for nuget.
@@ -375,6 +377,8 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 filePath("StringUtil.cs"),
                 filePath("TemperLang.Core.csproj"),
             )
+
+        override val configBindingsInjector: BindingsInjector = CSharpConfigInjector
 
         override fun make(setup: BackendSetup<CSharpBackend>): Backend<CSharpBackend> = CSharpBackend(setup)
     }

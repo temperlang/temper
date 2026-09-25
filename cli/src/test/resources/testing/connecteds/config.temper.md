@@ -8,6 +8,13 @@ Test extra things about user-space connecteds here.
 
 In particular, verify that we can pull in and use dependencies.
 
+    export let csharp = {
+      class: CSharpConfig,
+      dependencies: [
+        "Roaring.Net:1.4.1",
+      ],
+    };
+
     export let java = {
       class: JavaConfig,
       dependencies: [

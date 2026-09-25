@@ -1,5 +1,6 @@
 package lang.temper.library
 
+import lang.temper.common.console
 import lang.temper.fs.FileSystem
 import lang.temper.lexer.LanguageConfig
 import lang.temper.log.CodeLocationKey
@@ -8,8 +9,12 @@ import lang.temper.log.FilePathSegment
 import lang.temper.log.plus
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
+import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
+import lang.temper.name.SourceName
 import lang.temper.name.Symbol
+import lang.temper.value.InstancePropertyRecord
+import lang.temper.value.TClass
 import lang.temper.value.TString
 import lang.temper.value.Value
 
@@ -42,6 +47,27 @@ class LibraryConfiguration(
         classifyTemperSource = classifyTemperSource,
         configExports = configExports,
     )
+
+    fun extractProperties(configKey: String, className: String): Map<String, Value<*>>? {
+        return configExports[Symbol(configKey)]?.let value@{ value ->
+            // Check that we have a class instance.
+            val typeShape = (value.typeTag as? TClass)?.typeShape ?: run {
+                // TODO Provide a LogSink to backends?
+                console.error("Expected class instance for $configKey config")
+                return@value null
+            }
+            // Check the type name.
+            // We currently generate within the context of the config module, so the origin isn't special.
+            (typeShape.name as? ExportedName)?.baseName?.nameText == className || run {
+                console.error("Expected config class $className, not ${typeShape.name}")
+                return@value null
+            }
+            // Good enough for now. Extract a pretty map.
+            (value.stateVector as InstancePropertyRecord).properties.map { instance ->
+                (instance.key as SourceName).baseName.nameText to instance.value
+            }.toMap()
+        }
+    }
 }
 
 /**

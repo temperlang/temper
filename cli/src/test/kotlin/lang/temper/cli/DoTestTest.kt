@@ -108,6 +108,17 @@ class DoTestTest {
 
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsCSharp() {
+        checkPassing(
+            name = "ConnectedsCSharp",
+            path = "/testing/connecteds",
+            backends = listOf(CSharpBackend.Factory.backendId),
+            libraryName = DashedIdentifier("connecteds"),
+        )
+    }
+
+    @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testActualErrorJava17Backend() = runWithCopyOfTestingDir(
         "TestActualErrorJava17Backend",
         "/testing/actual-error",
@@ -136,7 +147,12 @@ class DoTestTest {
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun connectedsJava17() {
-        checkPassing("ConnectedsJava17", "/testing/connecteds", listOf(JavaBackend.Java17.backendId))
+        checkPassing(
+            name = "ConnectedsJava17",
+            path = "/testing/connecteds",
+            backends = listOf(JavaBackend.Java17.backendId),
+            libraryName = null,
+        )
     }
 
     @Test

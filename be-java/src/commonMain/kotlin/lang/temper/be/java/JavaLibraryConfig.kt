@@ -14,16 +14,13 @@ import lang.temper.library.versionOrDefault
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
 import lang.temper.log.LogSink
-import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
-import lang.temper.name.SourceName
 import lang.temper.name.Symbol
 import lang.temper.value.BlockTree
-import lang.temper.value.InstancePropertyRecord
-import lang.temper.value.TClass
 import lang.temper.value.TList
 import lang.temper.value.TString
 import lang.temper.value.Value
+import kotlin.reflect.full.primaryConstructor
 
 open class JavaLibraryConfigs(
     val base: LibraryConfigurations,
@@ -80,24 +77,10 @@ class JavaLibraryConfig(
     val libraryName: String get() = base.backendLibraryName(JavaConfigKeys.libraryNameGlobal)
     val libraryRoot: FilePath get() = base.libraryRoot
 
-    private val properties = base.configExports[Symbol(JavaConfigKeys.CONFIG)]?.let value@{ value ->
-        // Check that we have a class instance.
-        val typeShape = (value.typeTag as? TClass)?.typeShape ?: run {
-            // TODO Provide a LogSink to backends?
-            console.error("Expected class instance for ${JavaConfigKeys.CONFIG} config")
-            return@value null
-        }
-        // Check the type name.
-        // We currently generate within the context of the config module, so the origin isn't special.
-        (typeShape.name as? ExportedName)?.baseName?.nameText == JavaConfigKeys.CONFIG_CLASS_NAME || run {
-            console.error("Expected config class ${JavaConfigKeys.CONFIG_CLASS_NAME}, not ${typeShape.name}")
-            return@value null
-        }
-        // Good enough for now. Extract a pretty map.
-        (value.stateVector as InstancePropertyRecord).properties.map { instance ->
-            (instance.key as SourceName).baseName.nameText to instance.value
-        }.toMap()
-    }
+    private val properties = base.extractProperties(
+        configKey = JavaConfigKeys.CONFIG,
+        className = JavaConfigKeys.CONFIG_CLASS_NAME,
+    )
 
     private fun cfg(propertyName: String, globalSymbol: Symbol) =
         TString.unpackOrNull(properties?.get(propertyName) ?: base.configExports[globalSymbol])
@@ -121,7 +104,12 @@ class JavaLibraryConfig(
         ) ?: return@lazy emptyList()
         deps.mapNotNull dep@{ depValue ->
             val dependencyText = TString.unpackOrNull(depValue) ?: return@dep null
-            val (groupId, artifactId, version) = dependencyText.trim().split(":")
+            val parts = dependencyText.trim().split(":")
+            parts.size == Artifact::class.primaryConstructor!!.parameters.size || run {
+                console.error("""Expected "group:artifact:version", not $dependencyText""")
+                return@dep null
+            }
+            val (groupId, artifactId, version) = parts
             val artifact = Artifact(groupId, artifactId, version)
             // For javaDependencies, treat all as main. Factor logic if we make a javaTestDependencies later.
             Dependency(Java.SourceDirectory.MainJava, artifact)
