@@ -31,7 +31,6 @@ import lang.temper.type.NominalType
 import lang.temper.type.OrType
 import lang.temper.type.StaticType
 import lang.temper.type.TopType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypePartMapper
@@ -214,7 +213,7 @@ internal class TypeChecker(
                     while (type.definition == WellKnownTypes.neverTypeDefinition) {
                         type = type.bindings.getOrNull(0) ?: WellKnownTypes.emptyType2
                     }
-                    if (type.definition == WellKnownTypes.voidType2) {
+                    if (type.definition == WellKnownTypes.voidTypeDefinition) {
                         reportBadVoid(kid.pos)
                     }
                 }
@@ -457,7 +456,6 @@ internal class TypeChecker(
                         return t
                     }
 
-                    override fun mapBinding(b: TypeActual): TypeActual = b
                     override fun mapDefinition(d: TypeDefinition) = d
                 },
             )
@@ -570,7 +568,6 @@ internal class TypeChecker(
                                     } else {
                                         t
                                     }
-                                override fun mapBinding(b: TypeActual): TypeActual = b
                                 override fun mapDefinition(d: TypeDefinition): TypeDefinition = d
                             },
                         )

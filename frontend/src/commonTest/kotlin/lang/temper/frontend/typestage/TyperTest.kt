@@ -1472,8 +1472,8 @@ class TyperTest {
         |    }
         """.trimMargin(),
         wantErrors = listOf(
+            // TODO: all these error messages suck.
             "2+23-35: No member toString in AnyValue!",
-            "2+23-35: Cannot assign to String? from Invalid!",
             "2+23: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",

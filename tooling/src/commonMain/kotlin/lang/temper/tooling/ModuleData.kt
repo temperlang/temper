@@ -26,7 +26,7 @@ import lang.temper.name.NameOutputToken
 import lang.temper.type.FunctionType
 import lang.temper.type.MethodKind
 import lang.temper.type.NominalType
-import lang.temper.type.TypeActual
+import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.value.TemperFormattingHints
 import kotlin.math.min
@@ -153,7 +153,7 @@ class ModuleData {
                 val type = typeActual?.let { makePrettyTypeName(it) }
                 val kind = when (def.tree.value) {
                     // TODO(tjp, tooling): Distinguish kinds of types?
-                    is TypeActual -> when (typeActual) {
+                    is StaticType -> when (typeActual) {
                         is FunctionType -> DeclKind.Constructor
                         else -> DeclKind.Class
                     }
@@ -216,7 +216,7 @@ class ModuleData {
         typeDecls.clear()
         for (tree in trees) {
             for (pair in tree.recurseWithParents()) {
-                if (pair.tree.isDef && pair.parent?.kind == TreeKind.Decl && pair.tree.value is TypeActual) {
+                if (pair.tree.isDef && pair.parent?.kind == TreeKind.Decl && pair.tree.value is StaticType) {
                     findTypeName(pair.tree.value)?.let { typeName ->
                         // TODO(tjp, tooling): Assert previously missing in typeDecls?
                         typeDecls[typeName] = ToolType.fromTree(pair.parent)
@@ -228,7 +228,7 @@ class ModuleData {
         finishedFlow.value = true
     }
 
-    private fun makeMemberLookup(mention: Mention, typeActual: TypeActual): MemberLookup? {
+    private fun makeMemberLookup(mention: Mention, typeActual: StaticType): MemberLookup? {
         val typeName = findTypeName(typeActual)
         return typeDecls[typeName]?.let { type ->
             MemberLookup(mention = mention, name = mention.text, type = type)
@@ -262,7 +262,7 @@ class ModuleData {
         return DirectLookup(mention = mention, name = argName)
     }
 
-    private fun makeNewCallArgLookup(mention: Mention, typeActual: TypeActual): Lookup? {
+    private fun makeNewCallArgLookup(mention: Mention, typeActual: StaticType): Lookup? {
         val methods = ((typeActual as? NominalType)?.definition as? TypeShape)?.methods ?: emptyList()
         val constructors = methods.filter { it.methodKind == MethodKind.Constructor }
         // TODO Once we're overloading, we'll need someone to tell us which constructor to use.
@@ -336,7 +336,7 @@ enum class DeclKind {
 data class ToolType(
     val defName: String?,
     val members: Map<String, Def>,
-    val type: TypeActual?,
+    val type: StaticType?,
     // Potentially useful values that aren't currently used. Examples exist below on how to fill such things in.
     // Consider also uncommenting some if it helps for context when debugging.
     // val tree: ToolTree,
@@ -346,7 +346,7 @@ data class ToolType(
     companion object {
         fun fromTree(tree: ToolTree): ToolType {
             var defName: String? = null
-            var type: TypeActual? = null
+            var type: StaticType? = null
             // var typeNameText = ""
             val members = mutableMapOf<String, Def>()
             fun processDeclKids(declKids: List<ToolTree>) {
@@ -370,7 +370,7 @@ data class ToolType(
                     TreeKind.LeftName -> {
                         // typeNameText = kid.text!!
                         defName = kid.name!!
-                        type = kid.value as? TypeActual
+                        type = kid.value as? StaticType
                     }
                     TreeKind.Fun -> {
                         // Non-constructor members appear here.
@@ -394,12 +394,12 @@ data class ToolType(
     }
 }
 
-private fun findTypeName(type: TypeActual): String? = when (type) {
+private fun findTypeName(type: StaticType): String? = when (type) {
     is NominalType -> type.definition.name.rawDiagnostic
     else -> null
 }
 
-private fun makePrettyTypeName(type: TypeActual) = toStringViaTextOutput { textOutput ->
+private fun makePrettyTypeName(type: StaticType) = toStringViaTextOutput { textOutput ->
     WrappedTokenSink(
         TemperFormattingHints.makeFormattingTokenSink(
             TextOutputTokenSink(textOutput),
@@ -440,9 +440,9 @@ private fun findMention(
     offset: Int,
     tree: ToolTree,
     parent: ToolTree? = null,
-    boxType: TypeActual? = null,
+    boxType: StaticType? = null,
     callee: ToolTree? = null,
-    newType: TypeActual? = null,
+    newType: StaticType? = null,
 ): MentionContext? = when {
     tree.isMention -> when {
         parent?.isDot == true && parent.kids[0] !== tree ->
@@ -471,7 +471,7 @@ private fun findMention(
     }
     else -> {
         val boxTypeNow = when {
-            tree.isClass -> tree.kids.mapFirst { it.value as? TypeActual }
+            tree.isClass -> tree.kids.mapFirst { it.value as? StaticType }
             else -> null
         } ?: boxType
         val newTypeNow = when {
@@ -520,7 +520,7 @@ class ThisLookup(val mention: Mention, val name: String, val type: ToolType) : L
 sealed class MentionContext(
     open val mention: Mention?,
     open val parent: ToolTree?,
-    open val boxType: TypeActual? = null,
+    open val boxType: StaticType? = null,
 )
 
 /** Call to the function indicated by [parent], which actually isn't the parent for this case. */
@@ -537,12 +537,12 @@ sealed class DirectMentionContext(
     mention: Mention,
     parent: ToolTree?,
     /** Helps track context of being inside a class definition. */
-    boxType: TypeActual? = null,
+    boxType: StaticType? = null,
 ) : MentionContext(mention = mention, parent = parent, boxType = boxType) {
     override val mention: Mention get() = super.mention!!
 }
 
-class DefMentionContext(mention: Mention, parent: ToolTree?, boxType: TypeActual? = null) :
+class DefMentionContext(mention: Mention, parent: ToolTree?, boxType: StaticType? = null) :
     DirectMentionContext(mention = mention, parent = parent, boxType = boxType)
 
 class RefMentionContext(mention: Mention, parent: ToolTree?) : DirectMentionContext(mention = mention, parent = parent)
@@ -572,10 +572,10 @@ class MemberMentionContext(
 class NewCallMentionContext(
     mention: Mention,
     parent: ToolTree? = null,
-    boxType: TypeActual,
+    boxType: StaticType,
 ) : MentionContext(mention = mention, parent = parent, boxType = boxType) {
     override val mention: Mention get() = super.mention!!
-    override val boxType: TypeActual get() = super.boxType!!
+    override val boxType: StaticType get() = super.boxType!!
 }
 
 /** Indicates being inside textual content such as strings or comments where mentions don't usually apply. */

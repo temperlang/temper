@@ -12,7 +12,6 @@ import lang.temper.type.NominalType
 import lang.temper.type.OrType
 import lang.temper.type.StaticType
 import lang.temper.type.TopType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -188,7 +187,7 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
             check(t is NominalType) { "$t" }
             when (val d = t.definition) {
                 is TypeShape -> MkType2(d)
-                    .actuals(t.bindings.map { hackMapOldStyleToNew(it as StaticType) })
+                    .actuals(t.bindings.map { hackMapOldStyleToNew(it) })
                     .position(pos)
                     .get()
                 is TypeFormal -> MkType2(d).position(pos).get()
@@ -281,12 +280,10 @@ fun hackTryStaticTypeToSig(st: StaticType?): Signature2? {
     )
 }
 
-fun hackMapOldStyleActualsToNew(
-    ob: Map<TypeFormal, TypeActual>,
-): Map<TypeFormal, Type2> {
+fun hackMapOldStyleActualsToNew(ob: Map<TypeFormal, StaticType>): Map<TypeFormal, Type2> {
     return buildMap {
         for ((tf, v) in ob) {
-            this[tf] = hackMapOldStyleToNew(v as StaticType)
+            this[tf] = hackMapOldStyleToNew(v)
         }
     }
 }

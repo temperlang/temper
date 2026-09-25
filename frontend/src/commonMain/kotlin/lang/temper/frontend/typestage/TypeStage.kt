@@ -325,4 +325,4 @@ private fun isSimpleSubtype(
     sup: DefinedNonNullType,
     typeContext2: TypeContext2,
 ): Boolean =
-    typeContext2.superTypeTreeOf(sup)[sub.definition].isNotEmpty()
+    typeContext2.superTypeTreeOf(sub)[sup.definition].isNotEmpty()

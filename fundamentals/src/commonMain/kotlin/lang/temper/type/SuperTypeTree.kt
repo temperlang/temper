@@ -49,7 +49,7 @@ sealed class SuperTypeTree(
             val defn = t.definition
             val formals = t.definition.formals
             val indices = intersect(t.bindings.indices, formals.indices)
-            val formalNameToBinding: Map<ResolvedName, TypeActual> = indices.associate {
+            val formalNameToBinding: Map<ResolvedName, StaticType> = indices.associate {
                 formals[it].name to t.bindings[it]
             }
             val mapper = TypeBindingMapper(formalNameToBinding)

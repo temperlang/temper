@@ -74,7 +74,6 @@ import lang.temper.type.StaticPropertyShape
 import lang.temper.type.StaticType
 import lang.temper.type.SuperTypeTree
 import lang.temper.type.TopType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeBindingMapper
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeFormal
@@ -267,7 +266,7 @@ internal class Typer(
         // intermediate step towards dealing with only new style info.
         private val types: Pair<Lazy<StaticType>, Lazy<Type2>>,
         private val variants: Pair<Lazy<FunctionType>, Lazy<Signature2>>?,
-        private val bindingMaps: Pair<Lazy<Map<TypeFormal, TypeActual>>, Lazy<Map<TypeFormal, Type2>>>?,
+        private val bindingMaps: Pair<Lazy<Map<TypeFormal, StaticType>>, Lazy<Map<TypeFormal, Type2>>>?,
         val explanations: List<TypeReasonElement>,
     ) {
         val type: StaticType get() = types.first.value
@@ -276,7 +275,7 @@ internal class Typer(
         val variant: FunctionType? get() = variants?.first?.value
         val variant2: Signature2? get() = variants?.second?.value
 
-        val bindings: Map<TypeFormal, TypeActual>? get() = bindingMaps?.first?.value
+        val bindings: Map<TypeFormal, StaticType>? get() = bindingMaps?.first?.value
         val bindings2: Map<TypeFormal, Type2>? get() = bindingMaps?.second?.value
 
         override fun toString(): String = buildString {
@@ -319,7 +318,7 @@ internal class Typer(
         constructor(
             type: StaticType,
             variant: FunctionType? = null,
-            bindings: Map<TypeFormal, TypeActual>? = null,
+            bindings: Map<TypeFormal, StaticType>? = null,
             explanations: List<TypeReasonElement> = listOf(),
         ) : this(
             types = Pair(lazyOf(type), lazy { hackMapOldStyleToNew(type) }),
@@ -926,12 +925,10 @@ internal class Typer(
                 val nominalType = reifiedType?.type as? NominalType
                 val probablyHasExplicitTypeActuals = nominalType != null &&
                     nominalType.bindings.size == nominalType.definition.formals.size &&
-                    // `new Foo<*>()` is illegal.  You can't put a wildcard in a `new` expression.
-                    nominalType.bindings.all { it is StaticType } &&
                     reifiedType.hasExplicitActuals
                 if (probablyHasExplicitTypeActuals) {
                     val calleeRight = effectiveCallee.pos.rightEdge
-                    nominalType.bindings.map { (it as StaticType) to calleeRight }
+                    nominalType.bindings.map { it to calleeRight }
                 } else {
                     null
                 }
@@ -1083,7 +1080,7 @@ internal class Typer(
                         val formal = sig.valueFormalForActual(argIndex)?.type
                         if (formal != null) {
                             return formal.mapType(
-                                decision.bindings?.mapValues { (_, a) -> hackMapOldStyleToNew(a as StaticType) }
+                                decision.bindings?.mapValues { (_, a) -> hackMapOldStyleToNew(a) }
                                     ?: mapOf(),
                             )
                         }
@@ -1605,7 +1602,7 @@ internal class Typer(
     /**
      * Per the intertwined call comment in [TyperPlan], checks whether a call should be typed late.
      *
-     * @return null if not eligible.  If eligible, a pair with the variants that require
+     * @return null if not eligible.  If eligible, a pair with the variants which require
      *     intertwining, and those that don't.
      */
     private fun checkNeedToLateTypeCall(

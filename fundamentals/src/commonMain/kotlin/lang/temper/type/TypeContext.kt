@@ -391,8 +391,6 @@ class TypeContext {
             object : TypePartMapper {
                 override fun mapType(t: StaticType): StaticType = t
 
-                override fun mapBinding(b: TypeActual): TypeActual = b
-
                 override fun mapDefinition(d: TypeDefinition): TypeDefinition =
                     compatibleTypeFormalMap[d] ?: d
             },
@@ -408,28 +406,20 @@ class TypeContext {
      *     That assumption is checked separately.
      */
     private fun isSubBinding(
-        b: TypeActual,
-        c: TypeActual,
+        b: StaticType,
+        c: StaticType,
         formalIndex: Int,
         typeDef: TypeDefinition,
     ): Boolean {
         if (b == c) { // Handles value bindings
             return true
         }
-        if (b is StaticType && c is StaticType) {
-            val formal = typeDef.formals[formalIndex]
-            return when (formal.variance) {
-                Variance.Invariant -> false // b != c above
-                Variance.Covariant -> isSubType(b, c)
-                Variance.Contravariant -> isSubType(c, b)
-            }
+        val formal = typeDef.formals[formalIndex]
+        return when (formal.variance) {
+            Variance.Invariant -> false // b != c above
+            Variance.Covariant -> isSubType(b, c)
+            Variance.Contravariant -> isSubType(c, b)
         }
-        if (c is Wildcard) {
-            // We don't need to perform bound checks because we separately check whether actual
-            // bindings are compatible with formals.
-            return true
-        }
-        return false
     }
 
     /**
@@ -466,10 +456,7 @@ class TypeContext {
             is NominalType -> MkType.nominal(
                 type.definition,
                 bindings = type.bindings.map { actual ->
-                    when (actual) {
-                        is StaticType -> simplifyOrTypes(actual)
-                        else -> actual
-                    }
+                    simplifyOrTypes(actual)
                 },
             )
 

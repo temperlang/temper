@@ -17,7 +17,7 @@ import lang.temper.name.BuiltinName
 import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.SourceName
-import lang.temper.type.TypeActual
+import lang.temper.type.StaticType
 import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
@@ -60,7 +60,7 @@ data class ToolTree(
     /** Ideally represents original text such as variable base names, though this is sometimes lost in parsing. */
     val text: String? = null,
     /** The static type of this node. */
-    val type: TypeActual? = null,
+    val type: StaticType? = null,
     /** Used for some value leaves. */
     val value: Any? = null,
 ) : Structured {
@@ -553,14 +553,14 @@ data class TypeInfo(
     /** The kind of tree node. */
     val treeType: TreeType,
     /** The expression type of this node. */
-    val type: TypeActual?,
+    val type: StaticType?,
     /** The type being declared. */
-    val typeDecl: TypeActual? = null,
+    val typeDecl: StaticType? = null,
 )
 
 /** Upgrade nodes with type information. */
 fun correlateTypes(tree: ToolTree, infoMap: Map<Position, List<TypeInfo>>): ToolTree {
-    var type: TypeActual? = null
+    var type: StaticType? = null
     var value = tree.value
     when (tree.kind) {
         // Just grab specific tree types for now. After all stages, conflicting types overlay the same source range.

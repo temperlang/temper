@@ -25,9 +25,13 @@ import lang.temper.name.ResolvedNameMaker
 import lang.temper.name.ResolvedParsedName
 import lang.temper.name.Symbol
 import lang.temper.parser.parse
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.MkType2
+import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.withNullity
 import lang.temper.value.Document
 import lang.temper.value.StayLeaf
 import lang.temper.value.Tree
@@ -184,21 +188,123 @@ class TypeTestHarness(
     ): StaticType = type(
         cst = toCst(codeFragment),
         extraDefinitions = extraDefinitions,
+        factory = StaticTypeFactory,
     )
 
-    private fun type(
+    fun type2(
+        codeFragment: String,
+        extraDefinitions: List<TypeDefinition> = emptyList(),
+    ) = type2(
+        codeFragment,
+        extraDefinitions = ExtraDefinitions.from(extraDefinitions),
+    )
+
+    fun type2(
+        codeFragment: String,
+        extraDefinitions: ExtraDefinitions,
+    ) = type(
+        toCst(codeFragment),
+        extraDefinitions = extraDefinitions,
+        factory = Type2Factory,
+    )
+
+    private interface Factory<TYP> {
+        fun top(): TYP
+        fun invalid(): TYP
+        fun bubble(): TYP
+        fun never(): TYP
+        fun make(defn: TypeDefinition, bindings: List<TYP>): TYP
+        fun or(members: List<TYP>): TYP
+        fun and(members: List<TYP>): TYP
+        fun throws(pass: TYP, fail: List<TYP>): TYP
+        fun nullable(typ: TYP): TYP
+        fun fn(typeFormals: List<TypeFormal>, inps: List<ValueFormal<TYP>>, ret: TYP): TYP
+    }
+
+    private object StaticTypeFactory : Factory<StaticType> {
+        override fun top() = TopType
+        override fun invalid() = InvalidType
+        override fun bubble() = BubbleType
+        override fun never() = OrType.emptyOrType
+        override fun make(defn: TypeDefinition, bindings: List<StaticType>) =
+            MkType.nominal(defn, bindings)
+        override fun or(members: List<StaticType>) = MkType.or(members)
+        override fun and(members: List<StaticType>) = MkType.and(members)
+        override fun throws(pass: StaticType, fail: List<StaticType>) =
+            MkType.or(listOf(pass, BubbleType))
+        override fun nullable(typ: StaticType) = MkType.nullable(typ)
+        override fun fn(
+            typeFormals: List<TypeFormal>,
+            inps: List<ValueFormal<StaticType>>,
+            ret: StaticType,
+        ) = MkType.fnDetails(
+            typeFormals,
+            inps.map { FunctionType.ValueFormal(it.symbol, it.typ, it.isOptional) },
+            ret,
+        )
+    }
+
+    private object Type2Factory : Factory<Type2> {
+        override fun top() = WellKnownTypes.anyValueOrNullType2
+        override fun invalid() = WellKnownTypes.invalidType2
+        override fun bubble() = WellKnownTypes.bubbleType2
+        override fun never() = MkType2(WellKnownTypes.neverTypeDefinition).get()
+        override fun make(
+            defn: TypeDefinition,
+            bindings: List<Type2>,
+        ) = when (defn) {
+            is TypeFormal -> {
+                check(bindings.isEmpty())
+                MkType2(defn).get()
+            }
+            is TypeShape -> MkType2(defn).actuals(bindings).get()
+        }
+        override fun or(members: List<Type2>) = error("OrType($members)")
+        override fun and(members: List<Type2>) = error("AndType($members)")
+        override fun throws(pass: Type2, fail: List<Type2>) =
+            MkType2.result(listOf(pass) + fail).get()
+        override fun nullable(typ: Type2): Type2 = typ.withNullity(Nullity.OrNull)
+        override fun fn(
+            typeFormals: List<TypeFormal>,
+            inps: List<ValueFormal<Type2>>,
+            ret: Type2,
+        ): Type2 {
+            val req = mutableListOf<Type2>()
+            val opt = mutableListOf<Type2>()
+            for (inp in inps) {
+                if (inp.isOptional) {
+                    opt.add(inp.typ)
+                } else {
+                    check(opt.isEmpty())
+                    req.add(inp.typ)
+                }
+            }
+            return AdHocArrowTypes.definedTypeForSig(
+                Signature2(
+                    returnType2 = ret,
+                    hasThisFormal = inps.firstOrNull()?.symbol?.text == "this",
+                    requiredInputTypes = req.toList(),
+                    optionalInputTypes = opt.toList(),
+                    typeFormals = typeFormals,
+                ),
+            )
+        }
+    }
+
+    private fun <TYP> type(
         cst: ConcreteSyntaxTree,
         extraDefinitions: ExtraDefinitions,
-        bindings: List<TypeActual> = emptyList(),
-    ): StaticType {
+        bindings: List<TYP> = emptyList(),
+        factory: Factory<TYP>,
+    ): TYP {
         if (cst.operator == Operator.Leaf && cst.childCount == 1) {
             val nameText = cst.child(0).tokenText!!
             if (bindings.isEmpty()) {
                 when (nameText) {
-                    OutToks.topWord.text -> return TopType
-                    OutToks.invalidWord.text -> return InvalidType
-                    OutToks.bubbleWord.text -> return BubbleType
-                    OutToks.neverWord.text -> return OrType.emptyOrType
+                    OutToks.topWord.text -> return factory.top()
+                    OutToks.invalidWord.text -> return factory.invalid()
+                    OutToks.bubbleWord.text -> return factory.bubble()
+                    OutToks.neverWord.text -> return factory.never()
                     else -> Unit
                 }
             }
@@ -206,33 +312,29 @@ class TypeTestHarness(
             val definition = extraDefinitions.findDefinition(nameText)
                 ?: definitionsByNameText[nameText]
             check(definition != null) { "$nameText !in ${definitionsByNameText.keys}" }
-            return MkType.nominal(definition, bindings)
+            return factory.make(definition, bindings)
         }
         if (
             cst.operator == Operator.Angle && cst.childCount == 4 &&
             cst.child(1).tokenText == "<" && cst.child(cst.childCount - 1).tokenText == ">"
         ) {
-            val bindingsList = mutableListOf<TypeActual>()
+            val bindingsList = mutableListOf<TYP>()
             forEachAngleBracketed(cst) { bracketed ->
                 bindingsList.add(
-                    if (bracketed.operator == Operator.PreStar && bracketed.childCount == 1) {
-                        Wildcard
-                    } else {
-                        type(bracketed, extraDefinitions)
-                    },
+                    type(bracketed, extraDefinitions, factory = factory),
                 )
             }
-            return type(cst.child(0), extraDefinitions, bindingsList.toList())
+            return type(cst.child(0), extraDefinitions, bindingsList.toList(), factory)
         }
 
         if (cst.operator == Operator.Bar && bindings.isEmpty()) {
-            return MkType.or(
+            return factory.or(
                 (0 until cst.childCount).mapNotNull { i ->
                     val c = cst.child(i)
                     if (c.tokenText == "|") {
                         null
                     } else {
-                        type(c, extraDefinitions)
+                        type(c, extraDefinitions, factory = factory)
                     }
                 },
             )
@@ -243,19 +345,19 @@ class TypeTestHarness(
                 if (c.tokenText == "|" || c.tokenText == "throws") {
                     null
                 } else {
-                    type(c, extraDefinitions)
+                    type(c, extraDefinitions, factory = factory)
                 }
             }
-            return MkType.or(types[0], BubbleType)
+            return factory.throws(types[0], types.subList(1, types.size))
         }
         if (cst.operator == Operator.Amp && bindings.isEmpty()) {
-            return MkType.and(
+            return factory.and(
                 (0 until cst.childCount).mapNotNull { i ->
                     val c = cst.child(i)
                     if (c.tokenText == "&") {
                         null
                     } else {
-                        type(c, extraDefinitions)
+                        type(c, extraDefinitions, factory = factory)
                     }
                 },
             )
@@ -266,7 +368,7 @@ class TypeTestHarness(
             cst.child(1).tokenText == "?"
         ) {
             val operand = cst.child(0)
-            return MkType.nullable(type(operand, extraDefinitions))
+            return factory.nullable(type(operand, extraDefinitions, factory = factory))
         }
 
         if ( // fn (...): ...
@@ -291,7 +393,7 @@ class TypeTestHarness(
                 }
 
                 if (left0.childCount == 1 && left0.child(0).tokenText == "fn") {
-                    val valueFormals = mutableListOf<FunctionType.ValueFormal>()
+                    val valueFormals = mutableListOf<ValueFormal<TYP>>()
                     val valueFormalsTree = if (left.childCount == 4) {
                         left.child(2)
                     } else {
@@ -303,11 +405,11 @@ class TypeTestHarness(
                     )
                     if (valueFormalsTree != null) {
                         forEachCommaSeparated(valueFormalsTree) {
-                            valueFormals.add(valueFormal(it, allExtraDefinitions))
+                            valueFormals.add(valueFormal(it, allExtraDefinitions, factory))
                         }
                     }
-                    val returnType = type(returnTypeTree, allExtraDefinitions)
-                    return MkType.fnDetails(
+                    val returnType = type(returnTypeTree, allExtraDefinitions, factory = factory)
+                    return factory.fn(
                         typeFormals.toList(),
                         valueFormals.toList(),
                         returnType,
@@ -317,13 +419,23 @@ class TypeTestHarness(
         }
 
         if (cst.operator == Operator.ParenGroup && cst.childCount == 3 && bindings.isEmpty()) {
-            return type(cst.child(1), extraDefinitions)
+            return type(cst.child(1), extraDefinitions, factory = factory)
         }
 
         TODO("${FormattingStructureSink.toJsonString(cst)} $extraDefinitions")
     }
 
-    private fun valueFormal(cst: ConcreteSyntaxTree, extraDefinitions: ExtraDefinitions): FunctionType.ValueFormal {
+    private data class ValueFormal<TYP>(
+        val symbol: Symbol?,
+        val typ: TYP,
+        val isOptional: Boolean,
+    )
+
+    private fun <TYP> valueFormal(
+        cst: ConcreteSyntaxTree,
+        extraDefinitions: ExtraDefinitions,
+        factory: Factory<TYP>,
+    ): ValueFormal<TYP> {
         var tCst = cst
         var isOptional = false
         var symbol: Symbol? = null
@@ -350,7 +462,7 @@ class TypeTestHarness(
                 symbol = Symbol(nameText)
             }
         }
-        return FunctionType.ValueFormal(symbol, type(tCst, extraDefinitions), isOptional = isOptional)
+        return ValueFormal(symbol, type(tCst, extraDefinitions, factory = factory), isOptional = isOptional)
     }
 
     private fun processTypeDefinition(cst: ConcreteSyntaxTree): TypeShapeImpl? {
@@ -422,7 +534,11 @@ class TypeTestHarness(
             val typeShape = processTypeDefinition(cst.child(0))!!
             forEachExtended(cst) { extended ->
                 typeShape.superTypes.add(
-                    type(extended, ExtraDefinitions.from(typeShape.formals)) as NominalType,
+                    type(
+                        extended,
+                        ExtraDefinitions.from(typeShape.formals),
+                        factory = StaticTypeFactory,
+                    ) as NominalType,
                 )
             }
             return typeShape
@@ -485,7 +601,7 @@ class TypeTestHarness(
                     extraDefinitions,
                     ExtraDefinitions.from((enclosingType?.formals ?: emptyList())),
                 )
-                val upperBound = type(extended, allExtraDefinitions)
+                val upperBound = type(extended, allExtraDefinitions, factory = StaticTypeFactory)
                 if (upperBound is AndType) {
                     for (oneUpperBound in upperBound.members) {
                         upperBoundsList.add(oneUpperBound as NominalType)
@@ -612,16 +728,13 @@ class TypeTestHarness(
             forEachCommaSeparated(typeFormalContent) {
                 val tp = processTypeParameter(it, typeShape, ExtraDefinitions.from(typeFormals))
                 typeFormals.add(tp)
-                typeShape.typeParameters.add(
-                    TypeParameterShape(typeShape, tp, tp.word!!, null),
-                )
             }
         }
 
         val extras = ExtraDefinitions.from(typeFormals)
         // Now we're ready to parse input and output types.
         val outputType = outputTypeNode?.let {
-            type(it, extras)
+            type(it, extras, factory = StaticTypeFactory)
         }
         val requiredFormals = mutableListOf<Type2>()
         if (argList != null) {
@@ -631,7 +744,7 @@ class TypeTestHarness(
                     if (nameLeaf.operator == Operator.Leaf && nameLeaf.operands.size == 1) {
                         val symbol = nameLeaf.operands.first().tokenText?.let { Symbol(it) }
                         ignore(symbol)
-                        requiredFormals.add(hackMapOldStyleToNew(type(type, extras)))
+                        requiredFormals.add(type(type, extras, factory = Type2Factory))
                     } else {
                         TODO("$nameLeaf")
                     }
