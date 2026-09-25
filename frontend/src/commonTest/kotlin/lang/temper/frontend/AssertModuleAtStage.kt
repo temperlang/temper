@@ -353,18 +353,17 @@ internal fun assertModuleAtStage(
     } else {
         var passed = false
         val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+        val wantPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled)
+        val gotPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled)
         try {
-            assertStructure(
-                PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled),
-                PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled),
-            )
+            assertStructure(wantPostProcessed, gotPostProcessed)
             passed = true
         } finally {
             if (!passed && shouldRegenerateStageTest(stageTestDir, isEmpty = testDir.isEmpty())) {
                 console.info("assertModuleAtStage is regenerating test files under ${stageTestDir.url}")
                 val gotJson = run {
                     val b = JsonValueBuilder()
-                    gotReconciled.destructure(b)
+                    gotPostProcessed.destructure(b)
                     b.getRoot()
                 }
 

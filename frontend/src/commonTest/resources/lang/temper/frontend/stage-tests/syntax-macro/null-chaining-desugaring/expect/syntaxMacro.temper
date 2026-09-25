@@ -1,5 +1,5 @@
 @stay @imported(\(`test//c/`.C)) let C__0 = type (C), @imported(\(`test//c/`.g)) @fn g__0 = `test//c/`.g, @imported(\(`test//c/`.complexSubject)) @fn complexSubject__0 = (fn complexSubject), @fn f__0;
-f__0 = fn f(c__0 /* aka c */: C__0?) /* return__0 */: (Void) {
+f__0 = fn f(c__0 /* aka c */: C__0?) /* return__0 */: Void {
   fn__0: do {
     g__0({
         if (isNull(c__0)) {

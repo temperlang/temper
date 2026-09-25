@@ -1242,7 +1242,7 @@ class CleanupTemporariesTest {
                 |{
                 |  pseudoCodeAfter: ```
                 |    @fn let f__0;
-                |    f__0 = (@stay fn f /* return__1 */: (Int32 | Bubble) {
+                |    f__0 = (@stay fn f /* return__1 */: Int32 throws Bubble {
                 |        fn__0: do {
                 |          return__1 = 0 / 0
                 |        }
@@ -2007,7 +2007,7 @@ class CleanupTemporariesTest {
                 |constructor__8 = (@stay fn constructor(@impliedThis(IntUtil__0) this__1: IntUtil__0) /* return__2 */: Void {
                 |    return__2 = void
                 |});
-                |intOrBubble__4 = (@stay fn intOrBubble /* return__3 */: (Int32 | Bubble) {
+                |intOrBubble__4 = (@stay fn intOrBubble /* return__3 */: Int32 throws Bubble {
                 |    fn__9: do {
                 |      let i__10;
                 |      i__10 = randomInt();

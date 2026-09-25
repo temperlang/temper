@@ -7,6 +7,6 @@ runTestCases__1 = (fn runTestCases);
 @stay @imported(\(`std//testing/`.Test)) let Test__1;
 Test__1 = type (Test);
 @fn @test("- a test case -") let aTestCase__0;
-aTestCase__0 = (@stay fn aTestCase(test#0: Test) /* return__0 */: (Void | Bubble) {});
+aTestCase__0 = (@stay fn aTestCase(test#0: Test) /* return__0 */: Void throws Bubble {});
 @stay let `test//`.temper__testReport;
 `test//`.temper__testReport = runTestCases__0(list(new Pair("- a test case -", aTestCase__0)));

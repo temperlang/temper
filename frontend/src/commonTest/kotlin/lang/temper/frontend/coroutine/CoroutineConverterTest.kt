@@ -323,17 +323,16 @@ internal fun assertConvertedCoroutine(
 
     var passed = false
     val (wantReconciled, gotReconciled) = reconcileStructure(wantJson, got)
+    val wantPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled)
+    val gotPostProcessed = PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled)
     try {
-        assertStructure(
-            PseudoCodeNameRenumberer.newStructurePostProcessor()(wantReconciled),
-            PseudoCodeNameRenumberer.newStructurePostProcessor()(gotReconciled),
-        )
+        assertStructure(wantPostProcessed, gotPostProcessed)
         passed = true
     } finally {
         if (!passed && shouldRegenerateCoroConvertTest(stageTestDir, isEmpty = testDir.isEmpty())) {
             val gotJson = run {
                 val b = JsonValueBuilder()
-                gotReconciled.destructure(b)
+                gotPostProcessed.destructure(b)
                 b.getRoot()
             }
 

@@ -1,13 +1,13 @@
-let return__4 ⦂ String, @fn `test//`.f ⦂(fn (): String | Bubble);
-`test//`.f = (@stay fn f /* return__0 */: (String | Bubble) {
-    fn__2: do {
+let return__0 ⦂ String, @fn `test//`.f ⦂(fn (): String throws Bubble);
+`test//`.f = (@stay fn f /* return__1 */: String throws Bubble {
+    fn__0: do {
       bubble ⋖ String ⋗()
     }
 });
-var x__1 ⦂ String;
-orelse#3: {
-  x__1 = (fn f)()
+var x__0 ⦂ String;
+orelse#0: {
+  x__0 = (fn f)()
 } orelse {
-  x__1 = panic ⋖ String ⋗()
+  x__0 = panic ⋖ String ⋗()
 };
-return__4 = x__1;
+return__0 = x__0;

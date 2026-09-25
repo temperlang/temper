@@ -20,7 +20,7 @@
                             [
                                 [
                                     "LeftName",
-                                    "return__1"
+                                    "return__0"
                                 ],
                                 [
                                     "Value",
@@ -44,7 +44,7 @@
                                         ],
                                         [
                                             "LeftName",
-                                            "return__1"
+                                            "return__0"
                                         ],
                                         [
                                             "Call",
@@ -65,7 +65,7 @@
                                                             [
                                                                 [
                                                                     "LeftName",
-                                                                    "return__0"
+                                                                    "return__1"
                                                                 ],
                                                                 [
                                                                     "Value",
@@ -178,7 +178,7 @@
                                             "module": "core",
                                             "uid": 70,
                                             "nameHint": "Void",
-                                            "abbrev": "Void__70"
+                                            "abbrev": "Void__0"
                                         },
                                         "explanation": []
                                     }

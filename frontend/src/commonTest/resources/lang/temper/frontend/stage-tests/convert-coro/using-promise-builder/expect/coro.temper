@@ -7,7 +7,7 @@
   var b__0: PromiseBuilder<String>?;
   b__0 = null;
   let convertedCoroutine#0;
-  convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: (GeneratorResult<Empty>) {
+  convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: GeneratorResult<Empty> {
     fn__0: do {
       while (true) {
         let caseIndexLocal#0: Int32;

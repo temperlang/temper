@@ -11,7 +11,7 @@ class(\word, \StringHolder, \concrete, true, @typeDefined(StringHolder__0) fn {
       };
     };
 });
-`test//`.maybeLength = fn maybeLength(a__0 /* aka a */: StringHolder__0?, min__0 /* aka min */: Int) /* return__1 */: (Int?) {
+`test//`.maybeLength = fn maybeLength(a__0 /* aka a */: StringHolder__0?, min__0 /* aka min */: Int) /* return__1 */: Int?{
   fn__0: do {
     {
       let subject#0;

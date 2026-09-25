@@ -1,50 +1,50 @@
-var caseIndex#11: Int32;
-caseIndex#11 = 0;
-let convertedCoroutine#14;
-convertedCoroutine#14 = fn (generator#10: SafeGenerator<Empty>) /* return__4 */: (GeneratorResult<Empty>) {
-  fn__12: do {
+var caseIndex#0: Int32;
+caseIndex#0 = 0;
+let convertedCoroutine#0;
+convertedCoroutine#0 = fn (generator#0: SafeGenerator<Empty>) /* return__0 */: GeneratorResult<Empty> {
+  fn__0: do {
     while (true) {
-      let caseIndexLocal#13: Int32;
-      caseIndexLocal#13 = caseIndex#11;
-      caseIndex#11 = -1;
-      if (caseIndexLocal#13 == 0) {
-        do_call_log(console#5, "Beginning");
-        caseIndex#11 = 1;
-        return__4 = new ValueResult<Empty>({class: Empty__10});
-        break fn__12;
-      } else if (caseIndexLocal#13 == 1) {
-        if (b1__2) {
-          do_call_log(console#5, "b1 is true")
+      let caseIndexLocal#0: Int32;
+      caseIndexLocal#0 = caseIndex#0;
+      caseIndex#0 = -1;
+      if (caseIndexLocal#0 == 0) {
+        do_call_log(console#0, "Beginning");
+        caseIndex#0 = 1;
+        return__0 = new ValueResult<Empty>({class: Empty__0});
+        break fn__0;
+      } else if (caseIndexLocal#0 == 1) {
+        if (b1__0) {
+          do_call_log(console#0, "b1 is true")
         } else {
-          do_call_log(console#5, "b1 is false")
+          do_call_log(console#0, "b1 is false")
         };
-        do_call_log(console#5, "Middle");
-        if (b2__3) {
-          caseIndex#11 = 2
+        do_call_log(console#0, "Middle");
+        if (b2__0) {
+          caseIndex#0 = 2
         } else {
-          caseIndex#11 = 3
+          caseIndex#0 = 3
         }
-      } else if (caseIndexLocal#13 == 2) {
-        do_call_log(console#5, "b2 is true");
-        caseIndex#11 = 4;
-        return__4 = new ValueResult<Empty>({class: Empty__10});
-        break fn__12;
-      } else if (caseIndexLocal#13 == 3) {
-        caseIndex#11 = 5;
-        return__4 = new ValueResult<Empty>({class: Empty__10});
-        break fn__12;
-      } else if (caseIndexLocal#13 == 4) {
-        do_call_log(console#5, "End");
-        return__4 = core.doneResult();
-        break fn__12;
-      } else if (caseIndexLocal#13 == 5) {
-        do_call_log(console#5, "b2 is false");
-        caseIndex#11 = 4
+      } else if (caseIndexLocal#0 == 2) {
+        do_call_log(console#0, "b2 is true");
+        caseIndex#0 = 4;
+        return__0 = new ValueResult<Empty>({class: Empty__0});
+        break fn__0;
+      } else if (caseIndexLocal#0 == 3) {
+        caseIndex#0 = 5;
+        return__0 = new ValueResult<Empty>({class: Empty__0});
+        break fn__0;
+      } else if (caseIndexLocal#0 == 4) {
+        do_call_log(console#0, "End");
+        return__0 = core.doneResult();
+        break fn__0;
+      } else if (caseIndexLocal#0 == 5) {
+        do_call_log(console#0, "b2 is false");
+        caseIndex#0 = 4
       } else {
-        return__4 = core.doneResult();
-        break fn__12;
+        return__0 = core.doneResult();
+        break fn__0;
       }
     }
   }
 };
-return__6 = adaptGeneratorFnSafe(convertedCoroutine#14)
+return__1 = adaptGeneratorFnSafe(convertedCoroutine#0)
