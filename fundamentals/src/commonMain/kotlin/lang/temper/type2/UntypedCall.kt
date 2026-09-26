@@ -40,10 +40,10 @@ data class UntypedCall(
      */
     val inputTrees: List<Tree>,
 ) {
-    var resultType: StaticType? = null
-    var bindings: Map<TypeFormal, StaticType>? = null
+    var resultType: Type2? = null
+    var bindings: Map<TypeFormal, Type2>? = null
     var explanations: List<TypeReasonElement>? = null
     var chosenCallee: Int? = null
 
-    val passType: StaticType? get() = resultType?.let { excludeBubble(it) }
+    val passType: Type2? get() = resultType?.let { excludeBubble(it) }
 }

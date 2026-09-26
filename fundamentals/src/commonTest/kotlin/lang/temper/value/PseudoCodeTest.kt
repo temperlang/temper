@@ -33,11 +33,13 @@ import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
 import lang.temper.type.ExternalSet
 import lang.temper.type.FunctionType
-import lang.temper.type.MkType
 import lang.temper.type.OperatorMember
 import lang.temper.type.TypeTestHarness
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
+import lang.temper.type2.Type2
+import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.hackTryStaticTypeToSig
 import kotlin.test.Test
 
 class PseudoCodeTest {
@@ -739,7 +741,7 @@ class PseudoCodeTest {
         }
         ((block.child(0) as DeclTree).child(0) as LeftNameLeaf).typeInferences =
             BasicTypeInferences(
-                MkType.nominal(WellKnownTypes.intTypeDefinition),
+                WellKnownTypes.intType2,
                 emptyList(),
             )
         return block
@@ -997,14 +999,15 @@ class PseudoCodeTest {
         """.trimMargin(),
         detail = PseudoCodeDetail(resugarDotHelpers = Freq3.Always, showInferredTypes = true),
         makeInput = { doc, pos ->
-            val unboundCalleeType: FunctionType
+            val unboundCalleeType: Type2
             val tiWithBindings: CallTypeInferences
             TypeTestHarness("").run {
-                unboundCalleeType = type("fn<T>(T): Void") as FunctionType
+                val unboundCalleeFnType = type("fn<T>(T): Void") as FunctionType
+                unboundCalleeType = hackMapOldStyleToNew(unboundCalleeFnType)
                 tiWithBindings = CallTypeInferences(
-                    WellKnownTypes.voidType,
-                    variant = type("fn (String): Void"),
-                    bindings2 = mapOf(unboundCalleeType.typeFormals[0] to WellKnownTypes.stringType),
+                    WellKnownTypes.voidType2,
+                    variant = hackTryStaticTypeToSig(type("fn (String): Void"))!!,
+                    bindings2 = mapOf(unboundCalleeFnType.typeFormals[0] to WellKnownTypes.stringType2),
                     explanations = listOf(),
                 )
             }

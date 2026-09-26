@@ -540,7 +540,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
                 // `void` is used as a placeholder for things that are not really useful,
                 // and may be skipped in various representations.
                 // Just throw type *Void* on them.
-                val floatingVoidType = BasicTypeInferences(WellKnownTypes.voidType, emptyList())
+                val floatingVoidType = BasicTypeInferences(WellKnownTypes.voidType2, emptyList())
                 for (childIndex in tree.children.indices.toSet() - childOrder.toSet()) {
                     val child = tree.child(childIndex)
                     if (child is ValueLeaf && child.content == void && child.typeInferences == null) {

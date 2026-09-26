@@ -162,27 +162,10 @@
                                         ]
                                     ]
                                 ],
-                                {
-                                    "type": "Value",
-                                    "loc": "test/test.temper",
-                                    "left": 108,
-                                    "right": 108,
-                                    "content": {
-                                        "stateVector": null,
-                                        "typeTag": "Void",
-                                        "abbrev": "void: Void"
-                                    },
-                                    "typeInferences": {
-                                        "type": {
-                                            "type": "SourceName",
-                                            "module": "core",
-                                            "uid": 70,
-                                            "nameHint": "Void",
-                                            "abbrev": "Void__0"
-                                        },
-                                        "explanation": []
-                                    }
-                                }
+                                [
+                                    "Value",
+                                    "void: Void"
+                                ]
                             ],
                             "StructuredFlow"
                         ]

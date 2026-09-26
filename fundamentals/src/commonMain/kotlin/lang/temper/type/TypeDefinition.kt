@@ -29,8 +29,6 @@ import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
-import lang.temper.name.TemperName
-import lang.temper.value.DeclTree
 import lang.temper.value.Helpful
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.OccasionallyHelpful
@@ -118,19 +116,12 @@ const val ANY_VALUE_TYPE_NAME_TEXT = "AnyValue"
 const val FUNCTION_TYPE_NAME_TEXT = "Function"
 
 /**
- * Represents a function argument that takes multiple
- * TODO(rest formal) should this get integrated into the hierarchy here better?
- * @param type the type as seen from the invocation so `Foo` not `List<Foo>`
- */
-data class RestFormal(val name: TemperName, val type: StaticType, val position: Position, val tree: DeclTree)
-
-/**
  * A formal type parameter describes how the containing type can be parameterized.
  *
  * In `class C<A, B>`, the class *C* has two formal type parameters: *A* and *B*.
  *
- * In the type expression, `C<String, Int>` has two [actual][TypeActual] bindings:
- * the formal *A* is bound to the actual `String` and *B* is bound to *Int*.
+ * In the type expression, `C<String, Int>` has two actual bindings:
+ * the formal *A* is bound to the type *String* and *B* is bound to *Int*.
  */
 sealed interface TypeFormal : TypeDefinition {
     override val word: Symbol?

@@ -1,6 +1,5 @@
 package lang.temper.frontend
 
-import lang.temper.builtin.Types
 import lang.temper.common.Console
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.Log
@@ -23,6 +22,7 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.DeclTree
@@ -43,7 +43,6 @@ import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.typeDefinitionAtLeafOrNull
-import lang.temper.value.typeFromSignature
 import lang.temper.value.void
 
 private const val DEBUG = false
@@ -483,7 +482,7 @@ internal class UseBeforeInit(
                             .copy(requiredInputTypes = listOf(WellKnownTypes.anyValueOrNullType2))
                         CallTypeInferences(
                             type,
-                            typeFromSignature(sig),
+                            sig,
                             buildMap {
                                 val tf = sig.typeFormals.firstOrNull()
                                 if (tf != null) {
@@ -494,11 +493,11 @@ internal class UseBeforeInit(
                         )
                     }
                     Call(type = errorTypeInferences) {
-                        V(errorFn, type = errorTypeInferences?.variant)
-                        V(Value(problem, TProblem), type = Types.problem.type)
+                        V(errorFn, type = errorTypeInferences?.variant?.let(AdHocArrowTypes::definedTypeForSig))
+                        V(Value(problem, TProblem), type = WellKnownTypes.problemType2)
                     }
                 } else {
-                    V(void, type = Types.void.type)
+                    V(void, type = WellKnownTypes.voidType2)
                 }
             }
         }

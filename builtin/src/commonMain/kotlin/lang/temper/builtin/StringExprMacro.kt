@@ -19,8 +19,6 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
-import lang.temper.type.InvalidType
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
 import lang.temper.type.excludeBubble
@@ -28,7 +26,7 @@ import lang.temper.type2.AnySignature
 import lang.temper.type2.InterpSignature
 import lang.temper.type2.MacroSignature
 import lang.temper.type2.Signature2
-import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.Type2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.BuiltinOperatorId
@@ -69,7 +67,7 @@ import lang.temper.value.rawBuiltinName
 import lang.temper.value.safeStringPartSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toStringDotName
-import lang.temper.value.typeForValue
+import lang.temper.value.type2ForValue
 import lang.temper.value.typeSymbol
 import lang.temper.value.vIsNullFn
 import lang.temper.value.valueContained
@@ -643,7 +641,7 @@ internal object StringCatMacro :
                 tree to (
                     tree.typeInferences?.type
                         ?: (tree as? ValueLeaf)?.content?.let {
-                            typeForValue(it)
+                            type2ForValue(it)
                         }
                     )
             }
@@ -760,7 +758,7 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                             }
                         }
                         if (allHaveReturnType && passTypes.size == 1) {
-                            type = hackMapNewStyleToOld(passTypes.first())
+                            type = passTypes.first()
                         }
                     }
                 }
@@ -773,11 +771,11 @@ internal object CoerceToString : SpecialFunction, BuiltinMacro("str", null) {
                 } else if (value != null && stage > Stage.Type) {
                     if (value.typeTag == TNull) {
                         macroEnv.replaceMacroCallWith {
-                            V(macroEnv.pos, Value("null", TString), WellKnownTypes.stringType)
+                            V(macroEnv.pos, Value("null", TString), WellKnownTypes.stringType2)
                         }
                     } else {
                         macroEnv.replaceMacroCallWith {
-                            buildStringifyCall(freeTree(arg), typeForValue(value))
+                            buildStringifyCall(freeTree(arg), type2ForValue(value))
                         }
                     }
                 } else if (stage == Stage.GenerateCode) {
@@ -825,13 +823,17 @@ private fun Planting.buildToStringCall(subject: Tree) =
         Replant(subject)
     }
 
-private fun Planting.buildStringifyCall(arg: Tree, argType: StaticType?) {
-    if (argType == WellKnownTypes.stringType) {
+private fun Planting.buildStringifyCall(arg: Tree, argType: Type2?) {
+    if (argType == WellKnownTypes.stringType2) {
         Replant(freeTree(arg))
     } else if (isErrorCall(arg)) {
         // Don't try to call toString on error nodes.
         Replant(freeTree(arg))
-    } else if (argType is InvalidType? || canBeNull(argType)) {
+    } else if (
+        argType == null ||
+        argType.definition == WellKnownTypes.invalidTypeDefinition ||
+        canBeNull(argType)
+    ) {
         // if (isNull(arg)) { "null" } else { arg.toString() }
         fun Planting.plantNullSafeCall(toCheck: Tree, subject: Tree) = Block {
             If(
@@ -841,7 +843,7 @@ private fun Planting.buildStringifyCall(arg: Tree, argType: StaticType?) {
                     }
                 },
                 thn = {
-                    V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType)
+                    V(arg.pos, Value(OutToks.nullWord.text, TString), WellKnownTypes.stringType2)
                 },
                 els = {
                     buildToStringCall(
@@ -908,7 +910,7 @@ private fun tryReplaceWithString(macroEnv: MacroEnvironment, argRange: IntRange)
     if (strs.none { it == null }) {
         val result = Value(strs.joinToString("") { it!! }, TString)
         macroEnv.replaceMacroCallWith {
-            V(macroEnv.pos, result, WellKnownTypes.stringType)
+            V(macroEnv.pos, result, WellKnownTypes.stringType2)
         }
         return result
     }
@@ -944,6 +946,6 @@ private fun stringify(
 val vStringExprMacro = Value(StringExprMacro)
 val vStringCatMacro = Value(StringCatMacro)
 private val vEmptyString = Value("", TString)
-private val stringTypeInf = BasicTypeInferences(WellKnownTypes.stringType, listOf())
+private val stringTypeInf = BasicTypeInferences(WellKnownTypes.stringType2, listOf())
 
 val Tree.isStringValueLeaf get() = this is ValueLeaf && this.content.typeTag == TString

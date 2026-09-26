@@ -139,7 +139,6 @@ import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFormalSymbol
-import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.unholeBuiltinName
 import lang.temper.value.unify
@@ -1063,7 +1062,7 @@ class Interpreter(
                                 val sig = PreserveFn.sig
                                 preserveCall.typeInferences = CallTypeInferences(
                                     typeToInline,
-                                    typeFromSignature(sig),
+                                    sig,
                                     mapOf(sig.typeFormals[0] to typeToInline),
                                     listOf(),
                                 )

@@ -1,12 +1,12 @@
   var caseIndex#0: Int32;
   caseIndex#0 = 0;
-## Here's our dependency of the hoisted function which
+## Here's our dependency on the hoisted function which
 ## is not otherwise used in two or more basic blocks.
   var negSum__0: Int32;
   negSum__0 = 0;
 ## We hoist the function which is used in two or more.
   @fn let halfNegSum__0;
-## And its initializer.
+## and its initializer.
   halfNegSum__0 = (@stay fn halfNegSum /* return__0 */: Int32 {
       return__0 = negSum__0 / 2
   });

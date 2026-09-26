@@ -29,16 +29,17 @@ import lang.temper.log.snapshot
 import lang.temper.name.ResolvedName
 import lang.temper.stage.Stage
 import lang.temper.type.InvalidType
-import lang.temper.type.NominalType
 import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.TypeContext2
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.VoidishPanicFn
 import lang.temper.value.functionContained
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.toLispy
 import lang.temper.value.void
 import lang.temper.value.InterpreterCallback.NullInterpreterCallback as nullCallback
@@ -289,6 +290,7 @@ private fun dumpMissingTypeInfo(ast: Tree, description: String, console: Console
  */
 private fun replaceVoidishPanics(root: BlockTree) {
     val expectedTreeSize = VoidishPanicFn.sigs.first().requiredInputTypes.size + 1
+    val typeContext = TypeContext2()
     TreeVisit.startingAt(root).forEach tree@{ tree ->
         tree is CallTree || return@tree VisitCue.Continue
         tree.size == expectedTreeSize || return@tree VisitCue.Continue
@@ -299,17 +301,17 @@ private fun replaceVoidishPanics(root: BlockTree) {
             run exhaustive@{
                 // Check fail bailing with null goes to void below.
                 val foundType = tree.child(1).typeInferences?.type ?: return@exhaustive null
-                val expectedType = tree.child(2).staticTypeContained ?: return@exhaustive null
-                foundType is NominalType && expectedType is NominalType || return@exhaustive null
+                val expectedType = tree.child(2).reifiedTypeContained?.type2 ?: return@exhaustive null
+                foundType is DefinedNonNullType && expectedType is DefinedNonNullType || return@exhaustive null
                 // We don't support subtyping the same interface under different type actuals,
                 // so simple subtyping is fine here. Any broken type actuals will cause static
                 // type errors elsewhere.
-                isSimpleSubtype(foundType, expectedType) || return@exhaustive null
+                isSimpleSubtype(foundType, expectedType, typeContext) || return@exhaustive null
                 // Passed all checks, so panic it is.
                 Call(BuiltinFuns.vPanic, tree.typeInferences) {}
             } ?: run {
                 // Or bail here to void on check fails.
-                V(void, WellKnownTypes.voidType)
+                V(void, WellKnownTypes.voidType2)
             }
         }
         // Either way, these calls are effectively leaves, so don't bother with kids.
@@ -318,7 +320,9 @@ private fun replaceVoidishPanics(root: BlockTree) {
 }
 
 /** Just checks for the same type or a subtype, ignoring type actuals. */
-private fun isSimpleSubtype(sub: NominalType, sup: NominalType): Boolean {
-    sub.definition == sup.definition && return true
-    return sub.definition.superTypes.any { isSimpleSubtype(it, sup) }
-}
+private fun isSimpleSubtype(
+    sub: DefinedNonNullType,
+    sup: DefinedNonNullType,
+    typeContext2: TypeContext2,
+): Boolean =
+    typeContext2.superTypeTreeOf(sub)[sup.definition].isNotEmpty()

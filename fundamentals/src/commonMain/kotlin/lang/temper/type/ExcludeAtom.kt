@@ -3,6 +3,7 @@ package lang.temper.type
 import lang.temper.type2.DefinedType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 
@@ -44,6 +45,8 @@ fun canBeNull(t: StaticType): Boolean = anyAtom(t) {
         null -> false
     }
 }
+
+fun canBeNull(t: Type2): Boolean = TypeContext2.admitsNull(t)
 
 fun excludeAtom(t: StaticType, exclude: (StaticType) -> Boolean): StaticType {
     if (exclude(t)) {

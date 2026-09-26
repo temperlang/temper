@@ -32,7 +32,6 @@ import lang.temper.type.MkType
 import lang.temper.type.MutableTypeFormal
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypePartMapper
@@ -157,11 +156,6 @@ private class AdaptFormals(
                 }
             }
             return t
-        }
-
-        override fun mapBinding(b: TypeActual): TypeActual {
-            if (b is StaticType) { return mapType(b) }
-            return b
         }
 
         override fun mapDefinition(d: TypeDefinition): TypeDefinition = d
@@ -692,7 +686,7 @@ internal class JsonInteropPass(
         val unsealedSubTypes = mutableListOf<JsonInteropDetails.SealedSubType>()
         val q = ArrayDeque(
             listOf(
-                // Treat the typeDecl as a sealed sub-type of itself so that we can propagate type
+                // Treat the typeDecl as a sealed subtype of itself so that we can propagate type
                 // parameter info through.
                 JsonInteropDetails.SealedSubType(
                     typeDecl.name, typeDecl.typeFormals.map { MkType.nominal(it) },
@@ -704,8 +698,8 @@ internal class JsonInteropPass(
         while (q.isNotEmpty()) {
             val sealedSubType = q.removeFirst()
             val sealedSubTypeName = sealedSubType.subTypeName
-            // A sealed interface with multiple sealed sub-interfaces may have a sub-type that inherits from
-            // multiple of those, so keep track of what we've seen.  For example:
+            // A sealed interface with multiple sealed sub-interfaces may have a subtype that inherits from
+            // multiple of those, so keep track of what we've seen.  For example
             //    sealed interface SI {}
             //    sealed interface A extends SI
             //    sealed interface B extends SI

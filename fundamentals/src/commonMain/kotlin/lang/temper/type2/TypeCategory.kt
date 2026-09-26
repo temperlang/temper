@@ -22,7 +22,7 @@ import lang.temper.value.functionalInterfaceSymbol
  */
 enum class TypeCategory {
     /**
-     * A special return type which bundles a normal return type with
+     * A special return type that bundles a normal return type with
      * some abnormal result types.
      *
      * A function call's result may be a result type in which case
@@ -33,7 +33,7 @@ enum class TypeCategory {
     Result,
 
     /**
-     * The special return type which indicates no normal result.
+     * The special return type that indicates no normal result.
      */
     Void,
 
@@ -43,7 +43,7 @@ enum class TypeCategory {
     Functional,
 
     /**
-     * The special *Never* type which has a type parameter.
+     * The special *Never* type that has a type parameter.
      * This is bottom-like in that there is no value of it, but languages
      * with no mentionable bottom type can translate to its type parameter.
      *
@@ -60,7 +60,7 @@ enum class TypeCategory {
      */
     Invalid,
 
-    /** All user defined types. */
+    /** All user-defined types. */
     Other,
 }
 
@@ -156,10 +156,20 @@ inline fun <T> withType(
  * Helper for [withType].
  * Assumes [t]'s definition is a functional interface type and returns the corresponding signature.
  * If the underlying definition is not complete, for example, it lacks a method with [applyDotName],
- * or there is a mismatch in number of type parameters, returns null.
+ * or there is a mismatch in the number of type parameters, returns null.
  */
 fun sigForFunInterfaceType(t: DefinedType): Signature2? {
     val (fnTypeShape, bindings) = t
+    if (AdHocArrowTypes.isAdhocArrowTypeDefinition(fnTypeShape)) {
+        // The Fn signatures are not really fun interface types.
+        // Their type parameters are per-call, not per-boxed-instenace.
+        //
+        // For example, `Predicate<String?>` is a predicate that can be
+        // applied to any `String?` but a `<T>(T?) -> Boolean`, like
+        // `isNull`'s constructor, can be applied to a `String?` at
+        // one call-site and a `Foo?` at another.
+        return AdHocArrowTypes.reverseToSig(t)
+    }
     val formals = fnTypeShape.formals
     val applyMethodShape = fnTypeShape.membersMatching(DotMember(applyDotName))
         .firstOrNullAs<MemberShape, MethodShape> {

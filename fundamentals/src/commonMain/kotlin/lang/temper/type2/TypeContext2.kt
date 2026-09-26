@@ -156,8 +156,23 @@ class TypeContext2 {
     private val extendsPathCache =
         mutableMapOf<Pair<TypeDefinition, TypeDefinition>, List<TypeDefinition>?>()
 
+    fun simpleLub(t: Type2, u: Type2): Type2 {
+        val lub = lub(t, u)
+        val anyAdmitsNull = admitsNull(t) || admitsNull(u)
+        val simpler = if (lub.size == 1) {
+            lub[0]
+        } else {
+            leastCommonSuperTypes(lub.map { it.withNullity(NonNull) }).first()
+        }
+        return if (anyAdmitsNull && !admitsNull(simpler)) {
+            simpler.withNullity(OrNull)
+        } else {
+            simpler
+        }
+    }
+
     /**
-     * The least upper bound.
+     * The least upper bounds.
      */
     fun lub(t: Type2, u: Type2): List<Type2> = debug({ "lub($t, $u)" }) lubHelper@{
         if (t == u) {
@@ -687,14 +702,8 @@ class TypeContext2 {
             }
         }
 
-    fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean {
-        if (typeOrPartialType.nullity == OrNull) {
-            return true
-        }
-        // TODO: Once TypeFormal's allow upper bounds, look at the definition
-        // for nullable upper bounds.
-        return false
-    }
+    fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean =
+        Companion.admitsNull(typeOrPartialType)
 
     fun admitsNullFuzzingTypeParamRef(typeOrPartialType: TypeOrPartialType): Boolean? {
         if (typeOrPartialType is TypeParamRef) {
@@ -770,6 +779,17 @@ class TypeContext2 {
         }
     private var specificityVarCounter: Long = 0
     private val overloadSpecificityMemoTable = mutableMapOf<Pair<Signature2, Signature2>, OverloadSpecificity?>()
+
+    companion object {
+        fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean {
+            if (typeOrPartialType.nullity == OrNull) {
+                return true
+            }
+            // TODO: Once TypeFormal's allow upper bounds, look at the definition
+            // for nullable upper bounds.
+            return false
+        }
+    }
 }
 
 internal data class OverloadSpecificity(

@@ -31,13 +31,15 @@ import lang.temper.type.InternalGet
 import lang.temper.type.InternalSet
 import lang.temper.type.Member
 import lang.temper.type.MemberAccessor
-import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
 import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.Nullity
+import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -71,7 +73,6 @@ import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDefinedSymbol
-import lang.temper.value.typeFromSignature
 import lang.temper.value.unpackPairValue
 import lang.temper.value.vIsNullFn
 import lang.temper.value.vMissingSymbol
@@ -641,18 +642,17 @@ private fun desugarDotOperation(
                     }
                 }
 
-                val subjectTypeNullable = simpleSubject.typeInferences?.type?.let {
-                    MkType.nullable(it)
-                }
-                val isNullFnType = typeFromSignature(IsNullFn.sig)
+                val subjectTypeNullable = simpleSubject.typeInferences?.type
+                    ?.withNullity(Nullity.OrNull)
                 val isNullCallType = subjectTypeNullable?.let {
                     CallTypeInferences(
-                        WellKnownTypes.booleanType,
-                        isNullFnType,
-                        mapOf(isNullFnType.typeFormals.first() to it),
+                        WellKnownTypes.booleanType2,
+                        IsNullFn.sig,
+                        mapOf(IsNullFn.sig.typeFormals.first() to it),
                         listOf(),
                     )
                 }
+                val isNullFnType = AdHocArrowTypes.definedTypeForSig(IsNullFn.sig)
                 If(
                     cond = {
                         Call(subjectPos.leftEdge, type = isNullCallType) {

@@ -60,7 +60,6 @@ import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
-import lang.temper.type.MkType
 import lang.temper.type.SetMemberAccessor
 import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
@@ -71,6 +70,7 @@ import lang.temper.type.WellKnownTypes.booleanType2
 import lang.temper.type.WellKnownTypes.bubbleType2
 import lang.temper.type.WellKnownTypes.resultTypeDefinition
 import lang.temper.type.valueMap
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.Descriptor
 import lang.temper.type2.MkType2
@@ -78,11 +78,8 @@ import lang.temper.type2.Nullity.NonNull
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
-import lang.temper.type2.hackMapNewStyleToOld
-import lang.temper.type2.hackMapOldStyleActualsToNew
 import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.hackMapOldStyleToNewOrNull
-import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.type2.invalidSig
 import lang.temper.type2.isVoidLike
 import lang.temper.type2.mapType
@@ -552,7 +549,7 @@ class TmpLTranslator internal constructor(
                 val exportPos = rootBlock.pos.rightEdge
                 val leaf = RightNameLeaf(rootBlock.document, exportPos, outputName)
                 if (outputType != null) {
-                    leaf.typeInferences = BasicTypeInferences(hackMapNewStyleToOld(outputType), emptyList())
+                    leaf.typeInferences = BasicTypeInferences(outputType, emptyList())
                 }
                 result = translateExpression(leaf)
             }
@@ -934,8 +931,7 @@ class TmpLTranslator internal constructor(
 
         val typePos = declParts.type?.target?.pos ?: declParts.name.pos
         val (type, descriptor) =
-            declParts.name.typeInferences?.type?.let { t ->
-                val type = hackMapOldStyleToNew(t)
+            declParts.name.typeInferences?.type?.let { type ->
                 translateType(typePos, type) to type
             } ?: (untranslatableType(typePos, "missing type") to WellKnownTypes.invalidType2)
 
@@ -1128,7 +1124,7 @@ class TmpLTranslator internal constructor(
             rightExpr = maybeInjectCastForOutput(
                 expr = rightExpr,
                 actualCalleeType = Signature2(rightExpr.passType, hasThisFormal = false, listOf()),
-                declaredCalleeType = hackMapOldStyleToNewOrNull(left.typeInferences?.type)?.let {
+                declaredCalleeType = left.typeInferences?.type?.let {
                     Signature2(it, hasThisFormal = false, listOf())
                 },
                 adjustments = null,
@@ -1456,7 +1452,10 @@ class TmpLTranslator internal constructor(
             return translateCall(
                 tree.document.treeFarm.grow(pos) {
                     Call(type = emptyCallType) {
-                        Rn(BuiltinName("empty"), type = emptyCallType.variant)
+                        Rn(
+                            BuiltinName("empty"),
+                            type = AdHocArrowTypes.definedTypeForSig(emptyCallType.variant),
+                        )
                     }
                 },
             )
@@ -1593,7 +1592,7 @@ class TmpLTranslator internal constructor(
         var tentativeCallee = originalCallee
         val isNewCall = isNewCall(tree)
         val originalCalleeSig = if (isNewCall) {
-            hackTryStaticTypeToSig(tree.typeInferences?.variant)
+            tree.typeInferences?.variant
         } else {
             originalCallee.sig
         }.orInvalid
@@ -1640,7 +1639,7 @@ class TmpLTranslator internal constructor(
                                             expr = translateExpression(arg),
                                             argIndex = it - 1,
                                             actualCalleeType = effectiveCallee.sig,
-                                            declaredCalleeType = hackTryStaticTypeToSig(tree.typeInferences?.variant),
+                                            declaredCalleeType = tree.typeInferences?.variant,
                                             adjustments = null,
                                             builtinOperatorId = builtinOperatorId,
                                         )
@@ -1648,7 +1647,7 @@ class TmpLTranslator internal constructor(
                                 ),
                             ),
                             actualCalleeType = effectiveCallee.sig,
-                            declaredCalleeType = hackTryStaticTypeToSig(tree.typeInferences?.variant),
+                            declaredCalleeType = tree.typeInferences?.variant,
                             adjustments = null,
                             builtinOperatorId = builtinOperatorId,
                         )
@@ -1901,12 +1900,9 @@ class TmpLTranslator internal constructor(
             var actualCalleeType = effectiveCallee.sig
             val typeInferences = tree.typeInferences
             if (typeInferences?.bindings2?.isNotEmpty() == true) {
-                actualCalleeType =
-                    actualCalleeType?.mapType(
-                        hackMapOldStyleActualsToNew(typeInferences.bindings2),
-                    )
+                actualCalleeType = actualCalleeType?.mapType(typeInferences.bindings2)
             }
-            val declaredCalleeType = hackTryStaticTypeToSig(typeInferences?.variant)
+            val declaredCalleeType = typeInferences?.variant
 
             val typeActuals = translateCallTypeActuals(
                 pos = callable.pos.rightEdge,
@@ -2291,7 +2287,7 @@ class TmpLTranslator internal constructor(
             pos = tree.pos,
             id = id,
             fnParts = parts,
-            sig = hackTryStaticTypeToSig(tree.typeInferences?.type)!!,
+            sig = AdHocArrowTypes.reverseToSig(tree.typeInferences?.type!!)!!,
         )
     }
 
@@ -2338,7 +2334,7 @@ class TmpLTranslator internal constructor(
                                 }
                                 mayYield = true
                                 isWrappedCoro = true
-                                fnSig = hackTryStaticTypeToSig(unwrapped.typeInferences?.type)!!
+                                fnSig = AdHocArrowTypes.reverseToSig(unwrapped.typeInferences?.type!!)!!
                                 return@unwrapCoro ensureIsBlock(unwrappedBody) to unwrappedReturnDecl
                             }
                         }
@@ -2362,7 +2358,7 @@ class TmpLTranslator internal constructor(
                 // This prefers any declared return type.
                 return sigT?.returnType2
                     // Otherwise, look at the return decl if we have one.
-                    ?: hackMapOldStyleToNewOrNull(returnDecl?.parts?.name?.typeInferences?.type)
+                    ?: returnDecl?.parts?.name?.typeInferences?.type
                     ?: WellKnownTypes.invalidType2
             }
 
@@ -3176,10 +3172,12 @@ val anyLineBreak = Regex("""\r\n?|[\n\u000B\u000C\u0085\u2028\u2029]""")
 // to things that don't.
 private val hashWord = Regex("^(#+!*)([a-zA-Z])")
 
-val Tree?.typeOrInvalid: Type2 get() = this?.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+val Tree?.typeOrInvalid: Type2 get() = this?.typeInferences?.type
     ?: WellKnownTypes.invalidType2
 
-val Tree?.sig: Signature2? get() = this?.typeInferences?.type?.let { hackTryStaticTypeToSig(it) }
+val Tree?.sig: Signature2? get() = (this?.typeInferences?.type)?.let {
+    AdHocArrowTypes.reverseToSig(it)
+}
 
 internal fun logCannotTranslate(
     positioned: Positioned,
@@ -3404,8 +3402,8 @@ val testSig = Signature2(
 )
 
 private val emptyCallType = CallTypeInferences(
-    WellKnownTypes.emptyType,
-    MkType.fn(listOf(), listOf(), WellKnownTypes.emptyType),
+    WellKnownTypes.emptyType2,
+    Signature2(WellKnownTypes.emptyType2, false, listOf()),
     mapOf(),
     listOf(),
 )
