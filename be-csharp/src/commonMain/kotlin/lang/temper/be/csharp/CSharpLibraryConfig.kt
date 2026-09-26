@@ -6,7 +6,6 @@ import lang.temper.common.console
 import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.frontend.staging.buildConfigType
-import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.LogSink
 import lang.temper.name.Symbol
@@ -30,11 +29,7 @@ class CSharpLibraryConfig(
 
     fun rootNamespace(): String {
         return cfg(CSharpConfigKeys.ROOT_NAMESPACE, CSharpConfigKeys.namespaceKey)
-            ?: when (config.libraryName.text) {
-                // Hardcode std because we don't yet get config exports in funtests.
-                STANDARD_LIBRARY_NAME -> STD_ROOT_NAMESPACE
-                else -> config.libraryName.text.dashToPascal()
-            }
+            ?: config.libraryName.text.dashToPascal()
     }
 
     fun dependencies(): List<PackageReference> {

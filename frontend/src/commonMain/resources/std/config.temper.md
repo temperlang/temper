@@ -24,13 +24,6 @@ We might break these out into separate libraries in the future.
     import("./json");
     import("./net");
 
-## C#
-
-For [NuGet][std-on-nuget], we use TemperLang as a prefix for Temper internal
-libraries.
-
-    export let csharpRootNamespace = "TemperLang.Std";
-
 ## JS
 
 We use the name below on [npm][std-on-npm].
@@ -51,6 +44,4 @@ We use the name below for Cargo/crates.io.
 
 
 [std-on-pypi]: https://pypi.org/project/temper-std/
-[std-on-maven]: https://central.sonatype.com/artifact/dev.temperlang/temper-std/
 [std-on-npm]: https://www.npmjs.com/package/@temperlang/std
-[std-on-nuget]: https://www.nuget.org/packages/TemperLang.Std/
