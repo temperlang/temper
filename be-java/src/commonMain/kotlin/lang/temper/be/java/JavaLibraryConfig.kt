@@ -74,7 +74,7 @@ open class JavaLibraryConfigs(
 class JavaLibraryConfig(
     val base: LibraryConfiguration,
 ) {
-    val libraryName: String get() = base.backendLibraryName(JavaConfigKeys.libraryNameGlobal)
+    val libraryName: String get() = base.backendLibraryName(cfg(JavaConfigKeys.NAME, JavaConfigKeys.libraryNameGlobal))
     val libraryRoot: FilePath get() = base.libraryRoot
 
     private val properties = base.extractProperties(

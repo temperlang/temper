@@ -21,3 +21,10 @@ In particular, verify that we can pull in and use dependencies.
         "org.roaringbitmap:RoaringBitmap:1.6.20",
       ],
     };
+
+    export let js = {
+      class: JsConfig,
+      dependencies: [
+        "roaring-wasm@1.1.0",
+      ],
+    };

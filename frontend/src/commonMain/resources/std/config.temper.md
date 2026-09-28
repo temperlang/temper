@@ -24,12 +24,6 @@ We might break these out into separate libraries in the future.
     import("./json");
     import("./net");
 
-## JS
-
-We use the name below on [npm][std-on-npm].
-
-    export let jsName = "@temperlang/std";
-
 ## Python
 
 We use the name below on [pypi][std-on-pypi].
@@ -44,4 +38,3 @@ We use the name below for Cargo/crates.io.
 
 
 [std-on-pypi]: https://pypi.org/project/temper-std/
-[std-on-npm]: https://www.npmjs.com/package/@temperlang/std

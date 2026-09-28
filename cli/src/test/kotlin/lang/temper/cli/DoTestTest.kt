@@ -184,6 +184,16 @@ class DoTestTest {
     }
 
     @Test
+    fun connectedsJs() {
+        checkPassing(
+            name = "ConnectedsJs",
+            path = "/testing/connecteds",
+            backends = listOf(JsBackend.Factory.backendId),
+            libraryName = null,
+        )
+    }
+
+    @Test
     fun testPassingLuaBackend() {
         checkPassing("TestPassingLuaBackend", "/testing/passing", listOf(LuaBackend.Lua51.backendId))
     }

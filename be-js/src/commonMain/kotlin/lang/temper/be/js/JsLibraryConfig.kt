@@ -1,4 +1,4 @@
-package lang.temper.be.csharp
+package lang.temper.be.js
 
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.Types
@@ -14,63 +14,61 @@ import lang.temper.value.BlockTree
 import lang.temper.value.TList
 import lang.temper.value.TString
 import lang.temper.value.Value
-import kotlin.reflect.full.primaryConstructor
 
-class CSharpLibraryConfig(
+class JsLibraryConfig(
     val config: LibraryConfiguration,
 ) {
     private val properties = config.extractProperties(
-        configKey = CSharpConfigKeys.CONFIG,
-        className = CSharpConfigKeys.CONFIG_CLASS_NAME,
+        configKey = JsConfigKeys.CONFIG,
+        className = JsConfigKeys.CONFIG_CLASS_NAME,
     )
 
     @Suppress("SameParameterValue")
     private fun cfg(propertyName: String, globalSymbol: Symbol) =
         TString.unpackOrNull(properties?.get(propertyName) ?: config.configExports[globalSymbol])
 
-    fun rootNamespace(): String {
-        val name = cfg(CSharpConfigKeys.ROOT_NAMESPACE, CSharpConfigKeys.rootNamespaceKey)
-        return config.backendLibraryName(name) { it.dashToPascal() }
+    fun name(): String {
+        return config.backendLibraryName(cfg(JsConfigKeys.NAME, JsConfigKeys.nameKey))
     }
 
-    fun dependencies(): List<PackageReference> {
-        val deps = TList.unpackOrNull(properties?.get(CSharpConfigKeys.DEPENDENCIES)) ?: return emptyList()
+    internal fun dependencies(): List<JsDependency> {
+        val deps = TList.unpackOrNull(properties?.get(JsConfigKeys.DEPENDENCIES)) ?: return emptyList()
         return deps.mapNotNull dep@{ depValue ->
             val dependencyText = TString.unpackOrNull(depValue) ?: return@dep null
-            val parts = dependencyText.trim().split(":")
-            parts.size == PackageReference::class.primaryConstructor!!.parameters.size || run {
-                console.error("""Expected "name:version", not $dependencyText""")
+            val parts = dependencyText.trim().split("@")
+            parts.size == 2 || run {
+                console.error("""Expected "name@version", not $dependencyText""")
                 return@dep null
             }
             val (name, version) = parts
-            PackageReference(name = name, version = version)
+            JsDependency(name = name, versionString = version, temperLibraryName = null)
         }
     }
 }
 
-object CSharpConfigKeys {
+object JsConfigKeys {
     /** Key for the backend config instance. */
-    const val CONFIG = "csharp"
+    const val CONFIG = "js"
 
     /** The name of the class for configuring the backend. */
-    const val CONFIG_CLASS_NAME = "CSharpConfig"
+    const val CONFIG_CLASS_NAME = "JsConfig"
 
-    /** Config key to specify NuGet dependencies. */
+    /** Config key to specify npm dependencies. */
     const val DEPENDENCIES = "dependencies"
 
-    /** The root namespace for the dotnet library. */
-    const val ROOT_NAMESPACE = "rootNamespace"
-    internal val rootNamespaceKey = Symbol("csharpRootNamespace")
+    /** The name of the library for this backend. */
+    const val NAME = "name"
+    internal val nameKey = Symbol("jsName")
 }
 
-object CSharpConfigInjector : BindingsInjector {
+object JsConfigInjector : BindingsInjector {
     override fun inject(module: Module, root: BlockTree, logSink: LogSink) {
         root.insert {
             buildConfigType(
-                name = CSharpConfigKeys.CONFIG_CLASS_NAME,
+                name = JsConfigKeys.CONFIG_CLASS_NAME,
                 properties = mapOf(
-                    CSharpConfigKeys.ROOT_NAMESPACE to { V(Value(Types.string)) },
-                    CSharpConfigKeys.DEPENDENCIES to {
+                    JsConfigKeys.NAME to { V(Value(Types.string)) },
+                    JsConfigKeys.DEPENDENCIES to {
                         Call(BuiltinFuns.angleFn) {
                             V(Value(Types.list))
                             V(Value(Types.string))

@@ -98,12 +98,13 @@ val repositorySymbol = Symbol("repository")
 val versionSymbol = Symbol("version")
 
 fun LibraryConfiguration.backendLibraryName(key: Symbol): String {
-    val backendSpecific = TString.unpackOrNull(configExports[key])
-    val generic = libraryName.text
-    return if (backendSpecific.isNullOrBlank()) {
-        generic
-    } else {
-        backendSpecific
+    return backendLibraryName(TString.unpackOrNull(configExports[key]))
+}
+
+fun LibraryConfiguration.backendLibraryName(name: String?, mungeDefault: (String) -> String = { it }): String {
+    return when {
+        name.isNullOrBlank() -> mungeDefault(libraryName.text)
+        else -> name
     }
 }
 
