@@ -46,6 +46,7 @@ import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
+import kotlin.run
 
 internal fun runPyBestEffort(
     pythonVersion: PythonVersion,
@@ -55,7 +56,6 @@ internal fun runPyBestEffort(
     dependencies: Dependencies<*>,
     backendId: BackendId,
     built: VenvBuilt = NilVenvBuilt,
-    usePip: Boolean = false,
 ): List<ToolchainResult> =
     cliEnv.composing(cliEnv.specifics) {
         // Below we assume the dependencies and its metadata came from PyBackend
@@ -131,14 +131,22 @@ internal fun runPyBestEffort(
                     add(dep)
                 }
             }
+            // Any python-specific connected dependencies end up in deps.
+            add(pyDir.resolveDir("deps"))
         }.toList()
-        if (usePip) {
-            // Install dependencies, whether bundled-mode or not (maybe just for good measure?),
-            // but custom PYTHONPATH below can avoid that need for current use cases.
-            // the "--report -" "--ignore-installed" and "--dry-run" flags can provide additional context
-            // TODO Find if we need anything from pypi? Use a custom py env if so?
+
+        run installPipDeps@{
+            // See if we have any explicit connected dependencies.
+            val pipDeps = buildSet {
+                for (libConfig in dependencies.libraryConfigurations.byLibraryName.values) {
+                    addAll(PyLibraryConfig(libConfig).dependencies())
+                }
+            }
+            pipDeps.isEmpty() && return@installPipDeps
+            // Seems we do, so install those specifically in a local dir.
+            // The "--report -" "--ignore-installed" and "--dry-run" flags can provide additional context.
             val pipArgs = buildList {
-                addAll(listOf("-m", "pip", "install"))
+                addAll(listOf("-m", "pip", "install", "--target", "deps"))
                 if (installShouldFailFast) {
                     addAll(
                         listOf(
@@ -149,12 +157,7 @@ internal fun runPyBestEffort(
                         ),
                     )
                 }
-                for (dep in depPaths) {
-                    add(cliEnv.envPath(dep))
-                }
-                if (pyLibraryPath != null) {
-                    add(cliEnv.envPath(pyLibraryPath))
-                }
+                pipDeps.mapTo(this) { it.formatDepPep508() }
             }
             val pipCmd = Command(args = pipArgs, cwd = pyDir)
             val result = cpython.run(pipCmd)
@@ -162,18 +165,16 @@ internal fun runPyBestEffort(
                 maybeFreeze()
                 return@composing listOf(ToolchainResult(result = result))
             }
-            // Track that those libraries were built.
+            // Track that those libraries were installed, then announce them.
             built.built(depPaths)
-            // Announce install.
             cliEnv.announce(CliEnv.Checkpoint.postInstall)
         }
 
         fun getPythonEnv() = buildMap {
             put("PYTHONIOENCODING", cliEnv.specifics.preferredEncoding.name)
-            if (!usePip) {
-                val allPaths = (pyLibraryPath?.let { listOf(it) } ?: listOf()) + depPaths
-                put("PYTHONPATH", allPaths.joinToString(cliEnv.pathSeparator) { cliEnv.envPath(it) })
-            }
+            // TODO Also include "deps" install target dir.
+            val allPaths = (pyLibraryPath?.let { listOf(it) } ?: listOf()) + depPaths
+            put("PYTHONPATH", allPaths.joinToString(cliEnv.pathSeparator) { cliEnv.envPath(it) })
         }
 
         fun runPy(workingDir: FilePath): RResult<EffortSuccess, CliFailure> {

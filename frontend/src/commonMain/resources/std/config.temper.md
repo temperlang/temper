@@ -14,27 +14,12 @@ out from core builtins and also implemented primarily in the Temper language.
     export let license = "Apache-2.0 OR MIT";
     export let repository = "https://github.com/temperlang/temper";
 
-## Imports
-
-We might break these out into separate libraries in the future.
-
-    import("./regex");
-    import("./testing");
-    import("./temporal");
-    import("./json");
-    import("./net");
-
-## Python
-
-We use the name below on [pypi][std-on-pypi].
-
-    export let pyName = "temper-std";
+Each specific backend also injects its own std configuration.
 
 ## Rust
 
-We use the name below for Cargo/crates.io.
+We use the name below for [Cargo/crates.io][std-on-crates].
 
     export let rustName = "temper-std";
 
-
-[std-on-pypi]: https://pypi.org/project/temper-std/
+[std-on-crates]: https://crates.io/crates/temper-std

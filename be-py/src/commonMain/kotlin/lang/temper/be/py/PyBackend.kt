@@ -21,13 +21,12 @@ import lang.temper.common.jsonEscaper
 import lang.temper.common.partitionNotNull
 import lang.temper.common.subListToEnd
 import lang.temper.common.toStringViaBuilder
+import lang.temper.frontend.BindingsInjector
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
 import lang.temper.lexer.Genre
-import lang.temper.library.LibraryConfiguration
 import lang.temper.library.authors
-import lang.temper.library.backendLibraryName
 import lang.temper.library.description
 import lang.temper.library.homepage
 import lang.temper.library.license
@@ -41,6 +40,7 @@ import lang.temper.log.asFilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
+import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
@@ -50,7 +50,6 @@ import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
-import lang.temper.name.Symbol
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.value.DependencyCategory
 
@@ -186,6 +185,7 @@ class PyBackend private constructor(
         // see https://toml.io/en/v1.0.0 for more on TOML
 
         val libraryConfiguration = libraryConfigurations.currentLibraryConfiguration
+        val pyConfig = PyLibraryConfig(libraryConfiguration)
 
         /**
          * Normalize per https://peps.python.org/pep-0503/
@@ -252,7 +252,7 @@ class PyBackend private constructor(
             }
         }
 
-        val libraryNameText = libraryConfiguration.pyLibraryName()
+        val libraryNameText = pyConfig.name()
         /**
          * The setup for running pytest gets complicated here. Splitting the overall code into two packages with
          * different (but similar) pyproject.toml files.
@@ -267,7 +267,7 @@ class PyBackend private constructor(
 
     override fun tentativeTmpL(): TmpL.ModuleSet {
         val pyLibraryNames = libraryConfigurations.byLibraryRoot.mapValues {
-            FilePathSegment(it.value.pyLibraryName())
+            FilePathSegment(PyLibraryConfig(it.value).name())
         }
 
         // TODO Do we need to choose names already in this pass so we can use them in finishTmpLImports?
@@ -295,7 +295,7 @@ class PyBackend private constructor(
         this.pyNames = pyNames
 
         val libraryConfigurationMap = libraryConfigurations.byLibraryName
-        val pyLibraryNames = libraryConfigurationMap.mapValues { it.value.pyLibraryName() }
+        val pyLibraryNames = libraryConfigurationMap.mapValues { PyLibraryConfig(it.value).name() }
         val temperLibraryName = libraryConfigurations.currentLibraryConfiguration.libraryName
         val pyLibraryDir = FilePathSegment(pyLibraryNames.getValue(temperLibraryName))
         val pyLibraryName = pyDirToLibraryName(pyLibraryDir)
@@ -336,6 +336,7 @@ class PyBackend private constructor(
                 }
                 addAll(importDeps)
                 add(buildTemperCoreDependency())
+                addAll(PyLibraryConfig(libraryConfigurations.currentLibraryConfiguration).dependencies())
             }
             outputFileSpecifications.add(generateProjectMetaDataFile(dependencies))
         }
@@ -352,7 +353,7 @@ class PyBackend private constructor(
         // will fail with an error message like https://stackoverflow.com/q/75397736/20394
         val mainPackageName = FilePathSegment(
             toModuleFileName(
-                libraryConfigurations.currentLibraryConfiguration.pyLibraryName(),
+                PyLibraryConfig(libraryConfigurations.currentLibraryConfiguration).name(),
             ),
         )
         if (
@@ -435,7 +436,7 @@ class PyBackend private constructor(
             programs.map { tmpLModule.codeLocation.codeLocation to it }
         }
         // Create a pseudo-program for the top-level __init__.py if it's needed.
-        val pythonLibraryName = libraryConfigurations.currentLibraryConfiguration.pyLibraryName()
+        val pythonLibraryName = PyLibraryConfig(libraryConfigurations.currentLibraryConfiguration).name()
         val pythonLibraryBaseName = FilePathSegment(toModuleFileName(pythonLibraryName))
         val libraryNameAsPyModuleKey = safeModuleName(pythonLibraryName)
         if (top[libraryNameAsPyModuleKey].program == null && finished.genre != Genre.Documentation) {
@@ -593,9 +594,11 @@ class PyBackend private constructor(
                 PythonVersion.MypyC -> MypySpecifics
             }
 
+        private val baseDirPath = dirPath("lang", "temper", "be", "py")
+
         final override val coreLibraryResources: List<ResourceDescriptor> =
             declareResources(
-                base = dirPath("lang", "temper", "be", "py", "temper-core"),
+                base = baseDirPath.resolveDir("temper-core"),
                 filePath("README-temper-core.md"),
                 filePath("temper_core", "py.typed"),
                 filePath("temper_core", "__init__.py"),
@@ -614,15 +617,21 @@ class PyBackend private constructor(
                     )
             }
 
+        private val stdConfigResource = declareResources(
+            baseDirPath.resolveDir("std"),
+            filePath("config.temper.md"),
+        ).first()
+
         override val processCoreLibraryResourcesNeeded get() = false
+
+        override val configBindingsInjector: BindingsInjector = PyConfigInjector
+
+        override fun loadStdConfigSource(): String = stdConfigResource.load()
 
         override fun make(setup: BackendSetup<PyBackend>): PyBackend = PyBackend(pythonVersion, setup)
     }
 
     companion object {
-        /** Config files may export a name with this text to specify the pypi library name */
-        val pyNameConfigKey = Symbol("pyName")
-
         const val fileExtension = ".py"
 
         // None of the python MIME types are registered with IANA.
@@ -697,9 +706,19 @@ class Imports {
 
 data class ImportAlias(val name: OutName, val asName: OutName)
 
-private fun LibraryConfiguration.pyLibraryName() = backendLibraryName(PyBackend.pyNameConfigKey)
-
-private data class Dependency(val name: String, val version: String)
+internal data class Dependency(
+    val name: String,
+    val version: String,
+) {
+    fun formatDepPep508(): String {
+        // TODO Other variations? What constraints do we want by default on api stability?
+        return when {
+            version == "*" -> name
+            version.startsWith('~') -> "$name~=${version.substring(1)}"
+            else -> "$name==$version"
+        }
+    }
+}
 
 private fun buildTemperCoreDependency(): Dependency {
     // One way or another, these resources have to have correct info in them.
@@ -710,19 +729,9 @@ private fun buildTemperCoreDependency(): Dependency {
     return Dependency(DashedIdentifier.temperCoreLibraryIdentifier.text, version)
 }
 
-private fun Dependency.formatDepPep508(): String {
-    // TODO Other variations? What constraints do we want by default on api stability?
-    val text = when {
-        version == "*" -> name
-        version.startsWith('~') -> "$name ~= ${version.substring(1)}"
-        else -> "$name == $version"
-    }
-    return jsonEscaper.escape(text)
-}
-
 private fun formatDepsPep621(dependencies: List<Dependency>): String {
     // Include pipes for trimMargin.
-    val listText = dependencies.joinToString(",\n|    ") { it.formatDepPep508() }
+    val listText = dependencies.joinToString(",\n|    ") { jsonEscaper.escape(it.formatDepPep508()) }
     return "\n|    $listText\n|"
 }
 

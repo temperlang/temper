@@ -28,3 +28,10 @@ In particular, verify that we can pull in and use dependencies.
         "roaring-wasm@1.1.0",
       ],
     };
+
+    export let py = {
+      class: PyConfig,
+      dependencies: [
+        "pyroaring==1.1.0",
+      ],
+    };

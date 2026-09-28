@@ -263,6 +263,16 @@ class DoTestTest {
     }
 
     @Test
+    fun connectedsPy() {
+        checkPassing(
+            name = "ConnectedsPy",
+            path = "/testing/connecteds",
+            backends = listOf(PyBackend.Python3.backendId),
+            libraryName = null,
+        )
+    }
+
+    @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testFailingRustBackend() = runWithCopyOfTestingDir(
         "TestFailingRustBackend",
