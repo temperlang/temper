@@ -15,11 +15,3 @@ out from core builtins and also implemented primarily in the Temper language.
     export let repository = "https://github.com/temperlang/temper";
 
 Each specific backend also injects its own std configuration.
-
-## Rust
-
-We use the name below for [Cargo/crates.io][std-on-crates].
-
-    export let rustName = "temper-std";
-
-[std-on-crates]: https://crates.io/crates/temper-std

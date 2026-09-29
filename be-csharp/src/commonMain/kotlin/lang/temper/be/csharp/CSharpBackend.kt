@@ -37,7 +37,6 @@ import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
-import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
 
 /**
@@ -404,9 +403,6 @@ class CSharpMetadata(
 )
 
 const val DEFAULT_CSPROJ_BASENAME = "TemperBuilt"
-const val STD_ROOT_NAMESPACE = "TemperLang.Std"
-
-internal val csharpRootNamespaceKey = Symbol("csharpRootNamespace")
 
 private val mimeTypes = mapOf(
     CSharpBackend.FILE_EXTENSION to CSharpBackend.mimeType,

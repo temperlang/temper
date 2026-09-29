@@ -48,7 +48,7 @@ class JsLibraryConfig(
 
 object JsConfigKeys {
     /** Key for the backend config instance. */
-    const val CONFIG = "js"
+    const val CONFIG = JsBackend.BACKEND_ID
 
     /** The name of the class for configuring the backend. */
     const val CONFIG_CLASS_NAME = "JsConfig"

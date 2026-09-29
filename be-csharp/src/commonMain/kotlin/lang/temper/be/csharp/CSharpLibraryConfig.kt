@@ -50,7 +50,7 @@ class CSharpLibraryConfig(
 
 object CSharpConfigKeys {
     /** Key for the backend config instance. */
-    const val CONFIG = "csharp"
+    const val CONFIG = CSharpBackend.BACKEND_ID
 
     /** The name of the class for configuring the backend. */
     const val CONFIG_CLASS_NAME = "CSharpConfig"

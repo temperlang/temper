@@ -38,6 +38,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class DoTestTest {
 
@@ -283,6 +284,17 @@ class DoTestTest {
     }
 
     @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsRust() {
+        checkPassing(
+            name = "ConnectedsRust",
+            path = "/testing/connecteds",
+            backends = listOf(RustBackend.Factory.backendId),
+            libraryName = DashedIdentifier("connecteds"),
+        )
+    }
+
+    @Test
     fun multiInterpAll() = multiInterpNamed(null)
 
     @Test
@@ -418,6 +430,14 @@ private fun checkPassing(
 ) {
     runWithTemporaryDirCopyOf(name, resourcePath(path)) { dir ->
         val result = doTestResult(backends, name, dir, libraryName, verbose = verbose)
+        when (val tally = result.testTally) {
+            null -> fail("No test tally")
+            else -> when (val defined = tally.defined) {
+                null -> fail("No info on tests defined")
+                else if defined < 1 -> fail("No tests defined")
+                else -> assertEquals(defined, tally.run)
+            }
+        }
         assertTrue(result.errorFree, "Tests should have passed")
         extraChecks(dir, result)
     }

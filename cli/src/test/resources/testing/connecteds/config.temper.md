@@ -35,3 +35,11 @@ In particular, verify that we can pull in and use dependencies.
         "pyroaring==1.1.0",
       ],
     };
+
+    export let rust = {
+      class: RustConfig,
+      dependencies: [
+        // Old roaring for old rust.
+        "roaring@0.11.1",
+      ],
+    };
