@@ -626,7 +626,12 @@ class PyBackend private constructor(
 
         override val configBindingsInjector: BindingsInjector = PyConfigInjector
 
-        override fun loadStdConfigSource(): String = stdConfigResource.load()
+        override fun loadStdConfigSource(): String = when (pythonVersion) {
+            // Any time mypyc is available (or other potential variations), py also will be.
+            // And we we don't want duplicate code in std config, so go with just one.
+            PythonVersion.Python311 -> stdConfigResource.load()
+            else -> ""
+        }
 
         override fun make(setup: BackendSetup<PyBackend>): PyBackend = PyBackend(pythonVersion, setup)
     }
