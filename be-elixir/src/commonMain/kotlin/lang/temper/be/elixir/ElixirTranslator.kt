@@ -3,6 +3,7 @@ package lang.temper.be.elixir
 import lang.temper.ast.boundaryDescent
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
+import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.log.Position
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
@@ -62,6 +63,8 @@ internal class ElixirTranslator(
     private val types: Map<String, TmpL.TypeDeclaration>,
     /** An imported name, mapped to the exporting module's own name for the same thing. */
     private val imports: Map<ResolvedName, ResolvedName>,
+    /** Translating Temper's standard library, whose @connected functions are support code. */
+    private val isStdLib: Boolean = false,
 ) {
     /** The name a value was declared under, seen through any imports. */
     private fun canonical(name: ResolvedName): ResolvedName {
@@ -90,6 +93,8 @@ internal class ElixirTranslator(
     /** A local function that calls itself: the self-passing name its body calls through, and its arity. */
     private val recursiveLocals = mutableMapOf<ResolvedName, Pair<OutName, Int>>()
 
+    private val localFunctions = mutableSetOf<ResolvedName>()
+
     private fun collectBoxed(module: TmpL.Module) {
         val assigned = mutableSetOf<ResolvedName>()
         val captured = mutableSetOf<ResolvedName>()
@@ -98,6 +103,7 @@ internal class ElixirTranslator(
                 when (node) {
                     is TmpL.Assignment -> nameOf(node.left)?.let(assigned::add)
                     is TmpL.LocalFunctionDeclaration -> {
+                        localFunctions.add(node.name.name)
                         val declaredInside = mutableSetOf<ResolvedName>()
                         val usedInside = mutableSetOf<ResolvedName>()
                         node.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
@@ -112,6 +118,7 @@ internal class ElixirTranslator(
                                     }
                                 }
                                 is TmpL.Reference -> nameOf(inner.id)?.let(usedInside::add)
+                                is TmpL.FnReference -> nameOf(inner.id)?.let(usedInside::add)
                                 is TmpL.Assignment -> nameOf(inner.left)?.let(usedInside::add)
                                 else -> {}
                             }
@@ -125,6 +132,10 @@ internal class ElixirTranslator(
             }
         }
         boxed.addAll((captured intersect assigned) - moduleGlobals)
+        // a local function another closure calls lives in a cell made at the
+        // top of its block, so a closure defined earlier can call one defined
+        // later: putter calling walker, walker calling putter
+        boxed.addAll(captured intersect localFunctions)
     }
 
     fun translateModule(module: TmpL.Module): Translated {
@@ -212,12 +223,41 @@ internal class ElixirTranslator(
         formals.forEach { declare(it.name) }
         val params = formals.map { idOf(it) as Elixir.Pattern }
         val body = decl.body ?: TODO("function without a body: $decl")
+        if (decl.metadata.any { it.key.symbol == lang.temper.value.connectedSymbol } && !isStdLib) {
+            return Elixir.FunDef(
+                pos,
+                id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
+                params = params,
+                body = connectedBody(decl),
+            )
+        }
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
             params = params,
-            body = functionBody(pos, body.statements),
+            body = functionBody(pos, body.statements, prelude = boxParams(pos, formals.map { it.name })),
         )
+    }
+
+    /**
+     * A user `@connected` function: Temper's own parameter defaulting, then a
+     * call to the library's `_connected.ex`, which defines `TemperConnected`.
+     * The frontend gives such a function a body that only panics.
+     */
+    private fun connectedBody(decl: TmpL.ModuleFunctionDeclaration): Elixir.Block {
+        val pos = decl.pos
+        val defaulting = decl.parameterDefaultStatementsInfo()
+        val fn = FunctionContext(returnTag = null)
+        val items = defaulting.defaultStatements.flatMap { statement(it, fn) }
+        val args = decl.parameters.parameters.map { formal ->
+            val name = defaulting.parameterMapping[formal.name.name] ?: formal.name.name
+            varRef(pos, name)
+        }
+        val baseName = (decl.name.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+            ?: functionName(decl.name.name).outputNameText
+        // qualified, so a Kernel name like `length` needs no trailing underscore
+        val fnName = if (Regex("^[a-z_][a-zA-Z0-9_]*$").matches(baseName)) baseName else names.sanitize(baseName)
+        return Elixir.Block(pos, items + remoteCall(pos, elixirModule(pos, CONNECTED_MODULE), fnName, args))
     }
 
     /** A body whose fall-through returns nil, wrapped in a catch only if a return had to throw. */
@@ -274,6 +314,13 @@ internal class ElixirTranslator(
     private fun statements(list: List<TmpL.Statement>, end: End, fn: FunctionContext): List<Elixir.BlockItem> {
         val flat = flatten(list)
         val out = mutableListOf<Elixir.BlockItem>()
+        for (decl in flat.filterIsInstance<TmpL.LocalFunctionDeclaration>()) {
+            if (decl.name.name in boxed) {
+                declare(decl.name.name)
+                val empty = cell(decl.pos, Elixir.NilLit(decl.pos))
+                out.add(Elixir.Match(decl.pos, left = varId(decl.pos, decl.name.name), right = empty))
+            }
+        }
         var i = 0
         while (i < flat.size) {
             val statement = flat[i]
@@ -930,6 +977,12 @@ internal class ElixirTranslator(
     private fun cellGet(pos: Position, name: ResolvedName): Elixir.Expr =
         heapCall(pos, "get", listOf(varRef(pos, name), Elixir.Atom(pos, CELL)))
 
+    /** A parameter a closure shares goes into a cell before the body runs. */
+    private fun boxParams(pos: Position, params: List<ResolvedName>): List<Elixir.BlockItem> =
+        params.filter { it in boxed }.map { p ->
+            Elixir.Match(pos, left = varId(pos, p), right = cell(pos, varRef(pos, p)))
+        }
+
     /** `TemperCore.Heap.new(:cell, %{v: value})`: a variable a closure shares. */
     private fun cell(pos: Position, value: Elixir.Expr): Elixir.Expr =
         heapCall(
@@ -965,6 +1018,16 @@ internal class ElixirTranslator(
         }
         val params = formals.map { idOf(it) as Elixir.Pattern }
         val cls = outer.cls?.let { ClassContext(it.module, it.isStruct, it.thisName, isConstructor = false) }
+        if (name in boxed) {
+            // the cell was made at the top of the block; calls, its own
+            // included, read the function out of it
+            val boxedPrelude = formals.map { it.name }.filter { it in boxed }.map { p ->
+                Elixir.Match(pos, left = varId(pos, p), right = cell(pos, varRef(pos, p)))
+            }
+            val lambdaBody = functionBody(pos, decl.body.statements, cls, prelude = boxedPrelude)
+            val lambda = Elixir.Fn(pos, params = params, body = lambdaBody)
+            return listOf(heapCall(pos, "put", listOf(varRef(pos, name), Elixir.Atom(pos, CELL), lambda)))
+        }
         val boxedParams = formals.map { it.name }.filter { it in boxed }.map { p ->
             Elixir.Match(pos, left = varId(pos, p), right = cell(pos, varRef(pos, p)))
         }
@@ -1110,7 +1173,8 @@ internal class ElixirTranslator(
                 pos,
                 ctor.body.statements,
                 cls,
-                prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)),
+                prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) +
+                    boxParams(pos, formals.map { it.name.name }),
             ),
         )
     }
@@ -1134,7 +1198,12 @@ internal class ElixirTranslator(
             pos,
             id = Elixir.Id(pos, OutName(name, null)),
             params = params,
-            body = functionBody(pos, member.body!!.statements, cls),
+            body = functionBody(
+                pos,
+                member.body!!.statements,
+                cls,
+                prelude = boxParams(pos, formals.map { it.name.name }),
+            ),
         )
     }
 
@@ -1419,6 +1488,7 @@ internal class ElixirTranslator(
         const val NEXT = "temper_next"
         const val DONE = "temper_done"
         const val CONSTRUCTOR = "new"
+        const val CONNECTED_MODULE = "TemperConnected"
         const val CELL = "v"
         const val CELL_CLASS = "cell"
         const val SUPERTYPES = "__temper_supertypes__"

@@ -5,6 +5,7 @@ import lang.temper.be.BackendSetup
 import lang.temper.be.storeDescriptorsForDeclarations
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.isStdLib
 import lang.temper.common.MimeType
 import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
@@ -12,6 +13,7 @@ import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
+import lang.temper.log.last
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
@@ -97,12 +99,17 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
         // a function or module-level value is known by the name its own module declared
         val canonicalFunctions = moduleFunctions.toMap()
-        val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports)
+        val isStdLib = finished.modules.all { it.isStdLib }
+        val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports, isStdLib)
         val translated = finished.modules.map { translator.translateModule(it) }
         val mainBody = translated.flatMap { it.mainBody }
         val functions = translated.flatMap { it.functions }
         val classModules = translated.flatMap { it.modules }
-        return listOf(
+        // a user library's Elixir for its @connected functions, copied as is
+        val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
+            MetadataFileSpecification(path = filePath("lib", CONNECTED_FILE), mimeType = mimeType, content = source)
+        }
+        return connected + listOf(
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
                 mimeType = mimeType,
@@ -135,6 +142,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     companion object {
         const val FILE_EXTENSION = ".ex"
         const val MIX_FILE = "mix.exs"
+
+        /** Elixir for a library's own @connected functions, beside its Temper source. */
+        const val CONNECTED_FILE = "_connected.ex"
 
         /** Where temper-core lands, relative to the backend's output root. */
         const val CORE_DIR = "temper-core"
@@ -210,11 +220,13 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core_float.ex"),
                 filePath("lib", "temper_core_list.ex"),
                 filePath("lib", "temper_core_string.ex"),
+                filePath("lib", "temper_core_map.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
                 filePath("test", "temper_core_list_test.exs"),
                 filePath("test", "temper_core_string_test.exs"),
+                filePath("test", "temper_core_map_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

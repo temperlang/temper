@@ -297,6 +297,10 @@ private fun connectedKernel(key: String, fn: String) = ElixirConnected(key) { po
 private fun erlangMath(key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), fn, a) }
 
+/** `TemperCore.Module.fn(args)` */
+private fun connectedIn(module: String, key: String, fn: String) =
+    ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", module), fn, a) }
+
 /** `TemperCore.String.fn(args)` */
 private fun connectedString(key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "String"), fn, a) }
@@ -390,6 +394,38 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedBuilder("core.type StringBuilder.clear()", "clear"),
         connectedBuilder("core.type StringBuilder.toString()", "to_string"),
         connectedBuilder("core.type StringBuilder.get end()", "end_of"),
+        connectedIn("Pair", "core.type Pair.constructor()", "new"),
+        connectedIn("Map", "core.type Map.constructor()", "new"),
+        connectedIn("Map", "core.type MapBuilder.constructor()", "builder"),
+        connectedIn("Map", "core.type Mapped.get length()", "length"),
+        connectedIn("Map", "core.type Mapped.get()", "get"),
+        connectedIn("Map", "core.type Mapped.getOr()", "get_or"),
+        connectedIn("Map", "core.type Mapped.has()", "has"),
+        connectedIn("Map", "core.type Mapped.keys()", "keys"),
+        connectedIn("Map", "core.type Mapped.values()", "values"),
+        connectedIn("Map", "core.type Mapped.toMap()", "to_map"),
+        connectedIn("Map", "core.type Mapped.toMapBuilder()", "to_builder"),
+        connectedIn("Map", "core.type Mapped.toList()", "to_list"),
+        connectedIn("Map", "core.type Mapped.toListBuilder()", "to_list_builder"),
+        connectedIn("Map", "core.type Mapped.toListWith()", "to_list_with"),
+        connectedIn("Map", "core.type Mapped.toListBuilderWith()", "to_list_builder_with"),
+        connectedIn("Map", "core.type Mapped.forEach()", "for_each"),
+        connectedIn("Map", "core.type MapBuilder.set()", "set"),
+        connectedIn("Map", "core.type MapBuilder.remove()", "remove"),
+        connectedIn("Map", "core.type MapBuilder.clear()", "clear"),
+        connectedIn("Deque", "core.type Deque.constructor()", "new"),
+        connectedIn("Deque", "core.type Deque.add()", "add"),
+        connectedIn("Deque", "core.type Deque.get isEmpty()", "is_empty"),
+        connectedIn("Deque", "core.type Deque.removeFirst()", "remove_first"),
+        connectedIn("DenseBitVector", "core.type DenseBitVector.constructor()", "new"),
+        connectedIn("DenseBitVector", "core.type DenseBitVector.get()", "get"),
+        connectedIn("DenseBitVector", "core.type DenseBitVector.set()", "set"),
+        ElixirConnected("core.type Int32.succ()") { pos, a ->
+            coreCall(pos, "int32", listOf(infixOp(pos, a[0], ElixirOperator.Addition, Elixir.NumberLit(pos, 1))))
+        },
+        ElixirConnected("core.type Int32.pred()") { pos, a ->
+            coreCall(pos, "int32", listOf(infixOp(pos, a[0], ElixirOperator.Subtraction, Elixir.NumberLit(pos, 1))))
+        },
         ElixirConnected("core.type Float64.pi") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.PI) },
         ElixirConnected("core.type Float64.e") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.E) },
         // a ListBuilder is a Listed too, so every read goes through
