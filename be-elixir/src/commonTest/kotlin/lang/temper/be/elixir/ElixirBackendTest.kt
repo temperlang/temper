@@ -107,10 +107,11 @@ class ElixirBackendTest {
 
     /**
      * The frontend evaluates a test of constants while compiling, and the
-     * call goes with it: `onlyForTests` is then referenced by nothing, which
-     * the frontend counts as production, not test. And `limit` is inlined into
-     * `under`, so nothing reads it. Neither is reachable from what the library
-     * exports, so neither belongs in it.
+     * call goes with it: `foldedAway` is then referenced by nothing, which the
+     * frontend counts as production, not test. `limit` is inlined into `under`,
+     * so nothing reads it either. Neither is reachable from what the library
+     * exports, nor from a test, so neither is generated. `helper` is reached
+     * only by a test that is not folded, so it goes with the tests.
      */
     @Test
     fun whatProductionCannotReachStaysOutOfTheLibrary() {
@@ -118,15 +119,22 @@ class ElixirBackendTest {
             """
             |let limit = 5;
             |export let under(x: Int): Boolean { x < limit }
-            |let onlyForTests(x: Int): Int { x + 1 }
-            |test("folds") { assert(onlyForTests(2) == 3); }
+            |let foldedAway(x: Int): Int { x + 1 }
+            |test("folds") { assert(foldedAway(2) == 3); }
+            |let helper(x: Int): Int { x + 1 }
+            |let check(test: Test, x: Int): Void { assert(helper(x) == x + 1); }
+            |test("runs") { test => check(test, 2); }
             """.trimMargin(),
         )
         val library = fileContent(out, "temper_main.ex")
+        val support = fileContent(out, "temper_tests.ex")
         assertContains(library, "def under(")
-        assertFalse("onlyForTests" in library, library)
-        assertFalse("limit" in library, library)
-        assertContains(fileContent(out, "temper_tests.ex"), "def onlyForTests")
+        for (name in listOf("foldedAway", "limit", "helper")) {
+            assertFalse(name in library, "$name is in the library:\n$library")
+        }
+        // the folded assert still names it in its message; the function itself is gone
+        assertFalse("def foldedAway" in support, "nothing reaches foldedAway, but it is generated:\n$support")
+        assertContains(support, "def helper")
     }
 
     /** A library with no tests gets no test directory and no test-only paths. */

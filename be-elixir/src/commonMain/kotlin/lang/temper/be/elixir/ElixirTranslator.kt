@@ -92,6 +92,8 @@ internal class ElixirTranslator(
      * compiled for `mix test` and never shipped with the library.
      */
     private val testOnly: Set<ResolvedName> = setOf(),
+    /** Non-exported functions and values nothing reaches, production or tests: not generated. */
+    private val unused: Set<ResolvedName> = setOf(),
 ) {
     /** `Temper.MyLib.Tests`: tests and what only they use, in `test/support/`. */
     private val testRoot = root + ElixirBackend.TEST_MODULE
@@ -232,6 +234,7 @@ internal class ElixirTranslator(
      * nothing but tests reaches.
      */
     private fun processTopLevel(topLevel: TmpL.TopLevel) {
+        if (topLevel.declaredName()?.let { it in unused } == true) return
         val marks = Triple(functions.size, mainBody.size, modules.size)
         translateTopLevel(topLevel)
         if (topLevel.dependencyCategory() == DependencyCategory.Test || topLevel.declaredName() in testOnly) {

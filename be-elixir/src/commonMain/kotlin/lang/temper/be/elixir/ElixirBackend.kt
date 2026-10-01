@@ -134,13 +134,15 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 if (local != external) imports[local] = external
             }
         }
-        testOnly.addAll(unreachedFromProduction(finished, imports))
+        val placed = placement(finished, imports)
+        testOnly.addAll(placed.testOnly)
         // a function or module-level value is known by the name its own module declared
         val canonicalFunctions = moduleFunctions.toMap()
         val isStdLib = finished.modules.all { it.isStdLib }
         val translator = ElixirTranslator(
             names, root, externals, libraryRoots, canonicalFunctions, moduleGlobals, types, imports, isStdLib,
             testOnly,
+            placed.unused,
         )
         val translated = finished.modules.map { translator.translateModule(it) }
         // The CLI counts tests from this registry, not from the report: a run that
@@ -266,47 +268,58 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     }
 
     /**
-     * The non-exported functions and module-level values that nothing in
-     * production reaches. The frontend marks what only tests reach, but a call
-     * it evaluated while compiling is gone from the tree, so a helper only
-     * tests used, or a constant only they read, looks unused instead and would
-     * ship. Production's roots are what Elixir can reach: exported functions
-     * and values, classes, and top-level statements. A value's initializer
-     * comes with it, so leaving out an unread value changes nothing the
-     * library does.
+     * Where each non-exported function and module-level value belongs. The
+     * frontend marks what only tests reach, but a call it evaluated while
+     * compiling is gone from the tree, so a helper only tests used, or a
+     * constant only they read, looks unused instead and would ship.
+     *
+     * Production's roots are what Elixir can reach: exported functions and
+     * values, classes, and top-level statements. The tests' roots are the
+     * tests and what the frontend marked as theirs. What production does not
+     * reach goes to the test side if tests reach it, and is not generated at
+     * all if nothing does. A value's initializer comes with it, so leaving out
+     * an unread value changes nothing the library does.
      */
-    private fun unreachedFromProduction(
-        finished: TmpL.ModuleSet,
-        imports: Map<ResolvedName, ResolvedName>,
-    ): Set<ResolvedName> {
+    private class Placement(val testOnly: Set<ResolvedName>, val unused: Set<ResolvedName>)
+
+    private fun placement(finished: TmpL.ModuleSet, imports: Map<ResolvedName, ResolvedName>): Placement {
         val declarations = mutableMapOf<ResolvedName, TmpL.TopLevel>()
-        val roots = mutableListOf<TmpL.Tree>()
+        val productionRoots = mutableListOf<TmpL.Tree>()
+        val testRoots = mutableListOf<TmpL.Tree>()
         for (module in finished.modules) {
             for (topLevel in module.topLevels) {
-                if (topLevel.dependencyCategory() == DependencyCategory.Test) continue
+                if (topLevel.dependencyCategory() == DependencyCategory.Test) {
+                    testRoots.add(topLevel)
+                    continue
+                }
                 val name = when (topLevel) {
                     is TmpL.ModuleFunctionDeclaration -> topLevel.name.name
                     is TmpL.ModuleLevelDeclaration -> topLevel.name.name
                     else -> null
                 }
                 if (name == null || name is lang.temper.name.ExportedName) {
-                    roots.add(topLevel)
+                    productionRoots.add(topLevel)
                 } else {
                     declarations[name] = topLevel
                 }
             }
         }
-        val reached = mutableSetOf<ResolvedName>()
-        while (roots.isNotEmpty()) {
-            roots.removeLast().boundaryDescent { node ->
-                val id = (node as? TmpL.Id)?.nameContent as? Either.Left
-                var name = id?.item
-                repeat(imports.size) { name = name?.let { imports[it] ?: it } }
-                name?.let { if (it in declarations && reached.add(it)) roots.add(declarations.getValue(it)) }
-                true
+        fun reached(roots: MutableList<TmpL.Tree>): Set<ResolvedName> {
+            val reached = mutableSetOf<ResolvedName>()
+            while (roots.isNotEmpty()) {
+                roots.removeLast().boundaryDescent { node ->
+                    val id = (node as? TmpL.Id)?.nameContent as? Either.Left
+                    var name = id?.item
+                    repeat(imports.size) { name = name?.let { imports[it] ?: it } }
+                    name?.let { if (it in declarations && reached.add(it)) roots.add(declarations.getValue(it)) }
+                    true
+                }
             }
+            return reached
         }
-        return declarations.keys - reached
+        val notProduction = declarations.keys - reached(productionRoots)
+        val byTests = reached(testRoots)
+        return Placement(testOnly = notProduction intersect byTests, unused = notProduction - byTests)
     }
 
     /** Whether [tree] names the module [prefix] or one under it, or a value it keeps (`:"Temper.Std.x"`). */
