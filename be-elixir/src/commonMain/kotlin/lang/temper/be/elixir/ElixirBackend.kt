@@ -17,6 +17,7 @@ import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.OutName
+import lang.temper.name.ResolvedName
 
 /**
  * <!-- snippet: backend/elixir -->
@@ -61,7 +62,25 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val pos = finished.pos
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
-        val mainBody = finished.modules.flatMap { ElixirTranslator(it).translateModule().mainBody }
+        val names = ElixirNames()
+        // a pre-pass over every module, so a call knows a module function
+        // (and its arity) from a local holding a function value
+        val moduleFunctions = mutableMapOf<ResolvedName, Int>()
+        val moduleGlobals = mutableSetOf<ResolvedName>()
+        for (module in finished.modules) {
+            for (topLevel in module.topLevels) {
+                when (topLevel) {
+                    is TmpL.ModuleFunctionDeclaration ->
+                        moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size
+                    is TmpL.ModuleLevelDeclaration -> if (!topLevel.isConsole()) moduleGlobals.add(topLevel.name.name)
+                    else -> {}
+                }
+            }
+        }
+        val translator = ElixirTranslator(names, moduleFunctions, moduleGlobals)
+        val translated = finished.modules.map { translator.translateModule(it) }
+        val mainBody = translated.flatMap { it.mainBody }
+        val functions = translated.flatMap { it.functions }
         return listOf(
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
@@ -76,7 +95,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                         Elixir.ModuleDef(
                             pos,
                             name = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE))),
-                            items = listOf(
+                            items = functions + listOf(
                                 Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
                             ),
                         ),
@@ -167,8 +186,10 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 base = dirPath("lang", "temper", "be", "elixir", "temper-core"),
                 filePath("mix.exs"),
                 filePath("lib", "temper_core.ex"),
+                filePath("lib", "temper_core_float.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
+                filePath("test", "temper_core_float_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

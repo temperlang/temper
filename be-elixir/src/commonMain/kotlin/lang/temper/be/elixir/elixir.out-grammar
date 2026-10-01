@@ -96,6 +96,7 @@ Expr =
     | Atom
     | BoolLit
     | Call
+    | Capture
     | Case
     | Cond
     | ConsList
@@ -131,6 +132,9 @@ Field ::= obj%Expr & "." & id%Id;
 /** `Temper.Core.puts(x)`, `:erlang.abs(x)`. A field read is [Field]. */
 RemoteCall ::= module%Expr & "." & fn%Id & "(" & args%Expr*"," & ")";
 RemoteCall.args.default = `listOf()`;
+
+/** `&name/2`: a named function as a value. */
+Capture ::= "&" & fn%Id & "/" & arity%NumberLit;
 
 /** `f.(a, b)`: calling an anonymous function. */
 AnonCall ::= fn%Expr & "." & "(" & args%Expr*"," & ")";
@@ -229,6 +233,7 @@ Pattern =
     | NilLit
     | NumberLit
     | Pin
+    | RescueIn
     | StringLit
     | StructPattern
     | TuplePattern
@@ -236,6 +241,9 @@ Pattern =
     ;
 
 Wildcard ::= "_";
+
+/** `e in TemperCore.Bubble`, only in a `rescue` clause. */
+RescueIn ::= binding%Pattern & "in" & module%ModuleName;
 
 /** `^x`: match against x's value instead of rebinding x. */
 Pin ::= "^" & id%Id;

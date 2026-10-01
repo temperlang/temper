@@ -29,6 +29,95 @@ defmodule TemperCore do
   @doc "Temper's `Int` `%`: the sign of the dividend, as `rem/2`. By zero bubbles."
   def int32_rem(_a, 0), do: raise(TemperCore.Bubble, "remainder by zero")
   def int32_rem(a, b), do: rem(a, b)
+
+  @doc "`Int64` division: truncates, wraps at 64 bits, bubbles on zero."
+  def int64_div(_a, 0), do: raise(TemperCore.Bubble, "division by zero")
+  def int64_div(a, b), do: int64(div(a, b))
+
+  @doc "`Int64` `%`."
+  def int64_rem(_a, 0), do: raise(TemperCore.Bubble, "remainder by zero")
+  def int64_rem(a, b), do: rem(a, b)
+
+  @doc "Temper's `Int.toString(radix)`: lower-case digits, as JavaScript writes them."
+  def int_to_string(i, radix \\ 10), do: i |> Integer.to_string(radix) |> String.downcase()
+
+  @doc "`Int.toFloat64()`."
+  def int_to_float(i), do: i * 1.0
+
+  @doc "`Int64.toFloat64()`: bubbles rather than round a value a float cannot hold exactly."
+  def int64_to_float(i) do
+    f = i * 1.0
+    if trunc(f) == i, do: f, else: raise(TemperCore.Bubble, "#{i} has no exact Float64")
+  end
+
+  @doc "`Float64.toInt32()`: truncates, and bubbles outside Int32."
+  def float_to_int32(f) do
+    i = trunc(f)
+    if i >= -2_147_483_648 and i <= 2_147_483_647, do: i, else: raise(TemperCore.Bubble, "#{f} is not an Int32")
+  end
+
+  @doc "`Float64.toInt64()`: truncates, and bubbles outside Int64."
+  def float_to_int64(f) do
+    i = trunc(f)
+    if i >= -9_223_372_036_854_775_808 and i <= 9_223_372_036_854_775_807,
+      do: i,
+      else: raise(TemperCore.Bubble, "#{f} is not an Int64")
+  end
+
+  @doc "`Int64.toInt32()`: bubbles outside Int32."
+  def int64_to_int32(i) do
+    if i >= -2_147_483_648 and i <= 2_147_483_647, do: i, else: raise(TemperCore.Bubble, "#{i} is not an Int32")
+  end
+
+  @doc "`core.ignore(x)`: evaluates x for its effects."
+  def ignore(_x), do: nil
+
+  @doc "`Listed.get(i)`: the element, or a bubble when i is outside the list."
+  def list_get(list, i) when is_integer(i) and i >= 0 do
+    case Enum.fetch(list, i) do
+      {:ok, v} -> v
+      :error -> raise(TemperCore.Bubble, "index #{i} outside a list of #{length(list)}")
+    end
+  end
+
+  def list_get(list, i), do: raise(TemperCore.Bubble, "index #{i} outside a list of #{length(list)}")
+
+  @doc "`Listed.getOr(i, fallback)`."
+  def list_get_or(list, i, fallback) when is_integer(i) and i >= 0, do: Enum.at(list, i, fallback)
+  def list_get_or(_list, _i, fallback), do: fallback
+
+  @doc "Three-way comparison, as Temper's `cmp`: -1, 0 or 1."
+  def cmp(a, b) when a < b, do: -1
+  def cmp(a, b) when a > b, do: 1
+  def cmp(_a, _b), do: 0
+end
+
+defmodule TemperCore.Panic do
+  @moduledoc "A Temper panic: not a bubble, and nothing in Temper catches it."
+  defexception message: "panic"
+end
+
+defmodule TemperCore.Global do
+  @moduledoc """
+  Module-level Temper variables.
+
+  A Temper module's top-level `let` and `var` are read and written by the
+  module's functions, and Elixir functions see no variables but their own. So
+  module-level values live in the process dictionary, keyed by name. Reading
+  one that was never set raises rather than answering nil.
+  """
+
+  def put(name, value) when is_atom(name) do
+    Process.put({__MODULE__, name}, value)
+    value
+  end
+
+  def get(name) when is_atom(name) do
+    case Process.get({__MODULE__, name}, __MODULE__) do
+      __MODULE__ -> raise ArgumentError, "module-level #{inspect(name)} read before it was set"
+      value -> value
+    end
+  end
 end
 
 defmodule TemperCore.Bubble do

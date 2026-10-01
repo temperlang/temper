@@ -35,7 +35,17 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     // naming one. Widening this list is how be-elixir records progress.
     onlyPasses(
         elixir(),
+        Ft.AlgosFibonacci,
         Ft.AlgosHelloWorld,
+        Ft.ControlFlowIfReturn,
+        Ft.ControlFlowLoopReenterable,
+        Ft.ControlFlowLoops,
+        Ft.NamesNonascii,
+        Ft.SemanticsConstness,
+        Ft.SemanticsTypeCheckedLocals,
+        Ft.TypesIntBasics,
+        Ft.TypesListEmpty,
+        Ft.TypesStringIsEmpty,
     )
     onlyPasses(
         cppv(198),

@@ -55,6 +55,9 @@ object ElixirSpecifics : RunnerSpecifics {
     override val tools: List<ToolSpecifics> = listOf(MixCommand)
 }
 
+/** How long a translated program may run before the watchdog halts it. */
+internal const val RUN_TIMEOUT_MS = 60_000
+
 object MixCommand : ToolSpecifics {
     override val cliNames = listOf("mix")
 }
@@ -95,7 +98,12 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier): ToolchainResult {
         // the compile's own failure, with its diagnostics, is the result
         return ToolchainResult(libraryName = libraryName, result = compiled)
     }
-    val call = "${ElixirBackend.MAIN_MODULE}.${ElixirBackend.MAIN_FUNCTION}()"
+    // A watchdog, so a program that never finishes halts with a message
+    // instead of hanging whatever ran it. The first translated loop that
+    // forgot to carry a variable spun for twenty minutes before this.
+    val call =
+        "spawn(fn -> Process.sleep($RUN_TIMEOUT_MS); IO.puts(:stderr, \"timed out after $RUN_TIMEOUT_MS ms\"); " +
+            "System.halt(124) end); ${ElixirBackend.MAIN_MODULE}.${ElixirBackend.MAIN_FUNCTION}()"
     return ToolchainResult(
         libraryName = libraryName,
         result = step(listOf("run", "--no-compile", "-e", call), "stderr.txt"),

@@ -29,6 +29,40 @@ defmodule TemperCoreTest do
     assert_raise TemperCore.Bubble, fn -> int32_rem(1, 0) end
   end
 
+  test "Int toString writes lower-case digits in any radix" do
+    assert int_to_string(-255) == "-255"
+    assert int_to_string(255, 16) == "ff"
+    assert int_to_string(5, 2) == "101"
+  end
+
+  test "conversions bubble instead of losing the value" do
+    assert int64_to_float(2) == 2.0
+    assert_raise TemperCore.Bubble, fn -> int64_to_float(9_007_199_254_740_993) end
+    assert float_to_int32(-2.7) == -2
+    assert_raise TemperCore.Bubble, fn -> float_to_int32(3.0e9) end
+    assert_raise TemperCore.Bubble, fn -> int64_to_int32(2_147_483_648) end
+  end
+
+  test "list_get bubbles outside the list" do
+    assert list_get([1, 2], 1) == 2
+    assert_raise TemperCore.Bubble, fn -> list_get([1, 2], 2) end
+    assert_raise TemperCore.Bubble, fn -> list_get([1, 2], -1) end
+    assert list_get_or([1, 2], 5, :none) == :none
+  end
+
+  test "cmp is three-way" do
+    assert {cmp(1, 2), cmp(2, 2), cmp(3, 2)} == {-1, 0, 1}
+    assert cmp("a", "b") == -1
+  end
+
+  test "a module-level value is set before it is read, and an unset one raises" do
+    TemperCore.Global.put(:answer, 42)
+    assert TemperCore.Global.get(:answer) == 42
+    TemperCore.Global.put(:empty, nil)
+    assert TemperCore.Global.get(:empty) == nil
+    assert_raise ArgumentError, fn -> TemperCore.Global.get(:never_set) end
+  end
+
   test "Int64 wraps at 64 bits" do
     assert int64(9_223_372_036_854_775_807 + 1) == -9_223_372_036_854_775_808
   end

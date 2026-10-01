@@ -44,9 +44,9 @@ object ElixirSupportNetwork : SupportNetwork {
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
 
-    // TODO Map builtin operators onto Elixir's. Nothing the first functional
-    //  test needs calls one.
-    override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? = null
+    /** Temper's builtin operators, as Elixir operators or temper-core calls. */
+    override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? =
+        builtin.builtinOperatorId?.let { elixirOperators[it] }
 
     override fun optionalSupportCode(
         optionalSupportCodeKind: OptionalSupportCodeKind,
@@ -57,7 +57,7 @@ object ElixirSupportNetwork : SupportNetwork {
      * that logged anything fail with "Cannot translate value fn getConsole".
      */
     override fun translateConnectedReference(pos: Position, connectedKey: String, genre: Genre): SupportCode? =
-        elixirConnectedReferences[connectedKey]
+        elixirConnected[connectedKey]
 
     override fun translatedConnectedType(
         pos: Position,
