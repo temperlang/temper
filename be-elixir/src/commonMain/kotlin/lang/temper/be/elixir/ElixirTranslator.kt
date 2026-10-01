@@ -4,7 +4,9 @@ import lang.temper.ast.boundaryDescent
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
+import lang.temper.log.FilePath
 import lang.temper.log.Position
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.value.TBoolean
@@ -53,8 +55,25 @@ import lang.temper.value.TVoid
  * Unhandled nodes are `TODO()` carrying the node: a crash at build time is a
  * work item, plausible wrong output is a bug that hides.
  */
+/** A function or value that another Temper library exports, and the module that holds it. */
+internal sealed interface External {
+    val module: List<String>
+}
+
+/** `Temper.Std.parseJson/1`. */
+internal data class ExternalFunction(override val module: List<String>, val arity: Int) : External
+
+/** A module-level value, in `TemperCore.Global` under its library's key. */
+internal data class ExternalValue(override val module: List<String>) : External
+
 internal class ElixirTranslator(
     private val names: ElixirNames,
+    /** This library's root module, `Temper.Std` for std: its functions, and its classes' parent. */
+    private val root: List<String>,
+    /** What other libraries export to this one, by the name its own library declared. */
+    private val externals: Map<ResolvedName, External>,
+    /** The library each other translated library's root directory holds. */
+    private val libraryRoots: Map<FilePath, DashedIdentifier>,
     /** Every module function of the library, so a call knows it is one, and its arity. */
     private val moduleFunctions: Map<ResolvedName, Int>,
     /** Every module-level variable of the library. */
@@ -854,6 +873,7 @@ internal class ElixirTranslator(
             is TmpL.FnReference -> {
                 val name = canonical(callable.id.name)
                 when (name) {
+                    in externals -> externalReference(expression.pos, name)
                     in moduleFunctions -> capture(expression.pos, name)
                     in moduleGlobals -> globalGet(expression.pos, name)
                     else -> varRef(expression.pos, name)
@@ -870,6 +890,7 @@ internal class ElixirTranslator(
     private fun reference(expression: TmpL.Reference): Elixir.Expr {
         val name = canonical(expression.id.name)
         return when (name) {
+            in externals -> externalReference(expression.pos, name)
             in moduleGlobals -> globalGet(expression.pos, name)
             in moduleFunctions -> capture(expression.pos, name)
             in boxed -> cellGet(expression.pos, name)
@@ -877,15 +898,25 @@ internal class ElixirTranslator(
         }
     }
 
-    /** `&TemperMain.name/2` */
+    /** `&Temper.Lib.name/2` */
     private fun capture(pos: Position, name: ResolvedName): Elixir.Expr =
+        capture(pos, root, name, moduleFunctions.getValue(name))
+
+    private fun capture(pos: Position, module: List<String>, name: ResolvedName, arity: Int): Elixir.Expr =
         Elixir.Capture(
             pos,
-            fn = Elixir.Field(pos, obj = mainModule(pos), id = Elixir.Id(pos, functionName(name))),
-            arity = Elixir.NumberLit(pos, moduleFunctions.getValue(name)),
+            fn = Elixir.Field(pos, obj = moduleOf(pos, module), id = Elixir.Id(pos, functionName(name))),
+            arity = Elixir.NumberLit(pos, arity),
         )
 
-    private fun mainModule(pos: Position) = elixirModule(pos, ElixirBackend.MAIN_MODULE)
+    /** Another library's function as a value, or its module-level value. */
+    private fun externalReference(pos: Position, name: ResolvedName): Elixir.Expr =
+        when (val external = externals.getValue(name)) {
+            is ExternalFunction -> capture(pos, external.module, name, external.arity)
+            is ExternalValue -> globalGet(pos, name)
+        }
+
+    private fun mainModule(pos: Position) = moduleOf(pos, root)
 
     private fun infix(expression: TmpL.InfixOperation, fn: FunctionContext): Elixir.Expr {
         val pos = expression.pos
@@ -924,6 +955,11 @@ internal class ElixirTranslator(
                     // qualified, so it works from inside a class module too, and
                     // never meets a Kernel import of the same name
                     in moduleFunctions -> remoteCall(pos, mainModule(pos), functionName(name).outputNameText, args)
+                    in externals -> when (val external = externals.getValue(name)) {
+                        is ExternalFunction ->
+                            remoteCall(pos, moduleOf(pos, external.module), functionName(name).outputNameText, args)
+                        is ExternalValue -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
+                    }
                     in moduleGlobals -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
                     in recursiveLocals -> {
                         val self = recursiveLocals.getValue(name).first
@@ -953,7 +989,7 @@ internal class ElixirTranslator(
                         // only fail at run time in TemperCore.call; fail here instead
                         val owner = (callee.method?.enclosingType?.name as? lang.temper.name.ResolvedParsedName)
                             ?.baseName?.nameText
-                        if (owner != null && owner !in types) {
+                        if (owner != null && owner !in types && !isExternal(callee.method?.enclosingType?.name)) {
                             val builtin = builtinMethods["$owner.${callee.methodName.dotNameText}"]
                                 ?: TODO("method $owner.${callee.methodName.dotNameText} has no Elixir support code")
                             return remoteCall(
@@ -1215,17 +1251,56 @@ internal class ElixirTranslator(
         thisName?.let { declare(it) }
         val params = listOfNotNull(thisName?.let { varId(pos, it) }) + formals.map { idOf(it.name) }
         val cls = ClassContext(module, isStruct, thisName, isConstructor = false)
+        // std's @connected members keep a placeholder body that panics; one
+        // with no Elixir support code says which, rather than just "panic"
+        val unsupported = (member as? TmpL.Member)?.metadata?.let(::connectedKeyOf)
+            ?.takeIf { isStdLib && it !in elixirConnected && isPanicPlaceholder(member.body) }
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(pos, OutName(name, null)),
             params = params,
-            body = functionBody(
-                pos,
-                member.body!!.statements,
-                cls,
-                prelude = boxParams(pos, formals.map { it.name.name }),
-            ),
+            body = if (unsupported != null) {
+                Elixir.Block(
+                    pos,
+                    listOf(
+                        localCall(
+                            pos,
+                            "raise",
+                            listOf(
+                                elixirModule(pos, "TemperCore", "Panic"),
+                                Elixir.StringLit(pos, "no Elixir support code for $unsupported"),
+                            ),
+                        ),
+                    ),
+                )
+            } else {
+                functionBody(
+                    pos,
+                    member.body!!.statements,
+                    cls,
+                    prelude = boxParams(pos, formals.map { it.name.name }),
+                )
+            },
         )
+    }
+
+    /**
+     * A body that is only `pureVirtual()`: what the frontend gives a bodiless
+     * `@connected` member, one every backend must supply itself.
+     */
+    private fun isPanicPlaceholder(body: TmpL.BlockStatement?): Boolean {
+        val only = body?.statements?.singleOrNull() as? TmpL.ExpressionStatement ?: return false
+        val callee = (only.expression as? TmpL.CallExpression)?.fn as? TmpL.InlineSupportCodeWrapper ?: return false
+        return callee.supportCode == PureVirtual
+    }
+
+    /** The key of an `@connected` declaration, `std/temporal.type Date.today()`. */
+    private fun connectedKeyOf(metadata: List<TmpL.DeclarationMetadata>): String? {
+        if (metadata.none { it.key.symbol == lang.temper.value.connectedSymbol }) return null
+        return metadata.firstNotNullOfOrNull { m ->
+            if (m.key.symbol != lang.temper.value.qNameSymbol) return@firstNotNullOfOrNull null
+            (m.value as? TmpL.ValueData)?.value?.let { lang.temper.value.TString.unpackOrNull(it) }
+        }
     }
 
     private fun setBacked(statement: TmpL.SetBackedProperty, fn: FunctionContext): Elixir.BlockItem {
@@ -1289,7 +1364,7 @@ internal class ElixirTranslator(
         val name = typeBaseName(type)
         builtinGuards[name]?.let { guard -> return localCall(pos, guard, listOf(value)) }
         indexChecks[name]?.let { check -> return check(pos, value) }
-        val module = types[name]?.let { typeModule(it) } ?: TODO("instanceof $name")
+        val module = types[name]?.let { typeModule(it) } ?: externalTypeModule(type) ?: TODO("instanceof $name")
         return coreCall(pos, "is_a", listOf(value, moduleOf(pos, module)))
     }
 
@@ -1345,7 +1420,8 @@ internal class ElixirTranslator(
                 ),
             )
         }
-        val module = types[name]?.let { typeModule(it) } ?: TODO("cast to $name")
+        val module = types[name]?.let { typeModule(it) } ?: externalTypeModule(cast.checkedType)
+            ?: TODO("cast to $name")
         return coreCall(pos, "cast", listOf(value, moduleOf(pos, module)))
     }
 
@@ -1399,7 +1475,7 @@ internal class ElixirTranslator(
         val property = propertyText(expression.property)
         val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition
         val owner = (definition?.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
-        if (owner == null || owner in types) return null
+        if (owner == null || owner in types || isExternal(definition?.name)) return null
         val builtin = builtinGetters["$owner.$property"]
             ?: TODO("getter $owner.$property has no Elixir support code: $expression")
         return remoteCall(
@@ -1510,12 +1586,48 @@ internal class ElixirTranslator(
     }
 
     private fun typeModule(decl: TmpL.TypeDeclaration): List<String> =
-        listOf(ElixirBackend.MAIN_MODULE, names.moduleSegment(baseNameOfId(decl.name)))
+        root + names.moduleSegment(baseNameOfId(decl.name))
 
     private fun typeNameModule(typeName: TmpL.TypeName): List<String> {
         val key = baseNameOf(typeName) ?: TODO("type with no name: $typeName")
-        return types[key]?.let { typeModule(it) } ?: TODO("type not declared here: $key")
+        return types[key]?.let { typeModule(it) }
+            ?: externalModule(typeName.sourceDefinition?.name)
+            ?: TODO("type not declared here: $key")
     }
+
+    /**
+     * A type as a value: the module of a translated class, this library's
+     * or another's, and the name of a builtin type as an atom (`:Void`),
+     * as be-js gives the name as a string. Java gives a class literal.
+     */
+    private fun typeValue(pos: Position, type: lang.temper.type2.Type2, expression: TmpL.Tree): Elixir.Expr {
+        val definition = (type as? lang.temper.type2.DefinedType)?.definition
+            ?: TODO("type value with no definition: $expression")
+        val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+            ?: TODO("type value with no name: $expression")
+        types[base]?.let { return moduleOf(pos, typeModule(it)) }
+        externalModule(definition.name)?.let { return moduleOf(pos, it) }
+        return Elixir.Atom(pos, base)
+    }
+
+    /** The library another translated library's name was declared in, or null for Temper's builtins. */
+    private fun libraryOf(name: lang.temper.name.TemperName?): DashedIdentifier? {
+        val loc = ((name as? lang.temper.name.ModularName)?.origin?.loc as? lang.temper.name.ModuleName)
+            ?: return null
+        return libraryRoots[loc.libraryRoot()]
+    }
+
+    private fun isExternal(name: lang.temper.name.TemperName?): Boolean = libraryOf(name) != null
+
+    /** `Temper.Std.JsonArray` for std's JsonArray. */
+    private fun externalModule(name: lang.temper.name.TemperName?): List<String>? {
+        val library = libraryOf(name) ?: return null
+        val base = (name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return null
+        return ElixirBackend.libraryModule(library) + names.moduleSegment(base)
+    }
+
+    private fun externalTypeModule(type: TmpL.AType): List<String>? =
+        externalModule((type.ot as? TmpL.NominalType)?.typeName?.sourceDefinition?.name)
 
     private fun typeSubjectModule(subject: TmpL.TypeSubject): List<String> = when (subject) {
         is TmpL.TypeName -> typeNameModule(subject)
@@ -1569,7 +1681,11 @@ internal class ElixirTranslator(
 
     private fun functionName(name: ResolvedName): OutName = names.outName(name)
 
-    private fun globalAtom(pos: Position, name: ResolvedName) = Elixir.Atom(pos, names.outName(name).outputNameText)
+    /** `:"Temper.Std.hexDigits__386"`: keyed by library, as two libraries' globals share one process. */
+    private fun globalAtom(pos: Position, name: ResolvedName): Elixir.Atom {
+        val module = externals[name]?.module ?: root
+        return Elixir.Atom(pos, module.joinToString(".") + "." + names.outName(name).outputNameText)
+    }
 
     private fun globalGet(pos: Position, name: ResolvedName): Elixir.Expr =
         coreGlobal(pos, "get", listOf(globalAtom(pos, name)))
@@ -1601,8 +1717,9 @@ internal class ElixirTranslator(
             is TString -> Elixir.StringLit(pos, TString.unpack(expression.value))
             // RepresentationOfVoid.ReifyVoid: a void value really flows, and nil is it
             TNull, TVoid -> Elixir.NilLit(pos)
+            TType -> typeValue(pos, TType.unpack(expression.value).type2, expression)
             is TClass, TClosureRecord, TFunction, TList, TListBuilder, TMap, TMapBuilder,
-            TProblem, TStageRange, TSymbol, TType,
+            TProblem, TStageRange, TSymbol,
             -> TODO("value of type $tag: $expression")
         }
     }

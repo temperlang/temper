@@ -130,3 +130,29 @@ defmodule TemperCoreTest do
     assert Task.await(task) == {:raised, true}
   end
 end
+
+defmodule TemperCore.InitOnceTest do
+  use ExUnit.Case, async: true
+
+  test "a library's top levels run once per process, however many libraries depend on it" do
+    me = self()
+    run = fn -> TemperCore.init_once(:"Temper.Shared", fn -> send(me, :ran) end) end
+    run.()
+    run.()
+    assert_received :ran
+    refute_received :ran
+  end
+end
+
+defmodule TemperCore.TemporalTest do
+  use ExUnit.Case, async: true
+
+  defmodule FakeDate do
+    def new(y, m, d), do: {y, m, d}
+  end
+
+  test "today is built by the given Date module from the UTC date" do
+    %Date{year: y, month: m, day: d} = Date.utc_today()
+    assert TemperCore.Temporal.today(FakeDate) == {y, m, d}
+  end
+end

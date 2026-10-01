@@ -700,7 +700,7 @@ object Elixir {
         }
     }
 
-    /** `&TemperMain.name/2`: a named function as a value. */
+    /** `&Temper.Lib.name/2`: a named function as a value. */
     class Capture(
         pos: Position,
         fn: Expr,

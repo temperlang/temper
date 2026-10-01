@@ -54,17 +54,45 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
 
     /**
-     * One Mix project: `mix.exs`, and `lib/temper_main.ex` whose `main/0`
-     * runs every module's top-level statements in order.
+     * One Mix project per library: `mix.exs`, which depends on temper-core
+     * and on every library this one imports from, and `lib/temper_main.ex`.
      *
-     * Not done: every library is `TemperMain` with app `:temper_main`, so two
-     * libraries built together would collide. One library at a time is all
-     * the functional suite asks for so far.
+     * Everything lives under the library's root module, `Temper.Std` for
+     * std. Its `__temper_init__/0` runs the libraries it depends on, then
+     * every module's top-level statements in order, once per process;
+     * `main/0` runs that and drains the async queue.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val pos = finished.pos
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
         val names = ElixirNames()
+        val root = libraryModule(libraryName)
+        // what other libraries export to this one, and where their roots are,
+        // so a name can be traced to the library that declared it
+        val externals = mutableMapOf<ResolvedName, External>()
+        val libraryRoots = mutableMapOf<FilePath, lang.temper.name.DashedIdentifier>()
+        for (module in finished.modules) {
+            for (import in module.imports) {
+                val path = import.path as? TmpL.CrossLibraryPath ?: continue
+                libraryRoots[path.to.libraryRoot()] = path.libraryName
+                val external = runCatching { import.externalName.name }.getOrNull() ?: continue
+                val module = libraryModule(path.libraryName)
+                when (val sig = import.sig) {
+                    is TmpL.ImportedFunction -> externals[external] = ExternalFunction(
+                        module,
+                        sig.type.requiredInputTypes.size + sig.type.optionalInputTypes.size +
+                            (if (sig.type.restInputsType != null) 1 else 0),
+                    )
+                    is TmpL.ImportedValue -> externals[external] = ExternalValue(module)
+                    // a type is found from its definition's library, wherever it is
+                    // named; a connected function arrives as support code
+                    is TmpL.ImportedType, is TmpL.ImportedConnection, null -> {}
+                }
+            }
+        }
+        // std's modules list no deps, so the libraries imports cross into count too
+        val declared = finished.modules.flatMap { module -> module.deps.map { it.libraryName } }
+        val dependencies = (declared + libraryRoots.values).filter { it != libraryName }.distinct()
         // a pre-pass over every module, so a call knows a module function
         // (and its arity) from a local holding a function value
         val moduleFunctions = mutableMapOf<ResolvedName, Int>()
@@ -100,12 +128,45 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         // a function or module-level value is known by the name its own module declared
         val canonicalFunctions = moduleFunctions.toMap()
         val isStdLib = finished.modules.all { it.isStdLib }
-        val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports, isStdLib)
+        val translator = ElixirTranslator(
+            names, root, externals, libraryRoots, canonicalFunctions, moduleGlobals, types, imports, isStdLib,
+        )
         val translated = finished.modules.map { translator.translateModule(it) }
-        val mainBody = translated.flatMap { it.mainBody } +
-            remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf())
-        val functions =
-            translated.flatMap { it.functions } + listOfNotNull(testRunner(pos, translated.flatMap { it.tests }))
+        val rootModule = elixirModule(pos, *root.toTypedArray())
+        // `TemperCore.init_once(:"Temper.Std", fn -> deps; top levels end)`
+        val init = Elixir.FunDef(
+            pos,
+            id = id(INIT_FUNCTION),
+            body = Elixir.Block(
+                pos,
+                listOf(
+                    remoteCall(
+                        pos,
+                        elixirModule(pos, "TemperCore"),
+                        "init_once",
+                        listOf(
+                            Elixir.Atom(pos, root.joinToString(".")),
+                            Elixir.Fn(
+                                pos,
+                                body = Elixir.Block(
+                                    pos,
+                                    dependencies.map { dep ->
+                                        val module = elixirModule(pos, *libraryModule(dep).toTypedArray())
+                                        remoteCall(pos, module, INIT_FUNCTION, listOf())
+                                    } + translated.flatMap { it.mainBody } + Elixir.NilLit(pos),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val mainBody = listOf(
+            remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
+        )
+        val functions = translated.flatMap { it.functions } +
+            listOfNotNull(testRunner(pos, root, translated.flatMap { it.tests })) + init
         val classModules = translated.flatMap { it.modules }
         // a user library's Elixir for its @connected functions, copied as is
         val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
@@ -115,7 +176,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
                 mimeType = mimeType,
-                content = mixProject(MAIN_MODULE, "temper_main"),
+                content = mixProject(root.joinToString("."), libraryApp(libraryName), dependencies),
             ),
             TranslatedFileSpecification(
                 path = filePath("lib", "temper_main$FILE_EXTENSION"),
@@ -124,7 +185,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                     items = classModules + listOf(
                         Elixir.ModuleDef(
                             pos,
-                            name = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE))),
+                            name = rootModule,
                             items = functions + listOf(
                                 Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
                             ),
@@ -142,10 +203,10 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * std/testing would do this itself, but it is a library of its own and
      * not in this translation, so `TemperCore.Test` is a port of it.
      */
-    private fun testRunner(pos: lang.temper.log.Position, tests: List<String>): Elixir.FunDef? {
+    private fun testRunner(pos: lang.temper.log.Position, root: List<String>, tests: List<String>): Elixir.FunDef? {
         if (tests.isEmpty()) return null
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
-        val main = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE)))
+        val main = elixirModule(pos, *root.toTypedArray())
         val cases = tests.map { test ->
             Elixir.RemoteCall(
                 pos,
@@ -193,9 +254,29 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         /** Where temper-core lands, relative to the backend's output root. */
         const val CORE_DIR = "temper-core"
 
-        /** The module whose [MAIN_FUNCTION] `mix run` calls. */
-        const val MAIN_MODULE = "TemperMain"
         const val MAIN_FUNCTION = "main"
+
+        /** Runs a library's dependencies, then its top levels, once per process. */
+        const val INIT_FUNCTION = "__temper_init__"
+
+        /**
+         * `Temper.Std` for std, `Temper.MyLib` for my-lib: the module whose
+         * [MAIN_FUNCTION] `mix run` calls, and the parent of its classes.
+         * Under `Temper.`, so no library can be named into Elixir's own
+         * `String` or `Enum`.
+         */
+        fun libraryModule(library: lang.temper.name.DashedIdentifier): List<String> =
+            listOf("Temper", pascal(library.text))
+
+        /** `:temper_std`, `:temper_my_lib`. */
+        fun libraryApp(library: lang.temper.name.DashedIdentifier): String =
+            "temper_" + library.text.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
+        private fun pascal(text: String): String {
+            val words = text.split(Regex("[^A-Za-z0-9]+")).filter { it.isNotEmpty() }
+            val joined = words.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
+            return if (joined.firstOrNull()?.isLetter() == true) joined else "L$joined"
+        }
 
         /** Runs the `@test`s and answers JUnit XML. */
         const val TESTS_FUNCTION = "__temper_tests__"
@@ -219,7 +300,15 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
          * The backend is developed against Elixir 1.19.5 on OTP 28.
          * `"~> 1.15"` is a floor that has not been tested below 1.19.
          */
-        internal fun mixProject(moduleName: String, appName: String): String = """
+        internal fun mixProject(
+            moduleName: String,
+            appName: String,
+            dependencies: List<lang.temper.name.DashedIdentifier> = listOf(),
+        ): String {
+            // each library's project sits beside the others, in a directory named for it
+            val deps = listOf("{:temper_core, path: \"../$CORE_DIR\"}") +
+                dependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\"}" }
+            return """
             |defmodule $moduleName.MixProject do
             |  use Mix.Project
             |
@@ -228,11 +317,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             |  end
             |
             |  defp deps do
-            |    [{:temper_core, path: "../$CORE_DIR"}]
+            |    [${deps.joinToString(", ")}]
             |  end
             |end
             |
-        """.trimMargin()
+            """.trimMargin()
+        }
     }
 
     @PluginBackendId(BACKEND_ID)

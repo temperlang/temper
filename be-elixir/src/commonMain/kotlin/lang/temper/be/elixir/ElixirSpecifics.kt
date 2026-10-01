@@ -103,13 +103,14 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
     // A watchdog, so a program that never finishes halts with a message
     // instead of hanging whatever ran it. The first translated loop that
     // forgot to carry a variable spun for twenty minutes before this.
+    val root = ElixirBackend.libraryModule(libraryName).joinToString(".")
     val call =
         "spawn(fn -> Process.sleep($RUN_TIMEOUT_MS); IO.puts(:stderr, \"timed out after $RUN_TIMEOUT_MS ms\"); " +
-            "System.halt(124) end); ${ElixirBackend.MAIN_MODULE}.${ElixirBackend.MAIN_FUNCTION}()" +
+            "System.halt(124) end); $root.${ElixirBackend.MAIN_FUNCTION}()" +
             // the module's top level runs first: tests read the values it sets
             if (tests) {
                 "; File.write!(\"${ElixirBackend.TEST_RESULTS_FILE}\", " +
-                    "${ElixirBackend.MAIN_MODULE}.${ElixirBackend.TESTS_FUNCTION}())"
+                    "$root.${ElixirBackend.TESTS_FUNCTION}())"
             } else {
                 ""
             }

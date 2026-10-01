@@ -450,6 +450,16 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedIn("Test", "std/testing.type Test.get failedOnAssert()", "failed_on_assert"),
         connectedIn("Test", "std/testing.runTestCases()", "run_cases"),
         connectedIn("Test", "std/testing.processTestCases()", "process"),
+        // std's Date is a translated class, in std's own root module; only
+        // reading the clock needs the host
+        ElixirConnected("std/temporal.type Date.today()") { pos, _ ->
+            remoteCall(
+                pos,
+                elixirModule(pos, "TemperCore", "Temporal"),
+                "today",
+                listOf(elixirModule(pos, "Temper", "Std", "Date")),
+            )
+        },
         ElixirConnected("core.type Float64.pi") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.PI) },
         ElixirConnected("core.type Float64.e") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.E) },
         // a ListBuilder is a Listed too, so every read goes through

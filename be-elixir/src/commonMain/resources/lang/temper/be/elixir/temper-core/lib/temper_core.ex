@@ -51,6 +51,20 @@ defmodule TemperCore do
   @doc "Temper's `Int.toString(radix)`: lower-case digits, as JavaScript writes them."
   def int_to_string(i, radix \\ 10), do: i |> Integer.to_string(radix) |> String.downcase()
 
+  @doc """
+  Runs `body` the first time `key` is seen in this process. A library's
+  `__temper_init__/0` comes through here, so its top levels run once even
+  when two libraries that both depend on it are initialized.
+  """
+  def init_once(key, body) do
+    if Process.get({:temper_init, key}) do
+      nil
+    else
+      Process.put({:temper_init, key}, true)
+      body.()
+    end
+  end
+
   @doc "`Int.toFloat64()`."
   def int_to_float(i), do: i * 1.0
 
@@ -212,4 +226,14 @@ defmodule TemperCore.Heap do
   end
 
   defp key(%Ref{id: id}), do: {__MODULE__, id}
+end
+
+defmodule TemperCore.Temporal do
+  @moduledoc "What std/temporal needs from the host: the clock."
+
+  @doc "`Date.today()`: today's UTC date, made by std's own `Date` constructor."
+  def today(date_module) do
+    %Date{year: y, month: m, day: d} = Date.utc_today()
+    date_module.new(y, m, d)
+  end
 end
