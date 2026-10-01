@@ -9,6 +9,13 @@ defmodule TemperCore.Net do
   """
   alias TemperCore.{Heap, Promise}
 
+  @typedoc "A `NetResponse`: a heap object holding the status, the Content-Type and the raw body."
+  @type response :: TemperCore.Ref.t()
+
+  @typedoc "A Temper `Promise`: a heap object."
+  @type promise :: TemperCore.Ref.t()
+
+  @spec send_request(String.t(), String.t(), String.t() | nil, String.t() | nil) :: promise()
   def send_request(url, method, body, mime) do
     {:ok, _} = Application.ensure_all_started(:inets)
     p = Promise.new()
@@ -39,7 +46,9 @@ defmodule TemperCore.Net do
     p
   end
 
+  @spec status(response()) :: integer()
   def status(r), do: Heap.get(r, :status)
+  @spec content_type(response()) :: String.t() | nil
   def content_type(r), do: Heap.get(r, :content_type)
 
   @doc """
@@ -52,6 +61,7 @@ defmodule TemperCore.Net do
   UTF-16 is converted. Any other charset breaks the promise rather than
   return text decoded by a guess.
   """
+  @spec body_content(response()) :: promise()
   def body_content(r) do
     p = Promise.new()
 
@@ -64,6 +74,7 @@ defmodule TemperCore.Net do
   end
 
   @doc false
+  @spec charset(String.t() | nil) :: String.t() | nil
   def charset(nil), do: nil
 
   def charset(content_type) do
@@ -83,6 +94,7 @@ defmodule TemperCore.Net do
   end
 
   @doc false
+  @spec decode(binary(), String.t() | nil) :: {:ok, String.t()} | :error
   def decode(body, charset) when charset in [nil, "utf-8", "utf8"], do: {:ok, String.replace_invalid(body)}
 
   def decode(body, charset) when charset in ["iso-8859-1", "iso8859-1", "latin1", "latin-1"],

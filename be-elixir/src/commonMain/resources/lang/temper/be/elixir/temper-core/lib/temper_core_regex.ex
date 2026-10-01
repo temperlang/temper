@@ -16,8 +16,12 @@ defmodule TemperCore.Regex do
   iterates in. `:re.inspect(mp, :namelist)` sorts them alphabetically.
   """
 
+  @typedoc "A compiled regex: the `:re` program, and its capture names in pattern order."
+  @type t :: {:re.mp(), [String.t()]}
+
   @capture_name ~r/(?<!\\)\(\?<([A-Za-z_][A-Za-z0-9_]*)>/
 
+  @spec compile(String.t()) :: t()
   def compile(formatted) do
     mp =
       case :re.compile(formatted, [:unicode]) do
@@ -35,9 +39,11 @@ defmodule TemperCore.Regex do
     {mp, names}
   end
 
+  @spec found(t(), String.t()) :: boolean()
   def found({mp, _}, text), do: :re.run(text, mp, capture: :none) == :match
 
   @doc "`find`: the first match at or after `begin`, or a bubble."
+  @spec find(t(), String.t(), non_neg_integer(), module(), module()) :: term()
   def find({mp, names}, text, begin, match_module, group_module) do
     case :re.run(text, mp, [{:offset, begin}, {:capture, [0 | names], :index}]) do
       {:match, spans} -> to_match(text, names, spans, match_module, group_module)
@@ -46,7 +52,7 @@ defmodule TemperCore.Regex do
   end
 
   @doc "`replace`: every match replaced by what `format` makes of it."
-  @spec replace(term(), String.t(), (term() -> String.t()), module(), module()) :: String.t()
+  @spec replace(t(), String.t(), (term() -> String.t()), module(), module()) :: String.t()
   def replace({mp, names}, text, format, match_module, group_module) when is_binary(text) do
     case :re.run(text, mp, [:global, {:capture, [0 | names], :index}]) do
       :nomatch ->
@@ -64,9 +70,11 @@ defmodule TemperCore.Regex do
   end
 
   @doc "`split`: the pieces between matches, with captured groups between them, as be-py's `re.split` gives."
+  @spec split(t(), String.t()) :: TemperCore.Vec.t(String.t())
   def split({mp, _}, text), do: TemperCore.Vec.new(:re.split(text, mp, return: :binary))
 
   @doc "`pushCodeTo`: PCRE's numeric escape for a code point."
+  @spec code_escape(integer()) :: String.t()
   def code_escape(code), do: "\\x{" <> Integer.to_string(code, 16) <> "}"
 
   defp to_match(text, names, [{at, len} | named], match_module, group_module) do

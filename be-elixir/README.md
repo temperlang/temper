@@ -690,13 +690,22 @@ elixir be-elixir/src/commonTest/resources/lang/temper/be/elixir/dialyze.exs \
 It builds a PLT on its first run (about 15 s), then prints each warning and
 `SPEC-TOTAL`, the ones about a spec.
 
-Two things made the checking real. `TemperCore.Heap.entry/1`, which every
-exported function runs through, is a macro: as a function taking a closure,
-it returned `any()` to Dialyzer, and no exported function's spec could be
-found false. Generated modules `require TemperCore.Heap` for it. And a value
-returned by a `throw`, as an early `return` from inside a loop is, is
-`any()` to Dialyzer, so such a function's result is not checked; its
-arguments still are, at every call.
+Three things made the checking real. `TemperCore.Heap.entry/1`, which
+every exported function runs through, is a macro: as a function taking a
+closure, it returned `any()` to Dialyzer, and no exported function's spec
+could be found false. Generated modules `require TemperCore.Heap` for it.
+temper-core's public functions have specs, so a call into the runtime has a
+type where it had `any()`. And a null check is a `case`
+(`case x do nil -> ...; x -> ... end`) rather than `if x === nil`, because
+Dialyzer narrows a variable through a pattern and not through a boolean
+test.
+
+Two kinds of result are still not checked. A value returned by a `throw`,
+as an early `return` from inside a loop is, is `any()` to Dialyzer. And a
+value whose type comes from a spec's type variable, such as a map's value
+from `get_or`, is `term()`, since Dialyzer does not instantiate type
+variables at a call. Either function's arguments are still checked, at
+every call.
 
 ## 15. Long-running programs
 

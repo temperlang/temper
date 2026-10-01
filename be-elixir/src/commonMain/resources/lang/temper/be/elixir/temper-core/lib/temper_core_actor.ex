@@ -53,6 +53,8 @@ defmodule TemperCore.Actor do
 
       account = TemperCore.Actor.supervised(fn -> Temper.Bank.Account.new("ann") end)
   """
+  @spec supervised((-> result)) :: result when result: term()
+  @spec supervised((-> result), Supervisor.supervisor()) :: result when result: term()
   def supervised(fun, supervisor \\ TemperCore.Actors) do
     outer = Process.get(@supervised)
     Process.put(@supervised, supervisor)
@@ -65,9 +67,11 @@ defmodule TemperCore.Actor do
   end
 
   @doc "Ends an actor, supervised or not."
+  @spec stop(t()) :: :ok
   def stop(%__MODULE__{} = actor), do: GenServer.stop(pid!(actor), :normal)
 
   @doc "The process running an actor now, or nil if it has ended."
+  @spec whereis(t()) :: pid() | nil
   def whereis(%__MODULE__{id: id}) do
     case Registry.lookup(@registry, id) do
       [{pid, _}] -> pid
@@ -78,6 +82,7 @@ defmodule TemperCore.Actor do
   # -- generated code calls these ---------------------------------------------
 
   @doc "`new C(...)` for an `@actor` class: starts the process and runs the constructor in it."
+  @spec start(module(), (-> term())) :: t()
   def start(class, constructor) when is_function(constructor, 0) do
     sendable!(constructor, "a constructor argument of #{inspect(class)}")
     id = make_ref()
@@ -127,6 +132,7 @@ defmodule TemperCore.Actor do
   end
 
   @doc "The constructor's `this`: inside the actor's process, an actor whose fields live here."
+  @spec init_self(module(), map()) :: t()
   def init_self(class, fields) do
     Process.put(@self, Heap.new(class, fields))
     %__MODULE__{class: class, id: Process.get(@self_id)}
@@ -154,6 +160,7 @@ defmodule TemperCore.Actor do
   end
 
   @doc "The heap object holding this actor's fields, for `Heap.get`/`put` on `this`."
+  @spec fields(t()) :: TemperCore.Ref.t()
   def fields(%__MODULE__{class: class, id: id}) do
     if Process.get(@self_id) == id,
       do: Process.get(@self),
@@ -279,6 +286,7 @@ defmodule TemperCore.Actor do
   Temper's meaning: no mutable non-actor object anywhere inside it,
   including in a closure's captured values.
   """
+  @spec sendable!(term(), String.t()) :: :ok
   def sendable!(term, what) do
     case first_unsendable([term]) do
       nil ->
@@ -294,6 +302,7 @@ defmodule TemperCore.Actor do
   end
 
   @doc "Whether `term` could cross to another process: `sendable!/2` without the raise."
+  @spec sendable?(term()) :: boolean()
   def sendable?(term), do: first_unsendable([term]) == nil
 
   defp first_unsendable([]), do: nil

@@ -13,9 +13,15 @@ defmodule TemperCore.Promise do
   """
   alias TemperCore.{Async, Heap}
 
+  @typedoc "A PromiseBuilder, which is also its Promise."
+  @type t :: TemperCore.Ref.t()
+
+  @spec new() :: t()
   def new, do: Heap.new(:promise, %{state: :pending, waiters: []})
 
+  @spec complete(t(), term()) :: nil
   def complete(b, value), do: settle(b, {:ok, value})
+  @spec break_promise(t()) :: nil
   def break_promise(b), do: settle(b, :broken)
 
   defp settle(b, state) do
@@ -30,6 +36,7 @@ defmodule TemperCore.Promise do
   end
 
   @doc "`awakeUpon(p, gen)`: step `gen` once `p` settles; via the queue even if it has."
+  @spec awake_upon(t(), TemperCore.Generator.t()) :: nil
   def awake_upon(p, gen) do
     case Heap.get(p, :state) do
       :pending -> Heap.put(p, :waiters, [gen | Heap.get(p, :waiters)])
@@ -40,6 +47,7 @@ defmodule TemperCore.Promise do
   end
 
   @doc "`getPromiseResultSync(p)`: the value; a broken promise bubbles."
+  @spec result(t()) :: term()
   def result(p) do
     case Heap.get(p, :state) do
       {:ok, value} -> value
@@ -61,16 +69,19 @@ defmodule TemperCore.Async do
   """
   @key {__MODULE__, :queue}
 
+  @spec run((-> TemperCore.Generator.t())) :: nil
   def run(factory) when is_function(factory, 0) do
     enqueue(factory.())
     nil
   end
 
+  @spec enqueue(TemperCore.Generator.t()) :: nil
   def enqueue(gen) do
     Process.put(@key, :queue.in(gen, Process.get(@key, :queue.new())))
     nil
   end
 
+  @spec drain() :: nil
   def drain do
     case :queue.out(Process.get(@key, :queue.new())) do
       {{:value, gen}, rest} ->

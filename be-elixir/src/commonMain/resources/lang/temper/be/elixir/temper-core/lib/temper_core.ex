@@ -24,7 +24,14 @@ defmodule TemperCore do
 
   @float_atoms [:nan, :infinity, :neg_infinity]
 
+  @typedoc "A Temper `Int`, as `int32/1` leaves it."
+  @type int32 :: -2_147_483_648..2_147_483_647
+
+  @typedoc "A Temper `Int64`, as `int64/1` leaves it."
+  @type int64 :: -9_223_372_036_854_775_808..9_223_372_036_854_775_807
+
   @doc "Wraps an integer to signed 32 bits: `int32(2147483647 + 1)` is `-2147483648`."
+  @spec int32(integer()) :: int32()
   def int32(x) when is_integer(x) and x >= -2_147_483_648 and x <= 2_147_483_647, do: x
 
   def int32(x) when is_integer(x) do
@@ -33,6 +40,7 @@ defmodule TemperCore do
   end
 
   @doc "Wraps an integer to signed 64 bits."
+  @spec int64(integer()) :: int64()
   def int64(x) when is_integer(x) and x >= -9_223_372_036_854_775_808 and x <= 9_223_372_036_854_775_807, do: x
 
   def int64(x) when is_integer(x) do
@@ -44,22 +52,28 @@ defmodule TemperCore do
   Temper's `Int` division: truncates toward zero, as `div/2` does, and wraps,
   so `-2147483648 / -1` is `-2147483648`. Dividing by zero bubbles.
   """
+  @spec int32_div(int32(), int32()) :: int32()
   def int32_div(_a, 0), do: raise(TemperCore.Bubble, "division by zero")
   def int32_div(a, b), do: int32(div(a, b))
 
   @doc "Temper's `Int` `%`: the sign of the dividend, as `rem/2`. By zero bubbles."
+  @spec int32_rem(int32(), int32()) :: int32()
   def int32_rem(_a, 0), do: raise(TemperCore.Bubble, "remainder by zero")
   def int32_rem(a, b), do: rem(a, b)
 
   @doc "`Int64` division: truncates, wraps at 64 bits, bubbles on zero."
+  @spec int64_div(int64(), int64()) :: int64()
   def int64_div(_a, 0), do: raise(TemperCore.Bubble, "division by zero")
   def int64_div(a, b), do: int64(div(a, b))
 
   @doc "`Int64` `%`."
+  @spec int64_rem(int64(), int64()) :: int64()
   def int64_rem(_a, 0), do: raise(TemperCore.Bubble, "remainder by zero")
   def int64_rem(a, b), do: rem(a, b)
 
   @doc "Temper's `Int.toString(radix)`: lower-case digits, as JavaScript writes them."
+  @spec int_to_string(integer()) :: String.t()
+  @spec int_to_string(integer(), 2..36) :: String.t()
   def int_to_string(i, radix \\ 10), do: i |> Integer.to_string(radix) |> String.downcase()
 
   @doc """
@@ -68,6 +82,7 @@ defmodule TemperCore do
   many processes and libraries ask for it. A process that arrives while
   another is running it waits for it to finish.
   """
+  @spec init_once(atom(), (-> term())) :: nil
   def init_once(key, body) do
     cond do
       # this process is running it (a library that imports itself), or was
@@ -103,12 +118,19 @@ defmodule TemperCore do
   from there inherits them: its constructor may call the library, and waiting
   for the lock its creator holds would wait forever.
   """
+  @spec initializing() :: [atom()]
   def initializing, do: Process.get(@initializing, [])
 
   @doc false
-  def put_initializing(keys), do: Process.put(@initializing, keys)
+  # nil, not the keys it replaced: its one caller has no use for them
+  @spec put_initializing([atom()]) :: nil
+  def put_initializing(keys) do
+    Process.put(@initializing, keys)
+    nil
+  end
 
   @doc "`Int.toFloat64()`."
+  @spec int_to_float(integer()) :: float()
   def int_to_float(i), do: i * 1.0
 
   # Float64 holds every integer of magnitude up to 2^53 - 1 exactly; core.temper
@@ -116,11 +138,13 @@ defmodule TemperCore do
   @max_safe 0x1F_FFFF_FFFF_FFFF
 
   @doc "`Int64.toFloat64()`: bubbles outside plus or minus 2^53 - 1."
+  @spec int64_to_float(int64()) :: float()
   def int64_to_float(i) do
     if i >= -@max_safe and i <= @max_safe, do: i * 1.0, else: raise(TemperCore.Bubble, "#{i} has no exact Float64")
   end
 
   @doc "`Float64.toInt32()`: truncates, and bubbles outside Int32 or for infinity and NaN."
+  @spec float_to_int32(TemperCore.Float.t()) :: int32()
   def float_to_int32(f) when is_float(f) do
     i = trunc(f)
     if i >= -2_147_483_648 and i <= 2_147_483_647, do: i, else: raise(TemperCore.Bubble, "#{f} is not an Int32")
@@ -129,6 +153,7 @@ defmodule TemperCore do
   def float_to_int32(f), do: raise(TemperCore.Bubble, "#{TemperCore.Float.to_string(f)} is not an Int32")
 
   @doc "`Float64.toInt64()`: truncates, and bubbles outside plus or minus 2^53 - 1."
+  @spec float_to_int64(TemperCore.Float.t()) :: int64()
   def float_to_int64(f) when is_float(f) do
     i = trunc(f)
     if i >= -@max_safe and i <= @max_safe, do: i, else: raise(TemperCore.Bubble, "#{f} is not a safe Int64")
@@ -137,18 +162,22 @@ defmodule TemperCore do
   def float_to_int64(f), do: raise(TemperCore.Bubble, "#{TemperCore.Float.to_string(f)} is not an Int64")
 
   @doc "`toInt32Unsafe()` / `toInt64Unsafe()`: truncates; infinity and NaN are 0, as in JavaScript."
+  @spec float_trunc(TemperCore.Float.t()) :: integer()
   def float_trunc(f) when is_float(f), do: trunc(f)
   def float_trunc(_), do: 0
 
   @doc "`Int64.toInt32()`: bubbles outside Int32."
+  @spec int64_to_int32(int64()) :: int32()
   def int64_to_int32(i) do
     if i >= -2_147_483_648 and i <= 2_147_483_647, do: i, else: raise(TemperCore.Bubble, "#{i} is not an Int32")
   end
 
   @doc "`core.ignore(x)`: evaluates x for its effects."
+  @spec ignore(term()) :: nil
   def ignore(_x), do: nil
 
   @doc "`Listed.get(i)`: the element, or a bubble when i is outside the list."
+  @spec list_get([elem], integer()) :: elem when elem: term()
   def list_get(list, i) when is_integer(i) and i >= 0 do
     case Enum.fetch(list, i) do
       {:ok, v} -> v
@@ -159,6 +188,7 @@ defmodule TemperCore do
   def list_get(list, i), do: raise(TemperCore.Bubble, "index #{i} outside a list of #{length(list)}")
 
   @doc "`Listed.getOr(i, fallback)`."
+  @spec list_get_or([elem], integer(), fallback) :: elem | fallback when elem: term(), fallback: term()
   def list_get_or(list, i, fallback) when is_integer(i) and i >= 0, do: Enum.at(list, i, fallback)
   def list_get_or(_list, _i, fallback), do: fallback
 
@@ -166,6 +196,7 @@ defmodule TemperCore do
   The module a translated object's class became: a struct's `__struct__`,
   or a heap ref's `class`. Anything else is not a translated object.
   """
+  @spec class_of(term()) :: module()
   def class_of(%TemperCore.Ref{class: class}), do: class
   def class_of(%TemperCore.Actor{class: class}), do: class
   def class_of(%{__struct__: class}), do: class
@@ -175,20 +206,24 @@ defmodule TemperCore do
   Calls a method on whatever class the object turns out to be, which is how
   a call through an interface-typed value reaches the right implementation.
   """
+  @spec call(term(), atom(), [term()]) :: term()
   def call(obj, method, args), do: apply(class_of(obj), method, [obj | args])
 
   @doc "`instanceof` for a translated class or interface."
+  @spec is_a(term(), module()) :: boolean()
   def is_a(%TemperCore.Ref{class: class}, type), do: type in class.__temper_supertypes__()
   def is_a(%TemperCore.Actor{class: class}, type), do: type in class.__temper_supertypes__()
   def is_a(%{__struct__: class}, type), do: function_exported?(class, :__temper_supertypes__, 0) and type in class.__temper_supertypes__()
   def is_a(_other, _type), do: false
 
   @doc "A cast that can fail: the value when it is a `type`, otherwise a bubble."
+  @spec cast(value, module()) :: value when value: term()
   def cast(value, type) do
     if is_a(value, type), do: value, else: raise(TemperCore.Bubble, "#{inspect(value)} is not a #{inspect(type)}")
   end
 
   @doc "A cast to a builtin type, checked with its guard."
+  @spec cast_check(value, boolean()) :: value when value: term()
   def cast_check(value, true), do: value
   def cast_check(value, false), do: raise(TemperCore.Bubble, "#{inspect(value)} is not that type")
 
@@ -199,6 +234,7 @@ defmodule TemperCore do
   `TemperCore.Float.cmp`: the BEAM's term order puts the atoms standing for
   NaN and the infinities above every number, and calls -0.0 equal to 0.0.
   """
+  @spec cmp(term(), term()) :: -1 | 0 | 1
   def cmp(a, b) when is_float(a) or is_float(b) or a in @float_atoms or b in @float_atoms,
     do: TemperCore.Float.cmp(a, b)
 
@@ -237,6 +273,7 @@ defmodule TemperCore.Global do
   """
   @table :temper_globals
 
+  @spec put(atom(), value) :: value when value: term()
   def put(name, value) when is_atom(name) do
     if TemperCore.Actor.sendable?(value) do
       :ets.insert(@table, {name, {:shared, value}})
@@ -249,6 +286,7 @@ defmodule TemperCore.Global do
     value
   end
 
+  @spec get(atom()) :: term()
   def get(name) when is_atom(name) do
     case Process.get({__MODULE__, name}, __MODULE__) do
       __MODULE__ ->
@@ -306,16 +344,28 @@ defmodule TemperCore.Heap do
   @nursery {TemperCore.Heap.Nursery, :young}
   @remembered {TemperCore.Heap.Nursery, :remembered}
 
+  @typedoc "What has fields: a heap object, or an actor's, read from inside it."
+  @type object :: Ref.t() | TemperCore.Actor.t()
+
+  @typedoc "How deep in `entry/1` calls this process is: `:outer` for the outermost."
+  @type depth :: :outer | pos_integer()
+
+  @typedoc "An `export/1`ed term: the term, and the fields of each object it reaches."
+  @type exported :: {:temper_export, term(), %{optional(reference()) => term()}}
+
   @doc "Makes an object of `class` with the given fields, and returns its ref."
+  @spec new(module(), map()) :: Ref.t()
   def new(class, fields) when is_atom(class) and is_map(fields) do
     new_value(class, fields)
   end
 
   @doc "Reads a field. A field the object does not have raises KeyError."
+  @spec get(object(), atom()) :: term()
   def get(%TemperCore.Actor{} = actor, field), do: get(TemperCore.Actor.fields(actor), field)
   def get(%Ref{id: id} = ref, field), do: Map.fetch!(fields!(ref, id), field)
 
   @doc "Writes a field the object already has, and returns the value written."
+  @spec put(object(), atom(), value) :: value when value: term()
   def put(%TemperCore.Actor{} = actor, field, value), do: put(TemperCore.Actor.fields(actor), field, value)
 
   def put(%Ref{id: id} = ref, field, value) do
@@ -348,6 +398,7 @@ defmodule TemperCore.Heap do
   and imported like any object, and read and written with `get_value/1`
   and `put_value/2`, which skip the field map and the write barrier.
   """
+  @spec new_value(module(), term()) :: Ref.t()
   def new_value(class, value) when is_atom(class) do
     ref = %Ref{class: class, id: make_ref()}
     :erlang.put({__MODULE__, ref.id}, value)
@@ -360,9 +411,11 @@ defmodule TemperCore.Heap do
     ref
   end
 
+  @spec get_value(Ref.t()) :: term()
   def get_value(%Ref{id: id} = ref), do: fields!(ref, id)
 
   @doc "Replaces a `new_value/2` object's value. `value` must hold no objects: there is no write barrier."
+  @spec put_value(Ref.t(), term()) :: nil
   def put_value(%Ref{id: id} = ref, value) do
     case :erlang.put({__MODULE__, id}, value) do
       :undefined ->
@@ -412,6 +465,7 @@ defmodule TemperCore.Heap do
   defmacro entry(fun), do: quote(do: TemperCore.Heap.run(unquote(fun)))
 
   @doc "`entry/1` for a function value, such as a method body an actor runs."
+  @spec run((-> result)) :: result when result: term()
   def run(fun) do
     heap = enter()
 
@@ -428,6 +482,7 @@ defmodule TemperCore.Heap do
 
   @doc false
   # The outermost entry starts a nursery; a nested one only counts.
+  @spec enter() :: depth()
   def enter do
     case Process.get(@depth, 0) do
       0 ->
@@ -436,7 +491,9 @@ defmodule TemperCore.Heap do
         Process.put(@remembered, MapSet.new())
         :outer
 
-      depth ->
+      # only enter and leave write the depth, but Dialyzer cannot know it is
+      # an integer without being told
+      depth when is_integer(depth) ->
         Process.put(@depth, depth + 1)
         depth
     end
@@ -444,6 +501,7 @@ defmodule TemperCore.Heap do
 
   @doc false
   # The outermost entry frees what `roots` and the process do not reach.
+  @spec leave(depth(), [term()]) :: nil
   def leave(:outer, roots) do
     try do
       minor(roots)
@@ -507,6 +565,7 @@ defmodule TemperCore.Heap do
   defp mark_young([_ | rest], young, live), do: mark_young(rest, young, live)
 
   @doc "How many objects this process's heap holds."
+  @spec size() :: non_neg_integer()
   def size, do: Enum.count(Process.get(), &object?/1)
 
   @doc """
@@ -522,12 +581,21 @@ defmodule TemperCore.Heap do
   not a root. Pass whatever the caller still holds, such as a GenServer's
   state.
   """
+  @spec collect() :: non_neg_integer()
+  @spec collect(term()) :: non_neg_integer()
   def collect(roots \\ []) do
     {objects, others} = Enum.split_with(Process.get(), &object?/1)
     live = mark([roots | Enum.map(others, &elem(&1, 1))], MapSet.new())
 
     Enum.count(objects, fn {{__MODULE__, id} = k, _} ->
-      if MapSet.member?(live, id), do: false, else: Process.delete(k) && true
+      # not `Process.delete(k) && true`, which answers the deleted value: a
+      # new_value/2 object holding nil or false was freed but not counted
+      if MapSet.member?(live, id) do
+        false
+      else
+        Process.delete(k)
+        true
+      end
     end)
   end
 
@@ -542,12 +610,14 @@ defmodule TemperCore.Heap do
   replaces that process's copy with the newer snapshot. Writes made after
   the export are not shared: like any message, this is a copy.
   """
+  @spec export(term()) :: exported()
   def export(term) do
     ids = mark([term], MapSet.new())
     {:temper_export, term, Map.new(ids, fn id -> {id, Process.get({__MODULE__, id})} end)}
   end
 
   @doc "Puts an `export/1`ed term's objects into this process's heap and returns the term."
+  @spec import(exported()) :: term()
   def import({:temper_export, term, objects}) do
     Enum.each(objects, fn {id, fields} -> Process.put({__MODULE__, id}, fields) end)
     term
@@ -585,6 +655,7 @@ defmodule TemperCore.Temporal do
   @moduledoc "What std/temporal needs from the host: the clock."
 
   @doc "`Date.today()`: today's UTC date, made by std's own `Date` constructor."
+  @spec today(module()) :: term()
   def today(date_module) do
     %Date{year: y, month: m, day: d} = Date.utc_today()
     date_module.new(y, m, d)

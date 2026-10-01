@@ -12,8 +12,16 @@ defmodule TemperCore.Generator do
   """
   alias TemperCore.Heap
 
+  @typedoc "A generator: a heap object holding its step function and `done` flag."
+  @type t :: TemperCore.Ref.t()
+
+  @typedoc "A GeneratorResult: ValueResult or DoneResult."
+  @type result :: {:value, term()} | :done
+
+  @spec adapt((t() -> result())) :: t()
   def adapt(step) when is_function(step, 1), do: Heap.new(:generator, %{step: step, done: false})
 
+  @spec next(t()) :: result()
   def next(g) do
     if Heap.get(g, :done) do
       :done
@@ -35,17 +43,21 @@ defmodule TemperCore.Generator do
     end
   end
 
+  @spec done(t()) :: boolean()
   def done(g), do: Heap.get(g, :done)
 
   @doc """
   `ValueResult.value`. A ValueResult is the tuple `{:value, v}`, not a Temper
   object, so TemperCore.call cannot answer for it.
   """
+  @spec value({:value, value}) :: value when value: term()
   def value({:value, v}), do: v
 
   @doc "`is ValueResult`: the tag, not a module, is the type."
+  @spec value_result?(term()) :: boolean()
   def value_result?(r), do: match?({:value, _}, r)
 
+  @spec close(t()) :: nil
   def close(g) do
     Heap.put(g, :done, true)
     nil

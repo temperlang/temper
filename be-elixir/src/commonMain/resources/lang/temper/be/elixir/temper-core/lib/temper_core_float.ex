@@ -37,6 +37,7 @@ defmodule TemperCore.Float do
   end
 
   @doc "Whether the sign bit is set: true for -0.0 and -Infinity, false for NaN."
+  @spec neg?(t()) :: boolean()
   def neg?(f) when not float64?(f), do: not_float64!(:neg?, [f])
   def neg?(:neg_infinity), do: true
   def neg?(f) when is_float(f), do: f < 0.0 or f === -0.0
@@ -47,6 +48,7 @@ defmodule TemperCore.Float do
   defp zero(true), do: -0.0
   defp zero(false), do: 0.0
 
+  @spec add(t(), t()) :: t()
   def add(a, b) when is_float(a) and is_float(b) do
     a + b
   rescue
@@ -61,6 +63,7 @@ defmodule TemperCore.Float do
   def add(a, _) when special(a), do: a
   def add(_, b), do: b
 
+  @spec sub(t(), t()) :: t()
   def sub(a, b) when is_float(a) and is_float(b) do
     a - b
   rescue
@@ -70,12 +73,14 @@ defmodule TemperCore.Float do
   def sub(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:sub, [a, b])
   def sub(a, b), do: add(a, neg(b))
 
+  @spec neg(t()) :: t()
   def neg(f) when not float64?(f), do: not_float64!(:neg, [f])
   def neg(f) when is_float(f), do: -f
   def neg(:infinity), do: :neg_infinity
   def neg(:neg_infinity), do: :infinity
   def neg(:nan), do: :nan
 
+  @spec mul(t(), t()) :: t()
   def mul(a, b) when is_float(a) and is_float(b) do
     a * b
   rescue
@@ -88,6 +93,7 @@ defmodule TemperCore.Float do
   def mul(a, b) when a == 0.0 or b == 0.0, do: :nan
   def mul(a, b), do: inf(neg?(a) != neg?(b))
 
+  @spec divide(t(), t()) :: t()
   def divide(a, b) when is_float(a) and is_float(b) do
     cond do
       b != 0.0 -> a / b
@@ -106,6 +112,7 @@ defmodule TemperCore.Float do
   def divide(a, b), do: zero(neg?(a) != neg?(b))
 
   @doc "`%`: the remainder keeps the dividend's sign, as C's fmod does."
+  @spec rem(t(), t()) :: t()
   def rem(a, b) when is_float(a) and is_float(b),
     do: if(b == 0.0, do: :nan, else: :math.fmod(a, b))
 
@@ -114,6 +121,7 @@ defmodule TemperCore.Float do
   def rem(a, _), do: a
 
   @doc "`**`, with C's pow rules for the cases the BEAM raises on."
+  @spec pow(t(), t()) :: t()
   def pow(a, b) when is_float(a) and is_float(b) do
     :math.pow(a, b)
   rescue
@@ -146,6 +154,7 @@ defmodule TemperCore.Float do
   defp odd?(_), do: false
 
   @doc "The shortest round-tripping digits, laid out as Temper prints them."
+  @spec to_string(t()) :: String.t()
   def to_string(:infinity), do: "Infinity"
   def to_string(:neg_infinity), do: "-Infinity"
   def to_string(:nan), do: "NaN"
@@ -202,9 +211,11 @@ defmodule TemperCore.Float do
     {digits, String.length(whole) + exp - leading}
   end
 
+  @spec negative_zero?(t()) :: boolean()
   def negative_zero?(f), do: f === -0.0
 
   @doc "`is Float64`: a BEAM float or one of the three special atoms."
+  @spec float?(term()) :: boolean()
   def float?(x), do: is_float(x) or x in [:infinity, :neg_infinity, :nan]
 
   # where a value sits on Temper's number line, before comparing floats
@@ -213,40 +224,51 @@ defmodule TemperCore.Float do
   defp rank(:infinity), do: 2
   defp rank(:nan), do: 3
 
+  @spec eq(t(), t()) :: boolean()
   def eq(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:eq, [a, b])
   def eq(a, b), do: a === b
+  @spec ne(t(), t()) :: boolean()
   def ne(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:ne, [a, b])
   def ne(a, b), do: a !== b
 
+  @spec lt(t(), t()) :: boolean()
   def lt(a, b) when is_float(a) and is_float(b),
     do: a < b or (a == 0.0 and b == 0.0 and negative_zero?(a) and not negative_zero?(b))
 
   def lt(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:lt, [a, b])
   def lt(a, b), do: rank(a) < rank(b)
+  @spec gt(t(), t()) :: boolean()
   def gt(a, b), do: lt(b, a)
+  @spec le(t(), t()) :: boolean()
   def le(a, b), do: not lt(b, a)
+  @spec ge(t(), t()) :: boolean()
   def ge(a, b), do: not lt(a, b)
 
   @doc "`Float64.min`: NaN if either is, and -0.0 is the lesser zero."
+  @spec min(t(), t()) :: t()
   def min(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:min, [a, b])
   def min(a, b) when a == :nan or b == :nan, do: :nan
   def min(a, b), do: if(lt(b, a), do: b, else: a)
+  @spec max(t(), t()) :: t()
   def max(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:max, [a, b])
   def max(a, b) when a == :nan or b == :nan, do: :nan
   def max(a, b), do: if(lt(a, b), do: b, else: a)
 
   @doc "`Float64.sign()`: -1.0, 0.0 (keeping a negative zero), 1.0 or NaN."
+  @spec sign(t()) :: t()
   def sign(f) when not float64?(f), do: not_float64!(:sign, [f])
   def sign(:nan), do: :nan
   def sign(f) when f == :infinity or (is_float(f) and f > 0.0), do: 1.0
   def sign(f) when f == :neg_infinity or (is_float(f) and f < 0.0), do: -1.0
   def sign(f), do: f
 
+  @spec abs(t()) :: t()
   def abs(f) when not float64?(f), do: not_float64!(:abs, [f])
   def abs(f) when is_float(f), do: Kernel.abs(f)
   def abs(:neg_infinity), do: :infinity
   def abs(f), do: f
 
+  @spec cmp(t(), t()) :: -1 | 0 | 1
   def cmp(a, b) do
     cond do
       lt(a, b) -> -1
@@ -261,6 +283,9 @@ defmodule TemperCore.Float do
   Temper's own order instead, where `NaN <= NaN`, would call NaN near
   everything.
   """
+  @spec near(t(), t()) :: boolean()
+  @spec near(t(), t(), t() | nil) :: boolean()
+  @spec near(t(), t(), t() | nil, t() | nil) :: boolean()
   def near(a, b, rel_tol \\ nil, abs_tol \\ nil)
   def near(a, b, _, _) when not (float64?(a) and float64?(b)), do: not_float64!(:near, [a, b])
   def near(a, b, _, _) when a == :nan or b == :nan, do: false
@@ -278,6 +303,7 @@ defmodule TemperCore.Float do
   end
 
   @doc "`Float64.round()`: halves toward +Infinity, as JavaScript's Math.round does."
+  @spec round(t()) :: t()
   def round(f) when is_float(f) do
     down = Float.floor(f)
     r = if f - down >= 0.5, do: down + 1.0, else: down
@@ -292,6 +318,7 @@ defmodule TemperCore.Float do
   answers infinity or NaN, so a raise is mapped to that answer, and the
   special values are answered here without reaching `:math`.
   """
+  @spec math(atom(), t()) :: t()
   def math(fun, x) when is_float(x) do
     apply(__MODULE__, :finite, [fun, x])
   rescue
@@ -303,6 +330,7 @@ defmodule TemperCore.Float do
   def math(fun, x), do: at_infinity(fun, x)
 
   @doc false
+  @spec finite(atom(), float()) :: float()
   def finite(:expm1, x),
     do: if(Kernel.abs(x) < 1.0e-5, do: x + x * x / 2 + x * x * x / 6, else: :math.exp(x) - 1.0)
 
@@ -337,6 +365,7 @@ defmodule TemperCore.Float do
   defp at_infinity(fun, x) when fun in [:ceil, :floor], do: x
 
   @doc "`Float64.atan2()`: `y.atan2(x)`."
+  @spec atan2(t(), t()) :: float() | :nan
   def atan2(y, x) when is_float(y) and is_float(x), do: :math.atan2(y, x)
   def atan2(y, x) when not (float64?(y) and float64?(x)), do: not_float64!(:atan2, [y, x])
   def atan2(y, x) when y == :nan or x == :nan, do: :nan
@@ -360,6 +389,7 @@ defmodule TemperCore.Float do
   `-Infinity`, after trimming. A number too big for a float is infinite;
   `Float.parse` calls that an error.
   """
+  @spec parse(String.t()) :: t() | nil
   def parse(s) do
     t = String.trim(s)
 

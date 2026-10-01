@@ -8,10 +8,18 @@ defmodule TemperCore.Test do
   `assertHard` records and bubbles, and the report is the same JUnit XML
   `reportTestResults` writes, which is what the harness reads.
   """
-  alias TemperCore.Heap
+  alias TemperCore.{Heap, Pair, Vec}
 
+  @typedoc "A Temper `Test`: a heap object."
+  @type t :: TemperCore.Ref.t()
+
+  @typedoc "A `TestCase`: a test's name and its function."
+  @type test_case :: Pair.t(String.t(), (t() -> term()))
+
+  @spec new() :: t()
   def new, do: Heap.new(:temper_test, %{passing: true, messages: [], failed_on_assert: false})
 
+  @spec assert(t(), boolean(), (-> String.t())) :: nil
   def assert(t, success, message) do
     if not success do
       Heap.put(t, :passing, false)
@@ -21,6 +29,7 @@ defmodule TemperCore.Test do
     nil
   end
 
+  @spec assert_hard(t(), boolean(), (-> String.t())) :: nil
   def assert_hard(t, success, message) do
     assert(t, success, message)
 
@@ -32,6 +41,7 @@ defmodule TemperCore.Test do
     nil
   end
 
+  @spec soft_fail_to_hard(t()) :: nil
   def soft_fail_to_hard(t) do
     if not (failed_on_assert(t) or passing(t)) do
       Heap.put(t, :failed_on_assert, true)
@@ -41,14 +51,20 @@ defmodule TemperCore.Test do
     nil
   end
 
+  @spec bail(t()) :: no_return()
   def bail(_t), do: raise(TemperCore.Bubble, "test bailed")
+  @spec passing(t()) :: boolean()
   def passing(t), do: Heap.get(t, :passing)
-  def messages(t), do: Heap.get(t, :messages)
+  @doc "`messages()`: a Temper `List`, so a Vec, though the test keeps them as an Elixir list."
+  @spec messages(t()) :: Vec.t(String.t())
+  def messages(t), do: Vec.new(Heap.get(t, :messages))
+  @spec failed_on_assert(t()) :: boolean()
   def failed_on_assert(t), do: Heap.get(t, :failed_on_assert)
 
   @doc "Each test's name and its failure messages, empty when it passed, as an Elixir list of tuples."
+  @spec process(TemperCore.List.listed(test_case())) :: [{String.t(), [String.t()]}]
   def process(cases) do
-    Enum.map(TemperCore.List.items(cases), fn %TemperCore.Pair{key: name, value: fun} ->
+    Enum.map(TemperCore.List.items(cases), fn %Pair{key: name, value: fun} ->
       t = new()
 
       had_bubble =
@@ -62,8 +78,8 @@ defmodule TemperCore.Test do
       failures =
         cond do
           passing(t) and not had_bubble -> []
-          had_bubble and not failed_on_assert(t) -> messages(t) ++ ["Bubble"]
-          true -> messages(t)
+          had_bubble and not failed_on_assert(t) -> Heap.get(t, :messages) ++ ["Bubble"]
+          true -> Heap.get(t, :messages)
         end
 
       {name, failures}
@@ -75,12 +91,13 @@ defmodule TemperCore.Test do
   messages, as a Temper `List` of `Pair`s, which is what the translated
   `reportTestResults` reads. `process/1` is the same as an Elixir list.
   """
-  @spec process_cases(term()) :: TemperCore.Vec.t(TemperCore.Pair.t(String.t(), TemperCore.Vec.t(String.t())))
+  @spec process_cases(TemperCore.List.listed(test_case())) ::
+          Vec.t(Pair.t(String.t(), Vec.t(String.t())))
   def process_cases(cases) do
     cases
     |> process()
-    |> Enum.map(fn {name, failures} -> TemperCore.Pair.new(name, TemperCore.Vec.new(failures)) end)
-    |> TemperCore.Vec.new()
+    |> Enum.map(fn {name, failures} -> Pair.new(name, Vec.new(failures)) end)
+    |> Vec.new()
   end
 
   @doc """
@@ -89,8 +106,10 @@ defmodule TemperCore.Test do
   is the test's place in the Temper source, `src/diff.temper.md:42`, which
   leads the message: that is the line to fix, not the generated one.
   """
+  @spec check((t() -> term())) :: :ok
+  @spec check((t() -> term()), String.t() | nil) :: :ok
   def check(fun, where \\ nil) do
-    case process([TemperCore.Pair.new("test", fun)]) do
+    case process([Pair.new("test", fun)]) do
       [{_, []}] ->
         :ok
 
@@ -104,6 +123,7 @@ defmodule TemperCore.Test do
   end
 
   @doc "`runTestCases`: the JUnit XML `reportTestResults` writes, as one string."
+  @spec run_cases(TemperCore.List.listed(test_case())) :: String.t()
   def run_cases(cases) do
     results = process(cases)
     fails = Enum.count(results, fn {_, f} -> f != [] end)
