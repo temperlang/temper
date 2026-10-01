@@ -87,8 +87,9 @@ internal class ElixirTranslator(
     /** Translating Temper's standard library, whose @connected functions are support code. */
     private val isStdLib: Boolean = false,
     /**
-     * Module functions only tests use. They are defined in [testRoot], which
-     * is compiled for `mix test` and never shipped with the library.
+     * Module functions and values only tests use, or that nothing in
+     * production reaches. Functions are defined in [testRoot], which is
+     * compiled for `mix test` and never shipped with the library.
      */
     private val testOnly: Set<ResolvedName> = setOf(),
 ) {
@@ -233,11 +234,17 @@ internal class ElixirTranslator(
     private fun processTopLevel(topLevel: TmpL.TopLevel) {
         val marks = Triple(functions.size, mainBody.size, modules.size)
         translateTopLevel(topLevel)
-        if (topLevel.dependencyCategory() == DependencyCategory.Test) {
+        if (topLevel.dependencyCategory() == DependencyCategory.Test || topLevel.declaredName() in testOnly) {
             testFunctions.addAll(functions.drainFrom(marks.first))
             testMainBody.addAll(mainBody.drainFrom(marks.second))
             testModules.addAll(modules.drainFrom(marks.third))
         }
+    }
+
+    private fun TmpL.TopLevel.declaredName(): ResolvedName? = when (this) {
+        is TmpL.ModuleFunctionDeclaration -> name.name
+        is TmpL.ModuleLevelDeclaration -> name.name
+        else -> null
     }
 
     private fun <T> MutableList<T>.drainFrom(start: Int): List<T> {

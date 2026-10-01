@@ -105,6 +105,30 @@ class ElixirBackendTest {
         assertContains(fileContent(out, "something_test.exs"), "something/something.temper:6")
     }
 
+    /**
+     * The frontend evaluates a test of constants while compiling, and the
+     * call goes with it: `onlyForTests` is then referenced by nothing, which
+     * the frontend counts as production, not test. And `limit` is inlined into
+     * `under`, so nothing reads it. Neither is reachable from what the library
+     * exports, so neither belongs in it.
+     */
+    @Test
+    fun whatProductionCannotReachStaysOutOfTheLibrary() {
+        val out = generatedText(
+            """
+            |let limit = 5;
+            |export let under(x: Int): Boolean { x < limit }
+            |let onlyForTests(x: Int): Int { x + 1 }
+            |test("folds") { assert(onlyForTests(2) == 3); }
+            """.trimMargin(),
+        )
+        val library = fileContent(out, "temper_main.ex")
+        assertContains(library, "def under(")
+        assertFalse("onlyForTests" in library, library)
+        assertFalse("limit" in library, library)
+        assertContains(fileContent(out, "temper_tests.ex"), "def onlyForTests")
+    }
+
     /** A library with no tests gets no test directory and no test-only paths. */
     @Test
     fun aLibraryWithoutTestsHasNoTestTree() {

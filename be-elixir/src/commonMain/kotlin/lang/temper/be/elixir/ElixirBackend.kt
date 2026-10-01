@@ -1,5 +1,6 @@
 package lang.temper.be.elixir
 
+import lang.temper.ast.boundaryDescent
 import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
 import lang.temper.be.storeDescriptorsForDeclarations
@@ -7,6 +8,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.common.Either
 import lang.temper.common.MimeType
 import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
@@ -132,6 +134,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 if (local != external) imports[local] = external
             }
         }
+        testOnly.addAll(unreachedFromProduction(finished, imports))
         // a function or module-level value is known by the name its own module declared
         val canonicalFunctions = moduleFunctions.toMap()
         val isStdLib = finished.modules.all { it.isStdLib }
@@ -260,6 +263,50 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 ),
             ),
         )
+    }
+
+    /**
+     * The non-exported functions and module-level values that nothing in
+     * production reaches. The frontend marks what only tests reach, but a call
+     * it evaluated while compiling is gone from the tree, so a helper only
+     * tests used, or a constant only they read, looks unused instead and would
+     * ship. Production's roots are what Elixir can reach: exported functions
+     * and values, classes, and top-level statements. A value's initializer
+     * comes with it, so leaving out an unread value changes nothing the
+     * library does.
+     */
+    private fun unreachedFromProduction(
+        finished: TmpL.ModuleSet,
+        imports: Map<ResolvedName, ResolvedName>,
+    ): Set<ResolvedName> {
+        val declarations = mutableMapOf<ResolvedName, TmpL.TopLevel>()
+        val roots = mutableListOf<TmpL.Tree>()
+        for (module in finished.modules) {
+            for (topLevel in module.topLevels) {
+                if (topLevel.dependencyCategory() == DependencyCategory.Test) continue
+                val name = when (topLevel) {
+                    is TmpL.ModuleFunctionDeclaration -> topLevel.name.name
+                    is TmpL.ModuleLevelDeclaration -> topLevel.name.name
+                    else -> null
+                }
+                if (name == null || name is lang.temper.name.ExportedName) {
+                    roots.add(topLevel)
+                } else {
+                    declarations[name] = topLevel
+                }
+            }
+        }
+        val reached = mutableSetOf<ResolvedName>()
+        while (roots.isNotEmpty()) {
+            roots.removeLast().boundaryDescent { node ->
+                val id = (node as? TmpL.Id)?.nameContent as? Either.Left
+                var name = id?.item
+                repeat(imports.size) { name = name?.let { imports[it] ?: it } }
+                name?.let { if (it in declarations && reached.add(it)) roots.add(declarations.getValue(it)) }
+                true
+            }
+        }
+        return declarations.keys - reached
     }
 
     /** Whether [tree] names the module [prefix] or one under it, or a value it keeps (`:"Temper.Std.x"`). */
