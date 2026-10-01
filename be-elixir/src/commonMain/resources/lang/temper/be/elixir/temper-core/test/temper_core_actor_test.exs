@@ -31,6 +31,25 @@ defmodule TemperCore.ActorTest do
     end
   end
 
+  # A library whose top level makes an actor whose constructor calls one of
+  # the library's own exported functions, as generated code does.
+  defmodule SelfInit do
+    def init, do: TemperCore.init_once(:"ActorTest.SelfInit", fn -> TemperCore.Global.put(:"ActorTest.SelfInit.m", TemperCore.ActorTest.Maker.new()) end)
+    def answer, do: (init(); 42)
+  end
+
+  defmodule Maker do
+    def new do
+      Actor.start(__MODULE__, fn ->
+        this = Actor.init_self(__MODULE__, %{got: nil})
+        Heap.put(this, :got, TemperCore.ActorTest.SelfInit.answer())
+        this
+      end)
+    end
+
+    def got(this), do: Actor.run(this, fn -> Heap.get(this, :got) end)
+  end
+
   test "one object, many processes, no lost updates" do
     c = Counter.new(0)
     1..500 |> Enum.map(fn _ -> Task.async(fn -> Counter.bump(c) end) end) |> Task.await_many()
@@ -144,6 +163,15 @@ defmodule TemperCore.ActorTest do
     assert :ets.whereis(:temper_globals) != :undefined
     assert Process.whereis(TemperCore.Supervisor)
     Actor.stop(bystander)
+  end
+
+  test "an actor made by a library's top level may call the library" do
+    # init_once held its lock while the top level ran; the actor's call into
+    # the library waited for that lock, and the lock holder waited for the
+    # actor to start. Nothing timed out.
+    first = Task.async(fn -> SelfInit.answer() end)
+    assert Task.yield(first, 3000) == {:ok, 42}
+    assert Maker.got(TemperCore.Global.get(:"ActorTest.SelfInit.m")) == 42
   end
 
   test "a Temper error is the call's result, not a crash" do

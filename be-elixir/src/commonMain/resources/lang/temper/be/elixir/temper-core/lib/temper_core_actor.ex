@@ -91,7 +91,7 @@ defmodule TemperCore.Actor do
     else
       # linked only once the constructor has succeeded: a linked process that
       # stops in init would take its caller down instead of raising there
-      case GenServer.start(__MODULE__, {id, constructor, chain, self()}) do
+      case GenServer.start(__MODULE__, {id, constructor, chain, self(), TemperCore.initializing()}) do
         {:ok, pid} ->
           Process.link(pid)
           %__MODULE__{class: class, id: id}
@@ -110,7 +110,7 @@ defmodule TemperCore.Actor do
   defp keeper(id, constructor, chain) do
     actor = %{
       id: :actor,
-      start: {GenServer, :start_link, [__MODULE__, {id, constructor, chain, nil}]},
+      start: {GenServer, :start_link, [__MODULE__, {id, constructor, chain, nil, TemperCore.initializing()}]},
       restart: :transient,
       significant: true
     }
@@ -212,7 +212,8 @@ defmodule TemperCore.Actor do
   # -- the process --------------------------------------------------------------
 
   @impl true
-  def init({id, constructor, chain, creator}) do
+  def init({id, constructor, chain, creator, initializing}) do
+    TemperCore.put_initializing(initializing)
     if creator, do: Process.monitor(creator)
     Process.put(@self_id, id)
     Process.put(@chain, chain)

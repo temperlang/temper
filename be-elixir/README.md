@@ -162,7 +162,10 @@ end
 
 - `init_once` runs a library's top level **once per node**, however many
   processes and libraries ask for it. A process that arrives while another
-  is still running it waits under a lock until it finishes.
+  is still running it waits under a lock, taken on this node only, until it
+  finishes. An actor the top level constructs is the exception: it carries
+  its creator's "initializing" mark, so its constructor may call the
+  library without waiting for a lock its own creator holds.
 - A library's init first calls the init of every library it imports from,
   so std's globals exist before the user's code reads them.
 - `__temper_main__/0` runs init, then the async queue (section 9). It is

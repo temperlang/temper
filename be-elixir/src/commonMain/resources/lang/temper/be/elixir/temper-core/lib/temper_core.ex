@@ -17,6 +17,8 @@ defmodule TemperCore do
   translator emits for those types goes through `int32/1` or `int64/1`.
   """
 
+  @initializing {__MODULE__, :initializing}
+
   @float_atoms [:nan, :infinity, :neg_infinity]
 
   @doc "Wraps an integer to signed 32 bits: `int32(2147483647 + 1)` is `-2147483648`."
@@ -65,25 +67,43 @@ defmodule TemperCore do
   """
   def init_once(key, body) do
     cond do
-      # this process is already running it: a library that imports itself
-      Process.get({:temper_init, key}) -> nil
+      # this process is running it (a library that imports itself), or was
+      # made by the process running it (an actor its top level constructs)
+      key in initializing() -> nil
       :ets.member(:temper_globals, {:temper_init, key}) -> nil
-      true -> :global.trans({{:temper_init, key}, self()}, fn -> init_locked(key, body) end)
+      # the table is this node's, so the lock is too
+      true -> :global.trans({{:temper_init, key}, self()}, fn -> init_locked(key, body) end, [node()])
     end
   end
 
   # under the lock, another process may have finished it while this one waited
   defp init_locked(key, body) do
     unless :ets.member(:temper_globals, {:temper_init, key}) do
-      Process.put({:temper_init, key}, true)
-      # module state belongs to the node: an actor made by a top level must
-      # not end with whichever process happened to run it
-      TemperCore.Actor.supervised(body, TemperCore.LibraryActors)
-      :ets.insert(:temper_globals, {{:temper_init, key}, true})
+      outer = initializing()
+      Process.put(@initializing, [key | outer])
+
+      try do
+        # module state belongs to the node: an actor made by a top level must
+        # not end with whichever process happened to run it
+        TemperCore.Actor.supervised(body, TemperCore.LibraryActors)
+        :ets.insert(:temper_globals, {{:temper_init, key}, true})
+      after
+        Process.put(@initializing, outer)
+      end
     end
 
     nil
   end
+
+  @doc """
+  The libraries whose top levels this process is running. An actor started
+  from there inherits them: its constructor may call the library, and waiting
+  for the lock its creator holds would wait forever.
+  """
+  def initializing, do: Process.get(@initializing, [])
+
+  @doc false
+  def put_initializing(keys), do: Process.put(@initializing, keys)
 
   @doc "`Int.toFloat64()`."
   def int_to_float(i), do: i * 1.0
