@@ -44,15 +44,20 @@ object ElixirSupportNetwork : SupportNetwork {
 
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
 
-    // TODO Map builtin operators onto Elixir's. Until then the translator
-    //  has nothing to call, which is fine for a placeholder translation.
+    // TODO Map builtin operators onto Elixir's. Nothing the first functional
+    //  test needs calls one.
     override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? = null
 
     override fun optionalSupportCode(
         optionalSupportCodeKind: OptionalSupportCodeKind,
     ): Pair<SupportCode, Signature2>? = null
 
-    override fun translateConnectedReference(pos: Position, connectedKey: String, genre: Genre): SupportCode? = null
+    /**
+     * Where `console.log` is answered. A null here is what made every build
+     * that logged anything fail with "Cannot translate value fn getConsole".
+     */
+    override fun translateConnectedReference(pos: Position, connectedKey: String, genre: Genre): SupportCode? =
+        elixirConnectedReferences[connectedKey]
 
     override fun translatedConnectedType(
         pos: Position,

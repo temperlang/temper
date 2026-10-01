@@ -51,16 +51,17 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
 
     /**
-     * Placeholder translation.
+     * One Mix project: `mix.exs`, and `lib/temper_main.ex` whose `main/0`
+     * runs every module's top-level statements in order.
      *
-     * Per the backend guide, the first step is a bogus translator that emits a
-     * working program in the target language whatever the input. It proves
-     * the file plumbing and the run path, `mix compile` then `mix run`, before
-     * any real tree walking. A real translator replaces this.
+     * Not done: every library is `TemperMain` with app `:temper_main`, so two
+     * libraries built together would collide. One library at a time is all
+     * the functional suite asks for so far.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val pos = finished.pos
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
+        val mainBody = finished.modules.flatMap { ElixirTranslator(it).translateModule().mainBody }
         return listOf(
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
@@ -76,21 +77,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                             pos,
                             name = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE))),
                             items = listOf(
-                                Elixir.FunDef(
-                                    pos,
-                                    id = id(MAIN_FUNCTION),
-                                    body = Elixir.Block(
-                                        pos,
-                                        listOf(
-                                            Elixir.RemoteCall(
-                                                pos,
-                                                module = Elixir.ModuleName(pos, listOf(id("IO"))),
-                                                fn = id("puts"),
-                                                args = listOf(Elixir.StringLit(pos, "Hello, World!")),
-                                            ),
-                                        ),
-                                    ),
-                                ),
+                                Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
                             ),
                         ),
                     ),

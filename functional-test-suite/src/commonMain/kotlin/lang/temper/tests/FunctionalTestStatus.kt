@@ -31,6 +31,12 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.RegexMatch,
         Ft.TypesNetresponse,
     )
+    // Elixir is new, with no tracking issue yet, so `elixir()` skips without
+    // naming one. Widening this list is how be-elixir records progress.
+    onlyPasses(
+        elixir(),
+        Ft.AlgosHelloWorld,
+    )
     onlyPasses(
         cppv(198),
         Ft.AlgosFibonacci,
