@@ -2336,13 +2336,14 @@ class CppTranslator(
         } else {
             member.dotName.dotNameText
         }
+        val methodFormals = member.parameters.parameters.drop(1)
         // Emit `const` for a method the mutation analysis shows never
         // mutates its receiver. (Generators and optional-param methods are
         // seeded as mutating in that analysis, so they resolve to null here.)
         val methodQual = memberConstQualifier(member.dotName.dotNameText)
         when (val body = member.body) {
             null -> {
-                val paramTypes = member.parameters.parameters.drop(1).map { translateParamType(it) }
+                val paramTypes = methodFormals.map { translateParamType(it) }
                 add(
                     pureVirtualMethod(
                         translateType(member.returnType),
@@ -2361,7 +2362,7 @@ class CppTranslator(
                 impl = impl,
                 templateMethodDefs = templateMethodDefs,
                 effectiveDotName = effectiveDotName,
-                methodFormals = member.parameters.parameters.drop(1),
+                methodFormals = methodFormals,
                 methodQual = methodQual,
                 // Methods need 'virtual' for polymorphic dispatch in C++
                 needsVirtual = isInterface || realSuperTypes.any(),
