@@ -65,7 +65,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * Everything lives under the library's root module, `Temper.Std` for
      * std. Its `__temper_init__/0` runs the libraries it depends on, then
      * every module's top-level statements in order, once per process;
-     * `main/0` runs that and drains the async queue.
+     * `__temper_main__/0` runs that and drains the async queue.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val pos = finished.pos
@@ -453,7 +453,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         /** Where temper-core lands, relative to the backend's output root. */
         const val CORE_DIR = "temper-core"
 
-        const val MAIN_FUNCTION = "main"
+        /**
+         * The entry point `mix run` calls: init, then drain the async queue. Not
+         * `main`, which a library may export itself; in Elixir the first of two
+         * `def main()` wins, so the library's would run in its place.
+         */
+        const val MAIN_FUNCTION = "__temper_main__"
 
         /** `Temper.MyLib.Tests`, under the library's root: tests and what only they use. */
         const val TEST_MODULE = "Tests"

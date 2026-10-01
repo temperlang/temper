@@ -7,6 +7,7 @@ import lang.temper.lexer.Genre
 import lang.temper.log.filePath
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class ElixirBackendTest {
@@ -230,6 +231,25 @@ class ElixirBackendTest {
         )
         assertFalse("Query.new(%TemperCore.Vec" in out, "the arguments were packed into one list:\n$out")
         assertContains(out, "Query.new(n, ")
+    }
+
+    /**
+     * The generated entry point used to be `main/0`, so a library exporting
+     * its own `main` got two `def main()`. The library's came first, so
+     * running the program called it uninvited and never reached the entry
+     * point's init and async drain. The entry point now has a name in the
+     * backend's own `__temper_*__` space.
+     */
+    @Test
+    fun aLibrarysOwnMainIsNotTheEntryPoint() {
+        val out = generatedText(
+            """
+            |console.log("top level ran");
+            |export let main(): Void { console.log("user main ran"); }
+            """.trimMargin(),
+        )
+        assertEquals(1, Regex("""def main\(""").findAll(out).count(), "def main( should be the library's alone:\n$out")
+        assertContains(out, "def __temper_main__(")
     }
 }
 

@@ -33,7 +33,7 @@ import lang.temper.value.NamedBuiltinFun
  * is a TemperCore.Heap entry in the process dictionary, so it is visible only
  * to the process that made it. Generators and promises therefore stay in the
  * caller's process; `async` enqueues onto a run queue (TemperCore.Async) that
- * the library's `main/0` drains as its last statement.
+ * the library's `__temper_main__/0` drains as its last statement.
  */
 object ElixirSupportNetwork : SupportNetwork {
     override val backendDescription: String
