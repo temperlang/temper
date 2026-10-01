@@ -793,11 +793,34 @@ internal class ElixirTranslator(
             else -> null
         }
         if (arms != null) return Elixir.Cond(pos, listOf(Elixir.CondArm(pos, test, thenBlock)) + arms)
-        return Elixir.If(
+        val otherwiseBlock = Elixir.Block(pos, otherwise.ifEmpty { listOf(Elixir.NilLit(pos)) })
+        return nilCase(pos, test, thenBlock, otherwiseBlock)
+            ?: Elixir.If(pos, test = test, then = thenBlock, otherwise = otherwiseBlock)
+    }
+
+    /**
+     * `if x === nil`, which is how the frontend writes `x ?? y` and every null
+     * check, as `case x do nil -> ...; x -> ... end`. It means the same, reads
+     * as the Elixir it is, and the second clause tells Dialyzer that `x` is not
+     * nil there: from an `if`, `x` keeps its nil, and a function returning
+     * `finish(out) ?? []` looked as if it might return nil.
+     */
+    private fun nilCase(pos: Position, test: Elixir.Expr, then: Elixir.Block, otherwise: Elixir.Block): Elixir.Expr? {
+        val op = test as? Elixir.Operation ?: return null
+        val subject = op.left as? Elixir.Id ?: return null
+        if (op.right !is Elixir.NilLit) return null
+        val (ifNil, ifNot) = when (op.operator.operator) {
+            ElixirOperator.StrictEquals -> then to otherwise
+            ElixirOperator.StrictNotEquals -> otherwise to then
+            else -> return null
+        }
+        return Elixir.Case(
             pos,
-            test = test,
-            then = thenBlock,
-            otherwise = Elixir.Block(pos, otherwise.ifEmpty { listOf(Elixir.NilLit(pos)) }),
+            subject = Elixir.Id(subject.pos, subject.outName),
+            clauses = listOf(
+                Elixir.Clause(pos, pattern = Elixir.NilLit(pos), body = ifNil),
+                Elixir.Clause(pos, pattern = Elixir.Id(subject.pos, subject.outName), body = ifNot),
+            ),
         )
     }
 
