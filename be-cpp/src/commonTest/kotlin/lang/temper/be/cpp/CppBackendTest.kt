@@ -192,10 +192,6 @@ class CppBackendTest {
             cpp = """
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
-                |  std::shared_ptr<T_3> Classy::third(std::shared_ptr<std::vector<std::shared_ptr<T_3>>> const & things_17) {
-                |    std::shared_ptr<T_3> thing_19 = temper::core::List::get(things_17, 2);
-                |    return thing_19;
-                |  }
                 |  std::shared_ptr<Classy> Classy::make() {
                 |    std::shared_ptr<Classy> result_0 = std::make_shared<Classy>();
                 |    Classy* this_5 = result_0.get();
@@ -222,7 +218,10 @@ class CppBackendTest {
                 |      T thing = temper::core::List::get(things, 1);
                 |      return thing;
                 |    }
-                |    static std::shared_ptr<T_3> third(std::shared_ptr<std::vector<std::shared_ptr<T_3>>> const &);
+                |    template<class T_3> T_3 Classy::third(std::shared_ptr<std::vector<T_3>> const & things_17) {
+                |      T_3 thing_19 = temper::core::List::get(things_17, 2);
+                |      return thing_19;
+                |    }
                 |    static std::shared_ptr<Classy> make();
                 |  };
                 |  template<class T_0> T_0 first(std::shared_ptr<std::vector<T_0>> const & things_9) {
