@@ -20,6 +20,7 @@ defmodule TemperCore.ActorTest do
     def call_back(this, other), do: Actor.run(this, fn -> Counter.bump_through(other, this) end)
     def bump_through(this, back), do: Actor.run(this, fn -> Counter.bump(back) end)
     def take(this, value), do: Actor.run(this, fn -> value end)
+    def crash(this), do: Actor.run(this, fn -> raise ArgumentError, "not a Temper error" end)
   end
 
   test "one object, many processes, no lost updates" do
@@ -52,12 +53,66 @@ defmodule TemperCore.ActorTest do
     parent = self()
     spawn(fn -> send(parent, {:made, Counter.new(0)}) end)
     c = receive do: ({:made, c} -> c)
-    ref = Process.monitor(c.pid)
+    ref = Process.monitor(Actor.whereis(c))
     assert_receive {:DOWN, ^ref, :process, _, _}
     assert_raise TemperCore.Panic, ~r/has ended/, fn -> Counter.bump(c) end
   end
 
   test "a field cannot be read from outside the actor" do
     assert_raise TemperCore.Panic, ~r/outside its actor/, fn -> Heap.get(Counter.new(0), :n) end
+  end
+
+  test "a supervised actor outlives its creator" do
+    parent = self()
+    spawn(fn -> send(parent, {:made, Actor.supervised(fn -> Counter.new(5) end)}) end)
+    c = receive do: ({:made, c} -> c)
+    Process.sleep(20)
+    assert Counter.get_n(c) == 5
+    Actor.stop(c)
+    assert_raise TemperCore.Panic, ~r/has ended/, fn -> Counter.get_n(c) end
+  end
+
+  test "a crash restarts a supervised actor: fresh state, same identity" do
+    c = Actor.supervised(fn -> Counter.new(10) end)
+    Counter.bump(c)
+    assert Counter.get_n(c) == 11
+    before = Actor.whereis(c)
+    assert_raise ArgumentError, fn -> Counter.crash(c) end
+    assert Counter.get_n(c) == 10
+    assert Actor.whereis(c) != before
+    Actor.stop(c)
+  end
+
+  test "a Temper error is the call's result, not a crash" do
+    c = Actor.supervised(fn -> Counter.new(1) end)
+    pid = Actor.whereis(c)
+    assert_raise TemperCore.Bubble, fn -> Counter.fail(c) end
+    assert Actor.whereis(c) == pid
+    Actor.stop(c)
+  end
+
+  test "module values are shared by every process; a mutable object is copied per process" do
+    TemperCore.Global.put(:"ActorTest.shared", 1)
+    task = Task.async(fn -> TemperCore.Global.put(:"ActorTest.shared", TemperCore.Global.get(:"ActorTest.shared") + 41) end)
+    Task.await(task)
+    assert TemperCore.Global.get(:"ActorTest.shared") == 42
+
+    box = Heap.new(:box, %{v: 1})
+    TemperCore.Global.put(:"ActorTest.box", box)
+
+    Task.async(fn ->
+      theirs = TemperCore.Global.get(:"ActorTest.box")
+      Heap.put(theirs, :v, 99)
+    end)
+    |> Task.await()
+
+    assert Heap.get(TemperCore.Global.get(:"ActorTest.box"), :v) == 1
+  end
+
+  test "a library's top level runs once per node, however many processes ask" do
+    me = self()
+    1..20 |> Enum.map(fn _ -> Task.async(fn -> TemperCore.init_once(:"ActorTest.lib", fn -> send(me, :ran) end) end) end) |> Task.await_many()
+    assert_received :ran
+    refute_received :ran
   end
 end

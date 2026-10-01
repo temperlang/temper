@@ -367,6 +367,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core_net.ex"),
                 filePath("lib", "temper_core_regex.ex"),
                 filePath("lib", "temper_core_actor.ex"),
+                filePath("lib", "temper_core_application.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),

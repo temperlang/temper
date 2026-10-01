@@ -8,5 +8,5 @@ defmodule TemperCore.MixProject do
   # std/net uses :httpc. Mix prunes the code path to declared applications,
   # so without :inets its .app is not found; without :ssl, :httpc dies in
   # :public_key even for plain http.
-  def application, do: [extra_applications: [:inets, :ssl]]
+  def application, do: [mod: {TemperCore.Application, []}, extra_applications: [:inets, :ssl]]
 end

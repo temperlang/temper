@@ -52,17 +52,31 @@ defmodule TemperCore do
   def int_to_string(i, radix \\ 10), do: i |> Integer.to_string(radix) |> String.downcase()
 
   @doc """
-  Runs `body` the first time `key` is seen in this process. A library's
-  `__temper_init__/0` comes through here, so its top levels run once even
-  when two libraries that both depend on it are initialized.
+  Runs `body` the first time `key` is seen on this node. A library's
+  `__temper_init__/0` comes through here, so its top levels run once, however
+  many processes and libraries ask for it. A process that arrives while
+  another is running it waits for it to finish.
   """
   def init_once(key, body) do
-    if Process.get({:temper_init, key}) do
-      nil
-    else
-      Process.put({:temper_init, key}, true)
-      body.()
+    cond do
+      # this process is already running it: a library that imports itself
+      Process.get({:temper_init, key}) -> nil
+      :ets.member(:temper_globals, {:temper_init, key}) -> nil
+      true -> :global.trans({{:temper_init, key}, self()}, fn -> init_locked(key, body) end)
     end
+  end
+
+  # under the lock, another process may have finished it while this one waited
+  defp init_locked(key, body) do
+    unless :ets.member(:temper_globals, {:temper_init, key}) do
+      Process.put({:temper_init, key}, true)
+      # module state belongs to the node: an actor made by a top level must
+      # not end with whichever process happened to run it
+      TemperCore.Actor.supervised(body)
+      :ets.insert(:temper_globals, {{:temper_init, key}, true})
+    end
+
+    nil
   end
 
   @doc "`Int.toFloat64()`."
@@ -162,23 +176,59 @@ end
 
 defmodule TemperCore.Global do
   @moduledoc """
-  Module-level Temper variables.
+  Module-level Temper variables, shared by every process on the node.
 
   A Temper module's top-level `let` and `var` are read and written by the
-  module's functions, and Elixir functions see no variables but their own. So
-  module-level values live in the process dictionary, keyed by name. Reading
-  one that was never set raises rather than answering nil.
+  module's functions, and Elixir functions see no variables but their own,
+  so module values live outside the functions. A library's top level runs
+  once per node (`TemperCore.init_once/2`), and every process sees what it
+  set:
+
+  - **A value that can be shared** (a number, string, list, map, `@imu`
+    struct or actor) lives in an ETS table, so every process reads the
+    same one and sees every write. A shared `var` that two processes
+    read and write can still lose an update between the read and the
+    write. A counter or registry shared across processes should be an
+    `@actor`.
+  - **A mutable object that is not an actor** cannot be shared: its ref
+    only means something in the heap of the process that made it. Each
+    process gets its own copy, taken from a snapshot when it first reads
+    the value, and from then on its copy is its own.
+
+  Reading a value that was never set raises, rather than answering nil.
   """
+  @table :temper_globals
 
   def put(name, value) when is_atom(name) do
-    Process.put({__MODULE__, name}, value)
+    if TemperCore.Actor.sendable?(value) do
+      :ets.insert(@table, {name, {:shared, value}})
+      Process.delete({__MODULE__, name})
+    else
+      Process.put({__MODULE__, name}, value)
+      :ets.insert(@table, {name, {:snapshot, TemperCore.Heap.export(value)}})
+    end
+
     value
   end
 
   def get(name) when is_atom(name) do
     case Process.get({__MODULE__, name}, __MODULE__) do
-      __MODULE__ -> raise ArgumentError, "module-level #{inspect(name)} read before it was set"
-      value -> value
+      __MODULE__ ->
+        case :ets.lookup(@table, name) do
+          [{_, {:shared, value}}] ->
+            value
+
+          [{_, {:snapshot, snapshot}}] ->
+            value = TemperCore.Heap.import(snapshot)
+            Process.put({__MODULE__, name}, value)
+            value
+
+          [] ->
+            raise ArgumentError, "module-level #{inspect(name)} read before it was set"
+        end
+
+      value ->
+        value
     end
   end
 end
