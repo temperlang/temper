@@ -53,10 +53,42 @@ private val notIdentifierChar = Regex("[^A-Za-z0-9_]")
 internal class ElixirNames {
     private var gensymCount = 0
 
+    /** How many [withLocals] are running: functions nest inside classes. */
+    private var depth = 0
+
     /** Short names for one function's locals, while it is translated; see [withLocals]. */
     private var locals: Map<ResolvedName, String> = emptyMap()
 
-    fun outName(name: ResolvedName): OutName = OutName(locals[name] ?: identText(name), name)
+    /** Plain names for the library's functions, values and tests; see [nameModuleLevel]. */
+    private var moduleLevel: Map<ResolvedName, String> = emptyMap()
+
+    fun outName(name: ResolvedName): OutName = OutName(locals[name] ?: moduleLevel[name] ?: identText(name), name)
+
+    /**
+     * Names the library's module functions, module values and tests plainly:
+     * `moveRight`, not `moveRight__489`. The frontend's numbers count every
+     * name in the library, so one new declaration renumbered every name after
+     * it, and each diff of committed generated code was mostly renumbering. A
+     * name the library declares more than once is numbered within its own
+     * group, `fn`, `fn__2`, in declaration order, so a new declaration
+     * renumbers only names it shares. Exported names are taken first.
+     */
+    fun nameModuleLevel(declared: List<ResolvedName>) {
+        val taken = declared.filterIsInstance<ExportedName>().map { identText(it) }.toMutableSet()
+        val renamed = mutableMapOf<ResolvedName, String>()
+        for ((text, group) in declared.distinct().filter { it !is ExportedName }.groupBy { plainText(it) }) {
+            if (text == null) continue
+            var k = 1
+            for (name in group) {
+                var candidate = if (k == 1) text else "${text}__$k"
+                while (candidate in taken) candidate = "${text}__${++k}"
+                renamed[name] = candidate
+                taken.add(candidate)
+                k++
+            }
+        }
+        moduleLevel = renamed
+    }
 
     /**
      * Translates one function with its locals named plainly. A local that is
@@ -67,6 +99,9 @@ internal class ElixirNames {
      * functions keep one name everywhere.
      */
     fun <T> withLocals(declared: Collection<ResolvedName>, body: () -> T): T {
+        // gensyms count from 0 in each function, for the same reason as above
+        val outerGensyms = gensymCount
+        if (depth++ == 0) gensymCount = 0
         val byText = declared.distinct().groupBy { plainText(it) }
         val renamed = mutableMapOf<ResolvedName, String>()
         val taken = byText.keys.filterNotNull().toMutableSet()
@@ -89,6 +124,7 @@ internal class ElixirNames {
             return body()
         } finally {
             locals = outer
+            if (--depth == 0) gensymCount = outerGensyms
         }
     }
 

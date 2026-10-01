@@ -117,6 +117,18 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 }
             }
         }
+        names.nameModuleLevel(
+            finished.modules.flatMap { module ->
+                module.topLevels.mapNotNull { topLevel ->
+                    when (topLevel) {
+                        is TmpL.ModuleFunctionDeclaration -> topLevel.name.name
+                        is TmpL.ModuleLevelDeclaration -> topLevel.name.name
+                        is TmpL.Test -> topLevel.name.name
+                        else -> null
+                    }
+                }
+            },
+        )
         val types = mutableMapOf<String, TmpL.TypeDeclaration>()
         for (module in finished.modules) {
             for (topLevel in module.topLevels) {

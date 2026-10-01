@@ -137,6 +137,35 @@ class ElixirBackendTest {
         assertContains(support, "def helper")
     }
 
+    /**
+     * Generated code is committed, so a new declaration should show in a diff
+     * as itself, not as every name after it renumbered. Module functions,
+     * values and tests get plain names, and a function's gensyms count from 0
+     * in each function.
+     */
+    @Test
+    fun aNewDeclarationRenamesNothingElse() {
+        val source = """
+            |let helper(x: Int): Int { var t = 0; for (var i = 0; i < x; i += 1) { t += i; } t }
+            |export let total(x: Int): Int { helper(x) + helper(x + 1) }
+            |let check(test: Test, x: Int): Void { assert(total(x) >= 0); }
+            |test("totals") { test => check(test, 3); }
+        """.trimMargin()
+        val before = generatedText(source)
+        val after = generatedText(
+            "let added(x: Int): Int { var t = 1; for (var i = 0; i < x; i += 1) { t *= 2; } t }\n" +
+                "export let alsoAdded(x: Int): Int { added(x) }\n" + source,
+        )
+        for (file in listOf("temper_main.ex", "temper_tests.ex")) {
+            val old = fileContent(before, file)
+            assertFalse(Regex("__[0-9]").containsMatchIn(old), "a numbered name in $file:\n$old")
+            // every function of the old output is in the new one, as it was
+            val defs = old.split("\\n  def ").drop(1).filter { !it.startsWith("__temper") && !it.startsWith("main") }
+            for (def in defs) assertContains(fileContent(after, file), def)
+        }
+        assertContains(fileContent(before, "temper_tests.ex"), "def totals(test)")
+    }
+
     /** A library with no tests gets no test directory and no test-only paths. */
     @Test
     fun aLibraryWithoutTestsHasNoTestTree() {

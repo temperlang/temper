@@ -302,6 +302,8 @@ internal class ElixirTranslator(
             true
         }
         if (topLevel is TmpL.FunctionDeclarationOrMethod) parameters(topLevel.parameters)
+        // a test is a function too: its `test` parameter is one of its locals
+        if (topLevel is TmpL.Test) parameters(topLevel.parameters)
         return out
     }
 
