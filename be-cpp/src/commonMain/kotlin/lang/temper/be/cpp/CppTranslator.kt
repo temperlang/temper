@@ -2336,6 +2336,10 @@ class CppTranslator(
         } else {
             member.dotName.dotNameText
         }
+        // Emit `const` for a method the mutation analysis shows never
+        // mutates its receiver. (Generators and optional-param methods are
+        // seeded as mutating in that analysis, so they resolve to null here.)
+        val methodQual = memberConstQualifier(member.dotName.dotNameText)
         when (val body = member.body) {
             null -> {
                 val paramTypes = member.parameters.parameters.drop(1).map { translateParamType(it) }
@@ -2346,7 +2350,7 @@ class CppTranslator(
                         paramTypes.mapIndexed { i, t ->
                             cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                         },
-                        qual = memberConstQualifier(member.dotName.dotNameText),
+                        qual = methodQual,
                     ),
                 )
             }
@@ -2358,10 +2362,7 @@ class CppTranslator(
                 templateMethodDefs = templateMethodDefs,
                 effectiveDotName = effectiveDotName,
                 methodFormals = member.parameters.parameters.drop(1),
-                // Emit `const` for a method the mutation analysis shows never
-                // mutates its receiver. (Generators and optional-param methods are
-                // seeded as mutating in that analysis, so they resolve to null here.)
-                methodQual = memberConstQualifier(member.dotName.dotNameText),
+                methodQual = methodQual,
                 // Methods need 'virtual' for polymorphic dispatch in C++
                 needsVirtual = isInterface || realSuperTypes.any(),
             ) {
