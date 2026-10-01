@@ -182,9 +182,11 @@ internal class ElixirTranslator(
                 mainBody.addAll(statements(topLevel.body.statements, End.Discard, fn))
             }
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
-            is TmpL.ModuleFunctionDeclaration -> functions.add(translateFunction(topLevel))
+            is TmpL.ModuleFunctionDeclaration ->
+                functions.add(names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) })
+            // each member names its own locals; see translateType
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
-            is TmpL.Test -> functions.add(translateTest(topLevel))
+            is TmpL.Test -> functions.add(names.withLocals(declaredIn(topLevel)) { translateTest(topLevel) })
             is TmpL.GarbageTopLevel -> mainBody.add(garbage(topLevel.pos, topLevel.diagnostic))
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
             // comments and garbage carry no Elixir output
@@ -197,6 +199,30 @@ internal class ElixirTranslator(
         val fn = FunctionContext(returnTag = null)
         val value = decl.init?.let { expression(it, fn) } ?: Elixir.NilLit(decl.pos)
         mainBody.add(globalPut(decl.pos, decl.name.name, value))
+    }
+
+    /** Every local a declaration declares: parameters, `this`, locals and local functions, at any depth. */
+    private fun declaredIn(topLevel: TmpL.Tree): List<ResolvedName> {
+        val out = mutableListOf<ResolvedName>()
+        fun parameters(p: TmpL.Parameters) {
+            p.thisName?.let { out.add(it.name) }
+            p.parameters.forEach { out.add(it.name.name) }
+            p.restParameter?.let { out.add(it.name.name) }
+        }
+        topLevel.boundaryDescent { node ->
+            when (node) {
+                is TmpL.LocalDeclaration -> out.add(node.name.name)
+                is TmpL.LocalFunctionDeclaration -> {
+                    out.add(node.name.name)
+                    parameters(node.parameters)
+                }
+                is TmpL.FunctionDeclarationOrMethod -> parameters(node.parameters)
+                else -> {}
+            }
+            true
+        }
+        if (topLevel is TmpL.FunctionDeclarationOrMethod) parameters(topLevel.parameters)
+        return out
     }
 
     // ── Functions ────────────────────────────────────────────────────────
@@ -1170,18 +1196,20 @@ internal class ElixirTranslator(
         for (member in flattened) {
             when (member) {
                 is TmpL.InstanceProperty -> {}
-                is TmpL.Constructor -> if (isClass) items.add(constructor(member, module, isStruct, fields))
+                is TmpL.Constructor -> if (isClass) {
+                    items.add(names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) })
+                }
                 is TmpL.NormalMethod -> member.body?.let {
-                    items.add(method(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                    items.add(memberDef(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
                 }
                 is TmpL.Getter -> member.body?.let {
-                    items.add(method(member, getterName(member.dotName.dotNameText), module, isStruct))
+                    items.add(memberDef(member, getterName(member.dotName.dotNameText), module, isStruct))
                 }
                 is TmpL.Setter -> member.body?.let {
-                    items.add(method(member, setterName(member.dotName.dotNameText), module, isStruct))
+                    items.add(memberDef(member, setterName(member.dotName.dotNameText), module, isStruct))
                 }
                 is TmpL.StaticMethod -> member.body?.let {
-                    items.add(method(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                    items.add(memberDef(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
                 }
                 is TmpL.StaticProperty -> {
                     val fn = FunctionContext(returnTag = null)
@@ -1238,6 +1266,14 @@ internal class ElixirTranslator(
             ),
         )
     }
+
+    /** A method, with its own locals named plainly. */
+    private fun memberDef(
+        member: TmpL.FunctionDeclarationOrMethod,
+        name: String,
+        module: List<String>,
+        isStruct: Boolean,
+    ): Elixir.FunDef = names.withLocals(declaredIn(member)) { method(member, name, module, isStruct) }
 
     /** A method, getter, setter or static: `this` first unless static. */
     private fun method(

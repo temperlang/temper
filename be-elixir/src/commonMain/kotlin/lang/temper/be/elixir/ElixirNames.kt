@@ -53,7 +53,55 @@ private val notIdentifierChar = Regex("[^A-Za-z0-9_]")
 internal class ElixirNames {
     private var gensymCount = 0
 
-    fun outName(name: ResolvedName): OutName = OutName(identText(name), name)
+    /** Short names for one function's locals, while it is translated; see [withLocals]. */
+    private var locals: Map<ResolvedName, String> = emptyMap()
+
+    fun outName(name: ResolvedName): OutName = OutName(locals[name] ?: identText(name), name)
+
+    /**
+     * Translates one function with its locals named plainly. A local that is
+     * the only one of its name in the function is `x`, not `x__13`; names
+     * declared more than once, like the frontend's temporaries `t`, are
+     * numbered `t1`, `t2` in declaration order, so shadowing stays distinct.
+     * Only declarations inside the function are renamed: globals and module
+     * functions keep one name everywhere.
+     */
+    fun <T> withLocals(declared: Collection<ResolvedName>, body: () -> T): T {
+        val byText = declared.distinct().groupBy { plainText(it) }
+        val renamed = mutableMapOf<ResolvedName, String>()
+        val taken = byText.keys.filterNotNull().toMutableSet()
+        for ((text, group) in byText) {
+            if (text == null) continue
+            if (group.size == 1) {
+                renamed[group.single()] = text
+                continue
+            }
+            var k = 1
+            for (name in group) {
+                while ("$text$k" in taken) k++
+                renamed[name] = "$text$k"
+                taken.add("$text$k")
+            }
+        }
+        val outer = locals
+        locals = renamed
+        try {
+            return body()
+        } finally {
+            locals = outer
+        }
+    }
+
+    /** `x` for `x__13`, `caseIndex` for `caseIndex#17`; null for a name with no plain form. */
+    private fun plainText(name: ResolvedName): String? {
+        val base = when (name) {
+            is lang.temper.name.SourceName -> name.baseName.nameText
+            is Temporary -> name.nameHint
+            else -> return null
+        }
+        // gensyms are `ex_...`, so a plain name must not look like one
+        return sanitize(base).takeUnless { it.startsWith("ex_") }
+    }
 
     /** A fresh name that cannot collide with a translated one. */
     fun gensym(hint: String): OutName = OutName("ex_${sanitize(hint)}_${gensymCount++}", null)

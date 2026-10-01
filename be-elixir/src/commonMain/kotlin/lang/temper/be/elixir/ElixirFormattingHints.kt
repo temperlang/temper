@@ -30,6 +30,11 @@ object ElixirFormattingHints : FormattingHints {
     override fun spaceBetween(preceding: OutputToken, following: OutputToken): Boolean = when {
         // `Temper.Core.puts`, `f.(x)`
         preceding.text == "." || following.text == "." -> false
+        // `&Temper.Lib.f/2`: a capture's `&` and `/` are punctuation; `&&`
+        // and a division are other tokens and keep their spaces
+        preceding.text == "&" && preceding.type == OutputTokenType.Punctuation -> false
+        (preceding.text == "/" || following.text == "/") &&
+            (preceding.type == OutputTokenType.Punctuation || following.type == OutputTokenType.Punctuation) -> false
         // `not (a == b)` reads as the operator it is, not as a call to `not`
         preceding.text == "not" -> true
         // `defstruct[:x]` would be Access syntax on a call to `defstruct`
@@ -67,7 +72,14 @@ object ElixirFormattingHints : FormattingHints {
     /** `else`, `rescue` and `catch` close one block and open the next. */
     private val between = setOf("else", "rescue", "catch")
 
-    override fun indents(token: OutputToken): Boolean = token.text == "do" || token.text in between
+    /**
+     * `fn` opens a block its `end` closes, as `do` does. Before it indented,
+     * every `fn ... end` dedented once more than it indented, so each closure
+     * pulled the rest of the file a level left: `def main()` ended up in
+     * column 0 after a generator's state machine.
+     */
+    override fun indents(token: OutputToken): Boolean =
+        token.text == "do" || token.text == "fn" || token.text in between
 
     override fun dedents(token: OutputToken): Boolean = token.text == "end" || token.text in between
 

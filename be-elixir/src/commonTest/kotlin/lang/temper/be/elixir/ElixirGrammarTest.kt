@@ -139,7 +139,7 @@ class ElixirGrammarTest {
         assertCode(
             """
                 |f = fn c, d ->
-                |c + d
+                |  c + d
                 |end
                 |f.(1, 2)
             """.trimMargin(),
