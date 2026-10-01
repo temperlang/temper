@@ -278,6 +278,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
+                filePath("test", "temper_core_ieee_test.exs"),
                 filePath("test", "temper_core_list_test.exs"),
                 filePath("test", "temper_core_string_test.exs"),
                 filePath("test", "temper_core_map_test.exs"),

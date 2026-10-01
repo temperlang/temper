@@ -54,25 +54,34 @@ defmodule TemperCore do
   @doc "`Int.toFloat64()`."
   def int_to_float(i), do: i * 1.0
 
-  @doc "`Int64.toFloat64()`: bubbles rather than round a value a float cannot hold exactly."
+  # Float64 holds every integer of magnitude up to 2^53 - 1 exactly; core.temper
+  # bounds both Int64 <-> Float64 conversions there, 2^53 itself included.
+  @max_safe 0x1F_FFFF_FFFF_FFFF
+
+  @doc "`Int64.toFloat64()`: bubbles outside plus or minus 2^53 - 1."
   def int64_to_float(i) do
-    f = i * 1.0
-    if trunc(f) == i, do: f, else: raise(TemperCore.Bubble, "#{i} has no exact Float64")
+    if i >= -@max_safe and i <= @max_safe, do: i * 1.0, else: raise(TemperCore.Bubble, "#{i} has no exact Float64")
   end
 
-  @doc "`Float64.toInt32()`: truncates, and bubbles outside Int32."
-  def float_to_int32(f) do
+  @doc "`Float64.toInt32()`: truncates, and bubbles outside Int32 or for infinity and NaN."
+  def float_to_int32(f) when is_float(f) do
     i = trunc(f)
     if i >= -2_147_483_648 and i <= 2_147_483_647, do: i, else: raise(TemperCore.Bubble, "#{f} is not an Int32")
   end
 
-  @doc "`Float64.toInt64()`: truncates, and bubbles outside Int64."
-  def float_to_int64(f) do
+  def float_to_int32(f), do: raise(TemperCore.Bubble, "#{TemperCore.Float.to_string(f)} is not an Int32")
+
+  @doc "`Float64.toInt64()`: truncates, and bubbles outside plus or minus 2^53 - 1."
+  def float_to_int64(f) when is_float(f) do
     i = trunc(f)
-    if i >= -9_223_372_036_854_775_808 and i <= 9_223_372_036_854_775_807,
-      do: i,
-      else: raise(TemperCore.Bubble, "#{f} is not an Int64")
+    if i >= -@max_safe and i <= @max_safe, do: i, else: raise(TemperCore.Bubble, "#{f} is not a safe Int64")
   end
+
+  def float_to_int64(f), do: raise(TemperCore.Bubble, "#{TemperCore.Float.to_string(f)} is not an Int64")
+
+  @doc "`toInt32Unsafe()` / `toInt64Unsafe()`: truncates; infinity and NaN are 0, as in JavaScript."
+  def float_trunc(f) when is_float(f), do: trunc(f)
+  def float_trunc(_), do: 0
 
   @doc "`Int64.toInt32()`: bubbles outside Int32."
   def int64_to_int32(i) do

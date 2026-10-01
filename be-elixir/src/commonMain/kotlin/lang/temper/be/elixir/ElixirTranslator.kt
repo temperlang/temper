@@ -1587,10 +1587,14 @@ internal class ElixirTranslator(
         return when (val tag = expression.value.typeTag) {
             TBoolean -> Elixir.BoolLit(pos, TBoolean.unpack(expression.value))
             TFloat64 -> TFloat64.unpack(expression.value).let { f ->
-                // the BEAM's floats have no NaN or infinity; failing the build by
-                // name beats the renderer's own error, which cut the file short
-                if (f.isNaN() || f.isInfinite()) TODO("$f has no BEAM float: $expression")
-                Elixir.NumberLit(pos, f)
+                // the BEAM's floats have no NaN or infinity; TemperCore.Float
+                // stands atoms in for them
+                when {
+                    f.isNaN() -> Elixir.Atom(pos, "nan")
+                    f == Double.POSITIVE_INFINITY -> Elixir.Atom(pos, "infinity")
+                    f == Double.NEGATIVE_INFINITY -> Elixir.Atom(pos, "neg_infinity")
+                    else -> Elixir.NumberLit(pos, f)
+                }
             }
             TInt -> Elixir.NumberLit(pos, TInt.unpack(expression.value))
             TInt64 -> Elixir.NumberLit(pos, TInt64.unpack(expression.value))

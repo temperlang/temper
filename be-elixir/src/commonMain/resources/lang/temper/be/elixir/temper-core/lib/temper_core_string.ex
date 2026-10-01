@@ -107,13 +107,9 @@ defmodule TemperCore.String do
     end
   end
 
-  @doc "JSON number syntax, after trimming whitespace. The BEAM has no NaN or infinity to return."
+  @doc "JSON number syntax plus `NaN` and the infinities, after trimming whitespace."
   def to_float64(s) do
-    t = String.trim(s)
-    case Float.parse(t) do
-      {f, ""} -> if String.starts_with?(t, "-") and f == 0.0, do: -0.0, else: f
-      _ -> raise TemperCore.Bubble, "#{inspect(s)} is not a number"
-    end
+    TemperCore.Float.parse(s) || raise(TemperCore.Bubble, "#{inspect(s)} is not a number")
   end
 end
 

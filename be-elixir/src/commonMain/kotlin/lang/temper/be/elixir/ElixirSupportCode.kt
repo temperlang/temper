@@ -129,7 +129,9 @@ private fun core(id: BuiltinOperatorId, fn: String) =
 
 /**
  * `TemperCore.Float.fn(args)`: Temper calls `-0.0` and `0.0` unequal and
- * orders `-0.0` first, which `==` and `<` on the BEAM do not.
+ * orders `-0.0` first, which `==` and `<` on the BEAM do not, and a Float64
+ * may be `:infinity`, `:neg_infinity` or `:nan`, which the BEAM's floats
+ * cannot be.
  */
 private fun floatCore(id: BuiltinOperatorId, fn: String) =
     ElixirOperatorCode(id) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "Float"), fn, a) }
@@ -203,15 +205,15 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
     kernel(BuiltinOperatorId.ModIntInt64Safe, "rem"),
     core(BuiltinOperatorId.ModIntInt, "int32_rem"),
     core(BuiltinOperatorId.ModIntInt64, "int64_rem"),
-    infix(BuiltinOperatorId.PlusFltFlt, ElixirOperator.Addition),
-    infix(BuiltinOperatorId.MinusFltFlt, ElixirOperator.Subtraction),
-    infix(BuiltinOperatorId.TimesFltFlt, ElixirOperator.Multiplication),
-    // Raises ArithmeticError on a zero divisor, where IEEE gives infinity.
-    // The BEAM has no infinity to give: a known gap, not a translation.
-    infix(BuiltinOperatorId.DivFltFlt, ElixirOperator.FloatDivision),
-    prefix(BuiltinOperatorId.MinusFlt, ElixirOperator.Negate),
-    ElixirOperatorCode(BuiltinOperatorId.ModFltFlt) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), "fmod", a) },
-    ElixirOperatorCode(BuiltinOperatorId.PowFltFlt) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), "pow", a) },
+    // The BEAM raises on overflow and a zero divisor, where IEEE gives
+    // infinity or NaN, so float arithmetic is never a bare operator.
+    floatCore(BuiltinOperatorId.PlusFltFlt, "add"),
+    floatCore(BuiltinOperatorId.MinusFltFlt, "sub"),
+    floatCore(BuiltinOperatorId.TimesFltFlt, "mul"),
+    floatCore(BuiltinOperatorId.DivFltFlt, "divide"),
+    floatCore(BuiltinOperatorId.MinusFlt, "neg"),
+    floatCore(BuiltinOperatorId.ModFltFlt, "rem"),
+    floatCore(BuiltinOperatorId.PowFltFlt, "pow"),
     infix(BuiltinOperatorId.LtIntInt, ElixirOperator.LessThan),
     infix(BuiltinOperatorId.LeIntInt, ElixirOperator.LessEquals),
     infix(BuiltinOperatorId.GtIntInt, ElixirOperator.GreaterThan),
@@ -301,8 +303,11 @@ private fun connectedFloat(key: String, fn: String) =
 
 private fun connectedKernel(key: String, fn: String) = ElixirConnected(key) { pos, a -> localCall(pos, fn, a) }
 
-private fun erlangMath(key: String, fn: String) =
-    ElixirConnected(key) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), fn, a) }
+/** `TemperCore.Float.math(:fn, x)`: `:math.fn`, with IEEE answers where it raises. */
+private fun floatMath(key: String, fn: String) =
+    ElixirConnected(key) { pos, a ->
+        remoteCall(pos, elixirModule(pos, "TemperCore", "Float"), "math", listOf(Elixir.Atom(pos, fn)) + a)
+    }
 
 /** `TemperCore.Module.fn(args)` */
 private fun connectedIn(module: String, key: String, fn: String) =
@@ -340,24 +345,28 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedFloat("core.type Float64.min()", "min"),
         connectedFloat("core.type Float64.max()", "max"),
         connectedFloat("core.type Float64.sign()", "sign"),
-        connectedKernel("core.type Float64.abs()", "abs"),
-        erlangMath("core.type Float64.sqrt()", "sqrt"),
-        erlangMath("core.type Float64.exp()", "exp"),
-        erlangMath("core.type Float64.log()", "log"),
-        erlangMath("core.type Float64.log10()", "log10"),
-        erlangMath("core.type Float64.log2()", "log2"),
-        erlangMath("core.type Float64.sin()", "sin"),
-        erlangMath("core.type Float64.cos()", "cos"),
-        erlangMath("core.type Float64.tan()", "tan"),
-        erlangMath("core.type Float64.asin()", "asin"),
-        erlangMath("core.type Float64.acos()", "acos"),
-        erlangMath("core.type Float64.atan()", "atan"),
-        erlangMath("core.type Float64.atan2()", "atan2"),
-        erlangMath("core.type Float64.sinh()", "sinh"),
-        erlangMath("core.type Float64.cosh()", "cosh"),
-        erlangMath("core.type Float64.tanh()", "tanh"),
-        erlangMath("core.type Float64.ceil()", "ceil"),
-        erlangMath("core.type Float64.floor()", "floor"),
+        connectedFloat("core.type Float64.abs()", "abs"),
+        floatMath("core.type Float64.sqrt()", "sqrt"),
+        floatMath("core.type Float64.exp()", "exp"),
+        floatMath("core.type Float64.log()", "log"),
+        floatMath("core.type Float64.log10()", "log10"),
+        floatMath("core.type Float64.log2()", "log2"),
+        floatMath("core.type Float64.sin()", "sin"),
+        floatMath("core.type Float64.cos()", "cos"),
+        floatMath("core.type Float64.tan()", "tan"),
+        floatMath("core.type Float64.asin()", "asin"),
+        floatMath("core.type Float64.acos()", "acos"),
+        floatMath("core.type Float64.atan()", "atan"),
+        connectedFloat("core.type Float64.atan2()", "atan2"),
+        floatMath("core.type Float64.sinh()", "sinh"),
+        floatMath("core.type Float64.cosh()", "cosh"),
+        floatMath("core.type Float64.tanh()", "tanh"),
+        floatMath("core.type Float64.ceil()", "ceil"),
+        floatMath("core.type Float64.floor()", "floor"),
+        floatMath("core.type Float64.expm1()", "expm1"),
+        floatMath("core.type Float64.log1p()", "log1p"),
+        connectedFloat("core.type Float64.round()", "round"),
+        connectedFloat("core.type Float64.near()", "near"),
         connectedCore("core.type Int32.toFloat64()", "int_to_float"),
         connectedCore("core.type Int32.toFloat64Unsafe()", "int_to_float"),
         connectedCore("core.type Int64.toFloat64()", "int64_to_float"),
@@ -365,10 +374,10 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedCore("core.type Float64.toInt32()", "float_to_int32"),
         connectedCore("core.type Float64.toInt64()", "float_to_int64"),
         ElixirConnected("core.type Float64.toInt32Unsafe()") { pos, a ->
-            coreCall(pos, "int32", listOf(localCall(pos, "trunc", a)))
+            coreCall(pos, "int32", listOf(coreCall(pos, "float_trunc", a)))
         },
         ElixirConnected("core.type Float64.toInt64Unsafe()") { pos, a ->
-            coreCall(pos, "int64", listOf(localCall(pos, "trunc", a)))
+            coreCall(pos, "int64", listOf(coreCall(pos, "float_trunc", a)))
         },
         identity("core.type Int32.toInt64()"),
         connectedCore("core.type Int64.toInt32()", "int64_to_int32"),
