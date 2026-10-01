@@ -209,7 +209,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                             ),
                         ),
                     ),
-                ),
+                ).also(::tidy),
                 mimeType = mimeType,
             ),
         )
