@@ -1,3 +1,13 @@
+# defined first: TemperCore below matches on %TemperCore.Ref{}, and a struct
+# must exist before a pattern in the same file can name it
+defmodule TemperCore.Ref do
+  @moduledoc """
+  A mutable Temper object: its class and a key into the calling process's
+  heap. Two refs are equal exactly when they are the same object.
+  """
+  defstruct [:class, :id]
+end
+
 defmodule TemperCore do
   @moduledoc """
   Runtime support for Elixir translated from Temper by be-elixir.
@@ -86,6 +96,34 @@ defmodule TemperCore do
   def list_get_or(list, i, fallback) when is_integer(i) and i >= 0, do: Enum.at(list, i, fallback)
   def list_get_or(_list, _i, fallback), do: fallback
 
+  @doc """
+  The module a translated object's class became: a struct's `__struct__`,
+  or a heap ref's `class`. Anything else is not a translated object.
+  """
+  def class_of(%TemperCore.Ref{class: class}), do: class
+  def class_of(%{__struct__: class}), do: class
+  def class_of(other), do: raise(ArgumentError, "#{inspect(other)} is not a Temper object")
+
+  @doc """
+  Calls a method on whatever class the object turns out to be, which is how
+  a call through an interface-typed value reaches the right implementation.
+  """
+  def call(obj, method, args), do: apply(class_of(obj), method, [obj | args])
+
+  @doc "`instanceof` for a translated class or interface."
+  def is_a(%TemperCore.Ref{class: class}, type), do: type in class.__temper_supertypes__()
+  def is_a(%{__struct__: class}, type), do: function_exported?(class, :__temper_supertypes__, 0) and type in class.__temper_supertypes__()
+  def is_a(_other, _type), do: false
+
+  @doc "A cast that can fail: the value when it is a `type`, otherwise a bubble."
+  def cast(value, type) do
+    if is_a(value, type), do: value, else: raise(TemperCore.Bubble, "#{inspect(value)} is not a #{inspect(type)}")
+  end
+
+  @doc "A cast to a builtin type, checked with its guard."
+  def cast_check(value, true), do: value
+  def cast_check(value, false), do: raise(TemperCore.Bubble, "#{inspect(value)} is not that type")
+
   @doc "Three-way comparison, as Temper's `cmp`: -1, 0 or 1."
   def cmp(a, b) when a < b, do: -1
   def cmp(a, b) when a > b, do: 1
@@ -125,13 +163,6 @@ defmodule TemperCore.Bubble do
   defexception message: "bubble"
 end
 
-defmodule TemperCore.Ref do
-  @moduledoc """
-  A mutable Temper object: its class and a key into the calling process's
-  heap. Two refs are equal exactly when they are the same object.
-  """
-  defstruct [:class, :id]
-end
 
 defmodule TemperCore.Heap do
   @moduledoc """

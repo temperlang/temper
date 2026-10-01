@@ -365,3 +365,9 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         identity("core.type List.toList()"),
     )
     ).associateBy { it.connectedKey }
+
+/** `pureVirtual()`, the body of an abstract method. */
+internal object PureVirtual : ElixirInlineSupportCode("pureVirtual") {
+    override fun callFactory(pos: Position, args: List<Elixir.Expr>): Elixir.Expr =
+        localCall(pos, "raise", listOf(elixirModule(pos, "TemperCore", "Panic")))
+}

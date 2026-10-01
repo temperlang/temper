@@ -45,8 +45,11 @@ object ElixirSupportNetwork : SupportNetwork {
     override fun representationOfVoid(genre: Genre): RepresentationOfVoid = RepresentationOfVoid.ReifyVoid
 
     /** Temper's builtin operators, as Elixir operators or temper-core calls. */
-    override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? =
-        builtin.builtinOperatorId?.let { elixirOperators[it] }
+    override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? = when {
+        // the body of an abstract method: reaching it is a panic, not a bubble
+        builtin.name == PureVirtual.connectedKey -> PureVirtual
+        else -> builtin.builtinOperatorId?.let { elixirOperators[it] }
+    }
 
     override fun optionalSupportCode(
         optionalSupportCodeKind: OptionalSupportCodeKind,

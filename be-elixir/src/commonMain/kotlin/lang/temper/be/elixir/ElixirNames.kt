@@ -68,6 +68,16 @@ internal class ElixirNames {
         },
     )
 
+    /** A module alias segment: letters, digits and underscores, starting with a capital. */
+    fun moduleSegment(text: String): String {
+        val cleaned = notIdentifierChar.replace(text, "_")
+        return when {
+            cleaned.isEmpty() -> "T"
+            !cleaned.first().isLetter() -> "T$cleaned"
+            else -> cleaned.replaceFirstChar { it.uppercaseChar() }
+        }
+    }
+
     fun sanitize(text: String): String {
         val cleaned = notIdentifierChar.replace(text, "_")
         val legal = when {

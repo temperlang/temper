@@ -58,19 +58,27 @@ internal class ElixirTranslator(
     private val moduleFunctions: Map<ResolvedName, Int>,
     /** Every module-level variable of the library. */
     private val moduleGlobals: Set<ResolvedName>,
+    /** Every class and interface of the library, by its source name. */
+    private val types: Map<String, TmpL.TypeDeclaration>,
 ) {
     private val functions = mutableListOf<Elixir.ModuleItem>()
     private val mainBody = mutableListOf<Elixir.BlockItem>()
+    private val modules = mutableListOf<Elixir.ModuleDef>()
 
-    data class Translated(val functions: List<Elixir.ModuleItem>, val mainBody: List<Elixir.BlockItem>)
+    data class Translated(
+        val functions: List<Elixir.ModuleItem>,
+        val mainBody: List<Elixir.BlockItem>,
+        val modules: List<Elixir.ModuleDef>,
+    )
 
     fun translateModule(module: TmpL.Module): Translated {
         functions.clear()
         mainBody.clear()
+        modules.clear()
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
         }
-        return Translated(functions.toList(), mainBody.toList())
+        return Translated(functions.toList(), mainBody.toList(), modules.toList())
     }
 
     // ── Top levels ───────────────────────────────────────────────────────
@@ -83,7 +91,7 @@ internal class ElixirTranslator(
             }
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
             is TmpL.ModuleFunctionDeclaration -> functions.add(translateFunction(topLevel))
-            is TmpL.TypeDeclaration -> TODO("type declaration: $topLevel")
+            is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
             is TmpL.Test -> TODO("test: $topLevel")
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
             // comments and garbage carry no Elixir output
@@ -101,10 +109,28 @@ internal class ElixirTranslator(
     // ── Functions ────────────────────────────────────────────────────────
 
     /** Per-function state: the tag its non-local returns carry, and whether one was thrown. */
-    private inner class FunctionContext(val returnTag: String?) {
+    private inner class FunctionContext(
+        val returnTag: String?,
+        /** The class whose method or constructor this is, if any. */
+        val cls: ClassContext? = null,
+    ) {
         var threwReturn = false
         val loops = ArrayDeque<LoopContext>()
+
+        /** What `return;` and falling off the end give: nil, or a constructor's `this`. */
+        fun returnValue(pos: Position): Elixir.Expr = when {
+            cls?.isConstructor == true -> varRef(pos, cls.thisName!!)
+            else -> Elixir.NilLit(pos)
+        }
     }
+
+    /** The class a method belongs to, and how its objects keep their fields. */
+    private class ClassContext(
+        val module: List<String>,
+        val isStruct: Boolean,
+        val thisName: ResolvedName?,
+        val isConstructor: Boolean,
+    )
 
     /** A loop or labeled block that `break` and `continue` can target. */
     private inner class LoopContext(
@@ -137,10 +163,15 @@ internal class ElixirTranslator(
     }
 
     /** A body whose fall-through returns nil, wrapped in a catch only if a return had to throw. */
-    private fun functionBody(pos: Position, body: List<TmpL.Statement>): Elixir.Block {
+    private fun functionBody(
+        pos: Position,
+        body: List<TmpL.Statement>,
+        cls: ClassContext? = null,
+        prelude: List<Elixir.BlockItem> = listOf(),
+    ): Elixir.Block {
         val tag = names.gensym("return").outputNameText
-        val fn = FunctionContext(returnTag = tag)
-        val items = statements(body, End.Return, fn)
+        val fn = FunctionContext(returnTag = tag, cls = cls)
+        val items = prelude + statements(body, End.Return, fn)
         if (!fn.threwReturn) return Elixir.Block(pos, items)
         val valueName = names.gensym("value")
         fun value() = Elixir.Id(pos, valueName)
@@ -225,7 +256,7 @@ internal class ElixirTranslator(
     }
 
     private fun fallThrough(end: End, pos: Position, fn: FunctionContext): List<Elixir.BlockItem> = when (end) {
-        End.Return -> listOf(Elixir.NilLit(pos))
+        End.Return -> listOf(fn.returnValue(pos))
         End.Discard -> listOf()
         is End.Yield -> listOf(packed(pos, end.vars))
         is End.Again -> listOf(again(pos, end.loop))
@@ -267,7 +298,10 @@ internal class ElixirTranslator(
         return when (statement) {
             is TmpL.ThrowStatement -> listOf(raiseBubble(pos))
             is TmpL.ReturnStatement -> {
-                val value = statement.expression?.let { expression(it, fn) } ?: Elixir.NilLit(pos)
+                val value = when {
+                    fn.cls?.isConstructor == true -> fn.returnValue(pos)
+                    else -> statement.expression?.let { expression(it, fn) } ?: Elixir.NilLit(pos)
+                }
                 when (end) {
                     End.Return -> listOf(value)
                     else -> {
@@ -412,6 +446,21 @@ internal class ElixirTranslator(
                 else -> labeledBlock(statement, fn)
             }
             is TmpL.TryStatement -> tryOf(statement, fn)
+            is TmpL.SetBackedProperty -> listOf(setBacked(statement, fn))
+            is TmpL.SetAbstractProperty -> {
+                val subject = statement.left.subject as? TmpL.Expression ?: TODO("setter subject: $statement")
+                listOf(
+                    coreCall(
+                        pos,
+                        "call",
+                        listOf(
+                            expression(subject, fn),
+                            Elixir.Atom(pos, setterName(propertyText(statement.left.property))),
+                            Elixir.ListLit(pos, listOf(expression(statement.right, fn))),
+                        ),
+                    ),
+                )
+            }
             else -> TODO("statement: $statement")
         }
     }
@@ -630,6 +679,14 @@ internal class ElixirTranslator(
                     nameOf(node.left)?.let { if (it in visible) assigned.add(it) }
                     true
                 }
+                // a struct's constructor rebinds `this` for every field it sets
+                is TmpL.SetBackedProperty -> {
+                    val cls = fn.cls
+                    if (cls != null && cls.isStruct && node.left.subject is TmpL.This) {
+                        cls.thisName?.let { if (it in visible) assigned.add(it) }
+                    }
+                    true
+                }
                 else -> true
             }
         }
@@ -643,6 +700,21 @@ internal class ElixirTranslator(
         is TmpL.CallExpression -> call(expression, fn)
         is TmpL.Reference -> reference(expression)
         is TmpL.InfixOperation -> infix(expression, fn)
+        is TmpL.This -> varRef(expression.pos, expression.id.name)
+        is TmpL.GetBackedProperty -> getBacked(expression, fn)
+        is TmpL.GetAbstractProperty -> coreCall(
+            expression.pos,
+            "call",
+            listOf(
+                expression(expression.subject, fn),
+                Elixir.Atom(expression.pos, getterName(propertyText(expression.property))),
+                Elixir.ListLit(expression.pos, listOf()),
+            ),
+        )
+        is TmpL.InstanceOfExpression ->
+            instanceOf(expression.pos, expression(expression.expr, fn), expression.checkedType)
+        is TmpL.CastExpression -> cast(expression, fn)
+        is TmpL.UncheckedNotNullExpression -> expression(expression.expression, fn)
         is TmpL.PrefixOperation -> when (expression.op.tmpLOperator) {
             TmpLOperator.Bang -> prefixOp(expression.pos, ElixirOperator.Not, expression(expression.operand, fn))
         }
@@ -712,9 +784,371 @@ internal class ElixirTranslator(
                     else -> Elixir.AnonCall(call.pos, fn = varRef(callee.pos, name), args = args)
                 }
             }
+            is TmpL.ConstructorReference ->
+                remoteCall(call.pos, moduleOf(call.pos, typeNameModule(callee.typeName)), CONSTRUCTOR, args)
+            is TmpL.MethodReference -> when (val subject = callee.subject) {
+                is TmpL.TypeSubject -> remoteCall(
+                    call.pos,
+                    moduleOf(call.pos, typeSubjectModule(subject)),
+                    names.sanitize(callee.methodName.dotNameText),
+                    args,
+                )
+                is TmpL.Expression -> coreCall(
+                    call.pos,
+                    "call",
+                    listOf(
+                        expression(subject, fn),
+                        Elixir.Atom(call.pos, names.sanitize(callee.methodName.dotNameText)),
+                        Elixir.ListLit(call.pos, args),
+                    ),
+                )
+            }
             else -> TODO("callable: $callee")
         }
     }
+
+    // ── Classes ──────────────────────────────────────────────────────────
+
+    /**
+     * A class or interface becomes a module, `TemperMain.Name`.
+     *
+     * A class that never writes a property outside its constructor and has no
+     * setter becomes a `defstruct`: its objects are immutable values, and its
+     * constructor rebinds `this` as it fills them in. Any other class keeps
+     * its fields in `TemperCore.Heap`, so that every alias sees every write.
+     *
+     * Members are flattened, the way be-blimp flattens them: a class carries
+     * every inherited method body it does not override, so a call never has
+     * to find a super implementation at run time.
+     */
+    private fun translateType(decl: TmpL.TypeDeclaration): Elixir.ModuleDef {
+        val pos = decl.pos
+        val module = typeModule(decl)
+        val isClass = decl.kind == TmpL.TypeDeclarationKind.Class
+        if (!isClass && decl.kind != TmpL.TypeDeclarationKind.Interface) TODO("${decl.kind} declaration: ${decl.name}")
+        val flattened = if (isClass) flattenMembers(decl) else decl.members.filterIsInstance<TmpL.Member>()
+        val isStruct = isClass && isStructClass(flattened)
+        val fields = flattened.filterIsInstance<TmpL.InstanceProperty>()
+            .filter { it.memberShape.abstractness == lang.temper.type.Abstractness.Concrete }
+            .map { fieldText(it.name) }
+        val items = mutableListOf<Elixir.ModuleItem>()
+        if (isStruct) items.add(Elixir.StructDef(pos, fields.map { Elixir.Atom(pos, it) }))
+        items.add(
+            Elixir.FunDef(
+                pos,
+                id = Elixir.Id(pos, OutName(SUPERTYPES, null)),
+                body = Elixir.Block(
+                    pos,
+                    listOf(Elixir.ListLit(pos, (listOf(module) + ancestorModules(decl)).map { moduleOf(pos, it) })),
+                ),
+            ),
+        )
+        for (member in flattened) {
+            when (member) {
+                is TmpL.InstanceProperty -> {}
+                is TmpL.Constructor -> if (isClass) items.add(constructor(member, module, isStruct, fields))
+                is TmpL.NormalMethod -> member.body?.let {
+                    items.add(method(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                }
+                is TmpL.Getter -> member.body?.let {
+                    items.add(method(member, getterName(member.dotName.dotNameText), module, isStruct))
+                }
+                is TmpL.Setter -> member.body?.let {
+                    items.add(method(member, setterName(member.dotName.dotNameText), module, isStruct))
+                }
+                is TmpL.StaticMethod -> member.body?.let {
+                    items.add(method(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                }
+                is TmpL.StaticProperty -> {
+                    val fn = FunctionContext(returnTag = null)
+                    mainBody.add(
+                        coreGlobal(
+                            member.pos,
+                            "put",
+                            listOf(
+                                staticKey(member.pos, module, member.dotName.dotNameText),
+                                expression(member.expression, fn),
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+        return Elixir.ModuleDef(pos, name = moduleOf(pos, module), items = items)
+    }
+
+    private fun constructor(
+        ctor: TmpL.Constructor,
+        module: List<String>,
+        isStruct: Boolean,
+        fields: List<String>,
+    ): Elixir.FunDef {
+        val pos = ctor.pos
+        val thisName = ctor.parameters.thisName?.name ?: TODO("constructor without this: $ctor")
+        val formals = ctor.parameters.parameters.filter { nameOf(it.name) != thisName }
+        formals.forEach { declare(it.name.name) }
+        declare(thisName)
+        val blank: Elixir.Expr = if (isStruct) {
+            Elixir.StructLit(pos, name = moduleOf(pos, module), fields = listOf())
+        } else {
+            heapCall(
+                pos,
+                "new",
+                listOf(
+                    moduleOf(pos, module),
+                    Elixir.MapLit(pos, fields.map { Elixir.MapEntry(pos, Elixir.Atom(pos, it), Elixir.NilLit(pos)) }),
+                ),
+            )
+        }
+        val cls = ClassContext(module, isStruct, thisName, isConstructor = true)
+        return Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, OutName(CONSTRUCTOR, null)),
+            params = formals.map { idOf(it.name) },
+            body = functionBody(
+                pos,
+                ctor.body.statements,
+                cls,
+                prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)),
+            ),
+        )
+    }
+
+    /** A method, getter, setter or static: `this` first unless static. */
+    private fun method(
+        member: TmpL.FunctionDeclarationOrMethod,
+        name: String,
+        module: List<String>,
+        isStruct: Boolean,
+    ): Elixir.FunDef {
+        val pos = member.pos
+        if (member.parameters.restParameter != null) TODO("rest parameter: $member")
+        val thisName = member.parameters.thisName?.name
+        val formals = member.parameters.parameters.filter { nameOf(it.name) != thisName }
+        formals.forEach { declare(it.name.name) }
+        thisName?.let { declare(it) }
+        val params = listOfNotNull(thisName?.let { varId(pos, it) }) + formals.map { idOf(it.name) }
+        val cls = ClassContext(module, isStruct, thisName, isConstructor = false)
+        return Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, OutName(name, null)),
+            params = params,
+            body = functionBody(pos, member.body!!.statements, cls),
+        )
+    }
+
+    private fun setBacked(statement: TmpL.SetBackedProperty, fn: FunctionContext): Elixir.BlockItem {
+        val pos = statement.pos
+        val value = expression(statement.right, fn)
+        return when (val subject = statement.left.subject) {
+            is TmpL.This -> {
+                val cls = fn.cls ?: TODO("property write outside a class: $statement")
+                val field = fieldText(statement.left.property)
+                if (cls.isStruct) {
+                    // `this = %{this | field => value}`: the constructor's own copy
+                    Elixir.Match(
+                        pos,
+                        left = varId(pos, subject.id.name),
+                        right = Elixir.MapUpdate(
+                            pos,
+                            base = varRef(pos, subject.id.name),
+                            entries = listOf(Elixir.MapEntry(pos, Elixir.Atom(pos, field), value)),
+                        ),
+                    )
+                } else {
+                    heapCall(pos, "put", listOf(varRef(pos, subject.id.name), Elixir.Atom(pos, field), value))
+                }
+            }
+            is TmpL.TypeSubject -> TODO("static property write: $statement")
+            else -> TODO("backed property write on $subject")
+        }
+    }
+
+    private fun getBacked(expression: TmpL.GetBackedProperty, fn: FunctionContext): Elixir.Expr {
+        val pos = expression.pos
+        return when (val subject = expression.subject) {
+            is TmpL.TypeSubject -> coreGlobal(
+                pos,
+                "get",
+                listOf(staticKey(pos, typeSubjectModule(subject), propertyText(expression.property))),
+            )
+            is TmpL.This -> {
+                val cls = fn.cls ?: TODO("property read outside a class: $expression")
+                val field = fieldText(expression.property)
+                if (cls.isStruct) {
+                    Elixir.Field(pos, obj = varRef(pos, subject.id.name), id = Elixir.Id(pos, OutName(field, null)))
+                } else {
+                    heapCall(pos, "get", listOf(varRef(pos, subject.id.name), Elixir.Atom(pos, field)))
+                }
+            }
+            is TmpL.Expression -> TODO("backed property read on another object: $expression")
+        }
+    }
+
+    /** `instanceof`: a guard for the builtin types, the supertype list for translated ones. */
+    private fun instanceOf(pos: Position, value: Elixir.Expr, type: TmpL.AType): Elixir.Expr {
+        val name = typeBaseName(type)
+        builtinGuards[name]?.let { guard -> return localCall(pos, guard, listOf(value)) }
+        val module = types[name]?.let { typeModule(it) } ?: TODO("instanceof $name")
+        return coreCall(pos, "is_a", listOf(value, moduleOf(pos, module)))
+    }
+
+    private fun cast(cast: TmpL.CastExpression, fn: FunctionContext): Elixir.Expr {
+        val pos = cast.pos
+        val value = expression(cast.expr, fn)
+        if (!cast.canFail) return value
+        val name = typeBaseName(cast.checkedType)
+        builtinGuards[name]?.let { guard ->
+            // bind once: the value is both checked and returned
+            val tmp = names.gensym("cast")
+            return Elixir.Case(
+                pos,
+                subject = value,
+                clauses = listOf(
+                    Elixir.Clause(
+                        pos,
+                        pattern = Elixir.Id(pos, tmp),
+                        body = Elixir.Block(
+                            pos,
+                            listOf(
+                                coreCall(
+                                    pos,
+                                    "cast_check",
+                                    listOf(Elixir.Id(pos, tmp), localCall(pos, guard, listOf(Elixir.Id(pos, tmp)))),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        }
+        val module = types[name]?.let { typeModule(it) } ?: TODO("cast to $name")
+        return coreCall(pos, "cast", listOf(value, moduleOf(pos, module)))
+    }
+
+    private val builtinGuards = mapOf(
+        "String" to "is_binary",
+        "Int" to "is_integer",
+        "Int32" to "is_integer",
+        "Int64" to "is_integer",
+        "Float64" to "is_float",
+        "Boolean" to "is_boolean",
+        "List" to "is_list",
+        "Listed" to "is_list",
+    )
+
+    /** A class carries its supertypes' members that it does not redefine, nearest first. */
+    private fun flattenMembers(decl: TmpL.TypeDeclaration): List<TmpL.Member> {
+        val byKey = linkedMapOf<String, TmpL.Member>()
+        var level = listOf(decl)
+        val seen = mutableSetOf<String>()
+        while (level.isNotEmpty()) {
+            for (type in level) {
+                for (member in type.members.filterIsInstance<TmpL.Member>()) {
+                    memberKey(member)?.let { byKey.putIfAbsent(it, member) }
+                }
+            }
+            level = level.flatMap { type ->
+                type.superTypes.mapNotNull { superType ->
+                    val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
+                    if (seen.add(key)) types[key] else null
+                }
+            }
+        }
+        return byKey.values.toList()
+    }
+
+    private fun memberKey(member: TmpL.Member): String? = when (member) {
+        is TmpL.InstanceProperty -> "prop:" + member.dotName.dotNameText
+        is TmpL.StaticProperty -> "static-prop:" + member.dotName.dotNameText
+        is TmpL.Getter -> "get:" + member.dotName.dotNameText
+        is TmpL.Setter -> "set:" + member.dotName.dotNameText
+        // an abstract method must not hide an inherited body
+        is TmpL.NormalMethod -> if (member.body == null) null else "fn:" + member.dotName.dotNameText
+        is TmpL.StaticMethod -> "static-fn:" + member.dotName.dotNameText
+        is TmpL.Constructor -> "ctor"
+    }
+
+    /** No setter, and no property write outside the constructor. */
+    private fun isStructClass(members: List<TmpL.Member>): Boolean {
+        if (members.any { it is TmpL.Setter }) return false
+        return members.none { member ->
+            member !is TmpL.Constructor && run {
+                var writes = false
+                member.boundaryDescent { node ->
+                    if (node is TmpL.SetBackedProperty) writes = true
+                    !writes
+                }
+                writes
+            }
+        }
+    }
+
+    private fun ancestorModules(decl: TmpL.TypeDeclaration): List<List<String>> {
+        val out = mutableListOf<List<String>>()
+        val seen = mutableSetOf<String>()
+        var level = listOf(decl)
+        while (level.isNotEmpty()) {
+            level = level.flatMap { type ->
+                type.superTypes.mapNotNull { superType ->
+                    val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
+                    if (!seen.add(key)) return@mapNotNull null
+                    val found = types[key] ?: return@mapNotNull null
+                    out.add(typeModule(found))
+                    found
+                }
+            }
+        }
+        return out
+    }
+
+    private fun typeModule(decl: TmpL.TypeDeclaration): List<String> =
+        listOf(ElixirBackend.MAIN_MODULE, names.moduleSegment(baseNameOfId(decl.name)))
+
+    private fun typeNameModule(typeName: TmpL.TypeName): List<String> {
+        val key = baseNameOf(typeName) ?: TODO("type with no name: $typeName")
+        return types[key]?.let { typeModule(it) } ?: TODO("type not declared here: $key")
+    }
+
+    private fun typeSubjectModule(subject: TmpL.TypeSubject): List<String> = when (subject) {
+        is TmpL.TypeName -> typeNameModule(subject)
+        else -> TODO("type subject: $subject")
+    }
+
+    private fun baseNameOf(typeName: TmpL.TypeName): String? =
+        (typeName.sourceDefinition?.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+
+    private fun baseNameOfId(id: TmpL.Id): String =
+        (nameOf(id) as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+            ?: names.outName(id.name).outputNameText
+
+    private fun typeBaseName(type: TmpL.AType): String =
+        (type.ot as? TmpL.NominalType)?.typeName?.let { baseNameOf(it) } ?: TODO("type test against $type")
+
+    private fun moduleOf(pos: Position, segments: List<String>): Elixir.ModuleName =
+        elixirModule(pos, *segments.toTypedArray())
+
+    private fun staticKey(pos: Position, module: List<String>, member: String): Elixir.Expr =
+        Elixir.Atom(pos, module.joinToString(".") + "." + member)
+
+    private fun fieldText(id: TmpL.Id): String = names.outName(id.name).outputNameText
+
+    private fun fieldText(property: TmpL.PropertyId): String = when (property) {
+        is TmpL.InternalPropertyId -> fieldText(property.name)
+        is TmpL.ExternalPropertyId -> names.sanitize(property.name.dotNameText)
+    }
+
+    private fun propertyText(property: TmpL.PropertyId): String = when (property) {
+        is TmpL.InternalPropertyId -> baseNameOfId(property.name)
+        is TmpL.ExternalPropertyId -> property.name.dotNameText
+    }
+
+    private fun heapCall(pos: Position, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
+        remoteCall(pos, elixirModule(pos, "TemperCore", "Heap"), fn, args)
+
+    private fun getterName(property: String) = names.sanitize("get_$property")
+
+    private fun setterName(property: String) = names.sanitize("set_$property")
 
     // ── Names ────────────────────────────────────────────────────────────
 
@@ -763,5 +1197,7 @@ internal class ElixirTranslator(
         const val CONTINUE = "temper_continue"
         const val NEXT = "temper_next"
         const val DONE = "temper_done"
+        const val CONSTRUCTOR = "new"
+        const val SUPERTYPES = "__temper_supertypes__"
     }
 }

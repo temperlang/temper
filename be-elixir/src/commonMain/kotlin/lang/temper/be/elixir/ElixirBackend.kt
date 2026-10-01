@@ -77,10 +77,20 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 }
             }
         }
-        val translator = ElixirTranslator(names, moduleFunctions, moduleGlobals)
+        val types = mutableMapOf<String, TmpL.TypeDeclaration>()
+        for (module in finished.modules) {
+            for (topLevel in module.topLevels) {
+                if (topLevel is TmpL.TypeDeclaration) {
+                    val key = (topLevel.name.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+                    if (key != null) types[key] = topLevel
+                }
+            }
+        }
+        val translator = ElixirTranslator(names, moduleFunctions, moduleGlobals, types)
         val translated = finished.modules.map { translator.translateModule(it) }
         val mainBody = translated.flatMap { it.mainBody }
         val functions = translated.flatMap { it.functions }
+        val classModules = translated.flatMap { it.modules }
         return listOf(
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
@@ -91,7 +101,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 path = filePath("lib", "temper_main$FILE_EXTENSION"),
                 content = Elixir.SourceFile(
                     pos,
-                    items = listOf(
+                    items = classModules + listOf(
                         Elixir.ModuleDef(
                             pos,
                             name = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE))),

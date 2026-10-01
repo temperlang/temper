@@ -50,6 +50,36 @@ defmodule TemperCoreTest do
     assert list_get_or([1, 2], 5, :none) == :none
   end
 
+  defmodule Shape do
+    def __temper_supertypes__, do: [__MODULE__]
+  end
+
+  defmodule Square do
+    defstruct [:side]
+    def __temper_supertypes__, do: [__MODULE__, TemperCoreTest.Shape]
+    def area(this), do: this.side * this.side
+  end
+
+  defmodule Counter do
+    def __temper_supertypes__, do: [__MODULE__]
+    def count(this), do: TemperCore.Heap.get(this, :n)
+  end
+
+  test "a method call finds the object's own class, struct or heap" do
+    assert TemperCore.call(%Square{side: 3}, :area, []) == 9
+    c = TemperCore.Heap.new(Counter, %{n: 4})
+    assert TemperCore.call(c, :count, []) == 4
+    assert_raise ArgumentError, fn -> TemperCore.call("text", :count, []) end
+  end
+
+  test "instanceof and casts follow the supertype list" do
+    assert is_a(%Square{side: 1}, Shape)
+    refute is_a(%Square{side: 1}, Counter)
+    refute is_a("text", Shape)
+    assert cast(%Square{side: 1}, Shape) == %Square{side: 1}
+    assert_raise TemperCore.Bubble, fn -> cast(%Square{side: 1}, Counter) end
+  end
+
   test "cmp is three-way" do
     assert {cmp(1, 2), cmp(2, 2), cmp(3, 2)} == {-1, 0, 1}
     assert cmp("a", "b") == -1
