@@ -75,6 +75,11 @@ defmodule TemperCore.String do
   @doc "The byte offset of `target` at or after `start`, or `StringIndex.none`."
   def index_of(s, target, start \\ 0) do
     start = start |> max(0) |> min(byte_size(s))
+    # :binary.match rejects an empty pattern; js and py find it at the start
+    if target == "", do: start, else: match_at(s, target, start)
+  end
+
+  defp match_at(s, target, start) do
     case :binary.match(s, target, scope: {start, byte_size(s) - start}) do
       {at, _} -> at
       :nomatch -> -1

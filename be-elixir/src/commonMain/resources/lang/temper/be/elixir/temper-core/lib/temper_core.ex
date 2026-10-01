@@ -17,6 +17,8 @@ defmodule TemperCore do
   translator emits for those types goes through `int32/1` or `int64/1`.
   """
 
+  @float_atoms [:nan, :infinity, :neg_infinity]
+
   @doc "Wraps an integer to signed 32 bits: `int32(2147483647 + 1)` is `-2147483648`."
   def int32(x) when is_integer(x) and x >= -2_147_483_648 and x <= 2_147_483_647, do: x
 
@@ -167,7 +169,16 @@ defmodule TemperCore do
   def cast_check(value, true), do: value
   def cast_check(value, false), do: raise(TemperCore.Bubble, "#{inspect(value)} is not that type")
 
-  @doc "Three-way comparison, as Temper's `cmp`: -1, 0 or 1."
+  @doc """
+  Three-way comparison, as Temper's `cmp`: -1, 0 or 1.
+
+  `<=>` on Float64 arrives here as the generic comparison, so floats go to
+  `TemperCore.Float.cmp`: the BEAM's term order puts the atoms standing for
+  NaN and the infinities above every number, and calls -0.0 equal to 0.0.
+  """
+  def cmp(a, b) when is_float(a) or is_float(b) or a in @float_atoms or b in @float_atoms,
+    do: TemperCore.Float.cmp(a, b)
+
   def cmp(a, b) when a < b, do: -1
   def cmp(a, b) when a > b, do: 1
   def cmp(_a, _b), do: 0

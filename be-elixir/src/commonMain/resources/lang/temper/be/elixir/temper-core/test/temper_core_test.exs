@@ -129,6 +129,27 @@ defmodule TemperCoreTest do
     end)
     assert Task.await(task) == {:raised, true}
   end
+
+  # Temper's `<=>` on Float64 arrives as the generic comparison. The BEAM's
+  # term order puts the atoms :nan, :infinity and :neg_infinity above every
+  # number, and says -0.0 equals 0.0, so it needs Temper's float order.
+  test "cmp orders floats the way Temper does" do
+    assert cmp(-0.0, 0.0) == -1
+    assert cmp(0.0, -0.0) == 1
+    assert cmp(:neg_infinity, 1.0) == -1
+    assert cmp(1.0, :infinity) == -1
+    assert cmp(:infinity, :nan) == -1
+    assert cmp(:nan, :nan) == 0
+    sorted = Enum.sort([3.0, :neg_infinity, :nan, -1.0, :infinity, 0.0, -0.0], &(cmp(&1, &2) <= 0))
+    assert sorted == [:neg_infinity, -1.0, -0.0, 0.0, 3.0, :infinity, :nan]
+  end
+
+  test "cmp still orders ints, strings and booleans as before" do
+    assert cmp(1, 2) == -1
+    assert cmp("b", "a") == 1
+    assert cmp(true, true) == 0
+  end
+
 end
 
 defmodule TemperCore.InitOnceTest do

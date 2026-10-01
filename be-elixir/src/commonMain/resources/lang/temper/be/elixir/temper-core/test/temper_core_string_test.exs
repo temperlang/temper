@@ -55,6 +55,16 @@ defmodule TemperCoreStringTest do
     assert S.index_of("hello", "z") == -1
   end
 
+  # js and py find the empty string where the search starts; :binary.match
+  # rejects an empty pattern with ArgumentError, which is not a bubble, so it
+  # took down the whole run
+  test "indexOf the empty string is where the search starts" do
+    assert S.index_of("hello", "") == 0
+    assert S.index_of("hello", "", 3) == 3
+    assert S.index_of("hello", "", 99) == 5
+    assert S.index_of("", "") == 0
+  end
+
   test "integer parsing: JSON syntax or a radix, and it must fit" do
     assert S.to_int32("-42") == -42
     assert S.to_int32(" 2 ") == 2
