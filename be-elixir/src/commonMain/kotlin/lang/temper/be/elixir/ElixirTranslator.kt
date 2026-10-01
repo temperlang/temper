@@ -81,7 +81,11 @@ internal class ElixirTranslator(
         val functions: List<Elixir.ModuleItem>,
         val mainBody: List<Elixir.BlockItem>,
         val modules: List<Elixir.ModuleDef>,
+        /** Each test's function name, which is also the name the JUnit report gives it. */
+        val tests: List<String>,
     )
+
+    private val tests = mutableListOf<String>()
 
     /**
      * Locals a closure reads that are also assigned somewhere. Elixir closures
@@ -142,11 +146,12 @@ internal class ElixirTranslator(
         functions.clear()
         mainBody.clear()
         modules.clear()
+        tests.clear()
         collectBoxed(module)
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
         }
-        return Translated(functions.toList(), mainBody.toList(), modules.toList())
+        return Translated(functions.toList(), mainBody.toList(), modules.toList(), tests.toList())
     }
 
     // ── Top levels ───────────────────────────────────────────────────────
@@ -160,7 +165,7 @@ internal class ElixirTranslator(
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
             is TmpL.ModuleFunctionDeclaration -> functions.add(translateFunction(topLevel))
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
-            is TmpL.Test -> TODO("test: $topLevel")
+            is TmpL.Test -> functions.add(translateTest(topLevel))
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
             // comments and garbage carry no Elixir output
             else -> {}
@@ -236,6 +241,25 @@ internal class ElixirTranslator(
             id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
             params = params,
             body = functionBody(pos, body.statements, prelude = boxParams(pos, formals.map { it.name })),
+        )
+    }
+
+    /**
+     * A `@test` is a function of one argument, the `Test` that collects its
+     * asserts. Its name is the one the JUnit report carries; the harness strips
+     * the `__12` suffix and turns camel case back into the test's sentence.
+     */
+    private fun translateTest(test: TmpL.Test): Elixir.FunDef {
+        val pos = test.pos
+        val formals = test.parameters.parameters.map { it.name }
+        formals.forEach { declare(it.name) }
+        val name = functionName(test.name.name).outputNameText
+        tests.add(name)
+        return Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, OutName(name, null)),
+            params = formals.map { idOf(it) },
+            body = functionBody(pos, test.body.statements, prelude = boxParams(pos, formals.map { it.name })),
         )
     }
 
@@ -938,7 +962,12 @@ internal class ElixirTranslator(
                         val owner = (callee.method?.enclosingType?.name as? lang.temper.name.ResolvedParsedName)
                             ?.baseName?.nameText
                         if (owner != null && owner !in types) {
-                            TODO("method $owner.${callee.methodName.dotNameText} has no Elixir support code")
+                            val builtin = builtinMethods["$owner.${callee.methodName.dotNameText}"]
+                                ?: TODO("method $owner.${callee.methodName.dotNameText} has no Elixir support code")
+                            return remoteCall(
+                                pos, elixirModule(pos, "TemperCore", builtin.first), builtin.second,
+                                listOf(expression(subject, fn)) + args,
+                            )
                         }
                         coreCall(
                             pos,
@@ -1266,6 +1295,7 @@ internal class ElixirTranslator(
     private fun instanceOf(pos: Position, value: Elixir.Expr, type: TmpL.AType): Elixir.Expr {
         val name = typeBaseName(type)
         builtinGuards[name]?.let { guard -> return localCall(pos, guard, listOf(value)) }
+        indexChecks[name]?.let { check -> return check(pos, value) }
         val module = types[name]?.let { typeModule(it) } ?: TODO("instanceof $name")
         return coreCall(pos, "is_a", listOf(value, moduleOf(pos, module)))
     }
@@ -1275,6 +1305,29 @@ internal class ElixirTranslator(
         val value = expression(cast.expr, fn)
         if (!cast.canFail) return value
         val name = typeBaseName(cast.checkedType)
+        indexChecks[name]?.let { check ->
+            val tmp = names.gensym("index")
+            return Elixir.Case(
+                pos,
+                subject = value,
+                clauses = listOf(
+                    Elixir.Clause(
+                        pos,
+                        pattern = Elixir.Id(pos, tmp),
+                        body = Elixir.Block(
+                            pos,
+                            listOf(
+                                coreCall(
+                                    pos,
+                                    "cast_check",
+                                    listOf(Elixir.Id(pos, tmp), check(pos, Elixir.Id(pos, tmp))),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        }
         builtinGuards[name]?.let { guard ->
             // bind once: the value is both checked and returned
             val tmp = names.gensym("cast")
@@ -1303,12 +1356,30 @@ internal class ElixirTranslator(
         return coreCall(pos, "cast", listOf(value, moduleOf(pos, module)))
     }
 
+    /**
+     * Methods of a library this one depends on, which Temper implements and
+     * does not mark connected, so they reach the translator as ordinary calls
+     * on a type it has no module for. Each is a temper-core function.
+     */
+    private val builtinMethods = mapOf(
+        "Test.softFailToHard" to ("Test" to "soft_fail_to_hard"),
+    )
+
     /** Statics of Temper's builtin types, which have no module here to hold them. */
     private val builtinStatics = mapOf<String, (Position) -> Elixir.Expr>(
         "String.begin" to { pos -> Elixir.NumberLit(pos, 0) },
         "StringIndex.none" to { pos -> Elixir.NumberLit(pos, -1) },
         "Float64.pi" to { pos -> Elixir.NumberLit(pos, kotlin.math.PI) },
         "Float64.e" to { pos -> Elixir.NumberLit(pos, kotlin.math.E) },
+    )
+
+    /**
+     * A string index is an integer byte offset and "no index" is -1, so the
+     * StringIndexOption types are told apart by sign, not by a type guard.
+     */
+    private val indexChecks = mapOf<String, (Position, Elixir.Expr) -> Elixir.Expr>(
+        "StringIndex" to { pos, v -> infixOp(pos, v, ElixirOperator.GreaterEquals, Elixir.NumberLit(pos, 0)) },
+        "NoStringIndex" to { pos, v -> infixOp(pos, v, ElixirOperator.Equals, Elixir.NumberLit(pos, -1)) },
     )
 
     private val builtinGuards = mapOf(

@@ -69,7 +69,7 @@ internal fun runElixir(cliEnv: CliEnv, request: ToolchainRequest): List<Toolchai
         // asserts inline, as be-blimp's did at this stage.
         is RunTestsRequest -> when (val libraryName = request.libraries?.firstOrNull()) {
             null -> unavailable(cliEnv, "Elixir backend needs an explicit library to test")
-            else -> listOf(cliEnv.runMain(libraryName))
+            else -> listOf(cliEnv.runMain(libraryName, tests = true))
         }
         is RunBackendSpecificCompilationStepRequest -> error(request)
         is ExecInteractiveRepl -> unavailable(cliEnv, "Elixir backend does not yet drive `iex -S mix`")
@@ -85,11 +85,13 @@ private fun unavailable(cliEnv: CliEnv, message: String) =
         ),
     )
 
-private fun CliEnv.runMain(libraryName: DashedIdentifier): ToolchainResult {
+private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false): ToolchainResult {
     val runDir = relativeOutputDirectoryForLibrary(ElixirBackend.Factory.backendId, libraryName)
     val mix = this[MixCommand]
     fun step(args: List<String>, stderr: String): RResult<EffortSuccess, CliFailure> {
-        val command = Command(args = args, aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)), cwd = runDir)
+        val aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)) +
+            if (tests) mapOf(Aux.JunitXml to runDir.resolveFile(ElixirBackend.TEST_RESULTS_FILE)) else mapOf()
+        val command = Command(args = args, aux = aux, cwd = runDir)
         command.maybeLogBeforeRunning(mix, shellPreferences)
         return mix.run(command)
     }
@@ -103,7 +105,14 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier): ToolchainResult {
     // forgot to carry a variable spun for twenty minutes before this.
     val call =
         "spawn(fn -> Process.sleep($RUN_TIMEOUT_MS); IO.puts(:stderr, \"timed out after $RUN_TIMEOUT_MS ms\"); " +
-            "System.halt(124) end); ${ElixirBackend.MAIN_MODULE}.${ElixirBackend.MAIN_FUNCTION}()"
+            "System.halt(124) end); ${ElixirBackend.MAIN_MODULE}.${ElixirBackend.MAIN_FUNCTION}()" +
+            // the module's top level runs first: tests read the values it sets
+            if (tests) {
+                "; File.write!(\"${ElixirBackend.TEST_RESULTS_FILE}\", " +
+                    "${ElixirBackend.MAIN_MODULE}.${ElixirBackend.TESTS_FUNCTION}())"
+            } else {
+                ""
+            }
     return ToolchainResult(
         libraryName = libraryName,
         result = step(listOf("run", "--no-compile", "-e", call), "stderr.txt"),

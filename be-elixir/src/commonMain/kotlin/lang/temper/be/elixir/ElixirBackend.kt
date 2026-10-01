@@ -103,7 +103,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports, isStdLib)
         val translated = finished.modules.map { translator.translateModule(it) }
         val mainBody = translated.flatMap { it.mainBody }
-        val functions = translated.flatMap { it.functions }
+        val functions =
+            translated.flatMap { it.functions } + listOfNotNull(testRunner(pos, translated.flatMap { it.tests }))
         val classModules = translated.flatMap { it.modules }
         // a user library's Elixir for its @connected functions, copied as is
         val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
@@ -134,6 +135,48 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         )
     }
 
+    /**
+     * `__temper_tests__/0`: runs every `@test` and answers the JUnit XML.
+     *
+     * std/testing would do this itself, but it is a library of its own and
+     * not in this translation, so `TemperCore.Test` is a port of it.
+     */
+    private fun testRunner(pos: lang.temper.log.Position, tests: List<String>): Elixir.FunDef? {
+        if (tests.isEmpty()) return null
+        fun id(text: String) = Elixir.Id(pos, OutName(text, null))
+        val main = Elixir.ModuleName(pos, listOf(id(MAIN_MODULE)))
+        val cases = tests.map { test ->
+            Elixir.RemoteCall(
+                pos,
+                module = Elixir.ModuleName(pos, listOf(id("TemperCore"), id("Pair"))),
+                fn = id("new"),
+                args = listOf(
+                    Elixir.StringLit(pos, test),
+                    Elixir.Capture(
+                        pos,
+                        fn = Elixir.Field(pos, obj = main, id = id(test)),
+                        arity = Elixir.NumberLit(pos, 1),
+                    ),
+                ),
+            )
+        }
+        return Elixir.FunDef(
+            pos,
+            id = id(TESTS_FUNCTION),
+            body = Elixir.Block(
+                pos,
+                listOf(
+                    Elixir.RemoteCall(
+                        pos,
+                        module = Elixir.ModuleName(pos, listOf(id("TemperCore"), id("Test"))),
+                        fn = id("run_cases"),
+                        args = listOf(Elixir.ListLit(pos, cases)),
+                    ),
+                ),
+            ),
+        )
+    }
+
     override val supportNetwork = ElixirSupportNetwork
 
     private fun tentativeOutputPathFor(module: Module): FilePath =
@@ -152,6 +195,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         /** The module whose [MAIN_FUNCTION] `mix run` calls. */
         const val MAIN_MODULE = "TemperMain"
         const val MAIN_FUNCTION = "main"
+
+        /** Runs the `@test`s and answers JUnit XML. */
+        const val TESTS_FUNCTION = "__temper_tests__"
+
+        /** Where a test run writes that XML, for the harness to read. */
+        const val TEST_RESULTS_FILE = "test-results.xml"
 
         val mimeType = MimeType("text", "x-elixir")
 
@@ -221,12 +270,14 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core_list.ex"),
                 filePath("lib", "temper_core_string.ex"),
                 filePath("lib", "temper_core_map.ex"),
+                filePath("lib", "temper_core_test.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
                 filePath("test", "temper_core_list_test.exs"),
                 filePath("test", "temper_core_string_test.exs"),
                 filePath("test", "temper_core_map_test.exs"),
+                filePath("test", "temper_core_test_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

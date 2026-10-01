@@ -426,6 +426,14 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         ElixirConnected("core.type Int32.pred()") { pos, a ->
             coreCall(pos, "int32", listOf(infixOp(pos, a[0], ElixirOperator.Subtraction, Elixir.NumberLit(pos, 1))))
         },
+        connectedIn("Test", "std/testing.type Test.assert()", "assert"),
+        connectedIn("Test", "std/testing.type Test.assertHard()", "assert_hard"),
+        connectedIn("Test", "std/testing.type Test.bail()", "bail"),
+        connectedIn("Test", "std/testing.type Test.get passing()", "passing"),
+        connectedIn("Test", "std/testing.type Test.messages()", "messages"),
+        connectedIn("Test", "std/testing.type Test.get failedOnAssert()", "failed_on_assert"),
+        connectedIn("Test", "std/testing.runTestCases()", "run_cases"),
+        connectedIn("Test", "std/testing.processTestCases()", "process"),
         ElixirConnected("core.type Float64.pi") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.PI) },
         ElixirConnected("core.type Float64.e") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.E) },
         // a ListBuilder is a Listed too, so every read goes through
