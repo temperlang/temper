@@ -65,8 +65,6 @@ object MixCommand : ToolSpecifics {
 internal fun runElixir(cliEnv: CliEnv, request: ToolchainRequest): List<ToolchainResult> {
     return when (request) {
         is RunLibraryRequest -> listOf(cliEnv.runMain(request.libraryName))
-        // `mix test` is not wired up yet; the translated program runs its
-        // asserts inline, as be-blimp's did at this stage.
         is RunTestsRequest -> when (val libraryName = request.libraries?.firstOrNull()) {
             null -> unavailable(cliEnv, "Elixir backend needs an explicit library to test")
             else -> listOf(cliEnv.runMain(libraryName, tests = true))
@@ -91,7 +89,9 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
     fun step(args: List<String>, stderr: String): RResult<EffortSuccess, CliFailure> {
         val aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)) +
             if (tests) mapOf(Aux.JunitXml to runDir.resolveFile(ElixirBackend.TEST_RESULTS_FILE)) else mapOf()
-        val command = Command(args = args, aux = aux, cwd = runDir)
+        // tests live in test/support/, which Mix compiles only for :test
+        val env = if (tests) mapOf("MIX_ENV" to "test") else mapOf()
+        val command = Command(args = args, aux = aux, cwd = runDir, env = env)
         command.maybeLogBeforeRunning(mix, shellPreferences)
         return mix.run(command)
     }
@@ -109,8 +109,11 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
             "System.halt(124) end); $root.${ElixirBackend.MAIN_FUNCTION}()" +
             // the module's top level runs first: tests read the values it sets
             if (tests) {
+                // a library with no tests has no test module; its report is empty
+                val tests = "$root.${ElixirBackend.TEST_MODULE}"
                 "; File.write!(\"${ElixirBackend.TEST_RESULTS_FILE}\", " +
-                    "$root.${ElixirBackend.TESTS_FUNCTION}())"
+                    "if(Code.ensure_loaded?($tests), do: $tests.${ElixirBackend.TESTS_FUNCTION}(), " +
+                    "else: TemperCore.Test.run_cases([])))"
             } else {
                 ""
             }

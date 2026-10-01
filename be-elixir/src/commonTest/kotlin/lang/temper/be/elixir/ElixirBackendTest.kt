@@ -67,6 +67,51 @@ class ElixirBackendTest {
         assertContains(out, "broken code")
         assertFalse("fieldKind ==" in out, "a read of fieldKind survives its raise:\n$out")
     }
+
+    /**
+     * Tests, and what only tests reach, are not part of the library: they go
+     * to `test/support/`, which Mix compiles for `mix test` alone, and a
+     * dependency only they need (std, for std/testing) is `only: :test`. Each
+     * ExUnit test names the Temper line it is on, which leads its failure.
+     *
+     * The helper takes its input as a parameter. A test of constants alone is
+     * evaluated by the frontend at compile time, on every backend, and what it
+     * called then looks unused rather than test-only.
+     */
+    @Test
+    fun testsAndWhatOnlyTheyUseStayOutOfTheLibrary() {
+        val out = generatedText(
+            """
+            |export let double(x: Int): Int { x * 2 }
+            |class Probe(public n: Int) {}
+            |let checkDouble(test: Test, p: Probe, want: Int): Void {
+            |  assert(double(p.n) == want);
+            |}
+            |test("doubles") { test => checkDouble(test, new Probe(2), 4); }
+            """.trimMargin(),
+        )
+        val library = fileContent(out, "temper_main.ex")
+        val support = fileContent(out, "temper_tests.ex")
+        val mix = fileContent(out, "mix.exs")
+        for (name in listOf("checkDouble", "Probe", "doubles", "Temper.Std")) {
+            assertFalse(name in library, "$name is in the library:\n$library")
+        }
+        assertContains(support, "def checkDouble")
+        assertContains(support, "defmodule Temper.MyTestLibrary.Probe")
+        assertContains(support, "Temper.MyTestLibrary.double(")
+        assertContains(mix, "only: :test")
+        // the JSON escapes each quote as \u0022
+        assertContains(mix, "elixirc_paths(:test), do: [\\u0022lib\\u0022, \\u0022test/support\\u0022]")
+        assertContains(fileContent(out, "something_test.exs"), "something/something.temper:6")
+    }
+
+    /** A library with no tests gets no test directory and no test-only paths. */
+    @Test
+    fun aLibraryWithoutTestsHasNoTestTree() {
+        val out = generatedText("export let double(x: Int): Int { x * 2 }")
+        assertFalse("test_helper.exs" in out, out)
+        assertFalse("elixirc_paths" in fileContent(out, "mix.exs"))
+    }
 }
 
 /**
@@ -84,4 +129,12 @@ private fun generatedText(temper: String): String {
         moduleResultNeeded = false,
     ) { text = FormattingStructureSink.toJsonString(it, filterKeys = { key -> !key.endsWith(".map") }) }
     return text
+}
+
+/** The JSON-escaped content of the generated file named [name], from [generatedText]. */
+private fun fileContent(json: String, name: String): String {
+    val at = json.indexOf("\"_name\": \"$name\"")
+    check(at >= 0) { "no $name in:\n$json" }
+    val content = json.indexOf("\"content\": \"", at) + "\"content\": \"".length
+    return json.substring(content, json.indexOf("\"__DO_NOT_CARE__\"", content))
 }

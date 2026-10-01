@@ -3,12 +3,14 @@ package lang.temper.be.elixir
 import lang.temper.ast.boundaryDescent
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
+import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
 import lang.temper.value.TClosureRecord
@@ -84,7 +86,18 @@ internal class ElixirTranslator(
     private val imports: Map<ResolvedName, ResolvedName>,
     /** Translating Temper's standard library, whose @connected functions are support code. */
     private val isStdLib: Boolean = false,
+    /**
+     * Module functions only tests use. They are defined in [testRoot], which
+     * is compiled for `mix test` and never shipped with the library.
+     */
+    private val testOnly: Set<ResolvedName> = setOf(),
 ) {
+    /** `Temper.MyLib.Tests`: tests and what only they use, in `test/support/`. */
+    private val testRoot = root + ElixirBackend.TEST_MODULE
+
+    /** The module a module function is defined in. */
+    private fun functionModule(name: ResolvedName) = if (name in testOnly) testRoot else root
+
     /** The name a value was declared under, seen through any imports. */
     private fun canonical(name: ResolvedName): ResolvedName {
         var current = name
@@ -112,7 +125,17 @@ internal class ElixirTranslator(
         val testTitles: Map<String, String>,
         /** Each test's TmpL node, by function name, for the CLI's test registry. */
         val testNodes: Map<String, TmpL.Test>,
+        /** What only tests use, and the tests themselves: [testRoot]'s functions. */
+        val testFunctions: List<Elixir.ModuleItem>,
+        /** Top-level statements that initialize test-only values. */
+        val testMainBody: List<Elixir.BlockItem>,
+        /** Classes only tests use. */
+        val testModules: List<Elixir.ModuleDef>,
     )
+
+    private val testFunctions = mutableListOf<Elixir.ModuleItem>()
+    private val testMainBody = mutableListOf<Elixir.BlockItem>()
+    private val testModules = mutableListOf<Elixir.ModuleDef>()
 
     private val tests = mutableListOf<String>()
     private val testTitles = mutableMapOf<String, String>()
@@ -180,6 +203,9 @@ internal class ElixirTranslator(
         tests.clear()
         testTitles.clear()
         testNodes.clear()
+        testFunctions.clear()
+        testMainBody.clear()
+        testModules.clear()
         collectBoxed(module)
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
@@ -191,12 +217,35 @@ internal class ElixirTranslator(
             tests.toList(),
             testTitles.toMap(),
             testNodes.toMap(),
+            testFunctions.toList(),
+            testMainBody.toList(),
+            testModules.toList(),
         )
     }
 
     // ── Top levels ───────────────────────────────────────────────────────
 
+    /**
+     * Translates a top level, and moves what it made to the test side when
+     * the frontend says only tests need it: a `test`, or a declaration that
+     * nothing but tests reaches.
+     */
     private fun processTopLevel(topLevel: TmpL.TopLevel) {
+        val marks = Triple(functions.size, mainBody.size, modules.size)
+        translateTopLevel(topLevel)
+        if (topLevel.dependencyCategory() == DependencyCategory.Test) {
+            testFunctions.addAll(functions.drainFrom(marks.first))
+            testMainBody.addAll(mainBody.drainFrom(marks.second))
+            testModules.addAll(modules.drainFrom(marks.third))
+        }
+    }
+
+    private fun <T> MutableList<T>.drainFrom(start: Int): List<T> {
+        val tail = subList(start, size)
+        return tail.toList().also { tail.clear() }
+    }
+
+    private fun translateTopLevel(topLevel: TmpL.TopLevel) {
         when (topLevel) {
             is TmpL.ModuleInitBlock -> {
                 val fn = FunctionContext(returnTag = null)
@@ -975,7 +1024,7 @@ internal class ElixirTranslator(
 
     /** `&Temper.Lib.name/2` */
     private fun capture(pos: Position, name: ResolvedName): Elixir.Expr =
-        capture(pos, root, name, moduleFunctions.getValue(name))
+        capture(pos, functionModule(name), name, moduleFunctions.getValue(name))
 
     private fun capture(pos: Position, module: List<String>, name: ResolvedName, arity: Int): Elixir.Expr =
         Elixir.Capture(
@@ -1029,7 +1078,8 @@ internal class ElixirTranslator(
                 when (name) {
                     // qualified, so it works from inside a class module too, and
                     // never meets a Kernel import of the same name
-                    in moduleFunctions -> remoteCall(pos, mainModule(pos), functionName(name).outputNameText, args)
+                    in moduleFunctions ->
+                        remoteCall(pos, moduleOf(pos, functionModule(name)), functionName(name).outputNameText, args)
                     in externals -> when (val external = externals.getValue(name)) {
                         is ExternalFunction ->
                             remoteCall(pos, moduleOf(pos, external.module), functionName(name).outputNameText, args)

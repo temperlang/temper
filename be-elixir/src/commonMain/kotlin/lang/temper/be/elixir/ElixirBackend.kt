@@ -5,12 +5,14 @@ import lang.temper.be.BackendSetup
 import lang.temper.be.storeDescriptorsForDeclarations
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.common.MimeType
 import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
+import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
@@ -20,6 +22,7 @@ import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.value.DependencyCategory
 
 /**
  * <!-- snippet: backend/elixir -->
@@ -97,12 +100,16 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         // (and its arity) from a local holding a function value
         val moduleFunctions = mutableMapOf<ResolvedName, Int>()
         val moduleGlobals = mutableSetOf<ResolvedName>()
+        // what only tests reach goes to test/support/, out of the library
+        val testOnly = mutableSetOf<ResolvedName>()
         for (module in finished.modules) {
             for (topLevel in module.topLevels) {
                 when (topLevel) {
-                    is TmpL.ModuleFunctionDeclaration ->
+                    is TmpL.ModuleFunctionDeclaration -> {
                         moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size +
                             (if (topLevel.parameters.restParameter != null) 1 else 0)
+                        if (topLevel.dependencyCategory() == DependencyCategory.Test) testOnly.add(topLevel.name.name)
+                    }
                     is TmpL.ModuleLevelDeclaration -> if (!topLevel.isConsole()) moduleGlobals.add(topLevel.name.name)
                     else -> {}
                 }
@@ -130,6 +137,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val isStdLib = finished.modules.all { it.isStdLib }
         val translator = ElixirTranslator(
             names, root, externals, libraryRoots, canonicalFunctions, moduleGlobals, types, imports, isStdLib,
+            testOnly,
         )
         val translated = finished.modules.map { translator.translateModule(it) }
         // The CLI counts tests from this registry, not from the report: a run that
@@ -142,10 +150,101 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             }
         }
         val rootModule = elixirModule(pos, *root.toTypedArray())
-        // `TemperCore.init_once(:"Temper.Std", fn -> deps; top levels end)`
-        val init = Elixir.FunDef(
+        val testRoot = root + TEST_MODULE
+        val mainBody = listOf(
+            remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
+        )
+        val classModules = translated.flatMap { it.modules }
+        val functions = translated.flatMap { it.functions }
+        val prodBody = translated.flatMap { it.mainBody }
+        // A dependency the library's own code never names is one only its tests
+        // need, such as std for std/testing: a dependency's init sets only that
+        // dependency's values, so leaving it out cannot change what the library does.
+        val prodDeps = dependencies.filter { dep ->
+            val prefix = libraryModule(dep).joinToString(".")
+            (classModules + functions + prodBody).any { refersTo(it, prefix) }
+        }
+        val testDeps = dependencies - prodDeps.toSet()
+        val libraryFile = Elixir.SourceFile(
             pos,
-            id = id(INIT_FUNCTION),
+            items = classModules + listOf(
+                Elixir.ModuleDef(
+                    pos,
+                    name = rootModule,
+                    items = functions + initFunction(pos, root, listOf(), prodDeps, prodBody) + listOf(
+                        Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
+                    ),
+                ),
+            ),
+        ).also(::tidy)
+        // tests, and the functions, classes and values only they use
+        val allTests = translated.flatMap { it.tests }
+        val testFunctions = translated.flatMap { it.testFunctions }
+        val testModules = translated.flatMap { it.testModules }
+        val testBody = translated.flatMap { it.testMainBody }
+        val hasTests = (allTests + testFunctions + testModules + testBody).isNotEmpty() || testDeps.isNotEmpty()
+        val testFiles = if (!hasTests) {
+            listOf()
+        } else {
+            val titles = translated.fold(mapOf<String, String>()) { acc, t -> acc + t.testTitles }
+            val nodes = translated.fold(mapOf<String, TmpL.Test>()) { acc, t -> acc + t.testNodes }
+            val testModule = Elixir.ModuleDef(
+                pos,
+                name = elixirModule(pos, *testRoot.toTypedArray()),
+                items = testFunctions +
+                    initFunction(pos, testRoot, listOf(root), testDeps, testBody) +
+                    listOfNotNull(testRunner(pos, testRoot, allTests)),
+            )
+            listOf(
+                TranslatedFileSpecification(
+                    path = filePath("test", "support", "temper_tests$FILE_EXTENSION"),
+                    content = Elixir.SourceFile(pos, items = testModules + testModule).also(::tidy),
+                    mimeType = mimeType,
+                ),
+                MetadataFileSpecification(
+                    path = filePath("test", "test_helper.exs"),
+                    mimeType = mimeType,
+                    content = "ExUnit.start()\n",
+                ),
+            ) + exUnitFiles(testRoot.joinToString("."), allTests, titles) { test -> nodes[test]?.let(::sourceLine) }
+        }
+        // a user library's Elixir for its @connected functions, copied as is
+        val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
+            MetadataFileSpecification(path = filePath("lib", CONNECTED_FILE), mimeType = mimeType, content = source)
+        }
+        return connected + testFiles + listOf(
+            MetadataFileSpecification(
+                path = filePath(MIX_FILE),
+                mimeType = mimeType,
+                content = mixProject(root.joinToString("."), libraryApp(libraryName), prodDeps, testDeps, hasTests),
+            ),
+            TranslatedFileSpecification(
+                path = filePath("lib", "temper_main$FILE_EXTENSION"),
+                content = libraryFile,
+                mimeType = mimeType,
+            ),
+        )
+    }
+
+    /**
+     * `__temper_init__/0`: `TemperCore.init_once(:"Temper.Lib", fn -> ... end)`,
+     * which runs [first] (the library, for its tests), then [deps], then
+     * [body], the top-level statements, once per node.
+     */
+    private fun initFunction(
+        pos: lang.temper.log.Position,
+        module: List<String>,
+        first: List<List<String>>,
+        deps: List<lang.temper.name.DashedIdentifier>,
+        body: List<Elixir.BlockItem>,
+    ): Elixir.FunDef {
+        val calls = (first + deps.map(::libraryModule)).map { m ->
+            remoteCall(pos, elixirModule(pos, *m.toTypedArray()), INIT_FUNCTION, listOf())
+        }
+        return Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, OutName(INIT_FUNCTION, null)),
             body = Elixir.Block(
                 pos,
                 listOf(
@@ -154,74 +253,31 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                         elixirModule(pos, "TemperCore"),
                         "init_once",
                         listOf(
-                            Elixir.Atom(pos, root.joinToString(".")),
-                            Elixir.Fn(
-                                pos,
-                                body = Elixir.Block(
-                                    pos,
-                                    dependencies.map { dep ->
-                                        val module = elixirModule(pos, *libraryModule(dep).toTypedArray())
-                                        remoteCall(pos, module, INIT_FUNCTION, listOf())
-                                    } + translated.flatMap { it.mainBody } + Elixir.NilLit(pos),
-                                ),
-                            ),
+                            Elixir.Atom(pos, module.joinToString(".")),
+                            Elixir.Fn(pos, body = Elixir.Block(pos, calls + body + Elixir.NilLit(pos))),
                         ),
                     ),
                 ),
             ),
         )
-        val mainBody = listOf(
-            remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
-            remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
-        )
-        val functions = translated.flatMap { it.functions } +
-            listOfNotNull(testRunner(pos, root, translated.flatMap { it.tests })) + init
-        val classModules = translated.flatMap { it.modules }
-        // a user library's Elixir for its @connected functions, copied as is
-        val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
-            MetadataFileSpecification(path = filePath("lib", CONNECTED_FILE), mimeType = mimeType, content = source)
+    }
+
+    /** Whether [tree] names the module [prefix] or one under it, or a value it keeps (`:"Temper.Std.x"`). */
+    private fun refersTo(tree: Elixir.Tree, prefix: String): Boolean = when (tree) {
+        is Elixir.ModuleName -> tree.segments.joinToString(".") { it.outName.outputNameText }.let {
+            it == prefix || it.startsWith("$prefix.")
         }
-        val allTests = translated.flatMap { it.tests }
-        val titles = translated.fold(mapOf<String, String>()) { acc, t -> acc + t.testTitles }
-        val mixTests = if (allTests.isEmpty()) {
-            listOf()
-        } else {
-            listOf(
-                MetadataFileSpecification(
-                    path = filePath("test", "test_helper.exs"),
-                    mimeType = mimeType,
-                    content = "ExUnit.start()\n",
-                ),
-                MetadataFileSpecification(
-                    path = filePath("test", "temper_test.exs"),
-                    mimeType = mimeType,
-                    content = exUnitModule(root.joinToString("."), allTests, titles),
-                ),
-            )
-        }
-        return connected + mixTests + listOf(
-            MetadataFileSpecification(
-                path = filePath(MIX_FILE),
-                mimeType = mimeType,
-                content = mixProject(root.joinToString("."), libraryApp(libraryName), dependencies),
-            ),
-            TranslatedFileSpecification(
-                path = filePath("lib", "temper_main$FILE_EXTENSION"),
-                content = Elixir.SourceFile(
-                    pos,
-                    items = classModules + listOf(
-                        Elixir.ModuleDef(
-                            pos,
-                            name = rootModule,
-                            items = functions + listOf(
-                                Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
-                            ),
-                        ),
-                    ),
-                ).also(::tidy),
-                mimeType = mimeType,
-            ),
-        )
+        is Elixir.Atom -> tree.text.startsWith("$prefix.")
+        else -> (0 until tree.childCount).any { i -> tree.childOrNull(i)?.let { refersTo(it, prefix) } ?: false }
+    }
+
+    /** `src/diff.temper.md:42`: where a test is, in the Temper source. */
+    private fun sourceLine(test: TmpL.Test): String? {
+        val loc = test.pos.loc as? FileRelatedCodeLocation ?: return null
+        val positions = readyModules.firstNotNullOfOrNull { it.filePositions[loc.sourceFile] } ?: return null
+        val line = positions.filePositionAtOffset(test.pos.left).line
+        val file = loc.sourceFile.segments.dropWhile { it.fullName != "src" }.ifEmpty { loc.sourceFile.segments }
+        return file.joinToString("/") { it.fullName } + ":" + line
     }
 
     /**
@@ -255,6 +311,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             body = Elixir.Block(
                 pos,
                 listOf(
+                    Elixir.RemoteCall(pos, module = main, fn = id(INIT_FUNCTION), args = listOf()),
                     Elixir.RemoteCall(
                         pos,
                         module = Elixir.ModuleName(pos, listOf(id("TemperCore"), id("Test"))),
@@ -267,23 +324,47 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     }
 
     /**
-     * `test/temper_test.exs`: each Temper `test` as an ExUnit test, so `mix test`
-     * runs them with ExUnit's reporting, filtering and seeds. The library's top
-     * level runs first, once, as tests read the values it sets. Text, not a
-     * tree: `use` and the `test "..." do` macro are not in the output grammar,
-     * and this file is the same few lines for every library.
+     * One ExUnit file per Temper source file with tests, `test/diff_test.exs`
+     * for `src/diff_test.temper.md`, so `mix test` runs them with ExUnit's
+     * reporting, filtering and seeds. A failure names the Temper line the test
+     * is on, since that is the line to fix, not the line of this file. The
+     * library's top level and the tests' own run first, once, as tests read
+     * the values they set. Text, not a tree: `use` and the `test "..." do`
+     * macro are not in the output grammar.
      */
-    private fun exUnitModule(root: String, tests: List<String>, titles: Map<String, String>): String =
-        buildString {
-            append("defmodule $root.TemperTest do\n")
-            append("  use ExUnit.Case\n\n")
-            append("  setup_all do\n    $root.$INIT_FUNCTION()\n    :ok\n  end\n")
-            for (test in tests) {
-                append("\n  test ${elixirStringText(titles[test] ?: test)} do\n")
-                append("    TemperCore.Test.check(&$root.$test/1)\n  end\n")
+    private fun exUnitFiles(
+        testRoot: String,
+        tests: List<String>,
+        titles: Map<String, String>,
+        lineOf: (String) -> String?,
+    ): List<MetadataFileSpecification> =
+        tests.groupBy { test -> lineOf(test)?.substringBeforeLast(":")?.let(::testFileStem) ?: "temper" }
+            .map { (stem, group) ->
+                val module = testRoot.removeSuffix(".$TEST_MODULE") + "." + pascalStem(stem) + "Test"
+                val content = buildString {
+                    append("defmodule $module do\n")
+                    append("  use ExUnit.Case\n\n")
+                    append("  setup_all do\n    $testRoot.$INIT_FUNCTION()\n    :ok\n  end\n")
+                    for (test in group) {
+                        val where = lineOf(test)?.let { ", ${elixirStringText(it)}" } ?: ""
+                        append("\n  test ${elixirStringText(titles[test] ?: test)} do\n")
+                        append("    TemperCore.Test.check(&$testRoot.$test/1$where)\n  end\n")
+                    }
+                    append("end\n")
+                }
+                MetadataFileSpecification(
+                    path = filePath("test", "${stem}_test.exs"),
+                    mimeType = mimeType,
+                    content = content,
+                )
             }
-            append("end\n")
-        }
+
+    /** `diff_test` and `diff` both test into `diff_test.exs`: the stem, without a `_test` of its own. */
+    private fun testFileStem(source: String): String =
+        source.substringAfterLast("/").substringBefore(".temper").lowercase()
+            .replace(Regex("[^a-z0-9]+"), "_").trim('_').removeSuffix("_test").ifEmpty { "temper" }
+
+    private fun pascalStem(stem: String) = stem.split("_").joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
 
     override val supportNetwork = ElixirSupportNetwork
 
@@ -301,6 +382,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         const val CORE_DIR = "temper-core"
 
         const val MAIN_FUNCTION = "main"
+
+        /** `Temper.MyLib.Tests`, under the library's root: tests and what only they use. */
+        const val TEST_MODULE = "Tests"
 
         /** Runs a library's dependencies, then its top levels, once per process. */
         const val INIT_FUNCTION = "__temper_init__"
@@ -350,21 +434,31 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             moduleName: String,
             appName: String,
             dependencies: List<lang.temper.name.DashedIdentifier> = listOf(),
+            testDependencies: List<lang.temper.name.DashedIdentifier> = listOf(),
+            hasTests: Boolean = false,
         ): String {
             // each library's project sits beside the others, in a directory named for it
             val deps = listOf("{:temper_core, path: \"../$CORE_DIR\"}") +
-                dependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\"}" }
+                dependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\"}" } +
+                testDependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\", only: :test}" }
+            // test/support/ holds the tests' own code, compiled for `mix test` only
+            val paths = if (hasTests) ", elixirc_paths: elixirc_paths(Mix.env())" else ""
+            val pathsFun = if (hasTests) {
+                "\n\n  defp elixirc_paths(:test), do: [\"lib\", \"test/support\"]\n  defp elixirc_paths(_), do: [\"lib\"]"
+            } else {
+                ""
+            }
             return """
             |defmodule $moduleName.MixProject do
             |  use Mix.Project
             |
             |  def project do
-            |    [app: :$appName, version: "0.1.0", elixir: "~> 1.15", deps: deps()]
+            |    [app: :$appName, version: "0.1.0", elixir: "~> 1.15", deps: deps()$paths]
             |  end
             |
             |  defp deps do
             |    [${deps.joinToString(", ")}]
-            |  end
+            |  end$pathsFun
             |end
             |
             """.trimMargin()

@@ -29,4 +29,17 @@ defmodule TemperCoreTestTest do
     assert xml =~ "name='a&lt;b'"
     assert xml =~ "message='it&#39;s &quot;x&quot; &amp; y'"
   end
+
+  test "check passes quietly, and a failure leads with the Temper line" do
+    assert T.check(fn t -> T.assert(t, true, fn -> "no" end) end, "src/x.temper.md:3") == :ok
+
+    error =
+      assert_raise ExUnit.AssertionError, fn ->
+        T.check(fn t -> T.assert(t, false, fn -> "got 4" end) end, "src/x.temper.md:7")
+      end
+
+    assert error.message == "src/x.temper.md:7: got 4"
+    error = assert_raise ExUnit.AssertionError, fn -> T.check(fn t -> T.assert(t, false, fn -> "bare" end) end) end
+    assert error.message == "bare"
+  end
 end

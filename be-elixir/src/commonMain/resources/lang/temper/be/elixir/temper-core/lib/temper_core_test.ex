@@ -72,17 +72,21 @@ defmodule TemperCore.Test do
 
   @doc """
   One test for `mix test`: run it as `processTestCases` would, and raise an
-  ExUnit assertion error carrying its failure messages if it failed.
+  ExUnit assertion error carrying its failure messages if it failed. `where`
+  is the test's place in the Temper source, `src/diff.temper.md:42`, which
+  leads the message: that is the line to fix, not the generated one.
   """
-  def check(fun) do
+  def check(fun, where \\ nil) do
     case process([TemperCore.Pair.new("test", fun)]) do
       [{_, []}] ->
         :ok
 
       [{_, failures}] ->
+        message = Enum.join(failures, "\n")
+        message = if where, do: "#{where}: #{message}", else: message
         # ExUnit is there under `mix test`; naming it at run time keeps
         # temper-core from depending on it
-        raise apply(ExUnit.AssertionError, :exception, [[message: Enum.join(failures, "\n")]])
+        raise apply(ExUnit.AssertionError, :exception, [[message: message]])
     end
   end
 
