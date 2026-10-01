@@ -52,6 +52,7 @@ import lang.temper.value.DeclTree
 import lang.temper.value.ErrorFn
 import lang.temper.value.FunTree
 import lang.temper.value.InnerTree
+import lang.temper.value.JumpDestination
 import lang.temper.value.JumpLabel
 import lang.temper.value.MacroValue
 import lang.temper.value.MaximalPath
@@ -84,6 +85,7 @@ import lang.temper.value.functionContained
 import lang.temper.value.isAssignment
 import lang.temper.value.isTypeAngleCall
 import lang.temper.value.mapControlFlowPlanting
+import lang.temper.value.matches
 import lang.temper.value.simplifyControlFlow
 import lang.temper.value.ssaSymbol
 import lang.temper.value.toPseudoCode
@@ -544,36 +546,56 @@ private class CoroutineConverter(
             }
         }
 
-        // Returns true if `cf` is isolated, meaning it doesn't
-        // yield.
+        // True if `cf` contains a `break` or `continue` whose destination is
+        // not inside `cf`.  Such a subtree cannot be isolated: the isolated
+        // copy would keep a jump to a label, like the `continue#13` block a
+        // `for` loop's body sits in, that the state machine dissolves into
+        // cases, leaving the jump with no target.
+        fun hasEscapingJump(cf: ControlFlow): Boolean {
+            val enclosing = mutableListOf<JumpDestination>()
+            fun walk(c: ControlFlow): Boolean {
+                if (c is ControlFlow.Jump) {
+                    return enclosing.none { it.matches(c) }
+                }
+                val dest = c as? JumpDestination
+                if (dest != null) { enclosing.add(dest) }
+                val escapes = c.clauses.any { walk(it) }
+                if (dest != null) { enclosing.removeAt(enclosing.lastIndex) }
+                return escapes
+            }
+            return walk(cf)
+        }
+
+        // Returns whether `cf` does not yield, and whether it may be isolated:
+        // it does not yield and does not jump out of itself.
         // If we have a StmtBlock that is not isolated but which
         // contains non-Stmt, non-StmtBlock clauses (see isolateSubBlocks above) which are, then
         // we isolate those.
-        fun isolateNonYieldingSubtrees(cf: ControlFlow): Boolean {
-            var isolated = true
+        fun isolateNonYieldingSubtrees(cf: ControlFlow): Pair<Boolean, Boolean> {
+            var noYields = true
             if (cf is ControlFlow.StmtBlock) {
                 val isolatedMask = KBitSet()
                 val stmts = cf.stmts
                 for (i in stmts.indices) {
                     val stmt = stmts[i]
-                    if (isolateNonYieldingSubtrees(stmt)) {
-                        isolatedMask.set(i)
-                    } else {
-                        isolated = false
-                    }
+                    val (stmtNoYields, stmtIsolatable) = isolateNonYieldingSubtrees(stmt)
+                    if (!stmtNoYields) { noYields = false }
+                    if (stmtIsolatable) { isolatedMask.set(i) }
                 }
-                if (!isolated && !isolatedMask.isEmpty) {
+                val isolatable = noYields && !hasEscapingJump(cf)
+                if (!isolatable && !isolatedMask.isEmpty) {
                     // Some to isolate
                     for (i in isolatedMask.bitIndices) {
                         isolate(parent = cf, stmtIndex = i)
                     }
                 }
+                return noYields to isolatable
             } else {
                 val ref = cf.ref
                 if (ref != null) {
                     val t = block.dereference(ref)?.target
                     if (disassembleYieldingCall(t) != null) {
-                        isolated = false
+                        noYields = false
                     }
                     if (cf is ControlFlow.Stmt && t != null && isReturnOfDoneResult(t)) {
                         // Just `void` out returns since we handle those for terminal paths.
@@ -581,12 +603,12 @@ private class CoroutineConverter(
                     }
                 }
                 for (clause in cf.clauses) {
-                    if (!isolateNonYieldingSubtrees(clause)) {
-                        isolated = false
+                    if (!isolateNonYieldingSubtrees(clause).first) {
+                        noYields = false
                     }
                 }
             }
-            return isolated
+            return noYields to (noYields && !hasEscapingJump(cf))
         }
         isolateNonYieldingSubtrees(structureBlock(block).controlFlow)
     }
@@ -628,8 +650,10 @@ private class CoroutineConverter(
                     yieldingCall.kind == YieldingFnKind.await -> true
                     else -> path.followers.any { it.condition is MaximalPath.AstElement }
                 }
-                if (needsAfterwardsCase) {
-                    check(yieldingCall != null)
+                // Only an `await` has a promise to carry across the pause; a
+                // `yield` gets an afterwards case just to test its followers'
+                // conditions, and a bare `yield` has no child(1) to type.
+                if (needsAfterwardsCase && yieldingCall?.kind == YieldingFnKind.await) {
                     val promiseTemporary = ccNameMaker.unusedTemporaryName("awaited")
                     val promiseType = yieldingCall.yieldingCall.child(1).typeInferences?.type
                         ?: InvalidType
