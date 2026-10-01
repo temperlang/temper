@@ -213,12 +213,12 @@ class CppBackendTest {
                 |namespace my_test_library {
                 |  struct Classy;
                 |  struct Classy : public std::enable_shared_from_this<Classy> {
-                |    template<class T> T Classy::second(std::shared_ptr<std::vector<T>> const & things) const {
+                |    template<class T> T second(std::shared_ptr<std::vector<T>> const & things) const {
                 |      auto this_ = temper::core::borrow_this(this);
                 |      T thing = temper::core::List::get(things, 1);
                 |      return thing;
                 |    }
-                |    template<class T_3> T_3 Classy::third(std::shared_ptr<std::vector<T_3>> const & things_17) {
+                |    template<class T_3> T_3 third(std::shared_ptr<std::vector<T_3>> const & things_17) {
                 |      T_3 thing_19 = temper::core::List::get(things_17, 2);
                 |      return thing_19;
                 |    }

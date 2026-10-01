@@ -2375,10 +2375,10 @@ class CppTranslator(
                 val needsVirtual = isInterface ||
                     realSuperTypes.any()
                 val func = cpp.func(
-                    cpp.scopedName(
-                        cpp.name(topLevel.name),
-                        methodCppName,
-                    ),
+                    when {
+                        typeFormals.isNotEmpty() -> methodCppName
+                        else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
+                    },
                     translateType(member.returnType),
                     methodFormals.map { param ->
                         cpp.pos(param) {
@@ -2480,10 +2480,10 @@ class CppTranslator(
                 val hasOptional =
                     methodFormals.any { it.optional }
                 val func = cpp.func(
-                    cpp.scopedName(
-                        cpp.name(topLevel.name),
-                        methodCppName,
-                    ),
+                    when {
+                        typeFormals.isNotEmpty() -> methodCppName
+                        else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
+                    },
                     translateType(member.returnType),
                     methodFormals.map { param ->
                         cpp.pos(param) {
