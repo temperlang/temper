@@ -3231,7 +3231,7 @@ class CppTranslator(
             val headerTypeDecl = mutableListOf<Cpp.Global>()
             val headerTypeDefs = mutableListOf<Cpp.Global>()
             val headerDecl = mutableListOf<Cpp.Global>()
-            val headerFunctions = mutableListOf<Cpp.Global>() //
+            val headerFunctions = mutableListOf<Cpp.Global>()
             val headerInit = mutableListOf<Cpp.Global>()
 
             fun header(): List<Cpp.Global> = buildList {
