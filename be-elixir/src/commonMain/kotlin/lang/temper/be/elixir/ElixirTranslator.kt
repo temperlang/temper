@@ -96,6 +96,9 @@ internal class ElixirTranslator(
 
     /** Whether the class being translated is `@actor`: its instances are processes. */
     private var currentClassIsActor = false
+
+    /** Whether the class being translated is exported: Elixir code may construct it directly. */
+    private var currentClassIsExported = false
     private val mainBody = mutableListOf<Elixir.BlockItem>()
     private val modules = mutableListOf<Elixir.ModuleDef>()
 
@@ -304,7 +307,15 @@ internal class ElixirTranslator(
      * the objects it made and left unreachable are freed.
      */
     private fun entry(pos: Position, body: Elixir.Block): Elixir.Block =
-        Elixir.Block(pos, listOf(heapCall(pos, "entry", listOf(Elixir.Fn(pos, body = body)))))
+        Elixir.Block(pos, listOf(selfInit(pos), heapCall(pos, "entry", listOf(Elixir.Fn(pos, body = body)))))
+
+    /**
+     * `Temper.Lib.__temper_init__()`: Elixir code calling into the library
+     * need not initialize it first. Init runs once per node, so after the first
+     * call this is one ETS lookup, and code inside the init itself skips it.
+     */
+    private fun selfInit(pos: Position): Elixir.Expr =
+        remoteCall(pos, mainModule(pos), ElixirBackend.INIT_FUNCTION, listOf())
 
     /**
      * A `@test` is a function of one argument, the `Test` that collects its
@@ -1200,6 +1211,7 @@ internal class ElixirTranslator(
         val isActor = isClass && decl.metadata.any { it.key.symbol == lang.temper.value.actorSymbol }
         if (isActor && isStruct) TODO("class ${decl.name} is both @imu and @actor")
         currentClassIsActor = isActor
+        currentClassIsExported = decl.name.name is lang.temper.name.ExportedName
         if (isStruct && !hasNoWritesAfterConstruction(flattened)) {
             TODO("@imu class ${decl.name} writes a property outside its constructor")
         }
@@ -1273,6 +1285,7 @@ internal class ElixirTranslator(
             else -> heapCall(pos, "new", listOf(moduleOf(pos, module), fieldMap))
         }
         val cls = ClassContext(module, isStruct, thisName, isConstructor = true)
+        val init = if (currentClassIsExported) listOf(selfInit(pos)) else listOf()
         val body = functionBody(
             pos,
             ctor.body.statements,
@@ -1287,9 +1300,9 @@ internal class ElixirTranslator(
             body = if (currentClassIsActor) {
                 // `new` starts the process and runs the constructor in it
                 val start = actorCall(pos, "start", listOf(moduleOf(pos, module), Elixir.Fn(pos, body = body)))
-                Elixir.Block(pos, listOf(start))
+                Elixir.Block(pos, init + start)
             } else {
-                body
+                Elixir.Block(pos, init + body.exprs.map { it.deepCopy() })
             },
         )
     }
