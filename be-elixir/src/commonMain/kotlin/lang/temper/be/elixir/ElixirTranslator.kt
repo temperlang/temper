@@ -282,13 +282,22 @@ internal class ElixirTranslator(
                 body = connectedBody(decl),
             )
         }
+        val translated = functionBody(pos, body.statements, prelude = boxParams(pos, formals.map { it.name }))
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
             params = params,
-            body = functionBody(pos, body.statements, prelude = boxParams(pos, formals.map { it.name })),
+            body = if (decl.name.name is lang.temper.name.ExportedName) entry(pos, translated) else translated,
         )
     }
+
+    /**
+     * An exported function is where Elixir code calls in, so its body runs
+     * through `TemperCore.Heap.entry`: when the outermost such call returns,
+     * the objects it made and left unreachable are freed.
+     */
+    private fun entry(pos: Position, body: Elixir.Block): Elixir.Block =
+        Elixir.Block(pos, listOf(heapCall(pos, "entry", listOf(Elixir.Fn(pos, body = body)))))
 
     /**
      * A `@test` is a function of one argument, the `Test` that collects its
@@ -1179,7 +1188,10 @@ internal class ElixirTranslator(
         val isClass = decl.kind == TmpL.TypeDeclarationKind.Class
         if (!isClass && decl.kind != TmpL.TypeDeclarationKind.Interface) TODO("${decl.kind} declaration: ${decl.name}")
         val flattened = if (isClass) flattenMembers(decl) else decl.members.filterIsInstance<TmpL.Member>()
-        val isStruct = isClass && isStructClass(flattened)
+        val isStruct = isClass && isImu(decl)
+        if (isStruct && !hasNoWritesAfterConstruction(flattened)) {
+            TODO("@imu class ${decl.name} writes a property outside its constructor")
+        }
         val fields = flattened.filterIsInstance<TmpL.InstanceProperty>()
             .filter { it.memberShape.abstractness == lang.temper.type.Abstractness.Concrete }
             .map { fieldText(it.name) }
@@ -1628,8 +1640,19 @@ internal class ElixirTranslator(
         is TmpL.Constructor -> "ctor"
     }
 
-    /** No setter, and no property write outside the constructor. */
-    private fun isStructClass(members: List<TmpL.Member>): Boolean {
+    /**
+     * A class is a struct when it says it is immutable, `@imu`, which the
+     * frontend enforces. Inferring it from the body would let a later version
+     * that adds a setter silently turn a library's struct into a heap ref:
+     * a consumer's `%Lib.Point{}` patterns stop matching, a value that crossed
+     * processes freely no longer does, and `==` goes from comparing fields
+     * to comparing identity.
+     */
+    private fun isImu(decl: TmpL.TypeDeclaration): Boolean =
+        decl.metadata.any { it.key.symbol == lang.temper.value.imuSymbol }
+
+    /** No setter, and no property write outside the constructor: what a struct needs. */
+    private fun hasNoWritesAfterConstruction(members: List<TmpL.Member>): Boolean {
         if (members.any { it is TmpL.Setter }) return false
         return members.none { member ->
             member !is TmpL.Constructor && run {

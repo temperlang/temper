@@ -210,10 +210,22 @@ defmodule TemperCore.Heap do
   """
   alias TemperCore.Ref
 
+  # the nursery's bookkeeping, keyed apart from objects ({TemperCore.Heap, id})
+  # so that size/0 and collect/1 never mistake it for one
+  @depth {TemperCore.Heap.Nursery, :depth}
+  @nursery {TemperCore.Heap.Nursery, :young}
+  @remembered {TemperCore.Heap.Nursery, :remembered}
+
   @doc "Makes an object of `class` with the given fields, and returns its ref."
   def new(class, fields) when is_atom(class) and is_map(fields) do
     ref = %Ref{class: class, id: make_ref()}
     Process.put(key(ref), fields)
+
+    case Process.get(@nursery) do
+      nil -> :ok
+      young -> Process.put(@nursery, MapSet.put(young, ref.id))
+    end
+
     ref
   end
 
@@ -221,8 +233,16 @@ defmodule TemperCore.Heap do
   def get(%Ref{} = ref, field), do: Map.fetch!(fields!(ref), field)
 
   @doc "Writes a field the object already has, and returns the value written."
-  def put(%Ref{} = ref, field, value) do
+  def put(%Ref{id: id} = ref, field, value) do
     Process.put(key(ref), %{fields!(ref) | field => value})
+
+    # the write barrier: an older object written during a call may now point
+    # at a young one, so its fields are roots for the minor collection
+    case Process.get(@nursery) do
+      nil -> :ok
+      young -> if not MapSet.member?(young, id), do: Process.put(@remembered, MapSet.put(Process.get(@remembered), id))
+    end
+
     value
   end
 
@@ -234,6 +254,96 @@ defmodule TemperCore.Heap do
   end
 
   defp key(%Ref{id: id}), do: {__MODULE__, id}
+
+  @doc """
+  Runs a call into a library, and frees what it left behind.
+
+  An exported function's body runs through this. Calls nest (Temper code
+  calling exported functions, its own library's or another's); only the
+  outermost one collects. Objects made during that call are young. When it
+  returns or raises, the young objects nothing reaches are freed. "Reaches"
+  means from the result, the rest of the process dictionary (Temper's
+  globals, the async queue), or an older object written during the call.
+  Older objects are never touched, so whatever the caller still holds from
+  earlier calls stays alive. Those, and objects from code that never went
+  through an entry, are left to `collect/1`, or to the process exiting.
+  """
+  def entry(fun) do
+    case Process.get(@depth, 0) do
+      0 ->
+        Process.put(@depth, 1)
+        Process.put(@nursery, MapSet.new())
+        Process.put(@remembered, MapSet.new())
+
+        try do
+          result = fun.()
+          minor([result])
+          result
+        catch
+          kind, reason ->
+            minor([])
+            :erlang.raise(kind, reason, __STACKTRACE__)
+        after
+          Process.delete(@depth)
+          Process.delete(@nursery)
+          Process.delete(@remembered)
+        end
+
+      depth ->
+        Process.put(@depth, depth + 1)
+
+        try do
+          fun.()
+        after
+          Process.put(@depth, depth)
+        end
+    end
+  end
+
+  # Frees the young objects that nothing reaches. Marking stops at older
+  # objects: they are alive, and any of their fields that could reach a young
+  # object were remembered by `put`.
+  defp minor(extra) do
+    young = Process.get(@nursery)
+
+    if MapSet.size(young) == 0 do
+      0
+    else
+      remembered = Enum.map(Process.get(@remembered), &Process.get({__MODULE__, &1}))
+
+      others =
+        for {k, v} <- Process.get(), not object?({k, v}), k not in [@depth, @nursery, @remembered], do: v
+
+      live = mark_young([extra, remembered | others], young, MapSet.new())
+      dead = MapSet.difference(young, live)
+      Enum.each(dead, &Process.delete({__MODULE__, &1}))
+      MapSet.size(dead)
+    end
+  end
+
+  defp mark_young([], _young, live), do: live
+
+  defp mark_young([%Ref{id: id} | rest], young, live) do
+    if MapSet.member?(young, id) and not MapSet.member?(live, id) do
+      mark_young([Process.get({__MODULE__, id}) | rest], young, MapSet.put(live, id))
+    else
+      mark_young(rest, young, live)
+    end
+  end
+
+  defp mark_young([[] | rest], young, live), do: mark_young(rest, young, live)
+  defp mark_young([[h | t] | rest], young, live), do: mark_young([h, t | rest], young, live)
+  defp mark_young([x | rest], young, live) when is_tuple(x), do: mark_young([Tuple.to_list(x) | rest], young, live)
+
+  defp mark_young([x | rest], young, live) when is_map(x),
+    do: mark_young([Map.keys(x), Map.values(x) | rest], young, live)
+
+  defp mark_young([x | rest], young, live) when is_function(x) do
+    {:env, env} = :erlang.fun_info(x, :env)
+    mark_young([env | rest], young, live)
+  end
+
+  defp mark_young([_ | rest], young, live), do: mark_young(rest, young, live)
 
   @doc "How many objects this process's heap holds."
   def size, do: Enum.count(Process.get(), &object?/1)
