@@ -70,6 +70,22 @@ defmodule TemperCore.Test do
     end)
   end
 
+  @doc """
+  One test for `mix test`: run it as `processTestCases` would, and raise an
+  ExUnit assertion error carrying its failure messages if it failed.
+  """
+  def check(fun) do
+    case process([TemperCore.Pair.new("test", fun)]) do
+      [{_, []}] ->
+        :ok
+
+      [{_, failures}] ->
+        # ExUnit is there under `mix test`; naming it at run time keeps
+        # temper-core from depending on it
+        raise apply(ExUnit.AssertionError, :exception, [[message: Enum.join(failures, "\n")]])
+    end
+  end
+
   @doc "`runTestCases`: the JUnit XML `reportTestResults` writes, as one string."
   def run_cases(cases) do
     results = process(cases)

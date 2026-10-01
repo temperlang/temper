@@ -105,9 +105,12 @@ internal class ElixirTranslator(
         val modules: List<Elixir.ModuleDef>,
         /** Each test's function name, which is also the name the JUnit report gives it. */
         val tests: List<String>,
+        /** Each test's own sentence, by function name: the name `mix test` shows. */
+        val testTitles: Map<String, String>,
     )
 
     private val tests = mutableListOf<String>()
+    private val testTitles = mutableMapOf<String, String>()
 
     /**
      * Locals a closure reads that are also assigned somewhere. Elixir closures
@@ -169,11 +172,12 @@ internal class ElixirTranslator(
         mainBody.clear()
         modules.clear()
         tests.clear()
+        testTitles.clear()
         collectBoxed(module)
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
         }
-        return Translated(functions.toList(), mainBody.toList(), modules.toList(), tests.toList())
+        return Translated(functions.toList(), mainBody.toList(), modules.toList(), tests.toList(), testTitles.toMap())
     }
 
     // ── Top levels ───────────────────────────────────────────────────────
@@ -313,6 +317,7 @@ internal class ElixirTranslator(
         formals.forEach { declare(it.name) }
         val name = functionName(test.name.name).outputNameText
         tests.add(name)
+        testTitles[name] = test.rawName
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(pos, OutName(name, null)),

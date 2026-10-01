@@ -172,7 +172,25 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
             MetadataFileSpecification(path = filePath("lib", CONNECTED_FILE), mimeType = mimeType, content = source)
         }
-        return connected + listOf(
+        val allTests = translated.flatMap { it.tests }
+        val titles = translated.fold(mapOf<String, String>()) { acc, t -> acc + t.testTitles }
+        val mixTests = if (allTests.isEmpty()) {
+            listOf()
+        } else {
+            listOf(
+                MetadataFileSpecification(
+                    path = filePath("test", "test_helper.exs"),
+                    mimeType = mimeType,
+                    content = "ExUnit.start()\n",
+                ),
+                MetadataFileSpecification(
+                    path = filePath("test", "temper_test.exs"),
+                    mimeType = mimeType,
+                    content = exUnitModule(root.joinToString("."), allTests, titles),
+                ),
+            )
+        }
+        return connected + mixTests + listOf(
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
                 mimeType = mimeType,
@@ -238,6 +256,25 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             ),
         )
     }
+
+    /**
+     * `test/temper_test.exs`: each Temper `test` as an ExUnit test, so `mix test`
+     * runs them with ExUnit's reporting, filtering and seeds. The library's top
+     * level runs first, once, as tests read the values it sets. Text, not a
+     * tree: `use` and the `test "..." do` macro are not in the output grammar,
+     * and this file is the same few lines for every library.
+     */
+    private fun exUnitModule(root: String, tests: List<String>, titles: Map<String, String>): String =
+        buildString {
+            append("defmodule $root.TemperTest do\n")
+            append("  use ExUnit.Case\n\n")
+            append("  setup_all do\n    $root.$INIT_FUNCTION()\n    :ok\n  end\n")
+            for (test in tests) {
+                append("\n  test ${elixirStringText(titles[test] ?: test)} do\n")
+                append("    TemperCore.Test.check(&$root.$test/1)\n  end\n")
+            }
+            append("end\n")
+        }
 
     override val supportNetwork = ElixirSupportNetwork
 
