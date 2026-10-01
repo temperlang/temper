@@ -193,6 +193,35 @@ internal class ElixirTranslator(
             }
         }
         boxed.addAll((captured intersect assigned) - moduleGlobals)
+        // A local assigned in a `do` body and declared outside it lives in a cell
+        // too. A `do` is an Elixir `try`, and a binding made inside `try` never
+        // reaches `rescue`: `do { x = 1; fail() } orelse ...` saw x as it was
+        // before the `do`. A cell is written in place, so the write survives the
+        // raise. What a nested function assigns is decided by the rule above.
+        for (topLevel in module.topLevels) {
+            topLevel.boundaryDescent { node ->
+                if (node is TmpL.TryStatement) {
+                    val declaredInside = mutableSetOf<ResolvedName>()
+                    val assignedInside = mutableSetOf<ResolvedName>()
+                    node.tried.boundaryDescent { inner ->
+                        when (inner) {
+                            is TmpL.LocalFunctionDeclaration -> false
+                            is TmpL.LocalDeclaration -> {
+                                nameOf(inner.name)?.let(declaredInside::add)
+                                true
+                            }
+                            is TmpL.Assignment -> {
+                                nameOf(inner.left)?.let(assignedInside::add)
+                                true
+                            }
+                            else -> true
+                        }
+                    }
+                    boxed.addAll(assignedInside - declaredInside - moduleGlobals)
+                }
+                true
+            }
+        }
         // a local function another closure calls lives in a cell made at the
         // top of its block, so a closure defined earlier can call one defined
         // later: putter calling walker, walker calling putter

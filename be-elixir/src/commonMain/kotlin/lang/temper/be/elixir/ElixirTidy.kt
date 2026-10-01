@@ -15,7 +15,8 @@ import lang.temper.name.OutName
  *   Elixir's `_` prefix.
  * - **A binding of a raise.** `t1 = raise(TemperCore.Panic)` binds the result
  *   of something that never returns, which Elixir's type checker reports
- *   as a pattern that will never match. It becomes the raise alone.
+ *   as a pattern that will never match. It becomes the raise alone, and so
+ *   does a raise stored into a cell, `TemperCore.Heap.put(t1, :v, raise(...))`.
  */
 internal fun tidy(file: Elixir.SourceFile) {
     file.items.forEach(::tidyTopLevel)
@@ -123,14 +124,31 @@ private fun pinned(pattern: Elixir.Tree): Set<String> = when (pattern) {
  */
 private fun dropRaiseBindings(node: Elixir.Tree) {
     if (node is Elixir.Block) {
-        val stop = node.exprs.indexOfFirst { isRaiseBinding(it) || isRaise(it) }
+        val stop = node.exprs.indexOfFirst { isRaiseBinding(it) || isRaise(it) || raiseStoredInCell(it) != null }
         if (stop >= 0) {
             node.exprs = node.exprs.take(stop + 1).map { item ->
-                if (isRaiseBinding(item)) (item as Elixir.Match).right.deepCopy() else item
+                when {
+                    isRaiseBinding(item) -> (item as Elixir.Match).right.deepCopy()
+                    else -> raiseStoredInCell(item)?.deepCopy() ?: item
+                }
             }
         }
     }
     for (i in 0 until node.childCount) node.childOrNull(i)?.let(::dropRaiseBindings)
+}
+
+/**
+ * The raise in `TemperCore.Heap.put(cell, :v, raise(...))`: a local kept in a
+ * cell, assigned something that never returns. Like `t = raise(...)`, it
+ * stores a value that never arrives, and Elixir's type checker warns about it;
+ * the frontend's lowering of `x orelse panic()` produces one whenever the
+ * temporary it assigns lives in a cell.
+ */
+private fun raiseStoredInCell(item: Elixir.BlockItem): Elixir.Expr? {
+    val call = item as? Elixir.RemoteCall ?: return null
+    val module = (call.module as? Elixir.ModuleName)?.segments?.map { it.outName.outputNameText }
+    if (module != listOf("TemperCore", "Heap") || call.fn.outName.outputNameText != "put") return null
+    return call.args.getOrNull(2)?.takeIf { isRaise(it) }
 }
 
 private fun isRaiseBinding(item: Elixir.BlockItem): Boolean {

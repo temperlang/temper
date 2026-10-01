@@ -262,6 +262,51 @@ class ElixirBackendTest {
     }
 
     /**
+     * A local assigned in a `do` body before something in it bubbles must keep
+     * that value in the `orelse`: js and py print `11` for this, be-elixir
+     * printed `10`. An Elixir binding made inside `try` never reaches `rescue`,
+     * so the local lives in a cell and the write survives the raise.
+     */
+    @Test
+    fun anAssignmentBeforeABubbleReachesTheOrelse() {
+        val out = generatedText(
+            """
+            |let fail(b: Boolean): Void throws Bubble { if (b) { bubble() } }
+            |export let f(b: Boolean): Int {
+            |  var x = 0;
+            |  do { x = 1; fail(b); x = 2; } orelse do { x += 10; }
+            |  x
+            |}
+            """.trimMargin(),
+        )
+        assertContains(out, "TemperCore.Heap.put(x, :v, 1)")
+        assertFalse("_x = 1" in out, "the write before the bubble is a dead binding:\n$out")
+    }
+
+    /**
+     * A local in a cell can be assigned something that raises: the frontend
+     * lowers `g(b) orelse panic()` by assigning a temporary in a `do`, and the
+     * `orelse` side is `panic()`. `TemperCore.Heap.put(t, :v, raise(...))` is
+     * a store of a value that never arrives, which Elixir's type checker warns
+     * about, as it does for `t = raise(...)`. alloy printed 55 of these once
+     * locals assigned in a `do` became cells.
+     */
+    @Test
+    fun aRaiseStoredInACellIsJustTheRaise() {
+        val out = generatedText(
+            """
+            |let g(b: Boolean): Int throws Bubble { if (b) { bubble() } 1 }
+            |export let f(b: Boolean): Int {
+            |  var x = 0;
+            |  do { x = g(b) orelse panic(); } orelse do { x = 2; }
+            |  x
+            |}
+            """.trimMargin(),
+        )
+        assertFalse(Regex("""Heap\.put\([^\n]*, raise\(""").containsMatchIn(out), "a raise stored into a cell:\n$out")
+    }
+
+    /**
      * The generated entry point used to be `main/0`, so a library exporting
      * its own `main` got two `def main()`. The library's came first, so
      * running the program called it uninvited and never reached the entry
