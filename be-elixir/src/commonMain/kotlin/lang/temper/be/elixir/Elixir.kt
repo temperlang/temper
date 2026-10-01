@@ -14,6 +14,7 @@ import lang.temper.format.FormattingHints
 import lang.temper.format.IndexableFormattableTreeElement
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
+import lang.temper.format.SpecialTokens
 import lang.temper.format.TokenAssociation
 import lang.temper.format.TokenSink
 import lang.temper.log.Position
@@ -700,7 +701,7 @@ object Elixir {
         }
     }
 
-    /** `&Temper.Lib.name/2`: a named function as a value. */
+    /** `&TemperMain.name/2`: a named function as a value. */
     class Capture(
         pos: Position,
         fn: Expr,
@@ -1705,6 +1706,10 @@ object Elixir {
         }
     }
 
+    /**
+     * A clause's body is indented past its pattern. No token in Elixir marks
+     * where a clause ends, so the invisible indent and dedent tokens do.
+     */
     class Clause(
         pos: Position,
         pattern: Pattern,
@@ -2928,7 +2933,7 @@ object Elixir {
             ),
         )
 
-    /** `{{0}} when {{1}} -> {{2}}` */
+    /** `{{0}} when {{1}} -> `SpecialTokens.indent` {{2}} `SpecialTokens.dedent`` */
     private val sharedCodeFormattingTemplate37 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -2936,27 +2941,33 @@ object Elixir {
                 CodeFormattingTemplate.LiteralToken("when", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(1),
                 CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.indent),
                 CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.dedent),
             ),
         )
 
-    /** `{{0}} -> {{2}}` */
+    /** `{{0}} -> `SpecialTokens.indent` {{2}} `SpecialTokens.dedent`` */
     private val sharedCodeFormattingTemplate38 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.indent),
                 CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.dedent),
             ),
         )
 
-    /** `{{0}} -> {{1}}` */
+    /** `{{0}} -> `SpecialTokens.indent` {{1}} `SpecialTokens.dedent`` */
     private val sharedCodeFormattingTemplate39 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.indent),
                 CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(SpecialTokens.dedent),
             ),
         )
 

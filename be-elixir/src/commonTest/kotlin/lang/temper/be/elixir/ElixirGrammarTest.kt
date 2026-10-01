@@ -98,12 +98,12 @@ class ElixirGrammarTest {
             """
                 |r = case {a, b} do
                 |  {1, _} ->
-                |  :one
+                |    :one
                 |  {_, y} when y > 1 ->
-                |  z = y + 1
-                |  {:big, z}
+                |    z = y + 1
+                |    {:big, z}
                 |  _ ->
-                |  :other
+                |    :other
                 |end
             """.trimMargin(),
             Elixir.Match(
@@ -238,9 +238,9 @@ class ElixirGrammarTest {
             """
                 |cond do
                 |  x > 1 ->
-                |  :big
+                |    :big
                 |  true ->
-                |  :small
+                |    :small
                 |end
             """.trimMargin(),
             Elixir.Cond(
@@ -257,7 +257,7 @@ class ElixirGrammarTest {
                 |  risky()
                 |rescue
                 |  e ->
-                |  {:error, e}
+                |    {:error, e}
                 |end
             """.trimMargin(),
             Elixir.Try(

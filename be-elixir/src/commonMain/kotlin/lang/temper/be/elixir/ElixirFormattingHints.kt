@@ -4,6 +4,7 @@ import lang.temper.common.TriState
 import lang.temper.format.FormattingHints
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
+import lang.temper.format.SpecialTokens
 
 /**
  * Elixir blocks are `do` ... `end`, like Blimp's and Lua's, so these hints are
@@ -12,9 +13,9 @@ import lang.temper.format.OutputTokenType
  *
  * Indentation is for readers only; Elixir's parser ignores it. Newlines are
  * what matter, and the one this backend depends on is after `->`: a `case`
- * clause's body runs from its arrow to the next `pattern ->` or `end`. Clause
- * bodies are not indented past their pattern, because no token marks where a
- * clause ends for the formatter to dedent on.
+ * clause's body runs from its arrow to the next `pattern ->` or `end`. The
+ * grammar brackets each clause body in invisible indent and dedent tokens,
+ * since no Elixir token marks where a clause ends.
  */
 object ElixirFormattingHints : FormattingHints {
     fun getInstance() = ElixirFormattingHints
@@ -79,9 +80,11 @@ object ElixirFormattingHints : FormattingHints {
      * column 0 after a generator's state machine.
      */
     override fun indents(token: OutputToken): Boolean =
-        token.text == "do" || token.text == "fn" || token.text in between
+        token == SpecialTokens.indent || token.text == "do" || token.text == "fn" || token.text in between
 
-    override fun dedents(token: OutputToken): Boolean = token.text == "end" || token.text in between
+    /** `end`, and the invisible dedent that closes a `case`, `cond`, `rescue` or `catch` clause's body. */
+    override fun dedents(token: OutputToken): Boolean =
+        token == SpecialTokens.dedent || token.text == "end" || token.text in between
 
     override val localLevelIndents: Boolean get() = false
 

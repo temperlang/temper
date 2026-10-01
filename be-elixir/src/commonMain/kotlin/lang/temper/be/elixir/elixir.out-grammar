@@ -17,6 +17,7 @@ let namespace = "Elixir";
 let imports = """
   "lang.temper.format.OutputToken
   "lang.temper.format.OutputTokenType
+  "lang.temper.format.SpecialTokens
   "lang.temper.format.TokenSerializable
   "lang.temper.format.TokenSink
   "lang.temper.name.OutName
@@ -147,18 +148,24 @@ Fn.params.default = `listOf()`;
 /** `case subject do pattern when guard -> body ... end` */
 Case ::= "case" & subject%Expr & "do" & clauses%Clause+"\n" & "end";
 
+/**
+ * A clause's body is indented past its pattern. No token in Elixir marks
+ * where a clause ends, so the invisible indent and dedent tokens do.
+ */
 Clause ::=
       pattern%Pattern
     & ((guard%Expr => "when" & guard) || ())
     & "->"
+    & `SpecialTokens.indent`
     & body%Block
+    & `SpecialTokens.dedent`
     ;
 Clause.guard.default = `null`;
 
 /** `cond do test -> body ... end` */
 Cond ::= "cond" & "do" & arms%CondArm+"\n" & "end";
 
-CondArm ::= test%Expr & "->" & body%Block;
+CondArm ::= test%Expr & "->" & `SpecialTokens.indent` & body%Block & `SpecialTokens.dedent`;
 
 /** `if test do ... else ... end` */
 If ::=

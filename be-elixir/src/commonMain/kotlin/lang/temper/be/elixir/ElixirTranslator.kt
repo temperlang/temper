@@ -563,12 +563,27 @@ internal class ElixirTranslator(
         test: Elixir.Expr,
         then: List<Elixir.BlockItem>,
         otherwise: List<Elixir.BlockItem>,
-    ): Elixir.Expr = Elixir.If(
-        pos,
-        test = test,
-        then = Elixir.Block(pos, then.ifEmpty { listOf(Elixir.NilLit(pos)) }),
-        otherwise = Elixir.Block(pos, otherwise.ifEmpty { listOf(Elixir.NilLit(pos)) }),
-    )
+    ): Elixir.Expr {
+        val thenBlock = Elixir.Block(pos, then.ifEmpty { listOf(Elixir.NilLit(pos)) })
+        // `if a ... else if b ... else ... end end` reads as the `cond` it is
+        val arms = when (val only = otherwise.singleOrNull()) {
+            is Elixir.If -> listOf(
+                Elixir.CondArm(pos, only.test.deepCopy(), only.then.deepCopy()),
+                Elixir.CondArm(pos, Elixir.BoolLit(pos, true), only.otherwise?.deepCopy() ?: nilBlock(pos)),
+            )
+            is Elixir.Cond -> only.arms.map { it.deepCopy() }
+            else -> null
+        }
+        if (arms != null) return Elixir.Cond(pos, listOf(Elixir.CondArm(pos, test, thenBlock)) + arms)
+        return Elixir.If(
+            pos,
+            test = test,
+            then = thenBlock,
+            otherwise = Elixir.Block(pos, otherwise.ifEmpty { listOf(Elixir.NilLit(pos)) }),
+        )
+    }
+
+    private fun nilBlock(pos: Position) = Elixir.Block(pos, listOf(Elixir.NilLit(pos)))
 
     /** An `if` in the middle of a list: it hands back whatever it assigned. */
     private fun middleIf(statement: TmpL.IfStatement, fn: FunctionContext): List<Elixir.BlockItem> {
@@ -1716,7 +1731,15 @@ internal class ElixirTranslator(
     private fun staticKey(pos: Position, module: List<String>, member: String): Elixir.Expr =
         Elixir.Atom(pos, module.joinToString(".") + "." + member)
 
-    private fun fieldText(id: TmpL.Id): String = names.outName(id.name).outputNameText
+    /**
+     * A field's name in its struct or heap map: the property's plain name,
+     * `x` for `x__29`. A class cannot have two members of one name, and a
+     * field is only ever read or written inside its own class, so the plain
+     * name is unique where it is used.
+     */
+    private fun fieldText(id: TmpL.Id): String =
+        (nameOf(id) as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText?.let(names::sanitize)
+            ?: names.outName(id.name).outputNameText
 
     private fun fieldText(property: TmpL.PropertyId): String = when (property) {
         is TmpL.InternalPropertyId -> fieldText(property.name)
