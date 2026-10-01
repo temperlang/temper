@@ -54,7 +54,7 @@ defmodule TemperCore.Async do
   The run queue, a FIFO of generators in the process dictionary. `async { }`
   enqueues its generator rather than running it, as be-js's setTimeout does,
   and settling a promise enqueues whatever waited on it. Nothing runs a
-  generator but `drain/0`, which TemperMain.main calls last; so no step ever
+  generator but `drain/0`, which a library's `__temper_main__/0` calls last; so no step ever
   runs inside another, and a long chain of awaits is a loop, not a deepening
   stack. A program awaiting a promise nothing will settle ends when the queue
   is empty.

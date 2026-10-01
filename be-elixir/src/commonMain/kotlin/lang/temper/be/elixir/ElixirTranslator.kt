@@ -1119,7 +1119,7 @@ internal class ElixirTranslator(
                 pos,
                 moduleOf(pos, typeNameModule(callee.typeName)),
                 CONSTRUCTOR,
-                arguments(pos, callee.type, given),
+                arguments(pos, constructorSig(callee) ?: callee.type, given),
             )
             is TmpL.MethodReference -> {
                 val args = arguments(pos, callee.type, given)
@@ -1537,7 +1537,8 @@ internal class ElixirTranslator(
         val name = typeBaseName(type)
         builtinGuards[name]?.let { guard -> return guard(pos, value) }
         indexChecks[name]?.let { check -> return check(pos, value) }
-        val module = types[name]?.let { typeModule(it) } ?: externalTypeModule(type) ?: TODO("instanceof $name")
+        val module = localType(nominalName(type))?.let { typeModule(it) } ?: externalTypeModule(type)
+            ?: TODO("instanceof $name")
         return coreCall(pos, "is_a", listOf(value, moduleOf(pos, module)))
     }
 
@@ -1593,7 +1594,8 @@ internal class ElixirTranslator(
                 ),
             )
         }
-        val module = types[name]?.let { typeModule(it) } ?: externalTypeModule(cast.checkedType)
+        val module = localType(nominalName(cast.checkedType))?.let { typeModule(it) }
+            ?: externalTypeModule(cast.checkedType)
             ?: TODO("cast to $name")
         return coreCall(pos, "cast", listOf(value, moduleOf(pos, module)))
     }
@@ -1666,14 +1668,18 @@ internal class ElixirTranslator(
      * that the class's module never defines `get_<property>` / `set_<property>`.
      * Only code the frontend rejected gets here: a class that declares its
      * constructor inputs twice keeps the constructor's `this.x = x` and its
-     * reads of `this.x`, but loses the property. Another library's class cannot
-     * be checked from here, so its accessor call stands.
+     * reads of `this.x`, but loses the property.
+     *
+     * The answer is no only when every member could be seen: the class is this
+     * library's, and so is everything it inherits from. A class of another
+     * library, or one with an ancestor there, cannot be checked from here, so
+     * its accessor call stands.
      */
     private fun classLacksAccessor(subject: TmpL.Expression, property: String, setter: Boolean): Boolean {
         val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition ?: return false
         if (definition.abstractness != lang.temper.type.Abstractness.Concrete) return false
-        val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return false
-        val decl = types[base]?.takeIf { it.kind == TmpL.TypeDeclarationKind.Class } ?: return false
+        val decl = localType(definition.name)?.takeIf { it.kind == TmpL.TypeDeclarationKind.Class } ?: return false
+        if (hasExternalAncestor(decl)) return false
         return flattenMembers(decl).none {
             val accessor = if (setter) it is TmpL.Setter else it is TmpL.Getter
             accessor && (it as TmpL.GetterOrSetter).body != null && it.dotName.dotNameText == property
@@ -1684,8 +1690,7 @@ internal class ElixirTranslator(
     private fun concreteClassModule(subject: TmpL.Expression): List<String>? {
         val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition ?: return null
         if (definition.abstractness != lang.temper.type.Abstractness.Concrete) return null
-        val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return null
-        types[base]?.let { decl ->
+        localType(definition.name)?.let { decl ->
             return if (decl.kind == TmpL.TypeDeclarationKind.Class) typeModule(decl) else null
         }
         return externalModule(definition.name)
@@ -1700,9 +1705,14 @@ internal class ElixirTranslator(
     private fun builtinGet(expression: TmpL.GetProperty, subject: TmpL.Expression, fn: FunctionContext): Elixir.Expr? {
         val property = propertyText(expression.property)
         val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition
+        val pos = expression.pos
         if (definition == lang.temper.type.WellKnownTypes.invalidTypeDefinition) {
-            val pos = expression.pos
             return garbage(pos, TmpL.Diagnostic(pos, "read of .$property on a value of a type that did not compile"))
+        }
+        // AnyValue has no properties, so a read of one only survives in code the
+        // frontend rejected: a parameter whose declared type does not exist is one
+        if (definition == lang.temper.type.WellKnownTypes.anyValueTypeDefinition) {
+            return garbage(pos, TmpL.Diagnostic(pos, "read of .$property on a value with no properties"))
         }
         val owner = (definition?.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
         if (owner == null || owner in types || isExternal(definition?.name)) return null
@@ -1775,7 +1785,7 @@ internal class ElixirTranslator(
             level = level.flatMap { type ->
                 type.superTypes.mapNotNull { superType ->
                     val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
-                    if (seen.add(key)) types[key] else null
+                    if (seen.add(key)) localType(superType.typeName.sourceDefinition?.name) else null
                 }
             }
         }
@@ -1828,7 +1838,7 @@ internal class ElixirTranslator(
                 type.superTypes.mapNotNull { superType ->
                     val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
                     if (!seen.add(key)) return@mapNotNull null
-                    val found = types[key] ?: return@mapNotNull null
+                    val found = localType(superType.typeName.sourceDefinition?.name) ?: return@mapNotNull null
                     out.add(typeModule(found))
                     found
                 }
@@ -1842,7 +1852,7 @@ internal class ElixirTranslator(
 
     private fun typeNameModule(typeName: TmpL.TypeName): List<String> {
         val key = baseNameOf(typeName) ?: TODO("type with no name: $typeName")
-        return types[key]?.let { typeModule(it) }
+        return localType(typeName.sourceDefinition?.name)?.let { typeModule(it) }
             ?: externalModule(typeName.sourceDefinition?.name)
             ?: TODO("type not declared here: $key")
     }
@@ -1857,7 +1867,7 @@ internal class ElixirTranslator(
             ?: TODO("type value with no definition: $expression")
         val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
             ?: TODO("type value with no name: $expression")
-        types[base]?.let { return moduleOf(pos, typeModule(it)) }
+        localType(definition.name)?.let { return moduleOf(pos, typeModule(it)) }
         externalModule(definition.name)?.let { return moduleOf(pos, it) }
         return Elixir.Atom(pos, base)
     }
@@ -1886,6 +1896,49 @@ internal class ElixirTranslator(
     }
 
     private fun isExternal(name: lang.temper.name.TemperName?): Boolean = libraryOf(name) != null
+
+    /**
+     * This library's declaration of the type [name] names, or null when it names
+     * another library's type or a builtin. [types] is keyed by short name, so
+     * looking it up by short name alone would let a class here answer for a
+     * dependency's class of the same name.
+     */
+    private fun localType(name: lang.temper.name.TemperName?): TmpL.TypeDeclaration? {
+        if (isExternal(name)) return null
+        val base = (name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return null
+        return types[base]
+    }
+
+    /** Whether [decl] inherits from a type declared in another library, whose members cannot be seen here. */
+    private fun hasExternalAncestor(decl: TmpL.TypeDeclaration): Boolean {
+        val seen = mutableSetOf<TmpL.TypeDeclaration>()
+        var level = listOf(decl)
+        while (level.isNotEmpty()) {
+            level = level.flatMap { type ->
+                type.superTypes.mapNotNull { superType ->
+                    val name = superType.typeName.sourceDefinition?.name
+                    if (isExternal(name)) return true
+                    localType(name)?.takeIf(seen::add)
+                }
+            }
+        }
+        return false
+    }
+
+    private fun nominalName(type: TmpL.AType): lang.temper.name.TemperName? =
+        (type.ot as? TmpL.NominalType)?.typeName?.sourceDefinition?.name
+
+    /**
+     * The signature of the constructor a call names, when it is this library's and
+     * the call's own did not survive type checking ([invalidSig][arguments]): the
+     * declaration still knows its arity.
+     */
+    private fun constructorSig(callee: TmpL.ConstructorReference): lang.temper.type2.Signature2? {
+        if (callee.type.restInputsType != lang.temper.type.WellKnownTypes.invalidType2) return null
+        val decl = localType(callee.typeName.sourceDefinition?.name) ?: return null
+        val sig = decl.members.filterIsInstance<TmpL.Constructor>().firstOrNull()?.sig ?: return null
+        return sig.takeIf { it.restInputsType != lang.temper.type.WellKnownTypes.invalidType2 }
+    }
 
     /** `Temper.Std.JsonArray` for std's JsonArray. */
     private fun externalModule(name: lang.temper.name.TemperName?): List<String>? {

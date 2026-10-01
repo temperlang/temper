@@ -43,29 +43,22 @@ class ElixirBackendTest {
      * a later read of it even though the read can never run ("undefined
      * variable"). So nothing after a raise in the same block may be emitted.
      * ormery's generated Elixir failed `mix compile` five times this way once
-     * its broken reads stopped crashing the translator.
+     * its broken reads stopped crashing the translator. Here the raise is the
+     * read itself: `f`'s declared type does not exist, which leaves it typed
+     * AnyValue, and nothing raises before the read. (That read used to stop
+     * the build: AnyValue was looked up as a builtin with no getter.)
      */
     @Test
     fun nothingAfterARaiseReadsTheNameItWouldHaveBound() {
         val out = generatedText(
             """
-            |class Field(public fieldType: String) {}
-            |
-            |class Schema() {
-            |  public getField(): Field { new Field("Int") }
-            |}
-            |
-            |class Query(public schema: Schema) {
-            |  public constructor(schema: Schema) { this.schema = schema; }
-            |  public kind(): String {
-            |    let f = schema.getField();
-            |    let fieldKind = f.fieldType;
-            |    if (fieldKind == "Int") { "int" } else { "other" }
-            |  }
+            |export let kind(f: Nope): String {
+            |  let fieldKind = f.fieldType;
+            |  if (fieldKind == "Int") { "int" } else { "other" }
             |}
             """.trimMargin(),
         )
-        assertContains(out, "broken code")
+        assertContains(out, "broken code: read of .fieldType on a value with no properties")
         assertFalse("fieldKind ==" in out, "a read of fieldKind survives its raise:\n$out")
     }
 
@@ -231,6 +224,41 @@ class ElixirBackendTest {
         )
         assertFalse("Query.new(%TemperCore.Vec" in out, "the arguments were packed into one list:\n$out")
         assertContains(out, "Query.new(n, ")
+    }
+
+    /**
+     * A constructor call that did not type-check still has a constructor to
+     * call, and that constructor's own signature knows its arity. Passing the
+     * arguments as written called `new/2` against a `new/3` when the third
+     * input has a default.
+     */
+    @Test
+    fun aCallWithNoSignatureUsesItsConstructorsArity() {
+        val out = generatedText(
+            """
+            |export class Query(public name: String, public conds: List<Nope>, public limit: Int = 10) {}
+            |export let from(n: String): Query { new Query(n, []) }
+            """.trimMargin(),
+        )
+        assertContains(out, "Query.new(n, %TemperCore.Vec{t: {}}, nil)")
+    }
+
+    /**
+     * ExUnit refuses two tests with one name in a module, and two Temper modules
+     * may each have a `test("same")`: `test/temper_test.exs` then failed to
+     * compile ("test same is already defined"), so `mix test` ran nothing.
+     * A repeated title is numbered.
+     */
+    @Test
+    fun repeatedTestTitlesStillCompileUnderMixTest() {
+        val out = generatedText(
+            """
+            |test("same") { assert(1 == 1) { "first" } }
+            |test("same") { assert(2 == 2) { "second" } }
+            """.trimMargin(),
+        )
+        assertContains(out, "test \\u0022same\\u0022 do")
+        assertContains(out, "test \\u0022same (2)\\u0022 do")
     }
 
     /**

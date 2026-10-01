@@ -403,6 +403,10 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * library's top level and the tests' own run first, once, as tests read
      * the values they set. Text, not a tree: `use` and the `test "..." do`
      * macro are not in the output grammar.
+     *
+     * ExUnit refuses two tests with one name in a module, and one source file
+     * may have two `test("same")`, so a repeated title is numbered:
+     * "same", then "same (2)".
      */
     private fun exUnitFiles(
         testRoot: String,
@@ -417,9 +421,14 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                     append("defmodule $module do\n")
                     append("  use ExUnit.Case\n\n")
                     append("  setup_all do\n    $testRoot.$INIT_FUNCTION()\n    :ok\n  end\n")
+                    val used = mutableSetOf<String>()
                     for (test in group) {
+                        val title = titles[test] ?: test
+                        var unique = title
+                        var n = 1
+                        while (!used.add(unique)) unique = "$title (${++n})"
                         val where = lineOf(test)?.let { ", ${elixirStringText(it)}" } ?: ""
-                        append("\n  test ${elixirStringText(titles[test] ?: test)} do\n")
+                        append("\n  test ${elixirStringText(unique)} do\n")
                         append("    TemperCore.Test.check(&$testRoot.$test/1$where)\n  end\n")
                     }
                     append("end\n")
