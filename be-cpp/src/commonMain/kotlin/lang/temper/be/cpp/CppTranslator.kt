@@ -2321,6 +2321,9 @@ class CppTranslator(
         impl: MutableList<Cpp.Global>,
         templateMethodDefs: MutableList<Cpp.Global>,
     ) {
+        // Save type formals before translating anything else.
+        val typeFormals = member.typeParameters.ot.typeParameters
+        val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
         // If this method overrides a supertype getter/setter,
         // use the overridden dotName for the C++ method name
         // so it matches the interface's virtual method name.
@@ -2389,20 +2392,64 @@ class CppTranslator(
                     ),
                     qual = methodQual,
                 )
-                emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
-                if (hasOptional) {
-                    val scopedName = cpp.scopedName(
-                        cpp.name(topLevel.name),
-                        methodCppName.deepCopy(),
+                if (typeFormals.isNotEmpty()) {
+                    val templateParams = typeFormals.map { formal ->
+                        cpp.funcParam(
+                            cpp.singleName(
+                                CppName("class", allowKey = true),
+                            ),
+                            savedTypeFormalNames[formal.definition]
+                                ?: cpp.name(formal.name),
+                        )
+                    }
+                    add(
+                        cpp.templateFuncDef(templateParams, func.def),
                     )
-                    val retType =
-                        translateType(member.returnType)
-                    emitMethodOverloads(
-                        generateOptionalOverloads(scopedName, retType, methodFormals.toList()),
-                        isTemplate, impl, templateMethodDefs,
-                    )
+                    if (hasOptional) {
+                        val funcName = cpp.name(topLevel.name)
+                        val retType =
+                            translateType(member.returnType)
+                        for (
+                        (_, def) in generateOptionalOverloads(
+                            funcName,
+                            retType,
+                            methodFormals.toList(),
+                        )
+                        ) {
+                            add(
+                                cpp.templateFuncDef(
+                                    templateParams.map {
+                                        it.deepCopy()
+                                    },
+                                    def,
+                                ),
+                            )
+                        }
+                    }
+                } else {
+                    emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
+                    if (hasOptional) {
+                        val scopedName = cpp.scopedName(
+                            cpp.name(topLevel.name),
+                            methodCppName.deepCopy(),
+                        )
+                        val retType =
+                            translateType(member.returnType)
+                        emitMethodOverloads(
+                            generateOptionalOverloads(scopedName, retType, methodFormals.toList()),
+                            isTemplate, impl, templateMethodDefs,
+                        )
+                    }
                 }
             }
+        }
+        // Clean up formals for this scope.
+        // Ideally, this is in a finally block, but if we throw above, we've failed the translation, anyway.
+        for (formal in typeFormals) {
+            typeFormalNames.remove(formal.definition)
+        }
+        for (key in savedTypeFormalKeys) {
+            typeFormalNamesByText.remove(key)
         }
     }
 
@@ -2814,20 +2861,10 @@ class CppTranslator(
     ) {
         val formals = topLevel.parameters.parameters
         val hasOptional = formals.any { it.optional }
-        val typeFormals =
-            topLevel.typeParameters.ot.typeParameters
+        val typeFormals = topLevel.typeParameters.ot.typeParameters
         // Populate type formal map BEFORE translating
         // return type, param types, and body
-        val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
-        val savedTypeFormalKeys = mutableListOf<String>()
-        for (formal in typeFormals) {
-            val cppName = cpp.name(formal.name)
-            savedTypeFormalNames[formal.definition] = cppName
-            typeFormalNames[formal.definition] = cppName
-            val key = typeFormalKey(formal.definition)
-            typeFormalNamesByText[key] = cppName
-            savedTypeFormalKeys.add(key)
-        }
+        val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
         val paramTypes = formals.map {
             translateParamType(it)
         }
@@ -2901,6 +2938,20 @@ class CppTranslator(
         for (key in savedTypeFormalKeys) {
             typeFormalNamesByText.remove(key)
         }
+    }
+
+    private fun saveTypeFormals(typeFormals: List<TmpL.TypeFormal>): Pair<MutableMap<TypeDefinition, Cpp.SingleName>, MutableList<String>> {
+        val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
+        val savedTypeFormalKeys = mutableListOf<String>()
+        for (formal in typeFormals) {
+            val cppName = cpp.name(formal.name)
+            savedTypeFormalNames[formal.definition] = cppName
+            typeFormalNames[formal.definition] = cppName
+            val key = typeFormalKey(formal.definition)
+            typeFormalNamesByText[key] = cppName
+            savedTypeFormalKeys.add(key)
+        }
+        return Pair(savedTypeFormalNames, savedTypeFormalKeys)
     }
 
     private fun translateConnectedBody(
@@ -3205,6 +3256,13 @@ class CppTranslator(
             val hasTemplateFunctions = mod.topLevels.any { tl ->
                 tl is TmpL.ModuleFunctionDeclaration &&
                     tl.typeParameters.ot.typeParameters.isNotEmpty()
+            } || mod.topLevels.any { tl ->
+                tl is TmpL.TypeDeclaration &&
+                    tl.kind == TmpL.TypeDeclarationKind.Class && // not interface
+                    tl.members.any { member ->
+                        member is TmpL.Method &&
+                            member.typeParameters.ot.typeParameters.isNotEmpty()
+                    }
             }
 
             // All variable initializations and init blocks are deferred to

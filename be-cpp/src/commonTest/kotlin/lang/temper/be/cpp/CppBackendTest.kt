@@ -192,11 +192,6 @@ class CppBackendTest {
             cpp = """
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
-                |  std::shared_ptr<T> Classy::second(std::shared_ptr<std::vector<std::shared_ptr<T>>> const & things) const {
-                |    auto this_ = temper::core::borrow_this(this);
-                |    std::shared_ptr<T> thing = temper::core::List::get(things, 1);
-                |    return thing;
-                |  }
                 |  std::shared_ptr<T_3> Classy::third(std::shared_ptr<std::vector<std::shared_ptr<T_3>>> const & things_17) {
                 |    std::shared_ptr<T_3> thing_19 = temper::core::List::get(things_17, 2);
                 |    return thing_19;
@@ -222,7 +217,11 @@ class CppBackendTest {
                 |namespace my_test_library {
                 |  struct Classy;
                 |  struct Classy : public std::enable_shared_from_this<Classy> {
-                |    std::shared_ptr<T> second(std::shared_ptr<std::vector<std::shared_ptr<T>>> const &) const;
+                |    template<class T> T Classy::second(std::shared_ptr<std::vector<T>> const & things) const {
+                |      auto this_ = temper::core::borrow_this(this);
+                |      T thing = temper::core::List::get(things, 1);
+                |      return thing;
+                |    }
                 |    static std::shared_ptr<T_3> third(std::shared_ptr<std::vector<std::shared_ptr<T_3>>> const &);
                 |    static std::shared_ptr<Classy> make();
                 |  };
