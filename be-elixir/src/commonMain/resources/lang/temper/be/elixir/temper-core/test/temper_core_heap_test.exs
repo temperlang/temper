@@ -1,5 +1,6 @@
 defmodule TemperCore.HeapTest do
   use ExUnit.Case, async: true
+  require TemperCore.Heap
   alias TemperCore.Heap
 
   test "collect frees what nothing reaches and keeps what roots, globals and closures reach" do

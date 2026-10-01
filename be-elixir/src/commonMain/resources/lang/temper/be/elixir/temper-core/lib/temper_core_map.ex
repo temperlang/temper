@@ -1,6 +1,8 @@
 defmodule TemperCore.Pair do
   @moduledoc "Temper's `Pair`: a struct, so `pair.key` reads like any other object's property."
   defstruct [:key, :value]
+
+  @type t(key, value) :: %__MODULE__{key: key, value: value}
   def new(key, value), do: %__MODULE__{key: key, value: value}
   def get_key(pair), do: pair.key
   def get_value(pair), do: pair.value
@@ -20,6 +22,9 @@ defmodule TemperCore.Map do
   alias TemperCore.{Heap, Ref, Pair}
 
   defstruct keys: [], map: %{}
+
+  @typedoc "A Temper `Map`: its keys in the order they arrived, beside an Elixir map."
+  @type t(key, value) :: %__MODULE__{keys: [key], map: %{optional(key) => value}}
 
   @class :map_builder
 

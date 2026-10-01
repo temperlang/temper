@@ -11,6 +11,9 @@ defmodule TemperCore.Vec do
   """
   defstruct t: {}
 
+  @typedoc "A Temper `List` of `elem`. The tuple's elements are `elem`; a type cannot say so."
+  @type t(_elem) :: %__MODULE__{t: tuple()}
+
   @doc "A Temper List of these elements."
   def new(items) when is_list(items), do: %__MODULE__{t: List.to_tuple(items)}
 end

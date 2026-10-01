@@ -41,6 +41,8 @@ object ElixirFormattingHints : FormattingHints {
         // `defstruct[:x]` would be Access syntax on a call to `defstruct`
         preceding.text == "defstruct" -> true
         preceding.text == "|" || following.text == "|" -> true
+        // `@spec f() :: [module()]`: a type's `::` is spaced like a binary operator
+        preceding.text == "::" || following.text == "::" -> true
         // `puts(x)`, `:erlang.abs(x)`, but not `x = (a + b) * c`
         following.text == "(" && (preceding.type in callableTypes || preceding.text == ")") -> false
         following.text == "," -> false
@@ -55,7 +57,9 @@ object ElixirFormattingHints : FormattingHints {
         else -> super.spaceBetween(preceding, following)
     }
 
-    override fun shouldBreakAfter(token: OutputToken): Boolean = token.text in breakAfter
+    override fun shouldBreakAfter(token: OutputToken): Boolean =
+        // a function type's arrow is a Word; a clause's is punctuation
+        token.text in breakAfter && !(token.text == typeArrow.text && token.type == typeArrow.type)
 
     override fun shouldBreakBefore(token: OutputToken): Boolean = token.text in breakBefore
 

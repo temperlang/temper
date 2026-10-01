@@ -53,8 +53,14 @@ ModuleItem =
     | FunDef
     | ModuleAttr
     | ModuleDef
+    | Require
     | StructDef
+    | TypeDef
+    | TypeSpec
     ;
+
+/** `require TemperCore.Heap`: a module whose macros this one calls. */
+Require ::= "require" & module%ModuleName;
 
 /** `@moduledoc false` */
 ModuleAttr ::= "@" & id%Id & value%Expr;
@@ -82,6 +88,60 @@ FunDef.doc.default = `null`;
 FunDef.isPrivate.default = `false`;
 FunDef.params.default = `listOf()`;
 FunDef.guard.default = `null`;
+
+// ── Typespecs ────────────────────────────────────────────────────────────
+//
+// Types are their own nodes, not expressions: `::` and `|` mean something
+// else in an expression, and a spec built from expression nodes could render
+// as text that parses but is not the type that was meant.
+
+/** `@spec name(integer(), String.t()) :: boolean()` */
+TypeSpec ::= "@spec" & id%Id & "(" & params%TypeExpr*"," & ")" & "::" & result%TypeExpr;
+TypeSpec.params.default = `listOf()`;
+
+/** `@type t() :: %Temper.Lib.Point{x: integer()}`, or `@type t(a) :: ...` */
+TypeDef ::= "@type" & head%LocalType & "::" & body%TypeExpr;
+
+TypeExpr =
+      Atom
+    | FunType
+    | Id
+    | ListType
+    | LocalType
+    | NilLit
+    | RemoteType
+    | StructType
+    | TupleType
+    | UnionType
+    ;
+
+/** `integer()`, or a type's own parameter list: `t(a)` */
+LocalType ::= id%Id & "(" & args%TypeExpr*"," & ")";
+LocalType.args.default = `listOf()`;
+
+/** `String.t()`, `TemperCore.Vec.t(integer())` */
+RemoteType ::= module%ModuleName & "." & id%Id & "(" & args%TypeExpr*"," & ")";
+RemoteType.args.default = `listOf()`;
+
+/** `integer() | nil`. `|` binds loosest in a type, so a union needs no parentheses. */
+UnionType ::= types%TypeExpr+"|";
+
+/** `%Temper.Lib.Point{x: integer(), y: integer()}` */
+StructType ::= "%" & name%ModuleName & "{" & fields%TypeField*"," & "}";
+StructType.fields.default = `listOf()`;
+
+TypeField ::= key%Id & ":" & type%TypeExpr;
+
+/** `(integer(), String.t() -> boolean())` */
+FunType ::= "(" & params%TypeExpr*"," & `typeArrow` & result%TypeExpr & ")";
+FunType.params.default = `listOf()`;
+
+/** `[integer()]` */
+ListType ::= "[" & elem%TypeExpr & "]";
+
+/** `{:value, integer()}` */
+TupleType ::= "{" & items%TypeExpr*"," & "}";
+TupleType.items.default = `listOf()`;
 
 // ── Blocks ───────────────────────────────────────────────────────────────
 

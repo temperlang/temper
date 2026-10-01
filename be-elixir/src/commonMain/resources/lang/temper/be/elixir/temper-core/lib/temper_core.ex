@@ -6,6 +6,9 @@ defmodule TemperCore.Ref do
   heap. Two refs are equal exactly when they are the same object.
   """
   defstruct [:class, :id]
+
+  @typedoc "A mutable Temper object of class `class`, in the calling process's heap."
+  @type t :: %__MODULE__{class: module(), id: reference()}
 end
 
 defmodule TemperCore do
@@ -385,36 +388,77 @@ defmodule TemperCore.Heap do
   earlier calls stays alive. Those, and objects from code that never went
   through an entry, are left to `collect/1`, or to the process exiting.
   """
-  def entry(fun) do
+  #
+  # A macro, so that Dialyzer sees the call's value as the body's own: as a
+  # function taking a closure, every exported function returned any(), and
+  # no spec on one could be found false. Generated code writes
+  # `TemperCore.Heap.entry(fn -> body end)` and requires this module.
+  defmacro entry({:fn, _, [{:->, _, [[], body]}]}) do
+    quote do
+      heap = TemperCore.Heap.enter()
+
+      try do
+        result = unquote(body)
+        TemperCore.Heap.leave(heap, [result])
+        result
+      catch
+        kind, reason ->
+          TemperCore.Heap.leave(heap, [])
+          :erlang.raise(kind, reason, __STACKTRACE__)
+      end
+    end
+  end
+
+  defmacro entry(fun), do: quote(do: TemperCore.Heap.run(unquote(fun)))
+
+  @doc "`entry/1` for a function value, such as a method body an actor runs."
+  def run(fun) do
+    heap = enter()
+
+    try do
+      result = fun.()
+      leave(heap, [result])
+      result
+    catch
+      kind, reason ->
+        leave(heap, [])
+        :erlang.raise(kind, reason, __STACKTRACE__)
+    end
+  end
+
+  @doc false
+  # The outermost entry starts a nursery; a nested one only counts.
+  def enter do
     case Process.get(@depth, 0) do
       0 ->
         Process.put(@depth, 1)
         Process.put(@nursery, MapSet.new())
         Process.put(@remembered, MapSet.new())
-
-        try do
-          result = fun.()
-          minor([result])
-          result
-        catch
-          kind, reason ->
-            minor([])
-            :erlang.raise(kind, reason, __STACKTRACE__)
-        after
-          Process.delete(@depth)
-          Process.delete(@nursery)
-          Process.delete(@remembered)
-        end
+        :outer
 
       depth ->
         Process.put(@depth, depth + 1)
-
-        try do
-          fun.()
-        after
-          Process.put(@depth, depth)
-        end
+        depth
     end
+  end
+
+  @doc false
+  # The outermost entry frees what `roots` and the process do not reach.
+  def leave(:outer, roots) do
+    try do
+      minor(roots)
+    after
+      Process.delete(@depth)
+      Process.delete(@nursery)
+      Process.delete(@remembered)
+    end
+
+    nil
+  end
+
+  def leave(depth, _roots) do
+    Process.put(@depth, depth)
+    nil
   end
 
   # Frees the young objects that nothing reaches. Marking stops at older

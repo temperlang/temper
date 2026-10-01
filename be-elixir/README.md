@@ -370,7 +370,7 @@ change:
   The frontend enforces `@imu` ("Class P claims imu but has a `var`
   property"), so the struct can never be written after construction.
 - **A class marked `@actor`** is a process per instance,
-  `%TemperCore.Actor{class, id}`, that any process may hold (section 15).
+  `%TemperCore.Actor{class, id}`, that any process may hold (section 16).
 - **Any other class** is a `%TemperCore.Ref{class, id}` into a heap kept in
   the process dictionary.
 
@@ -646,7 +646,59 @@ checks every variable a function reads, reachable or not, so a later read
 of `t` would not compile ("undefined variable"); nothing after a raise in
 its block can run anyway ([`probes/10_unbound_after_raise.exs`](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/probes/10_unbound_after_raise.exs)).
 
-## 14. Long-running programs
+## 14. Typespecs
+
+Every function in generated code has an `@spec`, and every class module an
+`@type t`, written from the Temper types:
+
+```elixir
+@type t() :: %Temper.Tour.Point{x: integer(), y: integer()}
+@spec plus(Temper.Tour.Point.t(), Temper.Tour.Point.t()) :: Temper.Tour.Point.t()
+@spec firstOrNull(TemperCore.Vec.t(String.t())) :: String.t() | nil
+@spec greet(String.t(), String.t() | nil) :: String.t()
+@spec twice((integer() -> integer()), integer()) :: integer()
+```
+
+| Temper | Elixir type |
+|--------|-------------|
+| `Int`, `Int64`, a string index | `integer()` |
+| `Float64` | `TemperCore.Float.t()`: `float() \| :infinity \| :neg_infinity \| :nan` |
+| `String`, `Boolean` | `String.t()`, `boolean()` |
+| `Void`, `Null` | `nil`; `T?` is `t \| nil` |
+| `List<T>`, `Map<K, V>`, `Pair<K, V>` | `TemperCore.Vec.t(t)`, `TemperCore.Map.t(k, v)`, `TemperCore.Pair.t(k, v)` |
+| a builder, generator, promise, deque | `TemperCore.Ref.t()` |
+| an `@imu` class | its struct, field by field |
+| any other class, an `@actor` class | `TemperCore.Ref.t()`, `TemperCore.Actor.t()` |
+| an interface, a type parameter | `term()` |
+| `Never`, a function that only bubbles | `no_return()` |
+
+A parameter a caller may omit arrives as `nil`, so its type gains `| nil`. A
+function that `throws Bubble` returns its pass type when it returns. A
+builtin type with no entry fails the build and names itself.
+
+**The specs are checked.** `ElixirTypespecTest` generates a library that
+reaches every row above and runs Dialyzer over it and temper-core: a spec the
+code contradicts, a call that breaks one, or a type that does not exist fails
+the test. A spec nothing checks can be wrong without anyone knowing.
+To check your own library:
+
+```bash
+elixir be-elixir/src/commonTest/resources/lang/temper/be/elixir/dialyze.exs \
+  /tmp/temper.plt path/to/temper.out/elixir/my-lib
+```
+
+It builds a PLT on its first run (about 15 s), then prints each warning and
+`SPEC-TOTAL`, the ones about a spec.
+
+Two things made the checking real. `TemperCore.Heap.entry/1`, which every
+exported function runs through, is a macro: as a function taking a closure,
+it returned `any()` to Dialyzer, and no exported function's spec could be
+found false. Generated modules `require TemperCore.Heap` for it. And a value
+returned by a `throw`, as an early `return` from inside a loop is, is
+`any()` to Dialyzer, so such a function's result is not checked; its
+arguments still are, at every call.
+
+## 15. Long-running programs
 
 Mutable objects live in their process's heap, which leaves two problems
 for a program that keeps running. `TemperCore.Heap` provides a tool for
@@ -733,7 +785,7 @@ shared. The receiving process does not have to initialize anything: every
 exported function and constructor runs the library's `__temper_init__/0`
 first ([entry 24](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/2026-10-01-self-init.md)).
 
-## 15. Actors
+## 16. Actors
 
 A class marked `@actor` has instances that are processes. Any number of
 processes can hold one and change it, and all of them see the same object.
@@ -859,7 +911,7 @@ in an actor, whose single process makes each update one step.
 Each call runs through `Heap.entry` inside the actor, so garbage from a
 method is freed when the method returns.
 
-## 16. Using it in an app
+## 17. Using it in an app
 
 [Marginalia](https://github.com/notactuallytreyanastasio/marginalia), a
 Phoenix app, runs its core text logic from Temper this way: paragraph and
@@ -899,7 +951,7 @@ defp row(%Core.Row{kind: "same", left: l, right: r}), do: {:same, l, r}
 ```
 
 **Export only the API.** Every exported function runs the library's init
-check and `TemperCore.Heap.entry` (section 14). That is cheap once per call
+check and `TemperCore.Heap.entry` (section 15). That is cheap once per call
 from Elixir, but a helper called once per character pays it once per
 character. Un-exporting Marginalia's helpers was most of a 3x-to-5x
 slowdown.
@@ -936,7 +988,7 @@ binaries. [Entry 27](https://github.com/notactuallytreyanastasio/temper-blimp/bl
 reflow, which the original did with a regex per line, is faster in
 Temper.
 
-## 17. Deliberate differences from js and py
+## 18. Deliberate differences from js and py
 
 Where js and py agree and this backend does not, it is a bug, with one
 exception, chosen for Elixir developers using a translated library:
@@ -957,7 +1009,7 @@ with `==` compares their fields.
 Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
 `"007".toFloat64()` fail where js and py accept them.
 
-## 18. Limits
+## 19. Limits
 
 - **Inheriting from another library's interface.** A class gets every
   inherited member it does not override, but only from types its own
@@ -974,7 +1026,7 @@ Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
 - **A module-level mutable non-actor object is per process.** Each process
   gets its own copy on first read.
 
-## 19. Where things are
+## 20. Where things are
 
 - Backend: `be-elixir/src/commonMain/kotlin/lang/temper/be/elixir/`
 - Runtime: `be-elixir/src/commonMain/resources/lang/temper/be/elixir/temper-core/`
@@ -983,6 +1035,6 @@ Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
   supervision, driven from Elixir) and [`examples/twolibs/`](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/examples/twolibs) (one
   library using another)
 - Used in an app: [marginalia#6](https://github.com/notactuallytreyanastasio/marginalia/pull/6)
-  (section 16)
+  (section 17)
 - How each part came about: the dated entries in the
   [journal](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/README.md)

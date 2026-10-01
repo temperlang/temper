@@ -36,6 +36,9 @@ defmodule TemperCore.Actor do
 
   defstruct [:class, :id]
 
+  @typedoc "An `@actor` object: its class, and the id its process is registered under."
+  @type t :: %__MODULE__{class: module(), id: reference()}
+
   @registry TemperCore.Actors.Registry
   @self {__MODULE__, :fields}
   @self_id {__MODULE__, :id}
@@ -130,6 +133,7 @@ defmodule TemperCore.Actor do
   end
 
   @doc "A method body: run here if this is the actor, otherwise in the actor."
+  @spec run(t(), (-> result)) :: result when result: term()
   def run(%__MODULE__{class: class, id: id} = actor, body) do
     if Process.get(@self_id) == id do
       body.()
@@ -233,7 +237,7 @@ defmodule TemperCore.Actor do
     Process.put(@chain, chain)
 
     try do
-      value = Heap.entry(body)
+      value = Heap.run(body)
       TemperCore.Async.drain()
       sendable!(value, "a result")
       {:reply, {:ok, value}, state}

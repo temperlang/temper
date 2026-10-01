@@ -42,4 +42,15 @@ defmodule TemperCoreTestTest do
     error = assert_raise ExUnit.AssertionError, fn -> T.check(fn t -> T.assert(t, false, fn -> "bare" end) end) end
     assert error.message == "bare"
   end
+
+  test "processTestCases gives a Temper List of Pairs, as std's reportTestResults reads it" do
+    # process/1's {name, failures} tuples went straight to the translated
+    # reportTestResults, which reads each result's .key and .value.
+    ok = fn _t -> nil end
+    bad = fn t -> TemperCore.Test.assert(t, false, fn -> "nope" end) end
+    results = TemperCore.Test.process_cases(TemperCore.Vec.new([TemperCore.Pair.new("ok", ok), TemperCore.Pair.new("bad", bad)]))
+    assert %TemperCore.Vec{} = results
+    assert [%TemperCore.Pair{key: "ok", value: %TemperCore.Vec{t: {}}}, %TemperCore.Pair{key: "bad", value: failures}] = Enum.to_list(results)
+    assert Enum.to_list(failures) == ["nope"]
+  end
 end

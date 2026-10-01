@@ -78,3 +78,11 @@ internal fun elixirCommentText(text: String): String =
 private const val FIRST_PRINTABLE = 0x20
 private const val DELETE = 0x7f
 private const val HEX = 16
+
+/**
+ * The arrow of a function type, `(integer() -> boolean())`. The formatter
+ * breaks the line after a clause's `->`, where the clause body starts; inside
+ * a type that would split one spec over two lines. A token type of its own
+ * lets [ElixirFormattingHints] tell the two apart.
+ */
+internal val typeArrow = lang.temper.format.OutputToken("->", lang.temper.format.OutputTokenType.Word)

@@ -20,6 +20,9 @@ defmodule TemperCore.Float do
 
   defguardp special(x) when x in [:infinity, :neg_infinity, :nan]
 
+  @typedoc "A Temper `Float64`: a BEAM float, or one of the values a BEAM float cannot be."
+  @type t :: float() | :infinity | :neg_infinity | :nan
+
   @doc "A Temper Float64: a BEAM float, or `:infinity`, `:neg_infinity` or `:nan`."
   defguard float64?(x) when is_float(x) or x in [:infinity, :neg_infinity, :nan]
 

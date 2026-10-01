@@ -397,6 +397,52 @@ object Elixir {
         }
     }
 
+    /** `require TemperCore.Heap`: a module whose macros this one calls. */
+    class Require(
+        pos: Position,
+        module: ModuleName,
+    ) : BaseTree(pos), ModuleItem {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate8
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.module
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _module: ModuleName
+        var module: ModuleName
+            get() = _module
+            set(newValue) { _module = updateTreeConnection(_module, newValue) }
+        override fun deepCopy(): Require {
+            return Require(pos, module = this.module.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Require && this.module == other.module
+        }
+        override fun hashCode(): Int {
+            return module.hashCode()
+        }
+        init {
+            this._module = updateTreeConnection(null, module)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as Require).module },
+            )
+        }
+    }
+
     /** `defstruct [:x, :y]` */
     class StructDef(
         pos: Position,
@@ -405,7 +451,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate8
+            get() = sharedCodeFormattingTemplate9
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -443,6 +489,131 @@ object Elixir {
         }
     }
 
+    /** `@type t() :: %Temper.Lib.Point{x: integer()}`, or `@type t(a) :: ...` */
+    class TypeDef(
+        pos: Position,
+        head: LocalType,
+        body: TypeExpr,
+    ) : BaseTree(pos), ModuleItem {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate10
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.head
+                1 -> this.body
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _head: LocalType
+        var head: LocalType
+            get() = _head
+            set(newValue) { _head = updateTreeConnection(_head, newValue) }
+        private var _body: TypeExpr
+        var body: TypeExpr
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        override fun deepCopy(): TypeDef {
+            return TypeDef(pos, head = this.head.deepCopy(), body = this.body.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is TypeDef && this.head == other.head && this.body == other.body
+        }
+        override fun hashCode(): Int {
+            var hc = head.hashCode()
+            hc = 31 * hc + body.hashCode()
+            return hc
+        }
+        init {
+            this._head = updateTreeConnection(null, head)
+            this._body = updateTreeConnection(null, body)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as TypeDef).head },
+                { n -> (n as TypeDef).body },
+            )
+        }
+    }
+
+    /** `@spec name(integer(), String.t()) :: boolean()` */
+    class TypeSpec(
+        pos: Position,
+        id: Id,
+        params: Iterable<TypeExpr> = listOf(),
+        result: TypeExpr,
+    ) : BaseTree(pos), ModuleItem {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate11
+        override val formatElementCount
+            get() = 3
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.id
+                1 -> FormattableTreeGroup(this.params)
+                2 -> this.result
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _id: Id
+        var id: Id
+            get() = _id
+            set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        private val _params: MutableList<TypeExpr> = mutableListOf()
+        var params: List<TypeExpr>
+            get() = _params
+            set(newValue) { updateTreeConnections(_params, newValue) }
+        private var _result: TypeExpr
+        var result: TypeExpr
+            get() = _result
+            set(newValue) { _result = updateTreeConnection(_result, newValue) }
+        override fun deepCopy(): TypeSpec {
+            return TypeSpec(pos, id = this.id.deepCopy(), params = this.params.deepCopy(), result = this.result.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is TypeSpec && this.id == other.id && this.params == other.params && this.result == other.result
+        }
+        override fun hashCode(): Int {
+            var hc = id.hashCode()
+            hc = 31 * hc + params.hashCode()
+            hc = 31 * hc + result.hashCode()
+            return hc
+        }
+        init {
+            this._id = updateTreeConnection(null, id)
+            updateTreeConnections(this._params, params)
+            this._result = updateTreeConnection(null, result)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as TypeSpec).id },
+                { n -> (n as TypeSpec).params },
+                { n -> (n as TypeSpec).result },
+            )
+        }
+    }
+
+    sealed interface TypeExpr : Tree {
+        override fun deepCopy(): TypeExpr
+    }
+
     sealed interface Pattern : Tree {
         override fun deepCopy(): Pattern
     }
@@ -451,7 +622,7 @@ object Elixir {
     class Id(
         pos: Position,
         var outName: OutName,
-    ) : BaseTree(pos), Expr, Pattern {
+    ) : BaseTree(pos), TypeExpr, Expr, Pattern {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override fun renderTo(
@@ -483,7 +654,7 @@ object Elixir {
     class Atom(
         pos: Position,
         var text: String,
-    ) : BaseTree(pos), Expr, Pattern {
+    ) : BaseTree(pos), TypeExpr, Expr, Pattern {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override fun renderTo(
@@ -556,6 +727,459 @@ object Elixir {
         }
     }
 
+    /** `integer()`, or a type's own parameter list: `t(a)` */
+    class LocalType(
+        pos: Position,
+        id: Id,
+        args: Iterable<TypeExpr> = listOf(),
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate12
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.id
+                1 -> FormattableTreeGroup(this.args)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _id: Id
+        var id: Id
+            get() = _id
+            set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        private val _args: MutableList<TypeExpr> = mutableListOf()
+        var args: List<TypeExpr>
+            get() = _args
+            set(newValue) { updateTreeConnections(_args, newValue) }
+        override fun deepCopy(): LocalType {
+            return LocalType(pos, id = this.id.deepCopy(), args = this.args.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is LocalType && this.id == other.id && this.args == other.args
+        }
+        override fun hashCode(): Int {
+            var hc = id.hashCode()
+            hc = 31 * hc + args.hashCode()
+            return hc
+        }
+        init {
+            this._id = updateTreeConnection(null, id)
+            updateTreeConnections(this._args, args)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as LocalType).id },
+                { n -> (n as LocalType).args },
+            )
+        }
+    }
+
+    /** `(integer(), String.t() -> boolean())` */
+    class FunType(
+        pos: Position,
+        params: Iterable<TypeExpr> = listOf(),
+        result: TypeExpr,
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate13
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> FormattableTreeGroup(this.params)
+                1 -> this.result
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private val _params: MutableList<TypeExpr> = mutableListOf()
+        var params: List<TypeExpr>
+            get() = _params
+            set(newValue) { updateTreeConnections(_params, newValue) }
+        private var _result: TypeExpr
+        var result: TypeExpr
+            get() = _result
+            set(newValue) { _result = updateTreeConnection(_result, newValue) }
+        override fun deepCopy(): FunType {
+            return FunType(pos, params = this.params.deepCopy(), result = this.result.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is FunType && this.params == other.params && this.result == other.result
+        }
+        override fun hashCode(): Int {
+            var hc = params.hashCode()
+            hc = 31 * hc + result.hashCode()
+            return hc
+        }
+        init {
+            updateTreeConnections(this._params, params)
+            this._result = updateTreeConnection(null, result)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as FunType).params },
+                { n -> (n as FunType).result },
+            )
+        }
+    }
+
+    /** `[integer()]` */
+    class ListType(
+        pos: Position,
+        elem: TypeExpr,
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate14
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.elem
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _elem: TypeExpr
+        var elem: TypeExpr
+            get() = _elem
+            set(newValue) { _elem = updateTreeConnection(_elem, newValue) }
+        override fun deepCopy(): ListType {
+            return ListType(pos, elem = this.elem.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is ListType && this.elem == other.elem
+        }
+        override fun hashCode(): Int {
+            return elem.hashCode()
+        }
+        init {
+            this._elem = updateTreeConnection(null, elem)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as ListType).elem },
+            )
+        }
+    }
+
+    class NilLit(
+        pos: Position,
+    ) : BaseTree(pos), TypeExpr, Expr, Pattern {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate15
+        override val formatElementCount
+            get() = 0
+        override fun deepCopy(): NilLit {
+            return NilLit(pos)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is NilLit
+        }
+        override fun hashCode(): Int {
+            return 0
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
+    /** `String.t()`, `TemperCore.Vec.t(integer())` */
+    class RemoteType(
+        pos: Position,
+        module: ModuleName,
+        id: Id,
+        args: Iterable<TypeExpr> = listOf(),
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate16
+        override val formatElementCount
+            get() = 3
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.module
+                1 -> this.id
+                2 -> FormattableTreeGroup(this.args)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _module: ModuleName
+        var module: ModuleName
+            get() = _module
+            set(newValue) { _module = updateTreeConnection(_module, newValue) }
+        private var _id: Id
+        var id: Id
+            get() = _id
+            set(newValue) { _id = updateTreeConnection(_id, newValue) }
+        private val _args: MutableList<TypeExpr> = mutableListOf()
+        var args: List<TypeExpr>
+            get() = _args
+            set(newValue) { updateTreeConnections(_args, newValue) }
+        override fun deepCopy(): RemoteType {
+            return RemoteType(pos, module = this.module.deepCopy(), id = this.id.deepCopy(), args = this.args.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is RemoteType && this.module == other.module && this.id == other.id && this.args == other.args
+        }
+        override fun hashCode(): Int {
+            var hc = module.hashCode()
+            hc = 31 * hc + id.hashCode()
+            hc = 31 * hc + args.hashCode()
+            return hc
+        }
+        init {
+            this._module = updateTreeConnection(null, module)
+            this._id = updateTreeConnection(null, id)
+            updateTreeConnections(this._args, args)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as RemoteType).module },
+                { n -> (n as RemoteType).id },
+                { n -> (n as RemoteType).args },
+            )
+        }
+    }
+
+    /** `%Temper.Lib.Point{x: integer(), y: integer()}` */
+    class StructType(
+        pos: Position,
+        name: ModuleName,
+        fields: Iterable<TypeField> = listOf(),
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate17
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.name
+                1 -> FormattableTreeGroup(this.fields)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _name: ModuleName
+        var name: ModuleName
+            get() = _name
+            set(newValue) { _name = updateTreeConnection(_name, newValue) }
+        private val _fields: MutableList<TypeField> = mutableListOf()
+        var fields: List<TypeField>
+            get() = _fields
+            set(newValue) { updateTreeConnections(_fields, newValue) }
+        override fun deepCopy(): StructType {
+            return StructType(pos, name = this.name.deepCopy(), fields = this.fields.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is StructType && this.name == other.name && this.fields == other.fields
+        }
+        override fun hashCode(): Int {
+            var hc = name.hashCode()
+            hc = 31 * hc + fields.hashCode()
+            return hc
+        }
+        init {
+            this._name = updateTreeConnection(null, name)
+            updateTreeConnections(this._fields, fields)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as StructType).name },
+                { n -> (n as StructType).fields },
+            )
+        }
+    }
+
+    /** `{:value, integer()}` */
+    class TupleType(
+        pos: Position,
+        items: Iterable<TypeExpr> = listOf(),
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate18
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> FormattableTreeGroup(this.items)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private val _items: MutableList<TypeExpr> = mutableListOf()
+        var items: List<TypeExpr>
+            get() = _items
+            set(newValue) { updateTreeConnections(_items, newValue) }
+        override fun deepCopy(): TupleType {
+            return TupleType(pos, items = this.items.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is TupleType && this.items == other.items
+        }
+        override fun hashCode(): Int {
+            return items.hashCode()
+        }
+        init {
+            updateTreeConnections(this._items, items)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as TupleType).items },
+            )
+        }
+    }
+
+    /** `integer() | nil`. `|` binds loosest in a type, so a union needs no parentheses. */
+    class UnionType(
+        pos: Position,
+        types: Iterable<TypeExpr>,
+    ) : BaseTree(pos), TypeExpr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate19
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> FormattableTreeGroup(this.types)
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private val _types: MutableList<TypeExpr> = mutableListOf()
+        var types: List<TypeExpr>
+            get() = _types
+            set(newValue) { updateTreeConnections(_types, newValue) }
+        override fun deepCopy(): UnionType {
+            return UnionType(pos, types = this.types.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is UnionType && this.types == other.types
+        }
+        override fun hashCode(): Int {
+            return types.hashCode()
+        }
+        init {
+            updateTreeConnections(this._types, types)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as UnionType).types },
+            )
+        }
+    }
+
+    class TypeField(
+        pos: Position,
+        key: Id,
+        type: TypeExpr,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate20
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.key
+                1 -> this.type
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _key: Id
+        var key: Id
+            get() = _key
+            set(newValue) { _key = updateTreeConnection(_key, newValue) }
+        private var _type: TypeExpr
+        var type: TypeExpr
+            get() = _type
+            set(newValue) { _type = updateTreeConnection(_type, newValue) }
+        override fun deepCopy(): TypeField {
+            return TypeField(pos, key = this.key.deepCopy(), type = this.type.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is TypeField && this.key == other.key && this.type == other.type
+        }
+        override fun hashCode(): Int {
+            var hc = key.hashCode()
+            hc = 31 * hc + type.hashCode()
+            return hc
+        }
+        init {
+            this._key = updateTreeConnection(null, key)
+            this._type = updateTreeConnection(null, type)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as TypeField).key },
+                { n -> (n as TypeField).type },
+            )
+        }
+    }
+
     /** `f.(a, b)`: calling an anonymous function. */
     class AnonCall(
         pos: Position,
@@ -565,7 +1189,7 @@ object Elixir {
         override val operatorDefinition
             get() = ElixirOperatorDefinition.Postfix
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate9
+            get() = sharedCodeFormattingTemplate21
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -621,9 +1245,9 @@ object Elixir {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (value) {
-                    sharedCodeFormattingTemplate10
+                    sharedCodeFormattingTemplate22
                 } else {
-                    sharedCodeFormattingTemplate11
+                    sharedCodeFormattingTemplate23
                 }
         override val formatElementCount
             get() = 0
@@ -710,7 +1334,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate13
+            get() = sharedCodeFormattingTemplate24
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -766,7 +1390,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate14
+            get() = sharedCodeFormattingTemplate25
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -821,7 +1445,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate15
+            get() = sharedCodeFormattingTemplate26
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -868,7 +1492,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate16
+            get() = sharedCodeFormattingTemplate27
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -924,7 +1548,7 @@ object Elixir {
         override val operatorDefinition
             get() = ElixirOperatorDefinition.Postfix
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate17
+            get() = sharedCodeFormattingTemplate28
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -980,7 +1604,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate18
+            get() = sharedCodeFormattingTemplate29
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1039,9 +1663,9 @@ object Elixir {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (otherwise != null) {
-                    sharedCodeFormattingTemplate19
+                    sharedCodeFormattingTemplate30
                 } else {
-                    sharedCodeFormattingTemplate20
+                    sharedCodeFormattingTemplate31
                 }
         override val formatElementCount
             get() = 3
@@ -1104,7 +1728,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate21
+            get() = sharedCodeFormattingTemplate32
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1150,7 +1774,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate22
+            get() = sharedCodeFormattingTemplate33
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1197,7 +1821,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate23
+            get() = sharedCodeFormattingTemplate34
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1253,7 +1877,7 @@ object Elixir {
         override val operatorDefinition
             get() = ElixirOperatorDefinition.Match
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate24
+            get() = sharedCodeFormattingTemplate35
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1300,33 +1924,6 @@ object Elixir {
         }
     }
 
-    class NilLit(
-        pos: Position,
-    ) : BaseTree(pos), Expr, Pattern {
-        override val operatorDefinition: ElixirOperatorDefinition?
-            get() = null
-        override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate25
-        override val formatElementCount
-            get() = 0
-        override fun deepCopy(): NilLit {
-            return NilLit(pos)
-        }
-        override val childMemberRelationships
-            get() = cmr
-        override fun equals(
-            other: Any?,
-        ): Boolean {
-            return other is NilLit
-        }
-        override fun hashCode(): Int {
-            return 0
-        }
-        companion object {
-            private val cmr = ChildMemberRelationships()
-        }
-    }
-
     class NumberLit(
         pos: Position,
         var value: Number,
@@ -1369,13 +1966,13 @@ object Elixir {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (left != null && right != null) {
-                    sharedCodeFormattingTemplate26
+                    sharedCodeFormattingTemplate36
                 } else if (left != null) {
-                    sharedCodeFormattingTemplate27
+                    sharedCodeFormattingTemplate37
                 } else if (right != null) {
-                    sharedCodeFormattingTemplate28
+                    sharedCodeFormattingTemplate38
                 } else {
-                    sharedCodeFormattingTemplate29
+                    sharedCodeFormattingTemplate39
                 }
         override val formatElementCount
             get() = 3
@@ -1441,7 +2038,7 @@ object Elixir {
         override val operatorDefinition
             get() = ElixirOperatorDefinition.Postfix
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate30
+            get() = sharedCodeFormattingTemplate16
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -1536,7 +2133,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate31
+            get() = sharedCodeFormattingTemplate17
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1599,13 +2196,13 @@ object Elixir {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (rescues.isNotEmpty() && catches.isNotEmpty()) {
-                    sharedCodeFormattingTemplate32
+                    sharedCodeFormattingTemplate40
                 } else if (rescues.isNotEmpty()) {
-                    sharedCodeFormattingTemplate33
+                    sharedCodeFormattingTemplate41
                 } else if (catches.isNotEmpty()) {
-                    sharedCodeFormattingTemplate34
+                    sharedCodeFormattingTemplate42
                 } else {
-                    sharedCodeFormattingTemplate35
+                    sharedCodeFormattingTemplate43
                 }
         override val formatElementCount
             get() = 3
@@ -1668,7 +2265,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate36
+            get() = sharedCodeFormattingTemplate18
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -1721,9 +2318,9 @@ object Elixir {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (guard != null) {
-                    sharedCodeFormattingTemplate37
+                    sharedCodeFormattingTemplate44
                 } else {
-                    sharedCodeFormattingTemplate38
+                    sharedCodeFormattingTemplate45
                 }
         override val formatElementCount
             get() = 3
@@ -1787,7 +2384,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate39
+            get() = sharedCodeFormattingTemplate46
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1842,7 +2439,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate40
+            get() = sharedCodeFormattingTemplate47
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1898,7 +2495,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate41
+            get() = sharedCodeFormattingTemplate20
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -1984,7 +2581,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate42
+            get() = sharedCodeFormattingTemplate48
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2038,7 +2635,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate21
+            get() = sharedCodeFormattingTemplate32
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2084,7 +2681,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate22
+            get() = sharedCodeFormattingTemplate33
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2130,7 +2727,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate43
+            get() = sharedCodeFormattingTemplate49
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2177,7 +2774,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate44
+            get() = sharedCodeFormattingTemplate50
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2232,7 +2829,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate31
+            get() = sharedCodeFormattingTemplate17
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2286,7 +2883,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate36
+            get() = sharedCodeFormattingTemplate18
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2330,7 +2927,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate45
+            get() = sharedCodeFormattingTemplate51
         override val formatElementCount
             get() = 0
         override fun deepCopy(): Wildcard {
@@ -2359,7 +2956,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate40
+            get() = sharedCodeFormattingTemplate47
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2414,7 +3011,7 @@ object Elixir {
         override val operatorDefinition: ElixirOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate41
+            get() = sharedCodeFormattingTemplate20
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2581,8 +3178,17 @@ object Elixir {
             ),
         )
 
-    /** `defstruct [ {{0*,}} ]` */
+    /** `require {{0}}` */
     private val sharedCodeFormattingTemplate8 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("require", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+            ),
+        )
+
+    /** `defstruct [ {{0*,}} ]` */
+    private val sharedCodeFormattingTemplate9 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("defstruct", OutputTokenType.Word),
@@ -2595,28 +3201,33 @@ object Elixir {
             ),
         )
 
-    /** `{{0}} . ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate9 =
+    /** `@type {{0}} :: {{1}}` */
+    private val sharedCodeFormattingTemplate10 =
         CodeFormattingTemplate.Concatenation(
             listOf(
+                CodeFormattingTemplate.LiteralToken("@type", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `@spec {{0}} ( {{1*,}} ) :: {{2}}` */
+    private val sharedCodeFormattingTemplate11 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("@spec", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("::", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(2),
             ),
         )
-
-    /** `true` */
-    private val sharedCodeFormattingTemplate10 =
-        CodeFormattingTemplate.LiteralToken("true", OutputTokenType.Word)
-
-    /** `false` */
-    private val sharedCodeFormattingTemplate11 =
-        CodeFormattingTemplate.LiteralToken("false", OutputTokenType.Word)
 
     /** `{{0}} ( {{1*,}} )` */
     private val sharedCodeFormattingTemplate12 =
@@ -2632,201 +3243,37 @@ object Elixir {
             ),
         )
 
-    /** `& {{0}} / {{1}}` */
+    /** `( {{0*,}} `typeArrow` {{1}} )` */
     private val sharedCodeFormattingTemplate13 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("/", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken(typeArrow),
                 CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
             ),
         )
 
-    /** `case {{0}} do {{1*\n}} end` */
+    /** `[ {{0}} ]` */
     private val sharedCodeFormattingTemplate14 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.NewLine,
-                ),
-                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
-            ),
-        )
-
-    /** `cond do {{0*\n}} end` */
-    private val sharedCodeFormattingTemplate15 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("cond", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.NewLine,
-                ),
-                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
-            ),
-        )
-
-    /** `[ {{0*,}} | {{1}} ]` */
-    private val sharedCodeFormattingTemplate16 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
                 CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `{{0}} . {{1}}` */
-    private val sharedCodeFormattingTemplate17 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-            ),
-        )
-
-    /** `fn {{0*,}} -> {{1}} end` */
-    private val sharedCodeFormattingTemplate18 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
-            ),
-        )
-
-    /** `if {{0}} do {{1}} else {{2}} end` */
-    private val sharedCodeFormattingTemplate19 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(2),
-                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
-            ),
-        )
-
-    /** `if {{0}} do {{1}} end` */
-    private val sharedCodeFormattingTemplate20 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
-            ),
-        )
-
-    /** `[ {{0*,}} ]` */
-    private val sharedCodeFormattingTemplate21 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
-            ),
-        )
-
-    /** `%\{ {{0*,}} \}` */
-    private val sharedCodeFormattingTemplate22 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("%{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `%\{ {{0}} | {{1*,}} \}` */
-    private val sharedCodeFormattingTemplate23 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("%{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    1,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
-    /** `{{0}} = {{1}}` */
-    private val sharedCodeFormattingTemplate24 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
             ),
         )
 
     /** `nil` */
-    private val sharedCodeFormattingTemplate25 =
+    private val sharedCodeFormattingTemplate15 =
         CodeFormattingTemplate.LiteralToken("nil", OutputTokenType.Word)
 
-    /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate26 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.OneSubstitution(2),
-            ),
-        )
-
-    /** `{{0}} {{1}}` */
-    private val sharedCodeFormattingTemplate27 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.OneSubstitution(1),
-            ),
-        )
-
-    /** `{{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate28 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(1),
-                CodeFormattingTemplate.OneSubstitution(2),
-            ),
-        )
-
-    /** `{{1}}` */
-    private val sharedCodeFormattingTemplate29 =
-        CodeFormattingTemplate.OneSubstitution(1)
-
     /** `{{0}} . {{1}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate30 =
+    private val sharedCodeFormattingTemplate16 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -2842,7 +3289,7 @@ object Elixir {
         )
 
     /** `% {{0}} \{ {{1*,}} \}` */
-    private val sharedCodeFormattingTemplate31 =
+    private val sharedCodeFormattingTemplate17 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("%", OutputTokenType.Punctuation),
@@ -2856,8 +3303,250 @@ object Elixir {
             ),
         )
 
-    /** `try do {{0}} rescue {{1*\n}} catch {{2*\n}} end` */
+    /** `\{ {{0*,}} \}` */
+    private val sharedCodeFormattingTemplate18 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `{{0*|}}` */
+    private val sharedCodeFormattingTemplate19 =
+        CodeFormattingTemplate.GroupSubstitution(
+            0,
+            CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
+        )
+
+    /** `{{0}} : {{1}}` */
+    private val sharedCodeFormattingTemplate20 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `{{0}} . ( {{1*,}} )` */
+    private val sharedCodeFormattingTemplate21 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
+    /** `true` */
+    private val sharedCodeFormattingTemplate22 =
+        CodeFormattingTemplate.LiteralToken("true", OutputTokenType.Word)
+
+    /** `false` */
+    private val sharedCodeFormattingTemplate23 =
+        CodeFormattingTemplate.LiteralToken("false", OutputTokenType.Word)
+
+    /** `& {{0}} / {{1}}` */
+    private val sharedCodeFormattingTemplate24 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("/", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `case {{0}} do {{1*\n}} end` */
+    private val sharedCodeFormattingTemplate25 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.NewLine,
+                ),
+                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
+            ),
+        )
+
+    /** `cond do {{0*\n}} end` */
+    private val sharedCodeFormattingTemplate26 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("cond", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.NewLine,
+                ),
+                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
+            ),
+        )
+
+    /** `[ {{0*,}} | {{1}} ]` */
+    private val sharedCodeFormattingTemplate27 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
+    /** `{{0}} . {{1}}` */
+    private val sharedCodeFormattingTemplate28 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `fn {{0*,}} -> {{1}} end` */
+    private val sharedCodeFormattingTemplate29 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("fn", OutputTokenType.Word),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("-\u003e", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
+            ),
+        )
+
+    /** `if {{0}} do {{1}} else {{2}} end` */
+    private val sharedCodeFormattingTemplate30 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
+            ),
+        )
+
+    /** `if {{0}} do {{1}} end` */
+    private val sharedCodeFormattingTemplate31 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("do", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken("end", OutputTokenType.Word),
+            ),
+        )
+
+    /** `[ {{0*,}} ]` */
     private val sharedCodeFormattingTemplate32 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
+    /** `%\{ {{0*,}} \}` */
+    private val sharedCodeFormattingTemplate33 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("%{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.GroupSubstitution(
+                    0,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `%\{ {{0}} | {{1*,}} \}` */
+    private val sharedCodeFormattingTemplate34 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("%{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.GroupSubstitution(
+                    1,
+                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
+                ),
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `{{0}} = {{1}}` */
+    private val sharedCodeFormattingTemplate35 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `{{0}} {{1}} {{2}}` */
+    private val sharedCodeFormattingTemplate36 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.OneSubstitution(2),
+            ),
+        )
+
+    /** `{{0}} {{1}}` */
+    private val sharedCodeFormattingTemplate37 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.OneSubstitution(1),
+            ),
+        )
+
+    /** `{{1}} {{2}}` */
+    private val sharedCodeFormattingTemplate38 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.OneSubstitution(2),
+            ),
+        )
+
+    /** `{{1}}` */
+    private val sharedCodeFormattingTemplate39 =
+        CodeFormattingTemplate.OneSubstitution(1)
+
+    /** `try do {{0}} rescue {{1*\n}} catch {{2*\n}} end` */
+    private val sharedCodeFormattingTemplate40 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -2878,7 +3567,7 @@ object Elixir {
         )
 
     /** `try do {{0}} rescue {{1*\n}} end` */
-    private val sharedCodeFormattingTemplate33 =
+    private val sharedCodeFormattingTemplate41 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -2894,7 +3583,7 @@ object Elixir {
         )
 
     /** `try do {{0}} catch {{2*\n}} end` */
-    private val sharedCodeFormattingTemplate34 =
+    private val sharedCodeFormattingTemplate42 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -2910,7 +3599,7 @@ object Elixir {
         )
 
     /** `try do {{0}} end` */
-    private val sharedCodeFormattingTemplate35 =
+    private val sharedCodeFormattingTemplate43 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -2920,21 +3609,8 @@ object Elixir {
             ),
         )
 
-    /** `\{ {{0*,}} \}` */
-    private val sharedCodeFormattingTemplate36 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.GroupSubstitution(
-                    0,
-                    CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
-                ),
-                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
-            ),
-        )
-
     /** `{{0}} when {{1}} -> `SpecialTokens.indent` {{2}} `SpecialTokens.dedent`` */
-    private val sharedCodeFormattingTemplate37 =
+    private val sharedCodeFormattingTemplate44 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -2948,7 +3624,7 @@ object Elixir {
         )
 
     /** `{{0}} -> `SpecialTokens.indent` {{2}} `SpecialTokens.dedent`` */
-    private val sharedCodeFormattingTemplate38 =
+    private val sharedCodeFormattingTemplate45 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -2960,7 +3636,7 @@ object Elixir {
         )
 
     /** `{{0}} -> `SpecialTokens.indent` {{1}} `SpecialTokens.dedent`` */
-    private val sharedCodeFormattingTemplate39 =
+    private val sharedCodeFormattingTemplate46 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -2972,7 +3648,7 @@ object Elixir {
         )
 
     /** `{{0}} => {{1}}` */
-    private val sharedCodeFormattingTemplate40 =
+    private val sharedCodeFormattingTemplate47 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -2981,18 +3657,8 @@ object Elixir {
             ),
         )
 
-    /** `{{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate41 =
-        CodeFormattingTemplate.Concatenation(
-            listOf(
-                CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken(":", OutputTokenType.Punctuation),
-                CodeFormattingTemplate.OneSubstitution(1),
-            ),
-        )
-
     /** `[ {{0}} | {{1}} ]` */
-    private val sharedCodeFormattingTemplate42 =
+    private val sharedCodeFormattingTemplate48 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -3004,7 +3670,7 @@ object Elixir {
         )
 
     /** `^ {{0}}` */
-    private val sharedCodeFormattingTemplate43 =
+    private val sharedCodeFormattingTemplate49 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("^", OutputTokenType.Punctuation),
@@ -3013,7 +3679,7 @@ object Elixir {
         )
 
     /** `{{0}} in {{1}}` */
-    private val sharedCodeFormattingTemplate44 =
+    private val sharedCodeFormattingTemplate50 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -3023,6 +3689,6 @@ object Elixir {
         )
 
     /** `_` */
-    private val sharedCodeFormattingTemplate45 =
+    private val sharedCodeFormattingTemplate51 =
         CodeFormattingTemplate.LiteralToken("_", OutputTokenType.Word)
 }

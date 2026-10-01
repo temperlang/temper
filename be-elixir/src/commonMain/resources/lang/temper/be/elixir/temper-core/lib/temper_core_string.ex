@@ -113,8 +113,14 @@ defmodule TemperCore.String do
   end
 
   @doc "JSON number syntax plus `NaN` and the infinities, after trimming whitespace."
+  @spec to_float64(String.t()) :: TemperCore.Float.t()
   def to_float64(s) do
-    TemperCore.Float.parse(s) || raise(TemperCore.Bubble, "#{inspect(s)} is not a number")
+    # a case, not `parse(s) || raise(...)`: Dialyzer cannot see that `||`
+    # leaves no nil, and the spec says there is none
+    case TemperCore.Float.parse(s) do
+      nil -> raise TemperCore.Bubble, "#{inspect(s)} is not a number"
+      f -> f
+    end
   end
 end
 

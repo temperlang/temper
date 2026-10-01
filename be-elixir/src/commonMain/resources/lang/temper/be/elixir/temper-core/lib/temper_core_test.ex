@@ -46,7 +46,7 @@ defmodule TemperCore.Test do
   def messages(t), do: Heap.get(t, :messages)
   def failed_on_assert(t), do: Heap.get(t, :failed_on_assert)
 
-  @doc "`processTestCases`: each test's name and its failure messages, empty when it passed."
+  @doc "Each test's name and its failure messages, empty when it passed, as an Elixir list of tuples."
   def process(cases) do
     Enum.map(TemperCore.List.items(cases), fn %TemperCore.Pair{key: name, value: fun} ->
       t = new()
@@ -68,6 +68,19 @@ defmodule TemperCore.Test do
 
       {name, failures}
     end)
+  end
+
+  @doc """
+  `std/testing.processTestCases()`: each case's name and its failure
+  messages, as a Temper `List` of `Pair`s, which is what the translated
+  `reportTestResults` reads. `process/1` is the same as an Elixir list.
+  """
+  @spec process_cases(term()) :: TemperCore.Vec.t(TemperCore.Pair.t(String.t(), TemperCore.Vec.t(String.t())))
+  def process_cases(cases) do
+    cases
+    |> process()
+    |> Enum.map(fn {name, failures} -> TemperCore.Pair.new(name, TemperCore.Vec.new(failures)) end)
+    |> TemperCore.Vec.new()
   end
 
   @doc """

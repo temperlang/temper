@@ -110,6 +110,11 @@ internal class ElixirTranslator(
 
     private val functions = mutableListOf<Elixir.ModuleItem>()
 
+    /** `@spec` and `@type` types: a class is its module's `t()`, this library's or another's. */
+    private val specs = ElixirTypespecs { shape ->
+        localType(shape.name)?.let { typeModule(it) } ?: externalModule(shape.name)
+    }
+
     /** Whether the class being translated is `@actor`: its instances are processes. */
     private var currentClassIsActor = false
 
@@ -290,11 +295,19 @@ internal class ElixirTranslator(
                 mainBody.addAll(statements(topLevel.body.statements, End.Discard, fn))
             }
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
-            is TmpL.ModuleFunctionDeclaration ->
-                functions.add(names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) })
+            is TmpL.ModuleFunctionDeclaration -> {
+                val fn = names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) }
+                functions.add(spec(fn, topLevel.parameters.parameters, specs.of(topLevel.returnType)))
+                functions.add(fn)
+            }
             // each member names its own locals; see translateType
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
-            is TmpL.Test -> functions.add(names.withLocals(declaredIn(topLevel)) { translateTest(topLevel) })
+            is TmpL.Test -> {
+                val fn = names.withLocals(declaredIn(topLevel)) { translateTest(topLevel) }
+                // a test's value is whatever its last statement left; nothing reads it
+                functions.add(spec(fn, topLevel.parameters.parameters, specs.builtin(topLevel.pos, "term")))
+                functions.add(fn)
+            }
             is TmpL.GarbageTopLevel -> mainBody.add(garbage(topLevel.pos, topLevel.diagnostic))
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
             // comments and garbage carry no Elixir output
@@ -397,6 +410,33 @@ internal class ElixirTranslator(
             params = params,
             body = if (decl.name.name is lang.temper.name.ExportedName) entry(pos, translated) else translated,
         )
+    }
+
+    /**
+     * `@spec` for [fn], whose parameters are [formals] after any leading
+     * [self]: what each formal's Temper type is on the BEAM, `nil` added for
+     * one a caller may leave out.
+     */
+    private fun spec(
+        fn: Elixir.FunDef,
+        formals: List<TmpL.Formal>,
+        result: Elixir.TypeExpr,
+        self: Elixir.TypeExpr? = null,
+    ): Elixir.TypeSpec {
+        val pos = fn.pos
+        val params = formals.map { formal ->
+            specs.of(formal.type).let {
+                if (formal.optionalState !=
+                    lang.temper.common.TriState.FALSE
+                ) {
+                    specs.orNil(pos, it)
+                } else {
+                    it
+                }
+            }
+        }
+        val id = Elixir.Id(pos, fn.id.outName)
+        return Elixir.TypeSpec(pos, id, params = listOfNotNull(self) + params, result = result)
     }
 
     /**
@@ -1371,33 +1411,38 @@ internal class ElixirTranslator(
             .map { fieldText(it.name) }
         val items = mutableListOf<Elixir.ModuleItem>()
         if (isStruct) items.add(Elixir.StructDef(pos, fields.map { Elixir.Atom(pos, it) }))
-        items.add(
-            Elixir.FunDef(
+        items.add(typeT(decl, module, flattened, isStruct, isActor, isClass))
+        val supertypes = Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, OutName(SUPERTYPES, null)),
+            body = Elixir.Block(
                 pos,
-                id = Elixir.Id(pos, OutName(SUPERTYPES, null)),
-                body = Elixir.Block(
-                    pos,
-                    listOf(Elixir.ListLit(pos, (listOf(module) + ancestorModules(decl)).map { moduleOf(pos, it) })),
-                ),
+                listOf(Elixir.ListLit(pos, (listOf(module) + ancestorModules(decl)).map { moduleOf(pos, it) })),
             ),
         )
+        val modules = Elixir.ListType(pos, specs.builtin(pos, "module"))
+        items.add(Elixir.TypeSpec(pos, Elixir.Id(pos, OutName(SUPERTYPES, null)), result = modules))
+        items.add(supertypes)
+        val self = { specs.remote(pos, module, "t") }
         for (member in flattened) {
             when (member) {
                 is TmpL.InstanceProperty -> {}
                 is TmpL.Constructor -> if (isClass) {
-                    items.add(names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) })
+                    val fn = names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) }
+                    items.add(spec(fn, memberFormals(member), self()))
+                    items.add(fn)
                 }
                 is TmpL.NormalMethod -> member.body?.let {
-                    items.add(memberDef(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                    items.addAll(specced(member, names.sanitize(member.dotName.dotNameText), module, isStruct, self()))
                 }
                 is TmpL.Getter -> member.body?.let {
-                    items.add(memberDef(member, getterName(member.dotName.dotNameText), module, isStruct))
+                    items.addAll(specced(member, getterName(member.dotName.dotNameText), module, isStruct, self()))
                 }
                 is TmpL.Setter -> member.body?.let {
-                    items.add(memberDef(member, setterName(member.dotName.dotNameText), module, isStruct))
+                    items.addAll(specced(member, setterName(member.dotName.dotNameText), module, isStruct, self()))
                 }
                 is TmpL.StaticMethod -> member.body?.let {
-                    items.add(memberDef(member, names.sanitize(member.dotName.dotNameText), module, isStruct))
+                    items.addAll(specced(member, names.sanitize(member.dotName.dotNameText), module, isStruct, null))
                 }
                 is TmpL.StaticProperty -> {
                     val fn = FunctionContext(returnTag = null)
@@ -1415,6 +1460,64 @@ internal class ElixirTranslator(
             }
         }
         return Elixir.ModuleDef(pos, name = moduleOf(pos, module), items = items)
+    }
+
+    /**
+     * `@type t`, what a value of this class is: its struct for an `@imu`
+     * class, an actor or a heap object otherwise. An interface's values may be
+     * any of those, from any library, so it is `term()`.
+     */
+    private fun typeT(
+        decl: TmpL.TypeDeclaration,
+        module: List<String>,
+        flattened: List<TmpL.Member>,
+        isStruct: Boolean,
+        isActor: Boolean,
+        isClass: Boolean,
+    ): Elixir.TypeDef {
+        val pos = decl.pos
+        val body = when {
+            !isClass -> specs.builtin(pos, "term")
+            isStruct -> Elixir.StructType(
+                pos,
+                name = moduleOf(pos, module),
+                fields = flattened.filterIsInstance<TmpL.InstanceProperty>()
+                    .filter { it.memberShape.abstractness == lang.temper.type.Abstractness.Concrete }
+                    .map { field ->
+                        val key = Elixir.Id(pos, OutName(fieldText(field.name), null))
+                        Elixir.TypeField(pos, key, specs.of(field.type))
+                    },
+            )
+            isActor -> specs.remote(pos, listOf("TemperCore", "Actor"), "t")
+            else -> specs.remote(pos, listOf("TemperCore", "Ref"), "t")
+        }
+        return Elixir.TypeDef(pos, Elixir.LocalType(pos, Elixir.Id(pos, OutName("t", null))), body)
+    }
+
+    /** A member's declared parameters, without `this`. */
+    private fun memberFormals(member: TmpL.FunctionDeclarationOrMethod): List<TmpL.Formal> {
+        val thisName = member.parameters.thisName?.name
+        return member.parameters.parameters.filter { nameOf(it.name) != thisName }
+    }
+
+    /** A method and its `@spec`; [self] is the type of `this`, null for a static. */
+    private fun specced(
+        member: TmpL.FunctionDeclarationOrMethod,
+        name: String,
+        module: List<String>,
+        isStruct: Boolean,
+        self: Elixir.TypeExpr?,
+    ): List<Elixir.ModuleItem> {
+        val fn = memberDef(member, name, module, isStruct)
+        val thisSelf = if (member.parameters.thisName != null) self else null
+        // an abstract method's body, or a connected one's, only raises: calls to
+        // an implementation, or to support code, never reach it
+        val result = if (isPanicPlaceholder(member.body)) {
+            specs.builtin(member.pos, "no_return")
+        } else {
+            specs.of(member.returnType)
+        }
+        return listOf(spec(fn, memberFormals(member), result, thisSelf), fn)
     }
 
     private fun constructor(

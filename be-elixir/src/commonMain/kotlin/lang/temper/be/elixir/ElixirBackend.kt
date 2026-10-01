@@ -181,15 +181,16 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             (classModules + functions + prodBody).any { refersTo(it, prefix) }
         }
         val testDeps = dependencies - prodDeps.toSet()
+        val main = Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody))
+        val rootItems = listOf(requireHeap(pos)) + functions +
+            initFunction(pos, root, listOf(), prodDeps, prodBody) + specced(main)
         val libraryFile = Elixir.SourceFile(
             pos,
             items = classModules + listOf(
                 Elixir.ModuleDef(
                     pos,
                     name = rootModule,
-                    items = functions + initFunction(pos, root, listOf(), prodDeps, prodBody) + listOf(
-                        Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody)),
-                    ),
+                    items = rootItems,
                 ),
             ),
         ).also(::tidy)
@@ -207,9 +208,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             val testModule = Elixir.ModuleDef(
                 pos,
                 name = elixirModule(pos, testRoot),
-                items = testFunctions +
+                items = listOf(requireHeap(pos)) + testFunctions +
                     initFunction(pos, testRoot, listOf(root), testDeps, testBody) +
-                    listOfNotNull(testRunner(pos, testRoot, allTests)),
+                    (testRunner(pos, testRoot, allTests)?.let { specced(it, "term") } ?: listOf()),
             )
             listOf(
                 TranslatedFileSpecification(
@@ -255,28 +256,46 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         first: List<List<String>>,
         deps: List<lang.temper.name.DashedIdentifier>,
         body: List<Elixir.BlockItem>,
-    ): Elixir.FunDef {
+    ): List<Elixir.ModuleItem> {
         val calls = (first + deps.map(::libraryModule)).map { m ->
             remoteCall(pos, elixirModule(pos, m), INIT_FUNCTION, listOf())
         }
-        return Elixir.FunDef(
-            pos,
-            id = Elixir.Id(pos, OutName(INIT_FUNCTION, null)),
-            body = Elixir.Block(
+        return specced(
+            Elixir.FunDef(
                 pos,
-                listOf(
-                    remoteCall(
-                        pos,
-                        elixirModule(pos, "TemperCore"),
-                        "init_once",
-                        listOf(
-                            Elixir.Atom(pos, module.joinToString(".")),
-                            Elixir.Fn(pos, body = Elixir.Block(pos, calls + body + Elixir.NilLit(pos))),
+                id = Elixir.Id(pos, OutName(INIT_FUNCTION, null)),
+                body = Elixir.Block(
+                    pos,
+                    listOf(
+                        remoteCall(
+                            pos,
+                            elixirModule(pos, "TemperCore"),
+                            "init_once",
+                            listOf(
+                                Elixir.Atom(pos, module.joinToString(".")),
+                                Elixir.Fn(pos, body = Elixir.Block(pos, calls + body + Elixir.NilLit(pos))),
+                            ),
                         ),
                     ),
                 ),
             ),
         )
+    }
+
+    /** `TemperCore.Heap.entry/1`, which every exported function runs through, is a macro. */
+    private fun requireHeap(
+        pos: lang.temper.log.Position,
+    ): Elixir.ModuleItem = Elixir.Require(pos, elixirModule(pos, "TemperCore", "Heap"))
+
+    /**
+     * `@spec` for a function the backend writes itself, of no arguments:
+     * init and the entry point return `nil`.
+     */
+    private fun specced(fn: Elixir.FunDef, result: String? = null): List<Elixir.ModuleItem> {
+        val pos = fn.pos
+        val type: Elixir.TypeExpr =
+            result?.let { Elixir.LocalType(pos, Elixir.Id(pos, OutName(it, null))) } ?: Elixir.NilLit(pos)
+        return listOf(Elixir.TypeSpec(pos, Elixir.Id(pos, fn.id.outName), result = type), fn)
     }
 
     /**

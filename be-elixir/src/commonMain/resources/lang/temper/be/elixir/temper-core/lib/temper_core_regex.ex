@@ -46,7 +46,8 @@ defmodule TemperCore.Regex do
   end
 
   @doc "`replace`: every match replaced by what `format` makes of it."
-  def replace({mp, names}, text, format, match_module, group_module) do
+  @spec replace(term(), String.t(), (term() -> String.t()), module(), module()) :: String.t()
+  def replace({mp, names}, text, format, match_module, group_module) when is_binary(text) do
     case :re.run(text, mp, [:global, {:capture, [0 | names], :index}]) do
       :nomatch ->
         text

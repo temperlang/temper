@@ -480,7 +480,7 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedIn("Test", "std/testing.type Test.messages()", "messages"),
         connectedIn("Test", "std/testing.type Test.get failedOnAssert()", "failed_on_assert"),
         connectedIn("Test", "std/testing.runTestCases()", "run_cases"),
-        connectedIn("Test", "std/testing.processTestCases()", "process"),
+        connectedIn("Test", "std/testing.processTestCases()", "process_cases"),
         // std/regex formats a pattern itself; the host compiles and runs it.
         // A member's first argument is `this`, unused here. Match and Group
         // are std's own classes, passed in so temper-core never names std.
