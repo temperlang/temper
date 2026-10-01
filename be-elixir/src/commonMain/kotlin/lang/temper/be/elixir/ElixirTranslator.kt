@@ -755,8 +755,13 @@ internal class ElixirTranslator(
             is TmpL.LocalFunctionDeclaration -> localFunction(statement, fn)
             is TmpL.SetAbstractProperty -> {
                 val subject = statement.left.subject as? TmpL.Expression ?: TODO("setter subject: $statement")
+                val property = propertyText(statement.left.property)
+                if (classLacksAccessor(subject, property, setter = true)) {
+                    val message = "write of .$property on a class that does not declare it"
+                    return listOf(garbage(pos, TmpL.Diagnostic(pos, message)))
+                }
                 val value = expression(statement.right, fn)
-                listOf(dispatch(pos, subject, setterName(propertyText(statement.left.property)), listOf(value), fn))
+                listOf(dispatch(pos, subject, setterName(property), listOf(value), fn))
             }
             else -> TODO("statement: $statement")
         }
@@ -1148,12 +1153,17 @@ internal class ElixirTranslator(
      * The arguments a call passes, from those it was given: omitted optional
      * ones become nil (the body tests for null itself), and anything past the
      * fixed parameters is packed into the rest parameter's list.
+     *
+     * A call the frontend could not type-check carries `invalidSig`, which
+     * claims a rest parameter and nothing else. Its real arity is unknown, so
+     * its arguments go as written rather than packed into one list.
      */
     private fun arguments(
         pos: Position,
         sig: lang.temper.type2.Signature2,
         given: List<Elixir.Expr>,
     ): List<Elixir.Expr> {
+        if (sig.restInputsType == lang.temper.type.WellKnownTypes.invalidType2) return given
         val fixed = sig.requiredInputTypes.size - (if (sig.hasThisFormal) 1 else 0) + sig.optionalInputTypes.size
         val padded = if (given.size < fixed) given + List(fixed - given.size) { Elixir.NilLit(pos) } else given
         return when (sig.restInputsType) {
@@ -1622,7 +1632,11 @@ internal class ElixirTranslator(
     private fun getAbstract(expression: TmpL.GetAbstractProperty, fn: FunctionContext): Elixir.Expr {
         val pos = expression.pos
         builtinGet(expression, expression.subject, fn)?.let { return it }
-        return dispatch(pos, expression.subject, getterName(propertyText(expression.property)), listOf(), fn)
+        val property = propertyText(expression.property)
+        if (classLacksAccessor(expression.subject, property, setter = false)) {
+            return garbage(pos, TmpL.Diagnostic(pos, "read of .$property on a class that does not declare it"))
+        }
+        return dispatch(pos, expression.subject, getterName(property), listOf(), fn)
     }
 
     /**
@@ -1644,6 +1658,26 @@ internal class ElixirTranslator(
         val module = concreteClassModule(subject)
             ?: return coreCall(pos, "call", listOf(receiver, Elixir.Atom(pos, method), Elixir.ListLit(pos, args)))
         return remoteCall(pos, moduleOf(pos, module), method, listOf(receiver) + args)
+    }
+
+    /**
+     * Whether [subject]'s static type is a class of this library with no getter
+     * (or, for [setter], no setter) for [property], counting inherited ones, so
+     * that the class's module never defines `get_<property>` / `set_<property>`.
+     * Only code the frontend rejected gets here: a class that declares its
+     * constructor inputs twice keeps the constructor's `this.x = x` and its
+     * reads of `this.x`, but loses the property. Another library's class cannot
+     * be checked from here, so its accessor call stands.
+     */
+    private fun classLacksAccessor(subject: TmpL.Expression, property: String, setter: Boolean): Boolean {
+        val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition ?: return false
+        if (definition.abstractness != lang.temper.type.Abstractness.Concrete) return false
+        val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return false
+        val decl = types[base]?.takeIf { it.kind == TmpL.TypeDeclarationKind.Class } ?: return false
+        return flattenMembers(decl).none {
+            val accessor = if (setter) it is TmpL.Setter else it is TmpL.Getter
+            accessor && (it as TmpL.GetterOrSetter).body != null && it.dotName.dotNameText == property
+        }
     }
 
     /** The module of [subject]'s static type when that is a concrete class, this library's or another's. */

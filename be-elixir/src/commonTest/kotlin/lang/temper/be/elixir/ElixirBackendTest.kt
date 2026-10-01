@@ -173,6 +173,64 @@ class ElixirBackendTest {
         assertFalse("test_helper.exs" in out, out)
         assertFalse("elixirc_paths" in fileContent(out, "mix.exs"))
     }
+
+    /**
+     * A class that declares its inputs twice is rejected, and its constructor's
+     * `this.schema = schema` is left writing a property the class no longer
+     * has. Calling `Query.set_schema/2` there names a function that is never
+     * defined: a compiler warning, and UndefinedFunctionError when Elixir code
+     * constructs the class. It is broken code like the rest of the class.
+     */
+    @Test
+    fun aWriteToAPropertyTheClassDoesNotHaveIsBrokenCode() {
+        val out = generatedText(
+            """
+            |class Schema() {}
+            |
+            |class Query(public schema: Schema) {
+            |  public constructor(schema: Schema) { this.schema = schema; }
+            |}
+            """.trimMargin(),
+        )
+        assertFalse("set_schema(" in out, "a call of a setter Query never defines:\n$out")
+        assertContains(out, "broken code: write of .schema")
+    }
+
+    /** The same class, read: `get_schema/1` is never defined either. */
+    @Test
+    fun aReadOfAPropertyTheClassDoesNotHaveIsBrokenCode() {
+        val out = generatedText(
+            """
+            |class Schema() {}
+            |
+            |class Query(public schema: Schema) {
+            |  public constructor(schema: Schema) { }
+            |  public peek(): Schema { this.schema }
+            |}
+            """.trimMargin(),
+        )
+        assertFalse("get_schema(" in out, "a call of a getter Query never defines:\n$out")
+        assertContains(out, "broken code: read of .schema")
+    }
+
+    /**
+     * A call the frontend could not type-check carries `invalidSig`: no fixed
+     * parameters and a rest parameter of type *Invalid*. Packing by that
+     * signature put every argument into one list, a call of `Query.new/1`
+     * against a `new/2`. With the real arity unknown, the arguments go as
+     * written, as they do in js.
+     */
+    @Test
+    fun aCallWithNoSignatureKeepsItsArguments() {
+        val out = generatedText(
+            """
+            |export class Query(public name: String, public conds: List<Nope>) {}
+            |export let from(n: String): Query { new Query(n, []) }
+            """.trimMargin(),
+        )
+        assertFalse("Query.new(%TemperCore.Vec" in out, "the arguments were packed into one list:\n$out")
+        assertContains(out, "Query.new(n, ")
+    }
 }
 
 /**
