@@ -811,9 +811,13 @@ The rules, one per line of that output:
   `TemperCore.Actor.supervised(fn -> ... end)` start under the
   `TemperCore.Actors` supervisor instead. They outlive their creator. After
   a crash they restart by re-running their constructor with the same
-  arguments: fresh state, the same identity, as OTP does. A call that
-  reaches the dead process retries once on the new one. It never ran,
-  because an actor only stops after replying to the call that crashed it.
+  arguments: the same identity, but the constructor's state, not the
+  state they had. That is OTP's restart. A call that was waiting behind
+  the one that crashed the actor, or that reached the dead process, is
+  tried once on the new one; it never ran, because an actor stops only
+  after replying to the call that crashed it. A call that was running when
+  the actor was killed is not tried again, which would run it twice: its
+  caller gets a `Panic` saying the actor ended during the call.
   `TemperCore.Actor.stop/1` ends either kind.
 - **Errors and crashes are different.** A Temper bubble or panic is the
   result of one call, and the actor carries on. Any other exception (an

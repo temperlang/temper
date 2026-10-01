@@ -138,21 +138,33 @@ defmodule TemperCore.Actor do
       else: raise(TemperCore.Panic, "a field of #{inspect(class)} read outside its actor")
   end
 
-  # A call that exits never ran: an actor only stops after replying to the
-  # call that crashed it, so a call that finds it dead or dying was not
-  # handled. Supervised, a new process takes over the same identity, so try
-  # once more there. The registry can name the dead process for a moment
-  # after it exits, which is how a call right after a crash reaches it.
+  # Only a call that cannot have run is tried again, on the restarted
+  # process that has the same identity:
+  #
+  # - `:noproc`: the process was gone before the message arrived, which is
+  #   how a call right after a crash reaches the dead pid the registry still
+  #   names.
+  # - `{:crash, ...}`: the actor stops with this reason only after replying
+  #   to the call that crashed it, and it handles one message at a time, so
+  #   any other call that sees it was still waiting in the mailbox.
+  #
+  # Any other exit can come while the method is running (the process was
+  # killed, or a link took it down). Running it again on the restarted
+  # actor's fresh state would turn at-most-once into at-least-once, so the
+  # caller sees the exit, as OTP's callers do.
   defp call(%__MODULE__{class: class} = actor, message, retry) do
     pid = pid!(actor)
 
     try do
       GenServer.call(pid, message, :infinity)
     catch
-      :exit, _ ->
+      :exit, {reason, _} when reason == :noproc or elem(reason, 0) == :crash ->
         if retry and restarted?(actor, pid),
           do: call(actor, message, false),
           else: raise(TemperCore.Panic, "#{inspect(class)} actor has ended")
+
+      :exit, {reason, _} ->
+        raise TemperCore.Panic, "#{inspect(class)} actor ended during the call: #{inspect(reason)}"
     end
   end
 

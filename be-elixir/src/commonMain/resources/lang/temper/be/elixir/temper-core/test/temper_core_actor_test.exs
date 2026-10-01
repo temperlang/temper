@@ -21,6 +21,14 @@ defmodule TemperCore.ActorTest do
     def bump_through(this, back), do: Actor.run(this, fn -> Counter.bump(back) end)
     def take(this, value), do: Actor.run(this, fn -> value end)
     def crash(this), do: Actor.run(this, fn -> raise ArgumentError, "not a Temper error" end)
+
+    def slow_bump(this, watcher) do
+      Actor.run(this, fn ->
+        Heap.put(this, :n, Heap.get(this, :n) + 1)
+        send(watcher, {:started, self()})
+        Process.sleep(500)
+      end)
+    end
   end
 
   test "one object, many processes, no lost updates" do
@@ -80,6 +88,31 @@ defmodule TemperCore.ActorTest do
     assert_raise ArgumentError, fn -> Counter.crash(c) end
     assert Counter.get_n(c) == 10
     assert Actor.whereis(c) != before
+    Actor.stop(c)
+  end
+
+  test "a supervised actor killed during a call does not run the call again" do
+    # Retrying turned at-most-once into at-least-once: the body ran a second
+    # time on the restarted actor's fresh state, and the caller saw success.
+    c = Actor.supervised(fn -> Counter.new(100) end)
+    test = self()
+    caller = Task.async(fn -> try do: Counter.slow_bump(c, test), rescue: (e -> e) end)
+    assert_receive {:started, pid}, 1000
+    Process.exit(pid, :kill)
+    assert %TemperCore.Panic{message: message} = Task.await(caller)
+    assert message =~ "ended during the call"
+    refute_receive {:started, _}, 700
+    assert Counter.get_n(c) == 100
+    Actor.stop(c)
+  end
+
+  test "a call that finds the actor already gone is tried once more on its restart" do
+    c = Actor.supervised(fn -> Counter.new(7) end)
+    pid = Actor.whereis(c)
+    ref = Process.monitor(pid)
+    Process.exit(pid, :kill)
+    assert_receive {:DOWN, ^ref, _, _, _}
+    assert Counter.get_n(c) == 7
     Actor.stop(c)
   end
 
