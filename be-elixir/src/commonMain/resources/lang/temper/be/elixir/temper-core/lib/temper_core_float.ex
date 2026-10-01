@@ -180,6 +180,9 @@ defmodule TemperCore.Float do
 
   def negative_zero?(f), do: f === -0.0
 
+  @doc "`is Float64`: a BEAM float or one of the three special atoms."
+  def float?(x), do: is_float(x) or x in [:infinity, :neg_infinity, :nan]
+
   # where a value sits on Temper's number line, before comparing floats
   defp rank(:neg_infinity), do: 0
   defp rank(f) when is_float(f), do: 1

@@ -62,21 +62,23 @@ defmodule TemperCore.Map do
 
   def get_or(x, key, fallback), do: Map.get(elem(parts(x), 1), key, fallback)
   def has(x, key), do: Map.has_key?(elem(parts(x), 1), key)
-  def keys(x), do: elem(parts(x), 0)
+  # keys, values and entries come back as Temper Lists (TemperCore.Vec)
+  def keys(x), do: TemperCore.Vec.new(elem(parts(x), 0))
 
   def values(x) do
     {keys, map} = parts(x)
-    Enum.map(keys, &Map.fetch!(map, &1))
+    TemperCore.Vec.new(Enum.map(keys, &Map.fetch!(map, &1)))
   end
 
-  def to_list_with(x, f) do
+  def to_list_with(x, f), do: TemperCore.Vec.new(entries_with(x, f))
+  def to_list(x), do: to_list_with(x, &Pair.new/2)
+  def to_list_builder(x), do: TemperCore.List.builder(entries_with(x, &Pair.new/2))
+  def to_list_builder_with(x, f), do: TemperCore.List.builder(entries_with(x, f))
+
+  defp entries_with(x, f) do
     {keys, map} = parts(x)
     Enum.map(keys, fn k -> f.(k, Map.fetch!(map, k)) end)
   end
-
-  def to_list(x), do: to_list_with(x, &Pair.new/2)
-  def to_list_builder(x), do: TemperCore.List.builder(to_list(x))
-  def to_list_builder_with(x, f), do: TemperCore.List.builder(to_list_with(x, f))
 
   def for_each(x, f), do: to_list_with(x, f) && nil
 

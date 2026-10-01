@@ -67,8 +67,8 @@ defmodule TemperCore.String do
   end
 
   @doc "Splitting by \"\" gives each code point as its own string."
-  def split(s, ""), do: String.codepoints(s)
-  def split(s, separator), do: String.split(s, separator)
+  def split(s, ""), do: TemperCore.Vec.new(String.codepoints(s))
+  def split(s, separator), do: TemperCore.Vec.new(String.split(s, separator))
 
   def for_each(s, f), do: s |> String.to_charlist() |> Enum.each(f) && nil
 

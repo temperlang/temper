@@ -277,7 +277,7 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
         )
     },
     strCat,
-    ElixirOperatorCode(BuiltinOperatorId.Listify) { pos, a -> Elixir.ListLit(pos, a) },
+    ElixirOperatorCode(BuiltinOperatorId.Listify) { pos, a -> vecLiteral(pos, a) },
     ElixirOperatorCode(BuiltinOperatorId.Bubble) { pos, _ -> raiseOf(pos, "Bubble") },
     ElixirOperatorCode(BuiltinOperatorId.Panic) { pos, _ -> raiseOf(pos, "Panic") },
     ElixirOperatorCode(BuiltinOperatorId.Print) { pos, a -> remoteCall(pos, elixirModule(pos, "IO"), "puts", a) },
@@ -308,6 +308,14 @@ private fun floatMath(key: String, fn: String) =
     ElixirConnected(key) { pos, a ->
         remoteCall(pos, elixirModule(pos, "TemperCore", "Float"), "math", listOf(Elixir.Atom(pos, fn)) + a)
     }
+
+/** A Temper List literal: `%TemperCore.Vec{t: {1, 2, 3}}`, its tuple built in place. */
+internal fun vecLiteral(pos: Position, items: List<Elixir.Expr>): Elixir.Expr =
+    Elixir.StructLit(
+        pos,
+        name = elixirModule(pos, "TemperCore", "Vec"),
+        fields = listOf(Elixir.KeywordEntry(pos, Elixir.Id(pos, OutName("t", null)), Elixir.TupleLit(pos, items))),
+    )
 
 private fun regex(pos: Position, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
     remoteCall(pos, elixirModule(pos, "TemperCore", "Regex"), fn, args)

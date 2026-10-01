@@ -63,7 +63,7 @@ defmodule TemperCore.Regex do
   end
 
   @doc "`split`: the pieces between matches, with captured groups between them, as be-py's `re.split` gives."
-  def split({mp, _}, text), do: :re.split(text, mp, return: :binary)
+  def split({mp, _}, text), do: TemperCore.Vec.new(:re.split(text, mp, return: :binary))
 
   @doc "`pushCodeTo`: PCRE's numeric escape for a code point."
   def code_escape(code), do: "\\x{" <> Integer.to_string(code, 16) <> "}"

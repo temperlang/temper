@@ -5,14 +5,14 @@ defmodule TemperCoreMapTest do
 
   test "maps keep insertion order, past the 32 keys where Elixir's stop pretending" do
     m = M.new(for i <- 40..1//-1, do: Pair.new(i, i * i))
-    assert M.keys(m) == Enum.to_list(40..1//-1)
+    assert Enum.to_list(M.keys(m)) == Enum.to_list(40..1//-1)
     small = M.new([Pair.new("b", 1), Pair.new("a", 2)])
-    assert M.keys(small) == ["b", "a"]
+    assert Enum.to_list(M.keys(small)) == ["b", "a"]
   end
 
   test "a repeated key keeps its first place and its last value" do
     m = M.new([Pair.new(:x, 1), Pair.new(:y, 2), Pair.new(:x, 3)])
-    assert M.to_list_with(m, fn k, v -> {k, v} end) == [x: 3, y: 2]
+    assert Enum.to_list(M.to_list_with(m, fn k, v -> {k, v} end)) == [x: 3, y: 2]
   end
 
   test "get bubbles, getOr and has do not" do
@@ -29,9 +29,9 @@ defmodule TemperCoreMapTest do
     M.set(alias_, "a", 1)
     M.set(b, "b", 2)
     M.set(b, "a", 3)
-    assert M.keys(b) == ["a", "b"]
+    assert Enum.to_list(M.keys(b)) == ["a", "b"]
     assert M.remove(b, "a") == 3
-    assert M.keys(b) == ["b"]
+    assert Enum.to_list(M.keys(b)) == ["b"]
     assert_raise TemperCore.Bubble, fn -> M.remove(b, "a") end
     frozen = M.to_map(b)
     M.set(b, "c", 4)

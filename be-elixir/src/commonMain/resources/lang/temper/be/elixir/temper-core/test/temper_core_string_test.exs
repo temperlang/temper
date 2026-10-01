@@ -36,8 +36,8 @@ defmodule TemperCoreStringTest do
   end
 
   test "split by \"\" gives code points" do
-    assert S.split("a😀b", "") == ["a", "😀", "b"]
-    assert S.split("a,,b", ",") == ["a", "", "b"]
+    assert Enum.to_list(S.split("a😀b", "")) == ["a", "😀", "b"]
+    assert Enum.to_list(S.split("a,,b", ",")) == ["a", "", "b"]
   end
 
   test "indexOf answers a byte offset or none" do

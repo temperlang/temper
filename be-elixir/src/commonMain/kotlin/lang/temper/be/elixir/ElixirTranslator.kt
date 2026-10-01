@@ -1056,7 +1056,7 @@ internal class ElixirTranslator(
         val padded = if (given.size < fixed) given + List(fixed - given.size) { Elixir.NilLit(pos) } else given
         return when (sig.restInputsType) {
             null -> padded
-            else -> padded.take(fixed) + Elixir.ListLit(pos, padded.drop(fixed))
+            else -> padded.take(fixed) + vecLiteral(pos, padded.drop(fixed))
         }
     }
 
@@ -1403,7 +1403,7 @@ internal class ElixirTranslator(
     /** `instanceof`: a guard for the builtin types, the supertype list for translated ones. */
     private fun instanceOf(pos: Position, value: Elixir.Expr, type: TmpL.AType): Elixir.Expr {
         val name = typeBaseName(type)
-        builtinGuards[name]?.let { guard -> return localCall(pos, guard, listOf(value)) }
+        builtinGuards[name]?.let { guard -> return guard(pos, value) }
         indexChecks[name]?.let { check -> return check(pos, value) }
         val module = types[name]?.let { typeModule(it) } ?: externalTypeModule(type) ?: TODO("instanceof $name")
         return coreCall(pos, "is_a", listOf(value, moduleOf(pos, module)))
@@ -1453,7 +1453,7 @@ internal class ElixirTranslator(
                                 coreCall(
                                     pos,
                                     "cast_check",
-                                    listOf(Elixir.Id(pos, tmp), localCall(pos, guard, listOf(Elixir.Id(pos, tmp)))),
+                                    listOf(Elixir.Id(pos, tmp), guard(pos, Elixir.Id(pos, tmp))),
                                 ),
                             ),
                         ),
@@ -1574,16 +1574,27 @@ internal class ElixirTranslator(
         "DoneResult" to { pos, v -> infixOp(pos, v, ElixirOperator.Equals, Elixir.Atom(pos, "done")) },
     )
 
-    private val builtinGuards = mapOf(
-        "String" to "is_binary",
-        "Int" to "is_integer",
-        "Int32" to "is_integer",
-        "Int64" to "is_integer",
-        "Float64" to "is_float",
-        "Boolean" to "is_boolean",
-        "List" to "is_list",
-        "Listed" to "is_list",
+    /**
+     * `x is T` for a builtin `T`. Most are Kernel guards. A Float64 may also be
+     * `:infinity`, `:neg_infinity` or `:nan`; a List is a `TemperCore.Vec` or a
+     * plain list from Elixir code; a ListBuilder is `Listed` too.
+     */
+    private val builtinGuards = mapOf<String, (Position, Elixir.Expr) -> Elixir.Expr>(
+        "String" to kernelGuard("is_binary"),
+        "Int" to kernelGuard("is_integer"),
+        "Int32" to kernelGuard("is_integer"),
+        "Int64" to kernelGuard("is_integer"),
+        "Float64" to coreGuard("Float", "float?"),
+        "Boolean" to kernelGuard("is_boolean"),
+        "List" to coreGuard("List", "list?"),
+        "Listed" to coreGuard("List", "listed?"),
     )
+
+    private fun kernelGuard(fn: String): (Position, Elixir.Expr) -> Elixir.Expr =
+        { pos, v -> localCall(pos, fn, listOf(v)) }
+
+    private fun coreGuard(module: String, fn: String): (Position, Elixir.Expr) -> Elixir.Expr =
+        { pos, v -> remoteCall(pos, elixirModule(pos, "TemperCore", module), fn, listOf(v)) }
 
     /** A class carries its supertypes' members that it does not redefine, nearest first. */
     private fun flattenMembers(decl: TmpL.TypeDeclaration): List<TmpL.Member> {
