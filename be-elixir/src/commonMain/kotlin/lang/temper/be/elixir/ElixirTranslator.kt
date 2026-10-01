@@ -185,6 +185,7 @@ internal class ElixirTranslator(
             is TmpL.ModuleFunctionDeclaration -> functions.add(translateFunction(topLevel))
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
             is TmpL.Test -> functions.add(translateTest(topLevel))
+            is TmpL.GarbageTopLevel -> mainBody.add(garbage(topLevel.pos, topLevel.diagnostic))
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
             // comments and garbage carry no Elixir output
             else -> {}
@@ -570,6 +571,7 @@ internal class ElixirTranslator(
         val pos = statement.pos
         return when (statement) {
             is TmpL.ExpressionStatement -> listOf(expression(statement.expression, fn))
+            is TmpL.GarbageStatement -> listOf(garbage(statement.pos, statement.diagnostic))
             is TmpL.LocalDeclaration -> {
                 val name = statement.name.name
                 declare(name)
@@ -859,6 +861,7 @@ internal class ElixirTranslator(
 
     private fun expression(expression: TmpL.Expression, fn: FunctionContext): Elixir.Expr = when (expression) {
         is TmpL.ValueReference -> translateValueReference(expression)
+        is TmpL.GarbageExpression -> garbage(expression.pos, expression.diagnostic)
         is TmpL.CallExpression -> call(expression, fn)
         is TmpL.Reference -> reference(expression)
         is TmpL.InfixOperation -> infix(expression, fn)
@@ -1007,7 +1010,7 @@ internal class ElixirTranslator(
             }
             is TmpL.FunInterfaceCallable ->
                 Elixir.AnonCall(pos, fn = expression(callee.expr, fn), args = given)
-            else -> TODO("callable: $callee")
+            is TmpL.GarbageCallable -> garbage(pos, callee.diagnostic)
         }
     }
 
@@ -1609,6 +1612,22 @@ internal class ElixirTranslator(
         externalModule(definition.name)?.let { return moduleOf(pos, it) }
         return Elixir.Atom(pos, base)
     }
+
+    /**
+     * Code the frontend already reported as broken, and translated anyway:
+     * it raises when reached, with the frontend's diagnostic, as be-py and
+     * be-js do. The one place a failure is deliberately left for run time,
+     * because the build was told to go on.
+     */
+    private fun garbage(pos: Position, diagnostic: TmpL.Diagnostic?): Elixir.Expr =
+        localCall(
+            pos,
+            "raise",
+            listOf(
+                elixirModule(pos, "TemperCore", "Panic"),
+                Elixir.StringLit(pos, "broken code: ${diagnostic?.text ?: "no diagnostic"}"),
+            ),
+        )
 
     /** The library another translated library's name was declared in, or null for Temper's builtins. */
     private fun libraryOf(name: lang.temper.name.TemperName?): DashedIdentifier? {

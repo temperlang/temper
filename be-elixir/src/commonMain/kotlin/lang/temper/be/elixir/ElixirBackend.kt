@@ -365,6 +365,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core_generator.ex"),
                 filePath("lib", "temper_core_promise.ex"),
                 filePath("lib", "temper_core_net.ex"),
+                filePath("lib", "temper_core_regex.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
@@ -376,6 +377,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("test", "temper_core_generator_test.exs"),
                 filePath("test", "temper_core_promise_test.exs"),
                 filePath("test", "temper_core_net_test.exs"),
+                filePath("test", "temper_core_regex_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

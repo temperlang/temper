@@ -309,6 +309,12 @@ private fun floatMath(key: String, fn: String) =
         remoteCall(pos, elixirModule(pos, "TemperCore", "Float"), "math", listOf(Elixir.Atom(pos, fn)) + a)
     }
 
+private fun regex(pos: Position, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
+    remoteCall(pos, elixirModule(pos, "TemperCore", "Regex"), fn, args)
+
+private fun matchModules(pos: Position): List<Elixir.Expr> =
+    listOf(elixirModule(pos, "Temper", "Std", "Match"), elixirModule(pos, "Temper", "Std", "Group"))
+
 /** `TemperCore.Module.fn(args)` */
 private fun connectedIn(module: String, key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", module), fn, a) }
@@ -450,6 +456,28 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedIn("Test", "std/testing.type Test.get failedOnAssert()", "failed_on_assert"),
         connectedIn("Test", "std/testing.runTestCases()", "run_cases"),
         connectedIn("Test", "std/testing.processTestCases()", "process"),
+        // std/regex formats a pattern itself; the host compiles and runs it.
+        // A member's first argument is `this`, unused here. Match and Group
+        // are std's own classes, passed in so temper-core never names std.
+        ElixirConnected("std/regex.type RegexFormatter.regexCompileFormatted()") { pos, a ->
+            regex(pos, "compile", listOf(a[1]))
+        },
+        ElixirConnected("std/regex.type Regex.compiledFound()") { pos, a -> regex(pos, "found", a.drop(1)) },
+        ElixirConnected("std/regex.type Regex.compiledFind()") { pos, a ->
+            regex(pos, "find", a.subList(1, 4) + matchModules(pos))
+        },
+        ElixirConnected("std/regex.type Regex.compiledReplace()") { pos, a ->
+            regex(pos, "replace", a.subList(1, 4) + matchModules(pos))
+        },
+        ElixirConnected("std/regex.type Regex.compiledSplit()") { pos, a -> regex(pos, "split", a.subList(1, 3)) },
+        ElixirConnected("std/regex.type RegexFormatter.pushCodeTo()") { pos, a ->
+            remoteCall(
+                pos,
+                elixirModule(pos, "TemperCore", "StringBuilder"),
+                "append",
+                listOf(a[1], regex(pos, "code_escape", listOf(a[2]))),
+            )
+        },
         // std's Date is a translated class, in std's own root module; only
         // reading the clock needs the host
         ElixirConnected("std/temporal.type Date.today()") { pos, _ ->
