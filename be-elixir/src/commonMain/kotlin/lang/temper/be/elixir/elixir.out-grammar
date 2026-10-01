@@ -133,8 +133,8 @@ Field ::= obj%Expr & "." & id%Id;
 RemoteCall ::= module%Expr & "." & fn%Id & "(" & args%Expr*"," & ")";
 RemoteCall.args.default = `listOf()`;
 
-/** `&name/2`: a named function as a value. */
-Capture ::= "&" & fn%Id & "/" & arity%NumberLit;
+/** `&TemperMain.name/2`: a named function as a value. */
+Capture ::= "&" & fn%Expr & "/" & arity%NumberLit;
 
 /** `f.(a, b)`: calling an anonymous function. */
 AnonCall ::= fn%Expr & "." & "(" & args%Expr*"," & ")";

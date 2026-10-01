@@ -60,7 +60,16 @@ internal class ElixirTranslator(
     private val moduleGlobals: Set<ResolvedName>,
     /** Every class and interface of the library, by its source name. */
     private val types: Map<String, TmpL.TypeDeclaration>,
+    /** An imported name, mapped to the exporting module's own name for the same thing. */
+    private val imports: Map<ResolvedName, ResolvedName>,
 ) {
+    /** The name a value was declared under, seen through any imports. */
+    private fun canonical(name: ResolvedName): ResolvedName {
+        var current = name
+        repeat(imports.size + 1) { current = imports[current] ?: return current }
+        return current
+    }
+
     private val functions = mutableListOf<Elixir.ModuleItem>()
     private val mainBody = mutableListOf<Elixir.BlockItem>()
     private val modules = mutableListOf<Elixir.ModuleDef>()
@@ -71,10 +80,58 @@ internal class ElixirTranslator(
         val modules: List<Elixir.ModuleDef>,
     )
 
+    /**
+     * Locals a closure reads that are also assigned somewhere. Elixir closures
+     * capture values and Temper's capture variables, so these live in a heap
+     * cell that the closure and its enclosing function share.
+     */
+    private val boxed = mutableSetOf<ResolvedName>()
+
+    /** A local function that calls itself: the self-passing name its body calls through, and its arity. */
+    private val recursiveLocals = mutableMapOf<ResolvedName, Pair<OutName, Int>>()
+
+    private fun collectBoxed(module: TmpL.Module) {
+        val assigned = mutableSetOf<ResolvedName>()
+        val captured = mutableSetOf<ResolvedName>()
+        for (topLevel in module.topLevels) {
+            topLevel.boundaryDescent { node ->
+                when (node) {
+                    is TmpL.Assignment -> nameOf(node.left)?.let(assigned::add)
+                    is TmpL.LocalFunctionDeclaration -> {
+                        val declaredInside = mutableSetOf<ResolvedName>()
+                        val usedInside = mutableSetOf<ResolvedName>()
+                        node.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
+                        node.parameters.restParameter?.let { r -> nameOf(r.name)?.let(declaredInside::add) }
+                        node.body.boundaryDescent { inner ->
+                            when (inner) {
+                                is TmpL.LocalDeclaration -> nameOf(inner.name)?.let(declaredInside::add)
+                                is TmpL.LocalFunctionDeclaration -> {
+                                    nameOf(inner.name)?.let(declaredInside::add)
+                                    inner.parameters.parameters.forEach { f ->
+                                        nameOf(f.name)?.let(declaredInside::add)
+                                    }
+                                }
+                                is TmpL.Reference -> nameOf(inner.id)?.let(usedInside::add)
+                                is TmpL.Assignment -> nameOf(inner.left)?.let(usedInside::add)
+                                else -> {}
+                            }
+                            true
+                        }
+                        captured.addAll(usedInside - declaredInside)
+                    }
+                    else -> {}
+                }
+                true
+            }
+        }
+        boxed.addAll((captured intersect assigned) - moduleGlobals)
+    }
+
     fun translateModule(module: TmpL.Module): Translated {
         functions.clear()
         mainBody.clear()
         modules.clear()
+        collectBoxed(module)
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
         }
@@ -148,11 +205,12 @@ internal class ElixirTranslator(
 
     private fun translateFunction(decl: TmpL.ModuleFunctionDeclaration): Elixir.FunDef {
         val pos = decl.pos
-        if (decl.parameters.restParameter != null) TODO("rest parameter: $decl")
         if (decl.parameters.thisName != null) TODO("this parameter: $decl")
-        // parameters are locals too: a loop that assigns one must carry it
-        decl.parameters.parameters.forEach { declare(it.name.name) }
-        val params = decl.parameters.parameters.map { idOf(it.name) as Elixir.Pattern }
+        // parameters are locals too: a loop that assigns one must carry it;
+        // a rest parameter arrives as one list
+        val formals = decl.parameters.parameters.map { it.name } + listOfNotNull(decl.parameters.restParameter?.name)
+        formals.forEach { declare(it.name) }
+        val params = formals.map { idOf(it) as Elixir.Pattern }
         val body = decl.body ?: TODO("function without a body: $decl")
         return Elixir.FunDef(
             pos,
@@ -426,14 +484,27 @@ internal class ElixirTranslator(
                 val name = statement.name.name
                 declare(name)
                 val value = statement.init?.let { expression(it, fn) } ?: Elixir.NilLit(pos)
-                listOf(Elixir.Match(pos, left = varId(pos, name), right = value))
+                listOf(
+                    Elixir.Match(
+                        pos, left = varId(pos, name),
+                        right = if (name in
+                            boxed
+                        ) {
+                            cell(pos, value)
+                        } else {
+                            value
+                        },
+                    ),
+                )
             }
             is TmpL.Assignment -> {
-                val name = statement.left.name
+                val name = canonical(statement.left.name)
                 val value = expression(statement.right, fn)
                 listOf(
                     if (name in moduleGlobals) {
                         globalPut(pos, name, value)
+                    } else if (name in boxed) {
+                        heapCall(pos, "put", listOf(varRef(pos, name), Elixir.Atom(pos, CELL), value))
                     } else {
                         Elixir.Match(pos, left = varId(pos, name), right = value)
                     },
@@ -447,6 +518,7 @@ internal class ElixirTranslator(
             }
             is TmpL.TryStatement -> tryOf(statement, fn)
             is TmpL.SetBackedProperty -> listOf(setBacked(statement, fn))
+            is TmpL.LocalFunctionDeclaration -> localFunction(statement, fn)
             is TmpL.SetAbstractProperty -> {
                 val subject = statement.left.subject as? TmpL.Expression ?: TODO("setter subject: $statement")
                 listOf(
@@ -676,7 +748,7 @@ internal class ElixirTranslator(
             when (node) {
                 is TmpL.LocalFunctionDeclaration -> false
                 is TmpL.Assignment -> {
-                    nameOf(node.left)?.let { if (it in visible) assigned.add(it) }
+                    nameOf(node.left)?.let { if (it in visible && it !in boxed) assigned.add(it) }
                     true
                 }
                 // a struct's constructor rebinds `this` for every field it sets
@@ -715,6 +787,17 @@ internal class ElixirTranslator(
             instanceOf(expression.pos, expression(expression.expr, fn), expression.checkedType)
         is TmpL.CastExpression -> cast(expression, fn)
         is TmpL.UncheckedNotNullExpression -> expression(expression.expression, fn)
+        is TmpL.FunInterfaceExpression -> when (val callable = expression.callable) {
+            is TmpL.FnReference -> {
+                val name = canonical(callable.id.name)
+                when (name) {
+                    in moduleFunctions -> capture(expression.pos, name)
+                    in moduleGlobals -> globalGet(expression.pos, name)
+                    else -> varRef(expression.pos, name)
+                }
+            }
+            else -> TODO("function value: $callable")
+        }
         is TmpL.PrefixOperation -> when (expression.op.tmpLOperator) {
             TmpLOperator.Bang -> prefixOp(expression.pos, ElixirOperator.Not, expression(expression.operand, fn))
         }
@@ -722,29 +805,24 @@ internal class ElixirTranslator(
     }
 
     private fun reference(expression: TmpL.Reference): Elixir.Expr {
-        val name = expression.id.name
+        val name = canonical(expression.id.name)
         return when (name) {
             in moduleGlobals -> globalGet(expression.pos, name)
             in moduleFunctions -> capture(expression.pos, name)
+            in boxed -> cellGet(expression.pos, name)
             else -> varRef(expression.pos, name)
         }
     }
 
-    private fun fnValue(expression: TmpL.FnReference): Elixir.Expr {
-        val name = expression.id.name
-        return when (name) {
-            in moduleFunctions -> capture(expression.pos, name)
-            in moduleGlobals -> globalGet(expression.pos, name)
-            else -> varRef(expression.pos, name)
-        }
-    }
-
+    /** `&TemperMain.name/2` */
     private fun capture(pos: Position, name: ResolvedName): Elixir.Expr =
         Elixir.Capture(
             pos,
-            fn = Elixir.Id(pos, functionName(name)),
+            fn = Elixir.Field(pos, obj = mainModule(pos), id = Elixir.Id(pos, functionName(name))),
             arity = Elixir.NumberLit(pos, moduleFunctions.getValue(name)),
         )
+
+    private fun mainModule(pos: Position) = elixirModule(pos, ElixirBackend.MAIN_MODULE)
 
     private fun infix(expression: TmpL.InfixOperation, fn: FunctionContext): Elixir.Expr {
         val pos = expression.pos
@@ -766,7 +844,8 @@ internal class ElixirTranslator(
     }
 
     private fun call(call: TmpL.CallExpression, fn: FunctionContext): Elixir.Expr {
-        val args = call.parameters.map { actual ->
+        val pos = call.pos
+        val given = call.parameters.map { actual ->
             when (actual) {
                 is TmpL.Expression -> expression(actual, fn)
                 else -> TODO("actual: $actual")
@@ -774,37 +853,159 @@ internal class ElixirTranslator(
         }
         return when (val callee = call.fn) {
             is TmpL.InlineSupportCodeWrapper ->
-                (callee.supportCode as ElixirInlineSupportCode).callFactory(call.pos, args)
+                (callee.supportCode as ElixirInlineSupportCode).callFactory(pos, given)
             is TmpL.FnReference -> {
-                val name = callee.id.name
+                val name = canonical(callee.id.name)
+                val args = arguments(pos, callee.type, given)
                 when (name) {
-                    in moduleFunctions ->
-                        Elixir.Call(call.pos, callee = Elixir.Id(callee.pos, functionName(name)), args = args)
-                    in moduleGlobals -> Elixir.AnonCall(call.pos, fn = globalGet(callee.pos, name), args = args)
-                    else -> Elixir.AnonCall(call.pos, fn = varRef(callee.pos, name), args = args)
+                    // qualified, so it works from inside a class module too, and
+                    // never meets a Kernel import of the same name
+                    in moduleFunctions -> remoteCall(pos, mainModule(pos), functionName(name).outputNameText, args)
+                    in moduleGlobals -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
+                    in recursiveLocals -> {
+                        val self = recursiveLocals.getValue(name).first
+                        Elixir.AnonCall(pos, fn = Elixir.Id(pos, self), args = listOf(Elixir.Id(pos, self)) + args)
+                    }
+                    in boxed -> Elixir.AnonCall(
+                        pos,
+                        fn = heapCall(pos, "get", listOf(varRef(callee.pos, name), Elixir.Atom(pos, CELL))),
+                        args = args,
+                    )
+                    else -> Elixir.AnonCall(pos, fn = varRef(callee.pos, name), args = args)
                 }
             }
-            is TmpL.ConstructorReference ->
-                remoteCall(call.pos, moduleOf(call.pos, typeNameModule(callee.typeName)), CONSTRUCTOR, args)
-            is TmpL.MethodReference -> when (val subject = callee.subject) {
-                is TmpL.TypeSubject -> remoteCall(
-                    call.pos,
-                    moduleOf(call.pos, typeSubjectModule(subject)),
-                    names.sanitize(callee.methodName.dotNameText),
-                    args,
-                )
-                is TmpL.Expression -> coreCall(
-                    call.pos,
-                    "call",
-                    listOf(
-                        expression(subject, fn),
-                        Elixir.Atom(call.pos, names.sanitize(callee.methodName.dotNameText)),
-                        Elixir.ListLit(call.pos, args),
-                    ),
-                )
+            is TmpL.ConstructorReference -> remoteCall(
+                pos,
+                moduleOf(pos, typeNameModule(callee.typeName)),
+                CONSTRUCTOR,
+                arguments(pos, callee.type, given),
+            )
+            is TmpL.MethodReference -> {
+                val args = arguments(pos, callee.type, given)
+                val method = names.sanitize(callee.methodName.dotNameText)
+                when (val subject = callee.subject) {
+                    is TmpL.TypeSubject -> remoteCall(pos, moduleOf(pos, typeSubjectModule(subject)), method, args)
+                    is TmpL.Expression -> {
+                        // a method on a builtin type that has no support code would
+                        // only fail at run time in TemperCore.call; fail here instead
+                        val owner = (callee.method?.enclosingType?.name as? lang.temper.name.ResolvedParsedName)
+                            ?.baseName?.nameText
+                        if (owner != null && owner !in types) {
+                            TODO("method $owner.${callee.methodName.dotNameText} has no Elixir support code")
+                        }
+                        coreCall(
+                            pos,
+                            "call",
+                            listOf(expression(subject, fn), Elixir.Atom(pos, method), Elixir.ListLit(pos, args)),
+                        )
+                    }
+                }
             }
+            is TmpL.FunInterfaceCallable ->
+                Elixir.AnonCall(pos, fn = expression(callee.expr, fn), args = given)
             else -> TODO("callable: $callee")
         }
+    }
+
+    /**
+     * The arguments a call passes, from those it was given: omitted optional
+     * ones become nil (the body tests for null itself), and anything past the
+     * fixed parameters is packed into the rest parameter's list.
+     */
+    private fun arguments(
+        pos: Position,
+        sig: lang.temper.type2.Signature2,
+        given: List<Elixir.Expr>,
+    ): List<Elixir.Expr> {
+        val fixed = sig.requiredInputTypes.size - (if (sig.hasThisFormal) 1 else 0) + sig.optionalInputTypes.size
+        val padded = if (given.size < fixed) given + List(fixed - given.size) { Elixir.NilLit(pos) } else given
+        return when (sig.restInputsType) {
+            null -> padded
+            else -> padded.take(fixed) + Elixir.ListLit(pos, padded.drop(fixed))
+        }
+    }
+
+    // ── Closures ─────────────────────────────────────────────────────────
+
+    private fun cellGet(pos: Position, name: ResolvedName): Elixir.Expr =
+        heapCall(pos, "get", listOf(varRef(pos, name), Elixir.Atom(pos, CELL)))
+
+    /** `TemperCore.Heap.new(:cell, %{v: value})`: a variable a closure shares. */
+    private fun cell(pos: Position, value: Elixir.Expr): Elixir.Expr =
+        heapCall(
+            pos,
+            "new",
+            listOf(
+                Elixir.Atom(pos, CELL_CLASS),
+                Elixir.MapLit(pos, listOf(Elixir.MapEntry(pos, Elixir.Atom(pos, CELL), value))),
+            ),
+        )
+
+    /**
+     * `name = fn a, b -> ... end`.
+     *
+     * One that calls itself cannot say so, because an Elixir `fn` has no name
+     * to call. It is written to take itself as a first argument, the way a
+     * loop is, and `name` is a wrapper that passes it in.
+     */
+    private fun localFunction(decl: TmpL.LocalFunctionDeclaration, outer: FunctionContext): List<Elixir.BlockItem> {
+        val pos = decl.pos
+        val name = decl.name.name
+        declare(name)
+        val formals = decl.parameters.parameters.map { it.name } + listOfNotNull(decl.parameters.restParameter?.name)
+        formals.forEach { declare(it.name) }
+        var recursive = false
+        decl.body.boundaryDescent { node ->
+            if ((node is TmpL.FnReference && nameOf(node.id) == name) ||
+                (node is TmpL.Reference && nameOf(node.id) == name)
+            ) {
+                recursive = true
+            }
+            !recursive
+        }
+        val params = formals.map { idOf(it) as Elixir.Pattern }
+        val cls = outer.cls?.let { ClassContext(it.module, it.isStruct, it.thisName, isConstructor = false) }
+        val boxedParams = formals.map { it.name }.filter { it in boxed }.map { p ->
+            Elixir.Match(pos, left = varId(pos, p), right = cell(pos, varRef(pos, p)))
+        }
+        if (!recursive) {
+            val body = functionBody(pos, decl.body.statements, cls, prelude = boxedParams)
+            val lambda = Elixir.Fn(pos, params = params, body = body)
+            return listOf(Elixir.Match(pos, left = varId(pos, name), right = lambda))
+        }
+        val self = names.gensym("rec")
+        recursiveLocals[name] = self to formals.size
+        val body = try {
+            functionBody(pos, decl.body.statements, cls, prelude = boxedParams)
+        } finally {
+            recursiveLocals.remove(name)
+        }
+        val wrapperParams = formals.map { varId(pos, it.name) as Elixir.Pattern }
+        return listOf(
+            Elixir.Match(
+                pos,
+                left = Elixir.Id(pos, self),
+                right = Elixir.Fn(pos, params = listOf<Elixir.Pattern>(Elixir.Id(pos, self)) + params, body = body),
+            ),
+            Elixir.Match(
+                pos,
+                left = varId(pos, name),
+                right = Elixir.Fn(
+                    pos,
+                    params = wrapperParams,
+                    body = Elixir.Block(
+                        pos,
+                        listOf(
+                            Elixir.AnonCall(
+                                pos,
+                                fn = Elixir.Id(pos, self),
+                                args = listOf(Elixir.Id(pos, self)) + formals.map { varRef(pos, it.name) },
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
     }
 
     // ── Classes ──────────────────────────────────────────────────────────
@@ -1179,7 +1380,12 @@ internal class ElixirTranslator(
         val pos = expression.pos
         return when (val tag = expression.value.typeTag) {
             TBoolean -> Elixir.BoolLit(pos, TBoolean.unpack(expression.value))
-            TFloat64 -> Elixir.NumberLit(pos, TFloat64.unpack(expression.value))
+            TFloat64 -> TFloat64.unpack(expression.value).let { f ->
+                // the BEAM's floats have no NaN or infinity; failing the build by
+                // name beats the renderer's own error, which cut the file short
+                if (f.isNaN() || f.isInfinite()) TODO("$f has no BEAM float: $expression")
+                Elixir.NumberLit(pos, f)
+            }
             TInt -> Elixir.NumberLit(pos, TInt.unpack(expression.value))
             TInt64 -> Elixir.NumberLit(pos, TInt64.unpack(expression.value))
             is TString -> Elixir.StringLit(pos, TString.unpack(expression.value))
@@ -1198,6 +1404,8 @@ internal class ElixirTranslator(
         const val NEXT = "temper_next"
         const val DONE = "temper_done"
         const val CONSTRUCTOR = "new"
+        const val CELL = "v"
+        const val CELL_CLASS = "cell"
         const val SUPERTYPES = "__temper_supertypes__"
     }
 }

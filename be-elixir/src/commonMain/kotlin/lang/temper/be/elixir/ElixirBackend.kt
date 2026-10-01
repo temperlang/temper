@@ -71,7 +71,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             for (topLevel in module.topLevels) {
                 when (topLevel) {
                     is TmpL.ModuleFunctionDeclaration ->
-                        moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size
+                        moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size +
+                            (if (topLevel.parameters.restParameter != null) 1 else 0)
                     is TmpL.ModuleLevelDeclaration -> if (!topLevel.isConsole()) moduleGlobals.add(topLevel.name.name)
                     else -> {}
                 }
@@ -86,7 +87,17 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 }
             }
         }
-        val translator = ElixirTranslator(names, moduleFunctions, moduleGlobals, types)
+        val imports = mutableMapOf<ResolvedName, ResolvedName>()
+        for (module in finished.modules) {
+            for (import in module.imports) {
+                val local = import.localName?.let { runCatching { it.name }.getOrNull() } ?: continue
+                val external = runCatching { import.externalName.name }.getOrNull() ?: continue
+                if (local != external) imports[local] = external
+            }
+        }
+        // a function or module-level value is known by the name its own module declared
+        val canonicalFunctions = moduleFunctions.toMap()
+        val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports)
         val translated = finished.modules.map { translator.translateModule(it) }
         val mainBody = translated.flatMap { it.mainBody }
         val functions = translated.flatMap { it.functions }

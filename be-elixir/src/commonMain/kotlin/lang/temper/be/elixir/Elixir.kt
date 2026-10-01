@@ -700,10 +700,10 @@ object Elixir {
         }
     }
 
-    /** `&name/2`: a named function as a value. */
+    /** `&TemperMain.name/2`: a named function as a value. */
     class Capture(
         pos: Position,
-        fn: Id,
+        fn: Expr,
         arity: NumberLit,
     ) : BaseTree(pos), Expr {
         override val operatorDefinition: ElixirOperatorDefinition?
@@ -721,8 +721,8 @@ object Elixir {
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
-        private var _fn: Id
-        var fn: Id
+        private var _fn: Expr
+        var fn: Expr
             get() = _fn
             set(newValue) { _fn = updateTreeConnection(_fn, newValue) }
         private var _arity: NumberLit
