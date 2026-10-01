@@ -1,8 +1,9 @@
 # Elixir implementations of the @connected declarations in
 # connected.temper.md. be-elixir copies this file into the library's lib/
-# and gives each @connected function a body that calls TemperConnected.<name>
-# with its defaults already applied.
-defmodule TemperConnected do
+# and gives each @connected function a body that calls Temper.Work.Connected.<name>
+# with its defaults already applied. The module is the library's own (this
+# suite's library is `work`), so two libraries' connected code can share an app.
+defmodule Temper.Work.Connected do
   def sum(i, j, bonus), do: i + j + bonus
 
   # Hidden is a translated class, so its public property is read through its

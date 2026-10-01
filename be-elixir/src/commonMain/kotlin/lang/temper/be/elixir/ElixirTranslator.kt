@@ -438,7 +438,7 @@ internal class ElixirTranslator(
 
     /**
      * A user `@connected` function: Temper's own parameter defaulting, then a
-     * call to the library's `_connected.ex`, which defines `TemperConnected`.
+     * call to the library's `_connected.ex`, which defines `Temper.Lib.Connected`.
      * The frontend gives such a function a body that only panics.
      */
     private fun connectedBody(decl: TmpL.ModuleFunctionDeclaration): Elixir.Block {
@@ -454,7 +454,8 @@ internal class ElixirTranslator(
             ?: functionName(decl.name.name).outputNameText
         // qualified, so a Kernel name like `length` needs no trailing underscore
         val fnName = if (Regex("^[a-z_][a-zA-Z0-9_]*$").matches(baseName)) baseName else names.sanitize(baseName)
-        return Elixir.Block(pos, items + remoteCall(pos, elixirModule(pos, CONNECTED_MODULE), fnName, args))
+        val connected = elixirModule(pos, root + ElixirBackend.CONNECTED_MODULE)
+        return Elixir.Block(pos, items + remoteCall(pos, connected, fnName, args))
     }
 
     /** A body whose fall-through returns nil, wrapped in a catch only if a return had to throw. */
@@ -2124,7 +2125,6 @@ internal class ElixirTranslator(
         const val NEXT = "temper_next"
         const val DONE = "temper_done"
         const val CONSTRUCTOR = "new"
-        const val CONNECTED_MODULE = "TemperConnected"
         const val CELL = "v"
         const val CELL_CLASS = "cell"
         const val SUPERTYPES = "__temper_supertypes__"

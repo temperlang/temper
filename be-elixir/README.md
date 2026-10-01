@@ -497,8 +497,11 @@ does not give, so the compiled regex carries the names itself. A
 connected std member with no Elixir support raises
 `no Elixir support code for <key>` if it is ever called.
 
-A user library's own `@connected` functions call `TemperConnected.name`,
-from the `_connected.ex` file next to its Temper source.
+A user library's own `@connected` functions call `Temper.MyLib.Connected.name`,
+which the `_connected.ex` file next to its Temper source defines. The module
+is the library's own, so two libraries with connected code can share an app;
+a build whose `_connected.ex` defines any other module fails and names the one
+it expects.
 
 ## 11. Errors
 

@@ -225,7 +225,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             ) + exUnitFiles(testRoot.joinToString("."), allTests, titles) { test -> nodes[test]?.let(::sourceLine) }
         }
         // a user library's Elixir for its @connected functions, copied as is
+        val connectedModule = (root + CONNECTED_MODULE).joinToString(".")
         val connected = rawBackendFiles.filter { it.key.last().fullName == CONNECTED_FILE }.values.map { source ->
+            checkConnectedModule(source, connectedModule)
             MetadataFileSpecification(path = filePath("lib", CONNECTED_FILE), mimeType = mimeType, content = source)
         }
         return connected + testFiles + listOf(
@@ -438,6 +440,21 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 )
             }
 
+    /**
+     * A library's `_connected.ex` must define the module its `@connected` functions call. A module
+     * name is the BEAM's only namespace, so each library owns its own; when every library defined
+     * `TemperConnected`, the second one loaded replaced the first and its calls were undefined.
+     */
+    private fun checkConnectedModule(source: String, expected: String) {
+        val defined = Regex("""defmodule\s+([A-Za-z0-9_.]+)\s+do""").findAll(source).map { it.groupValues[1] }.toList()
+        if (expected !in defined) {
+            error(
+                "$CONNECTED_FILE must define `$expected`, the module this library's @connected functions call; " +
+                    "it defines ${defined.joinToString { "`$it`" }.ifEmpty { "no module" }}",
+            )
+        }
+    }
+
     /** `diff_test` and `diff` both test into `diff_test.exs`: the stem, without a `_test` of its own. */
     private fun testFileStem(source: String): String =
         source.substringAfterLast("/").substringBefore(".temper").lowercase()
@@ -456,6 +473,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
 
         /** Elixir for a library's own @connected functions, beside its Temper source. */
         const val CONNECTED_FILE = "_connected.ex"
+
+        /**
+         * The module that file defines, under the library's root: `Temper.Lib.Connected`.
+         * One name shared by every library let the second one loaded replace the first.
+         */
+        const val CONNECTED_MODULE = "Connected"
 
         /** Where temper-core lands, relative to the backend's output root. */
         const val CORE_DIR = "temper-core"
