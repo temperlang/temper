@@ -512,7 +512,7 @@ internal class ElixirTranslator(
     }
 
     private fun statements(list: List<TmpL.Statement>, end: End, fn: FunctionContext): List<Elixir.BlockItem> {
-        val flat = flatten(list)
+        val flat = madeAfterWhatTheyCapture(flatten(list))
         val out = mutableListOf<Elixir.BlockItem>()
         for (decl in flat.filterIsInstance<TmpL.LocalFunctionDeclaration>()) {
             if (decl.name.name in boxed) {
@@ -547,6 +547,57 @@ internal class ElixirTranslator(
         }
         out.addAll(fallThrough(end, flat.lastOrNull()?.pos ?: lang.temper.log.unknownPos, fn))
         return out
+    }
+
+    /**
+     * [list] with each cell-held local function moved, if need be, to just after
+     * the last declaration in [list] of a local it captures.
+     *
+     * The frontend hoists a local function above the statements before it when
+     * something calls it first: `a` calling `b`, declared after `a`, puts `b`
+     * above both. An Elixir closure captures values when it is made, so a `b`
+     * made up there names locals that are not bound yet, and the module does not
+     * compile. Such a `b` is in a cell made at the top of the block, which is
+     * what `a` calls through, so only the store into the cell moves. Nothing can
+     * call `b` before the move's target: that call would read a `let` before it
+     * is initialized, which the frontend and js both reject.
+     */
+    private fun madeAfterWhatTheyCapture(list: List<TmpL.Statement>): List<TmpL.Statement> {
+        val out = list.toMutableList()
+        for (decl in list.filterIsInstance<TmpL.LocalFunctionDeclaration>()) {
+            if (decl.name.name !in boxed) continue
+            val captured = capturedBy(decl)
+            val from = out.indexOf(decl)
+            val last = out.indices.lastOrNull { j ->
+                j > from && (out[j] as? TmpL.LocalDeclaration)?.let { nameOf(it.name) in captured } == true
+            } ?: continue
+            out.removeAt(from)
+            out.add(last, decl) // `last` shifted down by one with the removal
+        }
+        return out
+    }
+
+    /** The locals [decl]'s body reads or assigns that it does not declare itself. */
+    private fun capturedBy(decl: TmpL.LocalFunctionDeclaration): Set<ResolvedName> {
+        val declaredInside = mutableSetOf<ResolvedName>()
+        val usedInside = mutableSetOf<ResolvedName>()
+        decl.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
+        decl.parameters.restParameter?.let { r -> nameOf(r.name)?.let(declaredInside::add) }
+        decl.body.boundaryDescent { inner ->
+            when (inner) {
+                is TmpL.LocalDeclaration -> nameOf(inner.name)?.let(declaredInside::add)
+                is TmpL.LocalFunctionDeclaration -> {
+                    nameOf(inner.name)?.let(declaredInside::add)
+                    inner.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
+                }
+                is TmpL.Reference -> nameOf(inner.id)?.let(usedInside::add)
+                is TmpL.FnReference -> nameOf(inner.id)?.let(usedInside::add)
+                is TmpL.Assignment -> nameOf(inner.left)?.let(usedInside::add)
+                else -> {}
+            }
+            true
+        }
+        return usedInside - declaredInside
     }
 
     /** An End whose fall-through is the whole list's value, so an `if` at the end can carry it in both arms. */

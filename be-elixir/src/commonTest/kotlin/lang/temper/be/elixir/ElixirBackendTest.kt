@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ElixirBackendTest {
     /**
@@ -304,6 +305,32 @@ class ElixirBackendTest {
             """.trimMargin(),
         )
         assertFalse(Regex("""Heap\.put\([^\n]*, raise\(""").containsMatchIn(out), "a raise stored into a cell:\n$out")
+    }
+
+    /**
+     * `a` calls `b` before `b` is declared, so the frontend hoists `b` above
+     * `base`. An Elixir closure captures values when it is made, so `b`'s
+     * `fn` made there names a `base` that is not bound yet, and the module
+     * did not compile ("undefined variable base"). js and py print `34 23`.
+     * `b` still gets its cell at the top of the block, for `a` to call
+     * through, but is stored into it after `base` exists.
+     */
+    @Test
+    fun aHoistedFunctionIsMadeAfterTheLocalsItCaptures() {
+        val out = generatedText(
+            """
+            |export let f(n: Int): Int {
+            |  let base = n * 10;
+            |  let a(k: Int): Int { b(k) + 1 }
+            |  let b(k: Int): Int { base + k }
+            |  a(n)
+            |}
+            """.trimMargin(),
+        )
+        val bound = out.indexOf("base = TemperCore.int32(n * 10)")
+        val stored = out.indexOf("TemperCore.Heap.put(b, :v, fn")
+        assertTrue(bound >= 0 && stored >= 0, "expected both a binding of base and a store of b:\n$out")
+        assertTrue(bound < stored, "b's closure is made before base is bound:\n$out")
     }
 
     /**
