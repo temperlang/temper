@@ -93,6 +93,9 @@ internal class ElixirTranslator(
     }
 
     private val functions = mutableListOf<Elixir.ModuleItem>()
+
+    /** Whether the class being translated is `@actor`: its instances are processes. */
+    private var currentClassIsActor = false
     private val mainBody = mutableListOf<Elixir.BlockItem>()
     private val modules = mutableListOf<Elixir.ModuleDef>()
 
@@ -1189,6 +1192,9 @@ internal class ElixirTranslator(
         if (!isClass && decl.kind != TmpL.TypeDeclarationKind.Interface) TODO("${decl.kind} declaration: ${decl.name}")
         val flattened = if (isClass) flattenMembers(decl) else decl.members.filterIsInstance<TmpL.Member>()
         val isStruct = isClass && isImu(decl)
+        val isActor = isClass && decl.metadata.any { it.key.symbol == lang.temper.value.actorSymbol }
+        if (isActor && isStruct) TODO("class ${decl.name} is both @imu and @actor")
+        currentClassIsActor = isActor
         if (isStruct && !hasNoWritesAfterConstruction(flattened)) {
             TODO("@imu class ${decl.name} writes a property outside its constructor")
         }
@@ -1254,32 +1260,37 @@ internal class ElixirTranslator(
         val formals = ctor.parameters.parameters.filter { nameOf(it.name) != thisName }
         formals.forEach { declare(it.name.name) }
         declare(thisName)
-        val blank: Elixir.Expr = if (isStruct) {
-            Elixir.StructLit(pos, name = moduleOf(pos, module), fields = listOf())
-        } else {
-            heapCall(
-                pos,
-                "new",
-                listOf(
-                    moduleOf(pos, module),
-                    Elixir.MapLit(pos, fields.map { Elixir.MapEntry(pos, Elixir.Atom(pos, it), Elixir.NilLit(pos)) }),
-                ),
-            )
+        val fieldMap = Elixir.MapLit(pos, fields.map { Elixir.MapEntry(pos, Elixir.Atom(pos, it), Elixir.NilLit(pos)) })
+        val blank: Elixir.Expr = when {
+            isStruct -> Elixir.StructLit(pos, name = moduleOf(pos, module), fields = listOf())
+            // inside the actor's new process: `this` is the actor, its fields kept there
+            currentClassIsActor -> actorCall(pos, "init_self", listOf(moduleOf(pos, module), fieldMap))
+            else -> heapCall(pos, "new", listOf(moduleOf(pos, module), fieldMap))
         }
         val cls = ClassContext(module, isStruct, thisName, isConstructor = true)
+        val body = functionBody(
+            pos,
+            ctor.body.statements,
+            cls,
+            prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) +
+                boxParams(pos, formals.map { it.name.name }),
+        )
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(pos, OutName(CONSTRUCTOR, null)),
             params = formals.map { idOf(it.name) },
-            body = functionBody(
-                pos,
-                ctor.body.statements,
-                cls,
-                prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) +
-                    boxParams(pos, formals.map { it.name.name }),
-            ),
+            body = if (currentClassIsActor) {
+                // `new` starts the process and runs the constructor in it
+                val start = actorCall(pos, "start", listOf(moduleOf(pos, module), Elixir.Fn(pos, body = body)))
+                Elixir.Block(pos, listOf(start))
+            } else {
+                body
+            },
         )
     }
+
+    private fun actorCall(pos: Position, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
+        remoteCall(pos, elixirModule(pos, "TemperCore", "Actor"), fn, args)
 
     /** A method, with its own locals named plainly. */
     private fun memberDef(
@@ -1327,12 +1338,19 @@ internal class ElixirTranslator(
                     ),
                 )
             } else {
-                functionBody(
+                val body = functionBody(
                     pos,
                     member.body!!.statements,
                     cls,
                     prelude = boxParams(pos, formals.map { it.name.name }),
                 )
+                // an actor's method runs in the actor: here if this is it, else by a call
+                if (currentClassIsActor && thisName != null) {
+                    val run = actorCall(pos, "run", listOf(varId(pos, thisName), Elixir.Fn(pos, body = body)))
+                    Elixir.Block(pos, listOf(run))
+                } else {
+                    body
+                }
             },
         )
     }

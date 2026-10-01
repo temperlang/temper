@@ -124,6 +124,7 @@ defmodule TemperCore do
   or a heap ref's `class`. Anything else is not a translated object.
   """
   def class_of(%TemperCore.Ref{class: class}), do: class
+  def class_of(%TemperCore.Actor{class: class}), do: class
   def class_of(%{__struct__: class}), do: class
   def class_of(other), do: raise(ArgumentError, "#{inspect(other)} is not a Temper object")
 
@@ -135,6 +136,7 @@ defmodule TemperCore do
 
   @doc "`instanceof` for a translated class or interface."
   def is_a(%TemperCore.Ref{class: class}, type), do: type in class.__temper_supertypes__()
+  def is_a(%TemperCore.Actor{class: class}, type), do: type in class.__temper_supertypes__()
   def is_a(%{__struct__: class}, type), do: function_exported?(class, :__temper_supertypes__, 0) and type in class.__temper_supertypes__()
   def is_a(_other, _type), do: false
 
@@ -230,9 +232,12 @@ defmodule TemperCore.Heap do
   end
 
   @doc "Reads a field. A field the object does not have raises KeyError."
+  def get(%TemperCore.Actor{} = actor, field), do: get(TemperCore.Actor.fields(actor), field)
   def get(%Ref{} = ref, field), do: Map.fetch!(fields!(ref), field)
 
   @doc "Writes a field the object already has, and returns the value written."
+  def put(%TemperCore.Actor{} = actor, field, value), do: put(TemperCore.Actor.fields(actor), field, value)
+
   def put(%Ref{id: id} = ref, field, value) do
     Process.put(key(ref), %{fields!(ref) | field => value})
 
