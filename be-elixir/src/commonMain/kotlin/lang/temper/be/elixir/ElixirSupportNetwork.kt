@@ -26,9 +26,14 @@ import lang.temper.value.NamedBuiltinFun
  *   never used.
  * - `nil` gives void a value to be.
  *
- * Coroutines are the uncomfortable fit, as they were for Blimp: Elixir has
- * no generators. A process per coroutine is the likely answer; until the
- * translator grows one, the generator strategy keeps the TmpL shape usable.
+ * Coroutines use the frontend's state machine
+ * (TranslateToRegularFunction): Elixir has no `yield`, and the obvious BEAM
+ * answer, a process per generator, does not work here. Every mutable Temper
+ * object, promises and the heap cells holding a coroutine's locals included,
+ * is a TemperCore.Heap entry in the process dictionary, so it is visible only
+ * to the process that made it. Generators and promises therefore stay in the
+ * caller's process; `async` enqueues onto a run queue (TemperCore.Async) that
+ * TemperMain.main drains as its last statement.
  */
 object ElixirSupportNetwork : SupportNetwork {
     override val backendDescription: String
@@ -36,7 +41,7 @@ object ElixirSupportNetwork : SupportNetwork {
 
     override val bubbleStrategy: BubbleBranchStrategy = BubbleBranchStrategy.Exceptions
 
-    override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToGenerator
+    override val coroutineStrategy: CoroutineStrategy = CoroutineStrategy.TranslateToRegularFunction
 
     override val functionTypeStrategy: FunctionTypeStrategy = FunctionTypeStrategy.ToFunctionType
 
@@ -48,6 +53,8 @@ object ElixirSupportNetwork : SupportNetwork {
     override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? = when {
         // the body of an abstract method: reaching it is a panic, not a bubble
         builtin.name == PureVirtual.connectedKey -> PureVirtual
+        builtin.name == AwakeUpon.connectedKey -> AwakeUpon
+        builtin.name == GetPromiseResultSync.connectedKey -> GetPromiseResultSync
         else -> builtin.builtinOperatorId?.let { elixirOperators[it] }
     }
 

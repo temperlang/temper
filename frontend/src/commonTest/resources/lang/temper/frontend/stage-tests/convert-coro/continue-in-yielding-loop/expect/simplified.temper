@@ -1,0 +1,42 @@
+var caseIndex#7: Int32;
+caseIndex#7 = 0;
+var i__1: Int32;
+i__1 = 0;
+let convertedCoroutine#10;
+convertedCoroutine#10 = fn (generator#6: SafeGenerator<Int32>) /* return__0 */: (GeneratorResult<Int32>) {
+  while (true) {
+    let caseIndexLocal#9: Int32;
+    caseIndexLocal#9 = caseIndex#7;
+    caseIndex#7 = -1;
+    if (caseIndexLocal#9 == 0) {
+      i__1 = 0;
+      caseIndex#7 = 1
+    } else if (caseIndexLocal#9 == 1) {
+      if (i__1 < 4) {
+        caseIndex#7 = 2
+      } else {
+        caseIndex#7 = 3
+      }
+    } else if (caseIndexLocal#9 == 2) {
+      if (i__1 == 1) {
+        caseIndex#7 = 4
+      } else {
+        caseIndex#7 = 5
+      }
+    } else if (caseIndexLocal#9 == 3) {
+      return__0 = core.doneResult();
+      break;
+    } else if (caseIndexLocal#9 == 4) {
+      i__1 = i__1 + 1;
+      caseIndex#7 = 1
+    } else if (caseIndexLocal#9 == 5) {
+      caseIndex#7 = 4;
+      return__0 = new ValueResult<Int32>(i__1);
+      break;
+    } else {
+      return__0 = core.doneResult();
+      break;
+    }
+  }
+};
+return__2 = adaptGeneratorFnSafe(convertedCoroutine#10)

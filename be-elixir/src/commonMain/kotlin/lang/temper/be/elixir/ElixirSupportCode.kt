@@ -176,6 +176,10 @@ private val strCat = ElixirOperatorCode(BuiltinOperatorId.StrCat) { pos, a ->
 private fun raiseOf(pos: Position, exception: String): Elixir.Expr =
     localCall(pos, "raise", listOf(elixirModule(pos, "TemperCore", exception)))
 
+/** An operator that is a call to `TemperCore.<module>.<fn>` with the operator's arguments. */
+private fun coreIn(id: BuiltinOperatorId, module: String, fn: String) =
+    ElixirOperatorCode(id) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", module), fn, a) }
+
 internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listOf(
     wrap32(BuiltinOperatorId.PlusIntInt, ElixirOperator.Addition),
     wrap32(BuiltinOperatorId.MinusIntInt, ElixirOperator.Subtraction),
@@ -275,6 +279,9 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
     ElixirOperatorCode(BuiltinOperatorId.Bubble) { pos, _ -> raiseOf(pos, "Bubble") },
     ElixirOperatorCode(BuiltinOperatorId.Panic) { pos, _ -> raiseOf(pos, "Panic") },
     ElixirOperatorCode(BuiltinOperatorId.Print) { pos, a -> remoteCall(pos, elixirModule(pos, "IO"), "puts", a) },
+    coreIn(BuiltinOperatorId.Async, "Async", "run"),
+    coreIn(BuiltinOperatorId.AdaptGeneratorFn, "Generator", "adapt"),
+    coreIn(BuiltinOperatorId.SafeAdaptGeneratorFn, "Generator", "adapt"),
 ).associateBy { it.builtinOperatorId!! }
 
 // ── Connected functions and methods ──────────────────────────────────────
@@ -470,6 +477,24 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedList("core.type ListBuilder.set()", "set"),
         connectedList("core.type ListBuilder.sort()", "sort"),
         connectedList("core.type ListBuilder.splice()", "splice"),
+        // Empty must differ from nil, and survive interpolation, which `{}` does not
+        ElixirConnected("core.empty()") { pos, _ -> Elixir.Atom(pos, "empty") },
+        ElixirConnected("core.doneResult()") { pos, _ -> Elixir.Atom(pos, "done") },
+        ElixirConnected("core.type ValueResult.constructor()") { pos, a ->
+            Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, "value"), a[0]))
+        },
+        connectedIn("Generator", "core.type Generator.next()", "next"),
+        connectedIn("Generator", "core.type SafeGenerator.next()", "next"),
+        connectedIn("Generator", "core.type SafeGenerator.nextSafe()", "next"),
+        connectedIn("Generator", "core.type Generator.close()", "close"),
+        connectedIn("Promise", "core.type PromiseBuilder.constructor()", "new"),
+        identity("core.type PromiseBuilder.get promise()"),
+        connectedIn("Promise", "core.type PromiseBuilder.complete()", "complete"),
+        connectedIn("Promise", "core.type PromiseBuilder.breakPromise()", "break_promise"),
+        connectedIn("Net", "std/net.sendRequest()", "send_request"),
+        connectedIn("Net", "std/net.type NetResponse.get status()", "status"),
+        connectedIn("Net", "std/net.type NetResponse.get contentType()", "content_type"),
+        connectedIn("Net", "std/net.type NetResponse.get bodyContent()", "body_content"),
     )
     ).associateBy { it.connectedKey }
 
@@ -477,4 +502,14 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
 internal object PureVirtual : ElixirInlineSupportCode("pureVirtual") {
     override fun callFactory(pos: Position, args: List<Elixir.Expr>): Elixir.Expr =
         localCall(pos, "raise", listOf(elixirModule(pos, "TemperCore", "Panic")))
+}
+
+internal object AwakeUpon : ElixirInlineSupportCode("awakeUpon") {
+    override fun callFactory(pos: Position, args: List<Elixir.Expr>): Elixir.Expr =
+        remoteCall(pos, elixirModule(pos, "TemperCore", "Promise"), "awake_upon", args)
+}
+
+internal object GetPromiseResultSync : ElixirInlineSupportCode("getPromiseResultSync") {
+    override fun callFactory(pos: Position, args: List<Elixir.Expr>): Elixir.Expr =
+        remoteCall(pos, elixirModule(pos, "TemperCore", "Promise"), "result", args)
 }

@@ -131,6 +131,16 @@ class CoroutineConverterTest {
         StageTestDir("convert-coro/yield-in-loop"),
     )
 
+    /**
+     * The `if` around `continue` does not yield, but it must not be isolated
+     * as an opaque sub-block: its `break` to the `for` body's continue label
+     * would then name a label that the state machine dissolved.
+     */
+    @Test
+    fun continueInYieldingLoop() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/continue-in-yielding-loop"),
+    )
+
     @Test
     fun nestedFunctionHoisting() = assertConvertedCoroutine(
         StageTestDir("convert-coro/nested-function-hoisting"),

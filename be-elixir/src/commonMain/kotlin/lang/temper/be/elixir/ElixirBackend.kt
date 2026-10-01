@@ -102,7 +102,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val isStdLib = finished.modules.all { it.isStdLib }
         val translator = ElixirTranslator(names, canonicalFunctions, moduleGlobals, types, imports, isStdLib)
         val translated = finished.modules.map { translator.translateModule(it) }
-        val mainBody = translated.flatMap { it.mainBody }
+        val mainBody = translated.flatMap { it.mainBody } +
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf())
         val functions =
             translated.flatMap { it.functions } + listOfNotNull(testRunner(pos, translated.flatMap { it.tests }))
         val classModules = translated.flatMap { it.modules }
@@ -271,6 +272,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core_string.ex"),
                 filePath("lib", "temper_core_map.ex"),
                 filePath("lib", "temper_core_test.ex"),
+                filePath("lib", "temper_core_generator.ex"),
+                filePath("lib", "temper_core_promise.ex"),
+                filePath("lib", "temper_core_net.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
@@ -278,6 +282,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("test", "temper_core_string_test.exs"),
                 filePath("test", "temper_core_map_test.exs"),
                 filePath("test", "temper_core_test_test.exs"),
+                filePath("test", "temper_core_generator_test.exs"),
+                filePath("test", "temper_core_promise_test.exs"),
+                filePath("test", "temper_core_net_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

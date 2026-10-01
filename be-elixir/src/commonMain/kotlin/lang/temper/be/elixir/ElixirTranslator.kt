@@ -845,15 +845,7 @@ internal class ElixirTranslator(
         is TmpL.InfixOperation -> infix(expression, fn)
         is TmpL.This -> varRef(expression.pos, expression.id.name)
         is TmpL.GetBackedProperty -> getBacked(expression, fn)
-        is TmpL.GetAbstractProperty -> coreCall(
-            expression.pos,
-            "call",
-            listOf(
-                expression(expression.subject, fn),
-                Elixir.Atom(expression.pos, getterName(propertyText(expression.property))),
-                Elixir.ListLit(expression.pos, listOf()),
-            ),
-        )
+        is TmpL.GetAbstractProperty -> getAbstract(expression, fn)
         is TmpL.InstanceOfExpression ->
             instanceOf(expression.pos, expression(expression.expr, fn), expression.checkedType)
         is TmpL.CastExpression -> cast(expression, fn)
@@ -1287,7 +1279,8 @@ internal class ElixirTranslator(
                     heapCall(pos, "get", listOf(varRef(pos, subject.id.name), Elixir.Atom(pos, field)))
                 }
             }
-            is TmpL.Expression -> TODO("backed property read on another object: $expression")
+            is TmpL.Expression -> builtinGet(expression, subject, fn)
+                ?: TODO("backed property read on another object: $expression")
         }
     }
 
@@ -1365,6 +1358,58 @@ internal class ElixirTranslator(
         "Test.softFailToHard" to ("Test" to "soft_fail_to_hard"),
     )
 
+    /**
+     * Property reads on builtin types that never reach the support network.
+     * Generator.done is a `@connected` property, but TranslateDotHelper only
+     * looks for connected getter methods, and an interface property has none,
+     * so no key is ever asked for. ValueResult.value is a plain backed
+     * property of a type that is lowered to the tuple `{:value, v}`.
+     */
+    private val builtinGetters = mapOf(
+        "Generator.done" to ("Generator" to "done"),
+        "SafeGenerator.done" to ("Generator" to "done"),
+        "ValueResult.value" to ("Generator" to "value"),
+        // a %TemperCore.Pair{} struct; TemperCore.call used to reach these through class_of
+        "Pair.key" to ("Pair" to "get_key"),
+        "Pair.value" to ("Pair" to "get_value"),
+    )
+
+    /**
+     * `subject.prop` through a getter. On a translated class that is a method
+     * call; on a builtin type, the class_of in TemperCore.call would name a
+     * module that does not exist and fail only at run time, so a builtin
+     * getter without support code fails the build here instead.
+     */
+    private fun getAbstract(expression: TmpL.GetAbstractProperty, fn: FunctionContext): Elixir.Expr {
+        val pos = expression.pos
+        builtinGet(expression, expression.subject, fn)?.let { return it }
+        return coreCall(
+            pos,
+            "call",
+            listOf(
+                expression(expression.subject, fn),
+                Elixir.Atom(pos, getterName(propertyText(expression.property))),
+                Elixir.ListLit(pos, listOf()),
+            ),
+        )
+    }
+
+    /** A read of a builtin type's property, or null when the subject's type is translated here. */
+    private fun builtinGet(expression: TmpL.GetProperty, subject: TmpL.Expression, fn: FunctionContext): Elixir.Expr? {
+        val property = propertyText(expression.property)
+        val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition
+        val owner = (definition?.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
+        if (owner == null || owner in types) return null
+        val builtin = builtinGetters["$owner.$property"]
+            ?: TODO("getter $owner.$property has no Elixir support code: $expression")
+        return remoteCall(
+            expression.pos,
+            elixirModule(expression.pos, "TemperCore", builtin.first),
+            builtin.second,
+            listOf(expression(subject, fn)),
+        )
+    }
+
     /** Statics of Temper's builtin types, which have no module here to hold them. */
     private val builtinStatics = mapOf<String, (Position) -> Elixir.Expr>(
         "String.begin" to { pos -> Elixir.NumberLit(pos, 0) },
@@ -1374,12 +1419,18 @@ internal class ElixirTranslator(
     )
 
     /**
-     * A string index is an integer byte offset and "no index" is -1, so the
-     * StringIndexOption types are told apart by sign, not by a type guard.
+     * Types told apart by value rather than by a guard or a module. A string
+     * index is an integer byte offset and "no index" is -1, so the
+     * StringIndexOption types are told apart by sign; generator results by tag.
      */
     private val indexChecks = mapOf<String, (Position, Elixir.Expr) -> Elixir.Expr>(
         "StringIndex" to { pos, v -> infixOp(pos, v, ElixirOperator.GreaterEquals, Elixir.NumberLit(pos, 0)) },
         "NoStringIndex" to { pos, v -> infixOp(pos, v, ElixirOperator.Equals, Elixir.NumberLit(pos, -1)) },
+        // generator results are `{:value, v}` and `:done`, not Temper objects
+        "ValueResult" to { pos, v ->
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Generator"), "value_result?", listOf(v))
+        },
+        "DoneResult" to { pos, v -> infixOp(pos, v, ElixirOperator.Equals, Elixir.Atom(pos, "done")) },
     )
 
     private val builtinGuards = mapOf(
