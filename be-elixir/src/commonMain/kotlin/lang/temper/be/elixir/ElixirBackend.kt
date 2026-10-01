@@ -209,10 +209,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("lib", "temper_core.ex"),
                 filePath("lib", "temper_core_float.ex"),
                 filePath("lib", "temper_core_list.ex"),
+                filePath("lib", "temper_core_string.ex"),
                 filePath("test", "test_helper.exs"),
                 filePath("test", "temper_core_test.exs"),
                 filePath("test", "temper_core_float_test.exs"),
                 filePath("test", "temper_core_list_test.exs"),
+                filePath("test", "temper_core_string_test.exs"),
             )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)

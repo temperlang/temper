@@ -297,6 +297,14 @@ private fun connectedKernel(key: String, fn: String) = ElixirConnected(key) { po
 private fun erlangMath(key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), fn, a) }
 
+/** `TemperCore.String.fn(args)` */
+private fun connectedString(key: String, fn: String) =
+    ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "String"), fn, a) }
+
+/** `TemperCore.StringBuilder.fn(args)` */
+private fun connectedBuilder(key: String, fn: String) =
+    ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "StringBuilder"), fn, a) }
+
 /** `TemperCore.List.fn(args)` */
 private fun connectedList(key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "List"), fn, a) }
@@ -354,9 +362,36 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         identity("core.type Int32.toInt64()"),
         connectedCore("core.type Int64.toInt32()", "int64_to_int32"),
         connectedCore("core.type Int64.toInt32Unsafe()", "int32"),
-        ElixirConnected("core.type String.get isEmpty()") { pos, a ->
-            infixOp(pos, a[0], ElixirOperator.Equals, Elixir.StringLit(pos, ""))
-        },
+        connectedString("core.type String.get isEmpty()", "is_empty"),
+        connectedString("core.type String.get end()", "end_of"),
+        connectedString("core.type String.get()", "get"),
+        connectedString("core.type String.hasIndex()", "has_index"),
+        connectedString("core.type String.next()", "next"),
+        connectedString("core.type String.prev()", "prev"),
+        connectedString("core.type String.step()", "step"),
+        connectedString("core.type String.countBetween()", "count_between"),
+        connectedString("core.type String.hasAtLeast()", "has_at_least"),
+        connectedString("core.type String.slice()", "slice"),
+        connectedString("core.type String.split()", "split"),
+        connectedString("core.type String.forEach()", "for_each"),
+        connectedString("core.type String.indexOf()", "index_of"),
+        connectedString("core.type String.fromCodePoint()", "from_code_point"),
+        connectedString("core.type String.fromCodePoints()", "from_code_points"),
+        connectedString("core.type String.toInt32()", "to_int32"),
+        connectedString("core.type String.toInt64()", "to_int64"),
+        connectedString("core.type String.toFloat64()", "to_float64"),
+        connectedString("core.type String.begin", "begin"),
+        connectedString("core.type StringIndex.none", "none"),
+        connectedCore("core.type StringIndexOption.compareTo()", "cmp"),
+        connectedBuilder("core.type StringBuilder.constructor()", "new"),
+        connectedBuilder("core.type StringBuilder.append()", "append"),
+        connectedBuilder("core.type StringBuilder.appendCodePoint()", "append_code_point"),
+        connectedBuilder("core.type StringBuilder.appendBetween()", "append_between"),
+        connectedBuilder("core.type StringBuilder.clear()", "clear"),
+        connectedBuilder("core.type StringBuilder.toString()", "to_string"),
+        connectedBuilder("core.type StringBuilder.get end()", "end_of"),
+        ElixirConnected("core.type Float64.pi") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.PI) },
+        ElixirConnected("core.type Float64.e") { pos, _ -> Elixir.NumberLit(pos, kotlin.math.E) },
         // a ListBuilder is a Listed too, so every read goes through
         // TemperCore.List, which takes a plain list or a builder
         connectedList("core.type Listed.get length()", "length"),

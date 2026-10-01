@@ -1168,11 +1168,18 @@ internal class ElixirTranslator(
     private fun getBacked(expression: TmpL.GetBackedProperty, fn: FunctionContext): Elixir.Expr {
         val pos = expression.pos
         return when (val subject = expression.subject) {
-            is TmpL.TypeSubject -> coreGlobal(
-                pos,
-                "get",
-                listOf(staticKey(pos, typeSubjectModule(subject), propertyText(expression.property))),
-            )
+            is TmpL.TypeSubject -> {
+                val typeName = (subject as? TmpL.TypeName)?.let { baseNameOf(it) }
+                val builtin = typeName?.let { builtinStatics["$it.${propertyText(expression.property)}"] }
+                when {
+                    builtin != null -> builtin(pos)
+                    else -> coreGlobal(
+                        pos,
+                        "get",
+                        listOf(staticKey(pos, typeSubjectModule(subject), propertyText(expression.property))),
+                    )
+                }
+            }
             is TmpL.This -> {
                 val cls = fn.cls ?: TODO("property read outside a class: $expression")
                 val field = fieldText(expression.property)
@@ -1226,6 +1233,14 @@ internal class ElixirTranslator(
         val module = types[name]?.let { typeModule(it) } ?: TODO("cast to $name")
         return coreCall(pos, "cast", listOf(value, moduleOf(pos, module)))
     }
+
+    /** Statics of Temper's builtin types, which have no module here to hold them. */
+    private val builtinStatics = mapOf<String, (Position) -> Elixir.Expr>(
+        "String.begin" to { pos -> Elixir.NumberLit(pos, 0) },
+        "StringIndex.none" to { pos -> Elixir.NumberLit(pos, -1) },
+        "Float64.pi" to { pos -> Elixir.NumberLit(pos, kotlin.math.PI) },
+        "Float64.e" to { pos -> Elixir.NumberLit(pos, kotlin.math.E) },
+    )
 
     private val builtinGuards = mapOf(
         "String" to "is_binary",
