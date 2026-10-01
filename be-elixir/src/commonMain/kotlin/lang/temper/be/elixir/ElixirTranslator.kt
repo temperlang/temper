@@ -639,17 +639,8 @@ internal class ElixirTranslator(
             is TmpL.LocalFunctionDeclaration -> localFunction(statement, fn)
             is TmpL.SetAbstractProperty -> {
                 val subject = statement.left.subject as? TmpL.Expression ?: TODO("setter subject: $statement")
-                listOf(
-                    coreCall(
-                        pos,
-                        "call",
-                        listOf(
-                            expression(subject, fn),
-                            Elixir.Atom(pos, setterName(propertyText(statement.left.property))),
-                            Elixir.ListLit(pos, listOf(expression(statement.right, fn))),
-                        ),
-                    ),
-                )
+                val value = expression(statement.right, fn)
+                listOf(dispatch(pos, subject, setterName(propertyText(statement.left.property)), listOf(value), fn))
             }
             else -> TODO("statement: $statement")
         }
@@ -1026,11 +1017,7 @@ internal class ElixirTranslator(
                                 listOf(expression(subject, fn)) + args,
                             )
                         }
-                        coreCall(
-                            pos,
-                            "call",
-                            listOf(expression(subject, fn), Elixir.Atom(pos, method), Elixir.ListLit(pos, args)),
-                        )
+                        dispatch(pos, subject, method, args, fn)
                     }
                 }
             }
@@ -1498,15 +1485,39 @@ internal class ElixirTranslator(
     private fun getAbstract(expression: TmpL.GetAbstractProperty, fn: FunctionContext): Elixir.Expr {
         val pos = expression.pos
         builtinGet(expression, expression.subject, fn)?.let { return it }
-        return coreCall(
-            pos,
-            "call",
-            listOf(
-                expression(expression.subject, fn),
-                Elixir.Atom(pos, getterName(propertyText(expression.property))),
-                Elixir.ListLit(pos, listOf()),
-            ),
-        )
+        return dispatch(pos, expression.subject, getterName(propertyText(expression.property)), listOf(), fn)
+    }
+
+    /**
+     * A call of a translated method, getter or setter. Temper cannot extend a
+     * concrete class ("Cannot extend concrete type(s) A"), so when the
+     * subject's static type is one, the object is of exactly that class and
+     * the call goes straight to its module: `Temper.Std.Regex.find(r, ...)`.
+     * Only an interface-typed subject needs `TemperCore.call`, which finds
+     * the module from the object at run time.
+     */
+    private fun dispatch(
+        pos: Position,
+        subject: TmpL.Expression,
+        method: String,
+        args: List<Elixir.Expr>,
+        fn: FunctionContext,
+    ): Elixir.Expr {
+        val receiver = expression(subject, fn)
+        val module = concreteClassModule(subject)
+            ?: return coreCall(pos, "call", listOf(receiver, Elixir.Atom(pos, method), Elixir.ListLit(pos, args)))
+        return remoteCall(pos, moduleOf(pos, module), method, listOf(receiver) + args)
+    }
+
+    /** The module of [subject]'s static type when that is a concrete class, this library's or another's. */
+    private fun concreteClassModule(subject: TmpL.Expression): List<String>? {
+        val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition ?: return null
+        if (definition.abstractness != lang.temper.type.Abstractness.Concrete) return null
+        val base = (definition.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText ?: return null
+        types[base]?.let { decl ->
+            return if (decl.kind == TmpL.TypeDeclarationKind.Class) typeModule(decl) else null
+        }
+        return externalModule(definition.name)
     }
 
     /** A read of a builtin type's property, or null when the subject's type is translated here. */
