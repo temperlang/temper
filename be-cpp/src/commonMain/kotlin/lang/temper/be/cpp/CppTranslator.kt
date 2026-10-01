@@ -2321,9 +2321,6 @@ class CppTranslator(
         impl: MutableList<Cpp.Global>,
         templateMethodDefs: MutableList<Cpp.Global>,
     ) {
-        // Save type formals before translating anything else.
-        val typeFormals = member.typeParameters.ot.typeParameters
-        val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
         // If this method overrides a supertype getter/setter,
         // use the overridden dotName for the C++ method name
         // so it matches the interface's virtual method name.
@@ -2339,118 +2336,40 @@ class CppTranslator(
         } else {
             member.dotName.dotNameText
         }
-        val methodCppName0 = cpp.singleName(
-            CppName(fixName(effectiveDotName)),
-        )
-        // Emit `const` for a method the mutation analysis shows never
-        // mutates its receiver. (Generators and optional-param methods are
-        // seeded as mutating in that analysis, so they resolve to null here.)
-        val methodQual = memberConstQualifier(member.dotName.dotNameText)
         when (val body = member.body) {
             null -> {
-                val paramTypes = member.parameters.parameters.drop(1).map {
-                    translateParamType(it)
-                }
+                val paramTypes = member.parameters.parameters.drop(1).map { translateParamType(it) }
                 add(
                     pureVirtualMethod(
                         translateType(member.returnType),
-                        methodCppName0,
+                        cpp.singleName(CppName(fixName(effectiveDotName))),
                         paramTypes.mapIndexed { i, t ->
                             cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                         },
-                        qual = methodQual,
+                        qual = memberConstQualifier(member.dotName.dotNameText),
                     ),
                 )
             }
-            else -> {
-                val methodCppName = cpp.singleName(
-                    CppName(fixName(effectiveDotName)),
+            else -> translateMethodMember(
+                member = member,
+                topLevel = topLevel,
+                isTemplate = isTemplate,
+                impl = impl,
+                templateMethodDefs = templateMethodDefs,
+                effectiveDotName = effectiveDotName,
+                methodFormals = member.parameters.parameters.drop(1),
+                // Emit `const` for a method the mutation analysis shows never
+                // mutates its receiver. (Generators and optional-param methods are
+                // seeded as mutating in that analysis, so they resolve to null here.)
+                methodQual = memberConstQualifier(member.dotName.dotNameText),
+                // Methods need 'virtual' for polymorphic dispatch in C++
+                needsVirtual = isInterface || realSuperTypes.any(),
+            ) {
+                translateBlockWithThis(
+                    cpp.name(member.parameters.parameters.first().name),
+                    body,
                 )
-                val methodFormals =
-                    member.parameters.parameters.drop(1)
-                val hasOptional =
-                    methodFormals.any { it.optional }
-                // Methods need 'virtual' for
-                // polymorphic dispatch in C++
-                val needsVirtual = isInterface ||
-                    realSuperTypes.any()
-                val func = cpp.func(
-                    when {
-                        typeFormals.isNotEmpty() -> methodCppName
-                        else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
-                    },
-                    translateType(member.returnType),
-                    methodFormals.map { param ->
-                        cpp.pos(param) {
-                            translateParamType(param) to
-                                cpp.name(param.name)
-                        }
-                    },
-                    translateBlockWithThis(
-                        cpp.name(member.parameters.parameters.first().name),
-                        body,
-                    ),
-                    qual = methodQual,
-                )
-                if (typeFormals.isNotEmpty()) {
-                    // This has a lot in common with static methods, but it takes many parameters to factor out.
-                    val templateParams = typeFormals.map { formal ->
-                        cpp.funcParam(
-                            cpp.singleName(
-                                CppName("class", allowKey = true),
-                            ),
-                            savedTypeFormalNames[formal.definition]
-                                ?: cpp.name(formal.name),
-                        )
-                    }
-                    add(
-                        cpp.templateFuncDef(templateParams, func.def),
-                    )
-                    if (hasOptional) {
-                        val funcName = cpp.name(topLevel.name)
-                        val retType =
-                            translateType(member.returnType)
-                        for (
-                        (_, def) in generateOptionalOverloads(
-                            funcName,
-                            retType,
-                            methodFormals.toList(),
-                        )
-                        ) {
-                            add(
-                                cpp.templateFuncDef(
-                                    templateParams.map {
-                                        it.deepCopy()
-                                    },
-                                    def,
-                                ),
-                            )
-                        }
-                    }
-                } else {
-                    emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
-                    if (hasOptional) {
-                        val scopedName = cpp.scopedName(
-                            cpp.name(topLevel.name),
-                            methodCppName.deepCopy(),
-                        )
-                        val retType =
-                            translateType(member.returnType)
-                        emitMethodOverloads(
-                            generateOptionalOverloads(scopedName, retType, methodFormals.toList()),
-                            isTemplate, impl, templateMethodDefs,
-                        )
-                    }
-                }
             }
-        }
-        // Clean up formals for this scope.
-        // Ideally, this is in a finally block, but if we throw above, we've failed the translation, anyway.
-        for (formal in typeFormals) {
-            typeFormalNames.remove(formal.definition)
-        }
-        for (key in savedTypeFormalKeys) {
-            typeFormalNamesByText.remove(key)
         }
     }
 
@@ -2465,98 +2384,122 @@ class CppTranslator(
         impl: MutableList<Cpp.Global>,
         templateMethodDefs: MutableList<Cpp.Global>,
     ) {
-        // Save type formals before translating anything else.
-        val typeFormals = member.typeParameters.ot.typeParameters
-        val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
         when (val body = member.body) {
             null -> {
                 // Abstract static method — skip
             }
-            else -> {
-                val methodCppName = cpp.singleName(
-                    CppName(fixName(member.dotName.dotNameText)),
-                )
-                val methodFormals =
-                    member.parameters.parameters
-                val hasOptional =
-                    methodFormals.any { it.optional }
-                val func = cpp.func(
-                    when {
-                        typeFormals.isNotEmpty() -> methodCppName
-                        else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
-                    },
-                    translateType(member.returnType),
-                    methodFormals.map { param ->
-                        cpp.pos(param) {
-                            translateParamType(param) to
-                                cpp.name(param.name)
-                        }
-                    },
-                    translateBlock(body),
-                )
-                if (typeFormals.isNotEmpty()) {
-                    // This has a lot in common with static methods, but it takes many parameters to factor out.
-                    val templateParams = typeFormals.map { formal ->
-                        cpp.funcParam(
-                            cpp.singleName(
-                                CppName("class", allowKey = true),
-                            ),
-                            savedTypeFormalNames[formal.definition]
-                                ?: cpp.name(formal.name),
-                        )
+            else -> translateMethodMember(
+                member = member,
+                topLevel = topLevel,
+                isTemplate = isTemplate,
+                impl = impl,
+                templateMethodDefs = templateMethodDefs,
+                effectiveDotName = member.dotName.dotNameText,
+                methodFormals = member.parameters.parameters,
+                declMod = Cpp.DefMod.Static,
+            ) {
+                translateBlock(body)
+            }
+        }
+    }
+
+    /**
+     * Translate either instance or static methods.
+     */
+    private fun MutableList<Cpp.StructPart>.translateMethodMember(
+        member: TmpL.Method,
+        topLevel: TmpL.TypeDeclaration,
+        isTemplate: Boolean,
+        impl: MutableList<Cpp.Global>,
+        templateMethodDefs: MutableList<Cpp.Global>,
+        effectiveDotName: String,
+        methodFormals: List<TmpL.Formal>,
+        declMod: Cpp.DefMod? = null,
+        methodQual: Cpp.MethodQualifier? = null,
+        needsVirtual: Boolean = false,
+        translateBody: () -> Cpp.BlockStmt,
+    ) {
+        // Save type formals before translating anything else.
+        val typeFormals = member.typeParameters.ot.typeParameters
+        val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
+        try {
+            val methodCppName = cpp.singleName(
+                CppName(fixName(effectiveDotName)),
+            )
+            val hasOptional =
+                methodFormals.any { it.optional }
+            val func = cpp.func(
+                when {
+                    typeFormals.isNotEmpty() -> methodCppName
+                    else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
+                },
+                translateType(member.returnType),
+                methodFormals.map { param ->
+                    cpp.pos(param) {
+                        translateParamType(param) to cpp.name(param.name)
                     }
-                    // TODO To support mutual recursion, we might need to separate decl from def in headers.
-                    // TODO This presumably also applies to top-level template functions.
-                    add(
-                        cpp.templateFuncDef(templateParams, func.def),
+                },
+                translateBody(),
+                qual = methodQual,
+            )
+            if (typeFormals.isNotEmpty()) {
+                // This has a lot in common with static methods, but it takes many parameters to factor out.
+                val templateParams = typeFormals.map { formal ->
+                    cpp.funcParam(
+                        cpp.singleName(
+                            CppName("class", allowKey = true),
+                        ),
+                        savedTypeFormalNames[formal.definition]
+                            ?: cpp.name(formal.name),
                     )
-                    if (hasOptional) {
-                        val funcName = cpp.name(topLevel.name)
-                        val retType =
-                            translateType(member.returnType)
-                        for (
-                        (_, def) in generateOptionalOverloads(
-                            funcName,
-                            retType,
-                            methodFormals.toList(),
-                        )
-                        ) {
-                            add(
-                                cpp.templateFuncDef(
-                                    templateParams.map {
-                                        it.deepCopy()
-                                    },
-                                    def,
-                                ),
-                            )
-                        }
-                    }
-                } else {
-                    emitMethodDeclAndDef(func, isTemplate, false, impl, templateMethodDefs, declMod = Cpp.DefMod.Static)
-                    if (hasOptional) {
-                        val scopedName = cpp.scopedName(
-                            cpp.name(topLevel.name),
-                            methodCppName.deepCopy(),
-                        )
-                        val retType =
-                            translateType(member.returnType)
-                        emitMethodOverloads(
-                            generateOptionalOverloads(
-                                scopedName, retType, methodFormals.toList(), declMod = Cpp.DefMod.Static,
+                }
+                // TODO To support mutual recursion, we might need to separate decl from def in headers.
+                // TODO This presumably also applies to top-level template functions.
+                add(
+                    cpp.templateFuncDef(templateParams, func.def),
+                )
+                if (hasOptional) {
+                    val funcName = cpp.name(topLevel.name)
+                    val retType = translateType(member.returnType)
+                    for (
+                    (_, def) in generateOptionalOverloads(
+                        funcName,
+                        retType,
+                        methodFormals.toList(),
+                    )
+                    ) {
+                        add(
+                            cpp.templateFuncDef(
+                                templateParams.map {
+                                    it.deepCopy()
+                                },
+                                def,
                             ),
-                            isTemplate, impl, templateMethodDefs,
                         )
                     }
                 }
+            } else {
+                emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs, declMod)
+                if (hasOptional) {
+                    val scopedName = cpp.scopedName(
+                        cpp.name(topLevel.name),
+                        methodCppName.deepCopy(),
+                    )
+                    val retType = translateType(member.returnType)
+                    emitMethodOverloads(
+                        generateOptionalOverloads(scopedName, retType, methodFormals.toList(), declMod),
+                        isTemplate, impl, templateMethodDefs,
+                    )
+                }
             }
-        }
-        // Clean up formals for this scope.
-        // Ideally, this is in a finally block, but if we throw above, we've failed the translation, anyway.
-        for (formal in typeFormals) {
-            typeFormalNames.remove(formal.definition)
-        }
-        for (key in savedTypeFormalKeys) {
-            typeFormalNamesByText.remove(key)
+        } finally {
+            // Clean up formals for this scope.
+            for (formal in typeFormals) {
+                typeFormalNames.remove(formal.definition)
+            }
+            for (key in savedTypeFormalKeys) {
+                typeFormalNamesByText.remove(key)
+            }
         }
     }
 
