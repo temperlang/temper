@@ -2393,6 +2393,7 @@ class CppTranslator(
                     qual = methodQual,
                 )
                 if (typeFormals.isNotEmpty()) {
+                    // This has a lot in common with static methods, but it takes many parameters to factor out.
                     val templateParams = typeFormals.map { formal ->
                         cpp.funcParam(
                             cpp.singleName(
@@ -2494,6 +2495,7 @@ class CppTranslator(
                     translateBlock(body),
                 )
                 if (typeFormals.isNotEmpty()) {
+                    // This has a lot in common with static methods, but it takes many parameters to factor out.
                     val templateParams = typeFormals.map { formal ->
                         cpp.funcParam(
                             cpp.singleName(
@@ -2503,6 +2505,8 @@ class CppTranslator(
                                 ?: cpp.name(formal.name),
                         )
                     }
+                    // TODO To support mutual recursion, we might need to separate decl from def in headers.
+                    // TODO This presumably also applies to top-level template functions.
                     add(
                         cpp.templateFuncDef(templateParams, func.def),
                     )
@@ -2987,7 +2991,9 @@ class CppTranslator(
         }
     }
 
-    private fun saveTypeFormals(typeFormals: List<TmpL.TypeFormal>): Pair<MutableMap<TypeDefinition, Cpp.SingleName>, MutableList<String>> {
+    private fun saveTypeFormals(
+        typeFormals: List<TmpL.TypeFormal>,
+    ): Pair<MutableMap<TypeDefinition, Cpp.SingleName>, MutableList<String>> {
         val savedTypeFormalNames = mutableMapOf<TypeDefinition, Cpp.SingleName>()
         val savedTypeFormalKeys = mutableListOf<String>()
         for (formal in typeFormals) {
