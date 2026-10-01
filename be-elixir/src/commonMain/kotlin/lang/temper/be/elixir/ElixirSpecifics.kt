@@ -85,7 +85,19 @@ private fun unavailable(cliEnv: CliEnv, message: String) =
 
 private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false): ToolchainResult {
     val runDir = relativeOutputDirectoryForLibrary(ElixirBackend.Factory.backendId, libraryName)
-    val mix = this[MixCommand]
+    // `this[MixCommand]` force-unwraps the lookup, so a machine without
+    // Elixir failed every run with a NullPointerException that named no tool
+    val found = which(MixCommand)
+    val mix = found.result ?: return ToolchainResult(
+        libraryName = libraryName,
+        result = RFailure(
+            CliFailure(
+                message = "be-elixir needs `mix` (Elixir 1.15 or later) on the PATH" +
+                    (found.failure?.message?.let { ": $it" } ?: ""),
+                effort = Effort(exitCode = EXIT_UNAVAILABLE, cliEnv = this),
+            ),
+        ),
+    )
     fun step(args: List<String>, stderr: String): RResult<EffortSuccess, CliFailure> {
         val aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)) +
             if (tests) mapOf(Aux.JunitXml to runDir.resolveFile(ElixirBackend.TEST_RESULTS_FILE)) else mapOf()
