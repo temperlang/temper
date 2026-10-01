@@ -353,26 +353,43 @@ class ElixirBackendTest {
     }
 
     /**
-     * `==` on two `@imu` values is Elixir's `==` on two structs: equal when
-     * their fields are, as an Elixir developer expects of a struct. js and py
-     * compare objects by identity; this backend does not, on purpose (guide,
-     * section 8). Pinned so a change to object equality cannot flip it
-     * silently.
+     * Temper no longer has a generic `==`: a class has equality only if it
+     * declares an `@operator("==")` method. `==` on two instances of one
+     * that does not is a type error on every backend, so this backend writes
+     * the located panic it writes for any rejected expression, and the
+     * struct is still a struct.
      */
     @Test
-    fun imuValuesCompareByTheirFields() {
+    fun equalityOnAClassWithoutOneIsBrokenCode() {
         val out = generatedText(
             """
             |@imu export class V(public x: Int) {}
             |export let same(a: V, b: V): Boolean { a == b }
             """.trimMargin(),
         )
-        // `==` is `==` for every class; what makes it compare fields is that
-        // an @imu class is a struct, where any other class is a heap ref
-        // compared by its id
         assertContains(out, "defstruct [:x]")
-        assertContains(out, "def same(a, b)")
-        assertContains(out, "a == b")
+        assertContains(out, "raise(TemperCore.Panic, \\u0022broken code: ")
+    }
+
+    /**
+     * The frontend writes `a < b` as `(a <=> b) < 0` for every type but
+     * Int32. Strings, Int64s and Booleans order in the BEAM as in Temper, so
+     * they go back to the infix operator; a Float64 does not (`-0.0`, NaN).
+     */
+    @Test
+    fun comparisonsTheBeamOrdersRightAreInfix() {
+        val out = generatedText(
+            """
+            |export let s(a: String, b: String): Boolean { a < b }
+            |export let l(a: Int64, b: Int64): Boolean { a >= b }
+            |export let f(a: Float64, b: Float64): Boolean { a < b }
+            """.trimMargin(),
+        )
+        // generatedText is JSON: `<` is \u003c and `>` is \u003e
+        assertContains(out, "a \\u003c b")
+        assertContains(out, "a \\u003e= b")
+        assertContains(out, "TemperCore.Float.cmp(a, b) \\u003c 0")
+        assertFalse("TemperCore.cmp(" in out, out)
     }
 }
 

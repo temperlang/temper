@@ -28,14 +28,14 @@ internal fun elixirStringText(value: String): String = buildString {
             char == '\n' -> append("\\n")
             char == '\t' -> append("\\t")
             char == '\r' -> append("\\r")
-            char.code < 0x20 || char.code == 0x7f -> append("\\u{${char.code.toString(16)}}")
+            char.code < FIRST_PRINTABLE || char.code == DELETE -> append("\\u{${char.code.toString(HEX)}}")
             char.isHighSurrogate() && i + 1 < value.length && value[i + 1].isLowSurrogate() -> {
                 append(char)
                 append(value[i + 1])
                 i += 1
             }
             char.isSurrogate() ->
-                error("lone surrogate U+${char.code.toString(16)} at $i cannot be written as UTF-8 Elixir source")
+                error("lone surrogate U+${char.code.toString(HEX)} at $i cannot be written as UTF-8 Elixir source")
             else -> append(char)
         }
         i += 1
@@ -74,3 +74,7 @@ internal fun elixirCommentText(text: String): String =
             else -> "# $line"
         }
     }
+
+private const val FIRST_PRINTABLE = 0x20
+private const val DELETE = 0x7f
+private const val HEX = 16

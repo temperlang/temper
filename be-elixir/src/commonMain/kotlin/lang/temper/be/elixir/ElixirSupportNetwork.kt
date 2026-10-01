@@ -2,6 +2,7 @@ package lang.temper.be.elixir
 
 import lang.temper.be.TargetLanguageTypeName
 import lang.temper.be.tmpl.BubbleBranchStrategy
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.ComputedJumpStrategy
 import lang.temper.be.tmpl.CoroutineStrategy
 import lang.temper.be.tmpl.FunctionTypeStrategy
@@ -9,11 +10,16 @@ import lang.temper.be.tmpl.OptionalSupportCodeKind
 import lang.temper.be.tmpl.RepresentationOfVoid
 import lang.temper.be.tmpl.SupportCode
 import lang.temper.be.tmpl.SupportNetwork
+import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TranslationAssistant
 import lang.temper.lexer.Genre
 import lang.temper.log.Position
+import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
+import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.emptyValue
 
 /**
  * Wires Temper builtins to Elixir.
@@ -68,6 +74,50 @@ object ElixirSupportNetwork : SupportNetwork {
      */
     override fun translateConnectedReference(pos: Position, connectedKey: String, genre: Genre): SupportCode? =
         elixirConnected[connectedKey]
+
+    /**
+     * The frontend writes `a < b` as `(a <=> b) < 0` for every type but Int32.
+     * For an Int64, a Boolean, a String or a string index the BEAM's own
+     * term order is Temper's (binaries compare byte by byte, which for UTF-8
+     * is code point order, and `false < true`), so the comparison goes back
+     * to the infix operator. A Float64 stays `TemperCore.Float.cmp`: the
+     * BEAM calls `-0.0 == 0.0` and has no NaN or infinities to order.
+     */
+    override fun simplifyPossibleComparison(
+        tmpl: TmpL.CallExpression,
+        comparisonKind: ComparisonKind,
+        translationAssistant: TranslationAssistant,
+    ): TmpL.Expression? {
+        val fn = tmpl.fn
+        val supportCode = when (fn) {
+            is TmpL.FnReference -> translationAssistant.supportCodeFromReference(fn.id)
+            is TmpL.InlineSupportCodeWrapper -> fn.supportCode
+            else -> null
+        } as? ElixirInlineSupportCode ?: return null
+        val ordersLikeTheBeam = supportCode.connectedKey == "core.type StringIndexOption.compareTo()" ||
+            supportCode.builtinOperatorId in termOrderComparisons
+        if (!ordersLikeTheBeam) return null
+        // the operands move to the new call; the old one keeps placeholders
+        val operands = tmpl.parameters.toList()
+        tmpl.parameters = operands.map { TmpL.ValueReference(it.pos, WellKnownTypes.emptyType2, emptyValue) }
+        return TmpL.CallExpression(
+            pos = tmpl.pos,
+            fn = TmpL.InlineSupportCodeWrapper(
+                fn.pos,
+                fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
+                ElixirComparison(comparisonKind),
+            ),
+            typeActuals = tmpl.typeActuals.deepCopy(),
+            parameters = operands,
+        )
+    }
+
+    private val termOrderComparisons = setOf(
+        BuiltinOperatorId.CmpIntInt,
+        BuiltinOperatorId.CmpLongLong,
+        BuiltinOperatorId.CmpBoolBool,
+        BuiltinOperatorId.CmpStrStr,
+    )
 
     override fun translatedConnectedType(
         pos: Position,

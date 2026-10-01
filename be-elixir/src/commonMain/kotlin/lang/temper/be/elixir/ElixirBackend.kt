@@ -85,8 +85,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 when (val sig = import.sig) {
                     is TmpL.ImportedFunction -> externals[external] = ExternalFunction(
                         module,
-                        sig.type.requiredInputTypes.size + sig.type.optionalInputTypes.size +
-                            (if (sig.type.restInputsType != null) 1 else 0),
+                        sig.type.requiredInputTypes.size + sig.type.optionalInputTypes.size,
                     )
                     is TmpL.ImportedValue -> externals[external] = ExternalValue(module)
                     // a type is found from its definition's library, wherever it is
@@ -108,8 +107,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             for (topLevel in module.topLevels) {
                 when (topLevel) {
                     is TmpL.ModuleFunctionDeclaration -> {
-                        moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size +
-                            (if (topLevel.parameters.restParameter != null) 1 else 0)
+                        moduleFunctions[topLevel.name.name] = topLevel.parameters.parameters.size
                         if (topLevel.dependencyCategory() == DependencyCategory.Test) testOnly.add(topLevel.name.name)
                     }
                     is TmpL.ModuleLevelDeclaration -> if (!topLevel.isConsole()) moduleGlobals.add(topLevel.name.name)
@@ -166,7 +164,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 dependenciesBuilder.addTest(libraryName, test, backendName = name)
             }
         }
-        val rootModule = elixirModule(pos, *root.toTypedArray())
+        val rootModule = elixirModule(pos, root)
         val testRoot = root + TEST_MODULE
         val mainBody = listOf(
             remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
@@ -208,7 +206,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             val nodes = translated.fold(mapOf<String, TmpL.Test>()) { acc, t -> acc + t.testNodes }
             val testModule = Elixir.ModuleDef(
                 pos,
-                name = elixirModule(pos, *testRoot.toTypedArray()),
+                name = elixirModule(pos, testRoot),
                 items = testFunctions +
                     initFunction(pos, testRoot, listOf(root), testDeps, testBody) +
                     listOfNotNull(testRunner(pos, testRoot, allTests)),
@@ -257,7 +255,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         body: List<Elixir.BlockItem>,
     ): Elixir.FunDef {
         val calls = (first + deps.map(::libraryModule)).map { m ->
-            remoteCall(pos, elixirModule(pos, *m.toTypedArray()), INIT_FUNCTION, listOf())
+            remoteCall(pos, elixirModule(pos, m), INIT_FUNCTION, listOf())
         }
         return Elixir.FunDef(
             pos,
@@ -361,7 +359,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     private fun testRunner(pos: lang.temper.log.Position, root: List<String>, tests: List<String>): Elixir.FunDef? {
         if (tests.isEmpty()) return null
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
-        val main = elixirModule(pos, *root.toTypedArray())
+        val main = elixirModule(pos, root)
         val cases = tests.map { test ->
             Elixir.RemoteCall(
                 pos,

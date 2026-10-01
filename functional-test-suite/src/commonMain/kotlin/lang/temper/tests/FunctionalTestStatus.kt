@@ -64,7 +64,6 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.FunctionsDefaulting,
         Ft.FunctionsLocals,
         Ft.FunctionsNamedArgs,
-        Ft.FunctionsRestFormal,
         Ft.FunctionsSimpleLocals,
         Ft.ImportsFunctions,
         Ft.ImportsTypes,

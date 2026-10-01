@@ -1,5 +1,6 @@
 package lang.temper.be.elixir
 
+import lang.temper.be.tmpl.ComparisonKind
 import lang.temper.be.tmpl.InlineSupportCode
 import lang.temper.be.tmpl.NamedSupportCode
 import lang.temper.be.tmpl.TypedArg
@@ -80,8 +81,20 @@ internal object ConsoleLog : ElixirInlineSupportCode("core.type Console.log()") 
 
 private fun eid(pos: Position, text: String) = Elixir.Id(pos, OutName(text, null))
 
-internal fun elixirModule(pos: Position, vararg segments: String) =
-    Elixir.ModuleName(pos, segments.map { eid(pos, it) })
+internal fun elixirModule(pos: Position, vararg segments: String) = elixirModule(pos, segments.asList())
+
+internal fun elixirModule(pos: Position, segments: List<String>) = Elixir.ModuleName(pos, segments.map { eid(pos, it) })
+
+/** A shift count is taken modulo the width, as Temper's are: `n &&& 31` for an Int32. */
+private const val INT32_SHIFT_MASK = 31
+private const val INT64_SHIFT_MASK = 63
+private const val UINT32_MAX = 0xFFFF_FFFFL
+
+/** After `this`, `find` and `replace` take the compiled regex, the string and a start or replacement. */
+private const val FIND_ARGS = 3
+
+/** After `this`, `split` takes the compiled regex and the string. */
+private const val SPLIT_ARGS = 2
 
 internal fun remoteCall(pos: Position, module: Elixir.Expr, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
     Elixir.RemoteCall(pos, module = module, fn = eid(pos, fn), args = args)
@@ -214,35 +227,24 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
     floatCore(BuiltinOperatorId.MinusFlt, "neg"),
     floatCore(BuiltinOperatorId.ModFltFlt, "rem"),
     floatCore(BuiltinOperatorId.PowFltFlt, "pow"),
+    // Only Int32 has the whole relational suite. For every other type the
+    // frontend writes `a < b` as `(a <=> b) < 0` and `a != b` as `!(a == b)`.
     infix(BuiltinOperatorId.LtIntInt, ElixirOperator.LessThan),
     infix(BuiltinOperatorId.LeIntInt, ElixirOperator.LessEquals),
     infix(BuiltinOperatorId.GtIntInt, ElixirOperator.GreaterThan),
     infix(BuiltinOperatorId.GeIntInt, ElixirOperator.GreaterEquals),
     infix(BuiltinOperatorId.EqIntInt, ElixirOperator.Equals),
-    infix(BuiltinOperatorId.NeIntInt, ElixirOperator.NotEquals),
-    floatCore(BuiltinOperatorId.LtFltFlt, "lt"),
-    floatCore(BuiltinOperatorId.LeFltFlt, "le"),
-    floatCore(BuiltinOperatorId.GtFltFlt, "gt"),
-    floatCore(BuiltinOperatorId.GeFltFlt, "ge"),
+    infix(BuiltinOperatorId.EqLongLong, ElixirOperator.Equals),
+    infix(BuiltinOperatorId.EqBoolBool, ElixirOperator.Equals),
     floatCore(BuiltinOperatorId.EqFltFlt, "eq"),
-    floatCore(BuiltinOperatorId.NeFltFlt, "ne"),
     // Elixir compares binaries byte by byte, which for UTF-8 is code point order.
-    infix(BuiltinOperatorId.LtStrStr, ElixirOperator.LessThan),
-    infix(BuiltinOperatorId.LeStrStr, ElixirOperator.LessEquals),
-    infix(BuiltinOperatorId.GtStrStr, ElixirOperator.GreaterThan),
-    infix(BuiltinOperatorId.GeStrStr, ElixirOperator.GreaterEquals),
     infix(BuiltinOperatorId.EqStrStr, ElixirOperator.Equals),
-    infix(BuiltinOperatorId.NeStrStr, ElixirOperator.NotEquals),
-    infix(BuiltinOperatorId.LtGeneric, ElixirOperator.LessThan),
-    infix(BuiltinOperatorId.LeGeneric, ElixirOperator.LessEquals),
-    infix(BuiltinOperatorId.GtGeneric, ElixirOperator.GreaterThan),
-    infix(BuiltinOperatorId.GeGeneric, ElixirOperator.GreaterEquals),
-    infix(BuiltinOperatorId.EqGeneric, ElixirOperator.Equals),
-    infix(BuiltinOperatorId.NeGeneric, ElixirOperator.NotEquals),
     core(BuiltinOperatorId.CmpIntInt, "cmp"),
+    core(BuiltinOperatorId.CmpLongLong, "cmp"),
+    // false < true in the BEAM's term order, as in Temper.
+    core(BuiltinOperatorId.CmpBoolBool, "cmp"),
     floatCore(BuiltinOperatorId.CmpFltFlt, "cmp"),
     core(BuiltinOperatorId.CmpStrStr, "cmp"),
-    core(BuiltinOperatorId.CmpGeneric, "cmp"),
     prefix(BuiltinOperatorId.BooleanNegation, ElixirOperator.Not),
     ElixirOperatorCode(BuiltinOperatorId.IsNull) { pos, a ->
         infixOp(pos, a[0], ElixirOperator.StrictEquals, Elixir.NilLit(pos))
@@ -258,16 +260,16 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
     bitwise(BuiltinOperatorId.BitwiseOr64, "bor", "int64"),
     bitwise(BuiltinOperatorId.BitwiseXor64, "bxor", "int64"),
     bitwise(BuiltinOperatorId.BitwiseNegation64, "bnot", "int64"),
-    shift(BuiltinOperatorId.BitwiseShl32, "bsl", "int32", 31),
-    shift(BuiltinOperatorId.BitwiseShr32, "bsr", "int32", 31),
-    shift(BuiltinOperatorId.BitwiseShl64, "bsl", "int64", 63),
-    shift(BuiltinOperatorId.BitwiseShr64, "bsr", "int64", 63),
-    unsignedShift(BuiltinOperatorId.BitwiseShrUnsigned32, "int32", 0xFFFF_FFFFL, 31),
+    shift(BuiltinOperatorId.BitwiseShl32, "bsl", "int32", INT32_SHIFT_MASK),
+    shift(BuiltinOperatorId.BitwiseShr32, "bsr", "int32", INT32_SHIFT_MASK),
+    shift(BuiltinOperatorId.BitwiseShl64, "bsl", "int64", INT64_SHIFT_MASK),
+    shift(BuiltinOperatorId.BitwiseShr64, "bsr", "int64", INT64_SHIFT_MASK),
+    unsignedShift(BuiltinOperatorId.BitwiseShrUnsigned32, "int32", UINT32_MAX, INT32_SHIFT_MASK),
     // 2^64 - 1 does not fit a Long, so this one is spelled out in the literal's text
     ElixirOperatorCode(BuiltinOperatorId.BitwiseShrUnsigned64) { pos, a ->
         val bitwise = elixirModule(pos, "Bitwise")
         val mask = Elixir.NumberLit(pos, java.math.BigInteger("18446744073709551615"))
-        val count = remoteCall(pos, bitwise, "band", listOf(a[1], Elixir.NumberLit(pos, 63)))
+        val count = remoteCall(pos, bitwise, "band", listOf(a[1], Elixir.NumberLit(pos, INT64_SHIFT_MASK)))
         coreCall(
             pos,
             "int64",
@@ -285,6 +287,17 @@ internal val elixirOperators: Map<BuiltinOperatorId, ElixirOperatorCode> = listO
     coreIn(BuiltinOperatorId.AdaptGeneratorFn, "Generator", "adapt"),
     coreIn(BuiltinOperatorId.SafeAdaptGeneratorFn, "Generator", "adapt"),
 ).associateBy { it.builtinOperatorId!! }
+
+/** `a < b` for a type whose order is the BEAM's term order; see [ElixirSupportNetwork.simplifyPossibleComparison]. */
+internal class ElixirComparison(kind: ComparisonKind) : ElixirInlineSupportCode("comparison ${kind.name}") {
+    private val op = when (kind) {
+        ComparisonKind.LessThan -> ElixirOperator.LessThan
+        ComparisonKind.LessThanOrEqual -> ElixirOperator.LessEquals
+        ComparisonKind.GreaterThanOrEqual -> ElixirOperator.GreaterEquals
+        ComparisonKind.GreaterThan -> ElixirOperator.GreaterThan
+    }
+    override fun callFactory(pos: Position, args: List<Elixir.Expr>): Elixir.Expr = infixOp(pos, args[0], op, args[1])
+}
 
 // ── Connected functions and methods ──────────────────────────────────────
 
@@ -417,6 +430,10 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         connectedString("core.type String.begin", "begin"),
         connectedString("core.type StringIndex.none", "none"),
         connectedCore("core.type StringIndexOption.compareTo()", "cmp"),
+        // a string index is an integer, -1 for none
+        ElixirConnected("core.type StringIndexOption.eq()") { pos, a ->
+            infixOp(pos, a[0], ElixirOperator.Equals, a[1])
+        },
         connectedBuilder("core.type StringBuilder.constructor()", "new"),
         connectedBuilder("core.type StringBuilder.append()", "append"),
         connectedBuilder("core.type StringBuilder.appendCodePoint()", "append_code_point"),
@@ -472,12 +489,14 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         },
         ElixirConnected("std/regex.type Regex.compiledFound()") { pos, a -> regex(pos, "found", a.drop(1)) },
         ElixirConnected("std/regex.type Regex.compiledFind()") { pos, a ->
-            regex(pos, "find", a.subList(1, 4) + matchModules(pos))
+            regex(pos, "find", a.subList(1, 1 + FIND_ARGS) + matchModules(pos))
         },
         ElixirConnected("std/regex.type Regex.compiledReplace()") { pos, a ->
-            regex(pos, "replace", a.subList(1, 4) + matchModules(pos))
+            regex(pos, "replace", a.subList(1, 1 + FIND_ARGS) + matchModules(pos))
         },
-        ElixirConnected("std/regex.type Regex.compiledSplit()") { pos, a -> regex(pos, "split", a.subList(1, 3)) },
+        ElixirConnected("std/regex.type Regex.compiledSplit()") { pos, a ->
+            regex(pos, "split", a.subList(1, 1 + SPLIT_ARGS))
+        },
         ElixirConnected("std/regex.type RegexFormatter.pushCodeTo()") { pos, a ->
             remoteCall(
                 pos,

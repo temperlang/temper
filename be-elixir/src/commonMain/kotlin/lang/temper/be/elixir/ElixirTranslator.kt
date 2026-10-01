@@ -168,7 +168,6 @@ internal class ElixirTranslator(
                         val declaredInside = mutableSetOf<ResolvedName>()
                         val usedInside = mutableSetOf<ResolvedName>()
                         node.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
-                        node.parameters.restParameter?.let { r -> nameOf(r.name)?.let(declaredInside::add) }
                         node.body.boundaryDescent { inner ->
                             when (inner) {
                                 is TmpL.LocalDeclaration -> nameOf(inner.name)?.let(declaredInside::add)
@@ -316,7 +315,6 @@ internal class ElixirTranslator(
         fun parameters(p: TmpL.Parameters) {
             p.thisName?.let { out.add(it.name) }
             p.parameters.forEach { out.add(it.name.name) }
-            p.restParameter?.let { out.add(it.name.name) }
         }
         topLevel.boundaryDescent { node ->
             when (node) {
@@ -379,9 +377,8 @@ internal class ElixirTranslator(
     private fun translateFunction(decl: TmpL.ModuleFunctionDeclaration): Elixir.FunDef {
         val pos = decl.pos
         if (decl.parameters.thisName != null) TODO("this parameter: $decl")
-        // parameters are locals too: a loop that assigns one must carry it;
-        // a rest parameter arrives as one list
-        val formals = decl.parameters.parameters.map { it.name } + listOfNotNull(decl.parameters.restParameter?.name)
+        // parameters are locals too: a loop that assigns one must carry it
+        val formals = decl.parameters.parameters.map { it.name }
         formals.forEach { declare(it.name) }
         val params = formals.map { idOf(it) as Elixir.Pattern }
         val body = decl.body ?: TODO("function without a body: $decl")
@@ -582,7 +579,6 @@ internal class ElixirTranslator(
         val declaredInside = mutableSetOf<ResolvedName>()
         val usedInside = mutableSetOf<ResolvedName>()
         decl.parameters.parameters.forEach { f -> nameOf(f.name)?.let(declaredInside::add) }
-        decl.parameters.restParameter?.let { r -> nameOf(r.name)?.let(declaredInside::add) }
         decl.body.boundaryDescent { inner ->
             when (inner) {
                 is TmpL.LocalDeclaration -> nameOf(inner.name)?.let(declaredInside::add)
@@ -1160,12 +1156,7 @@ internal class ElixirTranslator(
 
     private fun call(call: TmpL.CallExpression, fn: FunctionContext): Elixir.Expr {
         val pos = call.pos
-        val given = call.parameters.map { actual ->
-            when (actual) {
-                is TmpL.Expression -> expression(actual, fn)
-                else -> TODO("actual: $actual")
-            }
-        }
+        val given = call.parameters.map { expression(it, fn) }
         return when (val callee = call.fn) {
             is TmpL.InlineSupportCodeWrapper ->
                 (callee.supportCode as ElixirInlineSupportCode).callFactory(pos, given)
@@ -1231,25 +1222,20 @@ internal class ElixirTranslator(
 
     /**
      * The arguments a call passes, from those it was given: omitted optional
-     * ones become nil (the body tests for null itself), and anything past the
-     * fixed parameters is packed into the rest parameter's list.
+     * ones become nil (the body tests for null itself).
      *
-     * A call the frontend could not type-check carries `invalidSig`, which
-     * claims a rest parameter and nothing else. Its real arity is unknown, so
-     * its arguments go as written rather than packed into one list.
+     * A call the frontend could not type-check carries [lang.temper.type2.invalidSig], which
+     * declares no inputs at all. Its real arity is unknown, so its arguments
+     * go as written.
      */
     private fun arguments(
         pos: Position,
         sig: lang.temper.type2.Signature2,
         given: List<Elixir.Expr>,
     ): List<Elixir.Expr> {
-        if (sig.restInputsType == lang.temper.type.WellKnownTypes.invalidType2) return given
+        if (sig == lang.temper.type2.invalidSig) return given
         val fixed = sig.requiredInputTypes.size - (if (sig.hasThisFormal) 1 else 0) + sig.optionalInputTypes.size
-        val padded = if (given.size < fixed) given + List(fixed - given.size) { Elixir.NilLit(pos) } else given
-        return when (sig.restInputsType) {
-            null -> padded
-            else -> padded.take(fixed) + vecLiteral(pos, padded.drop(fixed))
-        }
+        return if (given.size < fixed) given + List(fixed - given.size) { Elixir.NilLit(pos) } else given
     }
 
     // ── Closures ─────────────────────────────────────────────────────────
@@ -1285,7 +1271,7 @@ internal class ElixirTranslator(
         val pos = decl.pos
         val name = decl.name.name
         declare(name)
-        val formals = decl.parameters.parameters.map { it.name } + listOfNotNull(decl.parameters.restParameter?.name)
+        val formals = decl.parameters.parameters.map { it.name }
         formals.forEach { declare(it.name) }
         var recursive = false
         decl.body.boundaryDescent { node ->
@@ -1490,7 +1476,6 @@ internal class ElixirTranslator(
         isStruct: Boolean,
     ): Elixir.FunDef {
         val pos = member.pos
-        if (member.parameters.restParameter != null) TODO("rest parameter: $member")
         val thisName = member.parameters.thisName?.name
         val formals = member.parameters.parameters.filter { nameOf(it.name) != thisName }
         formals.forEach { declare(it.name.name) }
@@ -1887,9 +1872,8 @@ internal class ElixirTranslator(
      * A class is a struct when it says it is immutable, `@imu`, which the
      * frontend enforces. Inferring it from the body would let a later version
      * that adds a setter silently turn a library's struct into a heap ref:
-     * a consumer's `%Lib.Point{}` patterns stop matching, a value that crossed
-     * processes freely no longer does, and `==` goes from comparing fields
-     * to comparing identity.
+     * a consumer's `%Lib.Point{}` patterns stop matching, and a value that
+     * crossed processes freely no longer does.
      */
     private fun isImu(decl: TmpL.TypeDeclaration): Boolean =
         decl.metadata.any { it.key.symbol == lang.temper.value.imuSymbol }
@@ -2014,10 +1998,10 @@ internal class ElixirTranslator(
      * declaration still knows its arity.
      */
     private fun constructorSig(callee: TmpL.ConstructorReference): lang.temper.type2.Signature2? {
-        if (callee.type.restInputsType != lang.temper.type.WellKnownTypes.invalidType2) return null
+        if (callee.type != lang.temper.type2.invalidSig) return null
         val decl = localType(callee.typeName.sourceDefinition?.name) ?: return null
         val sig = decl.members.filterIsInstance<TmpL.Constructor>().firstOrNull()?.sig ?: return null
-        return sig.takeIf { it.restInputsType != lang.temper.type.WellKnownTypes.invalidType2 }
+        return sig.takeIf { it != lang.temper.type2.invalidSig }
     }
 
     /** `Temper.Std.JsonArray` for std's JsonArray. */
@@ -2046,7 +2030,7 @@ internal class ElixirTranslator(
         (type.ot as? TmpL.NominalType)?.typeName?.let { baseNameOf(it) } ?: TODO("type test against $type")
 
     private fun moduleOf(pos: Position, segments: List<String>): Elixir.ModuleName =
-        elixirModule(pos, *segments.toTypedArray())
+        elixirModule(pos, segments)
 
     private fun staticKey(pos: Position, module: List<String>, member: String): Elixir.Expr =
         Elixir.Atom(pos, module.joinToString(".") + "." + member)
