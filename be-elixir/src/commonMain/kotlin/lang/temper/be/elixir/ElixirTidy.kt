@@ -113,11 +113,21 @@ private fun pinned(pattern: Elixir.Tree): Set<String> = when (pattern) {
     else -> (0 until pattern.childCount).flatMap { i -> pattern.childOrNull(i)?.let(::pinned) ?: setOf() }.toSet()
 }
 
-/** `x = raise(...)` in any block becomes `raise(...)`: a raise has no value to bind. */
+/**
+ * `x = raise(...)` in any block becomes `raise(...)`, and the block ends there.
+ *
+ * A raise has no value to bind. Dropping only the binding is not enough:
+ * Elixir checks every variable a function reads, reachable or not, so a later
+ * read of `x` is a compile error ("undefined variable"). Nothing after a raise
+ * in the same block can run, so it goes too.
+ */
 private fun dropRaiseBindings(node: Elixir.Tree) {
-    if (node is Elixir.Block && node.exprs.any(::isRaiseBinding)) {
-        node.exprs = node.exprs.map { item ->
-            if (isRaiseBinding(item)) (item as Elixir.Match).right.deepCopy() else item
+    if (node is Elixir.Block) {
+        val stop = node.exprs.indexOfFirst { isRaiseBinding(it) || isRaise(it) }
+        if (stop >= 0) {
+            node.exprs = node.exprs.take(stop + 1).map { item ->
+                if (isRaiseBinding(item)) (item as Elixir.Match).right.deepCopy() else item
+            }
         }
     }
     for (i in 0 until node.childCount) node.childOrNull(i)?.let(::dropRaiseBindings)
@@ -125,6 +135,10 @@ private fun dropRaiseBindings(node: Elixir.Tree) {
 
 private fun isRaiseBinding(item: Elixir.BlockItem): Boolean {
     val match = item as? Elixir.Match ?: return false
-    val call = match.right as? Elixir.Call ?: return false
+    return isRaise(match.right)
+}
+
+private fun isRaise(item: Elixir.BlockItem): Boolean {
+    val call = item as? Elixir.Call ?: return false
     return call.callee.outName.outputNameText == "raise"
 }

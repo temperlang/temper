@@ -132,6 +132,15 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             names, root, externals, libraryRoots, canonicalFunctions, moduleGlobals, types, imports, isStdLib,
         )
         val translated = finished.modules.map { translator.translateModule(it) }
+        // The CLI counts tests from this registry, not from the report: a run that
+        // dies before writing test-results.xml then says how many never ran, as
+        // "0 of 30 (30 not run)" rather than "0 of 0". The registered name is the
+        // function name because that is what the JUnit report carries.
+        for (module in translated) {
+            for ((name, test) in module.testNodes) {
+                dependenciesBuilder.addTest(libraryName, test, backendName = name)
+            }
+        }
         val rootModule = elixirModule(pos, *root.toTypedArray())
         // `TemperCore.init_once(:"Temper.Std", fn -> deps; top levels end)`
         val init = Elixir.FunDef(

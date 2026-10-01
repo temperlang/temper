@@ -110,10 +110,13 @@ internal class ElixirTranslator(
         val tests: List<String>,
         /** Each test's own sentence, by function name: the name `mix test` shows. */
         val testTitles: Map<String, String>,
+        /** Each test's TmpL node, by function name, for the CLI's test registry. */
+        val testNodes: Map<String, TmpL.Test>,
     )
 
     private val tests = mutableListOf<String>()
     private val testTitles = mutableMapOf<String, String>()
+    private val testNodes = mutableMapOf<String, TmpL.Test>()
 
     /**
      * Locals a closure reads that are also assigned somewhere. Elixir closures
@@ -176,11 +179,19 @@ internal class ElixirTranslator(
         modules.clear()
         tests.clear()
         testTitles.clear()
+        testNodes.clear()
         collectBoxed(module)
         for (topLevel in module.topLevels) {
             processTopLevel(topLevel)
         }
-        return Translated(functions.toList(), mainBody.toList(), modules.toList(), tests.toList(), testTitles.toMap())
+        return Translated(
+            functions.toList(),
+            mainBody.toList(),
+            modules.toList(),
+            tests.toList(),
+            testTitles.toMap(),
+            testNodes.toMap(),
+        )
     }
 
     // ── Top levels ───────────────────────────────────────────────────────
@@ -329,6 +340,7 @@ internal class ElixirTranslator(
         val name = functionName(test.name.name).outputNameText
         tests.add(name)
         testTitles[name] = test.rawName
+        testNodes[name] = test
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(pos, OutName(name, null)),
@@ -1583,10 +1595,19 @@ internal class ElixirTranslator(
         return externalModule(definition.name)
     }
 
-    /** A read of a builtin type's property, or null when the subject's type is translated here. */
+    /**
+     * A read of a builtin type's property, or null when the subject's type is translated here.
+     * A subject typed *Invalid* comes from code the frontend rejected, such as a value of a
+     * class that declares its inputs twice. That is broken code, raised when reached, not a
+     * builtin missing its support code.
+     */
     private fun builtinGet(expression: TmpL.GetProperty, subject: TmpL.Expression, fn: FunctionContext): Elixir.Expr? {
         val property = propertyText(expression.property)
         val definition = (subject.passType as? lang.temper.type2.DefinedType)?.definition
+        if (definition == lang.temper.type.WellKnownTypes.invalidTypeDefinition) {
+            val pos = expression.pos
+            return garbage(pos, TmpL.Diagnostic(pos, "read of .$property on a value of a type that did not compile"))
+        }
         val owner = (definition?.name as? lang.temper.name.ResolvedParsedName)?.baseName?.nameText
         if (owner == null || owner in types || isExternal(definition?.name)) return null
         val builtin = builtinGetters["$owner.$property"]
