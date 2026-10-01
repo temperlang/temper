@@ -50,9 +50,9 @@ defmodule TemperCore.Actor do
 
       account = TemperCore.Actor.supervised(fn -> Temper.Bank.Account.new("ann") end)
   """
-  def supervised(fun) do
+  def supervised(fun, supervisor \\ TemperCore.Actors) do
     outer = Process.get(@supervised)
-    Process.put(@supervised, true)
+    Process.put(@supervised, supervisor)
 
     try do
       fun.()
@@ -80,16 +80,13 @@ defmodule TemperCore.Actor do
     id = make_ref()
     chain = chain_for_callee()
 
-    if Process.get(@supervised) do
-      spec = %{
-        id: id,
-        start: {GenServer, :start_link, [__MODULE__, {id, constructor, chain, nil}]},
-        restart: :transient
-      }
+    if supervisor = Process.get(@supervised) do
+      case DynamicSupervisor.start_child(supervisor, keeper(id, constructor, chain)) do
+        {:ok, _keeper} ->
+          %__MODULE__{class: class, id: id}
 
-      case DynamicSupervisor.start_child(TemperCore.Actors, spec) do
-        {:ok, _pid} -> %__MODULE__{class: class, id: id}
-        {:error, {:temper_raise, kind, reason, stack}} -> :erlang.raise(kind, reason, stack)
+        {:error, {:shutdown, {:failed_to_start_child, _, {:temper_raise, kind, reason, stack}}}} ->
+          :erlang.raise(kind, reason, stack)
       end
     else
       # linked only once the constructor has succeeded: a linked process that
@@ -103,6 +100,27 @@ defmodule TemperCore.Actor do
           :erlang.raise(kind, reason, stack)
       end
     end
+  end
+
+  # One supervisor per supervised actor, holding that actor's restart limit
+  # (OTP's default, 3 in 5 seconds). When the actor keeps crashing, only its
+  # keeper gives up; the keeper is temporary, so its parent neither restarts
+  # it nor counts it. The actor is significant, so stopping it normally ends
+  # the keeper too.
+  defp keeper(id, constructor, chain) do
+    actor = %{
+      id: :actor,
+      start: {GenServer, :start_link, [__MODULE__, {id, constructor, chain, nil}]},
+      restart: :transient,
+      significant: true
+    }
+
+    %{
+      id: id,
+      start: {Supervisor, :start_link, [[actor], [strategy: :one_for_one, auto_shutdown: :any_significant]]},
+      restart: :temporary,
+      type: :supervisor
+    }
   end
 
   @doc "The constructor's `this`: inside the actor's process, an actor whose fields live here."

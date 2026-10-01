@@ -116,6 +116,36 @@ defmodule TemperCore.ActorTest do
     Actor.stop(c)
   end
 
+  test "an actor that keeps crashing ends alone" do
+    # User and library actors shared one supervisor, and its restart limit
+    # counted them together: four quick crashes of one actor ended every
+    # actor under it, module-level ones included, and a few more rounds took
+    # down :temper_core and its ETS table.
+    TemperCore.init_once(:"ActorTest.flaky", fn ->
+      TemperCore.Global.put(:"ActorTest.ledger", Counter.new(0))
+    end)
+
+    ledger = TemperCore.Global.get(:"ActorTest.ledger")
+    bystander = Actor.supervised(fn -> Counter.new(5) end)
+    flaky = Actor.supervised(fn -> Counter.new(1) end)
+
+    for _ <- 1..12 do
+      try do
+        Counter.crash(flaky)
+      rescue
+        _ -> nil
+      end
+    end
+
+    assert_raise TemperCore.Panic, ~r/has ended/, fn -> Counter.get_n(flaky) end
+    Counter.bump(ledger)
+    assert Counter.get_n(ledger) == 1
+    assert Counter.get_n(bystander) == 5
+    assert :ets.whereis(:temper_globals) != :undefined
+    assert Process.whereis(TemperCore.Supervisor)
+    Actor.stop(bystander)
+  end
+
   test "a Temper error is the call's result, not a crash" do
     c = Actor.supervised(fn -> Counter.new(1) end)
     pid = Actor.whereis(c)

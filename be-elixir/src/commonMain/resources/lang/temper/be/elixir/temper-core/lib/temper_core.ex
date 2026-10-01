@@ -78,7 +78,7 @@ defmodule TemperCore do
       Process.put({:temper_init, key}, true)
       # module state belongs to the node: an actor made by a top level must
       # not end with whichever process happened to run it
-      TemperCore.Actor.supervised(body)
+      TemperCore.Actor.supervised(body, TemperCore.LibraryActors)
       :ets.insert(:temper_globals, {{:temper_init, key}, true})
     end
 

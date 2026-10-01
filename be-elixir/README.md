@@ -809,7 +809,13 @@ The rules, one per line of that output:
   because a link alone ignores a normal exit.
 - **Supervision.** Actors created inside
   `TemperCore.Actor.supervised(fn -> ... end)` start under the
-  `TemperCore.Actors` supervisor instead. They outlive their creator. After
+  `TemperCore.Actors` supervisor instead, or under any `DynamicSupervisor`
+  the host names: `supervised(fun, MyApp.ActorSupervisor)`. Actors a
+  library's top level makes go under `TemperCore.LibraryActors`. Each
+  supervised actor has a supervisor of its own holding its restart limit
+  (OTP's default, 3 in 5 seconds), so an actor that keeps crashing ends
+  alone, and the rest of the node, other actors and `:temper_core`
+  included, carries on. They outlive their creator. After
   a crash they restart by re-running their constructor with the same
   arguments: the same identity, but the constructor's state, not the
   state they had. That is OTP's restart. A call that was waiting behind
