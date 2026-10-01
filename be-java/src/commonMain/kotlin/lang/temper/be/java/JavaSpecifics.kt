@@ -196,6 +196,8 @@ object Java17Specifics : JavaSpecifics(majorVersion = 17) {
     @Suppress("MagicNumber")
     private val minVersion = SemVer(17, 0, 0)
 
+    private const val SEMVER_PARTS = 3
+
     private abstract class JavaTool(private val versionPattern: Regex) : VersionedTool {
         // `--version` works on java 11+ but not java 8 (unsure about intermediates there).
         // Best to support friendly version checking even in the face of java 8.
@@ -206,7 +208,12 @@ object Java17Specifics : JavaSpecifics(majorVersion = 17) {
             val version = versionPattern.matchAt(out, 0)!!.groupValues[1]
             return SemVer(version).flatMap({ RSuccess(it) }, { _ ->
                 RResult.of(IllegalArgumentException::class) {
-                    SemVer(parseInt(version.trim()), 0, 0)
+                    // JEP 322 versions are $FEATURE.$INTERIM.$UPDATE.$PATCH and may
+                    // run past three parts, like Homebrew openjdk@21's "21.0.12.1",
+                    // or stop at one, like "23".
+                    val parts = version.trim().split('.').take(SEMVER_PARTS).map { parseInt(it) }
+                    val (major, minor, patch) = parts + List(SEMVER_PARTS - parts.size) { 0 }
+                    SemVer(major, minor, patch)
                 }
             }).checkMin(run, minVersion)
         }
