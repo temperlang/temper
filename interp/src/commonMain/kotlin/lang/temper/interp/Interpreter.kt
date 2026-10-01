@@ -863,16 +863,22 @@ class Interpreter(
                         InProgress.LoopState.BEFORE_CONDITION -> {
                             // Run the condition.
                             var runBody = false
+                            var failed = false
                             when (val r = interpretChild(cf.condition, ast, TBoolean)) {
                                 NotYet -> {
                                     result = NotYet
                                 }
-                                is Fail -> handleFail(r)
+                                is Fail -> {
+                                    // handleFail has already unwound the stack past this loop,
+                                    // to the nearest orelse or to empty.
+                                    failed = true
+                                    handleFail(r)
+                                }
                                 is Value<*> -> {
                                     runBody = TBoolean.unpack(r)
                                 }
                             }
-                            if (!runBody) {
+                            if (!runBody && !failed) {
                                 // Pop the loop
                                 popped(evaluation.stack.compatRemoveLast())
                             }
