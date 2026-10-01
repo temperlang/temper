@@ -1,0 +1,297 @@
+// Output grammar for Elixir.
+// See: https://hexdocs.pm/elixir/syntax-reference.html
+//
+// Elixir is expression-oriented: there are no statements, a block is a
+// sequence of expressions separated by newlines, and its value is the last
+// one. Indentation means nothing to the parser; newlines do. A `case` arm's
+// body runs from its `->` to the next `pattern ->` or the closing `end`.
+//
+// Only the syntax this backend emits is modelled here. Temper's classes
+// become `defmodule`s; a class with no mutable state becomes a `defstruct`,
+// one with mutable state a reference into a per-process heap. Loops become
+// recursive functions and early returns continuations, so neither `for`
+// comprehensions nor `throw` appear below.
+
+let namespace = "Elixir";
+
+let imports = """
+  "lang.temper.format.OutputToken
+  "lang.temper.format.OutputTokenType
+  "lang.temper.format.TokenSerializable
+  "lang.temper.format.TokenSink
+  "lang.temper.name.OutName
+  "lang.temper.name.name
+;
+
+Program = SourceFile;
+
+SourceFile ::= items%TopLevel*"\n";
+SourceFile.items.default = `listOf()`;
+
+TopLevel =
+      Comment
+    | Expr
+    | ModuleDef
+    ;
+
+// ── Modules ──────────────────────────────────────────────────────────────
+
+/** `defmodule Temper.Std.Io do ... end` */
+ModuleDef ::=
+      doc%Comment?
+    & "defmodule" & name%ModuleName
+    & "do"
+    & items%ModuleItem*"\n"
+    & "end"
+    ;
+ModuleDef.doc.default = `null`;
+ModuleDef.items.default = `listOf()`;
+
+ModuleItem =
+      Comment
+    | FunDef
+    | ModuleAttr
+    | ModuleDef
+    | StructDef
+    ;
+
+/** `@moduledoc false` */
+ModuleAttr ::= "@" & id%Id & value%Expr;
+
+/** `defstruct [:x, :y]` */
+StructDef ::= "defstruct" & "[" & fields%Atom*"," & "]";
+StructDef.fields.default = `listOf()`;
+
+/**
+ * `def name(a, b) when guard do ... end`, or `defp` when [isPrivate].
+ *
+ * Parameters are patterns: Elixir binds arguments by matching.
+ */
+FunDef ::=
+      doc%Comment?
+    & ((isPrivate%`Boolean` == true => "defp") || "def")
+    & id%Id
+    & "(" & params%Pattern*"," & ")"
+    & ((guard%Expr => "when" & guard) || ())
+    & "do"
+    & body%Block
+    & "end"
+    ;
+FunDef.doc.default = `null`;
+FunDef.isPrivate.default = `false`;
+FunDef.params.default = `listOf()`;
+FunDef.guard.default = `null`;
+
+// ── Blocks ───────────────────────────────────────────────────────────────
+
+Block ::= exprs%BlockItem*"\n";
+Block.exprs.default = `listOf()`;
+
+BlockItem = Comment | Expr;
+
+// ── Expressions ──────────────────────────────────────────────────────────
+
+Expr =
+      AnonCall
+    | Atom
+    | BoolLit
+    | Call
+    | Case
+    | Cond
+    | ConsList
+    | Field
+    | Fn
+    | Id
+    | If
+    | ListLit
+    | MapLit
+    | MapUpdate
+    | Match
+    | ModuleName
+    | NilLit
+    | NumberLit
+    | Operation
+    | RemoteCall
+    | StringLit
+    | StructLit
+    | Try
+    | TupleLit
+    ;
+
+/** `left = right`: Elixir's only binding form, a match. */
+Match ::= left%Pattern & "=" & right%Expr;
+
+/** A local call, `name(args)`. */
+Call ::= callee%Id & "(" & args%Expr*"," & ")";
+Call.args.default = `listOf()`;
+
+/** `point.x`: a struct's field, or a map's atom key. Raises KeyError if absent. */
+Field ::= obj%Expr & "." & id%Id;
+
+/** `Temper.Core.puts(x)`, `:erlang.abs(x)`. A field read is [Field]. */
+RemoteCall ::= module%Expr & "." & fn%Id & "(" & args%Expr*"," & ")";
+RemoteCall.args.default = `listOf()`;
+
+/** `f.(a, b)`: calling an anonymous function. */
+AnonCall ::= fn%Expr & "." & "(" & args%Expr*"," & ")";
+AnonCall.args.default = `listOf()`;
+
+/** `fn a, b -> body end`, one clause. */
+Fn ::= "fn" & params%Pattern*"," & "->" & body%Block & "end";
+Fn.params.default = `listOf()`;
+
+/** `case subject do pattern when guard -> body ... end` */
+Case ::= "case" & subject%Expr & "do" & clauses%Clause+"\n" & "end";
+
+Clause ::=
+      pattern%Pattern
+    & ((guard%Expr => "when" & guard) || ())
+    & "->"
+    & body%Block
+    ;
+Clause.guard.default = `null`;
+
+/** `cond do test -> body ... end` */
+Cond ::= "cond" & "do" & arms%CondArm+"\n" & "end";
+
+CondArm ::= test%Expr & "->" & body%Block;
+
+/** `if test do ... else ... end` */
+If ::=
+      "if" & test%Expr
+    & "do" & then%Block
+    & ((otherwise%Block => "else" & otherwise) || ())
+    & "end"
+    ;
+If.otherwise.default = `null`;
+
+/**
+ * `try do ... rescue pattern -> ... catch kind, value -> ... end`
+ *
+ * Temper's bubbles are raised as exceptions and land in [rescues].
+ */
+Try ::=
+      "try" & "do"
+    & body%Block
+    & ((rescues%Clause => "rescue" & rescues%Clause*"\n") || ())
+    & ((catches%Clause => "catch" & catches%Clause*"\n") || ())
+    & "end"
+    ;
+Try.rescues.default = `listOf()`;
+Try.catches.default = `listOf()`;
+
+ListLit ::= "[" & items%Expr*"," & "]";
+ListLit.items.default = `listOf()`;
+
+/** `[head | tail]` as an expression: prepend. */
+ConsList ::= "[" & items%Expr+"," & "|" & tail%Expr & "]";
+
+TupleLit ::= "{" & items%Expr*"," & "}";
+TupleLit.items.default = `listOf()`;
+
+/** `%{key => value}`. Always the arrow form, which takes any key. */
+MapLit ::= "%{" & entries%MapEntry*"," & "}";
+MapLit.entries.default = `listOf()`;
+
+MapEntry ::= key%Expr & "=>" & value%Expr;
+
+/** `%{map | key => value}`: replaces keys that already exist, raises otherwise. */
+MapUpdate ::= "%{" & base%Expr & "|" & entries%MapEntry+"," & "}";
+
+/** `%Point{x: 1, y: 2}` */
+StructLit ::= "%" & name%ModuleName & "{" & fields%KeywordEntry*"," & "}";
+StructLit.fields.default = `listOf()`;
+
+/** `x: 1` -- the colon hugs the key. */
+KeywordEntry ::= key%Id & ":" & value%Expr;
+
+Operation ::=
+      ((left%Expr => left) || ())
+    & operator%Operator
+    & ((right%Expr => right) || ())
+    ;
+Operation.left.default = `null`;
+Operation.right.default = `null`;
+Operation.operatorDefinition = `operator.operator.operatorDefinition`;
+
+Operator(operator%`ElixirOperator`);
+Operator.renderTo = `operator.emit(tokenSink)`;
+
+// ── Patterns ─────────────────────────────────────────────────────────────
+
+Pattern =
+      Atom
+    | BoolLit
+    | ConsPattern
+    | Id
+    | ListPattern
+    | MapPattern
+    | NilLit
+    | NumberLit
+    | Pin
+    | StringLit
+    | StructPattern
+    | TuplePattern
+    | Wildcard
+    ;
+
+Wildcard ::= "_";
+
+/** `^x`: match against x's value instead of rebinding x. */
+Pin ::= "^" & id%Id;
+
+ConsPattern ::= "[" & head%Pattern & "|" & tail%Pattern & "]";
+
+ListPattern ::= "[" & items%Pattern*"," & "]";
+ListPattern.items.default = `listOf()`;
+
+TuplePattern ::= "{" & items%Pattern*"," & "}";
+TuplePattern.items.default = `listOf()`;
+
+/** `%{key => pattern}`: matches maps that have at least these keys. */
+MapPattern ::= "%{" & entries%MapPatternEntry*"," & "}";
+MapPattern.entries.default = `listOf()`;
+
+MapPatternEntry ::= key%Expr & "=>" & value%Pattern;
+
+StructPattern ::= "%" & name%ModuleName & "{" & fields%KeywordPattern*"," & "}";
+StructPattern.fields.default = `listOf()`;
+
+KeywordPattern ::= key%Id & ":" & value%Pattern;
+
+// ── Leaves ───────────────────────────────────────────────────────────────
+
+/** A variable or function name. */
+Id(outName%`OutName`);
+Id.renderTo = `tokenSink.name(outName, inOperatorPosition = false)`;
+
+/** An alias: `Temper.Core`, each segment capitalised. */
+ModuleName ::= segments%Id+".";
+
+/** `:ok`, or `:"with spaces"` when the text is not a plain identifier. */
+Atom(text%`String`);
+Atom.renderTo = `tokenSink.emit(OutputToken(elixirAtomText(text), OutputTokenType.OtherValue))`;
+Atom.operatorDefinition = `null`;
+
+NumberLit(value%`Number`);
+NumberLit.renderTo = `tokenSink.number(elixirNumberText(value))`;
+
+StringLit(value%`String`);
+StringLit.renderTo = `tokenSink.quoted(elixirStringText(value))`;
+
+BoolLit ::= (value%`Boolean` == true => "true") || "false";
+
+NilLit ::= "nil";
+
+Comment(text%`String`);
+Comment.renderTo = `tokenSink.comment(elixirCommentText(text))`;
+Comment.operatorDefinition = `null`;
+
+// ── Parenthesization ─────────────────────────────────────────────────────
+
+Match.operatorDefinition = `ElixirOperatorDefinition.Match`;
+Call.operatorDefinition = `ElixirOperatorDefinition.Postfix`;
+Field.operatorDefinition = `ElixirOperatorDefinition.Postfix`;
+RemoteCall.operatorDefinition = `ElixirOperatorDefinition.Postfix`;
+AnonCall.operatorDefinition = `ElixirOperatorDefinition.Postfix`;
+ModuleName.operatorDefinition = `ElixirOperatorDefinition.Postfix`;
