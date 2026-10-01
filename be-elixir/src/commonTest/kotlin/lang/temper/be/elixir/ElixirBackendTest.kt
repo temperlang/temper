@@ -351,6 +351,29 @@ class ElixirBackendTest {
         assertEquals(1, Regex("""def main\(""").findAll(out).count(), "def main( should be the library's alone:\n$out")
         assertContains(out, "def __temper_main__(")
     }
+
+    /**
+     * `==` on two `@imu` values is Elixir's `==` on two structs: equal when
+     * their fields are, as an Elixir developer expects of a struct. js and py
+     * compare objects by identity; this backend does not, on purpose (guide,
+     * section 8). Pinned so a change to object equality cannot flip it
+     * silently.
+     */
+    @Test
+    fun imuValuesCompareByTheirFields() {
+        val out = generatedText(
+            """
+            |@imu export class V(public x: Int) {}
+            |export let same(a: V, b: V): Boolean { a == b }
+            """.trimMargin(),
+        )
+        // `==` is `==` for every class; what makes it compare fields is that
+        // an @imu class is a struct, where any other class is a heap ref
+        // compared by its id
+        assertContains(out, "defstruct [:x]")
+        assertContains(out, "def same(a, b)")
+        assertContains(out, "a == b")
+    }
 }
 
 /**
