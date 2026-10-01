@@ -23,6 +23,15 @@ defmodule TemperCoreStringTest do
     assert S.count_between(s, 0, S.end_of(s)) == 4
   end
 
+  test "next steps each width of UTF-8, and clamps outside the string" do
+    s = "a\u00e9\u20ac\u{1F600}"
+    assert Enum.scan(1..4, 0, fn _, i -> S.next(s, i) end) == [1, 3, 6, 10]
+    assert S.next(s, 10) == 10
+    assert S.next(s, 99) == 10
+    assert S.next(s, -5) == 0
+    assert S.next("", 0) == 0
+  end
+
   test "countBetween, hasAtLeast and slice" do
     s = "abcdefghijklmnopqrstuvwxyz"
     i = S.next(s, S.begin())

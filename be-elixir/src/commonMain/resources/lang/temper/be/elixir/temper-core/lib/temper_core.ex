@@ -18,12 +18,16 @@ defmodule TemperCore do
   """
 
   @doc "Wraps an integer to signed 32 bits: `int32(2147483647 + 1)` is `-2147483648`."
+  def int32(x) when is_integer(x) and x >= -2_147_483_648 and x <= 2_147_483_647, do: x
+
   def int32(x) when is_integer(x) do
     <<v::signed-32>> = <<x::32>>
     v
   end
 
   @doc "Wraps an integer to signed 64 bits."
+  def int64(x) when is_integer(x) and x >= -9_223_372_036_854_775_808 and x <= 9_223_372_036_854_775_807, do: x
+
   def int64(x) when is_integer(x) do
     <<v::signed-64>> = <<x::64>>
     v
@@ -270,45 +274,72 @@ defmodule TemperCore.Heap do
 
   @doc "Makes an object of `class` with the given fields, and returns its ref."
   def new(class, fields) when is_atom(class) and is_map(fields) do
-    ref = %Ref{class: class, id: make_ref()}
-    Process.put(key(ref), fields)
-
-    case Process.get(@nursery) do
-      nil -> :ok
-      young -> Process.put(@nursery, MapSet.put(young, ref.id))
-    end
-
-    ref
+    new_value(class, fields)
   end
 
   @doc "Reads a field. A field the object does not have raises KeyError."
   def get(%TemperCore.Actor{} = actor, field), do: get(TemperCore.Actor.fields(actor), field)
-  def get(%Ref{} = ref, field), do: Map.fetch!(fields!(ref), field)
+  def get(%Ref{id: id} = ref, field), do: Map.fetch!(fields!(ref, id), field)
 
   @doc "Writes a field the object already has, and returns the value written."
   def put(%TemperCore.Actor{} = actor, field, value), do: put(TemperCore.Actor.fields(actor), field, value)
 
   def put(%Ref{id: id} = ref, field, value) do
-    Process.put(key(ref), %{fields!(ref) | field => value})
-
-    # the write barrier: an older object written during a call may now point
-    # at a young one, so its fields are roots for the minor collection
-    case Process.get(@nursery) do
-      nil -> :ok
-      young -> if not MapSet.member?(young, id), do: Process.put(@remembered, MapSet.put(Process.get(@remembered), id))
-    end
-
+    :erlang.put({__MODULE__, id}, %{fields!(ref, id) | field => value})
+    barrier(id)
     value
   end
 
-  defp fields!(ref) do
-    case Process.get(key(ref)) do
-      nil -> raise ArgumentError, "#{inspect(ref)} is not an object in this process"
+  # The write barrier: an older object written during a call may now point
+  # at a young one, so its fields are roots for the minor collection.
+  defp barrier(id) do
+    case :erlang.get(@nursery) do
+      :undefined -> :ok
+      young -> if not MapSet.member?(young, id), do: :erlang.put(@remembered, MapSet.put(:erlang.get(@remembered), id))
+    end
+  end
+
+  # :erlang.get and put, not Process.get and put: these run on every field
+  # access, and the wrappers cost a call each
+  defp fields!(ref, id) do
+    case :erlang.get({__MODULE__, id}) do
+      :undefined -> raise ArgumentError, "#{inspect(ref)} is not an object in this process"
       fields -> fields
     end
   end
 
-  defp key(%Ref{id: id}), do: {__MODULE__, id}
+  @doc """
+  Makes an object whose whole state is `value`, a term that holds no
+  objects, such as a `StringBuilder`'s string. It is collected, exported
+  and imported like any object, and read and written with `get_value/1`
+  and `put_value/2`, which skip the field map and the write barrier.
+  """
+  def new_value(class, value) when is_atom(class) do
+    ref = %Ref{class: class, id: make_ref()}
+    :erlang.put({__MODULE__, ref.id}, value)
+
+    case :erlang.get(@nursery) do
+      :undefined -> :ok
+      young -> :erlang.put(@nursery, MapSet.put(young, ref.id))
+    end
+
+    ref
+  end
+
+  def get_value(%Ref{id: id} = ref), do: fields!(ref, id)
+
+  @doc "Replaces a `new_value/2` object's value. `value` must hold no objects: there is no write barrier."
+  def put_value(%Ref{id: id} = ref, value) do
+    case :erlang.put({__MODULE__, id}, value) do
+      :undefined ->
+        :erlang.erase({__MODULE__, id})
+        raise ArgumentError, "#{inspect(ref)} is not an object in this process"
+
+      _ ->
+        nil
+    end
+  end
+
 
   @doc """
   Runs a call into a library, and frees what it left behind.

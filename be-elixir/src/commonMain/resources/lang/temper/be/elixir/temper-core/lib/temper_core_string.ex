@@ -25,14 +25,18 @@ defmodule TemperCore.String do
   end
 
   @doc "The index after the code point at `i`, or `end` if there is none."
-  def next(s, i) do
-    n = byte_size(s)
-    cond do
-      i >= n -> n
-      i < 0 -> 0
-      true -> i + width(:binary.at(s, i))
+  def next(s, i) when i >= 0 do
+    # one match, no byte_size or :binary.at: this runs once per code point
+    case s do
+      <<_::binary-size(i), b, _::binary>> when b < 0x80 -> i + 1
+      <<_::binary-size(i), b, _::binary>> when b >= 0xF0 -> i + 4
+      <<_::binary-size(i), b, _::binary>> when b >= 0xE0 -> i + 3
+      <<_::binary-size(i), _, _::binary>> -> i + 2
+      _ -> byte_size(s)
     end
   end
+
+  def next(_s, _i), do: 0
 
   @doc "The index of the code point before `i`, or `begin` if there is none."
   def prev(s, i) do
@@ -44,10 +48,6 @@ defmodule TemperCore.String do
   defp back(_s, 0), do: 0
   defp back(s, i), do: if(Bitwise.band(:binary.at(s, i), 0xC0) == 0x80, do: back(s, i - 1), else: i)
 
-  defp width(b) when b < 0x80, do: 1
-  defp width(b) when b >= 0xF0, do: 4
-  defp width(b) when b >= 0xE0, do: 3
-  defp width(_b), do: 2
 
   def step(s, i, by) when by >= 0, do: Enum.reduce(1..by//1, i, fn _, acc -> next(s, acc) end)
   def step(s, i, by), do: Enum.reduce(1..(-by)//1, i, fn _, acc -> prev(s, acc) end)
@@ -114,17 +114,24 @@ defmodule TemperCore.String do
 end
 
 defmodule TemperCore.StringBuilder do
-  @moduledoc "Temper's `StringBuilder`: a heap object holding the string so far."
+  @moduledoc """
+  Temper's `StringBuilder`: a heap object whose value is the string so far.
+
+  It is a value object (`Heap.new_value/2`), not a map of fields: a string
+  holds no objects, so an append needs no write barrier. That makes an
+  append two process-dictionary operations, which matters because Temper
+  code builds strings one code point at a time.
+  """
   alias TemperCore.Heap
 
-  def new, do: Heap.new(:string_builder, %{s: ""})
-  def append(sb, text), do: put(sb, get(sb) <> text)
-  def append_code_point(sb, cp), do: put(sb, get(sb) <> TemperCore.String.from_code_point(cp))
-  def append_between(sb, text, b, e), do: put(sb, get(sb) <> TemperCore.String.slice(text, b, e))
-  def clear(sb), do: put(sb, "")
-  def to_string(sb), do: get(sb)
-  def end_of(sb), do: byte_size(get(sb))
+  def new, do: Heap.new_value(:string_builder, "")
+  def append(sb, text), do: Heap.put_value(sb, Heap.get_value(sb) <> text)
+  def append_code_point(sb, cp), do: Heap.put_value(sb, <<Heap.get_value(sb)::binary, code_point(cp)::binary>>)
+  def append_between(sb, text, b, e), do: Heap.put_value(sb, Heap.get_value(sb) <> TemperCore.String.slice(text, b, e))
+  def clear(sb), do: Heap.put_value(sb, "")
+  def to_string(sb), do: Heap.get_value(sb)
+  def end_of(sb), do: byte_size(Heap.get_value(sb))
 
-  defp get(sb), do: Heap.get(sb, :s)
-  defp put(sb, s), do: Heap.put(sb, :s, s) && nil
+  defp code_point(cp) when cp < 0x80 and cp >= 0, do: <<cp>>
+  defp code_point(cp), do: TemperCore.String.from_code_point(cp)
 end

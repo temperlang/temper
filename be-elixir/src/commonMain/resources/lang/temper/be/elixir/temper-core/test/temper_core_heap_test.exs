@@ -102,5 +102,36 @@ defmodule TemperCore.HeapTest do
     assert Heap.size() == before
     refute Enum.any?(Process.get(), fn {k, _} -> match?({TemperCore.Heap.Nursery, _}, k) end)
   end
-end
 
+  test "a value object is collected, exported and freed like any object" do
+    kept = TemperCore.StringBuilder.new()
+    TemperCore.StringBuilder.append(kept, "kept")
+    for _ <- 1..10, do: TemperCore.StringBuilder.new()
+    assert Heap.collect([kept]) >= 10
+    assert TemperCore.StringBuilder.to_string(kept) == "kept"
+
+    sent = Heap.export(%{sb: kept})
+    me = self()
+    spawn(fn ->
+      %{sb: sb} = Heap.import(sent)
+      TemperCore.StringBuilder.append_code_point(sb, 0x20AC)
+      send(me, TemperCore.StringBuilder.to_string(sb))
+    end)
+    assert_receive "kept\u20ac"
+    assert TemperCore.StringBuilder.to_string(kept) == "kept"
+
+    before = Heap.size()
+    young = Heap.entry(fn -> TemperCore.StringBuilder.new() && :done end)
+    assert young == :done
+    assert Heap.size() == before
+  end
+
+  test "a value object that is not in this process raises, and leaves nothing behind" do
+    sb = TemperCore.StringBuilder.new()
+    Heap.collect([])
+    before = Heap.size()
+    assert_raise ArgumentError, ~r/is not an object in this process/, fn -> TemperCore.StringBuilder.append(sb, "x") end
+    assert_raise ArgumentError, ~r/is not an object in this process/, fn -> TemperCore.StringBuilder.clear(sb) end
+    assert Heap.size() == before
+  end
+end
