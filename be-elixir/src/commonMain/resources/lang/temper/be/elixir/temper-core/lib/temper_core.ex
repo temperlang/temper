@@ -197,8 +197,16 @@ defmodule TemperCore.Heap do
   So an object with mutable fields is a `TemperCore.Ref`, and its fields live
   in the process dictionary under that ref.
 
-  Two costs, both by design for now: an object is never freed, and it is
-  only visible to the process that made it.
+  Two consequences, and what to do about each:
+
+  - **Nothing frees an object on its own.** A heap dies with its process,
+    so a process per request or per job needs nothing more. A process that
+    lives on, like a GenServer holding Temper objects, calls `collect/1`
+    between calls into Temper code, passing what it still holds.
+  - **An object is only visible in the process that made it.** To hand
+    objects to another process, `export/1` them, send the result, and
+    `import/1` it there. That copies them, the way a BEAM message copies
+    everything.
   """
   alias TemperCore.Ref
 
@@ -226,6 +234,80 @@ defmodule TemperCore.Heap do
   end
 
   defp key(%Ref{id: id}), do: {__MODULE__, id}
+
+  @doc "How many objects this process's heap holds."
+  def size, do: Enum.count(Process.get(), &object?/1)
+
+  @doc """
+  Frees every object nothing can reach, and returns how many it freed.
+
+  An object is reachable from `roots`, from everything else in the process
+  dictionary (Temper's globals, the async queue, anything the host keeps
+  there), and from any object, list, tuple, map or closure those reach.
+  Closures are traced through `:erlang.fun_info(f, :env)`.
+
+  The stack is not visible from here, so this is only safe between calls
+  into Temper code: a local in a Temper function that is still running is
+  not a root. Pass whatever the caller still holds, such as a GenServer's
+  state.
+  """
+  def collect(roots \\ []) do
+    {objects, others} = Enum.split_with(Process.get(), &object?/1)
+    live = mark([roots | Enum.map(others, &elem(&1, 1))], MapSet.new())
+
+    Enum.count(objects, fn {{__MODULE__, id} = k, _} ->
+      if MapSet.member?(live, id), do: false, else: Process.delete(k) && true
+    end)
+  end
+
+  @doc """
+  `term`, with a copy of every object it reaches, ready to send to another
+  process. `import/1` there gives the term back, with its objects living in
+  that process.
+
+  The copies keep their ids, which are unique across processes and
+  nodes. That is why a ref inside an exported closure is still good after
+  import, with no need to rewrite it. Importing the same object again
+  replaces that process's copy with the newer snapshot. Writes made after
+  the export are not shared: like any message, this is a copy.
+  """
+  def export(term) do
+    ids = mark([term], MapSet.new())
+    {:temper_export, term, Map.new(ids, fn id -> {id, Process.get({__MODULE__, id})} end)}
+  end
+
+  @doc "Puts an `export/1`ed term's objects into this process's heap and returns the term."
+  def import({:temper_export, term, objects}) do
+    Enum.each(objects, fn {id, fields} -> Process.put({__MODULE__, id}, fields) end)
+    term
+  end
+
+  defp object?({{__MODULE__, _}, _}), do: true
+  defp object?(_), do: false
+
+  # Ids of the objects reachable from a stack of terms, walked without
+  # recursion, so a long list or a deep object graph cannot overflow.
+  defp mark([], live), do: live
+
+  defp mark([%Ref{id: id} | rest], live) do
+    if MapSet.member?(live, id) do
+      mark(rest, live)
+    else
+      mark([Process.get({__MODULE__, id}) | rest], MapSet.put(live, id))
+    end
+  end
+
+  defp mark([[] | rest], live), do: mark(rest, live)
+  defp mark([[h | t] | rest], live), do: mark([h, t | rest], live)
+  defp mark([x | rest], live) when is_tuple(x), do: mark([Tuple.to_list(x) | rest], live)
+  defp mark([x | rest], live) when is_map(x), do: mark([Map.keys(x), Map.values(x) | rest], live)
+
+  defp mark([x | rest], live) when is_function(x) do
+    {:env, env} = :erlang.fun_info(x, :env)
+    mark([env | rest], live)
+  end
+
+  defp mark([_ | rest], live), do: mark(rest, live)
 end
 
 defmodule TemperCore.Temporal do
