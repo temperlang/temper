@@ -20,7 +20,21 @@ defmodule TemperCore.Float do
 
   defguardp special(x) when x in [:infinity, :neg_infinity, :nan]
 
+  @doc "A Temper Float64: a BEAM float, or `:infinity`, `:neg_infinity` or `:nan`."
+  defguard float64?(x) when is_float(x) or x in [:infinity, :neg_infinity, :nan]
+
+  # An integer where a Float64 belongs is the caller's mistake. The clauses
+  # for the special values would otherwise read it as one: add(1, 2.0) was
+  # 2.0 and mul(3, 2.0) was :infinity.
+  defp not_float64!(fun, args) do
+    bad = Enum.find(args, &(not float64?(&1)))
+
+    raise ArgumentError,
+          "TemperCore.Float.#{fun} takes Float64 values (a float, :infinity, :neg_infinity or :nan), got: #{inspect(bad)}"
+  end
+
   @doc "Whether the sign bit is set: true for -0.0 and -Infinity, false for NaN."
+  def neg?(f) when not float64?(f), do: not_float64!(:neg?, [f])
   def neg?(:neg_infinity), do: true
   def neg?(f) when is_float(f), do: f < 0.0 or f === -0.0
   def neg?(_), do: false
@@ -36,6 +50,7 @@ defmodule TemperCore.Float do
     ArithmeticError -> inf(a < 0.0)
   end
 
+  def add(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:add, [a, b])
   def add(:nan, _), do: :nan
   def add(_, :nan), do: :nan
   def add(:infinity, :neg_infinity), do: :nan
@@ -49,8 +64,10 @@ defmodule TemperCore.Float do
     ArithmeticError -> inf(a < 0.0)
   end
 
+  def sub(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:sub, [a, b])
   def sub(a, b), do: add(a, neg(b))
 
+  def neg(f) when not float64?(f), do: not_float64!(:neg, [f])
   def neg(f) when is_float(f), do: -f
   def neg(:infinity), do: :neg_infinity
   def neg(:neg_infinity), do: :infinity
@@ -62,6 +79,7 @@ defmodule TemperCore.Float do
     ArithmeticError -> inf(neg?(a) != neg?(b))
   end
 
+  def mul(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:mul, [a, b])
   def mul(:nan, _), do: :nan
   def mul(_, :nan), do: :nan
   def mul(a, b) when a == 0.0 or b == 0.0, do: :nan
@@ -77,6 +95,7 @@ defmodule TemperCore.Float do
     ArithmeticError -> inf(neg?(a) != neg?(b))
   end
 
+  def divide(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:divide, [a, b])
   def divide(:nan, _), do: :nan
   def divide(_, :nan), do: :nan
   def divide(a, b) when special(a) and special(b), do: :nan
@@ -87,6 +106,7 @@ defmodule TemperCore.Float do
   def rem(a, b) when is_float(a) and is_float(b),
     do: if(b == 0.0, do: :nan, else: :math.fmod(a, b))
 
+  def rem(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:rem, [a, b])
   def rem(a, b) when special(a) or b == :nan, do: :nan
   def rem(a, _), do: a
 
@@ -102,6 +122,7 @@ defmodule TemperCore.Float do
       end
   end
 
+  def pow(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:pow, [a, b])
   def pow(_, b) when b == 0.0, do: 1.0
   def pow(a, _) when a == 1.0, do: 1.0
   def pow(:nan, _), do: :nan
@@ -189,29 +210,36 @@ defmodule TemperCore.Float do
   defp rank(:infinity), do: 2
   defp rank(:nan), do: 3
 
+  def eq(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:eq, [a, b])
   def eq(a, b), do: a === b
+  def ne(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:ne, [a, b])
   def ne(a, b), do: a !== b
 
   def lt(a, b) when is_float(a) and is_float(b),
     do: a < b or (a == 0.0 and b == 0.0 and negative_zero?(a) and not negative_zero?(b))
 
+  def lt(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:lt, [a, b])
   def lt(a, b), do: rank(a) < rank(b)
   def gt(a, b), do: lt(b, a)
   def le(a, b), do: not lt(b, a)
   def ge(a, b), do: not lt(a, b)
 
   @doc "`Float64.min`: NaN if either is, and -0.0 is the lesser zero."
+  def min(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:min, [a, b])
   def min(a, b) when a == :nan or b == :nan, do: :nan
   def min(a, b), do: if(lt(b, a), do: b, else: a)
+  def max(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:max, [a, b])
   def max(a, b) when a == :nan or b == :nan, do: :nan
   def max(a, b), do: if(lt(a, b), do: b, else: a)
 
   @doc "`Float64.sign()`: -1.0, 0.0 (keeping a negative zero), 1.0 or NaN."
+  def sign(f) when not float64?(f), do: not_float64!(:sign, [f])
   def sign(:nan), do: :nan
   def sign(f) when f == :infinity or (is_float(f) and f > 0.0), do: 1.0
   def sign(f) when f == :neg_infinity or (is_float(f) and f < 0.0), do: -1.0
   def sign(f), do: f
 
+  def abs(f) when not float64?(f), do: not_float64!(:abs, [f])
   def abs(f) when is_float(f), do: Kernel.abs(f)
   def abs(:neg_infinity), do: :infinity
   def abs(f), do: f
@@ -231,6 +259,7 @@ defmodule TemperCore.Float do
   everything.
   """
   def near(a, b, rel_tol \\ nil, abs_tol \\ nil)
+  def near(a, b, _, _) when not (float64?(a) and float64?(b)), do: not_float64!(:near, [a, b])
   def near(a, b, _, _) when a == :nan or b == :nan, do: false
   def near(a, b, _, _) when a == b, do: true
   def near(a, b, _, _) when not (is_float(a) and is_float(b)), do: false
@@ -252,6 +281,7 @@ defmodule TemperCore.Float do
     if r == 0.0 and neg?(f), do: -0.0, else: r
   end
 
+  def round(f) when not float64?(f), do: not_float64!(:round, [f])
   def round(f), do: f
 
   @doc """
@@ -265,6 +295,7 @@ defmodule TemperCore.Float do
     ArithmeticError -> domain(fun, x)
   end
 
+  def math(fun, x) when not float64?(x), do: not_float64!(fun, [x])
   def math(_, :nan), do: :nan
   def math(fun, x), do: at_infinity(fun, x)
 
@@ -304,6 +335,7 @@ defmodule TemperCore.Float do
 
   @doc "`Float64.atan2()`: `y.atan2(x)`."
   def atan2(y, x) when is_float(y) and is_float(x), do: :math.atan2(y, x)
+  def atan2(y, x) when not (float64?(y) and float64?(x)), do: not_float64!(:atan2, [y, x])
   def atan2(y, x) when y == :nan or x == :nan, do: :nan
 
   def atan2(y, x) when y in [:infinity, :neg_infinity] do

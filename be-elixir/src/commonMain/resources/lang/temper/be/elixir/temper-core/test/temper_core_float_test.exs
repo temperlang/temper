@@ -33,4 +33,30 @@ defmodule TemperCoreFloatTest do
     assert F.eq(1.0, 1.0)
     assert F.lt(1.0, 2.0)
   end
+
+  test "an integer is not a Float64, and no operation reads it as one" do
+    # The special-value clauses used to catch it: add(1, 2.0) was 2.0,
+    # mul(3, 2.0) :infinity, divide(6, 3.0) 0.0, sign(5) 5.
+    for {fun, args} <- [
+          add: [1, 2.0],
+          sub: [5, 1.0],
+          mul: [3, 2.0],
+          divide: [6, 3.0],
+          rem: [7, 2.0],
+          pow: [2, 3.0],
+          eq: [1, 1.0],
+          lt: [1, 2.0],
+          min: [1, 2.0],
+          sign: [5],
+          abs: [-5],
+          round: [5],
+          neg: [5]
+        ] do
+      error = assert_raise ArgumentError, fn -> apply(F, fun, args) end
+      assert error.message =~ "takes Float64 values"
+    end
+
+    assert_raise ArgumentError, fn -> F.math(:sin, 1) end
+    assert {F.add(1.0, 2.0), F.add(:infinity, 1.0), F.mul(:infinity, 0.0)} == {3.0, :infinity, :nan}
+  end
 end
