@@ -8,7 +8,9 @@ import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.common.MimeType
 import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
+import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
+import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
@@ -107,6 +109,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         const val FILE_EXTENSION = ".ex"
         const val MIX_FILE = "mix.exs"
 
+        /** Where temper-core lands, relative to the backend's output root. */
+        const val CORE_DIR = "temper-core"
+
         /** The module whose [MAIN_FUNCTION] `mix run` calls. */
         const val MAIN_MODULE = "TemperMain"
         const val MAIN_FUNCTION = "main"
@@ -120,7 +125,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         internal const val BACKEND_ID = "elixir"
 
         /**
-         * A `mix.exs` with no dependencies.
+         * A `mix.exs` that depends on temper-core by path: the core library
+         * is laid down at `temper.out/elixir/temper-core`, beside every
+         * library's own directory.
          *
          * The backend is developed against Elixir 1.19.5 on OTP 28.
          * `"~> 1.15"` is a floor that has not been tested below 1.19.
@@ -130,7 +137,11 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             |  use Mix.Project
             |
             |  def project do
-            |    [app: :$appName, version: "0.1.0", elixir: "~> 1.15", deps: []]
+            |    [app: :$appName, version: "0.1.0", elixir: "~> 1.15", deps: deps()]
+            |  end
+            |
+            |  defp deps do
+            |    [{:temper_core, path: "../$CORE_DIR"}]
             |  end
             |end
             |
@@ -158,9 +169,20 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 ),
             )
 
-        // TODO A temper-core written in Elixir: the heap for mutable objects,
-        //  UTF-16 string indices over UTF-8 binaries, and Int32 wraparound.
-        override val coreLibraryResources: List<ResourceDescriptor> = listOf()
+        /**
+         * temper-core, its own Mix project, laid down beside the libraries
+         * that depend on it by path. A copy inside each library would define
+         * `TemperCore` once per library, and two libraries that depend on
+         * each other would not compile together.
+         */
+        override val coreLibraryResources: List<ResourceDescriptor> =
+            declareResources(
+                base = dirPath("lang", "temper", "be", "elixir", "temper-core"),
+                filePath("mix.exs"),
+                filePath("lib", "temper_core.ex"),
+                filePath("test", "test_helper.exs"),
+                filePath("test", "temper_core_test.exs"),
+            )
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)
     }
