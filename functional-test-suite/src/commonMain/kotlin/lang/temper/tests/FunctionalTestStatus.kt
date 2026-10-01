@@ -44,6 +44,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.ClassesCallOverrideFromSubtype,
         Ft.ClassesDirectGetter,
         Ft.ClassesInheritedGetter,
+        Ft.ClassesObjectLiterals,
         Ft.ClassesPrivateMethod,
         Ft.ClassesPropertyOrder,
         Ft.ClassesSetters,
@@ -57,6 +58,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.FunctionsConstructorCallbacks,
         Ft.FunctionsRestFormal,
         Ft.FunctionsSimpleLocals,
+        Ft.ImportsFunctions,
         Ft.ImportsTypes,
         Ft.ImportsValues,
         Ft.InterfacesEmpty,
@@ -68,6 +70,8 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.SemanticsTypeCheckedLocals,
         Ft.TypesIntBasics,
         Ft.TypesListEmpty,
+        Ft.TypesListReduce,
+        Ft.TypesListSorting,
         Ft.TypesStringIsEmpty,
     )
     onlyPasses(

@@ -297,6 +297,10 @@ private fun connectedKernel(key: String, fn: String) = ElixirConnected(key) { po
 private fun erlangMath(key: String, fn: String) =
     ElixirConnected(key) { pos, a -> remoteCall(pos, Elixir.Atom(pos, "math"), fn, a) }
 
+/** `TemperCore.List.fn(args)` */
+private fun connectedList(key: String, fn: String) =
+    ElixirConnected(key) { pos, a -> remoteCall(pos, elixirModule(pos, "TemperCore", "List"), fn, a) }
+
 private fun identity(key: String) = ElixirConnected(key) { _, a -> a[0] }
 
 /** Every `@connected` key be-elixir understands. Anything absent uses Temper's own implementation. */
@@ -353,16 +357,40 @@ internal val elixirConnected: Map<String, ElixirInlineSupportCode> = (
         ElixirConnected("core.type String.get isEmpty()") { pos, a ->
             infixOp(pos, a[0], ElixirOperator.Equals, Elixir.StringLit(pos, ""))
         },
-        connectedKernel("core.type Listed.get length()", "length"),
-        connectedKernel("core.type List.get length()", "length"),
-        ElixirConnected("core.type Listed.get isEmpty()") { pos, a ->
-            infixOp(pos, a[0], ElixirOperator.Equals, Elixir.ListLit(pos, listOf()))
-        },
-        connectedCore("core.type Listed.get()", "list_get"),
-        connectedCore("core.type List.get()", "list_get"),
-        connectedCore("core.type Listed.getOr()", "list_get_or"),
-        identity("core.type Listed.toList()"),
-        identity("core.type List.toList()"),
+        // a ListBuilder is a Listed too, so every read goes through
+        // TemperCore.List, which takes a plain list or a builder
+        connectedList("core.type Listed.get length()", "length"),
+        connectedList("core.type List.get length()", "length"),
+        connectedList("core.type ListBuilder.get length()", "length"),
+        connectedList("core.type Listed.get isEmpty()", "is_empty"),
+        connectedList("core.type Listed.get()", "get"),
+        connectedList("core.type List.get()", "get"),
+        connectedList("core.type ListBuilder.get()", "get"),
+        connectedList("core.type Listed.getOr()", "get_or"),
+        connectedList("core.type Listed.slice()", "slice"),
+        connectedList("core.type Listed.toList()", "to_list"),
+        connectedList("core.type List.toList()", "to_list"),
+        connectedList("core.type ListBuilder.toList()", "to_list"),
+        connectedList("core.type Listed.toListBuilder()", "to_builder"),
+        connectedList("core.type List.toListBuilder()", "to_builder"),
+        connectedList("core.type ListBuilder.toListBuilder()", "to_builder"),
+        connectedList("core.type Listed.map()", "map"),
+        connectedList("core.type Listed.filter()", "filter"),
+        connectedList("core.type Listed.reduce()", "reduce"),
+        connectedList("core.type Listed.reduceFrom()", "reduce_from"),
+        connectedList("core.type Listed.join()", "join"),
+        connectedList("core.type Listed.sorted()", "sorted"),
+        connectedList("core.type Listed.forEach()", "for_each"),
+        connectedList("core.type List.forEach()", "for_each"),
+        connectedList("core.type ListBuilder.constructor()", "builder"),
+        connectedList("core.type ListBuilder.add()", "add"),
+        connectedList("core.type ListBuilder.addAll()", "add_all"),
+        connectedList("core.type ListBuilder.clear()", "clear"),
+        connectedList("core.type ListBuilder.removeLast()", "remove_last"),
+        connectedList("core.type ListBuilder.reverse()", "reverse"),
+        connectedList("core.type ListBuilder.set()", "set"),
+        connectedList("core.type ListBuilder.sort()", "sort"),
+        connectedList("core.type ListBuilder.splice()", "splice"),
     )
     ).associateBy { it.connectedKey }
 
