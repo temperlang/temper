@@ -419,11 +419,18 @@ internal class CSharpTranslator(
             val result = translateType(decl.returnType)
             val (typeParameters, whereConstraints) = translateTypeParameters(decl.typeParameters)
             val parameters = translateParameters(decl.parameters)
+            // TODO Combine this structural logic with RustTranslator's similar handling?
             var body = when {
-                decl.metadata.any { it.key.symbol == connectedSymbol } && !module.isStdLib ->
-                    translateConnectedBody(decl, parameters) // TODO Rest param?
-                else -> translateBlockStatement(decl.body)
-            }
+                decl.metadata.any { it.key.symbol == connectedSymbol } -> when {
+                    module.isStdLib -> when {
+                        // Just erase std pure virtual connecteds for now.
+                        decl.body.isPureVirtual() -> return@withFunctionContext listOf()
+                        else -> null
+                    }
+                    else -> translateConnectedBody(decl, parameters)
+                }
+                else -> null
+            } ?: translateBlockStatement(decl.body)
 
             buildList {
                 if (!decl.mayYield) {

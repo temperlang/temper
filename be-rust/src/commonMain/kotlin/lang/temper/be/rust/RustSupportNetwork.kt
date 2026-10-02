@@ -30,6 +30,7 @@ import lang.temper.type2.DefinedType
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
+import lang.temper.value.AbstractPanic
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PureVirtual
@@ -48,10 +49,10 @@ object RustSupportNetwork : SupportNetwork {
     override val simplifyOrTypes: Boolean = true
 
     override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? {
-        return runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse {
+        return builtinFunSupportCode[builtin.name] ?: run {
             // Useful for placing a breakpoint.
             null
-        } ?: builtinFunSupportCode[builtin.name] ?: run {
+        } ?: runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse { //
             // Also useful.
             null
         }
@@ -219,6 +220,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
 }
 
 private val builtinFunSupportCode = mapOf(
+    AbstractPanic.name to PureVirtualBuiltin,
     PureVirtual.name to PureVirtualBuiltin,
     ConvertedCoroutineAwakeUponFn.name to AwakeUponSupportCode,
     GetPromiseResultSyncFn.name to GetPromiseResultSyncSupportCode,
