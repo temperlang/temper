@@ -9,6 +9,7 @@ import lang.temper.common.json.JsonValue
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.lexer.Genre
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
@@ -44,7 +45,10 @@ class ElixirTypespecTest {
         assertEquals(modules - 1, types, main)
     }
 
+    // The build's default is 30 s per test. On a fresh machine, Dialyzer first
+    // builds its PLT of Erlang/OTP and Elixir, which takes minutes.
     @Test
+    @Timeout(value = TEST_MINUTES, unit = TimeUnit.MINUTES)
     fun dialyzerFindsNoSpecTheCodeContradicts() {
         val root = Files.createTempDirectory("be-elixir-typespecs").toFile()
         for ((path, content) in generatedFiles()) {
@@ -80,6 +84,9 @@ class ElixirTypespecTest {
 }
 
 private const val DIALYZER_MINUTES = 10L
+
+/** Past [DIALYZER_MINUTES], so a slow Dialyzer fails with its own output, not JUnit's timeout. */
+private const val TEST_MINUTES = 15L
 
 /**
  * One library that reaches every kind of spec: an `@imu` struct, a heap
