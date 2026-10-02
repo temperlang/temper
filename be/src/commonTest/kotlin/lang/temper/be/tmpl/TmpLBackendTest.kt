@@ -207,6 +207,60 @@ class TmpLBackendTest {
         """,
     )
 
+    /**
+     * `==` on class instances is rejected (#508).  The garbage left in its place must carry
+     * the frontend's diagnostic, since every backend's run-time failure is built from it.
+     */
+    @Test
+    fun rejectedOperatorCarriesDiagnostic() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  foo: {
+                |    foo.temper: ```
+                |      class C {}
+                |      let same(a: C, b: C): Boolean { a == b }
+                |      let pick(a: C, b: C): Int { when (a) { b -> 1; else -> 2 } }
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            {
+              tmpl: {
+                "foo.tmpl": {
+                  content:
+                  ```
+                  //// work//foo/ => foo.tmpl
+                  @QName("test-library/foo.type C") @reach(\none) class C__0 / C {
+                    @QName("test-library/foo.type C.constructor()") @reach(\none) constructor__0(this = this__0, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C__0) this__0: C__0) {
+                      return void;
+                    }
+                  }
+                  @QName("test-library/foo.same()") @reach(\none) let same__0(@QName("test-library/foo.same().(a)") a__0: C__0, @QName("test-library/foo.same().(b)") b__0: C__0): Boolean {
+                    return<garbage "C__0 does not support infix `==`!">;
+                  }
+                  @QName("test-library/foo.pick()") @reach(\none) let pick__0(@QName("test-library/foo.pick().(a)") a__1: C__0, @QName("test-library/foo.pick().(b)") b__1: C__0): Int32 {
+                    if (<garbage "C__0 does not support infix `==`!">) {
+                      return 1;
+                    } else {
+                      return 2;
+                    }
+                  }
+
+                  ```
+                },
+                "foo.tmpl.map": "__DO_NOT_CARE__",
+              },
+              errors: [
+                "C__0 does not support infix `==`!",
+                "C__0 does not support infix `==`!",
+              ]
+            }
+        """,
+    )
+
     @Test
     fun makePeanoProud() = assertGeneratedCode(
         inputs = inputFileMapFromJson(

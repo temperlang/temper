@@ -2,6 +2,7 @@ package lang.temper.frontend.typestage
 
 import lang.temper.common.Log
 import lang.temper.common.abbreviate
+import lang.temper.common.asciiUnTitleCase
 import lang.temper.format.OutToks
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -13,6 +14,7 @@ import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.name.ResolvedName
 import lang.temper.type.Member
+import lang.temper.type.OperatorMember
 import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type2.TypeReason
@@ -159,6 +161,27 @@ internal class BecauseNoSuchMember(
     definingTypes: Set<TypeShape>,
 ) : BecauseNoMemberAccessible(pos, member, definingTypes) {
     override val formatString get() = "No member %s in %s"
+}
+
+/**
+ * Like [BecauseNoSuchMember] but for an operator, which the user may not have written as
+ * a member access, or at all: a `when` case compares with `==`.  Names the operand's type
+ * rather than every super-type that was searched.
+ */
+internal class BecauseNoSuchOperator(
+    override val pos: Position,
+    private val member: OperatorMember,
+    private val operandType: StaticType,
+) : AbstractTypeReasonElement() {
+    override val name get() = "BecauseNoSuchOperator"
+    override val level: Log.Level get() = Log.Error
+    override val formatString get() = "%s does not support %s `%s`"
+    override val templateFillers: List<TokenSerializable>
+        get() = listOf(
+            operandType,
+            OutputToken(member.kind.name.asciiUnTitleCase(), OutputTokenType.Word),
+            OutputToken(member.operator, OutputTokenType.Punctuation),
+        )
 }
 
 internal class BecauseUnresolvedTypeReference(
