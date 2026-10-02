@@ -41,6 +41,17 @@ class GenerateCodeStageTest {
         moduleResultNeeded = true,
     )
 
+    /**
+     * An assignment the type checker rejects must not reach backends as a valid assignment.
+     * It becomes an `error` call carrying the diagnostic, as uses before initialization do,
+     * so translated code fails where the rejected assignment was instead of storing a value
+     * of the wrong type.
+     */
+    @Test
+    fun rejectedAssignmentFailsAtRunTime() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/rejected-assignment-fails-at-run-time"),
+    )
+
     @Test
     fun docCommentInData() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/doc-comment-in-data"),
