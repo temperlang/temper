@@ -79,6 +79,28 @@ class ElixirTypespecTest {
         }
     }
 
+    /**
+     * A false spec on a function whose result comes out of a loop is found
+     * out: `total`'s sum, and `upTo`'s list. When a loop was a closure passed
+     * to itself, what it returned was `any()` to Dialyzer, and neither was.
+     */
+    @Test
+    @Timeout(value = TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun dialyzerSeesThroughLoops() {
+        val main = "elixir/my-test-library/lib/temper_main.ex"
+        for ((from, to) in listOf(
+            "@spec total(TemperCore.List.list_in(integer())) :: integer()" to
+                "@spec total(TemperCore.List.list_in(integer())) :: String.t()",
+            "@spec upTo(integer()) :: TemperCore.Vec.t(integer())" to "@spec upTo(integer()) :: String.t()",
+        )) {
+            val files = generatedFiles()
+            val source = files.getValue(main)
+            assertTrue(from in source, "no `$from` in:\n$source")
+            val output = dialyze(files + (main to source.replace(from, to)))
+            assertTrue("SPEC-TOTAL 0" !in output && "SPEC " in output, "Dialyzer did not object to `$to`:\n$output")
+        }
+    }
+
     /** Dialyzer's report on [files] beside temper-core: each warning, then SPEC-TOTAL and TOTAL. */
     private fun dialyze(files: Map<String, String>): String {
         val root = Files.createTempDirectory("be-elixir-typespecs").toFile()

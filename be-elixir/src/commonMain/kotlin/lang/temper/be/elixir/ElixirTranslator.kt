@@ -166,6 +166,32 @@ internal class ElixirTranslator(
     /** A local function that calls itself: the self-passing name its body calls through, and its arity. */
     private val recursiveLocals = mutableMapOf<ResolvedName, Pair<OutName, Int>>()
 
+    /**
+     * Loops lifted out as `defp`s, with their specs, waiting to join the
+     * module of the function they came from; see [loop].
+     */
+    private val lifted = mutableListOf<Elixir.ModuleItem>()
+
+    /** The function being translated, which names the loops lifted from it. */
+    private var currentFunction = INIT_NAME
+
+    /** Loops lifted so far, so each gets a name of its own. */
+    private var liftedCount = 0
+
+    /** [lifted], taken: each place that adds a function to a module adds these after it. */
+    private fun takeLifted(): List<Elixir.ModuleItem> = lifted.toList().also { lifted.clear() }
+
+    /** [body] with [currentFunction] set to [name]. */
+    private fun <T> within(name: String, body: () -> T): T {
+        val outer = currentFunction
+        currentFunction = name
+        try {
+            return body()
+        } finally {
+            currentFunction = outer
+        }
+    }
+
     private val localFunctions = mutableSetOf<ResolvedName>()
 
     private fun collectBoxed(module: TmpL.Module) {
@@ -303,10 +329,16 @@ internal class ElixirTranslator(
             is TmpL.ModuleInitBlock -> {
                 val fn = FunctionContext(returnTag = null)
                 mainBody.addAll(statements(topLevel.body.statements, End.Discard, fn))
+                functions.addAll(takeLifted())
             }
-            is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
+            is TmpL.ModuleLevelDeclaration -> {
+                processModuleLevelDeclaration(topLevel)
+                functions.addAll(takeLifted())
+            }
             is TmpL.ModuleFunctionDeclaration -> {
-                val fn = names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) }
+                val fn = within(functionName(topLevel.name.name).outputNameText) {
+                    names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) }
+                }
                 val exported = topLevel.name.name is lang.temper.name.ExportedName
                 if (topLevel.name.name in private) {
                     fn.isPrivate = true
@@ -320,14 +352,16 @@ internal class ElixirTranslator(
                 val result = specs.of(topLevel.returnType)
                 functions.add(spec(fn, topLevel.parameters.parameters, result, fromElixir = exported))
                 functions.add(fn)
+                functions.addAll(takeLifted())
             }
             // each member names its own locals; see translateType
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
             is TmpL.Test -> {
-                val fn = names.withLocals(declaredIn(topLevel)) { translateTest(topLevel) }
+                val fn = within("test") { names.withLocals(declaredIn(topLevel)) { translateTest(topLevel) } }
                 // a test's value is whatever its last statement left; nothing reads it
                 functions.add(spec(fn, topLevel.parameters.parameters, specs.builtin(topLevel.pos, "term")))
                 functions.add(fn)
+                functions.addAll(takeLifted())
             }
             is TmpL.GarbageTopLevel -> mainBody.add(garbage(topLevel.pos, topLevel.diagnostic))
             // TypeConnection, PooledValueDeclaration, SupportCodeDeclaration,
@@ -407,6 +441,9 @@ internal class ElixirTranslator(
         /** True while translating in try mode, where exits are tagged tuples. */
         var tryMode = false
 
+        /** Whether anything leaves it, by `break` or by falling off the end of a block. */
+        var leaves = false
+
         /**
          * True for a loop that hands an exit bound past it back to its call
          * site, as the tuple it would otherwise throw, and ends normally with
@@ -416,6 +453,13 @@ internal class ElixirTranslator(
 
         /** The exits an escaping loop handed back: one call-site clause each. */
         val escaped = linkedSetOf<Exit>()
+
+        /**
+         * `self(vars)`, a call of the loop's own function. Its free variables
+         * are put in front once they are known; see [loop].
+         */
+        fun selfCall(pos: Position, args: List<Elixir.Expr>): Elixir.Call =
+            Elixir.Call(pos, callee = Elixir.Id(pos, self!!), args = args)
     }
 
     /** Where a `return`, `break` or `continue` goes. */
@@ -781,17 +825,16 @@ internal class ElixirTranslator(
     /** Going round a loop again: a tail call, or a tagged value in try mode. */
     private fun again(pos: Position, loop: LoopContext): Elixir.Expr = when {
         loop.tryMode -> Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, NEXT), packed(pos, loop.carried)))
-        else -> Elixir.AnonCall(
-            pos,
-            fn = Elixir.Id(pos, loop.self!!),
-            args = listOf(Elixir.Id(pos, loop.self)) + loop.carried.map { varRef(pos, it) },
-        )
+        else -> loop.selfCall(pos, loop.carried.map { varRef(pos, it) })
     }
 
     /** Leaving a loop or block with its variables. */
-    private fun leave(pos: Position, loop: LoopContext): Elixir.Expr = when {
-        loop.tryMode -> Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, DONE), packed(pos, loop.carried)))
-        else -> continuing(pos, loop, packed(pos, loop.carried))
+    private fun leave(pos: Position, loop: LoopContext): Elixir.Expr {
+        loop.leaves = true
+        return when {
+            loop.tryMode -> Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, DONE), packed(pos, loop.carried)))
+            else -> continuing(pos, loop, packed(pos, loop.carried))
+        }
     }
 
     /** A loop's variables as it ends normally: `{:cont, vars}` if it is escaping. */
@@ -1126,17 +1169,27 @@ internal class ElixirTranslator(
     // ── Loops ────────────────────────────────────────────────────────────
 
     /**
+     * A loop is a function of its own, `defp`, next to the one it came from:
+     * the variables it reads are passed in, the ones it assigns are passed
+     * round and handed back.
+     *
      * ```
-     * loop = fn loop, a, b ->
-     *   if test do
+     * defp sum_loop_1(xs, i, total) do
+     *   if i < TemperCore.List.length(xs) do
      *     ...body...
-     *     loop.(loop, a, b)
+     *     sum_loop_1(xs, i, total)
      *   else
-     *     {a, b}
+     *     {i, total}
      *   end
      * end
-     * {a, b} = loop.(loop, a, b)
+     *
+     * {i, total} = sum_loop_1(xs, i, total)
      * ```
+     *
+     * It was a closure passed to itself, `loop.(loop, i, total)`, and
+     * Dialyzer types a call through a closure argument `any()`: whatever
+     * came out of a loop, and every function returning it, could have any
+     * spec at all. A named function it infers like any other.
      *
      * With [folded], the loop is escaping: an exit past it, which would
      * otherwise be thrown, ends it with the same tuple, and the call site
@@ -1160,7 +1213,8 @@ internal class ElixirTranslator(
     ): List<Elixir.BlockItem> {
         val pos = statement.pos
         val carried = assignedOuter(statement, fn)
-        val selfName = names.gensym("loop")
+        liftedCount += 1
+        val selfName = OutName("${currentFunction}_loop_$liftedCount", null)
         val context = LoopContext(
             label = label?.let { nameOf(it) },
             isLoop = true,
@@ -1168,8 +1222,8 @@ internal class ElixirTranslator(
             carried = carried,
             self = selfName,
         ).apply { escaping = folded != null }
-        fun self() = Elixir.Id(pos, selfName)
         fun body(): Elixir.Expr {
+            context.leaves = false
             fn.loops.addLast(context)
             scopes.addLast(mutableSetOf())
             try {
@@ -1211,13 +1265,7 @@ internal class ElixirTranslator(
                                         ),
                                         body = Elixir.Block(
                                             pos,
-                                            listOf(
-                                                Elixir.AnonCall(
-                                                    pos, fn = self(),
-                                                    args =
-                                                    listOf(self()) + carried.map { varRef(pos, it) },
-                                                ),
-                                            ),
+                                            listOf(context.selfCall(pos, carried.map { varRef(pos, it) })),
                                         ),
                                     ),
                                     Elixir.Clause(
@@ -1242,21 +1290,59 @@ internal class ElixirTranslator(
             context.tryMode = true
             ifExpr = body()
         }
-        val params = listOf<Elixir.Pattern>(self()) + carried.map { varId(pos, it) }
-        val fnValue = Elixir.Fn(pos, params = params, body = Elixir.Block(pos, listOf(ifExpr)))
-        val call = Elixir.AnonCall(pos, fn = self(), args = listOf(self()) + carried.map { varRef(pos, it) })
-        val define = Elixir.Match(pos, left = self(), right = fnValue)
+        // `while (true)` is its body alone: no `if true`, and no way to end but an exit
+        val forever = ((ifExpr as? Elixir.If)?.test as? Elixir.BoolLit)?.value == true
+        val items = if (forever) (ifExpr as Elixir.If).then.exprs.map { it.deepCopy() } else listOf(ifExpr)
+        val endsNormally = !forever || context.leaves || context.threw
+        fun params() = carried.map { varId(pos, it) }
+        val free =
+            freeVariables(Elixir.Fn(pos, params = params(), body = Elixir.Block(pos, items.map { it.deepCopy() })))
+        fun freeIds() = free.map { Elixir.Id(pos, OutName(it, null)) }
+        // found by walking, not kept as they were made: an `if` folded into a
+        // `cond` is a copy
+        items.flatMap { selfCalls(it, selfName) }.forEach { call ->
+            // the setter empties the list it replaces, so keep a copy
+            val args = call.args.toList()
+            call.args = listOf()
+            call.args = freeIds() + args
+        }
+        val def = Elixir.FunDef(
+            pos,
+            id = Elixir.Id(pos, selfName),
+            params = freeIds() + params(),
+            body = Elixir.Block(pos, items),
+        ).apply { isPrivate = true }
+        // term() throughout: Dialyzer still infers what the loop returns from
+        // its body, and checks the function the loop came from against that
+        val anything = { specs.builtin(pos, "term") }
+        val specParams = def.params.map { anything() }
+        lifted.add(Elixir.TypeSpec(pos, Elixir.Id(pos, selfName), params = specParams, result = anything()))
+        lifted.add(def)
+        val call = Elixir.Call(
+            pos, callee = Elixir.Id(pos, selfName),
+            args =
+            freeIds() + carried.map { varRef(pos, it) },
+        )
         if (folded == null) {
             return listOf(
-                define,
-                if (carried.isEmpty()) call else Elixir.Match(pos, left = packedPattern(pos, carried), right = call),
+                if (carried.isEmpty() || !endsNormally) {
+                    call
+                } else {
+                    Elixir.Match(pos, left = packedPattern(pos, carried), right = call)
+                },
             )
         }
-        val going = Elixir.Clause(
-            pos,
-            pattern = Elixir.TuplePattern(pos, listOf(Elixir.Atom(pos, CONT), packedPatternOrWild(pos, carried))),
-            body = Elixir.Block(pos, statements(folded.rest, folded.end, fn).ifEmpty { listOf(Elixir.NilLit(pos)) }),
-        )
+        // what follows a loop nothing leaves normally is never reached
+        val going = if (!endsNormally) {
+            null
+        } else {
+            val rest = statements(folded.rest, folded.end, fn).ifEmpty { listOf(Elixir.NilLit(pos)) }
+            Elixir.Clause(
+                pos,
+                pattern = Elixir.TuplePattern(pos, listOf(Elixir.Atom(pos, CONT), packedPatternOrWild(pos, carried))),
+                body = Elixir.Block(pos, rest),
+            )
+        }
         val exits = context.escaped.map { exit ->
             val valueName = names.gensym("value")
             val (pattern, payload) = when (exit) {
@@ -1270,7 +1356,19 @@ internal class ElixirTranslator(
                 body = Elixir.Block(pos, exitTo(pos, exit, payload, folded.end, fn)),
             )
         }
-        return listOf(define, Elixir.Case(pos, subject = call, clauses = listOf(going) + exits))
+        val clauses = listOfNotNull(going) + exits
+        return listOf(if (clauses.isEmpty()) call else Elixir.Case(pos, subject = call, clauses = clauses))
+    }
+
+    /** The calls of [name] in [tree]. */
+    private fun selfCalls(tree: Elixir.Tree, name: OutName): List<Elixir.Call> {
+        val out = mutableListOf<Elixir.Call>()
+        fun walk(node: Elixir.Tree) {
+            if (node is Elixir.Call && node.callee.outName.outputNameText == name.outputNameText) out.add(node)
+            for (i in 0 until node.childCount) node.childOrNull(i)?.let(::walk)
+        }
+        walk(tree)
+        return out
     }
 
     /** The rest of a list, folded into an escaping loop's call site, and how that list ends. */
@@ -1792,9 +1890,12 @@ internal class ElixirTranslator(
             when (member) {
                 is TmpL.InstanceProperty -> {}
                 is TmpL.Constructor -> if (isClass) {
-                    val fn = names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) }
+                    val fn = within(CONSTRUCTOR) {
+                        names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) }
+                    }
                     items.add(spec(fn, memberFormals(member), self(), fromElixir = fromElixir(member)))
                     items.add(fn)
+                    items.addAll(takeLifted())
                 }
                 is TmpL.NormalMethod -> member.body?.let {
                     items.addAll(specced(member, names.sanitize(member.dotName.dotNameText), module, isStruct, self()))
@@ -1820,6 +1921,8 @@ internal class ElixirTranslator(
                             ),
                         ),
                     )
+                    // a loop in a function made here runs in the library's init
+                    functions.addAll(takeLifted())
                 }
             }
         }
@@ -1883,7 +1986,7 @@ internal class ElixirTranslator(
         isStruct: Boolean,
         self: Elixir.TypeExpr?,
     ): List<Elixir.ModuleItem> {
-        val fn = memberDef(member, name, module, isStruct)
+        val fn = within(name) { memberDef(member, name, module, isStruct) }
         val thisSelf = if (member.parameters.thisName != null) self else null
         // an abstract method's body, or a connected one's, only raises: calls to
         // an implementation, or to support code, never reach it
@@ -1894,7 +1997,7 @@ internal class ElixirTranslator(
         }
         val doc = (member as? TmpL.Member)?.let { docAttr(member.pos, "doc", it.documentation) }
         val typeSpec = spec(fn, memberFormals(member), result, thisSelf, fromElixir = fromElixir(member))
-        return listOfNotNull(doc, typeSpec, fn)
+        return listOfNotNull(doc, typeSpec, fn) + takeLifted()
     }
 
     private fun constructor(
@@ -2635,6 +2738,9 @@ internal class ElixirTranslator(
         /** Nodes in a statement [copyable] lets a block copy. */
         const val COPYABLE_SIZE = 8
         const val CONSTRUCTOR = "new"
+
+        /** What a loop lifted from module init code is named after. */
+        const val INIT_NAME = "init"
         const val CELL = "v"
         const val CELL_CLASS = "cell"
         const val SUPERTYPES = "__temper_supertypes__"

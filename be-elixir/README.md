@@ -299,23 +299,41 @@ Elixir has no mutable variables and no loops. Temper has both.
 `x = TemperCore.int32(x + 1)`. An `if` that assigns hands its variables
 back as a value: `x = if c do ...; x else x end`.
 
-**A loop is a function that calls itself.** It carries every variable it
-assigns, and hands them back when it ends:
+**A loop is a function that calls itself.** It is a `defp` of its own,
+named after the function it came from. It is passed the variables it
+reads, carries every variable it assigns, and hands those back when it
+ends:
 
 ```elixir
-ex_loop_1 = fn ex_loop_1, i, total ->
+def sum(xs) do
+  ...
+  total = 0
+  i = 0
+  {_i, total} = sum_loop_1(xs, i, total)
+  total
+end
+
+@spec sum_loop_1(term(), term(), term()) :: term()
+defp sum_loop_1(xs, i, total) do
   if i < TemperCore.List.length(xs) do
     total = TemperCore.int32(total + TemperCore.List.get(xs, i))
     i = TemperCore.int32(i + 1)
-    ex_loop_1.(ex_loop_1, i, total)
+    sum_loop_1(xs, i, total)
   else
     {i, total}
   end
 end
-{_i, total} = ex_loop_1.(ex_loop_1, i, total)
 ```
 
-The recursive call is a tail call, so the stack does not grow.
+The recursive call is a tail call, so the stack does not grow. A loop
+was a closure passed to itself, `loop.(loop, i, total)`, until Dialyzer
+showed what that cost: it types a call through a closure argument
+`any()`, so nothing that came out of a loop was checked. A named function
+it infers like any other, `term()` spec or not, and a false spec on
+`sum` is found out. The speed is the same: a million-item indexed sum
+took 11 ms as a closure and 10 ms as a `defp`. A `while (true)` loop is
+its body alone, with no `if true`; when nothing breaks out of it, its
+call site has no clause for it ending, since it cannot.
 
 **Exits are folded where they can be.** A statement list is translated
 together with what falling off its end means: return `nil`, go round the
@@ -338,26 +356,27 @@ def firstNegative(xs) do
     xs = TemperCore.Vec.of(xs)
     return = nil
     i = 0
-    ex_loop_2 = fn ex_loop_2, i, return ->
-      if i < TemperCore.List.length(xs) do
-        if TemperCore.List.get(xs, i) < 0 do
-          return = i
-          {:temper_break, :ex_block_1, return}
-        else
-          i = TemperCore.int32(i + 1)
-          ex_loop_2.(ex_loop_2, i, return)
-        end
-      else
-        {:cont, {i, return}}
-      end
-    end
-    case ex_loop_2.(ex_loop_2, i, return) do
+    case firstNegative_loop_1(xs, i, return) do
       {:cont, {_i, _return}} ->
         -1
       {:temper_break, :ex_block_1, return} ->
         return
     end
   end)
+end
+
+defp firstNegative_loop_1(xs, i, return) do
+  if i < TemperCore.List.length(xs) do
+    if TemperCore.List.get(xs, i) < 0 do
+      return = i
+      {:temper_break, :ex_block_1, return}
+    else
+      i = TemperCore.int32(i + 1)
+      firstNegative_loop_1(xs, i, return)
+    end
+  else
+    {:cont, {i, return}}
+  end
 end
 ```
 
@@ -742,15 +761,12 @@ type where it had `any()`. And a null check is a `case`
 Dialyzer narrows a variable through a pattern and not through a boolean
 test.
 
-Two kinds of result are still not checked. A value that comes out of a
-loop is `any()` to Dialyzer: a loop is a closure passed to itself,
-`loop.(loop, ...)`, and Dialyzer does not type a call through a closure
-argument. `total`'s spec can be made false without a warning, with no
-`throw` in it. And a
-value whose type comes from a spec's type variable, such as a map's value
-from `get_or`, is `term()`, since Dialyzer does not instantiate type
-variables at a call. Either function's arguments are still checked, at
-every call.
+One kind of result is still not checked. A value whose type comes from
+a spec's type variable, such as a map's value from `get_or`, is `term()`,
+since Dialyzer does not instantiate type variables at a call. Such a
+function's arguments are still checked, at every call. A value that comes
+out of a loop is checked: `dialyzerSeesThroughLoops` makes `total`'s and
+`upTo`'s specs false and expects to be told.
 
 ## 15. Long-running programs
 

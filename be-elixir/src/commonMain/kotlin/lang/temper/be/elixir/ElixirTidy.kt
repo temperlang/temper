@@ -22,6 +22,13 @@ internal fun tidy(file: Elixir.SourceFile) {
     file.items.forEach(::tidyTopLevel)
 }
 
+/**
+ * The variables [fn] reads that it does not bind: what a loop lifted out
+ * of its function as a `defp` must be passed. Worked out on a copy, as the
+ * liveness pass also renames unread bindings.
+ */
+internal fun freeVariables(fn: Elixir.Fn): List<String> = reads(fn.deepCopy()).sorted()
+
 private fun tidyTopLevel(item: Elixir.Tree) {
     when (item) {
         is Elixir.ModuleDef -> item.items.forEach(::tidyTopLevel)
