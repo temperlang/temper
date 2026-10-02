@@ -65,9 +65,11 @@ object MixCommand : ToolSpecifics {
 internal fun runElixir(cliEnv: CliEnv, request: ToolchainRequest): List<ToolchainResult> {
     return when (request) {
         is RunLibraryRequest -> listOf(cliEnv.runMain(request.libraryName))
-        is RunTestsRequest -> when (val libraryName = request.libraries?.firstOrNull()) {
+        // every library asked for, as js and py do: taking the first, a
+        // workspace of two libraries ran one's tests and said nothing of the other's
+        is RunTestsRequest -> when (val libraries = request.libraries) {
             null -> unavailable(cliEnv, "Elixir backend needs an explicit library to test")
-            else -> listOf(cliEnv.runMain(libraryName, tests = true))
+            else -> libraries.map { cliEnv.runMain(it, tests = true) }
         }
         is RunBackendSpecificCompilationStepRequest -> error(request)
         is ExecInteractiveRepl -> unavailable(cliEnv, "Elixir backend does not yet drive `iex -S mix`")
