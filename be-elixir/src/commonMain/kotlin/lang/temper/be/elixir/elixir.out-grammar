@@ -164,6 +164,7 @@ Expr =
     | ConsList
     | Field
     | Fn
+    | Heredoc
     | Id
     | If
     | ListLit
@@ -354,6 +355,11 @@ NumberLit.renderTo = `tokenSink.number(elixirNumberText(value))`;
 
 StringLit(value%`String`);
 StringLit.renderTo = `tokenSink.quoted(elixirStringText(value))`;
+
+/** A `"""` string, for `@doc` and `@moduledoc`: the text as written, its lines kept. */
+Heredoc(value%`String`);
+Heredoc.renderTo = `tokenSink.emit(OutputToken(elixirHeredocText(value), OutputTokenType.QuotedValue))`;
+Heredoc.operatorDefinition = `null`;
 
 BoolLit ::= (value%`Boolean` == true => "true") || "false";
 

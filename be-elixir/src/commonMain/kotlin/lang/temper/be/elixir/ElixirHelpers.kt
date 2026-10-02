@@ -86,3 +86,21 @@ private const val HEX = 16
  * lets [ElixirFormattingHints] tell the two apart.
  */
 internal val typeArrow = lang.temper.format.OutputToken("->", lang.temper.format.OutputTokenType.Word)
+
+/**
+ * A `"""` heredoc holding [text] as written, for `@doc` and `@moduledoc`.
+ * Those sit one level into a module, as every module is top level here, so
+ * the text and the closing delimiter are indented to match, and Elixir
+ * strips the closing delimiter's indentation from each line. `\` and `#{`
+ * are escaped as in any string, and so is a `"""` inside the text.
+ */
+internal fun elixirHeredocText(text: String): String {
+    val escaped = text.trimEnd()
+        .replace("\\", "\\\\")
+        .replace("#{", "\\#{")
+        .replace("\"\"\"", "\\\"\"\"")
+    val body = escaped.lines().joinToString("\n") { if (it.isBlank()) "" else "$HEREDOC_INDENT$it" }
+    return "\"\"\"\n$body\n$HEREDOC_INDENT\"\"\""
+}
+
+private const val HEREDOC_INDENT = "  "

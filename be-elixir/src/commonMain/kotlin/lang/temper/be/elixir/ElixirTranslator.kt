@@ -4,6 +4,7 @@ import lang.temper.ast.boundaryDescent
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.dependencyCategory
+import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.log.FilePath
 import lang.temper.log.Position
@@ -308,7 +309,9 @@ internal class ElixirTranslator(
                 val exported = topLevel.name.name is lang.temper.name.ExportedName
                 if (topLevel.name.name in private) {
                     fn.isPrivate = true
-                } else if (!exported) {
+                } else if (exported) {
+                    docAttr(fn.pos, "doc", (topLevel as TmpL.Declaration).documentation)?.let(functions::add)
+                } else {
                     // a class's members or the tests call it, so it is public, but not API
                     val doc = Elixir.Id(fn.pos, OutName("doc", null))
                     functions.add(Elixir.ModuleAttr(fn.pos, doc, Elixir.BoolLit(fn.pos, false)))
@@ -426,6 +429,15 @@ internal class ElixirTranslator(
             params = params,
             body = if (decl.name.name is lang.temper.name.ExportedName) entry(pos, translated) else translated,
         )
+    }
+
+    /**
+     * `@doc` or `@moduledoc` from a declaration's doc comment, as a heredoc,
+     * so `h Temper.Lib.f` in IEx and ExDoc show what the Temper author wrote.
+     */
+    private fun docAttr(pos: Position, attr: String, doc: lang.temper.value.OccasionallyHelpful?): Elixir.ModuleAttr? {
+        val text = doc?.prettyPleaseHelp()?.longHelp()?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return Elixir.ModuleAttr(pos, Elixir.Id(pos, OutName(attr, null)), Elixir.Heredoc(pos, text))
     }
 
     /**
@@ -1460,6 +1472,7 @@ internal class ElixirTranslator(
             .filter { it.memberShape.abstractness == lang.temper.type.Abstractness.Concrete }
             .map { fieldText(it.name) }
         val items = mutableListOf<Elixir.ModuleItem>()
+        docAttr(pos, "moduledoc", decl.documentation)?.let(items::add)
         if (isStruct) items.add(Elixir.StructDef(pos, fields.map { Elixir.Atom(pos, it) }))
         items.add(typeT(decl, module, flattened, isStruct, isActor, isClass))
         val supertypes = Elixir.FunDef(
@@ -1578,7 +1591,8 @@ internal class ElixirTranslator(
         } else {
             specs.of(member.returnType)
         }
-        return listOf(spec(fn, memberFormals(member), result, thisSelf), fn)
+        val doc = (member as? TmpL.Member)?.let { docAttr(member.pos, "doc", it.documentation) }
+        return listOfNotNull(doc, spec(fn, memberFormals(member), result, thisSelf), fn)
     }
 
     private fun constructor(

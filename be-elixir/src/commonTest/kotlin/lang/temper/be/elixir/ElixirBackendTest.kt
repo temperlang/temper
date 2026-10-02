@@ -417,6 +417,30 @@ class ElixirBackendTest {
         assertContains(out, "  def shared(")
         assertContains(out, "  def api(")
     }
+
+    /**
+     * A doc comment becomes `@doc`, or `@moduledoc` for a class, so IEx's `h`
+     * and ExDoc show it. A private function's would be discarded with a
+     * warning, so it gets none.
+     */
+    @Test
+    fun docCommentsAreDocs() {
+        val out = generatedText(
+            """
+            |/** Adds one. */
+            |let helper(x: Int): Int { x + 1 }
+            |/** Doubles, then adds one. */
+            |export let api(x: Int): Int { helper(x * 2) }
+            |/** A point on the plane. */
+            |export class P(public x: Int) {}
+            """.trimMargin(),
+        )
+        // the generated text is JSON: a quote is \\u0022 and a newline \\n
+        val heredoc = "\\u0022\\u0022\\u0022"
+        assertContains(out, "@doc $heredoc\\n  Doubles, then adds one.\\n  $heredoc\\n  @spec api(")
+        assertContains(out, "@moduledoc $heredoc\\n  A point on the plane.")
+        assertFalse("Adds one." in out, out)
+    }
 }
 
 /**

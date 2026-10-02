@@ -1651,6 +1651,38 @@ object Elixir {
         }
     }
 
+    /** A `"""` string, for `@doc` and `@moduledoc`: the text as written, its lines kept. */
+    class Heredoc(
+        pos: Position,
+        var value: String,
+    ) : BaseTree(pos), Expr {
+        override val operatorDefinition: ElixirOperatorDefinition?
+            get() = null
+        override fun renderTo(
+            tokenSink: TokenSink,
+        ) {
+            tokenSink.emit(OutputToken(elixirHeredocText(value), OutputTokenType.QuotedValue))
+        }
+        override val codeFormattingTemplate: CodeFormattingTemplate?
+            get() = null
+        override fun deepCopy(): Heredoc {
+            return Heredoc(pos, value = this.value)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is Heredoc && this.value == other.value
+        }
+        override fun hashCode(): Int {
+            return value.hashCode()
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
     /** `if test do ... else ... end` */
     class If(
         pos: Position,
