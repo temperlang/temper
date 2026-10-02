@@ -380,11 +380,35 @@ defp firstNegative_loop_1(xs, i, return) do
 end
 ```
 
-**The rest throw.** An exit inside an `if` in the middle of a list, whose
-arms hand back variables, is still a tagged `throw`, caught by the loop,
-block or function it leaves. std's JSON parser has most of what remains.
-The loop's recursive call stays outside any `try`, which would otherwise
-break the tail call.
+**So do an `if` and a `try` in the middle of a list.** An exit inside one
+used to have no way out but a throw, since their arms hand back variables.
+Now their arms end `{:cont, vars}` or with the exit, and a `case` after
+them goes on with the rest of the list or takes the exit:
+
+```elixir
+ex_step_4 = try do
+  ...
+  {:cont, return}
+rescue
+  _ in TemperCore.Bubble ->
+    return = -1
+    {:temper_break, :ex_block_1, return}
+end
+case ex_step_4 do
+  {:cont, return} ->
+    ...
+    parsedSum_loop_14(t1, xs, i, return)
+  {:temper_break, :ex_block_1, return} ->
+    {:temper_break, :ex_block_1, return}
+end
+```
+
+The `case` is outside the `try`, so the loop's call to itself is still a
+tail call. std, alloy's orm, marginalia-core and every other library here
+have no `throw` left. An exit that still throws, caught by the loop, block
+or function it leaves, is one from a list nothing can hand it back
+through: module init code, or a block whose following statements are too
+long to copy.
 
 **Calls.** A module function is always called qualified,
 `Temper.Tour.tick()`. That works from inside a class module and never

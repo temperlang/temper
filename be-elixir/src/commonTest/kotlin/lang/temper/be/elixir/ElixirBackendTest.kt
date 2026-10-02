@@ -447,7 +447,8 @@ class ElixirBackendTest {
      * `break` out of a block around the body. Neither is thrown: the loop
      * hands the break back to its call site, and the block's way out is the
      * function's result. A `return` in a bubble's `try` at the end of a
-     * function is that function's result too.
+     * function is that function's result too, and an exit inside an `if` or
+     * a `try` in the middle of a list is handed back to a `case` after it.
      */
     @Test
     fun returnsFromLoopsAreNotThrown() {
@@ -469,6 +470,22 @@ class ElixirBackendTest {
             |}
             |export let intOr(s: String, d: Int): Int {
             |  return s.toInt32() orelse d;
+            |}
+            |export let midIf(xs: List<Int>, flag: Boolean): Int {
+            |  var r = 0;
+            |  if (flag) {
+            |    for (var i = 0; i < xs.length; ++i) { if (xs[i] == 3) { return 333; } r += xs[i]; }
+            |    r += 1000;
+            |  }
+            |  r
+            |}
+            |export let parsedSum(xs: List<String>): Int {
+            |  var t = 0;
+            |  for (var i = 0; i < xs.length; ++i) {
+            |    do { t += xs[i].toInt32(); } orelse do { return -1; }
+            |    t += 1;
+            |  }
+            |  t
             |}
             """.trimMargin(),
         )
