@@ -1487,8 +1487,12 @@ internal class ElixirTranslator(
 
     /**
      * `@type t`, what a value of this class is: its struct for an `@imu`
-     * class, an actor or a heap object otherwise. An interface's values may be
-     * any of those, from any library, so it is `term()`.
+     * class; for an `@actor` class or any other, the actor or heap reference
+     * whose `class` is this module. Every such reference carries its class, so
+     * one class's type is not another's: a `Query` passed where a `Schema`
+     * belongs is a type error to Dialyzer, as it is to Temper. An interface's
+     * values may be any Temper object of any class, from any library: a
+     * struct, a heap reference or an actor.
      */
     private fun typeT(
         decl: TmpL.TypeDeclaration,
@@ -1500,7 +1504,14 @@ internal class ElixirTranslator(
     ): Elixir.TypeDef {
         val pos = decl.pos
         val body = when {
-            !isClass -> specs.builtin(pos, "term")
+            !isClass -> specs.union(
+                pos,
+                listOf(
+                    Elixir.StructType(pos, name = elixirModule(pos, "TemperCore", "Ref")),
+                    Elixir.StructType(pos, name = elixirModule(pos, "TemperCore", "Actor")),
+                    specs.builtin(pos, "struct"),
+                ),
+            )
             isStruct -> Elixir.StructType(
                 pos,
                 name = moduleOf(pos, module),
@@ -1511,8 +1522,8 @@ internal class ElixirTranslator(
                         Elixir.TypeField(pos, key, specs.of(field.type))
                     },
             )
-            isActor -> specs.remote(pos, listOf("TemperCore", "Actor"), "t")
-            else -> specs.remote(pos, listOf("TemperCore", "Ref"), "t")
+            isActor -> specs.reference(pos, "Actor", module)
+            else -> specs.reference(pos, "Ref", module)
         }
         return Elixir.TypeDef(pos, Elixir.LocalType(pos, Elixir.Id(pos, OutName("t", null))), body)
     }
@@ -1559,7 +1570,14 @@ internal class ElixirTranslator(
             isStruct -> Elixir.StructLit(pos, name = moduleOf(pos, module), fields = listOf())
             // inside the actor's new process: `this` is the actor, its fields kept there
             currentClassIsActor -> actorCall(pos, "init_self", listOf(moduleOf(pos, module), fieldMap))
-            else -> heapCall(pos, "new", listOf(moduleOf(pos, module), fieldMap))
+            // built here, not by Heap.new, so that its class is in its type
+            else -> reference(pos, "Ref", module, localCall(pos, "make_ref", listOf()))
+        }
+        // a ref built in place is given its fields by the heap
+        val register = if (isStruct || currentClassIsActor) {
+            listOf()
+        } else {
+            listOf(heapCall(pos, "init", listOf(varRef(pos, thisName), fieldMap.deepCopy())))
         }
         val cls = ClassContext(module, isStruct, thisName, isConstructor = true)
         val init = if (currentClassIsExported) listOf(selfInit(pos)) else listOf()
@@ -1567,7 +1585,7 @@ internal class ElixirTranslator(
             pos,
             ctor.body.statements,
             cls,
-            prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) +
+            prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) + register +
                 boxParams(pos, formals.map { it.name.name }),
         )
         return Elixir.FunDef(
@@ -1576,13 +1594,28 @@ internal class ElixirTranslator(
             params = formals.map { idOf(it.name) },
             body = if (currentClassIsActor) {
                 // `new` starts the process and runs the constructor in it
-                val start = actorCall(pos, "start", listOf(moduleOf(pos, module), Elixir.Fn(pos, body = body)))
+                val id = actorCall(pos, "start_id", listOf(moduleOf(pos, module), Elixir.Fn(pos, body = body)))
+                val start = reference(pos, "Actor", module, id)
                 Elixir.Block(pos, init + start)
             } else {
                 Elixir.Block(pos, init + body.exprs.map { it.deepCopy() })
             },
         )
     }
+
+    /**
+     * `%TemperCore.Ref{class: Temper.Lib.C, id: id}`, or an `Actor`: an object
+     * whose class Dialyzer can see, as it cannot in one a function returns.
+     */
+    private fun reference(pos: Position, kind: String, module: List<String>, id: Elixir.Expr): Elixir.Expr =
+        Elixir.StructLit(
+            pos,
+            name = elixirModule(pos, "TemperCore", kind),
+            fields = listOf(
+                Elixir.KeywordEntry(pos, Elixir.Id(pos, OutName("class", null)), moduleOf(pos, module)),
+                Elixir.KeywordEntry(pos, Elixir.Id(pos, OutName("id", null)), id),
+            ),
+        )
 
     private fun actorCall(pos: Position, fn: String, args: List<Elixir.Expr>): Elixir.Expr =
         remoteCall(pos, elixirModule(pos, "TemperCore", "Actor"), fn, args)

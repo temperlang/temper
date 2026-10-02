@@ -668,8 +668,10 @@ Every function in generated code has an `@spec`, and every class module an
 | `List<T>`, `Map<K, V>`, `Pair<K, V>` | `TemperCore.Vec.t(t)`, `TemperCore.Map.t(k, v)`, `TemperCore.Pair.t(k, v)` |
 | a builder, generator, promise, deque | `TemperCore.Ref.t()` |
 | an `@imu` class | its struct, field by field |
-| any other class, an `@actor` class | `TemperCore.Ref.t()`, `TemperCore.Actor.t()` |
-| an interface, a type parameter | `term()` |
+| any other class | `%TemperCore.Ref{class: Temper.Lib.C, id: reference()}` |
+| an `@actor` class | `%TemperCore.Actor{class: Temper.Lib.C, id: reference()}` |
+| an interface | `%TemperCore.Ref{} \| %TemperCore.Actor{} \| struct()`: any Temper object |
+| a type parameter | `term()` |
 | `Never`, a function that only bubbles | `no_return()` |
 
 A parameter a caller may omit arrives as `nil`, so its type gains `| nil`. A
@@ -689,6 +691,16 @@ elixir be-elixir/src/commonTest/resources/lang/temper/be/elixir/dialyze.exs \
 
 It builds a PLT on its first run (about 15 s), then prints each warning and
 `SPEC-TOTAL`, the ones about a spec.
+
+**One class is not another.** A heap object or an actor carries its class
+in its struct, and the type says which: a `Query` passed where a `Schema`
+belongs breaks the contract, as it would be a type error in Temper. For
+Dialyzer to see the class, a constructor builds the reference in place,
+`this = %TemperCore.Ref{class: Temper.Lib.C, id: make_ref()}`, then
+`TemperCore.Heap.init(this, fields)`; one returned by `Heap.new/2` would be
+some class. An actor's `new` builds `%TemperCore.Actor{class: ..., id:
+TemperCore.Actor.start_id(...)}` the same way. `ElixirTypespecTest` swaps
+two classes in a spec and requires Dialyzer to object.
 
 Three things made the checking real. `TemperCore.Heap.entry/1`, which
 every exported function runs through, is a macro: as a function taking a

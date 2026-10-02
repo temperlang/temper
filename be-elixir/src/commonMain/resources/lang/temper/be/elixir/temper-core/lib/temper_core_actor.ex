@@ -83,7 +83,16 @@ defmodule TemperCore.Actor do
 
   @doc "`new C(...)` for an `@actor` class: starts the process and runs the constructor in it."
   @spec start(module(), (-> term())) :: t()
-  def start(class, constructor) when is_function(constructor, 0) do
+  def start(class, constructor), do: %__MODULE__{class: class, id: start_id(class, constructor)}
+
+  @doc """
+  `start/2`, answering only the new actor's id. Generated code writes
+  `%TemperCore.Actor{class: Temper.Lib.C, id: TemperCore.Actor.start_id(...)}`,
+  so the actor's class is in its type, which Dialyzer cannot see through a
+  struct `start/2` builds.
+  """
+  @spec start_id(module(), (-> term())) :: reference()
+  def start_id(class, constructor) when is_function(constructor, 0) do
     sendable!(constructor, "a constructor argument of #{inspect(class)}")
     id = make_ref()
     chain = chain_for_callee()
@@ -91,7 +100,7 @@ defmodule TemperCore.Actor do
     if supervisor = Process.get(@supervised) do
       case DynamicSupervisor.start_child(supervisor, keeper(id, constructor, chain)) do
         {:ok, _keeper} ->
-          %__MODULE__{class: class, id: id}
+          id
 
         {:error, {:shutdown, {:failed_to_start_child, _, {:temper_raise, kind, reason, stack}}}} ->
           :erlang.raise(kind, reason, stack)
@@ -102,7 +111,7 @@ defmodule TemperCore.Actor do
       case GenServer.start(__MODULE__, {id, constructor, chain, self(), TemperCore.initializing()}) do
         {:ok, pid} ->
           Process.link(pid)
-          %__MODULE__{class: class, id: id}
+          id
 
         {:error, {:temper_raise, kind, reason, stack}} ->
           :erlang.raise(kind, reason, stack)

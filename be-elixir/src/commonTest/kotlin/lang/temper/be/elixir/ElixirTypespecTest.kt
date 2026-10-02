@@ -50,8 +50,39 @@ class ElixirTypespecTest {
     @Test
     @Timeout(value = TEST_MINUTES, unit = TimeUnit.MINUTES)
     fun dialyzerFindsNoSpecTheCodeContradicts() {
+        val output = dialyze(generatedFiles())
+        val specWarnings = output.lines().filter { it.startsWith("SPEC ") }
+        assertTrue("SPEC-TOTAL 0" in output, "Dialyzer found specs the code contradicts:\n$specWarnings\n\n$output")
+    }
+
+    /**
+     * The types say which class an object is: a constructor whose spec names
+     * another class is found out, and so is a call passing one class's object
+     * where another's is wanted. When every heap object had the type
+     * `TemperCore.Ref.t()`, neither was.
+     */
+    @Test
+    @Timeout(value = TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun dialyzerTellsOneClassFromAnother() {
+        val main = "elixir/my-test-library/lib/temper_main.ex"
+        val counter = "Temper.MyTestLibrary.Counter.t()"
+        val square = "Temper.MyTestLibrary.Square.t()"
+        for ((what, from, to) in listOf(
+            Triple("a constructor returning another class", "@spec new() :: $counter", "@spec new() :: $square"),
+            Triple("a method taking another class", "@spec bump($counter) :: nil", "@spec bump($square) :: nil"),
+        )) {
+            val files = generatedFiles()
+            val source = files.getValue(main)
+            assertTrue(from in source, "no `$from` in:\n$source")
+            val output = dialyze(files + (main to source.replace(from, to)))
+            assertTrue("SPEC-TOTAL 0" !in output && "SPEC " in output, "Dialyzer did not object to $what:\n$output")
+        }
+    }
+
+    /** Dialyzer's report on [files] beside temper-core: each warning, then SPEC-TOTAL and TOTAL. */
+    private fun dialyze(files: Map<String, String>): String {
         val root = Files.createTempDirectory("be-elixir-typespecs").toFile()
-        for ((path, content) in generatedFiles()) {
+        for ((path, content) in files) {
             File(root, path).apply { parentFile.mkdirs() }.writeText(content)
         }
         temperCore().copyRecursively(File(root, "elixir/temper-core"))
@@ -68,9 +99,8 @@ class ElixirTypespecTest {
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(DIALYZER_MINUTES, TimeUnit.MINUTES), "Dialyzer did not finish:\n$output")
         assertEquals(0, process.exitValue(), output)
-        val specWarnings = output.lines().filter { it.startsWith("SPEC ") }
-        assertTrue("SPEC-TOTAL 0" in output, "Dialyzer found specs the code contradicts:\n$specWarnings\n\n$output")
         root.deleteRecursively()
+        return output
     }
 
     /** temper-core's source, which the generated `mix.exs` expects beside the library. */
@@ -166,6 +196,12 @@ private val FIXTURE = """
     |  var a = 0.0;
     |  for (let s of shapes) { a += s.area(); }
     |  a
+    |}
+    |
+    |export let fresh(): Int {
+    |  let c = new Counter();
+    |  c.bump();
+    |  c.count
     |}
 """.trimMargin()
 

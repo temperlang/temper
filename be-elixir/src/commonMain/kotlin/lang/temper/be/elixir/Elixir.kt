@@ -197,11 +197,15 @@ object Elixir {
         }
     }
 
+    sealed interface TypeExpr : Tree {
+        override fun deepCopy(): TypeExpr
+    }
+
     /** An alias: `Temper.Core`, each segment capitalised. */
     class ModuleName(
         pos: Position,
         segments: Iterable<Id>,
-    ) : BaseTree(pos), Expr {
+    ) : BaseTree(pos), TypeExpr, Expr {
         override val operatorDefinition
             get() = ElixirOperatorDefinition.Postfix
         override val codeFormattingTemplate: CodeFormattingTemplate
@@ -608,10 +612,6 @@ object Elixir {
                 { n -> (n as TypeSpec).result },
             )
         }
-    }
-
-    sealed interface TypeExpr : Tree {
-        override fun deepCopy(): TypeExpr
     }
 
     sealed interface Pattern : Tree {

@@ -108,6 +108,7 @@ TypeExpr =
     | Id
     | ListType
     | LocalType
+    | ModuleName
     | NilLit
     | RemoteType
     | StructType

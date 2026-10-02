@@ -63,6 +63,16 @@ internal class ElixirTypespecs(
     fun remote(pos: Position, module: List<String>, name: String, args: List<Elixir.TypeExpr> = listOf()) =
         Elixir.RemoteType(pos, elixirModule(pos, module), Elixir.Id(pos, OutName(name, null)), args)
 
+    /** `%TemperCore.Ref{class: Temper.Lib.C, id: reference()}`: a heap object, or with `Actor` an actor, of [module]. */
+    fun reference(pos: Position, kind: String, module: List<String>): Elixir.TypeExpr = Elixir.StructType(
+        pos,
+        name = elixirModule(pos, "TemperCore", kind),
+        fields = listOf(
+            Elixir.TypeField(pos, Elixir.Id(pos, OutName("class", null)), elixirModule(pos, module)),
+            Elixir.TypeField(pos, Elixir.Id(pos, OutName("id", null)), builtin(pos, "reference")),
+        ),
+    )
+
     /**
      * A union, flattened, with each member once. `no_return()` adds nothing
      * to a union that has another member: a function that may bubble returns
@@ -166,6 +176,7 @@ internal class ElixirTypespecs(
         is Elixir.FunType -> type.params.joinToString(",", "(", "->") { key(it) } + key(type.result) + ")"
         is Elixir.ListType -> "[" + key(type.elem) + "]"
         is Elixir.TupleType -> type.items.joinToString(",", "{", "}") { key(it) }
+        is Elixir.ModuleName -> type.segments.joinToString(".") { it.outName.outputNameText }
     }
 
     private companion object {

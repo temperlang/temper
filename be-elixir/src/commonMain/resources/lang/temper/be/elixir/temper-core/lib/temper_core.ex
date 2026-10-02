@@ -401,14 +401,29 @@ defmodule TemperCore.Heap do
   @spec new_value(module(), term()) :: Ref.t()
   def new_value(class, value) when is_atom(class) do
     ref = %Ref{class: class, id: make_ref()}
-    :erlang.put({__MODULE__, ref.id}, value)
+    register(ref, value)
+    ref
+  end
+
+  @doc """
+  Gives a ref the caller built its fields. Generated constructors write
+  `this = %TemperCore.Ref{class: Temper.Lib.C, id: make_ref()}` and then this:
+  a ref built in place has its class in its type, so to Dialyzer one class's
+  objects are not another's, which a ref returned by `new/2` could not show.
+  """
+  @spec init(Ref.t(), map()) :: nil
+  def init(%Ref{} = ref, fields) when is_map(fields) do
+    register(ref, fields)
+    nil
+  end
+
+  defp register(%Ref{id: id}, value) do
+    :erlang.put({__MODULE__, id}, value)
 
     case :erlang.get(@nursery) do
       :undefined -> :ok
-      young -> :erlang.put(@nursery, MapSet.put(young, ref.id))
+      young -> :erlang.put(@nursery, MapSet.put(young, id))
     end
-
-    ref
   end
 
   @spec get_value(Ref.t()) :: term()
