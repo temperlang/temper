@@ -1,0 +1,106 @@
+package lang.temper.be.elixir
+
+/** A plain atom, `:ok` or `:empty?`; anything else needs quotes, `:"with spaces"`. */
+private val plainAtom = Regex("^[a-z_][a-zA-Z0-9_]*[?!]?$")
+
+internal fun elixirAtomText(text: String): String =
+    if (plainAtom.matches(text)) ":$text" else ":${elixirStringText(text)}"
+
+/**
+ * Quotes a string as an Elixir string literal.
+ *
+ * `#` is escaped everywhere, not only before `{`: `#{` interpolates, `\#` is a
+ * valid escape for `#`, and escaping all of them needs no lookahead. Control
+ * characters use `\u{...}`, which Elixir accepts for any code point.
+ *
+ * Elixir source is UTF-8, so a lone UTF-16 surrogate has no encoding at all.
+ * Writing one out would silently become `?`, so it is an error instead.
+ */
+internal fun elixirStringText(value: String): String = buildString {
+    append('"')
+    var i = 0
+    while (i < value.length) {
+        val char = value[i]
+        when {
+            char == '"' -> append("\\\"")
+            char == '\\' -> append("\\\\")
+            char == '#' -> append("\\#")
+            char == '\n' -> append("\\n")
+            char == '\t' -> append("\\t")
+            char == '\r' -> append("\\r")
+            char.code < FIRST_PRINTABLE || char.code == DELETE -> append("\\u{${char.code.toString(HEX)}}")
+            char.isHighSurrogate() && i + 1 < value.length && value[i + 1].isLowSurrogate() -> {
+                append(char)
+                append(value[i + 1])
+                i += 1
+            }
+            char.isSurrogate() ->
+                error("lone surrogate U+${char.code.toString(HEX)} at $i cannot be written as UTF-8 Elixir source")
+            else -> append(char)
+        }
+        i += 1
+    }
+    append('"')
+}
+
+/**
+ * Elixir needs digits on both sides of a float's point (`1.` and `.5` are
+ * syntax errors, and so is `1e10`), and `1.0` must keep its `.0` to stay a
+ * float. Kotlin's `1.0E10` is accepted as written.
+ *
+ * BEAM floats have no NaN and no infinity: `1.0 / 0.0` raises
+ * ArithmeticError. There is no literal to emit for them, so they are errors
+ * here rather than a stand-in value that would compute something else.
+ */
+internal fun elixirNumberText(value: Number): String = when (value) {
+    is Double -> when {
+        value.isNaN() || value.isInfinite() ->
+            error("$value has no representation on the BEAM, whose floats have no NaN or infinity")
+        // -0.0 == 0.0, so the whole-number branch below would drop its sign,
+        // and since OTP 27 `0.0 === -0.0` is false
+        value == 0.0 && 1.0 / value < 0 -> "-0.0"
+        value == value.toLong().toDouble() && !value.toString().contains('E') -> "${value.toLong()}.0"
+        else -> value.toString()
+    }
+    is Float -> elixirNumberText(value.toDouble())
+    else -> value.toString()
+}
+
+/** Elixir comments run from `#` to end of line, so every line gets its own marker. */
+internal fun elixirCommentText(text: String): String =
+    text.trimEnd().lineSequence().joinToString("\n") { line ->
+        when {
+            line.isEmpty() -> "#"
+            else -> "# $line"
+        }
+    }
+
+private const val FIRST_PRINTABLE = 0x20
+private const val DELETE = 0x7f
+private const val HEX = 16
+
+/**
+ * The arrow of a function type, `(integer() -> boolean())`. The formatter
+ * breaks the line after a clause's `->`, where the clause body starts; inside
+ * a type that would split one spec over two lines. A token type of its own
+ * lets [ElixirFormattingHints] tell the two apart.
+ */
+internal val typeArrow = lang.temper.format.OutputToken("->", lang.temper.format.OutputTokenType.Word)
+
+/**
+ * A `"""` heredoc holding [text] as written, for `@doc` and `@moduledoc`.
+ * Those sit one level into a module, as every module is top level here, so
+ * the text and the closing delimiter are indented to match, and Elixir
+ * strips the closing delimiter's indentation from each line. `\` and `#{`
+ * are escaped as in any string, and so is a `"""` inside the text.
+ */
+internal fun elixirHeredocText(text: String): String {
+    val escaped = text.trimEnd()
+        .replace("\\", "\\\\")
+        .replace("#{", "\\#{")
+        .replace("\"\"\"", "\\\"\"\"")
+    val body = escaped.lines().joinToString("\n") { if (it.isBlank()) "" else "$HEREDOC_INDENT$it" }
+    return "\"\"\"\n$body\n$HEREDOC_INDENT\"\"\""
+}
+
+private const val HEREDOC_INDENT = "  "

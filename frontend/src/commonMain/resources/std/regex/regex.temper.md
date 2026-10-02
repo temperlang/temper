@@ -25,7 +25,7 @@ because it enables multiple regex components to be strung together. For example,
 component types extend the `RegexNode` interface.
 
 ```
-export interface RegexNode {
+@imu export interface RegexNode {
 ```
 
 Before a regex is used, it must be compiled. This transforms a `RegexNode` tree
@@ -103,7 +103,7 @@ access. Temper supports only named matches, with current intended syntax
 `/(?name = ...)/`.
 
 ```
-export class Capture(
+@imu export class Capture(
   public let name: String,
   public /*early*/ let item: RegexNode,
 ) extends RegexNode {}
@@ -118,7 +118,7 @@ Here, "code" is short for "code point" although "char" might work better,
 depending on expectations.
 
 ```
-export interface CodePart extends RegexNode {}
+@imu export interface CodePart extends RegexNode {}
 ```
 
 ### CodePoints
@@ -133,7 +133,7 @@ points, although the source text may require non-capture grouping. For example,
 `"ab"` with an optional `"c"`.
 
 ```
-export class CodePoints(
+@imu export class CodePoints(
   public let value: String,
 ) extends CodePart {}
 ```
@@ -162,7 +162,7 @@ classes.
 <details>
 
 ```
-export interface Special extends RegexNode {}
+@imu export interface Special extends RegexNode {}
 class BeginSpecial extends Special {}
 export let Begin: Special = doPure { (): Special => new BeginSpecial() };
 class DotSpecial extends Special {}
@@ -173,15 +173,15 @@ export let End: Special = doPure { (): Special => new EndSpecial() };
 // export let GraphemeCluster = doPure { (): Special =>
 //   class GraphemeCluster extends Special {}; new GraphemeCluster()
 // };
-class WordBoundarySpecial extends Special {}
+@imu class WordBoundarySpecial extends Special {}
 export let WordBoundary: Special = doPure { (): Special => new WordBoundarySpecial() };
 
-export interface SpecialSet extends CodePart & Special {}
-class DigitSpecial extends SpecialSet {}
+@imu export interface SpecialSet extends CodePart & Special {}
+@imu class DigitSpecial extends SpecialSet {}
 export let Digit: SpecialSet = doPure { (): SpecialSet => new DigitSpecial() };
-class SpaceSpecial extends SpecialSet {}
+@imu class SpaceSpecial extends SpecialSet {}
 export let Space: SpecialSet = doPure { (): SpecialSet => new SpaceSpecial() };
-class WordSpecial extends SpecialSet {}
+@imu class WordSpecial extends SpecialSet {}
 export let Word: SpecialSet = doPure { (): SpecialSet => new WordSpecial() };
 ```
 
@@ -195,7 +195,7 @@ including it as the first or last character. A `CodeRange` is usually contained
 inside a [CodeSet](#codeset), and syntactically always is.
 
 ```
-export class CodeRange(
+@imu export class CodeRange(
   public let min: Int,
   public let max: Int,
 ) extends CodePart {}
@@ -213,7 +213,7 @@ negated code set of just a special set often has custom syntax. For example,
 non-space can be said as either `/[^\s]/` or `/\S/`.
 
 ```
-export class CodeSet(
+@imu export class CodeSet(
   public let items: List<CodePart>,
   public let negated: Boolean = false,
 ) extends RegexNode {}
@@ -224,7 +224,7 @@ export class CodeSet(
 `Or` matches any one of multiple options, such as `/ab|cd|e*/`.
 
 ```
-export class Or(
+@imu export class Or(
   public /*early*/ let items: List<RegexNode>,
 ) extends RegexNode {}
 ```
@@ -246,7 +246,7 @@ In regex source, any of the above can have `?` appended to indicated reluctant
 (aka non-greedy), matching as few repetitions as possible.
 
 ```
-export class Repeat(
+@imu export class Repeat(
   public /*early*/ let item: RegexNode,
   public let min: Int,
   public let max: Int?, // where null means infinite
@@ -275,7 +275,7 @@ export let optional(item: RegexNode, reluctant: Boolean = false): Repeat {
 `Sequence` strings along multiple other regexes in order.
 
 ```
-export class Sequence(
+@imu export class Sequence(
   public /*early*/ let items: List<RegexNode>,
 ) extends RegexNode {}
 ```
@@ -293,12 +293,12 @@ TODO And sooner than that, we plan connected types for abstract mapping to
 backend match objects that might not be maps.
 
 ```
-export class Match(
+@imu export class Match(
   public let full: Group,
   public let groups: Map<String, Group>,
 ) {} // interface ... <T = Map<String, Group>> {
 
-export class Group(
+@imu export class Group(
   public let name: String,
   public let value: String,
   public let begin: StringIndex,
@@ -318,7 +318,7 @@ efficient reuse than working from a source [RegexNode](#regex-data-model).
 // sometimes get defined in temper-core for some backends. Also useful for
 // reference values for the interpreter.
 // TODO Avoid defining regex support in temper-core.
-class RegexRefs(
+@imu class RegexRefs(
   public let codePoints: CodePoints = new CodePoints(""),
   public let group: Group = {
     name: "", value: "", begin: String.begin, end: String.begin

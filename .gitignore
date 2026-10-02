@@ -59,6 +59,8 @@ hs_err_pid*
 /be-csharp/.gradle
 /be-data/build
 /be-data/.gradle
+/be-elixir/build
+/be-elixir/.gradle
 /be-java/build
 /be-java/.gradle
 /be-js/build

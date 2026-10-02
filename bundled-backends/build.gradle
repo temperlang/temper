@@ -46,6 +46,7 @@ kotlin {
                 implementation project(':be-csharp')
                 implementation project(':be-data')
                 implementation project(':be-java')
+                implementation project(':be-elixir')
                 implementation project(':be-js')
                 implementation project(':be-lua')
                 implementation project(':be-py')
