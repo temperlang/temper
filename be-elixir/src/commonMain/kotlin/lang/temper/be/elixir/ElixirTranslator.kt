@@ -11,6 +11,7 @@ import lang.temper.log.Position
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.type.WellKnownTypes
 import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
@@ -316,7 +317,8 @@ internal class ElixirTranslator(
                     val doc = Elixir.Id(fn.pos, OutName("doc", null))
                     functions.add(Elixir.ModuleAttr(fn.pos, doc, Elixir.BoolLit(fn.pos, false)))
                 }
-                functions.add(spec(fn, topLevel.parameters.parameters, specs.of(topLevel.returnType)))
+                val result = specs.of(topLevel.returnType)
+                functions.add(spec(fn, topLevel.parameters.parameters, result, fromElixir = exported))
                 functions.add(fn)
             }
             // each member names its own locals; see translateType
@@ -442,12 +444,15 @@ internal class ElixirTranslator(
                 body = connectedBody(decl),
             )
         }
-        val translated = functionBody(pos, body.statements, prelude = boxParams(pos, formals.map { it.name }))
+        val exported = decl.name.name is lang.temper.name.ExportedName
+        val prelude = (if (exported) listArgs(pos, decl.parameters.parameters) else listOf()) +
+            boxParams(pos, formals.map { it.name })
+        val translated = functionBody(pos, body.statements, prelude = prelude)
         return Elixir.FunDef(
             pos,
             id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
             params = params,
-            body = if (decl.name.name is lang.temper.name.ExportedName) entry(pos, translated) else translated,
+            body = if (exported) entry(pos, translated) else translated,
         )
     }
 
@@ -470,10 +475,11 @@ internal class ElixirTranslator(
         formals: List<TmpL.Formal>,
         result: Elixir.TypeExpr,
         self: Elixir.TypeExpr? = null,
+        fromElixir: Boolean = false,
     ): Elixir.TypeSpec {
         val pos = fn.pos
         val params = formals.map { formal ->
-            specs.of(formal.type).let {
+            specs.of(formal.type).let { if (fromElixir) specs.acceptingPlainLists(it) else it }.let {
                 if (formal.optionalState !=
                     lang.temper.common.TriState.FALSE
                 ) {
@@ -494,6 +500,35 @@ internal class ElixirTranslator(
      */
     private fun entry(pos: Position, body: Elixir.Block): Elixir.Block =
         Elixir.Block(pos, listOf(selfInit(pos), heapCall(pos, "entry", listOf(Elixir.Fn(pos, body = body)))))
+
+    /**
+     * `xs = TemperCore.Vec.of(xs)` for each `List` among [formals], where
+     * Elixir code calls in: a caller may pass a plain list, and inside the
+     * library a List is a Vec. Without it a plain list went through as it
+     * was, and `nonEmpty([1, 2])`, specced to return a Vec, returned
+     * `[1, 2]`; Dialyzer said so.
+     */
+    private fun listArgs(pos: Position, formals: List<TmpL.Formal>): List<Elixir.BlockItem> =
+        formals.filter { formal -> formal.type.privOtOrNull?.let(::isList) == true }.map { formal ->
+            val name = formal.name.name
+            Elixir.Match(
+                pos,
+                left = varId(pos, name),
+                right = remoteCall(pos, elixirModule(pos, "TemperCore", "Vec"), "of", listOf(varRef(pos, name))),
+            )
+        }
+
+    /** A Temper `List`, or a union with one in it, such as `List<T>?`. */
+    private fun isList(type: TmpL.Type): Boolean = when (type) {
+        is TmpL.NominalType ->
+            (type.typeName as? TmpL.TemperTypeName)?.typeDefinition == WellKnownTypes.listTypeDefinition
+        is TmpL.TypeUnion -> type.types.any(::isList)
+        else -> false
+    }
+
+    /** Whether Elixir code can call [member] directly: a public member of an exported class. */
+    private fun fromElixir(member: TmpL.FunctionDeclarationOrMethod) =
+        currentClassIsExported && (member as? TmpL.Member)?.visibility?.visibility == TmpL.Visibility.Public
 
     /**
      * `Temper.Lib.__temper_init__()`: Elixir code calling into the library
@@ -1758,7 +1793,7 @@ internal class ElixirTranslator(
                 is TmpL.InstanceProperty -> {}
                 is TmpL.Constructor -> if (isClass) {
                     val fn = names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) }
-                    items.add(spec(fn, memberFormals(member), self()))
+                    items.add(spec(fn, memberFormals(member), self(), fromElixir = fromElixir(member)))
                     items.add(fn)
                 }
                 is TmpL.NormalMethod -> member.body?.let {
@@ -1858,7 +1893,8 @@ internal class ElixirTranslator(
             specs.of(member.returnType)
         }
         val doc = (member as? TmpL.Member)?.let { docAttr(member.pos, "doc", it.documentation) }
-        return listOfNotNull(doc, spec(fn, memberFormals(member), result, thisSelf), fn)
+        val typeSpec = spec(fn, memberFormals(member), result, thisSelf, fromElixir = fromElixir(member))
+        return listOfNotNull(doc, typeSpec, fn)
     }
 
     private fun constructor(
@@ -1893,6 +1929,7 @@ internal class ElixirTranslator(
             ctor.body.statements,
             cls,
             prelude = listOf(Elixir.Match(pos, left = varId(pos, thisName), right = blank)) + register +
+                (if (fromElixir(ctor)) listArgs(pos, formals) else listOf()) +
                 boxParams(pos, formals.map { it.name.name }),
         )
         return Elixir.FunDef(
@@ -1976,7 +2013,8 @@ internal class ElixirTranslator(
                     pos,
                     member.body!!.statements,
                     cls,
-                    prelude = boxParams(pos, formals.map { it.name.name }),
+                    prelude = (if (fromElixir(member)) listArgs(pos, formals) else listOf()) +
+                        boxParams(pos, formals.map { it.name.name }),
                 )
                 // an actor's method runs in the actor: here if this is it, else by a call
                 if (currentClassIsActor && thisName != null) {

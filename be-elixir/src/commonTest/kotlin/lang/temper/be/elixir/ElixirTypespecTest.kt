@@ -122,7 +122,8 @@ private const val TEST_MINUTES = 15L
  * One library that reaches every kind of spec: an `@imu` struct, a heap
  * class, an actor, an interface and a generic class; lists, maps, pairs and
  * builders; a nullable result, an optional parameter, a function type, a
- * function that bubbles, `Int64`, `Boolean`, a string index.
+ * function that bubbles, `Int64`, `Boolean`, a string index; and a List
+ * returned as it came in, which Elixir code may pass as a plain list.
  */
 private val FIXTURE = """
     |export interface Shape { public area(): Float64; }
@@ -196,6 +197,14 @@ private val FIXTURE = """
     |  var a = 0.0;
     |  for (let s of shapes) { a += s.area(); }
     |  a
+    |}
+    |
+    |export let nonEmpty(xs: List<Int>): List<Int>? {
+    |  if (xs.length > 0) { xs } else { null }
+    |}
+    |
+    |export class Shelf(public books: List<String>) {
+    |  public first(): String? { if (books.length > 0) { books[0] } else { null } }
     |}
     |
     |export let fresh(): Int {

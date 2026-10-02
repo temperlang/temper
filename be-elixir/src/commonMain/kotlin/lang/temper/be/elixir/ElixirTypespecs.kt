@@ -52,6 +52,18 @@ internal class ElixirTypespecs(
         }
     }
 
+    /**
+     * [type] as a parameter Elixir code may pass: a List there may be a plain
+     * list, `TemperCore.List.list_in(t)`, which the function makes a Vec on
+     * entry.
+     */
+    fun acceptingPlainLists(type: Elixir.TypeExpr): Elixir.TypeExpr = when {
+        type is Elixir.UnionType -> union(type.pos, type.types.map(::acceptingPlainLists))
+        type is Elixir.RemoteType && key(type).startsWith("TemperCore.Vec.t(") ->
+            remote(type.pos, listOf("TemperCore", "List"), "list_in", type.args.map { it.deepCopy() })
+        else -> type
+    }
+
     /** A parameter a caller may leave out arrives as `nil`. */
     fun orNil(pos: Position, type: Elixir.TypeExpr): Elixir.TypeExpr = union(pos, listOf(type, Elixir.NilLit(pos)))
 

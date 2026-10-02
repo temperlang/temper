@@ -17,6 +17,17 @@ defmodule TemperCore.Vec do
   @doc "A Temper List of these elements."
   @spec new([elem]) :: t(elem) when elem: term()
   def new(items) when is_list(items), do: %__MODULE__{t: List.to_tuple(items)}
+
+  @doc """
+  A List from Elixir code, as the Vec a library works with: a Vec as it is,
+  a plain list converted, and `nil`, for a `List?`, as `nil`. A function
+  Elixir code can call does this to each List argument on entry.
+  """
+  @spec of(t(elem) | [elem]) :: t(elem) when elem: term()
+  @spec of(nil) :: nil
+  def of(%__MODULE__{} = vec), do: vec
+  def of(items) when is_list(items), do: new(items)
+  def of(nil), do: nil
 end
 
 defimpl Enumerable, for: TemperCore.Vec do

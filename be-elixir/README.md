@@ -270,13 +270,22 @@ copied, and 16,000 appends took 1.2 s. Now a million items build in 186 ms
 and sum by index in 20 ms.
 
 `TemperCore.Vec` is `Enumerable`, so Elixir code can `Enum` over a list a
-Temper library returns, and every Temper list operation also accepts a
-plain Elixir list:
+Temper library returns. Elixir code may pass a plain list where a
+function takes a `List`: an exported function, and a public method or
+constructor of an exported class, makes each `List` argument a Vec on
+entry, `xs = TemperCore.Vec.of(xs)`, and its spec says so,
+`TemperCore.List.list_in(integer())`:
 
 ```elixir
 Temper.Lists.build(5)            #=> #TemperCore.Vec<[0, 1, 2, 3, 4]>
 Temper.Lists.sumIndexed([1, 2, 3])   #=> 6
 ```
+
+Before that, a plain list went through as it was: a function returning
+its argument, specced to return a Vec, returned the plain list, and
+Dialyzer said so. A List inside another value, a map's values or an
+object's field set by Elixir code, is not converted, and temper-core's
+list operations still accept a plain list there.
 
 **Strings.** A `StringIndex` is a byte offset into the UTF-8 binary, so
 `s[i]` is a binary match and stepping (`next`, `prev`) moves over a whole
