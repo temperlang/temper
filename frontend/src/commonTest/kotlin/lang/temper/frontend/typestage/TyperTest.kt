@@ -782,6 +782,27 @@ class TyperTest {
     )
 
     @Test
+    fun noSuchOperator() = assertTypes(
+        """
+        |    class Something(public b: Int) {}
+        |    let something = new Something(9);
+        |    something <=> something;
+        |/// ┗━━━━━━━━━━━━━━━━━━━━━┛         : Invalid
+        |    -something;
+        |/// ┗━━━━━━━━┛                      : Invalid
+        |    void
+        """.trimMargin(),
+        wantErrors = listOf(
+            "3+4-27: Something does not support infix `<=>`!",
+            "5+4-14: Something does not support prefix `-`!",
+            "3+4-27: Type Invalid mentions Invalid",
+            "3+14-17: Type Invalid mentions Invalid",
+            "5+4-5: Type Invalid mentions Invalid",
+            "5+4-14: Type Invalid mentions Invalid",
+        ),
+    )
+
+    @Test
     fun noMemberInNotMissingType() = assertTypes(
         """
         |    [].hi;
@@ -1242,12 +1263,13 @@ class TyperTest {
         """
         |    let s: String = panic();
         |    s + s;
-        |/// ┗━━━┛ : Int32
+        |/// ┗━━━┛ : Invalid
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            "2+4-9: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!",
-            "2+4-9: Invalid variant: Invalid mentions Invalid",
+            "2+4-9: String does not support infix `+`!",
+            "2+4-9: Type Invalid mentions Invalid",
+            "2+6-7: Type Invalid mentions Invalid",
         ),
     )
 
