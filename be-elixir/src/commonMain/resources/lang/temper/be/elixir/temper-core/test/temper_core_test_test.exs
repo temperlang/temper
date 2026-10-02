@@ -24,6 +24,22 @@ defmodule TemperCoreTestTest do
     assert xml =~ "<failure message='one, two' />"
   end
 
+  test "a test that panics or crashes fails alone, and the ones after it still run" do
+    # a Panic used to escape process/1 and end the run: `temper test`
+    # reported every test, before and after it, as not run
+    cases = [
+      Pair.new("panics", fn _t -> raise TemperCore.Panic, "broken code: nope" end),
+      Pair.new("crashes", fn _t -> Map.fetch!(%{}, :x) end),
+      Pair.new("throws", fn _t -> throw(:stray) end),
+      Pair.new("after", fn t -> T.assert(t, true, fn -> "no" end) end)
+    ]
+
+    assert [{"panics", [panic]}, {"crashes", [crash]}, {"throws", [thrown]}, {"after", []}] = T.process(cases)
+    assert panic == "** (TemperCore.Panic) broken code: nope"
+    assert crash =~ "** (KeyError) key :x not found"
+    assert thrown == "** (throw) :stray"
+  end
+
   test "names and messages are escaped for XML" do
     xml = T.run_cases([Pair.new("a<b", fn t -> T.assert(t, false, fn -> "it's \"x\" & y" end) end)])
     assert xml =~ "name='a&lt;b'"

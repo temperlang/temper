@@ -67,19 +67,32 @@ defmodule TemperCore.Test do
     Enum.map(TemperCore.List.items(cases), fn %Pair{key: name, value: fun} ->
       t = new()
 
-      had_bubble =
+      # anything else a test raises, throws or exits with fails that test
+      # alone, as on js: it used to end the run, and every test after it was
+      # reported "not run"
+      outcome =
         try do
           fun.(t)
-          false
+          :ok
         rescue
-          TemperCore.Bubble -> true
+          TemperCore.Bubble -> :bubble
+          e -> {:crash, Exception.format_banner(:error, e, __STACKTRACE__)}
+        catch
+          kind, value -> {:crash, Exception.format_banner(kind, value, __STACKTRACE__)}
         end
 
       failures =
-        cond do
-          passing(t) and not had_bubble -> []
-          had_bubble and not failed_on_assert(t) -> Heap.get(t, :messages) ++ ["Bubble"]
-          true -> Heap.get(t, :messages)
+        case outcome do
+          :ok ->
+            if passing(t), do: [], else: Heap.get(t, :messages)
+
+          :bubble ->
+            if failed_on_assert(t),
+              do: Heap.get(t, :messages),
+              else: Heap.get(t, :messages) ++ ["Bubble"]
+
+          {:crash, banner} ->
+            Heap.get(t, :messages) ++ [banner]
         end
 
       {name, failures}
@@ -129,14 +142,21 @@ defmodule TemperCore.Test do
     fails = Enum.count(results, fn {_, f} -> f != [] end)
 
     lines =
-      ["<testsuites>", "  <testsuite name='suite' tests='#{length(results)}' failures='#{fails}' time='0.0'>"] ++
+      [
+        "<testsuites>",
+        "  <testsuite name='suite' tests='#{length(results)}' failures='#{fails}' time='0.0'>"
+      ] ++
         Enum.flat_map(results, fn {name, failures} ->
           basics = "name='#{escape(name)}' classname='#{escape(name)}' time='0.0'"
 
           if failures == [] do
             ["    <testcase #{basics} />"]
           else
-            ["    <testcase #{basics}>", "      <failure message='#{escape(Enum.join(failures, ", "))}' />", "    </testcase>"]
+            [
+              "    <testcase #{basics}>",
+              "      <failure message='#{escape(Enum.join(failures, ", "))}' />",
+              "    </testcase>"
+            ]
           end
         end) ++ ["  </testsuite>", "</testsuites>"]
 
