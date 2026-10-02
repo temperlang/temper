@@ -1,5 +1,5 @@
 // @ts-check
-import { Hidden } from "./work.internal.js";
+import { Hidden, sumOf3 } from "./work.internal.js";
 import { Support } from "./_support.js";
 
 /**
@@ -8,7 +8,7 @@ import { Support } from "./_support.js";
  * @param {number} bonus
  */
 export const sum = (i, j, bonus) => {
-  return i + j + bonus;
+  return sumOf3(i, j, bonus);
 };
 
 /**

@@ -95,9 +95,9 @@ class JavaBackendTest {
     @Test
     fun simpleInequalityInt() {
         assertGeneratedJava(
-            "export let t(x: Int): Boolean { return x != 1; }",
+            "@keep let t(x: Int): Boolean { return x != 1; }",
             """
-            |public static boolean t(int x__2) {
+            |static boolean t(int x__2) {
             |    return x__2 != 1;
             |}
             """.javaMethod(),
@@ -1078,10 +1078,10 @@ class JavaBackendTest {
             |                              private TestGlobal() {
             |                              }
             |                              static final Console console_5;
-            |                              static void f__0(Supplier<Generator<Optional<? super Object>>> factory__0) {
+            |                              static void f(Supplier<Generator<Optional<? super Object>>> factory__0) {
             |                                  factory__0.get().get();
             |                              }
-            |                              static Generator<Optional<? super Object>> fn__0() {
+            |                              static Generator<Optional<? super Object>> fn() {
             |                                  class Local_1 {
             |                                      int caseIndex_13 = 0;
             |                                  }
@@ -1111,7 +1111,7 @@ class JavaBackendTest {
             |                              }
             |                              static {
             |                                  console_5 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |                                  TestGlobal.f__0(TestGlobal :: fn__0);
+            |                                  TestGlobal.f(TestGlobal :: fn);
             |                              }
             |                          }
             |
@@ -1440,7 +1440,7 @@ class JavaBackendTest {
             |                  static final Console console_3;
             |                  static final CompletableFuture<String> b__0;
             |                  static final CompletableFuture<String> p__0;
-            |                  static Generator<Optional<? super Object>> fn__0() {
+            |                  static Generator<Optional<? super Object>> fn() {
             |                      class Local_1 {
             |                          int caseIndex_15 = 0;
             |                          @Nullable CompletableFuture<String> awaited_13 = null;
@@ -1501,7 +1501,7 @@ class JavaBackendTest {
             |                      console_3 = Core.getConsole(Logger.getLogger("my_test_library.test"));
             |                      b__0 = new CompletableFuture<>();
             |                      p__0 = b__0;
-            |                      Core.runAsync(TestGlobal :: fn__0);
+            |                      Core.runAsync(TestGlobal :: fn);
             |                      b__0.complete("Hi");
             |                  }
             |              }
@@ -1553,7 +1553,7 @@ class JavaBackendTest {
             |                  private TestGlobal() {
             |                  }
             |                  static final CompletableFuture<Optional<? super Object>> p__0;
-            |                  static Generator<Optional<? super Object>> fn__0() {
+            |                  static Generator<Optional<? super Object>> fn() {
             |                      class Local_1 {
             |                          int caseIndex_9 = 0;
             |                          @Nullable CompletableFuture<Optional<? super Object>> awaited_7 = null;
@@ -1608,7 +1608,7 @@ class JavaBackendTest {
             |                  }
             |                  static {
             |                      p__0 = new CompletableFuture<>();
-            |                      Core.runAsync(TestGlobal :: fn__0);
+            |                      Core.runAsync(TestGlobal :: fn);
             |                  }
             |              }
             |

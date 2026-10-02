@@ -19,6 +19,7 @@ internal class JsNames {
     private val availableAliases = mutableMapOf<ResolvedName, (JsIdentifierName) -> Unit>()
     private val localAliases = mutableMapOf<ResolvedName, JsIdentifierName>()
     private val tmpLNameToJsName = mutableMapOf<ResolvedName, JsIdentifierName>()
+    private val reservedNames = mutableMapOf<JsIdentifierName, ResolvedName>()
     private val tmpLNameToPrivateName = mutableMapOf<ResolvedName, JsIdentifierName>()
     var origin: NamingContext? = null
         private set
@@ -95,9 +96,11 @@ internal class JsNames {
             is ExportedName if name.comesFrom(origin) -> {
                 JsIdentifierName.escaped(name.baseName.nameText)
             }
-            else if cachePretty -> {
-                JsIdentifierName.escaped(name.prefix()).also {
-                    tmpLNameToJsName[name] = it
+            else if cachePretty -> tmpLNameToJsName.getOrPut(name) {
+                val pretty = JsIdentifierName.escaped(name.prefix())
+                when (reservedNames.getOrPut(pretty) { name }) {
+                    name -> pretty
+                    else -> unusedName(toSafePattern(name))
                 }
             }
             in localAliases -> localAliases.getValue(name)

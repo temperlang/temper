@@ -53,8 +53,8 @@ class JsBackendTest {
             |          content:
             |            ```
             |            /** @type {number} */
-            |            export const return_2 = 123;
-            |            export default return_2;
+            |            export const return_ = 123;
+            |            export default return_;
             |
             |            ```,
             |            mimeType: "text/javascript",
@@ -68,7 +68,7 @@ class JsBackendTest {
             |            sourcesContent: ["123"],
             |            names: ["return"],
             |            // Haven't checked.
-            |            mappings: "AAAA;AAAA,aAAAA,QAAA,MAAG,AAAH;AAAG,eAAAA,QAAA",
+            |            mappings: "AAAA;AAAA,aAAAA,OAAA,MAAG,AAAH;AAAG,eAAAA,OAAA"
             |          },
             |        }
             |      },
@@ -213,11 +213,11 @@ class JsBackendTest {
             |          "content":
             |          ```
             |          /** @type {number} */
-            |          export let one_0 = 1;
-            |          one_0 = one_0;
+            |          export let one = 1;
+            |          one = one;
             |          /** @type {number} */
-            |          export const return_0 = one_0 + one_0 | 0;
-            |          export default return_0;
+            |          export const return_ = one + one | 0;
+            |          export default return_;
             |
             |          ```
             |        },
@@ -270,16 +270,16 @@ class JsBackendTest {
             |          "content":
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0, cmpInt32 as cmpInt32_0
+            |            globalConsole as globalConsole_0, cmpInt32
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /**
             |           * @param {number} i_0
             |           * @returns {number}
             |           */
-            |          export function fib_0(i_0) {
-            |            console_0.log(i_0.toString());
+            |          export function fib(i_0) {
+            |            console.log(i_0.toString());
             |            let a_0 = 0;
             |            let b_0 = 1;
             |            while (i_0 > 0) {
@@ -295,7 +295,7 @@ class JsBackendTest {
             |           * @returns {number}
             |           */
             |          export function fibber(i_1) {
-            |            return fib_0(i_1);
+            |            return fib(i_1);
             |          };
             |
             |          ```
@@ -319,12 +319,12 @@ class JsBackendTest {
             |              Test as Test_0
             |            } from "@temperlang/std/testing";
             |            import {
-            |              fib_0
+            |              fib
             |            } from "../fib.internal.js";
             |            it("fib", function () {
             |                const test_0 = new Test_0();
             |                try {
-            |                  const actual_0 = fib_0(0);
+            |                  const actual_0 = fib(0);
             |                  function fn_0() {
             |                    return "expected fib(0) == (" + 0 .toString() + ") not (" + actual_0.toString() + ")";
             |                  }
@@ -383,8 +383,8 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
-            |          console_0.log("Here be side effects.");
+            |          export const console = globalConsole_0;
+            |          console.log("Here be side effects.");
             |
             |          ```
             |        },
@@ -405,17 +405,17 @@ class JsBackendTest {
             |              Test as Test_0
             |            } from "@temperlang/std/testing";
             |            import {
-            |              console_0
+            |              console
             |            } from "../sub.internal.js";
             |            /** @param {string} name_0 */
-            |            function greet_0(name_0) {
-            |              console_0.log("Hi, " + name_0 + "!");
+            |            function greet(name_0) {
+            |              console.log("Hi, " + name_0 + "!");
             |              return;
             |            }
             |            it("greet", function () {
             |                const test_0 = new Test_0();
             |                try {
-            |                  greet_0("world");
+            |                  greet("world");
             |                  return;
             |                } finally {
             |                  test_0.softFailToHard();
@@ -462,16 +462,16 @@ class JsBackendTest {
             |          content:
             |            ```
             |            import {
-            |              divIntInt as divIntInt_0
+            |              divIntInt
             |            } from "@temperlang/core";
             |            /** @type {number} */
-            |            export let return_0;
+            |            export let return_;
             |            try {
-            |              return_0 = divIntInt_0(0, 0);
+            |              return_ = divIntInt(0, 0);
             |            } catch {
-            |              return_0 = 0;
+            |              return_ = 0;
             |            }
-            |            export default return_0;
+            |            export default return_;
             |
             |            ```
             |        },
@@ -649,7 +649,7 @@ class JsBackendTest {
                     |  src: {
                     |    eq: {
                     |      eq.temper: ```
-                    |        export let foo(bar:String): Boolean {bar == ""}
+                    |        @keep let foo(bar:String): Boolean {bar == ""}
                     |        ```
                     |    }
                     |  }
@@ -674,7 +674,13 @@ class JsBackendTest {
             |
             |          ```
             |        },
-            |        "eq.js": "__DO_NOT_CARE__",
+            |        "eq.js": {
+            |          content:
+            |          ```
+            |          export {} from "./eq.internal.js";
+            |
+            |          ```
+            |        },
             |        "eq.js.map": "__DO_NOT_CARE__",
             |        "eq.internal.js.map": "__DO_NOT_CARE__",
             |      },
@@ -707,8 +713,8 @@ class JsBackendTest {
             |        "list.internal.js": {
             |          "content": ```
             |            /** @type {Array<number>} */
-            |            export const return_0 = Object.freeze([3, 4]);
-            |            export default return_0;
+            |            export const return_ = Object.freeze([3, 4]);
+            |            export default return_;
             |
             |            ```
             |        },
@@ -747,8 +753,8 @@ class JsBackendTest {
             |        "list.internal.js": {
             |          "content": ```
             |            /** @type {Array<string>} */
-            |            export const return_0 = Object.freeze(["", "foo", '"', "'", "<b>bold<\/b>", "foo\n\\bar\r\n.baz", "\x00"]);
-            |            export default return_0;
+            |            export const return_ = Object.freeze(["", "foo", '"', "'", "<b>bold<\/b>", "foo\n\\bar\r\n.baz", "\x00"]);
+            |            export default return_;
             |
             |            ```
             |        },
@@ -787,7 +793,7 @@ class JsBackendTest {
             |        stringy.internal.js: {
             |          content: ```
             |            import {
-            |              cmpString as cmpString_0
+            |              cmpString
             |            } from "@temperlang/core";
             |            /**
             |             * @param {string} a_0
@@ -796,7 +802,7 @@ class JsBackendTest {
             |             */
             |            export function lt(a_0, b_0) {
             |## The library function is used because JS `<` on strings is UTF16-lexicographic.
-            |              return cmpString_0(a_0, b_0) < 0;
+            |              return cmpString(a_0, b_0) < 0;
             |            };
             |            /**
             |             * @param {string} a_1
@@ -804,7 +810,7 @@ class JsBackendTest {
             |             * @returns {number}
             |             */
             |            export function cmp(a_1, b_1) {
-            |              return cmpString_0(a_1, b_1);
+            |              return cmpString(a_1, b_1);
             |            };
             |
             |            ```
@@ -852,9 +858,9 @@ class JsBackendTest {
             |              globalConsole as globalConsole_0
             |            } from "@temperlang/core";
             |            /** @type {Console_0} */
-            |            export const console_0 = globalConsole_0;
+            |            export const console = globalConsole_0;
             |            export function f() {
-            |              console_0.log("f");
+            |              console.log("f");
             |              return;
             |            };
             |
@@ -924,7 +930,7 @@ class JsBackendTest {
             |            JsonProducer as JsonProducer_0, JsonSyntaxTree as JsonSyntaxTree_0, InterchangeContext as InterchangeContext_0, JsonObject as JsonObject_0, JsonAdapter as JsonAdapter_0
             |          } from "@temperlang/std/json";
             |          import {
-            |            type as type_0, requireInstanceOf as requireInstanceOf_0, marshalToJsonObject as marshalToJsonObject_0
+            |            type as type_0, requireInstanceOf as requireInstanceOf_0, marshalToJsonObject
             |          } from "@temperlang/core";
             |          export class CJsonAdapter extends type_0() {
             |            /**
@@ -974,7 +980,7 @@ class JsBackendTest {
             |            }
             |            /** @returns {unknown} */
             |            toJSON() {
-            |              return marshalToJsonObject_0(C.jsonAdapter(), this);
+            |              return marshalToJsonObject(C.jsonAdapter(), this);
             |            }
             |          };
             |
@@ -1017,18 +1023,18 @@ class JsBackendTest {
             |          "content":
             |          ```
             |          import {
-            |            stringSplit as stringSplit_0
+            |            stringSplit
             |          } from "@temperlang/core";
             |          /**
             |           * @param {string} s_0
             |           * @returns {boolean}
             |           */
-            |          export function f_0(s_0) {
-            |            return stringSplit_0(s_0, ",").length === 1;
+            |          export function f(s_0) {
+            |            return stringSplit(s_0, ",").length === 1;
             |          };
             |          /** @type {(arg0: string) => boolean} */
-            |          export const return_1 = f_0;
-            |          export default return_1;
+            |          export const return_ = f;
+            |          export default return_;
             |
             |          ```,
             |          "mimeType": "text/javascript"
@@ -1163,12 +1169,12 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /**
             |           * @param {number | null} [a_0]
             |           * @param {number | null} [b_0]
             |           */
-            |          export function hi_0(a_0, b_0) {
+            |          export function hi(a_0, b_0) {
             |            let a_1;
             |            if (a_0 == null) {
             |              a_1 = 1;
@@ -1181,10 +1187,10 @@ class JsBackendTest {
             |            } else {
             |              b_1 = b_0;
             |            }
-            |            console_0.log((a_1 + b_1 | 0).toString());
+            |            console.log((a_1 + b_1 | 0).toString());
             |            return;
             |          };
-            |          hi_0(null, 3);
+            |          hi(null, 3);
             |
             |          ```,
             |          "mimeType": "text/javascript"
@@ -1225,12 +1231,12 @@ class JsBackendTest {
             |          content:
             |            ```
             |            import {
-            |              dequeConstructor as dequeConstructor_0
+            |              dequeConstructor
             |            } from "@temperlang/core";
             |            /** @type {Deque_0<string>} */
-            |            export const x_0 = dequeConstructor_0();
+            |            export const x = dequeConstructor();
             |            /** @type {Deque_0<string>} */
-            |            export const y_0 = dequeConstructor_0();
+            |            export const y = dequeConstructor();
             |
             |            ```,
             |          mimeType: "text/javascript"
@@ -1390,14 +1396,14 @@ class JsBackendTest {
             |      "foo.internal.js": {
             |        content: ```
             |          /** @type {number} */
-            |          export let m_0 = 0;
+            |          export let m = 0;
             |          /** @returns {number | null} */
-            |          export function f_0() {
-            |            m_0 = 5;
-            |            return m_0;
+            |          export function f() {
+            |            m = 5;
+            |            return m;
             |          };
             |          /** @type {number | null} */
-            |          export const n = f_0();
+            |          export const n = f();
             |
             |          ```,
             |      },
@@ -1645,7 +1651,7 @@ class JsBackendTest {
             |              globalConsole as globalConsole_0, type as type_0
             |            } from "@temperlang/core";
             |            /** @type {Console_0} */
-            |            export const console_0 = globalConsole_0;
+            |            export const console = globalConsole_0;
             |            export class catch_ extends type_0() {
             |              /** @type {string} */
             |              #if_0;
@@ -1666,12 +1672,12 @@ class JsBackendTest {
             |            };
             |            /** @param {string} with_0 */
             |            export function switch_(with_0) {
-            |              console_0.log("switch " + with_0);
+            |              console.log("switch " + with_0);
             |              return;
             |            };
             |            /** @type {catch_} */
-            |            export const in_0 = new catch_("something");
-            |            console_0.log(in_0.if_);
+            |            export const in_ = new catch_("something");
+            |            console.log(in_.if_);
             |
             |            ```,
             |        },
@@ -1727,26 +1733,26 @@ class JsBackendTest {
             |        content:
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic as panic_0, runAsync as runAsync_0
+            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic, runAsync
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /** @type {PromiseBuilder_0<string>} */
-            |          export const b_0 = new PromiseBuilder_0();
+            |          export const b = new PromiseBuilder_0();
             |          /** @type {globalThis.Promise<string>} */
-            |          export const p_0 = b_0.promise;
+            |          export const p = b.promise;
             |          /** @returns {Generator<{}>} */
-            |          export const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
+            |          export const fn = adaptAwaiter_0(function* fn(await_0) {
             |              let t_0;
             |              try {
-            |                t_0 = yield await_0(p_0);
+            |                t_0 = yield await_0(p);
             |              } catch {
-            |                t_0 = panic_0();
+            |                t_0 = panic();
             |              }
-            |              console_0.log(t_0);
+            |              console.log(t_0);
             |          });
-            |          runAsync_0(fn_0);
-            |          b_0.complete("Hi");
+            |          runAsync(fn);
+            |          b.complete("Hi");
             |
             |          ```
             |      },
@@ -1787,14 +1793,14 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /** @type {globalThis.Array<string>} */
-            |          export const sb_0 = [""];
-            |          void (sb_0[0] += "Hello, ");
-            |          void (sb_0[0] = "");
-            |          void (sb_0[0] += "World");
-            |          void (sb_0[0] += "!");
-            |          console_0.log(sb_0[0]);
+            |          export const sb = [""];
+            |          void (sb[0] += "Hello, ");
+            |          void (sb[0] = "");
+            |          void (sb[0] += "World");
+            |          void (sb[0] += "!");
+            |          console.log(sb[0]);
             |
             |          ```
             |      },
@@ -1829,14 +1835,14 @@ class JsBackendTest {
             |        content:
             |          ```
             |          import {
-            |            stringGet as stringGet_0
+            |            stringGet
             |          } from "@temperlang/core";
             |          /**
             |           * @param {string} s_0
             |           * @returns {number}
             |           */
             |          export function firstCodePoint(s_0) {
-            |            return stringGet_0(s_0, 0);
+            |            return stringGet(s_0, 0);
             |          };
             |
             |          ```
@@ -1883,40 +1889,40 @@ class JsBackendTest {
             |            NetRequest as NetRequest_0
             |          } from "@temperlang/std/net";
             |          import {
-            |            globalConsole as globalConsole_0, adaptAwaiter as adaptAwaiter_0, netResponseGetStatus as netResponseGetStatus_0, netResponseGetBodyContent as netResponseGetBodyContent_0, netResponseGetContentType as netResponseGetContentType_0, runAsync as runAsync_0
+            |            globalConsole as globalConsole_0, adaptAwaiter as adaptAwaiter_0, netResponseGetStatus, netResponseGetBodyContent, netResponseGetContentType, runAsync
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /** @returns {Generator<{}>} */
-            |          export const fn_0 = adaptAwaiter_0(function* fn_0(await_0) {
+            |          export const fn = adaptAwaiter_0(function* fn(await_0) {
             |              try {
             |## NetRequest is defined in Temper, so it doesn't need to connect
             |                const r_0 = yield await_0(new NetRequest_0("data:text/plain,Hello World!").send());
             |## Getting a status from the response involves a helper function.
             |## We could use a custom jobby to just do `.status`.
-            |                if (netResponseGetStatus_0(r_0) === 200) {
+            |                if (netResponseGetStatus(r_0) === 200) {
             |                  let t_0;
             |                  let body_0;
             |## Similarly for body content.
-            |                  const subject_0 = yield await_0(netResponseGetBodyContent_0(r_0));
+            |                  const subject_0 = yield await_0(netResponseGetBodyContent(r_0));
             |                  if (subject_0 == null) {
             |                    body_0 = "missing";
             |                  } else {
             |                    body_0 = subject_0;
             |                  }
-            |                  const subject_1 = netResponseGetContentType_0(r_0);
+            |                  const subject_1 = netResponseGetContentType(r_0);
             |                  if (subject_1 == null) {
             |                    t_0 = "unknown";
             |                  } else {
             |                    t_0 = subject_1;
             |                  }
-            |                  console_0.log("Got " + body_0 + " / " + t_0);
+            |                  console.log("Got " + body_0 + " / " + t_0);
             |                }
             |              } catch {
-            |                console_0.log("failed");
+            |                console.log("failed");
             |              }
             |          });
-            |          runAsync_0(fn_0);
+            |          runAsync(fn);
             |
             |          ```
             |      },
@@ -1953,7 +1959,7 @@ class JsBackendTest {
             |            imul: imul_0
             |          } = globalThis.Math;
             |          import {
-            |            listedGet as listedGet_0, stringCountBetween as stringCountBetween_0
+            |            listedGet, stringCountBetween
             |          } from "@temperlang/core";
             |          /**
             |           * @param {number} i_0
@@ -1976,7 +1982,7 @@ class JsBackendTest {
             |           */
             |          export function prodWrap(i_1, j_2) {
             |            let t_1;
-            |            const subject_0 = listedGet_0(j_2, 0);
+            |            const subject_0 = listedGet(j_2, 0);
             |            if (subject_0 == null) {
             |              t_1 = 1;
             |            } else {
@@ -1993,7 +1999,7 @@ class JsBackendTest {
             |              return null;
             |            } else {
             |              const a_1 = a_0;
-            |              return stringCountBetween_0(a_1, 0, a_1.length);
+            |              return stringCountBetween(a_1, 0, a_1.length);
             |            }
             |          };
             |
@@ -2038,7 +2044,7 @@ class JsBackendTest {
             |            globalConsole as globalConsole_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
-            |          export const console_0 = globalConsole_0;
+            |          export const console = globalConsole_0;
             |          /** @param {DenseBitVector_0 | null} x_0 */
             |          export function f(x_0) {
             |            let t_0;
@@ -2048,10 +2054,10 @@ class JsBackendTest {
             |              t_0 = false;
             |            }
             |            if (t_0) {
-            |              console_0.log("dense");
+            |              console.log("dense");
             |              return;
             |            } else if (x_0 == null) {
-            |              console_0.log("not dense");
+            |              console.log("not dense");
             |              return;
             |            } else {
             |              return;
@@ -2091,9 +2097,9 @@ class JsBackendTest {
             |            requireIsArray as requireIsArray_0
             |          } from "@temperlang/core";
             |          /** @type {Array<string>} */
-            |          export const lb_0 = [];
+            |          export const lb = [];
             |          /** @type {Array<string>} */
-            |          export const listed = requireIsArray_0(lb_0);
+            |          export const listed = requireIsArray_0(lb);
             |
             |          ```,
             |      },
@@ -2134,7 +2140,7 @@ class JsBackendTest {
             |      "foo.internal.js": {
             |        content: ```
             |            import {
-            |              requireStringIndex as requireStringIndex_0
+            |              requireStringIndex
             |            } from "@temperlang/core";
             |            /**
             |             * @param {globalThis.number} i_0
@@ -2142,7 +2148,7 @@ class JsBackendTest {
             |             */
             |            export function f(i_0) {
             |              if (i_0 >= 0) {
-            |                return requireStringIndex_0(i_0);
+            |                return requireStringIndex(i_0);
             |              } else {
             |                return 0;
             |              }
@@ -2553,7 +2559,7 @@ class JsBackendTest {
             |            } from "./foo/deeper.js";
             |            import * as _connected from "./foo/_connected.js";
             |            import {
-            |              panic as panic_0
+            |              panic
             |            } from "@temperlang/core";
             |            /**
             |             * @param {number} i_0
