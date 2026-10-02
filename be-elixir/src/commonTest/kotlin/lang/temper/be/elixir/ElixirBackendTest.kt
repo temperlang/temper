@@ -391,6 +391,32 @@ class ElixirBackendTest {
         assertContains(out, "TemperCore.Float.cmp(a, b) \\u003c 0")
         assertFalse("TemperCore.cmp(" in out, out)
     }
+
+    /**
+     * What Elixir can call is what Temper exports. A non-exported function
+     * only the root module calls is `defp`, called locally; one a class's
+     * method calls stays `def`, since a remote call cannot reach a private
+     * function, and is `@doc false`: callable, but not the library's API.
+     */
+    @Test
+    fun onlyExportedFunctionsArePublic() {
+        val out = generatedText(
+            """
+            |let helper(x: Int): Int { x + 1 }
+            |let shared(x: Int): Int { x * 2 }
+            |export class C(public n: Int) {
+            |  public twice(): Int { shared(n) }
+            |}
+            |export let api(x: Int): Int { helper(x) + shared(x) }
+            """.trimMargin(),
+        )
+        assertContains(out, "defp helper(")
+        assertContains(out, "helper(x)")
+        assertFalse("Temper.MyTestLibrary.helper(" in out, out)
+        assertContains(out, "@doc false\\n  @spec shared(")
+        assertContains(out, "  def shared(")
+        assertContains(out, "  def api(")
+    }
 }
 
 /**

@@ -34,7 +34,7 @@ class ElixirTypespecTest {
         val main = generatedFiles().getValue("elixir/my-test-library/lib/temper_main.ex")
         val lines = main.lines()
         val unspecced = lines.withIndex().filter { (i, line) ->
-            val def = Regex("""^\s*def ([a-zA-Z_?!0-9]+)\(""").find(line) ?: return@filter false
+            val def = Regex("""^\s*defp? ([a-zA-Z_?!0-9]+)\(""").find(line) ?: return@filter false
             val name = def.groupValues[1]
             !lines.subList(0, i).asReversed().first { it.isNotBlank() }.trimStart().startsWith("@spec $name(")
         }

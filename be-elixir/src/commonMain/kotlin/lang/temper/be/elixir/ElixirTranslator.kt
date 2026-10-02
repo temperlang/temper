@@ -94,7 +94,12 @@ internal class ElixirTranslator(
     private val testOnly: Set<ResolvedName> = setOf(),
     /** Non-exported functions and values nothing reaches, production or tests: not generated. */
     private val unused: Set<ResolvedName> = setOf(),
+    /** Non-exported functions only the root module calls: `defp`, called locally. */
+    private val private: Set<ResolvedName> = setOf(),
 ) {
+    /** True while translating code that lands in the root module, where a [private] function is in reach. */
+    private var inRoot = false
+
     /** `Temper.MyLib.Tests`: tests and what only they use, in `test/support/`. */
     private val testRoot = root + ElixirBackend.TEST_MODULE
 
@@ -269,8 +274,11 @@ internal class ElixirTranslator(
     private fun processTopLevel(topLevel: TmpL.TopLevel) {
         if (topLevel.declaredName()?.let { it in unused } == true) return
         val marks = Triple(functions.size, mainBody.size, modules.size)
+        val testSide = topLevel.dependencyCategory() == DependencyCategory.Test || topLevel.declaredName() in testOnly
+        inRoot = !testSide && topLevel !is TmpL.TypeDeclaration
         translateTopLevel(topLevel)
-        if (topLevel.dependencyCategory() == DependencyCategory.Test || topLevel.declaredName() in testOnly) {
+        inRoot = false
+        if (testSide) {
             testFunctions.addAll(functions.drainFrom(marks.first))
             testMainBody.addAll(mainBody.drainFrom(marks.second))
             testModules.addAll(modules.drainFrom(marks.third))
@@ -297,6 +305,14 @@ internal class ElixirTranslator(
             is TmpL.ModuleLevelDeclaration -> processModuleLevelDeclaration(topLevel)
             is TmpL.ModuleFunctionDeclaration -> {
                 val fn = names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) }
+                val exported = topLevel.name.name is lang.temper.name.ExportedName
+                if (topLevel.name.name in private) {
+                    fn.isPrivate = true
+                } else if (!exported) {
+                    // a class's members or the tests call it, so it is public, but not API
+                    val doc = Elixir.Id(fn.pos, OutName("doc", null))
+                    functions.add(Elixir.ModuleAttr(fn.pos, doc, Elixir.BoolLit(fn.pos, false)))
+                }
                 functions.add(spec(fn, topLevel.parameters.parameters, specs.of(topLevel.returnType)))
                 functions.add(fn)
             }
@@ -1179,9 +1195,17 @@ internal class ElixirTranslator(
         }
     }
 
-    /** `&Temper.Lib.name/2` */
+    /** `&Temper.Lib.name/2`, or `&name/2` for a private function from inside the root module */
     private fun capture(pos: Position, name: ResolvedName): Elixir.Expr =
-        capture(pos, functionModule(name), name, moduleFunctions.getValue(name))
+        if (inRoot && name in private) {
+            Elixir.Capture(
+                pos,
+                fn = Elixir.Id(pos, functionName(name)),
+                arity = Elixir.NumberLit(pos, moduleFunctions.getValue(name)),
+            )
+        } else {
+            capture(pos, functionModule(name), name, moduleFunctions.getValue(name))
+        }
 
     private fun capture(pos: Position, module: List<String>, name: ResolvedName, arity: Int): Elixir.Expr =
         Elixir.Capture(
@@ -1230,8 +1254,11 @@ internal class ElixirTranslator(
                 when (name) {
                     // qualified, so it works from inside a class module too, and
                     // never meets a Kernel import of the same name
-                    in moduleFunctions ->
+                    in moduleFunctions -> if (inRoot && name in private) {
+                        Elixir.Call(pos, callee = Elixir.Id(pos, functionName(name)), args = args)
+                    } else {
                         remoteCall(pos, moduleOf(pos, functionModule(name)), functionName(name).outputNameText, args)
+                    }
                     in externals -> when (val external = externals.getValue(name)) {
                         is ExternalFunction ->
                             remoteCall(pos, moduleOf(pos, external.module), functionName(name).outputNameText, args)

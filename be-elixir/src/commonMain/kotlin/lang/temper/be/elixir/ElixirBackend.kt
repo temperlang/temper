@@ -153,6 +153,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             names, root, externals, libraryRoots, canonicalFunctions, moduleGlobals, types, imports, isStdLib,
             testOnly,
             placed.unused,
+            placed.private,
         )
         val translated = finished.modules.map { translator.translateModule(it) }
         // The CLI counts tests from this registry, not from the report: a run that
@@ -171,8 +172,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
         )
         val classModules = translated.flatMap { it.modules }
-        val functions = translated.flatMap { it.functions }
         val prodBody = translated.flatMap { it.mainBody }
+        val functions = translated.flatMap { it.functions }
         // A dependency the library's own code never names is one only its tests
         // need, such as std for std/testing: a dependency's init sets only that
         // dependency's values, so leaving it out cannot change what the library does.
@@ -184,16 +185,10 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val main = Elixir.FunDef(pos, id = id(MAIN_FUNCTION), body = Elixir.Block(pos, mainBody))
         val rootItems = listOf(requireHeap(pos)) + functions +
             initFunction(pos, root, listOf(), prodDeps, prodBody) + specced(main)
-        val libraryFile = Elixir.SourceFile(
-            pos,
-            items = classModules + listOf(
-                Elixir.ModuleDef(
-                    pos,
-                    name = rootModule,
-                    items = rootItems,
-                ),
-            ),
-        ).also(::tidy)
+        val rootDef = Elixir.ModuleDef(pos, name = rootModule, items = rootItems)
+        val libraryFile = Elixir.SourceFile(pos, items = classModules + listOf(rootDef)).also(::tidy)
+        // after tidy, which ends each block at its first raise: a call after one is gone
+        rootDef.items = publishUncalled(rootDef.items.map { it.deepCopy() })
         // tests, and the functions, classes and values only they use
         val allTests = translated.flatMap { it.tests }
         val testFunctions = translated.flatMap { it.testFunctions }
@@ -282,6 +277,42 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         )
     }
 
+    /**
+     * A private function nothing in the root module calls is made public
+     * again, `@doc false`. The frontend's tree reached it, but every call was
+     * in code it rejected, or after a raise, which the tidy pass ends the
+     * block at. As `defp` it would be an "unused function" warning.
+     */
+    private fun publishUncalled(functions: List<Elixir.ModuleItem>): List<Elixir.ModuleItem> {
+        fun nameOf(fn: Elixir.FunDef) = fn.id.outName.outputNameText
+        val private = functions.filterIsInstance<Elixir.FunDef>().filter { it.isPrivate }.associateBy(::nameOf)
+        val called = mutableSetOf<String>()
+        val pending = ArrayDeque<Elixir.Tree>()
+        pending.addAll(functions.filter { it !is Elixir.FunDef || !it.isPrivate })
+        // from what is public, through every private function a call reaches
+        while (pending.isNotEmpty()) {
+            val tree = pending.removeFirst()
+            val name = when (tree) {
+                is Elixir.Call -> tree.callee.outName.outputNameText
+                is Elixir.Capture -> (tree.fn as? Elixir.Id)?.outName?.outputNameText
+                else -> null
+            }
+            if (name != null && called.add(name)) private[name]?.let(pending::add)
+            for (i in 0 until tree.childCount) tree.childOrNull(i)?.let(pending::add)
+        }
+        val uncalled = private.keys - called
+        return functions.flatMap { item ->
+            when {
+                item is Elixir.FunDef && nameOf(item) in uncalled -> listOf(item.also { it.isPrivate = false })
+                item is Elixir.TypeSpec && item.id.outName.outputNameText in uncalled -> {
+                    val doc = Elixir.Id(item.pos, OutName("doc", null))
+                    listOf(Elixir.ModuleAttr(item.pos, doc, Elixir.BoolLit(item.pos, false)), item)
+                }
+                else -> listOf(item)
+            }
+        }
+    }
+
     /** `TemperCore.Heap.entry/1`, which every exported function runs through, is a macro. */
     private fun requireHeap(
         pos: lang.temper.log.Position,
@@ -311,7 +342,17 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * all if nothing does. A value's initializer comes with it, so leaving out
      * an unread value changes nothing the library does.
      */
-    private class Placement(val testOnly: Set<ResolvedName>, val unused: Set<ResolvedName>)
+    private class Placement(
+        val testOnly: Set<ResolvedName>,
+        val unused: Set<ResolvedName>,
+        /**
+         * Non-exported production functions nothing outside the root module
+         * calls: no class's members and nothing on the test side. They are
+         * `defp`, so an Elixir caller reaches the library only through what it
+         * exports, and only after its init.
+         */
+        val private: Set<ResolvedName>,
+    )
 
     private fun placement(finished: TmpL.ModuleSet, imports: Map<ResolvedName, ResolvedName>): Placement {
         val declarations = mutableMapOf<ResolvedName, TmpL.TopLevel>()
@@ -350,7 +391,23 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
         val notProduction = declarations.keys - reached(productionRoots)
         val byTests = reached(testRoots)
-        return Placement(testOnly = notProduction intersect byTests, unused = notProduction - byTests)
+        val testOnly = notProduction intersect byTests
+        // what a class module, or the test side, names directly must stay callable from there
+        val outside = mutableSetOf<ResolvedName>()
+        val outsideRoots = finished.modules.flatMap { it.topLevels }.filter {
+            it is TmpL.TypeDeclaration || it.dependencyCategory() == DependencyCategory.Test
+        } + testOnly.mapNotNull { declarations[it] }
+        for (root in outsideRoots) {
+            root.boundaryDescent { node ->
+                val id = (node as? TmpL.Id)?.nameContent as? Either.Left
+                var name = id?.item
+                repeat(imports.size) { name = name?.let { imports[it] ?: it } }
+                name?.let(outside::add)
+                true
+            }
+        }
+        val private = declarations.filterValues { it is TmpL.ModuleFunctionDeclaration }.keys - notProduction - outside
+        return Placement(testOnly = testOnly, unused = notProduction - byTests, private = private)
     }
 
     /** Whether [tree] names the module [prefix] or one under it, or a value it keeps (`:"Temper.Std.x"`). */
