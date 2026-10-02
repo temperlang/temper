@@ -441,6 +441,41 @@ class ElixirBackendTest {
         assertContains(out, "@moduledoc $heredoc\\n  A point on the plane.")
         assertFalse("Adds one." in out, out)
     }
+
+    /**
+     * The frontend writes a `return` inside a loop as an assignment and a
+     * `break` out of a block around the body. Neither is thrown: the loop
+     * hands the break back to its call site, and the block's way out is the
+     * function's result. A `return` in a bubble's `try` at the end of a
+     * function is that function's result too.
+     */
+    @Test
+    fun returnsFromLoopsAreNotThrown() {
+        val out = generatedText(
+            """
+            |export let find(xs: List<Int>, want: Int): Int {
+            |  for (var i = 0; i < xs.length; ++i) {
+            |    if (xs[i] == want) { return i; }
+            |  }
+            |  -1
+            |}
+            |export let pairAt(xs: List<Int>, t: Int): Int {
+            |  for (var i = 0; i < xs.length; ++i) {
+            |    for (var j = i + 1; j < xs.length; ++j) {
+            |      if (xs[i] + xs[j] == t) { return i * 100 + j; }
+            |    }
+            |  }
+            |  -1
+            |}
+            |export let intOr(s: String, d: Int): Int {
+            |  return s.toInt32() orelse d;
+            |}
+            """.trimMargin(),
+        )
+        assertFalse("throw(" in out, out)
+        assertFalse("catch" in out, out)
+        assertContains(out, "{:temper_break, :ex_block_1, return}")
+    }
 }
 
 /**

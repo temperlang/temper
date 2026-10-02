@@ -404,6 +404,26 @@ internal class ElixirTranslator(
 
         /** True while translating in try mode, where exits are tagged tuples. */
         var tryMode = false
+
+        /**
+         * True for a loop that hands an exit bound past it back to its call
+         * site, as the tuple it would otherwise throw, and ends normally with
+         * `{:cont, vars}`. Its call site is a `case` over those.
+         */
+        var escaping = false
+
+        /** The exits an escaping loop handed back: one call-site clause each. */
+        val escaped = linkedSetOf<Exit>()
+    }
+
+    /** Where a `return`, `break` or `continue` goes. */
+    private sealed interface Exit {
+        object Return : Exit
+
+        /** Equal by [target]'s identity: one clause per target. */
+        data class Break(val target: LoopContext) : Exit
+
+        data class Continue(val target: LoopContext) : Exit
     }
 
     private fun translateFunction(decl: TmpL.ModuleFunctionDeclaration): Elixir.FunDef {
@@ -575,13 +595,21 @@ internal class ElixirTranslator(
 
         /** The list is a labeled block's body: leave the block. */
         class Leave(val block: LoopContext) : End
+
+        /**
+         * The list is a labeled block's body, with what follows the block
+         * folded in: leaving it is going on with [rest], which ends as [outer]
+         * does. Any other exit passes through to [outer].
+         */
+        class Then(val block: LoopContext, val rest: List<TmpL.Statement>, val outer: End) : End
     }
 
     private fun statements(list: List<TmpL.Statement>, end: End, fn: FunctionContext): List<Elixir.BlockItem> {
         val flat = madeAfterWhatTheyCapture(flatten(list))
         val out = mutableListOf<Elixir.BlockItem>()
         for (decl in flat.filterIsInstance<TmpL.LocalFunctionDeclaration>()) {
-            if (decl.name.name in boxed) {
+            // a list folded into another's branch was in that list, whose cells it shares
+            if (decl.name.name in boxed && scopes.none { decl.name.name in it }) {
                 declare(decl.name.name)
                 val empty = cell(decl.pos, Elixir.NilLit(decl.pos))
                 out.add(Elixir.Match(decl.pos, left = varId(decl.pos, decl.name.name), right = empty))
@@ -605,6 +633,20 @@ internal class ElixirTranslator(
                 }
                 statement is TmpL.IfStatement && rest.isEmpty() && endIsTail(end) -> {
                     out.add(tailIf(statement, end, fn))
+                    return out
+                }
+                statement is TmpL.LabeledStatement && statement.statement !is TmpL.WhileStatement &&
+                    rest.all(::copyable) -> {
+                    out.addAll(foldedBlock(statement, rest, end, fn))
+                    return out
+                }
+                statement is TmpL.TryStatement && rest.isEmpty() && end is End.Return -> {
+                    out.addAll(tryOf(statement, fn, returning = true))
+                    return out
+                }
+                escapes(statement, end, fn) -> {
+                    val (loop, label) = loopOf(statement)!!
+                    out.addAll(loop(loop, label, fn, Folded(rest, end)))
                     return out
                 }
                 else -> out.addAll(statement(statement, fn))
@@ -666,7 +708,11 @@ internal class ElixirTranslator(
     }
 
     /** An End whose fall-through is the whole list's value, so an `if` at the end can carry it in both arms. */
-    private fun endIsTail(end: End) = end !is End.Discard
+    private fun endIsTail(end: End): Boolean = when (end) {
+        End.Discard -> false
+        is End.Then -> endIsTail(end.outer)
+        else -> true
+    }
 
     private fun flatten(list: List<TmpL.Statement>): List<TmpL.Statement> = list.flatMap {
         when (it) {
@@ -682,6 +728,7 @@ internal class ElixirTranslator(
         is End.Yield -> listOf(packed(pos, end.vars))
         is End.Again -> listOf(again(pos, end.loop))
         is End.Leave -> listOf(leave(pos, end.block))
+        is End.Then -> statements(end.rest, end.outer, fn)
     }
 
     /** `{a, b}`, or `a` alone, or nil when nothing is carried. */
@@ -709,7 +756,13 @@ internal class ElixirTranslator(
     /** Leaving a loop or block with its variables. */
     private fun leave(pos: Position, loop: LoopContext): Elixir.Expr = when {
         loop.tryMode -> Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, DONE), packed(pos, loop.carried)))
-        else -> packed(pos, loop.carried)
+        else -> continuing(pos, loop, packed(pos, loop.carried))
+    }
+
+    /** A loop's variables as it ends normally: `{:cont, vars}` if it is escaping. */
+    private fun continuing(pos: Position, loop: LoopContext, vars: Elixir.Expr): Elixir.Expr = when {
+        loop.escaping -> Elixir.TupleLit(pos, listOf(Elixir.Atom(pos, CONT), vars))
+        else -> vars
     }
 
     // ── Exits ────────────────────────────────────────────────────────────
@@ -723,38 +776,141 @@ internal class ElixirTranslator(
                     fn.cls?.isConstructor == true -> fn.returnValue(pos)
                     else -> statement.expression?.let { expression(it, fn) } ?: Elixir.NilLit(pos)
                 }
-                when (end) {
-                    End.Return -> listOf(value)
-                    else -> {
-                        val tag = fn.returnTag ?: TODO("return outside a function: $statement")
-                        fn.threwReturn = true
-                        listOf(throwOf(pos, RETURN, tag, value))
-                    }
-                }
+                exitTo(pos, Exit.Return, value, end, fn)
             }
             is TmpL.BreakStatement -> {
                 val target = target(statement.label?.id, isContinue = false, fn, statement)
-                when {
-                    (end is End.Again && end.loop === target) || (end is End.Leave && end.block === target) ->
-                        listOf(leave(pos, target))
-                    else -> {
-                        target.threw = true
-                        listOf(throwOf(pos, BREAK, target.tag, packed(pos, target.carried)))
-                    }
-                }
+                exitTo(pos, Exit.Break(target), packed(pos, target.carried), end, fn)
             }
             is TmpL.ContinueStatement -> {
                 val target = target(statement.label?.id, isContinue = true, fn, statement)
-                when {
-                    end is End.Again && end.loop === target -> listOf(again(pos, target))
-                    else -> {
-                        target.threw = true
-                        listOf(throwOf(pos, CONTINUE, target.tag, packed(pos, target.carried)))
-                    }
-                }
+                exitTo(pos, Exit.Continue(target), packed(pos, target.carried), end, fn)
             }
             else -> error("not an exit: $statement")
         }
+    }
+
+    /**
+     * Taking [exit], carrying [payload] (the result, or the target's
+     * variables), from a list that ends as [end]: by value where [end] can
+     * take it, handed back to an escaping loop's call site, or thrown.
+     */
+    private fun exitTo(
+        pos: Position,
+        exit: Exit,
+        payload: Elixir.Expr,
+        end: End,
+        fn: FunctionContext,
+    ): List<Elixir.BlockItem> =
+        when {
+            end is End.Then -> when {
+                exit is Exit.Break && exit.target === end.block -> statements(end.rest, end.outer, fn)
+                else -> exitTo(pos, exit, payload, end.outer, fn)
+            }
+            exit is Exit.Return && end is End.Return -> listOf(payload)
+            exit is Exit.Break && (end is End.Again && end.loop === exit.target) ->
+                listOf(leave(pos, exit.target))
+            exit is Exit.Break && (end is End.Leave && end.block === exit.target) ->
+                listOf(leave(pos, exit.target))
+            exit is Exit.Continue && end is End.Again && end.loop === exit.target -> listOf(again(pos, exit.target))
+            end is End.Again && end.loop.escaping -> {
+                end.loop.escaped.add(exit)
+                listOf(exitTuple(pos, exit, payload, fn))
+            }
+            else -> {
+                when (exit) {
+                    Exit.Return -> fn.threwReturn = true
+                    is Exit.Break -> exit.target.threw = true
+                    is Exit.Continue -> exit.target.threw = true
+                }
+                listOf(localCall(pos, "throw", listOf(exitTuple(pos, exit, payload, fn))))
+            }
+        }
+
+    /** `{:temper_return, :tag, value}` and the like: what [exit] throws, or an escaping loop hands back. */
+    private fun exitTuple(pos: Position, exit: Exit, payload: Elixir.Expr, fn: FunctionContext): Elixir.Expr =
+        taggedTuple(pos, exitKind(exit), exitTag(exit, fn), payload)
+
+    private fun exitKind(exit: Exit) = when (exit) {
+        Exit.Return -> RETURN
+        is Exit.Break -> BREAK
+        is Exit.Continue -> CONTINUE
+    }
+
+    private fun exitTag(exit: Exit, fn: FunctionContext) = when (exit) {
+        Exit.Return -> fn.returnTag ?: TODO("return outside a function")
+        is Exit.Break -> exit.target.tag
+        is Exit.Continue -> exit.target.tag
+    }
+
+    /** Whether a list ending as [end] takes [exit] without throwing it. */
+    private fun takes(end: End, exit: Exit): Boolean = when (end) {
+        End.Return -> exit is Exit.Return
+        is End.Then -> (exit is Exit.Break && exit.target === end.block) || takes(end.outer, exit)
+        is End.Again -> end.loop.escaping || when (exit) {
+            is Exit.Break -> exit.target === end.loop
+            is Exit.Continue -> exit.target === end.loop
+            Exit.Return -> false
+        }
+        is End.Leave -> exit is Exit.Break && exit.target === end.block
+        End.Discard, is End.Yield -> false
+    }
+
+    /** The loop [statement] is, and its label. */
+    private fun loopOf(statement: TmpL.Statement): Pair<TmpL.WhileStatement, TmpL.Id?>? = when (statement) {
+        is TmpL.WhileStatement -> statement to null
+        is TmpL.LabeledStatement -> (statement.statement as? TmpL.WhileStatement)?.let { it to statement.label.id }
+        else -> null
+    }
+
+    /**
+     * Whether [statement] is a loop to translate escaping: one with an exit
+     * past it, a `return` or a jump to an enclosing label, that the list it
+     * sits in, ending as [end], takes without a throw.
+     */
+    private fun escapes(statement: TmpL.Statement, end: End, fn: FunctionContext): Boolean {
+        val (loop, label) = loopOf(statement) ?: return false
+        val exits = mutableListOf<Exit>()
+        fun jump(id: TmpL.Id?, inside: Set<ResolvedName>, isContinue: Boolean) {
+            val name = id?.let { nameOf(it) } ?: return // unlabeled: this loop or one inside it
+            if (name in inside) return
+            val target = fn.loops.lastOrNull { it.label == name && (it.isLoop || !isContinue) } ?: return
+            exits.add(if (isContinue) Exit.Continue(target) else Exit.Break(target))
+        }
+        fun walk(s: TmpL.Statement, inside: Set<ResolvedName>) {
+            when (s) {
+                is TmpL.ReturnStatement -> exits.add(Exit.Return)
+                is TmpL.BreakStatement -> jump(s.label?.id, inside, isContinue = false)
+                is TmpL.ContinueStatement -> jump(s.label?.id, inside, isContinue = true)
+                is TmpL.BlockStatement -> s.statements.forEach { walk(it, inside) }
+                is TmpL.IfStatement -> {
+                    walk(s.consequent, inside)
+                    s.alternate?.let { walk(it, inside) }
+                }
+                is TmpL.WhileStatement -> walk(s.body, inside)
+                is TmpL.LabeledStatement -> walk(s.statement, inside + listOfNotNull(nameOf(s.label.id)))
+                is TmpL.TryStatement -> {
+                    walk(s.tried, inside)
+                    walk(s.recover, inside)
+                }
+                else -> {}
+            }
+        }
+        walk(loop.body, setOfNotNull(label?.let { nameOf(it) }))
+        return exits.any { takes(end, it) }
+    }
+
+    /** A statement cheap and simple enough to translate once per way out of a block: see [foldedBlock]. */
+    private fun copyable(statement: TmpL.Statement): Boolean = when (statement) {
+        is TmpL.ReturnStatement, is TmpL.ExpressionStatement, is TmpL.Assignment -> {
+            var size = 0
+            statement.boundaryDescent {
+                size += 1
+                true
+            }
+            size <= COPYABLE_SIZE
+        }
+        else -> false
     }
 
     private fun target(label: TmpL.Id?, isContinue: Boolean, fn: FunctionContext, at: TmpL.Statement): LoopContext {
@@ -763,9 +919,6 @@ internal class ElixirTranslator(
             (name == null || loop.label == name) && (loop.isLoop || (!isContinue && name != null))
         } ?: TODO("jump with no target: $at")
     }
-
-    private fun throwOf(pos: Position, kind: String, tag: String, payload: Elixir.Expr): Elixir.Expr =
-        localCall(pos, "throw", listOf(taggedTuple(pos, kind, tag, payload)))
 
     private fun raiseBubble(pos: Position): Elixir.Expr =
         localCall(pos, "raise", listOf(elixirModule(pos, "TemperCore", "Bubble")))
@@ -913,9 +1066,9 @@ internal class ElixirTranslator(
                 )
             }
             is TmpL.IfStatement -> middleIf(statement, fn)
-            is TmpL.WhileStatement -> loop(statement, label = null, fn)
+            is TmpL.WhileStatement -> loop(statement, label = null, fn, folded = null)
             is TmpL.LabeledStatement -> when (val inner = statement.statement) {
-                is TmpL.WhileStatement -> loop(inner, label = statement.label.id, fn)
+                is TmpL.WhileStatement -> loop(inner, label = statement.label.id, fn, folded = null)
                 else -> labeledBlock(statement, fn)
             }
             is TmpL.TryStatement -> tryOf(statement, fn)
@@ -949,8 +1102,27 @@ internal class ElixirTranslator(
      * end
      * {a, b} = loop.(loop, a, b)
      * ```
+     *
+     * With [folded], the loop is escaping: an exit past it, which would
+     * otherwise be thrown, ends it with the same tuple, and the call site
+     * takes each such exit and folds in the rest of the list:
+     *
+     * ```
+     * case loop.(loop, a, b) do
+     *   {:cont, {a, b}} -> ...rest...
+     *   {:temper_return, :ex_return_0, value} -> value
+     * end
+     * ```
+     *
+     * Dialyzer cannot see through a throw: a function that returned from
+     * inside a loop had the result `any()`, whatever its spec said.
      */
-    private fun loop(statement: TmpL.WhileStatement, label: TmpL.Id?, fn: FunctionContext): List<Elixir.BlockItem> {
+    private fun loop(
+        statement: TmpL.WhileStatement,
+        label: TmpL.Id?,
+        fn: FunctionContext,
+        folded: Folded?,
+    ): List<Elixir.BlockItem> {
         val pos = statement.pos
         val carried = assignedOuter(statement, fn)
         val selfName = names.gensym("loop")
@@ -960,7 +1132,7 @@ internal class ElixirTranslator(
             tag = names.gensym("loop").outputNameText,
             carried = carried,
             self = selfName,
-        )
+        ).apply { escaping = folded != null }
         fun self() = Elixir.Id(pos, selfName)
         fun body(): Elixir.Expr {
             fn.loops.addLast(context)
@@ -968,7 +1140,7 @@ internal class ElixirTranslator(
             try {
                 val iteration = statements(listOf(statement.body), End.Again(context), fn)
                 val test = expression(statement.test, fn)
-                val exitValue = packed(pos, carried)
+                val exitValue = continuing(pos, context, packed(pos, carried))
                 return if (!context.tryMode) {
                     ifOf(pos, test, iteration, listOf(exitValue))
                 } else {
@@ -1016,9 +1188,9 @@ internal class ElixirTranslator(
                                     Elixir.Clause(
                                         pos,
                                         pattern = Elixir.TuplePattern(pos, listOf(Elixir.Atom(pos, DONE), caught())),
-                                        body = Elixir.Block(pos, listOf(caught())),
+                                        body = Elixir.Block(pos, listOf(continuing(pos, context, caught()))),
                                     ),
-                                ),
+                                ) + listOfNotNull(passOn(pos).takeIf { context.escaping }),
                             ),
                         ),
                         listOf(exitValue),
@@ -1038,10 +1210,42 @@ internal class ElixirTranslator(
         val params = listOf<Elixir.Pattern>(self()) + carried.map { varId(pos, it) }
         val fnValue = Elixir.Fn(pos, params = params, body = Elixir.Block(pos, listOf(ifExpr)))
         val call = Elixir.AnonCall(pos, fn = self(), args = listOf(self()) + carried.map { varRef(pos, it) })
-        return listOf(
-            Elixir.Match(pos, left = self(), right = fnValue),
-            if (carried.isEmpty()) call else Elixir.Match(pos, left = packedPattern(pos, carried), right = call),
+        val define = Elixir.Match(pos, left = self(), right = fnValue)
+        if (folded == null) {
+            return listOf(
+                define,
+                if (carried.isEmpty()) call else Elixir.Match(pos, left = packedPattern(pos, carried), right = call),
+            )
+        }
+        val going = Elixir.Clause(
+            pos,
+            pattern = Elixir.TuplePattern(pos, listOf(Elixir.Atom(pos, CONT), packedPatternOrWild(pos, carried))),
+            body = Elixir.Block(pos, statements(folded.rest, folded.end, fn).ifEmpty { listOf(Elixir.NilLit(pos)) }),
         )
+        val exits = context.escaped.map { exit ->
+            val valueName = names.gensym("value")
+            val (pattern, payload) = when (exit) {
+                Exit.Return -> Elixir.Id(pos, valueName) to Elixir.Id(pos, valueName)
+                is Exit.Break -> packedPatternOrWild(pos, exit.target.carried) to packed(pos, exit.target.carried)
+                is Exit.Continue -> packedPatternOrWild(pos, exit.target.carried) to packed(pos, exit.target.carried)
+            }
+            Elixir.Clause(
+                pos,
+                pattern = taggedPattern(pos, exitKind(exit), exitTag(exit, fn), pattern),
+                body = Elixir.Block(pos, exitTo(pos, exit, payload, folded.end, fn)),
+            )
+        }
+        return listOf(define, Elixir.Case(pos, subject = call, clauses = listOf(going) + exits))
+    }
+
+    /** The rest of a list, folded into an escaping loop's call site, and how that list ends. */
+    private class Folded(val rest: List<TmpL.Statement>, val end: End)
+
+    /** `exit -> exit`: in try mode, an escaping loop's exit past it goes on to the call site. */
+    private fun passOn(pos: Position): Elixir.Clause {
+        val name = names.gensym("exit")
+        val body = Elixir.Block(pos, listOf(Elixir.Id(pos, name)))
+        return Elixir.Clause(pos, pattern = Elixir.Id(pos, name), body = body)
     }
 
     /** `{:kind, :tag, payload}` */
@@ -1070,6 +1274,55 @@ internal class ElixirTranslator(
         )
 
     /** `label: { ... break label; ... }`: a block that `break` can leave. */
+
+    /**
+     * A labeled block with the [rest] of its list folded in, at each way out
+     * of it. The frontend writes a `return` from inside a loop as an
+     * assignment and a `break` out of a block around the function's body, with
+     * `return v;` after it; folded, those are the function's own results, not
+     * throws. [rest] is copied once per way out, so it is held to [copyable]
+     * statements.
+     */
+    private fun foldedBlock(
+        statement: TmpL.LabeledStatement,
+        rest: List<TmpL.Statement>,
+        end: End,
+        fn: FunctionContext,
+    ): List<Elixir.BlockItem> {
+        val pos = statement.pos
+        val carried = assignedOuter(statement.statement, fn)
+        val context = LoopContext(
+            label = nameOf(statement.label.id),
+            isLoop = false,
+            tag = names.gensym("block").outputNameText,
+            carried = carried,
+            self = null,
+        )
+        fn.loops.addLast(context)
+        scopes.addLast(mutableSetOf())
+        val items = try {
+            statements(listOf(statement.statement), End.Then(context, rest, end), fn)
+        } finally {
+            scopes.removeLast()
+            fn.loops.removeLast()
+        }
+        if (!context.threw) return items
+        // a break from somewhere the folding could not reach
+        return listOf(
+            Elixir.Try(
+                pos,
+                body = Elixir.Block(pos, items),
+                catches = listOf(
+                    Elixir.Clause(
+                        pos,
+                        pattern = taggedPattern(pos, BREAK, context.tag, packedPatternOrWild(pos, carried)),
+                        body = Elixir.Block(pos, statements(rest, end, fn).ifEmpty { listOf(Elixir.NilLit(pos)) }),
+                    ),
+                ),
+            ),
+        )
+    }
+
     private fun labeledBlock(statement: TmpL.LabeledStatement, fn: FunctionContext): List<Elixir.BlockItem> {
         val pos = statement.pos
         val carried = assignedOuter(statement.statement, fn)
@@ -1112,11 +1365,24 @@ internal class ElixirTranslator(
 
     // ── Bubbles ──────────────────────────────────────────────────────────
 
-    /** `{a} = try do ... rescue _ in TemperCore.Bubble -> ... end` */
-    private fun tryOf(statement: TmpL.TryStatement, fn: FunctionContext): List<Elixir.BlockItem> {
+    /**
+     * `{a} = try do ... rescue _ in TemperCore.Bubble -> ... end`, or with
+     * [returning], the last statement of a function, each arm returning: a
+     * `return` in either is the function's result, not a throw.
+     *
+     * Only a function's end can be carried into a `try` this way. A loop
+     * body's end goes round again, and a call made inside a `try` is not a
+     * tail call: each iteration would hold a frame, and a bubble in a later
+     * one would be rescued by an earlier one.
+     */
+    private fun tryOf(
+        statement: TmpL.TryStatement,
+        fn: FunctionContext,
+        returning: Boolean = false,
+    ): List<Elixir.BlockItem> {
         val pos = statement.pos
-        val vars = assignedOuter(statement, fn)
-        val end = End.Yield(vars)
+        val vars = if (returning) listOf() else assignedOuter(statement, fn)
+        val end = if (returning) End.Return else End.Yield(vars)
         val value = Elixir.Try(
             pos,
             body = Elixir.Block(pos, statements(listOf(statement.tried), end, fn)),
@@ -2324,6 +2590,12 @@ internal class ElixirTranslator(
         const val CONTINUE = "temper_continue"
         const val NEXT = "temper_next"
         const val DONE = "temper_done"
+
+        /** How an escaping loop that ran to its end says so. */
+        const val CONT = "cont"
+
+        /** Nodes in a statement [copyable] lets a block copy. */
+        const val COPYABLE_SIZE = 8
         const val CONSTRUCTOR = "new"
         const val CELL = "v"
         const val CELL_CLASS = "cell"
