@@ -1987,8 +1987,15 @@ class Interpreter(
                             V(ast.pos.leftEdge, vStaySymbol)
                             Replant(stayLeaf)
                         }
-                        if (im == InterpMode.Partial) {
-                            interpretEdge(stayLeaf.incoming!!, definingEnv, InterpMode.Partial)
+                        when (im) {
+                            InterpMode.Partial ->
+                                interpretEdge(stayLeaf.incoming!!, definingEnv, InterpMode.Partial)
+                            // A full evaluation during a stage, as when a call with constant
+                            // arguments is folded, may be the first to make a value of a lambda
+                            // that partial evaluation left alone because it closes over a local.
+                            // The stay goes into the tree that the stage is about to check was
+                            // all reached, so mark it reached as the partial branch does.
+                            InterpMode.Full -> stayLeaf.incoming!!.breadcrumb = stage
                         }
                     }
                     LongLivedUserFunction(
