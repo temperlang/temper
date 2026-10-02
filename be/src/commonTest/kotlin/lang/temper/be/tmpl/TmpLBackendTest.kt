@@ -4469,6 +4469,85 @@ class TmpLBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    @Test
+    fun autoEq() = assertGeneratedCode(
+        supportNetwork = TestSupportNetwork(functionTypeStrategy = FunctionTypeStrategy.ToFunctionalInterface),
+        inputs = inputFileMapFromJson(
+            $$"""
+                |{
+                |  foo: {
+                |    foo.temper:
+                |      ```
+                |      @auto("==")
+                |      export class Hi(
+                |        public id: String,
+                |        public var more: Int,
+                |      ) {
+                |        public var why: String = "${id}${more}";
+                |
+                |        @auto("==")
+                |        // @auto @operator("==")
+                |        public eq(other: Hi): Boolean {
+                |          id == other.id
+                |        }
+                |      }
+                |      ```
+                |  },
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        let nym`==#0` = builtins.nym`==` /* (String, String) -> Boolean */;
+            |        let cat#0 = builtins.cat /* () -> String */;
+            |        @QName("test-library/foo.type Hi") class Hi / Hi {
+            |          @QName("test-library/foo.type Hi.id") @constructorProperty let id__0: String;
+            |          @QName("test-library/foo.type Hi.more") @constructorProperty var more__0: Int32;
+            |          @QName("test-library/foo.type Hi.why") var why__0: String;
+            |          @QName("test-library/foo.type Hi.eq()") @operator("_==_") let eq__0(this = this__0, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__0: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__0: Hi): Boolean {
+            |            return nym`==#0`(/* this */ this__0.id__0, other__0.id);
+            |          }
+            |          @QName("test-library/foo.type Hi.constructor()") constructor__0(this = this__1, @QName("test-library/foo.type Hi.constructor().(this)") @impliedThis(Hi) this__1: Hi, @QName("test-library/foo.type Hi.constructor().(id)") id__1: String, @QName("test-library/foo.type Hi.constructor().(more)") more__1: Int32) {
+            |            let t#0: String = id__1;
+            |            /* this */ this__1.id__0 = t#0;
+            |            let t#1: Int32 = more__1;
+            |            /* this */ this__1.more__0 = t#1;
+            |            let t#2: String = cat#0(id__1, "" + more__1);
+            |            /* this */ this__1.why__0 = t#2;
+            |            return void;
+            |          }
+            |          get.id -> getid__0(this = this__2, @impliedThis(Hi) this__2: Hi): String {
+            |            return /* this */ this__2.id__0;
+            |          }
+            |          get.more -> getmore__0(this = this__3, @impliedThis(Hi) this__3: Hi): Int32 {
+            |            return /* this */ this__3.more__0;
+            |          }
+            |          set.more -> setmore__0(this = this__4, @impliedThis(Hi) this__4: Hi, newMore__0: Int32): Void {
+            |            /* this */ this__4.more__0 = newMore__0;
+            |            return void;
+            |          }
+            |          get.why -> getwhy__0(this = this__5, @impliedThis(Hi) this__5: Hi): String {
+            |            return /* this */ this__5.why__0;
+            |          }
+            |          set.why -> setwhy__0(this = this__6, @impliedThis(Hi) this__6: Hi, newWhy__0: String): Void {
+            |            /* this */ this__6.why__0 = newWhy__0;
+            |            return void;
+            |          }
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     private fun assertGeneratedCode(
         inputJsonPathToContent: String,
         want: String,
