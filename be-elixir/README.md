@@ -252,15 +252,15 @@ Temper's total order:
 
     -Infinity < ... < -0.0 < 0.0 < ... < Infinity < NaN,   and NaN == NaN
 
-`near` is Python's `math.isclose`.
+`near` is Python's `math.isclose`. `toString` prints the way JavaScript
+does, `1.0e+25` and `0.000001`, always with a point.
 
 **Comparisons.** Only `Int` has `<`, `<=`, `>` and `>=` as builtins; for
 every other type the frontend writes `a < b` as `(a <=> b) < 0`.
 `simplifyPossibleComparison` turns that back into `a < b` for `Int64`,
 `Boolean`, `String` and a string index, whose order on the BEAM is
 Temper's (UTF-8 binaries compare by code point, `false < true`). A
-`Float64` stays `TemperCore.Float.cmp(a, b) < 0`, for the order above. `toString` prints the way JavaScript
-does, `1.0e+25` and `0.000001`, always with a point.
+`Float64` stays `TemperCore.Float.cmp(a, b) < 0`, for the order above.
 
 **Lists.** A Temper `List` is a tuple in a struct, so `xs[i]` and
 `xs.length` take constant time. As an Elixir list, an indexed loop over
@@ -323,28 +323,49 @@ loop again, or hand back the assigned variables. An `if` whose branch
 always exits pulls the rest of the list into its other branch, so most
 `return`, `break` and `continue` statements become a value or a call.
 
-**The rest throw.** `firstNegative` returns from inside a loop, and the
-loop is a function, so the `return` becomes a tagged `throw`. The function
-catches its own tag. The loop's recursive call stays outside any `try`,
-which would otherwise break the tail call:
+**Exits past a loop are values too.** The frontend writes a `return`
+from inside a loop as an assignment and a `break` out of a block around
+the function's body. A loop with an exit past it returns that exit, the
+tuple it would otherwise throw, or `{:cont, vars}` when it runs out; its
+call site is a `case` with the rest of the list folded in. A block has
+what follows it folded in at each way out, when that is short, so a
+`return` in it is the function's result. `firstNegative`:
 
 ```elixir
 def firstNegative(xs) do
   Temper.Tour.__temper_init__()
   TemperCore.Heap.entry(fn ->
-    try do
-      ...
-              if TemperCore.List.get(xs, i) < 0 do
-                return = i
-                throw({:temper_break, :ex_block_1, return})
-      ...
-    catch
-      {:temper_return, :ex_return_0, ex_value_5} ->
-        ex_value_5
+    xs = TemperCore.Vec.of(xs)
+    return = nil
+    i = 0
+    ex_loop_2 = fn ex_loop_2, i, return ->
+      if i < TemperCore.List.length(xs) do
+        if TemperCore.List.get(xs, i) < 0 do
+          return = i
+          {:temper_break, :ex_block_1, return}
+        else
+          i = TemperCore.int32(i + 1)
+          ex_loop_2.(ex_loop_2, i, return)
+        end
+      else
+        {:cont, {i, return}}
+      end
+    end
+    case ex_loop_2.(ex_loop_2, i, return) do
+      {:cont, {_i, _return}} ->
+        -1
+      {:temper_break, :ex_block_1, return} ->
+        return
     end
   end)
 end
 ```
+
+**The rest throw.** An exit inside an `if` in the middle of a list, whose
+arms hand back variables, is still a tagged `throw`, caught by the loop,
+block or function it leaves. std's JSON parser has most of what remains.
+The loop's recursive call stays outside any `try`, which would otherwise
+break the tail call.
 
 **Calls.** A module function is always called qualified,
 `Temper.Tour.tick()`. That works from inside a class module and never
@@ -721,8 +742,11 @@ type where it had `any()`. And a null check is a `case`
 Dialyzer narrows a variable through a pattern and not through a boolean
 test.
 
-Two kinds of result are still not checked. A value returned by a `throw`,
-as an early `return` from inside a loop is, is `any()` to Dialyzer. And a
+Two kinds of result are still not checked. A value that comes out of a
+loop is `any()` to Dialyzer: a loop is a closure passed to itself,
+`loop.(loop, ...)`, and Dialyzer does not type a call through a closure
+argument. `total`'s spec can be made false without a warning, with no
+`throw` in it. And a
 value whose type comes from a spec's type variable, such as a map's value
 from `get_or`, is `term()`, since Dialyzer does not instantiate type
 variables at a call. Either function's arguments are still checked, at
