@@ -66,6 +66,7 @@ import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
+import lang.temper.type.OperatorMember
 import lang.temper.type.OrType
 import lang.temper.type.PropertyShape
 import lang.temper.type.SetMemberAccessor
@@ -2942,6 +2943,18 @@ internal class Typer(
                     includeInvalid = true
                 }
             }
+            if (member is OperatorMember) {
+                // An operator's DotHelper carries every builtin implementation of that
+                // operator: `_==_` has ones for Int32, Int64, Float64, String and Boolean.
+                // Those that cannot take the left operand are not candidates.  Keeping them
+                // means that when nothing applies, the type solver reports a mismatch against
+                // whichever came first, `(Int32, Int32) -> Boolean` for two class instances,
+                // instead of the real problem: the operand's type has no such operator.
+                variants.removeAll { (variantType, resolution) ->
+                    resolution is Either.Right &&
+                        !operatorExtensionAppliesTo(variantType, thisType)
+                }
+            }
 
             if (variants.isEmpty()) {
                 val filteredOut = (rejectedMemberHolders - acceptedMemberHolders).toSet()
@@ -2973,6 +2986,8 @@ internal class Typer(
                                     listOf("subject of $member"),
                                 ),
                             )
+                        } else if (member is OperatorMember && thisType != null) {
+                            BecauseNoSuchOperator(t.pos, member, thisType)
                         } else {
                             BecauseNoSuchMember(t.pos, member, typeShapes)
                         }
@@ -3066,6 +3081,19 @@ internal class Typer(
         return (member.metadata[overloadSymbol] ?: listOf()).any { v ->
             symbol.text == TString.unpackOrNull(v)
         }
+    }
+
+    /**
+     * False when [extensionType] is a non-generic function whose first parameter cannot
+     * accept [receiverType].  True whenever that is not known, so that an extension is
+     * only ruled out on a definite mismatch.
+     */
+    private fun operatorExtensionAppliesTo(extensionType: StaticType, receiverType: StaticType?): Boolean {
+        if (receiverType == null || receiverType.mentionsInvalid) { return true }
+        val fnType = extensionType as? FunctionType ?: return true
+        if (fnType.typeFormals.isNotEmpty()) { return true }
+        val firstFormalType = fnType.valueFormals.firstOrNull()?.staticType ?: return true
+        return typeContext.isSubType(receiverType, firstFormalType)
     }
 
     private fun typeForExtensionResolution(

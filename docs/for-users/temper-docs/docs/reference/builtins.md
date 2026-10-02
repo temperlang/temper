@@ -766,7 +766,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Expected subtype of Int32, but got Float64!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
@@ -777,7 +777,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 ```temper
 "foo" + "bar"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, String]!
+// ❌ String does not support infix `+`!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/2 -->
@@ -844,7 +844,7 @@ As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Expected subtype of Int32, but got Float64!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
@@ -1323,7 +1323,7 @@ Comparing incomparable values is a compile time error.
 
 ```temper
 0 == "0"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!
+// ❌ Expected subtype of Int32, but got String!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/1 -->
