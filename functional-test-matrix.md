@@ -19,6 +19,7 @@
 | [ClassesSetters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticProperties][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ClassesWriteBackThroughField][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -91,6 +92,7 @@
 [ClassesSetters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/setters/setters.temper.md
 [ClassesStaticProperties]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties/static-properties.temper.md
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
+[ClassesWriteBackThroughField]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/write-back-through-field/write-back-through-field.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
