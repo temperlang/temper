@@ -1,6 +1,7 @@
 package lang.temper.interp
 
 import lang.temper.value.Value
+import lang.temper.value.actorSymbol
 import lang.temper.value.imuSymbol
 import lang.temper.value.partialImuSymbol
 import lang.temper.value.void
@@ -33,3 +34,15 @@ val partialImuDecorator = MetadataDecorator(
 }
 
 val vPartialImuDecorator = Value(partialImuDecorator)
+
+/**
+ * Marker for classes whose instances are each an actor.
+ */
+val actorDecorator = MetadataDecorator(
+    actorSymbol,
+    name = "@actor",
+) {
+    void
+}
+
+val vActorDecorator = Value(actorDecorator)

@@ -570,6 +570,12 @@ val imuSymbol = Symbol("imu")
 val partialImuSymbol = Symbol("partialImu")
 
 /**
+ * Marks a class whose instances are each an actor: calls into one instance
+ * take turns.  See the `@actor` builtin.
+ */
+val actorSymbol = Symbol("actor")
+
+/**
  * The receiver type when an extension (see [extensionSymbol]) function is invoked via
  * `ReceiverType.dotName(...)` syntax.
  */
