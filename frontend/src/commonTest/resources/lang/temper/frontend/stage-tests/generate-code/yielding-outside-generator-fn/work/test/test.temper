@@ -1,0 +1,27 @@
+// None of these functions extends GeneratorFn, so none of them can pause.
+let waitFn(p: Promise<Int>): Int {
+  await p orelse -1
+}
+
+class Box {
+  public var v: Int = 0;
+  public waitFor(p: Promise<Int>): Void {
+    v = await p orelse -1;
+  }
+}
+
+let yieldFn(): Void {
+  yield;
+}
+
+let b = new PromiseBuilder<Int>();
+b.complete(3);
+
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  // This await is in a generator function body so is allowed.
+  let x = await b.promise orelse -1;
+  console.log("x=${x.toString()}");
+  // This one is in a plain function nested in that body.
+  let inner(): Int { await b.promise orelse -1 }
+  console.log("inner=${inner().toString()}");
+}

@@ -21,21 +21,15 @@ import lang.temper.name.ExportedName
 import lang.temper.name.InternalModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
-import lang.temper.type.WellKnownTypes
-import lang.temper.type.isVoidLike
 import lang.temper.value.BlockTree
-import lang.temper.value.CallTypeInferences
 import lang.temper.value.DeclTree
 import lang.temper.value.ErrorFn
 import lang.temper.value.MaximalPath
 import lang.temper.value.MaximalPathIndex
 import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.TEdge
-import lang.temper.value.TProblem
-import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 import lang.temper.value.debug
-import lang.temper.value.errorFn
 import lang.temper.value.fromTypeSymbol
 import lang.temper.value.isCore
 import lang.temper.value.orderedPathIndices
@@ -43,7 +37,6 @@ import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.typeDefinitionAtLeafOrNull
-import lang.temper.value.typeFromSignature
 import lang.temper.value.void
 
 private const val DEBUG = false
@@ -471,33 +464,10 @@ internal class UseBeforeInit(
 
     private fun fixupTreeAndReportProblems(problems: List<Pair<TEdge, LogEntry?>>) {
         for ((edgeToReplace, problem) in problems) {
-            edgeToReplace.replace {
-                if (problem != null) {
-                    val type = edgeToReplace.target.typeInferences?.type
-                    val errorTypeInferences = type?.let { type ->
-                        val sig = if (type.isVoidLike) {
-                            ErrorFn.voidSig
-                        } else {
-                            ErrorFn.genericSig
-                        } // Extend nary type with arg
-                            .copy(requiredInputTypes = listOf(WellKnownTypes.anyValueOrNullType2))
-                        CallTypeInferences(
-                            type,
-                            typeFromSignature(sig),
-                            buildMap {
-                                val tf = sig.typeFormals.firstOrNull()
-                                if (tf != null) {
-                                    this[tf] = type
-                                }
-                            },
-                            listOf(),
-                        )
-                    }
-                    Call(type = errorTypeInferences) {
-                        V(errorFn, type = errorTypeInferences?.variant)
-                        V(Value(problem, TProblem), type = Types.problem.type)
-                    }
-                } else {
+            if (problem != null) {
+                edgeToReplace.replaceWithError(problem)
+            } else {
+                edgeToReplace.replace {
                     V(void, type = Types.void.type)
                 }
             }
