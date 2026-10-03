@@ -133,6 +133,12 @@ class JavaTranslator(
         private val moduleTestInit: MutableList<J.BlockLevelStatement> = mutableListOf()
         private var processingTestCode = false
 
+        /**
+         * True while translating the instance members of an `@actor` class,
+         * where code that runs as the instance must hold its [temperActor].
+         */
+        private var inActorInstance = false
+
         /** Might even stay null for snippets. */
         private var module: TmpL.Module? = null
         private var adjuster: BackendAdjuster? = null
@@ -348,7 +354,17 @@ class JavaTranslator(
                                             pos,
                                             temperInitSimpleLogging.staticMethod(emptyList(), pos),
                                         ),
-                                        accessResult,
+                                        // Hold off async blocks until top-level code is done.
+                                        temperBeginTopLevel.staticMethod(pos = pos).exprStatement(),
+                                        J.TryStatement(
+                                            pos,
+                                            bodyBlock = J.BlockStatement(pos, listOf(accessResult)),
+                                            catchBlocks = listOf(),
+                                            finallyBlock = J.BlockStatement(
+                                                pos,
+                                                listOf(temperEndTopLevel.staticMethod(pos = pos).exprStatement()),
+                                            ),
+                                        ),
                                         waitUntilTasksComplete,
                                     ),
                                 ),
@@ -614,6 +630,36 @@ class JavaTranslator(
                 emptyList()
             }
 
+        /**
+         * Wraps [body] in a turn on the actor that owns it.
+         *
+         *     actor$.enter();
+         *     try { body } finally { actor$.exit(); }
+         *
+         * `actor$` is a plain name, not `this.actor$`, so that it also reaches
+         * the instance from a method of a local class lifted out of a method.
+         */
+        private fun actorTurn(body: J.BlockStatement): J.BlockStatement {
+            val pos = body.pos
+            fun gate(verb: String) = actorFieldName(pos).asNameExpr().method(verb).exprStatement()
+            return J.BlockStatement(
+                pos,
+                listOf(
+                    gate("enter"),
+                    J.TryStatement(
+                        pos,
+                        bodyBlock = body,
+                        catchBlocks = listOf(),
+                        finallyBlock = J.BlockStatement(pos, listOf(gate("exit"))),
+                    ),
+                ),
+            )
+        }
+
+        /** [actorTurn] when translating an actor's instance member, else [body] as is. */
+        private fun maybeActorTurn(body: J.BlockStatement): J.BlockStatement =
+            if (inActorInstance) actorTurn(body) else body
+
         private fun modLevelDeclare(t: TmpL.ModuleLevelDeclaration) {
             if (RENDER_META_COMMENTS) {
                 for (meta in t.metadata) {
@@ -861,13 +907,36 @@ class JavaTranslator(
             require(t.kind == TmpL.TypeDeclarationKind.Class) { "kind=${t.kind} but should be Class" }
             val name = names.typeDeclName(t.name)
             val classTypeParams = typeFormals(t.typeParameters)
+            val isActor = t.isActor
             val body: List<J.ClassBodyDeclaration> = buildList {
                 if (RENDER_META_COMMENTS) {
                     for (meta in t.metadata) {
                         add(metaComment(t.pos, meta))
                     }
                 }
+                if (isActor) {
+                    // private final temper.core.Actor actor$ = new temper.core.Actor();
+                    add(
+                        J.FieldDeclaration(
+                            t.pos,
+                            mods = J.FieldModifiers(
+                                t.pos,
+                                modAccess = J.ModAccess.Private,
+                                modFinal = J.ModFinal.Final,
+                            ),
+                            type = temperActor.toClassType(t.pos),
+                            variable = actorFieldName(t.pos),
+                            initializer = J.InstanceCreationExpr(
+                                t.pos,
+                                type = temperActor.toClassType(t.pos),
+                                args = listOf(),
+                            ),
+                        ),
+                    )
+                }
                 t.members.forEach { m ->
+                    // Instance members run as the actor; static ones have no instance.
+                    inActorInstance = isActor && m !is TmpL.StaticMember
                     when (m) {
                         is TmpL.GarbageStatement -> add(garbageComment(m))
                         is TmpL.Constructor -> {
@@ -875,7 +944,7 @@ class JavaTranslator(
                                 classBuilder(name, classTypeParams, m)?.also { add(it) }
                             }
                             val mods = J.ConstructorModifiers(m.pos, modAccess = access(m))
-                            val overs = overloads(null, m.parameters, stmt(m.body).asBlock()) { args ->
+                            val overs = overloads(null, m.parameters, maybeActorTurn(stmt(m.body).asBlock())) { args ->
                                 J.AlternateConstructorInvocation(t.pos, args = args).asBlock()
                             }
                             for (over in overs) {
@@ -912,7 +981,7 @@ class JavaTranslator(
                                     result = result,
                                     name = name,
                                     parameters = parameters.parametersNoPreamble,
-                                    body = m.body?.let { block(it) },
+                                    body = m.body?.let { maybeActorTurn(block(it)) },
                                 ),
                             )
                         }
@@ -928,7 +997,7 @@ class JavaTranslator(
                                     result = result,
                                     name = name,
                                     parameters = parameters.parametersNoPreamble,
-                                    body = m.body?.let { block(it) },
+                                    body = m.body?.let { maybeActorTurn(block(it)) },
                                 ),
                             )
                         }
@@ -939,7 +1008,9 @@ class JavaTranslator(
                             check(m is TmpL.DotAccessibleMethod)
                             val isStatic = m is TmpL.StaticMember
                             val formals = parameters(m.parameters)
-                            val tentativeBody = block(m.body).preface(formals.preamble)
+                            // The canonical body: defaulting overloads forward to it and a
+                            // boxing adjustment calls it, so they need no turn of their own.
+                            val tentativeBody = maybeActorTurn(block(m.body).preface(formals.preamble))
                             val tentativeMethodName = names.method(m.dotName).toIdentifier(m.dotName.pos)
                             val mods = J.MethodModifiers(
                                 // methodifiers, not even once
@@ -1056,7 +1127,8 @@ class JavaTranslator(
                                     javadoc = javadoc(autodocFor(m.pos, m.metadata)),
                                     mods = J.FieldModifiers(
                                         m.pos,
-                                        modAccess = access(m),
+                                        // Host code must go through the actor's getters and setters.
+                                        modAccess = if (isActor) J.ModAccess.Private else access(m),
                                         modFinal = final(m.assignOnce),
                                     ),
                                     type = varType(m),
@@ -1082,6 +1154,7 @@ class JavaTranslator(
                         )
                     }
                 }
+                inActorInstance = false
             }
 
             this.programs.add(
@@ -1506,12 +1579,23 @@ class JavaTranslator(
             /** the source function to translate */
             private val tmplFunc: TmpL.LocalFunctionDeclaration,
         ) {
+            /**
+             * Whether calls to this function are turns on the actor whose
+             * instance member created it: a closure or async block step that
+             * uses `this` may run later, on another thread.
+             */
+            private val runsAsActor = inActorInstance && tmplFunc.body.walk().any { it is TmpL.This }
+
             /** the full function body */
             val body: J.BlockStatement get() = block(tmplFunc.body)
                 .preface(paramsPreamble.preamble)
+                .let { if (runsAsActor) actorTurn(it) else it }
 
             /** when possible, provide an expression body for a lambda */
             val exprBody: J.Expression? get() {
+                if (runsAsActor) {
+                    return null
+                }
                 val stmts = tmplFunc.body.statements
                 if (stmts.size == 1 && paramsPreamble.preamble.isEmpty()) {
                     return (stmts[0] as? TmpL.ReturnStatement)?.expression?.let(::expr)
@@ -2197,49 +2281,14 @@ class JavaTranslator(
                     // Converted coroutines install these.
                     //     awakeUpon(promise, generator)
                     // ->
-                    //     promise.handle((_, _) -> generator.get())
-                    val promise = expr(parameters[0])
-                    val generator = expr(parameters[1])
-                    val leftPos = pos.leftEdge
-                    J.ExpressionStatement(
-                        J.InstanceMethodInvocationExpr(
-                            pos,
-                            expr = promise,
-                            // CompletableFuture.handle(BiConsumer)
-                            method = J.Identifier(leftPos, "handle"),
-                            args = listOf(
-                                J.Argument(
-                                    leftPos,
-                                    J.LambdaExpr(
-                                        leftPos,
-                                        J.LambdaSimpleParams(
-                                            leftPos,
-                                            // unnamed parameters are a preview feature
-                                            // and not in Java 8
-                                            listOf(
-                                                names.ignoredIdentifier(leftPos), // Resolution
-                                                names.ignoredIdentifier(leftPos), // Throwable
-                                            ),
-                                        ),
-                                        J.BlockStatement(
-                                            pos,
-                                            listOf(
-                                                J.ExpressionStatement(
-                                                    J.InstanceMethodInvocationExpr(
-                                                        pos,
-                                                        expr = generator,
-                                                        method = J.Identifier(leftPos, "get"),
-                                                        args = listOf(),
-                                                    ),
-                                                ),
-                                                J.ReturnStatement(pos.rightEdge, J.NullLiteral(pos.rightEdge)),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )
+                    //     Core.awakeUpon(promise, generator)
+                    // which queues the next step on the async scheduler
+                    // instead of running it on the completing thread.
+                    temperAwakeUpon.staticMethod(
+                        expr(parameters[0]),
+                        expr(parameters[1]),
+                        pos = pos,
+                    ).exprStatement()
                 }
                 // A promise was awaited but its result is not used
                 coroPromiseResultAsync -> {

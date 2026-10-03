@@ -14,6 +14,7 @@ import lang.temper.frontend.Weaver
 import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
 import lang.temper.frontend.simplifyFlow
+import lang.temper.frontend.typestage.ActorChecker
 import lang.temper.frontend.typestage.ImuChecker
 import lang.temper.frontend.typestage.Typer
 import lang.temper.interp.ReplacementPolicy
@@ -128,6 +129,7 @@ class GenerateCodeStage(
 
         UnicodeScalarChecker(module).check(root)
         ImuChecker(logSink).check(root)
+        ActorChecker(logSink).check(root)
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.GenerateCodeStage.CleanupTemporaries(configKey)

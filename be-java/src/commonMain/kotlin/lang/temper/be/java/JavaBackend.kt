@@ -120,6 +120,9 @@ class JavaBackend private constructor(
                         type.kind == TmpL.TypeDeclarationKind.Interface -> {}
                         // For classes, we need to implement only where split options are available.
                         type.hasSplitSupers(method) -> {}
+                        // An actor's inherited default methods must run as turns on it,
+                        // so it overrides each, and the override takes the turn.
+                        type.isActor -> {}
                         else -> return@configSuperCall null
                     }
                     // Got a unit, so config the call. Supercalls in Java exclude `this`.
@@ -364,6 +367,7 @@ class JavaBackend private constructor(
         private val baseDirPath = dirPath("lang", "temper", "be", "java")
         val immediateLibraryResources: List<ResourceDescriptor> = declareResources(
             baseDirPath + dirPath("temper-core", "src", "main", "java"),
+            filePath("temper", "core", "Actor.java"),
             filePath("temper", "core", "Core.java"),
             filePath("temper", "core", "Generator.java"),
             filePath("temper", "core", "NonNull.java"),
