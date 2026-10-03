@@ -1,6 +1,7 @@
 package lang.temper.be.rust
 
 import lang.temper.ast.anyChildDepth
+import lang.temper.ast.boundaryDescent
 import lang.temper.ast.deepCopy
 import lang.temper.be.Backend
 import lang.temper.be.Dependencies
@@ -619,7 +620,7 @@ class RustTranslator(
             results.addAll(
                 when {
                     skipLastReturn && i == statements.size - 1 && statement is TmpL.ReturnStatement ->
-                        translateReturnStatement(statement, last = true)
+                        hoistLeadingReads(translateReturnStatement(statement, last = true))
 
                     else -> translateStatement(statement)
                 },
@@ -2246,8 +2247,134 @@ class RustTranslator(
 
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
         val ref = translatePropertyReference(expression, lockName = "read")
+        if (takesReadGuard(expression) && guardWouldOutliveRead(expression)) {
+            // Copy the value out in a `let` of its own, which drops the guard before anything else runs:
+            // `{ let peer = self.0.read().unwrap().peer.clone(); peer }`. A non-copy value has to be cloned
+            // here even where the caller only wanted to borrow it, because the borrow cannot outlive the guard.
+            val pos = expression.pos
+            val propertyText = (expression.property as TmpL.InternalPropertyId).name.name.toSymbol()?.text
+            val temp = unusedTemporaryName(pos, propertyText ?: "t")
+            return Rust.Block(
+                pos,
+                statements = listOf(
+                    Rust.LetStatement(pos, pattern = temp, type = null, value = ref.maybeClone(expression.type)),
+                ),
+                result = temp.deepCopy(),
+            )
+        }
         val reallyAvoidClone = avoidClone || expression.property is TmpL.ExternalPropertyId
         return ref.maybeClone(expression.type, avoidClone = reallyAvoidClone)
+    }
+
+    /** Whether [read] translates to `self.0.read().unwrap().<field>`. */
+    private fun takesReadGuard(read: TmpL.GetProperty): Boolean =
+        read.property is TmpL.InternalPropertyId && insideMutableType &&
+            functionContextStack.last().constructorMode != ConstructorMode.Init
+
+    /**
+     * The guard in `self.0.read().unwrap().n` is a temporary, and Rust drops temporaries at the end of the
+     * enclosing statement, not after the field is read. Anything the statement does after the read that takes a
+     * lock or runs code we can't see runs while the guard is held. A method called on a field that writes back to
+     * `self` then waits on its own thread's read guard, and a second `self.0.read()` in the same expression waits
+     * behind any writer queued on another thread, which in turn waits for the first guard.
+     *
+     * Returns false only when nothing after [read] in its statement can take a lock or run other code, so that
+     * reads such as `return self.0.read().unwrap().n;` stay as they are.
+     */
+    private fun guardWouldOutliveRead(read: TmpL.GetProperty): Boolean {
+        var child: TmpL.Tree = read
+        while (true) {
+            val parent: TmpL.Tree = when (val parent = child.parent) {
+                is TmpL.Statement -> return statementOutlivesRead(parent, child)
+                is TmpL.Expression -> parent
+                is TmpL.Callable -> parent
+                // Such as a property initializer, outside any statement. Release to be safe.
+                else -> return true
+            }
+            // Children evaluate left to right, and the parent's own operation, such as a call, runs after them.
+            if (mayLockOrRunCode(parent) || laterSiblingsMayLockOrRunCode(parent, child)) {
+                return true
+            }
+            child = parent
+        }
+    }
+
+    private fun statementOutlivesRead(statement: TmpL.Statement, child: TmpL.Tree): Boolean {
+        when (statement) {
+            // A match keeps its scrutinee's temporaries alive through every arm.
+            is TmpL.ComputedJumpStatement -> return true
+            // The setter call, or the write guard, comes after the value, so the read guard is still held.
+            is TmpL.SetProperty -> if (
+                statement.left.property is TmpL.ExternalPropertyId ||
+                functionContextStack.last().constructorMode != ConstructorMode.Init
+            ) {
+                return true
+            }
+            is TmpL.Assignment -> decls[statement.left.name]?.let { decl ->
+                // Mutable captures and module level vars are written through a lock of their own.
+                if (decl.mutableCapture || decl.topper) {
+                    return true
+                }
+            }
+            else -> {}
+        }
+        return laterSiblingsMayLockOrRunCode(statement, child)
+    }
+
+    private fun laterSiblingsMayLockOrRunCode(parent: TmpL.Tree, child: TmpL.Tree): Boolean {
+        var seenChild = false
+        for (index in 0 until parent.childCount) {
+            val sibling = parent.childOrNull(index) ?: continue
+            when {
+                sibling === child -> seenChild = true
+                // Nested statements, such as the branches of an `if`, have temporary scopes of their own.
+                !seenChild || sibling is TmpL.Statement -> {}
+                else -> sibling.boundaryDescent { node ->
+                    when {
+                        node is TmpL.Statement -> false
+                        mayLockOrRunCode(node) -> return@laterSiblingsMayLockOrRunCode true
+                        else -> true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private fun mayLockOrRunCode(node: TmpL.Tree): Boolean = when (node) {
+        is TmpL.GetProperty -> when (node.property) {
+            is TmpL.InternalPropertyId -> takesReadGuard(node)
+            // A getter call.
+            is TmpL.ExternalPropertyId -> true
+        }
+        is TmpL.CallExpression -> when (val fn = node.fn) {
+            is TmpL.InlineSupportCodeWrapper -> when (fn.supportCode) {
+                AwakeUponSupportCode, GetPromiseResultSyncSupportCode -> true
+                // Inline support code works on the values it is given, so it runs our code only through those.
+                else -> node.parameters.any { it.type.mayRunCode() }
+            }
+            else -> true
+        }
+        is TmpL.Reference -> referenceTakesLock(node)
+        else -> false
+    }
+
+    private fun Descriptor.mayRunCode(): Boolean = when (val description = described()) {
+        is FnDescription -> true
+        is TypeDescription -> description.type.isFunctionType || when (description.definition()) {
+            WellKnownTypes.promiseTypeDefinition, WellKnownTypes.promiseBuilderTypeDefinition -> true
+            else -> false
+        }
+    }
+
+    /** Mirrors [translateReference] for the cases that read through a lock or call a function. */
+    private fun referenceTakesLock(reference: TmpL.Reference): Boolean {
+        val name = reference.id.name
+        functionContextStack.lastOrNull()?.captures?.get(name)?.let { capture ->
+            return !capture.assignOnce
+        }
+        val decl = decls[name] ?: return false
+        return decl.mutableCapture || decl.topper || fromOtherModule(decl)
     }
 
     private fun translateGetter(
@@ -2977,7 +3104,101 @@ class RustTranslator(
     private fun translateSetterId(setter: TmpL.Setter) =
         "set_${setter.dotName.dotNameText.camelToSnake()}".toId(setter.dotName.pos)
 
-    private fun translateStatement(statement: TmpL.Statement): List<Rust.Statement> {
+    private fun translateStatement(statement: TmpL.Statement): List<Rust.Statement> =
+        hoistLeadingReads(translateStatementInPlace(statement))
+
+    /**
+     * Moves the `let` of each released field read, `{ let n = self.0.read().unwrap().n; n }` from
+     * [translateGetProperty], in front of its statement when nothing the statement evaluates before that read has
+     * an effect, so the order of evaluation is unchanged. `{ ... }.pong(self.clone())` becomes
+     * `let peer = ...; peer.pong(self.clone())`, which reads better and also keeps an expression statement from
+     * starting with `{`, which Rust would parse as a block statement of its own.
+     */
+    private fun hoistLeadingReads(statements: List<Rust.Statement>): List<Rust.Statement> {
+        if (statements.none { it is Rust.LetStatement || it is Rust.ExprStatement || it is Rust.IfExpr }) {
+            return statements
+        }
+        return buildList {
+            for (statement in statements) {
+                val start = when (statement) {
+                    is Rust.LetStatement -> statement.value
+                    // The condition of an `if` runs once, before either branch, but a `while` condition runs
+                    // again on each pass, so it can't move out of the loop.
+                    is Rust.IfExpr -> statement.test
+                    is Rust.ExprStatement -> when (val expr = statement.expr) {
+                        is Rust.ReturnExpr -> expr.value
+                        is Rust.ExprWithBlock -> null
+                        else -> expr
+                    }
+                    else -> null
+                }
+                if (start != null) {
+                    val reads = mutableListOf<Rust.Block>()
+                    collectLeadingReads(start, reads)
+                    for (read in reads) {
+                        val let = read.statements.single() as Rust.LetStatement
+                        replaceChild(read, read.result!!.deepCopy())
+                        read.statements = listOf()
+                        add(let)
+                    }
+                }
+                add(statement)
+            }
+        }
+    }
+
+    /**
+     * Adds to [reads], in evaluation order, the released reads in [expr] that run before anything with an effect.
+     * Returns whether all of [expr] evaluates without an effect, so that evaluation can go on past it.
+     */
+    private fun collectLeadingReads(expr: Rust.Expr, reads: MutableList<Rust.Block>): Boolean = when (expr) {
+        is Rust.Block -> expr.isReleasedRead().also { if (it) reads.add(expr) }
+        is Rust.Path, is Rust.Literal -> true
+        is Rust.Operation -> when (expr.operator.operator) {
+            // An assignment evaluates its value before the place it assigns, and then has its effect.
+            RustOperator.Assign -> expr.right?.let { collectLeadingReads(it, reads) }.let { false }
+            // The right operand only sometimes runs.
+            RustOperator.LogicalAnd, RustOperator.LogicalOr, RustOperator.Propagation ->
+                expr.left?.let { collectLeadingReads(it, reads) }.let { false }
+            else -> listOfNotNull(expr.left, expr.right).all { collectLeadingReads(it, reads) }
+        }
+        is Rust.Call -> {
+            val callee = expr.callee
+            // A method call evaluates its receiver, then its arguments, then calls. Of calls, only `clone()` has
+            // no effect that matters here, as it copies an `Arc` or a value.
+            val isClone = callee is Rust.Operation && expr.args.isEmpty() &&
+                (callee.right as? Rust.Id)?.outName?.outputNameText == "clone"
+            collectLeadingReads(callee, reads) && expr.args.all { collectLeadingReads(it, reads) } && isClone
+        }
+        else -> false
+    }
+
+    private fun Rust.Block.isReleasedRead(): Boolean {
+        val let = statements.singleOrNull() as? Rust.LetStatement ?: return false
+        val pattern = let.pattern as? Rust.Id ?: return false
+        val result = result as? Rust.Id ?: return false
+        return attrs.isEmpty() && pattern.outName == result.outName
+    }
+
+    private fun replaceChild(old: Rust.Expr, new: Rust.Expr) {
+        when (val parent = old.parent) {
+            is Rust.Operation -> when {
+                parent.left === old -> parent.left = new
+                else -> parent.right = new
+            }
+            is Rust.Call -> when {
+                parent.callee === old -> parent.callee = new
+                else -> parent.args = parent.args.map { if (it === old) new else it }
+            }
+            is Rust.LetStatement -> parent.value = new
+            is Rust.ReturnExpr -> parent.value = new
+            is Rust.IfExpr -> parent.test = new
+            is Rust.ExprStatement -> parent.expr = new
+            else -> error("unexpected parent ${parent?.let { it::class.simpleName }} of a released read")
+        }
+    }
+
+    private fun translateStatementInPlace(statement: TmpL.Statement): List<Rust.Statement> {
         try {
             return when (statement) {
                 is TmpL.Assignment -> return translateAssignment(statement)
