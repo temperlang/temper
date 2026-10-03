@@ -4,6 +4,7 @@ use std::fmt;
 use std::mem::forget;
 use std::sync::{Arc, RwLock};
 
+pub mod actor;
 pub mod float64;
 pub mod generator;
 pub use generator::{SafeGenerator, SafeGeneratorTrait};
@@ -32,10 +33,16 @@ pub fn read_locked<T: Clone>(x: &Arc<RwLock<T>>) -> T {
 #[macro_export]
 macro_rules! impl_any_value_trait { // for concrete types
     // Two versions here. One for type args and one without.
-    ($type:ident$(<$($param:tt),*>)?, [$($target:ty),*] $(where $($bounds:tt)*)?) => {
+    // An actor class passes `gate = 1`, the tuple field holding its gate.
+    ($type:ident$(<$($param:tt),*>)?, [$($target:ty),*] $(, gate = $gate:tt)? $(where $($bounds:tt)*)?) => {
         impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
         $(where $($bounds)*)?
         {
+            $(
+                fn enter_turn(&self) -> temper_core::actor::Turn {
+                    self.$gate.enter()
+                }
+            )?
             fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
                 match () {
                     // Check the concrete type first, expecting it to be most common.
@@ -127,6 +134,12 @@ pub trait AnyValueTrait: Send + Sync {
     fn cast(&self, type_id: TypeId) -> Option<Box<dyn Any>>;
     fn is(&self, type_id: TypeId) -> bool;
     fn ptr_id(&self) -> usize;
+    /// Starts a turn if this is an instance of an `@actor` class.
+    /// Interface methods with bodies call this first, because an actor
+    /// inherits them without a method of its own to start the turn in.
+    fn enter_turn(&self) -> actor::Turn {
+        actor::Turn::inline()
+    }
 }
 
 #[derive(Clone)]
