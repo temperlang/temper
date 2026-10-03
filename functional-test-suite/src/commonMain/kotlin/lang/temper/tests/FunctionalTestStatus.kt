@@ -22,6 +22,9 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         staticallyTypeds(58),
     )
     issue(Ft.ControlFlowAsync, lua(144))
+    // csharp still runs async blocks on the thread pool, and is not run here.
+    issue(Ft.ControlFlowAsyncOneAtATime, csharp(516), lua(144))
+    issue(Ft.ControlFlowAsyncCompleteOrder, csharp(516), lua(144), rust(519))
     issue(Ft.RegexZeroAdvance, lua(166))
     issue(Ft.NamesNonascii, lua(228))
     214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }

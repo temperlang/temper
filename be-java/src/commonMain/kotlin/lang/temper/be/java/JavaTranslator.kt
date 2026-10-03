@@ -348,7 +348,17 @@ class JavaTranslator(
                                             pos,
                                             temperInitSimpleLogging.staticMethod(emptyList(), pos),
                                         ),
-                                        accessResult,
+                                        // Hold off async blocks until top-level code is done.
+                                        temperBeginTopLevel.staticMethod(pos = pos).exprStatement(),
+                                        J.TryStatement(
+                                            pos,
+                                            bodyBlock = J.BlockStatement(pos, listOf(accessResult)),
+                                            catchBlocks = listOf(),
+                                            finallyBlock = J.BlockStatement(
+                                                pos,
+                                                listOf(temperEndTopLevel.staticMethod(pos = pos).exprStatement()),
+                                            ),
+                                        ),
                                         waitUntilTasksComplete,
                                     ),
                                 ),
@@ -2197,49 +2207,14 @@ class JavaTranslator(
                     // Converted coroutines install these.
                     //     awakeUpon(promise, generator)
                     // ->
-                    //     promise.handle((_, _) -> generator.get())
-                    val promise = expr(parameters[0])
-                    val generator = expr(parameters[1])
-                    val leftPos = pos.leftEdge
-                    J.ExpressionStatement(
-                        J.InstanceMethodInvocationExpr(
-                            pos,
-                            expr = promise,
-                            // CompletableFuture.handle(BiConsumer)
-                            method = J.Identifier(leftPos, "handle"),
-                            args = listOf(
-                                J.Argument(
-                                    leftPos,
-                                    J.LambdaExpr(
-                                        leftPos,
-                                        J.LambdaSimpleParams(
-                                            leftPos,
-                                            // unnamed parameters are a preview feature
-                                            // and not in Java 8
-                                            listOf(
-                                                names.ignoredIdentifier(leftPos), // Resolution
-                                                names.ignoredIdentifier(leftPos), // Throwable
-                                            ),
-                                        ),
-                                        J.BlockStatement(
-                                            pos,
-                                            listOf(
-                                                J.ExpressionStatement(
-                                                    J.InstanceMethodInvocationExpr(
-                                                        pos,
-                                                        expr = generator,
-                                                        method = J.Identifier(leftPos, "get"),
-                                                        args = listOf(),
-                                                    ),
-                                                ),
-                                                J.ReturnStatement(pos.rightEdge, J.NullLiteral(pos.rightEdge)),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )
+                    //     Core.awakeUpon(promise, generator)
+                    // which queues the next step on the async scheduler
+                    // instead of running it on the completing thread.
+                    temperAwakeUpon.staticMethod(
+                        expr(parameters[0]),
+                        expr(parameters[1]),
+                        pos = pos,
+                    ).exprStatement()
                 }
                 // A promise was awaited but its result is not used
                 coroPromiseResultAsync -> {
