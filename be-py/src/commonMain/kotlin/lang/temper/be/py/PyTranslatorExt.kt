@@ -6,6 +6,7 @@ import lang.temper.log.Position
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
 import lang.temper.name.identifiers.IdentStyle
+import lang.temper.value.actorSymbol
 
 internal fun propertyDecorator(pos: Position) = Py.Decorator(
     pos,
@@ -77,3 +78,7 @@ fun PyTranslator.pyPropertyName(tProp: TmpL.PropertyId): Py.Identifier = when (t
 }
 
 fun temperToPython(name: String) = avoidReserved(IdentStyle.Camel.convertTo(IdentStyle.Snake, name))
+
+/** Whether instances of this class are actors, whose calls take turns. */
+fun TmpL.TypeDeclaration.isActor(): Boolean =
+    kind == TmpL.TypeDeclarationKind.Class && metadata.any { it.key.symbol == actorSymbol }

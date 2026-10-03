@@ -17,7 +17,6 @@ import lang.temper.type.TypeShape
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
-import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeParamRef
 import lang.temper.type2.hackMapOldStyleToNew
@@ -60,7 +59,7 @@ enum class ImuMessage(
 class ImuChecker(
     private val logSink: LogSink,
 ) {
-    private val superTypesCache = mutableMapOf<Type2, SuperTypeTree2<Type2>>()
+    private val immutability = DeepImmutability()
 
     fun check(tree: Tree) {
         for (child in tree.children) {
@@ -384,48 +383,13 @@ class ImuChecker(
             }
         }
 
-    private fun findNonImuPart(type: Type2, presumedImu: Set<Type2>): Type2? {
-        if (type in presumedImu) { return null }
-        val superTypeTree = getSuperTypeTree(type)
-        if (superTypeTree.hasSymbol(imuSymbol)) {
-            return null
-        }
+    private fun findNonImuPart(type: Type2, presumedImu: Set<Type2>): Type2? =
+        immutability.findNonImuPart(type, presumedImu)
 
-        if (
-            superTypeTree.hasSymbol(partialImuSymbol) &&
-            // Type formals do not have parameters so PartialImu makes little sense there.
-            type.definition is TypeShape
-        ) {
-            if (type.bindings.size != type.definition.formals.size) {
-                return type
-            }
-            for (actual in type.bindings) {
-                val problem = findNonImuPart(actual, presumedImu)
-                if (problem != null) {
-                    return problem
-                }
-            }
-            return null
-        }
-        return type
-    }
-
-    private fun getSuperTypeTree(nominalType: Type2) =
-        // TODO Also cache imuSymbol and partialImuSymbol lookups?
-        superTypesCache.getOrPut(nominalType) {
-            SuperTypeTree2.of(nominalType)
-        }
+    private fun getSuperTypeTree(nominalType: Type2) = immutability.superTypeTree(nominalType)
 }
 
-private fun Collection<TypeDefinition>.hasSymbol(symbol: Symbol): Boolean = run {
-    any { it.metadata.containsKey(symbol) }
-}
-
-private fun SuperTypeTree2<Type2>.hasSymbol(symbol: Symbol): Boolean = run {
-    byDefinition.keys.hasSymbol(symbol)
-}
-
-private val MemberShape.declarationPos get() =
+internal val MemberShape.declarationPos get() =
     this.stay?.pos ?: this.enclosingType.pos.leftEdge
 
 private fun mentionedInType(type: Type2, typeDefs: Set<TypeDefinition>): TypeDefinition? =
@@ -452,7 +416,7 @@ private fun mentionedInType(type: Type2, typeDefs: Set<TypeDefinition>): TypeDef
         helper(type)
     }
 
-private val TypeDefinition.diagnosticTypeName: TemperName get() =
+internal val TypeDefinition.diagnosticTypeName: TemperName get() =
     (this.name as? ResolvedParsedName)?.baseName ?: this.name
 
 private fun Type2.references(formal: TypeFormal): Boolean {

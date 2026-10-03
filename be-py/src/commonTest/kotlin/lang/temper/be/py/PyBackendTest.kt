@@ -55,6 +55,101 @@ class PyBackendTest {
     )
 
     @Test
+    fun actorClass() = assertGeneratedCode(
+        input = $$"""
+            |export interface Named {
+            |  public get name(): String;
+            |  public greet(): String { "hi ${name}" }
+            |}
+            |@actor export class Account(public name: String) extends Named {
+            |  public var balance: Int = 0;
+            |  private bump(n: Int): Void { balance += n; }
+            |  public deposit(n: Int): Int { bump(n); balance }
+            |  public labels(xs: List<String>): String {
+            |    xs.join(",") { (x: String): String => "${x}${balance.toString()}" }
+            |  }
+            |  public later(): Promise<Int> {
+            |    let pb = new PromiseBuilder<Int>();
+            |    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |      bump(1);
+            |      pb.complete(balance);
+            |    }
+            |    pb.promise
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |from abc import ABCMeta as ABCMeta7
+            |from builtins import str as str8, int as int10
+            |from temper_core import ActorLock as ActorLock9, adapt_generator_factory as adapt_generator_factory13, actor_steps as actor_steps15, str_cat as str_cat0, int_add as int_add1, int_to_string as int_to_string2, list_join as list_join3, new_unbound_promise as new_unbound_promise4, complete_promise as complete_promise5, async_launch as async_launch6
+            |from typing import Sequence as Sequence11, Generator as Generator16
+            |from concurrent.futures import Future as Future12
+            |_str_cat_54 = str_cat0
+            |_int_add_55 = int_add1
+            |_int_to_string_56 = int_to_string2
+            |_list_join_57 = list_join3
+            |_new_unbound_promise_58 = new_unbound_promise4
+            |_complete_promise_59 = complete_promise5
+            |_async_launch_60 = async_launch6
+            |class Named(metaclass = ABCMeta7):
+            |    def greet(this_1, /) -> 'str8':
+            |        return _str_cat_54('hi ', this_1.name)
+            |class Account(Named):
+            |    _actor: ActorLock9
+            |    _name_19: 'str8'
+            |    _balance_20: 'int10'
+            |    __slots__ = ('_actor', '_name_19', '_balance_20')
+            |    def _bump_21(this_2, n_22: 'int10', /) -> 'None':
+            |        with this_2._actor:
+            |            t_39: 'int10' = _int_add_55(this_2._balance_20, n_22)
+            |            this_2._balance_20 = t_39
+            |    def deposit(this_3, n_25: 'int10', /) -> 'int10':
+            |        with this_3._actor:
+            |            this_3._bump_21(n_25)
+            |            return this_3._balance_20
+            |    def labels(this_4, xs_28: 'Sequence11[str8]', /) -> 'str8':
+            |        with this_4._actor:
+            |            def fn_53(x_30: 'str8', /) -> 'str8':
+            |                with this_4._actor:
+            |                    return _str_cat_54(x_30, _int_to_string_56(this_4._balance_20))
+            |            return _list_join_57(xs_28, ',', fn_53)
+            |    def later(this_5, /) -> 'Future12[int10]':
+            |        with this_5._actor:
+            |            pb_34: 'Future12[int10]' = _new_unbound_promise_58()
+            |            @actor_steps15(this_5._actor)
+            |            @adapt_generator_factory13
+            |            def fn_52(do_await_14) -> 'Generator16[empty, None, None]':
+            |                if False:
+            |                    yield
+            |                this_5._bump_21(1)
+            |                _complete_promise_59(pb_34, this_5._balance_20)
+            |            _async_launch_60(fn_52)
+            |            return pb_34
+            |    def __init__(this, /, name: 'str8') -> None:
+            |        this._actor = ActorLock9('Account')
+            |        with this._actor:
+            |            this._name_19 = name
+            |            this._balance_20 = 0
+            |    @property
+            |    def name(this_41, /) -> 'str8':
+            |        with this_41._actor:
+            |            return this_41._name_19
+            |    @property
+            |    def balance(this_44, /) -> 'int10':
+            |        with this_44._actor:
+            |            return this_44._balance_20
+            |    @balance.setter
+            |    def balance(this_48, new_balance_47: 'int10', /) -> 'None':
+            |        with this_48._actor:
+            |            this_48._balance_20 = new_balance_47
+            |    def greet(inp_54, /) -> 'str8':
+            |        with inp_54._actor:
+            |            return Named.greet(inp_54)
+            |
+        """.trimMargin(),
+    )
+
+    @Test
     fun unexported() = assertGeneratedCode(
         input = $$"""
             |// `str_cat` was `game` for rhyming, but `str_cat` lets us conflict with import.

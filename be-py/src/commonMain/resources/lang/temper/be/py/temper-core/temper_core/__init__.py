@@ -13,6 +13,8 @@ import sys
 import logging
 from abc import abstractmethod
 from array import array
+from collections import deque
+from contextlib import contextmanager
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
 from logging import getLogger, INFO
@@ -27,6 +29,7 @@ from typing import (
     Generator,
     Generic,
     Iterable,
+    Iterator,
     List,
     Mapping,
     MutableSequence,
@@ -1042,8 +1045,61 @@ def mapped_for_each(
 
 
 # Async support
-# The executor used for Temper async{...} calls.
-_executor = ThreadPoolExecutor()
+#
+# Temper runs one async block at a time and switches only at `await`, as the
+# interpreter and JavaScript do.  Every step of every coroutine, whether it is
+# a launch or a resume after a promise settles, goes through one FIFO ready
+# queue that a single scheduler thread drains.  A promise may be settled on
+# any thread (std/net settles them on I/O threads, host code anywhere); that
+# only queues the waiter, so `complete_promise` returns before the waiter runs.
+#
+# `_turn` is held while a step runs.  The entry point holds it while module
+# top-level code runs, so that no async block starts until that code is done.
+_turn = threading.RLock()
+_ready: Deque[Callable[[], None]] = deque()
+_ready_cv = threading.Condition()
+_scheduler_thread: Optional[threading.Thread] = None
+# Runs blocking I/O for std/net off the scheduler thread.
+_io_executor = ThreadPoolExecutor(thread_name_prefix="temper-io")
+
+
+def _run_scheduler() -> None:
+    while True:
+        with _ready_cv:
+            while not _ready:
+                _ready_cv.wait()
+            step = _ready.popleft()
+        with _turn:
+            try:
+                step()
+            except Exception:
+                # _step_async_coro already printed it.  One failing block
+                # must not stop the others.
+                pass
+
+
+def _schedule(step: Callable[[], None]) -> None:
+    "Queues a step to run on the scheduler thread.  Safe from any thread."
+    global _scheduler_thread
+    with _ready_cv:
+        _ready.append(step)
+        if _scheduler_thread is None:
+            _scheduler_thread = threading.Thread(
+                target=_run_scheduler, name="temper-async", daemon=True
+            )
+            _scheduler_thread.start()
+        _ready_cv.notify()
+
+
+@contextmanager
+def top_level_turn() -> Iterator[None]:
+    """
+    Holds off async blocks while the caller runs Temper top-level code, so
+    that blocks launched by that code start after it finishes.
+    """
+    with _turn:
+        yield
+
 # This lock guards _unresolved_count
 _unresolved_count_lock = threading.Lock()
 _unresolved_count = 0
@@ -1101,6 +1157,7 @@ _sacT = TypeVar("_sacT")
 def _step_async_coro(
     generator: Generator[None, _sacT, None],
     p: Optional[Future[_sacT]],
+    actor: "Optional[ActorLock]",
 ) -> None:
     """
     Start/resume a coroutine that might use await.
@@ -1112,6 +1169,9 @@ def _step_async_coro(
     - we launch the coroutine so we need to step it once
     - a promise resolves that it was waiting on, so we need to send back the
       resolution (either a result or an exception) and start it running
+
+    A coroutine launched during an @actor's turn runs each step as a turn
+    of that actor.
     """
     yielded: Optional[Exception] = None
     # The caller must have incremented the unresolved count.
@@ -1126,10 +1186,16 @@ def _step_async_coro(
             if exc is None:
                 result = p.result()
         try:
-            if exc is not None:
-                yielded = generator.throw(exc)
-            else:
-                yielded = generator.send(cast(_sacT, result))
+            if actor is not None:
+                actor.__enter__()
+            try:
+                if exc is not None:
+                    yielded = generator.throw(exc)
+                else:
+                    yielded = generator.send(cast(_sacT, result))
+            finally:
+                if actor is not None:
+                    actor.__exit__()
         except StopIteration:
             pass
         except Exception as e:
@@ -1141,8 +1207,11 @@ def _step_async_coro(
             future = yielded.future
 
             # The next step call takes responsibility for decrementing the unresolved count. # noqa: E501
+            # The future may settle on any thread, or may already have
+            # settled, in which case this runs at once.  Either way the
+            # resume waits its turn on the scheduler.
             def done_callback(p: Optional[Future[_sacT]]) -> None:
-                _step_async_coro(generator, p)
+                _schedule(lambda: _step_async_coro(generator, p, actor))
 
             future.add_done_callback(done_callback)
         else:
@@ -1185,14 +1254,15 @@ def adapt_generator_factory(
 
 def async_launch(generator_factory: Callable[[], Generator[None, T, None]]) -> None:
     """
-    Launch a coroutine, stepping it once in another thread so that
-    it does some work.  Subsequent stepping is in response to
-    promise resolution when it yields via its `do_await`.
+    Launch a coroutine: queue its first step on the scheduler thread.
+    Subsequent stepping is in response to promise resolution when it
+    yields via its `do_await`.
     """
     generator = generator_factory()
+    actor = current_actor()
     # No this increment will be undone by _step_async_coro
     _increment_unresolved_count()
-    _executor.submit(_step_async_coro, generator, None)
+    _schedule(lambda: _step_async_coro(generator, None, actor))
 
 
 def await_safe_to_exit() -> None:
@@ -1200,7 +1270,6 @@ def await_safe_to_exit() -> None:
     Called by generated main methods to allow async tasks to complete.
     """
     _all_resolved.wait()
-    _executor.shutdown()
 
 
 def complete_promise(p: Future[T], resolution: T) -> None:
@@ -1268,22 +1337,28 @@ def std_net_send(
     net_response_future: Future[NetResponse] = new_unbound_promise()
     body_future: Future[str] = new_unbound_promise()
 
-    def do_fetch():
-        if False:
-            yield None  # Mark as a generator
-        with urllib.request.urlopen(request) as response:
-            try:
-                # TODO: use response headers to find body encoding.
-                body_future.set_result(response.read().decode("utf-8"))
-            except IOError as e:
-                body_future.set_exception(e)
-            net_response_future.set_result(
-                NetResponse(
-                    status=response.status, headers=response.headers, body=body_future
+    # This blocks, so it runs on an I/O thread, not the scheduler thread.
+    # Settling the futures there queues their waiters on the scheduler.
+    def do_fetch() -> None:
+        try:
+            with urllib.request.urlopen(request) as response:
+                try:
+                    # TODO: use response headers to find body encoding.
+                    body_future.set_result(response.read().decode("utf-8"))
+                except IOError as e:
+                    body_future.set_exception(e)
+                net_response_future.set_result(
+                    NetResponse(
+                        status=response.status,
+                        headers=response.headers,
+                        body=body_future,
+                    )
                 )
-            )
+        except Exception as e:
+            break_promise(net_response_future, e)
+            break_promise(body_future, e)
 
-    async_launch(lambda: do_fetch())
+    _io_executor.submit(do_fetch)
     return net_response_future
 
 
@@ -1343,3 +1418,163 @@ def _utf8_byte_of(code_point: int, byte_offset: int, n_bytes: int) -> int:
 
 def _utf16_size(char: str) -> int:
     return 1 + (ord(char) >= 0x10000)
+
+
+# @actor support
+#
+# Each instance of an @actor class holds an ActorLock in its `_actor` slot,
+# and every method, getter, setter and constructor body runs inside
+# `with this._actor:`.  Temper code alone never runs two turns at once on
+# Python, since one scheduler thread runs every async step, but host code
+# may call into an actor from any thread.
+#
+# A thread that already holds an actor re-enters it: that covers `this.m()`,
+# a callback the actor invoked that calls back in, and A -> B -> A on one
+# thread, as in the interpreter.  A thread that would wait for an actor
+# whose holder is itself waiting, directly or through other actors, on a
+# lock this thread holds panics with "actor call cycle" instead of
+# deadlocking.  The wait-for table is only consulted when a lock is busy.
+
+
+# .chain: the actors this thread has entered, innermost last.  A plain
+# threading.local, not a subclass, so that mypyc can compile this module.
+_actor_tls = threading.local()
+
+
+def _actor_chain() -> "List[ActorLock]":
+    try:
+        chain: List[ActorLock] = _actor_tls.chain
+    except AttributeError:
+        chain = []
+        _actor_tls.chain = chain
+    return chain
+
+
+# Guards _actor_waiting.  Taken only when an actor is busy.
+_actor_graph_lock = threading.Lock()
+# Thread ident -> the ActorLock that thread is blocked on.
+_actor_waiting: Dict[int, "ActorLock"] = {}
+
+
+def current_actor() -> "Optional[ActorLock]":
+    "The actor whose turn this thread is running, if any."
+    chain = _actor_chain()
+    return chain[-1] if chain else None
+
+
+class ActorLock:
+    """
+    Makes the turns of one @actor instance take place one at a time.
+    """
+
+    __slots__ = ("_lock", "_owner", "_depth", "_class_name")
+
+    def __init__(self, class_name: str) -> None:
+        self._lock = threading.Lock()
+        self._owner: Optional[int] = None
+        self._depth = 0
+        self._class_name = class_name
+
+    def __enter__(self) -> None:
+        me = threading.get_ident()
+        if self._owner == me:
+            self._depth += 1
+        elif self._lock.acquire(False):
+            self._owner = me
+            self._depth = 1
+        else:
+            self._wait(me)
+        _actor_chain().append(self)
+
+    def __exit__(self, *exc_info: object) -> None:
+        _actor_chain().pop()
+        depth = self._depth - 1
+        self._depth = depth
+        if depth == 0:
+            self._owner = None
+            self._lock.release()
+
+    def _wait(self, me: int) -> None:
+        with _actor_graph_lock:
+            # Follow holder -> what it waits on -> its holder ...  A holder
+            # sets _owner before it can wait on anything, and every wait
+            # registers under this lock, so the last thread to close a
+            # cycle sees all of it.
+            owner = self._owner
+            for _ in range(len(_actor_waiting) + 1):
+                if owner is None:
+                    break
+                if owner == me:
+                    raise RuntimeError(
+                        "actor call cycle: %s is waiting on this call"
+                        % self._class_name
+                    )
+                waited_on = _actor_waiting.get(owner)
+                owner = waited_on._owner if waited_on is not None else None
+            _actor_waiting[me] = self
+        try:
+            self._lock.acquire()
+        finally:
+            with _actor_graph_lock:
+                del _actor_waiting[me]
+        self._owner = me
+        self._depth = 1
+
+
+class _ActorSteps(Generic[_sacT]):
+    """
+    Wraps a coroutine created inside an @actor so that each step, from its
+    start or from one `await` to the next, runs as a turn of that actor,
+    whoever launches it.
+    """
+
+    __slots__ = ("_actor", "_generator")
+
+    def __init__(
+        self, actor: ActorLock, generator: Generator[None, _sacT, None]
+    ) -> None:
+        self._actor = actor
+        self._generator = generator
+
+    def __iter__(self) -> "_ActorSteps[_sacT]":
+        return self
+
+    def __next__(self) -> None:
+        return self.send(cast(_sacT, None))
+
+    def send(self, value: _sacT) -> None:
+        with self._actor:
+            return self._generator.send(value)
+
+    def throw(self, exc: BaseException) -> None:
+        with self._actor:
+            return self._generator.throw(exc)
+
+    def close(self) -> None:
+        with self._actor:
+            self._generator.close()
+
+
+def actor_steps(
+    actor: ActorLock,
+) -> Callable[
+    [Callable[..., Generator[None, _sacT, None]]],
+    Callable[..., Generator[None, _sacT, None]],
+]:
+    """
+    Decorates a generator factory defined inside an @actor so that the
+    coroutines it makes take a turn of `actor` for each step.
+    """
+
+    def decorate(
+        factory: Callable[..., Generator[None, _sacT, None]],
+    ) -> Callable[..., Generator[None, _sacT, None]]:
+        def make(*args: Any) -> Generator[None, _sacT, None]:
+            return cast(
+                Generator[None, _sacT, None],
+                _ActorSteps(actor, factory(*args)),
+            )
+
+        return make
+
+    return decorate

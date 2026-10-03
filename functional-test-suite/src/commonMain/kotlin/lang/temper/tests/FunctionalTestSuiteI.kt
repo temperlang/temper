@@ -137,8 +137,20 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowActorRun)
 
     @Test
+    fun controlFlowActorTurns() =
+        runFunctionalTest(Ft.ControlFlowActorTurns)
+
+    @Test
     fun controlFlowAsync() =
         runFunctionalTest(Ft.ControlFlowAsync)
+
+    @Test
+    fun controlFlowAsyncCompleteOrder() =
+        runFunctionalTest(Ft.ControlFlowAsyncCompleteOrder)
+
+    @Test
+    fun controlFlowAsyncOneAtATime() =
+        runFunctionalTest(Ft.ControlFlowAsyncOneAtATime)
 
     @Test
     fun controlFlowBubble() =
