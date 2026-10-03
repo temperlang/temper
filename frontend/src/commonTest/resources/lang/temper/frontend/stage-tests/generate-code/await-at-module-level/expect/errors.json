@@ -1,0 +1,8 @@
+[
+    {
+        "template": "YieldingOutsideGeneratorFn",
+        "values": ["await"],
+        "left": 206,
+        "right": 221
+    }
+]

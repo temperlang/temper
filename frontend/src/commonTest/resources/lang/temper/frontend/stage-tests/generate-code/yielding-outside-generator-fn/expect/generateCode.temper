@@ -1,0 +1,59 @@
+let console#0;
+console#0 = getConsole();
+@fn @reach(\none) let waitFn__0;
+@typeDecl(Box__0) @stay @reach(\none) let Box__0;
+Box__0 = type (Box__0);
+@fn @reach(\none) let yieldFn__0;
+waitFn__0 = (@stay fn waitFn(p__0 /* aka p */: Promise<Int32>) /* return__0 */: Int32 {
+    return__0 = error (YieldingOutsideGeneratorFn)
+});
+@visibility(\public) @stay @fromType(Box__0) @reach(\none) var v__0: Int32;
+@visibility(\public) @fn @stay @fromType(Box__0) @reach(\none) let waitFor__0;
+waitFor__0 = (@stay fn waitFor(@impliedThis(Box__0) this__0: Box__0, p__1 /* aka p */: Promise<Int32>) /* return__1 */: Void {
+    return__1 = void;
+    var t#0;
+    t#0 = error (YieldingOutsideGeneratorFn);
+    setp(v__0, this__0, t#0)
+});
+@fn @visibility(\public) @stay @fromType(Box__0) @reach(\none) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Box__0) this__1: Box__0) /* return__2 */: Void {
+    return__2 = void;
+    setp(v__0, this__1, 0)
+});
+@fn @visibility(\public) @stay @fromType(Box__0) @reach(\none) let getv__0;
+getv__0 = (@stay fn (@impliedThis(Box__0) this__2: Box__0) /* return__3 */: Int32 {
+    return__3 = getp(v__0, this__2)
+});
+@fn @visibility(\public) @stay @fromType(Box__0) @reach(\none) let setv__0;
+setv__0 = (@stay fn (@impliedThis(Box__0) this__3: Box__0, newV__0: Int32) /* return__4 */: Void {
+    return__4 = void;
+    setp(v__0, this__3, newV__0)
+});
+yieldFn__0 = (@stay fn yieldFn /* return__5 */: Void {
+    return__5 = void;
+    error (YieldingOutsideGeneratorFn)
+});
+let b__0;
+b__0 = new PromiseBuilder<Int32>();
+do_call_complete(b__0, 3);
+let fn__0;
+fn__0 = (@stay fn /* return__6 */{
+    let fn__1;
+    fn__1 = (@wrappedGeneratorFn fn /* return__7 */: GeneratorResult<Empty> implements GeneratorFn {
+        @fn let inner__0;
+        var x__0;
+        orelse#0: {
+          x__0 = await do_get_promise(b__0)
+        } orelse {
+          x__0 = -1
+        };
+        do_call_log(console#0, cat("x=", do_call_toString(x__0)));
+        inner__0 = (@stay fn inner /* return__8 */: Int32 {
+            return__8 = error (YieldingOutsideGeneratorFn)
+        });
+        do_call_log(console#0, cat("inner=", do_call_toString(inner__0())));
+        return__7 = (fn doneResult)<Empty>()
+    });
+    return__6 = adaptGeneratorFnSafe(fn__1)
+});
+async(fn__0)
