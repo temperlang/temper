@@ -26,10 +26,12 @@ impl AsyncRunner {
     {
         let gen = gen();
         // TODO Any way to avoid the extra Arc wrapping?
-        let gen_ignoring_result = Arc::new(move || {
+        let gen_ignoring_result: Task = Arc::new(move || {
             let _ = gen.next_safe();
         });
-        self.0.run_async(gen_ignoring_result);
+        // A block started during an actor's turn takes turns on that actor.
+        self.0
+            .run_async(crate::actor::belonging_to_current(gen_ignoring_result));
     }
 
     /// Queues a task to run on this runner after those already queued.
@@ -109,6 +111,8 @@ where
     /// the runner's queue, as an awaiter goes on the interpreter's ready
     /// queue, so code after `complete` runs before any waiter resumes.
     pub fn on_ready(&self, runner: &AsyncRunner, next: Task) {
+        // Resuming after an `await` in an actor's turn is a new turn of it.
+        let next = crate::actor::belonging_to_current(next);
         {
             let mut state = self.state.0.lock().unwrap();
             if state.result.is_none() {

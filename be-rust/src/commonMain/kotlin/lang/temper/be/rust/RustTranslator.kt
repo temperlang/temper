@@ -85,6 +85,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.actorSymbol
 import lang.temper.value.connectedSymbol
 import lang.temper.value.failSymbol
 import lang.temper.value.sealedTypeSymbol
@@ -100,11 +101,17 @@ class RustTranslator(
         libraryConfigurations.currentLibraryConfiguration.libraryName,
         DescriptorsForDeclarations.Key(RustBackend.Factory),
     )?.nameToDescriptor ?: mapOf()
+
+    /** The Temper name of the `@actor` class whose members are being translated, if any. */
+    private var actorClassName: String? = null
     private var anyConnected = false
     private var closureCount = 0
     private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
     private val failVars = mutableSetOf<ResolvedName>()
+
+    /** True while translating the trait for an interface, whose method bodies an actor may inherit. */
+    private var insideInterface = false
     private var insideMutableType = false
     internal val isRoot = module.codeLocation.codeLocation.relativePath().segments.isEmpty()
     private val functionContextStack = mutableListOf<FunctionContext>()
@@ -706,6 +713,7 @@ class RustTranslator(
         val structNameText = "${name.outputNameText}Struct"
         val structId = structNameText.toId(pos)
         val generics = buildGenerics(decl.typeParameters)
+        val isActor = decl.metadata.any { it.key.symbol == actorSymbol }
         var mutable = false
         Rust.Struct(
             pos,
@@ -735,7 +743,7 @@ class RustTranslator(
             pos,
             id = id,
             generics = generics.deepCopy(),
-            fields = listOf(
+            fields = listOfNotNull(
                 Rust.TupleField(
                     pos,
                     type = Rust.GenericType(
@@ -750,12 +758,15 @@ class RustTranslator(
                         }.let { listOf(it) },
                     ),
                 ),
+                // An actor's turns go through a gate kept beside its state, so field access stays `self.0`.
+                if (isActor) Rust.TupleField(pos, type = ACTOR_GATE_NAME.toId(pos)) else null,
             ),
         ).toItem(attrs = listOf(buildDerive(pos, listOf("Clone"))), pub = pub).also { moduleItems.add(it) }
         // We also need the impl itself for public class members working on the wrapper.
         val typeRef = id.makeTypeRef(generics)
         // And we need to know if we're implementing a shallowly mut type when getting internal property values.
         insideMutableType = mutable
+        actorClassName = if (isActor) decl.name.name.displayName else null
         try {
             Rust.Impl(
                 pos,
@@ -774,13 +785,21 @@ class RustTranslator(
         } finally {
             // Because type defs are always top level, we don't need a stack of indicators.
             insideMutableType = false
+            actorClassName = null
         }
         // Implement traits, including AnyValue.
         val supTypes = implTraits(pos, decl, typeRef, generics)
         Rust.Call(
             pos,
             callee = "temper_core".toKeyId(pos).extendWith("impl_any_value_trait!"),
-            args = listOf(typeRef.deepCopy(), Rust.Array(pos, supTypes.deepCopy())),
+            args = buildList {
+                add(typeRef.deepCopy())
+                add(Rust.Array(pos, supTypes.deepCopy()))
+                if (isActor) {
+                    // `gate = 1` overrides AnyValueTrait::enter_turn, for interface methods the actor inherits.
+                    add("gate".toId(pos).infix(RustOperator.Assign, Rust.NumberLiteral(pos, ACTOR_GATE_FIELD.toInt())))
+                }
+            },
             where = whereForAnyValueImpl(pos, generics),
         ).also { moduleItems.add(Rust.ExprStatement(pos, it).toItem()) }
     }
@@ -1002,10 +1021,15 @@ class RustTranslator(
                     block = null,
                 ).also { add(it.toItem()) }
                 // User-defined methods.
-                for (member in decl.members) {
-                    if (member !is TmpL.StaticMember) {
-                        addAll(translateMethodLike(member, forTrait = true))
+                insideInterface = true
+                try {
+                    for (member in decl.members) {
+                        if (member !is TmpL.StaticMember) {
+                            addAll(translateMethodLike(member, forTrait = true))
+                        }
                     }
+                } finally {
+                    insideInterface = false
                 }
             },
         ).toItem(pub = pub).also { moduleItems.add(it) }
@@ -2061,8 +2085,18 @@ class RustTranslator(
                             insideMutableType -> core.wrapLock()
                             else -> core
                         }
-                    }.wrapArc().let { Rust.Call(pos, callee = typeId, args = listOf(it)) },
+                    }.wrapArc().let { state ->
+                        val args = buildList {
+                            add(state)
+                            actorClassName?.let { add(newActorGate(pos, it)) }
+                        }
+                        Rust.Call(pos, callee = typeId, args = args)
+                    },
                 ).let { results.add(it) }
+                // The constructor is a turn too, once there is an instance for code to share.
+                if (actorClassName != null && useStatements.any { it !is TmpL.ReturnStatement }) {
+                    results.add(enterActorTurn(pos, "selfish".toId(pos)))
+                }
                 // Finish constructor.
                 context.constructorMode = ConstructorMode.Use
                 this@RustTranslator.processStatements(useStatements, results = results, skipLastReturn = true)
@@ -2188,7 +2222,11 @@ class RustTranslator(
                     ),
                 )
                 try {
-                    translateBody(body, prefix = paramInfo.conversions, statementProcessor = statementProcessor)
+                    val prefix = when (val turn = turnFor(decl)) {
+                        null -> paramInfo.conversions
+                        else -> listOf(turn) + paramInfo.conversions
+                    }
+                    translateBody(body, prefix = prefix, statementProcessor = statementProcessor)
                 } finally {
                     functionContextStack.compatRemoveLast()
                 }
@@ -2200,6 +2238,45 @@ class RustTranslator(
             item = function,
         )
     }
+
+    /**
+     * The `let _turn = ...;` that starts each instance method, getter and setter body of an `@actor` class, and
+     * each interface method body, which an actor may inherit. Nested functions and closures run inside the turn of
+     * the member that holds them, and async steps take their own turns through temper_core, so neither gets one.
+     */
+    private fun turnFor(decl: TmpL.FunctionDeclarationOrMethod): Rust.Statement? {
+        if (decl !is TmpL.NormalMethod && decl !is TmpL.GetterOrSetter) {
+            return null
+        }
+        val pos = decl.body?.pos?.leftEdge ?: decl.pos
+        return when {
+            insideInterface -> Rust.LetStatement(
+                pos,
+                pattern = TURN_NAME.toId(pos),
+                type = null,
+                value = Rust.Call(
+                    pos,
+                    callee = "temper_core".toKeyId(pos).extendWith(listOf("AnyValueTrait", "enter_turn")),
+                    args = listOf("self".toKeyId(pos)),
+                ),
+            )
+            actorClassName != null -> enterActorTurn(pos, "self".toKeyId(pos))
+            else -> null
+        }
+    }
+
+    private fun enterActorTurn(pos: Position, instance: Rust.Expr): Rust.Statement = Rust.LetStatement(
+        pos,
+        pattern = TURN_NAME.toId(pos),
+        type = null,
+        value = instance.member(ACTOR_GATE_FIELD, notMethod = true).methodCall("enter"),
+    )
+
+    private fun newActorGate(pos: Position, className: String): Rust.Expr = Rust.Call(
+        pos,
+        callee = "$ACTOR_GATE_NAME::new".toId(pos),
+        args = listOf(Rust.StringLiteral(pos, className)),
+    )
 
     private fun translateFunctionType(type: Signature2, pos: Position): Rust.Type {
         // We don't need mut functions if all mutation goes through Arc<Mutex|RwLock> anyway.
@@ -3867,6 +3944,8 @@ private interface StatementProcessor {
 
 // TODO Make actual id paths and such.
 internal const val ANY_NAME = "temper_core::AnyValue"
+internal const val ACTOR_GATE_FIELD = "1"
+internal const val ACTOR_GATE_NAME = "temper_core::actor::Gate"
 internal const val ARC_NAME = "std::sync::Arc"
 internal const val ARC_NEW_NAME = "$ARC_NAME::new"
 internal const val AS_ENUM_NAME = "as_enum"
@@ -3906,6 +3985,7 @@ internal const val TO_LIST_BUILDER_NAME = "temper_core::ToListBuilder"
 internal const val TO_LISTED_NAME = "temper_core::ToListed"
 internal const val TO_LISTED_TO_LISTED_NAME = "temper_core::ToListed::to_listed"
 internal const val TRAIT_NAME_SUFFIX = "Trait"
+internal const val TURN_NAME = "_turn"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
 

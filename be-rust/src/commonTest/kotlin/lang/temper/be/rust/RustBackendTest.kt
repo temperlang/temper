@@ -1428,6 +1428,7 @@ class RustBackendTest {
                 |    fn thing(& self) -> std::sync::Arc<String>;
                 |    fn set_thing(& self, that__0: std::sync::Arc<String>);
                 |    fn greeting(& self) -> std::sync::Arc<String> {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
                 |        return std::sync::Arc::new("Hi!".to_string());
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String>;
@@ -1472,6 +1473,7 @@ class RustBackendTest {
                 |pub (crate) trait BTrait<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> B<T>;
                 |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
                 |        return std::sync::Arc::new("blah".to_string());
                 |    }
                 |}
@@ -1591,12 +1593,18 @@ class RustBackendTest {
                 |pub (crate) trait DTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> D<T>;
                 |    fn prop(& self) -> std::sync::Arc<String> {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
                 |        return std::sync::Arc::new("Hello!".to_string());
                 |    }
-                |    fn set_prop(& self, value__0: std::sync::Arc<String>) {}
+                |    fn set_prop(& self, value__0: std::sync::Arc<String>) {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
+                |    }
                 |    fn thing(& self) -> std::sync::Arc<String>;
-                |    fn set_thing(& self, value__1: std::sync::Arc<String>) {}
+                |    fn set_thing(& self, value__1: std::sync::Arc<String>) {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
+                |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
+                |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
                 |        return std::sync::Arc::new("sure".to_string());
                 |    }
                 |}
@@ -2051,6 +2059,115 @@ class RustBackendTest {
             """.trimMargin(),
         )
     }
+
+    @Test
+    fun actorTurns() = assertGenerateWanted(
+        temper = """
+            |export interface Bumper {
+            |  bump(): Void;
+            |  bumpTwice(): Void { bump(); bump(); }
+            |}
+            |@actor export class Counter extends Bumper {
+            |  public var n: Int = 0;
+            |  public constructor() { bump(); }
+            |  public bump(): Void { n += 1; }
+            |  public checked(k: Int): Int throws Bubble {
+            |    if (k < 0) { bubble() }
+            |    k
+            |  }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |pub trait BumperTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+            |    fn clone_boxed(& self) -> Bumper;
+            |    fn bump(& self);
+            |    fn bump_twice(& self) {
+            |        let _turn = temper_core::AnyValueTrait::enter_turn(self);
+            |        self.bump();
+            |        self.bump();
+            |    }
+            |}
+            |#[derive(Clone)]
+            |pub struct Bumper(std::sync::Arc<dyn BumperTrait>);
+            |impl Bumper {
+            |    pub fn new(selfish: impl BumperTrait + 'static) -> Bumper {
+            |        Bumper(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |impl BumperTrait for Bumper {
+            |    fn clone_boxed(& self) -> Bumper {
+            |        BumperTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn bump(& self) -> () {
+            |        BumperTrait::bump( & ( * self.0))
+            |    }
+            |    fn bump_twice(& self) -> () {
+            |        BumperTrait::bump_twice( & ( * self.0))
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Bumper);
+            |impl std::ops::Deref for Bumper {
+            |    type Target = dyn BumperTrait;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |struct CounterStruct {
+            |    n: i32
+            |}
+            |#[derive(Clone)]
+            |pub struct Counter(std::sync::Arc<std::sync::RwLock<CounterStruct>>, temper_core::actor::Gate);
+            |impl Counter {
+            |    pub fn new() -> Counter {
+            |        let n;
+            |        n = 0;
+            |        let selfish = Counter(std::sync::Arc::new(std::sync::RwLock::new(CounterStruct {
+            |                        n
+            |            })), temper_core::actor::Gate::new("Counter"));
+            |        let _turn = selfish.1.enter();
+            |        selfish.bump();
+            |        return selfish;
+            |    }
+            |    pub fn bump(& self) {
+            |        let _turn = self.1.enter();
+            |        let t___0: i32 = self.0.read().unwrap().n.wrapping_add(1);
+            |        self.0.write().unwrap().n = t___0;
+            |    }
+            |    pub fn checked(& self, k__0: i32) -> temper_core::Result<i32> {
+            |        let _turn = self.1.enter();
+            |        let return__0: i32;
+            |        if k__0 < 0 {
+            |            return Err(temper_core::Error::new());
+            |        }
+            |        return__0 = k__0;
+            |        return Ok(return__0);
+            |    }
+            |    pub fn n(& self) -> i32 {
+            |        let _turn = self.1.enter();
+            |        return self.0.read().unwrap().n;
+            |    }
+            |    pub fn set_n(& self, newN__0: i32) {
+            |        let _turn = self.1.enter();
+            |        self.0.write().unwrap().n = newN__0;
+            |    }
+            |}
+            |impl BumperTrait for Counter {
+            |    fn clone_boxed(& self) -> Bumper {
+            |        Bumper::new(self.clone())
+            |    }
+            |    fn bump(& self) {
+            |        self.bump()
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Counter, [Bumper], gate = 1);
+        """.trimMargin(),
+    )
 
     @Test
     fun fieldReadGuards() = assertGenerateWanted(

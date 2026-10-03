@@ -294,6 +294,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                 base = coreResourceBase,
                 filePath("Cargo.lock"),
                 filePath("Cargo.toml"),
+                filePath("src", "actor.rs"),
                 filePath("src", "float64.rs"),
                 filePath("src", "generator.rs"),
                 filePath("src", "lib.rs"),
