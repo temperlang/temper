@@ -154,15 +154,17 @@ namespace temper {
             return promise->get();
         }
 
-        // Launch an async block: build its generator and drive it, then drain any
-        // continuations its awaits scheduled. Accepts any factory producing a Generator
-        // or SafeGenerator (next() is overloaded for both).
+        // Launch an async block: queue a task that builds its generator and drives it.
+        // The block does not start here. Like the interpreter, js and rust, it starts
+        // once the code that launched it has returned to whoever drains the queue: the
+        // generated `main` after module init, the test harness after each test, or an
+        // embedding program that calls `async_drain` itself. Accepts any factory
+        // producing a Generator or SafeGenerator (next() is overloaded for both).
         template<class FactoryFn>
         void async_run(FactoryFn factory) {
             async_enqueue([factory]() {
                 next(factory());
             });
-            async_drain();
         }
 
     }
