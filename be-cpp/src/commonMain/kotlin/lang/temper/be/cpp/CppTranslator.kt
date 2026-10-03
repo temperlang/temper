@@ -30,6 +30,7 @@ import lang.temper.type.MethodShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
+import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.NullableType
 import lang.temper.type2.Nullity
@@ -45,10 +46,14 @@ import lang.temper.value.TInt64
 import lang.temper.value.TNull
 import lang.temper.value.TProblem
 import lang.temper.value.TString
+import lang.temper.value.actorSymbol
 import lang.temper.value.connectedSymbol
 
 /** How the C++ backend renders Temper function types. Emitted and matched in one place. */
 private const val STD_FUNCTION_PREFIX = "std::function"
+
+/** The member of an `@actor` class's struct that holds its `temper::core::ActorState`. */
+internal const val ACTOR_STATE_MEMBER = "actor_"
 
 /**
  * Translates a TmpL module into C++ source files.
@@ -129,6 +134,17 @@ class CppTranslator(
 
     /** Current "this" variable name in member function bodies (for coercion on return). */
     private var currentThisVarName: String? = null
+
+    /** True while translating the members of an `@actor` class. */
+    private var inActorClass = false
+
+    /**
+     * The C++ name of the receiver inside the `@actor` member being translated, or null
+     * outside one. Code reached through it already runs in that actor's turn; it is also
+     * the actor an `async` block written there belongs to.
+     */
+    internal var actorSelfName: String? = null
+        private set
 
     /**
      * Maps TypeFormal definitions to their C++ template parameter names.
@@ -466,6 +482,61 @@ class CppTranslator(
 
     private fun setterSingleName(dotName: String): Cpp.SingleName =
         accessorSingleName(dotName = dotName, prefix = "set")
+
+    /**
+     * `temper::core::ActorTurn turn_N(*receiver->actor_);`, the first statement of every
+     * member of an `@actor` class. It holds the actor until the member returns or bubbles.
+     */
+    private fun actorTurnStmt(receiver: String): Cpp.Stmt {
+        val turn = cpp.tmp("turn").id.text
+        return cpp.exprStmt(
+            cpp.literal(cpp.raw("$TEMPER_CORE_NAMESPACE::ActorTurn $turn(*$receiver->$ACTOR_STATE_MEMBER)")),
+        )
+    }
+
+    /** The `@actor` class [expr] is statically typed as, or null. */
+    private fun actorTypeOf(expr: TmpL.Expression): TypeShape? =
+        (expr.type.definition as? TypeShape)?.takeIf { actorSymbol in it.metadata }
+
+    /** True if [expr] is the receiver of the `@actor` member being translated. */
+    private fun isActorSelf(expr: TmpL.Expression): Boolean {
+        val self = actorSelfName ?: return false
+        return when (expr) {
+            is TmpL.This -> cpp.name(expr.id).id.text == self
+            is TmpL.Reference -> cpp.name(expr.id).id.text == self
+            else -> false
+        }
+    }
+
+    /**
+     * The accessor that reads or writes the backed property [propDotName] of [subject]
+     * when [subject] is an `@actor` instance other than the current receiver. A plain
+     * `other->balance = 0` would touch the other actor's state without its turn, so the
+     * access goes through the other actor's getter or setter, which take it.
+     *
+     * Null when no turn is needed. Fails the build if the accessor does not exist, which
+     * the frontend's visibility rules should make impossible: a property without a
+     * public accessor is private, and only `this` may read a private property.
+     */
+    private fun actorAccessor(
+        subject: TmpL.Subject,
+        propDotName: String,
+        kind: MethodKind,
+        node: TmpL.Tree,
+    ): Cpp.SingleName? {
+        if (subject !is TmpL.Expression || isActorSelf(subject)) {
+            return null
+        }
+        val actor = actorTypeOf(subject) ?: return null
+        val hasAccessor = actor.methods.any { it.methodKind == kind && it.symbol.text == propDotName }
+        if (!hasAccessor) {
+            TODO("be-cpp @actor: no $kind for ${actor.name}.$propDotName to take its turn through at ${node.pos}")
+        }
+        return when (kind) {
+            MethodKind.Getter -> getterSingleName("get.$propDotName")
+            else -> setterSingleName("set.$propDotName")
+        }
+    }
 
     /**
      * The primitive value types that can be implicitly converted between one another (used by
@@ -1235,6 +1306,13 @@ class CppTranslator(
     }
 
     private fun translateGetBackedProperty(expr: TmpL.GetBackedProperty): Cpp.Expr {
+        val actorGetter = actorAccessor(expr.subject, propertyDotName(expr.property), MethodKind.Getter, expr)
+        if (actorGetter != null) {
+            return cpp.callExpr(
+                cpp.op("->", translateWithNarrowing(expr.subject as TmpL.Expression), actorGetter),
+                listOf(),
+            )
+        }
         val propName = translatePropertyId(expr.property)
         return when (val subject = expr.subject) {
             is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
@@ -1708,6 +1786,15 @@ class CppTranslator(
         }
     }
 
+    /** The dot name of a property, as accessor names are derived from it. */
+    private fun propertyDotName(prop: TmpL.PropertyId): String = when (prop) {
+        is TmpL.ExternalPropertyId -> prop.name.dotNameText
+        is TmpL.InternalPropertyId -> {
+            val key = propKey(prop.name.name)
+            propertyDotNames[key] ?: prop.name.name.displayName
+        }
+    }
+
     private fun translateSetProperty(
         lval: TmpL.PropertyLValue,
         right: TmpL.Expression,
@@ -1715,14 +1802,9 @@ class CppTranslator(
     ): List<Cpp.Stmt> {
         val propSingleName = translatePropertyId(lval.property)
         // Check if there's a setter method registered for this property
-        val propDotName = when (val prop = lval.property) {
-            is TmpL.ExternalPropertyId -> prop.name.dotNameText
-            is TmpL.InternalPropertyId -> {
-                val key = propKey(prop.name.name)
-                propertyDotNames[key] ?: prop.name.name.displayName
-            }
-        }
-        val setterName = if (useSetterMethod) setterMethodNames[propDotName] else null
+        val propDotName = propertyDotName(lval.property)
+        val setterName = actorAccessor(lval.subject, propDotName, MethodKind.Setter, lval)
+            ?: if (useSetterMethod) setterMethodNames[propDotName] else null
         if (setterName != null) {
             // Call setter method instead of direct assignment
             val call: Cpp.Expr = when (val subj = lval.subject) {
@@ -1804,6 +1886,10 @@ class CppTranslator(
     ): Cpp.BlockStmt = cpp.pos(block) {
         val savedThisVarName = currentThisVarName
         currentThisVarName = thisName.id.text
+        val savedActorSelfName = actorSelfName
+        if (inActorClass) {
+            actorSelfName = thisName.id.text
+        }
         val savedLocalFuncRefCaptures = localFuncRefCaptures.toList()
         val savedMutableLocalsInScope = mutableLocalsInScope.toMutableSet()
         localFuncRefCaptures = block.statements
@@ -1813,6 +1899,9 @@ class CppTranslator(
         try {
             cpp.blockStmt(
                 buildList {
+                    if (inActorClass) {
+                        add(actorTurnStmt("this"))
+                    }
                     add(
                         cpp.varDef(
                             cpp.singleName(CppName("auto", allowKey = true)),
@@ -1835,6 +1924,7 @@ class CppTranslator(
             )
         } finally {
             currentThisVarName = savedThisVarName
+            actorSelfName = savedActorSelfName
             localFuncRefCaptures = savedLocalFuncRefCaptures.toMutableList()
             mutableLocalsInScope = savedMutableLocalsInScope
         }
@@ -2128,7 +2218,8 @@ class CppTranslator(
                 translateType(member.returnType),
                 emptyList(),
                 cpp.blockStmt(
-                    listOf(
+                    listOfNotNull(
+                        if (inActorClass) actorTurnStmt("this") else null,
                         cpp.returnStmt(
                             cpp.op(
                                 "->",
@@ -2206,7 +2297,9 @@ class CppTranslator(
         declaredSetters: MutableSet<String>,
     ) {
         if (member.propertyShape.abstractness == Abstractness.Concrete) {
-            if (isInterface || realSuperTypes.any()) {
+            // An @actor class needs the setter even without supertypes: a write to
+            // another instance's property goes through it to take that instance's turn.
+            if (isInterface || realSuperTypes.any() || inActorClass) {
                 // Generate an override setter that does direct field assignment
                 val setterCppName = setterSingleName(member.dotName.dotNameText)
                 val propDotName =
@@ -2231,7 +2324,8 @@ class CppTranslator(
                         }
                     },
                     cpp.blockStmt(
-                        listOf(
+                        listOfNotNull(
+                            if (inActorClass) actorTurnStmt("this") else null,
                             cpp.exprStmt(
                                 cpp.op(
                                     "=",
@@ -2248,7 +2342,10 @@ class CppTranslator(
                 )
                 val firstDecl = setterKey !in declaredSetters
                 if (firstDecl) declaredSetters.add(setterKey)
-                emitMethodDeclAndDef(func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl)
+                val needsVirtualSetter = isInterface || realSuperTypes.any()
+                emitMethodDeclAndDef(
+                    func, isTemplate, needsVirtualSetter, impl, templateMethodDefs, emitDecl = firstDecl,
+                )
             }
             // else: no supertypes, backed properties use direct field access
         } else {
@@ -2561,11 +2658,25 @@ class CppTranslator(
                             ),
                         ),
                     )
-                    member.body.statements.forEach { stmt ->
-                        if (stmt is TmpL.ReturnStatement) {
-                            return@forEach
+                    // The constructor is a turn too. Nothing else can reach the instance
+                    // before make() returns, so it never waits, but calls the body makes
+                    // into other actors see it in this thread's chain.
+                    if (inActorClass) {
+                        add(actorTurnStmt(thisName.id.text))
+                    }
+                    val savedActorSelfName = actorSelfName
+                    if (inActorClass) {
+                        actorSelfName = thisName.id.text
+                    }
+                    try {
+                        member.body.statements.forEach { stmt ->
+                            if (stmt is TmpL.ReturnStatement) {
+                                return@forEach
+                            }
+                            addAll(translateStatement(stmt))
                         }
-                        addAll(translateStatement(stmt))
+                    } finally {
+                        actorSelfName = savedActorSelfName
                     }
                     add(cpp.returnStmt(resultName.deepCopy()))
                 },
@@ -2762,6 +2873,41 @@ class CppTranslator(
         headerTypeDefs: MutableList<Cpp.Global>,
     ) {
         val isInterface = topLevel.kind == TmpL.TypeDeclarationKind.Interface
+        val isActor = topLevel.metadata.any { it.key.symbol == actorSymbol }
+        if (isActor) {
+            checkActorDeclaration(topLevel, isInterface)
+        }
+        val savedInActorClass = inActorClass
+        inActorClass = isActor
+        try {
+            translateTypeDeclarationMembers(topLevel, isInterface, impl, headerTypeDecl, headerTypeDefs)
+        } finally {
+            inActorClass = savedInActorClass
+        }
+    }
+
+    /** Fail the build on an `@actor` declaration this backend cannot give turns to. */
+    private fun checkActorDeclaration(topLevel: TmpL.TypeDeclaration, isInterface: Boolean) {
+        if (isInterface) {
+            TODO("be-cpp @actor: interface ${topLevel.name.name} at ${topLevel.pos}; the frontend rejects these")
+        }
+        for (member in topLevel.members) {
+            if (member is TmpL.Property && fixName(member.dotName.dotNameText) == ACTOR_STATE_MEMBER) {
+                TODO(
+                    "be-cpp @actor: property ${member.dotName.dotNameText} at ${member.pos}" +
+                        " collides with the actor state",
+                )
+            }
+        }
+    }
+
+    private fun translateTypeDeclarationMembers(
+        topLevel: TmpL.TypeDeclaration,
+        isInterface: Boolean,
+        impl: MutableList<Cpp.Global>,
+        headerTypeDecl: MutableList<Cpp.Global>,
+        headerTypeDefs: MutableList<Cpp.Global>,
+    ) {
         val superTypes = topLevel.superTypes
         // Populate type formal names for template struct
         val structTypeFormals = topLevel.typeParameters.ot.typeParameters
@@ -2783,6 +2929,22 @@ class CppTranslator(
         prepopulatePropertyDotNames(topLevel)
         val declaredSetters = mutableSetOf<String>()
         val structFields = buildList {
+            if (inActorClass) {
+                // Held through a shared_ptr so members emitted `const` can still lock it,
+                // and so async steps can keep it alive.
+                val stateType = "std::shared_ptr<$TEMPER_CORE_NAMESPACE::ActorState>"
+                add(
+                    cpp.structField(
+                        cpp.singleName(CppName(stateType, raw = true)),
+                        cpp.singleName(
+                            CppName(
+                                "$ACTOR_STATE_MEMBER = std::make_shared<$TEMPER_CORE_NAMESPACE::ActorState>()",
+                                raw = true,
+                            ),
+                        ),
+                    ),
+                )
+            }
             // Add virtual destructor for interfaces to enable dynamic_pointer_cast
             if (isInterface) {
                 val dtorName = "~${cpp.name(topLevel.name).id.text}"
@@ -3208,6 +3370,8 @@ class CppTranslator(
         voidVarNames.clear()
         narrowingContext.clear()
         currentThisVarName = null
+        inActorClass = false
+        actorSelfName = null
         typeFormalNames.clear()
         typeFormalNamesByText.clear()
         testInfos.clear()

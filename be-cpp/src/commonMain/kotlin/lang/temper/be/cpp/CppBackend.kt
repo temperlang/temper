@@ -4,10 +4,12 @@ import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
 import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.RunnerSpecifics
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.asReceiverMember
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
@@ -24,6 +26,7 @@ import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
+import lang.temper.value.actorSymbol
 
 /**
  * # C++ Backend
@@ -68,7 +71,22 @@ class CppBackend private constructor(
         tentativeOutputPathFor = { outRoot },
         libraryConfigurations = libraryConfigurations,
         dependencyResolver = dependencyResolver,
-        withTentative = { injectSuperCallMethods(it) },
+        withTentative = { tentative ->
+            injectSuperCallMethods(
+                tentative,
+                configSuperCall = { type, method ->
+                    when {
+                        type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                        // An @actor class gets its own copy of every inherited method
+                        // that has a body, so that calling one takes the actor's turn
+                        // like any other member: the interface's body runs inline in
+                        // that turn instead of as one turn per property it reads.
+                        actorSymbol in type.typeShape.metadata -> SuperCallConfig(skipThis = false)
+                        else -> null
+                    }
+                },
+            )
+        },
     )
 
     /**
@@ -174,8 +192,8 @@ class CppBackend private constructor(
 
     /**
      * Build the contents of `main.cpp`: include each module's header, call its init
-     * function (each guarded so dependency order is handled), and — when the library
-     * contains tests — hand the test harness one closure per test.
+     * function (each guarded so dependency order is handled), drain the async queue,
+     * and, when the library contains tests, hand the test harness one closure per test.
      *
      * [initIncludes] should already be sorted for deterministic output. [testInfos] pairs
      * each test's generated function name with its raw (display) name. [testNs] is the
@@ -190,6 +208,7 @@ class CppBackend private constructor(
         for (inc in initIncludes) {
             appendLine("""#include "$inc"""")
         }
+        appendLine("""#include "temper-core/promise.hpp"""")
         if (testInfos.isNotEmpty()) {
             appendLine("""#include "std/testing.hpp"""")
             appendLine("""#include "temper-core/test_main.hpp"""")
@@ -198,6 +217,10 @@ class CppBackend private constructor(
         for (initFunc in initFuncs) {
             appendLine("  $initFunc();")
         }
+        // `async` only queues its block, and completing a promise only queues the
+        // blocks awaiting it, so nothing launched or resumed by top-level code runs
+        // until something drains the queue. Do that once all modules are initialized.
+        appendLine("  temper::core::async_drain();")
         if (testInfos.isNotEmpty()) {
             // Hand the harness one closure per test. Each closure runs the test and
             // reports its outcome; run_tests (in temper-core/test_main.hpp) owns the
@@ -210,6 +233,9 @@ class CppBackend private constructor(
                 appendLine("    { \"$escapedName\", []() -> temper::core::TestOutcome {")
                 appendLine("      auto t = $testNs::Test::make();")
                 appendLine("      $funcName(t);")
+                // Let async blocks the test launched or resumed finish before its
+                // outcome is read.
+                appendLine("      temper::core::async_drain();")
                 appendLine("      auto mc = t->messagesCombined();")
                 appendLine(
                     "      std::string messages = temper::core::is_null(mc)" +
@@ -280,6 +306,7 @@ class CppBackend private constructor(
                     filePath("regex.hpp"),
                     filePath("generator.hpp"),
                     filePath("promise.hpp"),
+                    filePath("actor.hpp"),
                     filePath("core.hpp"),
                     // Test harness used only by the generated `main.cpp`; intentionally not
                     // pulled into core.hpp so its <fstream>/<sstream> stay out of every TU.

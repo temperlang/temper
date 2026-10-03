@@ -62,6 +62,200 @@ class CppBackendTest {
     }
 
     @Test
+    fun actorTakesTurns() {
+        // Every member of an @actor class takes the actor's turn first, including the
+        // constructor and the accessors the class gets for `balance`. A write to another
+        // instance's property goes through its setter, which takes that instance's turn.
+        assertGenerated(
+            temper = """
+                |@actor export class Account(public owner: String) {
+                |  public var balance: Int = 0;
+                |  public deposit(n: Int): Int { balance += n; balance }
+                |  public drain(other: Account): Void {
+                |    balance += other.balance;
+                |    other.balance = 0;
+                |  }
+                |}
+                |
+            """,
+            cpp = """
+                |#include <my-test-library/something.hpp>
+                |namespace my_test_library {
+                |  int32_t Account::deposit(int32_t n) {
+                |    temper::core::ActorTurn turn_0(*this->actor_);
+                |    auto this_ = temper::core::borrow_this(this);
+                |    int32_t t_1 = temper::core::Int::add(this_->balance, n);
+                |    this_->balance = t_1;
+                |    return this_->balance;
+                |  }
+                |  void Account::drain(std::shared_ptr<Account> const & other) {
+                |    temper::core::ActorTurn turn_2(*this->actor_);
+                |    auto this_1 = temper::core::borrow_this(this);
+                |    int32_t t_3 = temper::core::Int::add(this_1->balance, other->get_balance());
+                |    this_1->balance = t_3;
+                |    other->set_balance(0);
+                |  }
+                |  std::shared_ptr<Account> Account::make(std::string owner_15) {
+                |    std::shared_ptr<Account> result_4 = std::make_shared<Account>();
+                |    Account* this_2 = result_4.get();
+                |    temper::core::ActorTurn turn_5(*this_2->actor_);
+                |    this_2->owner = owner_15;
+                |    this_2->balance = 0;
+                |    return result_4;
+                |  }
+                |  std::string Account::get_owner() const {
+                |    temper::core::ActorTurn turn_6(*this->actor_);
+                |    return this->owner;
+                |  }
+                |  int32_t Account::get_balance() {
+                |    temper::core::ActorTurn turn_7(*this->actor_);
+                |    return this->balance;
+                |  }
+                |  void Account::set_balance(int32_t newBalance) {
+                |    temper::core::ActorTurn turn_8(*this->actor_);
+                |    this->balance = newBalance;
+                |  }
+                |  void global_init_something() {
+                |    static bool initialized = false;
+                |    if (initialized) {
+                |      return;
+                |    }
+                |    initialized = true;
+                |  }
+                |}
+                |
+            """,
+            hpp = """
+                |#pragma once
+                |#include <temper-core/core.hpp>
+                |namespace my_test_library {
+                |  struct Account;
+                |  struct Account : public std::enable_shared_from_this<Account> {
+                |    std::shared_ptr<temper::core::ActorState> actor_ = std::make_shared<temper::core::ActorState>();
+                |    std::string owner;
+                |    int32_t balance;
+                |    int32_t deposit(int32_t);
+                |    void drain(std::shared_ptr<Account> const &);
+                |    static std::shared_ptr<Account> make(std::string);
+                |    std::string get_owner() const;
+                |    int32_t get_balance();
+                |    void set_balance(int32_t);
+                |  };
+                |  void global_init_something();
+                |}
+                |
+            """,
+        )
+    }
+
+    @Test
+    fun actorAsyncBlockRunsOnItsActor() {
+        // Each step of an async block written in an @actor member runs as a turn on
+        // that actor; outside one, async blocks are launched as before.
+        assertGeneratedContains(
+            temper = """
+                |@actor export class Account() {
+                |  private var balance: Int = 0;
+                |  public later(n: Int): Void {
+                |    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+                |      balance += n;
+                |    }
+                |  }
+                |}
+                |async { (): GeneratorResult<Empty> extends GeneratorFn =>
+                |  console.log("top");
+                |}
+            """,
+            cppContains = listOf(
+                "temper::core::async_run_on(this_->actor_, fn);",
+                "temper::core::async_run(fn_",
+            ),
+        )
+    }
+
+    @Test
+    fun actorInheritedMethodTakesTurn() {
+        // An inherited method with a body is overridden in the @actor class, so that a
+        // call to it is one turn rather than one per property its body reads.
+        assertGenerated(
+            temper = """
+                |export interface Named {
+                |  public get label(): String;
+                |  public shout(): String { "${'$'}{label}!" }
+                |}
+                |@actor export class Account(public owner: String) extends Named {
+                |  public get label(): String { owner }
+                |}
+            """,
+            cpp = """
+                |#include <my-test-library/something.hpp>
+                |namespace my_test_library {
+                |  std::string Named::get_label() const {
+                |    auto this_ = temper::core::borrow_this(this);
+                |    temper::core::pure_virtual();
+                |  }
+                |  std::string Named::shout() {
+                |    auto this_1 = temper::core::borrow_this(this);
+                |    return temper::core::cat(this_1->get_label(), "!");
+                |  }
+                |  std::string Account::get_label() const {
+                |    temper::core::ActorTurn turn_0(*this->actor_);
+                |    auto this_2 = temper::core::borrow_this(this);
+                |    return this_2->owner;
+                |  }
+                |  std::shared_ptr<Account> Account::make(std::string owner_18) {
+                |    std::shared_ptr<Account> result_1 = std::make_shared<Account>();
+                |    Account* this_7 = result_1.get();
+                |    temper::core::ActorTurn turn_2(*this_7->actor_);
+                |    this_7->owner = owner_18;
+                |    return result_1;
+                |  }
+                |  std::string Account::get_owner() const {
+                |    temper::core::ActorTurn turn_3(*this->actor_);
+                |    return this->owner;
+                |  }
+                |  std::string Account::shout() {
+                |    temper::core::ActorTurn turn_5(*this->actor_);
+                |    auto inp_4 = temper::core::borrow_this(this);
+                |    return inp_4->Named::shout();
+                |  }
+                |  void global_init_something() {
+                |    static bool initialized = false;
+                |    if (initialized) {
+                |      return;
+                |    }
+                |    initialized = true;
+                |  }
+                |}
+                |
+            """,
+            hpp = """
+                |#pragma once
+                |#include <temper-core/core.hpp>
+                |namespace my_test_library {
+                |  struct Named;
+                |  struct Account;
+                |  struct Named : virtual public temper::core::AnyValueBase {
+                |    virtual ~Named() {}
+                |    std::string virtual get_label() const;
+                |    std::string virtual shout();
+                |  };
+                |  struct Account : virtual public Named {
+                |    std::shared_ptr<temper::core::ActorState> actor_ = std::make_shared<temper::core::ActorState>();
+                |    std::string owner;
+                |    std::string virtual get_label() const;
+                |    static std::shared_ptr<Account> make(std::string);
+                |    std::string virtual get_owner() const;
+                |    std::string virtual shout();
+                |  };
+                |  void global_init_something();
+                |}
+                |
+            """,
+        )
+    }
+
+    @Test
     fun bubbles() {
         assertGenerated(
             temper = """
