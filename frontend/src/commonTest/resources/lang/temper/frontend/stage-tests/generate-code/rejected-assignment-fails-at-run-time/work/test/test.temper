@@ -1,0 +1,5 @@
+export let readingLabel(words: Int): String {
+  var seconds = words;
+  seconds = "slow";
+  "${seconds} seconds"
+}

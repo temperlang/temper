@@ -1,0 +1,7 @@
+@fn let `test//`.readingLabel;
+`test//`.readingLabel = (@stay fn readingLabel(words__0 /* aka words */: Int32) /* return__0 */: String {
+    var seconds__0;
+    seconds__0 = words__0;
+    error (IllegalAssignment);
+    return__0 = cat(do_call_toString(seconds__0), " seconds")
+})
