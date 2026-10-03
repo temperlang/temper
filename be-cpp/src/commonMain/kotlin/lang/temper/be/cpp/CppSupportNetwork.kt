@@ -137,7 +137,18 @@ internal object CppSupportNetwork : SupportNetwork {
         }
         BuiltinOperatorId.AdaptGeneratorFn -> Like.core("adapt_generator_fn")
         BuiltinOperatorId.SafeAdaptGeneratorFn -> Like.core("safe_adapt_generator_fn")
-        BuiltinOperatorId.Async -> Like.core("async_run")
+        BuiltinOperatorId.Async -> handle(builtinOperatorId) {
+            // An async block written inside an @actor member belongs to that actor:
+            // async_run_on runs each of its steps as a turn on it.
+            when (val self = translator.actorSelfName) {
+                null -> cpp.callExpr(cpp.name(TEMPER_CORE_NAMESPACE, "async_run"), values)
+                else -> cpp.callExpr(
+                    cpp.name(TEMPER_CORE_NAMESPACE, "async_run_on"),
+                    listOf(cpp.op("->", cpp.singleName(self), cpp.singleName(CppName(ACTOR_STATE_MEMBER)))) +
+                        values,
+                )
+            }
+        }
         null -> when (builtin.name) {
             pureVirtualBuiltinName.builtinKey -> Like.core("pure_virtual")
             // Coroutine→control-flow lowering for `await`: awakeUpon(promise, generator)
