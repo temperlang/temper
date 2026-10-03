@@ -11,9 +11,11 @@ import lang.temper.be.names.NameSelection
 import lang.temper.be.py.PyDottedIdentifier.Companion.dotted
 import lang.temper.be.py.helper.MypySpecifics
 import lang.temper.be.py.helper.PythonSpecifics
+import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.common.console
@@ -280,7 +282,21 @@ class PyBackend private constructor(
             tentativeOutputPathFor = {
                 pyPathForModuleLocation(it.loc as ModuleName, pyLibraryNames)
             },
-            withTentative = { injectSuperCallMethods(it) },
+            withTentative = { tentativeTmpL ->
+                injectSuperCallMethods(
+                    tentativeTmpL,
+                    configSuperCall = { type, method ->
+                        when {
+                            type.hasSplitSupers(method) -> SuperCallConfig(skipThis = false)
+                            // An inherited default body touches the actor's
+                            // state too, so it gets a member of its own that
+                            // calls up to it during a turn.
+                            type.isActor() -> SuperCallConfig(skipThis = false)
+                            else -> null
+                        }
+                    },
+                )
+            },
         )
     }
 
@@ -629,6 +645,9 @@ class PyBackend private constructor(
         val mimeType = MimeType("text", "python")
 
         const val exportName: String = "export"
+
+        /** The slot holding an `@actor` instance's `ActorLock`. */
+        const val ACTOR_SLOT = "_actor"
 
         // Also meets pytest defaults.
         // https://docs.pytest.org/en/7.1.x/example/pythoncollection.html

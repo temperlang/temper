@@ -20,5 +20,9 @@ class Box { public var v: Int = 0; }
 `@actor` on an interface, on anything that is not a class, or together with
 `@imu` or `@partialImu` is also a compiler error.
 
-No backend takes turns yet.  Until one does, an `@actor` class runs like an
-undecorated class.
+The Python backends (`py` and `mypyc`) take turns: host code may call into an
+`@actor` instance from several threads, calls run one at a time, a call that
+would close a cycle of actors waiting on each other across threads panics
+with "actor call cycle" instead of deadlocking, and each step of an `async`
+block started during a turn is a turn of that actor.  On the other backends
+an `@actor` class still runs like an undecorated class.

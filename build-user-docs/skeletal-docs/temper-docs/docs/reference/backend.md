@@ -559,7 +559,7 @@ new tests have been inserted into this list based on estimated fit.
 1. TypesMap
 1. ClassesStaticProperties, ClassesStaticPropertiesScope
 1. ControlFlowActorRun, ControlFlowAsync, ControlFlowAsyncOneAtATime,
-   ControlFlowAsyncCompleteOrder
+   ControlFlowAsyncCompleteOrder, ControlFlowActorTurns
 1. TestingAsserts (here down requiring `std`)
 1. TypesDate
 1. TypesJsonSyntaxTree

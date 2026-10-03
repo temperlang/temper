@@ -20,6 +20,7 @@
 | [ClassesStaticProperties][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ControlFlowActorTurns][] | ✅ | ❌<sup>[198][]</sup> | ❌<sup>[516][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowAsyncCompleteOrder][] | ✅ | ❌<sup>[198][]</sup> | ❌<sup>[516][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ❌<sup>[519][]</sup> |
 | [ControlFlowAsyncOneAtATime][] | ✅ | ❌<sup>[198][]</sup> | ❌<sup>[516][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
@@ -96,6 +97,7 @@
 [ClassesStaticProperties]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties/static-properties.temper.md
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
+[ControlFlowActorTurns]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-turns/actor-turns.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
 [ControlFlowAsyncCompleteOrder]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-complete-order/async-complete-order.temper.md
 [ControlFlowAsyncOneAtATime]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-one-at-a-time/async-one-at-a-time.temper.md

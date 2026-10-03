@@ -901,6 +901,8 @@ val AdaptGeneratorFactory = PySeparateCode(
     RUNTIME,
     BuiltinOperatorId.Async,
 )
+val ActorLockType = PySeparateCode("ActorLock", RUNTIME)
+val ActorSteps = PySeparateCode("actor_steps", RUNTIME)
 val ConcurrentFuturesFuture = PyConnectedType("Future", CONCURRENT_FUTURES)
 val PromiseBuilderBreakPromise = PySeparateCode("break_promise", RUNTIME)
 val PromiseBuilderComplete = PySeparateCode("complete_promise", RUNTIME)

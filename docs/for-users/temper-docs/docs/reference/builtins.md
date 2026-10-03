@@ -3301,8 +3301,10 @@ The rules are the same on every backend:
 
     The compiler checks which values cross the boundary and where
     `@actor` may appear.  The other rules are for backends to implement,
-    in separate changes, and no backend in this repository does yet:
-    today an `@actor` class runs exactly like an undecorated one.
+    in separate changes.  The Python backends (`py` and `mypyc`) keep
+    them, including for host code that calls in from several threads.
+    On the other backends an `@actor` class still runs exactly like an
+    undecorated one.
 
 <!-- /snippet: builtin/@actor -->
 

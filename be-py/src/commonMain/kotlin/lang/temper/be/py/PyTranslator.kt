@@ -88,6 +88,43 @@ class PyTranslator(
 
     private val generatorDoAwaitNameStack = mutableListOf<PyIdentifierName>()
 
+    /**
+     * While translating an instance member of an `@actor` class, the name of
+     * `this` in that member.  Functions declared inside it run as turns of
+     * the same actor, because they can outlive the call that made them.
+     */
+    private var actorThis: TmpL.Id? = null
+
+    private inline fun <T> withActorThis(thisId: TmpL.Id?, action: () -> T): T {
+        val old = actorThis
+        actorThis = thisId
+        try {
+            return action()
+        } finally {
+            actorThis = old
+        }
+    }
+
+    /**
+     * Wraps [stmts] in `with <this>._actor:` so that they run as one turn of
+     * the actor.  A docstring and `global`/`nonlocal` declarations stay ahead
+     * of the `with`.
+     */
+    private fun actorTurn(pos: Position, thisId: TmpL.Id, stmts: List<Py.Stmt>): List<Py.Stmt> {
+        val nLeading = stmts.indexOfFirst { stmt ->
+            !(
+                stmt is Py.Global || stmt is Py.Nonlocal ||
+                    (stmt is Py.ExprStmt && stmt.value is Py.Str)
+                )
+        }.let { if (it < 0) stmts.size else it }
+        val turn = stmts.subList(nLeading, stmts.size).ifEmpty { listOf(Py.Pass(pos)) }
+        return stmts.subList(0, nLeading) + Py.With(
+            pos,
+            items = listOf(Py.WithItem(pos, name(thisId).attribute(PyBackend.ACTOR_SLOT, pos))),
+            body = turn,
+        )
+    }
+
     /** Get a name that is backed by support code. */
     fun request(code: PySupportCode): OutName {
         support.add(code)
@@ -302,6 +339,7 @@ class PyTranslator(
 
         var needsGeneric = true
         val needsProto = t.kind == TmpL.TypeDeclarationKind.Interface
+        val isActor = t.isActor()
         t.superTypes.forEach { nominalType ->
             if (nominalType.params.isNotEmpty()) {
                 needsGeneric = false
@@ -383,12 +421,21 @@ class PyTranslator(
                 ignoreBody -> null
                 else -> s.body
             }
-            val stmts = body?.let { translate(it, renames) }
+            // Instance members of an @actor class run as turns.  Static ones
+            // have no `this`, so they touch no actor's state.
+            val actorThisId = if (isActor) s.parameters.thisName else null
+            if (actorThisId != null && s.mayYield) {
+                // A generator body would hold the turn across each `yield`.
+                TODO("@actor ${t.name.name}: generator method ${s.name.name} at ${s.pos}")
+            }
+            val stmts = withActorThis(actorThisId) { body?.let { translate(it, renames) } }
                 // Using @abstractmethod requires ABCMeta, which we only do for interfaces.
                 // TODO If for an interface, use @abstractmethod outside here?
                 ?: listOf(Py.Raise(s.pos, undefinedError?.let { it() } ?: request(NotImplementedError).asPyName(s.pos)))
             if (stmts.isEmpty()) {
                 Py.Pass(s.pos)
+            } else if (actorThisId != null && body != null) {
+                addAll(actorTurn(s.pos, actorThisId, stmts))
             } else {
                 addAll(stmts)
             }
@@ -404,6 +451,17 @@ class PyTranslator(
         }
 
         if (t.kind != TmpL.TypeDeclarationKind.Interface) {
+            if (isActor) {
+                slots.add(Py.Str(t.pos, PyBackend.ACTOR_SLOT))
+                body.add(
+                    Py.AnnAssign(
+                        t.pos,
+                        pyName(t.pos, PyBackend.ACTOR_SLOT),
+                        request(ActorLockType).asRName(t.pos),
+                        null,
+                    ),
+                )
+            }
             t.members.forEach members@{ member ->
                 if (member is TmpL.Property) {
                     val propertyType = translateAnnotation(member.type)
@@ -615,12 +673,30 @@ class PyTranslator(
                 is TmpL.Constructor -> {
                     constructors.add(
                         translateFunctionDef(s, stmtList) { decs, args, renames ->
+                            val actorThisId = if (isActor) s.parameters.thisName else null
+                            val ctorBody = withActorThis(actorThisId) { translate(s.body, renames) }
                             Py.FunctionDef(
                                 pos = t.pos,
                                 decoratorList = decs,
                                 name = pyIdent(s.pos, "__init__"),
                                 args = args,
-                                body = translate(s.body, renames),
+                                body = when (actorThisId) {
+                                    null -> ctorBody
+                                    // The lock exists before anything else
+                                    // can see the instance, and the body is
+                                    // a turn, in case it lets `this` escape.
+                                    else -> listOf(
+                                        Py.Assign(
+                                            s.pos,
+                                            listOf(name(actorThisId).attribute(PyBackend.ACTOR_SLOT, s.pos)),
+                                            Py.Call(
+                                                s.pos,
+                                                request(ActorLockType).asRName(s.pos),
+                                                listOf(Py.CallArg(s.pos, value = Py.Str(s.pos, className.id.text))),
+                                            ),
+                                        ),
+                                    ) + actorTurn(s.pos, actorThisId, ctorBody)
+                                },
                                 returns = PyConstant.None.at(s.pos),
                             )
                         },
@@ -1052,17 +1128,45 @@ class PyTranslator(
     }
 
     private fun translateFunction(func: TmpL.FunctionDeclaration): List<Py.Stmt> = buildList {
+        // A function made during an actor's turn may be called after the
+        // turn ends, from anywhere it was passed, so its body is a turn too.
+        // Re-entry makes that free when it is called during the turn.
+        val actorThisId = actorThis
         translateFunctionDef(func, this) { decs, args, renames ->
             val isConnected = func.metadata.any { it.key.symbol == connectedSymbol } && module?.isStdLib != true
+            val body = when {
+                isConnected -> translateConnectedBody(renames, func, args)
+                // TODO We also need to have renamed globals for rare cases of conflict with named args.
+                else -> translateFunctionBody(renames, func)
+            }
             Py.FunctionDef(
                 pos = func.pos,
-                decoratorList = decs,
+                decoratorList = when {
+                    // A coroutine cannot hold a turn across `await`, so each
+                    // of its steps takes one instead.
+                    actorThisId != null && func.mayYield -> {
+                        val decPos = func.pos.leftEdge
+                        listOf(
+                            Py.Decorator(
+                                decPos,
+                                name = listOf(request(ActorSteps).asPyId(decPos)),
+                                args = listOf(
+                                    Py.CallArg(
+                                        decPos,
+                                        value = name(actorThisId).attribute(PyBackend.ACTOR_SLOT, decPos),
+                                    ),
+                                ),
+                                called = true,
+                            ),
+                        ) + decs
+                    }
+                    else -> decs
+                },
                 name = ident(func.name),
                 args = args,
                 body = when {
-                    isConnected -> translateConnectedBody(renames, func, args)
-                    // TODO We also need to have renamed globals for rare cases of conflict with named args.
-                    else -> translateFunctionBody(renames, func)
+                    actorThisId != null && !func.mayYield -> actorTurn(func.pos, actorThisId, body)
+                    else -> body
                 },
                 returns = translateAnnotation(func.returnType),
             )
