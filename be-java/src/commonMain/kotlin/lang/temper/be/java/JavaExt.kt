@@ -28,6 +28,7 @@ import lang.temper.name.ModuleName
 import lang.temper.name.Name
 import lang.temper.name.OutName
 import lang.temper.type2.TypeContext2
+import lang.temper.value.actorSymbol
 import kotlin.reflect.KProperty
 import lang.temper.be.java.Java as J
 
@@ -539,3 +540,14 @@ fun <A, T> receiver(initializer: A.() -> T): Over<A, T> = Over(initializer)
 val <T> Iterable<T>.lastIndex get() = count() - 1
 
 val testModuleName = ModuleName(filePath("test.temper"), 0, isPreface = true)
+
+/**
+ * The private field of an `@actor` class that holds its [temperActor].
+ * Names from Temper only get a `$` as an escape followed by hex digits,
+ * so this cannot collide with a member, like `local$1` cannot.
+ */
+internal fun actorFieldName(pos: Position) = J.Identifier(pos, ACTOR_FIELD)
+
+/** Whether this is an `@actor` class, whose instances each take turns. */
+internal val TmpL.TypeDeclaration.isActor: Boolean
+    get() = kind == TmpL.TypeDeclarationKind.Class && metadata.any { it.key.symbol == actorSymbol }

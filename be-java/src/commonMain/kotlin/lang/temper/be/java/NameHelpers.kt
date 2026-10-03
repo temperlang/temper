@@ -13,6 +13,9 @@ internal const val CAPTURE_SUFFIX = $$"$capture"
 internal const val REST_SUFFIX = $$"$varargs"
 internal const val IGNORED_PREFIX = "ignored$"
 internal const val LOCAL_VAR_PREFIX = "local$"
+
+/** The field holding an `@actor` instance's `temper.core.Actor`. */
+internal const val ACTOR_FIELD = "actor$"
 internal const val LOCAL_CLASS_PREFIX = "Local_"
 
 /** Convert a dashed identifier into a list of snake case identifiers for use in package identifiers. */

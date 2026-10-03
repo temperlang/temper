@@ -231,6 +231,9 @@ val temperBeginTopLevel = temperCore.qualifyKnownSafe("beginTopLevel")
 val temperEndTopLevel = temperCore.qualifyKnownSafe("endTopLevel")
 val temperAwakeUpon = temperCore.qualifyKnownSafe("awakeUpon")
 
+/** The turn of one instance of an `@actor` class. */
+val temperActor = temperPkg.qualifyKnownSafe("Actor")
+
 // Module internal names
 val temperRegexPkg = temperStd.qualifyKnownSafe("regex")
 val temperRegexCore = temperRegexPkg.qualifyKnownSafe("Core")

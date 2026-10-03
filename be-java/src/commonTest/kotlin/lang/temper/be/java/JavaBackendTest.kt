@@ -1042,6 +1042,218 @@ class JavaBackendTest {
     )
 
     @Test
+    fun actorTakesTurns() = assertGeneratedJavaRaw(
+        // Every body that runs as the instance enters its actor: the
+        // constructor, getters and setters, the canonical method body (not its
+        // defaulting overload), an override of the inherited default method,
+        // and a closure and async block step that use `this`.  Not the static
+        // method, nor the closure that only calls a method.  Fields go private.
+        input = """
+            |export interface Bumpable {
+            |  bump(): Void;
+            |  bumpTwice(): Void { bump(); bump(); }
+            |}
+            |@actor export class Counter extends Bumpable {
+            |  private var n: Int = 0;
+            |  public var label: String = "c";
+            |  public bump(): Void { n += 1; }
+            |  public add(k: Int, times: Int = 1): Int { n += k * times; n }
+            |  public later(): Void {
+            |    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |      n += 100;
+            |    }
+            |  }
+            |  private apply(f: fn (Int): Int, x: Int): Int { f(x) }
+            |  public viaClosure(k: Int): Int { apply(fn (x: Int): Int { add(x) }, k) }
+            |  public viaAlias(): String {
+            |    let me = this;
+            |    let g(): String { me.label }
+            |    g()
+            |  }
+            |  public static make(): Counter { new Counter() }
+            |}
+        """.trimMargin(),
+        want = """
+            |"pom.xml": "__DO_NOT_CARE__",
+            |"src": {
+            |    "main": {
+            |        "java": {
+            |            "my_test_library": {
+            |                "test": {
+            |                    "TestGlobal.java": "__DO_NOT_CARE__",
+            |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
+            |                    "TestMain.java": "__DO_NOT_CARE__",
+            |                    "TestMain.java.map": "__DO_NOT_CARE__",
+            |                    "Bumpable.java": "__DO_NOT_CARE__",
+            |                    "Bumpable.java.map": "__DO_NOT_CARE__",
+            |                    "Counter.java": {
+            |                        "content":
+            |                        ```
+            |                        package my_test_library.test;
+            |                        import java.util.Optional;
+            |                        import temper.core.Generator.DoneResult;
+            |                        import java.util.function.Supplier;
+            |                        import temper.core.Core;
+            |                        import temper.core.Generator;
+            |                        import java.util.function.IntUnaryOperator;
+            |                        import temper.core.Actor;
+            |                        import temper.core.Generator.Result;
+            |                        import temper.core.Nullable;
+            |                        import java.util.function.Function;
+            |                        public final class Counter implements Bumpable {
+            |                            private final Actor actor$ = new temper.core.Actor();
+            |                            private int n;
+            |                            private String label;
+            |                            public void bump() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    int t_55 = this.n + 1;
+            |                                    this.n = t_55;
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public int add(int k__0, @Nullable Integer times__0) {
+            |                                actor$.enter();
+            |                                try {
+            |                                    int times__1;
+            |                                    if (times__0 == null) {
+            |                                        times__1 = 1;
+            |                                    } else {
+            |                                        times__1 = times__0.intValue();
+            |                                    }
+            |                                    int t_54 = this.n + k__0 * times__1;
+            |                                    this.n = t_54;
+            |                                    return this.n;
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public int add(int k__0) {
+            |                                return add(k__0, null);
+            |                            }
+            |                            public void later() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    Supplier<Generator<Optional<? super Object>>> fn__0 = () -> {
+            |                                        actor$.enter();
+            |                                        try {
+            |                                            class Local_1 {
+            |                                                int caseIndex_73 = 0;
+            |                                            }
+            |                                            final Local_1 local$1 = new Local_1();
+            |                                            Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine_76 = generator_72 -> {
+            |                                                actor$.enter();
+            |                                                try {
+            |                                                    int caseIndexLocal_75 = local$1.caseIndex_73;
+            |                                                    local$1.caseIndex_73 = -1;
+            |                                                    if (caseIndexLocal_75 == 0) {
+            |                                                        int t_53 = this.n + 100;
+            |                                                        this.n = t_53;
+            |                                                        return DoneResult.get();
+            |                                                    } else {
+            |                                                        return DoneResult.get();
+            |                                                    }
+            |                                                } finally {
+            |                                                    actor$.exit();
+            |                                                }
+            |                                            };
+            |                                            return Core.safeAdaptGeneratorFn(convertedCoroutine_76 :: apply);
+            |                                        } finally {
+            |                                            actor$.exit();
+            |                                        }
+            |                                    };
+            |                                    Core.runAsync(fn__0);
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            int apply(IntUnaryOperator f__0, int x__0) {
+            |                                actor$.enter();
+            |                                try {
+            |                                    return f__0.applyAsInt(x__0);
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public int viaClosure(int k__1) {
+            |                                actor$.enter();
+            |                                try {
+            |                                    IntUnaryOperator fn__1 = x__1 -> {
+            |                                        actor$.enter();
+            |                                        try {
+            |                                            return this.add(x__1);
+            |                                        } finally {
+            |                                            actor$.exit();
+            |                                        }
+            |                                    };
+            |                                    return this.apply(fn__1, k__1);
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public String viaAlias() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    Counter me__0 = this;
+            |                                    Supplier<String> g__0 = () -> me__0.getLabel();
+            |                                    return g__0.get();
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public static Counter make() {
+            |                                return new Counter();
+            |                            }
+            |                            public Counter() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    this.n = 0;
+            |                                    this.label = "c";
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public String getLabel() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    return this.label;
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public void setLabel(String newLabel__0) {
+            |                                actor$.enter();
+            |                                try {
+            |                                    this.label = newLabel__0;
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                            public void bumpTwice() {
+            |                                actor$.enter();
+            |                                try {
+            |                                    Bumpable.super.bumpTwice();
+            |                                } finally {
+            |                                    actor$.exit();
+            |                                }
+            |                            }
+            |                        }
+            |
+            |                        ```
+            |                    },
+            |                    "Counter.java.map": "__DO_NOT_CARE__"
+            |                },
+            |                "MyTestLibraryGlobal.java": "__DO_NOT_CARE__",
+            |                "MyTestLibraryMain.java": "__DO_NOT_CARE__",
+            |            }
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun coroutineConversion() = assertGeneratedJavaRaw(
         """
             |let f(factory: fn (): SafeGenerator<Empty>): Void {
