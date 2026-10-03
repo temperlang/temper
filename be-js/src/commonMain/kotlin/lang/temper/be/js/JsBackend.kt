@@ -18,6 +18,7 @@ import lang.temper.common.structure.PropertySink
 import lang.temper.common.structure.StructureParser
 import lang.temper.common.subListToEnd
 import lang.temper.format.TokenSink
+import lang.temper.frontend.BindingsInjector
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
 import lang.temper.library.LibraryConfiguration
@@ -37,13 +38,13 @@ import lang.temper.log.UNIX_FILE_SEGMENT_SEPARATOR
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
+import lang.temper.log.resolveDir
 import lang.temper.log.unknownPos
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
-import lang.temper.name.Symbol
 import lang.temper.value.DependencyCategory
 import lang.temper.value.Helpful
 import lang.temper.value.OccasionallyHelpful
@@ -142,7 +143,7 @@ class JsBackend private constructor(
             // The name and version are required for a minimal file. The test script is for executing generated tests.
             JsonValueBuilder.build {
                 obj {
-                    key("name") { value(libraryConfiguration.jsLibraryName()) }
+                    key("name") { value(JsLibraryConfig(libraryConfiguration).name()) }
                     libraryConfiguration.version()?.let { key("version") { value(it) } }
                     // TODO If we change authors to a list, then use "contributors" array instead.
                     libraryConfiguration.authors()?.let { key("author") { value(it) } }
@@ -197,7 +198,7 @@ class JsBackend private constructor(
 
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         val jsNames = JsNames()
-        val jsLibraryNames = libraryConfigurations.byLibraryName.mapValues { it.value.jsLibraryName() }
+        val jsLibraryNames = libraryConfigurations.byLibraryName.mapValues { JsLibraryConfig(it.value).name() }
 
         // Prep for test identification.
         val testPaths = mutableSetOf<FilePath>()
@@ -257,13 +258,17 @@ class JsBackend private constructor(
                 }
             // Update dependencies.
             jsDependencies = jsDependencies.copy(
-                runtimeDependencies = jsDependencies.runtimeDependencies + dependencyNames.map { depName ->
-                    // Our build process should provide library configs for all imports.
-                    JsDependency(
-                        jsLibraryNames.getValue(depName),
-                        libraryConfigurations.byLibraryName.getValue(depName).version() ?: "*",
-                        depName,
-                    )
+                runtimeDependencies = buildList {
+                    addAll(jsDependencies.runtimeDependencies)
+                    addAll(JsLibraryConfig(libraryConfigurations.currentLibraryConfiguration).dependencies())
+                    for (depName in dependencyNames) {
+                        // Our build process should provide library configs for all imports.
+                        JsDependency(
+                            jsLibraryNames.getValue(depName),
+                            libraryConfigurations.byLibraryName.getValue(depName).version() ?: "*",
+                            depName,
+                        ).also { add(it) }
+                    }
                 },
             )
             jsDependencies = jsDependencies.withDependency(buildTemperCoreDependency())
@@ -337,9 +342,6 @@ class JsBackend private constructor(
         /** The file extension for internal-use-only output files. */
         const val INTERNAL_EXTENSION = ".internal$EXTENSION"
 
-        /** Config files may export a name with this text to specify the JS library name */
-        val jsNameConfigKey = Symbol("jsName")
-
         const val INDEX_NAME = "index.js"
     }
 
@@ -386,8 +388,10 @@ class JsBackend private constructor(
             ),
         )
 
+        private val baseDirPath = dirPath("lang", "temper", "be", "js")
+
         override val coreLibraryResources = declareResources(
-            dirPath("lang", "temper", "be", "js", "temper-core"),
+            baseDirPath.resolveDir("temper-core"),
             filePath("package.json"),
             filePath("tsconfig.json"),
             filePath(INDEX_NAME),
@@ -408,7 +412,16 @@ class JsBackend private constructor(
             filePath("string.js"),
         )
 
+        private val stdConfigResource = declareResources(
+            baseDirPath.resolveDir("std"),
+            filePath("config.temper.md"),
+        ).first()
+
         override val specifics: NodeSpecifics get() = NodeSpecifics
+
+        override val configBindingsInjector: BindingsInjector = JsConfigInjector
+
+        override fun loadStdConfigSource(): String = stdConfigResource.load()
 
         /**
          * A label used to identify the language, for example in highlighted Markdown code blocks.
@@ -453,7 +466,7 @@ internal fun walkDepthFirst(t: Js.Tree, action: (Js.Tree) -> VisitCue): VisitCue
     return VisitCue.Continue
 }
 
-private data class JsDependency(
+internal data class JsDependency(
     val name: String,
     val versionString: String,
     val temperLibraryName: DashedIdentifier?,
@@ -472,7 +485,7 @@ private fun JsDependencies.withDependency(dep: JsDependency): JsDependencies =
 private fun JsDependencies.withTestDependency(dep: JsDependency): JsDependencies =
     JsDependencies(this.runtimeDependencies, this.testDependencies + dep)
 
-fun LibraryConfiguration.jsLibraryName() = backendLibraryName(JsBackend.jsNameConfigKey)
+fun LibraryConfiguration.jsLibraryName() = backendLibraryName(JsConfigKeys.nameKey)
 
 private fun PropertySink.buildDependencies(key: String, deps: List<JsDependency>) {
     maybeBuildObj(key, deps.sortedBy { it.name }.associate { it.name to it.versionString })

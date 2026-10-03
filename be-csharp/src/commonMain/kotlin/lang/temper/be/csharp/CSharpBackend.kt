@@ -12,6 +12,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.fs.KCharsets
 import lang.temper.fs.ResourceDescriptor
@@ -29,13 +30,13 @@ import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
+import lang.temper.log.resolveDir
 import lang.temper.log.resolveFile
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.ModuleName
-import lang.temper.name.Symbol
 import lang.temper.name.rootModuleName
 
 /**
@@ -161,7 +162,6 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             this@CSharpBackend.names = names
             val libraryConfig = finished.libraryConfiguration
             val libraryName = libraryConfig.libraryName
-            val isStd = libraryName.text == STANDARD_LIBRARY_NAME
             // Translate.
             val moduleNameToGlobalClassName = mutableMapOf<ModuleName, QualifiedName>()
             val dependencies = mutableSetOf<String>()
@@ -197,6 +197,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 ).also { add(it) }
             }
             // Proj.
+            val csharpConfig = CSharpLibraryConfig(libraryConfig)
             val rootNamespaceByName = names.rootNamespaces.associate { it.first.libraryName.text to it.second }
             val proj = CsProj(
                 authors = libraryConfig.authors(),
@@ -204,10 +205,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 internalsVisibleTo = listOf("${names.rootNamespace}$TEST_SUFFIX"),
                 packageLicenseExpression = libraryConfig.license(),
                 packageProjectUrl = libraryConfig.repository(),
-                packageReferences = when {
-                    isStd -> listOf(PackageReference.microsoftNetTestSdk, PackageReference.msTestTestFramework)
-                    else -> listOf()
-                },
+                packageReferences = csharpConfig.dependencies(),
                 projectReferences = buildList {
                     // Use relative references because they'll be transformed to global ones when packed for nuget.
                     // TODO Use direct global references if we know something is published?
@@ -273,7 +271,7 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                     )
                 }
             }
-            if (isStd) {
+            if (libraryName.text == STANDARD_LIBRARY_NAME) {
                 for (resource in stdLibraryResources) {
                     add(
                         MetadataFileSpecification(
@@ -361,9 +359,11 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
         override val specifics: RunnerSpecifics
             get() = CSharpSpecifics
 
+        private val baseDirPath = dirPath("lang", "temper", "be", "csharp")
+
         override val coreLibraryResources: List<ResourceDescriptor> =
             declareResources(
-                base = dirPath("lang", "temper", "be", "csharp", "temper-core"),
+                base = baseDirPath.resolveDir("temper-core"),
                 filePath("Async.cs"),
                 filePath("Core.cs"),
                 filePath("Float64.cs"),
@@ -375,6 +375,15 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
                 filePath("StringUtil.cs"),
                 filePath("TemperLang.Core.csproj"),
             )
+
+        private val stdConfigResource = declareResources(
+            baseDirPath.resolveDir("std"),
+            filePath("config.temper.md"),
+        ).first()
+
+        override val configBindingsInjector: BindingsInjector = CSharpConfigInjector
+
+        override fun loadStdConfigSource(): String = stdConfigResource.load()
 
         override fun make(setup: BackendSetup<CSharpBackend>): Backend<CSharpBackend> = CSharpBackend(setup)
     }
@@ -394,9 +403,6 @@ class CSharpMetadata(
 )
 
 const val DEFAULT_CSPROJ_BASENAME = "TemperBuilt"
-const val STD_ROOT_NAMESPACE = "TemperLang.Std"
-
-internal val csharpRootNamespaceKey = Symbol("csharpRootNamespace")
 
 private val mimeTypes = mapOf(
     CSharpBackend.FILE_EXTENSION to CSharpBackend.mimeType,
@@ -422,9 +428,13 @@ data class PackageReference(
     val version: String,
 ) {
     companion object {
+        // These two are just needed for actual unit tests for Temper-built libraries.
         val junitXmlTestLogger = PackageReference(name = "JunitXml.TestLogger", version = "3.0.134")
-        val microsoftNetTestSdk = PackageReference(name = "Microsoft.NET.Test.Sdk", version = "17.8.0")
         val msTestTestAdapter = PackageReference(name = "MSTest.TestAdapter", version = "3.1.1")
+
+        // The two below are also manually listed in be-csharp std config.
+        // Edits here may need done there also!
+        val microsoftNetTestSdk = PackageReference(name = "Microsoft.NET.Test.Sdk", version = "17.8.0")
         val msTestTestFramework = PackageReference(name = "MSTest.TestFramework", version = "3.1.1")
     }
 }
