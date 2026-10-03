@@ -356,7 +356,7 @@ class RustBackendTest {
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 2;
                 |                        }
-                |                        temper_core::read_locked( & self.awaited___0).clone().unwrap().on_ready(std::sync::Arc::new(move | |{
+                |                        temper_core::read_locked( & self.awaited___0).clone().unwrap().on_ready(crate::config().runner(), std::sync::Arc::new(move | |{
                 |                                    generator___0.clone().next();
                 |                        }));
                 |                        return Some(().clone());

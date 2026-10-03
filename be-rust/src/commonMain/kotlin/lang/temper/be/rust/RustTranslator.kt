@@ -1745,7 +1745,10 @@ class RustTranslator(
             params = listOf(),
             value = Rust.Block(pos, statements = listOf(Rust.ExprStatement(pos, args[1].methodCall("next")))),
         ).wrapArc()
-        return args[0].methodCall("on_ready", listOf(closure))
+        // The promise queues the closure on the runner rather than calling it, so every awaiter resumes, in order,
+        // after the code that resolved the promise has run on.
+        val runner = "crate::config".toId(pos).call().methodCall("runner")
+        return args[0].methodCall("on_ready", listOf(runner, closure))
     }
 
     private fun translateCallExpression(call: TmpL.CallExpression): Rust.Expr {
