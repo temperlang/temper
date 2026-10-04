@@ -96,13 +96,15 @@ internal class BecauseIllegalAssignment(
     val leftType: StaticType,
     val rightType: StaticType,
 ) : TypeReasonElement {
+    val logEntry: LogEntry get() = LogEntry(
+        level = Log.Error,
+        template = MessageTemplate.IllegalAssignment,
+        pos = pos,
+        values = listOf(leftType, rightType),
+    )
+
     override fun logTo(logSink: LogSink) {
-        logSink.log(
-            level = Log.Error,
-            template = MessageTemplate.IllegalAssignment,
-            pos = pos,
-            values = listOf(leftType, rightType),
-        )
+        logEntry.logTo(logSink)
     }
 }
 

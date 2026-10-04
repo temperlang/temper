@@ -10,11 +10,15 @@ import lang.temper.common.Log
 import lang.temper.common.ignore
 import lang.temper.common.padTo
 import lang.temper.frontend.Module
+import lang.temper.frontend.replaceWithError
+import lang.temper.frontend.syntax.isAssignment
+import lang.temper.frontend.typestage.BecauseIllegalAssignment
 import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
 import lang.temper.interp.New
 import lang.temper.interp.forEachActual
+import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
@@ -95,6 +99,16 @@ internal class TypeChecker(
     private val typeContext2 = TypeContext2()
     private val voidReturnDeclNames = mutableSetOf<TemperName>()
 
+    /**
+     * Assignments that were rejected, each with the first diagnostic reported for it.
+     * They are replaced, after the whole tree is checked, with a call to `error` carrying that
+     * diagnostic, as [UseBeforeInit][lang.temper.frontend.UseBeforeInit] does for reads of names
+     * that might not be initialized.
+     * Left alone, a backend translates a rejected assignment as written, so the translated
+     * code stores a value of the wrong type and carries on.
+     */
+    private val rejectedAssignments = mutableMapOf<CallTree, LogEntry>()
+
     fun check(root: BlockTree) {
         // First, make sure we track which things actually can be void.
         trackVoidReturnDeclNames(root)
@@ -118,7 +132,13 @@ internal class TypeChecker(
             }
             // Check after going deeper.
             t.typeInferences?.explanations?.forEach { explanation ->
-                explanation.logTo(logSink)
+                if (explanation is BecauseIllegalAssignment && t is CallTree && isAssignment(t)) {
+                    val problem = explanation.logEntry
+                    problem.logTo(logSink)
+                    rejectedAssignments.putIfAbsent(t, problem)
+                } else {
+                    explanation.logTo(logSink)
+                }
             }
             when (t) {
                 is BlockTree -> checkBlock(t)
@@ -133,6 +153,9 @@ internal class TypeChecker(
             }
         }
         dig(root)
+        for ((assignment, problem) in rejectedAssignments) {
+            assignment.incoming?.replaceWithError(problem)
+        }
     }
 
     /**
@@ -357,7 +380,9 @@ internal class TypeChecker(
         val rightType = rightTree.typeInferences?.type?.let { excludeBubble(it) }
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
-        checkSubType(t, leftType, rightType)
+        checkSubType(t, leftType, rightType)?.let { problem ->
+            rejectedAssignments.putIfAbsent(t, problem)
+        }
         // And make sure we don't use void as a value. Focus on actual void, not just void-like for now.
         if (rightType?.isVoid == true) {
             // We can assign voids only to simple names that are temporaries or appropriate return decls.
@@ -372,15 +397,19 @@ internal class TypeChecker(
         }
     }
 
-    private fun checkSubType(src: Positioned, leftType: StaticType?, rightType: StaticType?) {
+    /** Logs and returns a problem if [rightType] is known not to be a subtype of [leftType]. */
+    private fun checkSubType(src: Positioned, leftType: StaticType?, rightType: StaticType?): LogEntry? {
         if (leftType != null && rightType != null && !typeContext.isSubType(rightType, leftType)) {
-            logSink.log(
+            val problem = LogEntry(
                 level = Log.Error,
                 template = MessageTemplate.ExpectedSubType,
                 pos = src.pos,
                 values = listOf(leftType, rightType),
             )
+            problem.logTo(logSink)
+            return problem
         }
+        return null
     }
 
     private fun checkSetp(t: CallTree) {
