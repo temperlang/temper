@@ -1461,10 +1461,7 @@ class JavaBackendTest {
             |                                      {
             |                                      local$1.awaited_13 = p__0;
             |                                      local$1.caseIndex_15 = 2;
-            |                                      local$1.awaited_13.handle((ignored$1, ignored$2) -> {
-            |                                              generator_14.get();
-            |                                              return null;
-            |                                      });
+            |                                      Core.awakeUpon(local$1.awaited_13, generator_14);
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
@@ -1472,7 +1469,7 @@ class JavaBackendTest {
             |                                      try {
             |                                          local$1.t_7 = Core.getPromiseResult(local$1.awaited_13);
             |                                          local$1.caseIndex_15 = 4;
-            |                                      } catch (RuntimeException ignored$3) {
+            |                                      } catch (RuntimeException ignored$1) {
             |                                          local$1.caseIndex_15 = 3;
             |                                      }
             |                                      break;
@@ -1540,8 +1537,8 @@ class JavaBackendTest {
             |            "content":
             |              ```
             |              package my_test_library.test;
-            |              import java.util.Optional;
             |              import temper.core.Core;
+            |              import java.util.Optional;
             |              import java.util.concurrent.CompletableFuture;
             |              import temper.core.Generator.DoneResult;
             |              import temper.core.Generator;
@@ -1573,10 +1570,7 @@ class JavaBackendTest {
             |                                      {
             |                                      local$1.awaited_7 = p__0;
             |                                      local$1.caseIndex_9 = 2;
-            |                                      local$1.awaited_7.handle((ignored$1, ignored$2) -> {
-            |                                              generator_8.get();
-            |                                              return null;
-            |                                      });
+            |                                      Core.awakeUpon(local$1.awaited_7, generator_8);
             |                                      return new ValueResult<>(Optional.empty());
             |                                  }
             |                                  case 2:
@@ -1584,7 +1578,7 @@ class JavaBackendTest {
             |                                      try {
             |                                          Core.getPromiseResult(local$1.awaited_7);
             |                                          local$1.caseIndex_9 = 4;
-            |                                      } catch (RuntimeException ignored$3) {
+            |                                      } catch (RuntimeException ignored$1) {
             |                                          local$1.caseIndex_9 = 3;
             |                                      }
             |                                      break;
@@ -1788,7 +1782,12 @@ class JavaBackendTest {
             |                  }
             |                  public static void main(String[] args) throws ClassNotFoundException {
             |                      Core.initSimpleLogging();
-            |                      Class.forName("my_test_library.test.TestGlobal");
+            |                      Core.beginTopLevel();
+            |                      try {
+            |                          Class.forName("my_test_library.test.TestGlobal");
+            |                      } finally {
+            |                          Core.endTopLevel();
+            |                      }
             |                      Core.waitUntilTasksComplete();
             |                  }
             |              }
