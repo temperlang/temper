@@ -10,6 +10,7 @@ import lang.temper.frontend.CleanupTemporaries
 import lang.temper.frontend.Module
 import lang.temper.frontend.RttiCallSimplification
 import lang.temper.frontend.StageOutputs
+import lang.temper.frontend.StagingFlags
 import lang.temper.frontend.Weaver
 import lang.temper.frontend.flipDeclaredNames
 import lang.temper.frontend.interpretiveDanceStage
@@ -31,6 +32,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.LinearFlow
 import lang.temper.value.RightNameLeaf
+import lang.temper.value.TBoolean
 import lang.temper.value.TString
 import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
@@ -128,6 +130,14 @@ class GenerateCodeStage(
 
         UnicodeScalarChecker(module).check(root)
         ImuChecker(logSink).check(root)
+
+        // Documentation snippets may show `await` where a library could not,
+        // as the REPL does, so leave them for backends' idiomatic fallbacks.
+        if (genre != Genre.Documentation) {
+            val allowTopLevelAwait =
+                module.stableEnvironmentValue(StagingFlags.allowTopLevelAwait) == TBoolean.valueTrue
+            YieldingCallChecker(logSink, allowTopLevelYielding = allowTopLevelAwait).check(root)
+        }
 
         if (genre != Genre.Documentation) {
             Debug.Frontend.GenerateCodeStage.CleanupTemporaries(configKey)

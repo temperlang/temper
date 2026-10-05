@@ -1,0 +1,26 @@
+[
+    {
+        "template": "YieldingOutsideGeneratorFn",
+        "values": ["await"],
+        "left": 112,
+        "right": 119
+    },
+    {
+        "template": "YieldingOutsideGeneratorFn",
+        "values": ["await"],
+        "left": 220,
+        "right": 227
+    },
+    {
+        "template": "YieldingOutsideGeneratorFn",
+        "values": ["yield"],
+        "left": 270,
+        "right": 275
+    },
+    {
+        "template": "YieldingOutsideGeneratorFn",
+        "values": ["await"],
+        "left": 604,
+        "right": 619
+    }
+]
