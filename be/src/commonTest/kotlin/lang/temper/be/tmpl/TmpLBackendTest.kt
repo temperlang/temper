@@ -4481,16 +4481,26 @@ class TmpLBackendTest {
                 |      @auto("==")
                 |      export class Hi(
                 |        public id: String,
-                |        public var more: Int,
+                |        private var more: Int,
                 |      ) {
                 |        public var why: String = "${id}${more}";
+                |        public get sigh(): Int { 2 * more }
                 |
-                |        @auto("==")
                 |        // @auto @operator("==")
+                |        @auto("==") @operator("==")
                 |        public eq(other: Hi): Boolean {
-                |          id == other.id
+                |          id == other.id &&
+                |            // TODO Needs us to adjust access rules.
+                |            // more == other.more &&
+                |            why == other.why &&
+                |            sigh == other.sigh
                 |        }
                 |      }
+                |
+                |      @auto("==")
+                |      export sealed interface Maybe {}
+                |      class Sure(public n: Int) extends Maybe {}
+                |      class WhyNot extends Maybe {}
                 |      ```
                 |  },
                 |}
@@ -4503,39 +4513,65 @@ class TmpLBackendTest {
             |      content:
             |        ```
             |        //// work//foo/ => foo.tmpl
+            |        require temper-core;
+            |        let nym`*#0` = builtins.nym`*` /* (Int32, Int32) -> Int32 */;
             |        let nym`==#0` = builtins.nym`==` /* (String, String) -> Boolean */;
+            |        let nym`==#1` = builtins.nym`==` /* (Int32, Int32) -> Boolean */;
             |        let cat#0 = builtins.cat /* () -> String */;
-            |        @QName("test-library/foo.type Hi") class Hi / Hi {
+            |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
+            |        @auto("==") @QName("test-library/foo.type Hi") class Hi / Hi {
             |          @QName("test-library/foo.type Hi.id") @constructorProperty let id__0: String;
             |          @QName("test-library/foo.type Hi.more") @constructorProperty var more__0: Int32;
             |          @QName("test-library/foo.type Hi.why") var why__0: String;
-            |          @QName("test-library/foo.type Hi.eq()") @operator("_==_") let eq__0(this = this__0, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__0: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__0: Hi): Boolean {
-            |            return nym`==#0`(/* this */ this__0.id__0, other__0.id);
+            |          @QName("test-library/foo.type Hi.sigh") let sigh__0: Int32;
+            |          @QName("test-library/foo.type Hi.get sigh()") get.sigh -> get.sigh__1(this = this__0, @QName("test-library/foo.type Hi.get sigh().(this)") @impliedThis(Hi) this__0: Hi): Int32 {
+            |            return nym`*#0`(2, /* this */ this__0.more__0);
             |          }
-            |          @QName("test-library/foo.type Hi.constructor()") constructor__0(this = this__1, @QName("test-library/foo.type Hi.constructor().(this)") @impliedThis(Hi) this__1: Hi, @QName("test-library/foo.type Hi.constructor().(id)") id__1: String, @QName("test-library/foo.type Hi.constructor().(more)") more__1: Int32) {
+            |          @QName("test-library/foo.type Hi.eq()") @auto("==") @operator("_==_") let eq__0(this = this__1, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__1: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__0: Hi): Boolean {
+            |            if (nym`==#0`(/* this */ this__1.id__0, other__0.id)) {
+            |              if (nym`==#0`(/* this */ this__1.why__0, other__0.why)) {
+            |                return nym`==#1`(/* this */ this__1.sigh, other__0.sigh);
+            |              } else {
+            |                return false;
+            |              }
+            |            } else {
+            |              return false;
+            |            }
+            |          }
+            |          @QName("test-library/foo.type Hi.constructor()") constructor__0(this = this__2, @QName("test-library/foo.type Hi.constructor().(this)") @impliedThis(Hi) this__2: Hi, @QName("test-library/foo.type Hi.constructor().(id)") id__1: String, @QName("test-library/foo.type Hi.constructor().(more)") more__1: Int32) {
             |            let t#0: String = id__1;
-            |            /* this */ this__1.id__0 = t#0;
+            |            /* this */ this__2.id__0 = t#0;
             |            let t#1: Int32 = more__1;
-            |            /* this */ this__1.more__0 = t#1;
+            |            /* this */ this__2.more__0 = t#1;
             |            let t#2: String = cat#0(id__1, "" + more__1);
-            |            /* this */ this__1.why__0 = t#2;
+            |            /* this */ this__2.why__0 = t#2;
             |            return void;
             |          }
-            |          get.id -> getid__0(this = this__2, @impliedThis(Hi) this__2: Hi): String {
-            |            return /* this */ this__2.id__0;
+            |          get.id -> getid__0(this = this__3, @impliedThis(Hi) this__3: Hi): String {
+            |            return /* this */ this__3.id__0;
             |          }
-            |          get.more -> getmore__0(this = this__3, @impliedThis(Hi) this__3: Hi): Int32 {
-            |            return /* this */ this__3.more__0;
+            |          get.why -> getwhy__0(this = this__4, @impliedThis(Hi) this__4: Hi): String {
+            |            return /* this */ this__4.why__0;
             |          }
-            |          set.more -> setmore__0(this = this__4, @impliedThis(Hi) this__4: Hi, newMore__0: Int32): Void {
-            |            /* this */ this__4.more__0 = newMore__0;
+            |          set.why -> setwhy__0(this = this__5, @impliedThis(Hi) this__5: Hi, newWhy__0: String): Void {
+            |            /* this */ this__5.why__0 = newWhy__0;
             |            return void;
             |          }
-            |          get.why -> getwhy__0(this = this__5, @impliedThis(Hi) this__5: Hi): String {
-            |            return /* this */ this__5.why__0;
+            |        }
+            |        @sealedType @auto("==") @QName("test-library/foo.type Maybe") interface Maybe / Maybe {
+            |        }
+            |        @QName("test-library/foo.type Sure") @reach(\none) class Sure__0 / Sure extends Maybe {
+            |          @QName("test-library/foo.type Sure.n") @constructorProperty @reach(\none) let n__0: Int32;
+            |          @QName("test-library/foo.type Sure.constructor()") @reach(\none) constructor__1(this = this__6, @QName("test-library/foo.type Sure.constructor().(this)") @impliedThis(Sure__0) this__6: Sure__0, @QName("test-library/foo.type Sure.constructor().(n)") n__1: Int32) {
+            |            /* this */ this__6.n__0 = n__1;
+            |            return void;
             |          }
-            |          set.why -> setwhy__0(this = this__6, @impliedThis(Hi) this__6: Hi, newWhy__0: String): Void {
-            |            /* this */ this__6.why__0 = newWhy__0;
+            |          @reach(\none) get.n -> getn__0(this = this__7, @impliedThis(Sure__0) this__7: Sure__0): Int32 {
+            |            return /* this */ this__7.n__0;
+            |          }
+            |        }
+            |        @QName("test-library/foo.type WhyNot") @reach(\none) class WhyNot__0 / WhyNot extends Maybe {
+            |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__8, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__8: WhyNot__0) {
             |            return void;
             |          }
             |        }
