@@ -4489,7 +4489,7 @@ class TmpLBackendTest {
                 |        // @auto @operator("==")
                 |        @auto("==") @operator("==")
                 |        public eq(other: Hi): Boolean {
-                |          id == other.id &&
+                |          this.id == other.id &&
                 |            // TODO Needs us to adjust access rules.
                 |            // more == other.more &&
                 |            why == other.why &&

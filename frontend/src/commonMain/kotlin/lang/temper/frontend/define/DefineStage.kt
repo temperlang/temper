@@ -88,6 +88,7 @@ internal class DefineStage(
                             closureConvertClasses(root, logSink)
                         }
                     checkTypeDefinitions(convertedTypeInfo, logSink)
+                    addAutoMembers(module, convertedTypeInfo, logSink)
 
                     Debug.Frontend.DefineStage.AfterConvertClasses
                         .snapshot(configKey, AstSnapshotKey, root)

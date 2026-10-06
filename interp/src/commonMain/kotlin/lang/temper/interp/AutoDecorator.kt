@@ -10,6 +10,7 @@ import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.Value
 import lang.temper.value.valueContained
 
 object AutoDecorator : NamedBuiltinFun, MacroValue {
@@ -25,8 +26,11 @@ object AutoDecorator : NamedBuiltinFun, MacroValue {
     }
 }
 
+val autoSymbol = Symbol("auto")
+val vAutoSymbol = Value(Symbol("auto"))
+
 val autoDecorator = MetadataDecorator(
-    symbolKey = Symbol("auto"),
+    symbolKey = autoSymbol,
     argumentTypes = listOf(Types.string),
 ) { args ->
     // TODO Combine with operatorImplementationDecorator logic?
