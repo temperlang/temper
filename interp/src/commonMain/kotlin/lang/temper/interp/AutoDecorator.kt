@@ -34,6 +34,5 @@ val autoDecorator = MetadataDecorator(
     argumentTypes = listOf(Types.string),
 ) { args ->
     // TODO Combine with operatorImplementationDecorator logic?
-    args.valueTree(1).valueContained
-        ?: return@MetadataDecorator NotYet
+    args.valueTree(1).valueContained ?: NotYet
 }

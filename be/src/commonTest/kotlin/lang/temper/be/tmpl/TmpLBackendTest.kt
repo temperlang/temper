@@ -4478,6 +4478,7 @@ class TmpLBackendTest {
                 |  foo: {
                 |    foo.temper:
                 |      ```
+                |      // Individual class.
                 |      @auto("==")
                 |      export class Hi(
                 |        public id: String,
@@ -4497,10 +4498,26 @@ class TmpLBackendTest {
                 |        }
                 |      }
                 |
+                |      // Sealed interface.
                 |      @auto("==")
-                |      export sealed interface Maybe {}
-                |      class Sure(public n: Int) extends Maybe {}
-                |      class WhyNot extends Maybe {}
+                |      export sealed interface Maybe {
+                |        eq(other: Maybe): Boolean;
+                |      }
+                |
+                |      class Sure(public n: Int) extends Maybe {
+                |        public eq(other: Maybe): Boolean {
+                |          if (!(other is Sure)) {
+                |            return false;
+                |          }
+                |          other is Sure && this.n == other.n
+                |        }
+                |      }
+                |
+                |      class WhyNot extends Maybe {
+                |        public eq(other: Maybe): Boolean {
+                |          other is WhyNot
+                |        }
+                |      }
                 |      ```
                 |  },
                 |}
@@ -4519,6 +4536,7 @@ class TmpLBackendTest {
             |        let nym`==#1` = builtins.nym`==` /* (Int32, Int32) -> Boolean */;
             |        let cat#0 = builtins.cat /* () -> String */;
             |        let InterfaceTypeSupport#0 = InterfaceTypeSupport;
+            |        let pureVirtual#0 = builtins.pureVirtual;
             |        @auto("==") @QName("test-library/foo.type Hi") class Hi / Hi {
             |          @QName("test-library/foo.type Hi.id") @constructorProperty let id__0: String;
             |          @QName("test-library/foo.type Hi.more") @constructorProperty var more__0: Int32;
@@ -4570,23 +4588,51 @@ class TmpLBackendTest {
             |          }
             |        }
             |        @sealedType @auto("==") @QName("test-library/foo.type Maybe") interface Maybe / Maybe {
-            |          @QName("test-library/foo.type Maybe.eq()") @auto("==") @operator("_==_") let eq__2(this = this__7, @QName("test-library/foo.type Maybe.eq().(this)") @impliedThis(Maybe) this__7: Maybe, @QName("test-library/foo.type Maybe.eq().(other)") other__2: Maybe): Boolean {
+            |          @QName("test-library/foo.type Maybe.eq()") let eq__2(this = this__7, @QName("test-library/foo.type Maybe.eq().(this)") @impliedThis(Maybe) this__7: Maybe, @QName("test-library/foo.type Maybe.eq().(other)") other__2: Maybe): Boolean {
+            |            pureVirtual#0();
+            |          }
+            |          @QName("test-library/foo.type Maybe.eq()") @auto("==") @operator("_==_") let eq__3(this = this__8, @QName("test-library/foo.type Maybe.eq().(this)") @impliedThis(Maybe) this__8: Maybe, @QName("test-library/foo.type Maybe.eq().(other)") other__3: Maybe): Boolean {
             |            return true;
             |          }
             |        }
             |        @QName("test-library/foo.type Sure") @reach(\none) class Sure__0 / Sure extends Maybe {
             |          @QName("test-library/foo.type Sure.n") @constructorProperty @reach(\none) let n__0: Int32;
-            |          @QName("test-library/foo.type Sure.constructor()") @reach(\none) constructor__1(this = this__8, @QName("test-library/foo.type Sure.constructor().(this)") @impliedThis(Sure__0) this__8: Sure__0, @QName("test-library/foo.type Sure.constructor().(n)") n__1: Int32) {
-            |            /* this */ this__8.n__0 = n__1;
+            |          @QName("test-library/foo.type Sure.eq()") @reach(\none) let eq__4(this = this__9, @QName("test-library/foo.type Sure.eq().(this)") @impliedThis(Sure__0) this__9: Sure__0, @QName("test-library/foo.type Sure.eq().(other)") other__4: Maybe): Boolean {
+            |            @QName("test-library/foo.type Sure.eq().return=") let return__0: Boolean;
+            |            fn__0: {
+            |              if (!(other__4 instanceof Sure__0)) {
+            |                return__0 = false;
+            |                break fn__0;
+            |              }
+            |              if (other__4 instanceof Sure__0) {
+            |                let t#3: Sure__0 = safeCast (other__4, Sure__0);
+            |                return nym`==#1`(/* this */ this__9.n__0, t#3.n);
+            |              } else {
+            |                return false;
+            |              }
+            |            }
+            |            return return__0;
+            |          }
+            |          @QName("test-library/foo.type Sure.constructor()") @reach(\none) constructor__1(this = this__10, @QName("test-library/foo.type Sure.constructor().(this)") @impliedThis(Sure__0) this__10: Sure__0, @QName("test-library/foo.type Sure.constructor().(n)") n__1: Int32) {
+            |            /* this */ this__10.n__0 = n__1;
             |            return void;
             |          }
-            |          @reach(\none) get.n -> getn__0(this = this__9, @impliedThis(Sure__0) this__9: Sure__0): Int32 {
-            |            return /* this */ this__9.n__0;
+            |          @reach(\none) get.n -> getn__0(this = this__11, @impliedThis(Sure__0) this__11: Sure__0): Int32 {
+            |            return /* this */ this__11.n__0;
+            |          }
+            |          @QName("test-library/foo.type Sure.eq()") @auto("==") @operator("_==_") @reach(\none) let eq__5(this = this__12, @QName("test-library/foo.type Sure.eq().(this)") @impliedThis(Sure__0) this__12: Sure__0, @QName("test-library/foo.type Sure.eq().(other)") other__5: Maybe): Boolean {
+            |            return nym`==#1`(/* this */ this__12.n__0, other__5.n);
             |          }
             |        }
             |        @QName("test-library/foo.type WhyNot") @reach(\none) class WhyNot__0 / WhyNot extends Maybe {
-            |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__10, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__10: WhyNot__0) {
+            |          @QName("test-library/foo.type WhyNot.eq()") @reach(\none) let eq__6(this = this__13, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__13: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__6: Maybe): Boolean {
+            |            return other__6 instanceof WhyNot__0;
+            |          }
+            |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__14, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__14: WhyNot__0) {
             |            return void;
+            |          }
+            |          @QName("test-library/foo.type WhyNot.eq()") @auto("==") @operator("_==_") @reach(\none) let eq__7(this = this__15, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__15: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__7: Maybe): Boolean {
+            |            return true;
             |          }
             |        }
             |

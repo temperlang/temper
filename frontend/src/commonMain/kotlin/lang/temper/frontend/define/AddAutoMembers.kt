@@ -37,6 +37,7 @@ import lang.temper.value.Value
 import lang.temper.value.eqBuiltinName
 import lang.temper.value.qNameSymbol
 import lang.temper.value.reifiedTypeContained
+import lang.temper.value.sealedTypeSymbol
 import lang.temper.value.staySymbol
 import lang.temper.value.thisParsedName
 import lang.temper.value.typeDeclSymbol
@@ -75,30 +76,82 @@ private class AutoMemberAdder(
     private val edge: TEdge,
     private val logSink: LogSink,
 ) {
-    private val typeDecl = typeShape.stayLeaf?.incoming?.source as? DeclTree
-    private val reifiedType = typeDecl?.parts?.metadataSymbolMap?.get(typeDeclSymbol)?.reifiedTypeContained
+    private val typeDecl = typeShape.decl()
+    private val reifiedType = typeDecl?.reifiedType()
 
     fun addAutosIfWanted() {
         reifiedType ?: return
-        val auto = typeDecl?.parts?.metadataSymbolMap?.get(autoSymbol)?.target?.valueContained ?: return
-        addWantedAutos(auto)
-    }
-
-    private fun addWantedAutos(auto: Value<*>) {
-        // TODO Lists and/or rest args of autos.
-        when (TString.unpackOrNull(auto)) {
-            eqBuiltinName.builtinKey -> addAutoEq()
+        // First check our own auto keys.
+        val autoKeys = typeDecl?.autoKeys() ?: listOf()
+        for (autoKey in autoKeys) {
+            when (autoKey) {
+                eqBuiltinName.builtinKey -> addAutoEq()
+            }
         }
+        // Also check the parents' auto keys, just in case.
+        addAutoEqForSuperSealedIfWanted(autoKeys)
     }
 
-    private fun addAutoEq() {
-        // TODO First check if one already exists.
+    private fun addAutoEqForSuperSealedIfWanted(autoKeys: List<String>) {
+        eqBuiltinName.builtinKey in autoKeys && return
+        val typeShape = reifiedType!!.type2.definition as? TypeShape ?: return
+        // We care about this type only if it's concrete or sealed.
+        typeShape.abstractness == Abstractness.Concrete || typeShape.decl()?.isSealed() == true || return
+        val sealedAutoEqProgenitors = buildList digSealedProgenitors@{
+            fun dig(dugShape: TypeShape) {
+                superTypes@ for (superType in dugShape.superTypes) {
+                    val superShape = superType.definition as? TypeShape ?: continue@superTypes
+                    // If we're a subtype of a sealed type and we're valid (checked elsewhere) then it should have a
+                    // non-null list of sealed subtypes, and we would have to be in it.
+                    (superShape.sealedSubTypes ?: listOf()).isNotEmpty() || continue@superTypes
+                    // So if we get this far, the supertype is sealed. Check autos.
+                    // TODO Ideally we track the progenitors of each auto in one recursive dig, but sloppily just seek
+                    // TODO  `==` for now.
+                    // TODO Would we be building a multimap instead for each key?
+                    eqBuiltinName.builtinKey in (superShape.decl()?.autoKeys() ?: listOf()) || continue@superTypes
+                    // So we have a super auto eq.
+                    val oldSize = size
+                    dig(superShape)
+                    if (size == oldSize) {
+                        // No earlier sealed auto eq progenitors found, so add this one.
+                        add(superShape)
+                    }
+                }
+            }
+            dig(typeShape)
+        }
+        sealedAutoEqProgenitors.isEmpty() && return
+        if (sealedAutoEqProgenitors.size > 1) {
+            // TODO Log problem.
+            return
+        }
+        // We have just one super type that we need to add an auto eq for.
+        // TODO Use the reified type of the super for the `other` param.
+         val progenitor = sealedAutoEqProgenitors.first()
+        addAutoEq(progenitor.decl()?.reifiedType() ?: reifiedType)
+    }
+
+    private fun addAutoEq(otherType: ReifiedType = reifiedType!!) {
         val source = edge.source ?: return
         val index = source.edges.indexOf(edge)
         val typeValue = Value(reifiedType!!)
         val typeQNameValue = typeDecl!!.parts?.metadataSymbolMap?.get(qNameSymbol)?.valueContained ?: return
         val qNameBuilder = QName.Builder(QName.fromString(TString.unpack(typeQNameValue)).result!!)
         val typeShape = reifiedType.type2.definition as? MutableTypeShape ?: return
+        // Check kind.
+        val abstractness = typeShape.abstractness.also abstractness@{ abstractness ->
+            // Concrete auto eq is typically supported.
+            abstractness == Abstractness.Concrete && return@abstractness
+            // But don't support auto eq for non-sealed interfaces.
+            // TODO Log error.
+            sealedTypeSymbol in typeDecl.parts!!.metadataSymbolMap || return@addAutoEq
+            // We also need concrete subtypes. Don't bother checking deep because if all our sealed subtypes are valid
+            // (checked elsewhere), they'll also end up getting here, so eventually everything will be checked.
+            (typeShape.sealedSubTypes ?: listOf()).all { sealedSub ->
+                sealedSub.abstractness == Abstractness.Concrete || sealedSub.decl()?.isSealed() == true
+            }
+        }
+        // TODO Error or at least bail if an `==` already exists.
         var methodName: SourceName? = null
         source.insert(at = index) {
             // Prep naming.
@@ -132,7 +185,7 @@ private class AutoMemberAdder(
                     Decl {
                         Ln(otherName)
                         V(vTypeSymbol)
-                        V(typeValue)
+                        V(Value(otherType))
                         V(vWordSymbol)
                         V(otherName.toSymbol())
                         V(vQNameSymbol)
@@ -262,6 +315,25 @@ private class AutoMemberAdder(
         ).also { typeShape.methods.add(it) }
     }
 }
+
+/**
+ * TODO Support varargs or list of auto strings.
+ */
+private fun DeclTree.autoKeys(): List<String> {
+    val autoValue = parts?.metadataSymbolMap?.get(autoSymbol)?.target?.valueContained
+    return TString.unpackOrNull(autoValue)?.let { listOf(it) } ?: listOf()
+}
+
+private fun DeclTree.isSealed(): Boolean {
+    return parts?.metadataSymbolMap?.let { sealedTypeSymbol in it } == true
+}
+
+private fun DeclTree.reifiedType(): ReifiedType? {
+    return parts?.metadataSymbolMap?.get(typeDeclSymbol)?.reifiedTypeContained
+}
+
+private fun TypeShape.decl(): DeclTree? =
+    stayLeaf?.incoming?.source as? DeclTree
 
 private val eqSpec = OperatorMember.from(EqMacro.name, OperatorType.Infix).operatorSpecifier
 
