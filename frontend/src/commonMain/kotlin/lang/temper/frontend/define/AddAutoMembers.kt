@@ -166,60 +166,64 @@ private class AutoMemberAdder(
                         val properties = typeShape.properties
                         val eqHelper = Value(dotHelperForOperator(OperatorMember(eqSpec)))
                         fun Planting.buildIf(propertyIndex: Int) {
-                            // Call it gold if we've checked all properties.
-                            if (propertyIndex >= properties.size) {
+                            // Skip ahead until we find a readable property.
+                            val (property, foundIndex) = run nextIndex@{
+                                properties@ for (nextIndex in propertyIndex..<properties.size) {
+                                    val property = properties[nextIndex]
+                                    // For now, just check public properties.
+                                    // TODO Also check private properties once we loosen rules.
+                                    // TODO For autoEq classes, we should ensure other's type matches this's type.
+                                    // TODO Log errors if can't check all properties?
+                                    property.visibility == Visibility.Public || continue@properties
+                                    // Also bail out on setter-only properties.
+                                    // TODO Is this the right way to detect such?
+                                    property.setter == null || property.getter != null || continue@properties
+                                    // Seems good now.
+                                    return@nextIndex property to nextIndex
+                                }
+                                // No readable properties found. Should only happen if no readables are found.
                                 V(TBoolean.valueTrue)
-                                return
+                                return@buildIf
                             }
-                            // Otherwise, see what we have next.
-                            val property = properties[propertyIndex]
-                            // For now, just check public properties.
-                            // TODO Also check private properties once we loosen rules.
-                            // TODO For autoEq classes, we should ensure other's type matches this's type.
-                            // TODO Log errors if can't check all properties?
-                            if (property.visibility != Visibility.Public) {
-                                buildIf(propertyIndex + 1)
-                                return
-                            }
-                            // Also bail out on setter-only properties.
-                            // TODO Is this the right way to detect such?
-                            if (property.setter != null && property.getter == null) {
-                                buildIf(propertyIndex + 1)
-                                return
-                            }
-                            // Build `if` recursively.
-                            If(
-                                cond = {
-                                    Call {
-                                        V(EqMacro.value)
-                                        // This property.
-                                        Call {
-                                            // Jump hoops to match what we see elsewhere.
-                                            // TODO Make/access common helpers?
-                                            when (property.abstractness) {
-                                                Abstractness.Abstract -> {
-                                                    V(Value(DotHelper(InternalGet, DotMember(property.symbol))))
-                                                    V(typeValue)
-                                                }
-                                                Abstractness.Concrete -> {
-                                                    V(Value(BuiltinFuns.getpFn))
-                                                    Rn(property.name)
-                                                }
-                                            }
-                                            Rn(thisName)
+                            // Build condition.
+                            fun Planting.buildCond() = Call {
+                                V(EqMacro.value)
+                                // This property.
+                                Call {
+                                    // Jump hoops to match what we see elsewhere.
+                                    // TODO Make/access common helpers?
+                                    when (property.abstractness) {
+                                        Abstractness.Abstract -> {
+                                            V(Value(DotHelper(InternalGet, DotMember(property.symbol))))
+                                            V(typeValue)
                                         }
-                                        // Other property.
-                                        Call {
-                                            V(Value(DotHelper(ExternalGet, DotMember(property.symbol))))
-                                            Rn(otherName)
+                                        Abstractness.Concrete -> {
+                                            V(Value(BuiltinFuns.getpFn))
+                                            Rn(property.name)
                                         }
-                                        V(eqHelper)
                                     }
-                                },
-                                thn = { buildIf(propertyIndex + 1) },
-                                els = { V(TBoolean.valueFalse) },
-                            )
+                                    Rn(thisName)
+                                }
+                                // Other property.
+                                Call {
+                                    V(Value(DotHelper(ExternalGet, DotMember(property.symbol))))
+                                    Rn(otherName)
+                                }
+                                V(eqHelper)
+                            }
+                            // See how we want to use it.
+                            when (foundIndex) {
+                                // Last case can just use the condition expression directly.
+                                properties.size - 1 -> buildCond()
+                                // Otherwise build `if` recursively.
+                                else -> If(
+                                    cond = { buildCond() },
+                                    thn = { buildIf(propertyIndex + 1) },
+                                    els = { V(TBoolean.valueFalse) },
+                                )
+                            }
                         }
+                        // Start at the first property.
                         buildIf(0)
                     }
                 }
