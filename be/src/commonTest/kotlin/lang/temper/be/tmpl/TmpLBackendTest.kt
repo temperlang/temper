@@ -4557,21 +4557,35 @@ class TmpLBackendTest {
             |            /* this */ this__5.why__0 = newWhy__0;
             |            return void;
             |          }
+            |          @QName("test-library/foo.type Hi.eq()") @auto("==") @operator("_==_") let eq__1(this = this__6, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__6: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__1: Hi): Boolean {
+            |            if (nym`==#1`(/* this */ this__6.sigh, other__1.sigh)) {
+            |              if (nym`==#0`(/* this */ this__6.id__0, other__1.id)) {
+            |                return nym`==#0`(/* this */ this__6.why__0, other__1.why);
+            |              } else {
+            |                return false;
+            |              }
+            |            } else {
+            |              return false;
+            |            }
+            |          }
             |        }
             |        @sealedType @auto("==") @QName("test-library/foo.type Maybe") interface Maybe / Maybe {
+            |          @QName("test-library/foo.type Maybe.eq()") @auto("==") @operator("_==_") let eq__2(this = this__7, @QName("test-library/foo.type Maybe.eq().(this)") @impliedThis(Maybe) this__7: Maybe, @QName("test-library/foo.type Maybe.eq().(other)") other__2: Maybe): Boolean {
+            |            return true;
+            |          }
             |        }
             |        @QName("test-library/foo.type Sure") @reach(\none) class Sure__0 / Sure extends Maybe {
             |          @QName("test-library/foo.type Sure.n") @constructorProperty @reach(\none) let n__0: Int32;
-            |          @QName("test-library/foo.type Sure.constructor()") @reach(\none) constructor__1(this = this__6, @QName("test-library/foo.type Sure.constructor().(this)") @impliedThis(Sure__0) this__6: Sure__0, @QName("test-library/foo.type Sure.constructor().(n)") n__1: Int32) {
-            |            /* this */ this__6.n__0 = n__1;
+            |          @QName("test-library/foo.type Sure.constructor()") @reach(\none) constructor__1(this = this__8, @QName("test-library/foo.type Sure.constructor().(this)") @impliedThis(Sure__0) this__8: Sure__0, @QName("test-library/foo.type Sure.constructor().(n)") n__1: Int32) {
+            |            /* this */ this__8.n__0 = n__1;
             |            return void;
             |          }
-            |          @reach(\none) get.n -> getn__0(this = this__7, @impliedThis(Sure__0) this__7: Sure__0): Int32 {
-            |            return /* this */ this__7.n__0;
+            |          @reach(\none) get.n -> getn__0(this = this__9, @impliedThis(Sure__0) this__9: Sure__0): Int32 {
+            |            return /* this */ this__9.n__0;
             |          }
             |        }
             |        @QName("test-library/foo.type WhyNot") @reach(\none) class WhyNot__0 / WhyNot extends Maybe {
-            |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__8, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__8: WhyNot__0) {
+            |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__10, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__10: WhyNot__0) {
             |            return void;
             |          }
             |        }
