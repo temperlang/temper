@@ -4,6 +4,7 @@ import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.EqMacro
 import lang.temper.builtin.dotHelperForOperator
 import lang.temper.common.OpenOrClosed
+import lang.temper.interp.BreakTransform
 import lang.temper.interp.autoSymbol
 import lang.temper.interp.vAutoSymbol
 import lang.temper.lexer.OperatorType
@@ -127,11 +128,11 @@ private class AutoMemberAdder(
         }
         // We have just one super type that we need to add an auto eq for.
         // TODO Use the reified type of the super for the `other` param.
-         val progenitor = sealedAutoEqProgenitors.first()
-        addAutoEq(progenitor.decl()?.reifiedType() ?: reifiedType)
+        val progenitor = sealedAutoEqProgenitors.first()
+        addAutoEq(progenitor.decl()?.reifiedType())
     }
 
-    private fun addAutoEq(otherType: ReifiedType = reifiedType!!) {
+    private fun addAutoEq(otherType: ReifiedType? = null) {
         val source = edge.source ?: return
         val index = source.edges.indexOf(edge)
         val typeValue = Value(reifiedType!!)
@@ -139,17 +140,17 @@ private class AutoMemberAdder(
         val qNameBuilder = QName.Builder(QName.fromString(TString.unpack(typeQNameValue)).result!!)
         val typeShape = reifiedType.type2.definition as? MutableTypeShape ?: return
         // Check kind.
-        val abstractness = typeShape.abstractness.also abstractness@{ abstractness ->
-            // Concrete auto eq is typically supported.
-            abstractness == Abstractness.Concrete && return@abstractness
+        if (typeShape.abstractness == Abstractness.Abstract) {
+            // If abstract but the otherType isn't us, then we'll inherit the pure virtual.
+            otherType == null || return
             // But don't support auto eq for non-sealed interfaces.
             // TODO Log error.
-            sealedTypeSymbol in typeDecl.parts!!.metadataSymbolMap || return@addAutoEq
+            sealedTypeSymbol in typeDecl.parts!!.metadataSymbolMap || return
             // We also need concrete subtypes. Don't bother checking deep because if all our sealed subtypes are valid
             // (checked elsewhere), they'll also end up getting here, so eventually everything will be checked.
             (typeShape.sealedSubTypes ?: listOf()).all { sealedSub ->
                 sealedSub.abstractness == Abstractness.Concrete || sealedSub.decl()?.isSealed() == true
-            }
+            } || return
         }
         // TODO Error or at least bail if an `==` already exists.
         var methodName: SourceName? = null
@@ -185,7 +186,7 @@ private class AutoMemberAdder(
                     Decl {
                         Ln(otherName)
                         V(vTypeSymbol)
-                        V(Value(otherType))
+                        V(Value(otherType ?: reifiedType))
                         V(vWordSymbol)
                         V(otherName.toSymbol())
                         V(vQNameSymbol)
@@ -212,9 +213,60 @@ private class AutoMemberAdder(
                     V(vQNameSymbol)
                     V(qNameValue())
                     // Body.
-                    Block {
+                    Block body@{
+                        if (typeShape.abstractness == Abstractness.Abstract) {
+                            return@body Call { V(Value(BuiltinFuns.pureVirtualFn)) }
+                        }
+                        // Concrete type, so check contents.
                         V(vLabelSymbol)
-                        Ln(nameMaker.unusedTemporaryName("fn"))
+                        val labelName = nameMaker.unusedTemporaryName("fn")
+                        Ln(labelName)
+                        // If we have a super otherType, we need to check and cast.
+                        val typedOther = when (otherType) {
+                            null -> otherName
+                            else -> {
+                                // Bail early unless right type.
+                                If(
+                                    cond = {
+                                        Call {
+                                            V(BuiltinFuns.vNotFn)
+                                            Call {
+                                                V(BuiltinFuns.vIsFn)
+                                                Rn(otherName)
+                                                V(typeValue)
+                                            }
+                                        }
+                                    },
+                                    thn = {
+                                        Call {
+                                            V(BuiltinFuns.vSetLocalFn)
+                                            Ln(returnName)
+                                            V(TBoolean.valueFalse)
+                                        }
+                                        Call {
+                                            V(Value(BreakTransform))
+                                            V(vLabelSymbol)
+                                            Rn(labelName)
+                                        }
+                                    },
+                                    els = { V(void) },
+                                )
+                                // If right type, get an assert-cast version of it.
+                                // Because we aren't embedding in an if block, we don't infer this in AutoCast.
+                                val typedOther = nameMaker.unusedSourceName(ParsedName("other"))
+                                Decl {
+                                    // SimplifyDeclarations comes later, so use combo decl/init.
+                                    Ln(typedOther)
+                                    V(vInitSymbol)
+                                    Call {
+                                        V(BuiltinFuns.vAssertAsFn)
+                                        Rn(otherName)
+                                        V(typeValue)
+                                    }
+                                }
+                                typedOther
+                            }
+                        }
                         // Build check logic recursively for all (public for now) properties.
                         val properties = typeShape.properties
                         val eqHelper = Value(dotHelperForOperator(OperatorMember(eqSpec)))
@@ -224,8 +276,8 @@ private class AutoMemberAdder(
                                 properties@ for (nextIndex in propertyIndex..<properties.size) {
                                     val property = properties[nextIndex]
                                     // For now, just check public properties.
+                                    // For autoEq classes, by the time we get here, other's type matches this's type.
                                     // TODO Also check private properties once we loosen rules.
-                                    // TODO For autoEq classes, we should ensure other's type matches this's type.
                                     // TODO Log errors if can't check all properties?
                                     property.visibility == Visibility.Public || continue@properties
                                     // Also bail out on setter-only properties.
@@ -260,7 +312,7 @@ private class AutoMemberAdder(
                                 // Other property.
                                 Call {
                                     V(Value(DotHelper(ExternalGet, DotMember(property.symbol))))
-                                    Rn(otherName)
+                                    Rn(typedOther)
                                 }
                                 V(eqHelper)
                             }

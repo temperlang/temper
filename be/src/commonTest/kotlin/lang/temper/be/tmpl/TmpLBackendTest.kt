@@ -4592,7 +4592,7 @@ class TmpLBackendTest {
             |            pureVirtual#0();
             |          }
             |          @QName("test-library/foo.type Maybe.eq()") @auto("==") @operator("_==_") let eq__3(this = this__8, @QName("test-library/foo.type Maybe.eq().(this)") @impliedThis(Maybe) this__8: Maybe, @QName("test-library/foo.type Maybe.eq().(other)") other__3: Maybe): Boolean {
-            |            return true;
+            |            pureVirtual#0();
             |          }
             |        }
             |        @QName("test-library/foo.type Sure") @reach(\none) class Sure__0 / Sure extends Maybe {
@@ -4621,18 +4621,36 @@ class TmpLBackendTest {
             |            return /* this */ this__11.n__0;
             |          }
             |          @QName("test-library/foo.type Sure.eq()") @auto("==") @operator("_==_") @reach(\none) let eq__5(this = this__12, @QName("test-library/foo.type Sure.eq().(this)") @impliedThis(Sure__0) this__12: Sure__0, @QName("test-library/foo.type Sure.eq().(other)") other__5: Maybe): Boolean {
-            |            return nym`==#1`(/* this */ this__12.n__0, other__5.n);
+            |            @QName("test-library/foo.type Sure.eq().return=") let return__1: Boolean;
+            |            fn#0: {
+            |              if (!(other__5 instanceof Sure__0)) {
+            |                return__1 = false;
+            |                break fn#0;
+            |              }
+            |              let other__6: Sure__0 = safeCast (other__5, Sure__0);
+            |              return nym`==#1`(/* this */ this__12.n__0, other__6.n);
+            |            }
+            |            return return__1;
             |          }
             |        }
             |        @QName("test-library/foo.type WhyNot") @reach(\none) class WhyNot__0 / WhyNot extends Maybe {
-            |          @QName("test-library/foo.type WhyNot.eq()") @reach(\none) let eq__6(this = this__13, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__13: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__6: Maybe): Boolean {
-            |            return other__6 instanceof WhyNot__0;
+            |          @QName("test-library/foo.type WhyNot.eq()") @reach(\none) let eq__6(this = this__13, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__13: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__7: Maybe): Boolean {
+            |            return other__7 instanceof WhyNot__0;
             |          }
             |          @QName("test-library/foo.type WhyNot.constructor()") @reach(\none) constructor__2(this = this__14, @QName("test-library/foo.type WhyNot.constructor().(this)") @impliedThis(WhyNot__0) this__14: WhyNot__0) {
             |            return void;
             |          }
-            |          @QName("test-library/foo.type WhyNot.eq()") @auto("==") @operator("_==_") @reach(\none) let eq__7(this = this__15, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__15: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__7: Maybe): Boolean {
-            |            return true;
+            |          @QName("test-library/foo.type WhyNot.eq()") @auto("==") @operator("_==_") @reach(\none) let eq__7(this = this__15, @QName("test-library/foo.type WhyNot.eq().(this)") @impliedThis(WhyNot__0) this__15: WhyNot__0, @QName("test-library/foo.type WhyNot.eq().(other)") other__8: Maybe): Boolean {
+            |            @QName("test-library/foo.type WhyNot.eq().return=") let return__2: Boolean;
+            |            fn#1: {
+            |              if (!(other__8 instanceof WhyNot__0)) {
+            |                return__2 = false;
+            |                break fn#1;
+            |              }
+            |              let other__9: WhyNot__0 = safeCast (other__8, WhyNot__0);
+            |              return true;
+            |            }
+            |            return return__2;
             |          }
             |        }
             |
