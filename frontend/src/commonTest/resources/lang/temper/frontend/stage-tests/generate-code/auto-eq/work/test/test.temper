@@ -1,0 +1,67 @@
+// Individual class.
+@auto("==")
+export class Hi(
+  public id: String,
+  private var more: Int,
+  public yetMore: Int,
+) {
+  public var why: String = "${id}${more}";
+  public get sigh(): Int { 2 * more }
+
+  // TODO @auto("==") on methods sometime
+  // public eq(other: Hi): Boolean;
+}
+
+// Manual eq for comparison against @auto("==").
+export class ManualHi(
+  public id: String,
+  private var more: Int,
+  public yetMore: Int,
+) {
+  public var why: String = "${id}${more}";
+  public get sigh(): Int { 2 * more }
+
+  @operator("==")
+  public eq(other: ManualHi): Boolean {
+    // Some explicit this for comparison.
+    this.id == other.id &&
+      // TODO Needs us to adjust access rules.
+      // more == other.more &&
+      why == other.why &&
+      yetMore == other.yetMore
+  }
+}
+
+// Sealed interface.
+@auto("==")
+export sealed interface Maybe {}
+
+export class Sure(public n: Int) extends Maybe {}
+
+export class WhyNot extends Maybe {}
+
+export class HasOwn extends Maybe {
+  public eq(other: Maybe): Boolean {
+    // No equality here!
+    false
+  }
+}
+
+export interface Sneaky extends Maybe {} // not sealed
+
+// Manual eq comparison of some above on sealed interface.
+export sealed interface ManualMaybe {
+  eq(other: ManualMaybe): Boolean;
+}
+
+export class ManualSure(public n: Int) extends ManualMaybe {
+  public eq(other: ManualMaybe): Boolean {
+    other is ManualSure && this.n == other.n
+  }
+}
+
+export class ManualWhyNot extends ManualMaybe {
+  public eq(other: ManualMaybe): Boolean {
+    other is ManualWhyNot
+  }
+}

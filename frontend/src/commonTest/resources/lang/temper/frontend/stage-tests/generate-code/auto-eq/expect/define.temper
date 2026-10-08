@@ -1,0 +1,348 @@
+@typeDecl(Hi) @stay @auto("==") let `test//`.Hi;
+`test//`.Hi = type (Hi);
+@typeDecl(ManualHi) @stay let `test//`.ManualHi;
+`test//`.ManualHi = type (ManualHi);
+@typeDecl(Maybe) @stay @sealedType @auto("==") let `test//`.Maybe;
+`test//`.Maybe = type (Maybe);
+@typeDecl(Sure) @stay let `test//`.Sure;
+`test//`.Sure = type (Sure);
+@typeDecl(WhyNot) @stay let `test//`.WhyNot;
+`test//`.WhyNot = type (WhyNot);
+@typeDecl(HasOwn) @stay let `test//`.HasOwn;
+`test//`.HasOwn = type (HasOwn);
+@typeDecl(Sneaky) @stay let `test//`.Sneaky;
+`test//`.Sneaky = type (Sneaky);
+@typeDecl(ManualMaybe) @stay @sealedType let `test//`.ManualMaybe;
+`test//`.ManualMaybe = type (ManualMaybe);
+@typeDecl(ManualSure) @stay let `test//`.ManualSure;
+`test//`.ManualSure = type (ManualSure);
+@typeDecl(ManualWhyNot) @stay let `test//`.ManualWhyNot;
+`test//`.ManualWhyNot = type (ManualWhyNot);
+do {};
+void;
+Hi extends AnyValue;
+@constructorProperty @visibility(\public) @stay @fromType(Hi) let id__0: String;
+@constructorProperty @visibility(\private) @stay @fromType(Hi) var more__0: Int32;
+@constructorProperty @visibility(\public) @stay @fromType(Hi) let yetMore__0: Int32;
+@visibility(\public) @stay @fromType(Hi) var why__0: String;
+@visibility(\public) @stay @fromType(Hi) let sigh__0;
+@visibility(\public) @fn @stay @fromType(Hi) let nym`get.sigh__0`;
+nym`get.sigh__0` = (@stay fn nym`get.sigh`(@impliedThis(Hi) this__0: Hi) /* return__0 */: Int32 {
+    fn__0: do {
+      2 * getp(more__0, this__0)
+    }
+});
+@fn @visibility(\public) @stay @fromType(Hi) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Hi) this__1: Hi, id__1 /* aka id */: String, more__1 /* aka more */: Int32, yetMore__1 /* aka yetMore */: Int32) /* return__1 */: Void {
+    do {
+      let t#0;
+      setp(id__0, this__1, t#0 = id__1);
+      t#0
+    };
+    do {
+      let t#1;
+      setp(more__0, this__1, t#1 = more__1);
+      t#1
+    };
+    do {
+      let t#2;
+      setp(yetMore__0, this__1, t#2 = yetMore__1);
+      t#2
+    };
+    do {
+      let t#3;
+      setp(why__0, this__1, t#3 = cat(str(id__1), str(more__1)));
+      t#3
+    };
+});
+@fn @visibility(\public) @stay @fromType(Hi) let getid__0;
+getid__0 = fn (@impliedThis(Hi) this__2: Hi) /* return__2 */: String {
+  return__2 = getp(id__0, this__2)
+};
+@fn @visibility(\public) @stay @fromType(Hi) let getyetMore__0;
+getyetMore__0 = fn (@impliedThis(Hi) this__3: Hi) /* return__3 */: Int32 {
+  return__3 = getp(yetMore__0, this__3)
+};
+@fn @visibility(\public) @stay @fromType(Hi) let getwhy__0;
+getwhy__0 = fn (@impliedThis(Hi) this__4: Hi) /* return__4 */: String {
+  return__4 = getp(why__0, this__4)
+};
+@fn @visibility(\public) @stay @fromType(Hi) let setwhy__0;
+setwhy__0 = fn (@impliedThis(Hi) this__5: Hi, newWhy__0: String) /* return__5 */: Void {
+  setp(why__0, this__5, newWhy__0);
+  return__5 = void
+};
+class(\word, \Hi, \concrete, true, @typeDefined(Hi) @stay fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Hi) let eq__0;
+eq__0 = fn eq(@impliedThis(Hi) this__6: Hi, other__0 /* aka other */: Hi) /* return__6 */: Boolean {
+  fn#0: do {
+    if (getp(id__0, this__6) == do_get_id(other__0)) {
+      if (getp(yetMore__0, this__6) == do_get_yetMore(other__0)) {
+        getp(why__0, this__6) == do_get_why(other__0)
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  }
+};
+do {};
+void;
+ManualHi extends AnyValue;
+@constructorProperty @visibility(\public) @stay @fromType(ManualHi) let id__2: String;
+@constructorProperty @visibility(\private) @stay @fromType(ManualHi) var more__2: Int32;
+@constructorProperty @visibility(\public) @stay @fromType(ManualHi) let yetMore__2: Int32;
+@visibility(\public) @stay @fromType(ManualHi) var why__1: String;
+@visibility(\public) @stay @fromType(ManualHi) let sigh__1;
+@visibility(\public) @fn @stay @fromType(ManualHi) let nym`get.sigh__1`;
+nym`get.sigh__1` = (@stay fn nym`get.sigh`(@impliedThis(ManualHi) this__7: ManualHi) /* return__7 */: Int32 {
+    fn__1: do {
+      2 * getp(more__2, this__7)
+    }
+});
+@visibility(\public) @fn @operator("_==_") @stay @fromType(ManualHi) let eq__1;
+eq__1 = fn eq(@impliedThis(ManualHi) this__8: ManualHi, other__1 /* aka other */: ManualHi) /* return__8 */: Boolean {
+  fn__2: do {
+    void;
+    if(getp(id__2, this__8) == do_get_id(other__1), fn {
+        if(getp(why__1, this__8) == do_get_why(other__1), fn {
+            getp(yetMore__2, this__8) == do_get_yetMore(other__1)
+          }, \else, fn (f#0) {
+            f#0(@stay fn {
+                false
+            })
+        })
+      }, \else, fn (f#1) {
+        f#1(@stay fn {
+            false
+        })
+    })
+  }
+};
+@fn @visibility(\public) @stay @fromType(ManualHi) let constructor__1;
+constructor__1 = (@stay fn constructor(@impliedThis(ManualHi) this__9: ManualHi, id__3 /* aka id */: String, more__3 /* aka more */: Int32, yetMore__3 /* aka yetMore */: Int32) /* return__9 */: Void {
+    do {
+      let t#4;
+      setp(id__2, this__9, t#4 = id__3);
+      t#4
+    };
+    do {
+      let t#5;
+      setp(more__2, this__9, t#5 = more__3);
+      t#5
+    };
+    do {
+      let t#6;
+      setp(yetMore__2, this__9, t#6 = yetMore__3);
+      t#6
+    };
+    do {
+      let t#7;
+      setp(why__1, this__9, t#7 = cat(str(id__3), str(more__3)));
+      t#7
+    };
+});
+@fn @visibility(\public) @stay @fromType(ManualHi) let getid__1;
+getid__1 = fn (@impliedThis(ManualHi) this__10: ManualHi) /* return__10 */: String {
+  return__10 = getp(id__2, this__10)
+};
+@fn @visibility(\public) @stay @fromType(ManualHi) let getyetMore__1;
+getyetMore__1 = fn (@impliedThis(ManualHi) this__11: ManualHi) /* return__11 */: Int32 {
+  return__11 = getp(yetMore__2, this__11)
+};
+@fn @visibility(\public) @stay @fromType(ManualHi) let getwhy__1;
+getwhy__1 = fn (@impliedThis(ManualHi) this__12: ManualHi) /* return__12 */: String {
+  return__12 = getp(why__1, this__12)
+};
+@fn @visibility(\public) @stay @fromType(ManualHi) let setwhy__1;
+setwhy__1 = fn (@impliedThis(ManualHi) this__13: ManualHi, newWhy__1: String) /* return__13 */: Void {
+  setp(why__1, this__13, newWhy__1);
+  return__13 = void
+};
+class(\word, \ManualHi, \concrete, true, @typeDefined(ManualHi) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+do {};
+void;
+Maybe extends AnyValue;
+@typePlaceholder(Maybe) let typePlaceholder#0: Empty;
+typePlaceholder#0 = {class: Empty__0};
+interface(\word, \Maybe, \concrete, false, @typeDefined(Maybe) @stay fn {
+    do {}
+});
+do {};
+Sure extends Maybe;
+@constructorProperty @visibility(\public) @stay @fromType(Sure) let n__0: Int32;
+@fn @visibility(\public) @stay @fromType(Sure) let constructor__2;
+constructor__2 = (@stay fn constructor(@impliedThis(Sure) this__14: Sure, n__1 /* aka n */: Int32) /* return__14 */: Void {
+    do {
+      let t#8;
+      setp(n__0, this__14, t#8 = n__1);
+      t#8
+    };
+});
+@fn @visibility(\public) @stay @fromType(Sure) let getn__0;
+getn__0 = fn (@impliedThis(Sure) this__15: Sure) /* return__15 */: Int32 {
+  return__15 = getp(n__0, this__15)
+};
+class(\word, \Sure, \concrete, true, @typeDefined(Sure) @stay fn {
+    do {};
+    do {};
+    do {};
+    do {}
+});
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Sure) let eq__2;
+eq__2 = fn eq(@impliedThis(Sure) this__16: Sure, other__2 /* aka other */: Maybe) /* return__16 */: Boolean {
+  fn#1: do {
+    if (!(other__2 is Sure)) {
+      return__16 = false;
+      break(\label, fn#1)
+    };
+    do {
+      let other__3;
+      other__3 = assertAs(other__2, Sure);
+    };
+    getp(n__0, this__16) == do_get_n(other__3)
+  }
+};
+do {};
+WhyNot extends Maybe;
+@fn @visibility(\public) @stay @fromType(WhyNot) let constructor__3;
+constructor__3 = (@stay fn constructor(@impliedThis(WhyNot) this__17: WhyNot) /* return__17 */: Void {});
+class(\word, \WhyNot, \concrete, true, @typeDefined(WhyNot) @stay fn {
+    do {};
+    do {}
+});
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(WhyNot) let eq__3;
+eq__3 = fn eq(@impliedThis(WhyNot) this__18: WhyNot, other__4 /* aka other */: Maybe) /* return__18 */: Boolean {
+  fn#2: do {
+    if (!(other__4 is WhyNot)) {
+      return__18 = false;
+      break(\label, fn#2)
+    };
+    true
+  }
+};
+do {};
+HasOwn extends Maybe;
+@visibility(\public) @fn @stay @fromType(HasOwn) let eq__4;
+eq__4 = (@stay fn eq(@impliedThis(HasOwn) this__19: HasOwn, other__5 /* aka other */: Maybe) /* return__19 */: Boolean {
+    fn__3: do {
+      void;
+      false
+    }
+});
+@fn @visibility(\public) @stay @fromType(HasOwn) let constructor__4;
+constructor__4 = (@stay fn constructor(@impliedThis(HasOwn) this__20: HasOwn) /* return__20 */: Void {});
+class(\word, \HasOwn, \concrete, true, @typeDefined(HasOwn) @stay fn {
+    do {};
+    do {};
+    do {}
+});
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(HasOwn) let eq__5;
+eq__5 = fn eq(@impliedThis(HasOwn) this__21: HasOwn, other__6 /* aka other */: Maybe) /* return__21 */: Boolean {
+  fn#3: do {
+    if (!(other__6 is HasOwn)) {
+      return__21 = false;
+      break(\label, fn#3)
+    };
+    true
+  }
+};
+do {};
+Sneaky extends Maybe;
+@typePlaceholder(Sneaky) let typePlaceholder#1: Empty;
+typePlaceholder#1 = {class: Empty__0};
+interface(\word, \Sneaky, \concrete, false, @typeDefined(Sneaky) @stay fn {
+    do {}
+});
+void;
+do {};
+void;
+ManualMaybe extends AnyValue;
+@fn @stay @fromType(ManualMaybe) let eq__6;
+eq__6 = (@stay fn eq(@impliedThis(ManualMaybe) this__22: ManualMaybe, other__7 /* aka other */: ManualMaybe) /* return__22 */: Boolean {
+    fn__4: do {
+      pureVirtual()
+    }
+});
+interface(\word, \ManualMaybe, \concrete, false, @typeDefined(ManualMaybe) @stay fn {
+    do {};
+    do {}
+});
+do {};
+ManualSure extends ManualMaybe;
+@constructorProperty @visibility(\public) @stay @fromType(ManualSure) let n__2: Int32;
+@visibility(\public) @fn @stay @fromType(ManualSure) let eq__7;
+eq__7 = fn eq(@impliedThis(ManualSure) this__23: ManualSure, other__8 /* aka other */: ManualMaybe) /* return__23 */: Boolean {
+  fn__5: do {
+    if(other__8 is ManualSure, fn {
+        getp(n__2, this__23) == do_get_n(other__8)
+      }, \else, fn (f#2) {
+        f#2(@stay fn {
+            false
+        })
+    })
+  }
+};
+@fn @visibility(\public) @stay @fromType(ManualSure) let constructor__5;
+constructor__5 = (@stay fn constructor(@impliedThis(ManualSure) this__24: ManualSure, n__3 /* aka n */: Int32) /* return__24 */: Void {
+    do {
+      let t#9;
+      setp(n__2, this__24, t#9 = n__3);
+      t#9
+    };
+});
+@fn @visibility(\public) @stay @fromType(ManualSure) let getn__1;
+getn__1 = fn (@impliedThis(ManualSure) this__25: ManualSure) /* return__25 */: Int32 {
+  return__25 = getp(n__2, this__25)
+};
+class(\word, \ManualSure, \concrete, true, @typeDefined(ManualSure) fn {
+    do {};
+    do {};
+    do {};
+    do {};
+    do {}
+});
+do {};
+ManualWhyNot extends ManualMaybe;
+@visibility(\public) @fn @stay @fromType(ManualWhyNot) let eq__8;
+eq__8 = (@stay fn eq(@impliedThis(ManualWhyNot) this__26: ManualWhyNot, other__9 /* aka other */: ManualMaybe) /* return__26 */: Boolean {
+    fn__6: do {
+      other__9 is ManualWhyNot
+    }
+});
+@fn @visibility(\public) @stay @fromType(ManualWhyNot) let constructor__6;
+constructor__6 = (@stay fn constructor(@impliedThis(ManualWhyNot) this__27: ManualWhyNot) /* return__27 */: Void {});
+class(\word, \ManualWhyNot, \concrete, true, @typeDefined(ManualWhyNot) @stay fn {
+    do {};
+    do {};
+    do {}
+});
+type (ManualWhyNot)
