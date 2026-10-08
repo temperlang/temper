@@ -144,6 +144,22 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 if (local != external) imports[local] = external
             }
         }
+        // `var f = fn ...; f = g;` arrives as a module function named f and an
+        // assignment to it. JS and Python rebind a function's name; a `def`
+        // cannot be rebound, so f is a module-level value instead, its first
+        // value a capture of the `defp` its declaration became
+        for (module in finished.modules) {
+            for (topLevel in module.topLevels) {
+                topLevel.boundaryDescent { node ->
+                    if (node is TmpL.Assignment) {
+                        var name = node.left.name
+                        repeat(imports.size) { name = imports[name] ?: name }
+                        if (name in moduleFunctions) moduleGlobals.add(name)
+                    }
+                    true
+                }
+            }
+        }
         val placed = placement(finished, imports)
         testOnly.addAll(placed.testOnly)
         // a function or module-level value is known by the name its own module declared

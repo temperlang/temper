@@ -186,6 +186,11 @@ end
   its ref only means something in the heap that made it, so each process
   gets its own copy the first time it reads it. Section 15 covers sharing
   mutable state safely.
+- `var f = fn ...` that something later assigns, `f = g`, is a module-level
+  variable too, though the frontend hands it over as a function: its first
+  body is a `defp`, captured into `TemperCore.Global` where the `var` was,
+  and a call of f calls what the global holds. If f is exported, `def f`
+  stays, for Elixir and other libraries to call, and does the same.
 - The ETS table, the actor registry and the actor supervisor belong to the
   `:temper_core` OTP application. It starts with any Mix project that
   depends on a translated library.
