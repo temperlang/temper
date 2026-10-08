@@ -68,7 +68,7 @@ open class ConsoleBackedContextualLogSink(
         if (level >= Log.Fatal) {
             hasFatal = true
         }
-        if (!allowDuplicateLogPositions) {
+        if (!allowDuplicateLogPositions && !template.repeatsAtSamePosition) {
             val phase = (template as? MessageTemplate)?.stage
             if (
                 phase != CompilationPhase.Staging && // Spammy.  Uses top-of-file positions a lot.
