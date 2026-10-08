@@ -36,6 +36,7 @@ import lang.temper.value.TString
 import lang.temper.value.Value
 import lang.temper.value.autoSymbol
 import lang.temper.value.eqBuiltinName
+import lang.temper.value.operatorSymbol
 import lang.temper.value.qNameSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.sealedTypeSymbol
@@ -160,8 +161,10 @@ private class AutoMemberAdder(
                 )
                 return
             }
-            // We also need concrete subtypes. Don't bother checking deep because if all our sealed subtypes are valid
-            // (checked elsewhere), they'll also end up getting here, so eventually everything will be checked.
+            // We also need concrete subtypes. Don't bother checking deep
+            // because if all our sealed subtypes are valid (checked elsewhere),
+            // they'll also end up getting here, so eventually everything will
+            // be checked.
             val unsealedSubs = (typeShape.sealedSubTypes ?: listOf()).filter { sealedSub ->
                 sealedSub.abstractness == Abstractness.Abstract && sealedSub.decl()?.isSealed() != true
             }
@@ -175,7 +178,12 @@ private class AutoMemberAdder(
                 return
             }
         }
-        // TODO Error or at least bail if an `==` already exists.
+        // Bail if `==` already exists, whether it was auto or not. If it
+        // doesn't use the same method name as the supertype, there'll be other
+        // errors, but just live with that for now.
+        typeShape.methods.none { method ->
+            method.metadata[operatorSymbol]?.any { TString.unpackOrNull(it) == eqSpec } == true
+        } || return
         var methodName: SourceName? = null
         source.insert(at = index) {
             // Prep naming.
@@ -404,8 +412,9 @@ private fun DeclTree.reifiedType(): ReifiedType? {
     return parts?.metadataSymbolMap?.get(typeDeclSymbol)?.reifiedTypeContained
 }
 
-private fun TypeShape.decl(): DeclTree? =
-    stayLeaf?.incoming?.source as? DeclTree
+private fun TypeShape.decl(): DeclTree? {
+    return stayLeaf?.incoming?.source as? DeclTree
+}
 
 private val eqSpec = OperatorMember.from(EqMacro.name, OperatorType.Infix).operatorSpecifier
 

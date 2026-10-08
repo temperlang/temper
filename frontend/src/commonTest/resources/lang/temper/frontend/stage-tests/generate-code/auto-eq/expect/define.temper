@@ -248,7 +248,7 @@ eq__3 = fn eq(@impliedThis(WhyNot) this__17: WhyNot, other__4 /* aka other */: M
 };
 do {};
 HasOwn extends Maybe;
-@visibility(\public) @fn @stay @fromType(HasOwn) let eq__4;
+@visibility(\public) @fn @operator("_==_") @stay @fromType(HasOwn) let eq__4;
 eq__4 = (@stay fn eq(@impliedThis(HasOwn) this__18: HasOwn, other__5 /* aka other */: Maybe) /* return__18 */: Boolean {
     fn__2: do {
       void;
@@ -262,16 +262,6 @@ class(\word, \HasOwn, \concrete, true, @typeDefined(HasOwn) @stay fn {
     do {};
     do {}
 });
-@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(HasOwn) let eq__5;
-eq__5 = fn eq(@impliedThis(HasOwn) this__20: HasOwn, other__6 /* aka other */: Maybe) /* return__20 */: Boolean {
-  fn#3: do {
-    if (!(other__6 is HasOwn)) {
-      return__20 = false;
-      break(\label, fn#3)
-    };
-    true
-  }
-};
 do {};
 Sneaky extends Maybe;
 @typePlaceholder(Sneaky) let typePlaceholder#1: Empty;
@@ -296,8 +286,8 @@ typePlaceholder#3 = {class: Empty__0};
 interface(\word, \Root1, \concrete, false, @typeDefined(Root1) @stay fn {
     do {}
 });
-@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Root1) let eq__6;
-eq__6 = fn eq(@impliedThis(Root1) this__21: Root1, other__7 /* aka other */: Root1) /* return__21 */: Boolean {
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Root1) let eq__5;
+eq__5 = fn eq(@impliedThis(Root1) this__20: Root1, other__6 /* aka other */: Root1) /* return__20 */: Boolean {
   pureVirtual()
 };
 do {};
@@ -307,14 +297,14 @@ typePlaceholder#4 = {class: Empty__0};
 interface(\word, \Root2, \concrete, false, @typeDefined(Root2) @stay fn {
     do {}
 });
-@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Root2) let eq__7;
-eq__7 = fn eq(@impliedThis(Root2) this__22: Root2, other__8 /* aka other */: Root2) /* return__22 */: Boolean {
+@visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Root2) let eq__6;
+eq__6 = fn eq(@impliedThis(Root2) this__21: Root2, other__7 /* aka other */: Root2) /* return__21 */: Boolean {
   pureVirtual()
 };
 do {};
 WhichToUse extends ([Root1, Root2]);
 @fn @visibility(\public) @stay @fromType(WhichToUse) let constructor__5;
-constructor__5 = (@stay fn constructor(@impliedThis(WhichToUse) this__23: WhichToUse) /* return__23 */: Void {});
+constructor__5 = (@stay fn constructor(@impliedThis(WhichToUse) this__22: WhichToUse) /* return__22 */: Void {});
 class(\word, \WhichToUse, \concrete, true, @typeDefined(WhichToUse) @stay fn {
     do {};
     do {}
@@ -322,8 +312,8 @@ class(\word, \WhichToUse, \concrete, true, @typeDefined(WhichToUse) @stay fn {
 do {};
 void;
 ManualMaybe extends AnyValue;
-@fn @stay @fromType(ManualMaybe) let eq__8;
-eq__8 = (@stay fn eq(@impliedThis(ManualMaybe) this__24: ManualMaybe, other__9 /* aka other */: ManualMaybe) /* return__24 */: Boolean {
+@fn @stay @fromType(ManualMaybe) let eq__7;
+eq__7 = (@stay fn eq(@impliedThis(ManualMaybe) this__23: ManualMaybe, other__8 /* aka other */: ManualMaybe) /* return__23 */: Boolean {
     fn__3: do {
       pureVirtual()
     }
@@ -335,11 +325,11 @@ interface(\word, \ManualMaybe, \concrete, false, @typeDefined(ManualMaybe) @stay
 do {};
 ManualSure extends ManualMaybe;
 @constructorProperty @visibility(\public) @stay @fromType(ManualSure) let n__2: Int32;
-@visibility(\public) @fn @stay @fromType(ManualSure) let eq__9;
-eq__9 = fn eq(@impliedThis(ManualSure) this__25: ManualSure, other__10 /* aka other */: ManualMaybe) /* return__25 */: Boolean {
+@visibility(\public) @fn @stay @fromType(ManualSure) let eq__8;
+eq__8 = fn eq(@impliedThis(ManualSure) this__24: ManualSure, other__9 /* aka other */: ManualMaybe) /* return__24 */: Boolean {
   fn__4: do {
-    if(other__10 is ManualSure, fn {
-        getp(n__2, this__25) == do_get_n(other__10)
+    if(other__9 is ManualSure, fn {
+        getp(n__2, this__24) == do_get_n(other__9)
       }, \else, fn (f#2) {
         f#2(@stay fn {
             false
@@ -348,16 +338,16 @@ eq__9 = fn eq(@impliedThis(ManualSure) this__25: ManualSure, other__10 /* aka ot
   }
 };
 @fn @visibility(\public) @stay @fromType(ManualSure) let constructor__6;
-constructor__6 = (@stay fn constructor(@impliedThis(ManualSure) this__26: ManualSure, n__3 /* aka n */: Int32) /* return__26 */: Void {
+constructor__6 = (@stay fn constructor(@impliedThis(ManualSure) this__25: ManualSure, n__3 /* aka n */: Int32) /* return__25 */: Void {
     do {
       let t#9;
-      setp(n__2, this__26, t#9 = n__3);
+      setp(n__2, this__25, t#9 = n__3);
       t#9
     };
 });
 @fn @visibility(\public) @stay @fromType(ManualSure) let getn__1;
-getn__1 = fn (@impliedThis(ManualSure) this__27: ManualSure) /* return__27 */: Int32 {
-  return__27 = getp(n__2, this__27)
+getn__1 = fn (@impliedThis(ManualSure) this__26: ManualSure) /* return__26 */: Int32 {
+  return__26 = getp(n__2, this__26)
 };
 class(\word, \ManualSure, \concrete, true, @typeDefined(ManualSure) fn {
     do {};

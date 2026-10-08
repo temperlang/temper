@@ -40,6 +40,7 @@ export class Sure(public n: Int) extends Maybe {}
 export class WhyNot extends Maybe {}
 
 export class HasOwn extends Maybe {
+  @operator("==")
   public eq(other: Maybe): Boolean {
     // No equality here!
     false
