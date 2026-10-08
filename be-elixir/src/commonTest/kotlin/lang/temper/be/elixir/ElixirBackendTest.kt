@@ -5,6 +5,8 @@ import lang.temper.be.assertGeneratedStructure
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.lexer.Genre
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -206,6 +208,31 @@ class ElixirBackendTest {
         )
         assertFalse("get_schema(" in out, "a call of a getter Query never defines:\n$out")
         assertContains(out, "broken code: read of .schema")
+    }
+
+    /**
+     * A coroutine turned into a state machine starts every local it hoists
+     * out of the generator at its type's zero value, and a List's is `[]`.
+     * That arrived as a List value, and the build died with
+     * `kotlin.NotImplementedError: value of type List: []`. It is an empty
+     * Vec now, `%TemperCore.Vec{t: {}}`, as a list literal would be.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun aListHoistedOutOfAnAsyncBlockStartsEmpty() {
+        val out = elixirOutput(
+            """
+            |let p = new PromiseBuilder<Int>();
+            |async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |  let xs = [1, 2];
+            |  let xss: List<List<Int>> = [[3], [4, 5]];
+            |  let x = await p.promise orelse -1;
+            |  console.log("${'$'}{x} ${'$'}{xs.length} ${'$'}{xss[1][1]}");
+            |}
+            |p.complete(3);
+            """.trimMargin(),
+        )
+        assertEquals("3 2 5\n", out)
     }
 
     /**

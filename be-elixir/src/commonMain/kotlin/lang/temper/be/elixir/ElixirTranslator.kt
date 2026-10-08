@@ -31,6 +31,7 @@ import lang.temper.value.TString
 import lang.temper.value.TSymbol
 import lang.temper.value.TType
 import lang.temper.value.TVoid
+import lang.temper.value.Value
 
 /**
  * Turns the modules of one library into one Elixir module.
@@ -2841,11 +2842,19 @@ internal class ElixirTranslator(
 
     // ── Literals ─────────────────────────────────────────────────────────
 
-    private fun translateValueReference(expression: TmpL.ValueReference): Elixir.Expr {
-        val pos = expression.pos
-        return when (val tag = expression.value.typeTag) {
-            TBoolean -> Elixir.BoolLit(pos, TBoolean.unpack(expression.value))
-            TFloat64 -> TFloat64.unpack(expression.value).let { f ->
+    private fun translateValueReference(expression: TmpL.ValueReference): Elixir.Expr =
+        value(expression.pos, expression.value, expression)
+
+    /**
+     * A value the frontend computed, as Elixir. Most are scalars, but a
+     * coroutine turned into a state machine starts each local it hoists out
+     * of the generator at its type's zero value (ZeroValues), and a List's
+     * is `[]`. Anything else is a TODO naming where it came from.
+     */
+    private fun value(pos: Position, value: Value<*>, at: TmpL.ValueReference): Elixir.Expr =
+        when (val tag = value.typeTag) {
+            TBoolean -> Elixir.BoolLit(pos, TBoolean.unpack(value))
+            TFloat64 -> TFloat64.unpack(value).let { f ->
                 // the BEAM's floats have no NaN or infinity; TemperCore.Float
                 // stands atoms in for them
                 when {
@@ -2855,17 +2864,24 @@ internal class ElixirTranslator(
                     else -> Elixir.NumberLit(pos, f)
                 }
             }
-            TInt -> Elixir.NumberLit(pos, TInt.unpack(expression.value))
-            TInt64 -> Elixir.NumberLit(pos, TInt64.unpack(expression.value))
-            is TString -> Elixir.StringLit(pos, TString.unpack(expression.value))
+            TInt -> Elixir.NumberLit(pos, TInt.unpack(value))
+            TInt64 -> Elixir.NumberLit(pos, TInt64.unpack(value))
+            is TString -> Elixir.StringLit(pos, TString.unpack(value))
             // RepresentationOfVoid.ReifyVoid: a void value really flows, and nil is it
             TNull, TVoid -> Elixir.NilLit(pos)
-            TType -> typeValue(pos, TType.unpack(expression.value).type2, expression)
-            is TClass, TClosureRecord, TFunction, TList, TListBuilder, TMap, TMapBuilder,
-            TProblem, TStageRange, TSymbol,
-            -> TODO("value of type $tag: $expression")
+            TType -> typeValue(pos, TType.unpack(value).type2, at)
+            // an immutable List is a Vec, as a list literal is
+            TList -> vecLiteral(pos, TList.unpack(value).map { this.value(pos, it, at) })
+            // TmpL turns a bare Empty into a call of `empty()`, but not one
+            // inside a List value; `core.empty()` is `:empty`
+            is TClass -> if (tag.typeShape == WellKnownTypes.emptyTypeDefinition) {
+                Elixir.Atom(pos, "empty")
+            } else {
+                TODO("$pos: value of class ${tag.typeShape.name}: $at")
+            }
+            TClosureRecord, TFunction, TListBuilder, TMap, TMapBuilder, TProblem, TStageRange, TSymbol,
+            -> TODO("$pos: value of type $tag: $at")
         }
-    }
 
     private companion object {
         const val RETURN = "temper_return"
