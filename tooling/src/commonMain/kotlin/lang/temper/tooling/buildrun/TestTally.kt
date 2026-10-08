@@ -82,7 +82,10 @@ enum class RunTestsMessageTemplate(
     TestFailed(
         Log.Error,
         "Test failed (%s): %s - %s", // backend, test name, cause
-    ),
+    ) {
+        // Every failure is logged at unknownPos, one per failing test.
+        override val repeatsAtSamePosition: Boolean get() = true
+    },
     TestSummaryAllRun(
         Log.Summary,
         "Tests passed: %d of %d",
