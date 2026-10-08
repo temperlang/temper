@@ -153,6 +153,11 @@ class CoroutineConverterTest {
     )
 
     @Test
+    fun awaitOrelseThenIf() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/await-orelse-then-if"),
+    )
+
+    @Test
     fun usingPromiseBuilder() = assertConvertedCoroutine(
         StageTestDir("convert-coro/using-promise-builder"),
     )

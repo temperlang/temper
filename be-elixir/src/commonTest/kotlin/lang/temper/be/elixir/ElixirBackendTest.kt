@@ -287,6 +287,42 @@ class ElixirBackendTest {
     }
 
     /**
+     * An async block that ends with an `if`, after an `await ... orelse`,
+     * printed the branch and then panicked with `broken code: (Block)`. The
+     * coroutine converter dropped the `return doneResult()` at the end of
+     * each branch by leaving an empty block where it was, and an empty block
+     * is not a statement TmpL can translate. Java and Rust built the same
+     * garbage. Neither the `if` nor the `orelse` alone was enough: the `if`
+     * is only isolated as a block of its own when something before it yields.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun anAsyncBlockMayEndWithAnIf() {
+        val out = elixirOutput(
+            """
+            |let p = new PromiseBuilder<Int>();
+            |async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |  let v = await p.promise orelse -1;
+            |  if (v < 0) { console.log("neg"); } else { console.log("pos ${'$'}{v}"); }
+            |}
+            |let go(n: Int): Void {
+            |  async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |    let q = new PromiseBuilder<Int>();
+            |    q.complete(n);
+            |    let w = await q.promise orelse -1;
+            |    if (w > 0) { console.log("go ${'$'}{w}"); }
+            |  }
+            |}
+            |var n = 4;
+            |n = n;
+            |go(n);
+            |p.complete(3);
+            """.trimMargin(),
+        )
+        assertEquals("pos 3\ngo 4\n", out)
+    }
+
+    /**
      * A local in a cell can be assigned something that raises: the frontend
      * lowers `g(b) orelse panic()` by assigning a temporary in a `do`, and the
      * `orelse` side is `panic()`. `TemperCore.Heap.put(t, :v, raise(...))` is
