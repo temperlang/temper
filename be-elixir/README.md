@@ -949,9 +949,14 @@ The rules, one per line of that output:
   never answer. Each call carries the chain of actors it passed through,
   so the call back raises a `Panic` instead of hanging.
 - **Only values cross.** Messages copy, and copying a mutable object
-  would break Temper's sharing. Arguments, results and captured values
-  are checked, and a mutable non-actor object raises a `Panic` that names
-  it. Immutable values and other actors cross freely: strings, numbers,
+  would break Temper's sharing. be-elixir rejects a public member of an
+  `@actor` class whose type is not sendable when it builds ("Actor class
+  Account: parameter b of method stash has type Box__0, which is not
+  sendable"), and so a function type too. Other backends run every call on
+  the caller's stack and build the same program. At run time, for Elixir
+  code that calls an actor directly, arguments, results and captured values
+  are checked again, and a mutable non-actor object raises a `Panic` that
+  names it. Immutable values and other actors cross freely: strings, numbers,
   lists, maps, `@imu` structs. This is Erlang's own rule.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
