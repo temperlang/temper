@@ -20,7 +20,7 @@ along.
       public post(content: String, mimeType: String): Void {
         this.method = "POST";
         this.bodyContent = content;
-        this.bodyMimeType = bodyMimeType;
+        this.bodyMimeType = mimeType;
       }
 
 *Send* makes a best effort to actual send an HTTP method.
