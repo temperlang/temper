@@ -12,6 +12,7 @@ import lang.temper.value.NotYet
 import lang.temper.value.TProblem
 import lang.temper.value.TString
 import lang.temper.value.Value
+import lang.temper.value.autoSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.operatorSymbol
