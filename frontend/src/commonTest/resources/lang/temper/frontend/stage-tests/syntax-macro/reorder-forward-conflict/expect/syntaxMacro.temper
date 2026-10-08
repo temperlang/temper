@@ -1,0 +1,8 @@
+let console#0 = doPure(fn: Console {
+    getConsole()
+});
+REM("`snapshot` reads `counter` before its declaration, so it sees `counter`\nafter `counter = 5`. Logging needs `snapshot`, but reads `counter` before\n`counter = 5`. No order does both.", null, false);
+var counter__0 = 0;
+do_call_log(console#0, cat(str(snapshot__0), " ", str(counter__0)));
+counter__0 = 5;
+let snapshot__0 = counter__0;
