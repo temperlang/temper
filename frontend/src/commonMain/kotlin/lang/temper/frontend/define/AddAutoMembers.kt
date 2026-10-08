@@ -5,8 +5,6 @@ import lang.temper.builtin.EqMacro
 import lang.temper.builtin.dotHelperForOperator
 import lang.temper.common.OpenOrClosed
 import lang.temper.interp.BreakTransform
-import lang.temper.interp.autoSymbol
-import lang.temper.interp.vAutoSymbol
 import lang.temper.lexer.OperatorType
 import lang.temper.log.LogSink
 import lang.temper.name.ParsedName
@@ -35,6 +33,7 @@ import lang.temper.value.TList
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.Value
+import lang.temper.value.autoSymbol
 import lang.temper.value.eqBuiltinName
 import lang.temper.value.qNameSymbol
 import lang.temper.value.reifiedTypeContained
@@ -42,6 +41,7 @@ import lang.temper.value.sealedTypeSymbol
 import lang.temper.value.staySymbol
 import lang.temper.value.thisParsedName
 import lang.temper.value.typeDeclSymbol
+import lang.temper.value.vAutoSymbol
 import lang.temper.value.vFnSymbol
 import lang.temper.value.vFromTypeSymbol
 import lang.temper.value.vImpliedThisSymbol
