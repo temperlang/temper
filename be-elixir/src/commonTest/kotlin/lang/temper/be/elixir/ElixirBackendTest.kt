@@ -5,6 +5,8 @@ import lang.temper.be.assertGeneratedStructure
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.lexer.Genre
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -282,6 +284,42 @@ class ElixirBackendTest {
         )
         assertContains(out, "TemperCore.Heap.put(x, :v, 1)")
         assertFalse("_x = 1" in out, "the write before the bubble is a dead binding:\n$out")
+    }
+
+    /**
+     * An async block that ends with an `if`, after an `await ... orelse`,
+     * printed the branch and then panicked with `broken code: (Block)`. The
+     * coroutine converter dropped the `return doneResult()` at the end of
+     * each branch by leaving an empty block where it was, and an empty block
+     * is not a statement TmpL can translate. Java and Rust built the same
+     * garbage. Neither the `if` nor the `orelse` alone was enough: the `if`
+     * is only isolated as a block of its own when something before it yields.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun anAsyncBlockMayEndWithAnIf() {
+        val out = elixirOutput(
+            """
+            |let p = new PromiseBuilder<Int>();
+            |async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |  let v = await p.promise orelse -1;
+            |  if (v < 0) { console.log("neg"); } else { console.log("pos ${'$'}{v}"); }
+            |}
+            |let go(n: Int): Void {
+            |  async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |    let q = new PromiseBuilder<Int>();
+            |    q.complete(n);
+            |    let w = await q.promise orelse -1;
+            |    if (w > 0) { console.log("go ${'$'}{w}"); }
+            |  }
+            |}
+            |var n = 4;
+            |n = n;
+            |go(n);
+            |p.complete(3);
+            """.trimMargin(),
+        )
+        assertEquals("pos 3\ngo 4\n", out)
     }
 
     /**
