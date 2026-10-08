@@ -4487,8 +4487,8 @@ class TmpLBackendTest {
                 |        public var why: String = "${id}${more}";
                 |        public get sigh(): Int { 2 * more }
                 |
-                |        // @auto @operator("==")
-                |        @auto("==") @operator("==")
+                |        // TODO @auto("==") on methods sometime
+                |        @operator("==")
                 |        public eq(other: Hi): Boolean {
                 |          this.id == other.id &&
                 |            // TODO Needs us to adjust access rules.
@@ -4545,7 +4545,7 @@ class TmpLBackendTest {
             |          @QName("test-library/foo.type Hi.get sigh()") get.sigh -> get.sigh__1(this = this__0, @QName("test-library/foo.type Hi.get sigh().(this)") @impliedThis(Hi) this__0: Hi): Int32 {
             |            return nym`*#0`(2, /* this */ this__0.more__0);
             |          }
-            |          @QName("test-library/foo.type Hi.eq()") @auto("==") @operator("_==_") let eq__0(this = this__1, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__1: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__0: Hi): Boolean {
+            |          @QName("test-library/foo.type Hi.eq()") @operator("_==_") let eq__0(this = this__1, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__1: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__0: Hi): Boolean {
             |            if (nym`==#0`(/* this */ this__1.id__0, other__0.id)) {
             |              if (nym`==#0`(/* this */ this__1.why__0, other__0.why)) {
             |                return nym`==#1`(/* this */ this__1.sigh, other__0.sigh);
@@ -4576,12 +4576,8 @@ class TmpLBackendTest {
             |            return void;
             |          }
             |          @QName("test-library/foo.type Hi.eq()") @auto("==") @operator("_==_") let eq__1(this = this__6, @QName("test-library/foo.type Hi.eq().(this)") @impliedThis(Hi) this__6: Hi, @QName("test-library/foo.type Hi.eq().(other)") other__1: Hi): Boolean {
-            |            if (nym`==#1`(/* this */ this__6.sigh, other__1.sigh)) {
-            |              if (nym`==#0`(/* this */ this__6.id__0, other__1.id)) {
-            |                return nym`==#0`(/* this */ this__6.why__0, other__1.why);
-            |              } else {
-            |                return false;
-            |              }
+            |            if (nym`==#0`(/* this */ this__6.id__0, other__1.id)) {
+            |              return nym`==#0`(/* this */ this__6.why__0, other__1.why);
             |            } else {
             |              return false;
             |            }

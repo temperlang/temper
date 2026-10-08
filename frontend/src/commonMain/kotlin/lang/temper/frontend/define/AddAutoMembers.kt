@@ -14,7 +14,6 @@ import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExternalGet
-import lang.temper.type.InternalGet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.MkType
@@ -282,9 +281,8 @@ private class AutoMemberAdder(
                                     // TODO Also check private properties once we loosen rules.
                                     // TODO Log errors if can't check all properties?
                                     property.visibility == Visibility.Public || continue@properties
-                                    // Also bail out on setter-only properties.
-                                    // TODO Is this the right way to detect such?
-                                    property.setter == null || property.getter != null || continue@properties
+                                    // Also focus only on concrete properties, figuring others are derived.
+                                    property.abstractness == Abstractness.Concrete || continue@properties
                                     // Seems good now.
                                     return@nextIndex property to nextIndex
                                 }
@@ -301,18 +299,10 @@ private class AutoMemberAdder(
                                 V(EqMacro.value)
                                 // This property.
                                 Call {
-                                    // Jump hoops to match what we see elsewhere.
+                                    // Use the same access styles we see elsewhere.
                                     // TODO Make/access common helpers?
-                                    when (property.abstractness) {
-                                        Abstractness.Abstract -> {
-                                            V(Value(DotHelper(InternalGet, DotMember(property.symbol))))
-                                            V(typeValue)
-                                        }
-                                        Abstractness.Concrete -> {
-                                            V(Value(BuiltinFuns.getpFn))
-                                            Rn(property.name)
-                                        }
-                                    }
+                                    V(Value(BuiltinFuns.getpFn))
+                                    Rn(property.name)
                                     Rn(thisName)
                                 }
                                 // Other property.
@@ -329,7 +319,7 @@ private class AutoMemberAdder(
                                 // Otherwise build `if` recursively.
                                 else -> If(
                                     cond = { buildCond() },
-                                    thn = { buildIf(propertyIndex + 1) },
+                                    thn = { buildIf(foundIndex + 1) },
                                     els = { V(TBoolean.valueFalse) },
                                 )
                             }
