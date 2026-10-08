@@ -2565,6 +2565,20 @@ class TmpLTranslator internal constructor(
                 bodyParts.addAll(
                     TranslateFunctionExit().translateExit(bodyTree.pos.rightEdge).stmtList,
                 )
+            } else {
+                // Every path throws, so nothing reads the return-holding variable,
+                // but the body can still assign it: a `Void` body starts with
+                // `return__123 = void`.  Drop those dead stores when they are all
+                // there is, and otherwise declare the variable so the body does not
+                // refer to a name that nothing defines.
+                val returnName = output!!.second.name.content as ResolvedName
+                dropDeadStoresOfConstants(bodyParts, returnName)
+                if (bodyParts.any { mentionsName(it, returnName) }) {
+                    bodyParts.addAll(
+                        offsetForReturnStatement,
+                        translateStatement(output.first).stmtList,
+                    )
+                }
             }
         }
         simplifyFunctionBodyParts(bodyParts, pool)
@@ -3014,6 +3028,23 @@ private class TranslatedDeclaration(
 }
 
 internal fun isVoidLikeAssignment(tree: Tree) = isAssignment(tree) && hasVoidLikeType(tree)
+
+private fun mentionsName(t: TmpL.Tree, name: ResolvedName): Boolean =
+    (t is TmpL.Id && t.name == name) || t.children.any { mentionsName(it, name) }
+
+/**
+ * Removes top-level statements like `name = void` from [statements], but only
+ * when nothing else in [statements] mentions [name], so that no read is left
+ * without the value it would have seen.
+ */
+private fun dropDeadStoresOfConstants(statements: MutableList<TmpL.Statement>, name: ResolvedName) {
+    fun isConstantStore(s: TmpL.Statement) =
+        s is TmpL.Assignment && s.left.name == name && s.right is TmpL.ValueReference
+    val rest = statements.filterNot(::isConstantStore)
+    if (rest.size != statements.size && rest.none { mentionsName(it, name) }) {
+        statements.removeAll(::isConstantStore)
+    }
+}
 
 internal fun dotHelperFromCallOrNull(tree: Tree): DotHelper? =
     (tree as? CallTree)?.childOrNull(0)?.functionContained as? DotHelper

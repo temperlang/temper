@@ -1639,6 +1639,82 @@ class TmpLBackendTest {
         ),
     )
 
+    /**
+     * The frontend starts a `Void` body with `return__123 = void`.  When every
+     * path throws there is no `return return__123`, so that store must not be
+     * left referring to an undeclared variable.
+     */
+    @Test
+    fun voidReifiedFunctionThatNeverReturns() = assertGeneratedCode(
+        inputs = inputFileMapFromJson(
+            """
+                |{
+                |  foo: {
+                |    foo.temper: ```
+                |      export class Gate {
+                |        public var at: Int = -1;
+                |        public fail(n: Int): Void throws Bubble { at = n; bubble(); }
+                |      }
+                |      export let failFn(): Void { panic(); }
+                |      export let failWhen(n: Int): Void throws Bubble {
+                |        when (n) { 0 -> panic(); else -> bubble(); }
+                |      }
+                |      ```
+                |  }
+                |}
+            """.trimMargin(),
+        ),
+        want = """
+            |{
+            |  "tmpl": {
+            |    "foo.tmpl": {
+            |      content: ```
+            |      //// work//foo/ => foo.tmpl
+            |      let nym`==#0` = builtins.nym`==` /* (Int32, Int32) -> Boolean */;
+            |      @QName("test-library/foo.type Gate") class Gate / Gate {
+            |        @QName("test-library/foo.type Gate.at") var at__0: Int32;
+            |        @QName("test-library/foo.type Gate.fail()") let fail__0(this = this__0, @QName("test-library/foo.type Gate.fail().(this)") @impliedThis(Gate) this__0: Gate, @QName("test-library/foo.type Gate.fail().(n)") n__0: Int32): Void | Bubble {
+            |          /* this */ this__0.at__0 = n__0;
+            |          throw;
+            |        }
+            |        @QName("test-library/foo.type Gate.constructor()") constructor__0(this = this__1, @QName("test-library/foo.type Gate.constructor().(this)") @impliedThis(Gate) this__1: Gate) {
+            |          /* this */ this__1.at__0 = -1;
+            |          return void;
+            |        }
+            |        get.at -> getat__0(this = this__2, @impliedThis(Gate) this__2: Gate): Int32 {
+            |          return /* this */ this__2.at__0;
+            |        }
+            |        set.at -> setat__0(this = this__3, @impliedThis(Gate) this__3: Gate, newAt__0: Int32): Void {
+            |          /* this */ this__3.at__0 = newAt__0;
+            |          return void;
+            |        }
+            |      }
+            |      @QName("test-library/foo.failFn()") let failFn(): Void {
+            |        throw;
+            |      }
+            |## Here the store is not at top level, so it stays and the variable is declared.
+            |      @QName("test-library/foo.failWhen()") let failWhen(@QName("test-library/foo.failWhen().(n)") n__1: Int32): Void | Bubble {
+            |        @QName("test-library/foo.failWhen().return") let return__0: Void;
+            |        if (nym`==#0`(n__1, 0)) {
+            |          throw;
+            |          return__0 = void;
+            |        } else {
+            |          throw;
+            |        }
+            |      }
+            |
+            |      ```
+            |    },
+            |    "foo.tmpl.map": "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+        supportNetwork = defaultTestSupportNetwork.copy(
+            bubbleStrategy = BubbleBranchStrategy.Exceptions,
+            representationOfVoid = RepresentationOfVoid.ReifyVoid,
+        ),
+    )
+
     @Ignore
     @Test
     fun assertCanInlineToStmt() {
