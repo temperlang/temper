@@ -5,6 +5,8 @@ import lang.temper.be.assertGeneratedStructure
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.lexer.Genre
 import lang.temper.log.filePath
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -331,6 +333,62 @@ class ElixirBackendTest {
         val stored = out.indexOf("TemperCore.Heap.put(b, :v, fn")
         assertTrue(bound >= 0 && stored >= 0, "expected both a binding of base and a store of b:\n$out")
         assertTrue(bound < stored, "b's closure is made before base is bound:\n$out")
+    }
+
+    /**
+     * `var f = fn ...; f = g;` at the top level arrives as a module function
+     * named f and an assignment to it. JS and Python rebind a function's
+     * name, but a `defp` cannot be rebound: the assignment bound a local that
+     * nothing read, and every call still ran the first body (this printed
+     * `5 5 5 5 3`). f is a module-level value now. `install` rebinds it from
+     * inside a function, and `g` keeps the value f had when g was made.
+     *
+     * The frontend moves the top-level `f = dbl` up to just after the
+     * declarations it needs, ahead of `before`; js and the interpreter print
+     * the same `10` for it.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun aTopLevelVarHoldingAFunctionCanBeRebound() {
+        val out = elixirOutput(
+            """
+            |let dbl(x: Int): Int { x * 2 }
+            |let tpl(x: Int): Int { x * 3 }
+            |var f = fn (x: Int): Int { x };
+            |var calls = 0;
+            |let fire(v: Int): Int { calls += 1; f(v) }
+            |let install(): Void { f = tpl; }
+            |var seed = 5;
+            |seed = seed;
+            |let before = fire(seed);
+            |let g = f;
+            |f = dbl;
+            |let middle = fire(seed);
+            |install();
+            |console.log("${'$'}{before} ${'$'}{middle} ${'$'}{fire(seed)} ${'$'}{g(seed)} ${'$'}{calls}");
+            """.trimMargin(),
+        )
+        assertEquals("10 10 15 10 3\n", out)
+    }
+
+    /**
+     * An exported f that is rebound is called as `Temper.Lib.f(x)` by another
+     * library, and by Elixir code. That `def f` calls whatever f holds now;
+     * the first body is a `defp` of its own. Before, another library calling
+     * f after `install()` still got the first body.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun anExportedFunctionThatIsReboundIsCalledAsItIsNow() {
+        val out = elixirOutput(
+            """
+            |let dbl(x: Int): Int { x * 2 }
+            |export var f = fn (x: Int): Int { x };
+            |export let install(): Void { f = dbl; }
+            """.trimMargin(),
+            then = "lib = Temper.MyTestLibrary; IO.puts(lib.f(5)); lib.install(); IO.puts(lib.f(5))",
+        )
+        assertEquals("5\n10\n", out)
     }
 
     /**

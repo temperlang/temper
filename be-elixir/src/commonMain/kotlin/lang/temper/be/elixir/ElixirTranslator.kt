@@ -80,7 +80,11 @@ internal class ElixirTranslator(
     private val libraryRoots: Map<FilePath, DashedIdentifier>,
     /** Every module function of the library, so a call knows it is one, and its arity. */
     private val moduleFunctions: Map<ResolvedName, Int>,
-    /** Every module-level variable of the library. */
+    /**
+     * Every module-level variable of the library, and every module function
+     * an assignment rebinds: that one is in [moduleFunctions] too, which
+     * names its `defp`, but everything else reaches it through here.
+     */
     private val moduleGlobals: Set<ResolvedName>,
     /** Every class and interface of the library, by its source name. */
     private val types: Map<String, TmpL.TypeDeclaration>,
@@ -336,11 +340,19 @@ internal class ElixirTranslator(
                 functions.addAll(takeLifted())
             }
             is TmpL.ModuleFunctionDeclaration -> {
-                val fn = within(functionName(topLevel.name.name).outputNameText) {
+                val name = topLevel.name.name
+                val exported = name is lang.temper.name.ExportedName
+                // rebound later, `var f = fn ...; f = g;`, so f is a module-level
+                // value and its first value goes where its `var` was
+                val rebound = name in moduleGlobals
+                if (rebound && exported) {
+                    reboundExport(topLevel)
+                    return
+                }
+                val fn = within(functionName(name).outputNameText) {
                     names.withLocals(declaredIn(topLevel)) { translateFunction(topLevel) }
                 }
-                val exported = topLevel.name.name is lang.temper.name.ExportedName
-                if (topLevel.name.name in private) {
+                if (name in private) {
                     fn.isPrivate = true
                 } else if (exported) {
                     docAttr(fn.pos, "doc", (topLevel as TmpL.Declaration).documentation)?.let(functions::add)
@@ -353,6 +365,7 @@ internal class ElixirTranslator(
                 functions.add(spec(fn, topLevel.parameters.parameters, result, fromElixir = exported))
                 functions.add(fn)
                 functions.addAll(takeLifted())
+                if (rebound) mainBody.add(globalPut(topLevel.pos, name, capture(topLevel.pos, name)))
             }
             // each member names its own locals; see translateType
             is TmpL.TypeDeclaration -> modules.add(translateType(topLevel))
@@ -368,6 +381,49 @@ internal class ElixirTranslator(
             // comments and garbage carry no Elixir output
             else -> {}
         }
+    }
+
+    /**
+     * An exported function an assignment rebinds. Another library calls
+     * `Temper.Lib.f(x)` and Elixir code may too, so `def f` stays, and
+     * calls whatever f holds now. Its first value is the declared body,
+     * under a name of its own:
+     *
+     *     defp ex_f_3(x) do x end
+     *     def f(x) do (entry) TemperCore.Global.get(:"Temper.Lib.f").(x) end
+     *     # in __temper_init__:
+     *     TemperCore.Global.put(:"Temper.Lib.f", &ex_f_3/1)
+     */
+    private fun reboundExport(decl: TmpL.ModuleFunctionDeclaration) {
+        val pos = decl.pos
+        val name = decl.name.name
+        val outName = functionName(name)
+        val first = names.gensym(outName.outputNameText)
+        val result = specs.of(decl.returnType)
+        val (impl, dispatch) = within(outName.outputNameText) {
+            names.withLocals(declaredIn(decl)) {
+                val impl = translateFunction(decl, id = Elixir.Id(decl.name.pos, first), entryPoint = false)
+                impl.isPrivate = true
+                val formals = decl.parameters.parameters
+                val args = formals.map { varRef(pos, it.name.name) }
+                val call = Elixir.AnonCall(pos, fn = globalGet(pos, name), args = args)
+                val dispatch = Elixir.FunDef(
+                    pos,
+                    id = Elixir.Id(decl.name.pos, outName),
+                    params = formals.map { idOf(it.name) },
+                    body = entry(pos, Elixir.Block(pos, listArgs(pos, formals) + call)),
+                )
+                impl to dispatch
+            }
+        }
+        functions.add(spec(impl, decl.parameters.parameters, result))
+        functions.add(impl)
+        functions.addAll(takeLifted())
+        docAttr(pos, "doc", (decl as TmpL.Declaration).documentation)?.let(functions::add)
+        functions.add(spec(dispatch, decl.parameters.parameters, result, fromElixir = true))
+        functions.add(dispatch)
+        val arity = Elixir.NumberLit(pos, decl.parameters.parameters.size)
+        mainBody.add(globalPut(pos, name, Elixir.Capture(pos, fn = Elixir.Id(pos, first), arity = arity)))
     }
 
     private fun processModuleLevelDeclaration(decl: TmpL.ModuleLevelDeclaration) {
@@ -472,7 +528,15 @@ internal class ElixirTranslator(
         data class Continue(val target: LoopContext) : Exit
     }
 
-    private fun translateFunction(decl: TmpL.ModuleFunctionDeclaration): Elixir.FunDef {
+    /**
+     * [decl] as a `def`, named [id]. An [entryPoint], an exported function,
+     * is where Elixir code calls in; see [entry] and [listArgs].
+     */
+    private fun translateFunction(
+        decl: TmpL.ModuleFunctionDeclaration,
+        id: Elixir.Id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
+        entryPoint: Boolean = decl.name.name is lang.temper.name.ExportedName,
+    ): Elixir.FunDef {
         val pos = decl.pos
         if (decl.parameters.thisName != null) TODO("this parameter: $decl")
         // parameters are locals too: a loop that assigns one must carry it
@@ -481,22 +545,16 @@ internal class ElixirTranslator(
         val params = formals.map { idOf(it) as Elixir.Pattern }
         val body = decl.body ?: TODO("function without a body: $decl")
         if (decl.metadata.any { it.key.symbol == lang.temper.value.connectedSymbol } && !isStdLib) {
-            return Elixir.FunDef(
-                pos,
-                id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
-                params = params,
-                body = connectedBody(decl),
-            )
+            return Elixir.FunDef(pos, id = id, params = params, body = connectedBody(decl))
         }
-        val exported = decl.name.name is lang.temper.name.ExportedName
-        val prelude = (if (exported) listArgs(pos, decl.parameters.parameters) else listOf()) +
+        val prelude = (if (entryPoint) listArgs(pos, decl.parameters.parameters) else listOf()) +
             boxParams(pos, formals.map { it.name })
         val translated = functionBody(pos, body.statements, prelude = prelude)
         return Elixir.FunDef(
             pos,
-            id = Elixir.Id(decl.name.pos, functionName(decl.name.name)),
+            id = id,
             params = params,
-            body = if (exported) entry(pos, translated) else translated,
+            body = if (entryPoint) entry(pos, translated) else translated,
         )
     }
 
@@ -1724,8 +1782,8 @@ internal class ElixirTranslator(
                 val name = canonical(callable.id.name)
                 when (name) {
                     in externals -> externalReference(expression.pos, name)
-                    in moduleFunctions -> capture(expression.pos, name)
                     in moduleGlobals -> globalGet(expression.pos, name)
+                    in moduleFunctions -> capture(expression.pos, name)
                     else -> varRef(expression.pos, name)
                 }
             }
@@ -1805,6 +1863,8 @@ internal class ElixirTranslator(
                 val name = canonical(callee.id.name)
                 val args = arguments(pos, callee.type, given)
                 when (name) {
+                    // a module function an assignment rebinds: whatever it holds now
+                    in moduleGlobals -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
                     // qualified, so it works from inside a class module too, and
                     // never meets a Kernel import of the same name
                     in moduleFunctions -> if (inRoot && name in private) {
@@ -1817,7 +1877,6 @@ internal class ElixirTranslator(
                             remoteCall(pos, moduleOf(pos, external.module), functionName(name).outputNameText, args)
                         is ExternalValue -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
                     }
-                    in moduleGlobals -> Elixir.AnonCall(pos, fn = globalGet(callee.pos, name), args = args)
                     in recursiveLocals -> {
                         val self = recursiveLocals.getValue(name).first
                         Elixir.AnonCall(pos, fn = Elixir.Id(pos, self), args = listOf(Elixir.Id(pos, self)) + args)
