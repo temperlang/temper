@@ -106,16 +106,16 @@ private class AutoMemberAdder(
                     // non-null list of sealed subtypes, and we would have to be in it.
                     (superShape.sealedSubTypes ?: listOf()).isNotEmpty() || continue@superTypes
                     // So if we get this far, the supertype is sealed. Check autos.
-                    // TODO Ideally we track the progenitors of each auto in one recursive dig, but sloppily just seek
-                    // TODO  `==` for now.
-                    // TODO Would we be building a multimap instead for each key?
-                    eqBuiltinName.builtinKey in (superShape.decl()?.autoKeys() ?: listOf()) || continue@superTypes
-                    // So we have a super auto eq.
                     val oldSize = size
                     dig(superShape)
                     if (size == oldSize) {
-                        // No earlier sealed auto eq progenitors found, so add this one.
-                        add(superShape)
+                        // No earlier sealed auto eq progenitors found, so see if this is auto eq.
+                        // TODO Ideally we track the progenitors of each auto in one recursive dig, but sloppily just
+                        // TODO seek `==` for now.
+                        // TODO Would we be building a multimap instead for each key?
+                        if (eqBuiltinName.builtinKey in (superShape.decl()?.autoKeys() ?: listOf())) {
+                            add(superShape)
+                        }
                     }
                 }
             }

@@ -88,3 +88,67 @@ break. There's no way to instantiate one.
 But do extend another non-sealed interface to ensure we also handle that.
 
     sealed interface AllAlone extends I {}
+
+## Detour on auto equality for sealed interfaces
+
+Also check auto equality for sealed types. Skip generic for now, although maybe
+*Equatable* could help with that.
+
+    @auto("==")
+    sealed interface High {
+      toString(): String;
+    }
+
+With that one root type as auto eq, this sealed hierachy should handle `==`.
+
+    class Low1(public i: Int) extends High {
+      public toString(): String { "Low1(${i})" }
+    }
+
+But we do require the entire hierarchy to be sealed.
+
+    sealed interface Mid extends High {}
+
+    class Low2(public s: String) extends Mid {
+      public toString(): String { "Low2(${s})" }
+    }
+
+    class Low3 extends Mid {
+      public toString(): String { "Low3" }
+    }
+
+Make some instances. Some equal and some not.
+
+    let high1: High = new Low1(11);
+    let high1b: High = new Low1(12);
+    let high1c: High = new Low1(12);
+    let high2: High = new Low2("two");
+    let high2b: High = new Low2("to be");
+    let high2c: High = new Low2("to be");
+    let high3: High = new Low3();
+    let high3b: High = new Low3();
+
+Compare various pairs.
+
+    let pairs = [
+      new Pair(high1, high1b),
+      new Pair(high1b, high1c),
+      new Pair(high1, high2),
+      new Pair(high2, high2b),
+      new Pair(high2b, high2c),
+      new Pair(high1, high3),
+      new Pair(high3, high3b),
+    ];
+    for (let pair of pairs) {
+      console.log("${pair.key} == ${pair.value}: ${pair.key == pair.value}");
+    }
+
+```log
+Low1(11) == Low1(12): false
+Low1(12) == Low1(12): true
+Low1(11) == Low2(two): false
+Low2(two) == Low2(to be): false
+Low2(to be) == Low2(to be): true
+Low1(11) == Low3: false
+Low3 == Low3: true
+```
