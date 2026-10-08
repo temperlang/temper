@@ -963,6 +963,20 @@ The rules, most of them shown in that output:
   are checked again, and a mutable non-actor object raises a `Panic` that
   names it. Immutable values and other actors cross freely: strings, numbers,
   lists, maps, `@imu` structs. This is Erlang's own rule.
+- **Promises cross.** A `Promise<T>` of a sendable `T` may be an argument
+  or a result. A promise is a heap object, so on the way out it is
+  published to `TemperCore.Promises`, which keeps its state and tells
+  every process that awaits it when it settles. Its ref is unchanged; in a
+  process whose heap lacks it, `await` subscribes instead of parking on
+  the heap object. An actor wakes for such a settle in a turn of its own.
+  `__temper_main__/0` keeps draining while it awaits one. Only the process
+  that made a promise can complete it, and if that process ends first the
+  `await` panics instead of waiting forever. Published promises are never
+  forgotten, which leaks for a long-lived actor that hands out many.
+- **Await is a turn boundary.** An actor's turn ends when its call returns
+  and the async steps that call started have run as far as they can. A
+  block suspended at an `await` resumes in a later turn, so a field it read
+  before the `await` may have changed after it.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
   because a link alone ignores a normal exit.

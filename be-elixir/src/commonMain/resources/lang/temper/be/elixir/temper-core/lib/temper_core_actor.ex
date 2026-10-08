@@ -14,7 +14,9 @@ defmodule TemperCore.Actor do
   - **Crossing.** Arguments and results are copied, as every BEAM message is.
     Copying a mutable non-actor object would break Temper's aliasing, so
     one raises a `TemperCore.Panic` that names it. Values and other actors
-    go through.
+    go through, and so do promises, which are published so the receiver
+    can await them. The frontend rejects the rest when it compiles; this
+    check is for Elixir code, which nothing type-checks.
   - **Errors and crashes.** A Temper bubble or panic in a method is that
     call's result: the caller raises it again, so `orelse` works across
     processes, and the actor carries on. Anything else (an Elixir error, an
@@ -398,7 +400,7 @@ defmodule TemperCore.Actor do
 
     try do
       value = Heap.run(body)
-      if drain, do: TemperCore.Async.drain()
+      if drain, do: TemperCore.Async.drain_queue()
       sendable!(value, "a result")
       {:ok, value}
     catch
@@ -408,7 +410,15 @@ defmodule TemperCore.Actor do
     end
   end
 
+  # A promise made elsewhere that a generator here awaits has settled: its
+  # waiters run now, as a turn of their own.
   @impl true
+  def handle_info({:temper_promise, id, settled}, state) do
+    TemperCore.Promise.remote_settled(id, settled)
+    TemperCore.Async.drain_queue()
+    {:noreply, state}
+  end
+
   def handle_info({:DOWN, _, :process, _creator, _reason}, state), do: {:stop, :normal, state}
   def handle_info(_other, state), do: {:noreply, state}
 
@@ -436,7 +446,7 @@ defmodule TemperCore.Actor do
   """
   @spec sendable!(term(), String.t()) :: :ok
   def sendable!(term, what) do
-    case first_unsendable([term]) do
+    case first_unsendable([term], true) do
       nil ->
         :ok
 
@@ -451,20 +461,28 @@ defmodule TemperCore.Actor do
 
   @doc "Whether `term` could cross to another process: `sendable!/2` without the raise."
   @spec sendable?(term()) :: boolean()
-  def sendable?(term), do: first_unsendable([term]) == nil
+  def sendable?(term), do: first_unsendable([term], false) == nil
 
-  defp first_unsendable([]), do: nil
-  defp first_unsendable([%__MODULE__{} | rest]), do: first_unsendable(rest)
-  defp first_unsendable([%TemperCore.Ref{class: class} | _]), do: class
-  defp first_unsendable([[] | rest]), do: first_unsendable(rest)
-  defp first_unsendable([[h | t] | rest]), do: first_unsendable([h, t | rest])
-  defp first_unsendable([x | rest]) when is_tuple(x), do: first_unsendable([Tuple.to_list(x) | rest])
-  defp first_unsendable([x | rest]) when is_map(x), do: first_unsendable([Map.keys(x), Map.values(x) | rest])
+  # With `publish`, a promise is sendable, and is published on the way, so
+  # whoever receives its ref can await it (see `TemperCore.Promise`).
+  defp first_unsendable([], _), do: nil
+  defp first_unsendable([%__MODULE__{} | rest], p), do: first_unsendable(rest, p)
 
-  defp first_unsendable([x | rest]) when is_function(x) do
-    {:env, env} = :erlang.fun_info(x, :env)
-    first_unsendable([env | rest])
+  defp first_unsendable([%TemperCore.Ref{class: :promise} = promise | rest], true) do
+    TemperCore.Promise.publish(promise)
+    first_unsendable(rest, true)
   end
 
-  defp first_unsendable([_ | rest]), do: first_unsendable(rest)
+  defp first_unsendable([%TemperCore.Ref{class: class} | _], _), do: class
+  defp first_unsendable([[] | rest], p), do: first_unsendable(rest, p)
+  defp first_unsendable([[h | t] | rest], p), do: first_unsendable([h, t | rest], p)
+  defp first_unsendable([x | rest], p) when is_tuple(x), do: first_unsendable([Tuple.to_list(x) | rest], p)
+  defp first_unsendable([x | rest], p) when is_map(x), do: first_unsendable([Map.keys(x), Map.values(x) | rest], p)
+
+  defp first_unsendable([x | rest], p) when is_function(x) do
+    {:env, env} = :erlang.fun_info(x, :env)
+    first_unsendable([env | rest], p)
+  end
+
+  defp first_unsendable([_ | rest], p), do: first_unsendable(rest, p)
 end
