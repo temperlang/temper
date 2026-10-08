@@ -19,7 +19,6 @@ export class ManualHi(
   public yetMore: Int,
 ) {
   public var why: String = "${id}${more}";
-  public get sigh(): Int { 2 * more }
 
   @operator("==")
   public eq(other: ManualHi): Boolean {
@@ -47,7 +46,20 @@ export class HasOwn extends Maybe {
   }
 }
 
-export interface Sneaky extends Maybe {} // not sealed
+export interface Sneaky extends Maybe {} // nonsealed in hierarchy
+
+// Not sealed with direct auto.
+@auto("==")
+export interface NoWay {}
+
+// Incompatible types for auto eq.
+@auto("==")
+export sealed interface Root1 {}
+
+@auto("==")
+export sealed interface Root2 {}
+
+export class WhichToUse extends Root1 & Root2 {}
 
 // Manual eq comparison of some above on sealed interface.
 export sealed interface ManualMaybe {
@@ -57,11 +69,5 @@ export sealed interface ManualMaybe {
 export class ManualSure(public n: Int) extends ManualMaybe {
   public eq(other: ManualMaybe): Boolean {
     other is ManualSure && this.n == other.n
-  }
-}
-
-export class ManualWhyNot extends ManualMaybe {
-  public eq(other: ManualMaybe): Boolean {
-    other is ManualWhyNot
   }
 }

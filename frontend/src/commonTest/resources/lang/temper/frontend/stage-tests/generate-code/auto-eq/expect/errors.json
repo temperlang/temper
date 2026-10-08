@@ -1,0 +1,6 @@
+[
+    "Auto method not allowed with unsealed subtype(s): Sneaky!",
+    "Auto method not support for interface that's not sealed!",
+    "Auto method cannot support multiple supertype(s): Root1, Root2!",
+    "Type WhichToUse must implement eq from Root1.  Maybe add `public eq(other: Root1): Boolean`!"
+]

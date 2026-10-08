@@ -3,10 +3,12 @@ package lang.temper.frontend.define
 import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.EqMacro
 import lang.temper.builtin.dotHelperForOperator
+import lang.temper.common.Log
 import lang.temper.common.OpenOrClosed
 import lang.temper.interp.BreakTransform
 import lang.temper.lexer.OperatorType
 import lang.temper.log.LogSink
+import lang.temper.log.MessageTemplate
 import lang.temper.name.ParsedName
 import lang.temper.name.QName
 import lang.temper.name.SourceName
@@ -122,11 +124,16 @@ private class AutoMemberAdder(
         }
         sealedAutoEqProgenitors.isEmpty() && return
         if (sealedAutoEqProgenitors.size > 1) {
-            // TODO Log problem.
+            val namePos = typeDecl?.parts?.name?.pos ?: typeDecl?.pos ?: edge.target.pos
+            logSink.log(
+                Log.Error,
+                MessageTemplate.MultipleAutoOptions,
+                namePos,
+                listOf(sealedAutoEqProgenitors.joinToString(", ") { it.name.displayName }),
+            )
             return
         }
         // We have just one super type that we need to add an auto eq for.
-        // TODO Use the reified type of the super for the `other` param.
         val progenitor = sealedAutoEqProgenitors.first()
         addAutoEq(progenitor.decl()?.reifiedType())
     }
@@ -143,13 +150,30 @@ private class AutoMemberAdder(
             // If abstract but the otherType isn't us, then we'll inherit the pure virtual.
             otherType == null || return
             // But don't support auto eq for non-sealed interfaces.
-            // TODO Log error.
-            sealedTypeSymbol in typeDecl.parts!!.metadataSymbolMap || return
+            val namePos = typeDecl.parts?.name?.pos ?: typeDecl.pos
+            if (sealedTypeSymbol !in typeDecl.parts!!.metadataSymbolMap) {
+                logSink.log(
+                    Log.Error,
+                    MessageTemplate.NoAutoWhenNotSealed,
+                    namePos,
+                    listOf(),
+                )
+                return
+            }
             // We also need concrete subtypes. Don't bother checking deep because if all our sealed subtypes are valid
             // (checked elsewhere), they'll also end up getting here, so eventually everything will be checked.
-            (typeShape.sealedSubTypes ?: listOf()).all { sealedSub ->
-                sealedSub.abstractness == Abstractness.Concrete || sealedSub.decl()?.isSealed() == true
-            } || return
+            val unsealedSubs = (typeShape.sealedSubTypes ?: listOf()).filter { sealedSub ->
+                sealedSub.abstractness == Abstractness.Abstract && sealedSub.decl()?.isSealed() != true
+            }
+            if (unsealedSubs.isNotEmpty()) {
+                logSink.log(
+                    Log.Error,
+                    MessageTemplate.AutoNotFullySealed,
+                    namePos,
+                    listOf(unsealedSubs.joinToString(", ") { it.name.displayName }),
+                )
+                return
+            }
         }
         // TODO Error or at least bail if an `==` already exists.
         var methodName: SourceName? = null
@@ -279,7 +303,7 @@ private class AutoMemberAdder(
                                     // For now, just check public properties.
                                     // For autoEq classes, by the time we get here, other's type matches this's type.
                                     // TODO Also check private properties once we loosen rules.
-                                    // TODO Log errors if can't check all properties?
+                                    // TODO So we don't need to log this as an error if we fix it soon.
                                     property.visibility == Visibility.Public || continue@properties
                                     // Also focus only on concrete properties, figuring others are derived.
                                     property.abstractness == Abstractness.Concrete || continue@properties

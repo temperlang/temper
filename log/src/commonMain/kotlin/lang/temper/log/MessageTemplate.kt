@@ -258,6 +258,9 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     CannotSealClass("Only interfaces can be sealed", CompilationPhase.Interpreter),
+    NoAutoWhenNotSealed("Auto method not support for interface that's not sealed", CompilationPhase.Staging),
+    AutoNotFullySealed("Auto method not allowed with unsealed subtype(s): %s", CompilationPhase.Staging),
+    MultipleAutoOptions("Auto method cannot support multiple supertype(s): %s", CompilationPhase.Staging),
     CannotIntroduceParamInSealedSubtype(
         "Cannot introduce type parameters in sealed subtype %s",
         CompilationPhase.Interpreter,
