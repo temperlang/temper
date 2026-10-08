@@ -222,8 +222,8 @@ private class AutoMemberAdder(
                         val labelName = nameMaker.unusedTemporaryName("fn")
                         Ln(labelName)
                         // If we have a super otherType, we need to check and cast.
-                        val typedOther = when (otherType) {
-                            null -> otherName
+                        val (typedOther, initTypedOther) = when (otherType) {
+                            null -> otherName to null
                             else -> {
                                 // Bail early unless right type.
                                 If(
@@ -254,22 +254,24 @@ private class AutoMemberAdder(
                                 // If right type, get an assert-cast version of it.
                                 // Because we aren't embedding in an if block, we don't infer this in AutoCast.
                                 val typedOther = nameMaker.unusedSourceName(ParsedName("other"))
-                                Decl {
-                                    // SimplifyDeclarations comes later, so use combo decl/init.
-                                    Ln(typedOther)
-                                    V(vInitSymbol)
-                                    Call {
-                                        V(BuiltinFuns.vAssertAsFn)
-                                        Rn(otherName)
-                                        V(typeValue)
+                                typedOther to {
+                                    Decl {
+                                        // SimplifyDeclarations comes later, so use combo decl/init.
+                                        Ln(typedOther)
+                                        V(vInitSymbol)
+                                        Call {
+                                            V(BuiltinFuns.vAssertAsFn)
+                                            Rn(otherName)
+                                            V(typeValue)
+                                        }
                                     }
                                 }
-                                typedOther
                             }
                         }
                         // Build check logic recursively for all (public for now) properties.
                         val properties = typeShape.properties
                         val eqHelper = Value(dotHelperForOperator(OperatorMember(eqSpec)))
+                        var startedChecking = false
                         fun Planting.buildIf(propertyIndex: Int) {
                             // Skip ahead until we find a readable property.
                             val (property, foundIndex) = run nextIndex@{
@@ -289,6 +291,10 @@ private class AutoMemberAdder(
                                 // No readable properties found. Should only happen if no readables are found.
                                 V(TBoolean.valueTrue)
                                 return@buildIf
+                            }
+                            if (!startedChecking) {
+                                initTypedOther?.invoke()
+                                startedChecking = true
                             }
                             // Build condition.
                             fun Planting.buildCond() = Call {

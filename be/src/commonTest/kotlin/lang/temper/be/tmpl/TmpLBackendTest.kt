@@ -4647,7 +4647,6 @@ class TmpLBackendTest {
             |                return__2 = false;
             |                break fn#1;
             |              }
-            |              let other__9: WhyNot__0 = safeCast (other__8, WhyNot__0);
             |              return true;
             |            }
             |            return return__2;
