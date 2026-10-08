@@ -1,0 +1,18 @@
+let console#0 = doPure(fn: Console {
+    getConsole()
+}), @fn f__0, @fn g__0;
+REM("`k` is needed above `w = 1`, but `f()` reads `w`, so `k` stays below\n`w = 1` and the logging moves down to it, as if `k` read `w` itself.", null, false);
+var w__0 = 0;
+g__0 = fn g /* return__0 */: Int {
+  fn__0: do {
+    w__0
+  }
+};
+f__0 = fn f /* return__1 */: Int {
+  fn__1: do {
+    g__0()
+  }
+};
+w__0 = 1;
+let k__0 = f__0();
+do_call_log(console#0, cat(str(k__0)));

@@ -1,0 +1,16 @@
+let console#0 = doPure(fn: Console {
+    getConsole()
+}), @fn readW__0;
+REM("Declarations are order-independent: `half` goes after `two`.\nReassignments of `w` keep their place relative to reads of `w`.", null, false);
+var w__0 = 0;
+do_call_log(console#0, cat("before ", str(w__0)));
+w__0 = w__0 + 1;
+let one__0 = 1.0, two__0 = one__0 + one__0, half__0 = one__0 / two__0;
+do_call_log(console#0, cat("mid ", str(w__0)));
+w__0 = 99;
+readW__0 = fn readW /* return__0 */: Int {
+  fn__0: do {
+    w__0
+  }
+};
+do_call_log(console#0, cat("after ", str(readW__0())));
