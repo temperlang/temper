@@ -133,6 +133,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ClassesStaticPropertiesScope)
 
     @Test
+    fun controlFlowActor() =
+        runFunctionalTest(Ft.ControlFlowActor)
+
+    @Test
     fun controlFlowActorRun() =
         runFunctionalTest(Ft.ControlFlowActorRun)
 
