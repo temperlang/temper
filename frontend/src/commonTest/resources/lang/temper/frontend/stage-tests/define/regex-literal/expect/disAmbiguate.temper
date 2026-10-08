@@ -4,14 +4,14 @@
 ## TODO Wrap stable string values in `new CodePoints` calls if we want to support runtime building.
 ## r7 uses Sequence instead of Sequence__0 since it was hand-coded and
 ## remains unaffected by the auto-import used above.
-  @stay @imported(\(`std//regex/`.Sequence)) let Sequence__0 = type (Sequence), @imported(\(`std//regex/`.CodePoints)) CodePoints__0 = type (CodePoints), @imported(\(`std//regex/`.Dot)) Dot__0 = `std//regex/`.Dot, @imported(\(`std//regex/`.Repeat)) Repeat__0 = type (Repeat), @imported(\(`std//regex/`.End)) End__0 = `std//regex/`.End;
+  @stay @imported(\(`std//regex/`.Sequence)) let Sequence__0 = type (Sequence), @imported(\(`std//regex/`.CodePoints)) CodePoints__0 = type (CodePoints), @imported(\(`std//regex/`.Dot)) Dot__0 = `std//regex/`.Dot, @imported(\(`std//regex/`.Repeat)) Repeat__0 = type (Repeat);
   REM("Some tests below:", true, true);
   REM("Interpolated string value next to another interpolation. Also test a disappearing empty hole.", true, true);
   REM("Simple interpolated string value since we can't evaluate regex objects at compile time yet.", true, true);
   REM("Starting off with a simple regex", true, true);
   let r1 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))));
   REM("b is not in scope here.", true, true);
-  let r2 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))));
+  let r2 = rgx(list("a.\u{24}{b}*"), list());
   REM("We don't actually support the following flag syntax at the moment.\nThat's one of the syntax error messages.", true, true);
   let r3 = rgx(list("(?/g)a.b*"), list()), b = r3;
   REM("And we have a brief interpolation representation from Grammar that's\neasyish to build.  It gets changed later.", true, true);
