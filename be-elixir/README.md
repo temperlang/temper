@@ -907,13 +907,13 @@ BEAM:
 ```elixir
 def new(owner) do
   TemperCore.Actor.start(Temper.Bank.Account, fn ->
-    this = TemperCore.Actor.init_self(Temper.Bank.Account, %{:owner => nil, :balance => nil})
+    server = TemperCore.Actor.init_self(Temper.Bank.Account, %{:owner => nil, :balance => nil})
     ...
-    this
+    server
   end)
 end
-def deposit(this, n) do
-  TemperCore.Actor.run(this, fn ->
+def deposit(server, n) do
+  TemperCore.Actor.run(server, fn ->
     ...
   end)
 end
@@ -922,7 +922,10 @@ end
 `new` starts a GenServer and runs the constructor inside it. The object
 is `%TemperCore.Actor{class, id}`: an ordinary term that can be sent,
 stored and compared. The id is registered to whichever process runs the
-actor now, so the identity survives a restart. Its fields exist only inside its own process. Each
+actor now, so the identity survives a restart. That is why an actor's
+`this` is named `server` in the generated code, as `GenServer.call(server, ...)`
+names it, and not `pid`: it is not a pid, and one held across a restart
+would go stale. Its fields exist only inside its own process. Each
 method body runs through `TemperCore.Actor.run`. From inside the actor
 (`this.m()`) that is a plain call. From anywhere else it is a
 message the actor answers like a `GenServer.call`, about 1.6 µs. Calls stay synchronous, as

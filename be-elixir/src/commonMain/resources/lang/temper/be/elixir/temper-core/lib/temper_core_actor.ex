@@ -15,7 +15,7 @@ defmodule TemperCore.Actor do
     Copying a mutable non-actor object would break Temper's aliasing, so
     one raises a `TemperCore.Panic` that names it. Values and other actors
     go through, and so do promises, which are published so the receiver
-    can await them. The frontend rejects the rest when it compiles; this
+    can await them. be-elixir rejects the rest when it builds; this
     check is for Elixir code, which nothing type-checks.
   - **Errors and crashes.** A Temper bubble or panic in a method is that
     call's result: the caller raises it again, so `orelse` works across
