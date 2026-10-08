@@ -925,19 +925,18 @@ stored and compared. The id is registered to whichever process runs the
 actor now, so the identity survives a restart. Its fields exist only inside its own process. Each
 method body runs through `TemperCore.Actor.run`. From inside the actor
 (`this.m()`) that is a plain call. From anywhere else it is a
-`GenServer.call`, which costs about 1.6 µs. Calls stay synchronous, as
+message the actor answers like a `GenServer.call`, about 1.6 µs. Calls stay synchronous, as
 Temper expects. Driven from Elixir ([`examples/bank/`](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/examples/bank)):
 
 ```
 after 1000 concurrent deposits: 1000
 after transfer: ann 700, bob 300
 withdraw too much: bubbled back to the caller (TemperCore.Bubble)
-cycle: Panic: actor call cycle: Temper.Bank.Account is already waiting on this call
 mutable argument: Panic: an argument to Temper.Bank.Account is a mutable Temper.Bank.Box, which cannot be shared with another process; make its class @imu to pass a copy, or @actor to share it
 actor whose creator ended: Panic: Temper.Bank.Account actor has ended
 ```
 
-The rules, one per line of that output:
+The rules, most of them shown in that output:
 
 - **One object, one process.** A thousand processes depositing at once
   lose no update, because the actor handles one call at a time.
@@ -945,9 +944,15 @@ The rules, one per line of that output:
   `bob`.
 - **Errors cross.** A bubble or panic raised in the actor is raised again
   in the caller, so `orelse` works across processes.
-- **No deadlocks from cycles.** If A is waiting on B and B calls A, A can
-  never answer. Each call carries the chain of actors it passed through,
-  so the call back raises a `Panic` instead of hanging.
+- **A call back runs inline.** Each call carries the chain of actors it
+  passed through. If A is waiting on B and B calls A on the same chain, A
+  serves that call while it waits, so `a.ping(b)` where `b` calls `a.add(1)`
+  works as it does on a single-threaded backend.
+- **No deadlocks from cycles.** Two chains can still block each other: A,
+  busy for one caller, calls B while B, busy for another, calls A. Each
+  actor records which actor it waits on, and the call that would close the
+  cycle raises `Panic: actor call cycle` instead of hanging. The other
+  call goes through.
 - **Only values cross.** Messages copy, and copying a mutable object
   would break Temper's sharing. be-elixir rejects a public member of an
   `@actor` class whose type is not sendable when it builds ("Actor class

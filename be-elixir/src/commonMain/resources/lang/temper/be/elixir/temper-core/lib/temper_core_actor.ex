@@ -19,10 +19,17 @@ defmodule TemperCore.Actor do
     call's result: the caller raises it again, so `orelse` works across
     processes, and the actor carries on. Anything else (an Elixir error, an
     exit) is a crash. The caller gets the error, and the actor stops.
-  - **Cycles.** If A calls B and B calls A while A is still waiting, A could
-    never answer. Every call carries the chain of actors it passed through,
-    and calling back into one of them raises a `TemperCore.Panic` instead
-    of deadlocking.
+  - **Re-entry.** Every call carries the chain of actors it passed through.
+    If A calls B and B calls A, A is waiting on B for that same chain, so it
+    runs B's call inline while it waits, as a single-threaded backend runs
+    it on its one stack. A constructor that calls back into the actor
+    constructing it is served the same way.
+  - **Cycles.** Two chains can still block each other: A, in a turn for one
+    caller, calls B while B, in a turn for another, calls A. Each actor
+    records in the registry which actor it is waiting on, and a call that
+    would wait on an actor already waiting, directly or through others, on
+    the caller raises a `TemperCore.Panic` ("actor call cycle") instead of
+    deadlocking.
   - **Lifetime.** By default an actor ends when the process that created it
     ends, for any reason: it is linked to its creator and also monitors it,
     because a link alone ignores a normal exit. Actors created inside
@@ -43,6 +50,7 @@ defmodule TemperCore.Actor do
   @self {__MODULE__, :fields}
   @self_id {__MODULE__, :id}
   @chain {__MODULE__, :chain}
+  @waiting {__MODULE__, :waiting}
   @supervised {__MODULE__, :supervised}
 
   # -- for Elixir code ------------------------------------------------------------
@@ -96,26 +104,47 @@ defmodule TemperCore.Actor do
     sendable!(constructor, "a constructor argument of #{inspect(class)}")
     id = make_ref()
     chain = chain_for_callee()
+    supervisor = Process.get(@supervised)
+    init_arg = {id, constructor, chain, if(supervisor, do: nil, else: self()), TemperCore.initializing()}
 
-    if supervisor = Process.get(@supervised) do
-      case DynamicSupervisor.start_child(supervisor, keeper(id, constructor, chain)) do
-        {:ok, _keeper} ->
-          id
+    # The constructor runs in the new process's init, and may call back into
+    # an actor on this chain, this one included. OTP's start blocks in a
+    # receive that would never serve that call, so a helper process does the
+    # start while this one waits the way `run/2` waits, serving its chain.
+    starting = fn ->
+      if supervisor,
+        do: DynamicSupervisor.start_child(supervisor, keeper(id, init_arg)),
+        else: GenServer.start(__MODULE__, init_arg)
+    end
 
-        {:error, {:shutdown, {:failed_to_start_child, _, {:temper_raise, kind, reason, stack}}}} ->
-          :erlang.raise(kind, reason, stack)
-      end
-    else
-      # linked only once the constructor has succeeded: a linked process that
-      # stops in init would take its caller down instead of raising there
-      case GenServer.start(__MODULE__, {id, constructor, chain, self(), TemperCore.initializing()}) do
-        {:ok, pid} ->
-          Process.link(pid)
-          id
+    case wait_for(id, starting) do
+      {:ok, pid} ->
+        # linked only once the constructor has succeeded: a linked process
+        # that stops in init would take its caller down instead of raising
+        # there. A supervised actor is linked to its keeper instead.
+        unless supervisor, do: Process.link(pid)
+        id
 
-        {:error, {:temper_raise, kind, reason, stack}} ->
-          :erlang.raise(kind, reason, stack)
-      end
+      {:error, {:shutdown, {:failed_to_start_child, _, {:temper_raise, kind, reason, stack}}}} ->
+        :erlang.raise(kind, reason, stack)
+
+      {:error, {:temper_raise, kind, reason, stack}} ->
+        :erlang.raise(kind, reason, stack)
+    end
+  end
+
+  # Runs `starting` in a helper and answers its result, serving calls from
+  # this process's chain meanwhile. The helper is unlinked: if this process
+  # dies, the actor it was starting sees its creator go and ends too.
+  defp wait_for(id, starting) do
+    me = self()
+    tag = make_ref()
+    helper = spawn(fn -> send(me, {tag, starting.()}) end)
+    mref = Process.monitor(helper)
+
+    case waiting_on(id, fn -> await_reply(tag, mref) end) do
+      {:ok, result} -> result
+      {:down, reason} -> raise TemperCore.Panic, "starting an actor failed: #{inspect(reason)}"
     end
   end
 
@@ -124,10 +153,10 @@ defmodule TemperCore.Actor do
   # keeper gives up; the keeper is temporary, so its parent neither restarts
   # it nor counts it. The actor is significant, so stopping it normally ends
   # the keeper too.
-  defp keeper(id, constructor, chain) do
+  defp keeper(id, init_arg) do
     actor = %{
       id: :actor,
-      start: {GenServer, :start_link, [__MODULE__, {id, constructor, chain, nil, TemperCore.initializing()}]},
+      start: {GenServer, :start_link, [__MODULE__, init_arg]},
       restart: :transient,
       significant: true
     }
@@ -153,13 +182,22 @@ defmodule TemperCore.Actor do
     if Process.get(@self_id) == id do
       body.()
     else
-      if id in chain_for_callee() do
-        raise TemperCore.Panic, "actor call cycle: #{inspect(class)} is already waiting on this call"
-      end
-
       sendable!(body, "an argument to #{inspect(class)}")
+      chain = chain_for_callee()
 
-      reply = call(actor, {:run, body, chain_for_callee()}, true)
+      # An actor already on this chain is waiting in `await_reply/2` for the
+      # call that led here, so it runs this one there, inline, as a
+      # single-threaded backend would. Any other actor may be busy with
+      # another chain, so first make sure that chain is not waiting on this.
+      reply =
+        if id in chain do
+          waiting_on(id, fn -> call(actor, {:reenter, body, chain}, false) end)
+        else
+          waiting_on(id, fn ->
+            cycle!(actor)
+            call(actor, {:run, body, chain}, true)
+          end)
+        end
 
       case reply do
         {:ok, value} -> value
@@ -192,17 +230,101 @@ defmodule TemperCore.Actor do
   # caller sees the exit, as OTP's callers do.
   defp call(%__MODULE__{class: class} = actor, message, retry) do
     pid = pid!(actor)
+    mref = Process.monitor(pid)
+    send(pid, {:"$gen_call", {self(), mref}, message})
 
-    try do
-      GenServer.call(pid, message, :infinity)
-    catch
-      :exit, {reason, _} when reason == :noproc or elem(reason, 0) == :crash ->
+    case await_reply(mref, mref) do
+      {:ok, reply} ->
+        reply
+
+      {:down, reason} when reason == :noproc or elem(reason, 0) == :crash ->
         if retry and restarted?(actor, pid),
           do: call(actor, message, false),
           else: raise(TemperCore.Panic, "#{inspect(class)} actor has ended")
 
-      :exit, {reason, _} ->
+      {:down, reason} ->
         raise TemperCore.Panic, "#{inspect(class)} actor ended during the call: #{inspect(reason)}"
+    end
+  end
+
+  # GenServer.call's receive, plus one more kind of message: a call from
+  # this process's own chain. That chain is blocked on this process, so it
+  # runs here, inline, and the wait goes on. Calls from other chains stay
+  # in the mailbox until the turn ends.
+  defp await_reply(tag, mref) do
+    receive do
+      {^tag, reply} ->
+        Process.demonitor(mref, [:flush])
+        {:ok, reply}
+
+      {:DOWN, ^mref, :process, _, reason} ->
+        {:down, reason}
+
+      {:"$gen_call", from, {:reenter, body, chain}} ->
+        reply = turn(body, chain, false)
+        GenServer.reply(from, reply)
+
+        # a crash is still a crash: the outer turn ends with it too
+        with {:raise, kind, reason, stack} <- reply,
+             false <- temper_error?(kind, reason),
+             do: :erlang.raise(kind, reason, stack)
+
+        await_reply(tag, mref)
+    end
+  end
+
+  # While `fun` runs, this actor is waiting on the actor `id`, as recorded
+  # in the registry for `cycle!/1` to follow. Waits nest when a call is
+  # served inline; the innermost is the one that blocks.
+  defp waiting_on(id, fun) do
+    case Process.get(@self_id) do
+      nil ->
+        fun.()
+
+      me ->
+        outer = Process.get(@waiting)
+        Process.put(@waiting, id)
+        Registry.update_value(@registry, me, fn _ -> id end)
+
+        try do
+          fun.()
+        after
+          Process.put(@waiting, outer)
+          Registry.update_value(@registry, me, fn _ -> outer end)
+        end
+    end
+  end
+
+  # A call into an actor that is waiting, directly or through other actors,
+  # on this one could never be answered. Each side records its wait before
+  # it looks, so of two actors calling each other at once, at least one
+  # sees the cycle.
+  defp cycle!(%__MODULE__{class: class, id: callee}) do
+    case Process.get(@self_id) do
+      nil -> :ok
+      me -> follow_waits(callee, me, MapSet.new(), class)
+    end
+  end
+
+  defp follow_waits(nil, _me, _seen, _class), do: :ok
+
+  defp follow_waits(id, me, seen, class) do
+    cond do
+      MapSet.member?(seen, id) ->
+        :ok
+
+      true ->
+        case Registry.lookup(@registry, id) do
+          [{_, ^me}] ->
+            raise TemperCore.Panic,
+                  "actor call cycle: #{inspect(class)} is waiting, directly or through other actors, on the caller"
+
+          [{_, next}] ->
+            follow_waits(next, me, MapSet.put(seen, id), class)
+
+          [] ->
+            :ok
+        end
     end
   end
 
@@ -249,21 +371,38 @@ defmodule TemperCore.Actor do
 
   @impl true
   def handle_call({:run, body, chain}, _from, state) do
+    case turn(body, chain, true) do
+      {:raise, kind, reason, _} = reply ->
+        # a Temper error is this call's result; anything else is a crash
+        if temper_error?(kind, reason),
+          do: {:reply, reply, state},
+          else: {:stop, {:crash, kind, reason}, reply, state}
+
+      reply ->
+        {:reply, reply, state}
+    end
+  end
+
+  # Only a process waiting in `await_reply/2` takes these. One that arrives
+  # here came from a chain this actor is no longer on.
+  def handle_call({:reenter, _body, _chain}, _from, state) do
+    {:reply, {:raise, :error, %TemperCore.Panic{message: "an actor was called back after its call had ended"}, []}, state}
+  end
+
+  # One call's body, then, for a turn of its own, the async steps it started.
+  # A call served inline is part of the turn that is waiting, so it leaves
+  # the run queue to that turn.
+  defp turn(body, chain, drain) do
     outer = Process.get(@chain)
     Process.put(@chain, chain)
 
     try do
       value = Heap.run(body)
-      TemperCore.Async.drain()
+      if drain, do: TemperCore.Async.drain()
       sendable!(value, "a result")
-      {:reply, {:ok, value}, state}
+      {:ok, value}
     catch
-      kind, reason ->
-        reply = {:raise, kind, reason, __STACKTRACE__}
-        # a Temper error is this call's result; anything else is a crash
-        if temper_error?(kind, reason),
-          do: {:reply, reply, state},
-          else: {:stop, {:crash, kind, reason}, reply, state}
+      kind, reason -> {:raise, kind, reason, __STACKTRACE__}
     after
       Process.put(@chain, outer)
     end

@@ -20,6 +20,25 @@ defmodule TemperCore.ActorTest do
     def call_back(this, other), do: Actor.run(this, fn -> Counter.bump_through(other, this) end)
     def bump_through(this, back), do: Actor.run(this, fn -> Counter.bump(back) end)
     def take(this, value), do: Actor.run(this, fn -> value end)
+
+    def make_from(this) do
+      Actor.run(this, fn ->
+        Actor.start(__MODULE__, fn ->
+          made = Actor.init_self(__MODULE__, %{n: nil})
+          Heap.put(made, :n, Counter.bump(this))
+          made
+        end)
+      end)
+    end
+
+    # takes a turn, lets the test start the other chain's turn, then calls `other`
+    def poke(this, other, gate) do
+      Actor.run(this, fn ->
+        send(gate, {:in, self()})
+        receive do: (:go -> :ok)
+        Counter.get_n(other)
+      end)
+    end
     def crash(this), do: Actor.run(this, fn -> raise ArgumentError, "not a Temper error" end)
 
     def slow_bump(this, watcher) do
@@ -62,10 +81,30 @@ defmodule TemperCore.ActorTest do
     assert_raise TemperCore.Bubble, fn -> Counter.fail(Counter.new(0)) end
   end
 
-  test "calling back into a waiting actor is a panic, not a deadlock" do
+  test "a call back into an actor from its own chain runs inline" do
     a = Counter.new(0)
     b = Counter.new(0)
-    assert_raise TemperCore.Panic, ~r/call cycle/, fn -> Counter.call_back(a, b) end
+    # a -> b -> a: a is waiting on b, and serves b's call while it waits
+    assert Counter.call_back(a, b) == 1
+    assert Counter.get_n(a) == 1
+    # a constructor that calls back into the actor constructing it
+    assert Counter.get_n(Counter.make_from(a)) == 2
+    assert Counter.get_n(a) == 2
+  end
+
+  test "two chains that each hold one actor and call the other panic instead of deadlocking" do
+    a = Counter.new(0)
+    b = Counter.new(0)
+    me = self()
+    poke = fn x, y -> Task.async(fn -> try do: Counter.poke(x, y, me), rescue: (e -> e) end) end
+    tasks = [poke.(a, b), poke.(b, a)]
+    # both turns have started before either calls out
+    for pid <- for(_ <- 1..2, do: receive(do: ({:in, p} -> p))), do: send(pid, :go)
+    results = tasks |> Task.yield_many(2000) |> Enum.map(fn {_, {:ok, r}} -> r end)
+    assert Enum.any?(results, &match?(%TemperCore.Panic{message: "actor call cycle" <> _}, &1))
+    # the side that did not panic got its answer, and both actors carry on
+    assert Enum.all?(results, &(&1 == 0 or is_exception(&1)))
+    assert Counter.bump(a) == 1 and Counter.bump(b) == 1
   end
 
   test "values and actors cross; a mutable object does not" do
