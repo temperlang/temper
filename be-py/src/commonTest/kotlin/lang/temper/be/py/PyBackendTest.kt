@@ -31,15 +31,15 @@ class PyBackendTest {
             |from builtins import int as int6, bool as bool7
             |from temper_core import list_filter as list_filter0
             |_list_filter_22 = list_filter0
-            |T_1 = TypeVar2('T_1', bound = Any1)
-            |U_3 = TypeVar2('U_3', bound = Any1)
+            |T_1 = TypeVar2('T_1', bound = 'Any1')
+            |U_3 = TypeVar2('U_3', bound = 'Any1')
             |class Thing(Generic3[T_1]):
             |    __slots__ = ()
             |    def identity(this_2, u_12: 'U_3', f_13: 'Callable4[[U_3], T_1]', /) -> 'T_1':
             |        return f_13(u_12)
             |    def __init__(this, /) -> None:
             |        pass
-            |T_0 = TypeVar2('T_0', bound = Any1)
+            |T_0 = TypeVar2('T_0', bound = 'Any1')
             |def identity(t_9: 'T_0', /) -> 'T_0':
             |    "They're the same thing!\n\nt__0: T__0\n  The thing to return\n"
             |    return t_9
@@ -81,6 +81,47 @@ class PyBackendTest {
             |    return _str_cat_21('Hello, ', name_10)
             |def tame(name_19: 'str1', /) -> 'str1':
             |    return _Fame().blame(name_19)
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun selfBoundedTypeParameters() = assertGeneratedCode(
+        // A TypeVar bound is evaluated where the TypeVar is assigned, before the
+        // type variable and the interface it names exist, so it must be quoted.
+        input = """
+            |export interface Ord<T extends Ord<T>> {
+            |  public less(other: T): Boolean;
+            |}
+            |export class N(public v: Int) extends Ord<N> {
+            |  public less(other: N): Boolean { v < other.v }
+            |}
+            |export let smaller<T extends Ord<T>>(a: T, b: T): T { if (a.less(b)) { a } else { b } }
+        """.trimMargin(),
+        want = """
+            |from typing import TypeVar as TypeVar0, Generic as Generic1
+            |from abc import ABCMeta as ABCMeta2
+            |from builtins import RuntimeError as RuntimeError3, bool as bool4, int as int5
+            |T_1 = TypeVar0('T_1', bound = 'Ord[T_1]', covariant = True)
+            |class Ord(Generic1[T_1], metaclass = ABCMeta2):
+            |    def less(this_2, other_11: 'T_1', /) -> 'bool4':
+            |        raise RuntimeError3()
+            |class N(Ord['N']):
+            |    _v_13: 'int5'
+            |    __slots__ = ('_v_13',)
+            |    def less(this_3, other_15: 'N', /) -> 'bool4':
+            |        return this_3._v_13 < other_15.v
+            |    def __init__(this, /, v: 'int5') -> None:
+            |        this._v_13 = v
+            |    @property
+            |    def v(this_24, /) -> 'int5':
+            |        return this_24._v_13
+            |T_4 = TypeVar0('T_4', bound = 'Ord[T_4]')
+            |def smaller(a_19: 'T_4', b_20: 'T_4', /) -> 'T_4':
+            |    if a_19.less(b_20):
+            |        return a_19
+            |    else:
+            |        return b_20
             |
         """.trimMargin(),
     )

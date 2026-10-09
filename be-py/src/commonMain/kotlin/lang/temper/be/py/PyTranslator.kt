@@ -673,24 +673,25 @@ class PyTranslator(
             )
             // Keep bounds that aren't already implicit in Python.
             val upperBounds = typeParam.upperBounds.filter { !it.isCommonlyImplied() }
-            if (upperBounds.size == 1) {
-                typeVarArgs.add(
-                    Py.CallArg(
-                        pos,
-                        arg = pyIdent(pos, "bound"),
-                        value = translateNominalType(upperBounds[0]),
-                    ),
+            // The bound is quoted, as annotations are, because it is evaluated where the
+            // TypeVar is assigned: before the type variable itself exists, as in
+            // `T extends Ord<T>`, and before the class being declared, as in
+            // `interface Ord<T extends Ord<T>>`.
+            val bound = when {
+                upperBounds.size == 1 -> translateNominalType(upperBounds[0])
+                upperBounds.size > 1 -> Py.Subscript(
+                    pos,
+                    request(UnionType).asRName(pos),
+                    upperBounds.map(::translateNominalType),
                 )
-            } else if (upperBounds.size > 1) {
+                else -> null
+            }
+            if (bound != null) {
                 typeVarArgs.add(
                     Py.CallArg(
                         pos,
                         arg = pyIdent(pos, "bound"),
-                        value = Py.Subscript(
-                            pos,
-                            request(UnionType).asRName(pos),
-                            upperBounds.map(::translateNominalType),
-                        ),
+                        value = Py.TypeStr(pos, bound),
                     ),
                 )
             }
