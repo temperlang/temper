@@ -941,9 +941,9 @@ class RustBackendTest {
             |            let thing__0: temper_core::AnyValue = 1.as_any_value();
             |            let things__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]).unwrap();
             |            let more__0: temper_core::List<i32> = std::sync::Arc::new(vec![1, 2]);
-            |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
+            |            let still__0: temper_core::List<temper_core::AnyValue> = temper_core::listed::map( & std::sync::Arc::new(vec![1, 2]), & | it___0 | it___0.as_any_value());
             |            let yet__0: temper_core::List<std::sync::Arc<String>> = std::sync::Arc::new(vec![std::sync::Arc::new("one".to_string()), std::sync::Arc::new("two".to_string())]);
-            |            let yetAgain__0: temper_core::List<temper_core::MapKey<std::sync::Arc<String>>> = yet__0.clone();
+            |            let yetAgain__0: temper_core::List<temper_core::MapKey<std::sync::Arc<String>>> = temper_core::listed::map( & yet__0.clone(), & | it___1 | temper_core::MapKey::new(it___1));
             |            Ok(())
             |    }).clone()
             |}
@@ -2700,7 +2700,7 @@ class RustBackendTest {
                 |    INIT_ONCE.get_or_init(| |{
                 |            let a__0: A = A::new(B::new());
                 |            let a2__0: A = a__0.clone();
-                |            let things__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]);
+                |            let things__0: temper_core::List<A> = temper_core::listed::map( & std::sync::Arc::new(vec![B::new()]), & | it___0 | A::new(it___0));
                 |            let more__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]).unwrap();
                 |            println!("{}", a2__0.adjust(std::sync::Arc::new("hi".to_string())));
                 |            Ok(())
