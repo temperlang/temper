@@ -133,6 +133,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ClassesStaticPropertiesScope)
 
     @Test
+    fun controlFlowActor() =
+        runFunctionalTest(Ft.ControlFlowActor)
+
+    @Test
     fun controlFlowActorRun() =
         runFunctionalTest(Ft.ControlFlowActorRun)
 
@@ -235,6 +239,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun semanticsMutuallyReferencingTypes() =
         runFunctionalTest(Ft.SemanticsMutuallyReferencingTypes)
+
+    @Test
+    fun semanticsTopLevelOrder() =
+        runFunctionalTest(Ft.SemanticsTopLevelOrder)
 
     @Test
     fun semanticsTypeCheckedLocals() =

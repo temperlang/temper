@@ -1,6 +1,7 @@
 package lang.temper.interp
 
 import lang.temper.value.Value
+import lang.temper.value.actorSymbol
 import lang.temper.value.imuSymbol
 import lang.temper.value.partialImuSymbol
 import lang.temper.value.void
@@ -33,3 +34,20 @@ val partialImuDecorator = MetadataDecorator(
 }
 
 val vPartialImuDecorator = Value(partialImuDecorator)
+
+/**
+ * <!-- snippet: builtin/@actor -->
+ * # `@actor` decorator
+ * Marker for classes whose instances are each a concurrent actor, on
+ * backends that have them: on the BEAM, each instance is its own process,
+ * its methods run there, and any process may hold it. Other backends ignore
+ * it, so the class behaves exactly as an undecorated one.
+ */
+val actorDecorator = MetadataDecorator(
+    actorSymbol,
+    name = "@actor",
+) {
+    void
+}
+
+val vActorDecorator = Value(actorDecorator)

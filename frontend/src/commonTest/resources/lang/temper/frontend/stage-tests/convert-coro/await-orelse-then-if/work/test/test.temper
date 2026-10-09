@@ -1,0 +1,5 @@
+let p = new PromiseBuilder<Int>().promise;
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  let v = await p orelse -1;
+  if (v < 0) { console.log("neg"); } else { console.log("pos"); }
+}

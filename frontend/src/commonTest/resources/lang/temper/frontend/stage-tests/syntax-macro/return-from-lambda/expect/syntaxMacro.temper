@@ -1,0 +1,54 @@
+@fn let call__0, @fn drive__0, @fn wrap__0, @fn firstBig__0;
+call__0 = fn call(g__0 /* aka g */: fn(\outType, Int)) /* return__0 */: Int {
+  fn__0: do {
+    g__0()
+  }
+};
+drive__0 = fn drive(body__0 /* aka body */: fn(\outType, SafeGenerator<Empty>)) /* return__1 */: Void {
+  fn__1: do {
+    do_call_nextSafe(body__0());
+  }
+};
+REM("A `return` that would leave a lambda with a declared result type is refused.", null, false);
+call__0(fn /* return__2 */: Int {
+    if(true, fn {
+        error (ReturnFromLambda);
+    });
+    2
+});
+REM("A generator lambda cannot leave the function around it: its body runs later.", null, false);
+drive__0(fn /* return__3 */: GeneratorResult<Empty> implements GeneratorFn {
+    var i__0 = 0;
+    while(true, fn {
+        if(i__0 == 1, fn {
+            error (ReturnFromLambda);
+        });
+        i__0 = i__0 + 1;
+        yield();
+    })
+});
+wrap__0 = fn wrap /* return__4 */: Int {
+  fn__2: do {
+    call__0(fn /* return__5 */: Int {
+        if(true, fn {
+            error (ReturnFromLambda);
+        });
+        8
+    })
+  }
+};
+REM("Returning from a function through a loop's desugared body is fine.", null, false);
+firstBig__0 = fn firstBig(xs__0 /* aka xs */: List<Int>) /* return__6 */: Int {
+  fn__3: do {
+    do_call_forEach(xs__0, fn (x__0) {
+        if(x__0 <=> 2 > 0, fn {
+            do {
+              return__6 = x__0;
+              break(\label, fn__3)
+            };
+        })
+    });
+    -1
+  }
+};
+error (ReturnOutsideFn);

@@ -1,0 +1,6 @@
+// Logging needs `two`, which has to come after `w = 1`,
+// but logging reads `w` before `w = 1`. No order does both.
+var w = 0;
+console.log("${two + w}");
+w = 1;
+let two = w + 1;

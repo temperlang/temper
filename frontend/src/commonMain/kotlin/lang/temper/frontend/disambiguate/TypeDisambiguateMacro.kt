@@ -696,13 +696,37 @@ internal fun typeDisambiguateMacro(
                     }
                     wordName.copyLeft() to wordName.content.toSymbol()!!
                 } else if (
+                    nameIsFollowedByWord && hasStaticAnnotation &&
+                    (
+                        name.content.builtinKey == getBuiltinName.builtinKey ||
+                            name.content.builtinKey == setBuiltinName.builtinKey
+                        )
+                ) {
+                    // static get p() {...}
+                    // Static getters and setters are not implemented: nothing turns a read
+                    // of `C.p` into a call to a static `get.p`, in the typer or in any
+                    // backend. Reject the declaration here, with its position.
+                    // The error node replaces the decorations too, so `@static` and
+                    // `@public` are not left wrapped around it for later stages to trip on.
+                    val problem = LogEntry(
+                        Log.Error,
+                        MessageTemplate.StaticComputedPropertyUnsupported,
+                        possiblyDecoratedMemberEdge.target.pos,
+                        listOf(
+                            name.content.builtinKey!!,
+                            (memberTree.child(2) as NameLeaf).content.displayName,
+                        ),
+                    )
+                    problem.logTo(logSink)
+                    convertToErrorNode(possiblyDecoratedMemberEdge, problem)
+                    null to null
+                } else if (
                     nameIsFollowedByWord &&
                     (
                         name.content.builtinKey == getBuiltinName.builtinKey ||
                             name.content.builtinKey == setBuiltinName.builtinKey
                         )
                 ) {
-                    if (hasStaticAnnotation) { TODO("static computed property declaration") }
                     // get p() {...}
                     // ->
                     // let `get.p` = fn `get.p`() { ... }

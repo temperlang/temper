@@ -78,6 +78,25 @@ ISO 8601 yonks: 0012-11-10
 yonksAgo.year = 12
 ```
 
+The weekday of a year ending in 00 needs the right century. A
+January first or March first of 1900 or 2100 lands on a different day
+than in 2000, since 2000 is a leap year and the others are not.
+
+    for (let y of [1700, 1800, 1900, 2000, 2100, 2400]) {
+      console.log(
+        "${y}: Jan 1 weekday ${new Date(y, 1, 1).dayOfWeek}, Mar 1 weekday ${new Date(y, 3, 1).dayOfWeek}"
+      );
+    }
+
+```log
+1700: Jan 1 weekday 5, Mar 1 weekday 1
+1800: Jan 1 weekday 3, Mar 1 weekday 6
+1900: Jan 1 weekday 1, Mar 1 weekday 4
+2000: Jan 1 weekday 6, Mar 1 weekday 3
+2100: Jan 1 weekday 5, Mar 1 weekday 1
+2400: Jan 1 weekday 6, Mar 1 weekday 3
+```
+
 TODO: test negative year support once we've got a
 story for Python whose datetime.MIN_YEAR == 1.
 
