@@ -203,6 +203,8 @@ defmodule TemperCore.Actor do
           end)
         end
 
+      TemperCore.Promise.take_settled()
+
       case reply do
         {:ok, value} -> value
         {:raise, kind, reason, stack} -> :erlang.raise(kind, reason, stack)

@@ -992,7 +992,12 @@ The rules, most of them shown in that output:
   every process that awaits it when it settles. Its ref is unchanged; in a
   process whose heap lacks it, `await` subscribes instead of parking on
   the heap object. An actor wakes for such a settle in a turn of its own.
-  `__temper_main__/0` keeps draining while it awaits one. Only the process
+  `__temper_main__/0` keeps draining while it awaits one. A settle reaches
+  every waiter before the settling process goes on, and a call into an
+  actor takes the settles that arrived during it as it returns, so a
+  promise an actor settles in a call wakes its waiters in the caller right
+  then, as on one thread: `box.send("hi")` wakes the block awaiting
+  `box.receive()` before the sender's next `await` queues it again. Only the process
   that made a promise can complete it, and if that process ends first the
   `await` panics instead of waiting forever. Published promises are never
   forgotten, which leaks for a long-lived actor that hands out many.

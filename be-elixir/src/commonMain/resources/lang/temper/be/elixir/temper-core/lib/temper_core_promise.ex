@@ -49,7 +49,9 @@ defmodule TemperCore.Promise do
       if Heap.get(b, :published) do
         with {:ok, value} <- state, do: TemperCore.Actor.sendable!(value, "the value of a promise another process awaits")
         TemperCore.Global.publish()
-        GenServer.cast(@hub, {:settle, b.id, state})
+        # a call, not a cast: the hub has sent the news to every process
+        # awaiting it before this one goes on (see `take_settled/0`)
+        :ok = GenServer.call(@hub, {:settle, b.id, state}, :infinity)
       end
 
       waiters |> Enum.reverse() |> Enum.each(&Async.enqueue/1)
@@ -155,6 +157,24 @@ defmodule TemperCore.Promise do
     nil
   end
 
+  @doc """
+  Handles the settles that have already arrived, without waiting. A call
+  into an actor runs this when it returns: a promise the actor settled
+  during the call was sent here before the actor replied, so its waiters
+  join the run queue now, ahead of whatever the caller queues next, as
+  they would on a single thread.
+  """
+  @spec take_settled() :: nil
+  def take_settled do
+    receive do
+      {:temper_promise, id, state} ->
+        remote_settled(id, state)
+        take_settled()
+    after
+      0 -> nil
+    end
+  end
+
   @doc false
   @spec awaiting_remote?() :: boolean()
   def awaiting_remote?, do: MapSet.size(awaiting()) > 0
@@ -166,7 +186,7 @@ defmodule TemperCore.Promises do
   @moduledoc """
   The state of every promise that has crossed between processes, and who
   waits on it. The process that made a promise publishes it before its ref
-  leaves, and casts each settle here; a process awaiting it subscribes, and
+  leaves, and calls here with each settle; a process awaiting it subscribes, and
   is sent `{:temper_promise, id, state}` once it settles, or at once if it
   already has. If the maker ends with the promise still pending, its
   subscribers are sent `:ended`, and their `await` panics rather than
@@ -202,8 +222,7 @@ defmodule TemperCore.Promises do
     end
   end
 
-  @impl true
-  def handle_cast({:settle, id, state}, s), do: {:noreply, settle(s, id, state)}
+  def handle_call({:settle, id, state}, _from, s), do: {:reply, :ok, settle(s, id, state)}
 
   @impl true
   def handle_info({:DOWN, _, :process, owner, _}, s) do

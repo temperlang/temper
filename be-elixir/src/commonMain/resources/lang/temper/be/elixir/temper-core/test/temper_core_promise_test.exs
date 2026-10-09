@@ -160,6 +160,41 @@ defmodule TemperCorePromiseTest do
     assert_received {:later, 7}
   end
 
+  # The settle went to TemperCore.Promises as a cast and reached the
+  # awaiting process whenever it did, so the waiter woke only once the run
+  # queue was empty: "sent, after one await, after two awaits, got hi",
+  # where js says "sent, got hi, after one await, after two awaits".
+  test "a waiter on an actor's promise wakes in the turn of the call that settled it" do
+    me = self()
+    o = Oracle.new()
+    later = Oracle.later(o)
+    Async.run(fn -> awaiter(later, &send(me, {:step, "got #{&1}"})) end)
+
+    done = Promise.new()
+    Promise.complete(done, :empty)
+
+    # the program's sender: settle through the actor, then await a promise
+    # that has already settled, which queues it again at once
+    Async.run(fn ->
+      gen([
+        fn me_gen ->
+          Oracle.settle(o, "hi")
+          send(me, {:step, "sent"})
+          Promise.awake_upon(done, me_gen)
+          {:value, :empty}
+        end,
+        fn _ ->
+          send(me, {:step, "after one await"})
+          :done
+        end
+      ])
+    end)
+
+    Async.drain()
+    steps = for _ <- 1..3, do: (assert_receive {:step, s}; s)
+    assert steps == ["sent", "got hi", "after one await"]
+  end
+
   test "a promise passed into an actor wakes the actor's async block when it settles" do
     o = Oracle.new()
     mine = Promise.new()
