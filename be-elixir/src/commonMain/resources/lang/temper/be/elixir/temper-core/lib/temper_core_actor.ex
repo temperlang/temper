@@ -80,6 +80,36 @@ defmodule TemperCore.Actor do
   @spec stop(t()) :: :ok
   def stop(%__MODULE__{} = actor), do: GenServer.stop(pid!(actor), :normal)
 
+  @doc """
+  Returns once no actor has anything left to do: none is in a turn, and
+  no settle that would start one is on its way. A library's
+  `__temper_main__/0` ends with this, so work an actor does after the top
+  level's last `await` is not cut off when `mix run` exits; on every other
+  backend that work is on the one queue the program drains.
+
+  Turns start only for calls, which return before their caller goes on,
+  and for settles, which `TemperCore.Promises` sends and counts. So this
+  asks every actor to answer once it has handled what that registry sent
+  it, and goes again until a round in which the registry sent nothing.
+  An actor that never finishes a turn keeps this waiting, as an endless
+  async loop keeps js waiting.
+  """
+  @spec wait_idle() :: nil
+  def wait_idle do
+    {sent, tag, pids} = GenServer.call(TemperCore.Promises, {:sync, self()}, :infinity)
+
+    Enum.each(pids, fn pid ->
+      mref = Process.monitor(pid)
+
+      receive do
+        {^tag, ^pid} -> Process.demonitor(mref, [:flush])
+        {:DOWN, ^mref, :process, ^pid, _} -> :ok
+      end
+    end)
+
+    if GenServer.call(TemperCore.Promises, :sent, :infinity) == sent, do: nil, else: wait_idle()
+  end
+
   @doc "The process running an actor now, or nil if it has ended."
   @spec whereis(t()) :: pid() | nil
   def whereis(%__MODULE__{id: id}) do
@@ -441,6 +471,11 @@ defmodule TemperCore.Actor do
   def handle_info({:temper_promise, id, settled, shared}, state) do
     TemperCore.Promise.remote_settled(id, settled, shared)
     TemperCore.Async.drain_queue()
+    {:noreply, state}
+  end
+
+  def handle_info({:temper_sync, tag, to}, state) do
+    send(to, {tag, self()})
     {:noreply, state}
   end
 

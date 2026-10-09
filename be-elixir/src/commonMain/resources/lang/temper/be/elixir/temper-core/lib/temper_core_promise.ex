@@ -329,10 +329,23 @@ defmodule TemperCore.Promises do
   # leases: lease => {monitor of the receiver or nil, ids}
   # receivers: monitor => lease
   @impl true
-  def init(nil), do: {:ok, %{promises: %{}, owners: %{}, leases: %{}, receivers: %{}}}
+  # sent: how many settles this has sent to holders, which is how
+  # `TemperCore.Actor.wait_idle/0` knows whether anything happened
+  def init(nil), do: {:ok, %{promises: %{}, owners: %{}, leases: %{}, receivers: %{}, sent: 0}}
 
   @impl true
   def handle_call(:size, _from, s), do: {:reply, map_size(s.promises), s}
+  def handle_call(:sent, _from, s), do: {:reply, s.sent, s}
+
+  # For `TemperCore.Actor.wait_idle/0`: every actor running now is sent
+  # {:temper_sync, tag, to} from here, so after every settle this has sent
+  # it; it answers `to` once it has handled them.
+  def handle_call({:sync, to}, _from, s) do
+    tag = make_ref()
+    pids = Registry.select(TemperCore.Actors.Registry, [{{:_, :"$1", :_}, [], [:"$1"]}])
+    Enum.each(pids, &send(&1, {:temper_sync, tag, to}))
+    {:reply, {s.sent, tag, pids}, s}
+  end
 
   def handle_call({:share, items, to}, {from, _}, s) do
     case missing(s, items, from) do
@@ -354,7 +367,7 @@ defmodule TemperCore.Promises do
         case missing(s, nested, owner) do
           [] ->
             s = keep(s, nested, owner, MapSet.to_list(p.holders), MapSet.to_list(p.leases))
-            Enum.each(p.holders, &send(&1, {:temper_promise, id, state, shared}))
+            s = tell(s, p.holders, {:temper_promise, id, state, shared})
             nested = Enum.map(nested, &elem(&1, 0))
             {:reply, :ok, keep_or_forget(s, id, %{p | state: state, shared: shared, nested: nested, holders: MapSet.new()})}
 
@@ -391,6 +404,11 @@ defmodule TemperCore.Promises do
       %{^mref => lease} -> {:noreply, release(%{s | receivers: Map.delete(s.receivers, mref)}, lease)}
       _ -> {:noreply, owner_ended(s, pid)}
     end
+  end
+
+  defp tell(s, holders, message) do
+    Enum.each(holders, &send(&1, message))
+    %{s | sent: s.sent + MapSet.size(holders)}
   end
 
   # The pending stand-ins in `items` that are not pending here: their
@@ -489,7 +507,7 @@ defmodule TemperCore.Promises do
     Enum.reduce(ids, %{s | owners: owners}, fn id, s ->
       case s.promises do
         %{^id => %{state: :pending} = p} ->
-          Enum.each(p.holders, &send(&1, {:temper_promise, id, :ended, %{}}))
+          s = tell(s, p.holders, {:temper_promise, id, :ended, %{}})
           keep_or_forget(s, id, %{p | state: :ended, holders: MapSet.new()})
 
         _ ->

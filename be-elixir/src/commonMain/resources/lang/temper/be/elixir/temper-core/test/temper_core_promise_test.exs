@@ -49,6 +49,19 @@ defmodule TemperCorePromiseTest do
     def ping(this), do: Actor.run(this, fn -> nil end)
   end
 
+  # an @actor whose `relay` answers a promise of what `p` settles to, plus one
+  defmodule Relay do
+    def new, do: Actor.start(__MODULE__, fn -> Actor.init_self(__MODULE__, %{}) end)
+
+    def relay(this, p) do
+      Actor.run(this, fn ->
+        out = Promise.new()
+        Async.run(fn -> TemperCorePromiseTest.awaiter(p, &Promise.complete(out, &1 + 1)) end)
+        out
+      end)
+    end
+  end
+
   def awaiter(p, then) do
     k = Heap.new(:cell, %{v: 0})
 
@@ -337,5 +350,18 @@ defmodule TemperCorePromiseTest do
       Process.sleep(1)
       wait_until(ready)
     end
+  end
+
+  # What a library's __temper_main__ does last. Each relay wakes in a turn
+  # of its own, for a settle the one before it sent, so nothing has
+  # happened yet when the first promise is completed here.
+  test "wait_idle returns only once the actors' work after the last await is done" do
+    first = Promise.new()
+    last = Enum.reduce(1..5, first, fn _, p -> Relay.relay(Relay.new(), p) end)
+    Oracle.wait_on(Oracle.new(), last, self())
+    Promise.complete(first, 0)
+    Actor.wait_idle()
+    # received already, not awaited: wait_idle has waited
+    assert_received {:oracle_got, 5}
   end
 end

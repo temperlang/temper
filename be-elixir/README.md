@@ -157,6 +157,7 @@ end
 def __temper_main__() do
   Temper.Tour.__temper_init__()
   TemperCore.Async.drain()
+  TemperCore.Actor.wait_idle()
 end
 ```
 
@@ -168,7 +169,8 @@ end
   library without waiting for a lock its own creator holds.
 - A library's init first calls the init of every library it imports from,
   so std's globals exist before the user's code reads them.
-- `__temper_main__/0` runs init, then the async queue (section 9). It is
+- `__temper_main__/0` runs init, then the async queue (section 9), then
+  waits until no actor has work left (section 16). It is
   not called `main` because a library may export a `main` of its own: in
   Elixir the first of two `def main()` wins, and the library's would run
   in the entry point's place.
@@ -1003,6 +1005,21 @@ The rules, most of them shown in that output:
   and the async steps that call started have run as far as they can. A
   block suspended at an `await` resumes in a later turn, so a field it read
   before the `await` may have changed after it.
+- **The program waits for its actors.** An actor's async steps can run
+  after the top level has finished: a turn of its own, for a settle that
+  arrives later. On js and py they are on the one queue the program
+  drains, so they finish before it exits. `__temper_main__/0` matches
+  that by ending with `TemperCore.Actor.wait_idle/0`; before, `mix run`
+  exited under them, and a chain of three relays printed none of its
+  lines. Turns start only for calls, which return before their caller
+  goes on, and for settles, which `TemperCore.Promises` sends and counts.
+  So `wait_idle` asks every actor, through that registry so the question
+  arrives after every settle sent before it, to answer once it has handled
+  them, and asks again until a round in which no settle was sent. That
+  depends on no timing. An actor in an endless loop of turns keeps the
+  program running, as an endless async loop does on js. Elixir code that
+  calls into a library never calls `__temper_main__/0` and is not
+  affected.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
   because a link alone ignores a normal exit.

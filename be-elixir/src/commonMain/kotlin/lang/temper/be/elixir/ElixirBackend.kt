@@ -80,7 +80,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * Everything lives under the library's root module, `Temper.Std` for
      * std. Its `__temper_init__/0` runs the libraries it depends on, then
      * every module's top-level statements in order, once per process;
-     * `__temper_main__/0` runs that and drains the async queue.
+     * `__temper_main__/0` runs that, drains the async queue, and waits
+     * until no actor has work left.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
         if (!actorsPass) return emptyList()
@@ -199,9 +200,13 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
         val rootModule = elixirModule(pos, root)
         val testRoot = root + TEST_MODULE
+        // then wait for the actors: work one does after the top level's last
+        // await would otherwise be cut off when `mix run` exits, where every
+        // other backend runs it on the one queue the program drains
         val mainBody = listOf(
             remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
             remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Actor"), "wait_idle", listOf()),
         )
         val classModules = translated.flatMap { it.modules }
         val prodBody = translated.flatMap { it.mainBody }
@@ -601,7 +606,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         const val CORE_DIR = "temper-core"
 
         /**
-         * The entry point `mix run` calls: init, then drain the async queue. Not
+         * The entry point `mix run` calls: init, drain the async queue, wait for
+         * the actors to be idle. Not
          * `main`, which a library may export itself; in Elixir the first of two
          * `def main()` wins, so the library's would run in its place.
          */

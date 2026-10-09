@@ -669,6 +669,43 @@ class ElixirBackendTest {
     }
 
     /**
+     * Each relay is an actor that wakes, in a turn of its own, when the
+     * promise before it settles, after the top level has finished. js runs
+     * those steps on the queue it drains before exiting, so it prints all
+     * three. `__temper_main__/0` used to return once its own queue was empty,
+     * and `mix run` exited with the relays still working: only `main done`
+     * was printed. It now waits until no actor has work left, which does not
+     * depend on how long the work takes.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun actorWorkAfterTheTopLevelEndsIsNotCutOff() {
+        val out = elixirOutput(
+            """
+            |@actor export class Relay(private var name: Int) {
+            |  public relay(p: Promise<Int>): Promise<Int> {
+            |    let out = new PromiseBuilder<Int>();
+            |    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |      let v = await p orelse -1;
+            |      var sum = 0;
+            |      for (var i = 0; i < 300000; ++i) { sum += i % 7; }
+            |      console.log("relay ${'$'}{name.toString()} got ${'$'}{v.toString()}");
+            |      out.complete(v + sum - sum + 1);
+            |    }
+            |    out.promise
+            |  }
+            |}
+            |let first = new PromiseBuilder<Int>();
+            |var p: Promise<Int> = first.promise;
+            |for (var i = 0; i < 3; ++i) { p = new Relay(i).relay(p); }
+            |console.log("main done");
+            |first.complete(10);
+            """.trimMargin(),
+        )
+        assertEquals("main done\nrelay 0 got 10\nrelay 1 got 11\nrelay 2 got 12\n", out)
+    }
+
+    /**
      * An `@actor` the checker rejects stops the build with its located message
      * and nothing else. A class that is both `@actor` and `@imu` used to go on
      * to the translator, whose TODO for that shape ended the build in a stack
