@@ -26,7 +26,8 @@ import lang.temper.log.resolveFile
 import lang.temper.name.DashedIdentifier
 
 /**
- * How to run translated Elixir: `mix compile`, then `mix run --no-compile`.
+ * How to run translated Elixir: `mix deps.get`, `mix compile`, then
+ * `mix run --no-compile`.
  *
  * Two commands, not one, because `mix run` prints `Compiling 1 file (.ex)`
  * and `Generated temper_main app` on stdout before the program's own output,
@@ -108,6 +109,13 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
         val command = Command(args = args, aux = aux, cwd = runDir, env = env)
         command.maybeLogBeforeRunning(mix, shellPreferences)
         return mix.run(command)
+    }
+    // Hex packages a library's config declares, its own or a dependency's,
+    // must be fetched before anything compiles. With path deps only, this
+    // touches no network and writes nothing.
+    val fetched = step(listOf("deps.get"), "deps-stderr.txt")
+    if (fetched is RFailure) {
+        return ToolchainResult(libraryName = libraryName, result = fetched)
     }
     val compiled = step(listOf("compile"), "compile-stderr.txt")
     if (compiled is RFailure) {

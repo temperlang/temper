@@ -19,7 +19,7 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 ./gradlew :cli:installDist                      # a `temper` that knows -b elixir
 cli/build/install/temper/bin/temper build -b elixir -w path/to/my-lib
 cd path/to/my-lib/temper.out/elixir/my-lib
-mix compile && mix run --no-compile -e "Temper.MyLib.__temper_main__()"
+mix deps.get && mix compile && mix run --no-compile -e "Temper.MyLib.__temper_main__()"
 ```
 
 `temper.out/elixir/` holds one Mix project per Temper library, next to
@@ -34,7 +34,9 @@ temper.out/elixir/
 ```
 
 `temper run -b elixir` and the functional-test harness do the same through
-`ElixirSpecifics`. They run `mix compile` first, so Mix's "Compiling"
+`ElixirSpecifics`. They run `mix deps.get`, which fetches any Hex
+packages a library declares (section 10) and with path deps alone touches
+no network, then `mix compile`, so Mix's "Compiling"
 lines never mix with the program's own output, and the run includes a
 60-second watchdog. A program that never finishes halts with "timed out
 after 60000 ms" instead of hanging whatever called it.
@@ -68,7 +70,8 @@ formatter renders that tree. The pieces:
 | `ElixirSupportNetwork.kt` | tells the frontend how this target differs: bubbles are exceptions, coroutines are state machines, void is `nil` |
 | `ElixirSupportCode.kt` | each builtin operator and `@connected` member, as an Elixir expression |
 | `ElixirNames.kt` | legal and readable names |
-| `ElixirSpecifics.kt` | compiling and running the output |
+| `ElixirLibraryConfig.kt` | `ElixirConfig`, a library's Hex dependencies from `config.temper.md` |
+| `ElixirSpecifics.kt` | fetching, compiling and running the output |
 | `temper-core/` | the runtime library, `TemperCore.*` |
 
 Anything the translator does not handle is a `TODO()` carrying the TmpL
@@ -585,6 +588,41 @@ which the `_connected.ex` file next to its Temper source defines. The module
 is the library's own, so two libraries with connected code can share an app;
 a build whose `_connected.ex` defines any other module fails and names the one
 it expects.
+
+Connected code can use Hex packages the library's `config.temper.md`
+declares, as #504 lets a library do for npm, PyPI, crates.io, Maven and NuGet:
+
+```temper
+export let elixir = {
+  class: ElixirConfig,
+  dependencies: ["decimal ~> 3.1"],
+};
+```
+
+Each entry is a package name and a Mix version requirement, and lands in
+`mix.exs` as it would be written by hand:
+
+```elixir
+defp deps do
+  [{:temper_core, path: "../temper-core"}, {:decimal, "~> 3.1"}]
+end
+```
+
+```elixir
+defmodule Temper.ConnectedsHex.Connected do
+  def addDecimals(a, b), do: Decimal.add(Decimal.new(a), Decimal.new(b)) |> Decimal.to_string()
+end
+```
+
+An entry Mix could not use fails the build at the `elixir` export and says
+why: no requirement (`"decimal"`), a name Hex would not take
+(`"Decimal ~> 3.1"`), a requirement `Version.parse_requirement/1` rejects
+(`"decimal >= 3.1"`, which needs all three parts), a package declared twice,
+or one named like a Temper library's own app (`temper_core`). So does an
+`elixir` export that is not an `ElixirConfig`; the other backends log that
+and build as if it were absent. A library that depends on this one gets the
+package through Mix, as any path dependency's deps arrive. `mix deps.get`
+then needs the network, or `HEX_OFFLINE=1` and the package in the Hex cache.
 
 ## 11. Errors
 
@@ -1119,7 +1157,7 @@ Temper.
 ## 18. Differences from js and py
 
 Where js and py agree and this backend does not, it is a bug. There are
-no deliberate exceptions.
+no deliberate exceptions in what a program does.
 
 Float64 `/` and `%` by zero, `0.0` or `-0.0`, bubble, whatever the
 dividend. That is what `builtins.md` says ("Float64 division by zero is a
@@ -1144,6 +1182,23 @@ with `==` compares their fields.
 Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
 `"007".toFloat64()` fail where js and py accept them.
 
+One deliberate difference is in config, not in what programs do. A
+dependency js or py cannot parse is printed and dropped, and the build
+succeeds without it:
+
+```
+$ temper build -b py        # dependencies: ["pyroaring"]
+Expected "name==version", not pyroaring
+$ grep -A2 dependencies temper.out/py/pybad/pyproject.toml
+dependencies = [
+    "temper-core==0.6.0"
+]
+```
+
+The connected code that needed it then fails on import, at run time. An
+`ElixirConfig` dependency Mix could not use fails the build instead
+(section 10).
+
 ## 19. Limits
 
 - **Inheriting from another library's interface.** A class gets every
@@ -1160,6 +1215,11 @@ Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
   stay consistent belongs in an `@actor`.
 - **A module-level mutable non-actor object is per process.** Each process
   gets its own copy on first read.
+
+- **Hex packages only, with a version requirement.** `ElixirConfig` has no
+  git or path dependencies, no options such as `only: :test` or
+  `runtime: false`, and no `name`: the Mix app is always `temper_` and the
+  library's name.
 
 ## 20. Where things are
 

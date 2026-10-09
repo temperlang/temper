@@ -667,6 +667,101 @@ class ElixirBackendTest {
         assertFalse("catch" in out, out)
         assertContains(out, "{:temper_break, :ex_block_1, return}")
     }
+
+    /**
+     * Upstream #504 gave each backend a config class for a library's own
+     * dependencies, used by its connected code. Without an `ElixirConfig` the
+     * frontend has no such class, and the config does not translate at all:
+     * "Cannot translate (Call (V new) (R ElixirConfig) ...)".
+     */
+    @Test
+    fun aConfigsHexDependenciesAreInMixExs() {
+        val out = unescaped(
+            generatedText(
+                "export let x = 1;",
+                config = """
+                    |    export let elixir = {
+                    |      class: ElixirConfig,
+                    |      dependencies: ["decimal ~> 3.1", "jason >= 1.4.0 and < 2.0.0"],
+                    |    };
+                """.trimMargin(),
+            ),
+        )
+        assertFalse("Cannot translate" in out, out)
+        assertContains(
+            out,
+            """[{:temper_core, path: "../temper-core"}, {:decimal, "~> 3.1"}, {:jason, ">= 1.4.0 and < 2.0.0"}]""",
+        )
+    }
+
+    /** An `ElixirConfig` with no dependencies adds none. */
+    @Test
+    fun aConfigWithoutDependenciesAddsNone() {
+        val out = unescaped(
+            generatedText("export let x = 1;", config = "    export let elixir = { class: ElixirConfig };"),
+        )
+        assertFalse("Cannot translate" in out, out)
+        assertContains(out, """[{:temper_core, path: "../temper-core"}]""")
+    }
+
+    /**
+     * A dependency `mix.exs` could not use fails the build at the config's
+     * `elixir` export, naming each one, instead of reaching `mix deps.get`
+     * or being left out for `_connected.ex` to find missing when it runs.
+     */
+    @Test
+    fun aMalformedHexDependencyFailsTheBuild() {
+        val out = unescaped(
+            generatedText(
+                "export let x = 1;",
+                config = """
+                    |    export let elixir = {
+                    |      class: ElixirConfig,
+                    |      dependencies: ["decimal", "Decimal ~> 3.1", "decimal >= 3.1", "temper_core ~> 1.0"],
+                    |    };
+                """.trimMargin(),
+            ),
+        )
+        assertContains(out, """Elixir dependency "decimal": expected a Hex package and a Mix version requirement""")
+        assertContains(out, "`Decimal` is not a Hex package name")
+        assertContains(out, "`>= 3.1` is not a Mix version requirement")
+        assertContains(out, "`temper_core` is the Mix app of a Temper library")
+        assertFalse("{:decimal," in out, out)
+    }
+
+    /** An `elixir` export that is not an `ElixirConfig` would otherwise declare nothing, silently. */
+    @Test
+    fun anElixirExportThatIsNotAConfigFailsTheBuild() {
+        val out = generatedText("export let x = 1;", config = "    export let elixir = \"decimal ~> 3.1\";")
+        assertContains(out, "`elixir` must be an ElixirConfig")
+    }
+
+    /**
+     * What `Version.parse_requirement/1` says of each requirement, on Elixir
+     * 1.18.4, is what [HexDependency.parse] must say: a requirement Mix would
+     * reject is a build error here, not a `mix deps.get` failure later.
+     */
+    @Test
+    fun hexRequirementsAreWhatMixAccepts() {
+        val accepted = listOf(
+            "~> 3.1", "3.1.1", "== 3.1.1", "~> 3.1.0", ">= 2.0.0 and < 4.0.0", "~> 2.0 or ~> 3.0", "~>3.1",
+            ">= 1.0.0-rc.1", "1.0.0+build", ">=2.0.0", "~> 2.0  or ~> 3.0", "3.1.1-rc", "~> 3.1-rc.1", "1.2.3-0a",
+        )
+        val rejected = listOf(
+            "3.1", "*", "~> 3", ">= 3.1", "== 3.1", "01.2.3", "~> 3.1 and", "and ~> 3.1", "~> 3.1 AND ~> 3.0",
+            "> 3.1.0 or", "=~ 1.0.0", "= 1.0.0", "~> 1.2.3.4", "1.2.3-", "1.2.3-a..b", "1.2.3-01",
+        )
+        for (requirement in accepted) {
+            assertEquals(
+                HexDependency("decimal", requirement),
+                HexDependency.parse("decimal $requirement").leftOrNull,
+                requirement,
+            )
+        }
+        for (requirement in rejected) {
+            assertEquals(null, HexDependency.parse("decimal $requirement").leftOrNull, requirement)
+        }
+    }
 }
 
 /**
@@ -674,10 +769,11 @@ class ElixirBackendTest {
  * Source maps are left out: they embed the Temper source, which would match
  * any search for a Temper name.
  */
-private fun generatedText(temper: String): String {
+private fun generatedText(temper: String, config: String? = null): String {
     var text = ""
+    val library = config?.let { listOf(filePath("config.temper.md") to "# My test library\n\n$it\n") } ?: listOf()
     assertGeneratedStructure(
-        inputs = listOf(filePath("something", "something.temper") to temper),
+        inputs = library + listOf(filePath("something", "something.temper") to temper),
         factory = ElixirBackend.Factory,
         backendConfig = Backend.Config.production,
         genre = Genre.Library,
@@ -685,6 +781,10 @@ private fun generatedText(temper: String): String {
     ) { text = FormattingStructureSink.toJsonString(it, filterKeys = { key -> !key.endsWith(".map") }) }
     return text
 }
+
+/** [json] with the escapes the generated text uses for quotes, angle brackets and newlines undone. */
+private fun unescaped(json: String): String =
+    json.replace("\\u0022", "\"").replace("\\u003e", ">").replace("\\u003c", "<").replace("\\n", "\n")
 
 /** The JSON-escaped content of the generated file named [name], from [generatedText]. */
 private fun fileContent(json: String, name: String): String {

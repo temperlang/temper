@@ -22,7 +22,7 @@ import kotlin.test.Test
  *
  * The build writes `elixir/<library>/` into the output root and temper-core
  * is copied to `elixir/temper-core/`, where the library's `mix.exs` looks
- * for it. [runElixir] runs `mix compile` then `mix run` with
+ * for it. [runElixir] runs `mix deps.get`, `mix compile`, then `mix run` with
  * `elixir/<library>` as its working directory.
  *
  * Which tests run is decided by `onlyPasses(elixir(), ...)` in
