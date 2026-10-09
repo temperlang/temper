@@ -25,6 +25,20 @@ class TestIntToString(ut.TestCase):
             ],
         )
 
+    def test_radix_36(self):
+        # The documented range is 2 through 36 inclusive.
+        self.assertEqual("z", rt.int_to_string(35, 36))
+        self.assertEqual("10", rt.int_to_string(36, 36))
+        self.assertEqual("-zik0zk", rt.int_to_string(-0x8000_0000, 36))
+        self.assertEqual(
+            "-1y2p0ij32e8e8", rt.int_to_string(-0x8000_0000_0000_0000, 36)
+        )
+
+    def test_radix_out_of_range(self):
+        for radix in [-1, 0, 1, 37]:
+            with self.assertRaises(ValueError):
+                rt.int_to_string(1, radix)
+
 
 class TestBooleanToString(ut.TestCase):
     def test_true(self):
