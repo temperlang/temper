@@ -3,13 +3,11 @@ package lang.temper.be.csharp
 import lang.temper.be.names.LookupNameVisitor
 import lang.temper.be.names.NameLookup
 import lang.temper.be.tmpl.TmpL
-import lang.temper.interp.importExport.STANDARD_LIBRARY_NAME
 import lang.temper.library.LibraryConfiguration
 import lang.temper.log.FilePath
 import lang.temper.name.ModuleName
 import lang.temper.name.QName
 import lang.temper.name.ResolvedName
-import lang.temper.value.TString
 
 class CSharpNames(
     val nameLookup: NameLookup,
@@ -34,22 +32,15 @@ class CSharpNames(
     }
 }
 
-private fun chooseRootNamespace(config: LibraryConfiguration) =
-    config.configExports[csharpRootNamespaceKey]?.let { value ->
-        TString.unpackOrNull(value)
-    } ?: when (config.libraryName.text) {
-        // Hardcode std because we don't yet get config exports in funtests.
-        STANDARD_LIBRARY_NAME -> STD_ROOT_NAMESPACE
-        else -> config.libraryName.text.dashToPascal()
-    }
-
 internal fun makeCSharpNames(
     backend: CSharpBackend,
     moduleSet: TmpL.ModuleSet,
 ): CSharpNames {
     val libraryConfig = moduleSet.libraryConfiguration
-    val rootNamespace = chooseRootNamespace(libraryConfig)
-    val rootNamespaces = backend.libraryConfigurations.byLibraryRoot.values.map { it to chooseRootNamespace(it) }
+    val rootNamespace = CSharpLibraryConfig(libraryConfig).rootNamespace()
+    val rootNamespaces = backend.libraryConfigurations.byLibraryRoot.values.map { libraryConfig ->
+        libraryConfig to CSharpLibraryConfig(libraryConfig).rootNamespace()
+    }
     return CSharpNames(
         nameLookup = LookupNameVisitor().visit(moduleSet).toLookup(),
         rootNamespace = rootNamespace,

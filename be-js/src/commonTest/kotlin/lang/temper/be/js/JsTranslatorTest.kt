@@ -41,7 +41,7 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
             "moduleWithTopLevel" to
                 """
                     |/** @type {string} */
-                    |export const exampleName_0 = "example assigned value";
+                    |export const exampleName = "example assigned value";
                     |
                     |export {} from "./implement.internal.js";
                 """.trimMargin(),
@@ -358,13 +358,13 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
             "funLambdaArgs" to
                 """
                     |/**
-                    | * @template X_4
-                    | * @param {string} alpha_1
-                    | * @param {number} beta_2
-                    | * @param {(arg0: string, arg1: string) => X_4} gamma_3
+                    | * @template X_3
+                    | * @param {string} alpha_0
+                    | * @param {number} beta_1
+                    | * @param {(arg0: string, arg1: string) => X_3} gamma_2
                     | * @returns {string}
                     | */
-                    |export function function_0(alpha_1, beta_2, gamma_3) {
+                    |export function function_(alpha_0, beta_1, gamma_2) {
                     |};
                     |
                     |export {} from "./implement.internal.js";
@@ -372,18 +372,18 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
             "trailingRequiredArgs" to
                 """
                     |/**
-                    | * @param {number} alpha_1
-                    | * @param {number | null} [beta_2]
-                    | * @param {number} gamma_3
+                    | * @param {number} alpha_0
+                    | * @param {number | null} [beta_1]
+                    | * @param {number} gamma_2
                     | * @returns {number}
                     | */
-                    |export function function_0(alpha_1, beta_2, gamma_3) {
-                    |  let return_4;
+                    |export function function_(alpha_0, beta_1, gamma_2) {
+                    |  let return_3;
                     |  if (true) {
-                    |    beta_2 = 77;
+                    |    beta_1 = 77;
                     |  }
-                    |  return_4 = alpha_1 + beta_2 + gamma_3;
-                    |  return return_4;
+                    |  return_3 = alpha_0 + beta_1 + gamma_2;
+                    |  return return_3;
                     |};
                     |
                     |export {} from "./implement.internal.js";
@@ -391,12 +391,12 @@ class JsTranslatorTest : TranslatorTests(JsBackend.Factory.backendMeta, JsSuppor
             "simpleGenerator" to
                 """
                     |import {
-                    |  adaptAwaiter as adaptAwaiter__2
+                    |  adaptAwaiter as adaptAwaiter__1
                     |} from "@temperlang/core";
                     |/** @returns {Generator<{}>} */
-                    |export const simpleGenerator_0 = adaptAwaiter__2(function* simpleGenerator_0(await_1) {
+                    |export const simpleGenerator = adaptAwaiter__1(function* simpleGenerator(await_0) {
                     |    yield null;
-                    |    return empty_3;
+                    |    return empty_2;
                     |});
                     |
                     |export {} from "./implement.internal.js";

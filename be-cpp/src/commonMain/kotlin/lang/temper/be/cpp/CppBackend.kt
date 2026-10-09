@@ -12,6 +12,7 @@ import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
 import lang.temper.common.subListToEnd
+import lang.temper.frontend.BindingsInjector
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
@@ -288,6 +289,8 @@ class CppBackend private constructor(
             }
 
         override val processCoreLibraryResourcesNeeded get() = true
+
+        override val configBindingsInjector: BindingsInjector = CppConfigInjector
 
         override fun make(setup: BackendSetup<CppBackend>) = CppBackend(lang, setup)
     }
