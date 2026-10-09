@@ -4,15 +4,24 @@ defmodule TemperCore.IeeeTest do
 
   @big 1.7976931348623157e308
 
-  test "overflow and zero divisors give infinities, not ArithmeticError" do
+  test "overflow gives infinities, not ArithmeticError" do
     assert F.mul(@big, 2.0) == :infinity
     assert F.mul(@big, -2.0) == :neg_infinity
     assert F.add(@big, @big) == :infinity
-    assert F.divide(1.0, 0.0) == :infinity
-    assert F.divide(1.0, -0.0) == :neg_infinity
-    assert F.divide(0.0, 0.0) == :nan
+    assert F.divide(@big, 0.5) == :infinity
+    assert F.divide(-@big, 1.0e-10) == :neg_infinity
     assert F.divide(1.0, :infinity) === 0.0
     assert F.divide(-1.0, :infinity) === -0.0
+    assert F.divide(:infinity, -2.0) == :neg_infinity
+  end
+
+  # builtins.md: "Float64 division by zero is a Bubble too", as in the
+  # interpreter, py and rust. Not IEEE's Infinity or NaN.
+  test "/ and % by 0.0 or -0.0 bubble, whatever the dividend" do
+    for a <- [1.0, -1.0, 0.0, -0.0, :infinity, :neg_infinity, :nan], b <- [0.0, -0.0] do
+      assert_raise TemperCore.Bubble, fn -> F.divide(a, b) end
+      assert_raise TemperCore.Bubble, fn -> F.rem(a, b) end
+    end
   end
 
   test "NaN and infinities propagate" do
@@ -20,9 +29,14 @@ defmodule TemperCore.IeeeTest do
     assert F.mul(:infinity, 0.0) == :nan
     assert F.sub(:infinity, 1.0) == :infinity
     assert F.neg(:infinity) == :neg_infinity
-    assert F.rem(1.0, 0.0) == :nan
+    assert F.rem(:infinity, 2.0) == :nan
     assert F.rem(1.5, :infinity) == 1.5
+    assert F.rem(-7.5, 2.0) == -1.5
     assert F.pow(0.0, -1.0) == :infinity
+    assert F.pow(0.0, :neg_infinity) == :infinity
+    assert F.pow(0.5, :neg_infinity) == :infinity
+    assert F.pow(-2.0, :neg_infinity) === 0.0
+    assert F.pow(-1.0, :neg_infinity) == 1.0
     assert F.pow(-8.0, 1 / 3) == :nan
     assert F.pow(:nan, 0.0) == 1.0
   end

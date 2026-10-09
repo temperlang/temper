@@ -312,6 +312,39 @@ class ElixirBackendTest {
     }
 
     /**
+     * builtins.md says Float64 division by zero is a Bubble, and the
+     * interpreter, py and rust agree. This backend gave js's Infinity, NaN
+     * and -Infinity, on purpose. The first three lines are the docs example;
+     * the rest divide by a zero the compiler cannot see, including -0.0, and
+     * check that `%` follows `/` and that overflow still gives Infinity.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun float64DivisionAndRemainderByZeroBubble() {
+        val out = elixirOutput(
+            """
+            |console.log("${'$'}{ (0.0 /  0.0).toString() orelse "Bubble" }");
+            |console.log("${'$'}{ (1.0 /  0.0).toString() orelse "Bubble" }");
+            |console.log("${'$'}{ (1.0 / -0.0).toString() orelse "Bubble" }");
+            |let show(a: Float64, b: Float64): String {
+            |  "${'$'}{(a / b).toString() orelse "Bubble"} ${'$'}{(a % b).toString() orelse "Bubble"}"
+            |}
+            |var z = 0.0;
+            |z = z;
+            |console.log(show(1.0, z));
+            |console.log(show(0.0, z));
+            |console.log(show(1.0, -z));
+            |console.log(show(7.5, 2.0));
+            |console.log(show(1.7976931348623157e308, 0.5));
+            """.trimMargin(),
+        )
+        assertEquals(
+            "Bubble\nBubble\nBubble\nBubble Bubble\nBubble Bubble\nBubble Bubble\n3.75 1.5\nInfinity 0.0\n",
+            out,
+        )
+    }
+
+    /**
      * An async block that ends with an `if`, after an `await ... orelse`,
      * printed the branch and then panicked with `broken code: (Block)`. The
      * coroutine converter dropped the `return doneResult()` at the end of

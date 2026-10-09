@@ -252,7 +252,9 @@ TemperCore.Float.mul(this.side, this.side)
 ```
 
 `mul` runs the BEAM's `*` inside a `try` and turns a raise into the IEEE
-result. On ten million adds that cost about 10%. Comparisons follow
+result. On ten million adds that cost about 10%. `/` and `%` by a zero
+divisor are the exception: Temper makes them bubble, as on `Int`, rather
+than give Infinity or NaN (section 18). Comparisons follow
 Temper's total order:
 
     -Infinity < ... < -0.0 < 0.0 < ... < Infinity < NaN,   and NaN == NaN
@@ -1114,18 +1116,25 @@ binaries. [Entry 27](https://github.com/notactuallytreyanastasio/temper-blimp/bl
 reflow, which the original did with a regex per line, is faster in
 Temper.
 
-## 18. Deliberate differences from js and py
+## 18. Differences from js and py
 
-Where js and py agree and this backend does not, it is a bug, with one
-exception, chosen for Elixir developers using a translated library:
+Where js and py agree and this backend does not, it is a bug. There are
+no deliberate exceptions.
 
-- **Float64 division by zero gives Infinity, -Infinity or NaN.** `1.0 / 0.0`
-  is `Infinity` and `x % 0.0` is `NaN`, as in js. py, and Temper's
-  `BuiltinOperatorSpecs`, bubble instead. The BEAM itself raises
-  ArithmeticError for `1.0 / 0.0`; this backend gives Temper's infinities
-  and NaN values of their own (`:infinity`, `:neg_infinity`, `:nan`), and a
-  program that produces one keeps running with it rather than stopping.
-  Pinned by temper-core's IEEE tests.
+Float64 `/` and `%` by zero, `0.0` or `-0.0`, bubble, whatever the
+dividend. That is what `builtins.md` says ("Float64 division by zero is a
+*Bubble* too") and what the interpreter, py and rust do; js, lua, java
+and cpp give Infinity or NaN instead (temperlang/temper#373), so js and
+py do not agree here and this backend follows the docs:
+
+```temper
+console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); // Bubble
+console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); // Bubble
+console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); // Bubble
+```
+
+Infinity and NaN still come from everything else that makes them:
+overflow, `Infinity - Infinity`, `Infinity / 2.0`, `0.0 ** -1.0`.
 
 There is no `==` between two class instances to differ on: Temper rejects
 it on every backend unless the class declares an `@operator("==")` method.
