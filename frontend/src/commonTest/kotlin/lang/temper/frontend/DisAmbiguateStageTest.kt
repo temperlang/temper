@@ -82,6 +82,14 @@ class DisAmbiguateStageTest {
     )
 
     @Test
+    fun staticGettersAndSettersRejected() = assertModuleAtStage(
+        stageTestDir = StageTestDir("dis-ambiguate/static-getters-and-setters-rejected"),
+        stagingFlags = setOf(StagingFlags.skipImportCore),
+        // `static get` and `static set` are not implemented. Each gets a located error, and the
+        // instance getter and static method beside them are converted as usual.
+    )
+
+    @Test
     fun multipleKeywordAnnotationsAllFire() = assertModuleAtStage(
         stageTestDir = StageTestDir("dis-ambiguate/multiple-keyword-annotations-all-fire"),
     )

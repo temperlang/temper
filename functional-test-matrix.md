@@ -46,6 +46,7 @@
 | [SemanticsBroken][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsConstness][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsMutuallyReferencingTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [SemanticsTopLevelOrder][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsTypeCheckedLocals][] | ❌<sup>[58][]</sup> | ❌<sup>[198][]</sup> | ❌<sup>[58][]</sup> | ✅ | ❌<sup>[58][]</sup> | ❌<sup>[58][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[58][]</sup> |
 | [TestingAsserts][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDate][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -121,6 +122,7 @@
 [SemanticsBroken]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/broken/broken.temper.md
 [SemanticsConstness]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/constness/constness.temper.md
 [SemanticsMutuallyReferencingTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/mutually-referencing-types/mutually-referencing-types.temper.md
+[SemanticsTopLevelOrder]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/top-level-order/top-level-order.temper.md
 [SemanticsTypeCheckedLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/type-checked-locals/type-checked-locals.temper.md
 [TestingAsserts]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/testing/asserts/asserts.temper.md
 [TypesDate]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/date/date.temper.md

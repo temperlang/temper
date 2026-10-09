@@ -44,6 +44,7 @@ import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.Tree
 import lang.temper.value.functionContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.toLispy
 
 internal object TranslateDotHelper {
@@ -394,6 +395,15 @@ internal object TranslateDotHelper {
                 )
             }
             is SetMemberAccessor -> if (otherArgs.size == 1) {
+                if (subjectTree.reifiedTypeContained != null) {
+                    // `C.n = x` with `C` a type.  The Typer has already reported this.
+                    // A property write on a type value would translate the type value
+                    // as an ordinary value, which no backend can assign through.
+                    return garbageTranslatedHelper(
+                        pos,
+                        "Cannot assign to static member ${dotMember.dotName.text}",
+                    )
+                }
                 val newValue = otherArgs.first()
                 return translatedStmt(
                     TmpL.SetAbstractProperty(

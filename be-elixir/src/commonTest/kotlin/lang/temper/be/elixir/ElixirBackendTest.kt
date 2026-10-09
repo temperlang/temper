@@ -404,9 +404,10 @@ class ElixirBackendTest {
      * `5 5 5 5 3`). f is a module-level value now. `install` rebinds it from
      * inside a function, and `g` keeps the value f had when g was made.
      *
-     * The frontend moves the top-level `f = dbl` up to just after the
-     * declarations it needs, ahead of `before`; js and the interpreter print
-     * the same `10` for it.
+     * Statements run in source order, so `before` and `g` see the identity
+     * function and `middle` sees dbl; js and py print the same
+     * `5 10 15 5 3`. This used to expect `10 10 15 10 3`, which was #540:
+     * the frontend hoisted `f = dbl` above `before` on every backend.
      */
     @Test
     @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
@@ -429,7 +430,7 @@ class ElixirBackendTest {
             |console.log("${'$'}{before} ${'$'}{middle} ${'$'}{fire(seed)} ${'$'}{g(seed)} ${'$'}{calls}");
             """.trimMargin(),
         )
-        assertEquals("10 10 15 10 3\n", out)
+        assertEquals("5 10 15 5 3\n", out)
     }
 
     /**

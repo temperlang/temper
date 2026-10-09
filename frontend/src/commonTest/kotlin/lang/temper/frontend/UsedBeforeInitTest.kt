@@ -150,6 +150,147 @@ class UsedBeforeInitTest {
     }
 
     @Test
+    fun constantAssignedAlongOneBranch() {
+        // Partial evaluation visits `x = 1` whether or not `b` holds.  It must not let that
+        // settle the value of `x` for the read below, or the read becomes `1` before this
+        // check sees it.
+        val r = doCheck(
+            """
+                |export let f(b: Boolean): Int {
+                |  let x: Int;
+                |  if (b) { x = 1; }
+                |  x
+                |}
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  consoleOutput: ```
+                |      4: x
+                |         ⇧
+                |      [test/test.temper:4+2-3]@T: x__0 is not initialized along branches at [:3+19]
+                |      3: if (b) { x = 1; }
+                |                          ⇧
+                |
+                |      ```
+                |}
+            """.trimMargin(),
+            r,
+        )
+    }
+
+    @Test
+    fun constantAssignedAlongOneBranchAtTopLevel() {
+        val r = doCheck(
+            """
+                |let x: Int;
+                |if (randomBool()) { x = 1; }
+                |console.log(x.toString());
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  consoleOutput: ```
+                |      3: console.log(x.toString());
+                |                     ⇧
+                |      [test/test.temper:3+12-13]@T: x__0 is not initialized along branches at [:2+28]
+                |      2: omBool()) { x = 1; }
+                |                             ⇧
+                |
+                |      ```
+                |}
+            """.trimMargin(),
+            r,
+        )
+    }
+
+    @Test
+    fun constantAssignedAlongOneNestedBranchInLoop() {
+        // `y` is declared in the loop body, so an assignment directly in the body would
+        // count, but this one is one branch further in.
+        val r = doCheck(
+            """
+                |export let f(n: Int): Int {
+                |  var total = 0;
+                |  for (var i = 0; i < n; ++i) {
+                |    let y: Int;
+                |    if (randomBool()) { y = 1; }
+                |    total += y;
+                |  }
+                |  total
+                |}
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  consoleOutput: ```
+                |      6: total += y;
+                |                  ⇧
+                |      [test/test.temper:6+13-14]@T: y__0 is not initialized along branches at [:5+32]
+                |      5: omBool()) { y = 1; }
+                |                             ⇧
+                |
+                |      ```
+                |}
+            """.trimMargin(),
+            r,
+        )
+    }
+
+    @Test
+    fun constantAssignedAfterBreakOutOfLabeledBlock() {
+        // The `break` skips `x = 1`, and before weaving it is inside the block lambda for the
+        // `if`, not in the labeled block's own flow.
+        val r = doCheck(
+            """
+                |export let f(b: Boolean): Int {
+                |  let x: Int;
+                |  lbl: do {
+                |    if (b) { break lbl; }
+                |    x = 1;
+                |  }
+                |  x
+                |}
+            """.trimMargin(),
+        )
+        assertStructure(
+            """
+                |{
+                |  consoleOutput: ```
+                |      7: x
+                |         ⇧
+                |      [test/test.temper:7+2-3]@T: x__0 is not initialized along branches at [:2+2 - 4+9]
+                |        ┏┓
+                |      2:┃let x: Int;
+                |      3:┃lbl: do {
+                |      4:┃  if (b) { break lbl; }
+                |        ┗━━━━━━┛
+                |
+                |      ```
+                |}
+            """.trimMargin(),
+            r,
+        )
+    }
+
+    @Test
+    fun constantAssignedAlongBothBranches() {
+        val r = doCheck(
+            """
+                |export let f(b: Boolean): Int {
+                |  let x: Int;
+                |  if (b) { x = 1; } else { x = 2; }
+                |  x
+                |}
+            """.trimMargin(),
+        )
+        assertStructure("{}", r)
+    }
+
+    @Test
     fun type() {
         val r = doCheck(
             """
