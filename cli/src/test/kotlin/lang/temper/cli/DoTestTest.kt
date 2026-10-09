@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Timeout
 import java.nio.file.Path
 import java.util.concurrent.ForkJoinPool
 import kotlin.io.path.exists
+import kotlin.io.path.writeText
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -127,6 +128,26 @@ class DoTestTest {
         // In Java, this causes a compiler error, so the test can't run at all.
         val result = doTestResult(listOf(JavaBackend.Java17.backendId), jobName, output, libraryName)
         checkErrorResults(result)
+    }
+
+    @Test
+    @Timeout(2 * JAVA_TIMEOUT_SECONDS)
+    fun testCompileErrorAfterPassingJava17Backend() = runWithCopyOfTestingDir(
+        "TestCompileErrorAfterPassingJava17Backend",
+        "/testing/passing",
+    ) { output, libraryName, jobName ->
+        // A first run that passes leaves surefire reports in temper.out. Then javac fails, so
+        // surefire writes nothing, and the old reports must not be read as the second run's.
+        // The broken source is planted by hand so that the failure does not depend on a
+        // translation bug that may get fixed.
+        val backends = listOf(JavaBackend.Java17.backendId)
+        val first = doTestResult(backends, jobName, output, libraryName)
+        assertTrue(first.ok, "First run should pass")
+        output.resolve("temper.out/java/test-me/src/main/java/test_me/Broken.java")
+            .writeText("package test_me;\nclass Broken { int x = ; }\n")
+        val second = doTestResult(backends, jobName, output, libraryName)
+        assertFalse(second.ok, "javac failed, so the run should fail")
+        assertEquals(0, second.testTally?.run, "No test ran")
     }
 
     @Test
