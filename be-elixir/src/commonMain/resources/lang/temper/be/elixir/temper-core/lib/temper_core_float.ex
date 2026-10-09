@@ -93,30 +93,33 @@ defmodule TemperCore.Float do
   def mul(a, b) when a == 0.0 or b == 0.0, do: :nan
   def mul(a, b), do: inf(neg?(a) != neg?(b))
 
+  @doc """
+  `/`. A zero divisor, `0.0` or `-0.0`, bubbles whatever the dividend, as
+  Temper's docs say and as the interpreter, py and rust do. Infinities and
+  NaN still come out of the other cases, such as `Infinity / 2.0` or a
+  quotient too large for a float.
+  """
   @spec divide(t(), t()) :: t()
+  def divide(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:divide, [a, b])
+  def divide(_, b) when b == 0.0, do: raise(TemperCore.Bubble, "division by zero")
+
   def divide(a, b) when is_float(a) and is_float(b) do
-    cond do
-      b != 0.0 -> a / b
-      a == 0.0 -> :nan
-      true -> inf(neg?(a) != neg?(b))
-    end
+    a / b
   rescue
     ArithmeticError -> inf(neg?(a) != neg?(b))
   end
 
-  def divide(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:divide, [a, b])
   def divide(:nan, _), do: :nan
   def divide(_, :nan), do: :nan
   def divide(a, b) when special(a) and special(b), do: :nan
   def divide(a, b) when special(a), do: inf(neg?(a) != neg?(b))
   def divide(a, b), do: zero(neg?(a) != neg?(b))
 
-  @doc "`%`: the remainder keeps the dividend's sign, as C's fmod does."
+  @doc "`%`: the remainder keeps the dividend's sign, as C's fmod does. A zero divisor bubbles, as for `/`."
   @spec rem(t(), t()) :: t()
-  def rem(a, b) when is_float(a) and is_float(b),
-    do: if(b == 0.0, do: :nan, else: :math.fmod(a, b))
-
   def rem(a, b) when not (float64?(a) and float64?(b)), do: not_float64!(:rem, [a, b])
+  def rem(_, b) when b == 0.0, do: raise(TemperCore.Bubble, "remainder by zero")
+  def rem(a, b) when is_float(a) and is_float(b), do: :math.fmod(a, b)
   def rem(a, b) when special(a) or b == :nan, do: :nan
   def rem(a, _), do: a
 
@@ -140,7 +143,18 @@ defmodule TemperCore.Float do
   def pow(_, :nan), do: :nan
 
   def pow(a, :infinity), do: pow_inf(abs(a))
-  def pow(a, :neg_infinity), do: pow_inf(divide(1.0, abs(a)))
+  # Not pow_inf(divide(1.0, abs(a))): 0.0 ** -Infinity is Infinity, and
+  # divide bubbles on a zero divisor.
+  def pow(a, :neg_infinity) do
+    m = abs(a)
+
+    cond do
+      m == 1.0 -> 1.0
+      gt(m, 1.0) -> 0.0
+      true -> :infinity
+    end
+  end
+
   def pow(:infinity, b), do: if(b > 0.0, do: :infinity, else: 0.0)
   def pow(:neg_infinity, b) when b > 0.0, do: inf(odd?(b))
   def pow(:neg_infinity, b), do: zero(odd?(b))
