@@ -65,8 +65,9 @@ internal fun runJsBestEffort(
     when (request) {
         is RunBackendSpecificCompilationStepRequest -> error("$request")
         is RunLibraryRequest -> {
+            // Null for a library the build does not know, which the metadata check below reports.
             mainLibraryConfig = dependencies.libraryConfigurations
-                .byLibraryName.getValue(request.libraryName)
+                .byLibraryName[request.libraryName]
             val jsLibraryName = dependencies.metadata[request.libraryName, JsMetadataKey.JsLibraryName]
                 ?: return listOf(
                     ToolchainResult(result = RFailure(CliFailure("No JS library name for $request"))),
