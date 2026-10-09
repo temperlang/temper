@@ -87,6 +87,8 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     moduleResultNeeded: Boolean,
     logSink: LogSink,
     lookupFactory: (BackendId) -> Backend.Factory<*>? = factoryFinder(factory),
+    /** Write the output of every library the inputs declare, not only `my-test-library`'s. */
+    writeEveryLibrary: Boolean = false,
 ): OutputRoot {
     val outputRoot = OutputRoot(MemoryFileSystem())
     val backendOrganization = organizeBackends(
@@ -108,6 +110,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
                 logSink = logSink,
                 outputRoot = outputRoot,
                 adjusterFactory = factory.adjusterFactories()[backendId],
+                writeEveryLibrary = writeEveryLibrary,
             )
         }
     }
@@ -124,6 +127,7 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
     outputRoot: OutputRoot,
     adjusterFactory: BackendAdjusterFactory?,
     activeFactories: Iterable<Backend.Factory<*>> = listOf(factory),
+    writeEveryLibrary: Boolean = false,
 ) {
     val backendId = factory.backendId
     val libraryRoot = dirPath()
@@ -192,6 +196,8 @@ fun <BACKEND : Backend<BACKEND>> generateCode(
             val (config, moduleList) = lib
             val buildFileCreator = if (config == libraryConfiguration) {
                 outputDir.systemAccess(cancelGroup)
+            } else if (writeEveryLibrary) {
+                outputRoot.makeDirs(dirPath(backendId.uniqueId, config.libraryName.text)).systemAccess(cancelGroup)
             } else {
                 NullSystemAccess(outputRoot.path.resolve(backendLib), cancelGroup)
             }

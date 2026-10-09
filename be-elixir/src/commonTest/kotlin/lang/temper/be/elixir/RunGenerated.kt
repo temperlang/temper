@@ -8,6 +8,7 @@ import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
 import lang.temper.common.structure.FormattingStructureSink
 import lang.temper.lexer.Genre
+import lang.temper.log.FilePath
 import lang.temper.log.filePath
 import java.io.File
 import java.nio.file.Files
@@ -23,10 +24,18 @@ import kotlin.test.fail
  * would only say what it looks like. [then] is Elixir run after the
  * program, as code calling into the library would. Needs `mix` on the path.
  */
-internal fun elixirOutput(temper: String, then: String = ""): String {
+internal fun elixirOutput(temper: String, then: String = ""): String =
+    elixirOutput(listOf(filePath("something", "something.temper") to temper), then)
+
+/**
+ * The same for several source files, which may declare libraries of their
+ * own beside `my-test-library` with a `config.temper.md`: each is written
+ * where its Mix project expects it, beside the others.
+ */
+internal fun elixirOutput(inputs: List<Pair<FilePath, String>>, then: String = ""): String {
     val root = Files.createTempDirectory("be-elixir-run").toFile()
     try {
-        for ((path, content) in elixirFiles(temper)) {
+        for ((path, content) in elixirFiles(inputs)) {
             File(root, path).apply { parentFile.mkdirs() }.writeText(content)
         }
         temperCoreSource().copyRecursively(File(root, "elixir/temper-core"))
@@ -53,15 +62,16 @@ private fun mix(project: File, vararg args: String): String {
     return output
 }
 
-/** Every file the backend writes for [temper], by path, source maps left out. */
-private fun elixirFiles(temper: String): Map<String, String> {
+/** Every file the backend writes for [inputs], every library's, by path, source maps left out. */
+private fun elixirFiles(inputs: List<Pair<FilePath, String>>): Map<String, String> {
     var json = ""
     assertGeneratedStructure(
-        inputs = listOf(filePath("something", "something.temper") to temper),
+        inputs = inputs,
         factory = ElixirBackend.Factory,
         backendConfig = Backend.Config.production,
         genre = Genre.Library,
         moduleResultNeeded = false,
+        writeEveryLibrary = true,
     ) { json = FormattingStructureSink.toJsonString(it, filterKeys = { key -> !key.endsWith(".map") }) }
     val tree = (JsonValue.parse(json, tolerant = true) as? RSuccess)?.result as? JsonObject
         ?: fail("generated structure is not JSON:\n$json")

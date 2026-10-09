@@ -192,7 +192,12 @@ end
   variable too, though the frontend hands it over as a function: its first
   body is a `defp`, captured into `TemperCore.Global` where the `var` was,
   and a call of f calls what the global holds. If f is exported, `def f`
-  stays, for Elixir and other libraries to call, and does the same.
+  stays, for Elixir to call, and does the same. Another Temper library
+  reads and calls f through the global too, so `let g = f` there takes the
+  value f holds at that moment, as in js and py, where a capture of
+  `def f` would follow every later rebinding. Each library records which
+  of its functions are rebound before any library translates, which is
+  how the one importing f knows.
 - The ETS table, the actor registry and the actor supervisor belong to the
   `:temper_core` OTP application. It starts with any Mix project that
   depends on a translated library.
@@ -1209,6 +1214,12 @@ console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); // Bubble
 
 Infinity and NaN still come from everything else that makes them:
 overflow, `Infinity - Infinity`, `Infinity / 2.0`, `0.0 ** -1.0`.
+
+A call of another library's exported `var f` after that library rebinds
+it runs the new value, as in js, whose imports are live bindings. py's
+`from liba import f` copies the value once, so there a call still runs the
+first one. A read, `let g = f`, takes the value f holds at the read in all
+three.
 
 There is no `==` between two class instances to differ on: Temper rejects
 it on every backend unless the class declares an `@operator("==")` method.

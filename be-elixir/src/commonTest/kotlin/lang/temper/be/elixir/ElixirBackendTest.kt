@@ -487,6 +487,37 @@ class ElixirBackendTest {
     }
 
     /**
+     * Another library's rebindable function, read as a value, is the value
+     * it holds at the read, as in js and py. It was `&Temper.Liba.f/1`, a
+     * capture of the dispatching `def f`, so g followed install's rebinding
+     * and printed `g 10` after it. Calls of f itself see the rebinding, as
+     * in js; py's `from liba import f` keeps the first value there.
+     */
+    @Test
+    @Timeout(value = RUN_TEST_MINUTES, unit = TimeUnit.MINUTES)
+    fun anotherLibraryReadsARebindableFunctionAsItIsNow() {
+        val out = elixirOutput(
+            listOf(
+                filePath("liba", "config.temper.md") to "# Liba\n\n    export let name = \"liba\";\n",
+                filePath("liba", "liba.temper") to """
+                    |let dbl(x: Int): Int { x * 2 }
+                    |export var f = fn (x: Int): Int { x };
+                    |export let install(): Void { f = dbl; }
+                """.trimMargin(),
+                filePath("app.temper") to """
+                    |let { f, install } = import("liba");
+                    |let g = f;
+                    |console.log("g ${'$'}{g(5)} f ${'$'}{f(5)}");
+                    |install();
+                    |let h = f;
+                    |console.log("g ${'$'}{g(5)} f ${'$'}{f(5)} h ${'$'}{h(5)}");
+                """.trimMargin(),
+            ),
+        )
+        assertEquals("g 5 f 5\ng 5 f 10 h 10\n", out)
+    }
+
+    /**
      * The generated entry point used to be `main/0`, so a library exporting
      * its own `main` got two `def main()`. The library's came first, so
      * running the program called it uninvited and never reached the entry
