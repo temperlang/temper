@@ -79,12 +79,14 @@ internal data class HexDependency(val name: String, val requirement: String) {
          * One clause of a Mix requirement, as `Version.parse_requirement/1`
          * accepts it: `~>` may name a major and minor only (`~> 3.1`), every
          * other operator needs all three parts. `!=` is left out: Elixir 1.18
-         * accepts it with a deprecation warning.
+         * accepts it with a deprecation warning. Space is the only separator
+         * Elixir's lexer takes; with a tab or newline Mix says the requirement
+         * is "incorrectly specified".
          */
         private val clause = Regex(
-            "(?:~>\\s*$NUMBER\\.$NUMBER(?:\\.$NUMBER)?|(?:==|>=|<=|>|<)?\\s*$NUMBER\\.$NUMBER\\.$NUMBER)$PRE$BUILD",
+            "(?:~> *$NUMBER\\.$NUMBER(?:\\.$NUMBER)?|(?:==|>=|<=|>|<)? *$NUMBER\\.$NUMBER\\.$NUMBER)$PRE$BUILD",
         )
-        private val requirement = Regex("${clause.pattern}(?:\\s+(?:and|or)\\s+${clause.pattern})*")
+        private val requirement = Regex("${clause.pattern}(?: +(?:and|or) +${clause.pattern})*")
 
         /** A [HexDependency], or why [text] is not one. */
         fun parse(text: String): Either<HexDependency, String> {

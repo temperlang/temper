@@ -750,6 +750,8 @@ class ElixirBackendTest {
         val rejected = listOf(
             "3.1", "*", "~> 3", ">= 3.1", "== 3.1", "01.2.3", "~> 3.1 and", "and ~> 3.1", "~> 3.1 AND ~> 3.0",
             "> 3.1.0 or", "=~ 1.0.0", "= 1.0.0", "~> 1.2.3.4", "1.2.3-", "1.2.3-a..b", "1.2.3-01",
+            // Elixir's lexer splits on spaces only: a tab or newline is "incorrectly specified"
+            "~>\t3.1", "~> 3.1\tor ~> 3.0", "~> 3.1 or\n~> 3.0", ">=\r1.0.0",
         )
         for (requirement in accepted) {
             assertEquals(
