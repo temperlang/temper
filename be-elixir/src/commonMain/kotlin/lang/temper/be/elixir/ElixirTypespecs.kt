@@ -6,6 +6,9 @@ import lang.temper.name.OutName
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.Nullity
+import lang.temper.type2.Type2
+import lang.temper.type2.withType
 
 /**
  * A Temper type as the Elixir type its values have on the BEAM, for `@spec`
@@ -50,6 +53,37 @@ internal class ElixirTypespecs(
             is TmpL.TypeUnion -> union(pos, type.types.map { of(it) })
             is TmpL.NominalType -> nominal(type)
         }
+    }
+
+    /**
+     * The same, for a type the frontend gives as a [Type2] with no tree form:
+     * a member of another library's interface, known here only from its
+     * signature. Each case answers as its tree form would.
+     */
+    fun of(pos: Position, type: Type2): Elixir.TypeExpr {
+        val spec = withType(
+            type,
+            fallback = { t ->
+                when (val definition = t.definition) {
+                    is TypeFormal -> builtin(pos, "term")
+                    is TypeShape -> wellKnown(pos, definition, t.bindings.map { of(pos, it) })
+                        ?: classModule(definition)?.let { remote(pos, it, "t") }
+                        ?: TODO("no Elixir type for ${definition.name}")
+                }
+            },
+            result = { pass, _, _ -> union(pos, listOf(of(pos, pass), builtin(pos, NO_RETURN_NAME))) },
+            never = { _, _, _ -> builtin(pos, NO_RETURN_NAME) },
+            fn = { _, sig, _ ->
+                Elixir.FunType(
+                    pos,
+                    params = sig.requiredInputTypes.map { of(pos, it) } +
+                        sig.optionalInputTypes.map { orNil(pos, of(pos, it)) },
+                    result = of(pos, sig.returnType2),
+                )
+            },
+            malformed = { _, t -> TODO("malformed type to spec: $t") },
+        )
+        return if (type.nullity == Nullity.OrNull) orNil(pos, spec) else spec
     }
 
     /**

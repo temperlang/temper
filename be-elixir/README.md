@@ -515,6 +515,25 @@ An interface's method bodies are copied into each class that implements
 it, so there is no `super`. An abstract method left unimplemented raises
 `TemperCore.Panic` if it is ever called.
 
+An interface from another library has no TmpL here to copy, only its
+type. So each getter, setter or method with a body that the class does
+not redefine becomes a function that calls the one the interface's module
+defines, its spec written from the member's signature:
+
+```elixir
+@spec greet(Temper.App.Direct.t(), String.t(), String.t() | nil) :: String.t()
+def greet(this, other, punct) do
+  Temper.Base.Named.greet(this, other, punct)
+end
+```
+
+That body reaches the class's own members through `TemperCore.call`, as
+any interface body does. In an `@actor` class the call runs inside
+`TemperCore.Actor.run`, so the whole body runs in the actor, as a copied
+one would. The nearest definition wins, whichever library it is in, and
+`__temper_supertypes__/0` lists every translated ancestor, so `x is I`
+holds for an `I` two libraries away.
+
 ## 9. Generators and async
 
 The obvious BEAM answer, one process per coroutine, does not work here. A
@@ -1146,10 +1165,6 @@ Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
 
 ## 19. Limits
 
-- **Inheriting from another library's interface.** A class gets every
-  inherited member it does not override, but only from types its own
-  library declares. A getter or method with a body in another library's
-  interface is not copied in, so calling it is an `UndefinedFunctionError`.
 - **Broken code skips its operands.** A read or write the frontend rejected
   raises before evaluating its subject or value, where js evaluates them.
 - **Async is single-process.** `async` is a queue inside one process, not
