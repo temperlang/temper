@@ -187,8 +187,13 @@ end
   ETS only after a write; a 200,000-element module-level list read once
   per element took 51 s when every read copied it. A mutable object that is not an actor cannot be shared, since
   its ref only means something in the heap that made it, so each process
-  gets its own copy the first time it reads it. Section 15 covers sharing
-  mutable state safely.
+  gets its own copy the first time it reads it. That copy is a snapshot
+  the writer takes when another process could next look: when a top
+  level ends, before it calls or starts an actor, at the end of an
+  actor's turn, when an outermost exported call returns, and when the
+  async queue is drained. Taking it at every write made a top-level loop
+  growing a linked list quadratic. Section 15 covers sharing mutable
+  state safely.
 - `var f = fn ...` that something later assigns, `f = g`, is a module-level
   variable too, though the frontend hands it over as a function: its first
   body is a `defp`, captured into `TemperCore.Global` where the `var` was,
@@ -1167,7 +1172,9 @@ Still open: number parsing follows JSON syntax, so `"+7".toInt32()` and
   but a read followed by a write can race. Shared mutable state that must
   stay consistent belongs in an `@actor`.
 - **A module-level mutable non-actor object is per process.** Each process
-  gets its own copy on first read.
+  gets its own copy on first read, as of the writer's last snapshot (see
+  section 4). Elixir code that writes one with `TemperCore.Global.put`
+  calls `TemperCore.Global.publish()` before another process reads it.
 
 ## 20. Where things are
 

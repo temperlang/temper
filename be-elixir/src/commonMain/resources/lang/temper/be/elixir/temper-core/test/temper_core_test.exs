@@ -120,6 +120,55 @@ defmodule TemperCoreTest do
     assert TemperCore.Global.get(:shared_var) == 2
   end
 
+  # Each write of a mutable module value exported everything it reached,
+  # so growing a linked list in one, `head = new Node(i, head)`, was
+  # quadratic: 5,000 nodes at a top level took 15 s.
+  test "writing a mutable module value does not copy what it reaches" do
+    TemperCore.Global.put(:list_head, nil)
+
+    {micros, _} =
+      :timer.tc(fn ->
+        for i <- 1..20_000 do
+          head = TemperCore.Global.get(:list_head)
+          TemperCore.Global.put(:list_head, TemperCore.Heap.new(:node, %{v: i, next: head}))
+        end
+      end)
+
+    assert TemperCore.Heap.get(TemperCore.Global.get(:list_head), :v) == 20_000
+    assert micros < 1_000_000, "20,000 writes took #{div(micros, 1000)} ms"
+  end
+
+  test "another process copies a mutable module value as of the writer's last publish" do
+    me = self()
+    TemperCore.Global.put(:mutable_cell, TemperCore.Heap.new(:cell, %{v: 1}))
+
+    read = fn ->
+      spawn(fn ->
+        got =
+          try do
+            TemperCore.Heap.get(TemperCore.Global.get(:mutable_cell), :v)
+          rescue
+            e in ArgumentError -> e.message
+          end
+
+        send(me, {:read, got})
+      end)
+
+      assert_receive {:read, got}
+      got
+    end
+
+    assert read.() =~ "before its writer published it"
+    TemperCore.Global.publish()
+    assert read.() == 1
+    TemperCore.Global.put(:mutable_cell, TemperCore.Heap.new(:cell, %{v: 2}))
+    # not yet published: others still get the last snapshot
+    assert read.() == 1
+    TemperCore.Global.publish()
+    assert read.() == 2
+    assert TemperCore.Heap.get(TemperCore.Global.get(:mutable_cell), :v) == 2
+  end
+
   test "Int64 wraps at 64 bits" do
     assert int64(9_223_372_036_854_775_807 + 1) == -9_223_372_036_854_775_808
   end

@@ -48,6 +48,7 @@ defmodule TemperCore.Promise do
 
       if Heap.get(b, :published) do
         with {:ok, value} <- state, do: TemperCore.Actor.sendable!(value, "the value of a promise another process awaits")
+        TemperCore.Global.publish()
         GenServer.cast(@hub, {:settle, b.id, state})
       end
 
@@ -253,6 +254,7 @@ defmodule TemperCore.Async do
   @spec drain() :: nil
   def drain do
     drain_queue()
+    TemperCore.Global.publish()
 
     if TemperCore.Promise.awaiting_remote?() do
       receive do

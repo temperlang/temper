@@ -104,6 +104,7 @@ defmodule TemperCore do
         # module state belongs to the node: an actor made by a top level must
         # not end with whichever process happened to run it
         TemperCore.Actor.supervised(body, TemperCore.LibraryActors)
+        TemperCore.Global.publish()
         :ets.insert(:temper_globals, {{:temper_init, key}, true})
       after
         Process.put(@initializing, outer)
@@ -269,6 +270,14 @@ defmodule TemperCore.Global do
     process gets its own copy, taken from a snapshot when it first reads
     the value, and from then on its copy is its own.
 
+    The writer takes that snapshot (`publish/0`) when another process
+    could next look: when a library's top level ends, before a call into
+    an actor or the start of one, at the end of an actor's turn, when an
+    outermost `Heap.entry` returns outside a top level, and when the run
+    queue is drained. Taking it at every write copied everything the value
+    reaches each time, so a top-level loop that grew a linked list,
+    `head = new Node(i, head)`, was quadratic: 5,000 nodes took 15 s.
+
   Reading a value that was never set raises, rather than answering nil.
 
   Reading a shared value out of ETS copies it into the reading process,
@@ -279,6 +288,7 @@ defmodule TemperCore.Global do
   no copy at all.
   """
   @table :temper_globals
+  @unpublished {__MODULE__, :unpublished}
 
   @spec put(atom(), value) :: value when value: term()
   def put(name, value) when is_atom(name) do
@@ -287,13 +297,39 @@ defmodule TemperCore.Global do
     if TemperCore.Actor.sendable?(value) do
       :ets.insert(@table, {name, version, {:shared, value}})
       Process.delete({__MODULE__, name})
+      with %MapSet{} = names <- Process.get(@unpublished), do: Process.put(@unpublished, MapSet.delete(names, name))
       TemperCore.Heap.put_root({__MODULE__.Read, name}, {version, value})
     else
       TemperCore.Heap.put_root({__MODULE__, name}, value)
-      :ets.insert(@table, {name, version, {:snapshot, TemperCore.Heap.export(value)}})
+      Process.put(@unpublished, MapSet.put(Process.get(@unpublished, MapSet.new()), name))
+      # a first write still makes the name known, so a read from elsewhere
+      # before the snapshot is taken finds no value rather than none set
+      :ets.insert_new(@table, {name, version, :unpublished})
     end
 
     value
+  end
+
+  @doc """
+  Takes the snapshot of each mutable module value this process wrote
+  since the last one, for other processes' first reads.
+  """
+  @spec publish() :: nil
+  def publish do
+    case Process.delete(@unpublished) do
+      nil ->
+        nil
+
+      names ->
+        Enum.each(names, fn name ->
+          case Process.get({__MODULE__, name}) do
+            nil -> :ok
+            value -> :ets.insert(@table, {name, :erlang.unique_integer([:monotonic]), {:snapshot, TemperCore.Heap.export(value)}})
+          end
+        end)
+
+        nil
+    end
   end
 
   @spec get(atom()) :: term()
@@ -323,6 +359,9 @@ defmodule TemperCore.Global do
         value = TemperCore.Heap.import(snapshot)
         TemperCore.Heap.put_root({__MODULE__, name}, value)
         value
+
+      [{_, _, :unpublished}] ->
+        raise ArgumentError, "module-level #{inspect(name)} read in another process before its writer published it"
 
       [] ->
         raise ArgumentError, "module-level #{inspect(name)} read before it was set"
@@ -564,6 +603,7 @@ defmodule TemperCore.Heap do
   def leave(:outer, roots) do
     try do
       minor(roots)
+      if TemperCore.initializing() == [], do: TemperCore.Global.publish()
     after
       Process.delete(@depth)
       Process.delete(@nursery)
