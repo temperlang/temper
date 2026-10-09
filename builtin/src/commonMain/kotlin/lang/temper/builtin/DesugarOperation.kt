@@ -499,7 +499,7 @@ private fun Planting.maybePrecapture(
 
 private val vZero = Value(0, TInt)
 
-internal fun dotHelperForOperator(member: Member): DotHelper {
+fun dotHelperForOperator(member: Member): DotHelper {
     val builtins = when (member) {
         is OperatorMember -> builtinOperatorSpecs[member.operatorSpecifier]
         is DotMember -> null

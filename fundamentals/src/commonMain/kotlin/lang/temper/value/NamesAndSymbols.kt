@@ -548,6 +548,12 @@ val vExtensionSymbol = Value(extensionSymbol)
 val operatorSymbol = Symbol("operator")
 val vOperatorSymbol = Value(operatorSymbol)
 
+/**
+ * Metadata key for automatic operator or method implementations.
+ */
+val autoSymbol = Symbol("auto")
+val vAutoSymbol = Value(Symbol("auto"))
+
 /** Provides an overload name to a function or class member. */
 val overloadSymbol = Symbol("overload")
 

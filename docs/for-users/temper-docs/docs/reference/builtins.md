@@ -3244,6 +3244,37 @@ do {
 
 <!-- /snippet: builtin/@ -->
 
+<!-- snippet: builtin/@auto -->
+
+<a name="builtin&#45;&#64;auto" class="snippet-anchor-name"></a>
+
+### `@auto` decorator
+The *\@auto* decorator currently applies to a class or sealed interface,
+indicating that the specified operator should be automatically implemented
+for this type. In the future, it might be possible to specify on an
+individual method for a specific operator.
+
+Currently, only the `==` operator is supported via `@auto("==")`, but we
+expect to expand on this in the future. The currently generated method name
+is *eq*. Some mechanism for supplying multiple operators is expected in the
+future.
+
+It is an error to use `@auto("==")` even on a sealed interface that has other
+than class or sealed interface descendents. Inheriting `@auto("==")` from
+multiple sealed ancestor interface branches is also an error. Further, if a
+manual `@operator("==")` method exists for a type, no automatic
+implementation is injected.
+
+Automatic `==` implementation is done by comparing all concrete properties in
+an unspecified order using `==` on each. Used on a sealed interface, it adds
+a pure virtual method to the interface and a concrete method on all leaf
+classes that checks both the type and its concrete properties.
+
+Manual `@operator("==")` is available if `@auto("==")` has unwanted behavior
+for some type.
+
+<!-- /snippet: builtin/@auto -->
+
 <!-- snippet: builtin/@connected -->
 
 <a name="builtin&#45;&#64;connected" class="snippet-anchor-name"></a>
