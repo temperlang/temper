@@ -971,7 +971,9 @@ The rules, most of them shown in that output:
   Account: parameter b of method stash has type Box__0, which is not
   sendable"), and so a function type too. It also rejects `@actor` on an
   interface, on anything but a class, and on a class that is also `@imu`.
-  A library with a rejected actor gets no Elixir at all, only the message.
+  A library with a rejected actor gets no Elixir at all, only the message
+  and a `mix.exs` that raises when Mix loads it, so a project an earlier
+  build left in `temper.out` cannot run in its place.
   Other backends run every call on
   the caller's stack and build the same program. At run time, for Elixir
   code that calls an actor directly, arguments, results and captured values
@@ -1030,6 +1032,12 @@ The rules, most of them shown in that output:
   program running, as an endless async loop does on js. Elixir code that
   calls into a library never calls `__temper_main__/0` and is not
   affected.
+
+  Not yet like js: a bubble or panic in such a turn has no call to be
+  the result of, so it crashes the actor. An actor the top level made is
+  supervised, so the crash is logged, the actor restarts, and the program
+  exits 0, where js exits 1 with the error. Before the wait, that turn
+  never ran at all.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
   because a link alone ignores a normal exit.
@@ -1161,10 +1169,12 @@ Temper.
 
 ## 18. Differences from js and py
 
-Where js and py agree and this backend does not, it is a bug. The one
-deliberate exception is the order of an actor's async steps against its
-caller's code (section 16): they run in the actor's turn, during the
-call, not after the top level.
+Where js and py agree and this backend does not, it is a bug, except
+where section 16 says an `@actor` behaves differently on purpose: the
+build rejects members that cannot cross processes, a call that would
+close a cycle panics, a supervised actor restarts after a crash, and an
+actor's async steps run in its turn, during the call, not after the top
+level.
 
 Float64 `/` and `%` by zero, `0.0` or `-0.0`, bubble, whatever the
 dividend. That is what `builtins.md` says ("Float64 division by zero is a

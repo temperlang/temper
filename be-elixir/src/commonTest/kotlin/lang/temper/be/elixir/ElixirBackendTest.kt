@@ -709,7 +709,9 @@ class ElixirBackendTest {
      * An `@actor` the checker rejects stops the build with its located message
      * and nothing else. A class that is both `@actor` and `@imu` used to go on
      * to the translator, whose TODO for that shape ended the build in a stack
-     * trace under the message that had already explained it.
+     * trace under the message that had already explained it. The only file
+     * written is a `mix.exs` that raises, since a project an earlier build
+     * left behind would otherwise run in this one's place.
      */
     @Test
     fun aRejectedActorIsReportedAndNotTranslated() {
@@ -720,7 +722,10 @@ class ElixirBackendTest {
             """.trimMargin(),
         )
         assertContains(out, "Class Point cannot be both @actor and @imu")
-        assertFalse("mix.exs" in out, "a project for a program the backend rejected:\n$out")
+        val mix = fileContent(out, "mix.exs")
+        assertContains(mix, "raise ")
+        assertContains(mix, "be-elixir did not translate my-test-library: the build rejected an @actor in it")
+        assertFalse("defmodule" in out, "Elixir for a program the backend rejected:\n$out")
         assertFalse(".ex\"" in out, "Elixir for a program the backend rejected:\n$out")
     }
 }

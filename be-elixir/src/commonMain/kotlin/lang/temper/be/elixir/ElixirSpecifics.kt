@@ -5,7 +5,6 @@ import lang.temper.be.cli.Aux
 import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.CliFailure
 import lang.temper.be.cli.Command
-import lang.temper.be.cli.EXIT_NOENT
 import lang.temper.be.cli.EXIT_UNAVAILABLE
 import lang.temper.be.cli.Effort
 import lang.temper.be.cli.EffortSuccess
@@ -101,20 +100,6 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
             ),
         ),
     )
-    // A library the backend refused to translate (an `@actor` it rejects)
-    // has no project. The build has already said why; running `mix` in a
-    // directory that is not there only adds a stack trace under that.
-    if (!fileExists(runDir.resolveFile("mix.exs"))) {
-        return ToolchainResult(
-            libraryName = libraryName,
-            result = RFailure(
-                CliFailure(
-                    message = "be-elixir wrote no Mix project for $libraryName; see the build's errors",
-                    effort = Effort(exitCode = EXIT_NOENT, cliEnv = this),
-                ),
-            ),
-        )
-    }
     fun step(args: List<String>, stderr: String): RResult<EffortSuccess, CliFailure> {
         val aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)) +
             if (tests) mapOf(Aux.JunitXml to runDir.resolveFile(ElixirBackend.TEST_RESULTS_FILE)) else mapOf()
