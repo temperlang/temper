@@ -90,6 +90,40 @@ defmodule TemperCore.HeapTest do
     assert inner_size >= 2
   end
 
+  # Each outermost entry listed the whole process dictionary to find roots,
+  # so a loop of calls into a library cost as much per call as the heap it
+  # had kept: 80,000 calls of an exported constructor took 41 s.
+  test "an entry costs what it made, not the heap that was already there" do
+    kept = for i <- 1..100_000, do: Heap.new(:old, %{v: i})
+
+    {micros, made} =
+      :timer.tc(fn ->
+        for i <- 1..20_000 do
+          Heap.entry(fn ->
+            Heap.new(:garbage, %{})
+            Heap.new(:made, %{v: i})
+          end)
+        end
+      end)
+
+    assert length(kept) == 100_000
+    assert Heap.get(List.last(made), :v) == 20_000
+    assert micros < 2_000_000, "20,000 entries over a 100,000-object heap took #{div(micros, 1000)} ms"
+  end
+
+  test "a young object reached only from the run queue or a remote promise's waiters survives" do
+    gen = Heap.entry(fn ->
+      g = TemperCore.Generator.adapt(fn _ -> :done end)
+      TemperCore.Async.enqueue(g)
+      nil
+    end)
+
+    assert gen == nil
+    {{:value, queued}, _} = :queue.out(Process.get({TemperCore.Async, :queue}))
+    assert Heap.local?(queued)
+    Process.delete({TemperCore.Async, :queue})
+  end
+
   test "a raise still collects, and the bookkeeping is gone afterwards" do
     before = Heap.size()
 

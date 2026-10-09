@@ -104,6 +104,7 @@ defmodule TemperCore do
         # module state belongs to the node: an actor made by a top level must
         # not end with whichever process happened to run it
         TemperCore.Actor.supervised(body, TemperCore.LibraryActors)
+        TemperCore.Global.publish()
         :ets.insert(:temper_globals, {{:temper_init, key}, true})
       after
         Process.put(@initializing, outer)
@@ -269,42 +270,101 @@ defmodule TemperCore.Global do
     process gets its own copy, taken from a snapshot when it first reads
     the value, and from then on its copy is its own.
 
+    The writer takes that snapshot (`publish/0`) when another process
+    could next look: when a library's top level ends, before a call into
+    an actor or the start of one, at the end of an actor's turn, when an
+    outermost `Heap.entry` returns outside a top level, and when the run
+    queue is drained. Taking it at every write copied everything the value
+    reaches each time, so a top-level loop that grew a linked list,
+    `head = new Node(i, head)`, was quadratic: 5,000 nodes took 15 s.
+
   Reading a value that was never set raises, rather than answering nil.
+
+  Reading a shared value out of ETS copies it into the reading process,
+  so a module-level list of 200,000 elements read in a loop cost a copy
+  of the list per read: 51 s where js took 3. Each row carries a version,
+  and each process keeps the value it last read beside that version, so a
+  read is a lookup of the version and, unless another write came since,
+  no copy at all.
   """
   @table :temper_globals
+  @unpublished {__MODULE__, :unpublished}
 
   @spec put(atom(), value) :: value when value: term()
   def put(name, value) when is_atom(name) do
+    version = :erlang.unique_integer([:monotonic])
+
     if TemperCore.Actor.sendable?(value) do
-      :ets.insert(@table, {name, {:shared, value}})
+      :ets.insert(@table, {name, version, {:shared, value}})
       Process.delete({__MODULE__, name})
+      with %MapSet{} = names <- Process.get(@unpublished), do: Process.put(@unpublished, MapSet.delete(names, name))
+      TemperCore.Heap.put_root({__MODULE__.Read, name}, {version, value})
     else
-      Process.put({__MODULE__, name}, value)
-      :ets.insert(@table, {name, {:snapshot, TemperCore.Heap.export(value)}})
+      TemperCore.Heap.put_root({__MODULE__, name}, value)
+      Process.put(@unpublished, MapSet.put(Process.get(@unpublished, MapSet.new()), name))
+      # a first write still makes the name known, so a read from elsewhere
+      # before the snapshot is taken finds no value rather than none set
+      :ets.insert_new(@table, {name, version, :unpublished})
     end
 
     value
+  end
+
+  @doc """
+  Takes the snapshot of each mutable module value this process wrote
+  since the last one, for other processes' first reads.
+  """
+  @spec publish() :: nil
+  def publish do
+    case Process.delete(@unpublished) do
+      nil ->
+        nil
+
+      names ->
+        Enum.each(names, fn name ->
+          case Process.get({__MODULE__, name}) do
+            nil -> :ok
+            value -> :ets.insert(@table, {name, :erlang.unique_integer([:monotonic]), {:snapshot, TemperCore.Heap.export(value)}})
+          end
+        end)
+
+        nil
+    end
   end
 
   @spec get(atom()) :: term()
   def get(name) when is_atom(name) do
     case Process.get({__MODULE__, name}, __MODULE__) do
       __MODULE__ ->
-        case :ets.lookup(@table, name) do
-          [{_, {:shared, value}}] ->
-            value
+        case Process.get({__MODULE__.Read, name}) do
+          {version, value} ->
+            if :ets.lookup_element(@table, name, 2, nil) == version, do: value, else: fetch(name)
 
-          [{_, {:snapshot, snapshot}}] ->
-            value = TemperCore.Heap.import(snapshot)
-            Process.put({__MODULE__, name}, value)
-            value
-
-          [] ->
-            raise ArgumentError, "module-level #{inspect(name)} read before it was set"
+          nil ->
+            fetch(name)
         end
 
       value ->
         value
+    end
+  end
+
+  defp fetch(name) do
+    case :ets.lookup(@table, name) do
+      [{_, version, {:shared, value}}] ->
+        TemperCore.Heap.put_root({__MODULE__.Read, name}, {version, value})
+        value
+
+      [{_, _, {:snapshot, snapshot}}] ->
+        value = TemperCore.Heap.import(snapshot)
+        TemperCore.Heap.put_root({__MODULE__, name}, value)
+        value
+
+      [{_, _, :unpublished}] ->
+        raise ArgumentError, "module-level #{inspect(name)} read in another process before its writer published it"
+
+      [] ->
+        raise ArgumentError, "module-level #{inspect(name)} read before it was set"
     end
   end
 end
@@ -343,6 +403,7 @@ defmodule TemperCore.Heap do
   @depth {TemperCore.Heap.Nursery, :depth}
   @nursery {TemperCore.Heap.Nursery, :young}
   @remembered {TemperCore.Heap.Nursery, :remembered}
+  @roots {TemperCore.Heap.Nursery, :roots}
 
   @typedoc "What has fields: a heap object, or an actor's, read from inside it."
   @type object :: Ref.t() | TemperCore.Actor.t()
@@ -424,6 +485,23 @@ defmodule TemperCore.Heap do
       :undefined -> :ok
       young -> :erlang.put(@nursery, MapSet.put(young, id))
     end
+  end
+
+  @doc """
+  `Process.put/2` for an entry that may hold objects, such as Temper's
+  globals or the async queue. During a call through `entry/1`, the minor
+  collection looks for young objects only in the entries written this
+  way, so Elixir code that keeps an object of the call in the process
+  dictionary must write it with this too.
+  """
+  @spec put_root(term(), term()) :: term()
+  def put_root(key, value) do
+    case :erlang.get(@roots) do
+      :undefined -> :ok
+      keys -> :erlang.put(@roots, MapSet.put(keys, key))
+    end
+
+    Process.put(key, value)
   end
 
   @doc "Whether `ref` is an object in this process's heap."
@@ -508,6 +586,7 @@ defmodule TemperCore.Heap do
         Process.put(@depth, 1)
         Process.put(@nursery, MapSet.new())
         Process.put(@remembered, MapSet.new())
+        Process.put(@roots, MapSet.new())
         :outer
 
       # only enter and leave write the depth, but Dialyzer cannot know it is
@@ -524,10 +603,12 @@ defmodule TemperCore.Heap do
   def leave(:outer, roots) do
     try do
       minor(roots)
+      if TemperCore.initializing() == [], do: TemperCore.Global.publish()
     after
       Process.delete(@depth)
       Process.delete(@nursery)
       Process.delete(@remembered)
+      Process.delete(@roots)
     end
 
     nil
@@ -540,7 +621,12 @@ defmodule TemperCore.Heap do
 
   # Frees the young objects that nothing reaches. Marking stops at older
   # objects: they are alive, and any of their fields that could reach a young
-  # object were remembered by `put`.
+  # object were remembered by `put`. The other roots are the process
+  # dictionary entries written during the call, which `put_root/2` recorded:
+  # a young object can only be in an entry written since it was made. So a
+  # pass costs as much as the young objects and what the call wrote, not
+  # the whole heap; listing the whole dictionary here made a loop of calls
+  # into a library quadratic in the heap it kept.
   defp minor(extra) do
     young = Process.get(@nursery)
 
@@ -548,11 +634,9 @@ defmodule TemperCore.Heap do
       0
     else
       remembered = Enum.map(Process.get(@remembered), &Process.get({__MODULE__, &1}))
+      roots = Enum.map(Process.get(@roots), &Process.get/1)
 
-      others =
-        for {k, v} <- Process.get(), not object?({k, v}), k not in [@depth, @nursery, @remembered], do: v
-
-      live = mark_young([extra, remembered | others], young, MapSet.new())
+      live = mark_young([extra, remembered | roots], young, MapSet.new())
       dead = MapSet.difference(young, live)
       Enum.each(dead, &Process.delete({__MODULE__, &1}))
       MapSet.size(dead)

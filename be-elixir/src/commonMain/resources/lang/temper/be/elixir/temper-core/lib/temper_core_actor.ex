@@ -134,6 +134,7 @@ defmodule TemperCore.Actor do
   @spec start_id(module(), (-> term())) :: reference()
   def start_id(class, constructor) when is_function(constructor, 0) do
     promises = crossing!(constructor, "a constructor argument of #{inspect(class)}")
+    TemperCore.Global.publish()
     id = make_ref()
     chain = chain_for_callee()
     supervisor = Process.get(@supervised)
@@ -214,7 +215,7 @@ defmodule TemperCore.Actor do
   @doc "The constructor's `this`: inside the actor's process, an actor whose fields live here."
   @spec init_self(module(), map()) :: t()
   def init_self(class, fields) do
-    Process.put(@self, Heap.new(class, fields))
+    Heap.put_root(@self, Heap.new(class, fields))
     %__MODULE__{class: class, id: Process.get(@self_id)}
   end
 
@@ -225,6 +226,7 @@ defmodule TemperCore.Actor do
       body.()
     else
       promises = crossing!(body, "an argument to #{inspect(class)}")
+      TemperCore.Global.publish()
       chain = chain_for_callee()
 
       # An actor already on this chain is waiting in `await_reply/2` for the
@@ -240,6 +242,8 @@ defmodule TemperCore.Actor do
             call(actor, {:run, body, chain}, promises, true)
           end)
         end
+
+      TemperCore.Promise.take_settled()
 
       case reply do
         {:ok, value, shared} ->
@@ -415,6 +419,7 @@ defmodule TemperCore.Actor do
       # the constructor's call is a turn like any other: the async steps
       # it started run before it ends, not at the end of some later call
       TemperCore.Async.drain_queue()
+      TemperCore.Global.publish()
       {:ok, nil}
     catch
       kind, reason -> {:stop, {:temper_raise, kind, reason, __STACKTRACE__}}
@@ -459,6 +464,7 @@ defmodule TemperCore.Actor do
         end)
 
       if drain, do: TemperCore.Async.drain_queue()
+      TemperCore.Global.publish()
       promises = crossing!(value, "a result")
       {:ok, value, TemperCore.Promise.share(promises, caller)}
     catch
@@ -474,6 +480,7 @@ defmodule TemperCore.Actor do
   def handle_info({:temper_promise, id, settled, shared}, state) do
     TemperCore.Promise.remote_settled(id, settled, shared)
     TemperCore.Async.drain_queue()
+    TemperCore.Global.publish()
     {:noreply, state}
   end
 

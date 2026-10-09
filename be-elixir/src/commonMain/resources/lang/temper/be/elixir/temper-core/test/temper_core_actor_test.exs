@@ -229,6 +229,8 @@ defmodule TemperCore.ActorTest do
 
     box = Heap.new(:box, %{v: 1})
     TemperCore.Global.put(:"ActorTest.box", box)
+    # what a top level's end, an actor call or an entry's return does
+    TemperCore.Global.publish()
 
     Task.async(fn ->
       theirs = TemperCore.Global.get(:"ActorTest.box")

@@ -201,10 +201,18 @@ end
   because a `def` cannot see variables outside its own parameters. Every
   process on the node sees the same module values: a value that can be
   shared (a number, string, list, map, `@imu` struct or actor) lives in an
-  ETS table. A mutable object that is not an actor cannot be shared, since
+  ETS table, beside a version. A process keeps the value it last read with
+  its version, so a read checks the version and copies the value out of
+  ETS only after a write; a 200,000-element module-level list read once
+  per element took 51 s when every read copied it. A mutable object that is not an actor cannot be shared, since
   its ref only means something in the heap that made it, so each process
-  gets its own copy the first time it reads it. Section 15 covers sharing
-  mutable state safely.
+  gets its own copy the first time it reads it. That copy is a snapshot
+  the writer takes when another process could next look: when a top
+  level ends, before it calls or starts an actor, at the end of an
+  actor's turn, when an outermost exported call returns, and when the
+  async queue is drained. Taking it at every write made a top-level loop
+  growing a linked list quadratic. Section 15 covers sharing mutable
+  state safely.
 - `var f = fn ...` that something later assigns, `f = g`, is a module-level
   variable too, though the frontend hands it over as a function: its first
   body is a `defp`, captured into `TemperCore.Global` where the `var` was,
@@ -590,11 +598,15 @@ end
 | a generator | `TemperCore.Generator.adapt(step)`, a heap object |
 | `g.next()` | `{:value, v}` or `:done`. Anything else is a panic, so a lowering bug cannot pass for "not done" |
 | `new PromiseBuilder()` | `TemperCore.Promise.new()`. The builder and its promise are one heap object; the first settle wins |
-| `async { ... }` | queued on a FIFO run queue in the process dictionary |
-| `await p` | park the generator on `p`; settling `p` queues it again |
+| `async { ... }` | queued on the queue of blocks to start, in the process dictionary |
+| `await p` | park the generator on `p`; settling `p` queues it on the queue of woken steps |
 
-`__temper_main__/0` ends by draining that queue. It pops one generator, steps it
-once, and repeats. No step runs inside another, so a long chain of awaits
+`__temper_main__/0` ends by draining the two queues. It steps one woken
+generator at a time while there is one, and only then starts the next
+block, as js runs every microtask before the next task. So a block runs
+through its awaits of settled promises before the next block starts,
+which is what js, py and the interpreter print; one queue for both
+interleaved them. No step runs inside another, so a long chain of awaits
 is a loop and not a deeper stack. A million settled awaits drained in
 444 ms.
 
@@ -904,12 +916,17 @@ end
 That is a small generational collector. Objects made during the outermost
 call into a library are young. When the call returns, or raises, the
 young objects nothing reaches are freed. "Reaches" means from the
-result, from Temper's globals and the rest of the process dictionary, or
-from an older object that the call wrote to: a write barrier in
-`Heap.put` remembers those older objects. Older objects are never
+result, from a process dictionary entry the call wrote (Temper's
+globals, the async queue, promise waiters), or from an older object that
+the call wrote to: a write barrier in `Heap.put` remembers those older
+objects, and `Heap.put_root/2` the entries. Older objects are never
 touched, so whatever the caller still holds from earlier calls stays
-alive. Nested calls (Temper code calling exported functions) collect only
-at the outermost one. The same service as below, with no `collect` in it
+alive, and a call costs what it made and wrote, not the size of the
+heap: 20,000 calls over a 100,000-object heap take 48 ms, where listing
+the whole dictionary per call took 29 s. Elixir code that keeps an
+object of the call in the process dictionary writes it with
+`Heap.put_root/2` too. Nested calls (Temper code calling exported
+functions) collect only at the outermost one. The same service as below, with no `collect` in it
 at all, ran 100,000 requests and ended with 1 object (its counter) in
 26 KB, in 270 ms.
 
@@ -1067,9 +1084,14 @@ The rules, most of them shown in that output:
   settled before they left and half after, all awaited by the caller,
   leave no entry (the test that shows it had 1000 before). An actor wakes
   for such a settle in a turn of its own. `__temper_main__/0` keeps
-  draining while it awaits one. Only the process that made a promise can
-  complete it, and if that process ends first the `await` panics instead
-  of waiting forever. A promise ref that reaches a process some other way
+  draining while it awaits one. A settle reaches every holder before the
+  settling process goes on, and a call into an actor takes the settles
+  that arrived during it as it returns, so a promise an actor settles in
+  a call wakes its waiters in the caller right then, as on one thread:
+  `box.send("hi")` wakes the block awaiting `box.receive()` before the
+  sender's next `await` queues it again. Only the process that made a
+  promise can complete it, and if that process ends first the `await`
+  panics instead of waiting forever. A promise ref that reaches a process some other way
   (Elixir code sending it) cannot be awaited there, and says so. A
   process that is handed a pending promise is sent
   `{:temper_promise, id, state, shared}` when it settles, awaited or not;
@@ -1309,7 +1331,9 @@ The connected code that needed it then fails on import, at run time. An
   but a read followed by a write can race. Shared mutable state that must
   stay consistent belongs in an `@actor`.
 - **A module-level mutable non-actor object is per process.** Each process
-  gets its own copy on first read.
+  gets its own copy on first read, as of the writer's last snapshot (see
+  section 4). Elixir code that writes one with `TemperCore.Global.put`
+  calls `TemperCore.Global.publish()` before another process reads it.
 
 - **Hex packages only, with a version requirement.** `ElixirConfig` has no
   git or path dependencies, no options such as `only: :test` or
