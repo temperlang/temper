@@ -103,7 +103,7 @@ defmodule TemperCore.Promise do
     case state!(p) do
       :pending ->
         Heap.put(p, :waiters, [gen | Heap.get(p, :waiters)])
-        if Heap.get(p, :foreign), do: Process.put(@awaiting, Map.put(awaiting(), p.id, p))
+        if Heap.get(p, :foreign), do: Heap.put_root(@awaiting, Map.put(awaiting(), p.id, p))
 
       _ ->
         Async.enqueue(gen)

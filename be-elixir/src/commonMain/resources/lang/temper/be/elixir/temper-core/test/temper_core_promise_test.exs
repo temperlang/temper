@@ -1,6 +1,7 @@
 defmodule TemperCorePromiseTest do
   use ExUnit.Case, async: true
   alias TemperCore.{Actor, Async, Generator, Heap, Promise}
+  require Heap
 
   # an @actor class holding a promise, written as the backend would write it
   defmodule Oracle do
@@ -248,6 +249,27 @@ defmodule TemperCorePromiseTest do
     Async.drain()
     steps = for _ <- 1..3, do: (assert_receive {:step, s}; s)
     assert steps == ["sent", "got hi", "after one await"]
+  end
+
+  # An entry's collection looks for young objects only in the dictionary
+  # entries written with Heap.put_root. A stand-in made during the entry
+  # and awaited there is reached only from the awaiting map, so when that
+  # was a plain Process.put the stand-in and its waiter were collected as
+  # the entry returned, and the settle that came later woke nothing.
+  test "a stand-in awaited inside an entry survives it and wakes its waiter" do
+    me = self()
+    o = Oracle.new()
+
+    Heap.entry(fn ->
+      later = Oracle.later(o)
+      Async.run(fn -> awaiter(later, &send(me, {:later, &1})) end)
+      Async.drain_queue()
+      nil
+    end)
+
+    Oracle.settle(o, 9)
+    Async.drain()
+    assert_received {:later, 9}
   end
 
   test "a promise passed into an actor wakes the actor's async block when it settles" do
