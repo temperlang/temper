@@ -46,10 +46,20 @@ import lang.temper.value.DependencyCategory
  * [Elixir]: https://elixir-lang.org/
  */
 class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>(Factory.backendId, setup) {
+    /**
+     * False once [ElixirActorChecker] has reported an `@actor` it rejects. The
+     * build has already failed with that located message, so [translate]
+     * writes nothing: no Elixir for a program the backend said it cannot run,
+     * and no translator TODO for a shape the checker has already named, such
+     * as a class that is both `@actor` and `@imu`.
+     */
+    private var actorsPass = true
+
     override fun tentativeTmpL(): TmpL.ModuleSet {
         val checker = ElixirActorChecker(logSink)
         for (module in readyModules) {
-            module.generatedCode?.let(checker::check)
+            val passes = module.generatedCode?.let(checker::check) ?: true
+            actorsPass = actorsPass && passes
         }
         return TmpLTranslator.translateModules(
             logSink,
@@ -73,6 +83,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * `__temper_main__/0` runs that and drains the async queue.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
+        if (!actorsPass) return emptyList()
         val pos = finished.pos
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
         val names = ElixirNames()

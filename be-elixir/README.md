@@ -967,7 +967,10 @@ The rules, most of them shown in that output:
   would break Temper's sharing. be-elixir rejects a public member of an
   `@actor` class whose type is not sendable when it builds ("Actor class
   Account: parameter b of method stash has type Box__0, which is not
-  sendable"), and so a function type too. Other backends run every call on
+  sendable"), and so a function type too. It also rejects `@actor` on an
+  interface, on anything but a class, and on a class that is also `@imu`.
+  A library with a rejected actor gets no Elixir at all, only the message.
+  Other backends run every call on
   the caller's stack and build the same program. At run time, for Elixir
   code that calls an actor directly, arguments, results and captured values
   are checked again, and a mutable non-actor object raises a `Panic` that

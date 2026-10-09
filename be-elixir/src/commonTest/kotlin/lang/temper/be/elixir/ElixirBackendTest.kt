@@ -667,6 +667,25 @@ class ElixirBackendTest {
         assertFalse("catch" in out, out)
         assertContains(out, "{:temper_break, :ex_block_1, return}")
     }
+
+    /**
+     * An `@actor` the checker rejects stops the build with its located message
+     * and nothing else. A class that is both `@actor` and `@imu` used to go on
+     * to the translator, whose TODO for that shape ended the build in a stack
+     * trace under the message that had already explained it.
+     */
+    @Test
+    fun aRejectedActorIsReportedAndNotTranslated() {
+        val out = generatedText(
+            """
+            |@actor @imu export class Point(public x: Int) {}
+            |export let one(): Int { new Point(1).x }
+            """.trimMargin(),
+        )
+        assertContains(out, "Class Point cannot be both @actor and @imu")
+        assertFalse("mix.exs" in out, "a project for a program the backend rejected:\n$out")
+        assertFalse(".ex\"" in out, "Elixir for a program the backend rejected:\n$out")
+    }
 }
 
 /**
