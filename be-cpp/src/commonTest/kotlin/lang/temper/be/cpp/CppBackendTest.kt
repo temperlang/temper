@@ -692,6 +692,23 @@ class CppBackendTest {
     }
 
     @Test
+    fun importOfOnlyTypesInitializesTheirModule() {
+        assertGeneratedContains(
+            temper = """
+                |let { Regex, Sequence, CodePoints } = import("std/regex");
+                |export let re = new Regex(new Sequence([new CodePoints("a"), new CodePoints("b")]));
+            """,
+            cppContains = listOf(
+                """
+                    |    initialized = true;
+                    |    temper_std::global_init_regex();
+                    |    re = temper_std::Regex::make(
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
     fun floatOps() {
         assertGeneratedContains(
             temper = """
