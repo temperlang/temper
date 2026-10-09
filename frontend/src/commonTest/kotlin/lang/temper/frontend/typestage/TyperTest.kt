@@ -1228,6 +1228,30 @@ class TyperTest {
     )
 
     @Test
+    fun emptyListInitializerTypedFromOtherInitializer() = assertTypes(
+        """
+        |    let count(items: List<String>?): Int {
+        |      let xs = items ?? [];
+        |///       ┗┛ : List<String>
+        |      xs.length
+        |    }
+        |    let pick(b: Boolean): Int {
+        |      let ys;
+        |///       ┗┛ : List<String>
+        |      if (b) { ys = []; } else { ys = ["foo"]; }
+        |///                 ┗┛ : List<String>
+        |      ys.length
+        |    }
+        |    let orNull(b: Boolean): Int {
+        |      let zs;
+        |///       ┗┛ : List<AnyValue>?
+        |      if (b) { zs = null; } else { zs = []; }
+        |      zs?.length ?? -1
+        |    }
+        """.trimMargin(),
+    )
+
+    @Test
     fun nestedGenericRestParameterCallsWithoutContext() = assertTypes(
         """
         |/// ┏━━━━━━━━━━━┓  : List<List<String>>
