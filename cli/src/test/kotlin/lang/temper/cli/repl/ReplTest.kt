@@ -703,6 +703,28 @@ class ReplTest {
         )
     }
 
+    /**
+     * The REPL gives each library's backend a metadata builder of its own,
+     * so the Elixir backend translating a chunk once could not find what
+     * std's backend recorded about which functions it rebinds, and threw.
+     */
+    @Test
+    fun importOfStdFunctionTranslatesToElixir() {
+        repl.processLine(
+            """let { parseJson } = import("std/json"); export let p(s: String): Void throws Bubble { parseJson(s); }""",
+        )
+        assertPending(
+            """
+                |interactive#0: void
+                |
+            """.trimMargin(),
+        )
+        repl.processLine("""translate(0, "elixir")""")
+        assertPendingContains(
+            Regex("""^Translated elixir for interactive[\s\S]*Temper[.]Std[.]parse[\s\S]*\ninteractive#1: void\n$"""),
+        )
+    }
+
     @Test
     fun todayIsADate() {
         repl.processLine(

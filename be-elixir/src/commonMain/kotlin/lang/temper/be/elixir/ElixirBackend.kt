@@ -3,7 +3,6 @@ package lang.temper.be.elixir
 import lang.temper.ast.boundaryDescent
 import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
-import lang.temper.be.MetadataKey
 import lang.temper.be.SiblingData
 import lang.temper.be.storeDescriptorsForDeclarations
 import lang.temper.be.tmpl.TmpL
@@ -66,19 +65,28 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
     }
 
+    /** The module functions this library rebinds, set by [finishTmpL]. */
+    private var reboundHere: Set<ResolvedName>? = null
+
+    /** The backends translating this library and the ones it imports from, set by [finishTmpL]. */
+    private var siblingBackends: Collection<Backend<*>> = emptyList()
+
     /**
      * Every library's backend finishes its TmpL before any translates, so
      * this is where a library says which of its module functions an
      * assignment rebinds: a library importing one reads it as a value from
      * `TemperCore.Global`, where a capture of `def f` would follow every
-     * later rebinding.
+     * later rebinding. The importer asks the exporter's backend among its
+     * siblings, not [dependenciesBuilder]: the REPL gives each backend a
+     * builder of its own.
      */
     override fun finishTmpL(
         tentative: TmpL.ModuleSet,
         siblings: SiblingData<TmpL.ModuleSet>,
     ): TmpL.ModuleSet {
         val finished = super.finishTmpL(tentative, siblings)
-        dependenciesBuilder.addMetadata(libraryName, ReboundFunctions, reboundFunctions(finished))
+        reboundHere = reboundFunctions(finished)
+        siblingBackends = siblings.backendsByLibraryRoot.values
         return finished
     }
 
@@ -611,13 +619,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
 
     /** The module functions [library] rebinds, which [finishTmpL] recorded before any library translated. */
     private fun rebound(library: DashedIdentifier): Set<ResolvedName> =
-        dependenciesBuilder.getMetadata(library, ReboundFunctions)
-            ?: error("$libraryName imports from $library, whose Elixir backend never finished its TmpL")
-
-    /** The module functions of a library that an assignment rebinds, by the name it declared them with. */
-    private object ReboundFunctions : MetadataKey<ElixirBackend, Set<ResolvedName>>() {
-        override val backendId: BackendId get() = Factory.backendId
-    }
+        siblingBackends.firstNotNullOfOrNull { (it as? ElixirBackend)?.takeIf { b -> b.libraryName == library } }
+            ?.reboundHere
+            ?: error("$libraryName imports from $library, whose Elixir backend is not translating beside it")
 
     private fun tentativeOutputPathFor(module: Module): FilePath =
         allocateTextFile(module, FILE_EXTENSION, defaultName = "module")
