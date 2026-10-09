@@ -83,6 +83,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.SemanticsBroken,
         Ft.SemanticsConstness,
         Ft.SemanticsMutuallyReferencingTypes,
+        Ft.SemanticsTopLevelOrder,
         Ft.SemanticsTypeCheckedLocals,
         Ft.TestingAsserts,
         Ft.TypesDate,
