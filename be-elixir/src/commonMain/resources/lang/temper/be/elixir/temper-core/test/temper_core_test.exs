@@ -93,6 +93,33 @@ defmodule TemperCoreTest do
     assert_raise ArgumentError, fn -> TemperCore.Global.get(:never_set) end
   end
 
+  # A read copied the value out of ETS every time: a module-level list of
+  # 200,000 read once per element took 51 s.
+  test "reading a big module-level value does not copy it each time" do
+    big = TemperCore.Vec.new(Enum.to_list(1..200_000))
+    TemperCore.Global.put(:big_list, big)
+    {micros, _} = :timer.tc(fn -> for _ <- 1..20_000, do: TemperCore.Global.get(:big_list) end)
+    assert TemperCore.List.length(TemperCore.Global.get(:big_list)) == 200_000
+    assert micros < 1_000_000, "20,000 reads took #{div(micros, 1000)} ms"
+  end
+
+  test "a process that has read a shared value sees the next write to it" do
+    TemperCore.Global.put(:shared_var, 1)
+    me = self()
+
+    reader =
+      spawn(fn ->
+        send(me, {:first, TemperCore.Global.get(:shared_var)})
+        receive do: (:again -> send(me, {:second, TemperCore.Global.get(:shared_var)}))
+      end)
+
+    assert_receive {:first, 1}
+    TemperCore.Global.put(:shared_var, 2)
+    send(reader, :again)
+    assert_receive {:second, 2}
+    assert TemperCore.Global.get(:shared_var) == 2
+  end
+
   test "Int64 wraps at 64 bits" do
     assert int64(9_223_372_036_854_775_807 + 1) == -9_223_372_036_854_775_808
   end

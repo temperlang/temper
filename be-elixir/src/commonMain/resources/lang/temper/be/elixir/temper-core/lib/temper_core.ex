@@ -270,17 +270,27 @@ defmodule TemperCore.Global do
     the value, and from then on its copy is its own.
 
   Reading a value that was never set raises, rather than answering nil.
+
+  Reading a shared value out of ETS copies it into the reading process,
+  so a module-level list of 200,000 elements read in a loop cost a copy
+  of the list per read: 51 s where js took 3. Each row carries a version,
+  and each process keeps the value it last read beside that version, so a
+  read is a lookup of the version and, unless another write came since,
+  no copy at all.
   """
   @table :temper_globals
 
   @spec put(atom(), value) :: value when value: term()
   def put(name, value) when is_atom(name) do
+    version = :erlang.unique_integer([:monotonic])
+
     if TemperCore.Actor.sendable?(value) do
-      :ets.insert(@table, {name, {:shared, value}})
+      :ets.insert(@table, {name, version, {:shared, value}})
       Process.delete({__MODULE__, name})
+      TemperCore.Heap.put_root({__MODULE__.Read, name}, {version, value})
     else
       TemperCore.Heap.put_root({__MODULE__, name}, value)
-      :ets.insert(@table, {name, {:snapshot, TemperCore.Heap.export(value)}})
+      :ets.insert(@table, {name, version, {:snapshot, TemperCore.Heap.export(value)}})
     end
 
     value
@@ -290,21 +300,32 @@ defmodule TemperCore.Global do
   def get(name) when is_atom(name) do
     case Process.get({__MODULE__, name}, __MODULE__) do
       __MODULE__ ->
-        case :ets.lookup(@table, name) do
-          [{_, {:shared, value}}] ->
-            value
+        case Process.get({__MODULE__.Read, name}) do
+          {version, value} ->
+            if :ets.lookup_element(@table, name, 2, nil) == version, do: value, else: fetch(name)
 
-          [{_, {:snapshot, snapshot}}] ->
-            value = TemperCore.Heap.import(snapshot)
-            TemperCore.Heap.put_root({__MODULE__, name}, value)
-            value
-
-          [] ->
-            raise ArgumentError, "module-level #{inspect(name)} read before it was set"
+          nil ->
+            fetch(name)
         end
 
       value ->
         value
+    end
+  end
+
+  defp fetch(name) do
+    case :ets.lookup(@table, name) do
+      [{_, version, {:shared, value}}] ->
+        TemperCore.Heap.put_root({__MODULE__.Read, name}, {version, value})
+        value
+
+      [{_, _, {:snapshot, snapshot}}] ->
+        value = TemperCore.Heap.import(snapshot)
+        TemperCore.Heap.put_root({__MODULE__, name}, value)
+        value
+
+      [] ->
+        raise ArgumentError, "module-level #{inspect(name)} read before it was set"
     end
   end
 end

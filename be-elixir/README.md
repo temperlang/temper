@@ -182,7 +182,10 @@ end
   because a `def` cannot see variables outside its own parameters. Every
   process on the node sees the same module values: a value that can be
   shared (a number, string, list, map, `@imu` struct or actor) lives in an
-  ETS table. A mutable object that is not an actor cannot be shared, since
+  ETS table, beside a version. A process keeps the value it last read with
+  its version, so a read checks the version and copies the value out of
+  ETS only after a write; a 200,000-element module-level list read once
+  per element took 51 s when every read copied it. A mutable object that is not an actor cannot be shared, since
   its ref only means something in the heap that made it, so each process
   gets its own copy the first time it reads it. Section 15 covers sharing
   mutable state safely.
