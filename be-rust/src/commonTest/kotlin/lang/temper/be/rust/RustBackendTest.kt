@@ -483,6 +483,56 @@ class RustBackendTest {
     }
 
     @Test
+    fun bubblyCastInNullableReturn() = assertGenerateWanted(
+        // The failed cast's bubble is the function's `Err`, not a `Some` of one.
+        temper = """
+            |export class Text(public s: String) {}
+            |export let asText(v: AnyValue?): Text? throws Bubble { v as Text }
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            Ok(())
+            |    }).clone()
+            |}
+            |struct TextStruct {
+            |    s: std::sync::Arc<String>
+            |}
+            |#[derive(Clone)]
+            |pub struct Text(std::sync::Arc<TextStruct>);
+            |impl Text {
+            |    pub fn new(s__0: impl temper_core::ToArcString) -> Text {
+            |        let s__0 = s__0.to_arc_string();
+            |        let s;
+            |        s = s__0.clone();
+            |        let selfish = Text(std::sync::Arc::new(TextStruct {
+            |                    s
+            |        }));
+            |        return selfish;
+            |    }
+            |    pub fn s(& self) -> std::sync::Arc<String> {
+            |        return self.0.s.clone();
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Text, []);
+            |pub fn as_text(v__0: Option<temper_core::AnyValue>) -> temper_core::Result<Option<Text>> {
+            |    let return__0: Option<Text>;
+            |    if v__0.is_none() {
+            |        return Err(temper_core::Error::new());
+            |    } else {
+            |        let return___0: temper_core::Result<Text> = v__0.clone().and_then(| x | temper_core::cast::<Text>(x)).ok_or_else(| | temper_core::Error::new());
+            |        if ! return___0.is_ok() {
+            |            return Err(return___0.err().unwrap());
+            |        }
+            |        return__0 = Some(return___0.unwrap());
+            |    }
+            |    return Ok(return__0.clone().clone());
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun bubblyConstructor() = assertGenerateWanted(
         temper = """
             |class C {

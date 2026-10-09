@@ -253,6 +253,11 @@ internal fun Rust.Expr.maybeWrap(
     translator: RustTranslator,
 ): Rust.Expr {
     wanted ?: return this
+    // A bubble, such as a failed cast's `Err(...)` or a `panic!()`, carries no value, so there is nothing to wrap in
+    // `Some` or `Ok`. It is already what a bubbly wanted type takes.
+    if (given is TypeDescription && given.type == null && given.bubbly && !given.nullable) {
+        return this
+    }
     val givenNone = this is Rust.Id && this.outName.outputNameText == "None"
     val wantedDefinition = wanted.definition()
     val wantStringIndexOption = wantedDefinition == WellKnownTypes.stringIndexOptionTypeDefinition
