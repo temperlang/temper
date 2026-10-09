@@ -141,6 +141,16 @@ class CoroutineConverterTest {
         StageTestDir("convert-coro/continue-in-yielding-loop"),
     )
 
+    /**
+     * A bare `yield` whose next step depends on a condition gets an
+     * afterwards case, but has no promise to carry across the pause:
+     * only an `await` has a promise operand.
+     */
+    @Test
+    fun breakAfterBareYield() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/break-after-bare-yield"),
+    )
+
     @Test
     fun nestedFunctionHoisting() = assertConvertedCoroutine(
         StageTestDir("convert-coro/nested-function-hoisting"),
