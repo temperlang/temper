@@ -2493,6 +2493,61 @@ object Cpp {
         }
     }
 
+    class InOrderTemp(
+        pos: Position,
+        name: SingleName,
+        value: Expr,
+    ) : BaseTree(pos), Stmt {
+        override val operatorDefinition: CppOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate46
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.name
+                1 -> this.value
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _name: SingleName
+        var name: SingleName
+            get() = _name
+            set(newValue) { _name = updateTreeConnection(_name, newValue) }
+        private var _value: Expr
+        var value: Expr
+            get() = _value
+            set(newValue) { _value = updateTreeConnection(_value, newValue) }
+        override fun deepCopy(): InOrderTemp {
+            return InOrderTemp(pos, name = this.name.deepCopy(), value = this.value.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is InOrderTemp && this.name == other.name && this.value == other.value
+        }
+        override fun hashCode(): Int {
+            var hc = name.hashCode()
+            hc = 31 * hc + value.hashCode()
+            return hc
+        }
+        init {
+            this._name = updateTreeConnection(null, name)
+            this._value = updateTreeConnection(null, value)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as InOrderTemp).name },
+                { n -> (n as InOrderTemp).value },
+            )
+        }
+    }
+
     class SwitchCase(
         pos: Position,
         labels: Iterable<CaseLabel>,
@@ -2501,7 +2556,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate46
+            get() = sharedCodeFormattingTemplate47
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2555,7 +2610,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate47
+            get() = sharedCodeFormattingTemplate48
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2656,7 +2711,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate48
+            get() = sharedCodeFormattingTemplate49
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2711,7 +2766,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate49
+            get() = sharedCodeFormattingTemplate50
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2767,7 +2822,7 @@ object Cpp {
         override val operatorDefinition
             get() = op.opEnum.operatorDefinition
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate50
+            get() = sharedCodeFormattingTemplate51
         override val formatElementCount
             get() = 3
         override fun formatElement(
@@ -2885,7 +2940,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate51
+            get() = sharedCodeFormattingTemplate52
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2938,7 +2993,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate52
+            get() = sharedCodeFormattingTemplate53
         override val formatElementCount
             get() = 0
         override fun deepCopy(): ThisExpr {
@@ -2970,7 +3025,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate53
+            get() = sharedCodeFormattingTemplate54
         override val formatElementCount
             get() = 5
         override fun formatElement(
@@ -3031,6 +3086,61 @@ object Cpp {
                 { n -> (n as LambdaExpr).params },
                 { n -> (n as LambdaExpr).ret },
                 { n -> (n as LambdaExpr).body },
+            )
+        }
+    }
+
+    class InOrderExpr(
+        pos: Position,
+        capture: CaptureByReference?,
+        body: BlockStmt,
+    ) : BaseTree(pos), Expr {
+        override val operatorDefinition: CppOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate55
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.capture ?: FormattableTreeGroup.empty
+                1 -> this.body
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _capture: CaptureByReference?
+        var capture: CaptureByReference?
+            get() = _capture
+            set(newValue) { _capture = updateTreeConnection(_capture, newValue) }
+        private var _body: BlockStmt
+        var body: BlockStmt
+            get() = _body
+            set(newValue) { _body = updateTreeConnection(_body, newValue) }
+        override fun deepCopy(): InOrderExpr {
+            return InOrderExpr(pos, capture = this.capture?.deepCopy(), body = this.body.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is InOrderExpr && this.capture == other.capture && this.body == other.body
+        }
+        override fun hashCode(): Int {
+            var hc = capture.hashCode()
+            hc = 31 * hc + body.hashCode()
+            return hc
+        }
+        init {
+            this._capture = updateTreeConnection(null, capture)
+            this._body = updateTreeConnection(null, body)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as InOrderExpr).capture },
+                { n -> (n as InOrderExpr).body },
             )
         }
     }
@@ -3104,7 +3214,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate54
+            get() = sharedCodeFormattingTemplate56
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3142,6 +3252,33 @@ object Cpp {
         }
     }
 
+    class CaptureByReference(
+        pos: Position,
+    ) : BaseTree(pos) {
+        override val operatorDefinition: CppOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate57
+        override val formatElementCount
+            get() = 0
+        override fun deepCopy(): CaptureByReference {
+            return CaptureByReference(pos)
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is CaptureByReference
+        }
+        override fun hashCode(): Int {
+            return 0
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships()
+        }
+    }
+
     class ScopedName(
         pos: Position,
         base: Type,
@@ -3150,7 +3287,7 @@ object Cpp {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate55
+            get() = sharedCodeFormattingTemplate58
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3803,8 +3940,20 @@ object Cpp {
             ),
         )
 
-    /** `{{0*}} {{1}}` */
+    /** `auto {{0}} = {{1}} ;` */
     private val sharedCodeFormattingTemplate46 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("auto", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("=", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `{{0*}} {{1}}` */
+    private val sharedCodeFormattingTemplate47 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.GroupSubstitution(
@@ -3816,7 +3965,7 @@ object Cpp {
         )
 
     /** `case {{0}} `CppToks.postfixColon`` */
-    private val sharedCodeFormattingTemplate47 =
+    private val sharedCodeFormattingTemplate48 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
@@ -3826,7 +3975,7 @@ object Cpp {
         )
 
     /** `{{0}} ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate48 =
+    private val sharedCodeFormattingTemplate49 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -3840,7 +3989,7 @@ object Cpp {
         )
 
     /** `{{0}} . {{1}}` */
-    private val sharedCodeFormattingTemplate49 =
+    private val sharedCodeFormattingTemplate50 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -3850,7 +3999,7 @@ object Cpp {
         )
 
     /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate50 =
+    private val sharedCodeFormattingTemplate51 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -3860,7 +4009,7 @@ object Cpp {
         )
 
     /** `( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate51 =
+    private val sharedCodeFormattingTemplate52 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -3871,11 +4020,11 @@ object Cpp {
         )
 
     /** `this` */
-    private val sharedCodeFormattingTemplate52 =
+    private val sharedCodeFormattingTemplate53 =
         CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word)
 
     /** `[ = {{0*}} ] ( {{1*,}} ) {{2}} `CppToks.returnTypeArrow` {{3}} {{4}}` */
-    private val sharedCodeFormattingTemplate53 =
+    private val sharedCodeFormattingTemplate54 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -3898,8 +4047,25 @@ object Cpp {
             ),
         )
 
+    /** `[ {{0}} ] ( ) `CppToks.returnTypeArrow` auto {{1}} `CppToks.calledInPlace` )` */
+    private val sharedCodeFormattingTemplate55 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("[", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken("]", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(CppToks.returnTypeArrow),
+                CodeFormattingTemplate.LiteralToken("auto", OutputTokenType.Word),
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.LiteralToken(CppToks.calledInPlace),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+            ),
+        )
+
     /** `, `CppToks.prefixAmp` {{0}}` */
-    private val sharedCodeFormattingTemplate54 =
+    private val sharedCodeFormattingTemplate56 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
@@ -3908,8 +4074,12 @@ object Cpp {
             ),
         )
 
+    /** `&` */
+    private val sharedCodeFormattingTemplate57 =
+        CodeFormattingTemplate.LiteralToken("\u0026", OutputTokenType.Punctuation)
+
     /** `{{0}} `CppToks.colons` {{1}}` */
-    private val sharedCodeFormattingTemplate55 =
+    private val sharedCodeFormattingTemplate58 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),

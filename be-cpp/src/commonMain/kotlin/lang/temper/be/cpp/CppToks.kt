@@ -27,6 +27,12 @@ data object CppToks {
     /** Postfix amp attaches to the left, like `int&`. */
     val postfixAmp = OutputToken("&", OutputTokenType.Punctuation, TokenAssociation.Postfix)
 
+    /**
+     * The `(` that calls an `InOrderExpr`'s lambda right after its body, `[&]() -> auto { ... }()`.
+     * A distinct object, compared with `===`, so the formatter keeps it on the line of the `}`.
+     */
+    val calledInPlace = OutputToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket)
+
     /** Postfix colon attaches to the left, like `case 123:`. */
     val postfixColon = OutputToken(":", OutputTokenType.Punctuation, TokenAssociation.Postfix)
 
