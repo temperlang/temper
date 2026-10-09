@@ -237,7 +237,7 @@ object Lua51Specifics : RunnerSpecifics {
     }
 
     override val tools: List<ToolSpecifics>
-        get() = listOf()
+        get() = listOf(LuaTool)
     override val backendId: BackendId
         get() = LuaLang.Lua51.id
 }

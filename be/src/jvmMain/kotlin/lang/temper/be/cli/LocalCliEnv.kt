@@ -115,8 +115,8 @@ open class LocalCliEnv(
     }
 
     override fun which(tool: ToolSpecifics): RResult<CliTool, CliFailure> {
-        // Cache all the lookups
-        val command = localTools.computeIfAbsent(tool) {
+        // Cache all the lookups, per PATH, since ShellPreferences can override it.
+        val command = localTools.computeIfAbsent(pathElements to tool) {
             val names = tool.cliNames
             val extensions = if (isWindows) {
                 // Using PATHEXT technically is more correct, but we don't care about most of these.
@@ -257,7 +257,8 @@ open class LocalCliEnv(
             escapeShellString(str)
         }
 
-        private val localTools = ConcurrentHashMap<ToolSpecifics, RResult<NativePath, CliFailure>>()
+        private val localTools =
+            ConcurrentHashMap<Pair<List<NativePath>, ToolSpecifics>, RResult<NativePath, CliFailure>>()
     }
 
     inner class LocalCliTool(command: NativePath, specifics: ToolSpecifics) : CliTool(specifics) {
