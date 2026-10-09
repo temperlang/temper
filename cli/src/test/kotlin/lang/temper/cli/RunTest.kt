@@ -169,6 +169,31 @@ class RunTest {
     @Test
     fun runPyBackendTop() = runRunTest("runTopLevel", PyBackend.Python3.backendId)
 
+    /**
+     * A library whose name has a dash, and whose code depends on no other library, so nothing
+     * but its own name puts its directory on PYTHONPATH.
+     */
+    @Test
+    fun runPyBackendDashedName() {
+        val path = resourcePath("/runDashedName/input")
+        // Clean up in case someone ran a build in the source tree.
+        removeDirRecursive(path.resolve(TEMPER_OUT_NAME))
+        runWithTemporaryDirCopyOf("RunPyBackendDashedName", path) { tempDir ->
+            val result = doRun(
+                RunTask(
+                    backends = setOf(PyBackend.Python3.backendId),
+                    request = RunLibraryRequest(
+                        DashedIdentifier.from("hello-world")!!,
+                        taskName = "RunPyBackendDashedName",
+                    ),
+                ),
+                workRoot = tempDir,
+            )
+            assertEquals("I ran\n", result.outputThunk())
+            assertTrue(result.errorFree)
+        }
+    }
+
     @Test
     fun runWithImportPyBackend() = runRunTest("runWithImport", PyBackend.Python3.backendId)
 }
