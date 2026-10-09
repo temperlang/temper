@@ -677,6 +677,25 @@ class CppBackendTest {
     }
 
     @Test
+    fun callMethodNamedAfterKeyword() {
+        assertGeneratedContains(
+            temper = """
+                |export class B {
+                |  public int(k: Int): Int { k + 1 }
+                |  public twice(k: Int): Int { int(int(k)) }
+                |  public static bool(k: Int): Boolean { k > 0 }
+                |}
+                |export let f(b: B, k: Int): Boolean { B.bool(b.int(k)) }
+            """,
+            cppContains = listOf(
+                "int32_t int_(int32_t) const;",
+                "return this_1->int_(this_1->int_(k_",
+                "return B::bool_(b->int_(k_19));",
+            ),
+        )
+    }
+
+    @Test
     fun importsBetweenModules() {
         assertGeneratedContains(
             temper = """
