@@ -279,7 +279,7 @@ defmodule TemperCore.Global do
       :ets.insert(@table, {name, {:shared, value}})
       Process.delete({__MODULE__, name})
     else
-      Process.put({__MODULE__, name}, value)
+      TemperCore.Heap.put_root({__MODULE__, name}, value)
       :ets.insert(@table, {name, {:snapshot, TemperCore.Heap.export(value)}})
     end
 
@@ -296,7 +296,7 @@ defmodule TemperCore.Global do
 
           [{_, {:snapshot, snapshot}}] ->
             value = TemperCore.Heap.import(snapshot)
-            Process.put({__MODULE__, name}, value)
+            TemperCore.Heap.put_root({__MODULE__, name}, value)
             value
 
           [] ->
@@ -343,6 +343,7 @@ defmodule TemperCore.Heap do
   @depth {TemperCore.Heap.Nursery, :depth}
   @nursery {TemperCore.Heap.Nursery, :young}
   @remembered {TemperCore.Heap.Nursery, :remembered}
+  @roots {TemperCore.Heap.Nursery, :roots}
 
   @typedoc "What has fields: a heap object, or an actor's, read from inside it."
   @type object :: Ref.t() | TemperCore.Actor.t()
@@ -424,6 +425,23 @@ defmodule TemperCore.Heap do
       :undefined -> :ok
       young -> :erlang.put(@nursery, MapSet.put(young, id))
     end
+  end
+
+  @doc """
+  `Process.put/2` for an entry that may hold objects, such as Temper's
+  globals or the async queue. During a call through `entry/1`, the minor
+  collection looks for young objects only in the entries written this
+  way, so Elixir code that keeps an object of the call in the process
+  dictionary must write it with this too.
+  """
+  @spec put_root(term(), term()) :: term()
+  def put_root(key, value) do
+    case :erlang.get(@roots) do
+      :undefined -> :ok
+      keys -> :erlang.put(@roots, MapSet.put(keys, key))
+    end
+
+    Process.put(key, value)
   end
 
   @doc "Whether `ref` is an object in this process's heap."
@@ -508,6 +526,7 @@ defmodule TemperCore.Heap do
         Process.put(@depth, 1)
         Process.put(@nursery, MapSet.new())
         Process.put(@remembered, MapSet.new())
+        Process.put(@roots, MapSet.new())
         :outer
 
       # only enter and leave write the depth, but Dialyzer cannot know it is
@@ -528,6 +547,7 @@ defmodule TemperCore.Heap do
       Process.delete(@depth)
       Process.delete(@nursery)
       Process.delete(@remembered)
+      Process.delete(@roots)
     end
 
     nil
@@ -540,7 +560,12 @@ defmodule TemperCore.Heap do
 
   # Frees the young objects that nothing reaches. Marking stops at older
   # objects: they are alive, and any of their fields that could reach a young
-  # object were remembered by `put`.
+  # object were remembered by `put`. The other roots are the process
+  # dictionary entries written during the call, which `put_root/2` recorded:
+  # a young object can only be in an entry written since it was made. So a
+  # pass costs as much as the young objects and what the call wrote, not
+  # the whole heap; listing the whole dictionary here made a loop of calls
+  # into a library quadratic in the heap it kept.
   defp minor(extra) do
     young = Process.get(@nursery)
 
@@ -548,11 +573,9 @@ defmodule TemperCore.Heap do
       0
     else
       remembered = Enum.map(Process.get(@remembered), &Process.get({__MODULE__, &1}))
+      roots = Enum.map(Process.get(@roots), &Process.get/1)
 
-      others =
-        for {k, v} <- Process.get(), not object?({k, v}), k not in [@depth, @nursery, @remembered], do: v
-
-      live = mark_young([extra, remembered | others], young, MapSet.new())
+      live = mark_young([extra, remembered | roots], young, MapSet.new())
       dead = MapSet.difference(young, live)
       Enum.each(dead, &Process.delete({__MODULE__, &1}))
       MapSet.size(dead)

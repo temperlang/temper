@@ -110,11 +110,11 @@ defmodule TemperCore.Promise do
       nil ->
         case GenServer.call(@hub, {:subscribe, id, self()}, :infinity) do
           {:settled, state} ->
-            Process.put({__MODULE__, id}, {state, []})
+            Heap.put_root({__MODULE__, id}, {state, []})
             Async.enqueue(gen)
 
           :pending ->
-            Process.put({__MODULE__, id}, {:pending, [gen]})
+            Heap.put_root({__MODULE__, id}, {:pending, [gen]})
             Process.put(@awaiting, MapSet.put(awaiting(), id))
 
           :unknown ->
@@ -122,7 +122,7 @@ defmodule TemperCore.Promise do
         end
 
       {:pending, waiters} ->
-        Process.put({__MODULE__, id}, {:pending, [gen | waiters]})
+        Heap.put_root({__MODULE__, id}, {:pending, [gen | waiters]})
 
       _settled ->
         Async.enqueue(gen)
@@ -143,7 +143,7 @@ defmodule TemperCore.Promise do
   def remote_settled(id, state) do
     case Process.get({__MODULE__, id}) do
       {:pending, waiters} ->
-        Process.put({__MODULE__, id}, {state, []})
+        Heap.put_root({__MODULE__, id}, {state, []})
         Process.put(@awaiting, MapSet.delete(awaiting(), id))
         waiters |> Enum.reverse() |> Enum.each(&Async.enqueue/1)
 
@@ -242,7 +242,7 @@ defmodule TemperCore.Async do
 
   @spec enqueue(TemperCore.Generator.t()) :: nil
   def enqueue(gen) do
-    Process.put(@key, :queue.in(gen, Process.get(@key, :queue.new())))
+    TemperCore.Heap.put_root(@key, :queue.in(gen, Process.get(@key, :queue.new())))
     nil
   end
 

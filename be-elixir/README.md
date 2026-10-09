@@ -826,12 +826,17 @@ end
 That is a small generational collector. Objects made during the outermost
 call into a library are young. When the call returns, or raises, the
 young objects nothing reaches are freed. "Reaches" means from the
-result, from Temper's globals and the rest of the process dictionary, or
-from an older object that the call wrote to: a write barrier in
-`Heap.put` remembers those older objects. Older objects are never
+result, from a process dictionary entry the call wrote (Temper's
+globals, the async queue, promise waiters), or from an older object that
+the call wrote to: a write barrier in `Heap.put` remembers those older
+objects, and `Heap.put_root/2` the entries. Older objects are never
 touched, so whatever the caller still holds from earlier calls stays
-alive. Nested calls (Temper code calling exported functions) collect only
-at the outermost one. The same service as below, with no `collect` in it
+alive, and a call costs what it made and wrote, not the size of the
+heap: 20,000 calls over a 100,000-object heap take 48 ms, where listing
+the whole dictionary per call took 29 s. Elixir code that keeps an
+object of the call in the process dictionary writes it with
+`Heap.put_root/2` too. Nested calls (Temper code calling exported
+functions) collect only at the outermost one. The same service as below, with no `collect` in it
 at all, ran 100,000 requests and ended with 1 object (its counter) in
 26 KB, in 270 ms.
 

@@ -174,7 +174,7 @@ defmodule TemperCore.Actor do
   @doc "The constructor's `this`: inside the actor's process, an actor whose fields live here."
   @spec init_self(module(), map()) :: t()
   def init_self(class, fields) do
-    Process.put(@self, Heap.new(class, fields))
+    Heap.put_root(@self, Heap.new(class, fields))
     %__MODULE__{class: class, id: Process.get(@self_id)}
   end
 
