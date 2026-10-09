@@ -748,6 +748,11 @@ class Interpreter(
                     // it's a yield statement.
                     val poppedForStmt = evaluation.stack.compatRemoveLast()
                     popped(poppedForStmt)
+                    // The innermost environment, as interpretChild uses for
+                    // ordinary statements. A loop body has its own, so a
+                    // yielding call there must read and assign through it,
+                    // not through mutableEnv, which is the outermost.
+                    val stmtEnv = evaluation.envStack.last()
                     val yieldingCallDetails = disassembleYieldingCall(cf, ast)
                     if (yieldingCallDetails != null && bodyOwner !is TransientUserFunction) {
                         // No place to store yieldedAt state.
@@ -780,7 +785,7 @@ class Interpreter(
                             val call = yieldingCallDetails.yieldingCall
                             var yielded: PartialResult = TNull.value
                             if (call.size == 2) {
-                                yielded = interpretEdge(call.edge(1), mutableEnv, im)
+                                yielded = interpretEdge(call.edge(1), stmtEnv, im)
                             }
                             val makeValueResult = TFunction.unpack(
                                 features.getValue(InternalFeatureKeys.MakeValueResult.featureKey),
@@ -803,7 +808,7 @@ class Interpreter(
                             val awaitCall = yieldingCallDetails.yieldingCall
                             val argValues = mutableListOf<Value<*>>()
                             for (i in 1 until awaitCall.size) {
-                                when (val argResult = interpretEdge(awaitCall.edge(i), mutableEnv, im)) {
+                                when (val argResult = interpretEdge(awaitCall.edge(i), stmtEnv, im)) {
                                     NotYet -> {
                                         result = argResult
                                         break@eval_loop
@@ -815,7 +820,7 @@ class Interpreter(
                             val args = LazyActualsList(
                                 awaitCall.children.subListToEnd(1),
                                 this,
-                                mutableEnv,
+                                stmtEnv,
                                 im,
                             )
                             val cb = callbackFor(awaitCall)
@@ -838,7 +843,7 @@ class Interpreter(
                                 is Fail -> handleFail(awaitResult)
                                 is Value<*> -> {
                                     if (assignedTo != null) {
-                                        (mutableEnv.set(assignedTo, awaitResult, cb) as? Fail)
+                                        (stmtEnv.set(assignedTo, awaitResult, cb) as? Fail)
                                             ?.let { handleFail(it) }
                                     }
                                     result = awaitResult
