@@ -18,6 +18,8 @@ import java.util.concurrent.ForkJoinPool;
 public class Core {
     private Core() {}
 
+    private static final int HTTP_ERROR_MIN = 400;
+
     public static CompletableFuture<NetResponse> stdNetSend(
         String url,
         String method,
@@ -66,7 +68,20 @@ public class Core {
                 }
                 CompletableFuture<@Nullable String> contentFuture = new CompletableFuture<>();
                 pool.submit(() -> {
-                    try (InputStream in = conn.getInputStream()) {
+                    // For a 4xx or 5xx status, getInputStream throws and the
+                    // body is on getErrorStream, which is null when there is
+                    // no body.
+                    InputStream body;
+                    try {
+                        body = status >= HTTP_ERROR_MIN ? conn.getErrorStream() : conn.getInputStream();
+                    } catch (IOException ex) {
+                        contentFuture.completeExceptionally(ex);
+                        return;
+                    }
+                    if (body == null) {
+                        body = new ByteArrayInputStream(new byte[0]);
+                    }
+                    try (InputStream in = body) {
                         try (InputStreamReader rin = new InputStreamReader(in, "UTF-8")) {
                             try (BufferedReader bin = new BufferedReader(rin)) {
                                 StringBuffer contentBuffer = new StringBuffer();

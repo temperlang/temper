@@ -76,9 +76,16 @@ fn make_request(
         Some(body_mime_type) => request.header("Content-Type", body_mime_type),
         _ => request,
     };
+    // By default ureq turns a 4xx or 5xx status into Err(StatusCode), which
+    // send would report as a broken promise. An HTTP error status is still
+    // a response, so resolve with it, as js and java do.
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .build()
+        .into();
     let mut response = match body_content {
-        Some(body_content) => ureq::run(request.body(body_content)?),
-        None => ureq::run(request.body(())?),
+        Some(body_content) => agent.run(request.body(body_content)?),
+        None => agent.run(request.body(())?),
     }?;
     let mut body = response.body_mut();
     let content_type = match response.headers().get(http::header::CONTENT_TYPE) {
