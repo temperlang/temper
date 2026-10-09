@@ -22,6 +22,10 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         staticallyTypeds(58),
     )
     issue(Ft.ControlFlowAsync, lua(144))
+    // rust holds a field's read guard across PromiseBuilder.complete (517),
+    // which resumes the awaiting block inline (519); its call into the same
+    // object then waits on that guard forever.
+    issue(Ft.ControlFlowActor, lua(144), rust(517, 519))
     issue(Ft.RegexZeroAdvance, lua(166))
     issue(Ft.NamesNonascii, lua(228))
     214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }
@@ -52,6 +56,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         Ft.ClassesSetters,
         Ft.ClassesStaticProperties,
         Ft.ClassesStaticPropertiesScope,
+        Ft.ControlFlowActor,
         Ft.ControlFlowActorRun,
         Ft.ControlFlowAsync,
         Ft.ControlFlowBubble,

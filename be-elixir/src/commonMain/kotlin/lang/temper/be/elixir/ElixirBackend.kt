@@ -46,8 +46,12 @@ import lang.temper.value.DependencyCategory
  * [Elixir]: https://elixir-lang.org/
  */
 class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>(Factory.backendId, setup) {
-    override fun tentativeTmpL(): TmpL.ModuleSet =
-        TmpLTranslator.translateModules(
+    override fun tentativeTmpL(): TmpL.ModuleSet {
+        val checker = ElixirActorChecker(logSink)
+        for (module in readyModules) {
+            module.generatedCode?.let(checker::check)
+        }
+        return TmpLTranslator.translateModules(
             logSink,
             readyModules,
             ElixirSupportNetwork,
@@ -57,6 +61,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         ).also {
             storeDescriptorsForDeclarations(it, Factory)
         }
+    }
 
     /**
      * One Mix project per library: `mix.exs`, which depends on temper-core

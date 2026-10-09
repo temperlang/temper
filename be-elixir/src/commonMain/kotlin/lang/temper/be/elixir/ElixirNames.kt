@@ -96,13 +96,19 @@ internal class ElixirNames {
      * declared more than once, like the frontend's temporaries `t`, are
      * numbered `t1`, `t2` in declaration order, so shadowing stays distinct.
      * Only declarations inside the function are renamed: globals and module
-     * functions keep one name everywhere.
+     * functions keep one name everywhere. [named] gives some locals a text of
+     * the translator's choosing in place of their Temper name, numbered like
+     * any other if a local of the function already has that text.
      */
-    fun <T> withLocals(declared: Collection<ResolvedName>, body: () -> T): T {
+    fun <T> withLocals(
+        declared: Collection<ResolvedName>,
+        named: Map<ResolvedName, String> = emptyMap(),
+        body: () -> T,
+    ): T {
         // gensyms count from 0 in each function, for the same reason as above
         val outerGensyms = gensymCount
         if (depth++ == 0) gensymCount = 0
-        val byText = declared.distinct().groupBy { plainText(it) }
+        val byText = declared.distinct().groupBy { named[it] ?: plainText(it) }
         val renamed = mutableMapOf<ResolvedName, String>()
         val taken = byText.keys.filterNotNull().toMutableSet()
         for ((text, group) in byText) {

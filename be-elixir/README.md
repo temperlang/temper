@@ -912,13 +912,13 @@ BEAM:
 ```elixir
 def new(owner) do
   TemperCore.Actor.start(Temper.Bank.Account, fn ->
-    this = TemperCore.Actor.init_self(Temper.Bank.Account, %{:owner => nil, :balance => nil})
+    server = TemperCore.Actor.init_self(Temper.Bank.Account, %{:owner => nil, :balance => nil})
     ...
-    this
+    server
   end)
 end
-def deposit(this, n) do
-  TemperCore.Actor.run(this, fn ->
+def deposit(server, n) do
+  TemperCore.Actor.run(server, fn ->
     ...
   end)
 end
@@ -927,22 +927,24 @@ end
 `new` starts a GenServer and runs the constructor inside it. The object
 is `%TemperCore.Actor{class, id}`: an ordinary term that can be sent,
 stored and compared. The id is registered to whichever process runs the
-actor now, so the identity survives a restart. Its fields exist only inside its own process. Each
+actor now, so the identity survives a restart. That is why an actor's
+`this` is named `server` in the generated code, as `GenServer.call(server, ...)`
+names it, and not `pid`: it is not a pid, and one held across a restart
+would go stale. Its fields exist only inside its own process. Each
 method body runs through `TemperCore.Actor.run`. From inside the actor
 (`this.m()`) that is a plain call. From anywhere else it is a
-`GenServer.call`, which costs about 1.6 µs. Calls stay synchronous, as
+message the actor answers like a `GenServer.call`, about 1.6 µs. Calls stay synchronous, as
 Temper expects. Driven from Elixir ([`examples/bank/`](https://github.com/notactuallytreyanastasio/temper-blimp/blob/main/journal/examples/bank)):
 
 ```
 after 1000 concurrent deposits: 1000
 after transfer: ann 700, bob 300
 withdraw too much: bubbled back to the caller (TemperCore.Bubble)
-cycle: Panic: actor call cycle: Temper.Bank.Account is already waiting on this call
 mutable argument: Panic: an argument to Temper.Bank.Account is a mutable Temper.Bank.Box, which cannot be shared with another process; make its class @imu to pass a copy, or @actor to share it
 actor whose creator ended: Panic: Temper.Bank.Account actor has ended
 ```
 
-The rules, one per line of that output:
+The rules, most of them shown in that output:
 
 - **One object, one process.** A thousand processes depositing at once
   lose no update, because the actor handles one call at a time.
@@ -950,14 +952,39 @@ The rules, one per line of that output:
   `bob`.
 - **Errors cross.** A bubble or panic raised in the actor is raised again
   in the caller, so `orelse` works across processes.
-- **No deadlocks from cycles.** If A is waiting on B and B calls A, A can
-  never answer. Each call carries the chain of actors it passed through,
-  so the call back raises a `Panic` instead of hanging.
+- **A call back runs inline.** Each call carries the chain of actors it
+  passed through. If A is waiting on B and B calls A on the same chain, A
+  serves that call while it waits, so `a.ping(b)` where `b` calls `a.add(1)`
+  works as it does on a single-threaded backend.
+- **No deadlocks from cycles.** Two chains can still block each other: A,
+  busy for one caller, calls B while B, busy for another, calls A. Each
+  actor records which actor it waits on, and the call that would close the
+  cycle raises `Panic: actor call cycle` instead of hanging. The other
+  call goes through.
 - **Only values cross.** Messages copy, and copying a mutable object
-  would break Temper's sharing. Arguments, results and captured values
-  are checked, and a mutable non-actor object raises a `Panic` that names
-  it. Immutable values and other actors cross freely: strings, numbers,
+  would break Temper's sharing. be-elixir rejects a public member of an
+  `@actor` class whose type is not sendable when it builds ("Actor class
+  Account: parameter b of method stash has type Box__0, which is not
+  sendable"), and so a function type too. Other backends run every call on
+  the caller's stack and build the same program. At run time, for Elixir
+  code that calls an actor directly, arguments, results and captured values
+  are checked again, and a mutable non-actor object raises a `Panic` that
+  names it. Immutable values and other actors cross freely: strings, numbers,
   lists, maps, `@imu` structs. This is Erlang's own rule.
+- **Promises cross.** A `Promise<T>` of a sendable `T` may be an argument
+  or a result. A promise is a heap object, so on the way out it is
+  published to `TemperCore.Promises`, which keeps its state and tells
+  every process that awaits it when it settles. Its ref is unchanged; in a
+  process whose heap lacks it, `await` subscribes instead of parking on
+  the heap object. An actor wakes for such a settle in a turn of its own.
+  `__temper_main__/0` keeps draining while it awaits one. Only the process
+  that made a promise can complete it, and if that process ends first the
+  `await` panics instead of waiting forever. Published promises are never
+  forgotten, which leaks for a long-lived actor that hands out many.
+- **Await is a turn boundary.** An actor's turn ends when its call returns
+  and the async steps that call started have run as far as they can. A
+  block suspended at an `await` resumes in a later turn, so a field it read
+  before the `await` may have changed after it.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
   because a link alone ignores a normal exit.

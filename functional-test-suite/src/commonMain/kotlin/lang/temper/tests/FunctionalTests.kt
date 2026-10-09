@@ -49,6 +49,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ClassesSetters(markdown("classes/setters/setters.temper.md", "ClassesSetters")),
     ClassesStaticProperties(markdown("classes/static-properties/static-properties.temper.md", "ClassesStaticProperties")),
     ClassesStaticPropertiesScope(markdown("classes/static-properties-scope/static-properties-scope.temper.md", "ClassesStaticPropertiesScope")),
+    ControlFlowActor(markdown("control-flow/actor/actor.temper.md", "ControlFlowActor")),
     ControlFlowActorRun(markdown("control-flow/actor-run/actor-run.temper.md", "ControlFlowActorRun")),
     ControlFlowAsync(markdown("control-flow/async/async.temper.md", "ControlFlowAsync")),
     ControlFlowBubble(markdown("control-flow/bubble/bubble.temper.md", "ControlFlowBubble")),

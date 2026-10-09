@@ -1,7 +1,8 @@
 defmodule TemperCore.Application do
   @moduledoc """
   What a node running Temper code shares: the table of module values
-  (`TemperCore.Global`), the registry that names actors, and two
+  (`TemperCore.Global`), the promises shared between processes
+  (`TemperCore.Promises`), the registry that names actors, and two
   supervisors: `TemperCore.LibraryActors` for the actors a library's top
   level makes, which belong to the node, and `TemperCore.Actors`, which
   `TemperCore.Actor.supervised/1` starts actors under by default.
@@ -19,6 +20,7 @@ defmodule TemperCore.Application do
   def start(_type, _args) do
     children = [
       TemperCore.State,
+      TemperCore.Promises,
       {Registry, keys: :unique, name: TemperCore.Actors.Registry},
       {DynamicSupervisor, name: TemperCore.LibraryActors, strategy: :one_for_one},
       {DynamicSupervisor, name: TemperCore.Actors, strategy: :one_for_one}

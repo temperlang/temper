@@ -426,6 +426,10 @@ defmodule TemperCore.Heap do
     end
   end
 
+  @doc "Whether `ref` is an object in this process's heap."
+  @spec local?(Ref.t()) :: boolean()
+  def local?(%Ref{id: id}), do: :erlang.get({__MODULE__, id}) != :undefined
+
   @spec get_value(Ref.t()) :: term()
   def get_value(%Ref{id: id} = ref), do: fields!(ref, id)
 

@@ -2093,7 +2093,9 @@ internal class ElixirTranslator(
                 is TmpL.InstanceProperty -> {}
                 is TmpL.Constructor -> if (isClass) {
                     val fn = within(CONSTRUCTOR) {
-                        names.withLocals(declaredIn(member)) { constructor(member, module, isStruct, fields) }
+                        names.withLocals(declaredIn(member), actorThis(member.parameters)) {
+                            constructor(member, module, isStruct, fields)
+                        }
                     }
                     items.add(spec(fn, memberFormals(member), self(), fromElixir = fromElixir(member)))
                     items.add(fn)
@@ -2275,7 +2277,20 @@ internal class ElixirTranslator(
         name: String,
         module: List<String>,
         isStruct: Boolean,
-    ): Elixir.FunDef = names.withLocals(declaredIn(member)) { method(member, name, module, isStruct) }
+    ): Elixir.FunDef = names.withLocals(declaredIn(member), actorThis(member.parameters)) {
+        method(member, name, module, isStruct)
+    }
+
+    /**
+     * An actor's `this` is `server`, as `GenServer.call(server, ...)` names
+     * it: an identity that the registry resolves to whichever process runs
+     * the actor now, not a pid, which a supervised restart would leave stale.
+     * Anything else's `this` is a heap reference in the same process.
+     */
+    private fun actorThis(parameters: TmpL.Parameters): Map<ResolvedName, String> {
+        val thisName = parameters.thisName?.name
+        return if (currentClassIsActor && thisName != null) mapOf(thisName to "server") else emptyMap()
+    }
 
     /** A method, getter, setter or static: `this` first unless static. */
     private fun method(
