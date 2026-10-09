@@ -1,5 +1,6 @@
 package lang.temper.frontend.typestage
 
+import lang.temper.builtin.BuiltinFuns
 import lang.temper.builtin.isSetPropertyCall
 import lang.temper.common.ForwardOrBack
 import lang.temper.common.addTransitiveClosure
@@ -183,14 +184,11 @@ import lang.temper.value.wordSymbol
  * } else {
  *     h = ["foo"];
  * }
- * // ([]) and (["foo"]) are both initializers for `h`.
- * // It would be nice to be able to use the type information from `(["foo"])` to infer that
- * // type of ([]) is an empty list of strings.
- * // That inference does not fall out of this.
- *
- * // TODO: perhaps filter out initializers that need type context and exclude them
- * // so that we do not infer `List<Never> | List<String>` for `h`.
- * // Do not inter-twine context-free initializers with ones that do not.
+ * // ([]) and (["foo"]) are both assigned first to `h`, but only (["foo"]) counts as
+ * // an initializer. An empty list literal has no element type of its own, so when a
+ * // name has other initializers, the `[]` is left out of them and typed late, with
+ * // the type inferred from the others, `List<String>`, as its context.
+ * // See [contextTypedInitializers].
  *
  * let i = mayFail(x) orelse panic();
  * // The `orelse` traps the failure and turns it into panic.  This is a user-assertion
@@ -389,6 +387,13 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
 
     /** For each assigned name, the right-hand-sides assigned to it. */
     val initializers: Map<TemperName, List<Tree>>
+
+    /**
+     * Empty list literals assigned to a name that has other initializers.
+     * They are left out of [initializers], come late in [typeOrder], and take
+     * the name's inferred type as their context type.
+     */
+    val contextTypedInitializers: Set<Tree>
     val aliasedCalls: Map<TemperName, AliasedCall>
 
     /** Names of variables that have only one assignment site. */
@@ -551,7 +556,6 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
         }
         val typeOrder = mutableListOf<Tree>()
         walk(root, typeOrder)
-        typeOrder.addAll(endBucket)
 
         val nameToReceiver = buildSetMultimap {
             for ((source, receiverAndCallList) in nameToNameAssigned) {
@@ -704,6 +708,28 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
             findInitializers(root, emptyMap())
         }
 
+        // An empty list literal, `[]`, has no element type of its own.
+        // When a name has other initializers too, as in
+        //     let h; if (c) { h = [] } else { h = ["foo"] }
+        // or `let xs = items ?? []`, type the name from the others and
+        // then type the `[]` with the name's type as context, the way a
+        // `panic()` initializer is typed from its context.
+        val contextTypedInitializers = mutableSetOf<Tree>()
+        val initializersTypedFirst: Map<TemperName, List<Tree>> = initializers.mapValues { (_, rhs) ->
+            val (needContext, others) = rhs.partition { isEmptyListLiteral(it) }
+            // A `null` initializer only makes the type nullable, so it does not count.
+            val othersGiveAType = others.any { TNull.unpackOrNull(it.valueContained) != TNull.Null }
+            if (needContext.isNotEmpty() && othersGiveAType) {
+                contextTypedInitializers.addAll(needContext)
+                others
+            } else {
+                rhs.toList()
+            }
+        }
+        typeOrder.removeAll(contextTypedInitializers)
+        typeOrder.addAll(contextTypedInitializers)
+        typeOrder.addAll(endBucket)
+
         val aliasedCalls = mutableListOf<AliasedCall>()
         for (call in calls) {
             if (isAssignment(call)) { continue }
@@ -765,7 +791,8 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
             mayInferTypeForVariableFrom.mapValues { it.value.toSet() }
         this.nameToReceiver = nameToReceiver
         this.typeOrder = typeOrder.toList()
-        this.initializers = initializers.mapValues { it.value.toList() }
+        this.initializers = initializersTypedFirst
+        this.contextTypedInitializers = contextTypedInitializers.toSet()
         this.aliasedCalls = aliasedCalls.associateBy { it.alias }
         this.singlyAssigned = assignmentCounts.filter { it.value == 1 }.keys.toSet()
         this.declarations = declaredToDeclarations.mapNotNull { (name, decls) ->
@@ -887,3 +914,7 @@ private fun <USES_BEFORE_MAP : UsesBeforeMap?> mergeUsesBeforeAsBranchesJoin(
     }
     else -> a
 }
+
+/** `[]`: a call to the list literal builtin with no elements and no explicit type actual. */
+private fun isEmptyListLiteral(t: Tree): Boolean =
+    t is CallTree && t.size == 1 && t.child(0).functionContained == BuiltinFuns.listifyFn
