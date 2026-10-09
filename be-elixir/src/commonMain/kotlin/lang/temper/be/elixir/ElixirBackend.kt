@@ -11,22 +11,28 @@ import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.common.Either
 import lang.temper.common.MimeType
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
+import lang.temper.frontend.staging.isConfigModule
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.log.FilePath
 import lang.temper.log.FileRelatedCodeLocation
+import lang.temper.log.Position
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
 import lang.temper.name.DashedIdentifier
+import lang.temper.name.ExportedName
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.value.DeclTree
 import lang.temper.value.DependencyCategory
+import lang.temper.value.Tree
 
 /**
  * <!-- snippet: backend/elixir -->
@@ -315,7 +321,14 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             MetadataFileSpecification(
                 path = filePath(MIX_FILE),
                 mimeType = mimeType,
-                content = mixProject(root.joinToString("."), libraryApp(libraryName), prodDeps, testDeps, hasTests),
+                content = mixProject(
+                    root.joinToString("."),
+                    libraryApp(libraryName),
+                    prodDeps,
+                    testDeps,
+                    hasTests,
+                    hexDependencies(dependencies),
+                ),
             ),
             TranslatedFileSpecification(
                 path = filePath("lib", "temper_main$FILE_EXTENSION"),
@@ -351,7 +364,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * [body], the top-level statements, once per node.
      */
     private fun initFunction(
-        pos: lang.temper.log.Position,
+        pos: Position,
         module: List<String>,
         first: List<List<String>>,
         deps: List<lang.temper.name.DashedIdentifier>,
@@ -420,7 +433,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
 
     /** `TemperCore.Heap.entry/1`, which every exported function runs through, is a macro. */
     private fun requireHeap(
-        pos: lang.temper.log.Position,
+        pos: Position,
     ): Elixir.ModuleItem = Elixir.Require(pos, elixirModule(pos, "TemperCore", "Heap"))
 
     /**
@@ -548,7 +561,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * std/testing would do this itself, but it is a library of its own and
      * not in this translation, so `TemperCore.Test` is a port of it.
      */
-    private fun testRunner(pos: lang.temper.log.Position, root: List<String>, tests: List<String>): Elixir.FunDef? {
+    private fun testRunner(pos: Position, root: List<String>, tests: List<String>): Elixir.FunDef? {
         if (tests.isEmpty()) return null
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
         val main = elixirModule(pos, root)
@@ -631,6 +644,47 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             }
 
     /**
+     * The Hex packages this library's `config.temper.md` declares for its
+     * connected code. An entry that is not one is an error at the config's
+     * `elixir` export, so the build fails there instead of leaving the
+     * package out of `mix.exs` and failing in `_connected.ex` at run time.
+     */
+    private fun hexDependencies(libraries: List<lang.temper.name.DashedIdentifier>): List<HexDependency> {
+        val (found, problems) = ElixirLibraryConfig(libraryConfigurations.currentLibraryConfiguration).hexDependencies()
+        // Mix rejects two deps of one name, so a package named like a library's
+        // own app would fail `mix deps.get` with a message about the wrong thing
+        val apps = (listOf(libraryName) + libraries).map(::libraryApp).toSet() + CORE_APP
+        val clashes = found.filter { it.name in apps }.map {
+            "Elixir dependency \"${it.name} ${it.requirement}\": `${it.name}` is the Mix app of a Temper library"
+        }
+        // one message for all of them: the log keeps one error per position
+        if (problems.isNotEmpty() || clashes.isNotEmpty()) {
+            val message = (problems + clashes).joinToString("; ")
+            logSink.log(ElixirConfigMessage.BadConfig, configExportPos(), listOf(message))
+        }
+        return found.filter { it.name !in apps }
+    }
+
+    /** Where `config.temper.md` declares `export let elixir`, or where it starts. */
+    private fun configExportPos(): Position {
+        val config = readyModules.firstOrNull { it.isConfigModule }
+            ?: return Position(libraryConfigurations.currentLibraryConfiguration.libraryRoot, 0, 0)
+        val root = config.generatedCode ?: return Position(config.loc, 0, 0)
+        var found: Position? = null
+        fun walk(tree: Tree) {
+            if (found != null) return
+            val name = (tree as? DeclTree)?.parts?.name?.content
+            if ((name as? ExportedName)?.baseName?.nameText == ElixirConfigKeys.CONFIG) {
+                found = tree.pos
+                return
+            }
+            tree.children.forEach(::walk)
+        }
+        walk(root)
+        return found ?: root.pos
+    }
+
+    /**
      * A library's `_connected.ex` must define the module its `@connected` functions call. A module
      * name is the BEAM's only namespace, so each library owns its own; when every library defined
      * `TemperConnected`, the second one loaded replaced the first and its calls were undefined.
@@ -678,6 +732,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
 
         /** Where temper-core lands, relative to the backend's output root. */
         const val CORE_DIR = "temper-core"
+
+        /** temper-core's Mix app. */
+        const val CORE_APP = "temper_core"
 
         /**
          * The entry point `mix run` calls: init, drain the async queue, wait for
@@ -740,11 +797,14 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             dependencies: List<lang.temper.name.DashedIdentifier> = listOf(),
             testDependencies: List<lang.temper.name.DashedIdentifier> = listOf(),
             hasTests: Boolean = false,
+            hexDependencies: List<HexDependency> = listOf(),
         ): String {
             // each library's project sits beside the others, in a directory named for it
-            val deps = listOf("{:temper_core, path: \"../$CORE_DIR\"}") +
+            val deps = listOf("{:$CORE_APP, path: \"../$CORE_DIR\"}") +
                 dependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\"}" } +
-                testDependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\", only: :test}" }
+                testDependencies.map { "{:${libraryApp(it)}, path: \"../${it.text}\", only: :test}" } +
+                // the library's own, from Hex, for its connected code
+                hexDependencies.map { it.mixDep }
             // test/support/ holds the tests' own code, compiled for `mix test` only
             val paths = if (hasTests) ", elixirc_paths: elixirc_paths(Mix.env())" else ""
             val pathsFun = if (hasTests) {
@@ -827,6 +887,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 filePath("test", "temper_core_heap_test.exs"),
                 filePath("test", "temper_core_actor_test.exs"),
             )
+
+        override val configBindingsInjector: BindingsInjector = ElixirConfigInjector
 
         override fun make(setup: BackendSetup<ElixirBackend>) = ElixirBackend(setup)
     }
