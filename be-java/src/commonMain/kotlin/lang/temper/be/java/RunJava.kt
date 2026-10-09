@@ -147,6 +147,7 @@ internal fun runJavaBestEffort(
 
         when (bundled) {
             true -> {
+                removeTestResults(dirPath())
                 val result = doRunJava(dirPath()).let { withTestResult(dirPath(), it) ?: it }
                 listOf(ToolchainResult(result = result))
             }
@@ -188,6 +189,9 @@ internal fun runJavaBestEffort(
                         }
                         println("--- run test ---")
                     }
+                    // Reports left by an earlier run would be read as this run's results when
+                    // maven stops before surefire writes new ones, as it does when javac fails.
+                    libraryNames.forEach { removeTestResults(workingDir.resolveDir(it.text)) }
                     val result = doRunJava(workingDir, listOf("-pl", libs, "-am"))
                     if (VERBOSE) {
                         println("--- post test explanation ---")
@@ -277,6 +281,12 @@ private fun CliEnv.withTestResult(
     reports.isEmpty() && return null
     val combined = combineSurefireResults(reports.values)
     result.mapEffort { it.withAux(Aux.JunitXml, combined) }
+}
+
+/** Removes the surefire reports that [withTestResult] would read for [libraryDir]. */
+private fun CliEnv.removeTestResults(libraryDir: FilePath) {
+    val testResultsDir = libraryDir.resolve(sureFire.segments, true)
+    readGlob(testResultsDir, "", ".xml").keys.forEach { remove(it) }
 }
 
 private fun CliEnv.runAsLast(tool: CliTool, cmd: Command): RFailure<CliFailure> {
