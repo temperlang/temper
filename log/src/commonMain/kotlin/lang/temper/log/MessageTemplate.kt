@@ -232,6 +232,12 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     ReturnOutsideFn("Return outside function body", CompilationPhase.Interpreter),
+    ReturnFromLambda(
+        "`return` inside a lambda with a declared result type would leave the enclosing function, " +
+            "not the lambda. Make it a function with `fn` or `let`, or end a generator with `break` " +
+            "or by reaching its end",
+        CompilationPhase.Interpreter,
+    ),
     YieldingOutsideGeneratorFn("%s outside generator function body", CompilationPhase.Interpreter),
     ThisOutsideClassBody(
         "`this` may only appear inside a type definition",
