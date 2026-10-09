@@ -555,11 +555,15 @@ end
 | a generator | `TemperCore.Generator.adapt(step)`, a heap object |
 | `g.next()` | `{:value, v}` or `:done`. Anything else is a panic, so a lowering bug cannot pass for "not done" |
 | `new PromiseBuilder()` | `TemperCore.Promise.new()`. The builder and its promise are one heap object; the first settle wins |
-| `async { ... }` | queued on a FIFO run queue in the process dictionary |
-| `await p` | park the generator on `p`; settling `p` queues it again |
+| `async { ... }` | queued on the queue of blocks to start, in the process dictionary |
+| `await p` | park the generator on `p`; settling `p` queues it on the queue of woken steps |
 
-`__temper_main__/0` ends by draining that queue. It pops one generator, steps it
-once, and repeats. No step runs inside another, so a long chain of awaits
+`__temper_main__/0` ends by draining the two queues. It steps one woken
+generator at a time while there is one, and only then starts the next
+block, as js runs every microtask before the next task. So a block runs
+through its awaits of settled promises before the next block starts,
+which is what js, py and the interpreter print; one queue for both
+interleaved them. No step runs inside another, so a long chain of awaits
 is a loop and not a deeper stack. A million settled awaits drained in
 444 ms.
 

@@ -121,6 +121,22 @@ defmodule TemperCorePromiseTest do
     assert {:messages, [{:first, 1}, {:second, 1}, {:third, 1}]} = Process.info(self(), :messages)
   end
 
+  # One FIFO for both made a block that awaits settled promises take turns
+  # with every other block: "a0 b0 a1 b1 a2 a3", where js, py and the
+  # interpreter all print "a0 a1 a2 a3 b0 b1".
+  test "a block runs through its awaits of settled promises before the next block starts" do
+    me = self()
+    p = Promise.new()
+    Promise.complete(p, :empty)
+    await_then = fn label -> fn g -> send(me, {:step, label}); Promise.awake_upon(p, g); {:value, :empty} end end
+    last = fn label -> fn _ -> send(me, {:step, label}) && :done end end
+    Async.run(fn -> gen([await_then.("a0"), await_then.("a1"), await_then.("a2"), last.("a3")]) end)
+    Async.run(fn -> gen([await_then.("b0"), last.("b1")]) end)
+    Async.drain()
+    steps = for _ <- 1..6, do: (assert_receive {:step, s}; s)
+    assert steps == ~w(a0 a1 a2 a3 b0 b1)
+  end
+
   test "awaiting a settled promise goes through the queue, not the stack" do
     p = Promise.new()
     Promise.complete(p, 1)

@@ -244,22 +244,30 @@ end
 
 defmodule TemperCore.Async do
   @moduledoc """
-  The run queue, a FIFO of generators in the process dictionary. `async { }`
-  enqueues its generator rather than running it, as be-js's setTimeout does,
-  and settling a promise enqueues whatever waited on it. Nothing runs a
-  generator but `drain/0`, which a library's `__temper_main__/0` calls last; so no step ever
-  runs inside another, and a long chain of awaits is a loop, not a deepening
-  stack. A program awaiting a promise nothing will settle ends when the queue
-  is empty.
+  The run queues, two FIFOs of generators in the process dictionary, as
+  js has a task queue and a microtask queue. `async { }` puts its generator
+  on the first rather than running it, as be-js's setTimeout does. Settling
+  a promise, or awaiting one already settled, puts whatever waited on the
+  second, as a js promise reaction is a microtask. `drain_queue/0` takes
+  from the second while it has anything and only then starts the next
+  block, so a block runs through its awaits of settled promises before
+  the next block starts, as on js, py and the interpreter. Nothing runs a
+  generator but the drain, which a library's `__temper_main__/0` calls
+  last; so no step ever runs inside another, and a long chain of awaits
+  is a loop, not a deepening stack. A program awaiting a promise nothing
+  will settle ends when the queues are empty.
   """
   @key {__MODULE__, :queue}
+  @started {__MODULE__, :started}
 
+  @doc "`async { }`: the block's first step waits for every woken step before it."
   @spec run((-> TemperCore.Generator.t())) :: nil
   def run(factory) when is_function(factory, 0) do
-    enqueue(factory.())
+    TemperCore.Heap.put_root(@started, :queue.in(factory.(), Process.get(@started, :queue.new())))
     nil
   end
 
+  @doc "Queues a generator a promise woke."
   @spec enqueue(TemperCore.Generator.t()) :: nil
   def enqueue(gen) do
     TemperCore.Heap.put_root(@key, :queue.in(gen, Process.get(@key, :queue.new())))
@@ -292,11 +300,21 @@ defmodule TemperCore.Async do
   """
   @spec drain_queue() :: nil
   def drain_queue do
-    case :queue.out(Process.get(@key, :queue.new())) do
-      {{:value, gen}, rest} ->
-        Process.put(@key, rest)
+    case take(@key) || take(@started) do
+      nil ->
+        nil
+
+      gen ->
         TemperCore.Generator.next(gen)
         drain_queue()
+    end
+  end
+
+  defp take(key) do
+    case :queue.out(Process.get(key, :queue.new())) do
+      {{:value, gen}, rest} ->
+        Process.put(key, rest)
+        gen
 
       {:empty, _} ->
         nil
