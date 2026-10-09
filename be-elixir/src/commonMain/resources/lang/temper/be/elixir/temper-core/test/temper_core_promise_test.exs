@@ -364,4 +364,19 @@ defmodule TemperCorePromiseTest do
     # received already, not awaited: wait_idle has waited
     assert_received {:oracle_got, 5}
   end
+
+  # js runs a constructor's async block once the top level is done. An
+  # actor's ran only at the end of its next call's turn, and never for an
+  # actor nobody called again: `wait_idle` had nothing to wait for.
+  test "an actor constructor's async steps run as part of creating it" do
+    me = self()
+
+    Actor.start(__MODULE__, fn ->
+      this = Actor.init_self(__MODULE__, %{})
+      Async.run(fn -> gen([fn _ -> send(me, :constructor_async_ran) && :done end]) end)
+      this
+    end)
+
+    assert_received :constructor_async_ran
+  end
 end

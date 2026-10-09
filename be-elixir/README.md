@@ -1004,7 +1004,17 @@ The rules, most of them shown in that output:
 - **Await is a turn boundary.** An actor's turn ends when its call returns
   and the async steps that call started have run as far as they can. A
   block suspended at an `await` resumes in a later turn, so a field it read
-  before the `await` may have changed after it.
+  before the `await` may have changed after it. Creating an actor is a
+  turn too: its constructor's async steps run before `new` returns. They
+  used to wait for the end of the actor's next call, and never ran in an
+  actor nobody called again. Steps that run inside the call also run
+  before the caller's next statement, where js runs them once the top
+  level is done:
+
+  ```
+  js:      main done / constructor's async block ran
+  elixir:  constructor's async block ran / main done
+  ```
 - **The program waits for its actors.** An actor's async steps can run
   after the top level has finished: a turn of its own, for a settle that
   arrives later. On js and py they are on the one queue the program
@@ -1151,8 +1161,10 @@ Temper.
 
 ## 18. Differences from js and py
 
-Where js and py agree and this backend does not, it is a bug. There are
-no deliberate exceptions.
+Where js and py agree and this backend does not, it is a bug. The one
+deliberate exception is the order of an actor's async steps against its
+caller's code (section 16): they run in the actor's turn, during the
+call, not after the top level.
 
 Float64 `/` and `%` by zero, `0.0` or `-0.0`, bubble, whatever the
 dividend. That is what `builtins.md` says ("Float64 division by zero is a

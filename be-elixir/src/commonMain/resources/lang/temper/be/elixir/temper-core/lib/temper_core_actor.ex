@@ -412,6 +412,9 @@ defmodule TemperCore.Actor do
     try do
       TemperCore.Promise.arrive(shared)
       constructor.()
+      # the constructor's call is a turn like any other: the async steps
+      # it started run before it ends, not at the end of some later call
+      TemperCore.Async.drain_queue()
       {:ok, nil}
     catch
       kind, reason -> {:stop, {:temper_raise, kind, reason, __STACKTRACE__}}
