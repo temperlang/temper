@@ -1,6 +1,7 @@
 package lang.temper.be.py
 
 import lang.temper.be.py.PyIdentifierGrammar.scrubNonIdentifierParts
+import lang.temper.log.FilePathSegment
 import lang.temper.name.OutName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -98,6 +99,16 @@ class PyIdentifierTest {
                 val word = pattern.replace("_", replace)
                 assertEquals(pattern, scrubNonIdentifierParts(word), message = word)
             }
+        }
+    }
+
+    @Test
+    fun libraryNameIsItsPackageDirectory() {
+        // The name `top.py` imports must be the directory the package is written to.
+        val cases = listOf("hello-world" to "hello_world", "f64str" to "f64str", "radix-36" to "radix_36")
+        for ((libraryName, packageName) in cases) {
+            assertEquals(packageName, toModuleFileName(libraryName))
+            assertEquals(packageName, pyDirToLibraryName(FilePathSegment(libraryName)).text)
         }
     }
 }
