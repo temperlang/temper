@@ -31,6 +31,7 @@ import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RunTest {
@@ -105,6 +106,26 @@ class RunTest {
 
     @Test
     fun runJsBackend() = runRunTest("run", JsBackend.Factory.backendId)
+
+    @Test
+    fun runJsBackendUnknownLibrary() {
+        val path = resourcePath("/run/input")
+        // Clean up in case someone ran a build in the source tree.
+        removeDirRecursive(path.resolve(TEMPER_OUT_NAME))
+        runWithTemporaryDirCopyOf("RunJsBackendUnknownLibrary", path) { tempDir ->
+            val result = doRun(
+                RunTask(
+                    backends = setOf(JsBackend.Factory.backendId),
+                    request = RunLibraryRequest(
+                        DashedIdentifier.from("no-such-library")!!,
+                        taskName = "RunJsBackendUnknownLibrary",
+                    ),
+                ),
+                workRoot = tempDir,
+            )
+            assertFalse(result.ok)
+        }
+    }
 
     @Ignore("Reexamine how import strategy and run tasks affect running only cherry-picked modules")
     @Test
