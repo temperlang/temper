@@ -54,6 +54,13 @@ export class PromiseBuilder {
         this.reject = reject;
       }
     );
+    // A Temper program may break a promise before any block awaits it,
+    // for example from top-level code while the awaiting block waits for
+    // its `setTimeout` in `runAsync`. Node treats a rejection that has no
+    // handler when the microtask queue drains as fatal. This handler marks
+    // the promise as handled; an `await` attached later still sees the
+    // rejection through its own `then`.
+    this.promise.catch(() => {});
   }
 
   /** @param {R} value */
