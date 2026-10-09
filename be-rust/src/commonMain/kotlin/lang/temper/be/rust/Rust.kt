@@ -3297,8 +3297,12 @@ object Rust {
         pos: Position,
         var value: Number,
     ) : BaseTree(pos), Literal {
-        override val operatorDefinition: RustOperatorDefinition?
-            get() = null
+        override val operatorDefinition
+            get() =
+                when (val v = value) {
+                    is Double -> if (v < 0.0 || 1.0 / v < 0.0) RustOperatorDefinition.Prefix else null
+                    else -> if (v.toLong() < 0L) RustOperatorDefinition.Prefix else null
+                }
         override fun renderTo(
             tokenSink: TokenSink,
         ) {
@@ -3310,7 +3314,7 @@ object Rust {
             get() =
                 when (value) {
                     is Double -> "f64"
-                    // is Long -> "i32" // TODO Ever needed?
+                    is Long -> "i64"
                     else -> ""
                 }
         override fun deepCopy(): NumberLiteral {
