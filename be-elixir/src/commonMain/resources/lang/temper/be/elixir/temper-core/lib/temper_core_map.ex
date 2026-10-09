@@ -22,6 +22,13 @@ defmodule TemperCore.Map do
   its keys, in the order they arrived, beside an Elixir map. A `Map` is an
   immutable struct of those two; a `MapBuilder` is a heap object holding
   them, so aliases share writes. Every read takes either.
+
+  A builder keeps its keys newest first, so `set` of a new key is a prepend
+  and not an append that copies every key before it. `remove` only drops
+  the value and counts the key as stale; a stale key, or the older place of
+  a key added again, is skipped when the keys are read in order, and once
+  half the list is stale it is rebuilt. Each write is O(1) amortized, and
+  reading the keys in order is O(n), as it is for a `Map`.
   """
   alias TemperCore.{Heap, Ref, Pair}
 
@@ -55,26 +62,49 @@ defmodule TemperCore.Map do
   end
 
   @spec builder() :: builder()
-  def builder, do: Heap.new(@class, %{keys: [], map: %{}})
+  def builder, do: new_builder([], %{})
+
+  # A builder's fields: `newest` is its keys, last added first, and `stale`
+  # is how many of them are no longer keys of `map` or were added again
+  # later. So length(newest) == map_size(map) + stale.
+  defp new_builder(keys, map), do: Heap.new(@class, %{newest: Enum.reverse(keys), stale: 0, map: map})
 
   defp parts(%__MODULE__{keys: keys, map: map}), do: {keys, map}
-  defp parts(%Ref{} = mb), do: {Heap.get(mb, :keys), Heap.get(mb, :map)}
+  defp parts(%Ref{} = mb), do: {ordered_keys(mb), Heap.get(mb, :map)}
 
-  defp store(mb, keys, map) do
-    Heap.put(mb, :keys, keys)
-    Heap.put(mb, :map, map)
-    nil
+  # what reads only the values needs, without putting the keys in order
+  defp map_of(%__MODULE__{map: map}), do: map
+  defp map_of(%Ref{} = mb), do: Heap.get(mb, :map)
+
+  defp ordered_keys(mb) do
+    newest = Heap.get(mb, :newest)
+
+    if Heap.get(mb, :stale) == 0,
+      do: Enum.reverse(newest),
+      else: live_keys(newest, Heap.get(mb, :map))
+  end
+
+  # Oldest first: each key that is still in `map`, at its latest place.
+  defp live_keys(newest, map) do
+    {keys, _seen} =
+      Enum.reduce(newest, {[], MapSet.new()}, fn k, {keys, seen} ->
+        if Map.has_key?(map, k) and not MapSet.member?(seen, k),
+          do: {[k | keys], MapSet.put(seen, k)},
+          else: {keys, seen}
+      end)
+
+    keys
   end
 
   # -- Mapped ------------------------------------------------------------------
 
   @spec length(mapped(term(), term())) :: non_neg_integer()
-  def length(x), do: x |> parts() |> elem(1) |> map_size()
+  def length(x), do: x |> map_of() |> map_size()
 
   @doc "The value for `key`, or a bubble when there is none."
   @spec get(mapped(key, value), key) :: value when key: term(), value: term()
   def get(x, key) do
-    case Map.fetch(elem(parts(x), 1), key) do
+    case Map.fetch(map_of(x), key) do
       {:ok, v} -> v
       :error -> raise TemperCore.Bubble, "no key #{inspect(key)}"
     end
@@ -82,9 +112,9 @@ defmodule TemperCore.Map do
 
   @spec get_or(mapped(key, value), key, fallback) :: value | fallback
         when key: term(), value: term(), fallback: term()
-  def get_or(x, key, fallback), do: Map.get(elem(parts(x), 1), key, fallback)
+  def get_or(x, key, fallback), do: Map.get(map_of(x), key, fallback)
   @spec has(mapped(key, term()), key) :: boolean() when key: term()
-  def has(x, key), do: Map.has_key?(elem(parts(x), 1), key)
+  def has(x, key), do: Map.has_key?(map_of(x), key)
   # keys, values and entries come back as Temper Lists (TemperCore.Vec)
   @spec keys(mapped(key, term())) :: TemperCore.Vec.t(key) when key: term()
   def keys(x), do: TemperCore.Vec.new(elem(parts(x), 0))
@@ -132,26 +162,37 @@ defmodule TemperCore.Map do
   @spec to_builder(mapped(term(), term())) :: builder()
   def to_builder(x) do
     {keys, map} = parts(x)
-    Heap.new(@class, %{keys: keys, map: map})
+    new_builder(keys, map)
   end
 
   # -- MapBuilder --------------------------------------------------------------
 
   @spec set(builder(), term(), term()) :: nil
   def set(mb, key, value) do
-    {keys, map} = parts(mb)
-    keys = if Map.has_key?(map, key), do: keys, else: keys ++ [key]
-    store(mb, keys, Map.put(map, key, value))
+    map = Heap.get(mb, :map)
+    unless Map.has_key?(map, key), do: Heap.put(mb, :newest, [key | Heap.get(mb, :newest)])
+    Heap.put(mb, :map, Map.put(map, key, value))
+    nil
   end
 
   @doc "Removes `key` and returns its value; bubbles when there is no such key."
   @spec remove(builder(), term()) :: term()
   def remove(mb, key) do
-    {keys, map} = parts(mb)
+    map = Heap.get(mb, :map)
 
     case Map.fetch(map, key) do
       {:ok, v} ->
-        store(mb, List.delete(keys, key), Map.delete(map, key))
+        map = Map.delete(map, key)
+        stale = Heap.get(mb, :stale) + 1
+        Heap.put(mb, :map, map)
+
+        if stale > map_size(map) do
+          Heap.put(mb, :newest, Enum.reverse(live_keys(Heap.get(mb, :newest), map)))
+          Heap.put(mb, :stale, 0)
+        else
+          Heap.put(mb, :stale, stale)
+        end
+
         v
 
       :error ->
@@ -160,7 +201,12 @@ defmodule TemperCore.Map do
   end
 
   @spec clear(builder()) :: nil
-  def clear(mb), do: store(mb, [], %{})
+  def clear(mb) do
+    Heap.put(mb, :newest, [])
+    Heap.put(mb, :stale, 0)
+    Heap.put(mb, :map, %{})
+    nil
+  end
 end
 
 defmodule TemperCore.Deque do

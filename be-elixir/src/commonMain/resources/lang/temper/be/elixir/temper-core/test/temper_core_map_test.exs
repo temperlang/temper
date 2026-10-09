@@ -39,6 +39,44 @@ defmodule TemperCoreMapTest do
     assert M.length(b) == 2
   end
 
+  test "a key removed and added again goes last, and stale keys never show" do
+    b = M.builder()
+    for k <- ~w(a b c d), do: M.set(b, k, k)
+    M.remove(b, "b")
+    M.set(b, "b", "again")
+    M.remove(b, "c")
+    M.set(b, "a", "kept its place")
+    assert Enum.to_list(M.keys(b)) == ["a", "d", "b"]
+    assert Enum.to_list(M.values(b)) == ["kept its place", "d", "again"]
+    assert M.length(b) == 3
+    # enough removes to rebuild the key list, then the same answers
+    for k <- ~w(a d b), do: M.remove(b, k)
+    assert Enum.to_list(M.keys(b)) == []
+    M.set(b, "z", 1)
+    M.set(b, "a", 2)
+    assert Enum.to_list(M.keys(b)) == ["z", "a"]
+    assert Enum.to_list(M.keys(M.to_builder(M.to_map(b)))) == ["z", "a"]
+    M.clear(b)
+    M.set(b, "q", 0)
+    assert Enum.to_list(M.keys(b)) == ["q"]
+  end
+
+  # `set` appended each new key to a list, copying every key before it, so
+  # filling a builder was quadratic: 100,000 sets took 21 s.
+  test "filling and emptying a builder is linear" do
+    b = M.builder()
+
+    {micros, _} =
+      :timer.tc(fn ->
+        for i <- 1..200_000, do: M.set(b, i, i)
+        for i <- 1..200_000//2, do: M.remove(b, i)
+      end)
+
+    assert M.length(b) == 100_000
+    assert Enum.take(Enum.to_list(M.keys(b)), 3) == [2, 4, 6]
+    assert micros < 5_000_000, "200,000 sets and 100,000 removes took #{div(micros, 1000)} ms"
+  end
+
   test "deques are first in, first out, and panic when empty" do
     d = TemperCore.Deque.new()
     TemperCore.Deque.add(d, 1)
