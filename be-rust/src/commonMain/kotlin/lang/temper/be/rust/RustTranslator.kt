@@ -303,12 +303,14 @@ class RustTranslator(
         }
         // See which are referenced in other items. Like closure capture but top levels.
         items@ for (topLevel in module.topLevels) {
-            when (topLevel) {
-                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration -> {}
+            val refs = when (topLevel) {
+                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration -> topLevel.referencedNames()
 //                is TmpL.Test -> TODO()
-                else -> continue@items
+                // A local function, such as one in a top-level `if` or an `async` block in a top-level loop, becomes
+                // an `fn` item in a closure group, and an `fn` item cannot read the module init's locals.
+                else -> topLevel.namesReferencedFromLocalFunctions()
             }
-            refs@ for (ref in topLevel.referencedNames()) {
+            refs@ for (ref in refs) {
                 val decl = decls[ref] ?: continue@refs
                 decl.importedName != null && continue@refs
                 decl.topper && continue@refs
@@ -3686,3 +3688,12 @@ internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
 
 internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)
+
+private fun TmpL.Tree.namesReferencedFromLocalFunctions(): Sequence<ResolvedName> = sequence {
+    when (val tree = this@namesReferencedFromLocalFunctions) {
+        is TmpL.LocalFunctionDeclaration -> yieldAll(tree.referencedNames())
+        else -> for (kid in tree.children) {
+            yieldAll(kid.namesReferencedFromLocalFunctions())
+        }
+    }
+}
