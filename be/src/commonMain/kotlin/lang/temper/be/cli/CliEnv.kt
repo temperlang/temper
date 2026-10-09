@@ -66,8 +66,11 @@ abstract class CliEnv protected constructor(
     /** Used during initialization; afterward prefer the get operator. */
     abstract fun which(tool: ToolSpecifics): RResult<CliTool, CliFailure>
 
-    /** Get the cli tool within an initialized environment. */
-    open operator fun get(tool: ToolSpecifics): CliTool = which(tool).result!!
+    /**
+     * Get the cli tool within an initialized environment.
+     * Throws the failure from [which], such as [CommandNotFound], when the tool is missing.
+     */
+    open operator fun get(tool: ToolSpecifics): CliTool = which(tool).orThrow()
 
     /** Copy a local file into the environment; creates directories as needed. */
     abstract fun writeLocalFile(sourceFile: NativePath, destination: FilePath)
