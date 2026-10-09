@@ -118,7 +118,9 @@ internal fun runPyBestEffort(
             ),
         )
 
-        val pyLibraryPath = pyLibraryName?.let { pyDir.resolveDir(pyLibraryName.text) }
+        // The library's directory is named for the Temper library, like its dependencies' below,
+        // not for its Python module: `hello-world`, not `hello_world`.
+        val pyLibraryPath = (request as? RunLibraryRequest)?.let { pyDir.resolveDir(it.libraryName.text) }
 
         val depPaths = buildSet {
             val core = pyDir.resolveDir(DashedIdentifier.temperCoreLibraryIdentifier.text)
