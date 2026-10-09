@@ -157,6 +157,7 @@ val temperBoxedEqRev = temperCore.qualifyKnownSafe("boxedEqRev")
 val temperBubble = javaLangRuntimeException
 val temperBubbleMethod = temperCore.qualifyKnownSafe("bubble")
 val temperCast = temperCore.qualifyKnownSafe("cast")
+val temperListUpcast = temperCore.qualifyKnownSafe("listUpcast")
 val temperCastToNonNull = temperCore.qualifyKnownSafe("castToNonNull")
 val temperConsoleClass = temperCore.qualifyKnownSafe("Console")
 val temperGetConsoleMethod = temperCore.qualifyKnownSafe("getConsole")

@@ -265,6 +265,8 @@ internal fun Rust.Expr.maybeWrap(
     return (mapParam ?: this).let { result ->
         when {
             wanted is FnDescription && !givenNone && !translator.isClosure(this) -> result.wrapArc()
+            wantedDefinition == givenDefinition && wantedDefinition == WellKnownTypes.listTypeDefinition ->
+                result.convertListElements(given = given, wanted = wanted, translator = translator)
             wantedDefinition == givenDefinition -> result
             wanted.isInterface() && !wantStringIndexOption -> when {
                 wantedDefinition == WellKnownTypes.anyValueTypeDefinition -> result.methodCall("as_any_value")
@@ -310,6 +312,41 @@ internal fun Rust.Expr.maybeWrap(
         }
     }
 }
+
+/**
+ * `List` is covariant in Temper, so a `List<Square>` can stand where a
+ * `List<Shape>` is wanted, but a Rust `Arc<Vec<Square>>` is not an
+ * `Arc<Vec<Shape>>`, so copy the elements through the same per-value
+ * conversion [maybeWrap] would apply to one of them, as in `temper_core::listed::map(&squares, &|it| Shape::new(it))`.
+ * Leaves the list alone when its elements need no conversion.
+ */
+private fun Rust.Expr.convertListElements(
+    given: Description,
+    wanted: Description,
+    translator: RustTranslator,
+): Rust.Expr {
+    // A list literal passed as an argument is translated to an array whose
+    // elements already have the wanted type. See `translateActual`.
+    if (this is Rust.Array) { return this }
+    val givenElement = (given.type as? DefinedNonNullType)?.bindings?.getOrNull(0) ?: return this
+    val wantedElement = (wanted.type as? DefinedNonNullType)?.bindings?.getOrNull(0) ?: return this
+    if (givenElement == wantedElement) { return this }
+    val param = translator.unusedTemporaryName(pos, "it")
+    val element = param.maybeWrap(given = givenElement, wanted = wantedElement, translator = translator)
+    if (element === param) { return this }
+    val closure = Rust.Closure(
+        pos,
+        params = listOf(Rust.FunctionParam(pos, param.deepCopy(), null)),
+        value = element,
+    )
+    return Rust.Call(
+        pos,
+        callee = LISTED_MAP_NAME.toId(pos),
+        args = listOf(this.ref(), closure.ref()),
+    )
+}
+
+private const val LISTED_MAP_NAME = "temper_core::listed::map"
 
 internal fun Rust.Expr.maybeWrap(given: Type2, wanted: Description?, translator: RustTranslator) =
     maybeWrap(given = given.described(), wanted = wanted, translator = translator)
