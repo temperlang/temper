@@ -362,9 +362,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                 val configType = listOf("temper_core", "Config").toPath(pos)
                 val crateId = "crate".toKeyId(pos)
                 val crateConfig = crateId.deepCopy().extendWith("config")
-                val crateScope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate)
-                val pubCrate = Rust.VisibilityPub(pos, scope = crateScope)
-                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate))
+                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate(pos)))
                 // Library init function.
                 Rust.Function(
                     pos,

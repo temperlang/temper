@@ -1926,11 +1926,10 @@ class RustBackendTest {
                 |            Ok(())
                 |    }).clone()
                 |}
-                |pub enum ExportedSealedEnum {
+                |pub (crate) enum ExportedSealedEnum {
                 |    InternalSub(InternalSub), ExportedSub(ExportedSub)
                 |}
                 |pub trait ExportedSealedTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
-                |    fn as_enum(& self) -> ExportedSealedEnum;
                 |    fn clone_boxed(& self) -> ExportedSealed;
                 |}
                 |#[derive(Clone)]
@@ -1941,9 +1940,6 @@ class RustBackendTest {
                 |    }
                 |}
                 |impl ExportedSealedTrait for ExportedSealed {
-                |    fn as_enum(& self) -> ExportedSealedEnum {
-                |        ExportedSealedTrait::as_enum( & ( * self.0))
-                |    }
                 |    fn clone_boxed(& self) -> ExportedSealed {
                 |        ExportedSealedTrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1965,9 +1961,6 @@ class RustBackendTest {
                 |    }
                 |}
                 |impl ExportedSealedTrait for InternalSub {
-                |    fn as_enum(& self) -> ExportedSealedEnum {
-                |        ExportedSealedEnum::InternalSub(self.clone())
-                |    }
                 |    fn clone_boxed(& self) -> ExportedSealed {
                 |        ExportedSealed::new(self.clone())
                 |    }
@@ -1983,9 +1976,6 @@ class RustBackendTest {
                 |    }
                 |}
                 |impl ExportedSealedTrait for ExportedSub {
-                |    fn as_enum(& self) -> ExportedSealedEnum {
-                |        ExportedSealedEnum::ExportedSub(self.clone())
-                |    }
                 |    fn clone_boxed(& self) -> ExportedSealed {
                 |        ExportedSealed::new(self.clone())
                 |    }
