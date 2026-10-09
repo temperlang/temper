@@ -133,6 +133,31 @@ class JavaTranslator(
         private val moduleTestInit: MutableList<J.BlockLevelStatement> = mutableListOf()
         private var processingTestCode = false
 
+        /**
+         * How many local classes, of the kind [block] declares to hold lifted locals, enclose the
+         * code being translated. Inside one, a bare `this` is the local class, so `this` from the
+         * Temper source has to name its class.
+         */
+        private var localClassDepth = 0
+
+        private inline fun <T> inLocalClass(f: () -> T): T {
+            localClassDepth += 1
+            try {
+                return f()
+            } finally {
+                localClassDepth -= 1
+            }
+        }
+
+        private fun thisExpr(x: TmpL.This): J.Expression = if (localClassDepth == 0) {
+            J.ThisExpr(x.pos)
+        } else {
+            J.QualifiedThisExpr(
+                x.pos,
+                type = names.classTypeName(x.passType.definition).toQualIdent(x.pos),
+            )
+        }
+
         /** Might even stay null for snippets. */
         private var module: TmpL.Module? = null
         private var adjuster: BackendAdjuster? = null
@@ -1437,7 +1462,7 @@ class JavaTranslator(
                                     stmt.pos,
                                     type = varType(stmt),
                                     variable = localName.outName.toIdentifier(varId.pos),
-                                    initializer = stmt.init?.let(::expr),
+                                    initializer = stmt.init?.let { inLocalClass { expr(it) } },
                                 ),
                             )
                         } else {
@@ -1570,7 +1595,7 @@ class JavaTranslator(
                 result = javaResultType,
                 name = funcName,
                 parameters = paramsPreamble.parameters,
-                body = body,
+                body = inLocalClass { body },
             )
 
             /** express a local function declaration that's lifted into a scope field that's initially null */
@@ -1794,7 +1819,7 @@ class JavaTranslator(
             is TmpL.InfixOperation -> infixOp(x)
             is TmpL.PrefixOperation -> prefixOp(x)
             is TmpL.Reference -> reference(x)
-            is TmpL.This -> J.ThisExpr(x.pos)
+            is TmpL.This -> thisExpr(x)
             is TmpL.ValueReference -> value(x.pos, x.value)
         }
 
