@@ -4,7 +4,8 @@
 # with its defaults already applied. The module is the library's own (this
 # suite's library is `work`), so two libraries' connected code can share an app.
 defmodule Temper.Work.Connected do
-  def sum(i, j, bonus), do: i + j + bonus
+  # sumOf3 is unexported but @keep, so it is public under its Temper name
+  def sum(i, j, bonus), do: Temper.Work.sumOf3(i, j, bonus)
 
   # Hidden is a translated class, so its public property is read through its
   # getter, the same way translated code reads it

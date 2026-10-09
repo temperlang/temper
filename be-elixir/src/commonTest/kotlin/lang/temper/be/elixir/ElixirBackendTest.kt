@@ -538,6 +538,27 @@ class ElixirBackendTest {
     }
 
     /**
+     * `@keep` is how a library keeps an unexported helper for its connected
+     * code, which nothing in Temper calls. The frontend keeps it in the tree,
+     * so it must be generated, under its plain name, and public: connected
+     * Elixir code lives in another module, and a remote call cannot reach a
+     * `defp`. It was dropped as unreached, the same as an unkept helper.
+     */
+    @Test
+    fun keptFunctionsAreGeneratedAndCallable() {
+        val out = generatedText(
+            """
+            |@keep let sumOf3(a: Int, b: Int, c: Int): Int { a + b + c }
+            |let unkept(x: Int): Int { x + 1 }
+            |export let api(x: Int): Int { x }
+            """.trimMargin(),
+        )
+        assertContains(out, "@doc false\\n  @spec sumOf3(")
+        assertContains(out, "  def sumOf3(a, b, c)")
+        assertFalse("unkept" in out, out)
+    }
+
+    /**
      * A doc comment becomes `@doc`, or `@moduledoc` for a class, so IEx's `h`
      * and ExDoc show it. A private function's would be discarded with a
      * warning, so it gets none.

@@ -352,7 +352,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * constant only they read, looks unused instead and would ship.
      *
      * Production's roots are what Elixir can reach: exported functions and
-     * values, classes, and top-level statements. The tests' roots are the
+     * values, classes, top-level statements, and what `@keep` keeps for
+     * connected code, which is public too. The tests' roots are the
      * tests and what the frontend marked as theirs. What production does not
      * reach goes to the test side if tests reach it, and is not generated at
      * all if nothing does. A value's initializer comes with it, so leaving out
@@ -373,6 +374,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     private fun placement(finished: TmpL.ModuleSet, imports: Map<ResolvedName, ResolvedName>): Placement {
         val declarations = mutableMapOf<ResolvedName, TmpL.TopLevel>()
         val productionRoots = mutableListOf<TmpL.Tree>()
+        val kept = mutableSetOf<ResolvedName>()
         val testRoots = mutableListOf<TmpL.Tree>()
         for (module in finished.modules) {
             for (topLevel in module.topLevels) {
@@ -387,6 +389,10 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 }
                 if (name == null || name is lang.temper.name.ExportedName) {
                     productionRoots.add(topLevel)
+                } else if (topLevel.isKept()) {
+                    // `@keep`: connected code calls it, which nothing here can see
+                    productionRoots.add(topLevel)
+                    kept.add(name)
                 } else {
                     declarations[name] = topLevel
                 }
@@ -409,7 +415,7 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val byTests = reached(testRoots)
         val testOnly = notProduction intersect byTests
         // what a class module, or the test side, names directly must stay callable from there
-        val outside = mutableSetOf<ResolvedName>()
+        val outside = kept.toMutableSet()
         val outsideRoots = finished.modules.flatMap { it.topLevels }.filter {
             it is TmpL.TypeDeclaration || it.dependencyCategory() == DependencyCategory.Test
         } + testOnly.mapNotNull { declarations[it] }
@@ -425,6 +431,9 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         val private = declarations.filterValues { it is TmpL.ModuleFunctionDeclaration }.keys - notProduction - outside
         return Placement(testOnly = testOnly, unused = notProduction - byTests, private = private)
     }
+
+    private fun TmpL.TopLevel.isKept(): Boolean =
+        (this as? TmpL.Declaration)?.metadata?.any { it.key.symbol == lang.temper.value.keepSymbol } == true
 
     /** Whether [tree] names the module [prefix] or one under it, or a value it keeps (`:"Temper.Std.x"`). */
     private fun refersTo(tree: Elixir.Tree, prefix: String): Boolean = when (tree) {
