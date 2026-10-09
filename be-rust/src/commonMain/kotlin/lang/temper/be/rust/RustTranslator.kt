@@ -449,7 +449,7 @@ class RustTranslator(
                                         add(Rust.StructExprField(pos, selfish.deepCopy(), null))
                                         for (param in optionals) {
                                             param is Rust.FunctionParam
-                                            add(Rust.StructExprField(pos, param.toId(), expr = "None".toId(pos)))
+                                            add(Rust.StructExprField(pos, param.toId(), expr = NONE_NAME.toId(pos)))
                                         }
                                     },
                                 ),
@@ -670,8 +670,8 @@ class RustTranslator(
                         // Init both our own crate and temper_std (in case our crate doesn't) before any tests.
                         // Init is idempotent, so multi-init is ok.
                         // We currently don't actually need to init temper_std, but might in the future.
-                        Rust.ExprStatement(pos, Rust.Call(pos, crateInit, listOf("None".toId(pos)))),
-                        Rust.ExprStatement(pos, Rust.Call(pos, stdInit, listOf("None".toId(pos)))),
+                        Rust.ExprStatement(pos, Rust.Call(pos, crateInit, listOf(NONE_NAME.toId(pos)))),
+                        Rust.ExprStatement(pos, Rust.Call(pos, stdInit, listOf(NONE_NAME.toId(pos)))),
                         Rust.LetStatement(pos, pattern = testObjectId, type = null, value = newTest),
                     ),
                     statements = test.body.statements.cleanOutVoidVar(),
@@ -1131,7 +1131,7 @@ class RustTranslator(
             else -> null
         }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
         WellKnownTypes.stringIndexTypeDefinition -> when (wanted.definition()) {
-            WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
+            WellKnownTypes.stringIndexOptionTypeDefinition -> SOME_NAME.toId(pos)
             else -> null
         }
         WellKnownTypes.stringIndexOptionTypeDefinition -> when (wanted.definition()) {
@@ -1406,7 +1406,7 @@ class RustTranslator(
                     pos,
                     id = usedId,
                     type = decl.type!!.option().wrapRwLockType(),
-                    value = "None".toId(pos).wrapLock(),
+                    value = NONE_NAME.toId(pos).wrapLock(),
                 ).also { moduleItems.add(it.toItem()) }
                 usedId.methodCall("read").methodCall("unwrap").maybeClone(decl.typeFrom!!).methodCall("unwrap")
             }
@@ -1587,7 +1587,7 @@ class RustTranslator(
                     nullableIntoWanted -> Rust.PathSegments(
                         pos,
                         segments = listOf(
-                            "None".toId(pos),
+                            NONE_NAME.toId(pos),
                             Rust.GenericArgs(pos, args = listOf(translateType(wanted!!.type!!, pos))),
                         ),
                     )
@@ -1596,7 +1596,7 @@ class RustTranslator(
                         // TODO Why is there sometimes no wanted type coming through here?
                         "()"
                     } else {
-                        "None"
+                        NONE_NAME
                     }.toId(pos)
                 }
             }
@@ -1730,7 +1730,7 @@ class RustTranslator(
                 functionContext.returnType.bubbly -> null
                 else -> "panic!".toId(pos).call()
             }
-        } ?: Rust.Call(pos, callee = "Err".toId(pos), args = listOf(makeError(pos)))
+        } ?: Rust.Call(pos, callee = ERR_NAME.toId(pos), args = listOf(makeError(pos)))
     }
 
     private fun translateCallAwakeUpon(call: TmpL.CallExpression): Rust.Expr {
@@ -3421,7 +3421,7 @@ class RustTranslator(
             TListBuilder -> TODO("$expression")
             TMap -> TODO("$expression")
             TMapBuilder -> TODO("$expression")
-            TNull -> "None".toId(pos)
+            TNull -> NONE_NAME.toId(pos)
             TProblem -> TODO("$expression")
             TStageRange -> TODO("$expression")
             TSymbol -> TODO("$expression")
@@ -3666,7 +3666,13 @@ internal const val MAP_BUILDER_NAME = "temper_core::MapBuilder"
 internal const val MAP_KEY_NAME = "temper_core::MapKey"
 internal const val MAPPED_NAME = "temper_core::Mapped"
 internal const val ONCE_LOCK_NAME = "std::sync::OnceLock"
-internal const val OPTION_NAME = "Option"
+internal const val BOX_NAME = "std::boxed::Box"
+internal const val CLONE_NAME = "std::clone::Clone"
+internal const val ERR_NAME = "std::result::Result::Err"
+internal const val NONE_NAME = "std::option::Option::None"
+internal const val OK_NAME = "std::result::Result::Ok"
+internal const val OPTION_NAME = "std::option::Option"
+internal const val SOME_NAME = "std::option::Option::Some"
 internal const val PARTIAL_EQ_NAME = "std::cmp::PartialEq"
 internal const val PHANTOM_DATA_NAME = "std::marker::PhantomData"
 internal const val RESULT_NAME = "temper_core::Result"
@@ -3685,4 +3691,4 @@ internal const val TRAIT_NAME_SUFFIX = "Trait"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
 
-internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)
+internal val commonTypeBounds = listOf(CLONE_NAME, SEND_NAME, SYNC_NAME, STATIC_LIFETIME)

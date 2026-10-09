@@ -75,11 +75,11 @@ class RustBackendTest {
             |            pub use r#mod::*;
             |            mod support;
             |            pub (crate) use support::*;
-            |            pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
+            |            pub fn init(config: std::option::Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
             |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
             |                bar::init() ? ;
             |                r#mod::init() ? ;
-            |                Ok(crate::config().runner().clone())
+            |                std::result::Result::Ok(crate::config().runner().clone())
             |            }
             |
             |            ```
@@ -100,11 +100,11 @@ class RustBackendTest {
             |                        let stringifyValue__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(crate::bar::stringify.clone());
             |                        println!("{}", "Foo");
             |                        let stringifyValueHere__0: std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> = std::sync::Arc::new(stringify_here.clone());
-            |                        Ok(())
+            |                        std::result::Result::Ok(())
             |                }).clone()
             |            }
             |            pub (crate) fn stringify_here(i__0: i32) -> std::sync::Arc<String> {
-            |                return temper_core::int_to_string(i__0, None);
+            |                return temper_core::int_to_string(i__0, std::option::Option::None);
             |            }
             |            pub fn hi(nums__0: impl temper_core::ToListed<i32>) -> std::sync::Arc<String> {
             |                let nums__0 = nums__0.to_listed();
@@ -135,7 +135,7 @@ class RustBackendTest {
             |                          STRINGIFY_VALUE.set(std::sync::Arc::new(stringify.clone())).unwrap_or_else(| _ | panic!());
             |                          println!("{}", "Baz");
             |                          println!("{}", "Boo");
-            |                          Ok(())
+            |                          std::result::Result::Ok(())
             |                  }).clone()
             |              }
             |              static STRINGIFY_VALUE: std::sync::OnceLock<std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync>> = std::sync::OnceLock::new();
@@ -169,7 +169,7 @@ class RustBackendTest {
             |                  }
             |              }
             |              pub fn stringify(i__1: i32) -> std::sync::Arc<String> {
-            |                  return temper_core::int_to_string(i__1, None);
+            |                  return temper_core::int_to_string(i__1, std::option::Option::None);
             |              }
             |              pub fn make_talk(talker__1: Talker) {
             |                  talker__1.talk();
@@ -240,10 +240,10 @@ class RustBackendTest {
             |              pub (crate) fn init() -> temper_core::Result<()> {
             |                  static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                  INIT_ONCE.get_or_init(| |{
-            |                          Ok(())
+            |                          std::result::Result::Ok(())
             |                  }).clone()
             |              }
-            |              pub fn sum(i__0: i32, j__0: i32, bonus__0: Option<i32>) -> i32 {
+            |              pub fn sum(i__0: i32, j__0: i32, bonus__0: std::option::Option<i32>) -> i32 {
             |                  let bonus__1: i32;
             |                  if bonus__0.is_none() {
             |                      bonus__1 = 0;
@@ -253,9 +253,9 @@ class RustBackendTest {
             |                  _connected::sum(i__0, j__0, bonus__1)
             |              }
             |              pub fn inc(i__1: i32) -> i32 {
-            |                  return sum(i__1, 1, None);
+            |                  return sum(i__1, 1, std::option::Option::None);
             |              }
-            |              pub fn length(s__0: Option<impl temper_core::ToArcString>) -> i32 {
+            |              pub fn length(s__0: std::option::Option<impl temper_core::ToArcString>) -> i32 {
             |## It might be nice to stringify all semi-string before calling connected functions.
             |                  _connected::length(s__0)
             |              }
@@ -300,7 +300,7 @@ class RustBackendTest {
                 |            P.set(b__0.promise()).unwrap_or_else(| _ | panic!());
                 |            crate::run_async(std::sync::Arc::new(r#fn.clone()).clone());
                 |            b__0.complete(A::new("Hi"));
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |static P: std::sync::OnceLock<temper_core::Promise<A>> = std::sync::OnceLock::new();
@@ -329,15 +329,15 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(A, []);
                 |pub (crate) fn r#fn() -> temper_core::SafeGenerator<()> {
                 |    let mut caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
-                |    let mut awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut awaited___0: std::sync::Arc<std::sync::RwLock<std::option::Option<temper_core::Promise<A>>>> = std::sync::Arc::new(std::sync::RwLock::new(std::option::Option::None));
                 |    let mut t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>> = std::sync::Arc::new(std::sync::RwLock::new(std::sync::Arc::new("".to_string())));
-                |    let mut t___1: std::sync::Arc<std::sync::RwLock<Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+                |    let mut t___1: std::sync::Arc<std::sync::RwLock<std::option::Option<A>>> = std::sync::Arc::new(std::sync::RwLock::new(std::option::Option::None));
                 |    #[derive(Clone)]
                 |    struct ClosureGroup___0 {
-                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, awaited___0: std::sync::Arc<std::sync::RwLock<Option<temper_core::Promise<A>>>>, t___1: std::sync::Arc<std::sync::RwLock<Option<A>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
+                |        caseIndex___0: std::sync::Arc<std::sync::RwLock<i32>>, awaited___0: std::sync::Arc<std::sync::RwLock<std::option::Option<temper_core::Promise<A>>>>, t___1: std::sync::Arc<std::sync::RwLock<std::option::Option<A>>>, t___0: std::sync::Arc<std::sync::RwLock<std::sync::Arc<String>>>
                 |    }
                 |    impl ClosureGroup___0 {
-                |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> Option<()> {
+                |        fn convertedCoroutine___0(& self, generator___0: temper_core::SafeGenerator<()>) -> std::option::Option<()> {
                 |            'loop___0: loop {
                 |                let caseIndexLocal___0: i32 = temper_core::read_locked( & self.caseIndex___0);
                 |                {
@@ -351,7 +351,7 @@ class RustBackendTest {
                 |                    },
                 |                    1 => {
                 |                        {
-                |                            * self.awaited___0.write().unwrap() = Some(p().clone());
+                |                            * self.awaited___0.write().unwrap() = std::option::Option::Some(p().clone());
                 |                        }
                 |                        {
                 |                            * self.caseIndex___0.write().unwrap() = 2;
@@ -359,7 +359,7 @@ class RustBackendTest {
                 |                        temper_core::read_locked( & self.awaited___0).clone().unwrap().on_ready(std::sync::Arc::new(move | |{
                 |                                    generator___0.clone().next();
                 |                        }));
-                |                        return Some(().clone());
+                |                        return std::option::Option::Some(().clone());
                 |                    },
                 |                    2 => {
                 |                        'ok___0: {
@@ -369,7 +369,7 @@ class RustBackendTest {
                 |                                    break 'orElse___0;
                 |                                }
                 |                                {
-                |                                    * self.t___1.write().unwrap() = Some(result___0.unwrap());
+                |                                    * self.t___1.write().unwrap() = std::option::Option::Some(result___0.unwrap());
                 |                                }
                 |                                {
                 |                                    * self.caseIndex___0.write().unwrap() = 4;
@@ -399,10 +399,10 @@ class RustBackendTest {
                 |                    },
                 |                    5 => {
                 |                        println!("{}", temper_core::read_locked( & self.t___0).clone());
-                |                        return None;
+                |                        return std::option::Option::None;
                 |                    },
                 |                    _ => {
-                |                        return None;
+                |                        return std::option::Option::None;
                 |                    }
                 |                }
                 |            }
@@ -437,10 +437,10 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
-                |pub fn something(mut i__0: Option<i32>) -> temper_core::Result<i32> {
+                |pub fn something(mut i__0: std::option::Option<i32>) -> temper_core::Result<i32> {
                 |    let return__0: i32;
                 |    let t___0: bool;
                 |    if ! i__0.is_none() {
@@ -451,7 +451,7 @@ class RustBackendTest {
                 |## That whole if block could've been `t___0 = i__0.is_some();`
                 |    if t___0 {
                 |        if i__0.is_none() {
-                |            return Err(temper_core::Error::new());
+                |            return std::result::Result::Err(temper_core::Error::new());
                 |        }
                 |        let return___0: temper_core::Result<i32> = temper_core::int_rem(5, i__0.unwrap());
                 |        if ! return___0.is_ok() {
@@ -461,13 +461,13 @@ class RustBackendTest {
                 |    } else {
                 |        return__0 = 1;
                 |    }
-                |    return Ok(return__0);
+                |    return std::result::Result::Ok(return__0);
                 |}
                 |pub (crate) fn blah(i__1: i32) -> temper_core::Result<i32> {
                 |    let mut return__1: i32;
                 |    'ok___0: {
                 |        'orelse___0: {
-                |            let return___1: temper_core::Result<i32> = something(Some(i__1));
+                |            let return___1: temper_core::Result<i32> = something(std::option::Option::Some(i__1));
                 |            if ! return___1.is_ok() {
                 |                break 'orelse___0;
                 |            }
@@ -476,11 +476,83 @@ class RustBackendTest {
                 |        }
                 |        return__1 = 0;
                 |    }
-                |    return Ok(return__1);
+                |    return std::result::Result::Ok(return__1);
                 |}
             """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
         )
     }
+
+    @Test
+    fun classesNamedLikeThePrelude() = assertGenerateWanted(
+        // A user type takes the place of a prelude name in its module, and the any-value macro expands there too,
+        // so std names we emit are written out in full.
+        temper = """
+            |export class Box(public n: Int) {}
+            |export class Ok(public n: Int) {}
+            |export let pick(b: Box?): Box throws Bubble {
+            |  if (b == null) { bubble(); }
+            |  b as Box
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |struct BoxStruct {
+            |    n: i32
+            |}
+            |#[derive(Clone)]
+            |pub struct Box(std::sync::Arc<BoxStruct>);
+            |impl Box {
+            |    pub fn new(n__0: i32) -> Box {
+            |        let n;
+            |        n = n__0;
+            |        let selfish = Box(std::sync::Arc::new(BoxStruct {
+            |                    n
+            |        }));
+            |        return selfish;
+            |    }
+            |    pub fn n(& self) -> i32 {
+            |        return self.0.n;
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Box, []);
+            |struct OkStruct {
+            |    n: i32
+            |}
+            |#[derive(Clone)]
+            |pub struct Ok(std::sync::Arc<OkStruct>);
+            |impl Ok {
+            |    pub fn new(n__1: i32) -> Ok {
+            |        let n;
+            |        n = n__1;
+            |        let selfish = Ok(std::sync::Arc::new(OkStruct {
+            |                    n
+            |        }));
+            |        return selfish;
+            |    }
+            |    pub fn n(& self) -> i32 {
+            |        return self.0.n;
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Ok, []);
+            |pub fn pick(b__0: std::option::Option<Box>) -> temper_core::Result<Box> {
+            |    let return__0: Box;
+            |    if b__0.is_none() {
+            |        return std::result::Result::Err(temper_core::Error::new());
+            |    }
+            |    if b__0.is_none() {
+            |        return std::result::Result::Err(temper_core::Error::new());
+            |    } else {
+            |        return__0 = b__0.clone().unwrap();
+            |    }
+            |    return std::result::Result::Ok(return__0.clone().clone());
+            |}
+        """.trimMargin(),
+    )
 
     @Test
     fun bubblyConstructor() = assertGenerateWanted(
@@ -500,10 +572,10 @@ class RustBackendTest {
             |    INIT_ONCE.get_or_init(| |{
             |            let a___0: temper_core::Result<C> = C::new(false);
             |            if ! a___0.is_ok() {
-            |                return Err(temper_core::Error::new());
+            |                return std::result::Result::Err(temper_core::Error::new());
             |            }
             |            let a__0: C = a___0.unwrap();
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct CStruct {
@@ -515,13 +587,13 @@ class RustBackendTest {
             |    pub fn new(x__0: bool) -> temper_core::Result<C> {
             |        let x;
             |        if x__0 {
-            |            return Err(temper_core::Error::new());
+            |            return std::result::Result::Err(temper_core::Error::new());
             |        }
             |        x = x__0;
             |        let selfish = C(std::sync::Arc::new(CStruct {
             |                    x
             |        }));
-            |        return Ok(selfish);
+            |        return std::result::Result::Ok(selfish);
             |    }
             |    pub fn x(& self) -> bool {
             |        return self.0.x;
@@ -548,7 +620,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub fn hi(n__0: i32) {
@@ -602,7 +674,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn repeat(times__0: i32, act__0: std::sync::Arc<dyn Fn (i32) + std::marker::Send + std::marker::Sync>) {
@@ -616,8 +688,8 @@ class RustBackendTest {
             |mod tests {
             |    #[test]
             |    fn main__0() -> temper_core::Result<()> {
-            |        crate::init(None);
-            |        temper_std::init(None);
+            |        crate::init(std::option::Option::None);
+            |        temper_std::init(std::option::Option::None);
             |        let test___0 = temper_std::testing::Test::new();
             |        let mut sum__0: std::sync::Arc<std::sync::RwLock<i32>> = std::sync::Arc::new(std::sync::RwLock::new(0));
             |        #[derive(Clone)]
@@ -678,13 +750,13 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn things(n__0: i32) -> temper_core::Result<temper_core::List<i32>> {
             |    let return__0: temper_core::List<i32>;
             |    return__0 = std::sync::Arc::new(vec![n__0]);
-            |    return Ok(return__0.clone().clone());
+            |    return std::result::Result::Ok(return__0.clone().clone());
             |}
             |pub fn other(n__1: i32) -> temper_core::Listed<i32> {
             |    let mut return__1: temper_core::Listed<i32>;
@@ -725,7 +797,7 @@ class RustBackendTest {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
             |            enclose(1);
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn call_it(i__0: i32, f__0: std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>) -> i32 {
@@ -769,7 +841,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn f(a__0: f64, b__0: f64) -> bool {
@@ -797,7 +869,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct HubStruct {
@@ -807,7 +879,7 @@ class RustBackendTest {
             |pub (crate) struct Hub(std::sync::Arc<HubStruct>);
             |impl Hub {
             |    pub fn on_action(& self, handler__0: std::sync::Arc<dyn Fn () + std::marker::Send + std::marker::Sync>) {
-            |        temper_core::listed::add( & self.0.handlers, handler__0.clone(), None);
+            |        temper_core::listed::add( & self.0.handlers, handler__0.clone(), std::option::Option::None);
             |    }
             |    pub fn new() -> Hub {
             |        let handlers;
@@ -840,7 +912,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn passes(f__0: std::sync::Arc<dyn Fn () -> temper_core::Result<()> + std::marker::Send + std::marker::Sync>) -> bool {
@@ -878,15 +950,15 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |#[cfg(test)]
             |mod tests {
             |    #[test]
             |    fn sure__0() -> temper_core::Result<()> {
-            |        crate::init(None);
-            |        temper_std::init(None);
+            |        crate::init(std::option::Option::None);
+            |        temper_std::init(std::option::Option::None);
             |        let test___0 = temper_std::testing::Test::new();
             |        let nums__0: temper_core::List<i32> = std::sync::Arc::new(vec![0, 1]);
             |        let this__0: temper_core::List<i32> = nums__0.clone();
@@ -944,7 +1016,7 @@ class RustBackendTest {
             |            let still__0: temper_core::List<temper_core::AnyValue> = std::sync::Arc::new(vec![1, 2]);
             |            let yet__0: temper_core::List<std::sync::Arc<String>> = std::sync::Arc::new(vec![std::sync::Arc::new("one".to_string()), std::sync::Arc::new("two".to_string())]);
             |            let yetAgain__0: temper_core::List<temper_core::MapKey<std::sync::Arc<String>>> = yet__0.clone();
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
         """.trimMargin(),
@@ -969,23 +1041,23 @@ class RustBackendTest {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
                 |            let thing__0: Apple = Apple::new(Banana::new());
-                |            let maybe__0: Option<Apple> = Some(thing__0.clone());
+                |            let maybe__0: std::option::Option<Apple> = std::option::Option::Some(thing__0.clone());
                 |            let nope___0: temper_core::Result<Carrot> = temper_core::cast::<Carrot>(thing__0.clone()).ok_or_else(| | temper_core::Error::new());
                 |            if ! nope___0.is_ok() {
-                |                return Err(temper_core::Error::new());
+                |                return std::result::Result::Err(temper_core::Error::new());
                 |            }
                 |            let nope__0: Carrot = nope___0.unwrap();
                 |            let alsoNope__0: Carrot;
                 |            if maybe__0.is_none() {
-                |                return Err(temper_core::Error::new());
+                |                return std::result::Result::Err(temper_core::Error::new());
                 |            } else {
                 |                let alsoNope___0: temper_core::Result<Carrot> = maybe__0.clone().and_then(| x | temper_core::cast::<Carrot>(x)).ok_or_else(| | temper_core::Error::new());
                 |                if ! alsoNope___0.is_ok() {
-                |                    return Err(temper_core::Error::new());
+                |                    return std::result::Result::Err(temper_core::Error::new());
                 |                }
                 |                alsoNope__0 = alsoNope___0.unwrap();
                 |            }
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub enum AppleEnum {
@@ -1073,7 +1145,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |struct BlahStruct {}
@@ -1138,7 +1210,7 @@ class RustBackendTest {
                 |            let mut zero__0: i32 = 0;
                 |            zero__0 = zero__0;
                 |            println!("fib(10)={}", fib(zero__0.wrapping_add(10)));
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub fn fib(mut i__0: i32) -> i32 {
@@ -1195,11 +1267,11 @@ class RustBackendTest {
             |            pub mod bob;
             |            mod support;
             |            pub (crate) use support::*;
-            |            pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
+            |            pub fn init(config: std::option::Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
             |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
             |                bar::init() ? ;
             |                bob::bill::beth::init() ? ;
-            |                Ok(crate::config().runner().clone())
+            |                std::result::Result::Ok(crate::config().runner().clone())
             |            }
             |
             |            ```
@@ -1219,7 +1291,7 @@ class RustBackendTest {
             |                  INIT_ONCE.get_or_init(| |{
             |                          println!("{}", "Baz");
             |                          println!("{}", "Boo");
-            |                          Ok(())
+            |                          std::result::Result::Ok(())
             |                  }).clone()
             |              }
             |
@@ -1255,7 +1327,7 @@ class RustBackendTest {
             |                      static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |                      INIT_ONCE.get_or_init(| |{
             |                              println!("{}", "Barry");
-            |                              Ok(())
+            |                              std::result::Result::Ok(())
             |                      }).clone()
             |                  }
             |
@@ -1303,7 +1375,7 @@ class RustBackendTest {
                 |            let c__0: C = C::new("Hello", "World");
                 |            println!("{}, {}!", c__0.x(), c__0.y());
                 |            c__0.echo("Hello World, again!");
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |struct CStruct {
@@ -1417,7 +1489,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub (crate) trait ATrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
@@ -1468,20 +1540,20 @@ class RustBackendTest {
                 |        & ( * self.0)
                 |    }
                 |}
-                |pub (crate) trait BTrait<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |pub (crate) trait BTrait<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> B<T>;
                 |    fn whatever(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("blah".to_string());
                 |    }
                 |}
                 |#[derive(Clone)]
-                |pub (crate) struct B<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BTrait<T>>);
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> B<T> {
+                |pub (crate) struct B<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BTrait<T>>);
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> B<T> {
                 |    pub fn new(selfish: impl BTrait<T> + 'static) -> B<T> {
                 |        B(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for B<T> {
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for B<T> {
                 |    fn clone_boxed(& self) -> B<T> {
                 |        BTrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1489,7 +1561,7 @@ class RustBackendTest {
                 |        BTrait::whatever( & ( * self.0))
                 |    }
                 |}
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for B<T> {
                 |    fn clone_boxed(& self) -> A {
                 |        ATrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1513,18 +1585,18 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(B<T> where T: ATrait);
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for B<T> {
                 |    type Target = dyn BTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
                 |    }
                 |}
-                |struct CStruct<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |struct CStruct<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    prop: std::sync::Arc<String>, thing: std::sync::Arc<String>, phantom_T: std::marker::PhantomData<T>
                 |}
                 |#[derive(Clone)]
-                |pub (crate) struct C<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<std::sync::RwLock<CStruct<T>>>);
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
+                |pub (crate) struct C<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<std::sync::RwLock<CStruct<T>>>);
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> C<T> {
                 |    pub fn greeting(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Ha!".to_string());
                 |    }
@@ -1558,12 +1630,12 @@ class RustBackendTest {
                 |        self.0.write().unwrap().thing = newThing__0.clone();
                 |    }
                 |}
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for C<T> {
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> BTrait<T> for C<T> {
                 |    fn clone_boxed(& self) -> B<T> {
                 |        B::new(self.clone())
                 |    }
                 |}
-                |impl<T: ATrait + Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for C<T> {
+                |impl<T: ATrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for C<T> {
                 |    fn clone_boxed(& self) -> A {
                 |        A::new(self.clone())
                 |    }
@@ -1587,7 +1659,7 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait!(C<T>, [B<T>, A] where T: ATrait);
-                |pub (crate) trait DTrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
+                |pub (crate) trait DTrait<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + ATrait {
                 |    fn clone_boxed(& self) -> D<T>;
                 |    fn prop(& self) -> std::sync::Arc<String> {
                 |        return std::sync::Arc::new("Hello!".to_string());
@@ -1600,13 +1672,13 @@ class RustBackendTest {
                 |    }
                 |}
                 |#[derive(Clone)]
-                |pub (crate) struct D<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn DTrait<T>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> D<T> {
+                |pub (crate) struct D<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn DTrait<T>>);
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> D<T> {
                 |    pub fn new(selfish: impl DTrait<T> + 'static) -> D<T> {
                 |        D(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for D<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for D<T> {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        DTrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1626,7 +1698,7 @@ class RustBackendTest {
                 |        DTrait::thing( & ( * self.0))
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for D<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for D<T> {
                 |    fn clone_boxed(& self) -> A {
                 |        ATrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1650,28 +1722,28 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(D<T>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for D<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for D<T> {
                 |    type Target = dyn DTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
                 |    }
                 |}
-                |pub (crate) trait ETrait<T: Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + DTrait<T> {
+                |pub (crate) trait ETrait<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + DTrait<T> {
                 |    fn clone_boxed(& self) -> E<T>;
                 |}
                 |#[derive(Clone)]
-                |pub (crate) struct E<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn ETrait<T>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> E<T> {
+                |pub (crate) struct E<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn ETrait<T>>);
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> E<T> {
                 |    pub fn new(selfish: impl ETrait<T> + 'static) -> E<T> {
                 |        E(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ETrait<T> for E<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> ETrait<T> for E<T> {
                 |    fn clone_boxed(& self) -> E<T> {
                 |        ETrait::clone_boxed( & ( * self.0))
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for E<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> DTrait<T> for E<T> {
                 |    fn clone_boxed(& self) -> D<T> {
                 |        DTrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1691,7 +1763,7 @@ class RustBackendTest {
                 |        DTrait::thing( & ( * self.0))
                 |    }
                 |}
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for E<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> ATrait for E<T> {
                 |    fn clone_boxed(& self) -> A {
                 |        ATrait::clone_boxed( & ( * self.0))
                 |    }
@@ -1715,7 +1787,7 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(E<T>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for E<T> {
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for E<T> {
                 |    type Target = dyn ETrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
@@ -1799,7 +1871,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub trait ITrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
@@ -1824,21 +1896,21 @@ class RustBackendTest {
                 |        & ( * self.0)
                 |    }
                 |}
-                |pub enum HiEnum<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |pub enum HiEnum<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    Lo(Lo<T>)
                 |}
-                |pub trait HiTrait<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |pub trait HiTrait<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
                 |    fn as_enum(& self) -> HiEnum<T>;
                 |    fn clone_boxed(& self) -> Hi<T>;
                 |}
                 |#[derive(Clone)]
-                |pub struct Hi<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
-                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
+                |pub struct Hi<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HiTrait<T>>);
+                |impl<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T> {
                 |    pub fn new(selfish: impl HiTrait<T> + 'static) -> Hi<T> {
                 |        Hi(std::sync::Arc::new(selfish))
                 |    }
                 |}
-                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Hi<T> {
+                |impl<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Hi<T> {
                 |    fn as_enum(& self) -> HiEnum<T> {
                 |        HiTrait::as_enum( & ( * self.0))
                 |    }
@@ -1847,18 +1919,18 @@ class RustBackendTest {
                 |    }
                 |}
                 |temper_core::impl_any_value_trait_for_interface!(Hi<T> where T: ITrait);
-                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
+                |impl<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Hi<T> {
                 |    type Target = dyn HiTrait<T>;
                 |    fn deref(& self) -> & Self::Target {
                 |        & ( * self.0)
                 |    }
                 |}
-                |struct LoStruct<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |struct LoStruct<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    phantom_T: std::marker::PhantomData<T>
                 |}
                 |#[derive(Clone)]
-                |pub struct Lo<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
-                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
+                |pub struct Lo<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<LoStruct<T>>);
+                |impl<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Lo<T> {
                 |    pub fn new() -> Lo<T> {
                 |        let selfish = Lo(std::sync::Arc::new(LoStruct {
                 |                    phantom_T: std::marker::PhantomData
@@ -1866,7 +1938,7 @@ class RustBackendTest {
                 |        return selfish;
                 |    }
                 |}
-                |impl<T: ITrait + Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
+                |impl<T: ITrait + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HiTrait<T> for Lo<T> {
                 |    fn as_enum(& self) -> HiEnum<T> {
                 |        HiEnum::Lo(self.clone())
                 |    }
@@ -1921,15 +1993,15 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
-                |struct HaStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |struct HaStruct<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
                 |    i: i32, j: i32, phantom_T: std::marker::PhantomData<T>
                 |}
                 |#[derive(Clone)]
-                |pub struct Ha<T: Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
+                |pub struct Ha<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HaStruct<T>>);
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Ha<T> {
                 |    pub fn new(i__0: i32, j__0: i32) -> Ha<T> {
                 |        let i;
                 |        let j;
@@ -1954,7 +2026,7 @@ class RustBackendTest {
                 |        pub i: i32, pub j: i32
                 |    }
                 |    impl HaBuilder {
-                |        pub fn build<T: Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> Ha<T> {
+                |        pub fn build<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(self) -> Ha<T> {
                 |            Ha::new(self.i, self.j)
                 |        }
                 |    }
@@ -1979,16 +2051,16 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
-                |struct HiStruct<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |    t: Option<T>, u: U, i: i32, phantom_T: std::marker::PhantomData<T>, phantom_U: std::marker::PhantomData<U>
+                |struct HiStruct<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |    t: std::option::Option<T>, u: U, i: i32, phantom_T: std::marker::PhantomData<T>, phantom_U: std::marker::PhantomData<U>
                 |}
                 |#[derive(Clone)]
-                |pub struct Hi<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HiStruct<T, U>>);
-                |impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T, U> {
-                |    pub fn new(t__0: Option<T>, u__0: U, i__0: Option<i32>) -> Hi<T, U> {
+                |pub struct Hi<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<HiStruct<T, U>>);
+                |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Hi<T, U> {
+                |    pub fn new(t__0: std::option::Option<T>, u__0: U, i__0: std::option::Option<i32>) -> Hi<T, U> {
                 |        let t;
                 |        let u;
                 |        let i;
@@ -2006,7 +2078,7 @@ class RustBackendTest {
                 |        }));
                 |        return selfish;
                 |    }
-                |    pub fn t(& self) -> Option<T> {
+                |    pub fn t(& self) -> std::option::Option<T> {
                 |        return self.0.t.clone();
                 |    }
                 |    pub fn i(& self) -> i32 {
@@ -2016,28 +2088,28 @@ class RustBackendTest {
                 |temper_core::impl_any_value_trait!(Hi<T, U>, [] where U: std::cmp::Eq + std::hash::Hash);
                 |pub mod builders {
                 |    #[derive(Clone)]
-                |    pub struct HiBuilder<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |        pub t: Option<T>, pub u: U
+                |    pub struct HiBuilder<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        pub t: std::option::Option<T>, pub u: U
                 |    }
                 |    #[derive(Clone)]
-                |    pub struct HiOptions<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> {
-                |        selfish: HiBuilder<T, U>, i: Option<i32>
+                |    pub struct HiOptions<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> {
+                |        selfish: HiBuilder<T, U>, i: std::option::Option<i32>
                 |    }
-                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
+                |    impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HiOptions<T, U> {
                 |        pub fn new(selfish: HiBuilder<T, U>) -> Self {
                 |            Self {
-                |                selfish, i: None
+                |                selfish, i: std::option::Option::None
                 |            }
                 |        }
                 |        pub fn i(mut self, i: i32) -> Self {
-                |            self.i = Some(i);
+                |            self.i = std::option::Option::Some(i);
                 |            self
                 |        }
                 |        pub fn build(self) -> Hi<T, U> {
                 |            Hi::new(self.selfish.t, self.selfish.u, self.i)
                 |        }
                 |    }
-                |    impl<T: Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
+                |    impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, U: std::cmp::Eq + std::hash::Hash + std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HiBuilder<T, U> {
                 |        pub fn build(self) -> Hi<T, U> {
                 |            self.options().build()
                 |        }
@@ -2065,7 +2137,7 @@ class RustBackendTest {
                     |pub (crate) fn init() -> temper_core::Result<()> {
                     |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                     |    INIT_ONCE.get_or_init(| |{
-                    |            Ok(())
+                    |            std::result::Result::Ok(())
                     |    }).clone()
                     |}
                     |pub fn say_hi_to(name__0: impl temper_core::ToArcString) {
@@ -2085,7 +2157,7 @@ class RustBackendTest {
                     |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                     |    INIT_ONCE.get_or_init(| |{
                     |            crate::exporter::say_hi_to("World");
-                    |            Ok(())
+                    |            std::result::Result::Ok(())
                     |    }).clone()
                     |}
                 """.trimMargin(),
@@ -2107,7 +2179,7 @@ class RustBackendTest {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
             |            f([2, 3]);
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn f(vals__0: impl temper_core::ToList<i32>) {
@@ -2147,7 +2219,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn a(n__0: i32, nums__0: impl temper_core::ToList<i32>) {
@@ -2199,7 +2271,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub fn part_one(i__0: i32) -> i32 {
@@ -2252,12 +2324,12 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            A.set(None).unwrap_or_else(| _ | panic!());
-                |            Ok(())
+                |            A.set(std::option::Option::None).unwrap_or_else(| _ | panic!());
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
-                |static A: std::sync::OnceLock<Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>>> = std::sync::OnceLock::new();
-                |pub fn a() -> Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>> {
+                |static A: std::sync::OnceLock<std::option::Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>>> = std::sync::OnceLock::new();
+                |pub fn a() -> std::option::Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>> {
                 |    ( * A.get().unwrap()).clone()
                 |}
             """.trimMargin(),
@@ -2274,7 +2346,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct Vec2Struct {
@@ -2283,7 +2355,7 @@ class RustBackendTest {
             |#[derive(Clone)]
             |pub struct Vec2(std::sync::Arc<Vec2Struct>);
             |impl Vec2 {
-            |    pub fn new(x__0: Option<f64>, y__0: Option<f64>) -> Vec2 {
+            |    pub fn new(x__0: std::option::Option<f64>, y__0: std::option::Option<f64>) -> Vec2 {
             |        let x;
             |        let y;
             |        let x__1: f64;
@@ -2318,20 +2390,20 @@ class RustBackendTest {
             |    pub struct Vec2Builder {}
             |    #[derive(Clone)]
             |    pub struct Vec2Options {
-            |        selfish: Vec2Builder, x: Option<f64>, y: Option<f64>
+            |        selfish: Vec2Builder, x: std::option::Option<f64>, y: std::option::Option<f64>
             |    }
             |    impl Vec2Options {
             |        pub fn new(selfish: Vec2Builder) -> Self {
             |            Self {
-            |                selfish, x: None, y: None
+            |                selfish, x: std::option::Option::None, y: std::option::Option::None
             |            }
             |        }
             |        pub fn x(mut self, x: f64) -> Self {
-            |            self.x = Some(x);
+            |            self.x = std::option::Option::Some(x);
             |            self
             |        }
             |        pub fn y(mut self, y: f64) -> Self {
-            |            self.y = Some(y);
+            |            self.y = std::option::Option::Some(y);
             |            self
             |        }
             |        pub fn build(self) -> Vec2 {
@@ -2364,11 +2436,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            f(None, None);
-            |            Ok(())
+            |            f(std::option::Option::None, std::option::Option::None);
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
-            |pub (crate) fn f(a__0: Option<i32>, b__0: Option<i32>) {
+            |pub (crate) fn f(a__0: std::option::Option<i32>, b__0: std::option::Option<i32>) {
             |    let a__1: i32;
             |    if a__0.is_none() {
             |        a__1 = 1;
@@ -2402,17 +2474,17 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            let emptyFoo__0: Foo = Foo::new(None);
-            |            Ok(())
+            |            let emptyFoo__0: Foo = Foo::new(std::option::Option::None);
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct FooStruct {
-            |    x: Option<Foo>
+            |    x: std::option::Option<Foo>
             |}
             |#[derive(Clone)]
             |pub (crate) struct Foo(std::sync::Arc<FooStruct>);
             |impl Foo {
-            |    pub fn new(x__0: Option<Foo>) -> Foo {
+            |    pub fn new(x__0: std::option::Option<Foo>) -> Foo {
             |        let x;
             |        x = x__0.clone();
             |        let selfish = Foo(std::sync::Arc::new(FooStruct {
@@ -2420,7 +2492,7 @@ class RustBackendTest {
             |        }));
             |        return selfish;
             |    }
-            |    pub fn x(& self) -> Option<Foo> {
+            |    pub fn x(& self) -> std::option::Option<Foo> {
             |        return self.0.x.clone();
             |    }
             |}
@@ -2437,7 +2509,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn a(b__0: impl temper_core::ToArcString, c__0: impl temper_core::ToArcString) ->(std::sync::Arc<String>, std::sync::Arc<String>) {
@@ -2465,7 +2537,7 @@ class RustBackendTest {
             |            SOMETHING__HERE.set(std::sync::Arc::new("there".to_string())).unwrap_or_else(| _ | panic!());
             |            SOMETHING__HI.set(5).unwrap_or_else(| _ | panic!());
             |            println!("{}", Something::here());
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct SomethingStruct {}
@@ -2503,11 +2575,11 @@ class RustBackendTest {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
             |            let nope__0: () = ();
-            |            something(None);
-            |            Ok(())
+            |            something(std::option::Option::None);
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
-            |pub fn something(maybe__0: Option<usize>) {
+            |pub fn something(maybe__0: std::option::Option<usize>) {
             |    let t___0: bool = maybe__0.is_some();
             |    println!("{}", t___0);
             |}
@@ -2528,7 +2600,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub trait HiTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
@@ -2610,10 +2682,10 @@ class RustBackendTest {
             |    INIT_ONCE.get_or_init(| |{
             |            let j___0: temper_core::Result<i32> = prepare(1.5f64);
             |            if ! j___0.is_ok() {
-            |                return Err(temper_core::Error::new());
+            |                return std::result::Result::Err(temper_core::Error::new());
             |            }
             |            J.set(j___0.unwrap()).unwrap_or_else(| _ | panic!());
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |static J: std::sync::OnceLock<i32> = std::sync::OnceLock::new();
@@ -2628,7 +2700,7 @@ class RustBackendTest {
             |        return return___0;
             |    }
             |    return__0 = return___0.unwrap();
-            |    return Ok(return__0);
+            |    return std::result::Result::Ok(return__0);
             |}
             |pub fn inc_awkwardly(i__0: i32) -> i32 {
             |    return i__0.wrapping_add(j());
@@ -2651,19 +2723,19 @@ class RustBackendTest {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
             |            {
-            |                * A.write().unwrap() = Some(1);
+            |                * A.write().unwrap() = std::option::Option::Some(1);
             |            }
             |            hi();
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
-            |static A: std::sync::RwLock<Option<i32>> = std::sync::RwLock::new(None);
+            |static A: std::sync::RwLock<std::option::Option<i32>> = std::sync::RwLock::new(std::option::Option::None);
             |pub (crate) fn a() -> i32 {
             |    A.read().unwrap().unwrap()
             |}
             |pub fn hi() -> i32 {
             |    {
-            |        * A.write().unwrap() = Some(a().wrapping_add(1));
+            |        * A.write().unwrap() = std::option::Option::Some(a().wrapping_add(1));
             |    }
             |    return a();
             |}
@@ -2703,7 +2775,7 @@ class RustBackendTest {
                 |            let things__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]);
                 |            let more__0: temper_core::List<A> = std::sync::Arc::new(vec![B::new()]).unwrap();
                 |            println!("{}", a2__0.adjust(std::sync::Arc::new("hi".to_string())));
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub trait ATrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
@@ -2785,7 +2857,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub trait ATrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
@@ -2894,7 +2966,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub (crate) fn decode_hex_unsigned(sourceText__0: impl temper_core::ToArcString, start__0: usize, limit__0: usize) -> i32 {
@@ -2903,7 +2975,7 @@ class RustBackendTest {
             |    'fn__0: {
             |        let mut n__0: i32 = 0;
             |        let mut i__0: usize = start__0;
-            |        'loop___0: while (Some(i__0).cmp( & Some(limit__0)) as i32) < 0 {
+            |        'loop___0: while (std::option::Option::Some(i__0).cmp( & std::option::Option::Some(limit__0)) as i32) < 0 {
             |            let cp__0: i32 = temper_core::string::get( & sourceText__0, i__0);
             |            let digit__0: i32;
             |            let t___0: bool;
@@ -2959,11 +3031,11 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |pub fn not_empty(start__0: usize, limit__0: usize) -> bool {
-            |    return (Some(start__0).cmp( & Some(limit__0)) as i32) < 0;
+            |    return (std::option::Option::Some(start__0).cmp( & std::option::Option::Some(limit__0)) as i32) < 0;
             |}
         """.trimMargin(),
     )

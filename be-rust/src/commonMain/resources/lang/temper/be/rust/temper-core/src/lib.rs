@@ -31,21 +31,23 @@ pub fn read_locked<T: Clone>(x: &Arc<RwLock<T>>) -> T {
 
 #[macro_export]
 macro_rules! impl_any_value_trait { // for concrete types
+    // A macro body resolves names where it is used, in a module that may define its own `Option` or `Box`,
+    // so every std name here is written out in full.
     // Two versions here. One for type args and one without.
     ($type:ident$(<$($param:tt),*>)?, [$($target:ty),*] $(where $($bounds:tt)*)?) => {
-        impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
+        impl$(<$($param: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
         $(where $($bounds)*)?
         {
-            fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
+            fn cast(&self, type_id: std::any::TypeId) -> std::option::Option<std::boxed::Box<dyn std::any::Any>> {
                 match () {
                     // Check the concrete type first, expecting it to be most common.
-                    _ if type_id == std::any::TypeId::of::<$type$(<$($param),*>)?>() => Some(Box::new(self.clone())),
+                    _ if type_id == std::any::TypeId::of::<$type$(<$($param),*>)?>() => std::option::Option::Some(std::boxed::Box::new(self.clone())),
                     $(
                         _ if type_id == std::any::TypeId::of::<$target>() => {
-                            Some(Box::new(<$target>::new(self.clone())))
+                            std::option::Option::Some(std::boxed::Box::new(<$target>::new(self.clone())))
                         }
                     )*
-                    _ => None,
+                    _ => std::option::Option::None,
                 }
             }
             fn is(&self, type_id: std::any::TypeId) -> bool {
@@ -57,7 +59,7 @@ macro_rules! impl_any_value_trait { // for concrete types
             }
         }
 
-        impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AsAnyValue for $type$(<$($param),*>)?
+        impl$(<$($param: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static),*>)? temper_core::AsAnyValue for $type$(<$($param),*>)?
         $(where $($bounds)*)?
         {
             fn as_any_value(&self) -> temper_core::AnyValue {
@@ -70,10 +72,10 @@ macro_rules! impl_any_value_trait { // for concrete types
 #[macro_export]
 macro_rules! impl_any_value_trait_for_interface { // for abstract types
     ($type:ident $(<$($param:tt),*>)? $(where $($bounds:tt)*)?) => {
-        impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
+        impl$(<$($param: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static),*>)? temper_core::AnyValueTrait for $type $(<$($param),*>)?
         $(where $($bounds)*)?
         {
-            fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
+            fn cast(&self, type_id: std::any::TypeId) -> std::option::Option<std::boxed::Box<dyn std::any::Any>> {
                 temper_core::AnyValueTrait::cast(&*self.0, type_id)
             }
             fn is(&self, type_id: std::any::TypeId) -> bool {
@@ -84,7 +86,7 @@ macro_rules! impl_any_value_trait_for_interface { // for abstract types
             }
         }
 
-        impl$(<$($param: Clone + Send + Sync + 'static),*>)? temper_core::AsAnyValue for $type $(<$($param),*>)?
+        impl$(<$($param: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static),*>)? temper_core::AsAnyValue for $type $(<$($param),*>)?
         $(where $($bounds)*)?
         {
             fn as_any_value(&self) -> temper_core::AnyValue {
