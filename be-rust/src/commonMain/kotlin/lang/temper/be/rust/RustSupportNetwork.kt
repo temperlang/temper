@@ -804,7 +804,7 @@ private val divIntIntSafe = MethodCall("DivIntIntSafe", "wrapping_div", BuiltinO
 private object DivIntInt64 : FunctionCall("DivIntInt64", "temper_core::int64_div", BuiltinOperatorId.DivIntInt64)
 
 private object DoneResult : Constant("core.doneResult()") {
-    override fun value(pos: Position) = "None".toId(pos)
+    override fun value(pos: Position) = NONE_NAME.toId(pos)
 }
 object Empty : RustInlineSupportCode("core.empty()") {
     override fun inlineToTree(
@@ -1137,14 +1137,14 @@ internal object TestBail : RustInlineSupportCode("std/testing.type Test.bail()")
         val messages = "self".toKeyId(pos).methodCall("messages_combined")
         val makeError = "temper_core".toId(pos).extendWith(listOf("Error", "with_optional_message"))
         val error = Rust.Call(pos, makeError, listOf(messages))
-        return Rust.Call(pos, "Err".toId(pos), listOf(error))
+        return Rust.Call(pos, ERR_NAME.toId(pos), listOf(error))
     }
 }
 
 private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, RustOperator.Multiplication)
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
-    FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+    FunctionCall("core.type ValueResult.constructor()", SOME_NAME, cloneEvenIfFirst = true, hasGeneric = true)
 
 private val isOkResult = MethodCall(
     baseName = "IsOkResult",
@@ -1154,7 +1154,7 @@ private val isOkResult = MethodCall(
 
 private val packOkResult = FunctionCall(
     baseName = "PackOkResult",
-    functionName = "Ok",
+    functionName = OK_NAME,
     avoidDeref = true,
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
     cloneEvenIfFirst = true,
@@ -1173,7 +1173,7 @@ private object RepackErrResult : RustInlineSupportCode(
     ): Rust.Tree {
         return Rust.Call(
             pos,
-            callee = "Err".toId(pos),
+            callee = ERR_NAME.toId(pos),
             // `.expect_err` and `.unwrap_err` both require the success type
             // implements the Debug trait so that they can produce a panic message,
             // `.unwrap_err_unchecked` is unsafe, and `.into_err` is nightly only.
