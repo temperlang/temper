@@ -39,6 +39,20 @@ lines never mix with the program's own output, and the run includes a
 60-second watchdog. A program that never finishes halts with "timed out
 after 60000 ms" instead of hanging whatever called it.
 
+`ElixirSpecifics.runSingleSource`, which tests use to run a snippet of
+target code the way `RegexMatchTest` runs node and python, takes one
+Elixir source string. It lays temper-core down as a Mix project, compiles
+it, and runs the source as a script inside it with the same watchdog, so
+`TemperCore.*` is loaded and its application is started:
+
+```
+mix compile
+mix run --no-compile -e 'spawn(...watchdog...); Code.require_file("../single-source.exs")'
+```
+
+The script goes through `Code.require_file` because `mix run -e CODE FILE`
+treats FILE as an argument for `System.argv` and never runs it.
+
 To check the backend:
 
 ```bash

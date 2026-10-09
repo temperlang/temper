@@ -4,6 +4,7 @@ import lang.temper.be.Dependencies
 import lang.temper.be.cli.Aux
 import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.CliFailure
+import lang.temper.be.cli.CliTool
 import lang.temper.be.cli.Command
 import lang.temper.be.cli.EXIT_UNAVAILABLE
 import lang.temper.be.cli.Effort
@@ -16,12 +17,16 @@ import lang.temper.be.cli.RunnerSpecifics
 import lang.temper.be.cli.ToolSpecifics
 import lang.temper.be.cli.ToolchainRequest
 import lang.temper.be.cli.ToolchainResult
+import lang.temper.be.cli.composing
 import lang.temper.be.cli.maybeLogBeforeRunning
 import lang.temper.common.RFailure
 import lang.temper.common.RResult
+import lang.temper.common.RSuccess
 import lang.temper.fs.OutDir
 import lang.temper.library.relativeOutputDirectoryForLibrary
 import lang.temper.log.FilePath
+import lang.temper.log.dirPath
+import lang.temper.log.filePath
 import lang.temper.log.resolveFile
 import lang.temper.name.DashedIdentifier
 
@@ -32,6 +37,10 @@ import lang.temper.name.DashedIdentifier
  * and `Generated temper_main app` on stdout before the program's own output,
  * and stdout is what a run is judged by. `mix run --no-compile` after a
  * separate compile prints only what the program prints.
+ *
+ * [runSingleSource] does the same for one Elixir source string: it lays
+ * temper-core down as a Mix project, compiles it, and runs the source as a
+ * script inside it, so `TemperCore.*` is loaded and its application started.
  */
 object ElixirSpecifics : RunnerSpecifics {
     override fun runSingleSource(
@@ -39,8 +48,8 @@ object ElixirSpecifics : RunnerSpecifics {
         code: String,
         env: Map<String, String>,
         aux: Map<Aux, FilePath>,
-    ): RResult<EffortSuccess, CliFailure> {
-        TODO("Not yet implemented")
+    ): RResult<EffortSuccess, CliFailure> = cliEnv.composing(this) {
+        runSingleElixirSource(code, env, aux)
     }
 
     override fun runBestEffort(
@@ -87,19 +96,10 @@ private fun unavailable(cliEnv: CliEnv, message: String) =
 
 private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false): ToolchainResult {
     val runDir = relativeOutputDirectoryForLibrary(ElixirBackend.Factory.backendId, libraryName)
-    // `this[MixCommand]` force-unwraps the lookup, so a machine without
-    // Elixir failed every run with a NullPointerException that named no tool
-    val found = which(MixCommand)
-    val mix = found.result ?: return ToolchainResult(
-        libraryName = libraryName,
-        result = RFailure(
-            CliFailure(
-                message = "be-elixir needs `mix` (Elixir 1.15 or later) on the PATH" +
-                    (found.failure?.message?.let { ": $it" } ?: ""),
-                effort = Effort(exitCode = EXIT_UNAVAILABLE, cliEnv = this),
-            ),
-        ),
-    )
+    val mix = when (val found = findMix()) {
+        is RSuccess -> found.result
+        is RFailure -> return ToolchainResult(libraryName = libraryName, result = found)
+    }
     fun step(args: List<String>, stderr: String): RResult<EffortSuccess, CliFailure> {
         val aux = mapOf(Aux.Stderr to runDir.resolveFile(stderr)) +
             if (tests) mapOf(Aux.JunitXml to runDir.resolveFile(ElixirBackend.TEST_RESULTS_FILE)) else mapOf()
@@ -114,13 +114,9 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
         // the compile's own failure, with its diagnostics, is the result
         return ToolchainResult(libraryName = libraryName, result = compiled)
     }
-    // A watchdog, so a program that never finishes halts with a message
-    // instead of hanging whatever ran it. The first translated loop that
-    // forgot to carry a variable spun for twenty minutes before this.
     val root = ElixirBackend.libraryModule(libraryName).joinToString(".")
     val call =
-        "spawn(fn -> Process.sleep($RUN_TIMEOUT_MS); IO.puts(:stderr, \"timed out after $RUN_TIMEOUT_MS ms\"); " +
-            "System.halt(124) end); $root.${ElixirBackend.MAIN_FUNCTION}()" +
+        "$WATCHDOG; $root.${ElixirBackend.MAIN_FUNCTION}()" +
             // the module's top level runs first: tests read the values it sets
             if (tests) {
                 // a library with no tests has no test module; its report is empty
@@ -134,5 +130,64 @@ private fun CliEnv.runMain(libraryName: DashedIdentifier, tests: Boolean = false
     return ToolchainResult(
         libraryName = libraryName,
         result = step(listOf("run", "--no-compile", "-e", call), "stderr.txt"),
+    )
+}
+
+/**
+ * A watchdog, so a program that never finishes halts with a message
+ * instead of hanging whatever ran it. The first translated loop that
+ * forgot to carry a variable spun for twenty minutes before this.
+ */
+private const val WATCHDOG =
+    "spawn(fn -> Process.sleep($RUN_TIMEOUT_MS); IO.puts(:stderr, \"timed out after $RUN_TIMEOUT_MS ms\"); " +
+        "System.halt(124) end)"
+
+/**
+ * `mix`, or a failure that names it: `this[MixCommand]` force-unwraps the
+ * lookup, so a machine without Elixir failed every run with a
+ * NullPointerException that named no tool.
+ */
+private fun CliEnv.findMix(): RResult<CliTool, CliFailure> {
+    val found = which(MixCommand)
+    return found.result?.let { RSuccess(it) } ?: RFailure(
+        CliFailure(
+            message = "be-elixir needs `mix` (Elixir 1.15 or later) on the PATH" +
+                (found.failure?.message?.let { ": $it" } ?: ""),
+            effort = Effort(exitCode = EXIT_UNAVAILABLE, cliEnv = this),
+        ),
+    )
+}
+
+/** Where [ElixirSpecifics.runSingleSource] puts the source, beside temper-core. */
+internal const val SINGLE_SOURCE_FILE = "single-source.exs"
+
+private fun CliEnv.runSingleElixirSource(
+    code: String,
+    env: Map<String, String>,
+    aux: Map<Aux, FilePath>,
+): RResult<EffortSuccess, CliFailure> {
+    val mix = when (val found = findMix()) {
+        is RSuccess -> found.result
+        is RFailure -> return found
+    }
+    val coreDir = dirPath(ElixirBackend.CORE_DIR)
+    copyResources(ElixirBackend.Factory.coreLibraryResources, coreDir)
+    write(code, filePath(SINGLE_SOURCE_FILE))
+    fun step(args: List<String>, aux: Map<Aux, FilePath>): RResult<EffortSuccess, CliFailure> {
+        val command = Command(args = args, aux = aux, cwd = coreDir, env = env)
+        command.maybeLogBeforeRunning(mix, shellPreferences)
+        return mix.run(command)
+    }
+    // compiled apart, as for a library, so Mix's "Compiling 12 files" never
+    // reaches the stdout the run is judged by
+    val compiled = step(listOf("compile"), mapOf(Aux.Stderr to coreDir.resolveFile("compile-stderr.txt")))
+    if (compiled is RFailure) return compiled
+    // Not `mix run -e WATCHDOG FILE`: with `-e`, Mix takes FILE as an argument
+    // for System.argv and never runs it, and the run exits 0 having done
+    // nothing. And not `-r FILE`, which runs the file before any `-e`, so the
+    // watchdog would start only once the source had finished.
+    return step(
+        listOf("run", "--no-compile", "-e", "$WATCHDOG; Code.require_file(\"../$SINGLE_SOURCE_FILE\")"),
+        aux,
     )
 }
