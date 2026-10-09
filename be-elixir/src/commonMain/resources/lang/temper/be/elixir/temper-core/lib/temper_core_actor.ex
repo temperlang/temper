@@ -14,8 +14,8 @@ defmodule TemperCore.Actor do
   - **Crossing.** Arguments and results are copied, as every BEAM message is.
     Copying a mutable non-actor object would break Temper's aliasing, so
     one raises a `TemperCore.Panic` that names it. Values and other actors
-    go through, and so do promises, which are published so the receiver
-    can await them. be-elixir rejects the rest when it builds; this
+    go through, and so do promises, whose state goes with the call so the
+    receiver can await them (see `TemperCore.Promise`). be-elixir rejects the rest when it builds; this
     check is for Elixir code, which nothing type-checks.
   - **Errors and crashes.** A Temper bubble or panic in a method is that
     call's result: the caller raises it again, so `orelse` works across
@@ -80,6 +80,36 @@ defmodule TemperCore.Actor do
   @spec stop(t()) :: :ok
   def stop(%__MODULE__{} = actor), do: GenServer.stop(pid!(actor), :normal)
 
+  @doc """
+  Returns once no actor has anything left to do: none is in a turn, and
+  no settle that would start one is on its way. A library's
+  `__temper_main__/0` ends with this, so work an actor does after the top
+  level's last `await` is not cut off when `mix run` exits; on every other
+  backend that work is on the one queue the program drains.
+
+  Turns start only for calls, which return before their caller goes on,
+  and for settles, which `TemperCore.Promises` sends and counts. So this
+  asks every actor to answer once it has handled what that registry sent
+  it, and goes again until a round in which the registry sent nothing.
+  An actor that never finishes a turn keeps this waiting, as an endless
+  async loop keeps js waiting.
+  """
+  @spec wait_idle() :: nil
+  def wait_idle do
+    {sent, tag, pids} = GenServer.call(TemperCore.Promises, {:sync, self()}, :infinity)
+
+    Enum.each(pids, fn pid ->
+      mref = Process.monitor(pid)
+
+      receive do
+        {^tag, ^pid} -> Process.demonitor(mref, [:flush])
+        {:DOWN, ^mref, :process, ^pid, _} -> :ok
+      end
+    end)
+
+    if GenServer.call(TemperCore.Promises, :sent, :infinity) == sent, do: nil, else: wait_idle()
+  end
+
   @doc "The process running an actor now, or nil if it has ended."
   @spec whereis(t()) :: pid() | nil
   def whereis(%__MODULE__{id: id}) do
@@ -103,11 +133,14 @@ defmodule TemperCore.Actor do
   """
   @spec start_id(module(), (-> term())) :: reference()
   def start_id(class, constructor) when is_function(constructor, 0) do
-    sendable!(constructor, "a constructor argument of #{inspect(class)}")
+    promises = crossing!(constructor, "a constructor argument of #{inspect(class)}")
     id = make_ref()
     chain = chain_for_callee()
     supervisor = Process.get(@supervised)
-    init_arg = {id, constructor, chain, if(supervisor, do: nil, else: self()), TemperCore.initializing()}
+    # the actor's process does not exist yet, so its promises are leased
+    # until its init arrives; a start that fails never does
+    shared = TemperCore.Promise.share(promises, nil)
+    init_arg = {id, constructor, chain, if(supervisor, do: nil, else: self()), TemperCore.initializing(), shared}
 
     # The constructor runs in the new process's init, and may call back into
     # an actor on this chain, this one included. OTP's start blocks in a
@@ -119,7 +152,14 @@ defmodule TemperCore.Actor do
         else: GenServer.start(__MODULE__, init_arg)
     end
 
-    case wait_for(id, starting) do
+    started =
+      try do
+        wait_for(id, starting)
+      after
+        TemperCore.Promise.release(shared)
+      end
+
+    case started do
       {:ok, pid} ->
         # linked only once the constructor has succeeded: a linked process
         # that stops in init would take its caller down instead of raising
@@ -184,7 +224,7 @@ defmodule TemperCore.Actor do
     if Process.get(@self_id) == id do
       body.()
     else
-      sendable!(body, "an argument to #{inspect(class)}")
+      promises = crossing!(body, "an argument to #{inspect(class)}")
       chain = chain_for_callee()
 
       # An actor already on this chain is waiting in `await_reply/2` for the
@@ -193,17 +233,21 @@ defmodule TemperCore.Actor do
       # another chain, so first make sure that chain is not waiting on this.
       reply =
         if id in chain do
-          waiting_on(id, fn -> call(actor, {:reenter, body, chain}, false) end)
+          waiting_on(id, fn -> call(actor, {:reenter, body, chain}, promises, false) end)
         else
           waiting_on(id, fn ->
             cycle!(actor)
-            call(actor, {:run, body, chain}, true)
+            call(actor, {:run, body, chain}, promises, true)
           end)
         end
 
       case reply do
-        {:ok, value} -> value
-        {:raise, kind, reason, stack} -> :erlang.raise(kind, reason, stack)
+        {:ok, value, shared} ->
+          TemperCore.Promise.arrive(shared)
+          value
+
+        {:raise, kind, reason, stack} ->
+          :erlang.raise(kind, reason, stack)
       end
     end
   end
@@ -230,10 +274,12 @@ defmodule TemperCore.Actor do
   # killed, or a link took it down). Running it again on the restarted
   # actor's fresh state would turn at-most-once into at-least-once, so the
   # caller sees the exit, as OTP's callers do.
-  defp call(%__MODULE__{class: class} = actor, message, retry) do
+  defp call(%__MODULE__{class: class} = actor, {kind, body, chain} = message, promises, retry) do
     pid = pid!(actor)
+    # shared for this pid: a retry goes to another
+    shared = TemperCore.Promise.share(promises, pid)
     mref = Process.monitor(pid)
-    send(pid, {:"$gen_call", {self(), mref}, message})
+    send(pid, {:"$gen_call", {self(), mref}, {kind, body, chain, shared}})
 
     case await_reply(mref, mref) do
       {:ok, reply} ->
@@ -241,7 +287,7 @@ defmodule TemperCore.Actor do
 
       {:down, reason} when reason == :noproc or elem(reason, 0) == :crash ->
         if retry and restarted?(actor, pid),
-          do: call(actor, message, false),
+          do: call(actor, message, promises, false),
           else: raise(TemperCore.Panic, "#{inspect(class)} actor has ended")
 
       {:down, reason} ->
@@ -262,8 +308,8 @@ defmodule TemperCore.Actor do
       {:DOWN, ^mref, :process, _, reason} ->
         {:down, reason}
 
-      {:"$gen_call", from, {:reenter, body, chain}} ->
-        reply = turn(body, chain, false)
+      {:"$gen_call", {caller, _} = from, {:reenter, body, chain, shared}} ->
+        reply = turn(body, chain, false, shared, caller)
         GenServer.reply(from, reply)
 
         # a crash is still a crash: the outer turn ends with it too
@@ -356,7 +402,7 @@ defmodule TemperCore.Actor do
   # -- the process --------------------------------------------------------------
 
   @impl true
-  def init({id, constructor, chain, creator, initializing}) do
+  def init({id, constructor, chain, creator, initializing, shared}) do
     TemperCore.put_initializing(initializing)
     if creator, do: Process.monitor(creator)
     Process.put(@self_id, id)
@@ -364,7 +410,11 @@ defmodule TemperCore.Actor do
     {:ok, _} = Registry.register(@registry, id, nil)
 
     try do
+      TemperCore.Promise.arrive(shared)
       constructor.()
+      # the constructor's call is a turn like any other: the async steps
+      # it started run before it ends, not at the end of some later call
+      TemperCore.Async.drain_queue()
       {:ok, nil}
     catch
       kind, reason -> {:stop, {:temper_raise, kind, reason, __STACKTRACE__}}
@@ -372,8 +422,8 @@ defmodule TemperCore.Actor do
   end
 
   @impl true
-  def handle_call({:run, body, chain}, _from, state) do
-    case turn(body, chain, true) do
+  def handle_call({:run, body, chain, shared}, {caller, _}, state) do
+    case turn(body, chain, true, shared, caller) do
       {:raise, kind, reason, _} = reply ->
         # a Temper error is this call's result; anything else is a crash
         if temper_error?(kind, reason),
@@ -387,22 +437,30 @@ defmodule TemperCore.Actor do
 
   # Only a process waiting in `await_reply/2` takes these. One that arrives
   # here came from a chain this actor is no longer on.
-  def handle_call({:reenter, _body, _chain}, _from, state) do
+  def handle_call({:reenter, _body, _chain, shared}, _from, state) do
+    TemperCore.Promise.release(shared)
     {:reply, {:raise, :error, %TemperCore.Panic{message: "an actor was called back after its call had ended"}, []}, state}
   end
 
   # One call's body, then, for a turn of its own, the async steps it started.
   # A call served inline is part of the turn that is waiting, so it leaves
   # the run queue to that turn.
-  defp turn(body, chain, drain) do
+  defp turn(body, chain, drain, shared, caller) do
     outer = Process.get(@chain)
     Process.put(@chain, chain)
 
     try do
-      value = Heap.run(body)
+      # the promises that came with the call are made in the call's heap,
+      # so what it leaves unreached is collected with the rest
+      value =
+        Heap.run(fn ->
+          TemperCore.Promise.arrive(shared)
+          body.()
+        end)
+
       if drain, do: TemperCore.Async.drain_queue()
-      sendable!(value, "a result")
-      {:ok, value}
+      promises = crossing!(value, "a result")
+      {:ok, value, TemperCore.Promise.share(promises, caller)}
     catch
       kind, reason -> {:raise, kind, reason, __STACKTRACE__}
     after
@@ -413,9 +471,14 @@ defmodule TemperCore.Actor do
   # A promise made elsewhere that a generator here awaits has settled: its
   # waiters run now, as a turn of their own.
   @impl true
-  def handle_info({:temper_promise, id, settled}, state) do
-    TemperCore.Promise.remote_settled(id, settled)
+  def handle_info({:temper_promise, id, settled, shared}, state) do
+    TemperCore.Promise.remote_settled(id, settled, shared)
     TemperCore.Async.drain_queue()
+    {:noreply, state}
+  end
+
+  def handle_info({:temper_sync, tag, to}, state) do
+    send(to, {tag, self()})
     {:noreply, state}
   end
 
@@ -446,11 +509,19 @@ defmodule TemperCore.Actor do
   """
   @spec sendable!(term(), String.t()) :: :ok
   def sendable!(term, what) do
-    case first_unsendable([term], true) do
-      nil ->
-        :ok
+    crossing!(term, what)
+    :ok
+  end
 
-      class ->
+  # `sendable!/2`, answering the promises `term` holds, which may cross
+  # with an actor call (see `TemperCore.Promise.share/2`). One walk does
+  # both: this runs on every call.
+  defp crossing!(term, what) do
+    case crossing([term], []) do
+      {:ok, promises} ->
+        promises
+
+      {:unsendable, class} ->
         name = if is_atom(class), do: inspect(class), else: "object"
 
         raise TemperCore.Panic,
@@ -459,30 +530,40 @@ defmodule TemperCore.Actor do
     end
   end
 
+  defp crossing([], promises), do: {:ok, promises}
+  defp crossing([%__MODULE__{} | rest], ps), do: crossing(rest, ps)
+  defp crossing([%TemperCore.Ref{class: :promise} = p | rest], ps), do: crossing(rest, [p | ps])
+  defp crossing([%TemperCore.Ref{class: class} | _], _), do: {:unsendable, class}
+  defp crossing([[] | rest], ps), do: crossing(rest, ps)
+  defp crossing([[h | t] | rest], ps), do: crossing([h, t | rest], ps)
+  defp crossing([x | rest], ps) when is_tuple(x), do: crossing([Tuple.to_list(x) | rest], ps)
+  defp crossing([x | rest], ps) when is_map(x), do: crossing([Map.keys(x), Map.values(x) | rest], ps)
+
+  defp crossing([x | rest], ps) when is_function(x) do
+    {:env, env} = :erlang.fun_info(x, :env)
+    crossing([env | rest], ps)
+  end
+
+  defp crossing([_ | rest], ps), do: crossing(rest, ps)
+
   @doc "Whether `term` could cross to another process: `sendable!/2` without the raise."
   @spec sendable?(term()) :: boolean()
-  def sendable?(term), do: first_unsendable([term], false) == nil
+  def sendable?(term), do: first_unsendable([term]) == nil
 
-  # With `publish`, a promise is sendable, and is published on the way, so
-  # whoever receives its ref can await it (see `TemperCore.Promise`).
-  defp first_unsendable([], _), do: nil
-  defp first_unsendable([%__MODULE__{} | rest], p), do: first_unsendable(rest, p)
+  # A promise is not sendable here: a module value has no actor call to
+  # carry its state.
+  defp first_unsendable([]), do: nil
+  defp first_unsendable([%__MODULE__{} | rest]), do: first_unsendable(rest)
+  defp first_unsendable([%TemperCore.Ref{class: class} | _]), do: class
+  defp first_unsendable([[] | rest]), do: first_unsendable(rest)
+  defp first_unsendable([[h | t] | rest]), do: first_unsendable([h, t | rest])
+  defp first_unsendable([x | rest]) when is_tuple(x), do: first_unsendable([Tuple.to_list(x) | rest])
+  defp first_unsendable([x | rest]) when is_map(x), do: first_unsendable([Map.keys(x), Map.values(x) | rest])
 
-  defp first_unsendable([%TemperCore.Ref{class: :promise} = promise | rest], true) do
-    TemperCore.Promise.publish(promise)
-    first_unsendable(rest, true)
-  end
-
-  defp first_unsendable([%TemperCore.Ref{class: class} | _], _), do: class
-  defp first_unsendable([[] | rest], p), do: first_unsendable(rest, p)
-  defp first_unsendable([[h | t] | rest], p), do: first_unsendable([h, t | rest], p)
-  defp first_unsendable([x | rest], p) when is_tuple(x), do: first_unsendable([Tuple.to_list(x) | rest], p)
-  defp first_unsendable([x | rest], p) when is_map(x), do: first_unsendable([Map.keys(x), Map.values(x) | rest], p)
-
-  defp first_unsendable([x | rest], p) when is_function(x) do
+  defp first_unsendable([x | rest]) when is_function(x) do
     {:env, env} = :erlang.fun_info(x, :env)
-    first_unsendable([env | rest], p)
+    first_unsendable([env | rest])
   end
 
-  defp first_unsendable([_ | rest], p), do: first_unsendable(rest, p)
+  defp first_unsendable([_ | rest]), do: first_unsendable(rest)
 end

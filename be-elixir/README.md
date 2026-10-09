@@ -157,6 +157,7 @@ end
 def __temper_main__() do
   Temper.Tour.__temper_init__()
   TemperCore.Async.drain()
+  TemperCore.Actor.wait_idle()
 end
 ```
 
@@ -168,7 +169,8 @@ end
   library without waiting for a lock its own creator holds.
 - A library's init first calls the init of every library it imports from,
   so std's globals exist before the user's code reads them.
-- `__temper_main__/0` runs init, then the async queue (section 9). It is
+- `__temper_main__/0` runs init, then the async queue (section 9), then
+  waits until no actor has work left (section 16). It is
   not called `main` because a library may export a `main` of its own: in
   Elixir the first of two `def main()` wins, and the library's would run
   in the entry point's place.
@@ -986,26 +988,75 @@ The rules, most of them shown in that output:
   would break Temper's sharing. be-elixir rejects a public member of an
   `@actor` class whose type is not sendable when it builds ("Actor class
   Account: parameter b of method stash has type Box__0, which is not
-  sendable"), and so a function type too. Other backends run every call on
+  sendable"), and so a function type too. It also rejects `@actor` on an
+  interface, on anything but a class, and on a class that is also `@imu`.
+  A library with a rejected actor gets no Elixir at all, only the message
+  and a `mix.exs` that raises when Mix loads it, so a project an earlier
+  build left in `temper.out` cannot run in its place.
+  Other backends run every call on
   the caller's stack and build the same program. At run time, for Elixir
   code that calls an actor directly, arguments, results and captured values
   are checked again, and a mutable non-actor object raises a `Panic` that
   names it. Immutable values and other actors cross freely: strings, numbers,
   lists, maps, `@imu` structs. This is Erlang's own rule.
 - **Promises cross.** A `Promise<T>` of a sendable `T` may be an argument
-  or a result. A promise is a heap object, so on the way out it is
-  published to `TemperCore.Promises`, which keeps its state and tells
-  every process that awaits it when it settles. Its ref is unchanged; in a
-  process whose heap lacks it, `await` subscribes instead of parking on
-  the heap object. An actor wakes for such a settle in a turn of its own.
-  `__temper_main__/0` keeps draining while it awaits one. Only the process
-  that made a promise can complete it, and if that process ends first the
-  `await` panics instead of waiting forever. Published promises are never
-  forgotten, which leaks for a long-lived actor that hands out many.
+  or a result. A promise is a heap object, so the call carries the state
+  of each promise in it, and the receiver gets a stand-in: an object in
+  its own heap with the same ref, which `await` uses like any promise and
+  the heap collects like any object. One still pending is kept by
+  `TemperCore.Promises`, which sends the settle to every process holding
+  a stand-in and then forgets it. A long-lived actor that hands out
+  promise after promise leaves nothing behind there: 1000 promises, half
+  settled before they left and half after, all awaited by the caller,
+  leave no entry (the test that shows it had 1000 before). An actor wakes
+  for such a settle in a turn of its own. `__temper_main__/0` keeps
+  draining while it awaits one. Only the process that made a promise can
+  complete it, and if that process ends first the `await` panics instead
+  of waiting forever. A promise ref that reaches a process some other way
+  (Elixir code sending it) cannot be awaited there, and says so. A
+  process that is handed a pending promise is sent
+  `{:temper_promise, id, state, shared}` when it settles, awaited or not;
+  an Elixir GenServer calling such an actor gets these in `handle_info`,
+  where `use GenServer`'s default logs them, and can pass them to
+  `TemperCore.Promise.remote_settled/3` or drop them. A
+  supervised actor restarts with its first constructor arguments; a
+  promise among them that settled before the restart was forgotten once
+  the first process heard of it, so in the restarted one `await` panics.
 - **Await is a turn boundary.** An actor's turn ends when its call returns
   and the async steps that call started have run as far as they can. A
   block suspended at an `await` resumes in a later turn, so a field it read
-  before the `await` may have changed after it.
+  before the `await` may have changed after it. Creating an actor is a
+  turn too: its constructor's async steps run before `new` returns. They
+  used to wait for the end of the actor's next call, and never ran in an
+  actor nobody called again. Steps that run inside the call also run
+  before the caller's next statement, where js runs them once the top
+  level is done:
+
+  ```
+  js:      main done / constructor's async block ran
+  elixir:  constructor's async block ran / main done
+  ```
+- **The program waits for its actors.** An actor's async steps can run
+  after the top level has finished: a turn of its own, for a settle that
+  arrives later. On js and py they are on the one queue the program
+  drains, so they finish before it exits. `__temper_main__/0` matches
+  that by ending with `TemperCore.Actor.wait_idle/0`; before, `mix run`
+  exited under them, and a chain of three relays printed none of its
+  lines. Turns start only for calls, which return before their caller
+  goes on, and for settles, which `TemperCore.Promises` sends and counts.
+  So `wait_idle` asks every actor, through that registry so the question
+  arrives after every settle sent before it, to answer once it has handled
+  them, and asks again until a round in which no settle was sent. That
+  depends on no timing. An actor in an endless loop of turns keeps the
+  program running, as an endless async loop does on js. Elixir code that
+  calls into a library never calls `__temper_main__/0` and is not
+  affected.
+
+  Not yet like js: a bubble or panic in such a turn has no call to be
+  the result of, so it crashes the actor. An actor the top level made is
+  supervised, so the crash is logged, the actor restarts, and the program
+  exits 0, where js exits 1 with the error. Before the wait, that turn
+  never ran at all.
 - **Lifetime.** By default an actor ends when the process that created it
   ends, for any reason. It is linked to its creator and also monitors it,
   because a link alone ignores a normal exit.
@@ -1137,8 +1188,12 @@ Temper.
 
 ## 18. Differences from js and py
 
-Where js and py agree and this backend does not, it is a bug. There are
-no deliberate exceptions.
+Where js and py agree and this backend does not, it is a bug, except
+where section 16 says an `@actor` behaves differently on purpose: the
+build rejects members that cannot cross processes, a call that would
+close a cycle panics, a supervised actor restarts after a crash, and an
+actor's async steps run in its turn, during the call, not after the top
+level.
 
 Float64 `/` and `%` by zero, `0.0` or `-0.0`, bubble, whatever the
 dividend. That is what `builtins.md` says ("Float64 division by zero is a

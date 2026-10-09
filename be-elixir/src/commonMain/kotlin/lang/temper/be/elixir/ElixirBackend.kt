@@ -46,10 +46,21 @@ import lang.temper.value.DependencyCategory
  * [Elixir]: https://elixir-lang.org/
  */
 class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>(Factory.backendId, setup) {
+    /**
+     * False once [ElixirActorChecker] has reported an `@actor` it rejects. The
+     * build has already failed with that located message, so [translate]
+     * writes no Elixir for the program, and does not reach the translator's
+     * TODO for a shape the checker has already named, such as a class that
+     * is both `@actor` and `@imu`. It writes only a `mix.exs` that raises
+     * (see [rejectedProject]).
+     */
+    private var actorsPass = true
+
     override fun tentativeTmpL(): TmpL.ModuleSet {
         val checker = ElixirActorChecker(logSink)
         for (module in readyModules) {
-            module.generatedCode?.let(checker::check)
+            val passes = module.generatedCode?.let(checker::check) ?: true
+            actorsPass = actorsPass && passes
         }
         return TmpLTranslator.translateModules(
             logSink,
@@ -70,9 +81,11 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
      * Everything lives under the library's root module, `Temper.Std` for
      * std. Its `__temper_init__/0` runs the libraries it depends on, then
      * every module's top-level statements in order, once per process;
-     * `__temper_main__/0` runs that and drains the async queue.
+     * `__temper_main__/0` runs that, drains the async queue, and waits
+     * until no actor has work left.
      */
     override fun translate(finished: TmpL.ModuleSet): List<OutputFileSpecification> {
+        if (!actorsPass) return listOf(rejectedProject())
         val pos = finished.pos
         fun id(text: String) = Elixir.Id(pos, OutName(text, null))
         val names = ElixirNames()
@@ -188,9 +201,13 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         }
         val rootModule = elixirModule(pos, root)
         val testRoot = root + TEST_MODULE
+        // then wait for the actors: work one does after the top level's last
+        // await would otherwise be cut off when `mix run` exits, where every
+        // other backend runs it on the one queue the program drains
         val mainBody = listOf(
             remoteCall(pos, rootModule, INIT_FUNCTION, listOf()),
             remoteCall(pos, elixirModule(pos, "TemperCore", "Async"), "drain", listOf()),
+            remoteCall(pos, elixirModule(pos, "TemperCore", "Actor"), "wait_idle", listOf()),
         )
         val classModules = translated.flatMap { it.modules }
         val prodBody = translated.flatMap { it.mainBody }
@@ -260,6 +277,26 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
             ),
         )
     }
+
+    /**
+     * The whole output for a library whose actors [ElixirActorChecker]
+     * rejected: a `mix.exs` that raises when Mix loads it. Writing nothing
+     * is not enough, because nothing deletes what an earlier build wrote:
+     * `temper run` after the rejection would compile and run the last
+     * program that built, and print its output. This one replaces that
+     * project's `mix.exs`, so `mix compile`, `mix run` and any Mix project
+     * that depends on this one stop with the reason.
+     */
+    private fun rejectedProject() = MetadataFileSpecification(
+        path = filePath(MIX_FILE),
+        mimeType = mimeType,
+        content = buildString {
+            append("# be-elixir did not translate this library: the build rejected an @actor in it\n")
+            append("# and said where. Anything else in this directory is from an earlier build.\n")
+            append("raise \"be-elixir did not translate $libraryName: the build rejected an @actor in it; ")
+            append("see the build's errors\"\n")
+        },
+    )
 
     /**
      * `__temper_init__/0`: `TemperCore.init_once(:"Temper.Lib", fn -> ... end)`,
@@ -590,7 +627,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
         const val CORE_DIR = "temper-core"
 
         /**
-         * The entry point `mix run` calls: init, then drain the async queue. Not
+         * The entry point `mix run` calls: init, drain the async queue, wait for
+         * the actors to be idle. Not
          * `main`, which a library may export itself; in Elixir the first of two
          * `def main()` wins, so the library's would run in its place.
          */
