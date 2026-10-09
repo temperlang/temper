@@ -977,15 +977,28 @@ The rules, most of them shown in that output:
   names it. Immutable values and other actors cross freely: strings, numbers,
   lists, maps, `@imu` structs. This is Erlang's own rule.
 - **Promises cross.** A `Promise<T>` of a sendable `T` may be an argument
-  or a result. A promise is a heap object, so on the way out it is
-  published to `TemperCore.Promises`, which keeps its state and tells
-  every process that awaits it when it settles. Its ref is unchanged; in a
-  process whose heap lacks it, `await` subscribes instead of parking on
-  the heap object. An actor wakes for such a settle in a turn of its own.
-  `__temper_main__/0` keeps draining while it awaits one. Only the process
-  that made a promise can complete it, and if that process ends first the
-  `await` panics instead of waiting forever. Published promises are never
-  forgotten, which leaks for a long-lived actor that hands out many.
+  or a result. A promise is a heap object, so the call carries the state
+  of each promise in it, and the receiver gets a stand-in: an object in
+  its own heap with the same ref, which `await` uses like any promise and
+  the heap collects like any object. One still pending is kept by
+  `TemperCore.Promises`, which sends the settle to every process holding
+  a stand-in and then forgets it. A long-lived actor that hands out
+  promise after promise leaves nothing behind there: 1000 promises, half
+  settled before they left and half after, all awaited by the caller,
+  leave no entry (the test that shows it had 1000 before). An actor wakes
+  for such a settle in a turn of its own. `__temper_main__/0` keeps
+  draining while it awaits one. Only the process that made a promise can
+  complete it, and if that process ends first the `await` panics instead
+  of waiting forever. A promise ref that reaches a process some other way
+  (Elixir code sending it) cannot be awaited there, and says so. A
+  process that is handed a pending promise is sent
+  `{:temper_promise, id, state, shared}` when it settles, awaited or not;
+  an Elixir GenServer calling such an actor gets these in `handle_info`,
+  where `use GenServer`'s default logs them, and can pass them to
+  `TemperCore.Promise.remote_settled/3` or drop them. A
+  supervised actor restarts with its first constructor arguments; a
+  promise among them that settled before the restart was forgotten once
+  the first process heard of it, so in the restarted one `await` panics.
 - **Await is a turn boundary.** An actor's turn ends when its call returns
   and the async steps that call started have run as far as they can. A
   block suspended at an `await` resumes in a later turn, so a field it read
