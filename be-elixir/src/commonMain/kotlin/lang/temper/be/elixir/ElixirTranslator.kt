@@ -11,6 +11,9 @@ import lang.temper.log.Position
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.type.MethodKind
+import lang.temper.type.MethodShape
+import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.value.DependencyCategory
 import lang.temper.value.TBoolean
@@ -2053,14 +2056,16 @@ internal class ElixirTranslator(
      *
      * Members are flattened, the way be-blimp flattens them: a class carries
      * every inherited method body it does not override, so a call never has
-     * to find a super implementation at run time.
+     * to find a super implementation at run time. A body from another
+     * library's interface is a [forwarder] to that interface's module.
      */
     private fun translateType(decl: TmpL.TypeDeclaration): Elixir.ModuleDef {
         val pos = decl.pos
         val module = typeModule(decl)
         val isClass = decl.kind == TmpL.TypeDeclarationKind.Class
         if (!isClass && decl.kind != TmpL.TypeDeclarationKind.Interface) TODO("${decl.kind} declaration: ${decl.name}")
-        val flattened = if (isClass) flattenMembers(decl) else decl.members.filterIsInstance<TmpL.Member>()
+        val inherited = if (isClass) inheritance(decl) else null
+        val flattened = inherited?.members ?: decl.members.filterIsInstance<TmpL.Member>()
         val isStruct = isClass && isImu(decl)
         val isActor = isClass && decl.metadata.any { it.key.symbol == lang.temper.value.actorSymbol }
         if (isActor && isStruct) TODO("class ${decl.name} is both @imu and @actor")
@@ -2130,7 +2135,65 @@ internal class ElixirTranslator(
                 }
             }
         }
+        inherited?.forwarded?.forEach { items.addAll(forwarder(pos, it, self())) }
         return Elixir.ModuleDef(pos, name = moduleOf(pos, module), items = items)
+    }
+
+    /**
+     * A member the class being translated inherits from another library's
+     * interface, as a call of the function that interface's module defines:
+     *
+     *     @spec greet(Temper.App.Direct.t(), String.t(), String.t() | nil) :: String.t()
+     *     def greet(this, other, punct) do
+     *       Temper.Base.Named.greet(this, other, punct)
+     *     end
+     *
+     * The body there calls back through `TemperCore.call`, as an interface's
+     * body does, so it reaches this class's own getters and methods. An
+     * actor's runs inside the actor, as a body copied into it would.
+     */
+    private fun forwarder(pos: Position, inherited: Forwarded, self: Elixir.TypeExpr): List<Elixir.ModuleItem> {
+        val method = inherited.method
+        val what = "${method.enclosingType.name}.${method.symbol.text}"
+        val sig = method.descriptor ?: TODO("inherited $what has no signature")
+        if (!sig.hasThisFormal) TODO("inherited $what has no this")
+        val name = when (method.methodKind) {
+            MethodKind.Getter -> getterName(method.symbol.text)
+            MethodKind.Setter -> setterName(method.symbol.text)
+            else -> names.sanitize(method.symbol.text)
+        }
+        val inputs = sig.requiredInputTypes.drop(1) + sig.optionalInputTypes
+        val firstOptional = sig.requiredInputTypes.size - 1
+        val thisText = if (currentClassIsActor) "server" else "this"
+        val taken = mutableSetOf(thisText)
+        val hints = method.parameterInfo?.names ?: listOf()
+        val paramTexts = inputs.indices.map { i ->
+            val hint = hints.getOrNull(i + 1)?.text?.let(names::sanitize) ?: "arg"
+            var text = hint
+            var n = 1
+            while (!taken.add(text)) text = "${hint}_${n++}"
+            text
+        }
+        val id = { text: String -> Elixir.Id(pos, OutName(text, null)) }
+        val call = remoteCall(pos, moduleOf(pos, inherited.module), name, (listOf(thisText) + paramTexts).map(id))
+        val body = if (currentClassIsActor) {
+            actorCall(pos, "run", listOf(id(thisText), Elixir.Fn(pos, body = Elixir.Block(pos, listOf(call)))))
+        } else {
+            call
+        }
+        val fn = Elixir.FunDef(
+            pos,
+            id = id(name),
+            params = (listOf(thisText) + paramTexts).map(id),
+            body = Elixir.Block(pos, listOf(body)),
+        )
+        val fromElixir = currentClassIsExported && method.visibility == lang.temper.type.Visibility.Public
+        val params = inputs.mapIndexed { i, type ->
+            val spec = specs.of(pos, type).let { if (fromElixir) specs.acceptingPlainLists(it) else it }
+            if (i >= firstOptional) specs.orNil(pos, spec) else spec
+        }
+        val result = specs.of(pos, sig.returnType2)
+        return listOf(Elixir.TypeSpec(pos, id(name), params = listOf(self) + params, result = result), fn)
     }
 
     /**
@@ -2662,24 +2725,64 @@ internal class ElixirTranslator(
         { pos, v -> remoteCall(pos, elixirModule(pos, "TemperCore", module), fn, listOf(v)) }
 
     /** A class carries its supertypes' members that it does not redefine, nearest first. */
-    private fun flattenMembers(decl: TmpL.TypeDeclaration): List<TmpL.Member> {
+    private fun flattenMembers(decl: TmpL.TypeDeclaration): List<TmpL.Member> = inheritance(decl).members
+
+    /**
+     * A getter, setter or method with a body that a class inherits from an
+     * interface of another library. That library's TmpL is not here to copy,
+     * so the class gets a function of the same name that calls the one the
+     * interface's own module defines.
+     */
+    private class Forwarded(val method: MethodShape, val module: List<String>)
+
+    private class Inheritance(val members: List<TmpL.Member>, val forwarded: List<Forwarded>)
+
+    /**
+     * What [decl] has, its own members and those of every supertype that it
+     * does not redefine, nearest first. A supertype of this library gives
+     * its members' TmpL, to be copied; one of another library gives its
+     * shape, whose members with bodies are [forwarded][Forwarded]. Builtin
+     * types have nothing to give, and their supertypes are not followed.
+     */
+    private fun inheritance(decl: TmpL.TypeDeclaration): Inheritance {
         val byKey = linkedMapOf<String, TmpL.Member>()
-        var level = listOf(decl)
-        val seen = mutableSetOf<String>()
+        val forwarded = linkedMapOf<String, Forwarded>()
+        val seen = mutableSetOf<TypeShape>(decl.typeShape)
+        var level = listOf(decl.typeShape)
         while (level.isNotEmpty()) {
-            for (type in level) {
-                for (member in type.members.filterIsInstance<TmpL.Member>()) {
-                    memberKey(member)?.let { byKey.putIfAbsent(it, member) }
+            for (shape in level) {
+                val local = if (shape == decl.typeShape) decl else localType(shape.name)
+                if (local != null) {
+                    for (member in local.members.filterIsInstance<TmpL.Member>()) {
+                        memberKey(member)?.takeIf { it !in forwarded }?.let { byKey.putIfAbsent(it, member) }
+                    }
+                } else {
+                    val module = externalModule(shape.name) ?: continue
+                    for (method in shape.methods) {
+                        val key = methodKey(method)?.takeIf { it !in byKey && it !in forwarded } ?: continue
+                        forwarded[key] = Forwarded(method, module)
+                    }
                 }
             }
-            level = level.flatMap { type ->
-                type.superTypes.mapNotNull { superType ->
-                    val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
-                    if (seen.add(key)) localType(superType.typeName.sourceDefinition?.name) else null
+            level = level.flatMap { shape ->
+                if (shape != decl.typeShape && localType(shape.name) == null && !isExternal(shape.name)) {
+                    return@flatMap listOf()
                 }
+                shape.superTypes.mapNotNull { (it.definition as? TypeShape)?.takeIf(seen::add) }
             }
         }
-        return byKey.values.toList()
+        return Inheritance(byKey.values.toList(), forwarded.values.toList())
+    }
+
+    /** As [memberKey], for another library's member: one with a body, which a class inherits. */
+    private fun methodKey(method: MethodShape): String? = when {
+        method.isPureVirtual -> null
+        else -> when (method.methodKind) {
+            MethodKind.Normal -> "fn:"
+            MethodKind.Getter -> "get:"
+            MethodKind.Setter -> "set:"
+            MethodKind.Constructor -> null
+        }?.let { it + method.symbol.text }
     }
 
     private fun memberKey(member: TmpL.Member): String? = when (member) {
@@ -2718,18 +2821,24 @@ internal class ElixirTranslator(
         }
     }
 
+    /**
+     * The module of every translated type [decl] inherits from, this
+     * library's or another's, for `__temper_supertypes__/0`: `x is I` and
+     * `x as I` look there.
+     */
     private fun ancestorModules(decl: TmpL.TypeDeclaration): List<List<String>> {
         val out = mutableListOf<List<String>>()
-        val seen = mutableSetOf<String>()
-        var level = listOf(decl)
+        val seen = mutableSetOf<TypeShape>(decl.typeShape)
+        var level = listOf(decl.typeShape)
         while (level.isNotEmpty()) {
             level = level.flatMap { type ->
                 type.superTypes.mapNotNull { superType ->
-                    val key = baseNameOf(superType.typeName) ?: return@mapNotNull null
-                    if (!seen.add(key)) return@mapNotNull null
-                    val found = localType(superType.typeName.sourceDefinition?.name) ?: return@mapNotNull null
-                    out.add(typeModule(found))
-                    found
+                    val shape = (superType.definition as? TypeShape)?.takeIf(seen::add) ?: return@mapNotNull null
+                    val module = localType(shape.name)?.let { typeModule(it) } ?: externalModule(shape.name)
+                    module?.let {
+                        out.add(it)
+                        shape
+                    }
                 }
             }
         }

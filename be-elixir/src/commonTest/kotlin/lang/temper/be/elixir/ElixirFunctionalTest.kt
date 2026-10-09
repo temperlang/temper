@@ -13,8 +13,10 @@ import lang.temper.fs.OutDir
 import lang.temper.fs.OutputRoot
 import lang.temper.log.FilePath
 import lang.temper.log.FilePathSegment
+import lang.temper.log.dirPath
 import lang.temper.name.ModuleName
 import lang.temper.tests.FunctionalTestBase
+import lang.temper.tests.MarkdownFileBasedFunctionalTestBase
 import kotlin.test.Test
 
 /**
@@ -33,6 +35,16 @@ class ElixirFunctionalTest : FunctionalTestRunner<ElixirBackend>(ElixirBackend.F
     @Test
     override fun algosHelloWorld() {
         super.algosHelloWorld()
+    }
+
+    /**
+     * A class inheriting getters, a setter and methods with bodies from
+     * interfaces declared in two other libraries, built as three libraries
+     * and run together, the way `temper build` lays them out.
+     */
+    @Test
+    fun classesInheritFromOtherLibrariesInterfaces() {
+        runFunctionalTest(CrossLibraryInterfaces)
     }
 
     override fun runGeneratedCode(
@@ -74,4 +86,16 @@ class ElixirFunctionalTest : FunctionalTestRunner<ElixirBackend>(ElixirBackend.F
             }
         }
     }
+}
+
+/**
+ * `cross-library-interfaces/`: `main.temper.md` and the libraries beside it
+ * that it imports, each a directory with its own `config.temper.md`.
+ */
+private object CrossLibraryInterfaces : MarkdownFileBasedFunctionalTestBase() {
+    override val testName = "crossLibraryInterfaces"
+    override val projectPath = dirPath(
+        "be-elixir", "src", "commonTest", "resources", "lang", "temper", "be", "elixir", "cross-library-interfaces",
+    )
+    override val sourcePath = projectPath
 }
