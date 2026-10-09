@@ -4,7 +4,6 @@ import lang.temper.builtin.Types
 import lang.temper.common.Log
 import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
-import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
@@ -112,11 +111,12 @@ internal val operatorImplementationDecorator =
  * individual method for a specific operator.
  *
  * Currently, only the `==` operator is supported via `@auto("==")`, but we
- * expect to expand on this in the future. The currently generating method name
- * is *eq*.
+ * expect to expand on this in the future. The currently generated method name
+ * is *eq*. Some mechanism for supplying multiple operators is expected in the
+ * future.
  *
- * It is an error to use `@auto("==")` on an interface that isn't sealed with
- * only class or sealed interface descendents. Inheriting `@auto("==")` from
+ * It is an error to use `@auto("==")` even on a sealed interface that has other
+ * than class or sealed interface descendents. Inheriting `@auto("==")` from
  * multiple sealed ancestor interface branches is also an error. Further, if a
  * manual `@operator("==")` method exists for a type, no automatic
  * implementation is injected.
@@ -126,8 +126,8 @@ internal val operatorImplementationDecorator =
  * a pure virtual method to the interface and a concrete method on all leaf
  * classes that checks both the type and its concrete properties.
  *
- * Manual `@operator("==")` is always available if `@auto("==")` has unwanted
- * behavior for some type.
+ * Manual `@operator("==")` is available if `@auto("==")` has unwanted behavior
+ * for some type.
  */
 internal val autoDecorator = MetadataDecorator(
     symbolKey = autoSymbol,
