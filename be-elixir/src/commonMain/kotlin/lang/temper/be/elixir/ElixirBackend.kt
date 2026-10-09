@@ -3,6 +3,8 @@ package lang.temper.be.elixir
 import lang.temper.ast.boundaryDescent
 import lang.temper.be.Backend
 import lang.temper.be.BackendSetup
+import lang.temper.be.MetadataKey
+import lang.temper.be.SiblingData
 import lang.temper.be.storeDescriptorsForDeclarations
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
@@ -20,6 +22,7 @@ import lang.temper.log.filePath
 import lang.temper.log.last
 import lang.temper.name.BackendId
 import lang.temper.name.BackendMeta
+import lang.temper.name.DashedIdentifier
 import lang.temper.name.FileType
 import lang.temper.name.LanguageLabel
 import lang.temper.name.OutName
@@ -64,6 +67,62 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     }
 
     /**
+     * Every library's backend finishes its TmpL before any translates, so
+     * this is where a library says which of its module functions an
+     * assignment rebinds: a library importing one reads it as a value from
+     * `TemperCore.Global`, where a capture of `def f` would follow every
+     * later rebinding.
+     */
+    override fun finishTmpL(
+        tentative: TmpL.ModuleSet,
+        siblings: SiblingData<TmpL.ModuleSet>,
+    ): TmpL.ModuleSet {
+        val finished = super.finishTmpL(tentative, siblings)
+        dependenciesBuilder.addMetadata(libraryName, ReboundFunctions, reboundFunctions(finished))
+        return finished
+    }
+
+    /**
+     * `var f = fn ...; f = g;` arrives as a module function named f and an
+     * assignment to it. JS and Python rebind a function's name; a `def`
+     * cannot be rebound, so f is a module-level value instead, its first
+     * value a capture of the `defp` its declaration became.
+     */
+    private fun reboundFunctions(finished: TmpL.ModuleSet): Set<ResolvedName> {
+        val functions = finished.modules.flatMap { module ->
+            module.topLevels.mapNotNull { (it as? TmpL.ModuleFunctionDeclaration)?.name?.name }
+        }.toSet()
+        val imports = localImports(finished)
+        val rebound = mutableSetOf<ResolvedName>()
+        for (module in finished.modules) {
+            for (topLevel in module.topLevels) {
+                topLevel.boundaryDescent { node ->
+                    if (node is TmpL.Assignment) {
+                        var name = node.left.name
+                        repeat(imports.size) { name = imports[name] ?: name }
+                        if (name in functions) rebound.add(name)
+                    }
+                    true
+                }
+            }
+        }
+        return rebound
+    }
+
+    /** What each module calls a name it imports, to the name its declaring module gave it. */
+    private fun localImports(finished: TmpL.ModuleSet): Map<ResolvedName, ResolvedName> {
+        val imports = mutableMapOf<ResolvedName, ResolvedName>()
+        for (module in finished.modules) {
+            for (import in module.imports) {
+                val local = import.localName?.let { runCatching { it.name }.getOrNull() } ?: continue
+                val external = runCatching { import.externalName.name }.getOrNull() ?: continue
+                if (local != external) imports[local] = external
+            }
+        }
+        return imports
+    }
+
+    /**
      * One Mix project per library: `mix.exs`, which depends on temper-core
      * and on every library this one imports from, and `lib/temper_main.ex`.
      *
@@ -88,10 +147,12 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 val external = runCatching { import.externalName.name }.getOrNull() ?: continue
                 val module = libraryModule(path.libraryName)
                 when (val sig = import.sig) {
-                    is TmpL.ImportedFunction -> externals[external] = ExternalFunction(
-                        module,
-                        sig.type.requiredInputTypes.size + sig.type.optionalInputTypes.size,
-                    )
+                    // one its library rebinds is a value, read for what it holds now
+                    is TmpL.ImportedFunction -> externals[external] = if (external in rebound(path.libraryName)) {
+                        ExternalValue(module)
+                    } else {
+                        ExternalFunction(module, sig.type.requiredInputTypes.size + sig.type.optionalInputTypes.size)
+                    }
                     is TmpL.ImportedValue -> externals[external] = ExternalValue(module)
                     // a type is found from its definition's library, wherever it is
                     // named; a connected function arrives as support code
@@ -141,30 +202,8 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
                 }
             }
         }
-        val imports = mutableMapOf<ResolvedName, ResolvedName>()
-        for (module in finished.modules) {
-            for (import in module.imports) {
-                val local = import.localName?.let { runCatching { it.name }.getOrNull() } ?: continue
-                val external = runCatching { import.externalName.name }.getOrNull() ?: continue
-                if (local != external) imports[local] = external
-            }
-        }
-        // `var f = fn ...; f = g;` arrives as a module function named f and an
-        // assignment to it. JS and Python rebind a function's name; a `def`
-        // cannot be rebound, so f is a module-level value instead, its first
-        // value a capture of the `defp` its declaration became
-        for (module in finished.modules) {
-            for (topLevel in module.topLevels) {
-                topLevel.boundaryDescent { node ->
-                    if (node is TmpL.Assignment) {
-                        var name = node.left.name
-                        repeat(imports.size) { name = imports[name] ?: name }
-                        if (name in moduleFunctions) moduleGlobals.add(name)
-                    }
-                    true
-                }
-            }
-        }
+        val imports = localImports(finished)
+        moduleGlobals.addAll(rebound(libraryName))
         val placed = placement(finished, imports)
         testOnly.addAll(placed.testOnly)
         // a function or module-level value is known by the name its own module declared
@@ -569,6 +608,16 @@ class ElixirBackend(setup: BackendSetup<ElixirBackend>) : Backend<ElixirBackend>
     private fun pascalStem(stem: String) = stem.split("_").joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
 
     override val supportNetwork = ElixirSupportNetwork
+
+    /** The module functions [library] rebinds, which [finishTmpL] recorded before any library translated. */
+    private fun rebound(library: DashedIdentifier): Set<ResolvedName> =
+        dependenciesBuilder.getMetadata(library, ReboundFunctions)
+            ?: error("$libraryName imports from $library, whose Elixir backend never finished its TmpL")
+
+    /** The module functions of a library that an assignment rebinds, by the name it declared them with. */
+    private object ReboundFunctions : MetadataKey<ElixirBackend, Set<ResolvedName>>() {
+        override val backendId: BackendId get() = Factory.backendId
+    }
 
     private fun tentativeOutputPathFor(module: Module): FilePath =
         allocateTextFile(module, FILE_EXTENSION, defaultName = "module")
