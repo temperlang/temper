@@ -174,13 +174,15 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("regex = { version = \"=1.12.2\", optional = true }\n")
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
+                    // Here down are transitive dependencies that need versions locked.
+                    append("powerfmt = { version = \"=0.2.0\", optional = true }\n")
                     append("zeroize = { version = \"=1.8.2\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
                     append("net = [\"ureq\", \"zeroize\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
-                    append("temporal = [\"time\"]\n")
+                    append("temporal = [\"powerfmt\", \"time\"]\n")
                 }
             }
             val packageFields = buildMap {

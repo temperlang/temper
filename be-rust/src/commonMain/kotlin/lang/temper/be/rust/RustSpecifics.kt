@@ -66,6 +66,8 @@ object RustcCommand : VersionedTool {
      * - https://releases.rs/docs/1.63.0/ - Aug 2022, Const RwLock
      * - https://releases.rs/docs/1.70.0/ - Jun 2023, OnceLock
      * - https://releases.rs/docs/1.71.1/ - Aug 2023, Required for ureq
+     * - https://releases.rs/docs/1.85.0/ - Feb 2025, Rust 2024, cargo also defaults to looking at rust-version
+     * - https://releases.rs/docs/1.85.1/ - Mar 2025, Fixes some regressions
      */
     @Suppress("MagicNumber")
     val minVersion = SemVer(1, 71, 1)
