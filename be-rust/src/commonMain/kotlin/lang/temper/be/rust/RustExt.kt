@@ -61,6 +61,9 @@ fun makeSrcFilePath(relDir: List<FilePathSegment>): FilePath {
     return dirPath("src").resolve(modPath)
 }
 
+fun pubCrate(pos: Position): Rust.VisibilityPub =
+    Rust.VisibilityPub(pos, scope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate))
+
 internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.GenericParam>): Rust.Where? = run {
     val whereItems = translatedGenerics.mapNotNull generics@{ translatedParam ->
         val translatedFormal = translatedParam as? Rust.TypeParam ?: return@generics null

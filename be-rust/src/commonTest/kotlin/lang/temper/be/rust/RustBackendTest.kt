@@ -1912,6 +1912,80 @@ class RustBackendTest {
     }
 
     @Test
+    fun hiddenSealedSub() {
+        assertGenerateWanted(
+            temper = """
+                |export sealed interface ExportedSealed {}
+                |@keep class InternalSub extends ExportedSealed {}
+                |export class ExportedSub extends ExportedSealed {}
+            """.trimMargin(),
+            rust = """
+                |pub (crate) fn init() -> temper_core::Result<()> {
+                |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+                |    INIT_ONCE.get_or_init(| |{
+                |            Ok(())
+                |    }).clone()
+                |}
+                |pub (crate) enum ExportedSealedEnum {
+                |    InternalSub(InternalSub), ExportedSub(ExportedSub)
+                |}
+                |pub trait ExportedSealedTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+                |    fn clone_boxed(& self) -> ExportedSealed;
+                |}
+                |#[derive(Clone)]
+                |pub struct ExportedSealed(std::sync::Arc<dyn ExportedSealedTrait>);
+                |impl ExportedSealed {
+                |    pub fn new(selfish: impl ExportedSealedTrait + 'static) -> ExportedSealed {
+                |        ExportedSealed(std::sync::Arc::new(selfish))
+                |    }
+                |}
+                |impl ExportedSealedTrait for ExportedSealed {
+                |    fn clone_boxed(& self) -> ExportedSealed {
+                |        ExportedSealedTrait::clone_boxed( & ( * self.0))
+                |    }
+                |}
+                |temper_core::impl_any_value_trait_for_interface!(ExportedSealed);
+                |impl std::ops::Deref for ExportedSealed {
+                |    type Target = dyn ExportedSealedTrait;
+                |    fn deref(& self) -> & Self::Target {
+                |        & ( * self.0)
+                |    }
+                |}
+                |struct InternalSubStruct {}
+                |#[derive(Clone)]
+                |pub (crate) struct InternalSub(std::sync::Arc<InternalSubStruct>);
+                |impl InternalSub {
+                |    pub fn new() -> InternalSub {
+                |        let selfish = InternalSub(std::sync::Arc::new(InternalSubStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |impl ExportedSealedTrait for InternalSub {
+                |    fn clone_boxed(& self) -> ExportedSealed {
+                |        ExportedSealed::new(self.clone())
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(InternalSub, [ExportedSealed]);
+                |struct ExportedSubStruct {}
+                |#[derive(Clone)]
+                |pub struct ExportedSub(std::sync::Arc<ExportedSubStruct>);
+                |impl ExportedSub {
+                |    pub fn new() -> ExportedSub {
+                |        let selfish = ExportedSub(std::sync::Arc::new(ExportedSubStruct {}));
+                |        return selfish;
+                |    }
+                |}
+                |impl ExportedSealedTrait for ExportedSub {
+                |    fn clone_boxed(& self) -> ExportedSealed {
+                |        ExportedSealed::new(self.clone())
+                |    }
+                |}
+                |temper_core::impl_any_value_trait!(ExportedSub, [ExportedSealed]);
+            """.trimMargin(),
+        )
+    }
+
+    @Test
     fun needlesslyGenericBuilder() {
         assertGenerateWanted(
             temper = """
