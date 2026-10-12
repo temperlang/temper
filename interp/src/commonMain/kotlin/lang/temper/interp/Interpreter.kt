@@ -319,7 +319,8 @@ class Interpreter(
                 // to double-check that we've completely reached everything in the child tree.
                 val ast = edge.target
                 val childEnv = when (ast) {
-                    is BlockTree, is FunTree -> BlockEnvironment(env)
+                    is BlockTree -> BlockEnvironment(env)
+                    is FunTree -> BlockEnvironment(MayNotRunEnvironment(env))
                     is CallTree, is DeclTree, is LeafTree -> env
                     is EscTree -> {
                         preemptEscapedCalls(ast, env, im)
@@ -542,16 +543,34 @@ class Interpreter(
             }
             var lastResult: PartialResult = void
             if (orderForNodes != null) {
+                val flow = ast.flow
+                val regions = if (flow is StructuredFlow) mayNotRunRegions(ast, flow) else emptyMap()
+                // One environment per region, nested as the regions are, so that an assignment
+                // reaches a declaration in the same region but not one outside it.
+                val regionEnvs = mutableMapOf<MayNotRunRegion, Environment>()
+                fun envFor(region: MayNotRunRegion?): Environment = when (region) {
+                    null -> mutableEnv
+                    else -> regionEnvs.getOrPut(region) {
+                        MayNotRunEnvironment(envFor(region.enclosing))
+                    }
+                }
                 for (i in orderForNodes) {
-                    lastResult = interpretEdge(ast.edge(i), mutableEnv, im)
+                    lastResult = interpretEdge(ast.edge(i), envFor(regions[i]), im)
                 }
             } else {
                 // In a LinearFlow, some macros insert in place, especially during disambiguate.
+                // A labeled block that may be broken out of may stop part way, like an `if`
+                // branch, so its assignments to outer names must not settle their values.
+                val linearEnv = if (isLinearBlockThatMayBreak(ast)) {
+                    MayNotRunEnvironment(mutableEnv)
+                } else {
+                    mutableEnv
+                }
                 var i = 0
                 while (i < ast.size) {
                     val edge = ast.edge(i)
                     val nextEdge = ast.edgeOrNull(i + 1)
-                    lastResult = interpretEdge(edge, mutableEnv, im)
+                    lastResult = interpretEdge(edge, linearEnv, im)
                     i = when {
                         ast.edgeOrNull(i) == edge -> i + 1
                         edge.source == ast -> edge.edgeIndex + 1
@@ -1521,14 +1540,16 @@ class Interpreter(
         // function stability check below benefits from any impurity reducing substitutions.
 
         if (im == InterpMode.Partial) {
-            val exampleStackFrame = blankEnvironment(definingEnv)
+            // The body may run any number of times, so assignments in it to outer names
+            // must not settle what reads of those names outside it see.
+            val exampleStackFrame = BlockEnvironment(MayNotRunEnvironment(definingEnv))
             maybeVisitChildren(ast, exampleStackFrame, im)
         }
 
         // When expanding macros, we need to have a stack frame with formal/return parameters in
         // scope, masking anything in env
         val partialFunEnv = when (im) {
-            InterpMode.Partial -> blankEnvironment(definingEnv)
+            InterpMode.Partial -> BlockEnvironment(MayNotRunEnvironment(definingEnv))
             InterpMode.Full -> null
         }
 
