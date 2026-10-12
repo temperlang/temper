@@ -265,9 +265,40 @@ class SyntaxMacroStageTest {
         moduleResultNeeded = true,
     )
 
+    /**
+     * A `return` the macro cannot place is an error at the `return`, not a call left
+     * in the tree for a backend to run.
+     */
+    @Test
+    fun returnFromLambda() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/return-from-lambda"),
+    )
+
     @Test
     fun reorder() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/reorder"),
+    )
+
+    @Test
+    fun reorderKeepsReassignmentsInPlace() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-reassignment"),
+    )
+
+    @Test
+    fun reorderConflictIsAnError() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-conflict"),
+        moduleResultNeeded = true,
+    )
+
+    @Test
+    fun reorderFollowsCalls() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-through-call"),
+    )
+
+    @Test
+    fun reorderConflictThroughForwardReferenceIsAnError() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-forward-conflict"),
+        moduleResultNeeded = true,
     )
 
     @Test

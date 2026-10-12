@@ -1,0 +1,8 @@
+let console#0 = doPure(fn: Console {
+    getConsole()
+});
+REM("Logging needs `two`, which has to come after `w = 1`,\nbut logging reads `w` before `w = 1`. No order does both.", null, false);
+var w__0 = 0;
+w__0 = 1;
+let two__0 = w__0 + 1;
+do_call_log(console#0, cat(str(two__0 + w__0)));

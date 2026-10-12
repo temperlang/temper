@@ -1,0 +1,7 @@
+// `snapshot` reads `counter` before its declaration, so it sees `counter`
+// after `counter = 5`. Logging needs `snapshot`, but reads `counter` before
+// `counter = 5`. No order does both.
+let snapshot = counter;
+var counter = 0;
+console.log("${snapshot} ${counter}");
+counter = 5;

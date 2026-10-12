@@ -570,6 +570,12 @@ val imuSymbol = Symbol("imu")
 val partialImuSymbol = Symbol("partialImu")
 
 /**
+ * Marks a class whose instances are each a concurrent actor, on a backend
+ * that has them (the BEAM). Everywhere else it changes nothing.
+ */
+val actorSymbol = Symbol("actor")
+
+/**
  * The receiver type when an extension (see [extensionSymbol]) function is invoked via
  * `ReceiverType.dotName(...)` syntax.
  */

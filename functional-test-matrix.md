@@ -19,6 +19,7 @@
 | [ClassesSetters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticProperties][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ControlFlowActor][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ❌<sup>[517][], [519][]</sup> |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -45,6 +46,7 @@
 | [SemanticsBroken][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsConstness][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsMutuallyReferencingTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [SemanticsTopLevelOrder][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsTypeCheckedLocals][] | ❌<sup>[58][]</sup> | ❌<sup>[198][]</sup> | ❌<sup>[58][]</sup> | ✅ | ❌<sup>[58][]</sup> | ❌<sup>[58][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[58][]</sup> |
 | [TestingAsserts][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDate][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -73,6 +75,8 @@
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
 [456]: https://github.com/temperlang/temper/issues/456
+[517]: https://github.com/temperlang/temper/issues/517
+[519]: https://github.com/temperlang/temper/issues/519
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
 [AlgosHelloFromClassToTop]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/hello-from-class-to-top/hello-from-class-to-top.temper.md
@@ -91,6 +95,7 @@
 [ClassesSetters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/setters/setters.temper.md
 [ClassesStaticProperties]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties/static-properties.temper.md
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
+[ControlFlowActor]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor/actor.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
@@ -117,6 +122,7 @@
 [SemanticsBroken]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/broken/broken.temper.md
 [SemanticsConstness]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/constness/constness.temper.md
 [SemanticsMutuallyReferencingTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/mutually-referencing-types/mutually-referencing-types.temper.md
+[SemanticsTopLevelOrder]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/top-level-order/top-level-order.temper.md
 [SemanticsTypeCheckedLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/type-checked-locals/type-checked-locals.temper.md
 [TestingAsserts]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/testing/asserts/asserts.temper.md
 [TypesDate]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/date/date.temper.md

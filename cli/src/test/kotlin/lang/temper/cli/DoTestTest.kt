@@ -184,6 +184,22 @@ class DoTestTest {
         assertFalse(result.errorFree, "Tests should have had an error")
     }
 
+    /**
+     * A Hex package from the library's `ElixirConfig`, used by its `_connected.ex`.
+     * `mix deps.get` needs Hex and either the network or, with `HEX_OFFLINE=1`,
+     * decimal 3.1.x in the Hex cache.
+     */
+    @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsHexElixir() {
+        checkPassing(
+            name = "ConnectedsHexElixir",
+            path = "/testing/connecteds-hex",
+            backends = listOf(BackendId("elixir")),
+            libraryName = DashedIdentifier("connecteds-hex"),
+        )
+    }
+
     @Test
     fun connectedsJs() {
         checkPassing(

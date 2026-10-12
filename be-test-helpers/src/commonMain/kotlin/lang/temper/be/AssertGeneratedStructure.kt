@@ -23,6 +23,8 @@ fun <BACKEND : Backend<BACKEND>> assertGeneratedStructure(
     moduleResultNeeded: Boolean,
     postProcess: (Structured) -> Structured = { it },
     lookupFactory: (BackendId) -> Backend.Factory<*>? = factoryFinder(factory),
+    /** Every library the inputs declare, as `<backend>/<library>`, not only `my-test-library`. */
+    writeEveryLibrary: Boolean = false,
     assertion: (Structured) -> Unit,
 ) {
     val logSink = ListBackedLogSink()
@@ -34,6 +36,7 @@ fun <BACKEND : Backend<BACKEND>> assertGeneratedStructure(
         moduleResultNeeded = moduleResultNeeded,
         logSink = logSink,
         lookupFactory = lookupFactory,
+        writeEveryLibrary = writeEveryLibrary,
     )
     logSink.toConsole(
         console,

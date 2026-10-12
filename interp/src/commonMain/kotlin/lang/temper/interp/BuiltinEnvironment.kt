@@ -792,6 +792,7 @@ private object Builtins {
             keyPair(vConnectedDecorator),
             keyPair(vImuDecorator),
             keyPair(vPartialImuDecorator),
+            keyPair(vActorDecorator),
 
             "new" to Value(New),
             keyPair(Value(ImportMacro)),

@@ -116,6 +116,7 @@ enum class MessageTemplate(
     IsNotAName("Expected a name", CompilationPhase.Interpreter),
     CouldNotSetLocal("Failed to assign %s", CompilationPhase.Interpreter),
     ExpectedValueOfType("Expected value of type %s not %s", CompilationPhase.Interpreter),
+    MalformedRegex("Malformed regex: %s", CompilationPhase.Interpreter),
     NoCalleeMatching("No callee matches inputs %s among %s", CompilationPhase.Interpreter),
     AlreadyDeclared("Name was already declared", CompilationPhase.Interpreter),
     ClassMemberNameConflict("Class members with same name conflict at %s", CompilationPhase.Interpreter),
@@ -232,6 +233,12 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     ReturnOutsideFn("Return outside function body", CompilationPhase.Interpreter),
+    ReturnFromLambda(
+        "`return` inside a lambda with a declared result type would leave the enclosing function, " +
+            "not the lambda. Make it a function with `fn` or `let`, or end a generator with `break` " +
+            "or by reaching its end",
+        CompilationPhase.Interpreter,
+    ),
     YieldingOutsideGeneratorFn("%s outside generator function body", CompilationPhase.Interpreter),
     ThisOutsideClassBody(
         "`this` may only appear inside a type definition",
@@ -281,8 +288,16 @@ enum class MessageTemplate(
     MalformedAnnotation("Malformed annotation", CompilationPhase.Interpreter),
     UnexpectedMetadata("Metadata %s has unexpected value %s", CompilationPhase.Interpreter),
     MemberUnavailable("Class member %s is unavailable", CompilationPhase.Interpreter),
+    TopLevelOrderConflict(
+        "Top-level use of %s must keep its place among other uses of it, but the declarations they need would move it",
+        CompilationPhase.Interpreter,
+    ),
     StaticMemberNeedsQualified("Type name required for accessing static member", CompilationPhase.Interpreter),
     StaticMemberUsesChaining("Static member access should use `.`, not `?.`", CompilationPhase.Interpreter),
+    StaticComputedPropertyUnsupported(
+        "`static %s %s` is not supported; use a static method instead",
+        CompilationPhase.Interpreter,
+    ),
     NoAccessibleMember("No accessible member %s in type %s", CompilationPhase.Interpreter),
     NoAccessibleGetter("No accessible getter %s in %s", CompilationPhase.Interpreter),
     NoAccessibleSetter("No accessible setter %s in %s", CompilationPhase.Interpreter),

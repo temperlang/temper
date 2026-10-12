@@ -26,7 +26,7 @@ latest version from those that need a deprecated version.
 
 And for convenience, here's a blank interchange context.
 
-    export class NullInterchangeContext extends InterchangeContext {
+    @imu export class NullInterchangeContext extends InterchangeContext {
       public getHeader(headerName: String): String? { null }
 
       public static instance: NullInterchangeContext =
@@ -155,11 +155,11 @@ There may not be an order of keys that makes it easy to consume a stream of
 events to implement those rules, and expecting all producers to use the same
 key order would lead to brittle unmarshalling.
 
-    export sealed interface JsonSyntaxTree {
+    @imu export sealed interface JsonSyntaxTree {
       public produce(p: JsonProducer): Void;
     }
 
-    export class JsonObject(
+    @imu export class JsonObject(
       public properties: Map<String, List<JsonSyntaxTree>>,
     ) extends JsonSyntaxTree {
 
@@ -225,7 +225,7 @@ key order would lead to brittle unmarshalling.
       }
     }
 
-    export class JsonArray(
+    @imu export class JsonArray(
       public elements: List<JsonSyntaxTree>,
     ) extends JsonSyntaxTree {
 
@@ -238,7 +238,7 @@ key order would lead to brittle unmarshalling.
       }
     }
 
-    export class JsonBoolean(
+    @imu export class JsonBoolean(
       public content: Boolean,
     ) extends JsonSyntaxTree {
       public produce(p: JsonProducer): Void {
@@ -246,13 +246,13 @@ key order would lead to brittle unmarshalling.
       }
     }
 
-    export class JsonNull extends JsonSyntaxTree {
+    @imu export class JsonNull extends JsonSyntaxTree {
       public produce(p: JsonProducer): Void {
         p.nullValue();
       }
     }
 
-    export class JsonString(
+    @imu export class JsonString(
       public content: String,
     ) extends JsonSyntaxTree {
       public produce(p: JsonProducer): Void {
@@ -270,7 +270,7 @@ key order would lead to brittle unmarshalling.
 
     export let JsonInt = JsonInt32;
 
-    export class JsonInt32(
+    @imu export class JsonInt32(
       public content: Int,
     ) extends JsonNumeric {
       public produce(p: JsonProducer): Void {
@@ -291,7 +291,7 @@ key order would lead to brittle unmarshalling.
       public asFloat64Safe(): Float64 { content.toFloat64() }
     }
 
-    export class JsonInt64(
+    @imu export class JsonInt64(
       public content: Int64,
     ) extends JsonNumeric {
       public produce(p: JsonProducer): Void {
@@ -310,7 +310,7 @@ key order would lead to brittle unmarshalling.
       public asFloat64(): Float64 throws Bubble { content.toFloat64() }
     }
 
-    export class JsonFloat64(
+    @imu export class JsonFloat64(
       public content: Float64,
     ) extends JsonNumeric {
       public produce(p: JsonProducer): Void {
@@ -329,7 +329,7 @@ key order would lead to brittle unmarshalling.
       public asFloat64Safe(): Float64 { content }
     }
 
-    export class JsonNumericToken(
+    @imu export class JsonNumericToken(
       public content: String,
     ) extends JsonNumeric {
       public produce(p: JsonProducer): Void {
@@ -1278,7 +1278,7 @@ type.
 Our intrinsic types, like *Boolean* need json adapters.  Static extensions
 let us make *Boolean.jsonAdapter()* work as if it were built in.
 
-    class BooleanJsonAdapter extends JsonAdapter<Boolean> {
+    @imu class BooleanJsonAdapter extends JsonAdapter<Boolean> {
       public encodeToJson(x: Boolean, p: JsonProducer): Void {
         p.booleanValue(x);
       }
@@ -1292,7 +1292,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       new BooleanJsonAdapter()
     }
 
-    class Float64JsonAdapter extends JsonAdapter<Float64> {
+    @imu class Float64JsonAdapter extends JsonAdapter<Float64> {
       public encodeToJson(x: Float64, p: JsonProducer): Void {
         p.float64Value(x);
       }
@@ -1306,7 +1306,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       new Float64JsonAdapter()
     }
 
-    class Int32JsonAdapter extends JsonAdapter<Int> {
+    @imu class Int32JsonAdapter extends JsonAdapter<Int> {
       public encodeToJson(x: Int, p: JsonProducer): Void {
         p.int32Value(x);
       }
@@ -1320,7 +1320,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       new Int32JsonAdapter()
     }
 
-    class Int64JsonAdapter extends JsonAdapter<Int64> {
+    @imu class Int64JsonAdapter extends JsonAdapter<Int64> {
       public encodeToJson(x: Int64, p: JsonProducer): Void {
         p.int64Value(x);
       }
@@ -1334,7 +1334,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       new Int64JsonAdapter()
     }
 
-    class StringJsonAdapter extends JsonAdapter<String> {
+    @imu class StringJsonAdapter extends JsonAdapter<String> {
       public encodeToJson(x: String, p: JsonProducer): Void {
         p.stringValue(x);
       }

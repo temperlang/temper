@@ -62,6 +62,12 @@ jobs:
               with:
                 dotnet-version: '9.0'
               timeout-minutes: 2
+            - name: Set up Erlang and Elixir
+              uses: erlef/setup-beam@v1
+              with:
+                otp-version: '28'
+                elixir-version: '1.19'
+              timeout-minutes: 5
             - name: Build and run tests with Gradle
               id: gradle
               run: ./gradlew --info --profile --parallel build

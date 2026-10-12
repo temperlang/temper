@@ -3244,6 +3244,18 @@ do {
 
 <!-- /snippet: builtin/@ -->
 
+<!-- snippet: builtin/@actor -->
+
+<a name="builtin&#45;&#64;actor" class="snippet-anchor-name"></a>
+
+### `@actor` decorator
+Marker for classes whose instances are each a concurrent actor, on
+backends that have them: on the BEAM, each instance is its own process,
+its methods run there, and any process may hold it. Other backends ignore
+it, so the class behaves exactly as an undecorated one.
+
+<!-- /snippet: builtin/@actor -->
+
 <!-- snippet: builtin/@connected -->
 
 <a name="builtin&#45;&#64;connected" class="snippet-anchor-name"></a>

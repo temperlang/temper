@@ -53,6 +53,54 @@ calcRows(3, 6)
 2
 ```
 
+## A loop whose condition bubbles
+
+The frontend evaluates a call with constant arguments while compiling. When a
+loop's condition bubbled during that evaluation, the interpreter unwound to
+the `orelse` and then popped the loop a second time, from an empty stack, so
+the build crashed with an IndexOutOfBoundsException instead of using the
+`orelse`.
+
+    let countBelow(s: String): Int throws Bubble {
+      var i = 0;
+      while (i < s.toInt32()) { i += 1; }
+      i
+    }
+    console.log((countBelow("abc") orelse -1).toString());
+
+```log
+-1
+```
+
+## Void bodies that never return
+
+A `Void` method whose body ends in `bubble()` has no path that returns. The
+field write before the bubble still has to happen.
+
+    class Failer {
+      public var failedAt: Int = -1;
+      public fail(n: Int): Void throws Bubble {
+        failedAt = n;
+        bubble();
+      }
+    }
+
+    let failer = new Failer();
+    failer.fail(7) orelse console.log("bubbled");
+    console.log("failedAt ${failer.failedAt}");
+
+A function that only bubbles is the same shape without the field.
+
+    let alwaysBubbles(): Void throws Bubble { bubble(); }
+
+    alwaysBubbles() orelse console.log("bubbled again");
+
+```log
+bubbled
+failedAt 7
+bubbled again
+```
+
 ## Match miscellany
 
 This code doesn't have anything to do with bubbling, but it failed in Lua, and

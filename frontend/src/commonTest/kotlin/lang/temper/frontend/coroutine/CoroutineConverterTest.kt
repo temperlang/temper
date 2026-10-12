@@ -131,6 +131,26 @@ class CoroutineConverterTest {
         StageTestDir("convert-coro/yield-in-loop"),
     )
 
+    /**
+     * The `if` around `continue` does not yield, but it must not be isolated
+     * as an opaque sub-block: its `break` to the `for` body's continue label
+     * would then name a label that the state machine dissolved.
+     */
+    @Test
+    fun continueInYieldingLoop() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/continue-in-yielding-loop"),
+    )
+
+    /**
+     * A bare `yield` whose next step depends on a condition gets an
+     * afterwards case, but has no promise to carry across the pause:
+     * only an `await` has a promise operand.
+     */
+    @Test
+    fun breakAfterBareYield() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/break-after-bare-yield"),
+    )
+
     @Test
     fun nestedFunctionHoisting() = assertConvertedCoroutine(
         StageTestDir("convert-coro/nested-function-hoisting"),
@@ -140,6 +160,11 @@ class CoroutineConverterTest {
     @Test
     fun netResponse() = assertConvertedCoroutine(
         StageTestDir("convert-coro/net-response"),
+    )
+
+    @Test
+    fun awaitOrelseThenIf() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/await-orelse-then-if"),
     )
 
     @Test

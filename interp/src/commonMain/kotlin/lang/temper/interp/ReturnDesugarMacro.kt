@@ -114,6 +114,13 @@ internal object ReturnDesugarMacro : StaylessMacroValue, NamedBuiltinFun {
         // Find a function declared via `fn() { ... }` or `let f() { ... }`
         // so that the return goes to a predictable place, not to the end of
         // a function that's part of a desugared control flow statement.
+        // A lambda the user wrote with a declared result type, `(): T => ...`, is not
+        // such a function, and a `return` that would pass out of one is refused: its
+        // writer meant to leave the lambda, and a generator lambda cannot leave the
+        // function around it at all, because its body runs later, on its own. Left
+        // alone, the `return` call survived this macro and was later bound to the
+        // lambda's own result variable, so it compiled to a call of that variable.
+        var crossedTypedLambda = false
         val explicitFunction: FunTree? = run {
             var candidate = macroEnv.callee
             while (true) {
@@ -122,6 +129,9 @@ internal object ReturnDesugarMacro : StaylessMacroValue, NamedBuiltinFun {
                     val parts = containingScope.parts
                     if (parts?.returnedFrom == true) {
                         return@run containingScope
+                    }
+                    if (parts?.metadataSymbolMap?.containsKey(outTypeSymbol) == true || parts?.returnDecl != null) {
+                        crossedTypedLambda = true
                     }
                 }
                 if (containingScope == candidate) {
@@ -132,20 +142,22 @@ internal object ReturnDesugarMacro : StaylessMacroValue, NamedBuiltinFun {
             null
         }
 
+        if (crossedTypedLambda) {
+            return refuse(macroEnv, MessageTemplate.ReturnFromLambda)
+        }
+        if (explicitFunction == null) {
+            // This macro runs only during the syntax macro stage, so this is the one
+            // chance to say so. A bare Fail here let the program build, and a backend
+            // then ran the leftover call.
+            return refuse(macroEnv, MessageTemplate.ReturnOutsideFn)
+        }
+
         // Figure out the name of the variable used to store the output
-        val outputName = if (explicitFunction != null) {
-            val fnParts = explicitFunction.parts
-            when (val retDecl = fnParts?.returnDecl) {
-                null -> null
-                else -> retDecl.parts?.name?.content
-            }
-        } else {
-            null
-        } ?: run {
+        val outputName = explicitFunction.parts?.returnDecl?.parts?.name?.content ?: run {
             // Allocate an output variable if there is none defined
             val newName = macroEnv.nameMaker.unusedSourceName(returnParsedName)
             // Add a declaration to the tree as metadata
-            val declarationEdge = if (explicitFunction != null) {
+            val declarationEdge = run {
                 val parts = explicitFunction.parts
                 val outTypeEdge = parts?.metadataSymbolMap?.get(outTypeSymbol)
                 val beforeBodyIndex = explicitFunction.size - 1
@@ -167,30 +179,14 @@ internal object ReturnDesugarMacro : StaylessMacroValue, NamedBuiltinFun {
                     }
                 }
                 explicitFunction.edge(replaceRange.first + 1) // past \returnDecl
-            } else {
-                null
             }
             // Declare it so that interpretation following this macro call
             // have a coherent environment.
-            if (declarationEdge != null) {
-                macroEnv.evaluateEdge(declarationEdge, interpMode)
-            }
+            macroEnv.evaluateEdge(declarationEdge, interpMode)
             newName
         }
 
         val pos = macroEnv.pos
-        if (explicitFunction == null) {
-            val problem = LogEntry(
-                Log.Error,
-                MessageTemplate.ReturnOutsideFn,
-                pos,
-                listOf(),
-            )
-            if (macroEnv.stage > Stage.SyntaxMacro) {
-                macroEnv.replaceMacroCallWithErrorNode(problem)
-            }
-            return Fail(problem)
-        }
 
         // We need a label to break to.
         val rootLabelName = rootLabelFor(macroEnv, explicitFunction)
@@ -276,3 +272,10 @@ private fun defineRootLabelFor(
 }
 
 private val vBreakTransform = Value(BreakTransform)
+
+private fun refuse(macroEnv: MacroEnvironment, template: MessageTemplate): Fail {
+    val problem = LogEntry(Log.Error, template, macroEnv.pos, listOf())
+    macroEnv.logSink.log(problem.level, problem.template, problem.pos, problem.values)
+    macroEnv.replaceMacroCallWithErrorNode(problem)
+    return Fail(problem)
+}
