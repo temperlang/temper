@@ -577,7 +577,12 @@ private class CoroutineConverter(
                     }
                     if (cf is ControlFlow.Stmt && t != null && isReturnOfDoneResult(t)) {
                         // Just `void` out returns since we handle those for terminal paths.
-                        freeTree(t)
+                        // Not with freeTree: the empty block it leaves behind is no
+                        // statement once an `if` around it is isolated as a sub-block,
+                        // and TmpL translates it as garbage, `Cannot translate (Block)`.
+                        val voided = ValueLeaf(t.document, t.pos, void)
+                        voided.typeInferences = BasicTypeInferences(WKT.voidType, listOf())
+                        t.incoming!!.replace(voided)
                     }
                 }
                 for (clause in cf.clauses) {
