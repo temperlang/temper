@@ -24,7 +24,10 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     issue(Ft.ControlFlowAsync, lua(144))
     issue(Ft.RegexZeroAdvance, lua(166))
     issue(Ft.NamesNonascii, lua(228))
-    214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }
+    214.let {
+        issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it))
+        issue(Ft.TypesNetresponseNotFound, cpp(it), interp(it), lua(it))
+    }
     456.let { issue(Ft.FunctionsConnected, interp(it)) }
     onlyFails(
         cpp(198),

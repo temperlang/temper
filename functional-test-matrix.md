@@ -62,6 +62,7 @@
 | [TypesListSorting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesMap][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesNetresponse][] | ❌<sup>[198][], [214][]</sup> | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ |
+| [TypesNetresponseNotFound][] | ❌<sup>[214][]</sup> | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ |
 | [TypesStringBuild][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesStringIndices][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesStringIsEmpty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -134,6 +135,7 @@
 [TypesListSorting]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/sorting/sorting.temper.md
 [TypesMap]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/map/map.temper.md
 [TypesNetresponse]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/netresponse/netresponse.temper.md
+[TypesNetresponseNotFound]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/netresponse-not-found/netresponse-not-found.temper.md
 [TypesStringBuild]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/build/build.temper.md
 [TypesStringIndices]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/indices/indices.temper.md
 [TypesStringIsEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/is-empty/is-empty.temper.md

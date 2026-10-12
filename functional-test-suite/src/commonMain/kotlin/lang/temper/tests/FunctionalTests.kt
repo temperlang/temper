@@ -124,6 +124,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     TypesListSorting(markdown("types/list/sorting/sorting.temper.md", "TypesListSorting")),
     TypesMap(markdown("types/map/map.temper.md", "TypesMap")),
     TypesNetresponse(markdown("types/netresponse/netresponse.temper.md", "TypesNetresponse")),
+    TypesNetresponseNotFound(markdown("types/netresponse-not-found/netresponse-not-found.temper.md", "TypesNetresponseNotFound")),
     TypesStringBuild(markdown("types/string/build/build.temper.md", "TypesStringBuild")),
     TypesStringIndices(markdown("types/string/indices/indices.temper.md", "TypesStringIndices")),
     TypesStringIsEmpty(markdown("types/string/is-empty/is-empty.temper.md", "TypesStringIsEmpty")),
