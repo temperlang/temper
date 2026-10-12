@@ -30,7 +30,7 @@ constructor__2 = (@stay fn constructor(@impliedThis(Square) this__2: Square) /* 
     } else if (g__0 is Square) {
       return__3 = "square"
     } else {
-      return__3 = void
+      error (IllegalAssignment)
     }
 });
 `test//`.describeShape = (@stay fn describeShape(s__0 /* aka s */: Shape) /* return__4 */: String {
