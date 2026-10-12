@@ -730,18 +730,33 @@ class TyperTest {
     @Test
     fun privateMemberVisibility() = assertTypes(
         """
-        |    class Private(private b: Int) {}
+        |    class Private(private b: Int) {
+        |      public sharing(other: Private): Int {
+        |        b + other.b
+        |      }
+        |    }
         |    let aPrivate = new Private(9);
         |///     ┗━━━━━━┛   ┗━━━━━━━━━━━━┛  : Private
         |/// ┏━━━━━━┓                       : Private
         |    aPrivate.b;
         |/// ┗━━━━━━━━┛                     : Invalid
+        |    export class Outsider {
+        |      public burgle(victim: Private): Int {
+        |        victim.b
+        |      }
+        |    }
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            "5+4-14: Member b defined in Private not publicly accessible!",
-            "5+4-14: Type Invalid mentions Invalid",
-            "5+13-14: Type Invalid mentions Invalid",
+            "3+12-19: Member b defined in Private not publicly accessible!",
+            "9+4-14: Member b defined in Private not publicly accessible!",
+            "13+8-16: Member b defined in Private not publicly accessible!",
+            "3+12-19: Type Invalid mentions Invalid",
+            "3+18-19: Type Invalid mentions Invalid",
+            "9+4-14: Type Invalid mentions Invalid",
+            "9+13-14: Type Invalid mentions Invalid",
+            "13+8-16: Type Invalid mentions Invalid",
+            "13+15-16: Type Invalid mentions Invalid",
         ),
     )
 
