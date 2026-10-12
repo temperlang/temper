@@ -283,6 +283,10 @@ enum class MessageTemplate(
     MemberUnavailable("Class member %s is unavailable", CompilationPhase.Interpreter),
     StaticMemberNeedsQualified("Type name required for accessing static member", CompilationPhase.Interpreter),
     StaticMemberUsesChaining("Static member access should use `.`, not `?.`", CompilationPhase.Interpreter),
+    StaticComputedPropertyUnsupported(
+        "`static %s %s` is not supported; use a static method instead",
+        CompilationPhase.Interpreter,
+    ),
     NoAccessibleMember("No accessible member %s in type %s", CompilationPhase.Interpreter),
     NoAccessibleGetter("No accessible getter %s in %s", CompilationPhase.Interpreter),
     NoAccessibleSetter("No accessible setter %s in %s", CompilationPhase.Interpreter),
