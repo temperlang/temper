@@ -13,6 +13,8 @@ import sys
 import logging
 from abc import abstractmethod
 from array import array
+from collections import deque
+from contextlib import contextmanager
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
 from logging import getLogger, INFO
@@ -27,6 +29,7 @@ from typing import (
     Generator,
     Generic,
     Iterable,
+    Iterator,
     List,
     Mapping,
     MutableSequence,
@@ -1042,8 +1045,61 @@ def mapped_for_each(
 
 
 # Async support
-# The executor used for Temper async{...} calls.
-_executor = ThreadPoolExecutor()
+#
+# Temper runs one async block at a time and switches only at `await`, as the
+# interpreter and JavaScript do.  Every step of every coroutine, whether it is
+# a launch or a resume after a promise settles, goes through one FIFO ready
+# queue that a single scheduler thread drains.  A promise may be settled on
+# any thread (std/net settles them on I/O threads, host code anywhere); that
+# only queues the waiter, so `complete_promise` returns before the waiter runs.
+#
+# `_turn` is held while a step runs.  The entry point holds it while module
+# top-level code runs, so that no async block starts until that code is done.
+_turn = threading.RLock()
+_ready: Deque[Callable[[], None]] = deque()
+_ready_cv = threading.Condition()
+_scheduler_thread: Optional[threading.Thread] = None
+# Runs blocking I/O for std/net off the scheduler thread.
+_io_executor = ThreadPoolExecutor(thread_name_prefix="temper-io")
+
+
+def _run_scheduler() -> None:
+    while True:
+        with _ready_cv:
+            while not _ready:
+                _ready_cv.wait()
+            step = _ready.popleft()
+        with _turn:
+            try:
+                step()
+            except Exception:
+                # _step_async_coro already printed it.  One failing block
+                # must not stop the others.
+                pass
+
+
+def _schedule(step: Callable[[], None]) -> None:
+    "Queues a step to run on the scheduler thread.  Safe from any thread."
+    global _scheduler_thread
+    with _ready_cv:
+        _ready.append(step)
+        if _scheduler_thread is None:
+            _scheduler_thread = threading.Thread(
+                target=_run_scheduler, name="temper-async", daemon=True
+            )
+            _scheduler_thread.start()
+        _ready_cv.notify()
+
+
+@contextmanager
+def top_level_turn() -> Iterator[None]:
+    """
+    Holds off async blocks while the caller runs Temper top-level code, so
+    that blocks launched by that code start after it finishes.
+    """
+    with _turn:
+        yield
+
 # This lock guards _unresolved_count
 _unresolved_count_lock = threading.Lock()
 _unresolved_count = 0
@@ -1141,8 +1197,11 @@ def _step_async_coro(
             future = yielded.future
 
             # The next step call takes responsibility for decrementing the unresolved count. # noqa: E501
+            # The future may settle on any thread, or may already have
+            # settled, in which case this runs at once.  Either way the
+            # resume waits its turn on the scheduler.
             def done_callback(p: Optional[Future[_sacT]]) -> None:
-                _step_async_coro(generator, p)
+                _schedule(lambda: _step_async_coro(generator, p))
 
             future.add_done_callback(done_callback)
         else:
@@ -1185,14 +1244,14 @@ def adapt_generator_factory(
 
 def async_launch(generator_factory: Callable[[], Generator[None, T, None]]) -> None:
     """
-    Launch a coroutine, stepping it once in another thread so that
-    it does some work.  Subsequent stepping is in response to
-    promise resolution when it yields via its `do_await`.
+    Launch a coroutine: queue its first step on the scheduler thread.
+    Subsequent stepping is in response to promise resolution when it
+    yields via its `do_await`.
     """
     generator = generator_factory()
     # No this increment will be undone by _step_async_coro
     _increment_unresolved_count()
-    _executor.submit(_step_async_coro, generator, None)
+    _schedule(lambda: _step_async_coro(generator, None))
 
 
 def await_safe_to_exit() -> None:
@@ -1200,7 +1259,6 @@ def await_safe_to_exit() -> None:
     Called by generated main methods to allow async tasks to complete.
     """
     _all_resolved.wait()
-    _executor.shutdown()
 
 
 def complete_promise(p: Future[T], resolution: T) -> None:
@@ -1268,22 +1326,28 @@ def std_net_send(
     net_response_future: Future[NetResponse] = new_unbound_promise()
     body_future: Future[str] = new_unbound_promise()
 
-    def do_fetch():
-        if False:
-            yield None  # Mark as a generator
-        with urllib.request.urlopen(request) as response:
-            try:
-                # TODO: use response headers to find body encoding.
-                body_future.set_result(response.read().decode("utf-8"))
-            except IOError as e:
-                body_future.set_exception(e)
-            net_response_future.set_result(
-                NetResponse(
-                    status=response.status, headers=response.headers, body=body_future
+    # This blocks, so it runs on an I/O thread, not the scheduler thread.
+    # Settling the futures there queues their waiters on the scheduler.
+    def do_fetch() -> None:
+        try:
+            with urllib.request.urlopen(request) as response:
+                try:
+                    # TODO: use response headers to find body encoding.
+                    body_future.set_result(response.read().decode("utf-8"))
+                except IOError as e:
+                    body_future.set_exception(e)
+                net_response_future.set_result(
+                    NetResponse(
+                        status=response.status,
+                        headers=response.headers,
+                        body=body_future,
+                    )
                 )
-            )
+        except Exception as e:
+            break_promise(net_response_future, e)
+            break_promise(body_future, e)
 
-    async_launch(lambda: do_fetch())
+    _io_executor.submit(do_fetch)
     return net_response_future
 
 

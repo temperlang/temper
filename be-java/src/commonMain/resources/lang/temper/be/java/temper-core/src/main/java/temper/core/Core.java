@@ -17,10 +17,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
@@ -1719,31 +1723,142 @@ public final class Core {
         }
     }
 
+    // Temper runs one async block at a time and switches only at `await`,
+    // as the interpreter and JavaScript do.  Every step of every coroutine,
+    // whether it is a launch or a resume after a promise settles, is queued
+    // on one single-threaded executor.  A promise may be completed on any
+    // thread (std/net completes them on the common pool, host code anywhere);
+    // that only queues the waiter, so `complete` returns before it runs.
+    //
+    // TURN is held while a step runs.  The generated main method holds it
+    // while module initialization runs top-level code, so that no async block
+    // starts until that code is done.
+
+    private static final ReentrantLock TURN = new ReentrantLock();
+    private static final Object STEPS_LOCK = new Object();
+    /** Guarded by STEPS_LOCK. */
+    private static long stepsScheduled = 0;
+    /** Guarded by STEPS_LOCK. */
+    private static long stepsFinished = 0;
     /**
-     * Steps a generator on the shared fork/join thread pool.
+     * One worker at most, so steps run in order and never overlap.  The worker
+     * exits when idle, so that a host which joins the threads a program
+     * started, as `mvn exec:java` does for fifteen seconds, need not wait.
+     */
+    private static final ThreadPoolExecutor SCHEDULER;
+    static {
+        SCHEDULER = new ThreadPoolExecutor(
+            1, 1, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+            runnable -> {
+                Thread thread = new Thread(runnable, "temper-async");
+                thread.setDaemon(true);
+                return thread;
+            }
+        );
+        SCHEDULER.allowCoreThreadTimeOut(true);
+    }
+
+    private static void schedule(Runnable step) {
+        synchronized (STEPS_LOCK) {
+            stepsScheduled += 1;
+        }
+        SCHEDULER.execute(
+            () -> {
+                TURN.lock();
+                try {
+                    step.run();
+                } catch (Throwable e) {
+                    // Report it, as an uncaught exception on a pool thread
+                    // would be, but keep the scheduler thread for the others.
+                    Thread thread = Thread.currentThread();
+                    thread.getUncaughtExceptionHandler().uncaughtException(thread, e);
+                } finally {
+                    TURN.unlock();
+                    synchronized (STEPS_LOCK) {
+                        stepsFinished += 1;
+                        STEPS_LOCK.notifyAll();
+                    }
+                }
+            }
+        );
+    }
+
+    /**
+     * Queues the first step of an async block.
      *
      * If the generator uses Temper await, then it will reschedule itself when
      * a promise it's waiting on completes to deal with the resolution.
      */
     public static void runAsync(Supplier<Generator<Optional<? super Object>>> generatorSupplier) {
         Generator<Optional<? super Object>> generator = generatorSupplier.get();
-        ForkJoinPool.commonPool().execute(
-            () -> {
-                generator.get();
-            }
-        );
+        schedule(generator::get);
+    }
+
+    /**
+     * Queues the next step of an awaiting coroutine once the promise settles.
+     * Runs nothing inline, even if the promise has already settled.
+     */
+    public static void awakeUpon(CompletableFuture<?> promise, Generator<?> generator) {
+        promise.whenComplete((ignoredResult, ignoredThrowable) -> schedule(generator::get));
+    }
+
+    /**
+     * Called from a main method before it runs module top-level code.
+     * Async blocks launched by that code wait for {@link #endTopLevel}.
+     */
+    public static void beginTopLevel() {
+        TURN.lock();
+    }
+
+    /** Lets async blocks run after {@link #beginTopLevel}. */
+    public static void endTopLevel() {
+        TURN.unlock();
     }
 
     /**
      * Called from main method to wait for tasks,
      * like those scheduled via {@link #runAsync}, complete.
+     *
+     * Returns when no async step is queued or running and the common pool,
+     * where std/net does its I/O, is quiescent, or after ten seconds.
      */
     public static void waitUntilTasksComplete() {
         ForkJoinPool commonPool = ForkJoinPool.commonPool();
         // This timeout is sufficient for functional tests.
         // If a long running main method needs more time, it should
         // negotiate promises for termination with the tasks it spawns.
-        commonPool.awaitQuiescence(10L, TimeUnit.SECONDS);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10L);
+        while (true) {
+            long scheduledBefore;
+            long finishedBefore;
+            synchronized (STEPS_LOCK) {
+                while (stepsFinished != stepsScheduled) {
+                    long remaining = deadline - System.nanoTime();
+                    if (remaining <= 0) {
+                        return;
+                    }
+                    try {
+                        TimeUnit.NANOSECONDS.timedWait(STEPS_LOCK, remaining);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                scheduledBefore = stepsScheduled;
+                finishedBefore = stepsFinished;
+            }
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0) {
+                return;
+            }
+            boolean poolQuiet = commonPool.awaitQuiescence(remaining, TimeUnit.NANOSECONDS);
+            synchronized (STEPS_LOCK) {
+                // Done only if nothing was scheduled or ran meanwhile.
+                if (poolQuiet && stepsScheduled == scheduledBefore && stepsFinished == finishedBefore) {
+                    return;
+                }
+            }
+        }
     }
 }
 

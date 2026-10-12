@@ -77,9 +77,10 @@ internal fun runPyBestEffort(
             write(
                 """
                     |# ${hashCommentSafe(request.taskName)}
-                    |from temper_core import init_simple_logging, await_safe_to_exit
+                    |from temper_core import init_simple_logging, await_safe_to_exit, top_level_turn
                     |init_simple_logging()
-                    |import $pyLibraryName as module
+                    |with top_level_turn():
+                    |    import $pyLibraryName as module
                     |await_safe_to_exit()
                 """.trimMargin(),
                 pyDir.resolveFile("$ENTRY_POINT${PyBackend.fileExtension}"),

@@ -227,6 +227,9 @@ val temperStringBuilderAppendBetween = temperCore.qualifyKnownSafe("stringBuilde
 val temperStringBuilderAppendCodePoint = temperCore.qualifyKnownSafe("stringBuilderAppendCodePoint")
 val temperThrowAssertionError = temperCore.qualifyKnownSafe("throwAssertionError")
 val temperWaitUntilTasksComplete = temperCore.qualifyKnownSafe("waitUntilTasksComplete")
+val temperBeginTopLevel = temperCore.qualifyKnownSafe("beginTopLevel")
+val temperEndTopLevel = temperCore.qualifyKnownSafe("endTopLevel")
+val temperAwakeUpon = temperCore.qualifyKnownSafe("awakeUpon")
 
 // Module internal names
 val temperRegexPkg = temperStd.qualifyKnownSafe("regex")

@@ -21,6 +21,8 @@
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
+| [ControlFlowAsyncCompleteOrder][] | ✅ | ❌<sup>[198][]</sup> | ❌<sup>[516][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ❌<sup>[519][]</sup> |
+| [ControlFlowAsyncOneAtATime][] | ✅ | ❌<sup>[198][]</sup> | ❌<sup>[516][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowIfReturn][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -73,6 +75,8 @@
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
 [456]: https://github.com/temperlang/temper/issues/456
+[516]: https://github.com/temperlang/temper/issues/516
+[519]: https://github.com/temperlang/temper/issues/519
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
 [AlgosHelloFromClassToTop]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/hello-from-class-to-top/hello-from-class-to-top.temper.md
@@ -93,6 +97,8 @@
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
+[ControlFlowAsyncCompleteOrder]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-complete-order/async-complete-order.temper.md
+[ControlFlowAsyncOneAtATime]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-one-at-a-time/async-one-at-a-time.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
 [ControlFlowIfReturn]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/if-return/if-return.temper.md
 [ControlFlowLoopReenterable]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loop-reenterable/loop-reenterable.temper.md
