@@ -116,6 +116,7 @@ enum class MessageTemplate(
     IsNotAName("Expected a name", CompilationPhase.Interpreter),
     CouldNotSetLocal("Failed to assign %s", CompilationPhase.Interpreter),
     ExpectedValueOfType("Expected value of type %s not %s", CompilationPhase.Interpreter),
+    MalformedRegex("Malformed regex: %s", CompilationPhase.Interpreter),
     NoCalleeMatching("No callee matches inputs %s among %s", CompilationPhase.Interpreter),
     AlreadyDeclared("Name was already declared", CompilationPhase.Interpreter),
     ClassMemberNameConflict("Class members with same name conflict at %s", CompilationPhase.Interpreter),

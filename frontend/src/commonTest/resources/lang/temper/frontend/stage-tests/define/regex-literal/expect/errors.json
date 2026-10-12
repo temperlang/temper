@@ -1,4 +1,5 @@
 [
+    "Malformed regex: `{` at offset 3 starts `{b}*`, which is not a count like {3}, {2,} or {2,5}; write `\\{` to match a literal brace!",
     "Syntax error!",
     "Syntax error!",
     "Syntax error!"

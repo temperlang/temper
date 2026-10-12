@@ -328,6 +328,27 @@ of times.;
 It was the worst of times.;
 ```
 
+### Counted repetition
+
+Braces count repetitions of the item before them: exactly `{m}`, at least
+`{m,}`, or between `{m,n}`. An escaped brace is still literal text.
+
+    console.log("exact: ${/[0-9]{3}/.find("x12345y").full.value}");
+    console.log("range: ${/[0-9]{2,3}/.find("x12345y").full.value}");
+    console.log("open: ${/a{2,}/.find("baaaab").full.value}");
+    console.log("group: ${/(ab){2}/.find("abababx").full.value}");
+    console.log("too few: ${/x{3}/.found("axxb")}");
+    console.log("escaped: ${/x\{3\}/.find("ax{3}b").full.value}");
+
+```log
+exact: 123
+range: 123
+open: aaaa
+group: abab
+too few: false
+escaped: x{3}
+```
+
 ## Import
 
 Import at the end to prove we can. That was failing for this test case in the
