@@ -332,7 +332,7 @@ private class Float64Compare(
             pos = pos,
             callee = "temper_core".toKeyId(pos.leftEdge).extendWith(listOf("float64", "cmp")),
             args = arguments.map { it.expr as Rust.Expr },
-        ).infix(operator, Rust.NumberLiteral(pos, 0L))
+        ).infix(operator, Rust.NumberLiteral(pos, 0))
     }
 }
 
@@ -646,7 +646,7 @@ private class BitwiseShift(
                         bPos,
                         bExpr,
                         Rust.Operator(bRPos, RustOperator.And),
-                        Rust.NumberLiteral(bRPos, mask.toLong()),
+                        Rust.NumberLiteral(bRPos, mask),
                     ),
                     Rust.Operator(bRPos, RustOperator.As),
                     Rust.Id(bRPos, OutName("u32", null)),
@@ -697,7 +697,7 @@ private class BitwiseUShr(
                             bPos,
                             bExpr,
                             Rust.Operator(bRPos, RustOperator.And),
-                            Rust.NumberLiteral(bRPos, shiftMask.toLong()),
+                            Rust.NumberLiteral(bRPos, shiftMask),
                         ),
                         Rust.Operator(bRPos, RustOperator.As),
                         Rust.Id(bRPos, OutName("u32", null)),

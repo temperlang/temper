@@ -783,6 +783,32 @@ class RustBackendTest {
     )
 
     @Test
+    fun int64LiteralOutsideInt32Range() = assertGenerateWanted(
+        // On the left of `as`, nothing but a suffix makes the literal an `i64`.
+        // And a negative receiver needs parentheses, or `-` applies to the call's result.
+        temper = """
+            |let k = 0xb5c0fbcfi64.toInt32Unsafe();
+            |let f = 9007199254740993i64.toFloat64Unsafe();
+            |let m = (-5i64).max(3i64);
+            |let a = (-2.5).abs();
+            |console.log("${'$'}{k} ${'$'}{f} ${'$'}{m} ${'$'}{a}");
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            let k__0: i32 = 3049323471i64 as i32;
+            |            let f__0: f64 = 9007199254740993i64 as f64;
+            |            let m__0: i64 = (-5i64).max(3i64);
+            |            let a__0: f64 = (-2.5f64).abs();
+            |            println!("{} {} {} {}", k__0, temper_core::float64::to_string(f__0), m__0, temper_core::float64::to_string(a__0));
+            |            Ok(())
+            |    }).clone()
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun funArgWrong() = assertGenerateWanted(
         temper = """
             |@fun interface Handler(): Void;
