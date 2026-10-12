@@ -21,6 +21,7 @@
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
+| [ControlFlowAsyncTopLevelComplete][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowIfReturn][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -93,6 +94,7 @@
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
+[ControlFlowAsyncTopLevelComplete]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-top-level-complete/async-top-level-complete.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
 [ControlFlowIfReturn]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/if-return/if-return.temper.md
 [ControlFlowLoopReenterable]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loop-reenterable/loop-reenterable.temper.md

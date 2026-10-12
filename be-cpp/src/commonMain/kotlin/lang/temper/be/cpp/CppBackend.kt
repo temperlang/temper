@@ -175,8 +175,8 @@ class CppBackend private constructor(
 
     /**
      * Build the contents of `main.cpp`: include each module's header, call its init
-     * function (each guarded so dependency order is handled), and — when the library
-     * contains tests — hand the test harness one closure per test.
+     * function (each guarded so dependency order is handled), drain the async queue,
+     * and, when the library contains tests, hand the test harness one closure per test.
      *
      * [initIncludes] should already be sorted for deterministic output. [testInfos] pairs
      * each test's generated function name with its raw (display) name. [testNs] is the
@@ -191,6 +191,7 @@ class CppBackend private constructor(
         for (inc in initIncludes) {
             appendLine("""#include "$inc"""")
         }
+        appendLine("""#include "temper-core/promise.hpp"""")
         if (testInfos.isNotEmpty()) {
             appendLine("""#include "std/testing.hpp"""")
             appendLine("""#include "temper-core/test_main.hpp"""")
@@ -199,6 +200,10 @@ class CppBackend private constructor(
         for (initFunc in initFuncs) {
             appendLine("  $initFunc();")
         }
+        // Completing a promise only queues the blocks awaiting it, and async_run is
+        // the only other caller of async_drain, so a block resumed by top-level code
+        // after the last launch would never run. Drain once all modules are initialized.
+        appendLine("  temper::core::async_drain();")
         if (testInfos.isNotEmpty()) {
             // Hand the harness one closure per test. Each closure runs the test and
             // reports its outcome; run_tests (in temper-core/test_main.hpp) owns the
@@ -211,6 +216,8 @@ class CppBackend private constructor(
                 appendLine("    { \"$escapedName\", []() -> temper::core::TestOutcome {")
                 appendLine("      auto t = $testNs::Test::make();")
                 appendLine("      $funcName(t);")
+                // Let async blocks the test resumed finish before its outcome is read.
+                appendLine("      temper::core::async_drain();")
                 appendLine("      auto mc = t->messagesCombined();")
                 appendLine(
                     "      std::string messages = temper::core::is_null(mc)" +
