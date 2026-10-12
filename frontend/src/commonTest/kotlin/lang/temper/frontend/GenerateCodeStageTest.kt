@@ -363,6 +363,21 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun yieldingOutsideGeneratorFn() = assertModuleAtStage(
+        // `await` and `yield` outside a generator function body are reported
+        // and replaced with `error` calls, so no backend receives an await
+        // it cannot translate.
+        stageTestDir = StageTestDir("generate-code/yielding-outside-generator-fn"),
+    )
+
+    @Test
+    fun awaitAtModuleLevel() = assertModuleAtStage(
+        // Without StagingFlags.allowTopLevelAwait, which `awaiting` above
+        // sets, module initialization may not await.
+        stageTestDir = StageTestDir("generate-code/await-at-module-level"),
+    )
+
+    @Test
     fun invalidRtti() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/invalid-rtti"),
         // Check that is T and as T only operate

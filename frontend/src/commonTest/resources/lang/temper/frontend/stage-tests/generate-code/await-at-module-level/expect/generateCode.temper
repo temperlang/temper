@@ -1,0 +1,8 @@
+let console#0;
+console#0 = getConsole();
+let b__0;
+b__0 = new PromiseBuilder<Int32>();
+do_call_complete(b__0, 3);
+var y__0;
+y__0 = error (YieldingOutsideGeneratorFn);
+do_call_log(console#0, cat("y=", do_call_toString(y__0)))
