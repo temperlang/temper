@@ -67,11 +67,14 @@ Genericallier, x is still foo.
 
 ## Detour on generic sealed interfaces
 
-Also because it's in the ballpark, test generic sealed interfaces here.
+Also because it's in the ballpark, test generic sealed interfaces here. For
+bonus fun, also make it exported.
 
-    sealed interface SI<T extends I> {
+    export sealed interface SI<T extends I> {
       public get thing(): T;
     }
+
+But don't export the subtype. This was breaking be-rust.
 
     class SSub<T extends I>(public thing: T) extends SI<T> {}
 

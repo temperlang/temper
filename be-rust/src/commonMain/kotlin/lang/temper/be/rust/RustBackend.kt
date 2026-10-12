@@ -174,13 +174,15 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     append("regex = { version = \"=1.12.2\", optional = true }\n")
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
+                    // Here down are transitive dependencies that need versions locked.
+                    append("powerfmt = { version = \"=0.2.0\", optional = true }\n")
                     append("zeroize = { version = \"=1.8.2\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
                     append("net = [\"ureq\", \"zeroize\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
-                    append("temporal = [\"time\"]\n")
+                    append("temporal = [\"powerfmt\", \"time\"]\n")
                 }
             }
             val packageFields = buildMap {
@@ -362,9 +364,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                 val configType = listOf("temper_core", "Config").toPath(pos)
                 val crateId = "crate".toKeyId(pos)
                 val crateConfig = crateId.deepCopy().extendWith("config")
-                val crateScope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate)
-                val pubCrate = Rust.VisibilityPub(pos, scope = crateScope)
-                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate))
+                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate(pos)))
                 // Library init function.
                 Rust.Function(
                     pos,
