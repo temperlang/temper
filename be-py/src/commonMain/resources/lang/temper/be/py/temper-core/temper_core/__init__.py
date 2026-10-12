@@ -445,7 +445,7 @@ def int_sub(a: int, b: int) -> int:
 
 def int_to_string(num: int, radix: int = 10) -> str:
     "Implements connected method core.type Int32.toString()."
-    if not 2 <= radix < 36:
+    if not 2 <= radix <= 36:
         raise ValueError()
     elif radix == 10:
         return str(num)
