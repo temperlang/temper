@@ -86,6 +86,71 @@ class PyBackendTest {
     )
 
     @Test
+    fun reassignedFunctionVarIsNotNonlocal() = assertGeneratedCode(
+        // `var f = fn ...` becomes a nested `def f`, which binds `f` in `main`.
+        // Reassigning it must not declare it `nonlocal` there, or in an
+        // enclosing function.
+        input = $$"""
+            |export let main(): Void {
+            |  var f = fn (x: Int): Int { x };
+            |  f = fn (x: Int): Int { x + 1 };
+            |  console.log("${f(1)}");
+            |}
+            |export let outer(): Void {
+            |  let inner(): Void {
+            |    var g = fn (x: Int): Int { x };
+            |    g = fn (x: Int): Int { x + 2 };
+            |    console.log("${g(1)}");
+            |  }
+            |  inner();
+            |}
+            |// A nested function that does rebind the outer `var` still needs `nonlocal`.
+            |export let swapped(): Int {
+            |  var h = fn (x: Int): Int { x };
+            |  let swap(): Void { h = fn (x: Int): Int { x * 2 }; }
+            |  swap();
+            |  h(3)
+            |}
+        """.trimMargin(),
+        want = """
+            |from temper_core import LoggingConsole as LoggingConsole4, int_add as int_add0, str_cat as str_cat1, int_to_string as int_to_string2, int_mul as int_mul3
+            |from builtins import int as int5
+            |_int_add_37 = int_add0
+            |_str_cat_38 = str_cat1
+            |_int_to_string_39 = int_to_string2
+            |_int_mul_42 = int_mul3
+            |_console_33: 'LoggingConsole4' = LoggingConsole4(__name__)
+            |def main() -> 'None':
+            |    def f_12(x_13: 'int5', /) -> 'int5':
+            |        return x_13
+            |    def fn_36(x_15: 'int5', /) -> 'int5':
+            |        return _int_add_37(x_15, 1)
+            |    f_12 = fn_36
+            |    _console_33.log(_str_cat_38(_int_to_string_39(f_12(1))))
+            |def outer() -> 'None':
+            |    def inner_18() -> 'None':
+            |        def g_20(x_21: 'int5', /) -> 'int5':
+            |            return x_21
+            |        def fn_40(x_23: 'int5', /) -> 'int5':
+            |            return _int_add_37(x_23, 2)
+            |        g_20 = fn_40
+            |        _console_33.log(_str_cat_38(_int_to_string_39(g_20(1))))
+            |    inner_18()
+            |def swapped() -> 'int5':
+            |    def h_27(x_28: 'int5', /) -> 'int5':
+            |        return x_28
+            |    def swap_26() -> 'None':
+            |        nonlocal h_27
+            |        def fn_41(x_31: 'int5', /) -> 'int5':
+            |            return _int_mul_42(x_31, 2)
+            |        h_27 = fn_41
+            |    swap_26()
+            |    return h_27(3)
+            |
+        """.trimMargin(),
+    )
+
+    @Test
     fun overloadedMethods() = assertGeneratedCode(
         input = """
             |export class IntMaker(public radix: Int32) {

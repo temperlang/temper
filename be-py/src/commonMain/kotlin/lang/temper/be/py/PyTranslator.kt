@@ -1247,6 +1247,15 @@ class PyTranslator(
                     locals.add(t.name.name)
                     false
                 }
+                // A nested `def` binds its name in this scope, and a later assignment
+                // to a function-holding `var` rebinds it. The function being scanned
+                // does not bind its own name, though; that belongs to its parent.
+                is TmpL.LocalFunctionDeclaration -> {
+                    if (t !== func) {
+                        locals.add(t.name.name)
+                    }
+                    true
+                }
                 // When a name is assigned but not locally declared, then we need
                 // a `nonlocal` or `global` statement
                 is TmpL.Assignment -> {
