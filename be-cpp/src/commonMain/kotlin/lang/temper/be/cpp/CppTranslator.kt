@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.Backend
 import lang.temper.be.tmpl.TmpL
+import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.mapParameters
@@ -30,6 +31,7 @@ import lang.temper.type.MethodShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
+import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.NullableType
 import lang.temper.type2.Nullity
@@ -161,9 +163,43 @@ class CppTranslator(
     private data class ImportInfo(val sourceModule: ModuleName, val externalName: ResolvedName)
     private val importedNames = mutableMapOf<String, ImportInfo>()
 
+    /** C++ names of this module's module-level `var`s: a call can change what they hold. */
+    private val moduleVarNames = mutableSetOf<String>()
+
+    /**
+     * Names used inside a local function or closure. A `var` local outside this set can only
+     * change by an assignment statement, never by a call made while evaluating an expression.
+     */
+    private val namesUsedInClosures = mutableSetOf<ResolvedName>()
+
+    /** This module's properties that are set once, in the constructor, and only read after. */
+    private val assignOnceProperties = mutableSetOf<ResolvedName>()
+
+    private fun collectOrderingFacts(tree: TmpL.Tree) {
+        when (tree) {
+            is TmpL.LocalFunctionDeclaration -> namesUsedInClosures.addAll(tree.body.referencedNames())
+            is TmpL.InstanceProperty -> if (tree.assignOnce) {
+                assignOnceProperties.add(tree.name.name)
+            }
+            else -> {}
+        }
+        for (kid in tree.children) {
+            collectOrderingFacts(kid)
+        }
+    }
+
     /** Populate importedNames from module imports. */
     private fun preprocessImports(mod: TmpL.Module) {
         importedNames.clear()
+        moduleVarNames.clear()
+        namesUsedInClosures.clear()
+        assignOnceProperties.clear()
+        collectOrderingFacts(mod)
+        for (topLevel in mod.topLevels) {
+            if (topLevel is TmpL.ModuleLevelDeclaration && !topLevel.assignOnce) {
+                moduleVarNames.add(cpp.name(topLevel.name).id.text)
+            }
+        }
         for (import in mod.imports) {
             val localName = import.localName?.name ?: continue
             val sourceModule = import.path?.to ?: continue
@@ -914,7 +950,11 @@ class CppTranslator(
         return emptyList()
     }
 
-    private fun translateCallable(fn: TmpL.Callable): Cpp.Expr = cpp.pos(fn) {
+    /**
+     * [translatedSubject] is the translation of a method's [TmpL.Expression] subject, when the
+     * caller has already made it so it can order it among the arguments; see [inOrder].
+     */
+    private fun translateCallable(fn: TmpL.Callable, translatedSubject: Cpp.Expr? = null): Cpp.Expr = cpp.pos(fn) {
         when (fn) {
             is TmpL.InlineSupportCodeWrapper -> unsupportedConstruct(fn)
             is TmpL.FnReference -> resolveNameCrossModule(fn.id)
@@ -929,10 +969,11 @@ class CppTranslator(
                 when (val subject = fn.subject) {
                     is TmpL.Expression -> {
                         val methodName = cpp.singleName(CppName(fn.methodName.dotNameText))
+                        val subjectExpr = translatedSubject ?: translateExpression(subject)
                         if (isValueType(subject.passType)) {
-                            cpp.memberExpr(translateExpression(subject), methodName)
+                            cpp.memberExpr(subjectExpr, methodName)
                         } else {
-                            cpp.op("->", translateExpression(subject), methodName)
+                            cpp.op("->", subjectExpr, methodName)
                         }
                     }
 
@@ -981,7 +1022,15 @@ class CppTranslator(
             is TmpL.InfixOperation -> {
                 val left = translateExpression(expr.left)
                 val right = translateExpression(expr.right)
-                cpp.op(expr.op.kind.outputToken.text, left, right)
+                val opText = expr.op.kind.outputToken.text
+                when (expr.op) {
+                    // C++ sequences these itself, and binding the right side would evaluate it
+                    // when the left side says not to.
+                    TmpLOperator.AmpAmp, TmpLOperator.BarBar -> cpp.op(opText, left, right)
+                    else -> inOrder(listOf(expr.left to left, expr.right to right)) { (l, r) ->
+                        cpp.op(opText, l, r)
+                    }
+                }
             }
             is TmpL.PrefixOperation -> {
                 cpp.unaryExpr(cpp.unaryOp(expr.op.kind.outputToken.text), translateExpression(expr.operand))
@@ -1005,6 +1054,129 @@ class CppTranslator(
         emptyList(),
     )
 
+    /**
+     * True while translating a static property's initializer, which is emitted at namespace
+     * scope, where a lambda may not have a capture default.
+     */
+    private var inStaticInitializer = false
+
+    /** What evaluating an operand can do to, or see of, the state its sibling operands share. */
+    private enum class OperandEffect {
+        /** A constant, `this`, or a local nothing else can assign: safe to evaluate at any time. */
+        None,
+
+        /**
+         * Reads something a call could change, such as a property or a `var`, or can fail.
+         * Two of these can run in either order.
+         */
+        Reads,
+
+        /** May write state or run code it was not written next to: a call, a getter, a cast. */
+        Acts,
+    }
+
+    private fun operandEffect(expr: TmpL.Expression): OperandEffect = when (expr) {
+        is TmpL.ValueReference, is TmpL.This, is TmpL.FunInterfaceExpression -> OperandEffect.None
+        is TmpL.Reference -> {
+            val key = cpp.name(expr.id).id.text
+            val changeable = key in moduleVarNames ||
+                (key in mutableLocalsInScope && expr.id.name in namesUsedInClosures) ||
+                // Another module's `var` would be changed by that module's functions.
+                sourceModuleFor(expr.id.name) != null
+            if (changeable) OperandEffect.Reads else OperandEffect.None
+        }
+        is TmpL.GetBackedProperty -> {
+            val property = expr.property
+            val own = if (property is TmpL.InternalPropertyId && property.name.name in assignOnceProperties) {
+                OperandEffect.None
+            } else {
+                OperandEffect.Reads
+            }
+            maxOf(own, subjectEffect(expr.subject))
+        }
+        is TmpL.GetAbstractProperty -> if (isStoredFieldOfClass(expr)) {
+            maxOf(OperandEffect.Reads, subjectEffect(expr.subject))
+        } else {
+            // A getter is a method call.
+            OperandEffect.Acts
+        }
+        is TmpL.InfixOperation -> maxOf(operandEffect(expr.left), operandEffect(expr.right))
+        is TmpL.PrefixOperation -> operandEffect(expr.operand)
+        is TmpL.InstanceOfExpression -> operandEffect(expr.expr)
+        is TmpL.UncheckedNotNullExpression -> operandEffect(expr.expression)
+        is TmpL.CallExpression -> {
+            val supportCode = (expr.fn as? TmpL.InlineSupportCodeWrapper)?.supportCode as? CppInlineSupportCode
+            val own = when (supportCode?.effect) {
+                SupportEffect.Pure -> OperandEffect.None
+                SupportEffect.Reads -> OperandEffect.Reads
+                SupportEffect.Acts, null -> OperandEffect.Acts
+            }
+            maxOf(own, expr.parameters.maxOfOrNull { operandEffect(it) } ?: OperandEffect.None)
+        }
+        // A checked cast can fail, and an await or a garbage node is not a value.
+        is TmpL.CastExpression, is TmpL.AwaitExpression, is TmpL.BubbleSentinel, is TmpL.GarbageExpression ->
+            OperandEffect.Acts
+    }
+
+    /**
+     * True when [expr] reads a backed property of a class through the getter generated for it,
+     * which only returns the field. An interface's property, or one with a getter written in
+     * Temper, may run any code. Temper classes cannot be extended, so the subject's static
+     * type says which getter runs.
+     */
+    private fun isStoredFieldOfClass(expr: TmpL.GetAbstractProperty): Boolean {
+        val subject = expr.subject as? TmpL.Expression ?: return false
+        val shape = subject.passType.definition as? TypeShape ?: return false
+        if (shape.abstractness != Abstractness.Concrete) {
+            return false
+        }
+        val property = when (val id = expr.property) {
+            is TmpL.ExternalPropertyId -> shape.properties.firstOrNull { it.symbol.text == id.name.dotNameText }
+            is TmpL.InternalPropertyId -> shape.properties.firstOrNull { it.name == id.name.name }
+        }
+        return property?.abstractness == Abstractness.Concrete
+    }
+
+    private fun subjectEffect(subject: TmpL.Subject): OperandEffect = when (subject) {
+        is TmpL.Expression -> operandEffect(subject)
+        else -> OperandEffect.None
+    }
+
+    /**
+     * Builds an expression from [operands] that evaluates them in Temper's order, left to right.
+     *
+     * C++ does not say in what order a call's arguments, its callee's object expression or an
+     * operator's operands are evaluated, and x86-64 g++ evaluates arguments right to left. So
+     * when one operand may act on state that another reads or acts on, every operand that is
+     * not a constant or an unassignable local is copied to a local in order, inside an
+     * [Cpp.InOrderExpr], and [build] gets those locals instead. Otherwise [build] gets the
+     * operands as they are, and the output is unchanged.
+     *
+     * Each operand pairs the TmpL it came from with its translation; the translations are made
+     * before this is called, in the same order.
+     */
+    private fun inOrder(
+        operands: List<Pair<TmpL.Expression, Cpp.Expr>>,
+        build: (List<Cpp.Expr>) -> Cpp.Expr,
+    ): Cpp.Expr {
+        val effects = operands.map { (tmpl, _) -> operandEffect(tmpl) }
+        // Reads alone can run in any order; an act matters to anything else that is not None.
+        if (effects.none { it == OperandEffect.Acts } || effects.count { it != OperandEffect.None } < 2) {
+            return build(operands.map { it.second })
+        }
+        val temps = mutableListOf<Cpp.InOrderTemp>()
+        val args = operands.mapIndexed { i, (_, translated) ->
+            if (effects[i] == OperandEffect.None) {
+                translated
+            } else {
+                val name = cpp.tmp("arg")
+                temps.add(cpp.inOrderTemp(name, translated))
+                name
+            }
+        }
+        return cpp.inOrderExpr(temps, build(args), inFunction = !inStaticInitializer)
+    }
+
     private fun translateCallExpression(expr: TmpL.CallExpression): Cpp.Expr {
         return when (val fn = expr.fn) {
             is TmpL.GarbageCallable -> {
@@ -1013,17 +1185,24 @@ class CppTranslator(
 
             is TmpL.InlineSupportCodeWrapper -> {
                 when (val supportCode = fn.supportCode) {
-                    is CppInlineSupportCode -> supportCode.inlineToTree(
-                        expr.pos,
-                        expr.mapParameters { actualExpr, staticType, _ ->
+                    is CppInlineSupportCode -> {
+                        val actuals = mutableListOf<TmpL.Expression>()
+                        val typedArgs = expr.mapParameters { actualExpr, staticType, _ ->
+                            actuals.add(actualExpr)
                             TypedArg(
                                 translateExpression(actualExpr),
                                 staticType ?: WellKnownTypes.anyValueType2,
                             )
-                        },
-                        expr.passType,
-                        this,
-                    ) as? Cpp.Expr ?: error("inline support code did not produce an expression")
+                        }
+                        inOrder(actuals.zip(typedArgs) { actual, arg -> actual to arg.expr }) { args ->
+                            supportCode.inlineToTree(
+                                expr.pos,
+                                typedArgs.zip(args) { arg, cppArg -> TypedArg<Cpp.Tree>(cppArg, arg.type) },
+                                expr.passType,
+                                this,
+                            ) as? Cpp.Expr ?: error("inline support code did not produce an expression")
+                        }
+                    }
 
                     else -> unsupportedConstruct(expr)
                 }
@@ -1052,34 +1231,32 @@ class CppTranslator(
                 val ctorParamTypes = ctxSig.requiredInputTypes.drop(
                     if (sig.hasThisFormal) 1 else 0,
                 )
-                cpp.callExpr(
-                    callable,
-                    expr.parameters.mapIndexed { idx, actualExpr ->
-                        val optionalIdx = idx - numRequired
-                        val isOptionalParam = optionalIdx >= 0
-                        val isNullLiteral = actualExpr is TmpL.ValueReference &&
-                            actualExpr.value.typeTag == TNull
-                        if (isOptionalParam && optionalIdx < optionalTypes.size) {
-                            val optType = optionalTypes[optionalIdx]
-                            if (isNullLiteral) {
-                                wrapInNullableParamIfNeeded(optType)
-                            } else {
-                                wrapInNullableParamIfNeeded(
-                                    optType,
-                                    translateExpression(actualExpr),
-                                )
-                            }
+                val ctorArgs = expr.parameters.mapIndexed { idx, actualExpr ->
+                    val optionalIdx = idx - numRequired
+                    val isOptionalParam = optionalIdx >= 0
+                    val isNullLiteral = actualExpr is TmpL.ValueReference &&
+                        actualExpr.value.typeTag == TNull
+                    if (isOptionalParam && optionalIdx < optionalTypes.size) {
+                        val optType = optionalTypes[optionalIdx]
+                        if (isNullLiteral) {
+                            wrapInNullableParamIfNeeded(optType)
                         } else {
-                            val translated = translateExpression(actualExpr)
-                            val paramType = ctorParamTypes.getOrNull(idx)
-                            wrapArgForParam(
-                                translated,
-                                actualExpr.passType,
-                                paramType,
+                            wrapInNullableParamIfNeeded(
+                                optType,
+                                translateExpression(actualExpr),
                             )
                         }
-                    },
-                )
+                    } else {
+                        val translated = translateExpression(actualExpr)
+                        val paramType = ctorParamTypes.getOrNull(idx)
+                        wrapArgForParam(
+                            translated,
+                            actualExpr.passType,
+                            paramType,
+                        )
+                    }
+                }
+                inOrder(expr.parameters.zip(ctorArgs)) { args -> cpp.callExpr(callable, args) }
             }
 
             else -> {
@@ -1107,10 +1284,13 @@ class CppTranslator(
                 val optionalTypes = ctxSig.optionalInputTypes
                 // Add explicit template args for template functions
                 // to help C++ template argument deduction
-                val callableExpr = run {
-                    val base = translateCallable(fn)
+                // The object a method is called on is an operand too, evaluated first.
+                val subjectOperand = ((fn as? TmpL.MethodReference)?.subject as? TmpL.Expression)
+                val translatedSubject = subjectOperand?.let { translateExpression(it) }
+                fun callableExpr(subject: Cpp.Expr?): Cpp.Expr {
+                    val base = translateCallable(fn, subject)
                     val typeBindings = expr.typeActuals.bindings
-                    if (fn is TmpL.FnReference &&
+                    return if (fn is TmpL.FnReference &&
                         typeBindings.isNotEmpty() &&
                         fn.type.typeFormals.isNotEmpty() &&
                         base is Cpp.Type
@@ -1169,7 +1349,19 @@ class CppTranslator(
                         )
                     }
                 }
-                cpp.callExpr(callableExpr, translatedArgs)
+                val operands = buildList {
+                    if (subjectOperand != null) {
+                        add(subjectOperand to translatedSubject!!)
+                    }
+                    addAll(parameters.zip(translatedArgs))
+                }
+                inOrder(operands) { cppOperands ->
+                    if (subjectOperand != null) {
+                        cpp.callExpr(callableExpr(cppOperands.first()), cppOperands.drop(1))
+                    } else {
+                        cpp.callExpr(callableExpr(null), cppOperands)
+                    }
+                }
             }
         }
     }
@@ -1723,13 +1915,28 @@ class CppTranslator(
             }
         }
         val setterName = if (useSetterMethod) setterMethodNames[propDotName] else null
+        val subject = lval.subject
+        if (subject is TmpL.Expression) {
+            // The object is evaluated before the new value, which C++ does not promise for
+            // either `a->set_p(b)` or `a->p = b`.
+            val subjectExpr = translateExpression(subject)
+            val rightExpr = translateExpression(right)
+            return listOf(
+                cpp.exprStmt(
+                    inOrder(listOf(subject to subjectExpr, right to rightExpr)) { (s, r) ->
+                        if (setterName != null) {
+                            cpp.callExpr(cpp.op("->", s, setterName), r)
+                        } else {
+                            cpp.op("=", cpp.op("->", s, propSingleName), r)
+                        }
+                    },
+                ),
+            )
+        }
         if (setterName != null) {
             // Call setter method instead of direct assignment
-            val call: Cpp.Expr = when (val subj = lval.subject) {
-                is TmpL.Expression -> cpp.callExpr(
-                    cpp.op("->", translateExpression(subj), setterName),
-                    translateExpression(right),
-                )
+            val call: Cpp.Expr = when (val subj = subject) {
+                is TmpL.Expression -> error("handled above")
                 is TmpL.ConnectedToTypeName -> cpp.callExpr(
                     cpp.scopedName(translateTypeName(subj), setterName),
                     translateExpression(right),
@@ -1743,8 +1950,8 @@ class CppTranslator(
             return listOf(cpp.exprStmt(call))
         }
         // Fall back to direct assignment
-        val lhs: Cpp.Expr = when (val subj = lval.subject) {
-            is TmpL.Expression -> cpp.op("->", translateExpression(subj), propSingleName)
+        val lhs: Cpp.Expr = when (val subj = subject) {
+            is TmpL.Expression -> error("handled above")
             is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subj), propSingleName)
             is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subj), propSingleName)
             is TmpL.SuperSubject -> error("illegal super call for backed property")
@@ -2067,7 +2274,15 @@ class CppTranslator(
                     cpp.name(topLevel.name),
                     cpp.singleName(propCppName),
                 ),
-                init = translateExpression(member.expression),
+                init = run {
+                    val outer = inStaticInitializer
+                    inStaticInitializer = true
+                    try {
+                        translateExpression(member.expression)
+                    } finally {
+                        inStaticInitializer = outer
+                    }
+                },
             ),
         )
     }
