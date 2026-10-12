@@ -204,19 +204,36 @@ object Java17Specifics : JavaSpecifics(majorVersion = 17) {
             // Some go to stdout and some to stderr. Might even vary by version and/or platform. Just grab both.
             val out = (run.stdout + run.auxOut[Aux.Stderr]).trim()
             val version = versionPattern.matchAt(out, 0)!!.groupValues[1]
-            return SemVer(version).flatMap({ RSuccess(it) }, { _ ->
-                RResult.of(IllegalArgumentException::class) {
-                    SemVer(parseInt(version.trim()), 0, 0)
-                }
-            }).checkMin(run, minVersion)
+            return parseJavaVersion(version).checkMin(run, minVersion)
         }
     }
+
+    /**
+     * Reads the version a JDK tool reports as a [SemVer].
+     *
+     * JEP 322 defines it as `$FEATURE.$INTERIM.$UPDATE.$PATCH`, with trailing zero parts left
+     * off, so `"23"` and `"21.0.12.1"` are both valid. Old JDKs report `"1.8.0"`. Parts past the
+     * third are dropped: they are patch releases and play no part in the minimum we check.
+     */
+    internal fun parseJavaVersion(version: String): RResult<SemVer, IllegalArgumentException> =
+        RResult.of(IllegalArgumentException::class) {
+            val parts = version.trim().split('.')
+            require(parts.all { part -> part.isNotEmpty() && part.all { it in '0'..'9' } }) {
+                "not a JDK version: $version"
+            }
+            SemVer(
+                parseInt(parts[0]),
+                parts.getOrNull(1)?.let(::parseInt) ?: 0,
+                parts.getOrNull(2)?.let(::parseInt) ?: 0,
+            )
+        }
 
     // Examples (with other lines below these):
     // openjdk version "23" 2024-09-17
     // openjdk version "1.8.0_372"
     // openjdk version "17.0.7" 2023-04-18
     // java version "17.0.5" 2022-10-18 LTS
+    // openjdk version "21.0.12.1" 2026-08-18
     private val java17Tool = object : JavaTool(Regex("""[\w ]+"([\d.]+)""")) {
         override val cliNames get() = javaCliNames
     }
@@ -226,6 +243,7 @@ object Java17Specifics : JavaSpecifics(majorVersion = 17) {
     // javac 17.0.7
     // javac 17.0.5
     // javac 23
+    // javac 21.0.12.1
     private val javac17Tool = object : JavaTool(Regex("""\w+ ([\d.]+)""")) {
         override val cliNames get() = javacCliNames
     }
