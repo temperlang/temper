@@ -26,6 +26,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     issue(Ft.NamesNonascii, lua(228))
     214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }
     456.let { issue(Ft.FunctionsConnected, interp(it)) }
+    issue(Ft.ClassesWriteBackThroughField, cpp(539))
     onlyFails(
         cpp(198),
         Ft.RegexMatch,
