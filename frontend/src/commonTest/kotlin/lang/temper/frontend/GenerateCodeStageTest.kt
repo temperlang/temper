@@ -345,6 +345,11 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/generator-interpreted-in-loop"),
     )
 
+    @Test
+    fun generatorYieldsLoopLocal() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-yields-loop-local"),
+    )
+
     @Ignore
     @Test
     fun generatorResultsUsed() = assertModuleAtStage(

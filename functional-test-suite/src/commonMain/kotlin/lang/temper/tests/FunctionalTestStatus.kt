@@ -22,6 +22,7 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         staticallyTypeds(58),
     )
     issue(Ft.ControlFlowAsync, lua(144))
+    issue(Ft.ControlFlowAwaitInLoop, cpp(520), lua(144))
     issue(Ft.RegexZeroAdvance, lua(166))
     issue(Ft.NamesNonascii, lua(228))
     214.let { issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it)) }
