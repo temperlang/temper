@@ -88,6 +88,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ),
     SemanticsConstness(markdown("semantics/constness/constness.temper.md", "SemanticsConstness")),
     SemanticsMutuallyReferencingTypes(markdown("semantics/mutually-referencing-types/mutually-referencing-types.temper.md", "SemanticsMutuallyReferencingTypes")),
+    SemanticsTopLevelOrder(markdown("semantics/top-level-order/top-level-order.temper.md", "SemanticsTopLevelOrder")),
     SemanticsTypeCheckedLocals(
         markdown(
             "semantics/type-checked-locals/type-checked-locals.temper.md",

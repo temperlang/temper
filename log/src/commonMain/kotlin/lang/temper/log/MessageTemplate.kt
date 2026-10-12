@@ -281,6 +281,10 @@ enum class MessageTemplate(
     MalformedAnnotation("Malformed annotation", CompilationPhase.Interpreter),
     UnexpectedMetadata("Metadata %s has unexpected value %s", CompilationPhase.Interpreter),
     MemberUnavailable("Class member %s is unavailable", CompilationPhase.Interpreter),
+    TopLevelOrderConflict(
+        "Top-level use of %s must keep its place among other uses of it, but the declarations they need would move it",
+        CompilationPhase.Interpreter,
+    ),
     StaticMemberNeedsQualified("Type name required for accessing static member", CompilationPhase.Interpreter),
     StaticMemberUsesChaining("Static member access should use `.`, not `?.`", CompilationPhase.Interpreter),
     NoAccessibleMember("No accessible member %s in type %s", CompilationPhase.Interpreter),
