@@ -281,6 +281,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.TypesJsonSyntaxTree)
 
     @Test
+    fun typesListCovariance() =
+        runFunctionalTest(Ft.TypesListCovariance)
+
+    @Test
     fun typesListEmpty() =
         runFunctionalTest(Ft.TypesListEmpty)
 

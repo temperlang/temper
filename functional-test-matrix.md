@@ -56,6 +56,7 @@
 | [TypesIntLimits][] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesIntShifty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesJsonSyntaxTree][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesListCovariance][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListEmpty][] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListOperations][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListReduce][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -128,6 +129,7 @@
 [TypesIntLimits]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/limits/limits.temper.md
 [TypesIntShifty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/shifty/shifty.temper.md
 [TypesJsonSyntaxTree]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/json-syntax-tree/json-syntax-tree.temper.md
+[TypesListCovariance]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/covariance/covariance.temper.md
 [TypesListEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/empty/empty.temper.md
 [TypesListOperations]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/operations/operations.temper.md
 [TypesListReduce]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/reduce/reduce.temper.md

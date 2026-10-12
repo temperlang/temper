@@ -48,19 +48,32 @@ namespace temper {
                 return list;
             }
 
+            // Converts one element for upcast the way make converts one: implicitly,
+            // or by boxing a value into an AnyValue. An element that is itself a
+            // list, as in List<List<Derived>> to List<List<Base>>, is upcast in turn.
+            template<class Base, class Derived>
+            struct UpcastElem {
+                static Base apply(const Derived& elem) { return convert_elem<Base>(elem); }
+            };
+
+            template<class Base, class Derived>
+            struct UpcastElem<std::shared_ptr<std::vector<Base>>, std::shared_ptr<std::vector<Derived>>> {
+                static std::shared_ptr<std::vector<Base>> apply(const std::shared_ptr<std::vector<Derived>>& elem);
+            };
+
             template<
                 class Base,
                 class Derived,
-                class = typename std::enable_if<
-                    !std::is_same<Base, Derived>::value
-                    && std::is_convertible<Derived, Base>::value
-                >::type
+                class = typename std::enable_if<!std::is_same<Base, Derived>::value>::type
             >
             std::shared_ptr<std::vector<Base>> upcast(const std::shared_ptr<std::vector<Derived>>& src) {
+                if (src == nullptr) {
+                    return nullptr;
+                }
                 std::shared_ptr<std::vector<Base>> result = std::make_shared<std::vector<Base>>();
                 result->reserve(src->size());
                 for (const Derived& elem : *src) {
-                    result->push_back(elem);
+                    result->push_back(UpcastElem<Base, Derived>::apply(elem));
                 }
                 return result;
             }
@@ -68,6 +81,14 @@ namespace temper {
             template<class T>
             std::shared_ptr<std::vector<T>> upcast(const std::shared_ptr<std::vector<T>>& src) {
                 return src;
+            }
+
+            template<class Base, class Derived>
+            std::shared_ptr<std::vector<Base>>
+            UpcastElem<std::shared_ptr<std::vector<Base>>, std::shared_ptr<std::vector<Derived>>>::apply(
+                const std::shared_ptr<std::vector<Derived>>& elem
+            ) {
+                return upcast<Base>(elem);
             }
 
             template<class Elem>

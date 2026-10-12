@@ -723,6 +723,23 @@ public final class Core {
     }
 
     /**
+     * Temper's List is covariant, so a List of Square may be used as a List
+     * of Shape, but java.util.List is invariant.  Nothing adds to or sets
+     * elements of a list through a Temper List, so viewing the same list
+     * with a wider element type cannot let a non-Square into it.  The Temper
+     * frontend has checked that the element types are related, including
+     * for nested lists like a List of List of Square, which Java's
+     * {@code ? extends} cannot express, hence the unchecked parameter type.
+     * @param list a list, or null
+     * @return the same list, or null
+     * @param <E> the wider element type
+     */
+    @SuppressWarnings("unchecked")
+    public static <E> List<E> listUpcast(List<?> list) {
+        return (List<E>) list;
+    }
+
+    /**
      * @param target a ListBuilder instance
      * @param elem the element to add
      * @param <E> the element type

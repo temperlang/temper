@@ -118,6 +118,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     TypesIntLimits(markdown("types/int/limits/limits.temper.md", "TypesIntLimits")),
     TypesIntShifty(markdown("types/int/shifty/shifty.temper.md", "TypesIntShifty")),
     TypesJsonSyntaxTree(markdown("types/json-syntax-tree/json-syntax-tree.temper.md", "TypesJsonSyntaxTree")),
+    TypesListCovariance(markdown("types/list/covariance/covariance.temper.md", "TypesListCovariance")),
     TypesListEmpty(markdown("types/list/empty/empty.temper.md", "TypesListEmpty")),
     TypesListOperations(markdown("types/list/operations/operations.temper.md", "TypesListOperations")),
     TypesListReduce(markdown("types/list/reduce/reduce.temper.md", "TypesListReduce")),

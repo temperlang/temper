@@ -34,12 +34,18 @@ import lang.temper.name.ResolvedName
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
+import lang.temper.type.TypeFormal
+import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.excludeNullAndBubble
 import lang.temper.type.isVoidLike
 import lang.temper.type.mentionsInvalid
 import lang.temper.type.simplify
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.TBoolean
 import lang.temper.value.TClass
@@ -640,7 +646,7 @@ class JavaTranslator(
                 activeInit().add(
                     Assign.assign(
                         left = fieldName.asNameExpr(t.pos),
-                        right = expr(init),
+                        right = upcastList(expr(init), init.type, t.descriptor),
                     ).exprStatement(t.pos),
                 )
             }
@@ -1617,7 +1623,10 @@ class JavaTranslator(
                 is TmpL.LocalFunctionDeclaration -> LocalFunctionDecl(t).toLocalVarDecl()
                 is TmpL.ModuleInitFailed -> moduleInitFailed(t)
                 is TmpL.YieldStatement -> TODO() // JavaSupportNetwork opts into TranslateToRegularFunction
-                is TmpL.ReturnStatement -> J.ReturnStatement(t.pos, t.expression?.let(::expr))
+                is TmpL.ReturnStatement -> J.ReturnStatement(
+                    t.pos,
+                    t.expression?.let { upcastList(expr(it), it.type, enclosingReturnType(t)) },
+                )
                 is TmpL.SetProperty -> setProperty(t)
                 is TmpL.ThrowStatement -> throwStmt(t)
                 is TmpL.TryStatement -> tryStmt(t)
@@ -1640,7 +1649,7 @@ class JavaTranslator(
                 t.pos,
                 type = varType(t),
                 name = names.lookupRegularLocalNameObj(t.name).outName.toIdentifier(t.name.pos),
-                expr = t.init?.let(::expr),
+                expr = t.init?.let { upcastList(expr(it), it.type, t.descriptor) },
             )
 
         private fun ifStmt(t: TmpL.IfStatement) = J.IfStatement(
@@ -1759,7 +1768,7 @@ class JavaTranslator(
         private fun assignment(t: TmpL.Assignment): J.BlockLevelStatement =
             Assign.assign(
                 leftHandSide(t.left),
-                expr(t.right),
+                upcastList(expr(t.right), t.right.type, t.type),
                 pos = t.pos,
             ).exprStatement(t.pos)
 
@@ -1767,17 +1776,69 @@ class JavaTranslator(
             val left = t.left
             // Static properties are not assignable.
             val leftSubject = left.subject as TmpL.Expression
+            val right = upcastList(expr(t.right), t.right.type, propertyType(leftSubject, left.property))
             return when (val prop = left.property) {
                 is TmpL.ExternalPropertyId ->
                     J.InstanceMethodInvocationExpr(
                         t.pos,
                         expr(leftSubject),
                         method = names.setterName(prop.name),
-                        args = listOf(expr(t.right).asArgument(t.pos)),
+                        args = listOf(right.asArgument(t.pos)),
                     ).exprStatement()
                 is TmpL.InternalPropertyId ->
-                    Assign.assign(expr(leftSubject).field(names.field(prop)), expr(t.right)).exprStatement(t.pos)
+                    Assign.assign(expr(leftSubject).field(names.field(prop)), right).exprStatement(t.pos)
             }
+        }
+
+        private fun propertyType(subject: TmpL.Expression, property: TmpL.PropertyId): Type2? {
+            val shape = (subject.type as? DefinedNonNullType)?.definition as? TypeShape ?: return null
+            val symbol = when (property) {
+                is TmpL.ExternalPropertyId -> property.name.dotNameText
+                is TmpL.InternalPropertyId -> property.name.name.toSymbol()?.text
+            }
+            return shape.properties.find { it.symbol.text == symbol }?.descriptor as? Type2
+        }
+
+        private fun enclosingReturnType(t: TmpL.Tree): Type2? {
+            var ancestor = t.parent
+            while (ancestor != null) {
+                if (ancestor is TmpL.FunctionLike) {
+                    return ancestor.sig.returnType2
+                }
+                ancestor = ancestor.parent
+            }
+            return null
+        }
+
+        /**
+         * `List` is covariant in Temper, so a `List<Square>` may be used where a
+         * `List<Shape>` is wanted, but `java.util.List` is invariant and javac
+         * rejects the assignment. Wraps [translated] in
+         * `Core.<Shape>listUpcast(...)`, an unchecked view of the same list, when
+         * the element types differ.
+         *
+         * The element type is given explicitly so that javac does not infer a
+         * narrower one from a generic context. A wanted element type that
+         * mentions a type parameter is left alone because that parameter may
+         * not be in scope at the use site.
+         */
+        private fun upcastList(translated: J.Expression, given: Type2?, wanted: Type2?): J.Expression {
+            val givenElement = listElementType(given) ?: return translated
+            val wantedElement = listElementType(wanted) ?: return translated
+            if (givenElement.withNullity(Nullity.NonNull) == wantedElement.withNullity(Nullity.NonNull)) {
+                return translated
+            }
+            if (mentionsTypeFormal(wantedElement)) { return translated }
+            val pos = translated.pos
+            val elementType = JavaType.fromFrontend(wantedElement, names).asReferenceType()
+            val (type, method) = temperListUpcast.split()
+            return J.StaticMethodInvocationExpr(
+                pos,
+                type = type.toQualIdent(pos.leftEdge),
+                typeArgs = J.TypeArguments(pos.leftEdge, listOf(elementType.toTypeArgAst(pos.leftEdge))),
+                method = J.Identifier(pos.leftEdge, method),
+                args = listOf(translated.asArgument()),
+            )
         }
 
         fun expr(x: TmpL.Expression): J.Expression = when (x) {
@@ -1935,7 +1996,7 @@ class JavaTranslator(
                 else -> calleeType?.valueFormalsExceptThis
             }
             return actuals.mapGenericIndexed { idx, actual ->
-                var expr = expr(actual)
+                var expr = upcastList(expr(actual), actual.type, calleeFormals?.getOrNull(idx)?.type)
                 if (calleeFormals != null && validInstanceMethodReferenceSubject(expr)) {
                     val actualSig = withType(
                         actual.passType,
@@ -2499,3 +2560,13 @@ internal fun potentiallyLongStringToJavaExpression(pos: Position, s: String): J.
         args = emptyList(),
     )
 }
+
+/** The element type of a `List`, ignoring whether the list itself is nullable or bubbly. */
+private fun listElementType(type: Type2?): Type2? {
+    val list = type?.let { excludeNullAndBubble(it) } as? DefinedNonNullType ?: return null
+    if (list.definition != WellKnownTypes.listTypeDefinition) { return null }
+    return list.bindings.getOrNull(0)
+}
+
+private fun mentionsTypeFormal(type: Type2): Boolean =
+    type.definition is TypeFormal || type.bindings.any { mentionsTypeFormal(it) }

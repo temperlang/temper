@@ -30,7 +30,9 @@ import lang.temper.type.MethodShape
 import lang.temper.type.PropertyShape
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
+import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type.excludeNullAndBubble
 import lang.temper.type2.NullableType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
@@ -329,10 +331,11 @@ class CppTranslator(
             WellKnownTypes.listedTypeDefinition,
         )
         if (declDef !in listUpcastDefs || initDef !in listUpcastDefs) return translatedExpr
-        // Check if element types differ
+        // Check if element types differ. Compare whole types, not just definitions,
+        // so that a List<List<Derived>> is converted to a List<List<Base>> too.
         val declElem = declaredTmpLType.bindings.firstOrNull() ?: return translatedExpr
         val initElem = initExprType.bindings.firstOrNull() ?: return translatedExpr
-        if (declElem.definition == initElem.definition) return translatedExpr
+        if (declElem.withNullity(Nullity.NonNull) == initElem.withNullity(Nullity.NonNull)) return translatedExpr
         // Element types differ — wrap with List::upcast<DeclaredElemType>
         val declElemCpp = translateType2(declElem)
         return cpp.callExpr(
@@ -1671,7 +1674,13 @@ class CppTranslator(
                             listOf(translateExpression(retExpr)),
                         )
                     }
-                    else -> translateExpressionOrNull(retExpr)
+                    else -> translateExpressionOrNull(retExpr)?.let { translated ->
+                        wrapWithListUpcastIfNeeded(
+                            translated,
+                            retExpr?.type,
+                            enclosingReturnType(stmt)?.let { excludeNullAndBubble(it) },
+                        )
+                    }
                 }
                 listOf(cpp.returnStmt(translatedRet))
             }
@@ -1723,20 +1732,25 @@ class CppTranslator(
             }
         }
         val setterName = if (useSetterMethod) setterMethodNames[propDotName] else null
+        val translatedRight = wrapWithListUpcastIfNeeded(
+            translateExpression(right),
+            right.type,
+            propertyType(lval),
+        )
         if (setterName != null) {
             // Call setter method instead of direct assignment
             val call: Cpp.Expr = when (val subj = lval.subject) {
                 is TmpL.Expression -> cpp.callExpr(
                     cpp.op("->", translateExpression(subj), setterName),
-                    translateExpression(right),
+                    translatedRight,
                 )
                 is TmpL.ConnectedToTypeName -> cpp.callExpr(
                     cpp.scopedName(translateTypeName(subj), setterName),
-                    translateExpression(right),
+                    translatedRight,
                 )
                 is TmpL.TemperTypeName -> cpp.callExpr(
                     cpp.scopedName(translateTypeName(subj), setterName),
-                    translateExpression(right),
+                    translatedRight,
                 )
                 is TmpL.SuperSubject -> error("super property handled elsewhere")
             }
@@ -1750,8 +1764,32 @@ class CppTranslator(
             is TmpL.SuperSubject -> error("illegal super call for backed property")
         }
         return listOf(
-            cpp.exprStmt(cpp.op("=", lhs, translateExpression(right))),
+            cpp.exprStmt(cpp.op("=", lhs, translatedRight)),
         )
+    }
+
+    /** The declared type of the property [lval] assigns, when its subject's type is known here. */
+    private fun propertyType(lval: TmpL.PropertyLValue): Type2? {
+        val shape = when (val subject = lval.subject) {
+            is TmpL.Expression -> subject.type.definition as? TypeShape
+            is TmpL.TypeSubject -> subject.typeName.sourceDefinition as? TypeShape
+        } ?: return null
+        val symbol = when (val property = lval.property) {
+            is TmpL.ExternalPropertyId -> property.name.dotNameText
+            is TmpL.InternalPropertyId -> property.name.name.toSymbol()?.text
+        }
+        return shape.properties.find { it.symbol.text == symbol }?.descriptor as? Type2
+    }
+
+    private fun enclosingReturnType(stmt: TmpL.Tree): Type2? {
+        var ancestor = stmt.parent
+        while (ancestor != null) {
+            if (ancestor is TmpL.FunctionLike) {
+                return ancestor.sig.returnType2
+            }
+            ancestor = ancestor.parent
+        }
+        return null
     }
 
     /** True if the block's control unconditionally leaves (so a trailing `break` is dead). */
@@ -3025,7 +3063,9 @@ class CppTranslator(
                         listOf(translateExpression(initExpr)),
                     )
                 } else {
-                    translateExpressionOrNull(initExpr)
+                    translateExpressionOrNull(initExpr)?.let { translated ->
+                        wrapWithListUpcastIfNeeded(translated, initExpr?.type, topLevel.descriptor)
+                    }
                 }
                 // Always declare with null init and defer assignment
                 // to the init function to avoid SIOF.
