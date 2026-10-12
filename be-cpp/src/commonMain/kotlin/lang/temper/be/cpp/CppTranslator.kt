@@ -161,12 +161,21 @@ class CppTranslator(
     private data class ImportInfo(val sourceModule: ModuleName, val externalName: ResolvedName)
     private val importedNames = mutableMapOf<String, ImportInfo>()
 
-    /** Populate importedNames from module imports. */
+    /**
+     * Every module this one imports from, whatever kind of name it imports. An import of a type
+     * has no [TmpL.Import.localName], so it is missing from [importedNames], but the module it
+     * comes from still has to be initialized before this one's top level runs.
+     */
+    private val importedModules = mutableSetOf<ModuleName>()
+
+    /** Populate importedNames and importedModules from module imports. */
     private fun preprocessImports(mod: TmpL.Module) {
         importedNames.clear()
+        importedModules.clear()
         for (import in mod.imports) {
-            val localName = import.localName?.name ?: continue
             val sourceModule = import.path?.to ?: continue
+            importedModules.add(sourceModule)
+            val localName = import.localName?.name ?: continue
             val externalName = import.externalName.name
             val key = cpp.name(localName).id.text
             importedNames[key] = ImportInfo(sourceModule, externalName)
@@ -3091,8 +3100,7 @@ class CppTranslator(
      */
     private fun gatherDependencyInitCalls(): MutableSet<String> {
         val depInitCalls = mutableSetOf<String>()
-        for ((_, info) in importedNames) {
-            val depModName = info.sourceModule
+        for (depModName in importedModules) {
             val libNs = cpp.nameTextForModule(depModName)
             val depRelPath = depModName.relativePath()
             val depBaseName = when {
