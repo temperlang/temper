@@ -24,6 +24,9 @@ because it enables multiple regex components to be strung together. For example,
 `/hi./` is a sequence of [CodePoints](#codepoints) `/hi/` and dot `/./`, but all
 component types extend the `RegexNode` interface.
 
+The hierarchy is fully sealed so that backends can map defined concepts to their
+respective regex engines.
+
 ```
 // TODO Auto here currently takes manual effort for lists, but pegging it at the
 // TODO top of the hierarchy at least reserves the correct "other" type.
@@ -146,19 +149,19 @@ export class CodePoints(
 A number of special match forms exist. In the data model, these are empty
 classes.
 
-- `.` - `DotSpecial` In default mode, matches any Unicode code point except newline.
-- `^` - `BeginSpecial` in default mode matches zero-length at the beginning of a
+- `.` - `Dot` In default mode, matches any Unicode code point except newline.
+- `^` - `Begin` in default mode matches zero-length at the beginning of a
   string.
-- `$` - `EndSpecial` in default mode matches zero-length at the end of a string.
-- `\b` - `WordBoundarySpecial` matches zero-length at the boundary between word and
+- `$` - `End` in default mode matches zero-length at the end of a string.
+- `\b` - `WordBoundary` matches zero-length at the boundary between word and
   non-word code points. More sophisticated Unicode compliance is TBD.
-- `\s` (negated as `\S`) - `SpaceSpecial` matches any horizontal space code point.
+- `\s` (negated as `\S`) - `Space` matches any horizontal space code point.
   Details are TBD.
-- `\w` (negated as `\W`) - `WordSpecial` matches any word code point. Details are TBD.
+- `\w` (negated as `\W`) - `Word` matches any word code point. Details are TBD.
   This is currently defined in terms of old ASCII definitions because those are
   clear. Perhaps this will stay that way, and Unicode properties like `\p{L}`
   will be used for human language needs.
-- `\X` - `GraphemeClusterSpecial` might not be supported, but [here is some discussion
+- `\X` - `GraphemeCluster` might not be supported, but [here is some discussion
   of how to implement it](
   https://github.com/rust-lang/regex/issues/54#issuecomment-661905060).
 
@@ -166,26 +169,27 @@ classes.
 
 ```
 export sealed interface Special extends RegexNode {}
-class BeginSpecial extends Special {}
-export let Begin: Special = doPure { (): Special => new BeginSpecial() };
-class DotSpecial extends Special {}
-export let Dot: Special = doPure { (): Special => new DotSpecial() };
-class EndSpecial extends Special {}
-export let End: Special = doPure { (): Special => new EndSpecial() };
+export let Begin: Special = doPure { (): Special => class Begin extends Special {}; new Begin() };
+export let Dot: Special = doPure { (): Special => class Dot extends Special {}; new Dot() };
+export let End: Special = doPure { (): Special => class End extends Special {}; new End() };
 // TODO(tjp, regex): We can't easily support this at present across backends.
 // export let GraphemeCluster = doPure { (): Special =>
 //   class GraphemeCluster extends Special {}; new GraphemeCluster()
 // };
-class WordBoundarySpecial extends Special {}
-export let WordBoundary: Special = doPure { (): Special => new WordBoundarySpecial() };
+export let WordBoundary: Special = doPure { (): Special =>
+  class WordBoundary extends Special {}; new WordBoundary()
+};
 
 export sealed interface SpecialSet extends CodePart & Special {}
-class DigitSpecial extends SpecialSet {}
-export let Digit: SpecialSet = doPure { (): SpecialSet => new DigitSpecial() };
-class SpaceSpecial extends SpecialSet {}
-export let Space: SpecialSet = doPure { (): SpecialSet => new SpaceSpecial() };
-class WordSpecial extends SpecialSet {}
-export let Word: SpecialSet = doPure { (): SpecialSet => new WordSpecial() };
+export let Digit: SpecialSet = doPure { (): SpecialSet =>
+  class Digit extends SpecialSet {}; new Digit()
+};
+export let Space: SpecialSet = doPure { (): SpecialSet =>
+  class Space extends SpecialSet {}; new Space()
+};
+export let Word: SpecialSet = doPure { (): SpecialSet =>
+  class Word extends SpecialSet {}; new Word()
+};
 ```
 
 </details>
@@ -735,9 +739,9 @@ class RegexFormatter {
       }
       // Others below are easy for now.
       is CodeRange -> codePart.max;
-      is DigitSpecial -> Codes.digit9;
-      is SpaceSpecial -> Codes.space;
-      is WordSpecial -> Codes.lowerZ;
+      Digit -> Codes.digit9;
+      Space -> Codes.space;
+      Word -> Codes.lowerZ;
       // Actually unexpected, ever, but eh.
       else -> null;
     }
