@@ -148,32 +148,35 @@ private class AutoMemberAdder(
         val typeShape = reifiedType.type2.definition as? MutableTypeShape ?: return
         // Check kind.
         if (typeShape.abstractness == Abstractness.Abstract) {
-            // If abstract but the otherType isn't us, then we'll inherit the pure virtual.
-            otherType == null || return
-            // But don't support auto eq for non-sealed interfaces.
-            val namePos = typeDecl.parts?.name?.pos ?: typeDecl.pos
-            if (sealedTypeSymbol !in typeDecl.parts!!.metadataSymbolMap) {
-                logSink.log(
-                    Log.Error,
-                    MessageTemplate.NoAutoWhenNotSealed,
-                    namePos,
-                    listOf(),
-                )
-                return
-            }
-            // We also need concrete subtypes. Don't bother checking deep
-            // because if all our sealed subtypes are valid (checked elsewhere),
-            // they'll also end up getting here, so eventually everything will
-            // be checked.
+            // We need concrete subtypes. Don't bother checking deep because if
+            // all our sealed subtypes are valid (checked elsewhere), they'll
+            // also end up getting here, so eventually everything will be
+            // checked.
             val unsealedSubs = (typeShape.sealedSubTypes ?: listOf()).filter { sealedSub ->
                 sealedSub.abstractness == Abstractness.Abstract && sealedSub.decl()?.isSealed() != true
             }
+            val namePos = typeDecl.parts?.name?.pos ?: typeDecl.pos
             if (unsealedSubs.isNotEmpty()) {
                 logSink.log(
                     Log.Error,
                     MessageTemplate.AutoNotFullySealed,
                     namePos,
                     listOf(unsealedSubs.joinToString(", ") { it.name.displayName }),
+                )
+                return
+            }
+            // The above needs checked in all cases so we get the full
+            // hierarchy, but if abstract and the otherType isn't us, we'll
+            // inherit the pure virtual, so we don't need to add anything.
+            otherType == null || return
+            // And still don't add auto eq for non-sealed interfaces, where
+            // we're now presumably an auto eq root.
+            if (sealedTypeSymbol !in typeDecl.parts!!.metadataSymbolMap) {
+                logSink.log(
+                    Log.Error,
+                    MessageTemplate.NoAutoWhenNotSealed,
+                    namePos,
+                    listOf(),
                 )
                 return
             }
