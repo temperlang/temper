@@ -1,7 +1,11 @@
 package lang.temper.be.tmpl
 
 import lang.temper.common.Either
+import lang.temper.common.Log
 import lang.temper.common.subListToEnd
+import lang.temper.log.LogEntry
+import lang.temper.log.LogSink
+import lang.temper.log.MessageTemplateI
 import lang.temper.log.Position
 import lang.temper.name.ResolvedName
 import lang.temper.type.CallMemberAccessor
@@ -165,9 +169,12 @@ internal object TranslateDotHelper {
         val dotMember = dotHelper.member
         when (dotMember) {
             is DotMember -> {} // OK
+            // The Typer converts every operator it can resolve, so one that reaches here was
+            // rejected.  Say why, in the user's terms, instead of describing our internals.
             is OperatorMember -> return garbageTranslatedHelper(
                 pos,
-                "Operator member $dotMember should have been converted to dot-name form",
+                problemsReportedFor(callTree)
+                    ?: "Operator member $dotMember should have been converted to dot-name form",
             )
         }
 
@@ -540,6 +547,32 @@ private fun connectedKeyForMethod(methodShape: MethodShape): String? {
 
 private fun propertyShapeFor(methodShape: MethodShape): PropertyShape? =
     methodShape.enclosingType.properties.firstOrNull { it.symbol == methodShape.symbol }
+
+/**
+ * The errors the frontend explained for [callTree] or its callee, as one message,
+ * or null if there are none.
+ */
+private fun problemsReportedFor(callTree: CallTree): String? {
+    val problems = mutableListOf<LogEntry>()
+    val collector = object : LogSink {
+        override val hasFatal: Boolean get() = false
+        override fun log(
+            level: Log.Level,
+            template: MessageTemplateI,
+            pos: Position,
+            values: List<Any>,
+            fyi: Boolean,
+        ) {
+            if (level >= Log.Error) {
+                problems.add(LogEntry(level, template, pos, values, fyi))
+            }
+        }
+    }
+    for (tree in listOfNotNull(callTree.childOrNull(0), callTree)) {
+        tree.typeInferences?.explanations?.forEach { it.logTo(collector) }
+    }
+    return problems.distinct().joinToString(" ; ") { it.messageText }.ifEmpty { null }
+}
 
 private fun garbageTranslatedHelper(pos: Position, message: String) =
     TranslateDotHelper.TranslatedDotHelper(
