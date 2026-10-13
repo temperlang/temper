@@ -520,7 +520,7 @@ class RegexFormatter {
       Begin -> out.append("^");
       Dot -> out.append(".");
       End -> out.append("$");
-      Word -> out.append("\\b");
+      WordBoundary -> out.append("\\b");
       // Special sets.
       Digit -> out.append("\\d");
       Space -> out.append("\\s");
