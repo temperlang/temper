@@ -25,7 +25,10 @@ because it enables multiple regex components to be strung together. For example,
 component types extend the `RegexNode` interface.
 
 ```
-export interface RegexNode {
+// TODO Auto here currently takes manual effort for lists, but pegging it at the
+// TODO top of the hierarchy at least reserves the correct "other" type.
+@auto("==")
+export sealed interface RegexNode {
 ```
 
 Before a regex is used, it must be compiled. This transforms a `RegexNode` tree
@@ -118,7 +121,7 @@ Here, "code" is short for "code point" although "char" might work better,
 depending on expectations.
 
 ```
-export interface CodePart extends RegexNode {}
+export sealed interface CodePart extends RegexNode {}
 ```
 
 ### CodePoints
@@ -162,7 +165,7 @@ classes.
 <details>
 
 ```
-export interface Special extends RegexNode {}
+export sealed interface Special extends RegexNode {}
 class BeginSpecial extends Special {}
 export let Begin: Special = doPure { (): Special => new BeginSpecial() };
 class DotSpecial extends Special {}
@@ -176,7 +179,7 @@ export let End: Special = doPure { (): Special => new EndSpecial() };
 class WordBoundarySpecial extends Special {}
 export let WordBoundary: Special = doPure { (): Special => new WordBoundarySpecial() };
 
-export interface SpecialSet extends CodePart & Special {}
+export sealed interface SpecialSet extends CodePart & Special {}
 class DigitSpecial extends SpecialSet {}
 export let Digit: SpecialSet = doPure { (): SpecialSet => new DigitSpecial() };
 class SpaceSpecial extends SpecialSet {}
@@ -216,7 +219,26 @@ non-space can be said as either `/[^\s]/` or `/\S/`.
 export class CodeSet(
   public let items: List<CodePart>,
   public let negated: Boolean = false,
-) extends RegexNode {}
+) extends RegexNode {
+  // TODO Auto "==" for List<T> when T is equatable.
+  // TODO Even without this on List, we could @auto implement it here.
+  @operator("==")
+  public eq(other: RegexNode): Boolean {
+    if (other is CodeSet) {
+      if (items.length != other.items.length) {
+        return false;
+      }
+      for (var i = 0; i < items.length; i += 1) {
+        if (items[i] != other.items[i]) {
+          return false;
+        }
+      }
+      true
+    } else {
+      false
+    }
+  }
+}
 ```
 
 ### Or
@@ -226,7 +248,31 @@ export class CodeSet(
 ```
 export class Or(
   public /*early*/ let items: List<RegexNode>,
-) extends RegexNode {}
+) extends RegexNode {
+  @operator("==")
+  public eq(other: RegexNode): Boolean {
+    if (other is Or) {
+      regexNodeListEq(items, other.items)
+    } else {
+      false
+    }
+  }
+}
+
+// This gets reused, at least.
+// TODO Any @auto on classes with lists that fills this in is unlikely to reuse
+// TODO equivalent helpers like this.
+private let regexNodeListEq(a: List<RegexNode>, b: List<RegexNode>): Boolean {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (var i = 0; i < a.length; i += 1) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  true
+}
 ```
 
 ### Repeat
@@ -277,7 +323,16 @@ export let optional(item: RegexNode, reluctant: Boolean = false): Repeat {
 ```
 export class Sequence(
   public /*early*/ let items: List<RegexNode>,
-) extends RegexNode {}
+) extends RegexNode {
+  @operator("==")
+  public eq(other: RegexNode): Boolean {
+    if (other is Sequence) {
+      regexNodeListEq(items, other.items)
+    } else {
+      false
+    }
+  }
+}
 ```
 
 ## Match Objects
@@ -462,14 +517,14 @@ class RegexFormatter {
       is Sequence -> pushSequence(regex);
       // Specials.
       // Some of these will need to be customized on future backends.
-      is BeginSpecial -> out.append("^");
-      is DotSpecial -> out.append(".");
-      is EndSpecial -> out.append("$");
-      is WordBoundarySpecial -> out.append("\\b");
+      Begin -> out.append("^");
+      Dot -> out.append(".");
+      End -> out.append("$");
+      Word -> out.append("\\b");
       // Special sets.
-      is DigitSpecial -> out.append("\\d");
-      is SpaceSpecial -> out.append("\\s");
-      is WordSpecial -> out.append("\\w");
+      Digit -> out.append("\\d");
+      Space -> out.append("\\s");
+      Word -> out.append("\\w");
       // ...
     }
   }

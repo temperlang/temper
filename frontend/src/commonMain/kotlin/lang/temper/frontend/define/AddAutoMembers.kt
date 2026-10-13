@@ -100,7 +100,7 @@ private class AutoMemberAdder(
         val typeShape = reifiedType!!.type2.definition as? TypeShape ?: return
         // We care about this type only if it's concrete or sealed.
         typeShape.abstractness == Abstractness.Concrete || typeShape.decl()?.isSealed() == true || return
-        val sealedAutoEqProgenitors = buildList digSealedProgenitors@{
+        val sealedAutoEqProgenitors = buildSet digSealedProgenitors@{
             fun dig(dugShape: TypeShape) {
                 superTypes@ for (superType in dugShape.superTypes) {
                     val superShape = superType.definition as? TypeShape ?: continue@superTypes
