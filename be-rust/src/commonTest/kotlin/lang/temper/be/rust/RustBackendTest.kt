@@ -483,6 +483,56 @@ class RustBackendTest {
     }
 
     @Test
+    fun bubblyCastInNullableReturn() = assertGenerateWanted(
+        // The failed cast's bubble is the function's `Err`, not a `Some` of one.
+        temper = """
+            |export class Text(public s: String) {}
+            |export let asText(v: AnyValue?): Text? throws Bubble { v as Text }
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |struct TextStruct {
+            |    s: std::sync::Arc<String>
+            |}
+            |#[derive(Clone)]
+            |pub struct Text(std::sync::Arc<TextStruct>);
+            |impl Text {
+            |    pub fn new(s__0: impl temper_core::ToArcString) -> Text {
+            |        let s__0 = s__0.to_arc_string();
+            |        let s;
+            |        s = s__0.clone();
+            |        let selfish = Text(std::sync::Arc::new(TextStruct {
+            |                    s
+            |        }));
+            |        return selfish;
+            |    }
+            |    pub fn s(& self) -> std::sync::Arc<String> {
+            |        return self.0.s.clone();
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Text, []);
+            |pub fn as_text(v__0: std::option::Option<temper_core::AnyValue>) -> temper_core::Result<std::option::Option<Text>> {
+            |    let return__0: std::option::Option<Text>;
+            |    if v__0.is_none() {
+            |        return std::result::Result::Err(temper_core::Error::new());
+            |    } else {
+            |        let return___0: temper_core::Result<Text> = v__0.clone().and_then(| x | temper_core::cast::<Text>(x)).ok_or_else(| | temper_core::Error::new());
+            |        if ! return___0.is_ok() {
+            |            return std::result::Result::Err(return___0.err().unwrap());
+            |        }
+            |        return__0 = std::option::Option::Some(return___0.unwrap());
+            |    }
+            |    return std::result::Result::Ok(return__0.clone().clone());
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun classesNamedLikeThePrelude() = assertGenerateWanted(
         // A user type takes the place of a prelude name in its module, and the any-value macro expands there too,
         // so std names we emit are written out in full.
@@ -2819,11 +2869,11 @@ class RustBackendTest {
     @Test
     fun topVarsInLocalFunctionInTopLevelBlock() = assertGenerateWanted(
         // `f` becomes an `fn` item in a closure group, which cannot read `init`'s locals, so `n` must be a static.
-        temper = """
+        temper = $$"""
             |var n = 1;
             |n += 1;
             |if (n > 0) {
-            |  let f(): Void { console.log("n=${'$'}{n}"); }
+            |  let f(): Void { console.log("n=${n}"); }
             |  f();
             |}
         """.trimMargin(),
