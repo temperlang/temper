@@ -1995,7 +1995,7 @@ class RustBackendTest {
                 |pub (crate) fn init() -> temper_core::Result<()> {
                 |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
                 |    INIT_ONCE.get_or_init(| |{
-                |            Ok(())
+                |            std::result::Result::Ok(())
                 |    }).clone()
                 |}
                 |pub (crate) enum ExportedSealedEnum {
@@ -2812,6 +2812,52 @@ class RustBackendTest {
             |        * A.write().unwrap() = std::option::Option::Some(a().wrapping_add(1));
             |    }
             |    return a();
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun topVarsInLocalFunctionInTopLevelBlock() = assertGenerateWanted(
+        // `f` becomes an `fn` item in a closure group, which cannot read `init`'s locals, so `n` must be a static.
+        temper = """
+            |var n = 1;
+            |n += 1;
+            |if (n > 0) {
+            |  let f(): Void { console.log("n=${'$'}{n}"); }
+            |  f();
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            {
+            |                * N.write().unwrap() = std::option::Option::Some(1);
+            |            }
+            |            {
+            |                * N.write().unwrap() = std::option::Option::Some(n().wrapping_add(1));
+            |            }
+            |            if n() > 0 {
+            |                #[derive(Clone)]
+            |                struct ClosureGroup___0 {}
+            |                impl ClosureGroup___0 {
+            |                    fn f(& self) {
+            |                        println!("n={}", n());
+            |                    }
+            |                }
+            |                let closure_group = ClosureGroup___0 {};
+            |                let f = {
+            |                    let closure_group = closure_group.clone();
+            |                    std::sync::Arc::new(move | | closure_group.f())
+            |                };
+            |                f();
+            |            }
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |static N: std::sync::RwLock<std::option::Option<i32>> = std::sync::RwLock::new(std::option::Option::None);
+            |pub (crate) fn n() -> i32 {
+            |    N.read().unwrap().unwrap()
             |}
         """.trimMargin(),
     )
