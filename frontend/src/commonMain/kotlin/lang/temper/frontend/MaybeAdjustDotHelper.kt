@@ -150,7 +150,15 @@ internal fun maybeAdjustDotHelper(
                 return V(calleePos, alt)
             }
             val gets = when (accessor) {
-                is InternalMemberAccessor -> BuiltinFuns.vIGets
+                is InternalMemberAccessor -> {
+                    val contextTypeArg = t.child(accessor.enclosingTypeIndexOrNegativeOne + 1)
+                    val contextTypeDef = contextTypeArg.reifiedTypeContained?.type2?.definition
+                    when (typeReceiver.definition) {
+                        // We have type values resolved here so determine actual internal nature.
+                        contextTypeDef -> BuiltinFuns.vIGets
+                        else -> BuiltinFuns.vGets
+                    }
+                }
                 is ExternalMemberAccessor -> BuiltinFuns.vGets
             }
             return Call(pos) {

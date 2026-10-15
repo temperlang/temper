@@ -1020,13 +1020,17 @@ class TyperTest {
         |    C.b;
         |/// ┗━┛ : Invalid
         |    class D { private static e = C.b; }
+        |///                              ┗━┛ : Invalid
         |    void
         """.trimMargin(),
         wantErrors = listOf(
             "2+4-7: Member b defined in C not publicly accessible!",
+            "4+33-36: Member b defined in C not publicly accessible!",
             "2+4-7: Type Invalid mentions Invalid",
             "2+6-7: Type Invalid mentions Invalid",
-            "4+?-?: Member b defined in C not publicly accessible!",
+            "4+29-30: Type Invalid mentions Invalid",
+            "4+33-36: Type Invalid mentions Invalid",
+            "4+35-36: Type Invalid mentions Invalid",
         ),
     )
 
