@@ -369,14 +369,18 @@ sealed class MemberAccessor(
     override fun toString(): String = prefix
 }
 
-/** Access to a member from within its definition via a `this` subject. */
+/**
+ * Access to a member from within some type context. The enclosing type at the
+ * access point is stored as a call argument for access later. It should be
+ * checked against the subject type when the type is known.
+ */
 sealed class InternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = 0) {
     override fun prefix(member: VisibleMemberShape) = prefix(DotMember(member.symbol))
 }
 
-/** Access to a member from outside the type's definition. */
+/** Access to a member from outside a type definition. */
 sealed class ExternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = -1) {

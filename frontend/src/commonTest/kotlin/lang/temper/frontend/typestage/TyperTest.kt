@@ -733,6 +733,7 @@ class TyperTest {
         |    class Private(private b: Int) {
         |      public sharing(other: Private): Int {
         |        b + other.b
+        |///     ┗━━━━━━━━━┛                : Int32
         |      }
         |    }
         |    let aPrivate = new Private(9);
@@ -743,20 +744,18 @@ class TyperTest {
         |    export class Outsider {
         |      public burgle(victim: Private): Int {
         |        victim.b
+        |///     ┗━━━━━━┛                   : Invalid
         |      }
         |    }
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            "3+12-19: Member b defined in Private not publicly accessible!",
-            "9+4-14: Member b defined in Private not publicly accessible!",
-            "13+8-16: Member b defined in Private not publicly accessible!",
-            "3+12-19: Type Invalid mentions Invalid",
-            "3+18-19: Type Invalid mentions Invalid",
-            "9+4-14: Type Invalid mentions Invalid",
-            "9+13-14: Type Invalid mentions Invalid",
-            "13+8-16: Type Invalid mentions Invalid",
-            "13+15-16: Type Invalid mentions Invalid",
+            "10+4-14: Member b defined in Private not publicly accessible!",
+            "14+8-16: Member b defined in Private not publicly accessible!",
+            "10+4-14: Type Invalid mentions Invalid",
+            "10+13-14: Type Invalid mentions Invalid",
+            "14+8-16: Type Invalid mentions Invalid",
+            "14+15-16: Type Invalid mentions Invalid",
         ),
     )
 
@@ -1020,12 +1019,14 @@ class TyperTest {
         |    class C { private static b = 123; }
         |    C.b;
         |/// ┗━┛ : Invalid
+        |    class D { private static e = C.b; }
         |    void
         """.trimMargin(),
         wantErrors = listOf(
             "2+4-7: Member b defined in C not publicly accessible!",
             "2+4-7: Type Invalid mentions Invalid",
             "2+6-7: Type Invalid mentions Invalid",
+            "4+?-?: Member b defined in C not publicly accessible!",
         ),
     )
 

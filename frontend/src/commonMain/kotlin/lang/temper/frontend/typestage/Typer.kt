@@ -2757,27 +2757,35 @@ internal class Typer(
             }
 
             // TODO: consolidate this with AccessibleFilter
-            val useMember: (VisibleMemberShape) -> MemberUsage2 = {
+            val useMember: (VisibleMemberShape) -> MemberUsage2 = { memberShape ->
                 // Either it's public or we're reading from within the class definition.
                 // TODO: check protected vs private.  This is sensitive to whether something is
                 // reached directly or via super-type walking above.
                 if (DEBUG) {
-                    console.log("filtering: $it")
+                    console.log("filtering: $memberShape")
                 }
-                val visible = it.visibility == Visibility.Public ||
-                    memberAccessor is InternalMemberAccessor
+                val visible = when {
+                    memberShape.visibility == Visibility.Public -> true
+                    memberAccessor is InternalMemberAccessor -> {
+                        // Check the lexical context type vs the member subject type, since we have both here now.
+                        val enclosingTypeArg = t.child(1 + memberAccessor.enclosingTypeIndexOrNegativeOne)
+                        val enclosingTypeDef = enclosingTypeArg.reifiedTypeContained?.type2?.definition
+                        enclosingTypeDef == memberShape.enclosingType
+                    }
+                    else -> false
+                }
                 val compatible = when (memberAccessor) {
                     is GetMemberAccessor ->
-                        it is PropertyShape ||
-                            (it is MethodShape && it.methodKind == MethodKind.Getter)
+                        memberShape is PropertyShape ||
+                            (memberShape is MethodShape && memberShape.methodKind == MethodKind.Getter)
                     // TODO: method or constructor references
                     is SetMemberAccessor ->
-                        (it is PropertyShape && it.hasSetter) ||
-                            (it is MethodShape && it.methodKind == MethodKind.Setter)
+                        (memberShape is PropertyShape && memberShape.hasSetter) ||
+                            (memberShape is MethodShape && memberShape.methodKind == MethodKind.Setter)
                     is CallMemberAccessor ->
-                        it is MethodShape &&
+                        memberShape is MethodShape &&
                             // TODO: call of value of property with function type via getter
-                            it.methodKind == MethodKind.Normal
+                            memberShape.methodKind == MethodKind.Normal
                 }
                 when {
                     compatible && visible -> MemberUsage2.Good
