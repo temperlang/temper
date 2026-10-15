@@ -415,20 +415,20 @@ private fun desugarDotOperation(
                 problem.logTo(logSink)
                 convertToErrorNode(subjectEdge, problem)
             }
-        } else if (actuallyEnclosingTypeTree != null) {
-            // TODO Instead go straight to internal static get? See above logic on direct jump.
-            val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type
-            val actuallyEnclosingTypeShape = (actuallyEnclosingType as? NominalType)?.definition as? TypeShape
-            if (actuallyEnclosingTypeShape?.name == subject.nameContained) {
-                enclosingTypeShape = actuallyEnclosingTypeShape
-                enclosingTypeTree = actuallyEnclosingTypeTree
-                enclosingTypeValue = actuallyEnclosingTypeTree.valueContained
-                return@thisType
-            }
         }
-        enclosingTypeShape = null
-        enclosingTypeTree = null
-        enclosingTypeValue = null
+        if (actuallyEnclosingTypeTree != null) {
+            // We don't really know yet if this is an instance or static reference.
+            // Nor do we know if it's really internal or not. So treat as internal and track the type.
+            // TODO Old comment: Go straight to internal static get? See above logic on direct jump.
+            val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type
+            enclosingTypeShape = (actuallyEnclosingType as? NominalType)?.definition as? TypeShape
+            enclosingTypeTree = actuallyEnclosingTypeTree
+            enclosingTypeValue = actuallyEnclosingTypeTree.valueContained
+        } else {
+            enclosingTypeShape = null
+            enclosingTypeTree = null
+            enclosingTypeValue = null
+        }
     }
 
     // We need to distinguish backed properties from other kinds of accesses.
