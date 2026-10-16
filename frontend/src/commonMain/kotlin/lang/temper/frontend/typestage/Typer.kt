@@ -73,6 +73,7 @@ import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.StaticPropertyShape
 import lang.temper.type.StaticType
 import lang.temper.type.SuperTypeTree
+import lang.temper.type.ThisAccessor
 import lang.temper.type.TopType
 import lang.temper.type.TypeActual
 import lang.temper.type.TypeBindingMapper
@@ -2766,6 +2767,7 @@ internal class Typer(
                 }
                 val visible = when {
                     memberShape.visibility == Visibility.Public -> true
+                    memberAccessor is ThisAccessor -> true
                     memberAccessor is InternalMemberAccessor -> {
                         // Check the lexical context type vs the member subject type, since we have both here now.
                         val enclosingTypeArg = t.child(1 + memberAccessor.enclosingTypeIndexOrNegativeOne)

@@ -380,6 +380,9 @@ sealed class InternalMemberAccessor(
     override fun prefix(member: VisibleMemberShape) = prefix(DotMember(member.symbol))
 }
 
+/** Indicates a known access via `this`, which also is always internal. */
+sealed interface ThisAccessor
+
 /** Access to a member from outside a type definition. */
 sealed class ExternalMemberAccessor(
     prefix: String,
@@ -400,6 +403,9 @@ sealed interface SetMemberAccessor
 sealed interface CallMemberAccessor
 
 /** Reading a property internally. */
+object ThisGet : InternalMemberAccessor("tget"), GetMemberAccessor, ThisAccessor
+object ThisSet : InternalMemberAccessor("tset"), SetMemberAccessor, ThisAccessor
+object ThisCall : InternalMemberAccessor("tcall"), CallMemberAccessor, ThisAccessor
 object InternalGet : InternalMemberAccessor("iget"), GetMemberAccessor
 object InternalSet : InternalMemberAccessor("iset"), SetMemberAccessor
 object InternalCall : InternalMemberAccessor("icall"), CallMemberAccessor
