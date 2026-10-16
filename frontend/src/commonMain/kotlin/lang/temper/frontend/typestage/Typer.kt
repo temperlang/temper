@@ -2772,6 +2772,7 @@ internal class Typer(
                         // Check the lexical context type vs the member subject type, since we have both here now.
                         val enclosingTypeArg = t.child(1 + memberAccessor.enclosingTypeIndexOrNegativeOne)
                         val enclosingTypeDef = enclosingTypeArg.reifiedTypeContained?.type2?.definition
+                        // TODO Convert known externals later to external as a clarification/optimization?
                         enclosingTypeDef == memberShape.enclosingType
                     }
                     else -> false
