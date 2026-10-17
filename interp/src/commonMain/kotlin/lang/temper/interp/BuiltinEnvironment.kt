@@ -17,6 +17,8 @@ import lang.temper.interp.importExport.ImportMacro
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.TemperName
+import lang.temper.type.WellKnownTypes
+import lang.temper.type2.MkType2
 import lang.temper.value.Fail
 import lang.temper.value.InternalFeatureKeys
 import lang.temper.value.InterpreterCallback
@@ -24,6 +26,7 @@ import lang.temper.value.MacroValue
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.NotYet
 import lang.temper.value.PartialResult
+import lang.temper.value.ReifiedType
 import lang.temper.value.TBoolean
 import lang.temper.value.TFloat64
 import lang.temper.value.TFunction
@@ -792,6 +795,19 @@ private object Builtins {
             keyPair(vConnectedDecorator),
             keyPair(vImuDecorator),
             keyPair(vPartialImuDecorator),
+            "Never" to Value(
+                ReifiedType(
+                    MkType2(WellKnownTypes.neverTypeDefinition)
+                        .actuals(
+                            WellKnownTypes.neverTypeDefinition.formals.map {
+                                MkType2(it).get()
+                            },
+                        )
+                        .get(),
+                ),
+                TType,
+            ),
+            "Bubble" to Value(Types.bubble, TType),
 
             "new" to Value(New),
             keyPair(Value(ImportMacro)),

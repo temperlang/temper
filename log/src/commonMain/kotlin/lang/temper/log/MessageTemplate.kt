@@ -196,7 +196,7 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     IncompatibleVisibility(
-        "Type %s has method %s but it's visibility is %s which is narrower than the method it overrides in %s",
+        "Type %s has method %s but its visibility is %s which is narrower than the method it overrides in %s",
         CompilationPhase.Interpreter,
     ),
     IncompatibleSignature(

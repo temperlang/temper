@@ -22,15 +22,10 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
-import lang.temper.type.AndType
-import lang.temper.type.BubbleType
-import lang.temper.type.FunctionType
 import lang.temper.type.InvalidType
 import lang.temper.type.MkType
 import lang.temper.type.NominalType
-import lang.temper.type.OrType
 import lang.temper.type.StaticType
-import lang.temper.type.TopType
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypePartMapper
@@ -46,9 +41,11 @@ import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.DefinedType
 import lang.temper.type2.Nullity
+import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.mapType
 import lang.temper.type2.passTypeOf
 import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
@@ -71,7 +68,6 @@ import lang.temper.value.nameContained
 import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
-import lang.temper.value.typeFromSignature
 import lang.temper.value.visibilitySymbol
 
 /**
@@ -437,7 +433,7 @@ internal class TypeChecker(
     private fun checkRegularCall(t: CallTree) {
         val tTypeInferences = t.typeInferences
         val callee = t.childOrNull(0) ?: return
-        val calleeTypes = typeFromSignature(tTypeInferences?.variant ?: return)
+        val calleeSig = tTypeInferences?.variant ?: return
         val actuals = extractTypedActuals(t) ?: return
         val bindings = tTypeInferences.bindings2
         fun bind(t: StaticType): StaticType =
@@ -459,137 +455,77 @@ internal class TypeChecker(
                     override fun mapDefinition(d: TypeDefinition) = d
                 },
             )
+        fun bind2(t: Type2): Type2 = t.mapType(bindings)
 
-        fun checkAgainstCalleeType(calleeType: StaticType) {
-            when (calleeType) {
-                BubbleType,
-                -> Unit // Call never happens.  Odd but ok.  TODO: should we warn
-                InvalidType,
-                TopType,
-                is NominalType,
-                -> {
-                    var reported = false
-                    if (callee.functionContained is New) {
-                        run newCall@{
-                            val type = t.children.getOrNull(1)?.staticTypeContained ?: return@newCall null
-                            val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@newCall null
-                            when (shape.abstractness) {
-                                // Customize the error messaging for this case.
-                                Abstractness.Abstract -> {
-                                    reported = true
-                                    logSink.log(
-                                        level = Log.Error,
-                                        template = MessageTemplate.CannotInstantiateAbstractType,
-                                        pos = t.child(1).pos,
-                                        values = listOf(shape.name.displayName),
-                                    )
-                                }
-                                Abstractness.Concrete -> null
-                            }
-                        }
-                    }
-                    // Most invalid callee types already reported in more specific ways, but not all.
-                    if (!reported && (calleeType != InvalidType || callee.functionContained == null)) {
+        var reported = false
+        if (callee.functionContained is New) {
+            run newCall@{
+                val type = t.children.getOrNull(1)?.staticTypeContained ?: return@newCall null
+                val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@newCall null
+                when (shape.abstractness) {
+                    // Customize the error messaging for this case.
+                    Abstractness.Abstract -> {
+                        reported = true
                         logSink.log(
                             level = Log.Error,
-                            template = MessageTemplate.ExpectedFunctionType,
-                            pos = callee.pos,
-                            values = listOf(calleeType),
+                            template = MessageTemplate.CannotInstantiateAbstractType,
+                            pos = t.child(1).pos,
+                            values = listOf(shape.name.displayName),
                         )
                     }
+                    Abstractness.Concrete -> null
                 }
-                is FunctionType -> {
-                    val boundCalleeType = if (calleeType.typeFormals.isEmpty()) {
-                        calleeType
-                    } else {
-                        MkType.fnDetails(
-                            typeFormals = emptyList(),
-                            valueFormals = calleeType.valueFormals.map { unbound ->
-                                FunctionType.ValueFormal(
-                                    symbol = unbound.symbol,
-                                    staticType = bind(unbound.staticType),
-                                    isOptional = unbound.isOptional,
-                                )
-                            },
-                            returnType = bind(calleeType.returnType),
-                        )
-                    }
-
-                    val valueFormals = boundCalleeType.valueFormals
-
-                    if (actuals.size !in boundCalleeType.arityRange) {
-                        logSink.log(
-                            level = Log.Error,
-                            template = MessageTemplate.ArityMismatch,
-                            pos = t.pos,
-                            values = listOf(valueFormals.size),
-                        )
-                    }
-                    for (i in actuals.indices) {
-                        val actual = actuals[i]
-                        val formal = valueFormals.getOrNull(i)
-                        if (actual.symbol != null && actual.symbol != formal?.symbol) {
-                            // Check matching arg names.
-                            // And until we improve features, expect all named actuals to be in order with the formals.
-                            // This error message is less than ideal for correct names out of order, but it gets the job
-                            // done for now.
-                            // TODO(tjp): Improve error messages once overall named arg support improves.
-                            logSink.log(
-                                level = Log.Error,
-                                template = MessageTemplate.UndeclaredName,
-                                pos = actual.symbolPos!!,
-                                values = listOf(actual.symbol.text),
-                            )
-                        }
-                        val formalType = formal?.staticType ?: break
-                        if (failsValidSubtypeCheck(actual.type, formalType)) {
-                            // Preserve can do whatever it wants, especially for storing void args.
-                            // TODO Figure out how not to special-case it?
-                            if (callee.functionContained != BuiltinFuns.preserveFn) {
-                                logSink.log(
-                                    level = Log.Error,
-                                    template = MessageTemplate.ExpectedSubType,
-                                    pos = actual.pos,
-                                    values = listOf(formalType, actual.type),
-                                )
-                            }
-                        }
-                    }
-                    val computedType = hackMapNewStyleToOld(tTypeInferences.type)
-                    val boundCalleePassType = excludeBubble(boundCalleeType.returnType).let {
-                        // HACK: allow Never-ish compatibility on return type for nullary specials
-                        // until we get rid of NeverType entirely.
-                        MkType.map(
-                            it,
-                            object : TypePartMapper {
-                                override fun mapType(t: StaticType): StaticType =
-                                    if (t is NominalType && t.definition == WellKnownTypes.neverTypeDefinition) {
-                                        OrType.emptyOrType
-                                    } else {
-                                        t
-                                    }
-                                override fun mapDefinition(d: TypeDefinition): TypeDefinition = d
-                            },
-                        )
-                    }
-
-                    if (failsValidSubtypeCheck(boundCalleePassType, computedType)) {
-                        logSink.log(
-                            level = Log.Error,
-                            template = MessageTemplate.ExpectedSubType,
-                            pos = t.pos,
-                            values = listOf(computedType, boundCalleeType.returnType),
-                        )
-                    }
-                }
-                is OrType ->
-                    // We should have pruned out incompatible variants already, so just check each.
-                    calleeType.members.forEach { checkAgainstCalleeType(it) }
-                is AndType ->
-                    calleeType.members.forEach { checkAgainstCalleeType(it) }
             }
         }
-        checkAgainstCalleeType(calleeTypes)
+
+        val boundCalleeType = if (calleeSig.typeFormals.isEmpty()) {
+            calleeSig
+        } else {
+            Signature2(
+                returnType2 = bind2(calleeSig.returnType2),
+                hasThisFormal = calleeSig.hasThisFormal,
+                requiredInputTypes = calleeSig.requiredInputTypes.map { bind2(it) },
+                optionalInputTypes = calleeSig.optionalInputTypes.map { bind2(it) },
+                typeFormals = emptyList(),
+            )
+        }
+
+        if (actuals.size !in boundCalleeType.arityRange) {
+            logSink.log(
+                level = Log.Error,
+                template = MessageTemplate.ArityMismatch,
+                pos = t.pos,
+                values = listOf(boundCalleeType.arityRange),
+            )
+        }
+        for (i in actuals.indices) {
+            val actual = actuals[i]
+            val formal = boundCalleeType.valueFormalForActual(i)
+            val formalType = formal?.staticType ?: break
+            if (failsValidSubtypeCheck(actual.type, formalType)) {
+                // Preserve can do whatever it wants, especially for storing void args.
+                // TODO Figure out how not to special-case it?
+                if (callee.functionContained != BuiltinFuns.preserveFn) {
+                    logSink.log(
+                        level = Log.Error,
+                        template = MessageTemplate.ExpectedSubType,
+                        pos = actual.pos,
+                        values = listOf(formalType, actual.type),
+                    )
+                }
+            }
+        }
+        val computedType = tTypeInferences.type
+        val boundCalleePassType = excludeBubble(boundCalleeType.returnType2)
+
+        if (failsValidSubtypeCheck(boundCalleePassType, computedType)) {
+            logSink.log(
+                level = Log.Error,
+                template = MessageTemplate.ExpectedSubType,
+                pos = t.pos,
+                values = listOf(computedType, boundCalleeType.returnType),
+            )
+        }
     }
 
     private fun checkRttiCheckAllowed(tree: CallTree, checkFn: RttiCheckFunction) {

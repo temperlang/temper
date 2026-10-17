@@ -189,82 +189,82 @@ class TyperPlanTest {
             // Don't bother to indent the big do block in this case.
             """
                 |do {
-                |var a;
-                |if (condition) {
-                |  call();
-                |}
-                |a = 1;
-                |if (condition) {
-                |  a = 2;  // Not an initializer
-                |}
-                |
-                |var b;
-                |if (condition) {
-                |  call();
-                |}
-                |if (condition) {
-                |  b = 1;
-                |  call(b);
-                |  b = 2; // Not
-                |} else {
-                |  b = 3;
-                |  call();
-                |  b = 4; // Not
-                |}
-                |b = 5; // Not
-                |
-                |var c;
-                |// The assignment in the lambda appears lexically first, so
-                |// we treat that as the initializer.
-                |mightBeAffine {
-                |  c = 1;
-                |}
-                |c = 2; // Not
-                |
-                |var d;
-                |mightBeAffine {
+                |  var a;
                 |  if (condition) {
-                |    d = 1
+                |    call();
                 |  }
-                |}
-                |d = 2; // Not
-                |
-                |var e;
-                |if (condition) {
-                |  e = 1;
-                |}
-                |mightBeAffine {
-                |  e = 2; // Not
-                |}
-                |
-                |var f;
-                |mightBeAffine {
+                |  a = 1;
                 |  if (condition) {
-                |    f = 1;
+                |    a = 2;  // Not an initializer
                 |  }
-                |}
-                |mightBeAffine {
-                |  if (!condition) {
-                |    f = 2; // Not
+                |
+                |  var b;
+                |  if (condition) {
+                |    call();
                 |  }
-                |}
-                |f = 3; // Not
-                |call();
-                |f = 4; // Not
-                |call(f);
+                |  if (condition) {
+                |    b = 1;
+                |    call(b);
+                |    b = 2; // Not
+                |  } else {
+                |    b = 3;
+                |    call();
+                |    b = 4; // Not
+                |  }
+                |  b = 5; // Not
                 |
-                |var g;
-                |let someFun() {
-                |  call(g);
-                |}
-                |g = "assigned after def of using function";
-                |someFun();
-                |g = "another value assigned"; // Not
+                |  var c;
+                |  // The assignment in the lambda appears lexically first, so
+                |  // we treat that as the initializer.
+                |  mightBeAffine {
+                |    c = 1;
+                |  }
+                |  c = 2; // Not
                 |
-                |var h = null;
-                |if (condition) {
-                |  h = "some not null value";
-                |}
+                |  var d;
+                |  mightBeAffine {
+                |    if (condition) {
+                |      d = 1
+                |    }
+                |  }
+                |  d = 2; // Not
+                |
+                |  var e;
+                |  if (condition) {
+                |    e = 1;
+                |  }
+                |  mightBeAffine {
+                |    e = 2; // Not
+                |  }
+                |
+                |  var f;
+                |  mightBeAffine {
+                |    if (condition) {
+                |      f = 1;
+                |    }
+                |  }
+                |  mightBeAffine {
+                |    if (!condition) {
+                |      f = 2; // Not
+                |    }
+                |  }
+                |  f = 3; // Not
+                |  call();
+                |  f = 4; // Not
+                |  call(f);
+                |
+                |  var g;
+                |  let someFun() {
+                |    call(g);
+                |  }
+                |  g = "assigned after def of using function";
+                |  someFun();
+                |  g = "another value assigned"; // Not
+                |
+                |  var h = null;
+                |  if (condition) {
+                |    h = "some not null value";
+                |  }
                 |}
             """.trimMargin(),
             stage = Stage.Type,

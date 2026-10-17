@@ -83,7 +83,6 @@ import lang.temper.type.Visibility
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.anyValueType
-import lang.temper.type.WellKnownTypes.booleanType
 import lang.temper.type.WellKnownTypes.booleanType2
 import lang.temper.type.WellKnownTypes.functionType
 import lang.temper.type.WellKnownTypes.functionType2
@@ -106,6 +105,7 @@ import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.InputBound
 import lang.temper.type2.InternalTyperFailureException
 import lang.temper.type2.MkType2
+import lang.temper.type2.Nullity
 import lang.temper.type2.OutputBound
 import lang.temper.type2.PositionedType
 import lang.temper.type2.Signature2
@@ -124,6 +124,7 @@ import lang.temper.type2.inferBounds
 import lang.temper.type2.invalidSig
 import lang.temper.type2.mapType
 import lang.temper.type2.passTypeOf
+import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BasicTypeInferencesTree
@@ -345,8 +346,33 @@ internal class Typer(
         )
     }
 
+    private class NameBinding private constructor(
+        val types: Pair<Lazy<StaticType>, Lazy<Type2>>,
+    ) {
+        val t get() = types.first.value
+        val t2 get() = types.second.value
+        val sig get() = withType(t2, fallback = { invalidSig }, fn = { _, s, _ -> s })
+
+        constructor(staticType: StaticType) :
+            this(lazyOf(staticType) to lazy { hackMapOldStyleToNew(staticType) })
+
+        constructor(type: Type2) :
+            this(lazy { hackMapNewStyleToOld(type) } to lazyOf(type))
+
+        fun merge(other: NameBinding?, typeContext2: TypeContext2): NameBinding {
+            if (other == null) { return this }
+            val (at, at2) = this.types
+            val (bt, bt2) = this.types
+            return if (at2.isInitialized() || bt2.isInitialized()) {
+                NameBinding(mergeTypeArgs2(at2.value, bt2.value, typeContext2))
+            } else {
+                NameBinding(mergeTypeArgs(at.value, bt.value))
+            }
+        }
+    }
+
     private inner class TypingInfo(val typerPlan: TyperPlan) {
-        private val bindings = mutableMapOf<ResolvedName, StaticType>()
+        private val bindings = mutableMapOf<ResolvedName, NameBinding>()
         private val decisions = mutableMapOf<Tree, Decision>()
         val initializerInfo = mutableMapOf<ResolvedName, InitializerInfo>()
         val lateTypedCalls = mutableListOf<LateTypedCall>()
@@ -382,19 +408,18 @@ internal class Typer(
             }
         }
 
-        fun bind(name: ResolvedName, type: StaticType) {
-            console.groupIf(DEBUG, "Binding $name: $type") {
-                bindings.compute(name) { _, old ->
-                    when (old) {
-                        null -> type
-                        else -> mergeTypeArgs(from = type, into = old)
-                    }
+        fun bind(name: ResolvedName, type: Type2) = bind(name, NameBinding(type))
+
+        fun bind(name: ResolvedName, newBinding: NameBinding) {
+            console.groupIf(DEBUG, "Binding $name: $newBinding") {
+                bindings.compute(name) { _, oldBinding ->
+                    newBinding.merge(oldBinding, typeContext2)
                 }
                 // If this name directly implies the type of another, record that.
                 for (forwardingName in forwardingNames[name] ?: emptyList()) {
                     if (forwardingName !in bindings) {
                         console.logIf(DEBUG) { "$name implies type of $forwardingName" }
-                        bind(forwardingName, type)
+                        bind(forwardingName, newBinding)
                     }
                 }
                 // If name is of a typed member, then store the type with the member.
@@ -403,17 +428,19 @@ internal class Typer(
                     console.logIf(DEBUG) {
                         "Storing type of $name with ${member.enclosingType.name}.${
                             member.symbol.text
-                        } as $type"
+                        } as $newBinding"
                     }
                     when (member) {
-                        is PropertyShape -> member.descriptor = hackMapOldStyleToNew(type)
-                        is MethodShape -> member.descriptor = hackTryStaticTypeToSig(type)
+                        is PropertyShape -> member.descriptor = newBinding.t2
+                        is MethodShape -> member.descriptor = newBinding.sig.let {
+                            it.copy(hasThisFormal = it.requiredInputTypes.isNotEmpty())
+                        }
                         is StaticPropertyShape ->
                             member.descriptor =
                                 if (fnSymbol in member.metadata) {
-                                    hackTryStaticTypeToSig(type)
+                                    newBinding.sig
                                 } else {
-                                    hackMapOldStyleToNew(type)
+                                    newBinding.t2
                                 }
                     }
 
@@ -438,7 +465,8 @@ internal class Typer(
             decisions.remove(tree)
         }
 
-        fun isInsufficientlyTyped(name: ResolvedName) = bindings[name]?.hasUnbound() ?: true
+        fun isInsufficientlyTyped(name: ResolvedName) =
+            bindings[name]?.t2?.hasUnbound() ?: true
 
         fun isUnbound(name: ResolvedName) = name !in bindings
         fun isDecided(tree: Tree) = tree in decisions
@@ -469,7 +497,7 @@ internal class Typer(
             }
         }
 
-        fun sinkTypeOf(name: ResolvedName): StaticType? {
+        fun sinkTypeOf(name: ResolvedName): Type2? {
             val nameToReceiver = typerPlan.nameToReceiver
             val visited = mutableSetOf<ResolvedName>()
             val q = ArrayDeque<ResolvedName>()
@@ -478,7 +506,7 @@ internal class Typer(
                 val n = q.removeFirstOrNull() ?: break
                 if (n in visited) { continue }
                 visited.add(n)
-                val t = binding(n)
+                val t = binding(n)?.t2
                 if (t != null) { return t }
                 nameToReceiver[n]?.let {
                     for (next in it) {
@@ -491,10 +519,10 @@ internal class Typer(
 
         fun aliasedCallFor(call: CallTree): TyperPlan.AliasedCall? = callTreeToAliasedCall[call]
 
-        val bindingsMap: Map<ResolvedName, StaticType> get() = bindings
+        val bindingsMap: Map<ResolvedName, NameBinding> get() = bindings
     }
 
-    fun type(root: BlockTree): Map<ResolvedName, StaticType> {
+    fun type(root: BlockTree): Map<ResolvedName, Type2> {
         if (DEBUG) {
             console.group("Before Typing") {
                 root.toPseudoCode(console.textOutput)
@@ -532,7 +560,7 @@ internal class Typer(
                     // can be declared as (X throws Bubble).
                     // The local variable to hold the result cannot hold a Bubble because that is
                     // not a real value.
-                    MkType.and(declaredType, anyValueType) // Mask out Bubble
+                    excludeBubble(declaredType)
                 } else {
                     declaredType
                 }
@@ -555,7 +583,7 @@ internal class Typer(
         fun maybePreTypeAsBoolean(name: ResolvedName) {
             if (name in namesUsedAsConditions && ti.isUnbound(name) && name is ModularName) {
                 console.groupIf(DEBUG, "Pre-typed name used as a condition") {
-                    ti.bind(name, booleanType)
+                    ti.bind(name, booleanType2)
                 }
             }
         }
@@ -576,7 +604,7 @@ internal class Typer(
                 console.groupIf(DEBUG, "Attempting to pre-type $name") {
                     var allTyped = true
                     var hasInvalid = false
-                    val types = mutableListOf<StaticType>()
+                    val types = mutableListOf<Type2>()
                     initializers.mapNotNullTo(types) { initializer ->
                         when (initializer) {
                             is ValueLeaf -> preTypeValueLeaf(initializer)
@@ -584,12 +612,12 @@ internal class Typer(
                             is CallTree -> typePreserveCall(initializer)
                             else -> error(initializer)
                         }
-                        when (val preType = ti.decisionType(initializer)) {
+                        when (val preType = ti.decisionType2(initializer)) {
                             null -> {
                                 allTyped = false
                                 null
                             }
-                            InvalidType -> {
+                            invalidType2 -> {
                                 hasInvalid = true
                                 null
                             }
@@ -597,11 +625,15 @@ internal class Typer(
                         }
                     }
                     if (allTyped) {
-                        if (types.isEmpty() && hasInvalid) {
-                            types.add(InvalidType)
+                        if (types.isEmpty()) {
+                            if (hasInvalid) {
+                                types.add(invalidType2)
+                            } else {
+                                types.add(WellKnownTypes.anyValueOrNullType2)
+                            }
                         }
                         console.logIf(DEBUG) { "Pre-typed $name to $types" }
-                        ti.bind(name, typeContext.simpleOr(types.toList()))
+                        ti.bind(name, typeContext2.simpleLub(types.toList()))
                     }
                     val member = typerPlan.namesToLocalMemberShapes[name]
                     if (member is MethodShape && initializers.size == 1) {
@@ -655,11 +687,11 @@ internal class Typer(
                         } as MethodShape?
                         val propertyType =
                             getter?.descriptor?.returnType2?.let {
-                                hackMapNewStyleToOld(passTypeOf(it))
+                                passTypeOf(it)
                             }
                                 // TODO(mikesamuel, static-checks): Truly typeless properties are
                                 // an anti-pattern.  Maybe forbid them.
-                                ?: anyValueType
+                                ?: WellKnownTypes.anyValueOrNullType2
                         if (getter != null) {
                             console.logIf(DEBUG) {
                                 "Assuming type for ${enclosingType.name}.$name from getter ${
@@ -725,7 +757,7 @@ internal class Typer(
         // are neither read nor initialized.
         for (name in ti.typerPlan.declarations.keys) {
             if (name is InternalModularName && ti.isUnbound(name)) {
-                ti.bind(name, TopType)
+                ti.bind(name, WellKnownTypes.anyValueOrNullType2)
             }
         }
 
@@ -771,7 +803,9 @@ internal class Typer(
             }
         }
 
-        return ti.bindingsMap
+        return ti.bindingsMap.mapValues { (_, v) ->
+            v.t2
+        }
     }
 
     private fun storeDecisionsInTree(tree: Tree, skipStored: Boolean) {
@@ -834,7 +868,7 @@ internal class Typer(
             is LeftNameLeaf -> Unit // Fill in declarations and assignment lefts later.
             is RightNameLeaf -> {
                 val name = tree.content as ResolvedName
-                var typeBinding = ti.binding(name)
+                var typeBinding = ti.binding(name)?.t2
                 if (typeBinding == null) {
                     // We might have typed some initializers but not others.
                     // We should assume at least a partial type because a name may be read after
@@ -843,13 +877,13 @@ internal class Typer(
                     // This makes us sensitive to the order parallel branches are visited in which
                     // is sub-ideal.
                     val initializers = ti.typerPlan.initializers[name]
-                        ?.mapNotNull { ti.decisionType(it) }
+                        ?.mapNotNull { ti.decisionType2(it) }
                     if (!initializers.isNullOrEmpty()) {
-                        typeBinding = typeContext.simpleOr(initializers)
+                        typeBinding = typeContext2.simpleLub(initializers)
                     }
                 }
                 if (typeBinding != null) {
-                    ti.decide(tree, typeBinding)
+                    ti.decide(tree, Decision(typeBinding))
                 } else if (name !is InternalModularName) {
                     preTypeNonLocalNames(tree)
                 } else {
@@ -1057,10 +1091,10 @@ internal class Typer(
                     val left = ancestor.child(1)
                     if (left is LeftNameLeaf) {
                         val leftName = left.content as ResolvedName
-                        val deduction = ti.binding(leftName)
+                        val deduction = ti.binding(leftName)?.t2
                         if (deduction != null) {
                             // If we know about that name, great.
-                            return hackMapOldStyleToNew(deduction)
+                            return deduction
                         }
                     }
                     // Keep looking upwards.  Assignments can nest.
@@ -1071,8 +1105,7 @@ internal class Typer(
                 // A regular call.  If we have already solved its signature, use the
                 // argument type as a context type.
                 val decision = ti.decision(ancestor)
-                val variant = decision?.variant
-                val sig = variant?.let { hackTryStaticTypeToSig(it) }
+                val sig = decision?.variant2
                 if (sig != null) { // TODO: !mentionsInvalid
                     val edgeIndex = ancestor.edges.indexOf(incoming)
                     val argIndex = edgeIndex - ancestor.firstArgumentIndex
@@ -1099,9 +1132,9 @@ internal class Typer(
                     if (blockParent == null) { // Module root
                         val moduleResultName = module.outputName
                         if (moduleResultName != null) {
-                            val moduleResultType = ti.binding(moduleResultName)
+                            val moduleResultType = ti.binding(moduleResultName)?.t2
                             if (moduleResultType != null) {
-                                return hackMapOldStyleToNew(excludeBubble(moduleResultType))
+                                return excludeBubble(moduleResultType)
                             }
                         } else {
                             return voidType2
@@ -1342,9 +1375,9 @@ internal class Typer(
             }
         }
         if (
+            !boundsRequireFeedback &&
             intertwined.isEmpty() && calleeVariants.size == 1 &&
-            calleeVariants.first().sig.typeFormals.isEmpty() &&
-            !boundsRequireFeedback
+            calleeVariants.first().sig.typeFormals.isEmpty()
         ) {
             // Fast path for simple functions that do not require TypeSolving.
             val variant = calleeVariants.first()
@@ -1486,7 +1519,9 @@ internal class Typer(
 
                 // Store the actual variant chosen with the callee now that we know it.
                 if (!isNewCall(callSite)) {
-                    val variantType = AdHocArrowTypes.definedTypeForSig(decision.variant2 ?: invalidSig)
+                    val variantType = AdHocArrowTypes.definedTypeForSig(
+                        decision.variant2 ?: invalidSig,
+                    )
                     val callee = callSite.child(0)
                     val storedCalleeType = ti.decisionType2(callee)
                     if (variantType != storedCalleeType) {
@@ -1536,7 +1571,7 @@ internal class Typer(
 
     private fun postTypeDeclTree(tree: DeclTree) {
         val parts = tree.parts ?: return
-        val type = ti.binding(parts.name.content as ResolvedName)
+        val type = ti.binding(parts.name.content as ResolvedName)?.t2
         if (type != null) {
             // Optional expressions may be value references that need context to type.
             // For example, a `null` default expression like
@@ -1547,7 +1582,7 @@ internal class Typer(
                 if (optionalTree is ValueLeaf && ti.isUndecided(optionalTree)) {
                     preTypeValueLeaf(optionalTree)
                     if (ti.isUndecided(optionalTree)) {
-                        ti.decide(optionalTree, type)
+                        ti.decide(optionalTree, Decision(type))
                     }
                 }
             }
@@ -1755,10 +1790,10 @@ internal class Typer(
         }
 
         if (ti.isUndecided(right) && right is FunTree) {
-            val wantedType = ti.binding(name)
+            val wantedType = ti.binding(name)?.t2
             if (wantedType != null) {
                 withType(
-                    hackMapOldStyleToNew(wantedType),
+                    wantedType,
                     fn = { _, sig, _ ->
                         preTypeFunTree(right, wantedSig = sig)
                     },
@@ -1768,7 +1803,7 @@ internal class Typer(
         }
 
         console.groupIf(DEBUG, "Typing assignment $name") {
-            var type = ti.decisionType(right)
+            var type = ti.decisionType2(right)
             if (DEBUG) {
                 console.log("Callee type=${tree.child(0).staticTypeContained}")
             }
@@ -1792,11 +1827,11 @@ internal class Typer(
                     // Nothing more we can do for this until the mask is full.
                     initInfo.checkedMask.set(initializerIndex)
                 } else {
-                    val typeFromName = ti.bindingsMap[name]
+                    val typeFromName = ti.bindingsMap[name]?.t2
                     if (typeFromName != null) {
-                        ti.decide(right, typeFromName)
+                        ti.decide(right, Decision(typeFromName))
                     }
-                    type = ti.decisionType(right)
+                    type = ti.decisionType2(right)
                 }
             }
 
@@ -1805,10 +1840,10 @@ internal class Typer(
                     tree,
                     Decision(
                         type,
-                        variant = MkType.fn(
-                            typeFormals = emptyList(),
-                            valueFormals = listOf(type, type),
-                            returnType = type,
+                        variant = Signature2(
+                            returnType2 = type,
+                            hasThisFormal = false,
+                            requiredInputTypes = listOf(type, type),
                         ),
                     ),
                 )
@@ -1825,19 +1860,20 @@ internal class Typer(
                 ti.initializerInfo.remove(name)
                 val initializers = initInfo.initializers
                 val initializerTypes = buildSet {
-                    initializers.mapNotNullTo(this) { ti.decisionType(it) }
+                    initializers.mapNotNullTo(this) { ti.decisionType2(it) }
                     if (isEmpty()) {
                         // If there are only unsolved constant initializers, use the
                         // declared type.
-                        val declaredType = ti.binding(name)
+                        val declaredType = ti.binding(name)?.t2
                             ?: ti.sinkTypeOf(name)
-                            ?: MkType.nominal(WellKnownTypes.neverTypeDefinition, listOf(WellKnownTypes.emptyType))
+                            ?: MkType2(WellKnownTypes.neverTypeDefinition)
+                                .actuals(listOf(WellKnownTypes.emptyType2)).get()
                         add(declaredType)
                     }
                 }
-                var combinedType = typeContext.simpleOr(initializerTypes)
-                if (initInfo.assignedNullable && combinedType !is InvalidType) {
-                    combinedType = MkType.nullable(combinedType)
+                var combinedType = typeContext2.simpleLub(initializerTypes)
+                if (initInfo.assignedNullable && combinedType != invalidType2) {
+                    combinedType = combinedType.withNullity(Nullity.OrNull)
                 }
                 console.logIf(DEBUG) {
                     "Inferred type for $name as $combinedType from initializer types $initializerTypes"
@@ -1996,22 +2032,22 @@ internal class Typer(
                     }
                 }
 
-                fun typeForDeclOrNull(declTree: DeclTree): StaticType? {
+                fun typeForDeclOrNull(declTree: DeclTree): Type2? {
                     val declParts = declTree.parts
                     return if (declParts == null) {
                         contradictions.add(BecauseMalformedParameterDeclaration(declTree.pos))
-                        InvalidType
+                        invalidType2
                     } else {
                         val typeTree = declParts.type?.target
                         if (typeTree == null) {
                             null
                         } else {
                             val reifiedType = typeTree.reifiedTypeContained
-                            reifiedType?.type ?: run {
+                            reifiedType?.type2 ?: run {
                                 contradictions.add(
                                     BecauseUnresolvedFunctionSignaturePart(typeTree.pos),
                                 )
-                                InvalidType
+                                invalidType2
                             }
                         }
                     }
@@ -2032,9 +2068,8 @@ internal class Typer(
                         explicitType
                     } else { // No declared type, so infer.
                         val inferredType = typeContext2.valueFormalTypeAt(variants, declIndex, null)
-                            ?.let { hackMapNewStyleToOld(it) }
-                            ?: previousFunctionType?.valueFormals?.getOrNull(declIndex)?.staticType
-                            ?: anyValueType
+                            ?: previousFunctionType?.valueFormals?.getOrNull(declIndex)?.type
+                            ?: WellKnownTypes.anyValueOrNullType2
                         if (ti.isUnbound(name)) {
                             ti.bind(name, inferredType)
                         }
@@ -2042,7 +2077,7 @@ internal class Typer(
                     }
                     FunctionType.ValueFormal(
                         symbol = name.toSymbol(),
-                        staticType = type,
+                        staticType = hackMapNewStyleToOld(type),
                         isOptional = declParts.isOptional.elseTrue,
                     )
                 }
@@ -2061,12 +2096,13 @@ internal class Typer(
                     )
                 }
                 val returnType = returnDecl?.let { typeForDeclOrNull(it) }
-                    ?: wantedSig?.returnType2?.let { hackMapNewStyleToOld(it) }
-                    ?: previousFunctionType?.returnType?.also {
+                    ?: wantedSig?.returnType2
+                    ?: previousFunctionType?.returnType?.let {
                         contradictions.addAll(
                             ti.decision(t)?.explanations
                                 ?: t.typeInferences!!.explanations,
                         )
+                        hackMapOldStyleToNew(it)
                     }
                     ?: run {
                         // Default to TopType here, but provide errors for definitely missing return types.
@@ -2076,13 +2112,13 @@ internal class Typer(
                                 TypeReason(LogEntry(MessageTemplate.MissingReturnType, returnDecl.pos)),
                             )
                         }
-                        TopType
+                        WellKnownTypes.anyValueOrNullType2
                     }
 
                 MkType.fnDetails(
                     typeFormals = typeFormals,
                     valueFormals = valueFormals,
-                    returnType = returnType,
+                    returnType = hackMapNewStyleToOld(returnType),
                 )
             }
         }
@@ -2102,7 +2138,7 @@ internal class Typer(
             name is BuiltinName && env.declarationMetadata(name) == null ->
                 // We really should know the type of free variables.
                 Decision(
-                    InvalidType,
+                    invalidType2,
                     explanations = listOf(BecauseNameUndeclared(t.pos, name)),
                 )
             else -> null
@@ -2218,12 +2254,12 @@ internal class Typer(
             .forEachContinuing { t ->
                 if (t is NameLeaf && ti.isUndecided(t)) {
                     val name = t.content as ResolvedName
-                    val type = ti.binding(name)
+                    val type = ti.binding(name)?.t2
                     ti.decide(
                         t,
                         type?.let { Decision(it) }
                             ?: Decision(
-                                InvalidType,
+                                invalidType2,
                                 explanations = listOf(BecauseTypeInfoMissing(t.pos, name)),
                             ),
                     )
@@ -3447,6 +3483,51 @@ private fun mergeTypeArgs(from: StaticType?, into: StaticType): StaticType {
     return insert(into)
 }
 
+/**
+ * For example, merging `Fuji<Int>?` with `Apple throws Bubble`,
+ * returns `Apple<Int> throws Bubble`.
+ */
+private fun mergeTypeArgs2(first: Type2, second: Type2, typeContext2: TypeContext2): Type2 {
+    var canBeNull = false
+    var resultWrapper: Type2? = null
+    var isNever = true
+
+    fun unwrap(t: Type2): Type2 {
+        var unwrapped = t
+        while (unwrapped.definition == WellKnownTypes.resultTypeDefinition) {
+            if (resultWrapper == null) {
+                resultWrapper = unwrapped
+            }
+            unwrapped = unwrapped.bindings.firstOrNull() ?: break
+        }
+        if (unwrapped.nullity == Nullity.OrNull) {
+            canBeNull = true
+        }
+        if (unwrapped.definition == WellKnownTypes.neverTypeDefinition) {
+            do {
+                unwrapped = unwrapped.bindings.firstOrNull() ?: break
+            } while (unwrapped.definition == WellKnownTypes.neverTypeDefinition)
+        } else {
+            isNever = false
+        }
+        return unwrapped.withNullity(Nullity.NonNull)
+    }
+
+    val a = unwrap(first)
+    val b = unwrap(second)
+    var merged = typeContext2.simpleLub(a, b)
+    if (isNever) {
+        merged = MkType2(WellKnownTypes.neverTypeDefinition).actuals(listOf(merged)).get()
+    }
+    if (canBeNull) {
+        merged = merged.withNullity(Nullity.OrNull)
+    }
+    if (resultWrapper != null) {
+        merged = MkType2.result(listOf(merged) + resultWrapper.bindings.subListToEnd(1)).get()
+    }
+    return merged
+}
+
 /** For example, `Apple?` returns true if the class is generic, as in `Apple<T>`. */
 private fun StaticType.hasUnbound(): Boolean {
     return when (this) {
@@ -3454,6 +3535,11 @@ private fun StaticType.hasUnbound(): Boolean {
         is OrType -> members.any { it.hasUnbound() }
         else -> false
     }
+}
+
+/** For example, `Apple?` returns true if the class is generic, as in `Apple<T>`. */
+private fun Type2.hasUnbound(): Boolean {
+    return bindings.isEmpty() && definition.hasFormals
 }
 
 /**

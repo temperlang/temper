@@ -313,7 +313,7 @@ class TmpLTranslator internal constructor(
                     module.dependencyCategory,
                     root,
                     module.outputName,
-                    module.outputType?.let { hackMapOldStyleToNew(it) },
+                    module.outputType,
                     tentativeOutputPathFor(module),
                 )
                 withTentative(TentativeTmpL(translator, nascentModule))

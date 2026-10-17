@@ -1,0 +1,5 @@
+class Bobble {
+  public bobble(): Never<Void> throws Bubble {
+    bubble()
+  }
+}
