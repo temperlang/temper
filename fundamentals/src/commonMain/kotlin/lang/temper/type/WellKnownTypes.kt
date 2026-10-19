@@ -383,8 +383,6 @@ object WellKnownTypes {
         mapKeyTypeDefinition extends
             MkType.nominal(equatableTypeDefinition, listOf(MkType.nominal(mapKeyTypeDefinition.formals[0])))
         noStringIndexTypeDefinition extends stringIndexOptionType
-        nullTypeDefinition extends
-            MkType.nominal(equatableTypeDefinition, listOf(MkType.nominal(nullTypeDefinition)))
         safeGeneratorTypeDefinition extends MkType.nominal(
             generatorTypeDefinition,
             listOf(MkType.nominal(safeGeneratorTypeDefinition.formals.first())),

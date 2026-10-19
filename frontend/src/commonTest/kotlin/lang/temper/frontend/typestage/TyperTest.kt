@@ -1030,7 +1030,7 @@ class TyperTest {
     fun castViaAs() = assertTypes(
         // TODO reminder to put the two halves back together later
         """
-        |//                                        The innermost expressions have type String.
+        |//                               The innermost expressions have type String.
         |    let f(x: AnyValue): String throws Bubble { x as String }
         |/// ┏━━━━━━━━━━━━━━━━━━┓                       ┗━━━━━━━━━┛   : Result<String, Bubble>
         |    f(panic<AnyValue>());
@@ -1474,7 +1474,7 @@ class TyperTest {
         wantErrors = listOf(
             // TODO: all these error messages suck.
             "2+23-35: No member toString in AnyValue!",
-            "2+23: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
+            "2+23: Type (Invalid, Invalid) -> Invalid mentions Invalid",
             "2+23-35: Type Invalid mentions Invalid",
             "2+25-33: Type Invalid mentions Invalid",
         ),
@@ -1634,7 +1634,7 @@ class TyperTest {
             "2+27-32: No declaration for Thing!",
             "4+15-24: No declaration for Commander!",
             "2+8-13: Type Invalid mentions Invalid",
-            "2+16: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
+            "2+16: Type (Invalid, Invalid) -> Invalid mentions Invalid",
             "2+16-23: Type Invalid mentions Invalid",
             "2+16-32: Type Invalid mentions Invalid",
             "2+24-26: Type Invalid mentions Invalid",
@@ -2045,7 +2045,7 @@ class TyperTest {
         wantErrors = listOf(
             "5+4-15: No callee matches inputs [D] among [(A) -> Void, (C) -> String]!",
             "1+4: Type Invalid mentions Invalid",
-            "5+4: Type Fn__1013<Invalid, Invalid, Invalid> mentions Invalid",
+            "5+4: Type (Invalid, Invalid) -> Invalid mentions Invalid",
             "5+4-15: Type Invalid mentions Invalid",
         ),
     )
@@ -2124,35 +2124,7 @@ class TyperTest {
         val typeColonChunkToRequirements = typeRequirements.groupBy { it.desiredType }
         val replacements = typeColonChunkToRequirements.map { (chunk, reqs) ->
             var replacementTexts = reqs.map { req ->
-                val typeGotten = requirementsToInferences[req]?.type
-                var nullityAdjust = false
-                var descriptorGotten: Descriptor? = typeGotten
-                if (
-                    typeGotten is DefinedType &&
-                    AdHocArrowTypes.isAdhocArrowTypeDefinition(typeGotten.definition)
-                ) {
-                    val sig = AdHocArrowTypes.reverseToSig(typeGotten)
-                    if (sig != null) {
-                        descriptorGotten = sig
-                        nullityAdjust = typeGotten.nullity == Nullity.OrNull
-                    }
-                }
-                if (descriptorGotten != null) {
-                    fixupTypeNames(
-                        toStringViaTokenSink { tokenSink ->
-                            if (nullityAdjust) {
-                                tokenSink.emit(OutToks.leftParen)
-                            }
-                            descriptorGotten.renderTo(tokenSink)
-                            if (nullityAdjust) {
-                                tokenSink.emit(OutToks.rightParen)
-                                tokenSink.emit(OutToks.postfixQMark)
-                            }
-                        },
-                    )
-                } else {
-                    "???"
-                }
+                presentableDescriptor(requirementsToInferences[req]?.type)
             }
             // Collapse when we have multiple TypeInferences that are all the same on the same line
             // so that we end up showing one type phrase for all requirements that share that line.
@@ -2403,13 +2375,15 @@ class TyperTest {
             var hasProblem = false
             if (typeInferences != null) {
                 if (typeInferences.type.mentionsInvalid) {
-                    invalidPositions.putMultiSet(t.pos, "Type ${typeInferences.type}")
+                    invalidPositions.putMultiSet(t.pos, "Type ${presentableDescriptor(typeInferences.type)}")
                     hasProblem = true
                 } else if (typeInferences is CallTypeInferences) {
                     typeInferences.bindings2.forEach { (typeFormal, binding) ->
                         val name = typeFormal.name
                         if (binding is DefinedNonNullType && binding.mentionsInvalid) {
-                            invalidPositions.putMultiSet(t.pos, "Binding from $name to $binding")
+                            invalidPositions.putMultiSet(
+                                t.pos, "Binding from $name to ${presentableDescriptor(binding)}",
+                            )
                             hasProblem = true
                         }
                     }
@@ -2709,5 +2683,36 @@ private class TypeInfoByPosition(
             }
         }
         positionToInference = byPosition.toMap()
+    }
+}
+
+private fun presentableDescriptor(t: Type2?): String {
+    var nullityAdjust = false
+    var descriptorGotten: Descriptor? = t
+    if (
+        descriptorGotten is DefinedType &&
+        AdHocArrowTypes.isAdhocArrowTypeDefinition(descriptorGotten.definition)
+    ) {
+        val sig = AdHocArrowTypes.reverseToSig(descriptorGotten)
+        if (sig != null) {
+            nullityAdjust = descriptorGotten.nullity == Nullity.OrNull
+            descriptorGotten = sig
+        }
+    }
+    return if (descriptorGotten != null) {
+        fixupTypeNames(
+            toStringViaTokenSink { tokenSink ->
+                if (nullityAdjust) {
+                    tokenSink.emit(OutToks.leftParen)
+                }
+                descriptorGotten.renderTo(tokenSink)
+                if (nullityAdjust) {
+                    tokenSink.emit(OutToks.rightParen)
+                    tokenSink.emit(OutToks.postfixQMark)
+                }
+            },
+        )
+    } else {
+        "???"
     }
 }

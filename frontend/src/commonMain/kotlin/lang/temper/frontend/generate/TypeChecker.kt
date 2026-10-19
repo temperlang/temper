@@ -13,7 +13,6 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
-import lang.temper.interp.New
 import lang.temper.interp.forEachActual
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -21,7 +20,6 @@ import lang.temper.log.Positioned
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
 import lang.temper.type.FunctionType
@@ -49,6 +47,7 @@ import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.invalidSig
 import lang.temper.type2.passTypeOf
 import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
@@ -468,28 +467,8 @@ internal class TypeChecker(
                 TopType,
                 is NominalType,
                 -> {
-                    var reported = false
-                    if (callee.functionContained is New) {
-                        run newCall@{
-                            val type = t.children.getOrNull(1)?.staticTypeContained ?: return@newCall null
-                            val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@newCall null
-                            when (shape.abstractness) {
-                                // Customize the error messaging for this case.
-                                Abstractness.Abstract -> {
-                                    reported = true
-                                    logSink.log(
-                                        level = Log.Error,
-                                        template = MessageTemplate.CannotInstantiateAbstractType,
-                                        pos = t.child(1).pos,
-                                        values = listOf(shape.name.displayName),
-                                    )
-                                }
-                                Abstractness.Concrete -> null
-                            }
-                        }
-                    }
                     // Most invalid callee types already reported in more specific ways, but not all.
-                    if (!reported && (calleeType != InvalidType || callee.functionContained == null)) {
+                    if (!calleeType.isInvalidDescriptor || callee.functionContained == null) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedFunctionType,
@@ -517,7 +496,7 @@ internal class TypeChecker(
 
                     val valueFormals = boundCalleeType.valueFormals
 
-                    if (actuals.size !in boundCalleeType.arityRange) {
+                    if (actuals.size !in boundCalleeType.arityRange && calleeType != invalidSigAsType) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ArityMismatch,
@@ -542,7 +521,8 @@ internal class TypeChecker(
                             )
                         }
                         val formalType = formal?.staticType ?: break
-                        if (failsValidSubtypeCheck(actual.type, formalType)) {
+                        val actualType = actual.type
+                        if (failsValidSubtypeCheck(actualType, formalType)) {
                             // Preserve can do whatever it wants, especially for storing void args.
                             // TODO Figure out how not to special-case it?
                             if (callee.functionContained != BuiltinFuns.preserveFn) {
@@ -550,7 +530,7 @@ internal class TypeChecker(
                                     level = Log.Error,
                                     template = MessageTemplate.ExpectedSubType,
                                     pos = actual.pos,
-                                    values = listOf(formalType, actual.type),
+                                    values = listOf(formalType, actualType),
                                 )
                             }
                         }
@@ -642,4 +622,9 @@ private fun extractTypedActuals(t: CallTree): List<TypedActual>? {
         }
     }
     return if (!problemExtracting) { actuals } else { null }
+}
+
+private val invalidSigAsType by lazy { typeFromSignature(invalidSig) }
+private val StaticType.isInvalidDescriptor: Boolean get() {
+    return this is InvalidType || this == invalidSigAsType
 }

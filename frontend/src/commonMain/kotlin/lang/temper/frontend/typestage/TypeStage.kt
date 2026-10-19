@@ -28,11 +28,11 @@ import lang.temper.log.LogSink
 import lang.temper.log.snapshot
 import lang.temper.name.ResolvedName
 import lang.temper.stage.Stage
-import lang.temper.type.InvalidType
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
+import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.TBoolean
@@ -54,9 +54,9 @@ internal class TypeStage(
 ) {
     private val configKey = root.configurationKey
 
-    fun process(callback: (outputs: StageOutputs, resultName: ResolvedName?, resultType: StaticType?) -> Unit) {
+    fun process(callback: (outputs: StageOutputs, resultName: ResolvedName?, resultType: Type2?) -> Unit) {
         var outputName: ResolvedName? = null
-        var outputType: StaticType? = null
+        var outputType: Type2? = null
         val outputs = Debug.Frontend.TypeStage(configKey).group("Type Stage") {
             interpretiveDanceStage(
                 stage = Stage.Type,
@@ -83,7 +83,7 @@ internal class TypeStage(
         Debug.Frontend.TypeStage.Before.snapshot(configKey, AstSnapshotKey, root)
     }
 
-    private fun doAfterInterpretation(root: BlockTree): Pair<ResolvedName, StaticType>? {
+    private fun doAfterInterpretation(root: BlockTree): Pair<ResolvedName, Type2>? {
         val genre = root.document.context.genre
 
         val builtinEnvironment = module.freeNameEnvironment!!
@@ -256,7 +256,9 @@ internal class TypeStage(
             dumpMissingTypeInfo(root, "After trimming loose threads", console)
         }
 
-        return outputName?.let { it to (nameToType[it] ?: InvalidType) }
+        return outputName?.let {
+            it to (nameToType[it]?.let(::hackMapOldStyleToNew) ?: WellKnownTypes.invalidType2)
+        }
     }
 }
 

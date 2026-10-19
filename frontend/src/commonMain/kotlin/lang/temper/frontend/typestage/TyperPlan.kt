@@ -13,9 +13,9 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.MemberShape
-import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.Type2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -36,7 +36,7 @@ import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.orderedPathIndices
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.typeSymbol
@@ -807,8 +807,8 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
         val use: NameLeaf,
     )
 
-    fun declaredType(name: TemperName): StaticType? =
-        declarations[name]?.parts?.metadataSymbolMap[typeSymbol]?.staticTypeContained
+    fun declaredType(name: TemperName): Type2? =
+        declarations[name]?.parts?.metadataSymbolMap[typeSymbol]?.reifiedTypeContained?.type2
 }
 
 private val DeclTree.isParameter: Boolean

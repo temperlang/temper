@@ -196,17 +196,19 @@ internal class BecauseExpectedTypeShape(
     override val templateFillers: List<TokenSerializable> get() = listOf(type)
 }
 
-internal class BecauseArityMismatch(
-    override val pos: Position,
-    val wantedArity: Int,
-) : AbstractTypeReasonElement() {
-    override val name get() = "BecauseArityMismatch"
-    override val formatString get() = MessageTemplate.ArityMismatch.formatString
-    override val templateFillers: List<TokenSerializable> get() = listOf(
-        OutputToken("$wantedArity", OutputTokenType.NumericValue),
-    )
-    override val level: Log.Level get() = Log.Error
-}
+fun becauseArityMismatch(
+    pos: Position,
+    wantedArity: Int,
+) = TypeReason(
+    LogEntry(
+        Log.Error,
+        MessageTemplate.ArityMismatch,
+        pos,
+        listOf(
+            OutputToken("$wantedArity", OutputTokenType.NumericValue),
+        ),
+    ),
+)
 
 internal fun <T> (Iterable<T>).joinToTokenSerializable(
     sep: TokenSerializable = OutToks.comma,

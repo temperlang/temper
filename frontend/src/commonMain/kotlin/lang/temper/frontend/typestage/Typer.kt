@@ -48,6 +48,7 @@ import lang.temper.name.InternalModularName
 import lang.temper.name.ModularName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
+import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
 import lang.temper.type.CallMemberAccessor
@@ -532,11 +533,11 @@ internal class Typer(
                     // can be declared as (X throws Bubble).
                     // The local variable to hold the result cannot hold a Bubble because that is
                     // not a real value.
-                    MkType.and(declaredType, anyValueType) // Mask out Bubble
+                    excludeBubble(declaredType)
                 } else {
                     declaredType
                 }
-                ti.bind(name as ResolvedName, type)
+                ti.bind(name as ResolvedName, hackMapNewStyleToOld(type))
             }
         }
 
@@ -998,19 +999,34 @@ internal class Typer(
             } else if (effectiveCalleeType != null) {
                 if (effectiveCalleeType is InvalidType) {
                     // Already reported as a problem elsewhere
-                } else if (!isCallable(effectiveCalleeType)) {
-                    priorProblems.add(
-                        TypeReason(
-                            LogEntry(
-                                Log.Error,
-                                MessageTemplate.ExpectedFunctionType,
-                                effectiveCallee.pos,
-                                listOf(effectiveCalleeType),
-                            ),
-                        ),
-                    )
                 } else {
-                    explodeCalleeType(effectiveCalleeType, CalleePriority.Default, ::specialize)
+                    var calleeProblem: LogEntry? = null
+                    var adjustedCalleeType: StaticType? = null
+                    val effectiveCalleeTypeNonNull = excludeNull(effectiveCalleeType)
+                    when {
+                        isCallable(effectiveCalleeType) -> adjustedCalleeType = effectiveCalleeType
+                        isCallable(effectiveCalleeTypeNonNull) -> {
+                            adjustedCalleeType = effectiveCalleeTypeNonNull
+                            calleeProblem = LogEntry(
+                                Log.Error,
+                                MessageTemplate.ExpectedSubType,
+                                effectiveCallee.pos,
+                                listOf(effectiveCalleeTypeNonNull, effectiveCalleeType),
+                            )
+                        }
+                        else -> calleeProblem = LogEntry(
+                            Log.Error,
+                            MessageTemplate.ExpectedFunctionType,
+                            effectiveCallee.pos,
+                            listOf(effectiveCalleeType),
+                        )
+                    }
+                    if (calleeProblem != null) {
+                        priorProblems.add(TypeReason(calleeProblem))
+                    }
+                    if (adjustedCalleeType != null) {
+                        explodeCalleeType(adjustedCalleeType, CalleePriority.Default, ::specialize)
+                    }
                 }
             }
         }.toList()
@@ -1057,6 +1073,13 @@ internal class Typer(
                     val left = ancestor.child(1)
                     if (left is LeftNameLeaf) {
                         val leftName = left.content as ResolvedName
+                        val declaredType = ti.typerPlan.declaredType(leftName)
+                        if (declaredType != null) {
+                            // TODO: once deductions are stored as new-style types,
+                            // we can just use the deduction path below.
+                            return excludeBubble(declaredType)
+                        }
+
                         val deduction = ti.binding(leftName)
                         if (deduction != null) {
                             // If we know about that name, great.
@@ -1359,7 +1382,7 @@ internal class Typer(
             // We would use TypeSolutions for ValueBounds in the slow path to
             // type ambiguous constants, so we still need to specialize some
             // untypable constant inputs.  This handles `null`, but might extend
-            // to list of null, for example.
+            // to `listify(null)`, for example.
             val sig = variant.sig
             fixupCalleeTypePost(callTree, sig)
             for ((i, inputTree) in inputTrees.withIndex()) {
@@ -1547,7 +1570,7 @@ internal class Typer(
                 if (optionalTree is ValueLeaf && ti.isUndecided(optionalTree)) {
                     preTypeValueLeaf(optionalTree)
                     if (ti.isUndecided(optionalTree)) {
-                        ti.decide(optionalTree, type)
+                        ti.decide(optionalTree, Decision(type))
                     }
                 }
             }
@@ -1885,9 +1908,9 @@ internal class Typer(
             )
             return listOf<Signature2>() to explanations
         }
-        val (_, variants) = shapeAndVariants
+        val (shape, variants) = shapeAndVariants
         val explanations = mutableListOf<TypeReasonElement>()
-        val sigs = variants.map { constructorShape ->
+        var sigs = variants.map { constructorShape ->
             constructorShape.descriptor
                 ?: run {
                     explanations.add(
@@ -1898,6 +1921,19 @@ internal class Typer(
                     )
                     invalidSig
                 }
+        }
+        if (sigs.isEmpty() && shape.abstractness == Abstractness.Abstract) {
+            sigs = listOf(invalidSig)
+            explanations.add(
+                TypeReason(
+                    LogEntry(
+                        level = Log.Error,
+                        template = MessageTemplate.CannotInstantiateAbstractType,
+                        pos = typeReferencePos,
+                        values = listOf(shape.name.displayName),
+                    ),
+                ),
+            )
         }
         return sigs to explanations.toList()
     }
@@ -2713,7 +2749,7 @@ internal class Typer(
         }
 
         if (call.size != AS_ARITY) {
-            problems.add(BecauseArityMismatch(call.pos, 2))
+            problems.add(becauseArityMismatch(call.pos, 2))
         }
 
         if (problems.isNotEmpty()) {
@@ -2783,7 +2819,7 @@ internal class Typer(
                     member = member,
                     extensions = dotHelper.extensions.filterIsInstance<StaticExtensionResolution>(),
                     callable = BuiltinFuns.getsFn,
-                    // gets expects the member name as an arg, but that's built into the dot helper
+                    // `gets` expects the member name as an arg, but that's built into the dot helper
                     expectSymbolArg = false,
                     // calls to statics are reads of the static followed by a call to it.
                     curry = false,
@@ -2860,29 +2896,39 @@ internal class Typer(
                 // Either it's public or we're reading from within the class definition.
                 // TODO: check protected vs private.  This is sensitive to whether something is
                 // reached directly or via super-type walking above.
-                if (DEBUG) {
-                    console.log("filtering: $it")
-                }
-                val visible = it.visibility == Visibility.Public ||
-                    memberAccessor is InternalMemberAccessor
-                val compatible = when (memberAccessor) {
-                    is GetMemberAccessor ->
-                        it is PropertyShape ||
-                            (it is MethodShape && it.methodKind == MethodKind.Getter)
-                    // TODO: method or constructor references
-                    is SetMemberAccessor ->
-                        (it is PropertyShape && it.hasSetter) ||
-                            (it is MethodShape && it.methodKind == MethodKind.Setter)
-                    is CallMemberAccessor ->
-                        it is MethodShape &&
-                            // TODO: call of value of property with function type via getter
-                            it.methodKind == MethodKind.Normal
-                }
-                when {
-                    compatible && visible -> MemberUsage2.Good
-                    !compatible && visible -> MemberUsage2.Incompatible
-                    compatible && !visible -> MemberUsage2.Invisible
-                    else -> MemberUsage2.IncompatibleAndInvisible
+                console.groupIf(DEBUG, "filtering") {
+                    if (DEBUG) {
+                        console.log("filteree: $it")
+                    }
+                    val visible = it.visibility == Visibility.Public ||
+                        memberAccessor is InternalMemberAccessor
+                    val compatible = when (memberAccessor) {
+                        is GetMemberAccessor ->
+                            it is PropertyShape ||
+                                (it is MethodShape && it.methodKind == MethodKind.Getter)
+                        // TODO: method or constructor references
+                        is SetMemberAccessor ->
+                            (it is PropertyShape && it.hasSetter) ||
+                                (it is MethodShape && it.methodKind == MethodKind.Setter)
+
+                        is CallMemberAccessor ->
+                            it is MethodShape &&
+                                // TODO: call of value of property with function type via getter
+                                it.methodKind == MethodKind.Normal
+                    }
+                    if (DEBUG) {
+                        console.log("visible=$visible, compatible=$compatible")
+                    }
+                    when {
+                        compatible && visible -> MemberUsage2.Good
+                        !compatible && visible -> MemberUsage2.Incompatible
+                        compatible && !visible -> MemberUsage2.Invisible
+                        else -> MemberUsage2.IncompatibleAndInvisible
+                    }.also { usage ->
+                        if (DEBUG) {
+                            console.log("memberUsage <- $usage")
+                        }
+                    }
                 }
             }
 
@@ -3186,7 +3232,7 @@ internal class Typer(
         // where the number of AnyValue is one less than the number of arguments.
         val arity = t.size - 1
         if (arity == 0) {
-            return TypedVariants(listOf(functionType), listOf(BecauseArityMismatch(t.pos, 1)))
+            return TypedVariants(listOf(functionType), listOf(becauseArityMismatch(t.pos, 1)))
         }
         val typeT = MkType.nominal(commaT)
         return TypedVariants(
