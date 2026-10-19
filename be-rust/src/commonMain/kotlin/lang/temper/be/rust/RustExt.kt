@@ -61,6 +61,9 @@ fun makeSrcFilePath(relDir: List<FilePathSegment>): FilePath {
     return dirPath("src").resolve(modPath)
 }
 
+fun pubCrate(pos: Position): Rust.VisibilityPub =
+    Rust.VisibilityPub(pos, scope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate))
+
 internal fun whereForAnyValueImpl(pos: Position, translatedGenerics: List<Rust.GenericParam>): Rust.Where? = run {
     val whereItems = translatedGenerics.mapNotNull generics@{ translatedParam ->
         val translatedFormal = translatedParam as? Rust.TypeParam ?: return@generics null
@@ -193,7 +196,7 @@ internal fun Rust.Expr.box(wanted: TypeDefinition? = null, translator: RustTrans
     val callee = when (wanted) {
         WellKnownTypes.generatorResultTypeDefinition -> return this // specially-handled type
         WellKnownTypes.listedTypeDefinition -> TO_LISTED_TO_LISTED_NAME.toId(pos)
-        null -> "Box::new".toId(pos) // TODO Can this happen and if so, what to do?
+        null -> "$BOX_NAME::new".toId(pos) // TODO Can this happen and if so, what to do?
         else ->
             (translator.translateTypeDefinition(wanted, pos.leftEdge) as Rust.Path)
                 .extendWith("new")
@@ -253,7 +256,12 @@ internal fun Rust.Expr.maybeWrap(
     translator: RustTranslator,
 ): Rust.Expr {
     wanted ?: return this
-    val givenNone = this is Rust.Id && this.outName.outputNameText == "None"
+    // A bubble, such as a failed cast's `Err(...)` or a `panic!()`, carries no value, so there is nothing to wrap in
+    // `Some` or `Ok`. It is already what a bubbly wanted type takes.
+    if (given is TypeDescription && given.type == null && given.bubbly && !given.nullable) {
+        return this
+    }
+    val givenNone = this is Rust.Id && this.outName.outputNameText == NONE_NAME
     val wantedDefinition = wanted.definition()
     val wantStringIndexOption = wantedDefinition == WellKnownTypes.stringIndexOptionTypeDefinition
     val givenDefinition = given.definition()
@@ -285,7 +293,7 @@ internal fun Rust.Expr.maybeWrap(
         when {
             !given.nullable && wanted.nullable -> result.wrapSome()
             wantStringIndexOption -> when (givenDefinition) {
-                WellKnownTypes.noStringIndexTypeDefinition -> "None".toId(pos)
+                WellKnownTypes.noStringIndexTypeDefinition -> NONE_NAME.toId(pos)
                 WellKnownTypes.stringIndexTypeDefinition -> result.wrapSome()
                 else -> result
             }
@@ -371,15 +379,15 @@ internal fun Rust.Expr.wrapClone() = methodCall("clone")
 
 internal fun Rust.Expr.wrapLock() = Rust.Call(pos, callee = "$RW_LOCK_NAME::new".toId(pos), args = listOf(this))
 
-internal fun Rust.Expr.wrapOk() = Rust.Call(pos, callee = "Ok".toId(pos.leftEdge), args = listOf(this))
+internal fun Rust.Expr.wrapOk() = Rust.Call(pos, callee = OK_NAME.toId(pos.leftEdge), args = listOf(this))
 
-internal fun Rust.Expr.wrapErr() = Rust.Call(pos, callee = "Err".toId(pos), args = listOf(this))
+internal fun Rust.Expr.wrapErr() = Rust.Call(pos, callee = ERR_NAME.toId(pos), args = listOf(this))
 
 /** Convert Option to Result. */
 internal fun Rust.Expr.wrapOkOrElse(pos: Position = this.pos) =
     methodCall("ok_or_else", listOf(Rust.Closure(pos, params = listOf(), value = makeError(pos))))
 
-internal fun Rust.Expr.wrapSome() = Rust.Call(pos, callee = "Some".toId(pos), args = listOf(this))
+internal fun Rust.Expr.wrapSome() = Rust.Call(pos, callee = SOME_NAME.toId(pos), args = listOf(this))
 
 /**
  * Only properly handles cases where the pattern is a [Rust.FunctionParam].
