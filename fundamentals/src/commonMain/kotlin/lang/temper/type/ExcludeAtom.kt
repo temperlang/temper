@@ -23,6 +23,20 @@ fun excludeBubble(t: Type2): Type2 =
         null
     } ?: t
 
+/** `Never<T>` -> `T`, `Never<U>? -> `U?` */
+fun excludeNever(t: Type2): Type2 {
+    var unwrapped = t
+    // Never should not nest as in Never<Never<U>> but it costs us nothing to normalize here.
+    while (unwrapped.definition == WellKnownTypes.neverTypeDefinition && unwrapped.bindings.size == 1) {
+        val arg = unwrapped.bindings[0]
+        unwrapped = when (unwrapped.nullity) {
+            Nullity.NonNull -> arg
+            Nullity.OrNull -> arg.withNullity(Nullity.OrNull)
+        }
+    }
+    return unwrapped
+}
+
 /** The composition of [excludeNull] and [excludeBubble] */
 fun excludeNullAndBubble(t: StaticType): StaticType =
     excludeAtom(t) { it is BubbleType || it.isNullType }

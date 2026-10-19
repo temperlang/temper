@@ -1,0 +1,4 @@
+@fn let `test//`.f;
+`test//`.f = (@stay fn f(x__0 /* aka x */: Int32) /* return__0 */: Never<Void> throws Bubble {
+    bubble()
+})

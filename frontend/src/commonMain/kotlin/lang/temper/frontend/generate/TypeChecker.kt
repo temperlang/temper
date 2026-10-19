@@ -301,6 +301,11 @@ internal class TypeChecker(
         val sig = t.typeInferences?.type?.let { AdHocArrowTypes.reverseToSig(it) }
         val returnType = sig?.returnType2
         val returnDecl = t.parts?.returnDecl
+        if (returnType?.definition == WellKnownTypes.bubbleTypeDefinition) {
+            // TODO: Distinguish between returning Bubble (collapsed from `Never | Bubble`)
+            // and returning Result<Never<...>, Bubble>` in the Typer before re-enabling the below.
+            return // HACK
+        }
         if (returnDecl != null) {
             val returnDeclType = returnDecl.parts?.name?.typeInferences?.type
             val passType = returnType?.let(::passTypeOf)
