@@ -2873,13 +2873,6 @@ internal class Typer(
             // irrelevant overloads.
             filterOutDeeperMembers(memberTypesGrouped, allThisVariants, typeContext2)
 
-            // Might need a type argument since the internal member accessors expect the this-type.
-            val containingType = if (memberAccessor is InternalMemberAccessor) {
-                WellKnownTypes.typeType
-            } else {
-                null
-            }
-
             // We need to, after typing, decide whether a DotHelper with extensions should use one
             // of the regular members, or one of the extensions.
             // We recall this later to get that relationship between extensions and members.
@@ -2907,17 +2900,18 @@ internal class Typer(
                             // shape.
                             val asMethodType = when (memberShape) {
                                 is PropertyShape -> {
+                                    // Skip containing types here because those aren't really args.
                                     if (memberAccessor is SetMemberAccessor) {
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType, memberShapeType),
+                                            valueFormals = listOfNotNull(nominalType, memberShapeType),
                                             returnType = Types.void.type,
                                         )
                                     } else {
                                         check(memberAccessor is GetMemberAccessor)
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType),
+                                            valueFormals = listOfNotNull(nominalType),
                                             returnType = memberShapeType,
                                         )
                                     }

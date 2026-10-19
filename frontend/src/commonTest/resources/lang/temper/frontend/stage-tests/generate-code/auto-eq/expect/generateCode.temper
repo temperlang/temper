@@ -66,9 +66,13 @@ setwhy__0 = (@stay fn (@impliedThis(Hi) this__5: Hi, newWhy__0: String) /* retur
 });
 @visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Hi) let eq__0 ⦂(fn (Hi, Hi): Boolean);
 eq__0 = (@stay fn eq(@impliedThis(Hi) this__6: Hi, other__0 /* aka other */: Hi) /* return__6 */: Boolean {
-    if (getp(id__0, this__6) == do_get_id(other__0)) {
-      if (getp(yetMore__0, this__6) == do_get_yetMore(other__0)) {
-        return__6 = getp(why__0, this__6) == do_get_why(other__0)
+    if (getp(id__0, this__6) == do_iget_id(type (Hi), other__0)) {
+      if (getp(more__0, this__6) == do_iget_more(type (Hi), other__0)) {
+        if (getp(yetMore__0, this__6) == do_iget_yetMore(type (Hi), other__0)) {
+          return__6 = getp(why__0, this__6) == do_iget_why(type (Hi), other__0)
+        } else {
+          return__6 = false
+        }
       } else {
         return__6 = false
       }
@@ -82,9 +86,13 @@ eq__0 = (@stay fn eq(@impliedThis(Hi) this__6: Hi, other__0 /* aka other */: Hi)
 @visibility(\public) @stay @fromType(ManualHi) var why__1: String;
 @visibility(\public) @fn @operator("_==_") @stay @fromType(ManualHi) let eq__1 ⦂(fn (ManualHi, ManualHi): Boolean);
 eq__1 = (@stay fn eq(@impliedThis(ManualHi) this__7: ManualHi, other__1 /* aka other */: ManualHi) /* return__7 */: Boolean {
-    if (getp(id__2, this__7) == do_get_id(other__1)) {
-      if (getp(why__1, this__7) == do_get_why(other__1)) {
-        return__7 = getp(yetMore__2, this__7) == do_get_yetMore(other__1)
+    if (getp(id__2, this__7) == do_iget_id(type (ManualHi), other__1)) {
+      if (getp(more__2, this__7) == do_iget_more(type (ManualHi), other__1)) {
+        if (getp(why__1, this__7) == do_iget_why(type (ManualHi), other__1)) {
+          return__7 = getp(yetMore__2, this__7) == do_iget_yetMore(type (ManualHi), other__1)
+        } else {
+          return__7 = false
+        }
       } else {
         return__7 = false
       }
@@ -144,7 +152,7 @@ eq__2 = (@stay fn eq(@impliedThis(Sure) this__15: Sure, other__2 /* aka other */
       };
       let other__3 ⦂ Sure;
       other__3 = assertAs ⋖ Sure ⋗(other__2, Sure);
-      return__15 = getp(n__0, this__15) == do_get_n(other__3)
+      return__15 = getp(n__0, this__15) == do_iget_n(type (Sure), other__3)
     }
 });
 @fn @visibility(\public) @stay @fromType(WhyNot) let constructor__3 ⦂(fn (WhyNot): Void);
@@ -199,7 +207,7 @@ eq__8 = (@stay fn eq(@impliedThis(ManualSure) this__24: ManualSure, other__9 /* 
     if (other__9 is ManualSure) {
       let t#10 ⦂ ManualSure;
       t#10 = assertAs ⋖ ManualSure ⋗(other__9, ManualSure);
-      return__24 = getp(n__2, this__24) == do_get_n(t#10)
+      return__24 = getp(n__2, this__24) == do_iget_n(type (ManualSure), t#10)
     } else {
       return__24 = false
     }
