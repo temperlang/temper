@@ -129,8 +129,9 @@ internal fun simplifyDotHelper(
             }
 
             if (extensionResolution is StaticExtensionResolution) {
-                // Remove the receiver type
-                call.removeChildren(1..1)
+                // Remove the receiver type and also the enclosing type before it, if present.
+                val afterFirstArg = dotHelper.memberAccessor.firstArgumentIndex + 1
+                call.removeChildren(1..afterFirstArg)
             }
             retypeTree(calleeEdge.target)
             return
