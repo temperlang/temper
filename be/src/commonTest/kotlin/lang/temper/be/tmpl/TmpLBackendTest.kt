@@ -4404,6 +4404,63 @@ class TmpLBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    /**
+     * The implicit `return = doneResult()` at the end of a generator function lands in the
+     * synthesized `else` of a trailing `if` with no `else`.  It must be dropped there too,
+     * as it is when it is an element of a block.
+     */
+    @Test
+    fun generatorFnEndingInIfDropsDoneResult() = assertGeneratedCode(
+        supportNetwork = defaultTestSupportNetwork.copy(
+            representationOfVoid = RepresentationOfVoid.DoNotReifyVoid,
+        ),
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      var n = 3;
+            |      n = n + 0;
+            |      async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |        if (n > 0) { console.log("pos"); }
+            |      }
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    "foo.tmpl": {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        let GetConsole#0 = builtins.GetConsole;
+            |        let nym`+#0` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
+            |        let nym`<=>#0` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
+            |        let ConsoleLog#0 = builtins.ConsoleLog;
+            |        let async#0 = builtins.async /* (Fn__0<SafeGenerator<Empty>>) -> Void */;
+            |        let console#0: Console = GetConsole#0();
+            |        @QName("test-library/foo.n") var n__0: Int32 = 3;
+            |        module init {
+            |          n__0 = nym`+#0`(n__0, 0);
+            |        }
+            |        let * fn__0(): SafeGenerator<Empty> {
+            |          if (n__0 > 0) {
+            |            ConsoleLog#0(console#0, "pos");
+            |          }
+            |        }
+            |        module init {
+            |          async#0(fn__0);
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     @Test
     fun bubblyConstructorInNonBubblyCall() = assertGeneratedCode(
         inputJsonPathToContent = """

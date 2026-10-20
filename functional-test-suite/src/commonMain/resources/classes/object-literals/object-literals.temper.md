@@ -10,6 +10,7 @@ We infer the constructor by matching up property names.
 
 Define local types, too. We'll import other types syntactically further down.
 
+    @auto("==")
     export class Person( // export for exploring generated builders
       public name: String,
       public age: Int = -100, // mostly just for exploring be-rust codegen
@@ -182,6 +183,21 @@ objects is nice with conveniences like destructuring and punning.
 ```log
 name is Carrie and age is 40
 Person Carrie of age 35
+```
+
+## Equality
+
+Take advantage of data style classes to test auto equality here also. If the
+frontend works correctly, auto equality should just work for all backends, but
+it's nice to see in action.
+
+    let twin = { name: person1.name, age: person1.age };
+    console.log("Some are twins: ${person1 == twin}");
+    console.log("All are twins: ${person2 == twin}");
+
+```log
+Some are twins: true
+All are twins: false
 ```
 
 ## Imports

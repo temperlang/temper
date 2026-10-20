@@ -467,6 +467,10 @@ class CppTranslator(
     private fun setterSingleName(dotName: String): Cpp.SingleName =
         accessorSingleName(dotName = dotName, prefix = "set")
 
+    /** The name a method is declared under, so a call matches it: `int` is declared as `int_`. */
+    private fun methodSingleName(dotName: String): Cpp.SingleName =
+        cpp.singleName(CppName(fixName(dotName)))
+
     /**
      * The primitive value types that can be implicitly converted between one another (used by
      * [isValueTypeMismatch] to decide when an explicit cast is needed). This is deliberately
@@ -928,7 +932,7 @@ class CppTranslator(
             is TmpL.MethodReference ->
                 when (val subject = fn.subject) {
                     is TmpL.Expression -> {
-                        val methodName = cpp.singleName(CppName(fn.methodName.dotNameText))
+                        val methodName = methodSingleName(fn.methodName.dotNameText)
                         if (isValueType(subject.passType)) {
                             cpp.memberExpr(translateExpression(subject), methodName)
                         } else {
@@ -938,11 +942,11 @@ class CppTranslator(
 
                     is TmpL.ConnectedToTypeName -> cpp.scopedName(
                         translateTypeName(subject),
-                        cpp.singleName(CppName(fn.methodName.dotNameText)),
+                        methodSingleName(fn.methodName.dotNameText),
                     )
                     is TmpL.TemperTypeName -> cpp.scopedName(
                         translateTypeName(subject),
-                        cpp.singleName(CppName(fn.methodName.dotNameText)),
+                        methodSingleName(fn.methodName.dotNameText),
                     )
                     is TmpL.SuperSubject -> cpp.op(
                         "->",
@@ -950,7 +954,7 @@ class CppTranslator(
                         cpp.scopedName(
                             translateTypeName(subject.typeName),
                             when ((fn.method as? MethodShape)?.methodKind) {
-                                MethodKind.Normal -> cpp.singleName(CppName(fn.methodName.dotNameText))
+                                MethodKind.Normal -> methodSingleName(fn.methodName.dotNameText)
                                 MethodKind.Getter -> getterSingleName(fn.methodName.dotNameText)
                                 MethodKind.Setter -> setterSingleName(fn.methodName.dotNameText)
                                 else -> error("invalid method kind for super call")
