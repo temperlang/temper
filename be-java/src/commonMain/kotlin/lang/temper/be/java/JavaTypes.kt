@@ -245,7 +245,7 @@ sealed interface JavaType : TargetLanguageTypeName {
                             }
 
                             connectedType ?: ReferenceType(
-                                names.classTypeName(type),
+                                names.classTypeName(principal),
                                 args = args,
                             )
                         }

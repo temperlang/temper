@@ -589,6 +589,30 @@ class JavaBackendTest {
     }
 
     @Test
+    fun throwingFunctionTypeWithObjectReturn() {
+        // The return type of `fn (String): String throws Bubble` is a Result in the frontend's
+        // types. It must not leak into the type argument as a class named `Result`.
+        assertGeneratedJava(
+            """
+            |export let applyOne(x: String, f: fn (String): String throws Bubble): String throws Bubble {
+            |  f(x)
+            |}
+            |export let supply<T>(f: fn (): T throws Bubble): T throws Bubble {
+            |  f()
+            |}
+            """.trimMargin(),
+            """
+            |public static String applyOne(String x__0, Function<String, String> f__0) {
+            |    return f__0.apply(x__0);
+            |}
+            |public static<T__0> T__0 supply(Supplier<T__0> f__1) {
+            |    return f__1.get();
+            |}
+            """.javaMethod("import java.util.function.Function;", "import java.util.function.Supplier;"),
+        )
+    }
+
+    @Test
     fun mutableCapture() {
         assertGeneratedJava(
             """
