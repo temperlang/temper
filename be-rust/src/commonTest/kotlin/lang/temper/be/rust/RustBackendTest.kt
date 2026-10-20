@@ -924,7 +924,7 @@ class RustBackendTest {
             |            let m__0: i64 = (-5i64).max(3i64);
             |            let a__0: f64 = (-2.5f64).abs();
             |            println!("{} {} {} {}", k__0, temper_core::float64::to_string(f__0), m__0, temper_core::float64::to_string(a__0));
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
         """.trimMargin(),
