@@ -313,6 +313,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.TypesNetresponse)
 
     @Test
+    fun typesNetresponseNotFound() =
+        runFunctionalTest(Ft.TypesNetresponseNotFound)
+
+    @Test
     fun typesStringBuild() =
         runFunctionalTest(Ft.TypesStringBuild)
 
