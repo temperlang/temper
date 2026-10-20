@@ -133,6 +133,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ClassesStaticPropertiesScope)
 
     @Test
+    fun classesWriteBackThroughField() =
+        runFunctionalTest(Ft.ClassesWriteBackThroughField)
+
+    @Test
     fun controlFlowActorRun() =
         runFunctionalTest(Ft.ControlFlowActorRun)
 
