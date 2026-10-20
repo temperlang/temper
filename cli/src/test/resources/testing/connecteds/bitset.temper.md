@@ -8,9 +8,11 @@ Got an AI recommendation to try RoaringBitmap as a 3rd-party dependency for
 connected testing. Expose it here as *Bitset*. In some ways, this is like
 Temper's *DenseBitVector*, but it's presumably more efficient for large cases.
 
-Because we don't yet support userspace connected types, just wrap an *AnyValue*
-and let backends handle that. But hide the actual class type under a sealed
-interface.
+Userspace connected types in Temper right now require implementing the type in
+host language code in a way that's compatible with Temper usage. If you want a
+large surface area with most code in Temper, then consider making an actual
+wrapped type internal, and use it from a public Temper type. Or possibly extend
+a `sealed` public Temper interface.
 
     @connected
     export class Bitset {
