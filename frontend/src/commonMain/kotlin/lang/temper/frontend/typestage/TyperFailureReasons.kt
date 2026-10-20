@@ -161,6 +161,23 @@ internal class BecauseNoSuchMember(
     override val formatString get() = "No member %s in %s"
 }
 
+/**
+ * `C.n = x` where `C` is a type.  Static properties are initialized once, at
+ * their declaration, and no backend has a way to reassign one.
+ */
+internal class BecauseStaticMemberNotAssignable(
+    override val pos: Position,
+    private val member: Member,
+    private val receiverType: StaticType,
+) : AbstractTypeReasonElement() {
+    override val name get() = "BecauseStaticMemberNotAssignable"
+    override val level: Log.Level get() = Log.Error
+    override val formatString get() =
+        "Cannot assign to static member %s of %s; static members are only initialized at their declaration"
+    override val templateFillers: List<TokenSerializable>
+        get() = listOf(member, receiverType)
+}
+
 internal class BecauseUnresolvedTypeReference(
     override val pos: Position,
     val unexpected: TokenSerializable,
