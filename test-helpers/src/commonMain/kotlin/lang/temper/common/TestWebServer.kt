@@ -30,6 +30,14 @@ class TestWebServer(private val requestedPort: Int = 0) {
             exchange.sendResponseHeaders(HTTP_OK, response.size.toLong())
             exchange.responseBody.use { it.write(response) }
         }
+        // A path the server does not have, for checking that an HTTP error
+        // status reaches Temper code as a response with that status.
+        server.createContext("/missing") { exchange ->
+            val response = "not here".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "text/plain")
+            exchange.sendResponseHeaders(HTTP_NOT_FOUND, response.size.toLong())
+            exchange.responseBody.use { it.write(response) }
+        }
         server.start()
     }
 
@@ -40,3 +48,4 @@ class TestWebServer(private val requestedPort: Int = 0) {
 }
 
 private const val HTTP_OK = 200
+private const val HTTP_NOT_FOUND = 404

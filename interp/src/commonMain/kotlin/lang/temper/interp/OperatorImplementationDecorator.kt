@@ -11,6 +11,7 @@ import lang.temper.value.NotYet
 import lang.temper.value.TProblem
 import lang.temper.value.TString
 import lang.temper.value.Value
+import lang.temper.value.autoSymbol
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.operatorSymbol
@@ -100,3 +101,38 @@ internal val operatorImplementationDecorator =
             Value(problem, TProblem)
         }
     }
+
+/**
+ * <!-- snippet: builtin/@auto -->
+ * # `@auto` decorator
+ * The *\@auto* decorator currently applies to a class or sealed interface,
+ * indicating that the specified operator should be automatically implemented
+ * for this type. In the future, it might be possible to specify on an
+ * individual method for a specific operator.
+ *
+ * Currently, only the `==` operator is supported via `@auto("==")`, but we
+ * expect to expand on this in the future. The currently generated method name
+ * is *eq*. Some mechanism for supplying multiple operators is expected in the
+ * future.
+ *
+ * It is an error to use `@auto("==")` even on a sealed interface that has other
+ * than class or sealed interface descendents. Inheriting `@auto("==")` from
+ * multiple sealed ancestor interface branches is also an error. Further, if a
+ * manual `@operator("==")` method exists for a type, no automatic
+ * implementation is injected.
+ *
+ * Automatic `==` implementation is done by comparing all concrete properties in
+ * an unspecified order using `==` on each. Used on a sealed interface, it adds
+ * a pure virtual method to the interface and a concrete method on all leaf
+ * classes that checks both the type and its concrete properties.
+ *
+ * Manual `@operator("==")` is available if `@auto("==")` has unwanted behavior
+ * for some type.
+ */
+internal val autoDecorator = MetadataDecorator(
+    symbolKey = autoSymbol,
+    argumentTypes = listOf(Types.string),
+) { args ->
+    // TODO Combine with operatorImplementationDecorator logic?
+    args.valueTree(1).valueContained ?: NotYet
+}

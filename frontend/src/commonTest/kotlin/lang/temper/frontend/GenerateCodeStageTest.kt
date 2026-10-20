@@ -36,6 +36,12 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun autoEq() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/auto-eq"),
+        pseudoCodeDetail = PseudoCodeDetail.default.copy(showInferredTypes = true),
+    )
+
+    @Test
     fun assignmentsToTypedReturnAreChecked() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/assignments-to-typed-return-are-checked"),
         moduleResultNeeded = true,

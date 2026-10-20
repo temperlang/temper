@@ -287,6 +287,7 @@ private fun actualizeGroupedFormal(
     }
 }
 
+@Suppress("SameParameterValue")
 private fun errorTree(tree: Tree, leftIndex: Int, rightIndex: Int): CallTree =
     tree.treeFarm.grow(tree.spanningPosition(leftIndex, rightIndex)) {
         Call(errorFn) {}
