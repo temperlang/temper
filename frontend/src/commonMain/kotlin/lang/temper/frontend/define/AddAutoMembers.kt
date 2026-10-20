@@ -15,7 +15,7 @@ import lang.temper.name.SourceName
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.ExternalGet
+import lang.temper.type.InternalGet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.MkType
@@ -308,14 +308,8 @@ private class AutoMemberAdder(
                             val (property, foundIndex) = run nextIndex@{
                                 properties@ for (nextIndex in propertyIndex..<properties.size) {
                                     val property = properties[nextIndex]
-                                    // For now, just check public properties.
-                                    // For autoEq classes, by the time we get here, other's type matches this's type.
-                                    // TODO Also check private properties once we loosen rules.
-                                    // TODO So we don't need to log this as an error if we fix it soon.
-                                    property.visibility == Visibility.Public || continue@properties
-                                    // Also focus only on concrete properties, figuring others are derived.
+                                    // Focus only on concrete properties, figuring others are derived.
                                     property.abstractness == Abstractness.Concrete || continue@properties
-                                    // Seems good now.
                                     return@nextIndex property to nextIndex
                                 }
                                 // No readable properties found. Should only happen if no readables are found.
@@ -339,7 +333,8 @@ private class AutoMemberAdder(
                                 }
                                 // Other property.
                                 Call {
-                                    V(Value(DotHelper(ExternalGet, DotMember(property.symbol))))
+                                    V(Value(DotHelper(InternalGet, DotMember(property.symbol))))
+                                    V(typeValue)
                                     Rn(typedOther)
                                 }
                                 V(eqHelper)

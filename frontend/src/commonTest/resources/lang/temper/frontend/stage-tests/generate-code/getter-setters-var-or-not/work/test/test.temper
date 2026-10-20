@@ -9,7 +9,7 @@ export class C extends I {
     // These are both legal.
     propNotVar = 1;
     propVar = 2;
-    // Seeing if explicity `this` is different.
+    // Seeing if explicit `this` is different.
     this.propVar = 3;
     // Check an entirely missing property, which needs explicit this.
     this.wrong = 4;

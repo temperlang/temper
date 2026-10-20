@@ -35,6 +35,9 @@ import lang.temper.type.MkType
 import lang.temper.type.NominalType
 import lang.temper.type.OperatorMember
 import lang.temper.type.StaticExtensionResolution
+import lang.temper.type.ThisCall
+import lang.temper.type.ThisGet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
@@ -389,10 +392,13 @@ private fun desugarDotOperation(
     val enclosingTypeShape: TypeShape?
     val enclosingTypeTree: Tree?
     val enclosingTypeValue: Value<*>?
+    val hasThis: Boolean
     run thisType@{
+        var wantsThis = false
         if (subject is CallTree && subject.size == 2) {
             val subjectCallee = subject.child(0)
             if (subjectCallee.functionContained == BuiltinFuns.thisPlaceholder) {
+                wantsThis = true
                 val subjectTypeTree = subject.child(1)
                 val subjectType = subjectTypeTree.reifiedTypeContained
                 val subjectNominalType = subjectType?.type as? NominalType
@@ -401,6 +407,7 @@ private fun desugarDotOperation(
                     enclosingTypeShape = definition
                     enclosingTypeTree = subjectTypeTree
                     enclosingTypeValue = Value(subjectType)
+                    hasThis = true
                     return@thisType
                 }
 
@@ -415,20 +422,21 @@ private fun desugarDotOperation(
                 problem.logTo(logSink)
                 convertToErrorNode(subjectEdge, problem)
             }
-        } else if (actuallyEnclosingTypeTree != null) {
-            // TODO Instead go straight to internal static get? See above logic on direct jump.
-            val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type
-            val actuallyEnclosingTypeShape = (actuallyEnclosingType as? NominalType)?.definition as? TypeShape
-            if (actuallyEnclosingTypeShape?.name == subject.nameContained) {
-                enclosingTypeShape = actuallyEnclosingTypeShape
-                enclosingTypeTree = actuallyEnclosingTypeTree
-                enclosingTypeValue = actuallyEnclosingTypeTree.valueContained
-                return@thisType
-            }
         }
-        enclosingTypeShape = null
-        enclosingTypeTree = null
-        enclosingTypeValue = null
+        if (actuallyEnclosingTypeTree != null && !wantsThis) {
+            // We don't really know yet if this is an instance or static reference.
+            // Nor do we know if it's really internal or not. So treat as internal and track the type.
+            // TODO Old comment: Go straight to internal static get? See above logic on direct jump.
+            val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type
+            enclosingTypeShape = (actuallyEnclosingType as? NominalType)?.definition as? TypeShape
+            enclosingTypeTree = actuallyEnclosingTypeTree
+            enclosingTypeValue = actuallyEnclosingTypeTree.valueContained
+        } else {
+            enclosingTypeShape = null
+            enclosingTypeTree = null
+            enclosingTypeValue = null
+        }
+        hasThis = false
     }
 
     // We need to distinguish backed properties from other kinds of accesses.
@@ -488,10 +496,10 @@ private fun desugarDotOperation(
                     Call(assignmentPos) {
                         plantHandler(
                             nameTree.pos,
-                            if (enclosingTypeShape != null) {
-                                InternalSet
-                            } else {
-                                ExternalSet
+                            when {
+                                hasThis -> ThisSet
+                                enclosingTypeShape != null -> InternalSet
+                                else -> ExternalSet
                             },
                             dotName,
                             Extensions.none,
@@ -533,10 +541,10 @@ private fun desugarDotOperation(
                 Call(call.pos) {
                     plantHandler(
                         nameTree.pos,
-                        if (enclosingTypeShape != null) {
-                            InternalCall
-                        } else {
-                            ExternalCall
+                        when {
+                            hasThis -> ThisCall
+                            enclosingTypeShape != null -> InternalCall
+                            else -> ExternalCall
                         },
                         dotName,
                         extensions,
@@ -562,10 +570,10 @@ private fun desugarDotOperation(
                 Call(dotCall.pos) {
                     plantHandler(
                         nameTree.pos,
-                        if (enclosingTypeShape != null) {
-                            InternalGet
-                        } else {
-                            ExternalGet
+                        when {
+                            hasThis -> ThisGet
+                            enclosingTypeShape != null -> InternalGet
+                            else -> ExternalGet
                         },
                         dotName,
                         Extensions.none,

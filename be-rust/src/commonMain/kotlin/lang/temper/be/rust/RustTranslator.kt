@@ -2946,7 +2946,8 @@ class RustTranslator(
     private fun translatePropertyReference(ref: TmpL.PropertyReference, lockName: String): Rust.Expr {
         val propertyId = translatePropertyId(ref.property)
         val isInternal = ref.property is TmpL.InternalPropertyId
-        if (isInternal && functionContextStack.last().constructorMode == ConstructorMode.Init) {
+        // We could be in static init for internal property access so might not have a function.
+        if (isInternal && functionContextStack.lastOrNull()?.constructorMode == ConstructorMode.Init) {
             // Use local vars until init is finished.
             return propertyId
         }

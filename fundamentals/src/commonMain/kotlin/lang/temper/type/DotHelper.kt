@@ -155,13 +155,13 @@ class DotHelper(
         val args = macroEnv.args
         val sizeWanted = when (memberAccessor) {
             ExternalGet -> arityOne // (this)
-            InternalGet -> arityTwo // (containingTypeShape, this)
+            InternalGet, ThisGet -> arityTwo // (containingTypeShape, this)
             ExternalSet -> arityTwo // (this, newValue)
-            InternalSet ->
+            InternalSet, ThisSet ->
                 @Suppress("MagicNumber") // arity
                 arityThree // (containingTypeShape, this, newValue)
             ExternalCall -> arityOneOrMore // (this, arg0, arg1, ...)
-            InternalCall -> arityTwoOrMore // (containingTypeShape, this, arg0, arg1)
+            InternalCall, ThisCall -> arityTwoOrMore // (containingTypeShape, this, arg0, arg1)
         }
         if (args.size !in sizeWanted) {
             return macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(sizeWanted))
@@ -197,7 +197,9 @@ class DotHelper(
         }
         val argIndex = memberAccessor.firstArgumentIndex + 1 // skip over subject
 
-        val accessibleMembers = typeShape?.let { accessibleMembers(it) } ?: listOf()
+        val accessibleMembers = typeShape?.let {
+            accessibleMembers(subjectTypeShape = typeShape, accessingTypeShape)
+        } ?: listOf()
         debug {
             console.log("memberAccessor=$memberAccessor member=$member")
             console.log(". subject=$subject")
@@ -279,8 +281,8 @@ class DotHelper(
             }
 
         return when (memberAccessor) {
-            InternalGet, ExternalGet,
-            ExternalSet, InternalSet,
+            InternalGet, ThisGet, ExternalGet,
+            InternalSet, ThisSet, ExternalSet,
             -> {
                 val wantGetter = memberAccessor is GetMemberAccessor
                 var helperName: TemperName? = null
@@ -313,7 +315,7 @@ class DotHelper(
 
                 dispatchCallTo(helperShape)
             }
-            ExternalCall, InternalCall ->
+            ExternalCall, InternalCall, ThisCall ->
                 when (val method = accessibleMembers.firstOrNull()) {
                     null -> inaccessible()
                     is MethodShape if (method.methodKind == MethodKind.Normal) ->
@@ -328,8 +330,11 @@ class DotHelper(
         }
     }
 
-    fun accessibleMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
-        AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), accessingTypeShape)
+    fun accessibleMembers(
+        subjectTypeShape: TypeShape,
+        accessingTypeShape: TypeShape?,
+    ): Iterable<MemberShape> =
+        AccessibleFilter(subjectTypeShape.membersMatching(member, member is OperatorMember), accessingTypeShape)
 
     fun publicMembers(accessingTypeShape: TypeShape): Iterable<MemberShape> =
         AccessibleFilter(accessingTypeShape.membersMatching(member, member is OperatorMember), null)

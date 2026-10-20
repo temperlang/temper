@@ -1,7 +1,5 @@
 [
     "No member wrong in C | I!",
-    "Wrong number of arguments.  Expected 2!",
-    "Expected subtype of Type, but got C!",
     "Member extraGetter defined in C | I incompatible with usage!",
     "Member superGetter defined in C | I incompatible with usage!",
     "Member propNotVar defined in C incompatible with usage!",

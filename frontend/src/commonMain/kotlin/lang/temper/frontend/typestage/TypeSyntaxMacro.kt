@@ -29,10 +29,10 @@ import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
-import lang.temper.type.InternalSet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.PropertyShape
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeShape
 import lang.temper.type.Visibility
 import lang.temper.value.BlockTree
@@ -486,7 +486,7 @@ internal fun typeSyntaxMacro(macroEnv: MacroEnvironment): PartialResult {
             prefixBlockWith(
                 body.document.treeFarm.growAll(body.pos.leftEdge) {
                     initializersToAdopt.forEach { (propertyShape, initializer) ->
-                        Call(DotHelper(InternalSet, DotMember(propertyShape.symbol))) {
+                        Call(DotHelper(ThisSet, DotMember(propertyShape.symbol))) {
                             V(typeValue)
                             Replant(thisName.copyRight())
                             Replant(initializer)

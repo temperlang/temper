@@ -2,7 +2,7 @@
   PointJsonAdapter__0 extends JsonAdapter<Point__0>;
   @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let encodeToJson__0;
   encodeToJson__0 = (@stay fn (@impliedThis(PointJsonAdapter__0) this__0: PointJsonAdapter__0, x__0: Point__0, p__0: JsonProducer) /* return__0 */: Void {
-      do_call_encodeToJson(x__0, p__0)
+      do_icall_encodeToJson(type (PointJsonAdapter__0), x__0, p__0)
   });
   @visibility(\public) @fn @stay @fromType(PointJsonAdapter__0) let decodeFromJson__0;
   decodeFromJson__0 = fn (@impliedThis(PointJsonAdapter__0) this__1: PointJsonAdapter__0, t__0: JsonSyntaxTree, ic__0: InterchangeContext) /* return__1 */: Point__0 throws Bubble {

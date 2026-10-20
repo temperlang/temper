@@ -73,6 +73,7 @@ import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.StaticPropertyShape
 import lang.temper.type.StaticType
 import lang.temper.type.SuperTypeTree
+import lang.temper.type.ThisAccessor
 import lang.temper.type.TopType
 import lang.temper.type.TypeActual
 import lang.temper.type.TypeBindingMapper
@@ -2757,27 +2758,37 @@ internal class Typer(
             }
 
             // TODO: consolidate this with AccessibleFilter
-            val useMember: (VisibleMemberShape) -> MemberUsage2 = {
+            val useMember: (VisibleMemberShape) -> MemberUsage2 = { memberShape ->
                 // Either it's public or we're reading from within the class definition.
                 // TODO: check protected vs private.  This is sensitive to whether something is
                 // reached directly or via super-type walking above.
                 if (DEBUG) {
-                    console.log("filtering: $it")
+                    console.log("filtering: $memberShape")
                 }
-                val visible = it.visibility == Visibility.Public ||
-                    memberAccessor is InternalMemberAccessor
+                val visible = when {
+                    memberShape.visibility == Visibility.Public -> true
+                    memberAccessor is ThisAccessor -> true
+                    memberAccessor is InternalMemberAccessor -> {
+                        // Check the lexical context type vs the member subject type, since we have both here now.
+                        val enclosingTypeArg = t.child(1 + memberAccessor.enclosingTypeIndexOrNegativeOne)
+                        val enclosingTypeDef = enclosingTypeArg.reifiedTypeContained?.type2?.definition
+                        // TODO Convert known externals later to external as a clarification/optimization?
+                        enclosingTypeDef == memberShape.enclosingType
+                    }
+                    else -> false
+                }
                 val compatible = when (memberAccessor) {
                     is GetMemberAccessor ->
-                        it is PropertyShape ||
-                            (it is MethodShape && it.methodKind == MethodKind.Getter)
+                        memberShape is PropertyShape ||
+                            (memberShape is MethodShape && memberShape.methodKind == MethodKind.Getter)
                     // TODO: method or constructor references
                     is SetMemberAccessor ->
-                        (it is PropertyShape && it.hasSetter) ||
-                            (it is MethodShape && it.methodKind == MethodKind.Setter)
+                        (memberShape is PropertyShape && memberShape.hasSetter) ||
+                            (memberShape is MethodShape && memberShape.methodKind == MethodKind.Setter)
                     is CallMemberAccessor ->
-                        it is MethodShape &&
+                        memberShape is MethodShape &&
                             // TODO: call of value of property with function type via getter
-                            it.methodKind == MethodKind.Normal
+                            memberShape.methodKind == MethodKind.Normal
                 }
                 when {
                     compatible && visible -> MemberUsage2.Good
@@ -2862,13 +2873,6 @@ internal class Typer(
             // irrelevant overloads.
             filterOutDeeperMembers(memberTypesGrouped, allThisVariants, typeContext2)
 
-            // Might need a type argument since the internal member accessors expect the this-type.
-            val containingType = if (memberAccessor is InternalMemberAccessor) {
-                WellKnownTypes.typeType
-            } else {
-                null
-            }
-
             // We need to, after typing, decide whether a DotHelper with extensions should use one
             // of the regular members, or one of the extensions.
             // We recall this later to get that relationship between extensions and members.
@@ -2896,17 +2900,18 @@ internal class Typer(
                             // shape.
                             val asMethodType = when (memberShape) {
                                 is PropertyShape -> {
+                                    // Skip containing types here because those aren't really args.
                                     if (memberAccessor is SetMemberAccessor) {
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType, memberShapeType),
+                                            valueFormals = listOfNotNull(nominalType, memberShapeType),
                                             returnType = Types.void.type,
                                         )
                                     } else {
                                         check(memberAccessor is GetMemberAccessor)
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType),
+                                            valueFormals = listOfNotNull(nominalType),
                                             returnType = memberShapeType,
                                         )
                                     }

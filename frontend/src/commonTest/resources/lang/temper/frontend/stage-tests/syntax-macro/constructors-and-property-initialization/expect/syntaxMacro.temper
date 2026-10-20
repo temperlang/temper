@@ -11,12 +11,12 @@ class(\word, \NeedsConstructor, \concrete, true, @typeDefined(NeedsConstructor__
     @visibility(\public) let constructor__0 = fn constructor(@impliedThis(NeedsConstructor__0) this__0: NeedsConstructor__0, @constructorProperty i__0 /* aka i */: Int32, j__1 /* aka j */: Int32 = 1) /* return__0 */: Void {
       do {
         let t#0;
-        do_iset_j(type (NeedsConstructor__0), this(NeedsConstructor__0), t#0 = j__1);
+        do_tset_j(type (NeedsConstructor__0), this(NeedsConstructor__0), t#0 = j__1);
         t#0
       };
       do {
         let t#1;
-        do_iset_k(type (NeedsConstructor__0), this(NeedsConstructor__0), t#1 = i__0 + 1);
+        do_tset_k(type (NeedsConstructor__0), this(NeedsConstructor__0), t#1 = i__0 + 1);
         t#1
       };
     };
@@ -29,11 +29,11 @@ class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefine
     @visibility(\private) let i__1: Int32;
     @visibility(\public) @fn let constructor__1 = fn constructor(@impliedThis(HasConstructorAndInitializedProperty__0) this__1: HasConstructorAndInitializedProperty__0, i__2 /* aka i */: Int32) /* return__1 */: Void {
       fn__0: do {
-        do_iset_b(type (HasConstructorAndInitializedProperty__0), this__1, false);
+        do_tset_b(type (HasConstructorAndInitializedProperty__0), this__1, false);
         void;
         do {
           let t#2;
-          do_iset_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#2 = i__2);
+          do_tset_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#2 = i__2);
           t#2
         };
       }
@@ -42,10 +42,10 @@ class(\word, \HasConstructorAndInitializedProperty, \concrete, true, @typeDefine
       fn__1: do {
         do {
           let t#3;
-          do_iset_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#3 = !do_iget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)));
+          do_tset_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0), t#3 = !do_tget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)));
           t#3
         };
-        do_iget_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)) + if(do_iget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)), fn {
+        do_tget_i(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)) + if(do_tget_b(type (HasConstructorAndInitializedProperty__0), this(HasConstructorAndInitializedProperty__0)), fn {
             1
           }, \else, fn (f#0) {
             f#0(fn {
@@ -67,7 +67,7 @@ class(\word, \HasTooManyConstructors, \concrete, true, @typeDefined(HasTooManyCo
         if(c__0, fn {
             do {
               let t#4;
-              do_iset_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0), t#4 = !do_iget_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0)));
+              do_tset_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0), t#4 = !do_tget_b(type (HasTooManyConstructors__0), this(HasTooManyConstructors__0)));
               t#4
             };
         })

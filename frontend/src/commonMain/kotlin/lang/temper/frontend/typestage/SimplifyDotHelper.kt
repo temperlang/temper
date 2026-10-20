@@ -9,7 +9,6 @@ import lang.temper.type.AndType
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
-import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
 import lang.temper.type.FunctionType
 import lang.temper.type.InstanceExtensionResolution
@@ -130,8 +129,9 @@ internal fun simplifyDotHelper(
             }
 
             if (extensionResolution is StaticExtensionResolution) {
-                // Remove the receiver type
-                call.removeChildren(1..1)
+                // Remove the receiver type and also the enclosing type before it, if present.
+                val afterFirstArg = dotHelper.memberAccessor.firstArgumentIndex + 1
+                call.removeChildren(1..afterFirstArg)
             }
             retypeTree(calleeEdge.target)
             return
@@ -141,19 +141,19 @@ internal fun simplifyDotHelper(
     // Inline some methods on numerics to reduce the method connect burden for backends.
     // This means `++x` when x has a builtin numeric type ends up as `x = x + 1` which
     // is more readily translated than `x = x.succ()`.
-    if (call.size == 2 && dotHelper.memberAccessor == ExternalCall) {
-        val subjectType = variantFunctionType?.valueFormals?.getOrNull(0)?.type
-        inlineHelpersForSuccAndPred[subjectType to dotHelper.member]?.let { (newCallee, extraArg) ->
-            val calleeEdge = call.edge(0)
-            calleeEdge.replace { pos ->
-                V(pos, Value(newCallee))
-            }
-            call.insert {
-                V(extraArg)
-            }
-            retypeTree(call)
-            return@simplifyDotHelper
+    val subjectType = variantFunctionType?.valueFormals?.getOrNull(0)?.type
+    inlineHelpersForSuccAndPred[subjectType to dotHelper.member]?.let { (newCallee, extraArg) ->
+        // Operator calls inside class bodies might have looked possibly
+        // internal earlier, although we know better now, so be flexible about
+        // whether we're internal or external coming in to here.
+        call.replace(0..dotHelper.memberAccessor.firstArgumentIndex) {
+            V(call.edge(0).target.pos, Value(newCallee))
         }
+        call.insert {
+            V(extraArg)
+        }
+        retypeTree(call)
+        return@simplifyDotHelper
     }
 
     val functionTypes = variantMatch?.let {
