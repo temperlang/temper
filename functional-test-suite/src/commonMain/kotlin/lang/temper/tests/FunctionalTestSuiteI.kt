@@ -153,6 +153,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowBubble)
 
     @Test
+    fun controlFlowForOfFolded() =
+        runFunctionalTest(Ft.ControlFlowForOfFolded)
+
+    @Test
     fun controlFlowIfReturn() =
         runFunctionalTest(Ft.ControlFlowIfReturn)
 
