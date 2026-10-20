@@ -2267,7 +2267,7 @@ class RustBackendTest {
             |pub (crate) fn init() -> temper_core::Result<()> {
             |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
             |    INIT_ONCE.get_or_init(| |{
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
             |struct PongStruct {}
