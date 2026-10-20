@@ -1245,7 +1245,7 @@ private open class PreTranslatedRewrite<I, O>(
     open fun rewriteGarbage(pt: PreTranslated.Garbage, x: I) = pt to zero
     open fun rewriteGoal(pt: PreTranslated.Goal, x: I) = pt to zero
     open fun rewriteReturn(pt: PreTranslated.Return, x: I) = pt to zero
-    open fun rewriteTreeWrapper(pt: PreTranslated.TreeWrapper, x: I) = pt to zero
+    open fun rewriteTreeWrapper(pt: PreTranslated.TreeWrapper, x: I): Pair<PreTranslated, O> = pt to zero
     open fun rewriteDocFoldBoundary(pt: PreTranslated.DocFoldBoundary, x: I) = pt to zero
     open fun rewriteBlock(pt: PreTranslated.Block, x: I) =
         rewriteByParts(pt, x, pt.unfixedElements) { es ->
@@ -1679,24 +1679,30 @@ private data class MigratedTryCatch(
 internal fun simplifyGeneratorFnReturns(body: PreTranslated, returnName: ResolvedName): PreTranslated {
     class Rewrite : PreTranslatedRewrite<Unit, Unit>({}, Unit) {
         override fun rewriteBlock(pt: PreTranslated.Block, x: Unit): Pair<PreTranslated, Unit> {
-            val (b) = super.rewriteBlock(pt, x)
-            check(b is PreTranslated.Block)
-            return b.copy(
-                elements = b.unfixedElements.filter {
-                    if (it is PreTranslated.TreeWrapper) {
-                        val tree = it.tree
-                        !(
-                            // Filter out `return__123 = core.doneResult()`
-                            isAssignment(tree) &&
-                                (tree.child(1) as? LeftNameLeaf)?.content == returnName &&
-                                isDoneResultCall(tree.child(2))
-                            )
-                    } else {
-                        true
-                    }
+            // Drop the assignment from the block before rewriting the elements, so that
+            // rewriteTreeWrapper below does not leave an empty block in its place.
+            val filtered = pt.copy(
+                elements = pt.unfixedElements.filter {
+                    !(it is PreTranslated.TreeWrapper && isDoneResultAssignment(it.tree))
                 },
-            ) to Unit
+            )
+            return super.rewriteBlock(filtered, x)
         }
+
+        // The assignment is not always an element of a block.  When the body ends in an `if`
+        // with no `else`, the synthesized `else` branch is the bare assignment.
+        override fun rewriteTreeWrapper(pt: PreTranslated.TreeWrapper, x: Unit): Pair<PreTranslated, Unit> =
+            if (isDoneResultAssignment(pt.tree)) {
+                PreTranslated.Block(pt.pos, emptyList()) to Unit
+            } else {
+                pt to Unit
+            }
+
+        /** True for `return__123 = core.doneResult()` */
+        private fun isDoneResultAssignment(tree: Tree): Boolean =
+            isAssignment(tree) &&
+                (tree.child(1) as? LeftNameLeaf)?.content == returnName &&
+                isDoneResultCall(tree.child(2))
 
         private fun isDoneResultCall(expr: Tree): Boolean {
             if (!(expr is CallTree && expr.size == 1)) {
