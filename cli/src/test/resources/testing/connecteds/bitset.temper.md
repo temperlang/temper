@@ -13,8 +13,7 @@ and let backends handle that. But hide the actual class type under a sealed
 interface.
 
     // TODO @connected on a class instead of needing to wrap things.
-    // TODO Fix rust internal impls of public sealed interfaces.
-    export /*sealed*/ interface Bitset {
+    export sealed interface Bitset {
       public add(i: Int): Void;
 
       public contains(i: Int): Boolean;
