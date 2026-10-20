@@ -79,7 +79,7 @@ private fun checkSealedExtension(
             }
         }
     }
-    if (illegalSuperTypes.isEmpty()) {
+    if (illegalSuperTypes.isNotEmpty()) {
         (typeShape as MutableTypeShape).superTypes.removeAll(illegalSuperTypes)
     }
 }

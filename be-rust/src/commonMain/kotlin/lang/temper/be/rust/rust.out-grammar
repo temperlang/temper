@@ -296,13 +296,22 @@ Module.pub.default = `null`;
 
 Move ::= "move";
 
-// For simple numbers. We might also want suffixed numbers in the future.
+// For simple numbers. A `Long` is an `i64` and says so, because an unsuffixed
+// literal is an `i32` wherever its context does not fix its type, as on the
+// left of `as`. An `Int` stays unsuffixed so it can take its context's type.
 NumberLiteral(value%`Number`);
 NumberLiteral.renderTo = `tokenSink.number("$value$suffix")`;
+// A negative literal is a negation: `-5i64.max(3i64)` is `-(5i64.max(3i64))`.
+NumberLiteral.operatorDefinition = `
+when (val v = value) {
+    is Double -> if (v < 0.0 || 1.0 / v < 0.0) RustOperatorDefinition.Prefix else null
+    else -> if (v.toLong() < 0L) RustOperatorDefinition.Prefix else null
+}
+`;
 NumberLiteral.suffix%`String` = `
 when (value) {
     is Double -> "f64"
-    // is Long -> "i32" // TODO Ever needed?
+    is Long -> "i64"
     else -> ""
 }
 `;
