@@ -85,7 +85,7 @@ ConstType ::= base%Type & "const";
 PtrType ::= base%Type & `CppToks.postfixStar`;
 
 // sStmt
-Stmt = BlockStmt | ExprStmt | LabelStmt | GotoStmt | ReturnStmt | ThrowStmt | TryCatchStmt | BreakStmt | SwitchStmt | Comment | IfStmt | WhileStmt | VarDef;
+Stmt = BlockStmt | ExprStmt | LabelStmt | GotoStmt | ReturnStmt | ThrowStmt | TryCatchStmt | BreakStmt | SwitchStmt | Comment | IfStmt | WhileStmt | VarDef | InOrderTemp;
 BlockStmt ::= "{" & stmts%Stmt*"" & "}";
 ExprStmt ::= expr%Expr & ";";
 LabelStmt ::= label%SingleName & `CppToks.postfixColon` & stmt%Stmt;
@@ -103,7 +103,7 @@ SwitchStmt ::= "switch" & "(" & subject%Expr & ")" & "{" &
 SwitchCase ::= labels%CaseLabel*"" & body%Stmt;
 CaseLabel ::= "case" & value%Expr & `CppToks.postfixColon`;
 
-Expr = IndexExpr | CallExpr | MemberExpr | Name | LiteralExpr | BinaryExpr | UnaryExpr | CastExpr | PreComment | PostComment | ThisExpr | TemplateType | LambdaExpr;
+Expr = IndexExpr | CallExpr | MemberExpr | Name | LiteralExpr | BinaryExpr | UnaryExpr | CastExpr | PreComment | PostComment | ThisExpr | TemplateType | LambdaExpr | InOrderExpr;
 CastExpr ::= "(" & type%Type & ")" & expr%Expr;
 IndexExpr ::= base%Expr & "[" & index%Expr & "]";
 CallExpr ::= func%Expr & "(" & args%Expr*"," & ")";
@@ -123,6 +123,18 @@ LambdaExpr ::= "[" & "=" & captures%LambdaCapture*"" & "]" &
 LambdaExpr.mut.default = `null`;
 LambdaCapture ::= "," & `CppToks.prefixAmp` & name%SingleName;
 enum LambdaMod = Mutable;
+// A lambda called in place, so that its body runs as one expression. C++ does not say in what
+// order a call's arguments, or an operator's operands, are evaluated, and x86-64 g++ goes right
+// to left. Where a Temper call's operands could see one another's effects, the translator binds
+// them to `InOrderTemp`s in Temper's left to right order and returns the call built from them:
+// `[&]() -> auto { auto arg_0 = f(); auto arg_1 = x->get_n(); return g(arg_0, arg_1); }()`.
+// A lambda outside any function, in a static member's initializer, may not have a capture
+// default and has nothing to capture, so `capture` is null there and the lambda is `[]`.
+InOrderExpr ::= "[" & capture%CaptureByReference? & "]" & "(" & ")" & `CppToks.returnTypeArrow` & "auto" & body%BlockStmt & `CppToks.calledInPlace` & ")";
+CaptureByReference ::= "&";
+// `auto name = value;`, an operand of an `InOrderExpr`. A copy, not a reference: a reference to
+// a field would see the write that a later operand makes to it.
+InOrderTemp ::= "auto" & name%SingleName & "=" & value%Expr & ";";
 
 IfStmt ::= "if" & "(" & cond%Expr & ")" & ifTrue%Stmt & ("else" & ifFalse%Stmt || ());
 WhileStmt ::= "while" & "(" & cond%Expr & ")" & body%Stmt;
