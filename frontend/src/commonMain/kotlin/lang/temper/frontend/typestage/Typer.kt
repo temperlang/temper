@@ -1431,10 +1431,10 @@ internal class Typer(
                     }
                 }
 
-                // If we have a delayed nullary-never call (see TyperPlan),
+                // If we have a delayed nullary-never call or a context-typed `[]` (see TyperPlan),
                 // we should go ahead and roll it back to complete the typing of any assignment
                 // it's part of.
-                if (isNullaryNeverCall(callSite)) {
+                if (isNullaryNeverCall(callSite) || callSite in ti.typerPlan.contextTypedInitializers) {
                     val parent = callSite.incoming?.source
                     if (parent is CallTree && isAssignment(parent) && ti.isUndecided(parent)) {
                         typeAssignmentCall(parent)
