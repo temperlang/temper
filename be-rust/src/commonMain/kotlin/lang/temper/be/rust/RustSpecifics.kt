@@ -12,6 +12,7 @@ import lang.temper.be.cli.ToolchainResult
 import lang.temper.be.cli.VersionedTool
 import lang.temper.be.cli.checkMin
 import lang.temper.common.RResult
+import lang.temper.common.RSuccess
 import lang.temper.fs.OutDir
 import lang.temper.log.FilePath
 import lang.temper.name.SemVer
@@ -39,12 +40,15 @@ object RustSpecifics : RunnerSpecifics {
 
     override val backendId get() = RustBackend.Factory.backendId
 
-    /** For now just inspect rustc and presume they have an appropriate matching cargo. */
-    override val tools: List<ToolSpecifics> = listOf(RustcCommand)
+    /** Check the rustc version, and that cargo is present, but presume its version matches rustc. */
+    override val tools: List<ToolSpecifics> = listOf(RustcCommand, CargoCommand)
 }
 
-object CargoCommand : ToolSpecifics {
+object CargoCommand : VersionedTool {
     override val cliNames = listOf("cargo")
+    override val versionCheckArgs = listOf("--version")
+
+    override fun checkVersion(run: EffortSuccess): RResult<Unit, CliFailure> = RSuccess(Unit)
 }
 
 object RustcCommand : VersionedTool {
