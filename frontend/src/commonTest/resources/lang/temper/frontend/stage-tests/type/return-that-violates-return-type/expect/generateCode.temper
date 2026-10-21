@@ -1,4 +1,4 @@
 let return__0;
 return__0 = (@stay fn /* return__1 */: Boolean {
-    return__1 = 42
+    error (IllegalAssignment)
 })

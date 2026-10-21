@@ -471,33 +471,10 @@ internal class UseBeforeInit(
 
     private fun fixupTreeAndReportProblems(problems: List<Pair<TEdge, LogEntry?>>) {
         for ((edgeToReplace, problem) in problems) {
-            edgeToReplace.replace {
-                if (problem != null) {
-                    val type = edgeToReplace.target.typeInferences?.type
-                    val errorTypeInferences = type?.let { type ->
-                        val sig = if (type.isVoidLike) {
-                            ErrorFn.voidSig
-                        } else {
-                            ErrorFn.genericSig
-                        } // Extend nary type with arg
-                            .copy(requiredInputTypes = listOf(WellKnownTypes.anyValueOrNullType2))
-                        CallTypeInferences(
-                            type,
-                            typeFromSignature(sig),
-                            buildMap {
-                                val tf = sig.typeFormals.firstOrNull()
-                                if (tf != null) {
-                                    this[tf] = type
-                                }
-                            },
-                            listOf(),
-                        )
-                    }
-                    Call(type = errorTypeInferences) {
-                        V(errorFn, type = errorTypeInferences?.variant)
-                        V(Value(problem, TProblem), type = Types.problem.type)
-                    }
-                } else {
+            if (problem != null) {
+                edgeToReplace.replaceWithError(problem)
+            } else {
+                edgeToReplace.replace {
                     V(void, type = Types.void.type)
                 }
             }
@@ -523,4 +500,38 @@ internal class UseBeforeInit(
 
     @Suppress("unused")
     private val debugConsole get() = if (debugging) console else null
+}
+
+/**
+ * Replaces the tree at this edge with a call to [ErrorFn] that carries [problem],
+ * keeping the replaced tree's type, so that backends translate it as a failure
+ * whose message is the diagnostic.
+ */
+internal fun TEdge.replaceWithError(problem: LogEntry) {
+    val type = target.typeInferences?.type
+    val errorTypeInferences = type?.let { type ->
+        val sig = if (type.isVoidLike) {
+            ErrorFn.voidSig
+        } else {
+            ErrorFn.genericSig
+        } // Extend nary type with arg
+            .copy(requiredInputTypes = listOf(WellKnownTypes.anyValueOrNullType2))
+        CallTypeInferences(
+            type,
+            typeFromSignature(sig),
+            buildMap {
+                val tf = sig.typeFormals.firstOrNull()
+                if (tf != null) {
+                    this[tf] = type
+                }
+            },
+            listOf(),
+        )
+    }
+    replace {
+        Call(type = errorTypeInferences) {
+            V(errorFn, type = errorTypeInferences?.variant)
+            V(Value(problem, TProblem), type = Types.problem.type)
+        }
+    }
 }

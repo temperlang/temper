@@ -97,7 +97,6 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
             "SemanticsTypeCheckedLocals",
             allowedErrors = setOf(
                 MessageTemplate.ExpectedSubType.name,
-                MessageTemplate.IllegalAssignment.name,
                 MessageTemplate.ExpectedFunctionType.name,
             ),
         ),

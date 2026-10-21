@@ -1,13 +1,12 @@
 # Type Checked Locals Functional Test
 
-This tests how illegal assignments are handled on backends.
+This tests how calls with arguments of the wrong type are handled on backends.
 
 ## Metadata
 
 ```text
 @meta:arg allowedErrors = setOf(
 @meta:arg     MessageTemplate.ExpectedSubType.name,
-@meta:arg     MessageTemplate.IllegalAssignment.name,
 @meta:arg     MessageTemplate.ExpectedFunctionType.name,
 @meta:arg ),
 ```
@@ -20,21 +19,13 @@ First, set up some sophisticated commentary.
     let meh(): Void { console.log("meh") };
     let boo(): Void { console.log("boo") };
 
-Test a static type error:
+An assignment of the wrong type, like `a = "1"` to an `Int`, is not
+tested here. It is a static error, and the assignment is replaced by a
+failure carrying that error, so it panics in the interpreter rather than
+running as written. See issue #511 and the
+`rejected-assignment-fails-at-run-time` stage test.
 
-    console.log("Checkpoint 0");
-    do {
-      let a: Int;
-      a = "1"; // Static error, but not fatal
-      bubble();
-    } orelse yay();
-
-```log
-Checkpoint 0
-yay
-```
-
-Then with the correct type:
+Assign with the correct type:
 
     console.log("Checkpoint 1");
     do {
@@ -45,29 +36,6 @@ Then with the correct type:
 ```log
 Checkpoint 1
 yay
-```
-
-Test an incorrect type in an inner scope.
-
-    console.log("Checkpoint 2");
-    do {
-      var a: Int = 1;
-      do {
-        a = "2"; // Static error, but not fatal
-        bubble();
-        boo();
-      } orelse meh();
-      if (a == 1) {
-        meh();
-      } else {
-        meh();
-      }
-    }
-
-```log
-Checkpoint 2
-meh
-meh
 ```
 
 Verify updating a value with a correct type.
