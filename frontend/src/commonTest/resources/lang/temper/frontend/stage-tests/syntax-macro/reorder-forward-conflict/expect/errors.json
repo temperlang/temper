@@ -1,0 +1,13 @@
+[
+    {
+        "level": "error",
+        "template": "TopLevelOrderConflict",
+        "values": [
+            "counter"
+        ],
+        "formatted": "Top-level use of counter must keep its place among other uses of it, but the declarations they need would move it!",
+        "loc": "test/test.temper",
+        "left": 270,
+        "right": 281
+    }
+]
