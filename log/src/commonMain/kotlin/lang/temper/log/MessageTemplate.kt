@@ -241,8 +241,8 @@ enum class MessageTemplate(
         "Function body required except for virtual methods or connected functions",
         CompilationPhase.CodeGeneration,
     ),
-    UserConnectedNotFun(
-        "At this time, users can connect only top-level functions",
+    UserConnectedNotClassOrFun(
+        "At this time, users can connect only classes or top-level functions",
         CompilationPhase.CodeGeneration,
     ),
     CannotExtend(

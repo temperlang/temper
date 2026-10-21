@@ -3,6 +3,8 @@ package lang.temper.interp
 import lang.temper.common.Log
 import lang.temper.log.MessageTemplate
 import lang.temper.name.Symbol
+import lang.temper.type.Abstractness
+import lang.temper.type.TypeShape
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
@@ -11,6 +13,7 @@ import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.initSymbol
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.void
@@ -32,18 +35,18 @@ internal val connectedDecorator = MetadataDecorator(
         // At this stage, we don't need the location context.
         isProcessingStd(sharedLocationContext = null) && return@check
         val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
-        when {
-            typeDeclSymbol in metadata -> {
-                log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
-            }
-            else -> when (metadata[initSymbol]?.target) {
+        when (val type = metadata[typeDeclSymbol]?.reifiedTypeContained) {
+            null -> when (metadata[initSymbol]?.target) {
                 is FunTree -> {
                     // Neither instance nor static methods get in here because of different tree structures.
                     // That's good for now.
                 }
                 else -> {
-                    log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
+                    log(Log.Error, MessageTemplate.UserConnectedNotClassOrFun, pos, listOf())
                 }
+            }
+            else -> if ((type.type2.definition as? TypeShape)?.abstractness != Abstractness.Concrete) {
+                log(Log.Error, MessageTemplate.UserConnectedNotClassOrFun, pos, listOf())
             }
         }
     }
