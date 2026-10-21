@@ -166,6 +166,11 @@ class CoroutineConverterTest {
     fun usingPromiseBuilder() = assertConvertedCoroutine(
         StageTestDir("convert-coro/using-promise-builder"),
     )
+
+    @Test
+    fun listAcrossAwait() = assertConvertedCoroutine(
+        StageTestDir("convert-coro/list-across-await"),
+    )
 }
 
 /**
