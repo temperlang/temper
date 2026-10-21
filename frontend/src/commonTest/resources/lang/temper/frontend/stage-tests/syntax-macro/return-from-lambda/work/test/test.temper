@@ -1,0 +1,35 @@
+let call(g: fn (): Int): Int { g() }
+let drive(body: fn (): SafeGenerator<Empty>): Void { body().nextSafe(); }
+
+// A `return` that would leave a lambda with a declared result type is refused.
+call { (): Int =>
+  if (true) { return 1; }
+  2
+};
+
+// A generator lambda cannot leave the function around it: its body runs later.
+drive { (): GeneratorResult<Empty> extends GeneratorFn =>
+  var i = 0;
+  while (true) {
+    if (i == 1) { return; }
+    i += 1;
+    yield;
+  }
+};
+
+let wrap(): Int {
+  call { (): Int =>
+    if (true) { return 7; }
+    8
+  }
+}
+
+// Returning from a function through a loop's desugared body is fine.
+let firstBig(xs: List<Int>): Int {
+  for (let x of xs) {
+    if (x > 2) { return x; }
+  }
+  -1
+}
+
+return;

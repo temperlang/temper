@@ -1,0 +1,38 @@
+[
+    {
+        "level": "error",
+        "template": "ReturnFromLambda",
+        "values": [],
+        "formatted": "`return` inside a lambda with a declared result type would leave the enclosing function, not the lambda. Make it a function with `fn` or `let`, or end a generator with `break` or by reaching its end!",
+        "loc": "test/test.temper",
+        "left": 224,
+        "right": 232
+    },
+    {
+        "level": "error",
+        "template": "ReturnFromLambda",
+        "values": [],
+        "formatted": "`return` inside a lambda with a declared result type would leave the enclosing function, not the lambda. Make it a function with `fn` or `let`, or end a generator with `break` or by reaching its end!",
+        "loc": "test/test.temper",
+        "left": 430,
+        "right": 436
+    },
+    {
+        "level": "error",
+        "template": "ReturnFromLambda",
+        "values": [],
+        "formatted": "`return` inside a lambda with a declared result type would leave the enclosing function, not the lambda. Make it a function with `fn` or `let`, or end a generator with `break` or by reaching its end!",
+        "loc": "test/test.temper",
+        "left": 525,
+        "right": 533
+    },
+    {
+        "level": "error",
+        "template": "ReturnOutsideFn",
+        "values": [],
+        "formatted": "Return outside function body!",
+        "loc": "test/test.temper",
+        "left": 718,
+        "right": 724
+    }
+]
