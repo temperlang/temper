@@ -22,6 +22,7 @@
 | [ClassesWriteBackThroughField][] | ❌<sup>[539][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
+| [ControlFlowAsyncBrokenEarly][] | ❌<sup>[520][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowAsyncWaiters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowIfReturn][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -76,6 +77,7 @@
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
 [456]: https://github.com/temperlang/temper/issues/456
+[520]: https://github.com/temperlang/temper/issues/520
 [539]: https://github.com/temperlang/temper/issues/539
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
@@ -98,6 +100,7 @@
 [ClassesWriteBackThroughField]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/write-back-through-field/write-back-through-field.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
+[ControlFlowAsyncBrokenEarly]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-broken-early/async-broken-early.temper.md
 [ControlFlowAsyncWaiters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-waiters/async-waiters.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
 [ControlFlowIfReturn]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/if-return/if-return.temper.md

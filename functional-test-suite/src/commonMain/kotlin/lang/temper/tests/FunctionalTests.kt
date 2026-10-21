@@ -52,6 +52,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ClassesWriteBackThroughField(markdown("classes/write-back-through-field/write-back-through-field.temper.md", "ClassesWriteBackThroughField")),
     ControlFlowActorRun(markdown("control-flow/actor-run/actor-run.temper.md", "ControlFlowActorRun")),
     ControlFlowAsync(markdown("control-flow/async/async.temper.md", "ControlFlowAsync")),
+    ControlFlowAsyncBrokenEarly(markdown("control-flow/async-broken-early/async-broken-early.temper.md", "ControlFlowAsyncBrokenEarly")),
     ControlFlowAsyncWaiters(markdown("control-flow/async-waiters/async-waiters.temper.md", "ControlFlowAsyncWaiters")),
     ControlFlowBubble(markdown("control-flow/bubble/bubble.temper.md", "ControlFlowBubble")),
     ControlFlowForOfFolded(markdown("control-flow/for-of-folded/for-of-folded.temper.md", "ControlFlowForOfFolded")),
