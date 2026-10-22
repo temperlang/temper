@@ -186,12 +186,27 @@ class LexerTest {
     )
 
     @Test
-    fun codeBlockStartingWhereAnotherEnds() = assertTokenization(
-        // Indented code in a block quote, then indented code outside it, with no
-        // markdown text between them to make a comment token from.
+    fun codeInBlockQuoteIsProse() = assertTokenization(
+        // Quoted code stays in the comment, even across lines.
+        """
+        >Text.
+        >
+        >> ```temper
+        >> let x = 1;
+        >> ```
+        :    C
+        """.trimIndent(),
+        languageConfig = MarkdownLanguageConfig(),
+        affectedBy = listOf(kotlinBackend.affectedByIssue1499),
+    )
+
+    @Test
+    fun codeAfterQuotedCode() = assertTokenization(
+        // Indented code in a block quote, which is prose, then indented code
+        // outside it. This used to crash when quoted code counted as code.
         """
         >>     ,
-        : C   SPS
+        :       C
         >    }
         :   SE
         """.trimIndent(),
