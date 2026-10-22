@@ -197,6 +197,7 @@ class MutableTypeFormal(
      * map, so they're collected along with this formal.
      */
     internal val hackFnShapes = mutableMapOf<HackFnInterop, TypeShape>()
+
     init {
         if (upperBounds.isNotEmpty()) {
             this.upperBounds.addAll(upperBounds)

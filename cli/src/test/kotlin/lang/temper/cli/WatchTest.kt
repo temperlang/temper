@@ -74,6 +74,7 @@ class WatchTest {
         // have finished, so memory doesn't grow per build. A generic function type covers
         // caches keyed by type formals. This checks the second build, because modules
         // reused since the first build can still reach that build's other modules.
+        @Suppress("MagicNumber") // Arbitrary but small enough and good enough in testing.
         val buildLimit = 5
         val checkedBuild = 2
         val checkedModules = mutableListOf<WeakReference<Module>>()
