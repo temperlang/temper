@@ -163,7 +163,7 @@ fun <TYPE : TypeOrPartialType> SuperTypeTreeForType2<TYPE>.forEachSuperType(
     }
 }
 
-private data class HackFnInterop(
+internal data class HackFnInterop(
     val formals: List<TypeFormal>,
     val nRequired: Int,
     val nOptional: Int,
@@ -178,7 +178,7 @@ private data class HackFnInterop(
  * formals would keep every build's modules alive in watch mode, since type
  * formals' names reference their modules.
  */
-private val hackFnTypeDefs = mutableMapOf<Any, TypeShape>()
+private val hackFnTypeDefs = mutableMapOf<HackFnInterop, TypeShape>()
 
 internal val hackDocument = Document(object : DocumentContext {
     override val sharedLocationContext: SharedLocationContext get() = TODO()
@@ -369,7 +369,7 @@ fun hackMapNewStyleToOld(t: Type2): StaticType {
     val bindings = t.bindings
     val nullity = t.nullity
 
-    val fnInterop = (definition as? TypeShapeImpl)?.hackFnInterop as HackFnInterop?
+    val fnInterop = (definition as? TypeShapeImpl)?.hackFnInterop
     val t = when {
         definition == neverTypeDefinition -> OrType.emptyOrType
         definition == resultTypeDefinition -> MkType.or(hackMapNewStyleToOld(bindings[0]), BubbleType)
