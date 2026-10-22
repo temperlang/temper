@@ -186,6 +186,23 @@ class LexerTest {
     )
 
     @Test
+    fun codeBlockStartingWhereAnotherEnds() = assertTokenization(
+        // Indented code in a block quote, then indented code outside it, with no
+        // markdown text between them to make a comment token from.
+        """
+        >>     ,
+        : C   SPS
+        >    }
+        :   SE
+        """.trimIndent(),
+        languageConfig = MarkdownLanguageConfig(),
+        wantedErrors = listOf(
+            "12-13: `}`: Close bracket matches no open bracket!",
+        ),
+        affectedBy = listOf(kotlinBackend.affectedByIssue1499),
+    )
+
+    @Test
     fun stringEndingInBackslash() = assertTokenization(
         // (r) below includes a synthetic close quote that is not part of the input
         """
