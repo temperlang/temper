@@ -65,6 +65,9 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
                         isProcessingCore && connectedSymbol in m.metadata -> true
                         // std has some required connections too which are sneakily hidden away
                         isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata -> true
+                        // A user's connected class gets its bodiless methods from host code.
+                        !isProcessingCore && !isStd && m.isPureVirtual &&
+                            connectedSymbol in superTypeShape.metadata -> true
                         m.methodKind != MethodKind.Constructor && m.isPureVirtual -> false
                         else -> true
                     }

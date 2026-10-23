@@ -24,7 +24,6 @@ import lang.temper.interp.errorNodeFor
 import lang.temper.interp.importExport.ExportDecorator
 import lang.temper.interp.isErrorNode
 import lang.temper.interp.mightBeMacroCallMeantToHappenLater
-import lang.temper.interp.vConnectedDecorator
 import lang.temper.interp.vExtendsFn
 import lang.temper.lexer.Genre
 import lang.temper.log.LogEntry
@@ -78,7 +77,6 @@ import lang.temper.value.TVoid
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.connectedSymbol
 import lang.temper.value.constructorPropertySymbol
 import lang.temper.value.constructorSymbol
 import lang.temper.value.fnBuiltinName
@@ -110,7 +108,6 @@ import lang.temper.value.typeFormalSymbol
 import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.unpackUnappliedDecoration
 import lang.temper.value.vConcreteSymbol
-import lang.temper.value.vConnectedSymbol
 import lang.temper.value.vDefaultSymbol
 import lang.temper.value.vFnSymbol
 import lang.temper.value.vGetterSymbol
@@ -150,18 +147,6 @@ internal fun typeDisambiguateMacro(
         // We can't do much if this is not a macro call rooted in the AST
         ?: return Fail
     val logSink = macroEnv.logSink
-    // Whether the class is `@connected`; see below.
-    var isConnected = false
-
-    // The function a decoration applies, found by value, so a user's own
-    // decorator with a builtin's name isn't mistaken for the builtin.
-    fun decoratorFunction(decoratorCall: CallTree): Any? {
-        val decorator = decoratorCall.childOrNull(0)
-        val decoratorName = (decorator as? RightNameLeaf)?.content
-        val value = decorator?.valueContained
-            ?: decoratorName?.let { macroEnv.environment[it, macroEnv] } as? Value<*>
-        return TFunction.unpackOrNull(value)
-    }
 
     val genre = doc.context.genre
     fun valueLeaf(pos: Position, content: Value<*>) = ValueLeaf(doc, pos, content)
@@ -276,7 +261,11 @@ internal fun typeDisambiguateMacro(
         val isExported = macroCall.incoming?.let { macroEdge ->
             var isExported = false
             forEachUnappliedDecoration(macroEdge) { _, decoratorCall ->
-                if (decoratorFunction(decoratorCall) == ExportDecorator) {
+                val decorator = decoratorCall.childOrNull(0)
+                val decoratorName = (decorator as? RightNameLeaf)?.content
+                val value = decorator?.valueContained
+                    ?: decoratorName?.let { macroEnv.environment[it, macroEnv] } as? Value<*>
+                if (TFunction.unpackOrNull(value) == ExportDecorator) {
                     isExported = true
                     VisitCue.AllDone
                 } else {
@@ -285,21 +274,6 @@ internal fun typeDisambiguateMacro(
             }
             isExported
         } ?: false
-
-        // A user's `@connected` class takes its bodiless members from host
-        // code, so they're connected rather than pure virtual. Like `export`,
-        // the decoration hasn't applied yet, so look for it around this call.
-        // Core and std connect their classes their own way, member by member.
-        macroCall.incoming?.takeIf { macroEnv.isProcessingUserCode }?.let { macroEdge ->
-            forEachUnappliedDecoration(macroEdge) { _, decoratorCall ->
-                if (decoratorFunction(decoratorCall) == TFunction.unpackOrNull(vConnectedDecorator)) {
-                    isConnected = true
-                    VisitCue.AllDone
-                } else {
-                    VisitCue.Continue
-                }
-            }
-        }
 
         val typeShape = run {
             var typeShape: TypeShapeImpl?
@@ -479,14 +453,6 @@ internal fun typeDisambiguateMacro(
         val hasStaticAnnotation = staticAnnotation != null
         val hasVarAnnotation = ancestorAnnotations.any { it.first == varDecoratorNameText }
         val annotationsToRemove = mutableListOf<CallTree>()
-        // In a connected class, a member's own `@connected` adds nothing,
-        // since the class marks its bodiless members below, so drop it.
-        if (isConnected) {
-            // By name, like `@static` and `@var` here: member decorations
-            // can't be resolved by value until the class body is.
-            ancestorAnnotations.filter { it.first == connectedDecoratorNameText }
-                .mapTo(annotationsToRemove) { it.second }
-        }
         checkAgainstVirtualGenericMethod(abstractness, isStatic = hasStaticAnnotation, memberTree, macroEnv)
         val hasNoPropertyAnnotation =
             ancestorAnnotations.any { it.first == noPropertyNameText }
@@ -697,13 +663,6 @@ internal fun typeDisambiguateMacro(
                 val nameIsFollowedByWord =
                     memberTree.size >= 3 && memberTree.child(1).symbolContained == wordSymbol
                 val extraMetadata = mutableListOf<Tree>()
-                // Bodiless members of connected classes are connected, as if
-                // each had its own `@connected`.
-                val isConnectedMember = isConnected && memberTree.children.lastOrNull() !is FunTree
-                if (isConnectedMember) {
-                    extraMetadata.add(valueLeaf(memberTree.pos.leftEdge, vConnectedSymbol))
-                    extraMetadata.add(valueLeaf(memberTree.pos.leftEdge, void))
-                }
                 val (leftName, memberNameSymbol) = if (
                     nameIsFollowedByWord && memberTree.child(2) !is NameLeaf
                 ) {
@@ -847,20 +806,12 @@ internal fun typeDisambiguateMacro(
                 // ->
                 //     fn(\word, word, fn { pureVirtual() })
                 // The `fn` macro requires a body to be able to convert it to a function.
-                // But a connected member gets a body that panics, as connected
-                // functions do, marked connected, as `@connected` marks them.
                 if (memberTree.children.lastOrNull() !is FunTree) {
                     // no trailing block
                     memberTree.add(
                         memberTree.treeFarm.grow(memberTree.pos.rightEdge) {
                             Fn {
-                                if (isConnectedMember) {
-                                    V(vConnectedSymbol)
-                                    V(void)
-                                    Block { Call { V(BuiltinFuns.vAbstractPanic) } }
-                                } else {
-                                    Call { V(BuiltinFuns.vPureVirtual) }
-                                }
+                                Call { V(BuiltinFuns.vPureVirtual) }
                             }
                         },
                     )
@@ -1672,7 +1623,6 @@ internal val (DeclParts).isTypeMember: Boolean get() {
     }
 }
 
-private val connectedDecoratorNameText = "@${connectedSymbol.text}"
 private val staticDecoratorNameText = "@${staticSymbol.text}"
 private val varDecoratorNameText = "@${varSymbol.text}"
 private val noPropertyNameText = "@${noPropertySymbol.text}"

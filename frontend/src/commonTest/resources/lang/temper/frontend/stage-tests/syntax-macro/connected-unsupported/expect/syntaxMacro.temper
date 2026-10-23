@@ -3,14 +3,14 @@
 do {};
 class(\word, \NoConnectedTypesForNow, \concrete, true, @typeDefined(NoConnectedTypesForNow) fn {
     NoConnectedTypesForNow extends AnyValue;
-    @connected @visibility(\public) @fn let alsoNoConnectedMethodsYet__0 = (@connected fn alsoNoConnectedMethodsYet(@impliedThis(NoConnectedTypesForNow) this__0: NoConnectedTypesForNow) {
+    @visibility(\public) @connected @fn let alsoNoConnectedMethodsYet__0 = (@connected fn alsoNoConnectedMethodsYet(@impliedThis(NoConnectedTypesForNow) this__0: NoConnectedTypesForNow) {
         fn__0: do {
-          abstractPanic()
+          pureVirtual()
         }
     });
-    @fn @connected @static @visibility(\public) let notEvenStaticMethodsYet__0 = (@connected fn notEvenStaticMethodsYet {
+    @fn @static @visibility(\public) @connected let notEvenStaticMethodsYet__0 = (@connected fn notEvenStaticMethodsYet {
         fn__1: do {
-          abstractPanic()
+          pureVirtual()
         }
     });
     @visibility(\public) let constructor__0 = fn constructor(@impliedThis(NoConnectedTypesForNow) this__1: NoConnectedTypesForNow) /* return__0 */: Void {};
