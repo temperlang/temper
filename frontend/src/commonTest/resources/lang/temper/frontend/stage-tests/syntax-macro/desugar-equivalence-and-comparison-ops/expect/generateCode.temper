@@ -1,75 +1,56 @@
-## The temporaries make this somewhat easier to visualize than
-## the syntaxMacro.temper output.
-## Inline below are the pre-sugared expressions.
-  @fn let `test//`.a;
-  `test//`.a = (@stay fn a(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32, z__0 /* aka z */: Int32?, w__0 /* aka w */: Int32?) /* return__0 */: List<Boolean> {
-      let t#0, t#1, t#2, t#3, t#4, t#5, t#6, t#7, t#8, t#9, t#10, t#11, t#12, t#13, t#14;
-## x == y;  Neither is nullable, so it's just int comparison.
-      t#1 = x__0 == y__0;
-## x != y;  Just the negation of the above.
-      t#2 = !(x__0 == y__0);
-## x < y
-      t#3 = x__0 <=> y__0 < 0;
-## x <= y
-      t#4 = x__0 <=> y__0 <= 0;
-## x >= y
-      t#5 = x__0 <=> y__0 >= 0;
-## x > y
-      t#6 = x__0 <=> y__0 > 0;
-## (x <=> y) != 0;  all integer ops except for the `!`
-      t#7 = !(x__0 <=> y__0 == 0);
-## x == null and null != y are inlined as false and true at the bottom.
-## x == z; first dealing with case where z is null
-      if (isNull(z__0)) {
-        t#0 = false
+@fn let `test//`.a;
+`test//`.a = (@stay fn a(x__0 /* aka x */: Int32, y__0 /* aka y */: Int32, z__0 /* aka z */: Int32?, w__0 /* aka w */: Int32?) /* return__0 */: List<Boolean> {
+    let t#0, t#1, t#2, t#3, t#4, t#5, t#6, t#7, t#8, t#9, t#10, t#11, t#12, t#13, t#14;
+    t#1 = x__0 == y__0;
+    t#2 = !(x__0 == y__0);
+    t#3 = x__0 <=> y__0 < 0;
+    t#4 = x__0 <=> y__0 <= 0;
+    t#5 = x__0 <=> y__0 >= 0;
+    t#6 = x__0 <=> y__0 > 0;
+    t#7 = !(x__0 <=> y__0 == 0);
+    if (isNull(z__0)) {
+      t#0 = false
+    } else {
+      t#0 = x__0 == notNull(z__0)
+    };
+    if (isNull(z__0)) {
+      t#8 = false
+    } else {
+      t#8 = x__0 == notNull(z__0)
+    };
+    t#10 = !t#8;
+    if (isNull(z__0)) {
+      t#9 = false
+    } else {
+      t#9 = notNull(z__0) == x__0
+    };
+    if (isNull(z__0)) {
+      t#11 = false
+    } else {
+      t#11 = notNull(z__0) == x__0
+    };
+    t#13 = !t#11;
+    if (isNull(z__0)) {
+      t#12 = isNull(w__0)
+    } else {
+      let t#15;
+      if (isNull(w__0)) {
+        t#15 = false
       } else {
-## using `notNull` around z allows for matching the (int*int)->bool sig to match.
-        t#0 = x__0 == notNull(z__0)
+        t#15 = notNull(z__0) == notNull(w__0)
       };
-## x != z; just the negation of the block above.
-      if (isNull(z__0)) {
-        t#8 = false
+      t#12 = t#15
+    };
+    if (isNull(z__0)) {
+      t#14 = isNull(w__0)
+    } else {
+      let t#16;
+      if (isNull(w__0)) {
+        t#16 = false
       } else {
-        t#8 = x__0 == notNull(z__0)
+        t#16 = notNull(z__0) == notNull(w__0)
       };
-      t#10 = !t#8;
-## z == x; functionally same as two above, but different operand order.
-      if (isNull(z__0)) {
-        t#9 = false
-      } else {
-        t#9 = notNull(z__0) == x__0
-      };
-## z != x
-      if (isNull(z__0)) {
-        t#11 = false
-      } else {
-        t#11 = notNull(z__0) == x__0
-      };
-      t#13 = !t#11;
-## z == w; both have nullable types.
-      if (isNull(z__0)) {
-        t#12 = isNull(w__0)
-      } else {
-        let t#15;
-        if (isNull(w__0)) {
-          t#15 = false
-        } else {
-          t#15 = notNull(z__0) == notNull(w__0)
-        };
-        t#12 = t#15
-      };
-## z != w
-      if (isNull(z__0)) {
-        t#14 = isNull(w__0)
-      } else {
-        let t#16;
-        if (isNull(w__0)) {
-          t#16 = false
-        } else {
-          t#16 = notNull(z__0) == notNull(w__0)
-        };
-        t#14 = t#16
-      };
-## w == null; See the last expression that was not pulled out into a temporary
-      return__0 = list(t#1, t#2, t#3, t#4, t#5, t#6, t#7, false, true, t#0, t#10, t#9, t#13, t#12, !t#14, isNull(w__0))
-  })
+      t#14 = t#16
+    };
+    return__0 = list(t#1, t#2, t#3, t#4, t#5, t#6, t#7, false, true, t#0, t#10, t#9, t#13, t#12, !t#14, isNull(w__0))
+})

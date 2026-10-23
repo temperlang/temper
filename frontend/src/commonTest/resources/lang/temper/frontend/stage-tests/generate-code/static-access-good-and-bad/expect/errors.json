@@ -6,5 +6,6 @@
     "Type name required for accessing static member!",
     "Type name required for accessing static member!",
     "Type name required for accessing static member!",
-    "Member ap defined in C__0 not publicly accessible!"
+    "Member ap defined in C__0 not publicly accessible!",
+    "Expected subtype of Int32, but got Invalid!"
 ]

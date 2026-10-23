@@ -13,7 +13,6 @@ import lang.temper.frontend.Module
 import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
-import lang.temper.interp.New
 import lang.temper.interp.forEachActual
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
@@ -21,7 +20,6 @@ import lang.temper.log.Positioned
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
-import lang.temper.type.Abstractness
 import lang.temper.type.AndType
 import lang.temper.type.BubbleType
 import lang.temper.type.FunctionType
@@ -31,7 +29,6 @@ import lang.temper.type.NominalType
 import lang.temper.type.OrType
 import lang.temper.type.StaticType
 import lang.temper.type.TopType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypePartMapper
@@ -41,14 +38,17 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.invalidType2
 import lang.temper.type.excludeBubble
 import lang.temper.type.isBooleanLike
-import lang.temper.type.isBubbly
-import lang.temper.type.isVoid
 import lang.temper.type.isVoidAllowing
 import lang.temper.type.mentionsInvalid
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.DefinedNonNullType
+import lang.temper.type2.DefinedType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
-import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.hackMapNewStyleToOld
+import lang.temper.type2.invalidSig
+import lang.temper.type2.passTypeOf
 import lang.temper.type2.withNullity
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.BlockTree
@@ -70,6 +70,7 @@ import lang.temper.value.nameContained
 import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
+import lang.temper.value.typeFromSignature
 import lang.temper.value.visibilitySymbol
 
 /**
@@ -145,7 +146,9 @@ internal class TypeChecker(
         }
         TreeVisit.startingAt(root).forEachContinuing tree@{ tree ->
             tree is FunTree || return@tree
-            val returnType = (tree.typeInferences?.type as? FunctionType)?.returnType ?: return@tree
+            val type = tree.typeInferences?.type as? DefinedType ?: return@tree
+            val sig = AdHocArrowTypes.reverseToSig(type)
+            val returnType = sig?.returnType2 ?: return@tree
             if (returnType.isVoidAllowing) {
                 val returnDeclName = tree.parts?.returnDecl?.parts?.name ?: return@tree
                 voidReturnDeclNames.add(returnDeclName.content)
@@ -194,14 +197,24 @@ internal class TypeChecker(
             BuiltinFuns.abstractPanicFn -> checkAbstractPanicContext(t)
             else -> checkRegularCall(t)
         }
-        // And make sure we don't use Void in calls. Assignment is handled as a special case,
-        // so exclude that in checks here.
+        // And make sure we don't use types that are only return types in calls.
+        // Assignment is handled as a special case because we can assign void to
+        // a return variable, so exclude that in checks here.
         // Also avoid preserve calls because it can store whatever args it wants, including void.
         // TODO How to avoid so much special handling for preserve?
-        if (!(fn == BuiltinFuns.preserveFn || fn == BuiltinFuns.setLocalFn)) {
+        if (fn != BuiltinFuns.preserveFn) {
+            val isAssigment = fn == BuiltinFuns.setLocalFn
             for (kid in t.children) {
-                if (kid.typeInferences?.type?.isVoid == true) {
-                    reportBadVoid(kid.pos)
+                var type = kid.typeInferences?.type ?: continue
+                if (type.definition == WellKnownTypes.resultTypeDefinition) {
+                    reportNotAllowedAsInput(kid.pos, type)
+                } else if (!isAssigment) {
+                    while (type.definition == WellKnownTypes.neverTypeDefinition) {
+                        type = type.bindings.getOrNull(0) ?: WellKnownTypes.emptyType2
+                    }
+                    if (type.definition == WellKnownTypes.voidTypeDefinition) {
+                        reportBadVoid(kid.pos)
+                    }
                 }
             }
         }
@@ -285,13 +298,20 @@ internal class TypeChecker(
         // Failure can happen in cases of an inferred return type for lambda blocks.
         // With some effort, we likely can fix that, but this checks against that
         // for now as well as anything else that might slip through in the future.
-        val returnType = (t.typeInferences?.type as? FunctionType)?.returnType
+        val sig = t.typeInferences?.type?.let { AdHocArrowTypes.reverseToSig(it) }
+        val returnType = sig?.returnType2
         val returnDecl = t.parts?.returnDecl
+        if (returnType?.definition == WellKnownTypes.bubbleTypeDefinition) {
+            // TODO: Distinguish between returning Bubble (collapsed from `Never | Bubble`)
+            // and returning Result<Never<...>, Bubble>` in the Typer before re-enabling the below.
+            return // HACK
+        }
         if (returnDecl != null) {
             val returnDeclType = returnDecl.parts?.name?.typeInferences?.type
-            checkSubType(returnDecl, returnType, returnDeclType)
+            val passType = returnType?.let(::passTypeOf)
+            checkSubType(returnDecl, passType, returnDeclType)
         }
-        if (returnType?.isBubbly == false) {
+        if (returnType != null && returnType.definition != WellKnownTypes.resultTypeDefinition) {
             checkAgainstBubbles(t)
         }
     }
@@ -321,9 +341,7 @@ internal class TypeChecker(
         // But for `null` check that it has a nullable type
         // because the Typer tries a number of strategies.
         if (t.content == TNull.value) {
-            val type2 = t.typeInferences?.type?.let {
-                hackMapOldStyleToNew(it)
-            }
+            val type2 = t.typeInferences?.type
             when {
                 type2 == null -> logSink.log(
                     level = Log.Error,
@@ -354,12 +372,16 @@ internal class TypeChecker(
         // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
-        val rightType = rightTree.typeInferences?.type?.let { excludeBubble(it) }
+        val rightType = rightTree.typeInferences?.type?.let { passTypeOf(it) }
+        var rightTypeNotNever = rightType
+        while (rightTypeNotNever?.definition == WellKnownTypes.neverTypeDefinition) {
+            rightTypeNotNever = rightTypeNotNever.bindings.firstOrNull()
+        }
         // TODO: We probably want to enforce that we have either a left or a right type from the
         // checker, but baby steps.
         checkSubType(t, leftType, rightType)
         // And make sure we don't use void as a value. Focus on actual void, not just void-like for now.
-        if (rightType?.isVoid == true) {
+        if (rightTypeNotNever?.definition == WellKnownTypes.voidTypeDefinition) {
             // We can assign voids only to simple names that are temporaries or appropriate return decls.
             val badVoid = when (val name = leftTree.nameContained) {
                 null -> true
@@ -372,8 +394,8 @@ internal class TypeChecker(
         }
     }
 
-    private fun checkSubType(src: Positioned, leftType: StaticType?, rightType: StaticType?) {
-        if (leftType != null && rightType != null && !typeContext.isSubType(rightType, leftType)) {
+    private fun checkSubType(src: Positioned, leftType: Type2?, rightType: Type2?) {
+        if (leftType != null && rightType != null && !typeContext2.isSubType(rightType, leftType)) {
             logSink.log(
                 level = Log.Error,
                 template = MessageTemplate.ExpectedSubType,
@@ -386,7 +408,7 @@ internal class TypeChecker(
     private fun checkSetp(t: CallTree) {
         val (_, nameTree, thisTree, valueTree) = t.children.padTo(SETP_ARITY + 1, null)
         val name = nameTree?.nameContained ?: return
-        val typeShape = ((thisTree?.typeInferences?.type as? NominalType)?.definition as? TypeShape) ?: return
+        val typeShape = (thisTree?.typeInferences?.type as? DefinedNonNullType)?.definition ?: return
         // Tests say we're evaluating supertypes, maybe via some union type for `this`?
         val property = typeShape.properties.find { it.name == name } ?: return
         // Check has setter.
@@ -405,8 +427,8 @@ internal class TypeChecker(
         val propertyType = property.descriptor
             ?: logSink.logInvalid2BecauseMissingType(nameTree, "name")
         val valueType = valueTree?.typeInferences?.type
-            ?: logSink.logInvalidBecauseMissingType(valueTree ?: t.pos.rightEdge, "value")
-        if (failsValidSubtypeCheck(hackMapOldStyleToNew(valueType), propertyType)) {
+            ?: logSink.logInvalid2BecauseMissingType(valueTree ?: t.pos.rightEdge, "value")
+        if (failsValidSubtypeCheck(valueType, propertyType)) {
             logSink.log(
                 level = Log.Error,
                 template = MessageTemplate.ExpectedSubType,
@@ -419,7 +441,7 @@ internal class TypeChecker(
     private fun checkRegularCall(t: CallTree) {
         val tTypeInferences = t.typeInferences
         val callee = t.childOrNull(0) ?: return
-        val calleeTypes = tTypeInferences?.variant ?: return
+        val calleeTypes = typeFromSignature(tTypeInferences?.variant ?: return)
         val actuals = extractTypedActuals(t) ?: return
         val bindings = tTypeInferences.bindings2
         fun bind(t: StaticType): StaticType =
@@ -428,7 +450,9 @@ internal class TypeChecker(
                 object : TypePartMapper {
                     override fun mapType(t: StaticType): StaticType {
                         if (t is NominalType && t.bindings.isEmpty()) {
-                            val binding = bindings[t.definition]
+                            val binding = bindings[t.definition]?.let {
+                                hackMapNewStyleToOld(it)
+                            }
                             if (binding is StaticType) {
                                 return binding
                             }
@@ -436,7 +460,6 @@ internal class TypeChecker(
                         return t
                     }
 
-                    override fun mapBinding(b: TypeActual): TypeActual = b
                     override fun mapDefinition(d: TypeDefinition) = d
                 },
             )
@@ -449,28 +472,8 @@ internal class TypeChecker(
                 TopType,
                 is NominalType,
                 -> {
-                    var reported = false
-                    if (callee.functionContained is New) {
-                        run newCall@{
-                            val type = t.children.getOrNull(1)?.staticTypeContained ?: return@newCall null
-                            val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@newCall null
-                            when (shape.abstractness) {
-                                // Customize the error messaging for this case.
-                                Abstractness.Abstract -> {
-                                    reported = true
-                                    logSink.log(
-                                        level = Log.Error,
-                                        template = MessageTemplate.CannotInstantiateAbstractType,
-                                        pos = t.child(1).pos,
-                                        values = listOf(shape.name.displayName),
-                                    )
-                                }
-                                Abstractness.Concrete -> null
-                            }
-                        }
-                    }
                     // Most invalid callee types already reported in more specific ways, but not all.
-                    if (!reported && (calleeType != InvalidType || callee.functionContained == null)) {
+                    if (!calleeType.isInvalidDescriptor || callee.functionContained == null) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ExpectedFunctionType,
@@ -498,7 +501,7 @@ internal class TypeChecker(
 
                     val valueFormals = boundCalleeType.valueFormals
 
-                    if (actuals.size !in boundCalleeType.arityRange) {
+                    if (actuals.size !in boundCalleeType.arityRange && calleeType != invalidSigAsType) {
                         logSink.log(
                             level = Log.Error,
                             template = MessageTemplate.ArityMismatch,
@@ -523,7 +526,8 @@ internal class TypeChecker(
                             )
                         }
                         val formalType = formal?.staticType ?: break
-                        if (failsValidSubtypeCheck(actual.type, formalType)) {
+                        val actualType = actual.type
+                        if (failsValidSubtypeCheck(actualType, formalType)) {
                             // Preserve can do whatever it wants, especially for storing void args.
                             // TODO Figure out how not to special-case it?
                             if (callee.functionContained != BuiltinFuns.preserveFn) {
@@ -531,12 +535,12 @@ internal class TypeChecker(
                                     level = Log.Error,
                                     template = MessageTemplate.ExpectedSubType,
                                     pos = actual.pos,
-                                    values = listOf(formalType, actual.type),
+                                    values = listOf(formalType, actualType),
                                 )
                             }
                         }
                     }
-                    val computedType = tTypeInferences.type
+                    val computedType = hackMapNewStyleToOld(tTypeInferences.type)
                     val boundCalleePassType = excludeBubble(boundCalleeType.returnType).let {
                         // HACK: allow Never-ish compatibility on return type for nullary specials
                         // until we get rid of NeverType entirely.
@@ -549,11 +553,11 @@ internal class TypeChecker(
                                     } else {
                                         t
                                     }
-                                override fun mapBinding(b: TypeActual): TypeActual = b
                                 override fun mapDefinition(d: TypeDefinition): TypeDefinition = d
                             },
                         )
                     }
+
                     if (failsValidSubtypeCheck(boundCalleePassType, computedType)) {
                         logSink.log(
                             level = Log.Error,
@@ -577,7 +581,7 @@ internal class TypeChecker(
         val typeTree = tree.childOrNull(2) ?: return
         val checkedExpr = tree.child(1)
         val targetType = typeTree.staticTypeContained ?: return
-        val exprType = checkedExpr.typeInferences?.type ?: return
+        val exprType = hackMapNewStyleToOld(checkedExpr.typeInferences?.type ?: return)
         if (exprType.mentionsInvalid || targetType.mentionsInvalid) {
             return // Error reported elsewhere
         }
@@ -596,6 +600,10 @@ internal class TypeChecker(
     private fun reportBadVoid(pos: Position) {
         logSink.log(level = Log.Error, template = MessageTemplate.ExpectedNonVoid, pos = pos, values = listOf())
     }
+
+    private fun reportNotAllowedAsInput(pos: Position, type: Type2) {
+        logSink.log(Log.Error, MessageTemplate.TypeNotAllowedAsInput, pos, listOf(type))
+    }
 }
 
 private data class TypedActual(
@@ -612,10 +620,16 @@ private fun extractTypedActuals(t: CallTree): List<TypedActual>? {
         val type = child.typeInferences?.type
         if (type != null) {
             val symbol = symbolChild?.symbolContained
-            actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = type, pos = child.pos))
+            val typeOld = hackMapNewStyleToOld(type)
+            actuals.add(TypedActual(symbol = symbol, symbolPos = symbolChild?.pos, type = typeOld, pos = child.pos))
         } else {
             problemExtracting = true
         }
     }
     return if (!problemExtracting) { actuals } else { null }
+}
+
+private val invalidSigAsType by lazy { typeFromSignature(invalidSig) }
+private val StaticType.isInvalidDescriptor: Boolean get() {
+    return this is InvalidType || this == invalidSigAsType
 }

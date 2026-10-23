@@ -1,3 +1,3 @@
 [
-    "Expected function type, but got (fn (Int32): Void)?!"
+  "Expected subtype of fn (Int32): Void, but got (fn (Int32): Void)?!"
 ]

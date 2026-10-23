@@ -30,8 +30,8 @@
           }
         } else if (caseIndexLocal#0 == 3) {
           panic()
-## After the panic call there is no `caseIndex#8 = 4` because that leads to
-## unreachable code warnings on Java, and is unnecessary.
+## After the panic call there is no `caseIndex#0 = 4` because that leads to
+## Unreachable code warnings on Java, and is unnecessary.
         } else if (caseIndexLocal#0 == 4) {
           return__0 = core.doneResult();
           break fn__0;

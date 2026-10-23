@@ -7,8 +7,10 @@ import lang.temper.log.spanningPosition
 import lang.temper.name.NameMaker
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Descriptor
+import lang.temper.type2.Type2
 
 typealias FlowMaker = (BlockTree) -> BlockFlow
 
@@ -111,7 +113,7 @@ abstract class Planting(
 
     fun Block(
         flowMaker: FlowMaker? = null,
-        type: StaticType? = null,
+        type: Type2? = null,
         children: (BlockPlanting).() -> Any?,
     ): UnpositionedTreeTemplate<BlockTree> {
         val planting = BlockPlanting(nameMaker)
@@ -122,7 +124,7 @@ abstract class Planting(
     /** Builds a block, "spanning", inferring position metadata from the children. */
     fun BlockS(
         flowMaker: FlowMaker? = null,
-        type: StaticType? = null,
+        type: Type2? = null,
         children: (BlockPlanting).() -> Any?,
     ): TreeTemplate<BlockTree> {
         val planting = BlockPlanting(nameMaker)
@@ -140,7 +142,7 @@ abstract class Planting(
     fun Block(
         pos: Position,
         flowMaker: FlowMaker? = null,
-        type: StaticType? = null,
+        type: Type2? = null,
         children: (BlockPlanting).() -> Any?,
     ): TreeTemplate<BlockTree> {
         val planting = BlockPlanting(nameMaker)
@@ -160,7 +162,7 @@ abstract class Planting(
         children: (Planting).() -> Any?,
     ): UnpositionedTreeTemplate<CallTree> {
         val rowPlanting = RowPlanting(nameMaker)
-        rowPlanting.V(callee, type?.variant)
+        rowPlanting.V(callee, type?.variant?.let { AdHocArrowTypes.definedTypeForSig(it) })
         rowPlanting.children()
         return planted(UnpositionedCallTemplate(type, rowPlanting.childList))
     }
@@ -188,7 +190,7 @@ abstract class Planting(
         children: (Planting).() -> Any?,
     ): TreeTemplate<CallTree> {
         val rowPlanting = RowPlanting(nameMaker)
-        rowPlanting.V(callee, type = type?.variant)
+        rowPlanting.V(callee, type = type?.variant?.let { AdHocArrowTypes.definedTypeForSig(it) })
         rowPlanting.children()
         return planted(CallTemplate(pos, type, rowPlanting.childList))
     }
@@ -215,7 +217,7 @@ abstract class Planting(
         children: (Planting).() -> Any?,
     ): TreeTemplate<CallTree> {
         val rowPlanting = RowPlanting(nameMaker)
-        rowPlanting.V(callee, type = type?.variant)
+        rowPlanting.V(callee, type = type?.variant?.let { AdHocArrowTypes.definedTypeForSig(it) })
         rowPlanting.children()
         return planted(CallTemplate(rowPlanting.spannedPosition!!, type, rowPlanting.childList))
     }
@@ -303,57 +305,48 @@ abstract class Planting(
     }
 
     fun Fn(
-        type: StaticType? = null,
+        type: Descriptor? = null,
         children: (Planting).() -> Any?,
     ): UnpositionedTreeTemplate<FunTree> {
         val rowPlanting = RowPlanting(nameMaker)
         rowPlanting.children()
-        return planted(UnpositionedFunTemplate(type, rowPlanting.childList))
+        return planted(UnpositionedFunTemplate(type?.let(AdHocArrowTypes::toType2), rowPlanting.childList))
     }
 
     fun Fn(
         pos: Position,
-        type: StaticType? = null,
+        type: Descriptor? = null,
         children: (Planting).() -> Any?,
     ): TreeTemplate<FunTree> {
         val rowPlanting = RowPlanting(nameMaker)
         rowPlanting.children()
-        return planted(FunTemplate(pos, type, rowPlanting.childList))
-    }
-
-    fun FnS(
-        type: StaticType? = null,
-        children: (Planting).() -> Any?,
-    ): TreeTemplate<FunTree> {
-        val rowPlanting = RowPlanting(nameMaker)
-        rowPlanting.children()
-        return planted(FunTemplate(rowPlanting.spannedPosition!!, type, rowPlanting.childList))
+        return planted(FunTemplate(pos, type?.let(AdHocArrowTypes::toType2), rowPlanting.childList))
     }
 
     /** ln is shorthand for "left name": a name used in the assignment/write position. */
-    fun Ln(name: TemperName, type: StaticType? = null): UnpositionedTreeTemplate<LeftNameLeaf> =
+    fun Ln(name: TemperName, type: Type2? = null): UnpositionedTreeTemplate<LeftNameLeaf> =
         planted(UnpositionedLeftNameLeafTemplate(type, name))
 
-    fun Ln(pos: Position, name: TemperName, type: StaticType? = null): TreeTemplate<LeftNameLeaf> =
+    fun Ln(pos: Position, name: TemperName, type: Type2? = null): TreeTemplate<LeftNameLeaf> =
         planted(LeftNameLeafTemplate(pos, type, name))
 
-    fun Ln(type: StaticType? = null, makeName: (NameMaker) -> TemperName) =
+    fun Ln(type: Type2? = null, makeName: (NameMaker) -> TemperName) =
         Ln(makeName.invoke(nameMaker), type)
 
-    fun Ln(pos: Position, type: StaticType? = null, makeName: (NameMaker) -> TemperName) =
+    fun Ln(pos: Position, type: Type2? = null, makeName: (NameMaker) -> TemperName) =
         Ln(pos, makeName.invoke(nameMaker), type)
 
     /** rn is shorthand for "right name": a name used in read position. */
-    fun Rn(name: TemperName, type: StaticType? = null): UnpositionedTreeTemplate<RightNameLeaf> =
+    fun Rn(name: TemperName, type: Type2? = null): UnpositionedTreeTemplate<RightNameLeaf> =
         planted(UnpositionedRightNameLeafTemplate(type, name))
 
-    fun Rn(pos: Position, name: TemperName, type: StaticType? = null): TreeTemplate<RightNameLeaf> =
+    fun Rn(pos: Position, name: TemperName, type: Type2? = null): TreeTemplate<RightNameLeaf> =
         planted(RightNameLeafTemplate(pos, type, name))
 
-    fun Rn(type: StaticType? = null, makeName: (NameMaker) -> TemperName) =
+    fun Rn(type: Type2? = null, makeName: (NameMaker) -> TemperName) =
         Rn(makeName.invoke(nameMaker), type)
 
-    fun Rn(pos: Position, type: StaticType? = null, makeName: (NameMaker) -> TemperName) =
+    fun Rn(pos: Position, type: Type2? = null, makeName: (NameMaker) -> TemperName) =
         Rn(pos, makeName.invoke(nameMaker), type)
 
     fun Stay(): UnpositionedTreeTemplate<StayLeaf> =
@@ -362,13 +355,13 @@ abstract class Planting(
     fun Stay(pos: Position): TreeTemplate<StayLeaf> =
         planted(StayLeafTemplate(pos))
 
-    fun V(value: Value<*>, type: StaticType? = null): UnpositionedTreeTemplate<ValueLeaf> =
+    fun V(value: Value<*>, type: Type2? = null): UnpositionedTreeTemplate<ValueLeaf> =
         planted(UnpositionedValueLeafTemplate(type, value))
 
     fun V(symbol: Symbol): UnpositionedTreeTemplate<ValueLeaf> =
         V(Value(symbol))
 
-    fun V(pos: Position, value: Value<*>, type: StaticType? = null): TreeTemplate<ValueLeaf> =
+    fun V(pos: Position, value: Value<*>, type: Type2? = null): TreeTemplate<ValueLeaf> =
         planted(ValueLeafTemplate(pos, type, value))
 
     fun V(pos: Position, symbol: Symbol): TreeTemplate<ValueLeaf> =
@@ -1099,7 +1092,7 @@ sealed class TreeTemplate<TREE : Tree>(
 
 private class UnpositionedBlockTemplate(
     val flowMaker: FlowMaker?,
-    val type: StaticType?,
+    val type: Type2?,
     val children: List<TreeInnard>,
 ) : UnpositionedTreeTemplate<BlockTree>() {
     override fun at(pos: Position): TreeTemplate<BlockTree> =
@@ -1112,7 +1105,7 @@ private class UnpositionedBlockTemplate(
 private class BlockTemplate(
     pos: Position,
     val flowMaker: FlowMaker? = null,
-    val type: StaticType?,
+    val type: Type2?,
     val children: List<TreeInnard>,
 ) : TreeTemplate<BlockTree>(pos) {
     override val typeInferences
@@ -1169,7 +1162,7 @@ private class DeclTemplate(
     val children: List<UnpositionedTreeTemplate<*>>,
 ) : TreeTemplate<DeclTree>(pos) {
     override val typeInferences
-        get() = BasicTypeInferences(WellKnownTypes.voidType, listOf())
+        get() = BasicTypeInferences(WellKnownTypes.voidType2, listOf())
 
     override fun toTree(document: Document): DeclTree {
         val tree = DeclTree(document, pos, buildTreeList(document, pos, children))
@@ -1199,7 +1192,7 @@ private class EscTemplate(
 }
 
 private class UnpositionedFunTemplate(
-    val type: StaticType?,
+    val type: Type2?,
     val children: List<UnpositionedTreeTemplate<*>>,
 ) : UnpositionedTreeTemplate<FunTree>() {
     override fun at(pos: Position): TreeTemplate<FunTree> =
@@ -1214,7 +1207,7 @@ private class FunTemplate(
     override val typeInferences: BasicTypeInferences?,
     val children: List<UnpositionedTreeTemplate<*>>,
 ) : TreeTemplate<FunTree>(pos) {
-    constructor(pos: Position, type: StaticType?, children: List<UnpositionedTreeTemplate<*>>) :
+    constructor(pos: Position, type: Type2?, children: List<UnpositionedTreeTemplate<*>>) :
         this(pos, type?.let { BasicTypeInferences(it, listOf()) }, children)
 
     override fun toTree(document: Document): FunTree {
@@ -1225,7 +1218,7 @@ private class FunTemplate(
 }
 
 private class UnpositionedLeftNameLeafTemplate(
-    val type: StaticType?,
+    val type: Type2?,
     val name: TemperName,
 ) : UnpositionedTreeTemplate<LeftNameLeaf>() {
     override fun at(pos: Position): TreeTemplate<LeftNameLeaf> =
@@ -1240,7 +1233,7 @@ private class LeftNameLeafTemplate(
     override val typeInferences: BasicTypeInferences?,
     val name: TemperName,
 ) : TreeTemplate<LeftNameLeaf>(pos) {
-    constructor(pos: Position, type: StaticType?, name: TemperName) :
+    constructor(pos: Position, type: Type2?, name: TemperName) :
         this(pos, type?.let { BasicTypeInferences(it, listOf()) }, name)
 
     override fun toTree(document: Document): LeftNameLeaf {
@@ -1251,7 +1244,7 @@ private class LeftNameLeafTemplate(
 }
 
 private class UnpositionedRightNameLeafTemplate(
-    val type: StaticType?,
+    val type: Type2?,
     val name: TemperName,
 ) : UnpositionedTreeTemplate<RightNameLeaf>() {
     override fun at(pos: Position): TreeTemplate<RightNameLeaf> =
@@ -1266,7 +1259,7 @@ private class RightNameLeafTemplate(
     override val typeInferences: BasicTypeInferences?,
     val name: TemperName,
 ) : TreeTemplate<RightNameLeaf>(pos) {
-    constructor(pos: Position, type: StaticType?, name: TemperName) :
+    constructor(pos: Position, type: Type2?, name: TemperName) :
         this(pos, type?.let { BasicTypeInferences(it, listOf()) }, name)
 
     override fun toTree(document: Document): RightNameLeaf {
@@ -1291,7 +1284,7 @@ private class StayLeafTemplate(
 }
 
 private class UnpositionedValueLeafTemplate(
-    val type: StaticType?,
+    val type: Type2?,
     val value: Value<*>,
 ) : UnpositionedTreeTemplate<ValueLeaf>() {
     override fun at(pos: Position) = ValueLeafTemplate(pos, type, value)
@@ -1305,7 +1298,7 @@ private class ValueLeafTemplate(
     override val typeInferences: BasicTypeInferences?,
     val value: Value<*>,
 ) : TreeTemplate<ValueLeaf>(pos) {
-    constructor(pos: Position, type: StaticType?, value: Value<*>) :
+    constructor(pos: Position, type: Type2?, value: Value<*>) :
         this(pos, type?.let { BasicTypeInferences(it, listOf()) }, value)
 
     override fun toTree(document: Document): ValueLeaf {

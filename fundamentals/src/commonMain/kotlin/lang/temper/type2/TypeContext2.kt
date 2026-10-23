@@ -10,6 +10,7 @@ import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Variance
+import lang.temper.type.WellKnownTypes
 import lang.temper.type.WellKnownTypes.neverTypeDefinition
 import lang.temper.type2.Nullity.NonNull
 import lang.temper.type2.Nullity.OrNull
@@ -156,8 +157,36 @@ class TypeContext2 {
     private val extendsPathCache =
         mutableMapOf<Pair<TypeDefinition, TypeDefinition>, List<TypeDefinition>?>()
 
+    fun simpleLub(t: Type2, u: Type2): Type2 {
+        val lub = lub(t, u)
+        val anyAdmitsNull = admitsNull(t) || admitsNull(u)
+        val simpler = if (lub.size == 1) {
+            lub[0]
+        } else {
+            leastCommonSuperTypes(lub.map { it.withNullity(NonNull) }).firstOrNull()
+                ?: WellKnownTypes.invalidType2
+        }
+        return if (anyAdmitsNull && !admitsNull(simpler)) {
+            simpler.withNullity(OrNull)
+        } else {
+            simpler
+        }
+    }
+
+    fun simpleLub(atLeastOne: Iterable<Type2>): Type2 {
+        var lub: Type2? = null
+        for (t in atLeastOne) {
+            lub = if (lub == null) {
+                t
+            } else {
+                simpleLub(lub, t)
+            }
+        }
+        return lub ?: WellKnownTypes.invalidType2
+    }
+
     /**
-     * The least upper bound.
+     * The least upper bounds.
      */
     fun lub(t: Type2, u: Type2): List<Type2> = debug({ "lub($t, $u)" }) lubHelper@{
         if (t == u) {
@@ -243,6 +272,7 @@ class TypeContext2 {
         val superGroups = types.map {
             superTypeTreeOf(it).byDefinition
         }
+        if (superGroups.isEmpty()) { return setOf() }
         // First narrow down to common generic definitions.
         val commons = superGroups.map { it.keys }.intersectAll()
         // For now, just find valid parameterizations in common that are supertypes of all.
@@ -276,9 +306,9 @@ class TypeContext2 {
     }
 
     private fun <T> List<Set<T>>.intersectAll() = buildSet {
-        if (this@intersectAll.isNotEmpty()) {
-            this.addAll(this@intersectAll[0])
-        }
+        // The identity of set intersection is the set of everything, which is
+        // not representable, so just don't call here with zero sets.
+        this.addAll(this@intersectAll[0])
         for (group in this@intersectAll.subListToEnd(1)) {
             this.retainAll(group)
         }
@@ -687,14 +717,8 @@ class TypeContext2 {
             }
         }
 
-    fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean {
-        if (typeOrPartialType.nullity == OrNull) {
-            return true
-        }
-        // TODO: Once TypeFormal's allow upper bounds, look at the definition
-        // for nullable upper bounds.
-        return false
-    }
+    fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean =
+        Companion.admitsNull(typeOrPartialType)
 
     fun admitsNullFuzzingTypeParamRef(typeOrPartialType: TypeOrPartialType): Boolean? {
         if (typeOrPartialType is TypeParamRef) {
@@ -770,6 +794,17 @@ class TypeContext2 {
         }
     private var specificityVarCounter: Long = 0
     private val overloadSpecificityMemoTable = mutableMapOf<Pair<Signature2, Signature2>, OverloadSpecificity?>()
+
+    companion object {
+        fun admitsNull(typeOrPartialType: TypeOrPartialType): Boolean {
+            if (typeOrPartialType.nullity == OrNull) {
+                return true
+            }
+            // TODO: Once TypeFormal's allow upper bounds, look at the definition
+            // for nullable upper bounds.
+            return false
+        }
+    }
 }
 
 internal data class OverloadSpecificity(

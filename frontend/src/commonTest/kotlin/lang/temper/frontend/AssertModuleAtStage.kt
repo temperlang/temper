@@ -12,6 +12,7 @@ import lang.temper.common.assertStructure
 import lang.temper.common.buildListMultimap
 import lang.temper.common.console
 import lang.temper.common.ignore
+import lang.temper.common.json.JsonArray
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
@@ -372,6 +373,7 @@ internal fun assertModuleAtStage(
                         var value: JsonValue? = gotJson
                         for (prop in rel.r.jsonProperties) {
                             value = (value as? JsonObject)?.getOrNull(prop)
+                                ?: rel.defaultJsonValue
                         }
                         value?.let { value ->
                             val oldValue = originals[rel]
@@ -830,14 +832,22 @@ internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : Log
 private data class StageTestResourceFileRelationship(
     val stage: Stage?,
     val r: TestResourceFileRelationship,
+    val defaultJsonValue: JsonValue?,
 )
 
 private val testResourceFileRelationships: Map<FilePath, StageTestResourceFileRelationship> =
     buildMap {
-        fun put(stage: Stage?, jsonProperties: List<String>, relFilePath: FilePath, converter: DataFileConverter) {
+        fun put(
+            stage: Stage?,
+            jsonProperties: List<String>,
+            relFilePath: FilePath,
+            converter: DataFileConverter,
+            defaultJsonValue: JsonValue? = null,
+        ) {
             this[relFilePath] = StageTestResourceFileRelationship(
                 stage,
                 TestResourceFileRelationship(jsonProperties, relFilePath, converter),
+                defaultJsonValue = defaultJsonValue,
             )
         }
         for (stage in Stage.entries) {
@@ -900,6 +910,7 @@ private val testResourceFileRelationships: Map<FilePath, StageTestResourceFileRe
             listOf("errors"),
             filePath("expect", "errors.json"),
             ParseJsonTolerantConverter,
+            defaultJsonValue = JsonArray(listOf()),
         )
         put(
             null,

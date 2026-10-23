@@ -6,12 +6,14 @@ import lang.temper.type.DotHelper
 import lang.temper.type.OperatorMember
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.value.BINARY_OP_CALL_ARG_COUNT
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.IsNullFn
 import lang.temper.value.NameLeaf
 import lang.temper.value.NamedBuiltinFun
+import lang.temper.value.NotFn
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.TBoolean
 import lang.temper.value.TNull
@@ -19,7 +21,6 @@ import lang.temper.value.Tree
 import lang.temper.value.ValueLeaf
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
-import lang.temper.value.typeForFunctionValue
 import lang.temper.value.vIsNullFn
 
 /**
@@ -39,7 +40,7 @@ internal fun simplifyNullCheck(t: CallTree) {
         }
         // nonNullOperand == nullOperand -> isNull(nonNullOperand, nullOperand)
         t.edge(0).replace { pos ->
-            V(pos, vIsNullFn, typeForFunctionValue(IsNullFn))
+            V(pos, vIsNullFn, AdHocArrowTypes.definedTypeForSig(IsNullFn.sig))
         }
         // -> isNull(nonNullOperand, /* nothing else */)
         val nullOperandIndex = nullOperand.incoming!!.edgeIndex
@@ -47,13 +48,13 @@ internal fun simplifyNullCheck(t: CallTree) {
 
         // When we started with `e != null`, isNull(e) -> !isNull(e)
         if (!positivity) {
-            val notFnType = typeForFunctionValue(BuiltinFuns.notFn)
             val notCallType = CallTypeInferences(
-                WellKnownTypes.booleanType,
-                notFnType,
+                WellKnownTypes.booleanType2,
+                NotFn.sig,
                 mapOf(),
                 listOf(),
             )
+            val notFnType = AdHocArrowTypes.definedTypeForSig(NotFn.sig)
             edge.replace { pos ->
                 Call(pos, notCallType) {
                     V(pos.leftEdge, BuiltinFuns.vNotFn, notFnType)
@@ -63,7 +64,7 @@ internal fun simplifyNullCheck(t: CallTree) {
         }
     } else { // -> true or false
         edge.replace {
-            V(t.pos, TBoolean.value(!positivity), WellKnownTypes.booleanType)
+            V(t.pos, TBoolean.value(!positivity), WellKnownTypes.booleanType2)
         }
     }
 }

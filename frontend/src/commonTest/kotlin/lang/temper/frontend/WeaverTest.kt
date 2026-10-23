@@ -26,10 +26,10 @@ import lang.temper.name.ExportedName
 import lang.temper.name.ParsedName
 import lang.temper.type.TypeFormal
 import lang.temper.type.plantCallWithTypeInfo
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockPlanting
 import lang.temper.value.BlockTree
@@ -61,7 +61,6 @@ import lang.temper.value.isEmptyBlock
 import lang.temper.value.returnParsedName
 import lang.temper.value.simplifyControlFlow
 import lang.temper.value.toPseudoCode
-import lang.temper.value.typeFromSignature
 import lang.temper.value.vLabelSymbol
 import lang.temper.value.vReturnDeclSymbol
 import lang.temper.value.vSsaSymbol
@@ -143,15 +142,15 @@ class WeaverTest {
         Block {
             for (v in vars) {
                 Decl {
-                    Ln(v, WKT.intType)
+                    Ln(v, WKT.intType2)
                     V(vVarSymbol)
                     V(void)
                 }
             }
-            Assign(a, WKT.intType) {
-                Assign(b, WKT.intType) {
-                    Assign(c, WKT.intType) {
-                        Assign(d, WKT.intType) {
+            Assign(a, WKT.intType2) {
+                Assign(b, WKT.intType2) {
+                    Assign(c, WKT.intType2) {
+                        Assign(d, WKT.intType2) {
                             CallF { V(0) }
                         }
                     }
@@ -229,10 +228,10 @@ class WeaverTest {
         If(
             { CallB { V(0) } },
             thn = {
-                V(Value("foo", TString), WKT.stringType)
+                V(Value("foo", TString), WKT.stringType2)
             },
             els = {
-                V(Value("bar", TString), WKT.stringType)
+                V(Value("bar", TString), WKT.stringType2)
             },
         )
     }
@@ -250,18 +249,18 @@ class WeaverTest {
                     If(
                         { CallFF { V(3) } },
                         thn = {
-                            Assign(y, WKT.booleanType) { V(TBoolean.valueFalse) }
-                            Assign(x, WKT.booleanType) { CallF { V(4) } }
+                            Assign(y, WKT.booleanType2) { V(TBoolean.valueFalse) }
+                            Assign(x, WKT.booleanType2) { CallF { V(4) } }
                         },
                         els = {
-                            Assign(x, WKT.booleanType) { V(TBoolean.valueTrue) }
-                            Assign(y, WKT.booleanType) { CallFF { V(5) } }
+                            Assign(x, WKT.booleanType2) { V(TBoolean.valueTrue) }
+                            Assign(y, WKT.booleanType2) { CallFF { V(5) } }
                         },
                     )
                 },
                 els = {
-                    Assign(x, WKT.booleanType) {
-                        Assign(y, WKT.booleanType) {
+                    Assign(x, WKT.booleanType2) {
+                        Assign(y, WKT.booleanType2) {
                             CallF { V(6) }
                         }
                     }
@@ -269,10 +268,10 @@ class WeaverTest {
             )
             plantCallWithTypeInfo(BuiltinFuns.eqBooleanFn) {
                 plantCallWithTypeInfo(BuiltinFuns.eqBooleanFn) {
-                    Rn(x, WKT.booleanType)
-                    Rn(y, WKT.booleanType)
+                    Rn(x, WKT.booleanType2)
+                    Rn(y, WKT.booleanType2)
                 }
-                Rn(z, WKT.booleanType)
+                Rn(z, WKT.booleanType2)
             }
         },
         /*
@@ -335,11 +334,11 @@ class WeaverTest {
         buildInput = {
             val x = nameMaker.unusedSourceName(ParsedName("x"))
             Decl {
-                Ln(x, WKT.booleanType)
+                Ln(x, WKT.booleanType2)
                 V(varSymbol)
                 V(void)
             }
-            Assign(x, WKT.booleanType) {
+            Assign(x, WKT.booleanType2) {
                 Block {
                     OrElse(
                         or = {
@@ -356,7 +355,7 @@ class WeaverTest {
                 }
             }
             plantCallWithTypeInfo(BuiltinFuns.notFn) {
-                Rn(x, WKT.booleanType)
+                Rn(x, WKT.booleanType2)
             }
         },
         want = """
@@ -414,22 +413,22 @@ class WeaverTest {
             val x = nameMaker.unusedSourceName(ParsedName("x"))
             val y = nameMaker.unusedSourceName(ParsedName("y"))
             Block {
-                Decl { Ln(y, WKT.intType) }
-                Assign(y, WKT.intType) {
+                Decl { Ln(y, WKT.intType2) }
+                Assign(y, WKT.intType2) {
                     plantCallWithTypeInfo(BuiltinFuns.plusIntIntFn) {
                         V(1)
                         Block {
-                            Decl { Ln(x, WKT.intType) }
+                            Decl { Ln(x, WKT.intType2) }
                             If(
                                 cond = { CallB { V(0) } },
                                 thn = {
                                     If(
                                         cond = { CallB { V(1) } },
                                         thn = {
-                                            Assign(x, WKT.intType) { CallF { V(2) } }
+                                            Assign(x, WKT.intType2) { CallF { V(2) } }
                                         },
                                         els = {
-                                            Assign(x, WKT.intType) { CallF { V(3) } }
+                                            Assign(x, WKT.intType2) { CallF { V(3) } }
                                         },
                                     )
                                 },
@@ -440,7 +439,7 @@ class WeaverTest {
                         }
                     }
                 }
-                V(void, WKT.voidType)
+                V(void, WKT.voidType2)
             }
         },
         want = """
@@ -761,8 +760,8 @@ class WeaverTest {
     ) {
         val x = nameMaker.unusedSourceName(ParsedName("x"))
         val s = nameMaker.unusedSourceName(ParsedName("s"))
-        Decl { Ln(s, WKT.stringType) }
-        Assign(s, WKT.stringType) {
+        Decl { Ln(s, WKT.stringType2) }
+        Assign(s, WKT.stringType2) {
             Block {
                 If(
                     {
@@ -771,7 +770,7 @@ class WeaverTest {
                             V(0)
                         }
                     },
-                    thn = { V(Value("one", TString), WKT.stringType) },
+                    thn = { V(Value("one", TString), WKT.stringType2) },
                     els = {
                         If(
                             {
@@ -780,7 +779,7 @@ class WeaverTest {
                                     V(1)
                                 }
                             },
-                            thn = { V(Value("two", TString), WKT.stringType) },
+                            thn = { V(Value("two", TString), WKT.stringType2) },
                             els = {
                                 If(
                                     {
@@ -789,8 +788,8 @@ class WeaverTest {
                                             V(3)
                                         }
                                     },
-                                    thn = { V(Value("three", TString), WKT.stringType) },
-                                    els = { V(Value("many", TString), WKT.stringType) },
+                                    thn = { V(Value("three", TString), WKT.stringType2) },
+                                    els = { V(Value("many", TString), WKT.stringType2) },
                                 )
                             },
                         )
@@ -798,7 +797,7 @@ class WeaverTest {
                 )
             }
         }
-        Rn(s, WKT.stringType)
+        Rn(s, WKT.stringType2)
     }
 
     @Test
@@ -821,8 +820,8 @@ class WeaverTest {
         val x = nameMaker.unusedSourceName(ParsedName("x"))
         val y = nameMaker.unusedSourceName(ParsedName("y"))
         val z = nameMaker.unusedSourceName(ParsedName("z"))
-        Decl { Ln(z, WKT.intType) }
-        Assign(z, WKT.intType) {
+        Decl { Ln(z, WKT.intType2) }
+        Assign(z, WKT.intType2) {
             Block {
                 OrElse(
                     or = {
@@ -837,7 +836,7 @@ class WeaverTest {
                 )
             }
         }
-        Rn(z, WKT.intType)
+        Rn(z, WKT.intType2)
     }
 
     @Test
@@ -875,12 +874,12 @@ class WeaverTest {
 
         Block {
             Decl {
-                Ln(x, type = hackMapNewStyleToOld(intOrNull))
+                Ln(x, type = intOrNull)
                 V(vTypeSymbol)
                 V(Value(ReifiedType(intOrNull), TType))
             }
 
-            Assign(x, hackMapNewStyleToOld(intOrNull)) {
+            Assign(x, intOrNull) {
                 Block {
                     OrElse(
                         or = {
@@ -898,12 +897,10 @@ class WeaverTest {
                             // This `null` was not getting assigned to the same temporary as other branches.
                             V(
                                 TNull.value,
-                                type = hackMapNewStyleToOld(
-                                    MkType2(WKT.neverTypeDefinition)
-                                        .actuals(listOf(WKT.intType2))
-                                        .canBeNull(true)
-                                        .get(),
-                                ),
+                                type = MkType2(WKT.neverTypeDefinition)
+                                    .actuals(listOf(WKT.intType2))
+                                    .canBeNull(true)
+                                    .get(),
                             )
                         },
                     )
@@ -931,14 +928,14 @@ class WeaverTest {
             V(vTypeSymbol)
             V(Types.vInt)
         }
-        Assign(x, WKT.intType) {
+        Assign(x, WKT.intType2) {
             Call {
                 Call(vTypeAngleFn) {
                     V(
                         BuiltinFuns.vBubble,
-                        typeFromSignature(BubbleFn.sigs.first { it.typeFormals.isNotEmpty() }),
+                        AdHocArrowTypes.definedTypeForSig(BubbleFn.sigs.first { it.typeFormals.isNotEmpty() }),
                     )
-                    V(Types.vInt, WKT.typeType)
+                    V(Types.vInt, WKT.typeType2)
                 }
             }
         }
@@ -981,24 +978,24 @@ class WeaverTest {
         val sum = ExportedName(nameMaker.namingContext, ParsedName("sum"))
 
         Decl {
-            Ln(p, type = hackMapNewStyleToOld(promiseInt))
+            Ln(p, type = promiseInt)
             V(vTypeSymbol)
             V(Value(ReifiedType(promiseInt)))
         }
 
-        Assign(sum, WKT.intType) {
+        Assign(sum, WKT.intType2) {
             plantCallWithTypeInfo(BuiltinFuns.plusIntIntFn) {
-                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType)) {
-                    Rn(p, type = hackMapNewStyleToOld(promiseInt))
+                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType2)) {
+                    Rn(p, type = promiseInt)
                 }
-                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType)) {
-                    Rn(p, type = hackMapNewStyleToOld(promiseInt))
+                plantCallWithTypeInfo(AwaitFn, listOf(WKT.intType2)) {
+                    Rn(p, type = promiseInt)
                 }
             }
         }
 
         // Splitting out an initializer always leaves a void at the end.
-        V(void, WKT.voidType)
+        V(void, WKT.voidType2)
     }
 
     @Test
@@ -1013,15 +1010,15 @@ class WeaverTest {
             val fnLabel = nameMaker.unusedSourceName(fnParsedName)
             Block {
                 Decl {
-                    Ln(x, WKT.stringType)
+                    Ln(x, WKT.stringType2)
                 }
-                Assign(x, WKT.stringType) {
+                Assign(x, WKT.stringType2) {
                     Call {
                         Rn(BuiltinName("foo"))
                         Fn {
                             V(vReturnDeclSymbol)
                             Decl {
-                                Ln(preAllocatedReturn, WKT.stringType)
+                                Ln(preAllocatedReturn, WKT.stringType2)
                                 V(vTypeSymbol)
                                 V(Types.vString)
                                 V(vSsaSymbol)
@@ -1033,7 +1030,7 @@ class WeaverTest {
                                 // CallF { V(0) }
                                 V(vLabelSymbol)
                                 Ln(fnLabel)
-                                V(Value("foo", TString), WKT.stringType)
+                                V(Value("foo", TString), WKT.stringType2)
                             }
                         }
                     }
@@ -1060,21 +1057,21 @@ class WeaverTest {
             val (x, y, z) = listOf("x", "y", "z")
                 .map { nameMaker.unusedSourceName(ParsedName(it)) }
 
-            Decl { Ln(x, WKT.intType) }
-            Decl { Ln(y, WKT.intType) }
+            Decl { Ln(x, WKT.intType2) }
+            Decl { Ln(y, WKT.intType2) }
             Fn {
                 Block {
-                    Decl { Ln(z, WKT.intType) }
-                    Assign(z, WKT.intType) {
+                    Decl { Ln(z, WKT.intType2) }
+                    Assign(z, WKT.intType2) {
                         Block {
                             If(
                                 cond = { CallB { V(0) } },
-                                thn = { Rn(x, WKT.intType) },
-                                els = { Rn(y, WKT.intType) },
+                                thn = { Rn(x, WKT.intType2) },
+                                els = { Rn(y, WKT.intType2) },
                             )
                         }
                     }
-                    CallF { Rn(z, WKT.intType) }
+                    CallF { Rn(z, WKT.intType2) }
                 }
             }
         },
@@ -1185,17 +1182,17 @@ class WeaverTest {
                 nameMaker.unusedSourceName(ParsedName(it))
             }
             Decl {
-                Ln(x, WKT.intType)
+                Ln(x, WKT.intType2)
             }
-            Assign(x, WKT.intType) {
+            Assign(x, WKT.intType2) {
                 Block {
                     OrElse(
                         or = {
                             plantCallWithTypeInfo(
                                 BuiltinFuns.divIntIntFn,
                             ) {
-                                Rn(y, WKT.intType)
-                                Rn(z, WKT.intType)
+                                Rn(y, WKT.intType2)
+                                Rn(z, WKT.intType2)
                             }
                         },
                         els = {
@@ -1499,7 +1496,7 @@ private fun Planting.CallVV(args: Planting.() -> Unit) =
     plantCallWithTypeInfo(vvCallee) { args() }
 
 @Suppress("TestFunctionName")
-private fun Planting.V(n: Int) = V(Value(n, TInt), WKT.intType)
+private fun Planting.V(n: Int) = V(Value(n, TInt), WKT.intType2)
 
 private fun reblock(block: BlockTree) {
     val flow = structureBlock(block)
