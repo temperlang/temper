@@ -10,8 +10,6 @@
   Dot__0 = `std//regex/`.Dot;
   @imported(\(`std//regex/`.Repeat)) let Repeat__0;
   Repeat__0 = type (Repeat);
-  @imported(\(`std//regex/`.End)) let End__0;
-  End__0 = `std//regex/`.End;
   void;
   void;
   void;
@@ -21,7 +19,8 @@
   r1__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, new Repeat(new CodePoints("b"), 0, null, false))));
   void;
   let r2__0;
-  r2__0 = do_call_compiled(new Sequence(list(new CodePoints("a"), Dot__0, End__0, new CodePoints("{b"), new Repeat(new CodePoints("}"), 0, null, false))));
+## A /.../ literal does not interpolate, so `{b}` is a brace that is not a count.
+  r2__0 = error (MalformedRegex);
   void;
   let r3__0;
 ## (/g) unrecognized in rgx(list("(?/g)a.b*"), list());
