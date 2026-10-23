@@ -245,6 +245,10 @@ enum class MessageTemplate(
         "At this time, users can connect only classes or top-level functions",
         CompilationPhase.CodeGeneration,
     ),
+    ConnectedMethodDefaults(
+        "Method %s of a connected class can't have default arguments, since host code implements it directly",
+        CompilationPhase.Interpreter,
+    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

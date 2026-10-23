@@ -419,6 +419,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun connectedDefaults() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/connected-defaults"),
+    )
+
+    @Test
     fun sealedConnectedCasts() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/sealed-connected-casts"),
         // comments in the cast checker describe why this is the way it is.
