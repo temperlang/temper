@@ -2231,6 +2231,14 @@ class JavaBackendTest {
                 |
                 |      @connected
                 |      export let length(s: String? = null): Int;
+                |
+                |      @connected
+                |      export class Box(
+                |        public width: Float64,
+                |        public height: Float64,
+                |      ) {
+                |        public area(): Float64;
+                |      }
                 |      ```,
                 |    SubConnected.java: ```
                 |      package my_test_library.sub;

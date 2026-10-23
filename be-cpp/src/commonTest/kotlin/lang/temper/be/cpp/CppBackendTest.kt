@@ -787,6 +787,14 @@ class CppBackendTest {
                     |
                     |@connected
                     |export let length(s: String? = null): Int;
+                    |
+                    |@connected
+                    |export class Box(
+                    |  public width: Float64,
+                    |  public height: Float64,
+                    |) {
+                    |  public area(): Float64;
+                    |}
                 """.trimMargin(),
                 filePath("something", "deeper", "more-fun.temper") to """
                     |export let prod(i: Int, j: Int): Int {
@@ -837,27 +845,27 @@ class CppBackendTest {
                 |                  #include <my-test-library/something.hpp>
                 |                  #include "something/_connected.hpp"
                 |                  namespace my_test_library {
-                |                    int32_t twice(int32_t i_5) {
-                |                      return my_test_library::prod(i_5, 2);
+                |                    int32_t twice(int32_t i_9) {
+                |                      return my_test_library::prod(i_9, 2);
                 |                    }
-                |                    int32_t sum(int32_t i_7, int32_t j_8, temper::core::NullableParam<int32_t> bonus) {
-                |                      int32_t bonus_9;
+                |                    int32_t sum(int32_t i_11, int32_t j_12, temper::core::NullableParam<int32_t> bonus) {
+                |                      int32_t bonus_13;
                 |                      if (temper::core::is_null(bonus)) {
                 |                        {
-                |                          bonus_9 = 0;
+                |                          bonus_13 = 0;
                 |                        }
                 |                      } else {
                 |                        {
-                |                          bonus_9 = temper::core::not_null(bonus);
+                |                          bonus_13 = temper::core::not_null(bonus);
                 |                        }
                 |                      }
-                |                      return _connected::sum(i_7, j_8, bonus_9);
+                |                      return _connected::sum(i_11, j_12, bonus_13);
                 |                    }
-                |                    int32_t sum(int32_t i_7, int32_t j_8) {
-                |                      return sum(i_7, j_8, nullptr);
+                |                    int32_t sum(int32_t i_11, int32_t j_12) {
+                |                      return sum(i_11, j_12, nullptr);
                 |                    }
-                |                    int32_t inc(int32_t i_11) {
-                |                      return sum(i_11, 1);
+                |                    int32_t inc(int32_t i_15) {
+                |                      return sum(i_15, 1);
                 |                    }
                 |                    int32_t length(temper::core::NullableParam<std::string> s) {
                 |                      return _connected::length(s);
@@ -883,6 +891,10 @@ class CppBackendTest {
                 |                  #include <temper-core/core.hpp>
                 |                  #include <my-test-library/something/deeper.hpp>
                 |                  namespace my_test_library {
+                |                    namespace _connected {
+                |                      struct Box;
+                |                    }
+                |                    typedef _connected::Box Box;
                 |                    int32_t twice(int32_t);
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);

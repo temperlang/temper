@@ -1,11 +1,14 @@
 class _connected:
     from pyroaring import BitMap
 
-    def new_bitset_connected() -> "_connected.BitMap":
-        return _connected.BitMap()
+    class Bitset:
+        """Temper's connected Bitset class, with the members Temper would generate."""
 
-    def bitset_add(bitset: "_connected.BitMap", i: int) -> None:
-        bitset.add(i)
+        def __init__(self) -> None:
+            self._roaring = _connected.BitMap()
 
-    def bitset_contains(bitset: "_connected.BitMap", i: int) -> bool:
-        return i in bitset
+        def add(self, i: int, /) -> None:
+            self._roaring.add(i)
+
+        def contains(self, i: int, /) -> bool:
+            return i in self._roaring

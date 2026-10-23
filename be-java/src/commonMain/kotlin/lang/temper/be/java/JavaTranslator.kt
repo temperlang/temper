@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.autodocFor
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findImmediateSuperReaching
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
 import lang.temper.be.tmpl.mapGenericIndexed
@@ -183,10 +184,13 @@ class JavaTranslator(
                         is TmpL.SupportCodeDeclaration -> {}
                         is TmpL.Test -> moduleTest(tl)
                         is TmpL.TypeDeclaration ->
-                            when (tl.kind) {
-                                TmpL.TypeDeclarationKind.Class -> classDeclare(tl)
-                                TmpL.TypeDeclarationKind.Interface -> interfaceDeclare(tl)
-                                TmpL.TypeDeclarationKind.Enum -> TODO()
+                            when {
+                                // A same-named class among the library's
+                                // Java files takes its place in the package.
+                                tl.isUserConnected(module) -> {}
+                                tl.kind == TmpL.TypeDeclarationKind.Class -> classDeclare(tl)
+                                tl.kind == TmpL.TypeDeclarationKind.Interface -> interfaceDeclare(tl)
+                                else -> TODO()
                             }
                         is TmpL.TypeConnection -> {}
                     }

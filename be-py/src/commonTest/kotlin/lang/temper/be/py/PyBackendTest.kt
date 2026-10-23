@@ -751,6 +751,14 @@ class PyBackendTest {
             |
             |      @connected
             |      export let length(s: String? = null): Int;
+            |
+            |      @connected
+            |      export class Box(
+            |        public width: Float64,
+            |        public height: Float64,
+            |      ) {
+            |        public area(): Float64;
+            |      }
             |      ```,
             |    __connected__.py: ```
             |## All connected code goes into a single `_connected` namespace, using a class here.
@@ -796,22 +804,23 @@ class PyBackendTest {
             |              from builtins import int as int1, str as str3
             |              from typing import Union as Union2
             |              from temper_core import bubble as bubble0
-            |              _bubble_15 = bubble0
-            |              def sum(i_3: 'int1', j_4: 'int1', bonus_11: 'Union2[int1, None]' = None, /) -> 'int1':
-            |                  _bonus_11: 'Union2[int1, None]' = bonus_11
-            |                  bonus_5: 'int1'
-            |                  if _bonus_11 is None:
-            |                      bonus_5 = 0
+            |              _bubble_34 = bubble0
+            |              Box = _connected.Box
+            |              def sum(i_7: 'int1', j_8: 'int1', bonus_30: 'Union2[int1, None]' = None, /) -> 'int1':
+            |                  _bonus_30: 'Union2[int1, None]' = bonus_30
+            |                  bonus_9: 'int1'
+            |                  if _bonus_30 is None:
+            |                      bonus_9 = 0
             |                  else:
-            |                      bonus_5 = _bonus_11
+            |                      bonus_9 = _bonus_30
             |## Here's the connected call.
-            |                  return _connected.sum(i_3, j_4, bonus_5)
-            |              def inc(i_7: 'int1', /) -> 'int1':
-            |                  return sum(i_7, 1)
-            |              def length(s_9: 'Union2[str3, None]' = None, /) -> 'int1':
+            |                  return _connected.sum(i_7, j_8, bonus_9)
+            |              def inc(i_11: 'int1', /) -> 'int1':
+            |                  return sum(i_11, 1)
+            |              def length(s_13: 'Union2[str3, None]' = None, /) -> 'int1':
             |## And here we have a wasted assignment. TODO Clean this out?
-            |                  _s_9: 'Union2[str3, None]' = s_9
-            |                  return _connected.length(s_9)
+            |                  _s_13: 'Union2[str3, None]' = s_13
+            |                  return _connected.length(s_13)
             |
             |              ```,
             |          },
