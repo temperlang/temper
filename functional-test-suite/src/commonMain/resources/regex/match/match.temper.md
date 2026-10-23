@@ -231,16 +231,13 @@ And this should match nothing.
 
 But this should match a different kind of nothing, the empty string.
 
-```temper inert
-    // Ignore this case, because it fails on Lua.
-    // If enabled, we need a blank line added to the next log block.
     console.log(/[]*/.find(simplerLines).full.value);
-```
 
 ```log
 It was the best of times.
 It was the worst of times.
 -
+
 ```
 
 ### Word boundaries
@@ -326,6 +323,62 @@ It was the best;
 of times.;
 ;
 It was the worst of times.;
+```
+
+### Counted repeats
+
+Braces give exact, open-ended, and bounded repeat counts, greedy or reluctant.
+
+    let fourAs = "aaaa";
+    console.log(/a{2}/.find(fourAs).full.value);
+    console.log(/a{2,}/.find(fourAs).full.value);
+    console.log(/a{1,3}/.find(fourAs).full.value);
+    console.log(/a{1,3}?/.find(fourAs).full.value);
+
+```log
+aa
+aaaa
+aaa
+a
+```
+
+### Escaped punctuation
+
+Formatting escapes `~` and `&` for Python, and every backend still has to match
+them literally, both alone and in code sets.
+
+    console.log(/~&|[~&]+/.find("a~&b").full.value);
+    console.log(/[~&]+/.find("a&~b").full.value);
+
+```log
+~&
+&~
+```
+
+### Telling specials apart
+
+Specials don't support `==`, so code that walks regex data checks their
+classes instead. Regex literals use the same instances as the exported names.
+
+    let specialName(node: RegexNode): String {
+      when (node) {
+        is BeginSpecial -> "begin";
+        is DotSpecial -> "dot";
+        is EndSpecial -> "end";
+        is WordBoundarySpecial -> "boundary";
+        is DigitSpecial -> "digit";
+        is SpaceSpecial -> "space";
+        is WordSpecial -> "word";
+        else -> "other";
+      }
+    }
+    let nodes: List<RegexNode> = [
+      Begin, Dot, End, WordBoundary, Digit, Space, Word, /$/.data, /a/.data,
+    ];
+    console.log(nodes.join(", ") { node => specialName(node) });
+
+```log
+begin, dot, end, boundary, digit, space, word, end, other
 ```
 
 ## Import
