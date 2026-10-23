@@ -1075,9 +1075,10 @@ public final class Core {
      * @param source read once for its contents
      * @param function converts source values to result values
      * @return the remapped list, with the same length
+     * @param <F> the result element type
      */
-    public static List<Boolean> listMapDoubleToObj(List<Double> source, DoubleFunction<Boolean> function) {
-        List<Boolean> result = new ArrayList<>(source.size());
+    public static <F> List<F> listMapDoubleToObj(List<Double> source, DoubleFunction<F> function) {
+        List<F> result = new ArrayList<>(source.size());
         for (double elem : source) {
             result.add(function.apply(elem));
         }

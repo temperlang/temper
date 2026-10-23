@@ -153,6 +153,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowBubble)
 
     @Test
+    fun controlFlowForOfFolded() =
+        runFunctionalTest(Ft.ControlFlowForOfFolded)
+
+    @Test
     fun controlFlowIfReturn() =
         runFunctionalTest(Ft.ControlFlowIfReturn)
 
@@ -311,6 +315,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun typesNetresponse() =
         runFunctionalTest(Ft.TypesNetresponse)
+
+    @Test
+    fun typesNetresponseNotFound() =
+        runFunctionalTest(Ft.TypesNetresponseNotFound)
 
     @Test
     fun typesStringBuild() =

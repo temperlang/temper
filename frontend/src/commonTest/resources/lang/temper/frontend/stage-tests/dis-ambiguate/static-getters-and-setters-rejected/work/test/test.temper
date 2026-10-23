@@ -1,0 +1,6 @@
+class C {
+  public static get answer(): Int { 42 }
+  public static set count(v: Int): Void {}
+  public get age(): Int { 1 }
+  public static twice(x: Int): Int { x * 2 }
+}

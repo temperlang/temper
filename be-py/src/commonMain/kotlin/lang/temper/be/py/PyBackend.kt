@@ -740,11 +740,13 @@ private fun formatDepsPep621(dependencies: List<Dependency>): String {
     return "\n|    $listText\n|"
 }
 
+/**
+ * The name to import the library's top-level package by, like `foo_bar` for `foo-bar`.
+ * This must agree with the package directory, which [toModuleFileName] names, so it uses the same
+ * conversion. [IdentStyle] would re-split words around digits: `f64str` to `f64_str`, `radix-36` to `radix36`.
+ */
 fun pyDirToLibraryName(libraryDirectoryName: FilePathSegment): PyIdentifierName =
-    PyIdentifierName(
-        // convert directory name like foo-bar to Py ident like foo_bar
-        IdentStyle.Dash.convertTo(IdentStyle.Snake, libraryDirectoryName.fullName),
-    )
+    PyIdentifierName(toModuleFileName(libraryDirectoryName.fullName))
 
 private fun String.scrubRfc822Name(): String {
     // See https://packaging.python.org/en/latest/specifications/pyproject-toml/#authors-maintainers

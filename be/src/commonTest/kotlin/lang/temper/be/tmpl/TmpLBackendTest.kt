@@ -4400,6 +4400,63 @@ class TmpLBackendTest {
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 
+    /**
+     * The implicit `return = doneResult()` at the end of a generator function lands in the
+     * synthesized `else` of a trailing `if` with no `else`.  It must be dropped there too,
+     * as it is when it is an element of a block.
+     */
+    @Test
+    fun generatorFnEndingInIfDropsDoneResult() = assertGeneratedCode(
+        supportNetwork = defaultTestSupportNetwork.copy(
+            representationOfVoid = RepresentationOfVoid.DoNotReifyVoid,
+        ),
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      var n = 3;
+            |      n = n + 0;
+            |      async { (): GeneratorResult<Empty> extends GeneratorFn =>
+            |        if (n > 0) { console.log("pos"); }
+            |      }
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    "foo.tmpl": {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |        let GetConsole#0 = builtins.GetConsole;
+            |        let nym`+#0` = builtins.nym`+` /* (Int32, Int32) -> Int32 */;
+            |        let nym`<=>#0` = builtins.nym`<=>` /* (Int32, Int32) -> Int32 */;
+            |        let ConsoleLog#0 = builtins.ConsoleLog;
+            |        let async#0 = builtins.async /* (Fn__0<SafeGenerator<Empty>>) -> Void */;
+            |        let console#0: Console = GetConsole#0();
+            |        @QName("test-library/foo.n") var n__0: Int32 = 3;
+            |        module init {
+            |          n__0 = nym`+#0`(n__0, 0);
+            |        }
+            |        let * fn__0(): SafeGenerator<Empty> {
+            |          if (n__0 > 0) {
+            |            ConsoleLog#0(console#0, "pos");
+            |          }
+            |        }
+            |        module init {
+            |          async#0(fn__0);
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  }
+            |}
+        """.trimMargin(),
+    )
+
     @Test
     fun bubblyConstructorInNonBubblyCall() = assertGeneratedCode(
         inputJsonPathToContent = """
@@ -4461,6 +4518,83 @@ class TmpLBackendTest {
             |    bar.tmpl: "__DO_NOT_CARE__",
             |    bar.tmpl.map: "__DO_NOT_CARE__",
             |  }
+            |}
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun staticMemberAssignmentIsAnErrorNotAPropertyWriteOnTheType() = assertGeneratedCode(
+        inputJsonPathToContent = """
+            |{
+            |  foo: {
+            |    foo.temper: ```
+            |      export class C {
+            |        public static var n: Int = 0;
+            |        public static bump(): Void { C.n = C.n + 1; }
+            |        public var x: Int = 0;
+            |        public putX(): Void { C.x = 1; }
+            |      }
+            |      export let bump(): Void { C.n = 2; }
+            |      C.n = 3;
+            |      ```
+            |  }
+            |}
+        """.trimMargin(),
+        want = """
+            |{
+            |  tmpl: {
+            |    foo.tmpl: {
+            |      content:
+            |        ```
+            |        //// work//foo/ => foo.tmpl
+            |## TmpL has no mutable static: `static var` comes out as `static let`.
+            |        @QName("test-library/foo.type C") class C / C {
+            |          @QName("test-library/foo.type C.n") static let n__0: Int32 = 0;
+            |          @QName("test-library/foo.type C.bump()") static let bump__0(): Void {
+            |            C.n;
+            |## Inside a static method this used to be a malformed assignment that
+            |## crashed control flow fixup with a ClassCastException.
+            |            <garbage "Cannot assign to static member n">;
+            |            return void;
+            |          }
+            |          @QName("test-library/foo.type C.x") var x__0: Int32;
+            |## `C.x` names an instance property through the type.  As an internal set it
+            |## used to become a write to the type value with no error at all.
+            |          @QName("test-library/foo.type C.putX()") let putX__0(this = this__0, @QName("test-library/foo.type C.putX().(this)") @impliedThis(C) this__0: C): Void {
+            |            <garbage "Cannot assign to static member x">;
+            |            return void;
+            |          }
+            |          @QName("test-library/foo.type C.constructor()") constructor__0(this = this__1, @QName("test-library/foo.type C.constructor().(this)") @impliedThis(C) this__1: C) {
+            |            /* this */ this__1.x__0 = 0;
+            |            return void;
+            |          }
+            |          get.x -> getx__0(this = this__2, @impliedThis(C) this__2: C): Int32 {
+            |            return /* this */ this__2.x__0;
+            |          }
+            |          set.x -> setx__0(this = this__3, @impliedThis(C) this__3: C, newX__0: Int32): Void {
+            |            /* this */ this__3.x__0 = newX__0;
+            |            return void;
+            |          }
+            |        }
+            |## Elsewhere it used to be a property write on the type value printed as a string.
+            |        @QName("test-library/foo.bump()") let bump(): Void {
+            |          <garbage "Cannot assign to static member n">;
+            |          return void;
+            |        }
+            |        module init {
+            |          <garbage "Cannot assign to static member n">;
+            |        }
+            |
+            |        ```
+            |    },
+            |    foo.tmpl.map: "__DO_NOT_CARE__",
+            |  },
+            |  errors: [
+            |    "Cannot assign to static member n of C; static members are only initialized at their declaration!",
+            |    "Cannot assign to static member x of C; static members are only initialized at their declaration!",
+            |    "Cannot assign to static member n of C; static members are only initialized at their declaration!",
+            |    "Cannot assign to static member n of C; static members are only initialized at their declaration!",
+            |  ]
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )

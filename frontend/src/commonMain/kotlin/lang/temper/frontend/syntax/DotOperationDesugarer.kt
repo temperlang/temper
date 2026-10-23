@@ -317,9 +317,28 @@ private fun desugarDotOperation(
     }
     val dotName = DotMember(symbol)
 
+    val leftHandOfMacroContext = leftHandOfMacroContext(dotCall)
+    val context: DotContext = run dotContext@{
+        if (leftHandOfMacroContext != null) {
+            return@dotContext DotContext.Write
+        }
+        val parent = dotCallEdge.source!! // Root is not a call
+        if (parent is CallTree) {
+            if (dotCallEdge.edgeIndex == 0) {
+                return@dotContext DotContext.Call
+            } else if (dotCallEdge.edgeIndex == 1 && parent.child(0).isSetLocalRef) {
+                return@dotContext DotContext.Write
+            }
+        }
+        DotContext.Read
+    }
+
     val subjectValue = subject.valueContained
     // See if it's a static member access first.
-    subjectValue?.let { subjectValue ->
+    // `C.n = x` is not a read of `C.n`, so it does not become a `getStatic`.
+    // It goes the instance route below and becomes a setter call on the type,
+    // which the Typer rejects with a located error.
+    subjectValue?.takeIf { context != DotContext.Write }?.let { subjectValue ->
         val subjectType = asReifiedType(subjectValue)
         // If we know that the static member is resolved against the type,
         // then turn it into a `getStatic` call now.
@@ -353,7 +372,7 @@ private fun desugarDotOperation(
             }
         }
     }
-    if (actuallyEnclosingTypeTree != null && dotKind == DotKind.SimpleDot) {
+    if (actuallyEnclosingTypeTree != null && dotKind == DotKind.SimpleDot && context != DotContext.Write) {
         val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type2
         val actuallyEnclosingTypeShape = (actuallyEnclosingType as? DefinedNonNullType)?.definition
         if (actuallyEnclosingTypeShape?.name == subject.nameContained && extensions[dotName].isEmpty()) {
@@ -369,21 +388,6 @@ private fun desugarDotOperation(
     }
 
     // If not, proceed to treat as an instance member.
-    val leftHandOfMacroContext = leftHandOfMacroContext(dotCall)
-    val context: DotContext = run dotContext@{
-        if (leftHandOfMacroContext != null) {
-            return@dotContext DotContext.Write
-        }
-        val parent = dotCallEdge.source!! // Root is not a call
-        if (parent is CallTree) {
-            if (dotCallEdge.edgeIndex == 0) {
-                return@dotContext DotContext.Call
-            } else if (dotCallEdge.edgeIndex == 1 && parent.child(0).isSetLocalRef) {
-                return@dotContext DotContext.Write
-            }
-        }
-        DotContext.Read
-    }
 
     // If it's an internal use from within the body of a class, which one?
     val enclosingTypeShape: TypeShape?
@@ -415,7 +419,10 @@ private fun desugarDotOperation(
                 problem.logTo(logSink)
                 convertToErrorNode(subjectEdge, problem)
             }
-        } else if (actuallyEnclosingTypeTree != null) {
+        } else if (actuallyEnclosingTypeTree != null && context != DotContext.Write) {
+            // Not for `C.x = y`: as an internal set on the type name, a backed instance
+            // property `x` would become `setp(C, x__0, y)`, a write through the type value
+            // that the Typer never sees.  As an external set the Typer rejects it.
             // TODO Instead go straight to internal static get? See above logic on direct jump.
             val actuallyEnclosingType = actuallyEnclosingTypeTree.reifiedTypeContained?.type
             val actuallyEnclosingTypeShape = (actuallyEnclosingType as? NominalType)?.definition as? TypeShape
