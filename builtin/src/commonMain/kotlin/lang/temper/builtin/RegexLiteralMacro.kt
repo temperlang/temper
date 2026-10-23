@@ -36,6 +36,7 @@ import temper.std.regex.CodePoints
 import temper.std.regex.CodeRange
 import temper.std.regex.CodeSet
 import temper.std.regex.Or
+import temper.std.regex.RegexGlobal
 import temper.std.regex.RegexNode
 import temper.std.regex.Repeat
 import temper.std.regex.Sequence
@@ -156,14 +157,26 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
     }
 }
 
+// Specials are singletons whose classes are named differently from their
+// exports, so map the instances to the exported names.
+private val specialNames: Map<Special, String> = mapOf(
+    RegexGlobal.Begin to "Begin",
+    RegexGlobal.Dot to "Dot",
+    RegexGlobal.End to "End",
+    RegexGlobal.WordBoundary to "WordBoundary",
+    RegexGlobal.Digit to "Digit",
+    RegexGlobal.Space to "Space",
+    RegexGlobal.Word to "Word",
+)
+
 private fun Planting.buildRegex(
     regex: RegexNode,
     macroEnv: MacroEnvironment,
 ): UnpositionedTreeTemplate<*> {
-    // Simple Java names match Temper class names here by design.
+    // Simple Java names match Temper class names here by design, except for specials.
     fun Planting.makeName() = makeImportMeCall(
         macroEnv.pos,
-        Symbol(regex.javaClass.simpleName),
+        Symbol(if (regex is Special) specialNames.getValue(regex) else regex.javaClass.simpleName),
         "std/regex",
         macroEnv,
     )

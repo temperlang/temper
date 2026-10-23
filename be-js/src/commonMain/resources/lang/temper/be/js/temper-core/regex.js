@@ -113,11 +113,11 @@ export const regexCompiledSplit = (_, compiled, text) => {
  * @returns {RegExp}
  */
 export const regexFormatterRegexCompileFormatted = (_, formatted) => {
-  if (formatted.includes("\\&")) {
-    // std/regex escapes '&' because that's needed on Python, but
+  if (formatted.includes("\\&") || formatted.includes("\\~")) {
+    // std/regex escapes '&' and '~' because that's needed on Python, but
     // EcmaScript's builtin complains.
     formatted = formatted.replace(
-      /\\+&/g,
+      /\\+[&~]/g,
       // If the length is even, then it is escaped because the number of
       // backslashes preceding is odd.
       (s) => (s.length & 1 ? s : s.substring(1))
