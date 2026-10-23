@@ -31,9 +31,8 @@ internal val connectedDecorator = MetadataDecorator(
 ) { args ->
     // Whether we have errors or not, move on with a void value.
     void.also check@{
-        isProcessingCore && return@check
         // At this stage, we don't need the location context.
-        isProcessingStd(sharedLocationContext = null) && return@check
+        isProcessingUserCode || return@check
         val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
         when (val type = metadata[typeDeclSymbol]?.reifiedTypeContained) {
             null -> when (metadata[initSymbol]?.target) {

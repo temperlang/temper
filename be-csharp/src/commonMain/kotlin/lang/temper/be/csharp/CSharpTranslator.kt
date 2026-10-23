@@ -728,6 +728,11 @@ internal class CSharpTranslator(
     }
 
     private fun processTypeDeclaration(decl: TmpL.TypeDeclaration) {
+        // A connected user type is hand-written C# with the same name and
+        // members, in the library's connected code, so generate nothing.
+        if (!module.isStdLib && decl.metadata.any { it.key.symbol == connectedSymbol }) {
+            return
+        }
         typeDeclarationInProcess = decl
         try {
             // Extract getters and setters so we can pair them.

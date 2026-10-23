@@ -6,16 +6,16 @@ namespace Connecteds
     {
         R::Roaring32Bitmap roaring = new R::Roaring32Bitmap();
 
-        public Add(int i)
+        public void Add(int i)
         {
             // Two's complement is fine here, providing unique values.
             roaring.Add(unchecked((uint)i));
         }
 
-        public Contains(int i)
+        public bool Contains(int i)
         {
             // Again, two's complement is fine here.
-            roaring.Contains(unchecked((uint)i));
+            return roaring.Contains(unchecked((uint)i));
         }
     }
 }
