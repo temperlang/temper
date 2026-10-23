@@ -1,9 +1,6 @@
 [
-    "At this time, users can connect only top-level functions!",
-    "At this time, users can connect only top-level functions!",
-    "At this time, users can connect only top-level functions!",
-    "At this time, users can connect only top-level functions!",
-    "At this time, users can connect only top-level functions!",
-    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[C__1]\u003e from AnyValue!",
-    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[E__4]\u003e from S!"
+    "At this time, users can connect only classes or top-level functions!",
+    "At this time, users can connect only classes or top-level functions!",
+    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[C__0]\u003e from AnyValue!",
+    "Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: \u003c[E__0]\u003e from S!"
 ]

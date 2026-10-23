@@ -50,6 +50,26 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
             Abstractness.Concrete -> checkAllMethodsOverridden(typeShape, superTypeShapes)
         }
         checkOverridesCompatible(typeShape, superTypeShapes)
+        checkConnectedDefaults(typeShape)
+    }
+
+    /**
+     * Host code implements a user's connected class directly, so nothing would
+     * apply its methods' default arguments, and Temper doesn't fill defaults in
+     * at call sites.
+     */
+    private fun checkConnectedDefaults(typeShape: TypeShape) {
+        if (module.isEffectivelyCore || module.isEffectivelyStd) { return }
+        if (connectedSymbol !in typeShape.metadata) { return }
+        for (method in typeShape.methods) {
+            if (method.parameterNameSymbols?.optionalSymbols.isNullOrEmpty()) { continue }
+            logSink.log(
+                Log.Error,
+                MessageTemplate.ConnectedMethodDefaults,
+                method.stay?.pos ?: typeShape.stayLeaf?.pos ?: unknownPos,
+                listOf(method.symbol.text),
+            )
+        }
     }
 
     private fun checkAllMethodsOverridden(typeShape: TypeShape, superTypeShapes: Set<TypeShape>) {
@@ -65,6 +85,9 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
                         isProcessingCore && connectedSymbol in m.metadata -> true
                         // std has some required connections too which are sneakily hidden away
                         isStd && m.visibility == Visibility.Private && connectedSymbol in m.metadata -> true
+                        // A user's connected class gets its bodiless methods from host code.
+                        !isProcessingCore && !isStd && m.isPureVirtual &&
+                            connectedSymbol in superTypeShape.metadata -> true
                         m.methodKind != MethodKind.Constructor && m.isPureVirtual -> false
                         else -> true
                     }

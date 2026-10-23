@@ -11,6 +11,7 @@ import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
@@ -728,6 +729,11 @@ internal class CSharpTranslator(
     }
 
     private fun processTypeDeclaration(decl: TmpL.TypeDeclaration) {
+        // A connected user type is hand-written C# with the same name and
+        // members, in the library's connected code, so generate nothing.
+        if (decl.isUserConnected(module)) {
+            return
+        }
         typeDeclarationInProcess = decl
         try {
             // Extract getters and setters so we can pair them.

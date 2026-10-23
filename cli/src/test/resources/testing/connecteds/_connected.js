@@ -4,26 +4,20 @@ import { RoaringBitmap32, roaringLibraryInitialize } from "roaring-wasm";
 
 await roaringLibraryInitialize();
 
-/**
- * @returns {unknown}
- */
-export const newBitsetConnected = () => {
-  return new RoaringBitmap32();
-};
+/** Temper's connected Bitset class, with the members Temper would generate. */
+export class Bitset {
+  #roaring = new RoaringBitmap32();
 
-/**
- * @param {RoaringBitmap32} bitset
- * @param {number} i
- */
-export const bitsetAdd = (bitset, i) => {
-  bitset.add(i);
-};
+  /** @param {number} i */
+  add(i) {
+    this.#roaring.add(i);
+  }
 
-/**
- * @param {RoaringBitmap32} bitset
- * @param {number} i
- * @returns {boolean}
- */
-export const bitsetContains = (bitset, i) => {
-  return bitset.contains(i);
-};
+  /**
+   * @param {number} i
+   * @returns {boolean}
+   */
+  contains(i) {
+    return this.#roaring.contains(i);
+  }
+}

@@ -203,6 +203,14 @@ class RustBackendTest {
                 |
                 |      @connected
                 |      export let length(s: String? = null): Int;
+                |
+                |      @connected
+                |      export class Box(
+                |        public width: Float64,
+                |        public height: Float64,
+                |      ) {
+                |        public area(): Float64;
+                |      }
                 |      ```,
                 |    _connected.rs: ```
                 |## This submodule declaration in connected code is why we make a subdir later.
@@ -243,6 +251,7 @@ class RustBackendTest {
             |                          std::result::Result::Ok(())
             |                  }).clone()
             |              }
+            |              pub use self::_connected::Box;
             |              pub fn sum(i__0: i32, j__0: i32, bonus__0: std::option::Option<i32>) -> i32 {
             |                  let bonus__1: i32;
             |                  if bonus__0.is_none() {
