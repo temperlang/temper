@@ -506,8 +506,21 @@ class TypeContext2 {
             ) {
                 val sigT = withType(t, fn = { _, s, _ -> s }, fallback = { null })
                 val sigU = withType(u, fn = { _, s, _ -> s }, fallback = { null })
-                if (sigT != null && sigT == sigU) {
-                    return@isSub true
+                if (sigT != null && sigU != null) {
+                    if (sigT == sigU) {
+                        return@isSub true
+                    }
+                    val tTypeFormals = sigT.typeFormals
+                    val uTypeFormals = sigU.typeFormals
+                    if (tTypeFormals.isNotEmpty() && tTypeFormals.size == uTypeFormals.size &&
+                        sigT.requiredInputTypes.size == sigU.requiredInputTypes.size &&
+                        sigT.optionalInputTypes.size == sigU.optionalInputTypes.size
+                    ) {
+                        val sigUCompatible = formalCompatibleSig(sigU, tTypeFormals)
+                        if (sigT == sigUCompatible) {
+                            return@isSub true
+                        }
+                    }
                 }
             }
 
@@ -726,6 +739,35 @@ class TypeContext2 {
         }
         // TODO: Once TypeFormal's allow upper bounds, get rid of this tri-state variant.
         return admitsNull(typeOrPartialType)
+    }
+
+    /**
+     * Maybe we're comparing two types like the below which each have their own type formals.
+     *
+     *     fn<T__0>(T__0): T__0
+     *
+     *     fn<T__1>(T__1): T__1
+     *
+     * When comparing those two, the names of the formals do not matter.
+     *
+     * We substitute the names so that we can do structural comparison when subtyping.
+     */
+    private fun formalCompatibleSig(
+        t: Signature2,
+        compatibleTypeFormals: List<TypeFormal>,
+    ): Signature2? {
+        val typeFormals = t.typeFormals
+        if (compatibleTypeFormals.size != typeFormals.size) {
+            return null
+        }
+        if (typeFormals.isEmpty()) { return t }
+        val compatibleTypeFormalMap = mutableMapOf<TypeFormal, TypeParamRef>()
+        for (i in typeFormals.indices) {
+            // TODO: should we be checking that the upper-bounds (possibly with self-references
+            // like `T extends Equatable<T>`, are compatible.
+            compatibleTypeFormalMap[typeFormals[i]] = MkType2(compatibleTypeFormals[i]).get()
+        }
+        return t.mapType(compatibleTypeFormalMap).copy(typeFormals = compatibleTypeFormals)
     }
 
     /**

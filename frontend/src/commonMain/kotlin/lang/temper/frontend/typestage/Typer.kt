@@ -2313,7 +2313,7 @@ internal class Typer(
                         val rightTypeOrInvalid = rightType ?: invalidType2
                         val contradictions =
                             (ti.decision(t)?.explanations ?: emptyList()) +
-                                BecauseIllegalAssignment(
+                                becauseIllegalAssignment(
                                     t.pos,
                                     leftType ?: invalidType2,
                                     rightTypeOrInvalid,

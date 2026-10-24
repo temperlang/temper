@@ -7,7 +7,6 @@ import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
 import lang.temper.format.TokenSerializable
 import lang.temper.log.LogEntry
-import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.Positioned
@@ -20,7 +19,6 @@ import lang.temper.type2.TypeReason
 import lang.temper.value.AbstractTypeReasonElement
 import lang.temper.value.CallTree
 import lang.temper.value.Tree
-import lang.temper.value.TypeReasonElement
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 
@@ -92,20 +90,18 @@ internal class BecauseUnresolvedFunctionSignaturePart(
     override val level: Log.Level get() = Log.Info
 }
 
-internal class BecauseIllegalAssignment(
-    override val pos: Position,
-    val leftType: Type2,
-    val rightType: Type2,
-) : TypeReasonElement {
-    override fun logTo(logSink: LogSink) {
-        logSink.log(
-            level = Log.Error,
-            template = MessageTemplate.IllegalAssignment,
-            pos = pos,
-            values = listOf(leftType, rightType),
-        )
-    }
-}
+internal fun becauseIllegalAssignment(
+    pos: Position,
+    leftType: Type2,
+    rightType: Type2,
+) = TypeReason(
+    LogEntry(
+        level = Log.Error,
+        template = MessageTemplate.IllegalAssignment,
+        pos = pos,
+        values = listOf(leftType, rightType),
+    ),
+)
 
 internal class BecauseTypeInfoMissing(
     override val pos: Position,
