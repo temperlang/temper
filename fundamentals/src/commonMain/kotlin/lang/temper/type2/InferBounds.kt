@@ -13,6 +13,7 @@ import lang.temper.type.TypeBindingMapper
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
+import lang.temper.type.excludeNever
 import lang.temper.value.ReifiedType
 import lang.temper.value.ResolutionProblem
 import lang.temper.value.TType
@@ -189,7 +190,8 @@ fun inferBounds(
             null
         }
         call.contextType?.let { contextType ->
-            solver.assignable(contextType, callPass)
+            val contextTypeNotNever = excludeNever(contextType)
+            solver.assignable(contextTypeNotNever, callPass)
         }
         for (outputBound in call.outputBounds) {
             when (outputBound) {
@@ -265,7 +267,7 @@ fun inferBounds(
             var calleeHasProblems = false
             when (val solution = solver[callBundle.typeActuals]) {
                 is TypeListSolution -> {
-                    val (sig) = callee
+                    val sig = callee.sig
                     val n = min(solution.types.size, sig.typeFormals.size)
                     val bindingMap = (0 until n).associate { i ->
                         sig.typeFormals[i] to

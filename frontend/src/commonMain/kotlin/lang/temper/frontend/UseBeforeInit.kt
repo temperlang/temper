@@ -210,10 +210,10 @@ internal class UseBeforeInit(
             for (fns in readsAndWrites.nestedFunctions.values) {
                 for (fn in fns) {
                     if (fn !in freePerFn) {
-                        val parts = fn.tree.parts
-                        val fnInputParameters = parts?.formals ?: emptyList()
-                        val fnReturnDecl = parts?.returnDecl
-                        val fnBody = parts?.body as BlockTree
+                        val parts = fn.tree.parts ?: continue
+                        val fnInputParameters = parts.formals
+                        val fnReturnDecl = parts.returnDecl
+                        val fnBody = parts.body as BlockTree
 
                         val freeForFn = processBody(
                             inputParameters = fnInputParameters,

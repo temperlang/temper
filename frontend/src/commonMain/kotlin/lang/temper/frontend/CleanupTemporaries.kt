@@ -363,7 +363,7 @@ internal class CleanupTemporaries private constructor(
                         for ((elementIndex, temporaryLeaf) in ((chainStart + 1)..i) zip temporaryLeaves) {
                             val element = elements[elementIndex]
                             val assignment = element.edge!!.target as CallTree
-                            val temporary = temporaryLeaf.content as Temporary
+                            val temporary = temporaryLeaf.content as ResolvedName
                             edits.add(
                                 ReplaceRange(
                                     lineFor(element),

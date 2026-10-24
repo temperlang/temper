@@ -625,7 +625,7 @@ private class ClosureConvertClasses(
         mutableMapOf<TypeShape, Map<ClosureRecordInfo, List<ClosureRecordAlias>>>()
 
     /**
-     * If a type definition uses a free variable, make sure that instance's have access to a closure
+     * If a type definition uses a free variable, make sure that instances have access to a closure
      * record that aliases that variable.
      *
      * @return the set of closure records needed with the property symbols by which each is

@@ -17,12 +17,12 @@ data class UntypedCall(
     val inputBounds: List<InputBound>,
     /**
      * Equivalence bounds on the pass type.
-     * This is different from [contextType] which establishes an assignable to bound.
+     * This is different from [contextType] which establishes an assignable-to bound.
      */
     val outputBounds: List<OutputBound>,
     val hasTrailingBlock: Boolean,
     /**
-     * null or a type for the context in which the call is used.
+     * `null` or a type for the context in which the call is used.
      * For example, it could be the type from a declaration initialized with the result of the call.
      */
     val contextType: Type2?,

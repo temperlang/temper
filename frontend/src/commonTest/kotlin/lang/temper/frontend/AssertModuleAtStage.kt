@@ -217,15 +217,27 @@ internal fun assertModuleAtStage(
         }
     }
 
+    val allStagingFlags = buildSet {
+        addAll(stagingFlags)
+        if (moduleResultNeeded) {
+            add(StagingFlags.moduleResultNeeded)
+        }
+    }
+
     val outputsByStage = mutableMapOf<Stage?, StageSnapshot>()
     var exitKind: ExitKind = ExitKind.Normal
     var isTestModule: (Module) -> Boolean = { _ -> false } // reassigned
-    val moduleHook = ModuleCustomizeHook { module, _ ->
+    val moduleHook = ModuleCustomizeHook { module, isNew ->
         if (verboseDebug) {
             module.treeForDebug?.let { ast ->
                 console.group("${module.loc} ${module.stageCompleted?.toString() ?: "start"}") {
                     ast.toPseudoCode(console.textOutput)
                 }
+            }
+        }
+        if (isNew) {
+            if (allStagingFlags.isNotEmpty()) {
+                module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
             }
         }
         if (isTestModule(module)) {
@@ -273,15 +285,6 @@ internal fun assertModuleAtStage(
         allowDuplicateLogPositions = true,
     )
     isTestModule = { it === module }
-    val allStagingFlags = buildSet {
-        addAll(stagingFlags)
-        if (moduleResultNeeded) {
-            add(StagingFlags.moduleResultNeeded)
-        }
-    }
-    if (allStagingFlags.isNotEmpty()) {
-        module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
-    }
     provisionModule(module, moduleAdvancer, testDir)
 
     val stopBeforeForMainModule = Stage.after(stageNeeded)

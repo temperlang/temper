@@ -12,7 +12,7 @@ enum class ValueFormalKind {
     Required,
 
     /**
-     * A value formal which may not be supplied.
+     * A value formal that may not be supplied.
      *
      * Optional value formals are implicitly nullable,
      * and passing `null` for one is equivalent to not supplying it.

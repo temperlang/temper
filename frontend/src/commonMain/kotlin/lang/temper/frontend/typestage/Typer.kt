@@ -232,7 +232,7 @@ internal class Typer(
 
     // For convenience rather than recreating on demand when needed.
     private val reorderArgsHelper = ReorderArgs(root = module.generatedCode!!) {
-        ti.decision(it)?.variant
+        ti.decision(it)?.variant2
     }
 
     private inner class InitializerInfo(
@@ -1033,7 +1033,7 @@ internal class Typer(
 
         calleeVariants.firstOrNull()?.let { callee ->
             val reordered =
-                reorderArgsHelper.buildPositionalArgs(tree, callee.functionType)
+                reorderArgsHelper.buildPositionalArgs(tree, callee.sig)
             if (reordered != null) {
                 inputTrees = reordered
             }
@@ -2783,7 +2783,8 @@ internal class Typer(
         val sigs: List<Signature2>,
         override val reasons: List<TypeReasonElement>,
     ) : ITypedVariants {
-        override val fnTypes: List<StaticType> get() = listOf()
+        override val fnTypes: List<StaticType> get() =
+            error("use sigs which is not deprecated")
     }
 
     private fun typeForDotHelper(
@@ -2801,7 +2802,7 @@ internal class Typer(
             val member = dotHelper.member
 
             // A DotHelper with a static type receiver should turn into either a
-            // call to getStatic, or a call of a @staticExtension function.
+            // call to getStatic or a call of a @staticExtension function.
             // If thisArg is a type expression, then this dotHelper probably represents
             // a syntactic static member reference which might resolve against an
             // @staticExtension declaration.
@@ -3015,7 +3016,7 @@ internal class Typer(
             }
 
             // We need to, after typing, decide whether a DotHelper with extensions should use one
-            // of the regular members, or one of the extensions.
+            // of the regular members or one of the extensions.
             // We recall this later to get that relationship between extensions and members.
             val variants = mutableListOf<Pair<StaticType, Either<VisibleMemberShape, ExtensionResolution>>>()
             val explanations = mutableListOf<TypeReasonElement>()
@@ -3126,14 +3127,13 @@ internal class Typer(
                 includeInvalid = true
             }
             val variantTypes = buildSet {
-                for (variant in variants) {
-                    add(variant.first)
+                for ((variantType, _) in variants) {
+                    add(variantType)
                 }
                 if (includeInvalid) {
                     add(InvalidType)
                 }
             }
-            val type = MkType.and(variantTypes)
             if (DEBUG) {
                 console.group("thisVariants") {
                     thisVariants.forEach {
@@ -3148,9 +3148,6 @@ internal class Typer(
                             }
                         }
                     }
-                }
-                console.group("type") {
-                    console.logTokens(type)
                 }
                 console.group("variants") {
                     for ((variantType, resolution) in variants) {
@@ -3186,7 +3183,7 @@ internal class Typer(
         }
 
         val extraInputType = fn.extraInputType
-        val adjustedSigs = fn.sigs.map { sig ->
+        val adjustedSigs: List<Signature2> = fn.sigs.map { sig ->
             val nRequired = sig.requiredInputTypes.size
 
             val requiredInputTypes = buildList {
@@ -3197,12 +3194,10 @@ internal class Typer(
                 }
             }
 
-            val adjustedSig = sig.copy(
+            sig.copy(
                 requiredInputTypes = requiredInputTypes,
                 optionalInputTypes = listOf(),
             )
-
-            adjustedSig
         }
         return SigVariants(adjustedSigs, listOf())
     }
@@ -3224,15 +3219,15 @@ internal class Typer(
     }
 
     private fun typeForComma(t: CallTree): TypedVariants {
-        // Its variadic, but we can't use a variadic signature since its function
+        // It's variadic, but we can't use a variadic signature since its function
         // depends on the last argument, but not any of the preceding.
         // We want context to propagate through it to any generic function calls in
         // the last position, so we generate a function type like
         //    fn <T>(AnyValue, AnyValue, T): T
-        // where the number of AnyValue is one less than the number of arguments.
+        // where AnyValue occurs one less time than the number of arguments.
         val arity = t.size - 1
         if (arity == 0) {
-            return TypedVariants(listOf(functionType), listOf(becauseArityMismatch(t.pos, 1)))
+            return TypedVariants(listOf(InvalidType), listOf(becauseArityMismatch(t.pos, 1)))
         }
         val typeT = MkType.nominal(commaT)
         return TypedVariants(
@@ -3293,7 +3288,7 @@ internal class Typer(
         val contextType: Type2?,
         /**
          * An inference variable, if any, that must bind to the same type as the call's passing type.
-         * This allows calls which use this calls result as an input to include this inference
+         * This allows calls which use this call's result as an input to include this inference
          * variable in their [inputBounds] list.
          */
         val passVar: TypeVar,

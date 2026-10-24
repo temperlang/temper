@@ -537,7 +537,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
             }
             if (tree is BlockTree) {
                 // Just throw types on floating `void`s.
-                // `void` is used as a placeholder for things that are not really useful,
+                // `void` is used as a placeholder for things that are not really useful
                 // and may be skipped in various representations.
                 // Just throw type *Void* on them.
                 val floatingVoidType = BasicTypeInferences(WellKnownTypes.voidType2, emptyList())
@@ -582,7 +582,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
         }
 
         val mayInferTypeForVariableFrom = mutableMapOf<TemperName, MutableSet<TemperName>>()
-        // Look for ways to infer the types of un-typed variables from assignments.
+        // Look for ways to infer the types of untyped variables from assignments.
         for ((declared, declarations) in declaredToDeclarations) {
             // We only infer from how they're used for temporaries.
             // Otherwise, we just infer from assignments to declarations, not from them.
