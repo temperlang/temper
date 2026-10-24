@@ -491,6 +491,9 @@ class TyperTest {
         |    if (nothing()) {
         |        nothing()
         |///     ┗━━━━━━━┛ : AnyValue
+        |    } else {
+        |        nothing()
+        |///     ┗━━━━━━━┛ : AnyValue
         |    }
         """.trimMargin(),
     )
