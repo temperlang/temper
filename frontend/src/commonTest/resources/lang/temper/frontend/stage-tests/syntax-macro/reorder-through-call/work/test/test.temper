@@ -1,0 +1,8 @@
+// `k` is needed above `w = 1`, but `f()` reads `w`, so `k` stays below
+// `w = 1` and the logging moves down to it, as if `k` read `w` itself.
+var w = 0;
+console.log("${k}");
+w = 1;
+let k = f();
+let f(): Int { g() }
+let g(): Int { w }

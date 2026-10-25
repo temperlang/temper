@@ -249,6 +249,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.SemanticsMutuallyReferencingTypes)
 
     @Test
+    fun semanticsTopLevelOrder() =
+        runFunctionalTest(Ft.SemanticsTopLevelOrder)
+
+    @Test
     fun semanticsTypeCheckedLocals() =
         runFunctionalTest(Ft.SemanticsTypeCheckedLocals)
 

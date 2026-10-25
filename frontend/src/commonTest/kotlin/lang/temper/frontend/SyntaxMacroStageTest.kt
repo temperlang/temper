@@ -271,6 +271,28 @@ class SyntaxMacroStageTest {
     )
 
     @Test
+    fun reorderKeepsReassignmentsInPlace() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-reassignment"),
+    )
+
+    @Test
+    fun reorderConflictIsAnError() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-conflict"),
+        moduleResultNeeded = true,
+    )
+
+    @Test
+    fun reorderFollowsCalls() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-through-call"),
+    )
+
+    @Test
+    fun reorderConflictThroughForwardReferenceIsAnError() = assertModuleAtStage(
+        stageTestDir = StageTestDir("syntax-macro/reorder-forward-conflict"),
+        moduleResultNeeded = true,
+    )
+
+    @Test
     fun genericFunctionInDocs() = assertModuleAtStage(
         stageTestDir = StageTestDir("syntax-macro/generic-function-in-docs"),
         genre = Genre.Documentation,

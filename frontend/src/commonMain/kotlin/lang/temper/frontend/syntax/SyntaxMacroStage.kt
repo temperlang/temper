@@ -94,7 +94,7 @@ internal class SyntaxMacroStage(
                     declareModuleConsole(root)
                     // Convert object literals before sorting, so we know any references are in place.
                     ConvertObjectLiteralNew(failLog = failLog).process(root)
-                    sortTopLevels(root)
+                    sortTopLevels(root, logSink)
                     if (module.genre == Genre.Documentation) {
                         pullDocFunctionTypeFormalsIntoFold(root)
                     } else {

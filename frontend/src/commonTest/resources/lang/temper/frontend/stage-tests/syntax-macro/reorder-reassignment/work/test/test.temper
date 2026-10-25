@@ -1,0 +1,12 @@
+// Declarations are order-independent: `half` goes after `two`.
+// Reassignments of `w` keep their place relative to reads of `w`.
+var w = 0;
+console.log("before ${w}");
+w += 1;
+let half = one / two;
+let two = one + one;
+let one = 1.0;
+console.log("mid ${w}");
+w = 99;
+let readW(): Int { w }
+console.log("after ${readW()}");
