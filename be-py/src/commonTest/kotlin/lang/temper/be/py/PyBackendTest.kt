@@ -1,6 +1,7 @@
 package lang.temper.be.py
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -774,6 +775,16 @@ class PyBackendTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = PyBackend.Python3,
+        nativeFiles = mapOf(
+            "__connected__.py" to "class _connected:\n    def via_native(i: int) -> int:\n        return i + 1\n",
+        ),
+        listedCall = "_connected.via_native(",
+        unlistedCall = "_connected.via_body(",
     )
 
     @Test

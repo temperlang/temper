@@ -24,20 +24,76 @@ connected code calls, including in dynamic backends. Since it's only called from
 connected code, that means our module sorting needs to be stable. Otherwise, we
 can't depend on this being kept in place.
 
-## Top-level connected-only functions
+## Top-level connected functions with Temper bodies
 
-This function has no Temper implementation, so it needs connected on all
-backends. It's also top-level, which is the simplest form. But Temper backends
-might also still need to generate a wrapper function in the standard location
-for calling the user-provided functiom. Specifics vary by backend.
+A connected function can have a Temper body, its reference implementation, and
+list the backends that have native code for it. Listed backends use their native
+code, while other backends and the interpreter use the body. Under
+`--no-connected`, every backend uses the body.
+
+Here, the bodies deliberately answer 1000 more than the native code, so each
+run's output shows which code ran. Expected output blocks name the runs they
+apply to: `interp` for the interpreter, `no-connected` for runs under
+`--no-connected`, and backend IDs, with `~` to exclude one.
+
+Top-level functions are the simplest form. Temper backends still generate a
+wrapper function in the standard location for calling the native function.
+Specifics vary by backend.
 
 Also include an optional arg to ensure backends cope, although it's the
 responsibility of the connected code itself to provide the correct default. But,
 for example, overloads sending in `null` for optionals should be automated by
-be-java.
+be-java. And the body uses an unexported helper, which needs to be kept for it.
 
-    @connected
-    export let sum(i: Int, j: Int, bonus: Int = 0): Int;
+    @connected(["cpp", "csharp", "java", "js", "lua", "py", "rust"])
+    export let sum(i: Int, j: Int, bonus: Int = 0): Int {
+      sumOf3(i, j, bonus) + 1000
+    }
+
+Also try a function with a nullable default parameter that defaults to null. Our
+native implementations of `length` for this test are sloppy, so only pass in
+ASCII. This one doesn't list Lua, so Lua uses the body even without
+`--no-connected`.
+
+    @connected(["cpp", "csharp", "java", "js", "py", "rust"])
+    export let length(string: String? = null): Int {
+      if (string == null) {
+        999
+      } else {
+        string.countBetween(String.begin, string.end) + 1000
+      }
+    }
+
+A simple test will do. And these calls can't be inlined by Temper, since which
+implementation runs depends on the backend.
+
+    console.log("sum(1, 2): ${sum(1, 2)}");
+
+```log ~interp ~no-connected
+sum(1, 2): 3
+```
+
+```log interp no-connected
+sum(1, 2): 1003
+```
+
+    console.log("""
+      ~length "" vs null vs ():
+      ~ ${length("")} vs ${length(null)} vs ${length()}
+    );
+
+```log ~interp ~no-connected ~lua
+length "" vs null vs (): 0 vs -1 vs -1
+```
+
+```log interp no-connected lua
+length "" vs null vs (): 1000 vs 999 vs 999
+```
+
+## Top-level connected functions without bodies
+
+Without a list of backends, a connected function needs native code on every
+backend and needs no body. This one has none, so the interpreter can't run it.
 
 Try both exported above and unexported below to make sure both work. Again,
 managing this varies by backend. This one also uses an unexported type that
@@ -48,28 +104,16 @@ connected code needs to have access to.
 
     /* unexported */ class Hidden(public i: Int) {}
 
-Also try a function with a nullable default parameter that defaults to null. Our
-implementations of `length` for this test are sloppy, so only pass in ASCII.
+Native code is running when `sum` gives its native answer. Elsewhere, as in the
+interpreter, skip calling `prod`.
 
-    @connected
-    export let length(string: String? = null): Int;
+    let native = sum(1, 2) == 3;
+    if (native) {
+      console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}");
+    }
 
-A simple test will do. And this can't be inlined by Temper, since the Temper
-implementation can only panic.
-
-TODO How to test interpreter fallback? Different `log` blocks for interp?
-
-    console.log("sum(1, 2): ${sum(1, 2)}");
-    console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}");
-    console.log("""
-      ~length "" vs null vs ():
-      ~ ${length("")} vs ${length(null)} vs ${length()}
-    );
-
-```log
-sum(1, 2): 3
+```log ~interp ~no-connected
 prod(new Hidden(1), 2): 2
-length "" vs null vs (): 0 vs -1 vs -1
 ```
 
 ## Instance methods
@@ -92,9 +136,19 @@ And reuse the same hider instance just for fun.
 
     let hider = new Hider(3);
     console.log("new Hider(3).plus(4): ${hider.plus(4)}")
-    console.log("new Hider(3).times(4): ${hider.times(4)}")
 
-```log
+```log ~interp ~no-connected
 new Hider(3).plus(4): 7
+```
+
+```log interp no-connected
+new Hider(3).plus(4): 1007
+```
+
+    if (native) {
+      console.log("new Hider(3).times(4): ${hider.times(4)}")
+    }
+
+```log ~interp ~no-connected
 new Hider(3).times(4): 12
 ```

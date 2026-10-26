@@ -53,7 +53,7 @@ class RustFunctionalTest : FunctionalTestRunner<RustBackend>(RustBackend.Factory
             try {
                 when {
                     test.runAsTest -> assertTestingTest(test, result)
-                    else -> test.assertRunOutput(result)
+                    else -> test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

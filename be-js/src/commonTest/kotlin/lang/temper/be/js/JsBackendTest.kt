@@ -2,6 +2,7 @@
 
 package lang.temper.be.js
 
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.filePath
@@ -2499,6 +2500,16 @@ class JsBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = JsBackend.Factory,
+        nativeFiles = mapOf(
+            "_connected.js" to "export const viaNative = (i) => i + 1;\n",
+        ),
+        listedCall = "_connected.viaNative(",
+        unlistedCall = "_connected.viaBody(",
     )
 
     @Test

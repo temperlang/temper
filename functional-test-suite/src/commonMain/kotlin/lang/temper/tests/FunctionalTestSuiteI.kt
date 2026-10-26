@@ -40,10 +40,16 @@ typealias Ft = FunctionalTests
 interface FunctionalTestSuiteI {
     val cancelGroup: CancelGroup
 
-    /** Runs a specific test. */
+    /**
+     * Runs a specific test.
+     *
+     * @param noConnected true to use Temper bodies instead of native code for `@connected`
+     *     functions wherever they have one, as for `temper test --no-connected`.
+     */
     fun runFunctionalTest(
         test: FunctionalTestBase,
         verbose: Boolean = false,
+        noConnected: Boolean = false,
     )
 
     /** The backend this test runner is running against. */
@@ -53,13 +59,22 @@ interface FunctionalTestSuiteI {
         test: FunctionalTests,
         runOverride: Disposition? = null,
         verbose: Boolean = false,
+        noConnected: Boolean = false,
     ) {
         if ((runOverride ?: test.disposition(backendId)) is Disposition.Skip) {
             console.info("Skipping ${test.name}")
         } else {
-            runFunctionalTest(test.test, verbose)
+            runFunctionalTest(test.test, verbose, noConnected)
         }
     }
+
+    /**
+     * Runs [Ft.FunctionsConnected] again with Temper bodies standing in for native connected
+     * code, so its expected output comes from its `no-connected` log blocks.
+     */
+    @Test
+    fun functionsConnectedNoConnected() =
+        runFunctionalTest(Ft.FunctionsConnected, noConnected = true)
 
     /**
      * Test methods are updated via `./gradlew kcodegen:up`.

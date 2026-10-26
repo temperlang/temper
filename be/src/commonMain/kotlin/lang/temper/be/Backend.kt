@@ -209,6 +209,13 @@ abstract class Backend<SELF : Backend<SELF>>(
     }
 
     /**
+     * The names that a list on `@connected(["cpp", "rust"])` can use for this backend,
+     * meaning it has native code. Backends that share native files with another,
+     * like `java8` with `java`, can answer to its name too.
+     */
+    open val connectedBackendNames: Set<String> get() = setOf(backendId.uniqueId)
+
+    /**
      * Combines the [readyModules] with information from the version history to
      * produce a tentative [TmpL] translation.
      */
@@ -745,6 +752,13 @@ abstract class Backend<SELF : Backend<SELF>>(
          * Set true to abbreviate for visual convenience, even if it means the generated code is incomplete.
          */
         val abbreviated: Boolean = false,
+
+        /**
+         * Set true to ignore native code for user-space `@connected` functions and use their
+         * Temper bodies wherever they have one, as for `temper test --no-connected`.
+         * See `tmpl/ConnectedChoice.kt`.
+         */
+        val noConnected: Boolean = false,
     ) {
         companion object {
             /** For display purposes rather than utility, such as in repl translate. */

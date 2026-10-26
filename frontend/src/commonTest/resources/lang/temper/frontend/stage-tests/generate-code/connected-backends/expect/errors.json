@@ -1,0 +1,22 @@
+[
+    {
+        "level": "error",
+        "template": "UserConnectedBackendsNotNames",
+        "values": [
+            "\u0022cpp\u0022"
+        ],
+        "formatted": "@connected expects a list of backend names, like [\u0022cpp\u0022, \u0022rust\u0022], not \u0022cpp\u0022!",
+        "loc": "test/test.temper",
+        "left": 395,
+        "right": 400
+    },
+    {
+        "level": "error",
+        "template": "UserConnectedBackendsNeedBody",
+        "values": [],
+        "formatted": "A @connected function that lists backends needs a Temper body for the backends not listed!",
+        "loc": "test/test.temper",
+        "left": 344,
+        "right": 344
+    }
+]

@@ -24,11 +24,12 @@
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowAsyncWaiters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ControlFlowForOfFolded][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowIfReturn][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoops][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsAsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsConstructorCallbacks][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsDefaulting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -75,7 +76,6 @@
 [198]: https://github.com/temperlang/temper/issues/198
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
-[456]: https://github.com/temperlang/temper/issues/456
 [539]: https://github.com/temperlang/temper/issues/539
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
@@ -100,6 +100,7 @@
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
 [ControlFlowAsyncWaiters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-waiters/async-waiters.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
+[ControlFlowForOfFolded]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/for-of-folded/for-of-folded.temper.md
 [ControlFlowIfReturn]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/if-return/if-return.temper.md
 [ControlFlowLoopReenterable]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loop-reenterable/loop-reenterable.temper.md
 [ControlFlowLoops]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loops/loops.temper.md

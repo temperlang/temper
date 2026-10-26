@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -1508,6 +1509,21 @@ class CSharpBackendTest {
             |  }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = CSharpBackend.Factory,
+        nativeFiles = mapOf(
+            "FooConnected.cs" to """
+                |static class FooConnected
+                |{
+                |    internal static int ViaNative(int i) => i + 1;
+                |}
+            """.trimMargin(),
+        ),
+        listedCall = "FooConnected.ViaNative(",
+        unlistedCall = "FooConnected.ViaBody(",
     )
 
     @Test

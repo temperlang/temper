@@ -1035,7 +1035,13 @@ class TmpLTranslator internal constructor(
             pool.associateWithStay(stay, constName)
         }
 
-        val tmpLMetadata = translateDeclarationMetadata(metadata, parts?.metadataSymbolMap)
+        val tmpLMetadata = metadataForConnectedChoice(
+            declPos,
+            constName,
+            parts,
+            metadata,
+            translateDeclarationMetadata(metadata, parts?.metadataSymbolMap),
+        )
         val tf = doTranslateFunctionDefinition(init, constName)
             ?: return TranslatedDeclaration(id, untranslatableStmt(declPos, "Untranslatable function"))
 

@@ -3284,6 +3284,26 @@ Connect types, members, and functions to native code. Each backend defines
 specific conventions for connected backend code. Internal backend translation
 logic can also key on the QName of connected entities.
 
+A connected function may have a Temper body, its reference implementation,
+and list the backends that have native code for it. Other backends, and the
+interpreter, use the body.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@connected/snippet.md/0 -->
+
+```temper
+@connected(["cpp", "rust"])
+export let foldCase(c: Int): Int {
+  // ... pure Temper ...
+}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@connected/snippet.md/0 -->
+
+A listed backend must supply native code, and `--no-connected` makes every
+backend use bodies wherever they exist. Without a list, every backend must
+supply native code, and the body, if any, serves only the interpreter.
+
 <!-- /snippet: builtin/@connected -->
 
 <!-- snippet: builtin/@const -->
