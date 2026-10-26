@@ -33,7 +33,6 @@ import lang.temper.log.dirPath
 import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.SemVer
-import java.lang.Integer.parseInt
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -222,9 +221,10 @@ object Java17Specifics : JavaSpecifics(majorVersion = 17) {
                 "not a JDK version: $version"
             }
             SemVer(
-                parseInt(parts[0]),
-                parts.getOrNull(1)?.let(::parseInt) ?: 0,
-                parts.getOrNull(2)?.let(::parseInt) ?: 0,
+                parts[0].toInt(),
+                // JEP 322 says that parts missing at the end logically have the value zero.
+                parts.getOrNull(1)?.toInt() ?: 0,
+                parts.getOrNull(2)?.toInt() ?: 0,
             )
         }
 
