@@ -134,6 +134,8 @@ hs_err_pid*
 /result-helpers/build
 /result-helpers/.gradle
 /regex/build
+/regex-parser/build
+/regex-parser/.gradle
 /scripts/bin
 /scripts/build
 /stage/build

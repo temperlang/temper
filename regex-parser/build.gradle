@@ -1,0 +1,15 @@
+// Java translation of temper-regex-parser and std, written by `:cli:updateRegexParser`.
+// Don't edit src/ by hand; bump the pin in settings.gradle and rerun that task.
+plugins {
+    id 'java-library'
+}
+ext.temperProject = 'java'
+
+sourceSets {
+    main {
+        java {
+            // The generated code runs on the same temper-core that the Java backend ships.
+            srcDir rootProject.file('be-java/src/commonMain/resources/lang/temper/be/java/temper-core/src/main/java')
+        }
+    }
+}

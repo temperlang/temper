@@ -67,7 +67,8 @@ object PythonCommand : VersionedTool {
     override val cliNames = listOf("python3", "python")
     override val versionCheckArgs = listOf("--version")
     override fun checkVersion(run: EffortSuccess): RResult<Unit, CliFailure> =
-        SemVer(run.stdout.replace(leadingPython, "").trim())
+        // PyPy follows the version with build details: "Python 3.12.15 (d90944c94ad6, ...)".
+        SemVer(run.stdout.replace(leadingPython, "").trim().substringBefore(' '))
             .check(run, validVersions)
 }
 

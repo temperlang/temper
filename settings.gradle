@@ -43,6 +43,15 @@ gradle.ext.kotlinx_serialization_version = '1.8.1'
  * serializing to XML. */
 gradle.ext.serialization_xml_version = '0.86.3'
 
+// Temper libraries vendored into this tree by `:cli:updateRegexParser` and `:cli:updateRegexEngine`
+
+/** Translated to Java into `regex-parser`, which the compiler uses to parse regex literals. */
+gradle.ext.regex_parser_repo = 'https://github.com/temperlang/temper-regex-parser'
+gradle.ext.regex_parser_commit = '34d99c16f47966dfc191c823119af3c453aa7969'
+/** Bundled into be-lua's `temper-core/regex/runtime.lua`. */
+gradle.ext.regex_engine_repo = 'https://github.com/temperlang/temper-regex-engine'
+gradle.ext.regex_engine_commit = '5e06816d451704547506e7ebaf7a36f30c14f233'
+
 // Support utility versions.
 
 /** Set from <a href="https://github.com/pinterest/ktlint/releases">pinterest/ktlint</a> */
@@ -100,6 +109,7 @@ include ':log'
 include ':name'
 include ':parser'
 include ':regex'
+include ':regex-parser'
 include ':release-notes'
 include ':result-helpers'
 include ':stage'

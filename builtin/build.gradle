@@ -28,7 +28,6 @@ kotlin {
             dependencies {
                 implementation kotlin('stdlib-common')
                 implementation kotlin('reflect')
-                implementation "dev.temperlang:temper-regex-parser:0.4.0"
                 implementation project(':common')
                 implementation project(':ast')
                 implementation project(':cst')
@@ -37,6 +36,7 @@ kotlin {
                 implementation project(':log')
                 implementation project(':lexer')
                 implementation project(':name')
+                implementation project(':regex-parser')
                 implementation project(':stage')
             }
         }

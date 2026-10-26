@@ -184,6 +184,11 @@ subprojects {
                     freeCompilerArgs.add("-Xexpect-actual-classes")
                 }
             }
+        } else if (ext.temperProject == 'java') {
+            // Project requests standard customizations for a 'java-library'-based project.
+            tasks.withType(JavaCompile).configureEach {
+                options.release = jvm_target_int
+            }
         }
     }
 }
