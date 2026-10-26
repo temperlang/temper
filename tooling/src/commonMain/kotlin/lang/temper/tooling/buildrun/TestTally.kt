@@ -43,36 +43,43 @@ data class TestTally(
      * It's the total number of defined tests, whether they ran or not.
      */
     val defined: Int?,
+    /**
+     * Defined tests that didn't run, and tests that ran without being defined, which means a
+     * backend didn't declare its tests. Counted per backend and library, so one backend's
+     * missing runs don't hide another's unexpected ones.
+     */
+    val notRun: Int = if (defined != null) maxOf(defined - run, 0) else 0,
+    val unexpected: Int = if (defined != null) maxOf(run - defined, 0) else 0,
 ) {
     operator fun plus(other: TestTally): TestTally {
         val sumDefined = when {
             defined != null && other.defined != null -> defined + other.defined
             else -> null
         }
-        return TestTally(run = run + other.run, failed = failed + other.failed, defined = sumDefined)
+        return TestTally(
+            run = run + other.run,
+            failed = failed + other.failed,
+            defined = sumDefined,
+            notRun = notRun + other.notRun,
+            unexpected = unexpected + other.unexpected,
+        )
     }
 
     fun summary(): LogEntry {
-        // Never negative, even if a backend runs tests it didn't declare.
-        val notRun = when (defined) {
-            null -> 0
-            else -> maxOf(defined - run, 0)
-        }
         val passed = run - failed
-        val total = maxOf(defined ?: run, run)
-        return if (notRun == 0) {
-            LogEntry(
-                RunTestsMessageTemplate.TestSummaryAllRun,
-                unknownPos,
-                listOf(passed, total),
-            )
-        } else {
-            LogEntry(
-                RunTestsMessageTemplate.TestSummaryNotAllRun,
-                unknownPos,
-                listOf(passed, total, notRun),
-            )
+        val total = defined ?: run
+        val (template, values) = when {
+            notRun == 0 && unexpected == 0 ->
+                RunTestsMessageTemplate.TestSummaryAllRun to listOf(passed, total)
+            unexpected == 0 ->
+                RunTestsMessageTemplate.TestSummaryNotAllRun to listOf(passed, total, notRun)
+            notRun == 0 ->
+                RunTestsMessageTemplate.TestSummaryUnexpected to listOf(passed, total, unexpected)
+            else ->
+                RunTestsMessageTemplate.TestSummaryNotRunAndUnexpected to
+                    listOf(passed, total, notRun, unexpected)
         }
+        return LogEntry(template, unknownPos, values)
     }
 }
 
@@ -92,6 +99,14 @@ enum class RunTestsMessageTemplate(
         Log.Summary,
         "Tests passed: %d of %d (%d not run)",
     ),
+    TestSummaryUnexpected(
+        Log.Summary,
+        "Tests passed: %d of %d (%d unexpected)",
+    ),
+    TestSummaryNotRunAndUnexpected(
+        Log.Summary,
+        "Tests passed: %d of %d (%d not run, %d unexpected)",
+    ),
 }
 
 /** Also prints failure causes and errors. */
@@ -105,6 +120,7 @@ fun tallyResults(
     var testsRun = 0
     var testsFailed = 0
     val testsNamesByRun = mutableMapOf<Pair<BackendId, DashedIdentifier?>, Map<String, String>>()
+    val runsByKey = mutableMapOf<Pair<BackendId, DashedIdentifier?>, Int>()
     for ((backendId, results) in resultsByBackend) {
         for (result in results) {
             val libraryName = result.toolchainResult.libraryName
@@ -150,6 +166,8 @@ fun tallyResults(
                         throw err
                     }
                     testsRun += parsedResults.testsRun
+                    runsByKey[backendId to libraryName] =
+                        (runsByKey[backendId to libraryName] ?: 0) + parsedResults.testsRun
                     testsFailed += parsedResults.failures.size
                     // Whether this result had failures, not whether any so far did.
                     val failedHere = parsedResults.failures.isNotEmpty()
@@ -180,5 +198,21 @@ fun tallyResults(
             )
         }
     }
-    return TestTally(run = testsRun, failed = testsFailed, defined = testsDefined)
+    var notRun = 0
+    var unexpected = 0
+    if (testsDefined != null) {
+        for (key in testsNamesByRun.keys + runsByKey.keys) {
+            val definedHere = testsNamesByRun[key]?.size ?: 0
+            val runHere = runsByKey[key] ?: 0
+            notRun += maxOf(definedHere - runHere, 0)
+            unexpected += maxOf(runHere - definedHere, 0)
+        }
+    }
+    return TestTally(
+        run = testsRun,
+        failed = testsFailed,
+        defined = testsDefined,
+        notRun = notRun,
+        unexpected = unexpected,
+    )
 }
