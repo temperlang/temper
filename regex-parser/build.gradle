@@ -1,4 +1,4 @@
-// Java translation of temper-regex-parser and std, written by `:cli:updateRegexParser`.
+// Java translation of temper-regex-parser and std/regex, written by `:cli:updateRegexParser`.
 // Don't edit src/ by hand; bump the pin in settings.gradle and rerun that task.
 plugins {
     id 'java-library'

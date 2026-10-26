@@ -709,7 +709,8 @@ def vendoredLibrarySource = { String name, String repo, String commit, String di
     def src = new File(dir, commit)
     delete src
     dir.mkdirs()
-    ant.get(src: "$repo/archive/${commit}.zip", dest: archive)
+    // A commit's archive never changes, so one already downloaded is reused.
+    ant.get(src: "$repo/archive/${commit}.zip", dest: archive, skipexisting: true)
     // Unlike Gradle's copy, Ant keeps .gitignore, which temper reads to skip files that aren't source.
     ant.unzip(src: archive, dest: src) {
         // GitHub nests the archive under <repo>-<commit>/.
@@ -750,10 +751,14 @@ task updateRegexParser {
             "regexParserDir",
         )
         def out = temperBuild(src, "java")
+        // The compiler only loads the parser and the std/regex it builds, so leave out the rest of std,
+        // the tests, and the generated entry points.
         sync { spec ->
-            spec.from new File(out, "std/src/main/java")
+            spec.from(new File(out, "std/src/main/java")) {
+                include "temper/std/regex/**"
+            }
             spec.from(new File(out, "temper-regex-parser/src/main/java")) {
-                exclude "temper/regex_parser/tests/**"
+                exclude "temper/regex_parser/tests/**", "temper/regex_parser/RegexParserMain.java"
             }
             spec.into rootProject.file("regex-parser/src/main/java")
             spec.exclude "**/*.map"

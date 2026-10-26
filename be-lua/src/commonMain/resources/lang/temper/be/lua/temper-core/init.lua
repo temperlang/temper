@@ -2032,8 +2032,11 @@ do
             require('temper-core/regex/runtime')
             TemperRegexNFA = require("temper-regex-engine/nfa/nfa").TemperRegexNFA
         end
-        -- return TemperRegexNFA.fromRegex(regex.data)
-        -- retutrn TemperRegexNFA.fromRegexDFA(regex.data)
+        if utf8 == nil then
+            -- Generated scanners call utf8 directly, which LuaJIT and Lua 5.1
+            -- lack, so scan with the DFA table instead.
+            return TemperRegexNFA.fromRegexDFA(data)
+        end
         return TemperRegexNFA.fromRegexLua(data, function(str)
             return load(str)()
         end)
