@@ -29,22 +29,24 @@ class CppBackendTest {
             cpp = """
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
-                |  static std::shared_ptr<temper::core::Console::Type> console_0;
-                |  static int32_t x;
+                |  namespace temper_globals {
+                |    static temper::core::GlobalSlot<std::shared_ptr<temper::core::Console::Type>> console_0;
+                |    static temper::core::GlobalSlot<int32_t> x;
+                |  }
                 |  void greet(std::string name) {
-                |    temper::core::Console::log(console_0, "Hi:");
-                |    temper::core::Console::log(console_0, name);
+                |    global_init_something();
+                |    temper::core::Console::log(temper_globals::console_0.value, "Hi:");
+                |    temper::core::Console::log(temper_globals::console_0.value, name);
                 |  }
                 |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |    console_0 = temper::core::Console::get_console();
-                |    greet("world");
-                |    x = 3;
-                |    greet(temper::core::cat("world ", temper::core::Int::toString(3)));
+                |    temper::core::init_once([=]() -> void {
+                |        temper_globals::console_0.construct();
+                |        temper_globals::x.construct();
+                |        temper_globals::console_0.value = temper::core::Console::get_console();
+                |        greet("world");
+                |        temper_globals::x.value = 3;
+                |        greet(temper::core::cat("world ", temper::core::Int::toString(3)));
+                |    });
                 |  }
                 |}
                 |
@@ -53,8 +55,8 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  void greet(std::string);
                 |  void global_init_something();
+                |  void greet(std::string);
                 |}
                 |
             """,
@@ -75,8 +77,8 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  int32_t f(int32_t, int32_t);
                 |  void global_init_something();
+                |  int32_t f(int32_t, int32_t);
                 |}
                 |
             """,
@@ -98,13 +100,7 @@ class CppBackendTest {
                 |      }
                 |    }
                 |  }
-                |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |  }
+                |  void global_init_something() {}
                 |}
                 |
             """,
@@ -144,13 +140,7 @@ class CppBackendTest {
                 |  int32_t add(int32_t a, int32_t b) {
                 |    return temper::core::Int::add(a, b);
                 |  }
-                |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |  }
+                |  void global_init_something() {}
                 |}
                 |
             """,
@@ -158,8 +148,8 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  int32_t add(int32_t, int32_t);
                 |  void global_init_something();
+                |  int32_t add(int32_t, int32_t);
                 |}
                 |
             """,
@@ -197,13 +187,7 @@ class CppBackendTest {
                 |    Classy* this_5 = result_0.get();
                 |    return result_0;
                 |  }
-                |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |  }
+                |  void global_init_something() {}
                 |}
                 |
             """,
@@ -211,6 +195,7 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
+                |  void global_init_something();
                 |  struct Classy;
                 |  struct Classy : public std::enable_shared_from_this<Classy> {
                 |    template<class T> T second(std::shared_ptr<std::vector<T>> const & things) const {
@@ -228,7 +213,6 @@ class CppBackendTest {
                 |    T_0 thing_11 = temper::core::List::get(things_9, 0);
                 |    return thing_11;
                 |  }
-                |  void global_init_something();
                 |}
                 |
             """,
@@ -244,14 +228,18 @@ class CppBackendTest {
             cpp = """
                 |#include <my-test-library/something.hpp>
                 |namespace my_test_library {
-                |  int32_t x;
+                |  namespace temper_globals {
+                |    temper::core::GlobalSlot<int32_t> x;
+                |  }
+                |  int32_t const & x() {
+                |    global_init_something();
+                |    return temper_globals::x.value;
+                |  }
                 |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |    x = 42;
+                |    temper::core::init_once([=]() -> void {
+                |        temper_globals::x.construct();
+                |        temper_globals::x.value = 42;
+                |    });
                 |  }
                 |}
                 |
@@ -260,8 +248,11 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  extern int32_t x;
                 |  void global_init_something();
+                |  namespace temper_globals {
+                |    extern temper::core::GlobalSlot<int32_t> x;
+                |  }
+                |  int32_t const & x();
                 |}
                 |
             """,
@@ -282,13 +273,7 @@ class CppBackendTest {
                 |  bool isPositive(int32_t x) {
                 |    return x > 0;
                 |  }
-                |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |  }
+                |  void global_init_something() {}
                 |}
                 |
             """,
@@ -296,8 +281,8 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  bool isPositive(int32_t);
                 |  void global_init_something();
+                |  bool isPositive(int32_t);
                 |}
                 |
             """,
@@ -318,13 +303,7 @@ class CppBackendTest {
                 |  int32_t multiply(int32_t a, int32_t b) {
                 |    return temper::core::Int::mul(a, b);
                 |  }
-                |  void global_init_something() {
-                |    static bool initialized = false;
-                |    if (initialized) {
-                |      return;
-                |    }
-                |    initialized = true;
-                |  }
+                |  void global_init_something() {}
                 |}
                 |
             """,
@@ -332,8 +311,8 @@ class CppBackendTest {
                 |#pragma once
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
-                |  int32_t multiply(int32_t, int32_t);
                 |  void global_init_something();
+                |  int32_t multiply(int32_t, int32_t);
                 |}
                 |
             """,
@@ -857,9 +836,11 @@ class CppBackendTest {
                 |                  #include "something/_connected.hpp"
                 |                  namespace my_test_library {
                 |                    int32_t twice(int32_t i_5) {
+                |                      global_init_something();
                 |                      return my_test_library::prod(i_5, 2);
                 |                    }
                 |                    int32_t sum(int32_t i_7, int32_t j_8, temper::core::NullableParam<int32_t> bonus) {
+                |                      global_init_something();
                 |                      int32_t bonus_9;
                 |                      if (temper::core::is_null(bonus)) {
                 |                        {
@@ -876,21 +857,20 @@ class CppBackendTest {
                 |                      return sum(i_7, j_8, nullptr);
                 |                    }
                 |                    int32_t inc(int32_t i_11) {
+                |                      global_init_something();
                 |                      return sum(i_11, 1);
                 |                    }
                 |                    int32_t length(temper::core::NullableParam<std::string> s) {
+                |                      global_init_something();
                 |                      return _connected::length(s);
                 |                    }
                 |                    int32_t length() {
                 |                      return length(nullptr);
                 |                    }
                 |                    void global_init_something() {
-                |                      static bool initialized = false;
-                |                      if (initialized) {
-                |                        return;
-                |                      }
-                |                      initialized = true;
-                |                      my_test_library::global_init_deeper();
+                |                      temper::core::init_once([=]() -> void {
+                |                          my_test_library::global_init_deeper();
+                |                      });
                 |                    }
                 |                  }
                 |
@@ -902,13 +882,13 @@ class CppBackendTest {
                 |                  #include <temper-core/core.hpp>
                 |                  #include <my-test-library/something/deeper.hpp>
                 |                  namespace my_test_library {
+                |                    void global_init_something();
                 |                    int32_t twice(int32_t);
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);
                 |                    int32_t inc(int32_t);
                 |                    int32_t length(temper::core::NullableParam<std::string>);
                 |                    int32_t length();
-                |                    void global_init_something();
                 |                  }
                 |
                 |                  ```

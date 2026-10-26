@@ -300,7 +300,7 @@ object Cpp {
         pos: Position,
         name: Name,
         fields: Iterable<StructPart>,
-    ) : BaseTree(pos), Global, AnyStructDef {
+    ) : BaseTree(pos), Global, AnyStructDef, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate

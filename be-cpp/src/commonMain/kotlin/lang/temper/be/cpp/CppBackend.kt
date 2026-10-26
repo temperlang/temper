@@ -111,6 +111,8 @@ class CppBackend private constructor(
         // propagates to any const caller. See [lang.temper.be.tmpl.mutatingMemberNames].
         val forcedNonConst = forcedNonConstMembers(finished.modules)
         val mutatingMethodNames = mutatingMemberNames(finished.modules, forcedNonConst)
+        // Module-level values live in storage that generated code reads directly.
+        val moduleLevelValueNames = collectModuleLevelValueNames(finished.modules)
 
         val allTestInfos = mutableListOf<Pair<String, String>>()
         val allInitFuncs = mutableListOf<String>()
@@ -121,6 +123,7 @@ class CppBackend private constructor(
                 cppLibraryName = cppLibraryName,
                 libraryRootToOutputDir = libraryRootToOutputDir,
                 mutatingMethodNames = mutatingMethodNames,
+                moduleLevelValueNames = moduleLevelValueNames,
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
@@ -281,6 +284,7 @@ class CppBackend private constructor(
                     filePath("regex.hpp"),
                     filePath("generator.hpp"),
                     filePath("promise.hpp"),
+                    filePath("module_init.hpp"),
                     filePath("core.hpp"),
                     // Test harness used only by the generated `main.cpp`; intentionally not
                     // pulled into core.hpp so its <fstream>/<sstream> stay out of every TU.

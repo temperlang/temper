@@ -63,6 +63,13 @@ private const val STD_FUNCTION_PREFIX = "std::function"
  * definitions, static variables, and the init function go in the .cpp. Module-level
  * variable forward declarations are emitted before class method definitions to
  * prevent forward-reference errors.
+ *
+ * Module state initializes on first use. Module-level values live in
+ * `temper_globals::name` and static fields in `Type::temper_statics::name`, as
+ * `temper::core::GlobalSlot`s with only constant initialization; the module's
+ * `global_init_<module>()` sets them in source order. Generated code reads storage
+ * directly. Users instead call accessors, `name()` and `Type::name()`, which run the
+ * init first, as do exported functions, constructors, and static methods.
  */
 class CppTranslator(
     cppNames: CppNames,
@@ -76,7 +83,15 @@ class CppTranslator(
      * interface's declaration and its concrete overrides.
      */
     private val mutatingMethodNames: Set<String> = emptySet(),
+    /**
+     * Names of the library's module-level values, from [collectModuleLevelValueNames], so references
+     * from any of its modules read their storage. Imports from other libraries are found via
+     * their import signatures instead.
+     */
+    moduleLevelValueNames: Set<ResolvedName> = emptySet(),
 ) {
+    private val moduleLevelValueNames = moduleLevelValueNames.toMutableSet()
+
     internal val cpp = CppBuilder(cppNames, libraryRootToOutputDir)
     private val includes = mutableSetOf<String>()
     private var currentModuleLocation: ModuleName? = null
@@ -158,7 +173,12 @@ class CppTranslator(
      * Maps C++ name text of imported names to their source module and external name.
      * Keyed on CppName text since SourceName uses identity comparison.
      */
-    private data class ImportInfo(val sourceModule: ModuleName, val externalName: ResolvedName)
+    private data class ImportInfo(
+        val sourceModule: ModuleName,
+        val externalName: ResolvedName,
+        /** Whether the import is a module-level value, kept in [GLOBALS_NAMESPACE] storage. */
+        val isGlobalStorage: Boolean,
+    )
     private val importedNames = mutableMapOf<String, ImportInfo>()
 
     /** Populate importedNames from module imports. */
@@ -169,8 +189,30 @@ class CppTranslator(
             val sourceModule = import.path?.to ?: continue
             val externalName = import.externalName.name
             val key = cpp.name(localName).id.text
-            importedNames[key] = ImportInfo(sourceModule, externalName)
+            val sig = import.sig
+            val isGlobalStorage = sig is TmpL.ImportedValue && hasGlobalStorage(sig.type.ot)
+            importedNames[key] = ImportInfo(sourceModule, externalName, isGlobalStorage)
         }
+    }
+
+    /**
+     * Whether [name] is a module-level value. Those live in `temper_globals::name.value`
+     * (see [GLOBALS_NAMESPACE]), and exported ones get an accessor `name()` for users.
+     */
+    private fun isGlobalStorage(name: ResolvedName): Boolean =
+        importedNames[cpp.name(name).id.text]?.isGlobalStorage ?: (name in moduleLevelValueNames)
+
+    /** `[ns::]temper_globals::name.value`: direct access to module-level storage. */
+    private fun globalStorageRef(ns: Cpp.Name?, name: Cpp.SingleName): Cpp.MemberExpr {
+        val globals = cpp.singleName(GLOBALS_NAMESPACE)
+        val storage = cpp.scopedName(
+            when (ns) {
+                null -> globals
+                else -> cpp.scopedName(ns, globals)
+            },
+            name,
+        )
+        return cpp.memberExpr(storage, cpp.singleName(SLOT_VALUE))
     }
 
     /** Look up the source module for a name, checking imports first. */
@@ -180,7 +222,7 @@ class CppTranslator(
         if (name is ModularName) {
             val loc = name.origin.loc
             if (loc is ModuleName && loc != currentModuleLocation) {
-                return ImportInfo(loc, name)
+                return ImportInfo(loc, name, isGlobalStorage = name in moduleLevelValueNames)
             }
         }
         return null
@@ -188,25 +230,29 @@ class CppTranslator(
 
     /**
      * Resolves a TmpL.Id to its C++ name, qualifying with namespace
-     * if it comes from a different module.
+     * if it comes from a different module, and reading storage for module-level values.
      */
-    private fun resolveNameCrossModule(id: TmpL.Id): Cpp.Name {
-        val info = sourceModuleFor(id.name) ?: return cpp.name(id)
-        includes.add(cpp.includePathForModule(info.sourceModule))
-        // Use the external name from the source module, not the localized name
-        val externalCppName = cpp.name(info.externalName)
-        return cpp.scopedName(cpp.nameForModule(info.sourceModule), externalCppName)
-    }
+    private fun resolveNameCrossModule(id: TmpL.Id): Cpp.Expr = resolveNameCrossModule(id.name)
 
     /**
      * Resolves a ResolvedName to its C++ name, qualifying with namespace
-     * if it comes from a different module.
+     * if it comes from a different module, and reading storage for module-level values.
      */
-    private fun resolveNameCrossModule(name: ResolvedName): Cpp.Name {
-        val info = sourceModuleFor(name) ?: return cpp.name(name)
+    private fun resolveNameCrossModule(name: ResolvedName): Cpp.Expr {
+        val isStorage = isGlobalStorage(name)
+        val info = sourceModuleFor(name) ?: return when {
+            isStorage -> globalStorageRef(null, cpp.name(name))
+            else -> cpp.name(name)
+        }
         includes.add(cpp.includePathForModule(info.sourceModule))
+        // Use the external name from the source module, not the localized name
         val externalCppName = cpp.name(info.externalName)
-        return cpp.scopedName(cpp.nameForModule(info.sourceModule), externalCppName)
+        val ns = cpp.nameForModule(info.sourceModule)
+        return when {
+            // Read storage directly: this module's init already ran the source module's.
+            isStorage -> globalStorageRef(ns, externalCppName)
+            else -> cpp.scopedName(ns, externalCppName)
+        }
     }
 
     /**
@@ -1243,7 +1289,11 @@ class CppTranslator(
         return when (val subject = expr.subject) {
             is TmpL.Expression -> cpp.op("->", translateWithNarrowing(subject), propName)
             is TmpL.ConnectedToTypeName -> cpp.scopedName(translateTypeName(subject), propName)
-            is TmpL.TemperTypeName -> cpp.scopedName(translateTypeName(subject), propName)
+            // Read static storage directly; the module init (or ours, which runs it) has run.
+            is TmpL.TemperTypeName -> cpp.memberExpr(
+                cpp.scopedName(cpp.scopedName(translateTypeName(subject), cpp.singleName(STATICS_STRUCT)), propName),
+                cpp.singleName(SLOT_VALUE),
+            )
             is TmpL.SuperSubject -> error("illegal super call for backed property")
         }
     }
@@ -1417,11 +1467,15 @@ class CppTranslator(
                             wrapWithNarrowingCastIfNeeded(upcast, rhsType, stmt.type)
                         }
                     }
+                    val left = when {
+                        isGlobalStorage(stmt.left.name) -> resolveNameCrossModule(stmt.left)
+                        else -> cpp.name(stmt.left)
+                    }
                     listOf(
                         cpp.exprStmt(
                             cpp.op(
                                 "=",
-                                cpp.name(stmt.left),
+                                left,
                                 finalRight,
                             ),
                         ),
@@ -2044,36 +2098,40 @@ class CppTranslator(
     }
 
     /**
-     * Emit a static property member: a `static` struct field declaration plus its
-     * out-of-line definition (with initializer) in the .cpp.
+     * Emit a static property member: storage in the class's nested `temper_statics` struct
+     * (added to [staticFields]), defined in the .cpp with only constant initialization and
+     * set by the module init in source order, plus, if public, a static accessor for users,
+     * `Type::name()`, that inits the module first. Generated code reads the storage directly.
      */
     private fun MutableList<Cpp.StructPart>.translateStaticPropertyMember(
         member: TmpL.StaticProperty,
         topLevel: TmpL.TypeDeclaration,
+        staticFields: MutableList<Cpp.StructPart>,
         impl: MutableList<Cpp.Global>,
     ) {
         propertyDotNames[propKey(member.name.name)] = member.dotName.dotNameText
-        val propCppName = CppName(fixName(member.dotName.dotNameText))
-        val typeStr = renderToString(translateType(member.type))
-        // Declare as static in struct using raw StructField
-        add(
+        val propName = cpp.singleName(CppName(fixName(member.dotName.dotNameText)))
+        val type = translateType(member.type)
+        val slotType = globalSlotType(type)
+        // Declare as static in the nested struct using raw StructField
+        staticFields.add(
             cpp.structField(
-                cpp.singleName(CppName("static $typeStr", raw = true)),
-                cpp.singleName(propCppName),
+                cpp.singleName(CppName("static ${renderToString(slotType)}", raw = true)),
+                propName,
             ),
         )
         // Define outside the struct in the .cpp
-        impl.add(
-            Cpp.VarDef(
-                cpp.pos,
-                type = translateType(member.type),
-                name = cpp.scopedName(
-                    cpp.name(topLevel.name),
-                    cpp.singleName(propCppName),
-                ),
-                init = translateExpression(member.expression),
-            ),
-        )
+        val structName = cpp.name(topLevel.name)
+        val slot = cpp.scopedName(cpp.scopedName(structName, cpp.singleName(STATICS_STRUCT)), propName)
+        impl.add(Cpp.VarDef(cpp.pos, type = slotType, name = slot, init = null))
+        val storage = cpp.memberExpr(slot, cpp.singleName(SLOT_VALUE))
+        addSlotInit(storage, translateExpression(member.expression))
+        if (member.visibility.visibility == TmpL.Visibility.Public) {
+            addAccessor(
+                constRef(type), propName, cpp.scopedName(structName, propName), storage,
+                this, impl, declMod = Cpp.DefMod.Static,
+            )
+        }
     }
 
     /**
@@ -2404,7 +2462,11 @@ class CppTranslator(
                 methodFormals = member.parameters.parameters,
                 declMod = Cpp.DefMod.Static,
             ) {
-                translateBlock(body)
+                // An entry point for users, so init the module first.
+                when {
+                    isEntryPoint(topLevel, member.visibility) -> withInitCall(translateBlock(body))
+                    else -> translateBlock(body)
+                }
             }
         }
     }
@@ -2537,6 +2599,11 @@ class CppTranslator(
         val body = cpp.pos(member.body) {
             cpp.blockStmt(
                 buildList {
+                    // An entry point for users, so init the module first. Instances imply
+                    // init already ran, so instance methods needn't.
+                    if (moduleNeedsInit && isEntryPoint(topLevel, member.visibility)) {
+                        add(initCallStmt())
+                    }
                     // Construct the object on the heap up front so `this` points at the very
                     // instance the returned shared_ptr owns. A previous version built a stack
                     // temporary, took its address as `this`, and copied it into a shared_ptr on
@@ -2786,6 +2853,8 @@ class CppTranslator(
         // member ordering in TmpL.
         prepopulatePropertyDotNames(topLevel)
         val declaredSetters = mutableSetOf<String>()
+        // Storage for static fields, in a nested `struct temper_statics` (see [STATICS_STRUCT]).
+        val staticFields = mutableListOf<Cpp.StructPart>()
         val structFields = buildList {
             // Add virtual destructor for interfaces to enable dynamic_pointer_cast
             if (isInterface) {
@@ -2806,7 +2875,7 @@ class CppTranslator(
                 cpp.pos(member) {
                     when (member) {
                         is TmpL.StaticProperty ->
-                            translateStaticPropertyMember(member, topLevel, impl)
+                            translateStaticPropertyMember(member, topLevel, staticFields, impl)
                         is TmpL.Property ->
                             translatePropertyMember(member)
                         is TmpL.Getter ->
@@ -2835,6 +2904,9 @@ class CppTranslator(
                         }
                     }
                 }
+            }
+            if (staticFields.isNotEmpty()) {
+                add(0, cpp.structDef(cpp.singleName(STATICS_STRUCT), staticFields))
             }
         }
         emitStructDefinition(
@@ -2873,6 +2945,12 @@ class CppTranslator(
             topLevel.metadata.any { it.key.symbol == connectedSymbol } && !mod!!.isStdLib ->
                 translateConnectedBody(topLevel, paramNames)
             else -> translateBlock(topLevel.body)
+        }.let { body ->
+            // Exported functions are entry points for users, so init the module first.
+            when (topLevel.name.name) {
+                is ExportedName -> withInitCall(body)
+                else -> body
+            }
         }
         val func = cpp.func(
             cpp.name(topLevel.name),
@@ -2984,78 +3062,108 @@ class CppTranslator(
     }
 
     /**
-     * Translate a module-level variable declaration, forward-declaring it (or as `static`)
-     * and deferring its initializer assignment into [deferredInitStmts] to avoid SIOF.
+     * Translate a module-level variable declaration into `temper_globals` storage (see
+     * [GLOBALS_NAMESPACE]), deferring its initializer into the module init, and, if
+     * exported, an accessor `name()` that inits the module and returns the value.
      * Imported names and non-"real" (e.g. void/intersection) types are skipped.
      */
     private fun translateModuleLevelDeclaration(
         topLevel: TmpL.ModuleLevelDeclaration,
         hasTemplateFunctions: Boolean,
-        headerDecl: MutableList<Cpp.Global>,
-        implVarDecls: MutableList<Cpp.Global>,
-        deferredInitStmts: MutableList<Cpp.Stmt>,
     ) {
+        val out = moduleOutput
         // Skip declarations for imported names — they're
         // resolved to the source module's namespace.
         val nameKey = cpp.name(topLevel.name).id.text
-        if (nameKey in importedNames) {
-            // noop: imported
-        } else {
-            val isReal = when (val type = topLevel.type.ot) {
-                is TmpL.FunctionType -> true
-                is TmpL.TypeIntersection -> false
-                is TmpL.TypeUnion -> true
-                is TmpL.GarbageType -> false
-                is TmpL.NominalType -> when (type.typeName.sourceDefinition) {
-                    WellKnownTypes.voidType.definition -> false
-                    else -> true
-                }
-                is TmpL.BubbleType -> false
-                is TmpL.NeverType -> false
-                is TmpL.TopType -> true
-            }
-            if (isReal) {
-                val type = translateType(topLevel.type)
-                val name = cpp.name(topLevel.name)
-                val isExported = topLevel.name.name is ExportedName
-                val initExpr = topLevel.init
-                val translatedInit = if (
-                    initExpr != null &&
-                    isAnyValueTmpLType(topLevel.type.ot) &&
-                    isValueType(initExpr.passType)
-                ) {
-                    cpp.callExpr(
-                        cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
-                        listOf(translateExpression(initExpr)),
-                    )
-                } else {
-                    translateExpressionOrNull(initExpr)
-                }
-                // Always declare with null init and defer assignment
-                // to the init function to avoid SIOF.
-                if (isExported || hasTemplateFunctions) {
-                    headerDecl.add(cpp.varDecl(type, name))
-                    implVarDecls.add(cpp.varDef(type, name, null))
-                } else {
-                    implVarDecls.add(
-                        cpp.varDef(
-                            Cpp.DefMod.Static, type, name, null,
-                        ),
-                    )
-                }
-                if (translatedInit != null) {
-                    deferredInitStmts.add(
-                        cpp.exprStmt(
-                            cpp.binaryExpr(
-                                cpp.literal(cpp.raw(name.id.text)),
-                                cpp.binaryOp("="),
-                                translatedInit,
-                            ),
-                        ),
-                    )
-                }
-            }
+        if (nameKey in importedNames || !hasGlobalStorage(topLevel.type.ot)) {
+            return
         }
+        val type = translateType(topLevel.type)
+        val name = cpp.name(topLevel.name)
+        val isExported = topLevel.name.name is ExportedName
+        val initExpr = topLevel.init
+        val translatedInit = if (
+            initExpr != null &&
+            isAnyValueTmpLType(topLevel.type.ot) &&
+            isValueType(initExpr.passType)
+        ) {
+            cpp.callExpr(
+                cpp.name(TEMPER_CORE_NAMESPACE, "any_box"),
+                listOf(translateExpression(initExpr)),
+            )
+        } else {
+            translateExpressionOrNull(initExpr)
+        }
+        // Storage has only constant initialization; the module init constructs and
+        // assigns it, avoiding the static initialization order fiasco (SIOF).
+        val slotType = globalSlotType(type)
+        if (isExported || hasTemplateFunctions) {
+            // Template function bodies in the header may read it, as may other modules.
+            out.headerStorage.add(cpp.varDecl(slotType, name))
+            out.implStorage.add(cpp.varDef(slotType.deepCopy(), name.deepCopy(), null))
+        } else {
+            out.implStorage.add(cpp.varDef(Cpp.DefMod.Static, slotType, name, null))
+        }
+        val storage = globalStorageRef(null, name)
+        addSlotInit(storage, translatedInit)
+        if (isExported) {
+            addAccessor(constRef(type), name, null, storage, out.headerDecl, out.impl)
+        }
+    }
+
+    /**
+     * Records init for one storage slot: `construct()` first thing in the module init (so a
+     * re-entrant read during init sees a live, empty value), then the initializer, if any,
+     * in source order.
+     */
+    private fun addSlotInit(storage: Cpp.MemberExpr, init: Cpp.Expr?) {
+        val out = moduleOutput
+        val slot = storage.obj
+        out.slotConstructs.add(
+            cpp.exprStmt(cpp.callExpr(cpp.memberExpr(slot, cpp.singleName("construct")), listOf())),
+        )
+        if (init != null) {
+            out.deferredInitStmts.add(cpp.exprStmt(cpp.op("=", storage, init)))
+        }
+    }
+
+    /**
+     * Adds an accessor for users: `T const & name() { global_init_mod(); return storage; }`,
+     * declared in [decls] (with [declMod], e.g. static in a class) and defined in [impl] as
+     * [defName] (or [name] if null).
+     */
+    private fun addAccessor(
+        retType: Cpp.Type,
+        name: Cpp.SingleName,
+        defName: Cpp.Name?,
+        storage: Cpp.Expr,
+        decls: MutableList<in Cpp.FuncDecl>,
+        impl: MutableList<Cpp.Global>,
+        declMod: Cpp.DefMod? = null,
+    ) {
+        decls.add(cpp.funcDecl(declMod, retType, name.deepCopy(), listOf()))
+        impl.add(
+            cpp.funcDef(
+                retType.deepCopy(),
+                defName ?: name.deepCopy(),
+                listOf(),
+                cpp.blockStmt(listOf(initCallStmt(), cpp.returnStmt(storage))),
+            ),
+        )
+    }
+
+    /** `temper::core::GlobalSlot<T>`, storage with constant initialization only. */
+    private fun globalSlotType(type: Cpp.Type): Cpp.Type =
+        cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "GlobalSlot"), listOf(type))
+
+    /** `global_init_<module>();`, run first by entry points so users needn't call it. */
+    private fun initCallStmt(): Cpp.Stmt =
+        cpp.exprStmt(cpp.callExpr(cpp.singleName(CppName(moduleInitFuncName!!)), listOf()))
+
+    /** [body] with [initCallStmt] first, if this module has anything to init. */
+    private fun withInitCall(body: Cpp.BlockStmt): Cpp.BlockStmt = when {
+        moduleNeedsInit -> cpp.blockStmt(listOf(initCallStmt()) + body.stmts)
+        else -> body
     }
 
     /**
@@ -3112,64 +3220,38 @@ class CppTranslator(
     }
 
     /**
-     * Emit the deferred `global_init_<module>()` function (header decl + impl def) that guards
-     * against double init, calls dependency module inits, then runs the deferred variable
-     * initializations. Sets [moduleInitFuncName] as a side effect.
+     * Emit the `global_init_<module>()` function (header decl + impl def). Through
+     * `temper::core::init_once` (see temper-core/module_init.hpp), it runs once,
+     * thread-safely, and returns at once on re-entry from its own init. The init calls
+     * dependency module inits, constructs this module's storage slots, then runs the
+     * deferred initializations in source order.
+     *
+     * Users needn't call it: accessors and entry points do (see [withInitCall]). The
+     * generated main.cpp still calls each init explicitly, which is harmless.
      */
     private fun emitModuleInit(
-        sanitizedModuleName: String,
-        deferredInitStmts: List<Cpp.Stmt>,
         headerInit: MutableList<Cpp.Global>,
         impl: MutableList<Cpp.Global>,
     ) {
-        // Generate module init function with dependency init calls
-        // and deferred variable initializations.
-        val initFuncName = cpp.singleName(CppName("global_init_$sanitizedModuleName"))
-        moduleInitFuncName = initFuncName.id.text
-
-        val bodyStmts = mutableListOf<Cpp.Stmt>()
-        // static bool guard — prevent double initialization
-        bodyStmts.add(
-            cpp.exprStmt(
-                cpp.literal(
-                    cpp.raw(
-                        "static bool initialized = false",
-                    ),
-                ),
-            ),
-        )
-        bodyStmts.add(
-            cpp.ifStmt(
-                cpp.literal(cpp.raw("initialized")),
-                cpp.blockStmt(listOf(cpp.returnStmt(null))),
-            ),
-        )
-        bodyStmts.add(
-            cpp.exprStmt(
-                cpp.binaryExpr(
-                    cpp.literal(cpp.raw("initialized")),
-                    cpp.binaryOp("="),
-                    cpp.literal(cpp.raw("true")),
-                ),
-            ),
-        )
-        // Call dependency modules' init functions using fully qualified names.
-        val depInitCalls = gatherDependencyInitCalls()
-        for (call in depInitCalls.sorted()) {
-            bodyStmts.add(
-                cpp.exprStmt(
-                    cpp.callExpr(
-                        cpp.literal(cpp.raw(call)),
-                        listOf(),
-                    ),
-                ),
-            )
+        val initFuncName = cpp.singleName(CppName(moduleInitFuncName!!))
+        val out = moduleOutput
+        val initStmts = buildList {
+            // Call dependency modules' init functions using fully qualified names.
+            for (call in gatherDependencyInitCalls().sorted()) {
+                add(cpp.exprStmt(cpp.callExpr(cpp.literal(cpp.raw(call)), listOf())))
+            }
+            addAll(out.slotConstructs)
+            addAll(out.deferredInitStmts)
         }
-        // Add deferred variable initializations (for modules without init blocks)
-        bodyStmts.addAll(deferredInitStmts)
+        val bodyStmts = buildList {
+            if (initStmts.isNotEmpty()) {
+                val init = cpp.lambda(listOf(), listOf(), false, cpp.type("void"), cpp.blockStmt(initStmts))
+                add(cpp.exprStmt(cpp.callExpr(cpp.name(TEMPER_CORE_NAMESPACE, "init_once"), listOf(init))))
+            }
+        }
 
         val voidType = cpp.type("void")
-        // Declaration in header
+        // Declaration in header, ahead of everything that calls it.
         headerInit.add(
             cpp.funcDecl(
                 mod = null,
@@ -3178,23 +3260,53 @@ class CppTranslator(
                 args = listOf(),
             ),
         )
-        // Definition in cpp — placed at the beginning so the
-        // dependency-trigger struct constructor can call it.
-        val initFuncDef = cpp.funcDef(
-            ret = voidType,
-            name = initFuncName,
-            args = listOf(),
-            body = cpp.blockStmt(bodyStmts),
+        // Definition at the end of the impl file, after all storage it sets.
+        // No auto-trigger struct: static constructors cause cross-TU init order issues.
+        impl.add(
+            cpp.funcDef(
+                ret = voidType,
+                name = initFuncName,
+                args = listOf(),
+                body = cpp.blockStmt(bodyStmts),
+            ),
         )
-        // Add init function definition at the end of the impl file (after
-        // all static variable declarations so it can reference them).
-        // No auto-trigger struct — init must be called explicitly from
-        // main() or the generated main.cpp. Auto-trigger via static
-        // constructors causes cross-TU init order issues: std::function
-        // variables have non-trivial default constructors that can zero
-        // out values set by an earlier cross-TU init call.
-        impl.add(initFuncDef)
     }
+
+    /**
+     * Whether a member of [type] with [visibility] is an entry point for users, which
+     * must init the module first: public members of exported types.
+     */
+    private fun isEntryPoint(type: TmpL.TypeDeclaration, visibility: TmpL.VisibilityModifier): Boolean =
+        type.name.name is ExportedName && visibility.visibility == TmpL.Visibility.Public
+
+    /** Per-module output collected while translating top levels, in source order. */
+    private class ModuleOutput {
+        /** Storage declarations in the header, inside [GLOBALS_NAMESPACE]. */
+        val headerStorage = mutableListOf<Cpp.Global>()
+
+        /** Storage definitions in the .cpp, inside [GLOBALS_NAMESPACE]. */
+        val implStorage = mutableListOf<Cpp.Global>()
+
+        /** Header declarations after storage, including accessors. */
+        val headerDecl = mutableListOf<Cpp.Global>()
+
+        /** .cpp definitions. */
+        val impl = mutableListOf<Cpp.Global>()
+
+        /** `slot.construct()` for every storage slot, run first in the module init. */
+        val slotConstructs = mutableListOf<Cpp.Stmt>()
+
+        /** Initializers and init blocks, run by the module init in source order. */
+        val deferredInitStmts = mutableListOf<Cpp.Stmt>()
+    }
+
+    private var moduleOutput = ModuleOutput()
+
+    /**
+     * Whether the module init has anything to do, so entry points need to call it: there's
+     * module state, an init block, or imports whose modules might.
+     */
+    private var moduleNeedsInit = false
 
     private var mod: TmpL.Module? = null
 
@@ -3215,7 +3327,12 @@ class CppTranslator(
         typeFormalNames.clear()
         typeFormalNamesByText.clear()
         testInfos.clear()
-        moduleInitFuncName = null
+        moduleOutput = ModuleOutput()
+        moduleLevelValueNames.addAll(collectModuleLevelValueNames(listOf(mod)))
+        moduleNeedsInit = importedNames.isNotEmpty() || mod.topLevels.any { tl ->
+            tl is TmpL.ModuleLevelDeclaration || tl is TmpL.ModuleInitBlock ||
+                (tl is TmpL.TypeDeclaration && tl.members.any { it is TmpL.StaticProperty })
+        }
 
         fun namespaced(body: Iterable<Cpp.Global>): Iterable<Cpp.Global> = cpp.pos(mod) {
             val innerNamespace = when (cppLibraryName) {
@@ -3236,20 +3353,27 @@ class CppTranslator(
         return cpp.pos(mod) {
             val headerTypeDecl = mutableListOf<Cpp.Global>()
             val headerTypeDefs = mutableListOf<Cpp.Global>()
-            val headerDecl = mutableListOf<Cpp.Global>()
+            val out = moduleOutput
+            val headerDecl = out.headerDecl
             val headerFunctions = mutableListOf<Cpp.Global>()
             val headerInit = mutableListOf<Cpp.Global>()
 
-            fun header(): List<Cpp.Global> = buildList {
-                addAll(headerTypeDecl)
-                addAll(headerTypeDefs)
-                addAll(headerDecl) // before functions so template functions can see extern vars
-                addAll(headerFunctions)
-                addAll(headerInit)
+            fun globalsNamespace(body: List<Cpp.Global>): List<Cpp.Global> = when {
+                body.isEmpty() -> emptyList()
+                else -> listOf(cpp.namespace(cpp.singleName(GLOBALS_NAMESPACE), body))
             }
 
-            val implVarDecls = mutableListOf<Cpp.Global>()
-            val impl = mutableListOf<Cpp.Global>()
+            fun header(): List<Cpp.Global> = buildList {
+                addAll(headerInit) // first, since inline code anywhere may call it
+                addAll(headerTypeDecl)
+                addAll(headerTypeDefs)
+                // Storage before functions so template functions can see it.
+                addAll(globalsNamespace(out.headerStorage))
+                addAll(headerDecl)
+                addAll(headerFunctions)
+            }
+
+            val impl = out.impl
 
             // Pre-scan: check if module has template functions.
             // If so, non-exported module-level variables need extern
@@ -3267,18 +3391,21 @@ class CppTranslator(
                     }
             }
 
-            // All variable initializations and init blocks are deferred to
-            // the init function body to avoid the Static Initialization Order
-            // Fiasco (SIOF). Variables are forward-declared in implVarDecls,
-            // and their assignments + init block code go here in source order.
-            val deferredInitStmts = mutableListOf<Cpp.Stmt>()
+            // All variable and static field initializations and init blocks are
+            // deferred to the init function body to avoid the Static Initialization
+            // Order Fiasco (SIOF). Storage is declared with constant initialization
+            // only, and assignments + init block code go in deferredInitStmts in
+            // source order.
+            val deferredInitStmts = out.deferredInitStmts
 
-            // Compute sanitized module name for the init function.
+            // Compute sanitized module name for the init function, which entry points
+            // call as they're translated.
             val moduleBaseName = when {
                 path.segments.isNotEmpty() -> path.segments.last().baseName
                 else -> INIT_NAME
             }
             val sanitizedModuleName = moduleBaseName.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            moduleInitFuncName = cpp.singleName(CppName("global_init_$sanitizedModuleName")).id.text
 
             mod.topLevels.forEach { topLevel ->
                 cpp.pos(topLevel) {
@@ -3291,10 +3418,7 @@ class CppTranslator(
                         is TmpL.ModuleFunctionDeclaration ->
                             translateModuleFunction(topLevel, headerFunctions, impl)
                         is TmpL.ModuleLevelDeclaration ->
-                            translateModuleLevelDeclaration(
-                                topLevel, hasTemplateFunctions, headerDecl,
-                                implVarDecls, deferredInitStmts,
-                            )
+                            translateModuleLevelDeclaration(topLevel, hasTemplateFunctions)
                         is TmpL.TypeDeclaration ->
                             translateTypeDeclaration(topLevel, impl, headerTypeDecl, headerTypeDefs)
                         is TmpL.TypeConnection -> {
@@ -3318,7 +3442,7 @@ class CppTranslator(
                 }
             }
 
-            emitModuleInit(sanitizedModuleName, deferredInitStmts, headerInit, impl)
+            emitModuleInit(headerInit, impl)
 
             val modPath = mod.codeLocation.outputPath
             val hppName = path.withTemperAwareExtension(HPP_EXT)
@@ -3353,11 +3477,40 @@ class CppTranslator(
                                 }
                                 add(cpp.includeLocal(connectedIncludePath))
                             }
-                            addAll(namespaced(implVarDecls + impl))
+                            addAll(namespaced(globalsNamespace(out.implStorage) + impl))
                         },
                     ),
                 ),
             )
+        }
+    }
+}
+
+/** The `GlobalSlot` member holding the value; see temper-core/module_init.hpp. */
+private const val SLOT_VALUE = "value"
+
+/**
+ * Whether a module-level declaration of this type gets storage. Void and similar
+ * types don't, since C++ can't declare variables of them.
+ */
+private fun hasGlobalStorage(type: TmpL.Type): Boolean = when (type) {
+    is TmpL.FunctionType -> true
+    is TmpL.TypeIntersection -> false
+    is TmpL.TypeUnion -> true
+    is TmpL.GarbageType -> false
+    is TmpL.NominalType -> type.typeName.sourceDefinition != WellKnownTypes.voidType.definition
+    is TmpL.BubbleType -> false
+    is TmpL.NeverType -> false
+    is TmpL.TopType -> true
+}
+
+/** Names of the module-level values with storage in [modules], for [CppTranslator]. */
+internal fun collectModuleLevelValueNames(modules: Iterable<TmpL.Module>): Set<ResolvedName> = buildSet {
+    for (mod in modules) {
+        for (topLevel in mod.topLevels) {
+            if (topLevel is TmpL.ModuleLevelDeclaration && hasGlobalStorage(topLevel.type.ot)) {
+                add(topLevel.name.name)
+            }
         }
     }
 }
