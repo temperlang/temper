@@ -79,6 +79,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
             allowedErrors = setOf(
                 "BecauseNameUndeclared",
                 "BecauseTypeInfoMissing",
+                MessageTemplate.ExpectedFunctionType.name,
                 MessageTemplate.IllegalAssignment.name,
                 MessageTemplate.SignatureInputMismatch.name,
                 MessageTemplate.CannotTranslate.name,

@@ -900,9 +900,6 @@ internal class Typer(
             tree.childOrNull(0)
         }
 
-        val calleeFn = effectiveCallee?.functionContained
-        val calleeFnSigs = calleeFn?.sigs
-
         var inputTrees = tree.children.subListToEnd(tree.firstArgumentIndex)
 
         // Does the context in which the call happens place bounds on the return type?
@@ -938,6 +935,8 @@ internal class Typer(
             }
 
         val effectiveCalleeType = effectiveCallee?.let { ti.decisionType(it) }
+        val calleeFn = effectiveCallee?.functionContained
+        val calleeFnSigs = calleeFn?.sigs
 
         fun specialize(sig: Signature2): Signature2 {
             val explicitActualTypesAndPositions = explicitActualTypesAndPositions
