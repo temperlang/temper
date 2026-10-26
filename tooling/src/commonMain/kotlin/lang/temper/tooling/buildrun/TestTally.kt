@@ -53,12 +53,13 @@ data class TestTally(
     }
 
     fun summary(): LogEntry {
+        // Never negative, even if a backend runs tests it didn't declare.
         val notRun = when (defined) {
             null -> 0
-            else -> defined - run
+            else -> maxOf(defined - run, 0)
         }
         val passed = run - failed
-        val total = defined ?: run
+        val total = maxOf(defined ?: run, run)
         return if (notRun == 0) {
             LogEntry(
                 RunTestsMessageTemplate.TestSummaryAllRun,
@@ -150,6 +151,8 @@ fun tallyResults(
                     }
                     testsRun += parsedResults.testsRun
                     testsFailed += parsedResults.failures.size
+                    // Whether this result had failures, not whether any so far did.
+                    val failedHere = parsedResults.failures.isNotEmpty()
                     for (failure in parsedResults.failures) {
                         val testName = testNames.getOrDefault(failure.name, failure.name)
                         testFailures.add(testName to failure.cause)
@@ -161,7 +164,7 @@ fun tallyResults(
 
                         // TODO Stack traces when and how?
                     }
-                    testsFailed == 0
+                    !failedHere
                 }
             }
             resultDetails?.add(
