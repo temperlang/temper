@@ -61,7 +61,6 @@ import lang.temper.type.DotHelper
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.SetMemberAccessor
-import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -1996,7 +1995,6 @@ class TmpLTranslator internal constructor(
             val bindingsByTypeFormal = callInferences.bindings2
             for (tf in sig.typeFormals) {
                 val binding = bindingsByTypeFormal[tf]
-                    ?.let { hackMapOldStyleToNew(it as StaticType) }
                     ?: WellKnownTypes.invalidType2
                 bindings[tf] = binding
                 aTypes.add(translateType(pos, binding).aType)
