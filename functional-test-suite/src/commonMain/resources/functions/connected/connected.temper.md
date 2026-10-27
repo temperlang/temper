@@ -45,7 +45,10 @@ responsibility of the connected code itself to provide the correct default. But,
 for example, overloads sending in `null` for optionals should be automated by
 be-java. And the body uses an unexported helper, which needs to be kept for it.
 
-    @connected(["cpp", "csharp", "java", "js", "lua", "py", "rust"])
+This one has no backend list, so every backend must have connected code for it,
+and its body serves only the interpreter and runs under `--no-connected`.
+
+    @connected
     export let sum(i: Int, j: Int, bonus: Int = 0): Int {
       sumOf3(i, j, bonus) + 1000
     }
