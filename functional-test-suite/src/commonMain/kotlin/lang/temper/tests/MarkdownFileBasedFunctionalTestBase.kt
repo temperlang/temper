@@ -29,7 +29,7 @@ import lang.temper.name.BackendId
  *
  * A `log` block may name the runs it applies to, where expected output differs between them,
  * as in `` ```log interp no-connected ``. Names are backend IDs, like `py`, or `interp` for the
- * interpreter, or `no-connected` for runs where Temper bodies stand in for native `@connected`
+ * interpreter, or `no-connected` for runs where Temper bodies stand in for a backend's `@connected`
  * code. A `~` excludes a name, as in `` ```log ~interp ~no-connected ``. A block applies to a run
  * if any of its names without `~` names the run, or it has no such names, and none of its `~`
  * names name the run. So a block without names applies to every run.
@@ -79,7 +79,7 @@ abstract class MarkdownFileBasedFunctionalTestBase : FunctionalTestBase() {
     }
 }
 
-/** The name in `log` blocks for runs where Temper bodies stand in for native connected code. */
+/** The name in `log` blocks for runs where Temper bodies stand in for a backend's connected code. */
 const val NO_CONNECTED_LOG_NAME = "no-connected"
 
 private fun appendStdoutFromCodeBlocks(

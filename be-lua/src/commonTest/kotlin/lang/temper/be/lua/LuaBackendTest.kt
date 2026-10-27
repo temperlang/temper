@@ -471,11 +471,11 @@ class LuaBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = LuaBackend.Lua51,
-        nativeFiles = mapOf(
+        connectedFiles = mapOf(
             // Lua inlines this, so define it without looking like a call.
-            "_connected.lua" to "local _connected = {}\n_connected.viaNative = function(i) return i + 1 end\n",
+            "_connected.lua" to "local _connected = {}\n_connected.viaConnected = function(i) return i + 1 end\n",
         ),
-        listedCall = "_connected.viaNative(",
+        listedCall = "_connected.viaConnected(",
         unlistedCall = "_connected.viaBody(",
     )
 

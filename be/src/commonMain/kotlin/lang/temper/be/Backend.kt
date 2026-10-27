@@ -210,7 +210,7 @@ abstract class Backend<SELF : Backend<SELF>>(
 
     /**
      * The names that a list on `@connected(["cpp", "rust"])` can use for this backend,
-     * meaning it has native code. Backends that share native files with another,
+     * meaning it has connected code. Backends that share connected files with another,
      * like `java8` with `java`, can answer to its name too.
      */
     open val connectedBackendNames: Set<String> get() = setOf(backendId.uniqueId)
@@ -754,7 +754,7 @@ abstract class Backend<SELF : Backend<SELF>>(
         val abbreviated: Boolean = false,
 
         /**
-         * Set true to ignore native code for user-space `@connected` functions and use their
+         * Set true to ignore connected code for user-space `@connected` functions and use their
          * Temper bodies wherever they have one, as for `temper test --no-connected`.
          * See `tmpl/ConnectedChoice.kt`.
          */

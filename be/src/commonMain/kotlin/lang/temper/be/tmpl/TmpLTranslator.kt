@@ -1036,8 +1036,6 @@ class TmpLTranslator internal constructor(
         }
 
         val tmpLMetadata = metadataForConnectedChoice(
-            declPos,
-            constName,
             parts,
             metadata,
             translateDeclarationMetadata(metadata, parts?.metadataSymbolMap),

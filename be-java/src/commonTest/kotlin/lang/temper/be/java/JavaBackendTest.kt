@@ -2308,16 +2308,16 @@ class JavaBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = JavaBackend.Java17,
-        nativeFiles = mapOf(
+        connectedFiles = mapOf(
             "FooConnected.java" to """
                 |class FooConnected {
-                |    static int viaNative(int i) {
+                |    static int viaConnected(int i) {
                 |        return i + 1;
                 |    }
                 |}
             """.trimMargin(),
         ),
-        listedCall = "FooConnected.viaNative(",
+        listedCall = "FooConnected.viaConnected(",
         unlistedCall = "FooConnected.viaBody(",
     )
 

@@ -27,17 +27,17 @@ can't depend on this being kept in place.
 ## Top-level connected functions with Temper bodies
 
 A connected function can have a Temper body, its reference implementation, and
-list the backends that have native code for it. Listed backends use their native
-code, while other backends and the interpreter use the body. Under
+list the backends that have connected code for it. Listed backends use their
+connected code, while other backends and the interpreter use the body. Under
 `--no-connected`, every backend uses the body.
 
-Here, the bodies deliberately answer 1000 more than the native code, so each
+Here, the bodies deliberately answer 1000 more than the connected code, so each
 run's output shows which code ran. Expected output blocks name the runs they
 apply to: `interp` for the interpreter, `no-connected` for runs under
 `--no-connected`, and backend IDs, with `~` to exclude one.
 
 Top-level functions are the simplest form. Temper backends still generate a
-wrapper function in the standard location for calling the native function.
+wrapper function in the standard location for calling the connected function.
 Specifics vary by backend.
 
 Also include an optional arg to ensure backends cope, although it's the
@@ -50,12 +50,12 @@ be-java. And the body uses an unexported helper, which needs to be kept for it.
       sumOf3(i, j, bonus) + 1000
     }
 
-Also try a function with a nullable default parameter that defaults to null. Our
-native implementations of `length` for this test are sloppy, so only pass in
-ASCII. This one doesn't list Lua, so Lua uses the body even without
-`--no-connected`.
+Also try a function with a nullable default parameter that defaults to null,
+which is the main thing this function exists to exercise in connected code. Our
+connected implementations of `length` for this test are sloppy, so only pass in
+ASCII. Every backend is listed, so each runs its connected code.
 
-    @connected(["cpp", "csharp", "java", "js", "py", "rust"])
+    @connected(["cpp", "csharp", "java", "js", "lua", "py", "rust"])
     export let length(string: String? = null): Int {
       if (string == null) {
         999
@@ -82,17 +82,36 @@ sum(1, 2): 1003
       ~ ${length("")} vs ${length(null)} vs ${length()}
     );
 
-```log ~interp ~no-connected ~lua
+```log ~interp ~no-connected
 length "" vs null vs (): 0 vs -1 vs -1
 ```
 
-```log interp no-connected lua
+```log interp no-connected
 length "" vs null vs (): 1000 vs 999 vs 999
+```
+
+Also add a function that lists every backend except Lua, so Lua falls back to
+its body even without `--no-connected`. This is the unlisted-backend case: a
+backend not named on the list uses the body, like the interpreter does.
+
+    @connected(["cpp", "csharp", "java", "js", "py", "rust"])
+    export let twice(i: Int): Int {
+      i * 2 + 1000
+    }
+
+    console.log("twice(5): ${twice(5)}");
+
+```log ~interp ~no-connected ~lua
+twice(5): 10
+```
+
+```log interp no-connected lua
+twice(5): 1010
 ```
 
 ## Top-level connected functions without bodies
 
-Without a list of backends, a connected function needs native code on every
+Without a list of backends, a connected function needs connected code on every
 backend and needs no body. This one has none, so the interpreter can't run it.
 
 Try both exported above and unexported below to make sure both work. Again,
@@ -104,11 +123,11 @@ connected code needs to have access to.
 
     /* unexported */ class Hidden(public i: Int) {}
 
-Native code is running when `sum` gives its native answer. Elsewhere, as in the
-interpreter, skip calling `prod`.
+Connected code is running when `sum` gives its connected answer. Elsewhere, as in
+the interpreter, skip calling `prod`.
 
-    let native = sum(1, 2) == 3;
-    if (native) {
+    let isConnected = sum(1, 2) == 3;
+    if (isConnected) {
       console.log("prod(new Hidden(1), 2): ${prod(new Hidden(1), 2)}");
     }
 
@@ -145,7 +164,7 @@ new Hider(3).plus(4): 7
 new Hider(3).plus(4): 1007
 ```
 
-    if (native) {
+    if (isConnected) {
       console.log("new Hider(3).times(4): ${hider.times(4)}")
     }
 

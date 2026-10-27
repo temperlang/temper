@@ -253,10 +253,6 @@ enum class MessageTemplate(
         "A @connected function that lists backends needs a Temper body for the backends not listed",
         CompilationPhase.CodeGeneration,
     ),
-    UserConnectedNativeMissing(
-        "@connected lists %s for %s, but %s",
-        CompilationPhase.CodeGeneration,
-    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

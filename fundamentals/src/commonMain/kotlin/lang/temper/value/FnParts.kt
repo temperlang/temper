@@ -53,7 +53,7 @@ class FnParts internal constructor(
     }
 
     /**
-     * The backends named by `@connected(["cpp", "rust"])`, which have native code for this
+     * The backends named by `@connected(["cpp", "rust"])`, which have connected code for this
      * function, while others use its Temper body. Null for a plain `@connected` or none.
      */
     val connectedBackends: List<String>? get() = when {

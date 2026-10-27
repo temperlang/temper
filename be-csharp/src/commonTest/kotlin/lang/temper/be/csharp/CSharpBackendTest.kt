@@ -1514,15 +1514,15 @@ class CSharpBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = CSharpBackend.Factory,
-        nativeFiles = mapOf(
+        connectedFiles = mapOf(
             "FooConnected.cs" to """
                 |static class FooConnected
                 |{
-                |    internal static int ViaNative(int i) => i + 1;
+                |    internal static int ViaConnected(int i) => i + 1;
                 |}
             """.trimMargin(),
         ),
-        listedCall = "FooConnected.ViaNative(",
+        listedCall = "FooConnected.ViaConnected(",
         unlistedCall = "FooConnected.ViaBody(",
     )
 

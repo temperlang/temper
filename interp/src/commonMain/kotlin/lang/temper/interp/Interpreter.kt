@@ -1819,7 +1819,7 @@ class Interpreter(
             ValueStability.Unstable -> FunctionStability.Unstable
             null -> when {
                 // A user-space connected function's body is only its reference implementation,
-                // since backends may use native code instead, so don't inline or precompute
+                // since backends may use connected code instead, so don't inline or precompute
                 // calls with it. The interpreter still runs it at runtime.
                 parts?.connected == true && !isProcessingCore &&
                     !nameMaker.namingContext.loc.isEffectivelyStd(sharedLocationContext = null) ->

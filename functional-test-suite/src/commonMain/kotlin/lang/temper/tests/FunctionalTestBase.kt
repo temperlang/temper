@@ -123,7 +123,7 @@ abstract class FunctionalTestBase {
 
     /**
      * The expected output from running [mainFile] on [backendId]. [noConnected] means Temper
-     * bodies stand in for native `@connected` code, as for `temper test --no-connected`.
+     * bodies stand in for the backend's `@connected` code, as for `temper test --no-connected`.
      */
     abstract fun expectedOutput(backendId: BackendId, noConnected: Boolean = false): String
 

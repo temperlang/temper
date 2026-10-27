@@ -23,12 +23,12 @@ import lang.temper.value.void
 /**
  * <!-- snippet: builtin/@connected -->
  * # `@connected` decorator
- * Connect types, members, and functions to native code. Each backend defines
+ * Connect types, members, and functions to backend code. Each backend defines
  * specific conventions for connected backend code. Internal backend translation
  * logic can also key on the QName of connected entities.
  *
  * A connected function may have a Temper body, its reference implementation,
- * and list the backends that have native code for it. Other backends, and the
+ * and list the backends that have connected code for it. Other backends, and the
  * interpreter, use the body.
  *
  * ```temper inert
@@ -38,16 +38,18 @@ import lang.temper.value.void
  * }
  * ```
  *
- * A listed backend must supply native code, and `--no-connected` makes every
+ * A listed backend must supply connected code, and `--no-connected` makes every
  * backend use bodies wherever they exist. Without a list, every backend must
- * supply native code, and the body, if any, serves only the interpreter.
+ * supply connected code, and the body, if any, serves only the interpreter.
+ * An empty list, as in `@connected([])`, names no backend with backend code,
+ * so every backend uses the body.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
     optionalArgumentTypes = listOf(Types.anyValue),
     findDecoratorInsertions = ::findConnectedDecoratorInsertions,
 ) decoratedValue@{ args ->
-    // An optional list of backends with native code, as in `@connected(["cpp", "rust"])`,
+    // An optional list of backends with connected code, as in `@connected(["cpp", "rust"])`,
     // gets stored as the metadata value. See FnParts.connectedBackends.
     // Partial interpretation doesn't build lists, so evaluate fully.
     val backends: Value<*> = when (args.size) {

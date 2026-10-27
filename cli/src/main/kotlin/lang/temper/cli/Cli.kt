@@ -261,7 +261,7 @@ abstract class Main {
         fun noConnectedOpt(argParser: ArgParser) = argParser.option(
             type = ArgType.Boolean,
             fullName = "no-connected",
-            description = "Ignore native code for @connected functions, using their Temper bodies where they have one",
+            description = "Use @connected functions' Temper bodies, where they have one, instead of connected code",
         ).default(false)
 
         fun logFormatOpt(argParser: ArgParser) = argParser.option(

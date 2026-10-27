@@ -780,10 +780,10 @@ class PyBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = PyBackend.Python3,
-        nativeFiles = mapOf(
-            "__connected__.py" to "class _connected:\n    def via_native(i: int) -> int:\n        return i + 1\n",
+        connectedFiles = mapOf(
+            "__connected__.py" to "class _connected:\n    def via_connected(i: int) -> int:\n        return i + 1\n",
         ),
-        listedCall = "_connected.via_native(",
+        listedCall = "_connected.via_connected(",
         unlistedCall = "_connected.via_body(",
     )
 

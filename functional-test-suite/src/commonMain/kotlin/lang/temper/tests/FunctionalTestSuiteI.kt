@@ -43,7 +43,7 @@ interface FunctionalTestSuiteI {
     /**
      * Runs a specific test.
      *
-     * @param noConnected true to use Temper bodies instead of native code for `@connected`
+     * @param noConnected true to use Temper bodies instead of connected code for `@connected`
      *     functions wherever they have one, as for `temper test --no-connected`.
      */
     fun runFunctionalTest(
@@ -69,7 +69,7 @@ interface FunctionalTestSuiteI {
     }
 
     /**
-     * Runs [Ft.FunctionsConnected] again with Temper bodies standing in for native connected
+     * Runs [Ft.FunctionsConnected] again with Temper bodies standing in for connected
      * code, so its expected output comes from its `no-connected` log blocks.
      */
     @Test

@@ -191,10 +191,10 @@ class RustBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = RustBackend.Factory,
-        nativeFiles = mapOf(
-            "_connected.rs" to "pub(crate) fn via_native(i: i32) -> i32 {\n    i + 1\n}\n",
+        connectedFiles = mapOf(
+            "_connected.rs" to "pub(crate) fn via_connected(i: i32) -> i32 {\n    i + 1\n}\n",
         ),
-        listedCall = "_connected::via_native(",
+        listedCall = "_connected::via_connected(",
         unlistedCall = "_connected::via_body(",
     )
 

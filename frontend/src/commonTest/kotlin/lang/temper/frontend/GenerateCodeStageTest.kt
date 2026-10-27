@@ -431,7 +431,7 @@ class GenerateCodeStageTest {
     fun connectedBackends() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/connected-backends"),
         stage = Stage.GenerateCode,
-        // A list of backends with native code on `@connected` requires a Temper body.
+        // A list of backends with connected code on `@connected` requires a Temper body.
     )
 
     @Test

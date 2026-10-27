@@ -789,10 +789,10 @@ class CppBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = CppBackend.Cpp,
-        nativeFiles = mapOf(
-            "_connected.hpp" to "std::int32_t viaNative(std::int32_t i);\n",
+        connectedFiles = mapOf(
+            "_connected.hpp" to "std::int32_t viaConnected(std::int32_t i);\n",
         ),
-        listedCall = "_connected::viaNative(",
+        listedCall = "_connected::viaConnected(",
         unlistedCall = "_connected::viaBody(",
     )
 

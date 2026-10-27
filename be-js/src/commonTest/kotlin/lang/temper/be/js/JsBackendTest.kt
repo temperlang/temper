@@ -2505,10 +2505,10 @@ class JsBackendTest {
     @Test
     fun connectedFallback() = assertConnectedFallbacks(
         factory = JsBackend.Factory,
-        nativeFiles = mapOf(
-            "_connected.js" to "export const viaNative = (i) => i + 1;\n",
+        connectedFiles = mapOf(
+            "_connected.js" to "export const viaConnected = (i) => i + 1;\n",
         ),
-        listedCall = "_connected.viaNative(",
+        listedCall = "_connected.viaConnected(",
         unlistedCall = "_connected.viaBody(",
     )
 
