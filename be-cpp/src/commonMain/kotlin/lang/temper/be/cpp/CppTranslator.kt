@@ -3112,9 +3112,10 @@ class CppTranslator(
     }
 
     /**
-     * Records init for one storage slot: `construct()` first thing in the module init (so a
-     * re-entrant read during init sees a live, empty value), then the initializer, if any,
-     * in source order.
+     * Records init for one storage slot: `construct()` first thing in the module init, even
+     * before dependency inits (so a re-entrant read during init, even from host code a
+     * dependency's init calls, sees a live, empty value), then the initializer, if any, in
+     * source order.
      */
     private fun addSlotInit(storage: Cpp.MemberExpr, init: Cpp.Expr?) {
         val out = moduleOutput
@@ -3222,9 +3223,11 @@ class CppTranslator(
     /**
      * Emit the `global_init_<module>()` function (header decl + impl def). Through
      * `temper::core::init_once` (see temper-core/module_init.hpp), it runs once,
-     * thread-safely, and returns at once on re-entry from its own init. The init calls
-     * dependency module inits, constructs this module's storage slots, then runs the
-     * deferred initializations in source order.
+     * thread-safely, and returns at once on re-entry from its own init. The init constructs
+     * this module's storage slots, calls dependency module inits, then runs the deferred
+     * initializations in source order. Constructing first means that even host code called
+     * from a dependency's init (a logger, say) that reaches back into this module reads
+     * constructed values.
      *
      * Users needn't call it: accessors and entry points do (see [withInitCall]). The
      * generated main.cpp still calls each init explicitly, which is harmless.
@@ -3236,11 +3239,11 @@ class CppTranslator(
         val initFuncName = cpp.singleName(CppName(moduleInitFuncName!!))
         val out = moduleOutput
         val initStmts = buildList {
+            addAll(out.slotConstructs)
             // Call dependency modules' init functions using fully qualified names.
             for (call in gatherDependencyInitCalls().sorted()) {
                 add(cpp.exprStmt(cpp.callExpr(cpp.literal(cpp.raw(call)), listOf())))
             }
-            addAll(out.slotConstructs)
             addAll(out.deferredInitStmts)
         }
         val bodyStmts = buildList {
@@ -3293,7 +3296,7 @@ class CppTranslator(
         /** .cpp definitions. */
         val impl = mutableListOf<Cpp.Global>()
 
-        /** `slot.construct()` for every storage slot, run first in the module init. */
+        /** `slot.construct()` for every storage slot, run first in the module init, before dependency inits. */
         val slotConstructs = mutableListOf<Cpp.Stmt>()
 
         /** Initializers and init blocks, run by the module init in source order. */

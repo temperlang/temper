@@ -56,8 +56,9 @@ namespace temper {
         /// Constant-initialized with no live `T`, so it can't be clobbered by a
         /// dynamic initializer running after another translation unit already
         /// initialized the module (the static initialization order fiasco). The
-        /// module init calls `construct()` before assigning `value`, and generated
-        /// code reads `value` directly. Never destroyed, so it stays readable
+        /// module init calls `construct()` first, even before its dependencies'
+        /// inits, so any re-entrant read sees a live value, and then assigns
+        /// `value`. Generated code reads `value` directly. Never destroyed, so it stays readable
         /// during other objects' destruction at exit.
         template <typename T>
         struct GlobalSlot {
