@@ -43,6 +43,8 @@ from typing import (
 from sys import float_info
 from datetime import date as Date, datetime, timezone
 from types import MappingProxyType
+import http.client
+import urllib.error
 import urllib.request
 import urllib.response
 
@@ -445,7 +447,7 @@ def int_sub(a: int, b: int) -> int:
 
 def int_to_string(num: int, radix: int = 10) -> str:
     "Implements connected method core.type Int32.toString()."
-    if not 2 <= radix < 36:
+    if not 2 <= radix <= 36:
         raise ValueError()
     elif radix == 10:
         return str(num)
@@ -1271,11 +1273,27 @@ def std_net_send(
     def do_fetch():
         if False:
             yield None  # Mark as a generator
-        with urllib.request.urlopen(request) as response:
+        try:
+            response = urllib.request.urlopen(request)
+        except urllib.error.HTTPError as e:
+            # urlopen raises for a 4xx or 5xx status, but the error is
+            # itself the response, with its status, headers and body.
+            # Resolve with it, as js and java do.
+            response = e
+        except (OSError, http.client.HTTPException) as e:
+            # No response at all: refused, unreachable, malformed.
+            # Settle the body too: await_safe_to_exit waits for every
+            # promise made here, and nothing else would settle it.
+            break_promise(body_future, e)
+            break_promise(net_response_future, e)
+            return
+        with response:
             try:
                 # TODO: use response headers to find body encoding.
                 body_future.set_result(response.read().decode("utf-8"))
-            except IOError as e:
+            except (OSError, http.client.HTTPException, UnicodeDecodeError) as e:
+                # Anything that escapes here ends the worker with both
+                # promises unsettled, and the program waits for them.
                 body_future.set_exception(e)
             net_response_future.set_result(
                 NetResponse(

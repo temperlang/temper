@@ -46,7 +46,8 @@ export class HasOwn extends Maybe {
   }
 }
 
-export interface Sneaky extends Maybe {} // nonsealed in hierarchy
+export sealed interface Layer extends Maybe {} // even with a shield layer
+export interface Sneaky extends Layer {} // nonsealed in hierarchy in bad
 
 // Not sealed with direct auto.
 @auto("==")

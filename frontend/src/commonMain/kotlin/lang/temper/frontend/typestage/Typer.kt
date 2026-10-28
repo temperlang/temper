@@ -1431,10 +1431,10 @@ internal class Typer(
                     }
                 }
 
-                // If we have a delayed nullary-never call (see TyperPlan),
+                // If we have a delayed nullary-never call or a context-typed `[]` (see TyperPlan),
                 // we should go ahead and roll it back to complete the typing of any assignment
                 // it's part of.
-                if (isNullaryNeverCall(callSite)) {
+                if (isNullaryNeverCall(callSite) || callSite in ti.typerPlan.contextTypedInitializers) {
                     val parent = callSite.incoming?.source
                     if (parent is CallTree && isAssignment(parent) && ti.isUndecided(parent)) {
                         typeAssignmentCall(parent)
@@ -2673,6 +2673,16 @@ internal class Typer(
             // Delegate to the handler for getStatic special calls.
             val possibleStaticTypeReceiver = thisArg.staticTypeContained
             if (possibleStaticTypeReceiver != null) {
+                if (memberAccessor is SetMemberAccessor) {
+                    // `C.n = x`.  There is no static counterpart to a setter, and typing
+                    // this as a read below would let the assignment through to backends
+                    // as a property write on the type value.
+                    return@typeForDotHelper TypedMembersAndExtensions(
+                        listOf(InvalidType),
+                        listOf(BecauseStaticMemberNotAssignable(t.pos, member, possibleStaticTypeReceiver)),
+                        possibleStaticTypeReceiver,
+                    )
+                }
                 if (DEBUG) {
                     console.log("Typing ${toStringViaTokenSink { dotHelper.renderTo(it) }} as if gets")
                 }

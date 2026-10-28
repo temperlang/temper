@@ -1,0 +1,6 @@
+f { () : GeneratorResult<Int> extends GeneratorFn =>
+  for (var i = 0; i < 4; i += 1) {
+    if (i == 1) { continue; }
+    yield i;
+  }
+}

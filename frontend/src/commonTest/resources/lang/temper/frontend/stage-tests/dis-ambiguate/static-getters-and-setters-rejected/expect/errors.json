@@ -1,0 +1,4 @@
+[
+    "`static get answer` is not supported; use a static method instead!",
+    "`static set count` is not supported; use a static method instead!"
+]

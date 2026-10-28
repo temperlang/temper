@@ -589,6 +589,30 @@ class JavaBackendTest {
     }
 
     @Test
+    fun throwingFunctionTypeWithObjectReturn() {
+        // The return type of `fn (String): String throws Bubble` is a Result in the frontend's
+        // types. It must not leak into the type argument as a class named `Result`.
+        assertGeneratedJava(
+            """
+            |export let applyOne(x: String, f: fn (String): String throws Bubble): String throws Bubble {
+            |  f(x)
+            |}
+            |export let supply<T>(f: fn (): T throws Bubble): T throws Bubble {
+            |  f()
+            |}
+            """.trimMargin(),
+            """
+            |public static String applyOne(String x__0, Function<String, String> f__0) {
+            |    return f__0.apply(x__0);
+            |}
+            |public static<T__0> T__0 supply(Supplier<T__0> f__1) {
+            |    return f__1.get();
+            |}
+            """.javaMethod("import java.util.function.Function;", "import java.util.function.Supplier;"),
+        )
+    }
+
+    @Test
     fun mutableCapture() {
         assertGeneratedJava(
             """
@@ -1357,6 +1381,71 @@ class JavaBackendTest {
             |
             |                          ```
             |                    },
+            |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
+            |                    "TestMain.java": "__DO_NOT_CARE__",
+            |                    "TestMain.java.map": "__DO_NOT_CARE__",
+            |                },
+            |                "MyTestLibraryGlobal.java": "__DO_NOT_CARE__",
+            |                "MyTestLibraryMain.java": "__DO_NOT_CARE__",
+            |            }
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun recursiveLocalFunctionReadsField() = assertGeneratedJavaRaw(
+        // A recursive local function becomes a method of a local class, where a bare `this` is
+        // the local class. A field read from the source's `this` has to say `Counter.this`.
+        """
+            |export class Counter(public n: Int) {
+            |  public sumTo(): Int {
+            |    let go(i: Int): Int {
+            |      if (i <= 0) { 0 } else { n + go(i - 1) }
+            |    }
+            |    go(3)
+            |  }
+            |}
+        """.trimMargin(),
+        """
+            |"pom.xml": "__DO_NOT_CARE__",
+            |"src": {
+            |    "main": {
+            |        "java": {
+            |            "my_test_library": {
+            |                "test": {
+            |                    "Counter.java": {
+            |                      "content":
+            |                          ```
+            |                          package my_test_library.test;
+            |                          public final class Counter {
+            |                              public final int n;
+            |                              public int sumTo() {
+            |                                  class Local_1 {
+            |                                      int go__0(int i__0) {
+            |                                          if (i__0 <= 0) {
+            |                                              return 0;
+            |                                          } else {
+            |                                              return Counter.this.n + this.go__0(i__0 - 1);
+            |                                          }
+            |                                      }
+            |                                  }
+            |                                  final Local_1 local$1 = new Local_1();
+            |                                  return local$1.go__0(3);
+            |                              }
+            |                              public Counter(int n__0) {
+            |                                  this.n = n__0;
+            |                              }
+            |                              public int getN() {
+            |                                  return this.n;
+            |                              }
+            |                          }
+            |
+            |                          ```
+            |                    },
+            |                    "Counter.java.map": "__DO_NOT_CARE__",
+            |                    "TestGlobal.java": "__DO_NOT_CARE__",
             |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
             |                    "TestMain.java": "__DO_NOT_CARE__",
             |                    "TestMain.java.map": "__DO_NOT_CARE__",
