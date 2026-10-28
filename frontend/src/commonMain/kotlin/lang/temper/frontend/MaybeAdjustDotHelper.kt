@@ -15,6 +15,7 @@ import lang.temper.type.GetMemberAccessor
 import lang.temper.type.InstanceExtensionResolution
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
+import lang.temper.type.InternalSet
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.OperatorMember
@@ -100,10 +101,17 @@ internal fun maybeAdjustDotHelper(
         is DotMember -> thisType?.properties?.soleMatchingOrNull { it.symbol == member.dotName }
         is OperatorMember -> null
     }
+    // Access to another instance of the enclosing type, once typing shows the subject
+    // is one, reads and writes the backed property directly, as access through `this`
+    // does, since private properties have no getters or setters to call.
+    val subjectIsEnclosingType = thisType != null &&
+        subjectTypeShapes?.toSet() == setOf(thisType)
+    val isGet = accessor == ThisGet || (accessor == InternalGet && subjectIsEnclosingType)
+    val isSet = accessor == ThisSet || (accessor == InternalSet && subjectIsEnclosingType)
     if (
         !extensionsToPreserve &&
         property?.abstractness == Abstractness.Concrete &&
-        accessor == ThisGet && t.size == IGET_CALL_SIZE
+        isGet && t.size == IGET_CALL_SIZE
     ) {
         edge.replace { pos ->
             Call(pos) {
@@ -118,7 +126,7 @@ internal fun maybeAdjustDotHelper(
     if (
         !extensionsToPreserve &&
         property?.abstractness == Abstractness.Concrete &&
-        accessor == ThisSet && t.size == ISET_CALL_SIZE
+        isSet && t.size == ISET_CALL_SIZE
     ) {
         @Suppress("MagicNumber") // just list indices
         edge.replace { pos ->

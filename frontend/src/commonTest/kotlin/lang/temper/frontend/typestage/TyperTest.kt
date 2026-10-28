@@ -760,6 +760,42 @@ class TyperTest {
     )
 
     /**
+     * Private members of an interface, as they might be supported later: code in the interface
+     * may use them on any value of a subtype, but subtypes and outsiders may not, even through
+     * `this`, and a subtype's own private member of the same name doesn't shadow them there.
+     */
+    @Test
+    fun privateInterfaceMemberVisibility() = assertTypes(
+        """
+        |    interface I {
+        |      private secret(): String { "I" }
+        |      public static peek(x: C): String { x.secret() }
+        |    }
+        |    class C extends I {
+        |      private secret(): String { "C" }
+        |      public mine(): String { this.secret() }
+        |    }
+        |    class D extends I {
+        |      public sneak(): String { this.secret() }
+        |      public other(d: D): String { d.secret() }
+        |    }
+        |    new C().secret();
+        |    void
+        """.trimMargin(),
+        wantErrors = listOf(
+            "10+31-44: Member secret defined in D | I not publicly accessible!",
+            "11+35-45: Member secret defined in D | I not publicly accessible!",
+            "13+4-20: Member secret defined in C | I not publicly accessible!",
+            "10+31-44: Type Invalid mentions Invalid",
+            "10+36-42: Type Invalid mentions Invalid",
+            "11+35-45: Type Invalid mentions Invalid",
+            "11+37-43: Type Invalid mentions Invalid",
+            "13+4-20: Type Invalid mentions Invalid",
+            "13+12-18: Type Invalid mentions Invalid",
+        ),
+    )
+
+    /**
      * Effectively the same test as [privateMemberVisibility], except the usage is also wrong.
      * This tests semi-arbitrary priorities in our error messaging.
      */
