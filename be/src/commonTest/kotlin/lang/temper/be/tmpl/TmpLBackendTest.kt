@@ -3324,7 +3324,6 @@ class TmpLBackendTest {
         """.trimMargin(),
     )
 
-    @Ignore // Need to avoid losing Result info on never returning functions
     @Test
     fun alwaysBubbling() {
         assertGeneratedCode(
@@ -3343,7 +3342,7 @@ class TmpLBackendTest {
                 |    "foo.tmpl": {
                 |      content: ```
                 |        //// work//foo/ => foo.tmpl
-                |        @QName("test-library/foo.f()") let f(): Void | Bubble {
+                |        @QName("test-library/foo.f()") let f(): Never<Void> | Bubble {
                 |          throw;
                 |        }
                 |
@@ -3434,7 +3433,6 @@ class TmpLBackendTest {
             |        let getPromiseResultSync#0 = builtins.getPromiseResultSync /* <getPromiseResultSyncY extends AnyValue>(Promise<getPromiseResultSyncY>) -> Result<getPromiseResultSyncY, Bubble> */;
             |        let isOkResult#0 = builtins.isOkResult /* <isOkResultPASS extends AnyValue, isOkResultFAIL extends AnyValue>(Result<isOkResultPASS, isOkResultFAIL>) -> Boolean */;
             |        let unpackOkResult#0 = builtins.unpackOkResult /* <unpackOkResultPASS extends AnyValue, unpackOkResultFAIL extends AnyValue>(Result<unpackOkResultPASS, unpackOkResultFAIL>) -> unpackOkResultPASS */;
-            |        let panic#0 = builtins.panic;
             |        let cat#0 = builtins.cat /* () -> String */;
             |        let DoneResult#0 = builtins.DoneResult;
             |        let adaptGeneratorFnSafe#0 = builtins.adaptGeneratorFnSafe /* <adaptGeneratorFnSafeYIELD extends AnyValue>(Fn__0<GeneratorResult<adaptGeneratorFnSafeYIELD>>) -> SafeGenerator<adaptGeneratorFnSafeYIELD> */;
@@ -3479,7 +3477,7 @@ class TmpLBackendTest {
             |                  }
             |                }
             |                3 -> do {
-            |                  x__0 = panic#0();
+            |                  throw;
             |                }
             |                4 -> do {
             |                  ConsoleLog#0(console#0, cat#0("After ", x__0));

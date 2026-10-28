@@ -1428,7 +1428,7 @@ class JsBackendTest {
             |    "my-test-library": {
             |      "foo.internal.js": {
             |        content: ```
-            |          /** @returns {void} */
+            |          /** @returns {never} */
             |          export function f() {
             |            throw Error();
             |          };
@@ -1727,7 +1727,7 @@ class JsBackendTest {
             |        content:
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic as panic_0, runAsync as runAsync_0
+            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, runAsync as runAsync_0
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
             |          export const console_0 = globalConsole_0;
@@ -1741,7 +1741,7 @@ class JsBackendTest {
             |              try {
             |                t_0 = yield await_0(p_0);
             |              } catch {
-            |                t_0 = panic_0();
+            |                throw Error();
             |              }
             |              console_0.log(t_0);
             |          });

@@ -1141,8 +1141,8 @@ class JavaBackendTest {
             |    return Dot;
             |}
         """.javaMethod(
-            "import temper.std.regex.Special;",
-            "import static temper.std.regex.RegexGlobal.Dot;",
+            "import std.regex.Special;",
+            "import static std.regex.RegexGlobal.Dot;",
         ),
     )
 
@@ -1154,10 +1154,15 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static LocalDate f() {
-            |    return LocalDate.parse("2001-02-03");
+            |    try {
+            |        return LocalDate.parse("2001-02-03");
+            |    } catch (RuntimeException ignored$1) {
+            |        throw Core.bubble();
+            |    }
             |}
         """.javaMethod(
             "import java.time.LocalDate;",
+            "import temper.core.Core;",
         ),
     )
 

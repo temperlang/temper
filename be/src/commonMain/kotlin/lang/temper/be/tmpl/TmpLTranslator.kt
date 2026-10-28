@@ -2356,11 +2356,14 @@ class TmpLTranslator internal constructor(
             val typePos = fnParts.returnDecl?.pos ?: pos.leftEdge
 
             fun retTypeForFn(sigT: Signature2?, returnDecl: DeclTree?): Type2 {
-                // If the type from the Typer contains a function type, use its return type.
-                // This prefers any declared return type.
-                return sigT?.returnType2
+                val returnDeclParts = returnDecl?.parts
+                // The declared output type is the best marker.
+                return returnDeclParts?.type?.target?.reifiedTypeContained?.type2
+                    // If the type from the Typer contains a function type, use its return type.
+                    // This prefers any declared return type.
+                    ?: sigT?.returnType2
                     // Otherwise, look at the return decl if we have one.
-                    ?: returnDecl?.parts?.name?.typeInferences?.type
+                    ?: returnDeclParts?.name?.typeInferences?.type
                     ?: WellKnownTypes.invalidType2
             }
 
