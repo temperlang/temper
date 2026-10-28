@@ -1089,7 +1089,11 @@ class TmpLTranslator internal constructor(
         val left = tree.child(1) as LeftNameLeaf
         val rightTree = tree.child(2)
         if (isPanicCall(rightTree)) {
-            return listOf(TmpL.ThrowStatement(rightTree.pos))
+            when (cfOptions.nrbStrategy) {
+                BubbleBranchStrategy.Exceptions ->
+                    return listOf(TmpL.ThrowStatement(rightTree.pos))
+                BubbleBranchStrategy.Results -> {} // Proceed to below
+            }
         }
         return translateAssignment(tree.pos, left = left, right = rightTree)
     }

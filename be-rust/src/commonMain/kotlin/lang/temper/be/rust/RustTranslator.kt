@@ -3336,8 +3336,7 @@ class RustTranslator(
                 core = t
             }
         }
-
-        return translateType(core ?: TmpL.NeverType(type.pos), isFlex = isFlex).let { type ->
+        return translateType(core ?: neverEmpty(type.pos), isFlex = isFlex).let { type ->
             when {
                 canBeNull -> type.option()
                 else -> type
@@ -3670,3 +3669,6 @@ internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
 
 internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)
+
+private fun neverEmpty(pos: Position) =
+    TmpL.NominalType(pos, TmpL.TemperTypeName(pos, WellKnownTypes.emptyTypeDefinition), listOf())

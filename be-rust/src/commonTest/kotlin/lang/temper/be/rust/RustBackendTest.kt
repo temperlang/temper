@@ -1087,18 +1087,8 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(Blah, []);
                 |fn something__0(value__0: temper_core::AnyValue) -> Blah {
-                |    let t___0: bool;
-                |    if ! value__0.is_none() {
-                |        t___0 = temper_core::is::<Blah>(value__0.clone());
-                |    } else {
-                |        t___0 = false;
-                |    }
-                |    if t___0 {
-                |        if value__0.is_none() {
-                |            return panic!();
-                |        } else {
-                |            return temper_core::cast::<Blah>(value__0.clone()).unwrap();
-                |        }
+                |    if temper_core::is::<Blah>(value__0.clone()) {
+                |        return temper_core::cast::<Blah>(value__0.clone()).unwrap();
                 |    } else {
                 |        return Blah::new();
                 |    }
