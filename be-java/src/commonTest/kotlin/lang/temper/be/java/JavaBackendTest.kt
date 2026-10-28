@@ -2421,6 +2421,41 @@ class JavaBackendTest {
     )
 
     @Test
+    fun samTypeFromFunInterface() = assertGeneratedJava(
+        $$"""
+            |@fun interface StringSink(s: String): Void;
+            |
+            |let hello(how: String): Void { console.log("Called ${how}!") }
+            |
+            |let callIt(f: StringSink): Void {
+            |  f("by a function");
+            |}
+            |
+            |callIt(hello);
+        """.trimMargin(),
+        want = """
+            |static final Console console_14;
+            |static void hello__0(String how__0) {
+            |    console_14.log("Called " + how__0 + "!");
+            |}
+            |static void callIt__0(Consumer<String> f__0) {
+            |    f__0.accept("by a function");
+            |}
+            |static {
+            |    console_14 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |    TestGlobal.callIt__0(TestGlobal :: hello__0);
+            |}
+        """.trimMargin().javaMethod(
+            """
+                |import temper.core.Core;
+                |import java.util.logging.Logger;
+                |import temper.core.Core.Console;
+                |import java.util.function.Consumer;
+            """.trimMargin(),
+        ),
+    )
+
+    @Test
     fun protectedInInterfaces() = assertGeneratedJavaRaw(
         input = """
             |export interface I {

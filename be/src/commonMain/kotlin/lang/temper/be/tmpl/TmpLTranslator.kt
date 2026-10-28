@@ -3181,7 +3181,7 @@ val Tree?.typeOrInvalid: Type2 get() = this?.typeInferences?.type
     ?: WellKnownTypes.invalidType2
 
 val Tree?.sig: Signature2? get() = (this?.typeInferences?.type)?.let {
-    AdHocArrowTypes.reverseToSig(it)
+    withType(it, fn = { _, sig, _ -> sig }, fallback = { null })
 }
 
 internal fun logCannotTranslate(
