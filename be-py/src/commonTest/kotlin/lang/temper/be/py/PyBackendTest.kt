@@ -110,7 +110,7 @@ class PyBackendTest {
             |    _v_13: 'int5'
             |    __slots__ = ('_v_13',)
             |    def less(this_3, other_15: 'N', /) -> 'bool4':
-            |        return this_3._v_13 < other_15.v
+            |        return this_3._v_13 < other_15._v_13
             |    def __init__(this, /, v: 'int5') -> None:
             |        this._v_13 = v
             |    @property

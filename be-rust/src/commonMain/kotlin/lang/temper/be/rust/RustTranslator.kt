@@ -2279,7 +2279,7 @@ class RustTranslator(
     /** Whether [read] translates to `self.0.read().unwrap().<field>`. */
     private fun takesReadGuard(read: TmpL.GetProperty): Boolean =
         read.property is TmpL.InternalPropertyId && insideMutableType &&
-            functionContextStack.last().constructorMode != ConstructorMode.Init
+            functionContextStack.lastOrNull()?.constructorMode != ConstructorMode.Init
 
     /**
      * The guard in `self.0.read().unwrap().n` is a temporary, and Rust drops temporaries at the end of the
@@ -2316,7 +2316,7 @@ class RustTranslator(
             // The setter call, or the write guard, comes after the value, so the read guard is still held.
             is TmpL.SetProperty -> if (
                 statement.left.property is TmpL.ExternalPropertyId ||
-                functionContextStack.last().constructorMode != ConstructorMode.Init
+                functionContextStack.lastOrNull()?.constructorMode != ConstructorMode.Init
             ) {
                 return true
             }
