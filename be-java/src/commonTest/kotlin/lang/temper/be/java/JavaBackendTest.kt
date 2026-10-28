@@ -2524,15 +2524,15 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |static final Console console_14;
-            |static void hello__0(String how__0) {
+            |static void hello(String how__0) {
             |    console_14.log("Called " + how__0 + "!");
             |}
-            |static void callIt__0(Consumer<String> f__0) {
+            |static void callIt(Consumer<String> f__0) {
             |    f__0.accept("by a function");
             |}
             |static {
             |    console_14 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |    TestGlobal.callIt__0(TestGlobal :: hello__0);
+            |    TestGlobal.callIt(TestGlobal :: hello);
             |}
         """.trimMargin().javaMethod(
             """
