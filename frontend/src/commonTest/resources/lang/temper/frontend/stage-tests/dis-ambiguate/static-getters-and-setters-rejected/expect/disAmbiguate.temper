@@ -1,0 +1,13 @@
+@typeDecl(C__0) @hoistLeft(true) @resolution(C__0) @stay let C = type (C__0);
+class(\word, C, \concrete, true, @typeDefined(C__0) fn {
+    C__0 extends AnyValue;
+    error (StaticComputedPropertyUnsupported);
+    error (StaticComputedPropertyUnsupported);
+    @visibility(\public) let nym`get.age` = fn(\word, nym`get.age`, @impliedThis(C__0) let this__0: C__0, \outType, Int, fn {
+        1
+    });
+    @fn @static @visibility(\public) let twice = fn(\word, twice, let x /* aka x */: Int, \outType, Int, fn {
+        x * 2
+    });
+});
+C

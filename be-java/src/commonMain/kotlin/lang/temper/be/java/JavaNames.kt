@@ -18,6 +18,7 @@ import lang.temper.name.ExportedName
 import lang.temper.name.ModuleName
 import lang.temper.name.OutName
 import lang.temper.name.ResolvedName
+import lang.temper.name.SourceName
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
@@ -71,15 +72,27 @@ class JavaNames private constructor(
     private fun qualifiedFullName(name: ResolvedName, ctx: DescriptorChain?): QualifiedName =
         qualifiedClassName(name, ctx).qualify(distinctOutName(name))
     private fun typeNamePair(name: ResolvedName, ctx: DescriptorChain?): Pair<QualifiedName, OutName> =
-        qualifiedClassName(name, ctx) to distinctOutName(name)
+        qualifiedClassName(name, ctx) to distinctOutName(name, ctx)
 
     /** Register a simple outname (sans numbers) for a given resolved name. */
     private fun simpleOutName(name: ResolvedName): OutName =
         OutName(name.simpleSafeText(), name)
 
-    /** Register a distinct outname (preserve numbers) for a given resolved name. */
-    private fun distinctOutName(name: ResolvedName): OutName =
-        OutName(name.distinctSafeText(), name)
+    /** Register a distinct outname (preserve numbers if needed) for a given resolved name. */
+    private fun distinctOutName(name: ResolvedName, ctx: DescriptorChain? = null): OutName {
+        val text = when (ctx?.node) {
+            is TmpL.FunctionLike if name is SourceName -> name.simpleSafeText().let { text ->
+                when (reservedNames.getOrPut(text) { name }) {
+                    name -> text
+                    else -> name.distinctSafeText()
+                }
+            }
+            else -> name.distinctSafeText()
+        }
+        return OutName(text, name)
+    }
+
+    private val reservedNames = mutableMapOf<String, SourceName>()
 
     fun forModule(module: ModuleName): JavaNames = moduleMap.getOrPut(module) {
         JavaNames(

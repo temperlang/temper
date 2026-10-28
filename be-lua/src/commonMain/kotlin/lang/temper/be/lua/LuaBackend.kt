@@ -15,6 +15,7 @@ import lang.temper.common.currents.SignalRFuture
 import lang.temper.common.ignore
 import lang.temper.common.isNotEmpty
 import lang.temper.common.subListToEnd
+import lang.temper.frontend.BindingsInjector
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
 import lang.temper.fs.loadResource
@@ -308,6 +309,8 @@ class LuaBackend private constructor(
         }
 
         override val processCoreLibraryResourcesNeeded get() = true
+
+        override val configBindingsInjector: BindingsInjector = LuaConfigInjector
 
         override fun make(setup: BackendSetup<LuaBackend>): Backend<LuaBackend> = LuaBackend(lang, setup)
     }

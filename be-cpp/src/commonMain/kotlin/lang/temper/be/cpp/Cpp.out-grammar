@@ -42,7 +42,7 @@ AnyStructDef = StructDef | DerivedStructDef;
 TemplateStructDef ::= "template" & `CppToks.leftAngle` & typeParams%FuncParam*"," & `CppToks.rightAngle` & def%AnyStructDef;
 TemplateFuncDef ::= "template" & `CppToks.leftAngle` & typeParams%FuncParam*"," & `CppToks.rightAngle` & def%FuncDef;
 TemplateFuncDecl ::= "template" & `CppToks.leftAngle` & typeParams%FuncParam*"," & `CppToks.rightAngle` & decl%FuncDecl;
-StructPart = StructField | FuncDecl | FuncDef | Comment;
+StructPart = StructField | TemplateFuncDecl | TemplateFuncDef | FuncDecl | FuncDef | Comment;
 StructField ::= type%Type & name%SingleName & ";";
 
 enum DefMod = Static;

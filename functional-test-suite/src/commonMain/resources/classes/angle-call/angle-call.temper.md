@@ -36,3 +36,34 @@ here's a simple variation on the form that was causing the problem.
 This would cause the error. We don't really care about the outcome.
 
     whatever(1);
+
+## More bonus testing: Generic methods
+
+We already require classes and generics to some extent in this test. So take
+advantage of that to also test generic methods.
+
+    class Classy(
+      public index: Int,
+    ) {
+      // Static method.
+      public static first<T>(things: List<T>): T {
+        // Separate declaration that maybe exercises local declarations.
+        let thing = things[0];
+        thing
+      }
+
+      // Instance method.
+      public indexed<T>(things: List<T>): T {
+        let thing = things[index];
+        thing
+      }
+    }
+
+    let someThings = ["a", "b"];
+    let first = Classy.first(someThings);
+    let second = new Classy(1).indexed(someThings);
+    console.log("Some things: ${first}, ${second}");
+
+```log
+Some things: a, b
+```

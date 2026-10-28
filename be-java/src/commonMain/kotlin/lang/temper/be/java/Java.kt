@@ -5471,9 +5471,7 @@ object Java {
     }
 
     /**
-     * The `this` keyword. JLS 15.8.3, 15.8.4
-     *
-     * Won't do: qualified this is only required if we need inner classes
+     * The `this` keyword. JLS 15.8.3
      */
     class ThisExpr(
         pos: Position,
@@ -5499,6 +5497,57 @@ object Java {
         }
         companion object {
             private val cmr = ChildMemberRelationships()
+        }
+    }
+
+    /**
+     * A qualified `this`, `Outer.this`. JLS 15.8.4
+     *
+     * Needed inside the local classes that hold lifted local functions, where a bare `this` is
+     * the local class rather than the instance whose method declared the function.
+     */
+    class QualifiedThisExpr(
+        pos: Position,
+        type: QualIdentifier,
+    ) : BaseTree(pos), Expression {
+        override val operatorDefinition
+            get() = JavaOperatorDefinition.Atom
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate180
+        override val formatElementCount
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.type
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _type: QualIdentifier
+        var type: QualIdentifier
+            get() = _type
+            set(newValue) { _type = updateTreeConnection(_type, newValue) }
+        override fun deepCopy(): QualifiedThisExpr {
+            return QualifiedThisExpr(pos, type = this.type.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is QualifiedThisExpr && this.type == other.type
+        }
+        override fun hashCode(): Int {
+            return type.hashCode()
+        }
+        init {
+            this._type = updateTreeConnection(null, type)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as QualifiedThisExpr).type },
+            )
         }
     }
 
@@ -5580,7 +5629,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate180
+            get() = sharedCodeFormattingTemplate181
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5639,7 +5688,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate180
+            get() = sharedCodeFormattingTemplate181
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5697,7 +5746,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate181
+            get() = sharedCodeFormattingTemplate182
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -5747,7 +5796,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Unary
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate182
+            get() = sharedCodeFormattingTemplate183
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -5802,7 +5851,7 @@ object Java {
         override val operatorDefinition
             get() = JavaOperatorDefinition.Relational
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate183
+            get() = sharedCodeFormattingTemplate184
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -6064,13 +6113,13 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expr != null && typeArgs != null) {
-                    sharedCodeFormattingTemplate184
-                } else if (expr != null) {
                     sharedCodeFormattingTemplate185
-                } else if (typeArgs != null) {
+                } else if (expr != null) {
                     sharedCodeFormattingTemplate186
-                } else {
+                } else if (typeArgs != null) {
                     sharedCodeFormattingTemplate187
+                } else {
+                    sharedCodeFormattingTemplate188
                 }
         override val formatElementCount
             get() = 4
@@ -6150,13 +6199,13 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (type != null && typeArgs != null) {
-                    sharedCodeFormattingTemplate184
-                } else if (type != null) {
                     sharedCodeFormattingTemplate185
-                } else if (typeArgs != null) {
+                } else if (type != null) {
                     sharedCodeFormattingTemplate186
-                } else {
+                } else if (typeArgs != null) {
                     sharedCodeFormattingTemplate187
+                } else {
+                    sharedCodeFormattingTemplate188
                 }
         override val formatElementCount
             get() = 4
@@ -6237,9 +6286,9 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (typeArgs != null) {
-                    sharedCodeFormattingTemplate188
-                } else {
                     sharedCodeFormattingTemplate189
+                } else {
+                    sharedCodeFormattingTemplate190
                 }
         override val formatElementCount
             get() = 4
@@ -6318,13 +6367,13 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (typeArgs != null && classBody != null) {
-                    sharedCodeFormattingTemplate190
-                } else if (typeArgs != null) {
                     sharedCodeFormattingTemplate191
-                } else if (classBody != null) {
+                } else if (typeArgs != null) {
                     sharedCodeFormattingTemplate192
-                } else {
+                } else if (classBody != null) {
                     sharedCodeFormattingTemplate193
+                } else {
+                    sharedCodeFormattingTemplate194
                 }
         override val formatElementCount
             get() = 4
@@ -6677,9 +6726,9 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (value) {
-                    sharedCodeFormattingTemplate194
-                } else {
                     sharedCodeFormattingTemplate195
+                } else {
+                    sharedCodeFormattingTemplate196
                 }
         override val formatElementCount
             get() = 0
@@ -6766,7 +6815,7 @@ object Java {
         pos: Position,
     ) : BaseTree(pos), LiteralExpr {
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate196
+            get() = sharedCodeFormattingTemplate197
         override val formatElementCount
             get() = 0
         override fun deepCopy(): NullLiteral {
@@ -6800,7 +6849,7 @@ object Java {
         type: Type,
     ) : BaseTree(pos), LiteralExpr {
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate197
+            get() = sharedCodeFormattingTemplate198
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -6900,9 +6949,9 @@ object Java {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (oneParam) {
-                    sharedCodeFormattingTemplate198
-                } else {
                     sharedCodeFormattingTemplate199
+                } else {
+                    sharedCodeFormattingTemplate200
                 }
         override val formatElementCount
             get() = 1
@@ -6950,7 +6999,7 @@ object Java {
         override val operatorDefinition: JavaOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate199
+            get() = sharedCodeFormattingTemplate200
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -7009,7 +7058,7 @@ object Java {
                 if (type != null) {
                     sharedCodeFormattingTemplate140
                 } else {
-                    sharedCodeFormattingTemplate200
+                    sharedCodeFormattingTemplate201
                 }
         override val formatElementCount
             get() = 3
@@ -7081,7 +7130,7 @@ object Java {
                 if (type != null) {
                     sharedCodeFormattingTemplate141
                 } else {
-                    sharedCodeFormattingTemplate201
+                    sharedCodeFormattingTemplate202
                 }
         override val formatElementCount
             get() = 3
@@ -10499,8 +10548,18 @@ object Java {
     private val sharedCodeFormattingTemplate179 =
         CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word)
 
-    /** `{{0}} :: {{1}}` */
+    /** `{{0}} . this` */
     private val sharedCodeFormattingTemplate180 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(".", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("this", OutputTokenType.Word),
+            ),
+        )
+
+    /** `{{0}} :: {{1}}` */
+    private val sharedCodeFormattingTemplate181 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10510,7 +10569,7 @@ object Java {
         )
 
     /** `{{0}} :: new` */
-    private val sharedCodeFormattingTemplate181 =
+    private val sharedCodeFormattingTemplate182 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10520,7 +10579,7 @@ object Java {
         )
 
     /** `( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate182 =
+    private val sharedCodeFormattingTemplate183 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -10531,7 +10590,7 @@ object Java {
         )
 
     /** `{{0}} instanceof {{1}}` */
-    private val sharedCodeFormattingTemplate183 =
+    private val sharedCodeFormattingTemplate184 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10541,7 +10600,7 @@ object Java {
         )
 
     /** `{{0}} . {{1}} {{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate184 =
+    private val sharedCodeFormattingTemplate185 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10558,7 +10617,7 @@ object Java {
         )
 
     /** `{{0}} . {{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate185 =
+    private val sharedCodeFormattingTemplate186 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10574,7 +10633,7 @@ object Java {
         )
 
     /** `{{1}} {{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate186 =
+    private val sharedCodeFormattingTemplate187 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -10589,7 +10648,7 @@ object Java {
         )
 
     /** `{{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate187 =
+    private val sharedCodeFormattingTemplate188 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(2),
@@ -10603,7 +10662,7 @@ object Java {
         )
 
     /** `{{0}} . super . {{1}} {{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate188 =
+    private val sharedCodeFormattingTemplate189 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10622,7 +10681,7 @@ object Java {
         )
 
     /** `{{0}} . super . {{2}} ( {{3*,}} )` */
-    private val sharedCodeFormattingTemplate189 =
+    private val sharedCodeFormattingTemplate190 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10640,7 +10699,7 @@ object Java {
         )
 
     /** `new {{0}} {{1}} ( {{2*,}} ) {{3}}` */
-    private val sharedCodeFormattingTemplate190 =
+    private val sharedCodeFormattingTemplate191 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -10657,7 +10716,7 @@ object Java {
         )
 
     /** `new {{0}} {{1}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate191 =
+    private val sharedCodeFormattingTemplate192 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -10673,7 +10732,7 @@ object Java {
         )
 
     /** `new {{0}} ( {{2*,}} ) {{3}}` */
-    private val sharedCodeFormattingTemplate192 =
+    private val sharedCodeFormattingTemplate193 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -10689,7 +10748,7 @@ object Java {
         )
 
     /** `new {{0}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate193 =
+    private val sharedCodeFormattingTemplate194 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -10704,19 +10763,19 @@ object Java {
         )
 
     /** `true` */
-    private val sharedCodeFormattingTemplate194 =
+    private val sharedCodeFormattingTemplate195 =
         CodeFormattingTemplate.LiteralToken("true", OutputTokenType.Word)
 
     /** `false` */
-    private val sharedCodeFormattingTemplate195 =
+    private val sharedCodeFormattingTemplate196 =
         CodeFormattingTemplate.LiteralToken("false", OutputTokenType.Word)
 
     /** `null` */
-    private val sharedCodeFormattingTemplate196 =
+    private val sharedCodeFormattingTemplate197 =
         CodeFormattingTemplate.LiteralToken("null", OutputTokenType.Word)
 
     /** `{{0}} . class` */
-    private val sharedCodeFormattingTemplate197 =
+    private val sharedCodeFormattingTemplate198 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10726,14 +10785,14 @@ object Java {
         )
 
     /** `{{0*,}}` */
-    private val sharedCodeFormattingTemplate198 =
+    private val sharedCodeFormattingTemplate199 =
         CodeFormattingTemplate.GroupSubstitution(
             0,
             CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
         )
 
     /** `( {{0*,}} )` */
-    private val sharedCodeFormattingTemplate199 =
+    private val sharedCodeFormattingTemplate200 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -10746,7 +10805,7 @@ object Java {
         )
 
     /** `{{0}} var {{2}}` */
-    private val sharedCodeFormattingTemplate200 =
+    private val sharedCodeFormattingTemplate201 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -10756,7 +10815,7 @@ object Java {
         )
 
     /** `{{0}} var ... {{2}}` */
-    private val sharedCodeFormattingTemplate201 =
+    private val sharedCodeFormattingTemplate202 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),

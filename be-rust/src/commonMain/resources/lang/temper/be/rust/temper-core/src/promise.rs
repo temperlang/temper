@@ -81,10 +81,9 @@ pub struct Promise<T>
 where
     T: Clone,
 {
-    // Provide only one bonus listener for now. TODO Do we need more?
-    // TODO Just take a Generator directly instead of a function?
-    next: Arc<RwLock<Option<Task>>>,
-    wait: WaitPair<T>,
+    // The result and the waiters share one mutex, so a waiter added while
+    // another thread resolves the promise is either kept or sees the result.
+    state: StatePair<T>,
 }
 
 impl<T> Promise<T>
@@ -92,35 +91,26 @@ where
     T: Clone,
 {
     pub fn get(&self) -> Result<T> {
-        let (lock, cvar) = &*self.wait;
-        let mut result = lock.lock().unwrap();
-        while result.is_none() {
-            result = cvar.wait(result).unwrap();
+        let (lock, cvar) = &*self.state;
+        let mut state = lock.lock().unwrap();
+        while state.result.is_none() {
+            state = cvar.wait(state).unwrap();
         }
-        result.clone().unwrap()
+        state.result.clone().unwrap()
     }
 
-    fn next(&self) {
-        let next = {
-            let mut next = self.next.write().unwrap();
-            next.take()
-        };
-        if let Some(next) = next {
-            next();
-        }
-    }
-
+    /// Runs `next` once this promise is resolved: now if it already is,
+    /// otherwise inside the call that resolves it, after the waiters added
+    /// before it.
     pub fn on_ready(&self, next: Task) {
-        let result = {
-            let (lock, _) = &*self.wait;
-            lock.lock().unwrap().clone()
-        };
-        match result {
-            Some(_) => next(),
-            None => {
-                *self.next.write().unwrap() = Some(next);
+        {
+            let mut state = self.state.0.lock().unwrap();
+            if state.result.is_none() {
+                state.waiters.push(next);
+                return;
             }
         }
+        next();
     }
 }
 
@@ -130,7 +120,6 @@ where
     T: Clone,
 {
     promise: Promise<T>,
-    wait: WaitPair<T>,
 }
 
 impl<T> PromiseBuilder<T>
@@ -138,44 +127,130 @@ where
     T: Clone,
 {
     pub fn new() -> Self {
-        let wait = Arc::new((Mutex::new(None), Condvar::new()));
         Self {
             promise: Promise {
-                next: Arc::new(RwLock::new(None)),
-                wait: wait.clone(),
+                state: Arc::new((
+                    Mutex::new(PromiseState {
+                        result: None,
+                        waiters: Vec::new(),
+                    }),
+                    Condvar::new(),
+                )),
             },
-            wait,
         }
     }
 
     pub fn break_promise(&self) {
-        let (lock, cvar) = &*self.wait;
-        {
-            let mut result = lock.lock().unwrap();
-            *result = Some(Err(Error::new()));
-        }
-        self.promise().next();
-        cvar.notify_all();
+        self.resolve(Err(Error::new()));
     }
 
     pub fn complete(&self, value: T) {
-        let (lock, cvar) = &*self.wait;
-        {
-            let mut result = lock.lock().unwrap();
-            // TODO Still notify below if previously set?
-            if result.is_none() {
-                *result = Some(Ok(value));
-            }
-        }
-        self.promise().next();
-        cvar.notify_all();
+        self.resolve(Ok(value));
     }
 
     pub fn promise(&self) -> Promise<T> {
         self.promise.clone()
     }
+
+    /// The first resolution sticks. Later ones change nothing and wake no one.
+    fn resolve(&self, result: Result<T>) {
+        let (lock, cvar) = &*self.promise.state;
+        let waiters = {
+            let mut state = lock.lock().unwrap();
+            if state.result.is_some() {
+                return;
+            }
+            state.result = Some(result);
+            std::mem::take(&mut state.waiters)
+        };
+        cvar.notify_all();
+        // Outside the lock, so a waiter may await this promise again.
+        for next in waiters {
+            next();
+        }
+    }
 }
+
+struct PromiseState<T> {
+    result: Option<Result<T>>,
+    waiters: Vec<Task>,
+}
+
+type StatePair<T> = Arc<(Mutex<PromiseState<T>>, Condvar)>;
 
 pub type Task = std::sync::Arc<dyn Fn() + Send + Sync>;
 
-type WaitPair<T> = Arc<(Mutex<Option<Result<T>>>, Condvar)>;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn log_task(log: &Arc<Mutex<Vec<String>>>, line: &str) -> Task {
+        let log = log.clone();
+        let line = line.to_string();
+        Arc::new(move || log.lock().unwrap().push(line.clone()))
+    }
+
+    fn lines(log: &Arc<Mutex<Vec<String>>>) -> Vec<String> {
+        log.lock().unwrap().clone()
+    }
+
+    #[test]
+    fn every_waiter_resumes_on_complete() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let pb = PromiseBuilder::<i32>::new();
+        pb.promise().on_ready(log_task(&log, "first"));
+        pb.promise().on_ready(log_task(&log, "second"));
+        pb.complete(7);
+        assert_eq!(lines(&log), ["first", "second"]);
+        assert_eq!(pb.promise().get().ok(), Some(7));
+    }
+
+    #[test]
+    fn every_waiter_resumes_on_break_promise() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let pb = PromiseBuilder::<i32>::new();
+        pb.promise().on_ready(log_task(&log, "first"));
+        pb.promise().on_ready(log_task(&log, "second"));
+        pb.break_promise();
+        assert_eq!(lines(&log), ["first", "second"]);
+        assert!(pb.promise().get().is_err());
+    }
+
+    #[test]
+    fn on_ready_after_resolution_runs_now() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let pb = PromiseBuilder::<i32>::new();
+        pb.complete(1);
+        pb.promise().on_ready(log_task(&log, "late"));
+        assert_eq!(lines(&log), ["late"]);
+    }
+
+    #[test]
+    fn first_resolution_sticks_and_wakes_waiters_once() {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let pb = PromiseBuilder::<i32>::new();
+        pb.promise().on_ready(log_task(&log, "woken"));
+        pb.complete(1);
+        pb.complete(2);
+        pb.break_promise();
+        assert_eq!(lines(&log), ["woken"]);
+        assert_eq!(pb.promise().get().ok(), Some(1));
+    }
+
+    #[test]
+    fn get_blocks_until_another_thread_completes() {
+        let pb = PromiseBuilder::<i32>::new();
+        let promise = pb.promise();
+        let waiter = std::thread::spawn(move || promise.get().ok());
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        pb.complete(5);
+        assert_eq!(waiter.join().unwrap(), Some(5));
+    }
+
+    #[test]
+    fn promise_and_builder_are_send_and_sync() {
+        fn check<X: Send + Sync>() {}
+        check::<Promise<i32>>();
+        check::<PromiseBuilder<i32>>();
+    }
+}

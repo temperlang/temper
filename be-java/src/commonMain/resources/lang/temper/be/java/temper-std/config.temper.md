@@ -18,3 +18,5 @@ specialized connected methods.
         "org.junit.jupiter:junit-jupiter:5.9.2",
       ],
     };
+
+[std-on-maven]: https://central.sonatype.com/artifact/dev.temperlang/temper-std/

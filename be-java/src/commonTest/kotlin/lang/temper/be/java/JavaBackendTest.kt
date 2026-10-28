@@ -95,9 +95,9 @@ class JavaBackendTest {
     @Test
     fun simpleInequalityInt() {
         assertGeneratedJava(
-            "export let t(x: Int): Boolean { return x != 1; }",
+            "@keep let t(x: Int): Boolean { return x != 1; }",
             """
-            |public static boolean t(int x__2) {
+            |static boolean t(int x__2) {
             |    return x__2 != 1;
             |}
             """.javaMethod(),
@@ -585,6 +585,30 @@ class JavaBackendTest {
             |    IntSupplier a__0 = () -> x__0;
             |}
             """.javaMethod("import java.util.function.IntSupplier;"),
+        )
+    }
+
+    @Test
+    fun throwingFunctionTypeWithObjectReturn() {
+        // The return type of `fn (String): String throws Bubble` is a Result in the frontend's
+        // types. It must not leak into the type argument as a class named `Result`.
+        assertGeneratedJava(
+            """
+            |export let applyOne(x: String, f: fn (String): String throws Bubble): String throws Bubble {
+            |  f(x)
+            |}
+            |export let supply<T>(f: fn (): T throws Bubble): T throws Bubble {
+            |  f()
+            |}
+            """.trimMargin(),
+            """
+            |public static String applyOne(String x__0, Function<String, String> f__0) {
+            |    return f__0.apply(x__0);
+            |}
+            |public static<T__0> T__0 supply(Supplier<T__0> f__1) {
+            |    return f__1.get();
+            |}
+            """.javaMethod("import java.util.function.Function;", "import java.util.function.Supplier;"),
         )
     }
 
@@ -1078,10 +1102,10 @@ class JavaBackendTest {
             |                              private TestGlobal() {
             |                              }
             |                              static final Console console_5;
-            |                              static void f__0(Supplier<Generator<Optional<? super Object>>> factory__0) {
+            |                              static void f(Supplier<Generator<Optional<? super Object>>> factory__0) {
             |                                  factory__0.get().get();
             |                              }
-            |                              static Generator<Optional<? super Object>> fn__0() {
+            |                              static Generator<Optional<? super Object>> fn() {
             |                                  class Local_1 {
             |                                      int caseIndex_13 = 0;
             |                                  }
@@ -1111,7 +1135,7 @@ class JavaBackendTest {
             |                              }
             |                              static {
             |                                  console_5 = Core.getConsole(Logger.getLogger("my_test_library.test"));
-            |                                  TestGlobal.f__0(TestGlobal :: fn__0);
+            |                                  TestGlobal.f(TestGlobal :: fn);
             |                              }
             |                          }
             |
@@ -1376,6 +1400,71 @@ class JavaBackendTest {
     )
 
     @Test
+    fun recursiveLocalFunctionReadsField() = assertGeneratedJavaRaw(
+        // A recursive local function becomes a method of a local class, where a bare `this` is
+        // the local class. A field read from the source's `this` has to say `Counter.this`.
+        """
+            |export class Counter(public n: Int) {
+            |  public sumTo(): Int {
+            |    let go(i: Int): Int {
+            |      if (i <= 0) { 0 } else { n + go(i - 1) }
+            |    }
+            |    go(3)
+            |  }
+            |}
+        """.trimMargin(),
+        """
+            |"pom.xml": "__DO_NOT_CARE__",
+            |"src": {
+            |    "main": {
+            |        "java": {
+            |            "my_test_library": {
+            |                "test": {
+            |                    "Counter.java": {
+            |                      "content":
+            |                          ```
+            |                          package my_test_library.test;
+            |                          public final class Counter {
+            |                              public final int n;
+            |                              public int sumTo() {
+            |                                  class Local_1 {
+            |                                      int go__0(int i__0) {
+            |                                          if (i__0 <= 0) {
+            |                                              return 0;
+            |                                          } else {
+            |                                              return Counter.this.n + this.go__0(i__0 - 1);
+            |                                          }
+            |                                      }
+            |                                  }
+            |                                  final Local_1 local$1 = new Local_1();
+            |                                  return local$1.go__0(3);
+            |                              }
+            |                              public Counter(int n__0) {
+            |                                  this.n = n__0;
+            |                              }
+            |                              public int getN() {
+            |                                  return this.n;
+            |                              }
+            |                          }
+            |
+            |                          ```
+            |                    },
+            |                    "Counter.java.map": "__DO_NOT_CARE__",
+            |                    "TestGlobal.java": "__DO_NOT_CARE__",
+            |                    "TestGlobal.java.map": "__DO_NOT_CARE__",
+            |                    "TestMain.java": "__DO_NOT_CARE__",
+            |                    "TestMain.java.map": "__DO_NOT_CARE__",
+            |                },
+            |                "MyTestLibraryGlobal.java": "__DO_NOT_CARE__",
+            |                "MyTestLibraryMain.java": "__DO_NOT_CARE__",
+            |            }
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun reduceAll() {
         assertGeneratedJava(
             """
@@ -1445,7 +1534,7 @@ class JavaBackendTest {
             |                  static final Console console_3;
             |                  static final CompletableFuture<String> b__0;
             |                  static final CompletableFuture<String> p__0;
-            |                  static Generator<Optional<? super Object>> fn__0() {
+            |                  static Generator<Optional<? super Object>> fn() {
             |                      class Local_1 {
             |                          int caseIndex_15 = 0;
             |                          @Nullable CompletableFuture<String> awaited_13 = null;
@@ -1506,7 +1595,7 @@ class JavaBackendTest {
             |                      console_3 = Core.getConsole(Logger.getLogger("my_test_library.test"));
             |                      b__0 = new CompletableFuture<>();
             |                      p__0 = b__0;
-            |                      Core.runAsync(TestGlobal :: fn__0);
+            |                      Core.runAsync(TestGlobal :: fn);
             |                      b__0.complete("Hi");
             |                  }
             |              }
@@ -1558,7 +1647,7 @@ class JavaBackendTest {
             |                  private TestGlobal() {
             |                  }
             |                  static final CompletableFuture<Optional<? super Object>> p__0;
-            |                  static Generator<Optional<? super Object>> fn__0() {
+            |                  static Generator<Optional<? super Object>> fn() {
             |                      class Local_1 {
             |                          int caseIndex_9 = 0;
             |                          @Nullable CompletableFuture<Optional<? super Object>> awaited_7 = null;
@@ -1613,7 +1702,7 @@ class JavaBackendTest {
             |                  }
             |                  static {
             |                      p__0 = new CompletableFuture<>();
-            |                      Core.runAsync(TestGlobal :: fn__0);
+            |                      Core.runAsync(TestGlobal :: fn);
             |                  }
             |              }
             |

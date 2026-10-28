@@ -96,6 +96,7 @@ data class Value<T : Any>(
     override fun hashCode() = stateVector.hashCode()
 
     companion object {
+        operator fun invoke(string: String) = Value(string, TString)
         operator fun invoke(symbol: Symbol) = Value(symbol, TSymbol)
         operator fun invoke(reifiedType: ReifiedType) = Value(reifiedType, TType)
         operator fun invoke(macroValue: MacroValue) = Value(macroValue, TFunction)

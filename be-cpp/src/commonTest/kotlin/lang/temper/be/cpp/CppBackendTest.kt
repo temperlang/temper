@@ -167,6 +167,75 @@ class CppBackendTest {
     }
 
     @Test
+    fun genericFunctions() {
+        assertGenerated(
+            temper = """
+                |// Top-level function.
+                |export let first<T>(things: List<T>): T {
+                |  let thing = things[0];
+                |  thing
+                |}
+                |// Class here and not an interface.
+                |export class Classy {
+                |  // Instance method.
+                |  public second<T>(things: List<T>): T {
+                |    let thing = things[1];
+                |    thing
+                |  }
+                |  // Static method.
+                |  public static third<T>(things: List<T>): T {
+                |    let thing = things[2];
+                |    thing
+                |  }
+                |}
+            """,
+            cpp = """
+                |#include <my-test-library/something.hpp>
+                |namespace my_test_library {
+                |  std::shared_ptr<Classy> Classy::make() {
+                |    std::shared_ptr<Classy> result_0 = std::make_shared<Classy>();
+                |    Classy* this_5 = result_0.get();
+                |    return result_0;
+                |  }
+                |  void global_init_something() {
+                |    static bool initialized = false;
+                |    if (initialized) {
+                |      return;
+                |    }
+                |    initialized = true;
+                |  }
+                |}
+                |
+            """,
+            hpp = """
+                |#pragma once
+                |#include <temper-core/core.hpp>
+                |namespace my_test_library {
+                |  struct Classy;
+                |  struct Classy : public std::enable_shared_from_this<Classy> {
+                |    template<class T> T second(std::shared_ptr<std::vector<T>> const & things) const {
+                |      auto this_ = temper::core::borrow_this(this);
+                |      T thing = temper::core::List::get(things, 1);
+                |      return thing;
+                |    }
+                |    template<class T_3> T_3 third(std::shared_ptr<std::vector<T_3>> const & things_17) {
+                |      T_3 thing_19 = temper::core::List::get(things_17, 2);
+                |      return thing_19;
+                |    }
+                |    static std::shared_ptr<Classy> make();
+                |  };
+                |  template<class T_0> T_0 first(std::shared_ptr<std::vector<T_0>> const & things_9) {
+                |    T_0 thing_11 = temper::core::List::get(things_9, 0);
+                |    return thing_11;
+                |  }
+                |  void global_init_something();
+                |}
+                |
+            """,
+        )
+    }
+
+    @Test
     fun exportedVariable() {
         assertGenerated(
             temper = """
@@ -608,6 +677,25 @@ class CppBackendTest {
     }
 
     @Test
+    fun callMethodNamedAfterKeyword() {
+        assertGeneratedContains(
+            temper = """
+                |export class B {
+                |  public int(k: Int): Int { k + 1 }
+                |  public twice(k: Int): Int { int(int(k)) }
+                |  public static bool(k: Int): Boolean { k > 0 }
+                |}
+                |export let f(b: B, k: Int): Boolean { B.bool(b.int(k)) }
+            """,
+            cppContains = listOf(
+                "int32_t int_(int32_t) const;",
+                "return this_1->int_(this_1->int_(k_",
+                "return B::bool_(b->int_(k_19));",
+            ),
+        )
+    }
+
+    @Test
     fun importsBetweenModules() {
         assertGeneratedContains(
             temper = """
@@ -618,6 +706,23 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 "temper::core::Console::log",
+            ),
+        )
+    }
+
+    @Test
+    fun importOfOnlyTypesInitializesTheirModule() {
+        assertGeneratedContains(
+            temper = """
+                |let { Regex, Sequence, CodePoints } = import("std/regex");
+                |export let re = new Regex(new Sequence([new CodePoints("a"), new CodePoints("b")]));
+            """,
+            cppContains = listOf(
+                """
+                    |    initialized = true;
+                    |    temper_std::global_init_regex();
+                    |    re = temper_std::Regex::make(
+                """.trimMargin(),
             ),
         )
     }

@@ -30,6 +30,7 @@ import lang.temper.type2.DefinedType
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.withType
+import lang.temper.value.AbstractPanic
 import lang.temper.value.BuiltinOperatorId
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.PureVirtual
@@ -48,10 +49,10 @@ object RustSupportNetwork : SupportNetwork {
     override val simplifyOrTypes: Boolean = true
 
     override fun getSupportCode(pos: Position, builtin: NamedBuiltinFun, genre: Genre): SupportCode? {
-        return runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse {
+        return builtinFunSupportCode[builtin.name] ?: run {
             // Useful for placing a breakpoint.
             null
-        } ?: builtinFunSupportCode[builtin.name] ?: run {
+        } ?: runCatching { supportCodeByOperatorId(builtin.builtinOperatorId) }.getOrElse { //
             // Also useful.
             null
         }
@@ -219,6 +220,7 @@ private fun supportCodeByOperatorId(builtinOperatorId: BuiltinOperatorId?): Supp
 }
 
 private val builtinFunSupportCode = mapOf(
+    AbstractPanic.name to PureVirtualBuiltin,
     PureVirtual.name to PureVirtualBuiltin,
     ConvertedCoroutineAwakeUponFn.name to AwakeUponSupportCode,
     GetPromiseResultSyncFn.name to GetPromiseResultSyncSupportCode,
@@ -330,7 +332,7 @@ private class Float64Compare(
             pos = pos,
             callee = "temper_core".toKeyId(pos.leftEdge).extendWith(listOf("float64", "cmp")),
             args = arguments.map { it.expr as Rust.Expr },
-        ).infix(operator, Rust.NumberLiteral(pos, 0L))
+        ).infix(operator, Rust.NumberLiteral(pos, 0))
     }
 }
 
@@ -644,7 +646,7 @@ private class BitwiseShift(
                         bPos,
                         bExpr,
                         Rust.Operator(bRPos, RustOperator.And),
-                        Rust.NumberLiteral(bRPos, mask.toLong()),
+                        Rust.NumberLiteral(bRPos, mask),
                     ),
                     Rust.Operator(bRPos, RustOperator.As),
                     Rust.Id(bRPos, OutName("u32", null)),
@@ -695,7 +697,7 @@ private class BitwiseUShr(
                             bPos,
                             bExpr,
                             Rust.Operator(bRPos, RustOperator.And),
-                            Rust.NumberLiteral(bRPos, shiftMask.toLong()),
+                            Rust.NumberLiteral(bRPos, shiftMask),
                         ),
                         Rust.Operator(bRPos, RustOperator.As),
                         Rust.Id(bRPos, OutName("u32", null)),
@@ -802,7 +804,7 @@ private val divIntIntSafe = MethodCall("DivIntIntSafe", "wrapping_div", BuiltinO
 private object DivIntInt64 : FunctionCall("DivIntInt64", "temper_core::int64_div", BuiltinOperatorId.DivIntInt64)
 
 private object DoneResult : Constant("core.doneResult()") {
-    override fun value(pos: Position) = "None".toId(pos)
+    override fun value(pos: Position) = NONE_NAME.toId(pos)
 }
 object Empty : RustInlineSupportCode("core.empty()") {
     override fun inlineToTree(
@@ -1135,14 +1137,14 @@ internal object TestBail : RustInlineSupportCode("std/testing.type Test.bail()")
         val messages = "self".toKeyId(pos).methodCall("messages_combined")
         val makeError = "temper_core".toId(pos).extendWith(listOf("Error", "with_optional_message"))
         val error = Rust.Call(pos, makeError, listOf(messages))
-        return Rust.Call(pos, "Err".toId(pos), listOf(error))
+        return Rust.Call(pos, ERR_NAME.toId(pos), listOf(error))
     }
 }
 
 private val timesFltFlt = Infix("TimesFltFlt", BuiltinOperatorId.TimesFltFlt, RustOperator.Multiplication)
 private val timesIntInt = MethodCall("TimesIntInt", "wrapping_mul", BuiltinOperatorId.TimesIntInt)
 private val valueResultConstructor =
-    FunctionCall("core.type ValueResult.constructor()", "Some", cloneEvenIfFirst = true, hasGeneric = true)
+    FunctionCall("core.type ValueResult.constructor()", SOME_NAME, cloneEvenIfFirst = true, hasGeneric = true)
 
 private val isOkResult = MethodCall(
     baseName = "IsOkResult",
@@ -1152,7 +1154,7 @@ private val isOkResult = MethodCall(
 
 private val packOkResult = FunctionCall(
     baseName = "PackOkResult",
-    functionName = "Ok",
+    functionName = OK_NAME,
     avoidDeref = true,
     builtinOperatorId = BuiltinOperatorId.PackOkResult,
     cloneEvenIfFirst = true,
@@ -1171,7 +1173,7 @@ private object RepackErrResult : RustInlineSupportCode(
     ): Rust.Tree {
         return Rust.Call(
             pos,
-            callee = "Err".toId(pos),
+            callee = ERR_NAME.toId(pos),
             // `.expect_err` and `.unwrap_err` both require the success type
             // implements the Debug trait so that they can produce a panic message,
             // `.unwrap_err_unchecked` is unsafe, and `.into_err` is nightly only.

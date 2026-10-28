@@ -100,6 +100,7 @@ fun cargoTestToJunitXml(libraryName: String, stdout: String): String? {
     var nameForMessage: String? = null
     var time = 0.0
     var total = 0
+    var sawTestRun = false
     // There could be multiple rounds of test reports, and we usually only care about one of them, while the others
     // typically report zero tests for our usage. For simplicity, just treat all of it as unordered.
     lines@ for (line in stdout.split("\n")) {
@@ -128,7 +129,10 @@ fun cargoTestToJunitXml(libraryName: String, stdout: String): String? {
                 }
             }
         }
-            ?: regexTestTotal.find(line)?.also { total += it.groupValues[1].toInt() }
+            ?: regexTestTotal.find(line)?.also {
+                sawTestRun = true
+                total += it.groupValues[1].toInt()
+            }
             ?: regexTestItem.find(line)?.also { match ->
                 messages[match.groupValues[1]] = when (val failure = match.groupValues[2]) {
                     "ok" -> null
@@ -146,6 +150,11 @@ fun cargoTestToJunitXml(libraryName: String, stdout: String): String? {
                     messages[nameForMessage] = ""
                 }
             }
+    }
+    // No `running N tests` line means no test binary ran, typically because the crate did not compile. An empty
+    // report would count as zero failures, so return null and leave the command's own result to be reported.
+    if (!sawTestRun) {
+        return null
     }
     // Check matching data.
     val good = passed + failed == total && failed == messages.count { it.value != null } && time >= 0.0

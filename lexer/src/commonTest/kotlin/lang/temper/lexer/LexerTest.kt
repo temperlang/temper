@@ -186,6 +186,38 @@ class LexerTest {
     )
 
     @Test
+    fun codeInBlockQuoteIsProse() = assertTokenization(
+        // Quoted code stays in the comment, even across lines.
+        """
+        >Text.
+        >
+        >> ```temper
+        >> let x = 1;
+        >> ```
+        :    C
+        """.trimIndent(),
+        languageConfig = MarkdownLanguageConfig(),
+        affectedBy = listOf(kotlinBackend.affectedByIssue1499),
+    )
+
+    @Test
+    fun codeAfterQuotedCode() = assertTokenization(
+        // Indented code in a block quote, which is prose, then indented code
+        // outside it. This used to crash when quoted code counted as code.
+        """
+        >>     ,
+        :       C
+        >    }
+        :   SE
+        """.trimIndent(),
+        languageConfig = MarkdownLanguageConfig(),
+        wantedErrors = listOf(
+            "12-13: `}`: Close bracket matches no open bracket!",
+        ),
+        affectedBy = listOf(kotlinBackend.affectedByIssue1499),
+    )
+
+    @Test
     fun stringEndingInBackslash() = assertTokenization(
         // (r) below includes a synthetic close quote that is not part of the input
         """

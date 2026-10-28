@@ -80,24 +80,27 @@ internal class LuaTranslator(
         val testModuleParts = makeParts(DependencyCategory.Test)
         prodModuleParts.init(mod)
         testModuleParts.init(mod)
-        // Translate to Lua.
+        // Track prod top-levels by Lua name.
         val prodMap = mutableMapOf<LuaName, TmpL.Declaration>()
+        mod.topLevels.forEach { topLevel ->
+            if (topLevel.dependencyCategory() == DependencyCategory.Production) {
+                if (topLevel is TmpL.Declaration) {
+                    prodMap[luaNames.name(topLevel.name, tryPretty = true)] = topLevel
+                }
+            }
+        }
+        // Translate to Lua.
         mod.topLevels.forEach topLevels@{ topLevel ->
             val parts = when (topLevel.dependencyCategory()) {
-                DependencyCategory.Production -> {
-                    if (topLevel is TmpL.Declaration) {
-                        // Also track prod top-levels by Lua name.
-                        prodMap[luaNames.name(topLevel.name)] = topLevel
-                    }
-                    prodModuleParts
-                }
+                DependencyCategory.Production -> prodModuleParts
                 DependencyCategory.Test -> testModuleParts
                 null -> return@topLevels
             }
             parts.topLevels.addAll(parts.translateTopLevel(topLevel))
         }
         // Figure out what we need to import from prod in tests.
-        var anyUnexported = false
+        // And for now, just always presume connected functions mean we might need unexported things for them.
+        var anyUnexported = prodModuleParts.anyConnected || testModuleParts.anyConnected
         val neededByTest = buildSet {
             for (testTop in testModuleParts.topLevels) {
                 fun dig(tree: Lua.Tree) {
@@ -169,6 +172,7 @@ private class ModuleParts(
     private val labels = mutableMapOf<String, Int>()
     private var labelUsed = mutableSetOf<String>()
     private var libraryName: DashedIdentifier? = null
+    var anyConnected = false
     var needsPreDecl = mutableSetOf<LuaName>()
     var importedNames = mutableListOf<LuaName>()
     val exportedNames = mutableSetOf<LuaName>()
@@ -1775,6 +1779,7 @@ private class ModuleParts(
         params: Lua.Params,
     ): Lua.Chunk {
         val pos = stmt.pos
+        anyConnected = true
         val defaulting = stmt.parameterDefaultStatementsInfo()
         var last: Lua.LastStmt? = null
         val body = buildList {

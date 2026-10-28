@@ -412,6 +412,7 @@ class SimplifyNames(private val top: J.TopLevelClassDeclaration) {
 
         is J.StaticMethodReferenceExpr -> importType(e.type)
         is J.StaticFieldAccessExpr -> importType(e.type)
+        is J.QualifiedThisExpr -> importType(e.type)
 
         is J.FieldAccessExpr -> {
             scanExpr(e.expr)

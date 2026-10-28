@@ -67,6 +67,4 @@ accessible to Temper code.
       method: String,
       bodyContent: String?,
       bodyMimeType: String?,
-    ): Promise<NetResponse> {
-      panic()
-    }
+    ): Promise<NetResponse>;

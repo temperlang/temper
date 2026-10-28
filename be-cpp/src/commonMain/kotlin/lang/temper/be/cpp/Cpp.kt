@@ -474,7 +474,7 @@ object Cpp {
         pos: Position,
         typeParams: Iterable<FuncParam>,
         def: FuncDef,
-    ) : BaseTree(pos), Global {
+    ) : BaseTree(pos), Global, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
@@ -529,7 +529,7 @@ object Cpp {
         pos: Position,
         typeParams: Iterable<FuncParam>,
         decl: FuncDecl,
-    ) : BaseTree(pos), Global {
+    ) : BaseTree(pos), Global, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate

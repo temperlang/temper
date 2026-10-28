@@ -60,11 +60,11 @@ class DocJsTranslatorTest {
         |import {
         |  globalConsole as globalConsole__0
         |} from "@temperlang/core";
-        |/** @type {Console_2} */
-        |const console_0 = globalConsole__0;
-        |/** @param {string} x_3 */
-        |export function foo(x_3) {
-        |  console_0.log(x_3);
+        |/** @type {Console_1} */
+        |const console = globalConsole__0;
+        |/** @param {string} x_2 */
+        |export function foo(x_2) {
+        |  console.log(x_2);
         |  return;
         |};
         |// #endregion }}}
