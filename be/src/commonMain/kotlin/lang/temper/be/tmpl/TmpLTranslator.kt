@@ -147,6 +147,7 @@ import lang.temper.value.initSymbol
 import lang.temper.value.isAssignment
 import lang.temper.value.isBubbleCall
 import lang.temper.value.isNewCall
+import lang.temper.value.isPanicCall
 import lang.temper.value.isYieldCall
 import lang.temper.value.parameterNameSymbolsListSymbol
 import lang.temper.value.reachSymbol
@@ -1087,6 +1088,9 @@ class TmpLTranslator internal constructor(
         require(isAssignment(tree))
         val left = tree.child(1) as LeftNameLeaf
         val rightTree = tree.child(2)
+        if (isPanicCall(rightTree)) {
+            return listOf(TmpL.ThrowStatement(rightTree.pos))
+        }
         return translateAssignment(tree.pos, left = left, right = rightTree)
     }
 
