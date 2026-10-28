@@ -181,6 +181,7 @@ import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.unpackPairValue
 import lang.temper.value.valueContained
+import lang.temper.value.void
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.math.min
@@ -2306,7 +2307,10 @@ internal class Typer(
                     if (
                         type == null || !type.mentionsInvalid && (
                             leftType == null || rightType == null ||
-                                !typeContext2.isSubType(rightType, leftType)
+                                !(
+                                    typeContext2.isSubType(rightType, leftType) ||
+                                        isAllowedVoidAssignment(leftType, right)
+                                    )
                             )
                     ) {
                         val rightTypeOrInvalid = rightType ?: invalidType2
@@ -3659,3 +3663,14 @@ internal fun isCallable(t: StaticType): Boolean = when (t) {
     )
     TopType -> false
 }
+
+/** We allow auto-generated assignments of exactly `void` to `Never<Void>` return types. */
+fun isAllowedVoidAssignment(leftType: Type2?, right: Tree) =
+    leftType in allowedVoidReceiversHacky && right.valueContained == void
+
+private val allowedVoidReceiversHacky = setOf(
+    voidType2,
+    MkType2(WellKnownTypes.neverTypeDefinition).actuals(listOf(voidType2)).get(),
+    // HACK: disallow this once new<->old never-type compatibility ironed out
+    MkType2(WellKnownTypes.neverTypeDefinition).get(),
+)

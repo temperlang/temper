@@ -10,6 +10,7 @@ import lang.temper.common.Log
 import lang.temper.common.ignore
 import lang.temper.common.padTo
 import lang.temper.frontend.Module
+import lang.temper.frontend.typestage.isAllowedVoidAssignment
 import lang.temper.frontend.typestage.isConstructor
 import lang.temper.frontend.typestage.logInvalid2BecauseMissingType
 import lang.temper.frontend.typestage.logInvalidBecauseMissingType
@@ -372,6 +373,9 @@ internal class TypeChecker(
         // TODO: check that right type is a subtype of left-type.
         val (_, leftTree, rightTree) = t.children
         val leftType = leftTree.typeInferences?.type
+        if (leftType != null && isAllowedVoidAssignment(leftType, rightTree)) {
+            return
+        }
         val rightType = rightTree.typeInferences?.type?.let { passTypeOf(it) }
         var rightTypeNotNever = rightType
         while (rightTypeNotNever?.definition == WellKnownTypes.neverTypeDefinition) {

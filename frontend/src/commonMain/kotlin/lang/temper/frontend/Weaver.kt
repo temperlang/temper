@@ -624,6 +624,17 @@ class Weaver private constructor(
                                     }
                                 },
                             )
+                        } else if (
+                            hasNonNullNeverType(tree, typeContext2) &&
+                            !(isAssignment(parent) && edge === parent?.edgeOrNull(2))
+                        ) {
+                            heavies.add(
+                                edge to {
+                                    Block(tree.pos.rightEdge) {
+                                        Replant(freeTree(tree))
+                                    }
+                                },
+                            )
                         }
                     }
                 }
@@ -976,4 +987,12 @@ private fun varNamesOf(t: Tree) = buildSet {
             }
         }
         .visitPreOrder()
+}
+
+private fun hasNonNullNeverType(
+    t: Tree,
+    tc: TypeContext2,
+): Boolean {
+    val t = t.typeInferences?.type ?: return false
+    return t.definition == WellKnownTypes.neverTypeDefinition && !tc.admitsNull(t)
 }

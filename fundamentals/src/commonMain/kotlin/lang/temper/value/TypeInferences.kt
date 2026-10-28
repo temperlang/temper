@@ -97,6 +97,5 @@ val CallTypeInferences?.returnsVoid: Boolean
 
 val CallTree.returnsVoidClearly: Boolean
     get() {
-        // TODO: Take this nullaryNeverCall case away once we've got Never<Void> as a distinct return type.
-        return !isNullaryNeverCall(this) && typeInferences.returnsVoid
+        return typeInferences.returnsVoid
     }

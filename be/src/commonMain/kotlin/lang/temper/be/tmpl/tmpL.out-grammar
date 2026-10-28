@@ -489,7 +489,7 @@ RetType = ResultType | PassType;
  */
 ExprType = NonNullExprType | NullableExprType;
 ExprType ::= name
-    & ((typeActuals => "<" & typeActuals*"," & ">") || ())
+    & ((typeActuals => `OutToks.leftAngle` & typeActuals*"," & `OutToks.rightAngle`) || ())
     & ((canBeNull == true => "?") || ());
 
 /** An expression type that excludes the null value. */
@@ -575,7 +575,7 @@ PassType = ExprType | VoidType;
  * the first so that backends are not required to represent ad-hoc discriminated
  * unions.
  */
-ResultType ::= "result" & "<" & passType%PassType & "," & errTypes%RegularTypeNotNull+"|" & ">";
+ResultType ::= "result" & `OutToks.leftAngle` & passType%PassType & "," & errTypes%RegularTypeNotNull+"|" & `OutToks.leftAngle`;
 ResultType.typeActuals = `
     buildList {
         add(passType)
@@ -588,7 +588,7 @@ ResultType.typeActuals = `
  * normally but does not produce a first-class value.  Often because it is called
  * for a sideeffect.
  */
-VoidType ::= "void" & ((canBeNull == true => "?") || ());
+VoidType ::= "Void";
 VoidType.typeActuals = `emptyList()`;
 
 /** Metadata about a declared name */
@@ -746,7 +746,7 @@ TypeQualifiers ::=
     & ((supportsClauses%RegularTypeNotNull => ("supports" & supportsClauses)) || ())
     & ((forbidsClauses%NewType => ("forbids" & forbidsClauses*",")) || ());
 
-FormalTypeDefs ::= (defs%FormalTypeDef => "<" & defs*"," & ">") || ();
+FormalTypeDefs ::= (defs%FormalTypeDef => `OutToks.leftAngle` & defs*"," & `OutToks.rightAngle`) || ();
 FormalArgTypes ::= "(" & argTypes%ExprType*"," & ")";
 
 FormalTypeDef ::= metadata & ((qName => qName) || ()) & name & qualifiers;
@@ -911,7 +911,7 @@ VarLike =
 VarLike(metadata%DeclarationMetadata*"", name%Id, assignOnce%`Boolean`, descriptor%`Type2!`);
 
 /** A group of formal type parameters in the declaration of a type polymorphic thing. */
-TypeParameters ::= ((typeParameters%TypeFormal => "<" & typeParameters*", " & ">") || ());
+TypeParameters ::= ((typeParameters%TypeFormal => `OutToks.leftAngle` & typeParameters*", " & `OutToks.rightAngle`) || ());
 TypeParameters.operatorDefinition = `TmpLOperatorDefinition.Angle`;
 
 /** A group of formal value parameters in the declaration of a callable thing. */
@@ -1407,7 +1407,7 @@ companion object {
 `
 }
 
-ExplicitCallTypeActuals ::= ((types => "<" & types*", " & ">") || ());
+ExplicitCallTypeActuals ::= ((types => `OutToks.leftAngle` & types*", " & `OutToks.rightAngle`) || ());
 
 ImplicitCallTypeActuals ::= ();
 ImplicitCallTypeActuals {
@@ -1717,7 +1717,7 @@ TypeFormal.descriptor = `null`;
  */
 NominalType ::=
       typeName%TypeName
-    & ((params%AType => "<" & params*", " & ">") || ());
+    & ((params%AType => `OutToks.leftAngle` & params*", " & `OutToks.rightAngle`) || ());
 NominalType(connectsFrom%`Type2?`);
 NominalType.operatorDefinition = `TmpLOperatorDefinition.Angle`;
 NominalType.connectsFrom.default = `null`;
@@ -1779,7 +1779,7 @@ TypeIntersection.operatorDefinition = `TmpLOperatorDefinition.Amp`;
 
 TopType ::= "Top";
 BubbleType ::= "Bubble";
-NeverType ::= "Never";
+NeverType ::= "Never" & `OutToks.leftAngle` & fallback%Type & `OutToks.rightAngle`;
 
 MemberOrGarbage = Member | GarbageStatement;
 Member = Property | Method;

@@ -465,6 +465,12 @@ class TypeContext2 {
             //     Never<...> <: AnyValue
         }
 
+        // HACK: Treat `Never` as a `Never<*>` kind of type until the new<->old style type conversion
+        // reliably preserves `Never` type parameters.
+        if (t.definition == u.definition && t.definition == neverTypeDefinition && u.bindings.isEmpty()) {
+            return@isSub true
+        }
+
         val infiniteLoopAvoidanceKey = t to u
         if (!optimisticIfSubTypesRecursivelyReached.add(infiniteLoopAvoidanceKey)) {
             return@isSub true

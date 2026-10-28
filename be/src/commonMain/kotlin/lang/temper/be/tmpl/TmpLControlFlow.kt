@@ -30,7 +30,6 @@ import lang.temper.name.name
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -65,8 +64,8 @@ import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
 import lang.temper.value.isPanicCall
 import lang.temper.value.jumpKind
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.ssaSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
@@ -1134,9 +1133,7 @@ private fun fixupBlockContent(stmts: List<PreTranslated>): List<PreTranslated> {
         val typeMetadata = metadata[fromTypeSymbol]
             ?: metadata[typePlaceholderSymbol]
             ?: continue
-        val type = typeMetadata.target.staticTypeContained?.let {
-            hackMapOldStyleToNew(it)
-        }
+        val type = typeMetadata.target.reifiedTypeContained?.type2
         if (type is DefinedNonNullType) {
             typesDeclared.add(type.definition)
         }

@@ -7739,28 +7739,46 @@ object TmpL {
 
     class NeverType(
         pos: Position,
+        fallback: Type,
     ) : BaseTree(pos), SpecialType {
         override val operatorDefinition: TmpLOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() = sharedCodeFormattingTemplate163
         override val formatElementCount
-            get() = 0
+            get() = 1
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> this.fallback
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private var _fallback: Type
+        var fallback: Type
+            get() = _fallback
+            set(newValue) { _fallback = updateTreeConnection(_fallback, newValue) }
         override fun deepCopy(): NeverType {
-            return NeverType(pos)
+            return NeverType(pos, fallback = this.fallback.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is NeverType
+            return other is NeverType && this.fallback == other.fallback
         }
         override fun hashCode(): Int {
-            return 0
+            return fallback.hashCode()
+        }
+        init {
+            this._fallback = updateTreeConnection(null, fallback)
         }
         companion object {
-            private val cmr = ChildMemberRelationships()
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as NeverType).fallback },
+            )
         }
     }
 
@@ -9951,16 +9969,16 @@ object TmpL {
             ),
         )
 
-    /** `< {{0*,}} >` */
+    /** ``OutToks.leftAngle` {{0*,}} `OutToks.rightAngle`` */
     private val sharedCodeFormattingTemplate30 =
         CodeFormattingTemplate.Concatenation(
             listOf(
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
                 CodeFormattingTemplate.GroupSubstitution(
                     0,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.rightAngle),
             ),
         )
 
@@ -9968,32 +9986,32 @@ object TmpL {
     private val sharedCodeFormattingTemplate31 =
         CodeFormattingTemplate.empty
 
-    /** `{{0}} < {{1*,}} > ?` */
+    /** `{{0}} `OutToks.leftAngle` {{1*,}} `OutToks.rightAngle` ?` */
     private val sharedCodeFormattingTemplate32 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.rightAngle),
                 CodeFormattingTemplate.LiteralToken("?", OutputTokenType.Punctuation),
             ),
         )
 
-    /** `{{0}} < {{1*,}} >` */
+    /** `{{0}} `OutToks.leftAngle` {{1*,}} `OutToks.rightAngle`` */
     private val sharedCodeFormattingTemplate33 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.rightAngle),
             ),
         )
 
@@ -10006,19 +10024,19 @@ object TmpL {
             ),
         )
 
-    /** `result < {{0}} , {{1*|}} >` */
+    /** `result `OutToks.leftAngle` {{0}} , {{1*|}} `OutToks.leftAngle`` */
     private val sharedCodeFormattingTemplate35 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("result", OutputTokenType.Word),
-                CodeFormattingTemplate.LiteralToken("\u003c", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(",", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.GroupSubstitution(
                     1,
                     CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken("\u003e", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
             ),
         )
 
@@ -11849,9 +11867,16 @@ object TmpL {
     private val sharedCodeFormattingTemplate162 =
         CodeFormattingTemplate.LiteralToken("Bubble", OutputTokenType.Word)
 
-    /** `Never` */
+    /** `Never `OutToks.leftAngle` {{0}} `OutToks.rightAngle`` */
     private val sharedCodeFormattingTemplate163 =
-        CodeFormattingTemplate.LiteralToken("Never", OutputTokenType.Word)
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("Never", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(OutToks.rightAngle),
+            ),
+        )
 
     /** `{{0}} ? : {{1}}` */
     private val sharedCodeFormattingTemplate164 =

@@ -34,6 +34,7 @@ import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockPlanting
 import lang.temper.value.BlockTree
 import lang.temper.value.BubbleFn
+import lang.temper.value.CallTypeInferences
 import lang.temper.value.ControlFlow
 import lang.temper.value.DefaultJumpSpecifier
 import lang.temper.value.Document
@@ -1216,6 +1217,49 @@ class WeaverTest {
             |  [[ t#5 = 0 ]];
             |}
             |[[ x__0 = t#5 ]];
+        """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun typedNeverPulledOut() = assertWovenRoot(
+        // let return__123;
+        // f(neverIntFn());
+        // f(intFn());
+        // neverVoidFn()
+        buildInput = {
+            val neverInt = MkType2(WKT.neverTypeDefinition).actuals(listOf(WKT.intType2)).get()
+            val noneToNeverInt = Signature2(neverInt, false, listOf())
+            val noneToInt = Signature2(WKT.intType2, false, listOf())
+            val neverVoid = MkType2(WKT.neverTypeDefinition).actuals(listOf(WKT.voidType2)).get()
+            val noneToNeverVoid = Signature2(neverVoid, false, listOf())
+            Call {
+                Rn(BuiltinName("f"))
+                Call(CallTypeInferences(neverInt, noneToNeverInt, mapOf(), listOf())) {
+                    Rn(BuiltinName("neverIntFn"), AdHocArrowTypes.definedTypeForSig(noneToNeverInt))
+                }
+            }
+            Call {
+                Rn(BuiltinName("f"))
+                Call(CallTypeInferences(WKT.intType2, noneToInt, mapOf(), listOf())) {
+                    Rn(BuiltinName("intFn"), AdHocArrowTypes.definedTypeForSig(noneToInt))
+                }
+            }
+            Call(CallTypeInferences(neverVoid, noneToNeverVoid, mapOf(), listOf())) {
+                Rn(BuiltinName("neverVoidFn"), AdHocArrowTypes.definedTypeForSig(noneToNeverVoid))
+            }
+        },
+        want = """
+            |[[ let t#1 ]];
+            |[[ let return__0 ]];
+            |[[ t#1 = neverIntFn() ]];
+            |## Never arg pulled out into temporary.
+            |## This simplifies translation when the translation needs to pass
+            |## a target language's unreachable-code and no-return-on-path compiler checks.
+            |[[ f(t#1) ]];
+            |## Non-never arg not pulled out into temporary.
+            |[[ f(intFn()) ]];
+            |[[ neverVoidFn() ]];
+            |[[ return__0 = void ]];
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
     )
 

@@ -1,0 +1,34 @@
+  let console#0;
+  console#0 = getConsole();
+  @fn let returnsVoid__0, @fn neverReturnsVoid__0, @fn neverReturnsInt__0, @fn returnsInt__0, @fn `test//`.sometimesVoid;
+  returnsVoid__0 = (@stay fn returnsVoid /* return__0 */: Void {
+      return__0 = void;
+      do_call_log(console#0, "returnsVoid")
+  });
+  neverReturnsVoid__0 = (@stay fn neverReturnsVoid /* return__1 */: Never<Void> {
+      do_call_log(console#0, "neverReturnsVoid");
+## The call to `panic` in a void context is not captured.
+      panic();
+## But we still generate an assignment to the return variable.
+      return__1 = void
+  });
+  neverReturnsInt__0 = (@stay fn neverReturnsInt /* return__2 */: Int32 {
+      do_call_log(console#0, "neverReturnsInt");
+## This call to a never function in a non-void context can be captured in a local or return var.
+      return__2 = panic()
+  });
+  returnsInt__0 = (@stay fn returnsInt /* return__3 */: Int32 {
+      do_call_log(console#0, "returnsInt");
+      return__3 = 1
+  });
+  let `test//`.ints;
+  `test//`.ints = list(neverReturnsInt__0(), returnsInt__0(), neverReturnsInt__0(), returnsInt__0());
+  `test//`.sometimesVoid = (@stay fn sometimesVoid(b__0 /* aka b */: Boolean) /* return__4 */: Void {
+      if (b__0) {
+        returnsVoid__0();
+        return__4 = void
+      } else {
+        neverReturnsVoid__0();
+        return__4 = void
+      }
+  })
