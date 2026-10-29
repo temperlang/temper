@@ -182,14 +182,9 @@ class Interpreter(
     private val isProcessingCore = nameMaker.namingContext.isCore
 
     /**
-     * How many enclosing blocks in the current function call can take a jump that its own
-     * block can't resolve.  See [JumpOutOfBlock].
-     */
-    private var jumpCatchers = 0
-
-    /**
      * Counts each [Fail] that means only that full interpretation can't handle something yet,
-     * like a macro call that a stage hasn't expanded, not that the program failed.
+     * like a macro call that a stage hasn't expanded, or a jump out of a nested block before
+     * weaving, not that the program failed.
      * An `orelse` can't tell those apart from bubbles, so it's unsafe to use a result computed
      * while this went up.
      */
@@ -588,13 +583,11 @@ class Interpreter(
 
         check(im == InterpMode.Full) // Handled above
         var result: PartialResult = void
-
-        /** Null when a jump left the child, and is on [evaluation]'s stack to handle next. */
         fun interpretChild(
             ref: BlockChildReference,
             block: BlockTree,
             wantedType: TypeTag<*>? = null,
-        ): PartialResult? {
+        ): PartialResult {
             val tree = block.dereference(ref)?.target
                 ?: return Fail(
                     LogEntry(
@@ -604,15 +597,7 @@ class Interpreter(
                         emptyList(),
                     ),
                 )
-            jumpCatchers += 1
-            val r = try {
-                interpretTree(tree, evaluation.envStack.last(), im)
-            } catch (jumpOut: JumpOutOfBlock) {
-                evaluation.stack.add(InProgress(jumpOut.jump))
-                return null
-            } finally {
-                jumpCatchers -= 1
-            }
+            val r = interpretTree(tree, evaluation.envStack.last(), im)
             // Type checking the result here simplifies condition evaluation
             return if (
                 wantedType != null && r is Value<*> &&
@@ -688,7 +673,6 @@ class Interpreter(
                     // Interpret the condition and push either the then or else clauses
                     popped(evaluation.stack.compatRemoveLast())
                     when (val r = interpretChild(cf.condition, ast, TBoolean)) {
-                        null -> {} // A jump left the condition.
                         NotYet -> {
                             result = r
                         }
@@ -734,10 +718,9 @@ class Interpreter(
                     val jumpDestination = newTop?.controlFlow
                         as? JumpDestination
                     if (jumpDestination == null) {
-                        if (jumpCatchers != 0) {
-                            // Before weaving, the destination may be in an enclosing block.
-                            throw JumpOutOfBlock(cf)
-                        }
+                        // Before weaving, the destination may be in an enclosing block, which
+                        // we can't reach from here yet.
+                        notYetFails += 1
                         result = Fail(
                             LogEntry(
                                 Log.Error,
@@ -803,7 +786,6 @@ class Interpreter(
                     when (yieldingCallDetails?.kind) {
                         null -> { // A regular statement
                             when (val refResult = interpretChild(cf.ref, ast)) {
-                                null -> {} // A jump left the statement.
                                 is Value<*>, NotYet -> result = refResult
                                 // handleFail will set result if appropriate
                                 is Fail -> handleFail(refResult)
@@ -898,26 +880,22 @@ class Interpreter(
                         InProgress.LoopState.BEFORE_CONDITION -> {
                             // Run the condition.
                             var runBody = false
-                            var unwound = false
+                            var failed = false
                             when (val r = interpretChild(cf.condition, ast, TBoolean)) {
-                                null -> {
-                                    // A jump left the condition, and is on the stack above this loop.
-                                    unwound = true
-                                }
                                 NotYet -> {
                                     result = NotYet
                                 }
                                 is Fail -> {
                                     // handleFail has already unwound the stack past this loop,
                                     // to the nearest orelse or to empty.
-                                    unwound = true
+                                    failed = true
                                     handleFail(r)
                                 }
                                 is Value<*> -> {
                                     runBody = TBoolean.unpack(r)
                                 }
                             }
-                            if (!runBody && !unwound) {
+                            if (!runBody && !failed) {
                                 // Pop the loop
                                 popped(evaluation.stack.compatRemoveLast())
                             }
@@ -2150,24 +2128,17 @@ class Interpreter(
         }
 
         val bodyEdge = body.incoming
-        // Jumps can't leave a function body.
-        val outerJumpCatchers = jumpCatchers
-        jumpCatchers = 0
-        val bodyResult = try {
-            when (body) {
-                is BlockTree ->
-                    // Inline interpretEdge here so we can pass userFunction to enable pausing.
-                    if (bodyEdge == null || visitEdge(bodyEdge, callFrame, im)) {
-                        interpretBlock(body, callFrame, im, userFunction)
-                    } else {
-                        NotYet
-                    }
-                else -> {
-                    interpretEdge(bodyEdge!!, callFrame, im)
+        val bodyResult = when (body) {
+            is BlockTree ->
+                // Inline interpretEdge here so we can pass userFunction to enable pausing.
+                if (bodyEdge == null || visitEdge(bodyEdge, callFrame, im)) {
+                    interpretBlock(body, callFrame, im, userFunction)
+                } else {
+                    NotYet
                 }
+            else -> {
+                interpretEdge(bodyEdge!!, callFrame, im)
             }
-        } finally {
-            jumpCatchers = outerJumpCatchers
         }
 
         return when (bodyResult) {
@@ -2788,11 +2759,3 @@ internal fun interpSignatureOf(sig: Signature2, interpFormals: List<InterpValueF
         typeFormals = sig.typeFormals,
     )
 }
-
-/**
- * Before weaving, a block's children may be nested blocks with their own flows, like an
- * `if`'s branches, so a `break`, `continue`, or `return` may land outside the nested block
- * being fully interpreted.  It passes the jump to the enclosing block, instead of failing,
- * which would look like a bubble to an `orelse`.
- */
-private class JumpOutOfBlock(val jump: ControlFlow.Jump) : RuntimeException()
