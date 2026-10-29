@@ -48,7 +48,7 @@ namespace TemperLang.Std.Net
         private static readonly HttpClient _httpClient = new HttpClient();
         public static async Task<INetResponse> StdNetSend(
             string url, string method,
-            string? mimeType, string? requestBody
+            string? requestBody, string? mimeType
         )
         {
             HttpMethod httpMethod;
