@@ -908,12 +908,12 @@ class RustBackendTest {
     fun int64LiteralOutsideInt32Range() = assertGenerateWanted(
         // On the left of `as`, nothing but a suffix makes the literal an `i64`.
         // And a negative receiver needs parentheses, or `-` applies to the call's result.
-        temper = """
+        temper = $$"""
             |let k = 0xb5c0fbcfi64.toInt32Unsafe();
             |let f = 9007199254740993i64.toFloat64Unsafe();
             |let m = (-5i64).max(3i64);
             |let a = (-2.5).abs();
-            |console.log("${'$'}{k} ${'$'}{f} ${'$'}{m} ${'$'}{a}");
+            |console.log("${k} ${f} ${m} ${a}");
         """.trimMargin(),
         rust = """
             |pub (crate) fn init() -> temper_core::Result<()> {
@@ -924,7 +924,7 @@ class RustBackendTest {
             |            let m__0: i64 = (-5i64).max(3i64);
             |            let a__0: f64 = (-2.5f64).abs();
             |            println!("{} {} {} {}", k__0, temper_core::float64::to_string(f__0), m__0, temper_core::float64::to_string(a__0));
-            |            Ok(())
+            |            std::result::Result::Ok(())
             |    }).clone()
             |}
         """.trimMargin(),

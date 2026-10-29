@@ -3,6 +3,7 @@ package lang.temper.cli
 import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.RunTestsRequest
 import lang.temper.be.cli.ShellPreferences
+import lang.temper.be.cpp.CppBackend
 import lang.temper.be.csharp.CSharpBackend
 import lang.temper.be.java.JavaBackend
 import lang.temper.be.js.JsBackend
@@ -74,6 +75,13 @@ class DoTestTest {
             "/testing/passing",
             listOf(CSharpBackend.Factory.backendId),
         )
+    }
+
+    @Test
+    @Timeout(CPP_TIMEOUT_SECONDS)
+    fun testPassingCppBackend() {
+        // C++ keeps its own list of tests for main.cpp, so check it also declares them for the tally.
+        checkPassing("TestPassingCppBackend", "/testing/passing", listOf(CppBackend.Cpp.backendId))
     }
 
     @Ignore("Slow, so we have something in integration tests instead")
@@ -542,6 +550,9 @@ internal const val MYPYC_TIMEOUT_SECONDS = 300L
 
 /** We've seen it over 30 sometimes. */
 internal const val PY_TIMEOUT_SECONDS = 60L
+
+/** C++ compiles its runtime library along with the tests, through CMake. */
+internal const val CPP_TIMEOUT_SECONDS = 270L
 
 private fun runWithCopyOfTestingDir(
     jobName: String,
