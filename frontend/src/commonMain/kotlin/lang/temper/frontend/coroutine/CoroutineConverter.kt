@@ -602,9 +602,7 @@ private class CoroutineConverter(
                         // Not with freeTree: the empty block it leaves behind is no
                         // statement once an `if` around it is isolated as a sub-block,
                         // and TmpL translates it as garbage, `Cannot translate (Block)`.
-                        val voided = ValueLeaf(t.document, t.pos, void)
-                        voided.typeInferences = BasicTypeInferences(WKT.voidType, listOf())
-                        t.incoming!!.replace(voided)
+                        t.incoming?.replace { V(t.pos, void, WKT.voidType) }
                     }
                 }
                 for (clause in cf.clauses) {
