@@ -18,6 +18,7 @@ import lang.temper.type.FunctionType
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.MkType
+import lang.temper.type.MutableTypeFormal
 import lang.temper.type.OrType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
@@ -54,7 +55,7 @@ import lang.temper.value.void
  */
 object AdHocArrowTypes {
     fun isAdhocArrowTypeDefinition(defn: TypeDefinition) =
-        defn is TypeShapeImpl && defn.hackFnInterop != null
+        (defn as? TypeShapeImpl)?.hackFnInterop != null
 
     fun definedTypeForFunctionType(
         t: FunctionType,
@@ -161,96 +162,99 @@ object AdHocArrowTypes {
         )
     }
 
-    private fun adHocFnTypeDefnFor(key: HackFnInterop): TypeShape = synchronized(hackFnTypeDefs) {
-        hackFnTypeDefs.getOrPut(key) {
-            val nameMaker = ResolvedNameMaker(invalidTypeDefinition.name.origin, Genre.Library)
-            val mutationCount = invalidTypeDefinition.mutationCount
-            TypeShapeImpl(
-                invalidTypeDefinition.pos,
-                Symbol("Fn"),
-                nameMaker,
-                Abstractness.Abstract,
-                mutationCount,
-            ).also { it ->
-                it.hackFnInterop = key
+    private fun adHocFnTypeDefnFor(key: HackFnInterop): TypeShape {
+        val hackFnTypeDefs = key.hackFnTypeDefs
+        return synchronized(hackFnTypeDefs) {
+            hackFnTypeDefs.getOrPut(key) {
+                val nameMaker = ResolvedNameMaker(invalidTypeDefinition.name.origin, Genre.Library)
+                val mutationCount = invalidTypeDefinition.mutationCount
+                TypeShapeImpl(
+                    invalidTypeDefinition.pos,
+                    Symbol("Fn"),
+                    nameMaker,
+                    Abstractness.Abstract,
+                    mutationCount,
+                ).also { it ->
+                    it.hackFnInterop = key
 
-                fun makeTypeFormal(namePrefix: String, variance: Variance): TypeParameterShape {
-                    val symbol = Symbol(namePrefix)
-                    return TypeParameterShape(
-                        it,
-                        TypeFormal(
-                            adHocPos,
-                            nameMaker.unusedSourceName(ParsedName(namePrefix)),
+                    fun makeTypeFormal(namePrefix: String, variance: Variance): TypeParameterShape {
+                        val symbol = Symbol(namePrefix)
+                        return TypeParameterShape(
+                            it,
+                            TypeFormal(
+                                adHocPos,
+                                nameMaker.unusedSourceName(ParsedName(namePrefix)),
+                                symbol,
+                                variance,
+                                mutationCount,
+                                listOf(WellKnownTypes.anyValueType),
+                            ),
                             symbol,
-                            variance,
-                            mutationCount,
-                            listOf(WellKnownTypes.anyValueType),
-                        ),
-                        symbol,
-                        null,
-                    )
-                }
-                val requiredInputs = buildList {
-                    repeat(key.nRequired) {
-                        add(makeTypeFormal("I", Variance.Contravariant))
+                            null,
+                        )
                     }
-                }
-                val optionalInputs = buildList {
-                    repeat(key.nOptional) {
-                        add(makeTypeFormal("I", Variance.Contravariant))
-                    }
-                }
-                val output = makeTypeFormal("O", Variance.Covariant)
-
-                it.superTypes.add(WellKnownTypes.functionType)
-                it.typeParameters.addAll(
-                    buildList {
-                        addAll(requiredInputs)
-                        addAll(optionalInputs)
-                        add(output)
-                    },
-                )
-
-                // Create an apply method, so it's signature can be used to inform the signature
-                // of a functional interface type.
-                val applyMethod = MethodShape(
-                    enclosingType = it,
-                    name = nameMaker.unusedSourceName(ParsedName("apply")),
-                    symbol = applyDotName,
-                    stay = null,
-                    visibility = Visibility.Public,
-                    methodKind = MethodKind.Normal,
-                    openness = OpenOrClosed.Open,
-                )
-                it.methods.add(applyMethod)
-                applyMethod.descriptor = Signature2(
-                    returnType2 = MkType2(output.definition).get().let { outType ->
-                        if (key.bubbly) {
-                            MkType2(resultTypeDefinition)
-                                .actuals(listOf(outType, bubbleType2))
-                                .get()
-                        } else {
-                            outType
+                    val requiredInputs = buildList {
+                        repeat(key.nRequired) {
+                            add(makeTypeFormal("I", Variance.Contravariant))
                         }
-                    },
-                    hasThisFormal = false, // arguably this is the function, not an arg
-                    requiredInputTypes = requiredInputs.map { MkType2(it.definition).get() },
-                    optionalInputTypes = optionalInputs.map { MkType2(it.definition).get() },
-                    typeFormals = listOf(), // The type formals are on the interface
-                )
-
-                // Make sure TypeShape metadata is set
-                val hackDecl = adHocument.treeFarm.grow(adHocPos) {
-                    Decl(it.name) {
-                        V(staySymbol)
-                        Stay()
-                        V(functionalInterfaceSymbol)
-                        V(void)
-                        V(hackSynthesizedFunInterfaceSymbol)
-                        V(void)
                     }
+                    val optionalInputs = buildList {
+                        repeat(key.nOptional) {
+                            add(makeTypeFormal("I", Variance.Contravariant))
+                        }
+                    }
+                    val output = makeTypeFormal("O", Variance.Covariant)
+
+                    it.superTypes.add(WellKnownTypes.functionType)
+                    it.typeParameters.addAll(
+                        buildList {
+                            addAll(requiredInputs)
+                            addAll(optionalInputs)
+                            add(output)
+                        },
+                    )
+
+                    // Create an apply method, so it's signature can be used to inform the signature
+                    // of a functional interface type.
+                    val applyMethod = MethodShape(
+                        enclosingType = it,
+                        name = nameMaker.unusedSourceName(ParsedName("apply")),
+                        symbol = applyDotName,
+                        stay = null,
+                        visibility = Visibility.Public,
+                        methodKind = MethodKind.Normal,
+                        openness = OpenOrClosed.Open,
+                    )
+                    it.methods.add(applyMethod)
+                    applyMethod.descriptor = Signature2(
+                        returnType2 = MkType2(output.definition).get().let { outType ->
+                            if (key.bubbly) {
+                                MkType2(resultTypeDefinition)
+                                    .actuals(listOf(outType, bubbleType2))
+                                    .get()
+                            } else {
+                                outType
+                            }
+                        },
+                        hasThisFormal = false, // arguably this is the function, not an arg
+                        requiredInputTypes = requiredInputs.map { MkType2(it.definition).get() },
+                        optionalInputTypes = optionalInputs.map { MkType2(it.definition).get() },
+                        typeFormals = listOf(), // The type formals are on the interface
+                    )
+
+                    // Make sure TypeShape metadata is set
+                    val hackDecl = adHocument.treeFarm.grow(adHocPos) {
+                        Decl(it.name) {
+                            V(staySymbol)
+                            Stay()
+                            V(functionalInterfaceSymbol)
+                            V(void)
+                            V(hackSynthesizedFunInterfaceSymbol)
+                            V(void)
+                        }
+                    }
+                    it.stayLeaf = hackDecl.parts!!.metadataSymbolMap.getValue(staySymbol).target as StayLeaf
                 }
-                it.stayLeaf = hackDecl.parts!!.metadataSymbolMap.getValue(staySymbol).target as StayLeaf
             }
         }
     }
@@ -275,5 +279,11 @@ internal data class HackFnInterop(
     val nRequired: Int,
     val nOptional: Int,
     val bubbly: Boolean,
-)
-private val hackFnTypeDefs = mutableMapOf<HackFnInterop, TypeShape>()
+) {
+    val hackFnTypeDefs get() = when (val first = formals.firstOrNull()) {
+        null -> hackFnTypeDefsNoTypeFormals
+        is MutableTypeFormal -> first.hackFnShapes
+    }
+}
+private val hackFnTypeDefsNoTypeFormals =
+    mutableMapOf<HackFnInterop, TypeShape>()

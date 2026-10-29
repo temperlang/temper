@@ -184,7 +184,7 @@ class MutableTypeFormal(
 
     /**
      * Shapes for generic function types whose type formals start with this
-     * one, used by `hackMapOldStyleToNew`. Kept here, rather than in a global
+     * one, used by AdHocArrowTypes. Kept here, rather than in a global
      * map, so they're collected along with this formal.
      */
     internal val hackFnShapes = mutableMapOf<HackFnInterop, TypeShape>()
