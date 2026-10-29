@@ -219,14 +219,19 @@ Here's just enough of a Date type to get us started.
        */
       @connected
       public get dayOfWeek(): Int {
-        // Gauss's method.
+        // Gauss's method: January first of year Y is weekday
+        // (1 + 5((Y-1) mod 4) + 4((Y-1) mod 100) + 6((Y-1) mod 400)) mod 7,
+        // with Sunday 0. It is Y - 1 that splits into century and year:
+        // splitting Y instead is wrong for every year ending in 00 that
+        // is not a multiple of 400, such as 1900 and 2100.
+        // `%` keeps the dividend's sign, so each remainder adds its
+        // divisor and takes it again, to stay in range for years before 1.
         let y = year;
-        let c = if (y >= 0) { y / 100 } else { -(-y / 100) };
-        let yy = y - (c * 100);
-        // See note below about avoiding negative modulus to see why
-        // some of the offsets differ from Wikipedia's rendering of
-        // Gauss's formula.
-        let janFirst = (8 + 5*((yy + 3) % 4) + 3*(yy - 1) + 5*(c % 4)) % 7;
+        let before = y - 1;
+        let mod4 = ((before % 4) + 4) % 4;
+        let mod100 = ((before % 100) + 100) % 100;
+        let mod400 = ((before % 400) + 400) % 400;
+        let janFirst = (1 + 5 * mod4 + 4 * mod100 + 6 * mod400) % 7;
         let table = if (isLeapYear(y)) {
           dayOfWeekLookupTableLeapy
         } else {

@@ -9,6 +9,8 @@ import lang.temper.name.BackendId
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createFile
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -43,6 +45,26 @@ class LocalCliEnvTest {
             variants.forEach { dir.resolve(it).createFile() }
             val result2 = findCommand()
             assertNotNull(result2.result)
+        }
+    }
+
+    @Test
+    fun getNamesMissingTool(): Unit = makeCancelGroupForTest().let { cancelGroup ->
+        runWithTemporaryDirectory("getNamesMissingTool") { root ->
+            val specifics = TestSpecifics(cliNames = listOf("no-such-tool"))
+            val cliEnv = LocalCliEnv(
+                specifics,
+                ShellPreferences(
+                    console = NullConsole,
+                    onFailure = ShellPreferences.OnFailure.Release,
+                    pathElements = listOf(root.absolutePathString()),
+                    verbosity = ShellPreferences.Verbosity.Quiet,
+                ),
+                cancelGroup,
+            )
+            // This was a NullPointerException, which named nothing.
+            val failure = assertFailsWith<CommandNotFound> { cliEnv[specifics.tools.first()] }
+            assertEquals(listOf("no-such-tool"), failure.names)
         }
     }
 }

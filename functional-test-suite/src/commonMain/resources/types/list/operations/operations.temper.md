@@ -396,6 +396,22 @@ list (== true only) = [true]
 list (== false only) = [false]
 ```
 
+## Mapping List<Float64> to objects
+
+Java has a separate runtime helper for each primitive element type. The one for
+`Float64` to an object type was once declared to return `List<Boolean>`, so a
+map to `String` did not compile.
+
+    do {
+      let sizes: List<Float64> = [0.25, 3.0];
+      let labels = sizes.map { (f): String => if (f < 1.0) { "small" } else { "big" } };
+      console.log("sizes = [${labels.join(", ") { s => s }}]");
+    }
+
+```log
+sizes = [small, big]
+```
+
 ## Listed callback args
 
 C\# had a problem with these, trying to make overloads in local variables.

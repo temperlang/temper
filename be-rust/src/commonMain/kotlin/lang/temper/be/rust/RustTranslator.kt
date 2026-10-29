@@ -1,6 +1,7 @@
 package lang.temper.be.rust
 
 import lang.temper.ast.anyChildDepth
+import lang.temper.ast.boundaryDescent
 import lang.temper.ast.deepCopy
 import lang.temper.be.Backend
 import lang.temper.be.Dependencies
@@ -104,6 +105,7 @@ class RustTranslator(
     private val builderItems = mutableListOf<Rust.Item>()
     private val decls = mutableMapOf<ResolvedName, DeclInfo>()
     private val failVars = mutableSetOf<ResolvedName>()
+    private val hasAnyInternalSealedSubs = mutableSetOf<ResolvedName>()
     private var insideMutableType = false
     internal val isRoot = module.codeLocation.codeLocation.relativePath().segments.isEmpty()
     private val functionContextStack = mutableListOf<FunctionContext>()
@@ -136,7 +138,7 @@ class RustTranslator(
         val init = Rust.Item(
             pos,
             attrs = listOf(),
-            pub = Rust.VisibilityPub(pos, Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate)),
+            pub = pubCrate(pos),
             item = Rust.Function(
                 pos,
                 id = "init".toId(pos),
@@ -289,6 +291,14 @@ class RustTranslator(
     private fun preprocessTopLevels() {
         // First gather value decls, but not functions, etc.
         decls@ for (topLevel in module.topLevels) {
+            // Detour first on tracking sealed sub info.
+            if (topLevel is TmpL.TypeDeclaration) {
+                if (topLevel.typeShape.sealedSubTypes?.any { it.name !is ExportedName } == true) {
+                    hasAnyInternalSealedSubs.add(topLevel.name.name)
+                }
+                continue@decls
+            }
+            // Here down is vars/vals.
             val decl = (topLevel as? TmpL.ModuleLevelDeclaration) ?: continue@decls
             decl.isConsole() && continue@decls
             val name = decl.name.name
@@ -303,12 +313,14 @@ class RustTranslator(
         }
         // See which are referenced in other items. Like closure capture but top levels.
         items@ for (topLevel in module.topLevels) {
-            when (topLevel) {
-                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration -> {}
+            val refs = when (topLevel) {
+                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration -> topLevel.referencedNames()
 //                is TmpL.Test -> TODO()
-                else -> continue@items
+                // A local function, such as one in a top-level `if` or an `async` block in a top-level loop, becomes
+                // an `fn` item in a closure group, and an `fn` item cannot read the module init's locals.
+                else -> topLevel.namesReferencedFromLocalFunctions()
             }
-            refs@ for (ref in topLevel.referencedNames()) {
+            refs@ for (ref in refs) {
                 val decl = decls[ref] ?: continue@refs
                 decl.importedName != null && continue@refs
                 decl.topper && continue@refs
@@ -449,7 +461,7 @@ class RustTranslator(
                                         add(Rust.StructExprField(pos, selfish.deepCopy(), null))
                                         for (param in optionals) {
                                             param is Rust.FunctionParam
-                                            add(Rust.StructExprField(pos, param.toId(), expr = "None".toId(pos)))
+                                            add(Rust.StructExprField(pos, param.toId(), expr = NONE_NAME.toId(pos)))
                                         }
                                     },
                                 ),
@@ -619,7 +631,7 @@ class RustTranslator(
             results.addAll(
                 when {
                     skipLastReturn && i == statements.size - 1 && statement is TmpL.ReturnStatement ->
-                        translateReturnStatement(statement, last = true)
+                        hoistLeadingReads(translateReturnStatement(statement, last = true))
 
                     else -> translateStatement(statement)
                 },
@@ -670,8 +682,8 @@ class RustTranslator(
                         // Init both our own crate and temper_std (in case our crate doesn't) before any tests.
                         // Init is idempotent, so multi-init is ok.
                         // We currently don't actually need to init temper_std, but might in the future.
-                        Rust.ExprStatement(pos, Rust.Call(pos, crateInit, listOf("None".toId(pos)))),
-                        Rust.ExprStatement(pos, Rust.Call(pos, stdInit, listOf("None".toId(pos)))),
+                        Rust.ExprStatement(pos, Rust.Call(pos, crateInit, listOf(NONE_NAME.toId(pos)))),
+                        Rust.ExprStatement(pos, Rust.Call(pos, stdInit, listOf(NONE_NAME.toId(pos)))),
                         Rust.LetStatement(pos, pattern = testObjectId, type = null, value = newTest),
                     ),
                     statements = test.body.statements.cleanOutVoidVar(),
@@ -725,11 +737,8 @@ class RustTranslator(
             },
         ).toItem().also { moduleItems.add(it) }
         // We also need a wrapper for Arc<Mutex|RwLock> so we can impl it.
-        val pub = (
-            chooseVisibility(decl)
-                // Allow crate visibility for easier support code access.
-                ?: Rust.VisibilityPub(pos, scope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate))
-            )
+        // At minimum, allow crate visibility for easier support code access.
+        val pub = chooseVisibility(decl) ?: pubCrate(pos)
         Rust.TupleStruct(
             pos,
             id = id,
@@ -822,14 +831,16 @@ class RustTranslator(
                 type = typeRef.deepCopy(),
                 items = buildList {
                     // Some need as_enum.
-                    if (supDecl?.parts?.metadataSymbolMap?.contains(sealedTypeSymbol) == true) {
+                    if (
+                        supDecl?.parts?.metadataSymbolMap?.contains(sealedTypeSymbol) == true &&
+                        supShape.name !in hasAnyInternalSealedSubs
+                    ) {
                         // The sub shape must be a member of the sealed sub types if the Temper was legal.
                         // TODO Qualified path, not just name.
                         val enumId = supName.suffixed(ENUM_NAME_SUFFIX)
                         val subName = translateTypeOutName(subShape.name)
                         Rust.Function(
                             pos,
-                            // TODO Only if all sealed subtypes are public?
                             id = AS_ENUM_NAME.toId(pos),
                             params = selfParams.deepCopy(),
                             returnType = enumId.makeTypeRef(generics),
@@ -946,7 +957,6 @@ class RustTranslator(
         val name = translateTypeOutName(decl.name.name)
         val id = name.toId(decl.name.pos)
         val enumId = when {
-            // TODO Only if all sealed subtypes are public?
             decl.metadata.any { it.key.symbol == sealedTypeSymbol } -> defineSealedEnum(decl)
             else -> null
         }
@@ -982,10 +992,9 @@ class RustTranslator(
             bounds = bounds,
             items = buildList {
                 // Optional: fn as_enum(&self) -> WhateverEnum;
-                if (enumId != null) {
+                if (enumId != null && decl.name.name !in hasAnyInternalSealedSubs) {
                     Rust.Function(
                         pos,
-                        // TODO Only if all sealed subtypes are public?
                         id = AS_ENUM_NAME.toId(pos),
                         params = selfParams.deepCopy(),
                         returnType = enumId.makeTypeRef(generics),
@@ -1131,7 +1140,7 @@ class RustTranslator(
             else -> null
         }?.let { "temper_core".toKeyId(pos).extendWith(listOf("string", it)) }
         WellKnownTypes.stringIndexTypeDefinition -> when (wanted.definition()) {
-            WellKnownTypes.stringIndexOptionTypeDefinition -> makePath(pos, "Some")
+            WellKnownTypes.stringIndexOptionTypeDefinition -> SOME_NAME.toId(pos)
             else -> null
         }
         WellKnownTypes.stringIndexOptionTypeDefinition -> when (wanted.definition()) {
@@ -1406,7 +1415,7 @@ class RustTranslator(
                     pos,
                     id = usedId,
                     type = decl.type!!.option().wrapRwLockType(),
-                    value = "None".toId(pos).wrapLock(),
+                    value = NONE_NAME.toId(pos).wrapLock(),
                 ).also { moduleItems.add(it.toItem()) }
                 usedId.methodCall("read").methodCall("unwrap").maybeClone(decl.typeFrom!!).methodCall("unwrap")
             }
@@ -1456,8 +1465,7 @@ class RustTranslator(
             is ExportedName -> Rust.VisibilityPub(pos)
             else -> when {
                 considerMember -> (decl as? TmpL.Member)?.let { chooseVisibilityForMember(it, forTrait = false) }
-                decl.parent is TmpL.Module ->
-                    Rust.VisibilityPub(pos, scope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate))
+                decl.parent is TmpL.Module -> pubCrate(pos)
                 else -> null
             }
         }
@@ -1476,7 +1484,13 @@ class RustTranslator(
         val id = translateTypeOutName(decl.name.name).toId(decl.name.pos)
         val enumId = "$id$ENUM_NAME_SUFFIX".toId(decl.name.pos)
         val pos = decl.pos
-        val pub = chooseVisibility(decl)
+        // Even if we have internal subtypes, make enum anyway. Serves at least
+        // for inspection, even if we don't use it at present. But we do have to
+        // keep it hidden.
+        val pub = when {
+            decl.typeShape.name in hasAnyInternalSealedSubs -> pubCrate(pos)
+            else -> chooseVisibility(decl)
+        }
         val generics = buildGenerics(decl.typeParameters)
         // Enum type.
         Rust.Enum(
@@ -1587,7 +1601,7 @@ class RustTranslator(
                     nullableIntoWanted -> Rust.PathSegments(
                         pos,
                         segments = listOf(
-                            "None".toId(pos),
+                            NONE_NAME.toId(pos),
                             Rust.GenericArgs(pos, args = listOf(translateType(wanted!!.type!!, pos))),
                         ),
                     )
@@ -1596,7 +1610,7 @@ class RustTranslator(
                         // TODO Why is there sometimes no wanted type coming through here?
                         "()"
                     } else {
-                        "None"
+                        NONE_NAME
                     }.toId(pos)
                 }
             }
@@ -1730,7 +1744,7 @@ class RustTranslator(
                 functionContext.returnType.bubbly -> null
                 else -> "panic!".toId(pos).call()
             }
-        } ?: Rust.Call(pos, callee = "Err".toId(pos), args = listOf(makeError(pos)))
+        } ?: Rust.Call(pos, callee = ERR_NAME.toId(pos), args = listOf(makeError(pos)))
     }
 
     private fun translateCallAwakeUpon(call: TmpL.CallExpression): Rust.Expr {
@@ -2243,8 +2257,134 @@ class RustTranslator(
 
     private fun translateGetProperty(expression: TmpL.GetProperty, avoidClone: Boolean): Rust.Expr {
         val ref = translatePropertyReference(expression, lockName = "read")
+        if (takesReadGuard(expression) && guardWouldOutliveRead(expression)) {
+            // Copy the value out in a `let` of its own, which drops the guard before anything else runs:
+            // `{ let peer = self.0.read().unwrap().peer.clone(); peer }`. A non-copy value has to be cloned
+            // here even where the caller only wanted to borrow it, because the borrow cannot outlive the guard.
+            val pos = expression.pos
+            val propertyText = (expression.property as TmpL.InternalPropertyId).name.name.toSymbol()?.text
+            val temp = unusedTemporaryName(pos, propertyText ?: "t")
+            return Rust.Block(
+                pos,
+                statements = listOf(
+                    Rust.LetStatement(pos, pattern = temp, type = null, value = ref.maybeClone(expression.type)),
+                ),
+                result = temp.deepCopy(),
+            )
+        }
         val reallyAvoidClone = avoidClone || expression.property is TmpL.ExternalPropertyId
         return ref.maybeClone(expression.type, avoidClone = reallyAvoidClone)
+    }
+
+    /** Whether [read] translates to `self.0.read().unwrap().<field>`. */
+    private fun takesReadGuard(read: TmpL.GetProperty): Boolean =
+        read.property is TmpL.InternalPropertyId && insideMutableType &&
+            functionContextStack.last().constructorMode != ConstructorMode.Init
+
+    /**
+     * The guard in `self.0.read().unwrap().n` is a temporary, and Rust drops temporaries at the end of the
+     * enclosing statement, not after the field is read. Anything the statement does after the read that takes a
+     * lock or runs code we can't see runs while the guard is held. A method called on a field that writes back to
+     * `self` then waits on its own thread's read guard, and a second `self.0.read()` in the same expression waits
+     * behind any writer queued on another thread, which in turn waits for the first guard.
+     *
+     * Returns false only when nothing after [read] in its statement can take a lock or run other code, so that
+     * reads such as `return self.0.read().unwrap().n;` stay as they are.
+     */
+    private fun guardWouldOutliveRead(read: TmpL.GetProperty): Boolean {
+        var child: TmpL.Tree = read
+        while (true) {
+            val parent: TmpL.Tree = when (val parent = child.parent) {
+                is TmpL.Statement -> return statementOutlivesRead(parent, child)
+                is TmpL.Expression -> parent
+                is TmpL.Callable -> parent
+                // Such as a property initializer, outside any statement. Release to be safe.
+                else -> return true
+            }
+            // Children evaluate left to right, and the parent's own operation, such as a call, runs after them.
+            if (mayLockOrRunCode(parent) || laterSiblingsMayLockOrRunCode(parent, child)) {
+                return true
+            }
+            child = parent
+        }
+    }
+
+    private fun statementOutlivesRead(statement: TmpL.Statement, child: TmpL.Tree): Boolean {
+        when (statement) {
+            // A match keeps its scrutinee's temporaries alive through every arm.
+            is TmpL.ComputedJumpStatement -> return true
+            // The setter call, or the write guard, comes after the value, so the read guard is still held.
+            is TmpL.SetProperty -> if (
+                statement.left.property is TmpL.ExternalPropertyId ||
+                functionContextStack.last().constructorMode != ConstructorMode.Init
+            ) {
+                return true
+            }
+            is TmpL.Assignment -> decls[statement.left.name]?.let { decl ->
+                // Mutable captures and module level vars are written through a lock of their own.
+                if (decl.mutableCapture || decl.topper) {
+                    return true
+                }
+            }
+            else -> {}
+        }
+        return laterSiblingsMayLockOrRunCode(statement, child)
+    }
+
+    private fun laterSiblingsMayLockOrRunCode(parent: TmpL.Tree, child: TmpL.Tree): Boolean {
+        var seenChild = false
+        for (index in 0 until parent.childCount) {
+            val sibling = parent.childOrNull(index) ?: continue
+            when {
+                sibling === child -> seenChild = true
+                // Nested statements, such as the branches of an `if`, have temporary scopes of their own.
+                !seenChild || sibling is TmpL.Statement -> {}
+                else -> sibling.boundaryDescent { node ->
+                    when {
+                        node is TmpL.Statement -> false
+                        mayLockOrRunCode(node) -> return@laterSiblingsMayLockOrRunCode true
+                        else -> true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private fun mayLockOrRunCode(node: TmpL.Tree): Boolean = when (node) {
+        is TmpL.GetProperty -> when (node.property) {
+            is TmpL.InternalPropertyId -> takesReadGuard(node)
+            // A getter call.
+            is TmpL.ExternalPropertyId -> true
+        }
+        is TmpL.CallExpression -> when (val fn = node.fn) {
+            is TmpL.InlineSupportCodeWrapper -> when (fn.supportCode) {
+                AwakeUponSupportCode, GetPromiseResultSyncSupportCode -> true
+                // Inline support code works on the values it is given, so it runs our code only through those.
+                else -> node.parameters.any { it.type.mayRunCode() }
+            }
+            else -> true
+        }
+        is TmpL.Reference -> referenceTakesLock(node)
+        else -> false
+    }
+
+    private fun Descriptor.mayRunCode(): Boolean = when (val description = described()) {
+        is FnDescription -> true
+        is TypeDescription -> description.type.isFunctionType || when (description.definition()) {
+            WellKnownTypes.promiseTypeDefinition, WellKnownTypes.promiseBuilderTypeDefinition -> true
+            else -> false
+        }
+    }
+
+    /** Mirrors [translateReference] for the cases that read through a lock or call a function. */
+    private fun referenceTakesLock(reference: TmpL.Reference): Boolean {
+        val name = reference.id.name
+        functionContextStack.lastOrNull()?.captures?.get(name)?.let { capture ->
+            return !capture.assignOnce
+        }
+        val decl = decls[name] ?: return false
+        return decl.mutableCapture || decl.topper || fromOtherModule(decl)
     }
 
     private fun translateGetter(
@@ -2974,7 +3114,101 @@ class RustTranslator(
     private fun translateSetterId(setter: TmpL.Setter) =
         "set_${setter.dotName.dotNameText.camelToSnake()}".toId(setter.dotName.pos)
 
-    private fun translateStatement(statement: TmpL.Statement): List<Rust.Statement> {
+    private fun translateStatement(statement: TmpL.Statement): List<Rust.Statement> =
+        hoistLeadingReads(translateStatementInPlace(statement))
+
+    /**
+     * Moves the `let` of each released field read, `{ let n = self.0.read().unwrap().n; n }` from
+     * [translateGetProperty], in front of its statement when nothing the statement evaluates before that read has
+     * an effect, so the order of evaluation is unchanged. `{ ... }.pong(self.clone())` becomes
+     * `let peer = ...; peer.pong(self.clone())`, which reads better and also keeps an expression statement from
+     * starting with `{`, which Rust would parse as a block statement of its own.
+     */
+    private fun hoistLeadingReads(statements: List<Rust.Statement>): List<Rust.Statement> {
+        if (statements.none { it is Rust.LetStatement || it is Rust.ExprStatement || it is Rust.IfExpr }) {
+            return statements
+        }
+        return buildList {
+            for (statement in statements) {
+                val start = when (statement) {
+                    is Rust.LetStatement -> statement.value
+                    // The condition of an `if` runs once, before either branch, but a `while` condition runs
+                    // again on each pass, so it can't move out of the loop.
+                    is Rust.IfExpr -> statement.test
+                    is Rust.ExprStatement -> when (val expr = statement.expr) {
+                        is Rust.ReturnExpr -> expr.value
+                        is Rust.ExprWithBlock -> null
+                        else -> expr
+                    }
+                    else -> null
+                }
+                if (start != null) {
+                    val reads = mutableListOf<Rust.Block>()
+                    collectLeadingReads(start, reads)
+                    for (read in reads) {
+                        val let = read.statements.single() as Rust.LetStatement
+                        replaceChild(read, read.result!!.deepCopy())
+                        read.statements = listOf()
+                        add(let)
+                    }
+                }
+                add(statement)
+            }
+        }
+    }
+
+    /**
+     * Adds to [reads], in evaluation order, the released reads in [expr] that run before anything with an effect.
+     * Returns whether all of [expr] evaluates without an effect, so that evaluation can go on past it.
+     */
+    private fun collectLeadingReads(expr: Rust.Expr, reads: MutableList<Rust.Block>): Boolean = when (expr) {
+        is Rust.Block -> expr.isReleasedRead().also { if (it) reads.add(expr) }
+        is Rust.Path, is Rust.Literal -> true
+        is Rust.Operation -> when (expr.operator.operator) {
+            // An assignment evaluates its value before the place it assigns, and then has its effect.
+            RustOperator.Assign -> expr.right?.let { collectLeadingReads(it, reads) }.let { false }
+            // The right operand only sometimes runs.
+            RustOperator.LogicalAnd, RustOperator.LogicalOr, RustOperator.Propagation ->
+                expr.left?.let { collectLeadingReads(it, reads) }.let { false }
+            else -> listOfNotNull(expr.left, expr.right).all { collectLeadingReads(it, reads) }
+        }
+        is Rust.Call -> {
+            val callee = expr.callee
+            // A method call evaluates its receiver, then its arguments, then calls. Of calls, only `clone()` has
+            // no effect that matters here, as it copies an `Arc` or a value.
+            val isClone = callee is Rust.Operation && expr.args.isEmpty() &&
+                (callee.right as? Rust.Id)?.outName?.outputNameText == "clone"
+            collectLeadingReads(callee, reads) && expr.args.all { collectLeadingReads(it, reads) } && isClone
+        }
+        else -> false
+    }
+
+    private fun Rust.Block.isReleasedRead(): Boolean {
+        val let = statements.singleOrNull() as? Rust.LetStatement ?: return false
+        val pattern = let.pattern as? Rust.Id ?: return false
+        val result = result as? Rust.Id ?: return false
+        return attrs.isEmpty() && pattern.outName == result.outName
+    }
+
+    private fun replaceChild(old: Rust.Expr, new: Rust.Expr) {
+        when (val parent = old.parent) {
+            is Rust.Operation -> when {
+                parent.left === old -> parent.left = new
+                else -> parent.right = new
+            }
+            is Rust.Call -> when {
+                parent.callee === old -> parent.callee = new
+                else -> parent.args = parent.args.map { if (it === old) new else it }
+            }
+            is Rust.LetStatement -> parent.value = new
+            is Rust.ReturnExpr -> parent.value = new
+            is Rust.IfExpr -> parent.test = new
+            is Rust.ExprStatement -> parent.expr = new
+            else -> error("unexpected parent ${parent?.let { it::class.simpleName }} of a released read")
+        }
+    }
+
+    private fun translateStatementInPlace(statement: TmpL.Statement): List<Rust.Statement> {
         try {
             return when (statement) {
                 is TmpL.Assignment -> return translateAssignment(statement)
@@ -3421,7 +3655,7 @@ class RustTranslator(
             TListBuilder -> TODO("$expression")
             TMap -> TODO("$expression")
             TMapBuilder -> TODO("$expression")
-            TNull -> "None".toId(pos)
+            TNull -> NONE_NAME.toId(pos)
             TProblem -> TODO("$expression")
             TStageRange -> TODO("$expression")
             TSymbol -> TODO("$expression")
@@ -3666,7 +3900,13 @@ internal const val MAP_BUILDER_NAME = "temper_core::MapBuilder"
 internal const val MAP_KEY_NAME = "temper_core::MapKey"
 internal const val MAPPED_NAME = "temper_core::Mapped"
 internal const val ONCE_LOCK_NAME = "std::sync::OnceLock"
-internal const val OPTION_NAME = "Option"
+internal const val BOX_NAME = "std::boxed::Box"
+internal const val CLONE_NAME = "std::clone::Clone"
+internal const val ERR_NAME = "std::result::Result::Err"
+internal const val NONE_NAME = "std::option::Option::None"
+internal const val OK_NAME = "std::result::Result::Ok"
+internal const val OPTION_NAME = "std::option::Option"
+internal const val SOME_NAME = "std::option::Option::Some"
 internal const val PARTIAL_EQ_NAME = "std::cmp::PartialEq"
 internal const val PHANTOM_DATA_NAME = "std::marker::PhantomData"
 internal const val RESULT_NAME = "temper_core::Result"
@@ -3685,4 +3925,13 @@ internal const val TRAIT_NAME_SUFFIX = "Trait"
 internal const val TYPE_ID_NAME = "std::any::TypeId"
 internal const val TYPE_ID_OF_NAME = "std::any::TypeId::of"
 
-internal val commonTypeBounds = listOf("Clone", SEND_NAME, SYNC_NAME, STATIC_LIFETIME)
+internal val commonTypeBounds = listOf(CLONE_NAME, SEND_NAME, SYNC_NAME, STATIC_LIFETIME)
+
+private fun TmpL.Tree.namesReferencedFromLocalFunctions(): Sequence<ResolvedName> = sequence {
+    when (val tree = this@namesReferencedFromLocalFunctions) {
+        is TmpL.LocalFunctionDeclaration -> yieldAll(tree.referencedNames())
+        else -> for (kid in tree.children) {
+            yieldAll(kid.namesReferencedFromLocalFunctions())
+        }
+    }
+}
