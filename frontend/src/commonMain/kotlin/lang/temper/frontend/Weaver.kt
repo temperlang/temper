@@ -54,6 +54,7 @@ import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.isBubbleCall
+import lang.temper.value.isErrorCall
 import lang.temper.value.matches
 import lang.temper.value.returnsVoidClearly
 import lang.temper.value.toLispy
@@ -626,6 +627,7 @@ class Weaver private constructor(
                             )
                         } else if (
                             hasNonNullNeverType(tree, typeContext2) &&
+                            !isErrorCall(tree) &&
                             !(isAssignment(parent) && edge === parent?.edgeOrNull(2))
                         ) {
                             heavies.add(
