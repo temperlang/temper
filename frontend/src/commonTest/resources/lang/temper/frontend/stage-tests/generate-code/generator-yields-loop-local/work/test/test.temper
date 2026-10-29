@@ -1,0 +1,23 @@
+do {
+  let takeTwo(factory: fn (): SafeGenerator<Int>): Void {
+    let generator: SafeGenerator<Int> = factory();
+    for (var k = 0; k < 2; k += 1) {
+      let r = generator.nextSafe();
+      if (r is ValueResult<Int>) {
+        console.log("yielded ${r.value}");
+      }
+    }
+    generator.close();
+  }
+
+  // `tenfold` is declared in the loop body, so the `yield` must read it
+  // from the loop body's environment.
+  takeTwo { (): GeneratorResult<Int> extends GeneratorFn =>
+    var i = 0;
+    while (true) {
+      let tenfold = i * 10;
+      yield(tenfold);
+      i += 1;
+    }
+  }
+}
