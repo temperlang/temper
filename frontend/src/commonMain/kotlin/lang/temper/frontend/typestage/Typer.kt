@@ -137,6 +137,7 @@ import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InterpreterCallback
 import lang.temper.value.LeftNameLeaf
+import lang.temper.value.MacroValue
 import lang.temper.value.NAryFn
 import lang.temper.value.NameLeaf
 import lang.temper.value.NoTypeInferencesTree
@@ -146,6 +147,7 @@ import lang.temper.value.ReifiedType
 import lang.temper.value.RightNameLeaf
 import lang.temper.value.StayLeaf
 import lang.temper.value.TEdge
+import lang.temper.value.TFunction
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
@@ -937,6 +939,7 @@ internal class Typer(
 
         val effectiveCalleeType = effectiveCallee?.let { ti.decisionType(it) }
         val calleeFn = effectiveCallee?.functionContained
+            ?: fnByName(effectiveCallee, env)
         val calleeFnSigs = calleeFn?.sigs
 
         fun specialize(sig: Signature2): Signature2 {
@@ -2475,7 +2478,7 @@ internal class Typer(
     ) {
         if (sig == null) { return }
         val callee = call.childOrNull(0) ?: return
-        if (ti.decision(callee)?.type == functionType) {
+        if (ti.decision(callee)?.type2 == functionType2) {
             if (New == callee.functionContained) {
                 // Make sure any bubbliness for the constructor is reflected in the
                 // callee type, so that the Weaver can recognize bubbly callee's and
@@ -3684,3 +3687,10 @@ private val allowedVoidReceiversHacky = setOf(
     // HACK: disallow this once new<->old never-type compatibility ironed out
     MkType2(WellKnownTypes.neverTypeDefinition).get(),
 )
+
+private fun fnByName(callee: Tree?, env: Environment): MacroValue? {
+    val builtinName = (callee as? RightNameLeaf)?.content as? BuiltinName
+        ?: return null
+    val result = env[builtinName, InterpreterCallback.NullInterpreterCallback]
+    return (result as? Value<*>)?.let { TFunction.unpackOrNull(it) }
+}
