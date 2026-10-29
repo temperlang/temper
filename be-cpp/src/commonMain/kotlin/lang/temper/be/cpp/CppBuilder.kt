@@ -232,6 +232,19 @@ class CppBuilder(
     fun lambdaCapture(name: Cpp.SingleName): Cpp.LambdaCapture =
         Cpp.LambdaCapture(pos, name.deepCopy())
 
+    /**
+     * `[&]() -> auto { temps...; return result; }()`, or `[]` when [inFunction] is false: see
+     * `InOrderExpr` in Cpp.out-grammar.
+     */
+    fun inOrderExpr(temps: Iterable<Cpp.InOrderTemp>, result: Cpp.Expr, inFunction: Boolean): Cpp.InOrderExpr =
+        Cpp.InOrderExpr(
+            pos,
+            if (inFunction) Cpp.CaptureByReference(pos) else null,
+            blockStmt(temps + returnStmt(result)),
+        )
+    fun inOrderTemp(name: Cpp.SingleName, value: Cpp.Expr): Cpp.InOrderTemp =
+        Cpp.InOrderTemp(pos, name.deepCopy(), value.deepCopy())
+
     fun indexExpr(base: Cpp.Expr, index: Cpp.Expr): Cpp.IndexExpr =
         Cpp.IndexExpr(pos, base.deepCopy(), index.deepCopy())
     fun callExpr(expr: Cpp.Expr, args: Iterable<Cpp.Expr>): Cpp.CallExpr =

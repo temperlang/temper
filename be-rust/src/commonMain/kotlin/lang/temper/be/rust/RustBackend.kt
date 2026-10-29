@@ -10,6 +10,7 @@ import lang.temper.common.buildSetMultimap
 import lang.temper.common.jsonEscaper
 import lang.temper.common.putMultiSet
 import lang.temper.common.subListToEnd
+import lang.temper.frontend.BindingsInjector
 import lang.temper.frontend.Module
 import lang.temper.fs.ResourceDescriptor
 import lang.temper.fs.declareResources
@@ -113,7 +114,7 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                         // Track features for std to avoid unneeded dependencies.
                         // TODO Just split out std into separate libraries sometime?
                         path.to.relativePath().lastOrNull()?.fullName?.let { stdModule ->
-                            // We chose feature names to match module names, but not all std modules are features.
+                            // We choose feature names to match module names, but not all std modules are features.
                             if (stdModule in stdFeatures) {
                                 featuresByDep.computeIfAbsent(depName.text) { mutableSetOf() }.add(stdModule)
                             }
@@ -127,7 +128,8 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                     ).let { deps.add(it) }
                 }
             }
-            // Copy connected code.
+            // Connected deps and code.
+            deps.addAll(RustLibraryConfig(libraryConfiguration).dependencies())
             for (file in rawBackendFiles) {
                 // Put rust connected modules into a subdir, under "src/" but skipping library name.
                 val rootSize = libraryConfiguration.libraryRoot.segments.size
@@ -159,26 +161,28 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
             val isStd = libraryConfiguration.libraryName.text == STANDARD_LIBRARY_NAME
             val cargoDeps = buildString {
                 for (dep in deps) {
-                    val depPath = jsonEscaper.escape(dep.path)
-                    val depVersion = jsonEscaper.escape(dep.version)
-                    val depFeatures = when (val features = featuresByDep[dep.libraryName]) {
-                        null -> ""
-                        else -> ", features = [${features.joinToString { jsonEscaper.escape(it) }}]"
-                    }
-                    append("${dep.naming.packageName} = { path = $depPath, version = $depVersion$depFeatures }\n")
+                    val features = dep.libraryName?.let { featuresByDep[it] }
+                    val fullContent = buildList {
+                        dep.path?.also { add("path = ${jsonEscaper.escape(it)}") }
+                        add("version = ${jsonEscaper.escape(dep.version)}")
+                        features?.also { add("features = [${features.joinToString { jsonEscaper.escape(it) }}]") }
+                    }.joinToString(", ")
+                    append("${dep.naming.packageName} = { $fullContent }\n")
                 }
                 if (isStd) {
                     // TODO Provide a way to define these in config for arbitrary connected code?
                     append("regex = { version = \"=1.12.2\", optional = true }\n")
                     append("time = { version = \"=0.3.41\", optional = true }\n")
                     append("ureq = { version = \"=3.1.2\", optional = true }\n")
+                    // Here down are transitive dependencies that need versions locked.
+                    append("powerfmt = { version = \"=0.2.0\", optional = true }\n")
                     append("zeroize = { version = \"=1.8.2\", optional = true }\n")
                     // Below aren't dependencies section anymore, but eh.
                     append("\n")
                     append("[features]\n")
                     append("net = [\"ureq\", \"zeroize\"]\n")
                     // Implied: append("regex = [\"regex\"]\n")
-                    append("temporal = [\"time\"]\n")
+                    append("temporal = [\"powerfmt\", \"time\"]\n")
                 }
             }
             val packageFields = buildMap {
@@ -262,6 +266,9 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                 rsrcs = stdSupportNeeders.map { name -> filePath(name, "support.rs") },
             )
 
+        private val stdConfigResource: ResourceDescriptor =
+            declareResources(stdResourceBase, filePath("config.temper.md")).first()
+
         /**
          * <!-- snippet: backend/rust/id -->
          * BackendID: `rust`
@@ -303,11 +310,20 @@ class RustBackend(setup: BackendSetup<RustBackend>) : Backend<RustBackend>(Facto
                 filePath("src", "string.rs"),
             )
 
+        override val configBindingsInjector: BindingsInjector = RustConfigInjector
+
+        override fun loadStdConfigSource(): String = stdConfigResource.load()
+
         override fun make(setup: BackendSetup<RustBackend>) = RustBackend(setup)
     }
 }
 
-private data class Dep(val libraryName: String, val naming: PackageNaming, val path: String, val version: String)
+internal data class Dep(
+    val naming: PackageNaming,
+    val version: String,
+    val libraryName: String? = null,
+    val path: String? = null,
+)
 
 internal const val SRC_PROJECT_DIR = "src"
 
@@ -348,9 +364,7 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                 val configType = listOf("temper_core", "Config").toPath(pos)
                 val crateId = "crate".toKeyId(pos)
                 val crateConfig = crateId.deepCopy().extendWith("config")
-                val crateScope = Rust.VisibilityScope(pos, Rust.VisibilityScopeOption.Crate)
-                val pubCrate = Rust.VisibilityPub(pos, scope = crateScope)
-                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate))
+                add(Rust.Use(pos, supportId.deepCopy().extendWith("*")).toItem(pub = pubCrate(pos)))
                 // Library init function.
                 Rust.Function(
                     pos,
@@ -377,7 +391,10 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                                 ).let { listOf(it) },
                             ).let { add(Rust.ExprStatement(pos, it)) }
                             // Init external dependencies.
-                            for (dep in deps) {
+                            deps@ for (dep in deps) {
+                                // Only init deps that relate to actual temper libraries.
+                                // If connected deps need init, temper libs need to do that manually.
+                                dep.libraryName == null && continue@deps
                                 // ${dep.naming.crateName}::init(Some(crate::config().clone()))?;
                                 val config = crateConfig.deepCopy().call().wrapClone().wrapSome()
                                 val init =

@@ -84,16 +84,16 @@ namespace TemperLang.Std.Regex
                     case CodeRange range:
                         ranges.Add(new IntRange(range.Min, range.Max + 1));
                         break;
-                    case DigitSpecial:
+                    case Digit:
                         ranges.Add(new IntRange('0', '9'));
                         break;
-                    case SpaceSpecial:
+                    case Space:
                         foreach (var code in " \t\n\r\x0C\x0B")
                         {
                             ranges.Add(new IntRange(code));
                         }
                         break;
-                    case WordSpecial:
+                    case Word:
                         // Go ascii for now.
                         ranges.Add(new IntRange('_'));
                         ranges.Add(new IntRange('0', '9'));

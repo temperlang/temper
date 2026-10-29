@@ -258,6 +258,9 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     CannotSealClass("Only interfaces can be sealed", CompilationPhase.Interpreter),
+    NoAutoWhenNotSealed("Auto method not support for interface that's not sealed", CompilationPhase.Staging),
+    AutoNotFullySealed("Auto method not allowed with unsealed subtype(s): %s", CompilationPhase.Staging),
+    MultipleAutoOptions("Auto method cannot support multiple supertype(s): %s", CompilationPhase.Staging),
     CannotIntroduceParamInSealedSubtype(
         "Cannot introduce type parameters in sealed subtype %s",
         CompilationPhase.Interpreter,
@@ -283,6 +286,10 @@ enum class MessageTemplate(
     MemberUnavailable("Class member %s is unavailable", CompilationPhase.Interpreter),
     StaticMemberNeedsQualified("Type name required for accessing static member", CompilationPhase.Interpreter),
     StaticMemberUsesChaining("Static member access should use `.`, not `?.`", CompilationPhase.Interpreter),
+    StaticComputedPropertyUnsupported(
+        "`static %s %s` is not supported; use a static method instead",
+        CompilationPhase.Interpreter,
+    ),
     NoAccessibleMember("No accessible member %s in type %s", CompilationPhase.Interpreter),
     NoAccessibleGetter("No accessible getter %s in %s", CompilationPhase.Interpreter),
     NoAccessibleSetter("No accessible setter %s in %s", CompilationPhase.Interpreter),

@@ -24,10 +24,22 @@ class TestWebServer(private val requestedPort: Int = 0) {
         this.server = server
         server.createContext("/") { exchange ->
             val method = exchange.requestMethod
+            // Whether the request said its body is JSON. Only the media type is
+            // compared, since a client may add a charset parameter.
+            val json = exchange.requestHeaders.getFirst("Content-Type")
+                ?.substringBefore(';')?.trim() == "application/json"
             // Don't even worry about escaping for now.
-            val response = """{"method": "$method"}""".toByteArray()
+            val response = """{"method": "$method", "json": $json}""".toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
             exchange.sendResponseHeaders(HTTP_OK, response.size.toLong())
+            exchange.responseBody.use { it.write(response) }
+        }
+        // A path the server does not have, for checking that an HTTP error
+        // status reaches Temper code as a response with that status.
+        server.createContext("/missing") { exchange ->
+            val response = "not here".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "text/plain")
+            exchange.sendResponseHeaders(HTTP_NOT_FOUND, response.size.toLong())
             exchange.responseBody.use { it.write(response) }
         }
         server.start()
@@ -40,3 +52,4 @@ class TestWebServer(private val requestedPort: Int = 0) {
 }
 
 private const val HTTP_OK = 200
+private const val HTTP_NOT_FOUND = 404

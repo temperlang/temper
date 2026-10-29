@@ -677,6 +677,81 @@ class CppBackendTest {
     }
 
     @Test
+    fun operandsThatCanAffectEachOtherAreBoundInOrder() {
+        assertGeneratedContains(
+            temper = """
+                |class Counter {
+                |  public var n: Int = 0;
+                |  public bump(): Int { n += 1; n }
+                |}
+                |let show(a: Int, b: Int): String { "${'$'}{ a } ${'$'}{ b }" }
+                |let c = new Counter();
+                |console.log("args ${'$'}{ show(c.bump(), c.n) }");
+                |console.log("plus ${'$'}{ c.bump() * 10 + c.n }");
+                |console.log("none ${'$'}{ show(c.n, 1) } ${'$'}{ show(2, 3) }");
+            """,
+            // C++ leaves argument order unspecified, so `c.n` must not be read before `c.bump()`
+            // runs. Operands that cannot affect each other stay as they were.
+            cppContains = listOf(
+                """
+                    |    temper::core::Console::log(console_0, temper::core::cat("args ", [&]() -> auto {
+                    |          auto arg_3 = c->bump();
+                    |          auto arg_4 = c->get_n();
+                    |          return show(arg_3, arg_4);
+                    |        }()));
+                """.trimMargin(),
+                """
+                    |            auto arg_5 = temper::core::Int::mul(c->bump(), 10);
+                    |            auto arg_6 = c->get_n();
+                    |            return temper::core::Int::add(arg_5, arg_6);
+                """.trimMargin(),
+                """temper::core::cat("none ", show(c->get_n(), 1), " ", "2 3")""",
+            ),
+        )
+    }
+
+    @Test
+    fun operandsOfAStaticInitializerAreBoundWithoutCaptures() {
+        assertGeneratedContains(
+            temper = """
+                |class Counter {
+                |  public var n: Int = 0;
+                |  public bump(): Int { n += 1; n }
+                |}
+                |class S {
+                |  public static t: Int = new Counter().bump() * 10 + new Counter().bump();
+                |}
+            """,
+            // A static member is defined at namespace scope, where `[&]` does not compile.
+            cppContains = listOf(
+                """
+                    |  int32_t S::t = []() -> auto {
+                    |    auto arg_
+                """.trimMargin(),
+            ),
+        )
+    }
+
+    @Test
+    fun callMethodNamedAfterKeyword() {
+        assertGeneratedContains(
+            temper = """
+                |export class B {
+                |  public int(k: Int): Int { k + 1 }
+                |  public twice(k: Int): Int { int(int(k)) }
+                |  public static bool(k: Int): Boolean { k > 0 }
+                |}
+                |export let f(b: B, k: Int): Boolean { B.bool(b.int(k)) }
+            """,
+            cppContains = listOf(
+                "int32_t int_(int32_t) const;",
+                "return this_1->int_(this_1->int_(k_",
+                "return B::bool_(b->int_(k_19));",
+            ),
+        )
+    }
+
+    @Test
     fun importsBetweenModules() {
         assertGeneratedContains(
             temper = """
@@ -687,6 +762,23 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 "temper::core::Console::log",
+            ),
+        )
+    }
+
+    @Test
+    fun importOfOnlyTypesInitializesTheirModule() {
+        assertGeneratedContains(
+            temper = """
+                |let { Regex, Sequence, CodePoints } = import("std/regex");
+                |export let re = new Regex(new Sequence([new CodePoints("a"), new CodePoints("b")]));
+            """,
+            cppContains = listOf(
+                """
+                    |    initialized = true;
+                    |    temper_std::global_init_regex();
+                    |    re = temper_std::Regex::make(
+                """.trimMargin(),
             ),
         )
     }

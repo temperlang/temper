@@ -39,6 +39,7 @@ import lang.temper.type.WellKnownTypes.invalidTypeDefinition
 import lang.temper.type.WellKnownTypes.neverTypeDefinition
 import lang.temper.type.WellKnownTypes.resultTypeDefinition
 import lang.temper.type.WellKnownTypes.voidType2
+import lang.temper.type.internal
 import lang.temper.type.isNullType
 import lang.temper.value.BaseReifiedType
 import lang.temper.value.DependencyCategory
@@ -162,14 +163,22 @@ fun <TYPE : TypeOrPartialType> SuperTypeTreeForType2<TYPE>.forEachSuperType(
     }
 }
 
-private data class HackFnInterop(
+internal data class HackFnInterop(
     val formals: List<TypeFormal>,
     val nRequired: Int,
     val nOptional: Int,
     val bubbly: Boolean,
 )
+
+/**
+ * Shapes for function types without type formals, which are shared by every
+ * build. Shapes for generic function types are cached on their first type
+ * formal instead (see [MutableTypeFormal.hackFnShapes]), and each shape knows
+ * its key (see [TypeShapeImpl.hackFnInterop]). A global map keyed by type
+ * formals would keep every build's modules alive in watch mode, since type
+ * formals' names reference their modules.
+ */
 private val hackFnTypeDefs = mutableMapOf<HackFnInterop, TypeShape>()
-private val hackFnTypeDefsRev = mutableMapOf<TypeShape, HackFnInterop>()
 
 internal val hackDocument = Document(object : DocumentContext {
     override val sharedLocationContext: SharedLocationContext get() = TODO()
@@ -225,8 +234,9 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
             val nRequired = t.valueFormals.size - nOptional
             val bubbly = t.returnType is OrType && t.returnType.members.any { it is BubbleType }
             val key = HackFnInterop(t.typeFormals, nRequired, nOptional, bubbly = bubbly)
-            val defn = synchronized(hackFnTypeDefs) {
-                hackFnTypeDefs.getOrPut(key) {
+            val cache = t.typeFormals.firstOrNull()?.internal?.hackFnShapes ?: hackFnTypeDefs
+            val defn = synchronized(cache) {
+                cache.getOrPut(key) {
                     val nameMaker = ResolvedNameMaker(invalidTypeDefinition.name.origin, Genre.Library)
                     val mutationCount = invalidTypeDefinition.mutationCount
                     TypeShapeImpl(
@@ -236,7 +246,7 @@ fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
                         Abstractness.Abstract,
                         mutationCount,
                     ).also { it ->
-                        hackFnTypeDefsRev[it] = key
+                        it.hackFnInterop = key
 
                         fun makeTypeFormal(namePrefix: String, variance: Variance): TypeParameterShape {
                             val symbol = Symbol(namePrefix)
@@ -359,13 +369,7 @@ fun hackMapNewStyleToOld(t: Type2): StaticType {
     val bindings = t.bindings
     val nullity = t.nullity
 
-    val fnInterop = if (definition is TypeShape) {
-        synchronized(hackFnTypeDefs) {
-            hackFnTypeDefsRev[definition]
-        }
-    } else {
-        null
-    }
+    val fnInterop = (definition as? TypeShapeImpl)?.hackFnInterop
     val t = when {
         definition == neverTypeDefinition -> OrType.emptyOrType
         definition == resultTypeDefinition -> MkType.or(hackMapNewStyleToOld(bindings[0]), BubbleType)

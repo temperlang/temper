@@ -133,6 +133,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ClassesStaticPropertiesScope)
 
     @Test
+    fun classesWriteBackThroughField() =
+        runFunctionalTest(Ft.ClassesWriteBackThroughField)
+
+    @Test
     fun controlFlowActorRun() =
         runFunctionalTest(Ft.ControlFlowActorRun)
 
@@ -145,8 +149,20 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowAsyncTopLevelComplete)
 
     @Test
+    fun controlFlowAsyncWaiters() =
+        runFunctionalTest(Ft.ControlFlowAsyncWaiters)
+
+    @Test
+    fun controlFlowAwaitInLoop() =
+        runFunctionalTest(Ft.ControlFlowAwaitInLoop)
+
+    @Test
     fun controlFlowBubble() =
         runFunctionalTest(Ft.ControlFlowBubble)
+
+    @Test
+    fun controlFlowForOfFolded() =
+        runFunctionalTest(Ft.ControlFlowForOfFolded)
 
     @Test
     fun controlFlowIfReturn() =
@@ -307,6 +323,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun typesNetresponse() =
         runFunctionalTest(Ft.TypesNetresponse)
+
+    @Test
+    fun typesNetresponseNotFound() =
+        runFunctionalTest(Ft.TypesNetresponseNotFound)
 
     @Test
     fun typesStringBuild() =

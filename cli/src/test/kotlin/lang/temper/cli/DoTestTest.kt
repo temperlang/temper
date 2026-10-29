@@ -3,6 +3,7 @@ package lang.temper.cli
 import lang.temper.be.cli.CliEnv
 import lang.temper.be.cli.RunTestsRequest
 import lang.temper.be.cli.ShellPreferences
+import lang.temper.be.cpp.CppBackend
 import lang.temper.be.csharp.CSharpBackend
 import lang.temper.be.java.JavaBackend
 import lang.temper.be.js.JsBackend
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Timeout
 import java.nio.file.Path
 import java.util.concurrent.ForkJoinPool
 import kotlin.io.path.exists
+import kotlin.io.path.writeText
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -38,6 +40,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class DoTestTest {
 
@@ -74,6 +77,13 @@ class DoTestTest {
         )
     }
 
+    @Test
+    @Timeout(CPP_TIMEOUT_SECONDS)
+    fun testPassingCppBackend() {
+        // C++ keeps its own list of tests for main.cpp, so check it also declares them for the tally.
+        checkPassing("TestPassingCppBackend", "/testing/passing", listOf(CppBackend.Cpp.backendId))
+    }
+
     @Ignore("Slow, so we have something in integration tests instead")
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
@@ -108,6 +118,17 @@ class DoTestTest {
 
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsCSharp() {
+        checkPassing(
+            name = "ConnectedsCSharp",
+            path = "/testing/connecteds",
+            backends = listOf(CSharpBackend.Factory.backendId),
+            libraryName = DashedIdentifier("connecteds"),
+        )
+    }
+
+    @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testActualErrorJava17Backend() = runWithCopyOfTestingDir(
         "TestActualErrorJava17Backend",
         "/testing/actual-error",
@@ -115,6 +136,26 @@ class DoTestTest {
         // In Java, this causes a compiler error, so the test can't run at all.
         val result = doTestResult(listOf(JavaBackend.Java17.backendId), jobName, output, libraryName)
         checkErrorResults(result)
+    }
+
+    @Test
+    @Timeout(2 * JAVA_TIMEOUT_SECONDS)
+    fun testCompileErrorAfterPassingJava17Backend() = runWithCopyOfTestingDir(
+        "TestCompileErrorAfterPassingJava17Backend",
+        "/testing/passing",
+    ) { output, libraryName, jobName ->
+        // A first run that passes leaves surefire reports in temper.out. Then javac fails, so
+        // surefire writes nothing, and the old reports must not be read as the second run's.
+        // The broken source is planted by hand so that the failure does not depend on a
+        // translation bug that may get fixed.
+        val backends = listOf(JavaBackend.Java17.backendId)
+        val first = doTestResult(backends, jobName, output, libraryName)
+        assertTrue(first.ok, "First run should pass")
+        output.resolve("temper.out/java/test-me/src/main/java/test_me/Broken.java")
+            .writeText("package test_me;\nclass Broken { int x = ; }\n")
+        val second = doTestResult(backends, jobName, output, libraryName)
+        assertFalse(second.ok, "javac failed, so the run should fail")
+        assertEquals(0, second.testTally?.run, "No test ran")
     }
 
     @Test
@@ -136,7 +177,12 @@ class DoTestTest {
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun connectedsJava17() {
-        checkPassing("ConnectedsJava17", "/testing/connecteds", listOf(JavaBackend.Java17.backendId))
+        checkPassing(
+            name = "ConnectedsJava17",
+            path = "/testing/connecteds",
+            backends = listOf(JavaBackend.Java17.backendId),
+            libraryName = null,
+        )
     }
 
     @Test
@@ -165,6 +211,16 @@ class DoTestTest {
         assertEquals(1, tally.run, "Tests should have been run")
         assertEquals(0, tally.failed, "Tests should have passed")
         assertFalse(result.errorFree, "Tests should have had an error")
+    }
+
+    @Test
+    fun connectedsJs() {
+        checkPassing(
+            name = "ConnectedsJs",
+            path = "/testing/connecteds",
+            backends = listOf(JsBackend.Factory.backendId),
+            libraryName = null,
+        )
     }
 
     @Test
@@ -237,6 +293,16 @@ class DoTestTest {
     }
 
     @Test
+    fun connectedsPy() {
+        checkPassing(
+            name = "ConnectedsPy",
+            path = "/testing/connecteds",
+            backends = listOf(PyBackend.Python3.backendId),
+            libraryName = null,
+        )
+    }
+
+    @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testFailingRustBackend() = runWithCopyOfTestingDir(
         "TestFailingRustBackend",
@@ -244,6 +310,17 @@ class DoTestTest {
     ) { output, libraryName, jobName ->
         val result = doTestResult(listOf(RustBackend.Factory.backendId), jobName, output, libraryName)
         checkFailureResults(result)
+    }
+
+    @Test
+    @Timeout(JAVA_TIMEOUT_SECONDS)
+    fun connectedsRust() {
+        checkPassing(
+            name = "ConnectedsRust",
+            path = "/testing/connecteds",
+            backends = listOf(RustBackend.Factory.backendId),
+            libraryName = DashedIdentifier("connecteds"),
+        )
     }
 
     @Test
@@ -382,6 +459,14 @@ private fun checkPassing(
 ) {
     runWithTemporaryDirCopyOf(name, resourcePath(path)) { dir ->
         val result = doTestResult(backends, name, dir, libraryName, verbose = verbose)
+        when (val tally = result.testTally) {
+            null -> fail("No test tally")
+            else -> when (val defined = tally.defined) {
+                null -> fail("No info on tests defined")
+                else if defined < 1 -> fail("No tests defined")
+                else -> assertEquals(defined, tally.run)
+            }
+        }
         assertTrue(result.errorFree, "Tests should have passed")
         extraChecks(dir, result)
     }
@@ -465,6 +550,9 @@ internal const val MYPYC_TIMEOUT_SECONDS = 300L
 
 /** We've seen it over 30 sometimes. */
 internal const val PY_TIMEOUT_SECONDS = 60L
+
+/** C++ compiles its runtime library along with the tests, through CMake. */
+internal const val CPP_TIMEOUT_SECONDS = 270L
 
 private fun runWithCopyOfTestingDir(
     jobName: String,
