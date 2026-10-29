@@ -19,8 +19,11 @@
 | [ClassesSetters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticProperties][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesStaticPropertiesScope][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ClassesWriteBackThroughField][] | ❌<sup>[539][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowActorRun][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowAsync][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
+| [ControlFlowAsyncWaiters][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
+| [ControlFlowAwaitInLoop][] | ❌<sup>[520][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[144][]</sup> | ✅ | ✅ | ✅ |
 | [ControlFlowBubble][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowIfReturn][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -62,6 +65,7 @@
 | [TypesListSorting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesMap][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesNetresponse][] | ❌<sup>[198][], [214][]</sup> | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ |
+| [TypesNetresponseNotFound][] | ❌<sup>[214][]</sup> | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ | ❌<sup>[214][]</sup> | ✅ | ✅ | ✅ |
 | [TypesStringBuild][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesStringIndices][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesStringIsEmpty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -73,6 +77,8 @@
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
 [456]: https://github.com/temperlang/temper/issues/456
+[520]: https://github.com/temperlang/temper/issues/520
+[539]: https://github.com/temperlang/temper/issues/539
 [58]: https://github.com/temperlang/temper/issues/58
 [AlgosFibonacci]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/fibonacci/fibonacci.temper.md
 [AlgosHelloFromClassToTop]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/hello-from-class-to-top/hello-from-class-to-top.temper.md
@@ -91,8 +97,11 @@
 [ClassesSetters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/setters/setters.temper.md
 [ClassesStaticProperties]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties/static-properties.temper.md
 [ClassesStaticPropertiesScope]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/static-properties-scope/static-properties-scope.temper.md
+[ClassesWriteBackThroughField]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/write-back-through-field/write-back-through-field.temper.md
 [ControlFlowActorRun]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/actor-run/actor-run.temper.md
 [ControlFlowAsync]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async/async.temper.md
+[ControlFlowAsyncWaiters]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/async-waiters/async-waiters.temper.md
+[ControlFlowAwaitInLoop]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/await-in-loop/await-in-loop.temper.md
 [ControlFlowBubble]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/bubble/bubble.temper.md
 [ControlFlowIfReturn]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/if-return/if-return.temper.md
 [ControlFlowLoopReenterable]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/control-flow/loop-reenterable/loop-reenterable.temper.md
@@ -134,6 +143,7 @@
 [TypesListSorting]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/sorting/sorting.temper.md
 [TypesMap]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/map/map.temper.md
 [TypesNetresponse]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/netresponse/netresponse.temper.md
+[TypesNetresponseNotFound]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/netresponse-not-found/netresponse-not-found.temper.md
 [TypesStringBuild]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/build/build.temper.md
 [TypesStringIndices]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/indices/indices.temper.md
 [TypesStringIsEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/string/is-empty/is-empty.temper.md

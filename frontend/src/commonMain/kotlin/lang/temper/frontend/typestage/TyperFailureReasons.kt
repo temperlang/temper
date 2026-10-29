@@ -176,6 +176,7 @@ internal class BecauseNoSuchOperator(
     override val name get() = "BecauseNoSuchOperator"
     override val level: Log.Level get() = Log.Error
     override val formatString get() = when (member.operator) {
+        // TODO: Move these variants into MessageTemplate.
         // A class defines these itself with a method marked `@operator`.
         // `<`, `<=`, `>` and `>=` reach the Typer as `<=>`.
         "==", "!=" -> "%s does not support %s `%s`; give it a method marked `@operator(\"==\")`"
@@ -188,6 +189,23 @@ internal class BecauseNoSuchOperator(
             OutputToken(member.kind.name.asciiUnTitleCase(), OutputTokenType.Word),
             OutputToken(member.operator, OutputTokenType.Punctuation),
         )
+}
+
+/**
+ * `C.n = x` where `C` is a type.  Static properties are initialized once, at
+ * their declaration, and no backend has a way to reassign one.
+ */
+internal class BecauseStaticMemberNotAssignable(
+    override val pos: Position,
+    private val member: Member,
+    private val receiverType: StaticType,
+) : AbstractTypeReasonElement() {
+    override val name get() = "BecauseStaticMemberNotAssignable"
+    override val level: Log.Level get() = Log.Error
+    override val formatString get() =
+        "Cannot assign to static member %s of %s; static members are only initialized at their declaration"
+    override val templateFillers: List<TokenSerializable>
+        get() = listOf(member, receiverType)
 }
 
 internal class BecauseUnresolvedTypeReference(

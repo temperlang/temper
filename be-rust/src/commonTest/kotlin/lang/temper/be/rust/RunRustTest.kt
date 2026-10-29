@@ -2,6 +2,8 @@ package lang.temper.be.rust
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class RunRustTest {
     @Test
@@ -36,6 +38,19 @@ class RunRustTest {
             |</testsuites>
         """.trimMargin()
         assertEquals(expected, translated)
+    }
+
+    @Test
+    fun parseCargoTestThatDidNotCompile() {
+        // When rustc rejects the crate, cargo's errors go to stderr and nothing reaches stdout.
+        assertNull(cargoTestToJunitXml("whatever", ""))
+        // A crate with no tests still reports, as an empty suite.
+        val noTests = """
+            |running 0 tests
+            |
+            |test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+        """.trimMargin()
+        assertNotNull(cargoTestToJunitXml("whatever", noTests))
     }
 
     @Test

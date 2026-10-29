@@ -9,6 +9,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.asReceiverMember
 import lang.temper.be.tmpl.injectSuperCallMethods
+import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
 import lang.temper.common.subListToEnd
@@ -124,6 +125,12 @@ class CppBackend private constructor(
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
+            // Register tests too, so test runs count them as defined, as other backends do.
+            for (topLevel in mod.topLevels) {
+                if (topLevel is TmpL.Test) {
+                    dependenciesBuilder.addTest(mod.libraryName, topLevel)
+                }
+            }
             translator.moduleInitFuncName?.let { name ->
                 val libNs = safeCppNamespace(cppNames.library(cppLibraryName).text)
                 allInitFuncs.add("$libNs::$name")

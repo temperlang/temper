@@ -5,8 +5,10 @@ import lang.temper.log.FilePosition
 import lang.temper.log.FilePositions
 import lang.temper.log.UnknownCodeLocation
 import org.commonmark.node.AbstractVisitor
+import org.commonmark.node.BlockQuote
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.IndentedCodeBlock
+import org.commonmark.node.Node
 import org.commonmark.node.Paragraph
 import org.commonmark.node.SourceSpan
 import org.commonmark.parser.IncludeSourceSpans
@@ -19,13 +21,24 @@ actual fun findMarkdownCodeBlocks(text: String): List<TaggedRange> {
     return buildList {
         root.accept(
             object : AbstractVisitor() {
-                override fun visit(node: FencedCodeBlock) = ignore(add(node.taggedRange(positions, text)))
-                override fun visit(node: IndentedCodeBlock) = ignore(add(node.taggedRange(positions, text)))
+                override fun visit(node: FencedCodeBlock) {
+                    if (!node.isQuoted()) { add(node.taggedRange(positions, text)) }
+                }
+                override fun visit(node: IndentedCodeBlock) {
+                    if (!node.isQuoted()) { add(node.taggedRange(positions, text)) }
+                }
                 override fun visit(node: Paragraph) = ignore(add(node.taggedRange(positions, text)))
             },
         )
     }
 }
+
+/**
+ * Code in a block quote is quoted text, so it stays in the comment rather than
+ * being compiled. Its lines after the first also start with `>` markers, which
+ * wouldn't lex as the intended code anyway.
+ */
+private fun Node.isQuoted(): Boolean = generateSequence(parent) { it.parent }.any { it is BlockQuote }
 
 /** Translate also 1-numbered lines to 0-indexed. */
 fun SourceSpan.startPos() = FilePosition(lineIndex + 1, columnIndex)

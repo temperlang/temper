@@ -12,6 +12,7 @@ import lang.temper.be.cli.ToolchainResult
 import lang.temper.be.cli.VersionedTool
 import lang.temper.be.cli.checkMin
 import lang.temper.common.RResult
+import lang.temper.common.RSuccess
 import lang.temper.fs.OutDir
 import lang.temper.log.FilePath
 import lang.temper.name.SemVer
@@ -39,12 +40,15 @@ object RustSpecifics : RunnerSpecifics {
 
     override val backendId get() = RustBackend.Factory.backendId
 
-    /** For now just inspect rustc and presume they have an appropriate matching cargo. */
-    override val tools: List<ToolSpecifics> = listOf(RustcCommand)
+    /** Check the rustc version, and that cargo is present, but presume its version matches rustc. */
+    override val tools: List<ToolSpecifics> = listOf(RustcCommand, CargoCommand)
 }
 
-object CargoCommand : ToolSpecifics {
+object CargoCommand : VersionedTool {
     override val cliNames = listOf("cargo")
+    override val versionCheckArgs = listOf("--version")
+
+    override fun checkVersion(run: EffortSuccess): RResult<Unit, CliFailure> = RSuccess(Unit)
 }
 
 object RustcCommand : VersionedTool {
@@ -66,6 +70,8 @@ object RustcCommand : VersionedTool {
      * - https://releases.rs/docs/1.63.0/ - Aug 2022, Const RwLock
      * - https://releases.rs/docs/1.70.0/ - Jun 2023, OnceLock
      * - https://releases.rs/docs/1.71.1/ - Aug 2023, Required for ureq
+     * - https://releases.rs/docs/1.85.0/ - Feb 2025, Rust 2024, cargo also defaults to looking at rust-version
+     * - https://releases.rs/docs/1.85.1/ - Mar 2025, Fixes some regressions
      */
     @Suppress("MagicNumber")
     val minVersion = SemVer(1, 71, 1)
