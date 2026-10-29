@@ -1,0 +1,84 @@
+let console#0;
+console#0 = getConsole();
+@fn @reach(\none) let brk__0, @fn @reach(\none) cont__0, @fn @reach(\none) ret__0, @fn @reach(\none) bub__0, @fn @reach(\none) viaBrk__0, @fn @reach(\none) viaCont__0, @fn @reach(\none) viaRet__0, @fn @reach(\none) viaBub__0;
+brk__0 = (@stay fn brk(n__0 /* aka n */: Int32) /* return__0 */: Int32 throws Bubble {
+    var i__0;
+    i__0 = 0;
+    while (i__0 <=> 9 < 0) {
+      i__0 = i__0 + 1;
+      if (i__0 <=> n__0 > 0) {
+        break;
+      }
+    };
+    return__0 = i__0
+});
+cont__0 = (@stay fn cont(n__1 /* aka n */: Int32) /* return__1 */: Int32 throws Bubble {
+    var sum__0;
+    sum__0 = 0;
+    var i__1;
+    i__1 = 0;
+    while (i__1 <=> 5 < 0) {
+      continue#0: do {
+        if (i__1 == n__1) {
+          break continue#0;
+        };
+        sum__0 = sum__0 + i__1
+      };
+      i__1 = i__1 + 1
+    };
+    return__1 = sum__0
+});
+ret__0 = (@stay fn ret(n__2 /* aka n */: Int32) /* return__2 */: Int32 throws Bubble {
+    fn__0: do {
+      var i__2;
+      i__2 = 0;
+      while (i__2 <=> 9 < 0) {
+        if (i__2 == n__2) {
+          return__2 = i__2 * 10;
+          break fn__0;
+        };
+        i__2 = i__2 + 1
+      };
+      return__2 = -1
+    }
+});
+bub__0 = (@stay fn bub(n__3 /* aka n */: Int32) /* return__3 */: Int32 throws Bubble {
+    var i__3;
+    i__3 = 0;
+    while (i__3 <=> 9 < 0) {
+      if (i__3 <=> n__3 > 0) {
+        bubble()
+      };
+      i__3 = i__3 + 1
+    };
+    return__3 = n__3
+});
+viaBrk__0 = (@stay fn viaBrk(n__4 /* aka n */: Int32) /* return__4 */: Int32 {
+    orelse#0: {
+      return__4 = (fn brk)(n__4)
+    } orelse {
+      return__4 = -100
+    }
+});
+viaCont__0 = (@stay fn viaCont(n__5 /* aka n */: Int32) /* return__5 */: Int32 {
+    orelse#1: {
+      return__5 = (fn cont)(n__5)
+    } orelse {
+      return__5 = -100
+    }
+});
+viaRet__0 = (@stay fn viaRet(n__6 /* aka n */: Int32) /* return__6 */: Int32 {
+    orelse#2: {
+      return__6 = (fn ret)(n__6)
+    } orelse {
+      return__6 = -100
+    }
+});
+viaBub__0 = (@stay fn viaBub(n__7 /* aka n */: Int32) /* return__7 */: Int32 {
+    orelse#3: {
+      return__7 = (fn bub)(n__7)
+    } orelse {
+      return__7 = -100
+    }
+});
+do_call_log(console#0, cat(do_call_toString(2), " ", do_call_toString(8), " ", do_call_toString(30), " ", do_call_toString(-100), " ", do_call_toString(10)))

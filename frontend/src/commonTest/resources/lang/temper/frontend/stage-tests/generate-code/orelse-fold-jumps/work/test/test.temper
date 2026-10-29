@@ -1,0 +1,37 @@
+// Calls with constant arguments are folded while compiling, even through
+// `orelse`.  Jumps in loops and not yet expanded `==` aren't bubbles.
+let brk(n: Int): Int throws Bubble {
+  var i = 0;
+  while (i < 9) {
+    i += 1;
+    if (i > n) { break; }
+  }
+  i
+}
+let cont(n: Int): Int throws Bubble {
+  var sum = 0;
+  for (var i = 0; i < 5; ++i) {
+    if (i == n) { continue; }
+    sum += i;
+  }
+  sum
+}
+let ret(n: Int): Int throws Bubble {
+  for (var i = 0; i < 9; ++i) {
+    if (i == n) { return i * 10; }
+  }
+  -1
+}
+let bub(n: Int): Int throws Bubble {
+  for (var i = 0; i < 9; ++i) {
+    if (i > n) { bubble(); }
+  }
+  n
+}
+
+let viaBrk(n: Int): Int { brk(n) orelse -100 }
+let viaCont(n: Int): Int { cont(n) orelse -100 }
+let viaRet(n: Int): Int { ret(n) orelse -100 }
+let viaBub(n: Int): Int { bub(n) orelse -100 }
+
+console.log("${ viaBrk(1) } ${ viaCont(2) } ${ viaRet(3) } ${ viaBub(4) } ${ viaBub(10) }");
