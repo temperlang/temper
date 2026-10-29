@@ -101,7 +101,7 @@ namespace TemperLang.Core
         {
             // TODO Probably need more checks.
             var trimmed = s.Trim();
-            if (trimmed.StartsWith(".") || trimmed.EndsWith("."))
+            if (trimmed.StartsWith(".", StringComparison.Ordinal) || trimmed.EndsWith(".", StringComparison.Ordinal))
             {
                 throw new Exception();
             }
