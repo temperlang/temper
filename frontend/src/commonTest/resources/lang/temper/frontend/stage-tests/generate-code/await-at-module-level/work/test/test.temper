@@ -1,0 +1,6 @@
+// Module initialization is not a generator function body, so it cannot
+// pause.  Only the REPL, via StagingFlags.allowTopLevelAwait, allows this.
+let b = new PromiseBuilder<Int>();
+b.complete(3);
+let y = await b.promise orelse -1;
+console.log("y=${y.toString()}");
