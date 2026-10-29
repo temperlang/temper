@@ -54,9 +54,7 @@ import lang.temper.value.void
  */
 object AdHocArrowTypes {
     fun isAdhocArrowTypeDefinition(defn: TypeDefinition) =
-        defn is TypeShape && synchronized(hackFnTypeDefs) {
-            defn in hackFnTypeDefsRev
-        }
+        defn is TypeShapeImpl && defn.hackFnInterop != null
 
     fun definedTypeForFunctionType(
         t: FunctionType,
@@ -114,10 +112,9 @@ object AdHocArrowTypes {
     }
 
     fun reverseToFnType(t: Type2): FunctionType? {
-        val definition = t.definition as? TypeShape ?: return null
-        val fnInterop = synchronized(hackFnTypeDefs) {
-            hackFnTypeDefsRev[definition]
-        } ?: return null
+        val definition = t.definition as? TypeShape
+        val fnInterop = (definition as? TypeShapeImpl)?.hackFnInterop
+            ?: return null
 
         val returnIndex = t.bindings.lastIndex
         val lastRegularInputIndex = returnIndex - 1
@@ -138,9 +135,8 @@ object AdHocArrowTypes {
 
     fun reverseToSig(t: Type2): Signature2? {
         val definition = t.definition as? TypeShape ?: return null
-        val fnInterop = synchronized(hackFnTypeDefs) {
-            hackFnTypeDefsRev[definition]
-        } ?: return null
+        val fnInterop = (definition as TypeShapeImpl).hackFnInterop
+            ?: return null
         val hasThisFormal = fnInterop.hasThisFormal
 
         val returnIndex = t.bindings.lastIndex
@@ -176,7 +172,7 @@ object AdHocArrowTypes {
                 Abstractness.Abstract,
                 mutationCount,
             ).also { it ->
-                hackFnTypeDefsRev[it] = key
+                it.hackFnInterop = key
 
                 fun makeTypeFormal(namePrefix: String, variance: Variance): TypeParameterShape {
                     val symbol = Symbol(namePrefix)
@@ -273,7 +269,7 @@ private val adHocument = Document(object : DocumentContext {
 
 private val adHocPos = Position(adHocument.context.namingContext.loc, 0, 0)
 
-private data class HackFnInterop(
+internal data class HackFnInterop(
     val formals: List<TypeFormal>,
     val hasThisFormal: Boolean,
     val nRequired: Int,
@@ -281,4 +277,3 @@ private data class HackFnInterop(
     val bubbly: Boolean,
 )
 private val hackFnTypeDefs = mutableMapOf<HackFnInterop, TypeShape>()
-private val hackFnTypeDefsRev = mutableMapOf<TypeShape, HackFnInterop>()

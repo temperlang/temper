@@ -29,6 +29,7 @@ import lang.temper.name.NameMaker
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedName
 import lang.temper.name.Symbol
+import lang.temper.type2.HackFnInterop
 import lang.temper.value.Helpful
 import lang.temper.value.MetadataValueMultimap
 import lang.temper.value.OccasionallyHelpful
@@ -180,6 +181,14 @@ class MutableTypeFormal(
     override val stayLeaf: StayLeaf?,
 ) : TypeFormal, LawfulEvilOverlord() {
     override val upperBounds = lawfulEvilListOf<NominalType>(mutationCount)
+
+    /**
+     * Shapes for generic function types whose type formals start with this
+     * one, used by `hackMapOldStyleToNew`. Kept here, rather than in a global
+     * map, so they're collected along with this formal.
+     */
+    internal val hackFnShapes = mutableMapOf<HackFnInterop, TypeShape>()
+
     init {
         if (upperBounds.isNotEmpty()) {
             this.upperBounds.addAll(upperBounds)
@@ -469,6 +478,9 @@ class TypeShapeImpl(
     override val mutationCount: AtomicCounter,
 ) : LawfulEvilOverlord(), MutableTypeShape {
     private var _word = word
+
+    /** For function-type shapes made by `hackMapOldStyleToNew`, the key they were made for. */
+    internal var hackFnInterop: HackFnInterop? = null
     override var stayLeaf: StayLeaf? = null
     private val stableReaderCount = StableReaderCount()
     override var sealedSubTypes: List<TypeShape>?
