@@ -31,6 +31,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
+import lang.temper.value.ErrorFn
 import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InnerTree
@@ -54,7 +55,6 @@ import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.isBubbleCall
-import lang.temper.value.isErrorCall
 import lang.temper.value.matches
 import lang.temper.value.returnsVoidClearly
 import lang.temper.value.toLispy
@@ -563,6 +563,7 @@ class Weaver private constructor(
                             )
                         }
                     }
+                    ErrorFn -> {} // Leave errors in-situ
                     BuiltinFuns.setLocalFn,
                     BuiltinFuns.setpFn,
                     is DotHelper,
@@ -626,8 +627,8 @@ class Weaver private constructor(
                                 },
                             )
                         } else if (
+                            pullSpecialsRootward &&
                             hasNonNullNeverType(tree, typeContext2) &&
-                            !isErrorCall(tree) &&
                             !(isAssignment(parent) && edge === parent?.edgeOrNull(2))
                         ) {
                             heavies.add(
