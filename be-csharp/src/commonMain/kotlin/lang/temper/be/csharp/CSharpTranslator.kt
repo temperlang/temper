@@ -1724,6 +1724,10 @@ internal class CSharpTranslator(
                         pos.leftEdge,
                         modAccess = modAccess,
                         modStatic = modStatic,
+                        modNew = when {
+                            overridesObjectToString(method, id, modAccess, modStatic) -> CSharp.ModNew.Override
+                            else -> CSharp.ModNew.Implied
+                        },
                     ),
                     typeParameters = typeParameters.map { it.second },
                     parameters = parameters,
@@ -1734,6 +1738,24 @@ internal class CSharpTranslator(
             )
         }
     }
+
+    /**
+     * Whether a class's `public toString(): String` should override `object.ToString`
+     * rather than hide it, so `$"{x}"` and `Console.WriteLine(x)` use it.
+     */
+    private fun overridesObjectToString(
+        method: TmpL.Method,
+        id: CSharp.Identifier,
+        modAccess: CSharp.ModAccess,
+        modStatic: CSharp.ModStatic,
+    ): Boolean =
+        modStatic == CSharp.ModStatic.Instance &&
+            modAccess == CSharp.ModAccess.Public &&
+            id.outName.outputNameText == "ToString" &&
+            (method.parent as? TmpL.TypeDeclaration)?.kind == TmpL.TypeDeclarationKind.Class &&
+            method.sig.allValueFormals.size == (if (method.sig.hasThisFormal) 1 else 0) &&
+            method.sig.typeFormals.isEmpty() &&
+            method.sig.returnType2 == WellKnownTypes.stringType2
 
     /** Retains explicit `this` parameter if [keepThis]. */
     private fun translateParameters(

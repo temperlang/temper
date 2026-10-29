@@ -63,7 +63,7 @@ NamespaceDecl ::=
 NamespaceDecl.usings.default = `listOf()`;
 
 enum ModAccess = Private | Internal | Protected | ProtectedInternal | Public;
-enum ModNew = Implied | New;
+enum ModNew = Implied | New | Override;
 enum ModStatic = Instance | Static;
 enum ModTypeKind = Class | Interface | Struct;
 enum ModWritable = ReadOnly | ReadWrite;

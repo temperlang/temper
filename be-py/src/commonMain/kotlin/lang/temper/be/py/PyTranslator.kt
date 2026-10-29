@@ -641,6 +641,19 @@ class PyTranslator(
             }
         }
 
+        // Let `str(x)` and f-strings use a class's `toString()`.
+        if (t.kind == TmpL.TypeDeclarationKind.Class) {
+            t.members.firstOrNull { it.isPlainToString() }?.let { toString ->
+                val pos = toString.pos
+                body.add(
+                    Py.Assign.simple(
+                        pyName(pos, "__str__"),
+                        dotName(toString as TmpL.NormalMethod).asPyName(pos),
+                    ),
+                )
+            }
+        }
+
         stmtList.add(
             Py.ClassDef(
                 t.pos,
@@ -652,6 +665,17 @@ class PyTranslator(
         )
         stmtList.addAll(defer)
         return stmtList
+    }
+
+    /** A public `toString()` taking only `this` and returning `String`. */
+    private fun TmpL.MemberOrGarbage.isPlainToString(): Boolean {
+        val method = this as? TmpL.NormalMethod ?: return false
+        val sig = method.sig
+        return method.dotName.dotNameText == "toString" &&
+            method.visibility.visibility == TmpL.Visibility.Public &&
+            sig.allValueFormals.size == (if (sig.hasThisFormal) 1 else 0) &&
+            sig.typeFormals.isEmpty() &&
+            sig.returnType2 == WellKnownTypes.stringType2
     }
 
     private fun undefinedGetterError(prop: TmpL.DotAccessible) = Py.Call(
