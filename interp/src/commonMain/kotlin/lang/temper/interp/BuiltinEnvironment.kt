@@ -471,6 +471,7 @@ private object Builtins {
             ),
 
             keyPair(operatorImplementationDecorator),
+            keyPair(autoDecorator),
 
             /**
              * <!-- snippet: builtin/@extension -->

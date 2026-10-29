@@ -22,7 +22,11 @@ class RustNames(
 
 data class PackageNaming(
     val packageName: String,
-    val crateName: String = packageName.dashToSnake(),
+    /**
+     * The name cargo gives the package's library crate: the package name with each `-` made `_`.
+     * Not [dashToSnake], which re-splits words around digits: `f64str` to `f64_str`, `radix-36` to `radix36`.
+     */
+    val crateName: String = packageName.replace('-', '_'),
 )
 
 enum class ConnectedType : TargetLanguageTypeName {

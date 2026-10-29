@@ -994,7 +994,8 @@ AlternateConstructorInvocation ::= "this" & "(" & args%Argument*"," & ")" & ";" 
  */
 Expression =
     LiteralExpr // 15.8.2
-  | ThisExpr // 15.8.3, 15.8.4
+  | ThisExpr // 15.8.3
+  | QualifiedThisExpr // 15.8.4
 // | ArrayCreationExpr // 15.10.1
 // | ArrayAccessExpr // 15.10.3
   | FieldAccessExpr // 15.11
@@ -1092,12 +1093,19 @@ ClassLiteral ::= type%Type & "." & "class";
 ClassLiteral requires `type.isRaw()` ;
 
 /**
- * The `this` keyword. JLS 15.8.3, 15.8.4
- *
- * Won't do: qualified this is only required if we need inner classes
+ * The `this` keyword. JLS 15.8.3
  */
 ThisExpr ::= "this" ;
 ThisExpr.operatorDefinition = `JavaOperatorDefinition.Atom`;
+
+/**
+ * A qualified `this`, `Outer.this`. JLS 15.8.4
+ *
+ * Needed inside the local classes that hold lifted local functions, where a bare `this` is
+ * the local class rather than the instance whose method declared the function.
+ */
+QualifiedThisExpr ::= type%QualIdentifier & "." & "this" ;
+QualifiedThisExpr.operatorDefinition = `JavaOperatorDefinition.Atom`;
 
 /**
  * Constructs a new instance of a class type. JLS 15.9

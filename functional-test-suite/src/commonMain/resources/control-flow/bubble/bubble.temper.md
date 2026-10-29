@@ -53,6 +53,25 @@ calcRows(3, 6)
 2
 ```
 
+## A loop whose condition bubbles
+
+The frontend evaluates a call with constant arguments while compiling. When a
+loop's condition bubbled during that evaluation, the interpreter unwound to
+the `orelse` and then popped the loop a second time, from an empty stack, so
+the build crashed with an IndexOutOfBoundsException instead of using the
+`orelse`.
+
+    let countBelow(s: String): Int throws Bubble {
+      var i = 0;
+      while (i < s.toInt32()) { i += 1; }
+      i
+    }
+    console.log((countBelow("abc") orelse -1).toString());
+
+```log
+-1
+```
+
 ## Match miscellany
 
 This code doesn't have anything to do with bubbling, but it failed in Lua, and

@@ -72,6 +72,25 @@ class LuaBackendTest {
     }
 
     @Test
+    fun listLiteralIsTableConstructor() {
+        // A call passes each element in its own register, and Lua has 255 per
+        // function, so `temper.listof(...)` over 250 elements did not load.
+        assertGenerated(
+            temper = """
+                |@keep let xs = ["a", "b", "c"];
+            """.trimMargin(),
+            lua = """
+                |local temper = require('temper-core');
+                |local xs, exports;
+                |xs = {'a', 'b', 'c'};
+                |exports = {};
+                |return exports;
+                |
+            """.trimMargin(),
+        )
+    }
+
+    @Test
     fun ifElse() {
         assertGenerated(
             temper = """
