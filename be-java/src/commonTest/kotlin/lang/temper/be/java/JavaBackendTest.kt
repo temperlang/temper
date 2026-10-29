@@ -1165,8 +1165,8 @@ class JavaBackendTest {
             |    return Dot;
             |}
         """.javaMethod(
-            "import std.regex.Special;",
-            "import static std.regex.RegexGlobal.Dot;",
+            "import temper.std.regex.Special;",
+            "import static temper.std.regex.RegexGlobal.Dot;",
         ),
     )
 
