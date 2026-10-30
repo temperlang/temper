@@ -23,6 +23,40 @@ pub use string::AsStr;
 // Putting these in a separate scope avoids deadlock when in a context where
 // there's also a write to the same lock.
 
+thread_local! {
+    /// How many library inits are running on this thread, nested.
+    static INITIALIZING: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Runs a library's init, marking this thread as initializing meanwhile, so a
+/// read of a module-level value that isn't set yet panics rather than
+/// re-entering init.
+pub fn initializing<T>(init: impl FnOnce() -> T) -> T {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            INITIALIZING.with(|depth| depth.set(depth.get() - 1));
+        }
+    }
+    INITIALIZING.with(|depth| depth.set(depth.get() + 1));
+    let _guard = Guard;
+    init()
+}
+
+/// Reads a module-level value, first initializing its library if it isn't
+/// set yet, so libraries work without an explicit `init` call. Libraries
+/// initialize whole, each module after those it imports, as `init` does.
+pub fn initialized<T>(get: impl Fn() -> Option<T>, init: impl FnOnce()) -> T {
+    if let Some(value) = get() {
+        return value;
+    }
+    if INITIALIZING.with(|depth| depth.get()) > 0 {
+        panic!("Temper module-level value read before its module initialized it");
+    }
+    init();
+    get().expect("Temper module-level value unset after its library's init")
+}
+
 pub fn read_locked<T: Clone>(x: &Arc<RwLock<T>>) -> T {
     x.read().unwrap().clone()
 }
