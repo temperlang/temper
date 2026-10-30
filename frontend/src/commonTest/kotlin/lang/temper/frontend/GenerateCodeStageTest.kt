@@ -660,6 +660,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun orelseFoldJumps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-fold-jumps"),
+    )
+
+    @Test
     fun asVsAssertAs() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-vs-assertas"),
     )
