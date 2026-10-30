@@ -11,18 +11,18 @@
 ## magnitude has its doc string
       @fn let magnitude__0 = (@docString((["magnitude is the distance of this point from the origin.", "magnitude is the distance of this point from the origin.\n\nIt is always >= 0.", "test/test.temper.md"])) fn magnitude(@impliedThis(Point__0) this__0: Point__0) /* return__0 */: Float64 {
           fn__0: do {
-            do_call_sqrt(do_iget_x(type (Point__0), this(Point__0)) * do_iget_x(type (Point__0), this(Point__0)) + do_iget_y(type (Point__0), this(Point__0)) * do_iget_y(type (Point__0), this(Point__0)))
+            do_icall_sqrt(type (Point__0), do_tget_x(type (Point__0), this(Point__0)) * do_tget_x(type (Point__0), this(Point__0)) + do_tget_y(type (Point__0), this(Point__0)) * do_tget_y(type (Point__0), this(Point__0)))
           }
       });
       @visibility(\public) let constructor__0 = fn constructor(@impliedThis(Point__0) this__1: Point__0, x__1 /* aka x */: Float64, y__1 /* aka y */: Float64) /* return__1 */: Void {
         do {
           let t#0;
-          do_iset_x(type (Point__0), this(Point__0), t#0 = x__1);
+          do_tset_x(type (Point__0), this(Point__0), t#0 = x__1);
           t#0
         };
         do {
           let t#1;
-          do_iset_y(type (Point__0), this(Point__0), t#1 = y__1);
+          do_tset_y(type (Point__0), this(Point__0), t#1 = y__1);
           t#1
         };
       };

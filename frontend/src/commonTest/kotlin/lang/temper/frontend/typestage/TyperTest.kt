@@ -730,18 +730,68 @@ class TyperTest {
     @Test
     fun privateMemberVisibility() = assertTypes(
         """
-        |    class Private(private b: Int) {}
+        |    class Private(private b: Int) {
+        |      public sharing(other: Private): Int {
+        |        b + other.b
+        |///     ┗━━━━━━━━━┛                : Int32
+        |      }
+        |    }
         |    let aPrivate = new Private(9);
         |///     ┗━━━━━━┛   ┗━━━━━━━━━━━━┛  : Private
         |/// ┏━━━━━━┓                       : Private
         |    aPrivate.b;
         |/// ┗━━━━━━━━┛                     : Invalid
+        |    export class Outsider {
+        |      public burgle(victim: Private): Int {
+        |        victim.b
+        |///     ┗━━━━━━┛                   : Invalid
+        |      }
+        |    }
         |    void
         """.trimMargin(),
         wantErrors = listOf(
-            "5+4-14: Member b defined in Private not publicly accessible!",
-            "5+4-14: Type Invalid mentions Invalid",
-            "5+13-14: Type Invalid mentions Invalid",
+            "10+4-14: Member b defined in Private not publicly accessible!",
+            "14+8-16: Member b defined in Private not publicly accessible!",
+            "10+4-14: Type Invalid mentions Invalid",
+            "10+13-14: Type Invalid mentions Invalid",
+            "14+8-16: Type Invalid mentions Invalid",
+            "14+15-16: Type Invalid mentions Invalid",
+        ),
+    )
+
+    /**
+     * Private members of an interface, as they might be supported later: code in the interface
+     * may use them on any value of a subtype, but subtypes and outsiders may not, even through
+     * `this`, and a subtype's own private member of the same name doesn't shadow them there.
+     */
+    @Test
+    fun privateInterfaceMemberVisibility() = assertTypes(
+        """
+        |    interface I {
+        |      private secret(): String { "I" }
+        |      public static peek(x: C): String { x.secret() }
+        |    }
+        |    class C extends I {
+        |      private secret(): String { "C" }
+        |      public mine(): String { this.secret() }
+        |    }
+        |    class D extends I {
+        |      public sneak(): String { this.secret() }
+        |      public other(d: D): String { d.secret() }
+        |    }
+        |    new C().secret();
+        |    void
+        """.trimMargin(),
+        wantErrors = listOf(
+            "10+31-44: Member secret defined in D | I not publicly accessible!",
+            "11+35-45: Member secret defined in D | I not publicly accessible!",
+            "13+4-20: Member secret defined in C | I not publicly accessible!",
+            "10+31-44: Type Invalid mentions Invalid",
+            "10+36-42: Type Invalid mentions Invalid",
+            "11+35-45: Type Invalid mentions Invalid",
+            "11+37-43: Type Invalid mentions Invalid",
+            "13+4-20: Type Invalid mentions Invalid",
+            "13+12-18: Type Invalid mentions Invalid",
         ),
     )
 
@@ -1005,12 +1055,18 @@ class TyperTest {
         |    class C { private static b = 123; }
         |    C.b;
         |/// ┗━┛ : Invalid
+        |    class D { private static e = C.b; }
+        |///                              ┗━┛ : Invalid
         |    void
         """.trimMargin(),
         wantErrors = listOf(
             "2+4-7: Member b defined in C not publicly accessible!",
+            "4+33-36: Member b defined in C not publicly accessible!",
             "2+4-7: Type Invalid mentions Invalid",
             "2+6-7: Type Invalid mentions Invalid",
+            "4+29-30: Type Invalid mentions Invalid",
+            "4+33-36: Type Invalid mentions Invalid",
+            "4+35-36: Type Invalid mentions Invalid",
         ),
     )
 

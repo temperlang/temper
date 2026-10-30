@@ -97,9 +97,13 @@ class(\word, \Hi, \concrete, true, @typeDefined(Hi) @stay fn {
 @visibility(\public) @fn @operator("_==_") @auto("==") @stay @fromType(Hi) let eq__0;
 eq__0 = fn eq(@impliedThis(Hi) this__6: Hi, other__0 /* aka other */: Hi) /* return__6 */: Boolean {
   fn#0: do {
-    if (getp(id__0, this__6) == do_get_id(other__0)) {
-      if (getp(yetMore__0, this__6) == do_get_yetMore(other__0)) {
-        getp(why__0, this__6) == do_get_why(other__0)
+    if (getp(id__0, this__6) == do_iget_id(type (Hi), other__0)) {
+      if (getp(more__0, this__6) == do_iget_more(type (Hi), other__0)) {
+        if (getp(yetMore__0, this__6) == do_iget_yetMore(type (Hi), other__0)) {
+          getp(why__0, this__6) == do_iget_why(type (Hi), other__0)
+        } else {
+          false
+        }
       } else {
         false
       }
@@ -119,16 +123,22 @@ ManualHi extends AnyValue;
 eq__1 = fn eq(@impliedThis(ManualHi) this__7: ManualHi, other__1 /* aka other */: ManualHi) /* return__7 */: Boolean {
   fn__1: do {
     void;
-    if(getp(id__2, this__7) == do_get_id(other__1), fn {
-        if(getp(why__1, this__7) == do_get_why(other__1), fn {
-            getp(yetMore__2, this__7) == do_get_yetMore(other__1)
-          }, \else, fn (f#0) {
-            f#0(@stay fn {
+    if(getp(id__2, this__7) == do_iget_id(type (ManualHi), other__1), fn {
+        if(getp(more__2, this__7) == do_iget_more(type (ManualHi), other__1), fn {
+            if(getp(why__1, this__7) == do_iget_why(type (ManualHi), other__1), fn {
+                getp(yetMore__2, this__7) == do_iget_yetMore(type (ManualHi), other__1)
+              }, \else, fn (f#0) {
+                f#0(@stay fn {
+                    false
+                })
+            })
+          }, \else, fn (f#1) {
+            f#1(@stay fn {
                 false
             })
         })
-      }, \else, fn (f#1) {
-        f#1(@stay fn {
+      }, \else, fn (f#2) {
+        f#2(@stay fn {
             false
         })
     })
@@ -231,7 +241,7 @@ eq__3 = fn eq(@impliedThis(Sure) this__16: Sure, other__3 /* aka other */: Maybe
       let other__4;
       other__4 = assertAs(other__3, Sure);
     };
-    getp(n__0, this__16) == do_get_n(other__4)
+    getp(n__0, this__16) == do_iget_n(type (Sure), other__4)
   }
 };
 do {};
@@ -343,9 +353,9 @@ ManualSure extends ManualMaybe;
 eq__9 = fn eq(@impliedThis(ManualSure) this__25: ManualSure, other__10 /* aka other */: ManualMaybe) /* return__25 */: Boolean {
   fn__4: do {
     if(other__10 is ManualSure, fn {
-        getp(n__2, this__25) == do_get_n(other__10)
-      }, \else, fn (f#2) {
-        f#2(@stay fn {
+        getp(n__2, this__25) == do_iget_n(type (ManualSure), other__10)
+      }, \else, fn (f#3) {
+        f#3(@stay fn {
             false
         })
     })

@@ -24,8 +24,7 @@ export class ManualHi(
   public eq(other: ManualHi): Boolean {
     // Some explicit this for comparison.
     this.id == other.id &&
-      // TODO Needs us to adjust access rules.
-      // more == other.more &&
+      more == other.more &&
       why == other.why &&
       yetMore == other.yetMore
   }

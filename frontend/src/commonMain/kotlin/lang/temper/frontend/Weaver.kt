@@ -23,6 +23,7 @@ import lang.temper.name.Temporary
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeContext
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.TypeContext2
@@ -570,7 +571,7 @@ class Weaver private constructor(
                     -> if (pullSpecialsRootward) {
                         val rightIndex = when (fn) {
                             is DotHelper -> when (val accessor = fn.memberAccessor) {
-                                InternalSet, ExternalSet -> accessor.firstArgumentIndex + 2
+                                InternalSet, ThisSet, ExternalSet -> accessor.firstArgumentIndex + 2
                                 else -> -1 // Not assignment-like
                             }
                             BuiltinFuns.setpFn -> SETP_RIGHT_INDEX
