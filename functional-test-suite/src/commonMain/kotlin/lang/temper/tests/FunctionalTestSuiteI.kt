@@ -149,6 +149,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowAsyncBrokenEarly)
 
     @Test
+    fun controlFlowAsyncTopLevelComplete() =
+        runFunctionalTest(Ft.ControlFlowAsyncTopLevelComplete)
+
+    @Test
     fun controlFlowAsyncWaiters() =
         runFunctionalTest(Ft.ControlFlowAsyncWaiters)
 
