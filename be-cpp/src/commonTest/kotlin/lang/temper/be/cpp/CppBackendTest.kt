@@ -212,6 +212,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  struct Classy;
+                |  template<class T_0> T_0 first(std::shared_ptr<std::vector<T_0>> const &);
                 |  struct Classy : public std::enable_shared_from_this<Classy> {
                 |    template<class T> T second(std::shared_ptr<std::vector<T>> const & things) const {
                 |      auto this_ = temper::core::borrow_this(this);

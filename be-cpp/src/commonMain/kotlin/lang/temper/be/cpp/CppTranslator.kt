@@ -2908,8 +2908,9 @@ class CppTranslator(
                     cpp.name(formal.name),
                 )
             }
-            // For template structs, skip the forward declaration
-            // and emit the full template struct definition
+            // Forward-declare template structs too, so function templates can be
+            // declared before any type is defined (see headerTemplateDecls).
+            headerTypeDecl.add(cpp.templateStructDecl(templateParams, struct.decl))
             val structDefToUse: Cpp.AnyStructDef = if (superTypes.isNotEmpty() || isInterface) {
                 cpp.derivedStructDef(structName, baseSpecs(), structFields)
             } else {
@@ -3080,6 +3081,7 @@ class CppTranslator(
      */
     private fun translateModuleFunction(
         topLevel: TmpL.ModuleFunctionDeclaration,
+        headerTemplateDecls: MutableList<Cpp.Global>,
         headerFunctions: MutableList<Cpp.Global>,
         impl: MutableList<Cpp.Global>,
     ) {
@@ -3115,6 +3117,7 @@ class CppTranslator(
                         ?: cpp.name(formal.name),
                 )
             }
+            headerTemplateDecls.add(cpp.templateFuncDecl(templateParams, func.decl))
             headerFunctions.add(
                 cpp.templateFuncDef(templateParams, func.def),
             )
@@ -3123,12 +3126,13 @@ class CppTranslator(
                 val retType =
                     translateType(topLevel.returnType)
                 for (
-                (_, def) in generateOptionalOverloads(
+                (decl, def) in generateOptionalOverloads(
                     funcName,
                     retType,
                     formals.toList(),
                 )
                 ) {
+                    headerTemplateDecls.add(cpp.templateFuncDecl(templateParams, decl))
                     headerFunctions.add(
                         cpp.templateFuncDef(
                             templateParams.map {
@@ -3458,6 +3462,7 @@ class CppTranslator(
 
         return cpp.pos(mod) {
             val headerTypeDecl = mutableListOf<Cpp.Global>()
+            val headerTemplateDecls = mutableListOf<Cpp.Global>()
             val headerTypeDefs = mutableListOf<Cpp.Global>()
             val headerDecl = mutableListOf<Cpp.Global>()
             val headerFunctions = mutableListOf<Cpp.Global>()
@@ -3465,6 +3470,8 @@ class CppTranslator(
 
             fun header(): List<Cpp.Global> = buildList {
                 addAll(headerTypeDecl)
+                // Before types, so their inline template methods can call function templates.
+                addAll(headerTemplateDecls)
                 addAll(headerTypeDefs)
                 addAll(headerDecl) // before functions so template functions can see extern vars
                 addAll(headerFunctions)
@@ -3512,7 +3519,7 @@ class CppTranslator(
                             deferredInitStmts.addAll(block.stmts)
                         }
                         is TmpL.ModuleFunctionDeclaration ->
-                            translateModuleFunction(topLevel, headerFunctions, impl)
+                            translateModuleFunction(topLevel, headerTemplateDecls, headerFunctions, impl)
                         is TmpL.ModuleLevelDeclaration ->
                             translateModuleLevelDeclaration(
                                 topLevel, hasTemplateFunctions, headerDecl,
