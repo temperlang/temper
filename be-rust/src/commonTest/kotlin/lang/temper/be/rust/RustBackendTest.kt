@@ -1,6 +1,7 @@
 package lang.temper.be.rust
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -191,6 +192,16 @@ class RustBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = RustBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.rs" to "pub(crate) fn via_connected(i: i32) -> i32 {\n    i + 1\n}\n",
+        ),
+        listedCall = "_connected::via_connected(",
+        unlistedCall = "_connected::via_body(",
     )
 
     @Test

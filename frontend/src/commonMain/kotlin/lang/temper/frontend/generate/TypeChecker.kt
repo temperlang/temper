@@ -237,7 +237,18 @@ internal class TypeChecker(
         // Abstract panic allowed only for connected functions.
         // Pure virtual methods use a different function so don't arrive here.
         val parts = fn.parts ?: return
-        parts.connected && return
+        if (parts.connected) {
+            if (parts.connectedBackends != null) {
+                // Backends not in the list use the Temper body, so it's required.
+                logSink.log(
+                    level = Log.Error,
+                    template = MessageTemplate.UserConnectedBackendsNeedBody,
+                    pos = t.pos,
+                    values = listOf(),
+                )
+            }
+            return
+        }
         // Invalid abstract function.
         logSink.log(
             level = Log.Error,

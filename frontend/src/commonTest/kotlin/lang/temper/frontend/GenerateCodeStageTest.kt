@@ -9,6 +9,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
+import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
@@ -429,6 +430,13 @@ class GenerateCodeStageTest {
         // comments in the cast checker describe why this is the way it is.
         // In short, a sealed, connected type must be able to distinguish
         // its subtypes, so the static expression type matters when casting.
+    )
+
+    @Test
+    fun connectedBackends() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/connected-backends"),
+        stage = Stage.GenerateCode,
+        // A list of backends with connected code on `@connected` requires a Temper body.
     )
 
     @Test

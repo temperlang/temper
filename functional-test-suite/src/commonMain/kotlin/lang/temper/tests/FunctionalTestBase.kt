@@ -10,6 +10,7 @@ import lang.temper.lexer.isTemperFile
 import lang.temper.log.FilePath
 import lang.temper.log.last
 import lang.temper.log.resolveFile
+import lang.temper.name.BackendId
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ModuleName
 import kotlin.io.path.isDirectory
@@ -120,8 +121,11 @@ abstract class FunctionalTestBase {
             )
         }
 
-    /** The expected output from running [mainFile]. */
-    abstract val expectedOutput: String
+    /**
+     * The expected output from running [mainFile] on [backendId]. [noConnected] means Temper
+     * bodies stand in for the backend's `@connected` code, as for `temper test --no-connected`.
+     */
+    abstract fun expectedOutput(backendId: BackendId, noConnected: Boolean = false): String
 
     /**
      * Which compile-time errors are allowed, as identified by message template names.

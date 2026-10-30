@@ -245,6 +245,14 @@ enum class MessageTemplate(
         "At this time, users can connect only top-level functions",
         CompilationPhase.CodeGeneration,
     ),
+    UserConnectedBackendsNotNames(
+        "@connected expects a list of backend names, like [\"cpp\", \"rust\"], not %s",
+        CompilationPhase.Interpreter,
+    ),
+    UserConnectedBackendsNeedBody(
+        "A @connected function that lists backends needs a Temper body for the backends not listed",
+        CompilationPhase.CodeGeneration,
+    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

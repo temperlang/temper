@@ -1843,7 +1843,15 @@ class Interpreter(
         val functionStability = when (connected?.stability) {
             ValueStability.Stable -> FunctionStability.SelfContained
             ValueStability.Unstable -> FunctionStability.Unstable
-            null -> functionStability(ast, definingEnv)
+            null -> when {
+                // A user-space connected function's body is only its reference implementation,
+                // since backends may use connected code instead, so don't inline or precompute
+                // calls with it. The interpreter still runs it at runtime.
+                parts?.connected == true && !isProcessingCore &&
+                    !nameMaker.namingContext.loc.isEffectivelyStd(sharedLocationContext = null) ->
+                    FunctionStability.Unstable
+                else -> functionStability(ast, definingEnv)
+            }
         }
         val produceFunctionValue = when {
             im == InterpMode.Full -> true
