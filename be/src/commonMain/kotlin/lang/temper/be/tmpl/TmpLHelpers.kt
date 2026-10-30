@@ -507,6 +507,22 @@ fun TmpL.MemberOrGarbage.asReceiverMember(): ReceiverMember? = when (this) {
 }
 
 /**
+ * Whether this is a class's public instance `toString()` that takes only `this`, has no type
+ * parameters, and returns `String`. Backends can hook it up as the native display string, like
+ * C#'s `ToString` override or Python's `__str__`.
+ */
+fun TmpL.MemberOrGarbage.isPlainToString(): Boolean {
+    val method = this as? TmpL.NormalMethod ?: return false
+    val sig = method.sig
+    return method.dotName.dotNameText == "toString" &&
+        method.visibility.visibility == TmpL.Visibility.Public &&
+        (method.parent as? TmpL.TypeDeclaration)?.kind == TmpL.TypeDeclarationKind.Class &&
+        sig.allValueFormals.size == (if (sig.hasThisFormal) 1 else 0) &&
+        sig.typeFormals.isEmpty() &&
+        sig.returnType2 == WellKnownTypes.stringType2
+}
+
+/**
  * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
  * may be mutated when the member runs — directly (a property write or setter call on
  * `this`) or transitively (calling another such member on `this`). Setters always
