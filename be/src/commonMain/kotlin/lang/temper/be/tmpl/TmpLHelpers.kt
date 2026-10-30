@@ -802,7 +802,7 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
 }
 
 private fun neverTypeFrom(pos: Position, from: TmpL.Type) =
-    TmpL.NeverType(pos, from)
+    TmpL.NeverType(pos, from.deepCopy())
 
 private fun Iterable<TmpL.DeclarationMetadata>.documentationOf(): OccasionallyHelpful? =
     this.lookupMetaData(docStringSymbol, unpackVal = ::helpfulFromMetadataValue)

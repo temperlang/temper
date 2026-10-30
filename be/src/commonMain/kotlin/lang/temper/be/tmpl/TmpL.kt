@@ -10014,7 +10014,7 @@ object TmpL {
             ),
         )
 
-    /** `result `OutToks.leftAngle` {{0}} , {{1*|}} `OutToks.leftAngle`` */
+    /** `result `OutToks.leftAngle` {{0}} , {{1*|}} `OutToks.rightAngle`` */
     private val sharedCodeFormattingTemplate35 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -10026,7 +10026,7 @@ object TmpL {
                     1,
                     CodeFormattingTemplate.LiteralToken("|", OutputTokenType.Punctuation),
                 ),
-                CodeFormattingTemplate.LiteralToken(OutToks.leftAngle),
+                CodeFormattingTemplate.LiteralToken(OutToks.rightAngle),
             ),
         )
 
