@@ -485,7 +485,12 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        // Show the cause's message where there is one. Debug stays derived,
+        // since test reports parse its `MessageError("...")` form.
+        match &self.0 {
+            Some(source) => fmt::Display::fmt(source, f),
+            None => f.write_str("bubble"),
+        }
     }
 }
 
@@ -628,5 +633,30 @@ impl ToArcString for String {
 impl ToArcString for &str {
     fn to_arc_string(self) -> Arc<String> {
         Arc::new(self.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_display_shows_message_or_bubble() {
+        assert_eq!(Error::new().to_string(), "bubble");
+        assert_eq!(Error::with_optional_message(None).to_string(), "bubble");
+        let message = Some(Arc::new("bad input".to_string()));
+        let error = Error::with_optional_message(message);
+        assert_eq!(format!("{error}"), "bad input");
+        let source = i32_to_usize(-1).unwrap_err();
+        let expected = usize::try_from(-1i32).unwrap_err().to_string();
+        assert_eq!(source.to_string(), expected);
+    }
+
+    #[test]
+    fn error_debug_keeps_message_error_form() {
+        // RunRust.kt parses this form out of failing test output.
+        let error = Error::with_optional_message(Some(Arc::new("x".to_string())));
+        assert_eq!(format!("{error:?}"), r#"Error(Some(MessageError("x")))"#);
+        assert_eq!(format!("{:?}", Error::new()), "Error(None)");
     }
 }

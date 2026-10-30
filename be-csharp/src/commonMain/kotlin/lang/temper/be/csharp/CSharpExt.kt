@@ -80,6 +80,7 @@ fun CSharp.ModAccessorKind.emit(sink: TokenSink) = when (this) {
 fun CSharp.ModNew.emit(sink: TokenSink) = when (this) {
     CSharp.ModNew.Implied -> null
     CSharp.ModNew.New -> "new"
+    CSharp.ModNew.Override -> "override"
 }?.let { sink.word(it) }
 
 fun CSharp.ModStatic.emit(sink: TokenSink) = when (this) {

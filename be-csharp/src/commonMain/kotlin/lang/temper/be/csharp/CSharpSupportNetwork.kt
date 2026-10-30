@@ -1100,6 +1100,10 @@ private val stringHasIndex = StaticCall(
     "core.type String.hasIndex()",
     StandardNames.temperCoreStringUtilHasIndex,
 )
+
+// Not `string.IndexOf(string)`, which compares by culture, so ignorable
+// code points like NUL or soft hyphen match anywhere.
+private val stringIndexOf = StaticCall("core.type String.indexOf()", StandardNames.temperCoreStringUtilIndexOf)
 private val stringNext = StaticCall("core.type String.next()", StandardNames.temperCoreStringUtilNext)
 private val stringPrev = StaticCall("core.type String.prev()", StandardNames.temperCoreStringUtilPrev)
 private val stringStep = StaticCall("core.type String.step()", StandardNames.temperCoreStringUtilStep)
@@ -1502,6 +1506,7 @@ private val connectedReferences = listOf(
     stringGet,
     stringHasAtLeast,
     stringHasIndex,
+    stringIndexOf,
     stringIndexOptionCompareTo,
     stringIndexOptionEq,
     stringIsEmpty,

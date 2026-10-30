@@ -67,3 +67,24 @@ advantage of that to also test generic methods.
 ```log
 Some things: a, b
 ```
+
+## Generic methods calling generic functions
+
+A generic method can call a generic function, as a library's sorting
+method might call its sorting function. C++ needs the function declared
+before the class whose method calls it.
+
+    class Picker {
+      public pick<T>(things: List<T>): T { lastOf(things) }
+    }
+
+    let lastOf<T>(things: List<T>): T {
+      let thing = things[things.length - 1];
+      thing
+    }
+
+    console.log("Picked: ${new Picker().pick(someThings)}");
+
+```log
+Picked: b
+```
