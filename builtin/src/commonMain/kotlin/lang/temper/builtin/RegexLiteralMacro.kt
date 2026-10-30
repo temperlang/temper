@@ -136,8 +136,17 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
             }?.let { return@invoke it }
             tryString(templateStrings, index + 1) { it }?.let { return@invoke it }
         }
+        // Counted repetition first, since the parser reads `{` as literal text.
+        val text = try {
+            rewriteCountedRepetition("$builder", slots)
+        } catch (problem: RegexSyntaxProblem) {
+            return@invoke reportRegexError(
+                macroEnv,
+                template = MessageTemplate.MalformedRegex,
+                values = listOf(problem.message),
+            )
+        }
         // Try parsing it.
-        val text = "$builder"
         val regex = runCatching {
             RegexParserGlobal.parseWith(text, slots)!!
         }.getOrElse {
@@ -215,6 +224,11 @@ private fun Planting.buildRegex(
         }
     }
 }
+
+/**
+ * A regex literal that we refuse to compile, with a message saying why.
+ */
+internal class RegexSyntaxProblem(override val message: String) : RuntimeException(message)
 
 private fun isListifyCall(callTree: CallTree) =
     callTree.childOrNull(0)?.functionContained == BuiltinFuns.listifyFn
