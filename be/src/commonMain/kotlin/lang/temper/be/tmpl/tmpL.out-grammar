@@ -575,7 +575,7 @@ PassType = ExprType | VoidType;
  * the first so that backends are not required to represent ad-hoc discriminated
  * unions.
  */
-ResultType ::= "result" & `OutToks.leftAngle` & passType%PassType & "," & errTypes%RegularTypeNotNull+"|" & `OutToks.right Angle`;
+ResultType ::= "result" & `OutToks.leftAngle` & passType%PassType & "," & errTypes%RegularTypeNotNull+"|" & `OutToks.rightAngle`;
 ResultType.typeActuals = `
     buildList {
         add(passType)
