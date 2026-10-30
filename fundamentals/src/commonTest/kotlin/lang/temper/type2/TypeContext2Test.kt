@@ -12,6 +12,8 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class TypeContext2Test {
@@ -476,6 +478,15 @@ class TypeContext2Test {
                 |╚════════════════╩════════════════╩════════════════╩════════════════╝
             """.trimMargin(),
         )
+    }
+
+    @Test
+    fun differentButCompatibleTypeFormals() = withTypeTestHarness("") {
+        val a = AdHocArrowTypes.definedTypeForSig(sig("fn<T>(T): T"))
+        val b = AdHocArrowTypes.definedTypeForSig(sig("fn<T>(T): T"))
+        assertNotEquals(a.definition, b.definition, "Different formals, different ad-hoc definitions")
+        assertTrue(tc.isSubType(a, b), "a <: b")
+        assertTrue(tc.isSubType(b, a), "b <: a")
     }
 
     private fun assertSubTypeTable(

@@ -810,7 +810,7 @@ class TypeSolver(
          */
         var rejectedCallees = KBitSet()
         // We could store information about why callees were rejected in
-        // the case that all are eventually.
+        // the case that all are, eventually.
 
         val nPossible get() = nVariants - rejectedCallees.cardinality()
 
@@ -1366,8 +1366,8 @@ class TypeSolver(
             }
 
             if (state.nPossible > 1 && cons.args.all { node(it).choice != null }) {
-                // We have all the arg info that we could use to rule out a high priority variant.
-                // Eliminate lower priority callees if a high priority one is eligible.
+                // We have all the arg info that we could use to rule out a high-priority variant.
+                // Eliminate lower-priority callees if a high-priority one is eligible.
                 var highestPriority = CalleePriority.entries[0]
                 var lowestPriority = CalleePriority.entries.last()
 
@@ -1419,7 +1419,7 @@ class TypeSolver(
         // III. VALUE PARAMETER CONSTRAINTS
         // ================================
         // For each argument, we can add a constraint between the argument's declared type
-        // and the argument expression's type.
+        // and the corresponding argument expression's type.
         // Where a_0 is the CallConstraint's 0-th argVar.
         // If the signature defines inputs (x: List<T>, y: Int), we end up with these constraints:
         //    a_0 == List<p_T>

@@ -62,7 +62,7 @@ internal class ExportChecker(val module: Module) {
                 }
 
                 else -> checkTypeRefs(
-                    export.typeInferences?.type?.let { hackMapOldStyleToNew(it) },
+                    export.typeInferences?.type,
                     pos = export.position,
                     value = funTrees[export.name],
                 )
@@ -86,7 +86,7 @@ internal class ExportChecker(val module: Module) {
         // Formals.
         formals@ for (formal in parts.formals) {
             val formalParts = formal.parts
-            val formalType = formalParts?.name?.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+            val formalType = formalParts?.name?.typeInferences?.type
                 ?: continue@formals
             impliedThisSymbol in formalParts.metadataSymbolMap && continue@formals
             formalParts.metadataSymbolMap[wordSymbol]?.symbolContained in reportedProperties && continue@formals

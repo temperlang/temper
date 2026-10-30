@@ -19,14 +19,12 @@ import lang.temper.type.InternalCall
 import lang.temper.type.InternalGet
 import lang.temper.type.InternalMemberAccessor
 import lang.temper.type.InternalSet
-import lang.temper.type.InvalidType
 import lang.temper.type.MemberShape
 import lang.temper.type.MethodKind
 import lang.temper.type.MethodShape
 import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.SetMemberAccessor
-import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -254,9 +252,7 @@ internal object TranslateDotHelper {
             if (unaugmentedDescriptor != null) {
                 for (formal in unaugmentedDescriptor.typeFormals) {
                     if (formal !in actualBindings) {
-                        val binding = hackMapOldStyleToNew(
-                            callBindings[formal] as? StaticType ?: InvalidType,
-                        )
+                        val binding = callBindings[formal].orInvalid
                         actualBindings[formal] = binding
                         actualTypeList.add(translator.translateType(typeActualsPos, binding).aType)
                     }

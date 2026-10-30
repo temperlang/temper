@@ -47,7 +47,8 @@ internal class TypeTranslator(
                 ),
             )
         },
-        never = { _, _, _ -> TmpL.NeverType(pos) },
+        // TODO: don't forget nullity for never types
+        never = { orType, _, _ -> TmpL.NeverType(pos, translateType(pos.rightEdge, orType)) },
         fn = { _, sig, t ->
             when (supportNetwork.functionTypeStrategy) {
                 FunctionTypeStrategy.ToFunctionType -> translateFunctionType(pos, sig)

@@ -2633,9 +2633,7 @@ class TmpLBackendTest {
             |          } else {
             |            bonus__1 = notNull (bonus__0);
             |          }
-            |          @QName("test-library/connectMe.sum().return") let return__0: Int32;
-            |          return__0 = abstractPanic#0();
-            |          return return__0;
+            |          return abstractPanic#0();
             |        }
             |
             |        ```
@@ -3398,7 +3396,7 @@ class TmpLBackendTest {
                 |    "foo.tmpl": {
                 |      content: ```
                 |        //// work//foo/ => foo.tmpl
-                |        @QName("test-library/foo.f()") let f(): Void | Bubble {
+                |        @QName("test-library/foo.f()") let f(): Never<Void> | Bubble {
                 |          throw;
                 |        }
                 |

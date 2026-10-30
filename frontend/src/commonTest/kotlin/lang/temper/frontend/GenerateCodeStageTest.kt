@@ -660,6 +660,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun orelseFoldJumps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-fold-jumps"),
+    )
+
+    @Test
     fun asVsAssertAs() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-vs-assertas"),
     )
@@ -667,6 +672,16 @@ class GenerateCodeStageTest {
     @Test
     fun anonymousClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/anonymous-class"),
+    )
+
+    @Test
+    fun neverThrowsBubble() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-throws-bubble"),
+    )
+
+    @Test
+    fun neverHaveIVoid() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-have-i-void"),
     )
 }
 

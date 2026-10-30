@@ -2145,12 +2145,10 @@ internal class JsTranslator(
             is TmpL.NominalType -> translateNominalType(t)
             // TODO Support @throws separately from return type, although TS doesn't care about it, so meh?
             // TODO See: https://github.com/microsoft/TypeScript/issues/31329
-            is TmpL.BubbleType, // because exceptions in JS
-            is TmpL.NeverType,
-            -> {
-                val tmpLLiteral = (t.codeFormattingTemplate as CodeFormattingTemplate.LiteralToken)
-                Js.Identifier(t.pos, JsIdentifierName("never"), BuiltinName(tmpLLiteral.token.text))
+            is TmpL.BubbleType -> { // because exceptions in JS
+                Js.Identifier(t.pos, JsIdentifierName("never"), bubbleBuiltinName)
             }
+            is TmpL.NeverType -> Js.Identifier(t.pos, JsIdentifierName("never"), neverBuiltinName)
             is TmpL.TopType -> {
                 val tmpLLiteral = (t.codeFormattingTemplate as CodeFormattingTemplate.LiteralToken)
                 Js.Identifier(t.pos, JsIdentifierName("unknown"), BuiltinName(tmpLLiteral.token.text))
@@ -2595,3 +2593,6 @@ private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, inter
 )
 
 internal val connectedName = JsIdentifierName("_connected")
+
+private val bubbleBuiltinName = BuiltinName(WellKnownTypes.bubbleTypeDefinition.word!!.text)
+private val neverBuiltinName = BuiltinName(WellKnownTypes.neverTypeDefinition.word!!.text)

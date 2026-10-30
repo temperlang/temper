@@ -85,6 +85,11 @@ class CppBuilder(
         Cpp.DerivedStructDef(pos, name.deepCopy(), bases.deepCopy(), fields.deepCopy())
     fun baseSpec(virtual: Boolean, base: Cpp.Type): Cpp.BaseSpec =
         Cpp.BaseSpec(pos, virt = if (virtual) Cpp.VirtualMod.Virtual else null, base = base.deepCopy())
+    fun templateStructDecl(
+        typeParams: Iterable<Cpp.FuncParam>,
+        decl: Cpp.StructDecl,
+    ): Cpp.TemplateStructDecl =
+        Cpp.TemplateStructDecl(pos, typeParams.deepCopy(), decl.deepCopy())
     fun templateStructDef(
         typeParams: Iterable<Cpp.FuncParam>,
         def: Cpp.AnyStructDef,

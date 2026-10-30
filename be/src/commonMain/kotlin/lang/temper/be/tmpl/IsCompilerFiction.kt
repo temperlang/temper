@@ -12,7 +12,7 @@ internal fun isCompilerFiction(t: DeclTree): Boolean {
         val type = parts.name.typeInferences?.type
         // type aliases, stores of types that do not themselves participate
         // in defining a type, are compiler fictions and should not be translated
-        if (type == WellKnownTypes.typeType) {
+        if (type == WellKnownTypes.typeType2) {
             val metadataKeys = parts.metadataSymbolMultimap.keys
             if (
                 typeDeclSymbol !in metadataKeys &&

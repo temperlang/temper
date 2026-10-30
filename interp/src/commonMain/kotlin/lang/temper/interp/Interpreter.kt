@@ -139,7 +139,6 @@ import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeFormalSymbol
-import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.unholeBuiltinName
 import lang.temper.value.unify
@@ -180,6 +179,20 @@ class Interpreter(
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingCore = nameMaker.namingContext.isCore
+
+    /**
+     * Counts each [Fail] that means only that full interpretation can't handle something yet,
+     * like a macro call that a stage hasn't expanded, or a jump out of a nested block before
+     * weaving, not that the program failed.
+     * An `orelse` can't tell those apart from bubbles, so it's unsafe to use a result computed
+     * while this went up.
+     */
+    private var notYetFails = 0
+
+    private fun notYetFail(): Fail {
+        notYetFails += 1
+        return Fail
+    }
 
     /** Helps centralize tracking access to connecteds. */
     fun connection(qname: String?): ((Signature2) -> Value<*>)? {
@@ -704,6 +717,9 @@ class Interpreter(
                     val jumpDestination = newTop?.controlFlow
                         as? JumpDestination
                     if (jumpDestination == null) {
+                        // Before weaving, the destination may be in an enclosing block, which
+                        // we can't reach from here yet.
+                        notYetFails += 1
                         result = Fail(
                             LogEntry(
                                 Log.Error,
@@ -1015,6 +1031,7 @@ class Interpreter(
                 var shouldAttemptToInline =
                     isPureInlineAttempt && edge != null && !ast.isPreserved &&
                         calleeValue != BuiltinFuns.vPreserveFn
+                val notYetFailsBefore = notYetFails
                 val result = try {
                     when (asUserFn) {
                         null -> {
@@ -1033,6 +1050,10 @@ class Interpreter(
                     } else {
                         throw panic
                     }
+                }
+                if (im == InterpMode.Partial && notYetFails != notYetFailsBefore) {
+                    // As for a panic: an `orelse` might have taken a not-yet for a bubble.
+                    return NotYet
                 }
 
                 // Try to constant fold
@@ -1074,7 +1095,7 @@ class Interpreter(
                                 val sig = PreserveFn.sig
                                 preserveCall.typeInferences = CallTypeInferences(
                                     typeToInline,
-                                    typeFromSignature(sig),
+                                    sig,
                                     mapOf(sig.typeFormals[0] to typeToInline),
                                     listOf(),
                                 )
@@ -1111,7 +1132,7 @@ class Interpreter(
                 }
                 NotYet
             }
-            CallStrategy.Fail -> Fail
+            CallStrategy.Fail -> notYetFail()
             CallStrategy.CallAsMacroAndMaybeReplace -> {
                 val macroEdge = ast?.incoming
                 val calleeNameBefore = calleeName(ast)
@@ -2125,7 +2146,8 @@ class Interpreter(
         }
 
         return when (bodyResult) {
-            NotYet, is Fail -> Fail
+            NotYet -> notYetFail()
+            is Fail -> Fail
             is Value<*> -> {
                 // If we stopped at a yield point, then we should
                 // prefer the result, a *ValueResult* instance, to

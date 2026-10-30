@@ -28,17 +28,12 @@ import lang.temper.name.NameMaker
 import lang.temper.name.ResolvedName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
-import lang.temper.type.BubbleType
-import lang.temper.type.FunctionType
-import lang.temper.type.InvalidType
-import lang.temper.type.MkType
-import lang.temper.type.StaticType
 import lang.temper.type.isNeverType
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapNewStyleToOld
-import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.invalidSig
 import lang.temper.type2.mapType
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
@@ -83,13 +78,13 @@ import lang.temper.value.freeTarget
 import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.isAssignment
+import lang.temper.value.isBubbleCall
 import lang.temper.value.isTypeAngleCall
 import lang.temper.value.mapControlFlowPlanting
 import lang.temper.value.matches
 import lang.temper.value.simplifyControlFlow
 import lang.temper.value.ssaSymbol
 import lang.temper.value.toPseudoCode
-import lang.temper.value.typeFromSignature
 import lang.temper.value.typeSymbol
 import lang.temper.value.vReturnDeclSymbol
 import lang.temper.value.vTypeSymbol
@@ -599,7 +594,10 @@ private class CoroutineConverter(
                     }
                     if (cf is ControlFlow.Stmt && t != null && isReturnOfDoneResult(t)) {
                         // Just `void` out returns since we handle those for terminal paths.
-                        freeTree(t)
+                        // Not with freeTree: the empty block it leaves behind is no
+                        // statement once an `if` around it is isolated as a sub-block,
+                        // and TmpL translates it as garbage, `Cannot translate (Block)`.
+                        t.incoming?.replace { V(t.pos, void, WKT.voidType2) }
                     }
                 }
                 for (clause in cf.clauses) {
@@ -656,8 +654,7 @@ private class CoroutineConverter(
                 if (needsAfterwardsCase && yieldingCall?.kind == YieldingFnKind.await) {
                     val promiseTemporary = ccNameMaker.unusedTemporaryName("awaited")
                     val promiseType = yieldingCall.yieldingCall.child(1).typeInferences?.type
-                        ?: InvalidType
-                    val promiseType2 = hackMapOldStyleToNew(promiseType)
+                        ?: WKT.invalidType2
                     temporaryPromiseCaptures[lastEl!!] = promiseTemporary
                     // And we'll need to hoist that baby so that it's available on
                     // both the `awakeUpon` side and the `getPromiseResultSync` side.
@@ -667,10 +664,10 @@ private class CoroutineConverter(
                             Decl(lastEl.pos.leftEdge) {
                                 Ln(lastEl.pos.leftEdge, promiseTemporary, promiseType)
                                 V(vTypeSymbol)
-                                V(Value(ReifiedType(promiseType2), TType))
+                                V(Value(ReifiedType(promiseType), TType))
                             }
                         },
-                        ZeroValues[promiseType2],
+                        ZeroValues[promiseType],
                     )
                 }
 
@@ -754,7 +751,7 @@ private class CoroutineConverter(
 
     private data class AwakeUponInfo(
         val promiseNameInfo: HoistedNameInfo,
-        val promiseType: StaticType,
+        val promiseType: Type2,
         val promiseTreePos: Position,
         val yieldingCallPos: Position,
     )
@@ -792,9 +789,7 @@ private class CoroutineConverter(
             localNameInfo[name] = if (counts.getOrDefault(name, 0) <= 1) {
                 NotHoisted(name, decl)
             } else {
-                val type = decl.parts?.name?.typeInferences?.type?.let {
-                    hackMapOldStyleToNew(it)
-                } ?: WKT.invalidType2
+                val type = decl.parts?.name?.typeInferences?.type ?: WKT.invalidType2
                 val zeroValueRecord = if (name in nestedFnInitializers) {
                     // We don't need a zero value because we're going to initialize
                     // it to its const value where declared.
@@ -856,7 +851,7 @@ private class CoroutineConverter(
             // about the promise being awaited.
             requiredInputTypes = generatorSig.requiredInputTypes + listOf(generatorType),
         )
-        val generatorFnType = typeFromSignature(generatorSigAdjusted)
+        val generatorFnType2 = AdHocArrowTypes.definedTypeForSig(generatorSigAdjusted)
         val blockPos = block.pos
         val headerPos = blockPos.leftEdge
 
@@ -873,14 +868,14 @@ private class CoroutineConverter(
         return block.document.treeFarm.grow {
             Block(blockPos) {
                 Decl(headerPos) {
-                    Ln(caseIndexName, WKT.intType)
-                    V(vTypeSymbol)
-                    V(Types.vInt, WKT.typeType)
-                    V(vVarSymbol)
-                    V(void)
+                    Ln(caseIndexName, WKT.intType2)
+                    V(vTypeSymbol, WKT.symbolType2)
+                    V(Types.vInt, WKT.typeType2)
+                    V(vVarSymbol, WKT.symbolType2)
+                    V(void, WKT.voidType2)
                 }
-                Assign(headerPos, caseIndexName, WKT.intType) {
-                    V(vZero, WKT.intType)
+                Assign(headerPos, caseIndexName, WKT.intType2) {
+                    V(vZero, WKT.intType2)
                 }
 
                 // Declare hoisted variables outside the step function body.
@@ -888,14 +883,14 @@ private class CoroutineConverter(
                     val zeroValueRecord = hv.zeroValueRecord
                     val decl = hv.decl
                     val parts = decl.parts!!
-                    val adjustedTypeOld = zeroValueRecord?.adjustedType?.let { hackMapNewStyleToOld(it) }
-                        ?: parts.name.typeInferences?.type ?: InvalidType
+                    val adjustedType = zeroValueRecord?.adjustedType
+                        ?: parts.name.typeInferences?.type ?: WKT.invalidType2
                     if (zeroValueRecord?.needsNullAdjustment == true) {
                         namesNeedingNullAdjustment.add(hv.name)
                     }
                     val hoistedInitializer = nestedFnInitializers[hv.name]
                     Decl(decl.pos) {
-                        Ln(parts.name.pos, hv.name, adjustedTypeOld)
+                        Ln(parts.name.pos, hv.name, adjustedType)
                         var sawVar = false
                         for ((metadataKey, metadataValues) in parts.metadataSymbolMultimap) {
                             if (metadataKey == varSymbol) {
@@ -905,27 +900,27 @@ private class CoroutineConverter(
                                 continue
                             }
                             for (valueEdge in metadataValues) {
-                                V(valueEdge.target.pos.leftEdge, Value(metadataKey), WKT.symbolType)
+                                V(valueEdge.target.pos.leftEdge, Value(metadataKey), WKT.symbolType2)
                                 Replant(freeTarget(valueEdge))
                             }
                         }
                         val metadataPos = decl.pos.leftEdge
                         if (!sawVar && hoistedInitializer == null) {
-                            V(metadataPos, vVarSymbol, WKT.symbolType)
-                            V(metadataPos, void, WKT.voidType)
+                            V(metadataPos, vVarSymbol, WKT.symbolType2)
+                            V(metadataPos, void, WKT.voidType2)
                         }
                         if (zeroValueRecord != null) {
-                            V(metadataPos, vTypeSymbol, WKT.symbolType)
+                            V(metadataPos, vTypeSymbol, WKT.symbolType2)
                             V(
                                 metadataPos,
                                 Value(ReifiedType(zeroValueRecord.adjustedType), TType),
-                                WKT.typeType,
+                                WKT.typeType2,
                             )
                         }
                     }
                     if (zeroValueRecord != null) {
-                        Assign(decl.pos.rightEdge, hv.name, adjustedTypeOld) {
-                            V(decl.pos.rightEdge, zeroValueRecord.value, adjustedTypeOld)
+                        Assign(decl.pos.rightEdge, hv.name, adjustedType) {
+                            V(decl.pos.rightEdge, zeroValueRecord.value, adjustedType)
                         }
                     } else if (hoistedInitializer != null) {
                         freeTree(hoistedInitializer)
@@ -938,24 +933,23 @@ private class CoroutineConverter(
                 }
 
                 val fnName = ccNameMaker.unusedTemporaryName("convertedCoroutine")
-                val generatorTypeOld = hackMapNewStyleToOld(generatorType)
                 Decl(blockPos.leftEdge) {
-                    Ln(fnName, generatorFnType)
+                    Ln(fnName, generatorFnType2)
                 }
                 val fnBody = block.document.treeFarm.grow {
                     Block(blockPos) {
                         Do(blockPos, returnLabel) {
                             fun BlockPlanting.plantCoroBody() {
                                 Decl(headerPos) {
-                                    Ln(caseIndexLocalName, WKT.intType)
-                                    V(vTypeSymbol)
-                                    V(headerPos, Types.vInt, WKT.typeType)
+                                    Ln(caseIndexLocalName, WKT.intType2)
+                                    V(vTypeSymbol, WKT.symbolType2)
+                                    V(headerPos, Types.vInt, WKT.typeType2)
                                 }
-                                Assign(headerPos, caseIndexLocalName, WKT.intType) {
-                                    Rn(headerPos, caseIndexName, WKT.intType)
+                                Assign(headerPos, caseIndexLocalName, WKT.intType2) {
+                                    Rn(headerPos, caseIndexName, WKT.intType2)
                                 }
-                                Assign(headerPos, caseIndexName, WKT.intType) {
-                                    V(headerPos, vNegOne, WKT.intType)
+                                Assign(headerPos, caseIndexName, WKT.intType2) {
+                                    V(headerPos, vNegOne, WKT.intType2)
                                 }
                                 casesBuilder.unroll(this)
                             }
@@ -964,7 +958,7 @@ private class CoroutineConverter(
                                 While(
                                     blockPos,
                                     cond = {
-                                        V(headerPos, TBoolean.valueTrue, WKT.booleanType)
+                                        V(headerPos, TBoolean.valueTrue, WKT.booleanType2)
                                     },
                                 ) {
                                     plantCoroBody()
@@ -987,12 +981,12 @@ private class CoroutineConverter(
                     fnBody.replaceFlow(simplifiedFnBodyFlow)
                 }
 
-                Assign(blockPos.leftEdge, fnName, generatorFnType) {
-                    Fn(blockPos, type = generatorFnType) {
+                Assign(blockPos.leftEdge, fnName, generatorFnType2) {
+                    Fn(blockPos, type = generatorFnType2) {
                         Decl(blockPos.leftEdge) {
-                            Ln(blockPos.leftEdge, generatorInputName, generatorTypeOld)
+                            Ln(blockPos.leftEdge, generatorInputName, generatorType)
                             V(blockPos.leftEdge, vTypeSymbol)
-                            V(blockPos.leftEdge, Value(ReifiedType(generatorType)), WKT.typeType)
+                            V(blockPos.leftEdge, Value(ReifiedType(generatorType)), WKT.typeType2)
                         }
                         V(headerPos, vReturnDeclSymbol)
                         Replant(outputDecl.copy(copyInferences = true))
@@ -1004,19 +998,16 @@ private class CoroutineConverter(
                 val sig = adapterFn.sig
                 val generatorArgType = generatorType.bindings[0]
                 val bindings2 = mapOf(sig.typeFormals[0] to generatorArgType)
-                val bindings = bindings2.mapValues {
-                    hackMapNewStyleToOld(it.value)
-                }
                 val callType = CallTypeInferences(
-                    hackMapNewStyleToOld(sig.returnType2.mapType(bindings2)),
+                    sig.returnType2.mapType(bindings2),
                     sig,
-                    bindings,
+                    bindings2,
                     listOf(),
                 )
                 Assign(blockPos, outerFnOutputName, callType.type) {
                     Call(blockPos.rightEdge, type = callType) {
-                        V(blockPos.rightEdge, Value(adapterFn), callType.variant)
-                        Rn(blockPos.rightEdge, fnName, generatorFnType)
+                        V(blockPos.rightEdge, Value(adapterFn), callType.variantType)
+                        Rn(blockPos.rightEdge, fnName, generatorFnType2)
                     }
                 }
             }
@@ -1107,9 +1098,9 @@ private class CoroutineConverter(
                 If(
                     cond = {
                         Call(pos.leftEdge, type = eqIntCallTypeInferences) {
-                            V(pos.leftEdge, BuiltinFuns.vEqIntFn, eqIntCallTypeInferences.variant)
-                            Rn(pos.leftEdge, caseIndexLocalName, WKT.intType)
-                            V(pos.leftEdge, Value(case.assignedCaseIndex, TInt), WKT.intType)
+                            V(pos.leftEdge, BuiltinFuns.vEqIntFn, eqIntCallTypeInferences.variantType)
+                            Rn(pos.leftEdge, caseIndexLocalName, WKT.intType2)
+                            V(pos.leftEdge, Value(case.assignedCaseIndex, TInt), WKT.intType2)
                         }
                     },
                     thn = {
@@ -1209,8 +1200,8 @@ private class CoroutineConverter(
             // the outer `while` loop, but otherwise the caller must have set the return
             // variable, and we break to the end of the step function.
             fun BlockPlanting.transitionTo(pos: Position, target: CaseInfo, exits: Boolean) {
-                Assign(pos, caseIndexName, WKT.intType) {
-                    V(pos, Value(target.assignedCaseIndex, TInt), WKT.intType)
+                Assign(pos, caseIndexName, WKT.intType2) {
+                    V(pos, Value(target.assignedCaseIndex, TInt), WKT.intType2)
                 }
                 if (awakeUpon != null) {
                     plantAwakeUponInstruction(awakeUpon!!)
@@ -1251,7 +1242,7 @@ private class CoroutineConverter(
                                             check(afterwards != null)
                                             val promiseTree = yieldingInfo.yieldingCall.child(1)
                                             val promiseType = promiseTree.typeInferences?.type
-                                                ?: InvalidType
+                                                ?: WKT.invalidType2
                                             val promiseName = temporaryPromiseCaptures.getValue(element)
                                             val promiseNameInfo = localNameInfo.getValue(promiseName)
                                                 as HoistedNameInfo
@@ -1277,12 +1268,12 @@ private class CoroutineConverter(
                                     valueResultExpr = yieldingExpr
                                         ?: ValueLeaf(block.document, yieldingInfo.yieldingCall.pos, emptyValue)
                                             .also {
-                                                it.typeInferences = BasicTypeInferences(WKT.emptyType, listOf())
+                                                it.typeInferences = BasicTypeInferences(WKT.emptyType2, listOf())
                                             }
                                     continue
                                 }
                                 val lastElementType = tree.typeInferences?.type
-                                if (lastElementType is BubbleType || lastElementType?.isNeverType == true) {
+                                if (isBubbleCall(tree) || lastElementType?.isNeverType == true) {
                                     lastElementExitsNormally = false
                                 }
                             }
@@ -1316,14 +1307,13 @@ private class CoroutineConverter(
                             YieldingFnKind.await -> {
                                 val promiseTree = yieldingInfo.yieldingCall.child(1)
                                 val yieldedType = yieldingInfo.yieldingCall.typeInferences?.type
-                                    ?: InvalidType
+                                    ?: WKT.invalidType2
                                 val promiseName = temporaryPromiseCaptures.getValue(yieldingElement)
                                 val promiseNameInfo = localNameInfo.getValue(promiseName)
                                     as HoistedNameInfo
-                                val promiseType = MkType.nominal(
-                                    WKT.promiseTypeDefinition,
-                                    listOf(yieldedType),
-                                )
+                                val promiseType = MkType2(WKT.promiseTypeDefinition)
+                                    .actuals(listOf(yieldedType))
+                                    .get()
                                 val callType = CoroHelperSpecials.GetPromiseResultSyncFn.callTypeInferences(
                                     promiseType = promiseType,
                                 )
@@ -1332,7 +1322,7 @@ private class CoroutineConverter(
                                         V(
                                             tree.pos.leftEdge,
                                             Value(CoroHelperSpecials.GetPromiseResultSyncFn),
-                                            callType.variant,
+                                            callType.variantType,
                                         )
                                         NotNullCall(
                                             promiseTree.pos, promiseNameInfo.zeroValueRecord!!,
@@ -1435,7 +1425,7 @@ private class CoroutineConverter(
                 if (name != null && name in hoistedLocalNames) {
                     // The declaration was output separately.
                     val replacement = ValueLeaf(t.document, t.pos, void)
-                    replacement.typeInferences = BasicTypeInferences(WKT.voidType, listOf())
+                    replacement.typeInferences = BasicTypeInferences(WKT.voidType2, listOf())
                     return replacement
                 }
             }
@@ -1469,7 +1459,7 @@ private class CoroutineConverter(
                 V(
                     pos.leftEdge,
                     Value(CoroHelperSpecials.ConvertedCoroutineAwakeUponFn),
-                    callType.variant,
+                    callType.variantType,
                 )
                 NotNullCall(
                     promisePos,
@@ -1477,11 +1467,7 @@ private class CoroutineConverter(
                 ) { type ->
                     Rn(promisePos, promiseNameInfo.name, type)
                 }
-                Rn(
-                    pos.leftEdge,
-                    generatorInputName,
-                    hackMapNewStyleToOld(generatorType),
-                )
+                Rn(pos.leftEdge, generatorInputName, generatorType)
             }
         }
 
@@ -1491,13 +1477,13 @@ private class CoroutineConverter(
             pos: Position,
         ) {
             val resultReturnName = outputDecl.parts!!.name.content as ResolvedName
-            planting.Assign(pos, resultReturnName, hackMapNewStyleToOld(generatorResultType)) {
+            planting.Assign(pos, resultReturnName, generatorResultType) {
                 val callType = doneResultCallTypeInferences(
                     generatorResultType.bindings[0],
                     doneResultExport,
                 )
                 Call(pos, type = callType) {
-                    Rn(pos, doneResultExport.name, callType.variant)
+                    Rn(pos, doneResultExport.name, callType.variantType)
                 }
             }
         }
@@ -1512,17 +1498,16 @@ private class CoroutineConverter(
             val valueResultType = MkType2(WKT.valueResultTypeDefinition)
                 .actuals(listOf(valueResultTypeArg))
                 .get()
-            val valueResultTypeOld = hackMapNewStyleToOld(valueResultType)
             val callType = CallTypeInferences(
-                valueResultTypeOld,
+                valueResultType,
                 valueResultConstructorSig,
-                mapOf(valueResultConstructorSig.typeFormals[0] to hackMapNewStyleToOld(valueResultTypeArg)),
+                mapOf(valueResultConstructorSig.typeFormals[0] to valueResultTypeArg),
                 listOf(),
             )
-            planting.Assign(pos, resultReturnName, hackMapNewStyleToOld(generatorResultType)) {
+            planting.Assign(pos, resultReturnName, generatorResultType) {
                 Call(pos, type = callType) {
-                    V(pos.leftEdge, Value(New), WKT.functionType)
-                    V(pos.leftEdge, Value(ReifiedType(valueResultType), TType), WKT.typeType)
+                    V(pos.leftEdge, Value(New), WKT.functionType2)
+                    V(pos.leftEdge, Value(ReifiedType(valueResultType), TType), WKT.typeType2)
                     Replant(maybeAdjustVars(freeTree(valueExpr)))
                 }
             }
@@ -1597,33 +1582,31 @@ private val vZero = Value(0, TInt)
 private val vNegOne = Value(-1, TInt)
 
 private val eqIntCallTypeInferences = CallTypeInferences(
-    WKT.booleanType,
+    WKT.booleanType2,
     BuiltinFuns.eqIntFn.sigs!![0],
     mapOf(),
     listOf(),
 )
 
 private fun doneResultCallTypeInferences(typeArg: Type2, doneResultExport: Export): CallTypeInferences {
-    val variant = doneResultExport.typeInferences!!.type as FunctionType
-    val typeArgOld = hackMapNewStyleToOld(typeArg)
+    val variant = AdHocArrowTypes.reverseToSig(doneResultExport.typeInferences!!.type)
+        ?: invalidSig
     return CallTypeInferences(
-        MkType.nominal(WKT.doneResultTypeDefinition, listOf(typeArgOld)),
+        MkType2(WKT.doneResultTypeDefinition).actuals(listOf(typeArg)).get(),
         variant,
-        mapOf(variant.typeFormals[0] to typeArgOld),
+        mapOf(variant.typeFormals[0] to typeArg),
         listOf(),
     )
 }
 
 private val voidBubbleTypeInferences = CallTypeInferences(
-    WKT.voidType,
-    MkType.fn(
+    WKT.voidType2,
+    Signature2(
+        MkType2(WKT.resultTypeDefinition)
+            .actuals(listOf(WKT.voidType2, WKT.booleanType2))
+            .get(),
+        false,
         listOf(),
-        listOf(),
-        hackMapNewStyleToOld(
-            MkType2(WKT.resultTypeDefinition)
-                .actuals(listOf(WKT.voidType2, WKT.booleanType2))
-                .get(),
-        ),
     ),
     mapOf(),
     listOf(),
@@ -1632,27 +1615,25 @@ private val voidBubbleTypeInferences = CallTypeInferences(
 @Suppress("FunctionName")
 private fun Planting.VoidBubble(pos: Position): TreeTemplate<CallTree> =
     Call(pos, voidBubbleTypeInferences) {
-        V(BuiltinFuns.vBubble, voidBubbleTypeInferences.variant)
+        V(BuiltinFuns.vBubble, voidBubbleTypeInferences.variantType)
     }
-
-private val notNullFnType = typeFromSignature(NotNullFn.sig)
 
 @Suppress("FunctionName")
 fun Planting.NotNullCall(
     pos: Position,
     zvr: ZeroValueRecord,
-    plantArg: Planting.(StaticType) -> TreeTemplate<*>,
+    plantArg: Planting.(Type2) -> TreeTemplate<*>,
 ): TreeTemplate<CallTree> {
-    val adjustedType = hackMapNewStyleToOld(zvr.adjustedType)
-    val unadjustedType = hackMapNewStyleToOld(zvr.unadjustedType)
+    val adjustedType = zvr.adjustedType
+    val unadjustedType = zvr.unadjustedType
     val callType = CallTypeInferences(
         unadjustedType,
-        notNullFnType,
-        mapOf(notNullFnType.typeFormals[0] to unadjustedType),
+        NotNullFn.sig,
+        mapOf(NotNullFn.sig.typeFormals[0] to unadjustedType),
         listOf(),
     )
     return Call(pos, type = callType) {
-        V(pos.leftEdge, BuiltinFuns.vNotNullFn, callType.variant)
+        V(pos.leftEdge, BuiltinFuns.vNotNullFn, callType.variantType)
         plantArg(adjustedType)
     }
 }
@@ -1672,3 +1653,5 @@ private val valueResultConstructorSig = run {
         typeFormals = WKT.valueResultTypeDefinition.formals,
     )
 }
+
+private val CallTypeInferences.variantType get() = AdHocArrowTypes.definedTypeForSig(variant)

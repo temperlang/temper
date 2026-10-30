@@ -548,7 +548,7 @@ internal interface TmpLTreeRewriter {
     fun rewriteGarbageType(x: TmpL.GarbageType): TmpL.Type =
         TmpL.GarbageType(x.pos, x.diagnostic?.deepCopy())
 
-    fun rewriteNeverType(x: TmpL.NeverType): TmpL.Type = TmpL.NeverType(x.pos)
+    fun rewriteNeverType(x: TmpL.NeverType): TmpL.Type = TmpL.NeverType(x.pos, rewriteType(x.fallback))
     fun rewriteBubbleType(x: TmpL.BubbleType): TmpL.Type = TmpL.BubbleType(x.pos)
     fun rewriteTopType(x: TmpL.TopType): TmpL.Type = TmpL.TopType(x.pos)
 

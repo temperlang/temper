@@ -2,12 +2,10 @@ package lang.temper.frontend.coroutine
 
 import lang.temper.builtin.makeTypeFormal
 import lang.temper.env.InterpMode
-import lang.temper.type.InvalidType
-import lang.temper.type.NominalType
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
 import lang.temper.value.BuiltinStatelessMacroValue
 import lang.temper.value.CallTypeInferences
 import lang.temper.value.MacroEnvironment
@@ -21,7 +19,7 @@ import lang.temper.value.PartialResult
  *
  * Backends that can handle promises at a low level should connect these.
  *
- * These functions are not used when interpreting Temper code, and only serve to
+ * These functions are not used when interpreting Temper code and only serve to
  * aid in translation.
  */
 object CoroHelperSpecials {
@@ -52,10 +50,13 @@ object CoroHelperSpecials {
             throw Panic()
         }
 
-        fun callTypeInferences(promiseType: StaticType) = CallTypeInferences(
-            WellKnownTypes.voidType,
+        fun callTypeInferences(promiseType: Type2) = CallTypeInferences(
+            WellKnownTypes.voidType2,
             sig,
-            mapOf(sig.typeFormals[0] to ((promiseType as? NominalType)?.bindings[0] ?: InvalidType)),
+            mapOf(
+                sig.typeFormals[0] to
+                    (promiseType.bindings.getOrNull(0) ?: WellKnownTypes.invalidType2),
+            ),
             listOf(),
         )
     }
@@ -87,8 +88,8 @@ object CoroHelperSpecials {
             throw Panic()
         }
 
-        fun callTypeInferences(promiseType: StaticType): CallTypeInferences {
-            val promiseArg = ((promiseType as? NominalType)?.bindings[0] ?: InvalidType) as StaticType
+        fun callTypeInferences(promiseType: Type2): CallTypeInferences {
+            val promiseArg = promiseType.bindings.getOrNull(0) ?: WellKnownTypes.invalidType2
             return CallTypeInferences(
                 promiseArg,
                 sig,

@@ -300,7 +300,7 @@ object Cpp {
         pos: Position,
         name: Name,
         fields: Iterable<StructPart>,
-    ) : BaseTree(pos), Global, AnyStructDef {
+    ) : BaseTree(pos), Global, AnyStructDef, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
@@ -411,6 +411,61 @@ object Cpp {
                 { n -> (n as DerivedStructDef).name },
                 { n -> (n as DerivedStructDef).bases },
                 { n -> (n as DerivedStructDef).fields },
+            )
+        }
+    }
+
+    class TemplateStructDecl(
+        pos: Position,
+        typeParams: Iterable<FuncParam>,
+        decl: StructDecl,
+    ) : BaseTree(pos), Global {
+        override val operatorDefinition: CppOperatorDefinition?
+            get() = null
+        override val codeFormattingTemplate: CodeFormattingTemplate
+            get() = sharedCodeFormattingTemplate6
+        override val formatElementCount
+            get() = 2
+        override fun formatElement(
+            index: Int,
+        ): IndexableFormattableTreeElement {
+            return when (index) {
+                0 -> FormattableTreeGroup(this.typeParams)
+                1 -> this.decl
+                else -> throw IndexOutOfBoundsException("$index")
+            }
+        }
+        private val _typeParams: MutableList<FuncParam> = mutableListOf()
+        var typeParams: List<FuncParam>
+            get() = _typeParams
+            set(newValue) { updateTreeConnections(_typeParams, newValue) }
+        private var _decl: StructDecl
+        var decl: StructDecl
+            get() = _decl
+            set(newValue) { _decl = updateTreeConnection(_decl, newValue) }
+        override fun deepCopy(): TemplateStructDecl {
+            return TemplateStructDecl(pos, typeParams = this.typeParams.deepCopy(), decl = this.decl.deepCopy())
+        }
+        override val childMemberRelationships
+            get() = cmr
+        override fun equals(
+            other: Any?,
+        ): Boolean {
+            return other is TemplateStructDecl && this.typeParams == other.typeParams && this.decl == other.decl
+        }
+        override fun hashCode(): Int {
+            var hc = typeParams.hashCode()
+            hc = 31 * hc + decl.hashCode()
+            return hc
+        }
+        init {
+            updateTreeConnections(this._typeParams, typeParams)
+            this._decl = updateTreeConnection(null, decl)
+        }
+        companion object {
+            private val cmr = ChildMemberRelationships(
+                { n -> (n as TemplateStructDecl).typeParams },
+                { n -> (n as TemplateStructDecl).decl },
             )
         }
     }

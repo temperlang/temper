@@ -2331,7 +2331,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
-// ❌ Expected function type, but got Function!, No type for subject of .toString!
+// ❌ Expected function type, but got Function!, __flowInit has not been declared!, No type for subject of .toString!, Expected subtype of String, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/stmt/simple-for-loop/snippet.md/1 -->
