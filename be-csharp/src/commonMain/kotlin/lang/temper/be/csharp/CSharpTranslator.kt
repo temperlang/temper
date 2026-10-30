@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isPlainToString
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
@@ -1725,7 +1726,9 @@ internal class CSharpTranslator(
                         modAccess = modAccess,
                         modStatic = modStatic,
                         modNew = when {
-                            overridesObjectToString(method, id, modAccess, modStatic) -> CSharp.ModNew.Override
+                            // Override `object.ToString` rather than hide it, so `$"{x}"` and
+                            // `Console.WriteLine(x)` use it, unless renamed above.
+                            method.isPlainToString() && id === wantedId -> CSharp.ModNew.Override
                             else -> CSharp.ModNew.Implied
                         },
                     ),
@@ -1738,24 +1741,6 @@ internal class CSharpTranslator(
             )
         }
     }
-
-    /**
-     * Whether a class's `public toString(): String` should override `object.ToString`
-     * rather than hide it, so `$"{x}"` and `Console.WriteLine(x)` use it.
-     */
-    private fun overridesObjectToString(
-        method: TmpL.Method,
-        id: CSharp.Identifier,
-        modAccess: CSharp.ModAccess,
-        modStatic: CSharp.ModStatic,
-    ): Boolean =
-        modStatic == CSharp.ModStatic.Instance &&
-            modAccess == CSharp.ModAccess.Public &&
-            id.outName.outputNameText == "ToString" &&
-            (method.parent as? TmpL.TypeDeclaration)?.kind == TmpL.TypeDeclarationKind.Class &&
-            method.sig.allValueFormals.size == (if (method.sig.hasThisFormal) 1 else 0) &&
-            method.sig.typeFormals.isEmpty() &&
-            method.sig.returnType2 == WellKnownTypes.stringType2
 
     /** Retains explicit `this` parameter if [keepThis]. */
     private fun translateParameters(

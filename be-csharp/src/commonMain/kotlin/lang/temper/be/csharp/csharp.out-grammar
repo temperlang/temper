@@ -63,6 +63,8 @@ NamespaceDecl ::=
 NamespaceDecl.usings.default = `listOf()`;
 
 enum ModAccess = Private | Internal | Protected | ProtectedInternal | Public;
+// Despite its name, ModNew covers both hiding a base member (`new`) and
+// overriding a virtual one (`override`), such as `object.ToString`.
 enum ModNew = Implied | New | Override;
 enum ModStatic = Instance | Static;
 enum ModTypeKind = Class | Interface | Struct;
