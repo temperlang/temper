@@ -71,7 +71,7 @@ internal val connectedDecorator = MetadataDecorator(
     }
     // Whether we have errors or not, move on.
     backends.also check@{
-        // At this stage, we don't need the location context.
+        // Only user code is checked: Core and std use connected features their own way.
         isProcessingUserCode || return@check
         val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
         when (val type = metadata[typeDeclSymbol]?.reifiedTypeContained) {

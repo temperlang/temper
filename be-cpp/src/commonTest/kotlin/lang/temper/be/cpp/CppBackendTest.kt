@@ -930,9 +930,11 @@ class CppBackendTest {
                 |                  #include "something/_connected.hpp"
                 |                  namespace my_test_library {
                 |                    int32_t twice(int32_t i_9) {
+                |                      global_init_something();
                 |                      return my_test_library::prod(i_9, 2);
                 |                    }
                 |                    int32_t sum(int32_t i_11, int32_t j_12, temper::core::NullableParam<int32_t> bonus) {
+                |                      global_init_something();
                 |                      int32_t bonus_13;
                 |                      if (temper::core::is_null(bonus)) {
                 |                        {
@@ -949,6 +951,7 @@ class CppBackendTest {
                 |                      return sum(i_11, j_12, nullptr);
                 |                    }
                 |                    int32_t inc(int32_t i_15) {
+                |                      global_init_something();
                 |                      return sum(i_15, 1);
                 |                    }
                 |                    int32_t length(temper::core::NullableParam<std::string> s) {
@@ -973,6 +976,7 @@ class CppBackendTest {
                 |                  #include <temper-core/core.hpp>
                 |                  #include <my-test-library/something/deeper.hpp>
                 |                  namespace my_test_library {
+                |                    void global_init_something();
                 |                    namespace _connected {
                 |                      struct Box;
                 |                    }
