@@ -4,7 +4,9 @@ import lang.temper.ast.anyChildDepth
 import lang.temper.be.Backend
 import lang.temper.common.RFailure
 import lang.temper.common.RSuccess
+import lang.temper.common.console
 import lang.temper.common.mapFirst
+import lang.temper.format.TextOutputTokenSink
 import lang.temper.format.TokenSink
 import lang.temper.frontend.ModuleNamingContext
 import lang.temper.lexer.Genre
@@ -51,6 +53,7 @@ import lang.temper.value.OccasionallyHelpful
 import lang.temper.value.TNull
 import lang.temper.value.TString
 import lang.temper.value.TSymbol
+import lang.temper.value.TemperFormattingHints
 import lang.temper.value.Value
 import lang.temper.value.connectedSymbol
 import lang.temper.value.docStringSymbol
@@ -768,7 +771,7 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
 
         if (hasDifferences) {
             when (typesWithout.size) {
-                0 -> TmpL.NeverType(pos)
+                0 -> neverTypeFrom(pos, this)
                 1 -> typesWithout.first().deepCopy()
                 else -> TmpL.TypeIntersection(pos, typesWithout.map { it.deepCopy() })
             }
@@ -793,7 +796,7 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
 
         if (hasDifferences) {
             when (typesWithout.size) {
-                0 -> TmpL.NeverType(pos)
+                0 -> neverTypeFrom(pos, this)
                 1 -> typesWithout.first().deepCopy()
                 else -> TmpL.TypeUnion(pos, typesWithout.map { it.deepCopy() })
             }
@@ -808,11 +811,14 @@ fun TmpL.Type.withoutAtom(predicate: (TmpL.Type) -> Boolean): TmpL.Type = when (
     is TmpL.NominalType,
     is TmpL.TopType,
     -> if (predicate(this)) {
-        TmpL.NeverType(this.pos)
+        neverTypeFrom(pos, this)
     } else {
         this
     }
 }
+
+private fun neverTypeFrom(pos: Position, from: TmpL.Type) =
+    TmpL.NeverType(pos, from.deepCopy())
 
 private fun Iterable<TmpL.DeclarationMetadata>.documentationOf(): OccasionallyHelpful? =
     this.lookupMetaData(docStringSymbol, unpackVal = ::helpfulFromMetadataValue)
@@ -1381,4 +1387,27 @@ fun toSigBestEffort(descriptor: Descriptor?) = when (descriptor) {
 fun Map<Symbol, Value<*>>?.connectedKey(): String? = when {
     this != null && connectedSymbol in this -> this[qNameSymbol]?.let { TString.unpackOrNull(it) }
     else -> null
+}
+
+fun dumpTmpLForDebug(t: TmpL.Tree) {
+    val out = console
+    out.group("tmpl") {
+        TemperFormattingHints.makeFormattingTokenSink(
+            TextOutputTokenSink(out.textOutput),
+            singleLine = false,
+        ).use { tokenSink ->
+            t.renderTo(tokenSink)
+        }
+        out.textOutput.endLine()
+    }
+    out.group("structure") {
+        fun dumpStructure(t: TmpL.Tree) {
+            out.group(t::class.simpleName ?: "UNKNOWN") {
+                t.children.forEach {
+                    dumpStructure(it)
+                }
+            }
+        }
+        dumpStructure(t)
+    }
 }

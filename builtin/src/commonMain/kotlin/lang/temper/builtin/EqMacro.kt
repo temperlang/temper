@@ -5,11 +5,13 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.type.DotHelper
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
-import lang.temper.type.excludeNull
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.withNullity
 import lang.temper.value.BlockPlanting
 import lang.temper.value.CallTree
 import lang.temper.value.CallTypeInferences
@@ -101,7 +103,7 @@ object EqMacro : BuiltinMacro(
                 if (aIsNull && bIsNull) {
                     val result = TBoolean.value(true)
                     macroEnv.replaceMacroCallWith {
-                        V(macroEnv.pos, result, WellKnownTypes.booleanType)
+                        V(macroEnv.pos, result, WellKnownTypes.booleanType2)
                     }
                     return result
                 }
@@ -152,7 +154,7 @@ object EqMacro : BuiltinMacro(
                                     },
                                     thn = {
                                         // a != null && b == null
-                                        V(bTree.pos.leftEdge, TBoolean.valueFalse, WellKnownTypes.booleanType)
+                                        V(bTree.pos.leftEdge, TBoolean.valueFalse, WellKnownTypes.booleanType2)
                                     },
                                     els = {
                                         plantDotHelper(
@@ -179,7 +181,7 @@ object EqMacro : BuiltinMacro(
                                 thn = {
                                     if (bCanBeNull == false) {
                                         // a == null && b != null -> a != b
-                                        V(bTree.pos.leftEdge, TBoolean.valueFalse, WellKnownTypes.booleanType)
+                                        V(bTree.pos.leftEdge, TBoolean.valueFalse, WellKnownTypes.booleanType2)
                                     } else {
                                         IsNullCall(bTree.pos.leftEdge, argType = bType) {
                                             Replant(bLeaf.copy(copyInferences = true))
@@ -236,7 +238,7 @@ object EqMacro : BuiltinMacro(
             InterpMode.Partial -> {
                 if (result is Value<*> && result.typeTag == TBoolean) {
                     macroEnv.replaceMacroCallWith {
-                        V(macroEnv.pos, result, WellKnownTypes.booleanType)
+                        V(macroEnv.pos, result, WellKnownTypes.booleanType2)
                     }
                 }
                 NotYet
@@ -289,11 +291,11 @@ private fun <T : Any> applyComparator(
 @Suppress("FunctionName")
 fun Planting.NotNullCall(
     pos: Position,
-    argType: StaticType?,
+    argType: Type2?,
     plantArg: Planting.() -> UnpositionedTreeTemplate<*>,
 ): TreeTemplate<CallTree> {
     val callType = argType?.let {
-        val argTypeNotNull = excludeNull(argType)
+        val argTypeNotNull = argType.withNullity(Nullity.NonNull)
         val sig = NotNullFn.sig
         CallTypeInferences(
             argTypeNotNull,
@@ -303,7 +305,7 @@ fun Planting.NotNullCall(
         )
     }
     return Call(pos, type = callType) {
-        V(pos.leftEdge, BuiltinFuns.vNotNullFn, callType?.variant)
+        V(pos.leftEdge, BuiltinFuns.vNotNullFn, callType?.variant?.let(AdHocArrowTypes::definedTypeForSig))
         plantArg()
     }
 }

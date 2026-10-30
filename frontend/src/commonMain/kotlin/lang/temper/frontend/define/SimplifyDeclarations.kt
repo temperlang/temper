@@ -61,7 +61,7 @@ import lang.temper.value.void
  *
  *     fn f(n: T = i) { ... }
  *
- * becomes
+ * That becomes:
  *
  *     fn (n: T?) {
  *       if (isNull(n)) {
@@ -105,9 +105,9 @@ internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
 
     /**
      * Simplify all formal parameter initializers for the given function.
-     * Doing them all at once makes it easier to preserve order of initialization.
+     * Doing them all at once makes it easier to preserve the order of initialization.
      *
-     * It doesn't matter whether a parameter is an output parameters.
+     * It doesn't matter whether a parameter is an output parameter.
      * Output parameters' initializers run on function entry; we
      * do not have to wait until we know whether the body assigned
      * a value and returned normally to initialize.

@@ -766,7 +766,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, Expected subtype of Int32, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
@@ -844,7 +844,7 @@ As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, Expected subtype of Int32, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
@@ -1323,7 +1323,7 @@ Comparing incomparable values is a compile time error.
 
 ```temper
 0 == "0"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!, Expected subtype of Boolean, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/1 -->
@@ -2331,7 +2331,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
-// ❌ Expected function type, but got Function!, No type for subject of .toString!
+// ❌ Expected function type, but got Function!, __flowInit has not been declared!, No type for subject of .toString!, Expected subtype of String, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/stmt/simple-for-loop/snippet.md/1 -->

@@ -82,11 +82,8 @@ export sealed interface Never<@out T> {}
  */
 @imu
 @mayDowncastTo(true)
-export class Null extends Equatable<Null> {
+export class Null {
   private constructor(): Void {}
-
-  @operator("==")
-  public eq(other: Null): builtins.Boolean { true }
 }
 
 /**

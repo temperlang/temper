@@ -673,6 +673,16 @@ class GenerateCodeStageTest {
     fun anonymousClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/anonymous-class"),
     )
+
+    @Test
+    fun neverThrowsBubble() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-throws-bubble"),
+    )
+
+    @Test
+    fun neverHaveIVoid() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-have-i-void"),
+    )
 }
 
 // Provide an extra binding to a function whose call does not inline so does not trigger any

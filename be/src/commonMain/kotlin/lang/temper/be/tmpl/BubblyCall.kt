@@ -4,8 +4,6 @@ import lang.temper.log.Position
 import lang.temper.log.Positioned
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapOldStyleActualsToNew
-import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.type2.mapType
 import lang.temper.value.CallTree
 import lang.temper.value.LeftNameLeaf
@@ -31,14 +29,14 @@ internal fun unpackBubblyCall(t: Tree?): BubblyCall? {
     }
 
     val typeInferences = call.typeInferences ?: return null
-    val variant = hackTryStaticTypeToSig(typeInferences.variant)
-    if (variant?.returnType2?.definition != WellKnownTypes.resultTypeDefinition) {
+    val variant = typeInferences.variant
+    if (variant.returnType2.definition != WellKnownTypes.resultTypeDefinition) {
         // not bubbly
         return null
     }
 
     val bubbles = call
-    val resultType = variant.returnType2.mapType(hackMapOldStyleActualsToNew(typeInferences.bindings2))
+    val resultType = variant.returnType2.mapType(typeInferences.bindings2)
     val (passType, failType) = resultType.bindings
 
     return BubblyCall(

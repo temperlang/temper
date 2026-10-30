@@ -17,9 +17,9 @@ import lang.temper.stage.Stage
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
-import lang.temper.type.MkType
 import lang.temper.type.OperatorMember
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes.definedTypeForSig
 import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.withNullity
@@ -91,14 +91,14 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            Rn(BuiltinName("x"), MkType.nullable(WellKnownTypes.stringType))
-            Rn(BuiltinName("y"), MkType.nullable(WellKnownTypes.stringType))
+            Rn(BuiltinName("x"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
+            Rn(BuiltinName("y"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
             V(vDotHelper)
         }
     }
 
     private val noneToIntOrNull = CallTypeInferences(
-        MkType.nullable(WellKnownTypes.intType),
+        WellKnownTypes.intType2.withNullity(Nullity.OrNull),
         Signature2(
             returnType2 = WellKnownTypes.intType2.withNullity(Nullity.OrNull),
             hasThisFormal = false,
@@ -109,7 +109,7 @@ class EqMacroTest {
     )
 
     private val noneToInt = CallTypeInferences(
-        WellKnownTypes.intType,
+        WellKnownTypes.intType2,
         Signature2(
             returnType2 = WellKnownTypes.intType2.withNullity(Nullity.OrNull),
             hasThisFormal = false,
@@ -140,10 +140,10 @@ class EqMacroTest {
         Call {
             V(EqMacro.value)
             Call(type = noneToIntOrNull) {
-                Rn(BuiltinName("f"), noneToIntOrNull.variant)
+                Rn(BuiltinName("f"), definedTypeForSig(noneToIntOrNull.variant))
             }
             Call(type = noneToIntOrNull) {
-                Rn(BuiltinName("g"), noneToIntOrNull.variant)
+                Rn(BuiltinName("g"), definedTypeForSig(noneToIntOrNull.variant))
             }
             V(vDotHelper)
         }
@@ -156,10 +156,10 @@ class EqMacroTest {
         Call {
             V(EqMacro.value)
             Call(type = noneToInt) {
-                Rn(BuiltinName("f"), noneToInt.variant)
+                Rn(BuiltinName("f"), definedTypeForSig(noneToInt.variant))
             }
             Call(type = noneToInt) {
-                Rn(BuiltinName("g"), noneToInt.variant)
+                Rn(BuiltinName("g"), definedTypeForSig(noneToInt.variant))
             }
             V(vDotHelper)
         }
@@ -179,8 +179,8 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            Rn(BuiltinName("x"), MkType.nullable(WellKnownTypes.stringType))
-            Rn(BuiltinName("y"), WellKnownTypes.stringType)
+            Rn(BuiltinName("x"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
+            Rn(BuiltinName("y"), WellKnownTypes.stringType2)
             V(vDotHelper)
         }
     }
@@ -199,8 +199,8 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            Rn(BuiltinName("x"), WellKnownTypes.stringType)
-            Rn(BuiltinName("y"), MkType.nullable(WellKnownTypes.stringType))
+            Rn(BuiltinName("x"), WellKnownTypes.stringType2)
+            Rn(BuiltinName("y"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
             V(vDotHelper)
         }
     }
@@ -221,7 +221,7 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            Rn(BuiltinName("x"), MkType.nullable(WellKnownTypes.stringType))
+            Rn(BuiltinName("x"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
             Rn(BuiltinName("y"))
             V(vDotHelper)
         }
@@ -244,7 +244,7 @@ class EqMacroTest {
         Call {
             V(EqMacro.value)
             Rn(BuiltinName("x"))
-            Rn(BuiltinName("y"), MkType.nullable(WellKnownTypes.stringType))
+            Rn(BuiltinName("y"), WellKnownTypes.stringType2.withNullity(Nullity.OrNull))
             V(vDotHelper)
         }
     }
@@ -261,8 +261,8 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            Rn(BuiltinName("x"), WellKnownTypes.intType)
-            Rn(BuiltinName("y"), WellKnownTypes.intType)
+            Rn(BuiltinName("x"), WellKnownTypes.intType2)
+            Rn(BuiltinName("y"), WellKnownTypes.intType2)
             V(vDotHelper)
         }
     }
@@ -275,8 +275,8 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            V(Value(0, TInt), WellKnownTypes.intType)
-            V(TNull.value, MkType.nullable(WellKnownTypes.intType))
+            V(Value(0, TInt), WellKnownTypes.intType2)
+            V(TNull.value, WellKnownTypes.intType2.withNullity(Nullity.OrNull))
             V(vDotHelper)
         }
     }
@@ -288,8 +288,8 @@ class EqMacroTest {
     ) {
         Call {
             V(EqMacro.value)
-            V(Value(0, TInt), WellKnownTypes.intType)
-            V(Value("0", TString), WellKnownTypes.stringType)
+            V(Value(0, TInt), WellKnownTypes.intType2)
+            V(Value("0", TString), WellKnownTypes.stringType2)
             V(vDotHelper)
         }
     }

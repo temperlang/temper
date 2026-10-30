@@ -1178,10 +1178,15 @@ class JavaBackendTest {
         """.trimMargin(),
         want = """
             |public static LocalDate f() {
-            |    return LocalDate.parse("2001-02-03");
+            |    try {
+            |        return LocalDate.parse("2001-02-03");
+            |    } catch (RuntimeException ignored$1) {
+            |        throw Core.bubble();
+            |    }
             |}
         """.javaMethod(
             "import java.time.LocalDate;",
+            "import temper.core.Core;",
         ),
     )
 
@@ -2502,6 +2507,41 @@ class JavaBackendTest {
             """.trimMargin(),
         ),
         langs = listOf(JavaLang.Java17), // listOf
+    )
+
+    @Test
+    fun samTypeFromFunInterface() = assertGeneratedJava(
+        $$"""
+            |@fun interface StringSink(s: String): Void;
+            |
+            |let hello(how: String): Void { console.log("Called ${how}!") }
+            |
+            |let callIt(f: StringSink): Void {
+            |  f("by a function");
+            |}
+            |
+            |callIt(hello);
+        """.trimMargin(),
+        want = """
+            |static final Console console_14;
+            |static void hello(String how__0) {
+            |    console_14.log("Called " + how__0 + "!");
+            |}
+            |static void callIt(Consumer<String> f__0) {
+            |    f__0.accept("by a function");
+            |}
+            |static {
+            |    console_14 = Core.getConsole(Logger.getLogger("my_test_library.test"));
+            |    TestGlobal.callIt(TestGlobal :: hello);
+            |}
+        """.trimMargin().javaMethod(
+            """
+                |import temper.core.Core;
+                |import java.util.logging.Logger;
+                |import temper.core.Core.Console;
+                |import java.util.function.Consumer;
+            """.trimMargin(),
+        ),
     )
 
     @Test

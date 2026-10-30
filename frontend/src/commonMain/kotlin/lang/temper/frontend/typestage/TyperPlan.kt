@@ -14,9 +14,9 @@ import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.MemberShape
-import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.Type2
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -37,7 +37,7 @@ import lang.temper.value.fromTypeSymbol
 import lang.temper.value.functionContained
 import lang.temper.value.isNullaryNeverCall
 import lang.temper.value.orderedPathIndices
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeShapeAtLeafOrNull
 import lang.temper.value.typeSymbol
@@ -542,10 +542,10 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
             }
             if (tree is BlockTree) {
                 // Just throw types on floating `void`s.
-                // `void` is used as a placeholder for things that are not really useful,
+                // `void` is used as a placeholder for things that are not really useful
                 // and may be skipped in various representations.
                 // Just throw type *Void* on them.
-                val floatingVoidType = BasicTypeInferences(WellKnownTypes.voidType, emptyList())
+                val floatingVoidType = BasicTypeInferences(WellKnownTypes.voidType2, emptyList())
                 for (childIndex in tree.children.indices.toSet() - childOrder.toSet()) {
                     val child = tree.child(childIndex)
                     if (child is ValueLeaf && child.content == void && child.typeInferences == null) {
@@ -586,7 +586,7 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
         }
 
         val mayInferTypeForVariableFrom = mutableMapOf<TemperName, MutableSet<TemperName>>()
-        // Look for ways to infer the types of un-typed variables from assignments.
+        // Look for ways to infer the types of untyped variables from assignments.
         for ((declared, declarations) in declaredToDeclarations) {
             // We only infer from how they're used for temporaries.
             // Otherwise, we just infer from assignments to declarations, not from them.
@@ -834,8 +834,8 @@ internal class TyperPlan(val root: BlockTree, returnName: ResolvedName?) {
         val use: NameLeaf,
     )
 
-    fun declaredType(name: TemperName): StaticType? =
-        declarations[name]?.parts?.metadataSymbolMap[typeSymbol]?.staticTypeContained
+    fun declaredType(name: TemperName): Type2? =
+        declarations[name]?.parts?.metadataSymbolMap[typeSymbol]?.reifiedTypeContained?.type2
 }
 
 private val DeclTree.isParameter: Boolean

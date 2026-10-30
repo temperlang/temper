@@ -15,9 +15,9 @@ import lang.temper.log.Position
 import lang.temper.name.BuiltinName
 import lang.temper.name.ParsedName
 import lang.temper.name.ResolvedNameMaker
-import lang.temper.type.MkType
 import lang.temper.type.TypeTestHarness
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.value.BlockTree
@@ -170,8 +170,10 @@ class TmpLControlFlowTest {
         val t1 = nameMaker.unusedTemporaryName("t")
         val t2 = nameMaker.unusedTemporaryName("t")
         TypeTestHarness("").run {
-            val intType = WellKnownTypes.intType
-            val noneToInt = MkType.fn(listOf(), listOf(), intType)
+            val intType = WellKnownTypes.intType2
+            val noneToIntSig =
+                Signature2(intType, false, listOf())
+            val noneToInt = AdHocArrowTypes.definedTypeForSig(noneToIntSig)
             Block {
                 Decl { Ln(t1, intType) }
                 Decl { Ln(t2, intType) }
@@ -180,7 +182,7 @@ class TmpLControlFlowTest {
                     V(Value(123, TInt), intType)
                 }
                 Assign(t2, intType) {
-                    Call(type = CallTypeInferences(intType, noneToInt, mapOf(), listOf())) {
+                    Call(type = CallTypeInferences(intType, noneToIntSig, mapOf(), listOf())) {
                         Rn(BuiltinName("f"), noneToInt)
                     }
                 }

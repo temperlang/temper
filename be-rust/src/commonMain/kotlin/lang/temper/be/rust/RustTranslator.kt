@@ -63,7 +63,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.DeclTree
@@ -283,7 +282,7 @@ class RustTranslator(
                     exportedName = externalName,
                     sig = import.sig,
                 ),
-                typeFrom = export?.typeInferences?.type?.let { hackMapOldStyleToNew(it) },
+                typeFrom = export?.typeInferences?.type,
             )
         }
     }
@@ -3600,8 +3599,7 @@ class RustTranslator(
                 core = t
             }
         }
-
-        return translateType(core ?: TmpL.NeverType(type.pos), isFlex = isFlex).let { type ->
+        return translateType(core ?: neverEmpty(type.pos), isFlex = isFlex).let { type ->
             when {
                 canBeNull -> type.option()
                 else -> type
@@ -3950,3 +3948,6 @@ private fun TmpL.Tree.namesReferencedFromLocalFunctions(): Sequence<ResolvedName
         }
     }
 }
+
+private fun neverEmpty(pos: Position) =
+    TmpL.NominalType(pos, TmpL.TemperTypeName(pos, WellKnownTypes.emptyTypeDefinition), listOf())

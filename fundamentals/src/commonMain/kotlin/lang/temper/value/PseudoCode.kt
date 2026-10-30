@@ -55,17 +55,16 @@ import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.FunctionType
 import lang.temper.type.GetMemberAccessor
-import lang.temper.type.MkType
 import lang.temper.type.OperatorMember
 import lang.temper.type.SetMemberAccessor
-import lang.temper.type.StaticType
-import lang.temper.type.TypeActual
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.TypeShapeImpl
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.Wildcard
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.Descriptor
+import lang.temper.type2.MkType2
 import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -254,8 +253,9 @@ internal class PseudoTreeBuilder(
                     // ask for them.
                     if (typeArgs.isEmpty() && detail.showInferredTypes) {
                         val calleeType = calleeTree.typeInferences?.type
-                        val variant = calleeType as? FunctionType
-                            ?: tree.typeInferences?.variant as? FunctionType
+                        val variant = (calleeType as? DefinedNonNullType)
+                            ?.let { AdHocArrowTypes.reverseToSig(it) }
+                            ?: tree.typeInferences?.variant
                         val bindings = tree.typeInferences?.bindings2
                         if (variant != null && variant.typeFormals.isNotEmpty() && bindings != null) {
                             val inferredTypeArgs = variant.typeFormals.map {
@@ -263,7 +263,7 @@ internal class PseudoTreeBuilder(
                             }
                             if (null !in inferredTypeArgs) {
                                 inferredTypeArgs.mapTo(typeArgs) {
-                                    PseudoType(calleeTree.pos.rightEdge, it)
+                                    PseudoType(calleeTree.pos.rightEdge, it ?: missingTypeFakeType)
                                 }
                                 typeArgsInferred = true
                             }
@@ -622,7 +622,7 @@ internal class PseudoTreeBuilder(
             val inferredType = tree.parts?.name?.typeInferences?.type
             if (inferredType != null) {
                 typeIsInferred = true
-                type = PseudoType(name.pos.rightEdge, hackMapOldStyleToNew(inferredType))
+                type = PseudoType(name.pos.rightEdge, inferredType)
             }
         }
 
@@ -1562,26 +1562,12 @@ internal class PseudoDecl(
         return opTree
     }
 }
-internal class PseudoType(override val pos: Position, val descriptor: Descriptor) : PseudoTree() {
-    constructor(pos: Position, typeActual: TypeActual?) : this(
-        pos,
-        Unit.let {
-            val staticType = when (typeActual) {
-                is StaticType -> typeActual
-                Wildcard -> wildcardFakeStaticType
-                null -> missingTypeActualFakeStaticType
-            }
-            when (staticType) {
-                is FunctionType -> hackTryStaticTypeToSig(staticType)
-                else -> null
-            } ?: hackMapOldStyleToNew(staticType)
-        },
-    )
 
+internal class PseudoType(override val pos: Position, val descriptor: Descriptor) : PseudoTree() {
     constructor(pos: Position, reifiedType: ReifiedType) : this(
         pos,
         Unit.let {
-            (reifiedType.type as? FunctionType)?.let { fnType ->
+            (reifiedType.type as? FunctionType)?.let { fnType -> // do not commit
                 hackTryStaticTypeToSig(fnType)
             } ?: reifiedType.type2
         },
@@ -1592,7 +1578,7 @@ internal class PseudoType(override val pos: Position, val descriptor: Descriptor
     override fun reduce(): OpTree = reduce(inTypeContext = false)
 
     fun reduce(inTypeContext: Boolean): OpTree {
-        val typeTree = reduceDesciptor(pos, descriptor)
+        val typeTree = reduceDescriptor(pos, descriptor)
         return if (inTypeContext) {
             typeTree
         } else {
@@ -1622,7 +1608,7 @@ internal class PseudoType(override val pos: Position, val descriptor: Descriptor
             )
         }
 
-        internal fun reduceDesciptor(pos: Position, desc: Descriptor): OpTree =
+        internal fun reduceDescriptor(pos: Position, desc: Descriptor): OpTree =
             when (desc) {
                 is Signature2 -> reduceSig(pos, desc)
                 is Type2 -> reduceType2(pos, desc)
@@ -2631,17 +2617,7 @@ internal enum class ReturnKind {
     Error,
 }
 
-private val wildcardFakeStaticType = MkType.nominal(
-    TypeShapeImpl(
-        unknownPos,
-        Symbol("*"),
-        ResolvedNameMaker(WellKnownTypes.voidTypeDefinition.name.origin, Genre.Library)
-            .unusedSourceName(ParsedName("*")),
-        Abstractness.Abstract,
-        WellKnownTypes.voidTypeDefinition.mutationCount,
-    ),
-)
-private val missingTypeActualFakeStaticType = MkType.nominal(
+private val missingTypeFakeType = MkType2(
     TypeShapeImpl(
         unknownPos,
         Symbol("Missing"),
@@ -2650,4 +2626,4 @@ private val missingTypeActualFakeStaticType = MkType.nominal(
         Abstractness.Abstract,
         WellKnownTypes.voidTypeDefinition.mutationCount,
     ),
-)
+).get()

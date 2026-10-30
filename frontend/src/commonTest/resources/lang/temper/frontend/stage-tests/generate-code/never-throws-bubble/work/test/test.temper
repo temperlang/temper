@@ -1,0 +1,9 @@
+// A function declared Never<...> throws Bubble
+// always throws Bubble (or fails to halt).
+export let f(x: Int32): Never<Void> throws Bubble {
+  bubble()
+}
+// That `bubble()` call must use the ()->Never<Void> variant,
+// not the type-parameterized variant because a
+// type parameter cannot bind to a void-ish type like
+// Never<Void>.
