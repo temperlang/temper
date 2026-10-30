@@ -16,6 +16,7 @@ import lang.temper.be.tmpl.aType
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isPlainToString
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
@@ -639,6 +640,17 @@ class PyTranslator(
                     ),
                 )
             }
+        }
+
+        // Let `str(x)` and f-strings use a class's `toString()`.
+        t.members.firstOrNull { it.isPlainToString() }?.let { toString ->
+            val pos = toString.pos
+            body.add(
+                Py.Assign.simple(
+                    pyName(pos, "__str__"),
+                    dotName(toString as TmpL.NormalMethod).asPyName(pos),
+                ),
+            )
         }
 
         stmtList.add(
