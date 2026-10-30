@@ -181,6 +181,20 @@ class Interpreter(
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingCore = nameMaker.namingContext.isCore
 
+    /**
+     * Counts each [Fail] that means only that full interpretation can't handle something yet,
+     * like a macro call that a stage hasn't expanded, or a jump out of a nested block before
+     * weaving, not that the program failed.
+     * An `orelse` can't tell those apart from bubbles, so it's unsafe to use a result computed
+     * while this went up.
+     */
+    private var notYetFails = 0
+
+    private fun notYetFail(): Fail {
+        notYetFails += 1
+        return Fail
+    }
+
     /** Helps centralize tracking access to connecteds. */
     fun connection(qname: String?): ((Signature2) -> Value<*>)? {
         return connecteds[qname]
@@ -704,6 +718,9 @@ class Interpreter(
                     val jumpDestination = newTop?.controlFlow
                         as? JumpDestination
                     if (jumpDestination == null) {
+                        // Before weaving, the destination may be in an enclosing block, which
+                        // we can't reach from here yet.
+                        notYetFails += 1
                         result = Fail(
                             LogEntry(
                                 Log.Error,
@@ -748,6 +765,11 @@ class Interpreter(
                     // it's a yield statement.
                     val poppedForStmt = evaluation.stack.compatRemoveLast()
                     popped(poppedForStmt)
+                    // The innermost environment, as interpretChild uses for
+                    // ordinary statements. A loop body has its own, so a
+                    // yielding call there must read and assign through it,
+                    // not through mutableEnv, which is the outermost.
+                    val stmtEnv = evaluation.envStack.last()
                     val yieldingCallDetails = disassembleYieldingCall(cf, ast)
                     if (yieldingCallDetails != null && bodyOwner !is TransientUserFunction) {
                         // No place to store yieldedAt state.
@@ -780,7 +802,7 @@ class Interpreter(
                             val call = yieldingCallDetails.yieldingCall
                             var yielded: PartialResult = TNull.value
                             if (call.size == 2) {
-                                yielded = interpretEdge(call.edge(1), mutableEnv, im)
+                                yielded = interpretEdge(call.edge(1), stmtEnv, im)
                             }
                             val makeValueResult = TFunction.unpack(
                                 features.getValue(InternalFeatureKeys.MakeValueResult.featureKey),
@@ -803,7 +825,7 @@ class Interpreter(
                             val awaitCall = yieldingCallDetails.yieldingCall
                             val argValues = mutableListOf<Value<*>>()
                             for (i in 1 until awaitCall.size) {
-                                when (val argResult = interpretEdge(awaitCall.edge(i), mutableEnv, im)) {
+                                when (val argResult = interpretEdge(awaitCall.edge(i), stmtEnv, im)) {
                                     NotYet -> {
                                         result = argResult
                                         break@eval_loop
@@ -815,7 +837,7 @@ class Interpreter(
                             val args = LazyActualsList(
                                 awaitCall.children.subListToEnd(1),
                                 this,
-                                mutableEnv,
+                                stmtEnv,
                                 im,
                             )
                             val cb = callbackFor(awaitCall)
@@ -838,7 +860,7 @@ class Interpreter(
                                 is Fail -> handleFail(awaitResult)
                                 is Value<*> -> {
                                     if (assignedTo != null) {
-                                        (mutableEnv.set(assignedTo, awaitResult, cb) as? Fail)
+                                        (stmtEnv.set(assignedTo, awaitResult, cb) as? Fail)
                                             ?.let { handleFail(it) }
                                     }
                                     result = awaitResult
@@ -1010,6 +1032,7 @@ class Interpreter(
                 var shouldAttemptToInline =
                     isPureInlineAttempt && edge != null && !ast.isPreserved &&
                         calleeValue != BuiltinFuns.vPreserveFn
+                val notYetFailsBefore = notYetFails
                 val result = try {
                     when (asUserFn) {
                         null -> {
@@ -1028,6 +1051,10 @@ class Interpreter(
                     } else {
                         throw panic
                     }
+                }
+                if (im == InterpMode.Partial && notYetFails != notYetFailsBefore) {
+                    // As for a panic: an `orelse` might have taken a not-yet for a bubble.
+                    return NotYet
                 }
 
                 // Try to constant fold
@@ -1106,7 +1133,7 @@ class Interpreter(
                 }
                 NotYet
             }
-            CallStrategy.Fail -> Fail
+            CallStrategy.Fail -> notYetFail()
             CallStrategy.CallAsMacroAndMaybeReplace -> {
                 val macroEdge = ast?.incoming
                 val calleeNameBefore = calleeName(ast)
@@ -2128,7 +2155,8 @@ class Interpreter(
         }
 
         return when (bodyResult) {
-            NotYet, is Fail -> Fail
+            NotYet -> notYetFail()
+            is Fail -> Fail
             is Value<*> -> {
                 // If we stopped at a yield point, then we should
                 // prefer the result, a *ValueResult* instance, to

@@ -525,6 +525,37 @@ class CSharpBackendTest {
     )
 
     @Test
+    fun toStringOverridesObjectToString() = assertGeneratedUserClass(
+        temper = """
+            |export class Point(public x: Int) {
+            |  public toString(): String { "Point" }
+            |}
+        """.trimMargin(),
+        cSharpClassName = "Point",
+        csharp = """
+            |public class Point
+            |{
+            |    readonly int x;
+            |    public override string ToString()
+            |    {
+            |        return "Point";
+            |    }
+            |    public Point(int x__0)
+            |    {
+            |        this.x = x__0;
+            |    }
+            |    public int X
+            |    {
+            |        get
+            |        {
+            |            return this.x;
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun simplePanicValue() {
         assertGeneratedGlobalClass(
             temper = """

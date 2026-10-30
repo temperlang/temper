@@ -24,6 +24,7 @@
 #include "regex.hpp"
 #include "generator.hpp"
 #include "promise.hpp"
+#include "module_init.hpp"
 
 namespace temper {
     namespace core {

@@ -1407,7 +1407,7 @@ class RustTranslator(
                     type = decl.type!!.onceLock(),
                     value = Rust.Call(pos, callee = "$ONCE_LOCK_NAME::new".toId(pos), args = listOf()),
                 ).also { moduleItems.add(it.toItem()) }
-                usedId.methodCall("get").methodCall("unwrap").deref().maybeClone(decl.typeFrom!!)
+                initializedRead(usedId.deepCopy().methodCall("get")).deref().maybeClone(decl.typeFrom!!)
             }
 
             else -> {
@@ -1417,7 +1417,7 @@ class RustTranslator(
                     type = decl.type!!.option().wrapRwLockType(),
                     value = NONE_NAME.toId(pos).wrapLock(),
                 ).also { moduleItems.add(it.toItem()) }
-                usedId.methodCall("read").methodCall("unwrap").maybeClone(decl.typeFrom!!).methodCall("unwrap")
+                initializedRead(usedId.deepCopy().methodCall("read").methodCall("unwrap").wrapClone())
             }
         }
         // Accessor method for reads.
@@ -1428,6 +1428,20 @@ class RustTranslator(
             returnType = decl.type,
             block = Rust.Block(pos, result = access),
         ).toItem(pub = chooseVisibility(decl.decl, considerMember = considerMember))
+    }
+
+    /**
+     * `temper_core::initialized(|| read, crate::init_on_first_use)`: the value from [read], an
+     * `Option`, first initializing the library if it's unset, so callers needn't call `init`.
+     */
+    private fun initializedRead(read: Rust.Expr): Rust.Expr {
+        val pos = read.pos
+        return "temper_core::initialized".toId(pos).call(
+            listOf(
+                Rust.Closure(pos, params = listOf(), value = read),
+                "crate::$INIT_ON_FIRST_USE_NAME".toId(pos),
+            ),
+        )
     }
 
     private fun buildTopperAssign(
@@ -3890,6 +3904,7 @@ internal const val ERROR_NEW_NAME = "$ERROR_NAME::new"
 internal const val GENERATOR_NAME = "temper_core::Generator"
 internal const val HASH_NAME = "std::hash::Hash"
 internal const val INIT_ONCE_NAME = "INIT_ONCE"
+internal const val INIT_ON_FIRST_USE_NAME = "init_on_first_use"
 internal const val IS_NAME = "temper_core::is"
 internal const val LIST_NAME = "temper_core::List"
 internal const val LIST_BUILDER_NAME = "temper_core::ListBuilder"

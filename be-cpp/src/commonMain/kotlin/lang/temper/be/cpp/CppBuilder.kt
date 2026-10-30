@@ -85,6 +85,11 @@ class CppBuilder(
         Cpp.DerivedStructDef(pos, name.deepCopy(), bases.deepCopy(), fields.deepCopy())
     fun baseSpec(virtual: Boolean, base: Cpp.Type): Cpp.BaseSpec =
         Cpp.BaseSpec(pos, virt = if (virtual) Cpp.VirtualMod.Virtual else null, base = base.deepCopy())
+    fun templateStructDecl(
+        typeParams: Iterable<Cpp.FuncParam>,
+        decl: Cpp.StructDecl,
+    ): Cpp.TemplateStructDecl =
+        Cpp.TemplateStructDecl(pos, typeParams.deepCopy(), decl.deepCopy())
     fun templateStructDef(
         typeParams: Iterable<Cpp.FuncParam>,
         def: Cpp.AnyStructDef,
@@ -231,6 +236,19 @@ class CppBuilder(
         )
     fun lambdaCapture(name: Cpp.SingleName): Cpp.LambdaCapture =
         Cpp.LambdaCapture(pos, name.deepCopy())
+
+    /**
+     * `[&]() -> auto { temps...; return result; }()`, or `[]` when [inFunction] is false: see
+     * `InOrderExpr` in Cpp.out-grammar.
+     */
+    fun inOrderExpr(temps: Iterable<Cpp.InOrderTemp>, result: Cpp.Expr, inFunction: Boolean): Cpp.InOrderExpr =
+        Cpp.InOrderExpr(
+            pos,
+            if (inFunction) Cpp.CaptureByReference(pos) else null,
+            blockStmt(temps + returnStmt(result)),
+        )
+    fun inOrderTemp(name: Cpp.SingleName, value: Cpp.Expr): Cpp.InOrderTemp =
+        Cpp.InOrderTemp(pos, name.deepCopy(), value.deepCopy())
 
     fun indexExpr(base: Cpp.Expr, index: Cpp.Expr): Cpp.IndexExpr =
         Cpp.IndexExpr(pos, base.deepCopy(), index.deepCopy())

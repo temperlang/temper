@@ -160,8 +160,16 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.ControlFlowAsync)
 
     @Test
+    fun controlFlowAsyncBrokenEarly() =
+        runFunctionalTest(Ft.ControlFlowAsyncBrokenEarly)
+
+    @Test
     fun controlFlowAsyncWaiters() =
         runFunctionalTest(Ft.ControlFlowAsyncWaiters)
+
+    @Test
+    fun controlFlowAwaitInLoop() =
+        runFunctionalTest(Ft.ControlFlowAwaitInLoop)
 
     @Test
     fun controlFlowBubble() =

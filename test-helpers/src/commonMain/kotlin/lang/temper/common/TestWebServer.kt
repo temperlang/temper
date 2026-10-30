@@ -24,8 +24,12 @@ class TestWebServer(private val requestedPort: Int = 0) {
         this.server = server
         server.createContext("/") { exchange ->
             val method = exchange.requestMethod
+            // Whether the request said its body is JSON. Only the media type is
+            // compared, since a client may add a charset parameter.
+            val json = exchange.requestHeaders.getFirst("Content-Type")
+                ?.substringBefore(';')?.trim() == "application/json"
             // Don't even worry about escaping for now.
-            val response = """{"method": "$method"}""".toByteArray()
+            val response = """{"method": "$method", "json": $json}""".toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
             exchange.sendResponseHeaders(HTTP_OK, response.size.toLong())
             exchange.responseBody.use { it.write(response) }

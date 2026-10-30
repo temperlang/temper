@@ -352,6 +352,11 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/generator-interpreted-in-loop"),
     )
 
+    @Test
+    fun generatorYieldsLoopLocal() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-yields-loop-local"),
+    )
+
     @Ignore
     @Test
     fun generatorResultsUsed() = assertModuleAtStage(
@@ -660,6 +665,11 @@ class GenerateCodeStageTest {
     @Test
     fun orelseInStringInterpolation() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/orelse-in-string-interpolation"),
+    )
+
+    @Test
+    fun orelseFoldJumps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-fold-jumps"),
     )
 
     @Test

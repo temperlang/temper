@@ -128,6 +128,30 @@ class PyBackendTest {
     )
 
     @Test
+    fun toStringIsDunderStr() = assertGeneratedCode(
+        input = """
+            |export class Point(public x: Int) {
+            |  public toString(): String { "Point" }
+            |}
+        """.trimMargin(),
+        want = """
+            |from builtins import int as int0, str as str1
+            |class Point:
+            |    _x_4: 'int0'
+            |    __slots__ = ('_x_4',)
+            |    def to_string(this_0, /) -> 'str1':
+            |        return 'Point'
+            |    def __init__(this, /, x: 'int0') -> None:
+            |        this._x_4 = x
+            |    @property
+            |    def x(this_11, /) -> 'int0':
+            |        return this_11._x_4
+            |    __str__ = to_string
+            |
+        """.trimMargin(),
+    )
+
+    @Test
     fun overloadedMethods() = assertGeneratedCode(
         input = """
             |export class IntMaker(public radix: Int32) {

@@ -9,6 +9,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
 import lang.temper.be.tmpl.asReceiverMember
 import lang.temper.be.tmpl.injectSuperCallMethods
+import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mutatingMemberNames
 import lang.temper.common.MimeType
 import lang.temper.common.subListToEnd
@@ -111,6 +112,8 @@ class CppBackend private constructor(
         // propagates to any const caller. See [lang.temper.be.tmpl.mutatingMemberNames].
         val forcedNonConst = forcedNonConstMembers(finished.modules)
         val mutatingMethodNames = mutatingMemberNames(finished.modules, forcedNonConst)
+        // Module-level values live in storage that generated code reads directly.
+        val moduleLevelValueNames = collectModuleLevelValueNames(finished.modules)
 
         val allTestInfos = mutableListOf<Pair<String, String>>()
         val allInitFuncs = mutableListOf<String>()
@@ -121,9 +124,16 @@ class CppBackend private constructor(
                 cppLibraryName = cppLibraryName,
                 libraryRootToOutputDir = libraryRootToOutputDir,
                 mutatingMethodNames = mutatingMethodNames,
+                moduleLevelValueNames = moduleLevelValueNames,
             )
             val result = translator.translateModule(mod)
             allTestInfos.addAll(translator.testInfos)
+            // Register tests too, so test runs count them as defined, as other backends do.
+            for (topLevel in mod.topLevels) {
+                if (topLevel is TmpL.Test) {
+                    dependenciesBuilder.addTest(mod.libraryName, topLevel)
+                }
+            }
             translator.moduleInitFuncName?.let { name ->
                 val libNs = safeCppNamespace(cppNames.library(cppLibraryName).text)
                 allInitFuncs.add("$libNs::$name")
@@ -281,6 +291,7 @@ class CppBackend private constructor(
                     filePath("regex.hpp"),
                     filePath("generator.hpp"),
                     filePath("promise.hpp"),
+                    filePath("module_init.hpp"),
                     filePath("core.hpp"),
                     // Test harness used only by the generated `main.cpp`; intentionally not
                     // pulled into core.hpp so its <fstream>/<sstream> stay out of every TU.
