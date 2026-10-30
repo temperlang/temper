@@ -40,7 +40,7 @@ interface DocumentContext : ConfigurationKey.Holder {
         val loc = pos.loc
         val positions = (loc as? FileRelatedCodeLocation)?.let {
             filePositions[it.sourceFile]
-        } ?: sharedLocationContext.get(loc, CodeLocationKey.FilePositionsKey)
+        } ?: sharedLocationContext[loc, CodeLocationKey.FilePositionsKey]
         positions?.spanning(pos)?.toReadablePosition(loc.diagnostic)?.let {
             return@formatPosition it
         }

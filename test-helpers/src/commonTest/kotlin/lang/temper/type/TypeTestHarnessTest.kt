@@ -170,6 +170,7 @@ class TypeTestHarnessTest {
         val t = type("Filter<String>")
         assertIs<NominalType>(t)
         assertEquals(listOf(WellKnownTypes.stringType), t.bindings)
+        assertEquals(1, getDefinition("Filter")!!.formals.size)
 
         val defn = t.definition
         assertIs<TypeShape>(defn)

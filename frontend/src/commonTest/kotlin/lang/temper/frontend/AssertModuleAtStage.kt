@@ -12,6 +12,7 @@ import lang.temper.common.assertStructure
 import lang.temper.common.buildListMultimap
 import lang.temper.common.console
 import lang.temper.common.ignore
+import lang.temper.common.json.JsonArray
 import lang.temper.common.json.JsonObject
 import lang.temper.common.json.JsonString
 import lang.temper.common.json.JsonValue
@@ -216,15 +217,27 @@ internal fun assertModuleAtStage(
         }
     }
 
+    val allStagingFlags = buildSet {
+        addAll(stagingFlags)
+        if (moduleResultNeeded) {
+            add(StagingFlags.moduleResultNeeded)
+        }
+    }
+
     val outputsByStage = mutableMapOf<Stage?, StageSnapshot>()
     var exitKind: ExitKind = ExitKind.Normal
     var isTestModule: (Module) -> Boolean = { _ -> false } // reassigned
-    val moduleHook = ModuleCustomizeHook { module, _ ->
+    val moduleHook = ModuleCustomizeHook { module, isNew ->
         if (verboseDebug) {
             module.treeForDebug?.let { ast ->
                 console.group("${module.loc} ${module.stageCompleted?.toString() ?: "start"}") {
                     ast.toPseudoCode(console.textOutput)
                 }
+            }
+        }
+        if (isNew) {
+            if (allStagingFlags.isNotEmpty()) {
+                module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
             }
         }
         if (isTestModule(module)) {
@@ -272,15 +285,6 @@ internal fun assertModuleAtStage(
         allowDuplicateLogPositions = true,
     )
     isTestModule = { it === module }
-    val allStagingFlags = buildSet {
-        addAll(stagingFlags)
-        if (moduleResultNeeded) {
-            add(StagingFlags.moduleResultNeeded)
-        }
-    }
-    if (allStagingFlags.isNotEmpty()) {
-        module.addEnvironmentBindings(allStagingFlags.associateWith { TBoolean.valueTrue })
-    }
     provisionModule(module, moduleAdvancer, testDir)
 
     val stopBeforeForMainModule = Stage.after(stageNeeded)
@@ -372,6 +376,7 @@ internal fun assertModuleAtStage(
                         var value: JsonValue? = gotJson
                         for (prop in rel.r.jsonProperties) {
                             value = (value as? JsonObject)?.getOrNull(prop)
+                                ?: rel.defaultJsonValue
                         }
                         value?.let { value ->
                             val oldValue = originals[rel]
@@ -830,14 +835,22 @@ internal class DumpStackTracesForThoseErrors(private val logSink: LogSink) : Log
 private data class StageTestResourceFileRelationship(
     val stage: Stage?,
     val r: TestResourceFileRelationship,
+    val defaultJsonValue: JsonValue?,
 )
 
 private val testResourceFileRelationships: Map<FilePath, StageTestResourceFileRelationship> =
     buildMap {
-        fun put(stage: Stage?, jsonProperties: List<String>, relFilePath: FilePath, converter: DataFileConverter) {
+        fun put(
+            stage: Stage?,
+            jsonProperties: List<String>,
+            relFilePath: FilePath,
+            converter: DataFileConverter,
+            defaultJsonValue: JsonValue? = null,
+        ) {
             this[relFilePath] = StageTestResourceFileRelationship(
                 stage,
                 TestResourceFileRelationship(jsonProperties, relFilePath, converter),
+                defaultJsonValue = defaultJsonValue,
             )
         }
         for (stage in Stage.entries) {
@@ -900,6 +913,7 @@ private val testResourceFileRelationships: Map<FilePath, StageTestResourceFileRe
             listOf("errors"),
             filePath("expect", "errors.json"),
             ParseJsonTolerantConverter,
+            defaultJsonValue = JsonArray(listOf()),
         )
         put(
             null,

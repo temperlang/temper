@@ -12,6 +12,9 @@ class _connected:
     def length(string: str | None) -> int:
         return -1 if string is None else len(string)
 
+    def twice(i: int) -> int:
+        return i * 2
+
     class Counter:
         """Temper's connected Counter class, with the members Temper would generate."""
 

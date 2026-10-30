@@ -1,6 +1,7 @@
 package lang.temper.be.rust
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -77,9 +78,15 @@ class RustBackendTest {
             |            pub (crate) use support::*;
             |            pub fn init(config: std::option::Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
             |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
-            |                bar::init() ? ;
-            |                r#mod::init() ? ;
+            |                temper_core::initializing(| | -> temper_core::Result<()> {
+            |                        bar::init() ? ;
+            |                        r#mod::init() ? ;
+            |                        std::result::Result::Ok(())
+            |                }) ? ;
             |                std::result::Result::Ok(crate::config().runner().clone())
+            |            }
+            |            pub (crate) fn init_on_first_use() {
+            |                init(std::option::Option::None).expect("initializing a Temper library on first use");
             |            }
             |
             |            ```
@@ -140,7 +147,7 @@ class RustBackendTest {
             |              }
             |              static STRINGIFY_VALUE: std::sync::OnceLock<std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync>> = std::sync::OnceLock::new();
             |              pub fn stringify_value() -> std::sync::Arc<dyn Fn (i32) -> std::sync::Arc<String> + std::marker::Send + std::marker::Sync> {
-            |                  ( * STRINGIFY_VALUE.get().unwrap()).clone()
+            |                  ( * temper_core::initialized(| | STRINGIFY_VALUE.get(), crate::init_on_first_use)).clone()
             |              }
             |              pub trait TalkerTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
             |                  fn clone_boxed(& self) -> Talker;
@@ -185,6 +192,16 @@ class RustBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = RustBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.rs" to "pub(crate) fn via_connected(i: i32) -> i32 {\n    i + 1\n}\n",
+        ),
+        listedCall = "_connected::via_connected(",
+        unlistedCall = "_connected::via_body(",
     )
 
     @Test
@@ -314,7 +331,7 @@ class RustBackendTest {
                 |}
                 |static P: std::sync::OnceLock<temper_core::Promise<A>> = std::sync::OnceLock::new();
                 |pub (crate) fn p() -> temper_core::Promise<A> {
-                |    ( * P.get().unwrap()).clone()
+                |    ( * temper_core::initialized(| | P.get(), crate::init_on_first_use)).clone()
                 |}
                 |struct AStruct {
                 |    a: std::sync::Arc<String>
@@ -1244,18 +1261,8 @@ class RustBackendTest {
                 |}
                 |temper_core::impl_any_value_trait!(Blah, []);
                 |pub (crate) fn something(value__0: temper_core::AnyValue) -> Blah {
-                |    let t___0: bool;
-                |    if ! value__0.is_none() {
-                |        t___0 = temper_core::is::<Blah>(value__0.clone());
-                |    } else {
-                |        t___0 = false;
-                |    }
-                |    if t___0 {
-                |        if value__0.is_none() {
-                |            return panic!();
-                |        } else {
-                |            return temper_core::cast::<Blah>(value__0.clone()).unwrap();
-                |        }
+                |    if temper_core::is::<Blah>(value__0.clone()) {
+                |        return temper_core::cast::<Blah>(value__0.clone()).unwrap();
                 |    } else {
                 |        return Blah::new();
                 |    }
@@ -1354,9 +1361,15 @@ class RustBackendTest {
             |            pub (crate) use support::*;
             |            pub fn init(config: std::option::Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
             |                crate::CONFIG.get_or_init(| | config.unwrap_or_else(| | temper_core::Config::default()));
-            |                bar::init() ? ;
-            |                bob::bill::beth::init() ? ;
+            |                temper_core::initializing(| | -> temper_core::Result<()> {
+            |                        bar::init() ? ;
+            |                        bob::bill::beth::init() ? ;
+            |                        std::result::Result::Ok(())
+            |                }) ? ;
             |                std::result::Result::Ok(crate::config().runner().clone())
+            |            }
+            |            pub (crate) fn init_on_first_use() {
+            |                init(std::option::Option::None).expect("initializing a Temper library on first use");
             |            }
             |
             |            ```
@@ -2589,7 +2602,7 @@ class RustBackendTest {
                 |}
                 |static A: std::sync::OnceLock<std::option::Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>>> = std::sync::OnceLock::new();
                 |pub fn a() -> std::option::Option<std::sync::Arc<dyn Fn (i32) -> i32 + std::marker::Send + std::marker::Sync>> {
-                |    ( * A.get().unwrap()).clone()
+                |    ( * temper_core::initialized(| | A.get(), crate::init_on_first_use)).clone()
                 |}
             """.trimMargin(),
         )
@@ -2806,10 +2819,10 @@ class RustBackendTest {
             |static SOMETHING__HI: std::sync::OnceLock<i32> = std::sync::OnceLock::new();
             |impl Something {
             |    pub fn here() -> std::sync::Arc<String> {
-            |        ( * SOMETHING__HERE.get().unwrap()).clone()
+            |        ( * temper_core::initialized(| | SOMETHING__HERE.get(), crate::init_on_first_use)).clone()
             |    }
             |    pub fn hi() -> i32 {
-            |        * SOMETHING__HI.get().unwrap()
+            |        * temper_core::initialized(| | SOMETHING__HI.get(), crate::init_on_first_use)
             |    }
             |    pub fn new() -> Something {
             |        let selfish = Something(std::sync::Arc::new(SomethingStruct {}));
@@ -2949,7 +2962,7 @@ class RustBackendTest {
             |}
             |static J: std::sync::OnceLock<i32> = std::sync::OnceLock::new();
             |pub (crate) fn j() -> i32 {
-            |    * J.get().unwrap()
+            |    * temper_core::initialized(| | J.get(), crate::init_on_first_use)
             |}
             |pub (crate) fn prepare(x__0: f64) -> temper_core::Result<i32> {
             |    let return__0: i32;
@@ -2990,7 +3003,7 @@ class RustBackendTest {
             |}
             |static A: std::sync::RwLock<std::option::Option<i32>> = std::sync::RwLock::new(std::option::Option::None);
             |pub (crate) fn a() -> i32 {
-            |    A.read().unwrap().unwrap()
+            |    temper_core::initialized(| | A.read().unwrap().clone(), crate::init_on_first_use)
             |}
             |pub fn hi() -> i32 {
             |    {
@@ -3042,7 +3055,7 @@ class RustBackendTest {
             |}
             |static N: std::sync::RwLock<std::option::Option<i32>> = std::sync::RwLock::new(std::option::Option::None);
             |pub (crate) fn n() -> i32 {
-            |    N.read().unwrap().unwrap()
+            |    temper_core::initialized(| | N.read().unwrap().clone(), crate::init_on_first_use)
             |}
         """.trimMargin(),
     )

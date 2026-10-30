@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isPlainToString
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isYieldingStatement
@@ -1730,6 +1731,12 @@ internal class CSharpTranslator(
                         pos.leftEdge,
                         modAccess = modAccess,
                         modStatic = modStatic,
+                        modNew = when {
+                            // Override `object.ToString` rather than hide it, so `$"{x}"` and
+                            // `Console.WriteLine(x)` use it, unless renamed above.
+                            method.isPlainToString() && id === wantedId -> CSharp.ModNew.Override
+                            else -> CSharp.ModNew.Implied
+                        },
                     ),
                     typeParameters = typeParameters.map { it.second },
                     parameters = parameters,

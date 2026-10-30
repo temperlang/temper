@@ -9,6 +9,7 @@ import lang.temper.log.MessageTemplate
 import lang.temper.name.BuiltinName
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
+import lang.temper.stage.Stage
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.Signature2
 import lang.temper.value.ActualValues
@@ -351,6 +352,11 @@ class GenerateCodeStageTest {
         stageTestDir = StageTestDir("generate-code/generator-interpreted-in-loop"),
     )
 
+    @Test
+    fun generatorYieldsLoopLocal() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/generator-yields-loop-local"),
+    )
+
     @Ignore
     @Test
     fun generatorResultsUsed() = assertModuleAtStage(
@@ -429,6 +435,13 @@ class GenerateCodeStageTest {
         // comments in the cast checker describe why this is the way it is.
         // In short, a sealed, connected type must be able to distinguish
         // its subtypes, so the static expression type matters when casting.
+    )
+
+    @Test
+    fun connectedBackends() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/connected-backends"),
+        stage = Stage.GenerateCode,
+        // A list of backends with connected code on `@connected` requires a Temper body.
     )
 
     @Test
@@ -660,6 +673,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun orelseFoldJumps() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/orelse-fold-jumps"),
+    )
+
+    @Test
     fun asVsAssertAs() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/as-vs-assertas"),
     )
@@ -667,6 +685,16 @@ class GenerateCodeStageTest {
     @Test
     fun anonymousClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/anonymous-class"),
+    )
+
+    @Test
+    fun neverThrowsBubble() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-throws-bubble"),
+    )
+
+    @Test
+    fun neverHaveIVoid() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/never-have-i-void"),
     )
 }
 

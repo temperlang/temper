@@ -22,6 +22,10 @@ pub(crate) fn length(s: Option<impl temper_core::ToArcString>) -> i32 {
     }
 }
 
+pub(crate) fn twice(i: i32) -> i32 {
+    i * 2
+}
+
 /// Temper's connected Counter class, shaped as Temper would generate it: a
 /// cheap-to-clone handle to shared state.
 #[derive(Clone)]

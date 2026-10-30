@@ -766,7 +766,7 @@ As explained above, you cannot mix [*Int32*](types.md#type-Int32) and
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, Expected subtype of Int32, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/%2B/snippet.md/1 -->
@@ -844,7 +844,7 @@ As with `+`, you cannot mix [*Int32*](types.md#type-Int32) and [*Float64*](types
 
 ```temper
 1 + 1.0
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, No accessible member infix nym`+` in type Int32!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]!, Expected subtype of Int32, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/-/snippet.md/1 -->
@@ -1323,7 +1323,7 @@ Comparing incomparable values is a compile time error.
 
 ```temper
 0 == "0"
-// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!
+// ❌ Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, String]!, Expected subtype of Boolean, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/==/snippet.md/1 -->
@@ -2331,7 +2331,7 @@ Unlike in some other languages, curly brackets (`{...}`) are **required** around
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
-// ❌ Expected function type, but got Function!, No type for subject of .toString!
+// ❌ Expected function type, but got Function!, __flowInit has not been declared!, No type for subject of .toString!, Expected subtype of String, but got Invalid!
 ```
 
 <!-- /snippet: temper-code/build-user-docs/build/snippet/stmt/simple-for-loop/snippet.md/1 -->
@@ -3280,9 +3280,31 @@ for some type.
 <a name="builtin&#45;&#64;connected" class="snippet-anchor-name"></a>
 
 ### `@connected` decorator
-Connect types, members, and functions to native code. Each backend defines
+Connect types, members, and functions to backend code. Each backend defines
 specific conventions for connected backend code. Internal backend translation
 logic can also key on the QName of connected entities.
+
+A connected function may have a Temper body, its reference implementation,
+and list the backends that have connected code for it. Other backends, and the
+interpreter, use the body.
+
+<!-- snippet: temper-code/build-user-docs/build/snippet/builtin/@connected/snippet.md/0 -->
+
+```temper
+@connected(["cpp", "rust"])
+export let foldCase(c: Int): Int {
+  // ... pure Temper ...
+}
+// ⏸️
+```
+
+<!-- /snippet: temper-code/build-user-docs/build/snippet/builtin/@connected/snippet.md/0 -->
+
+A listed backend must supply connected code, and `--no-connected` makes every
+backend use bodies wherever they exist. Without a list, every backend must
+supply connected code, and the body, if any, serves only the interpreter.
+An empty list, as in `@connected([])`, names no backend with backend code,
+so every backend uses the body.
 
 <!-- /snippet: builtin/@connected -->
 

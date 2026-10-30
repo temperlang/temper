@@ -2,6 +2,7 @@
 
 package lang.temper.be.js
 
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.filePath
@@ -1434,7 +1435,7 @@ class JsBackendTest {
             |    "my-test-library": {
             |      "foo.internal.js": {
             |        content: ```
-            |          /** @returns {void} */
+            |          /** @returns {never} */
             |          export function f() {
             |            throw Error();
             |          };
@@ -1733,7 +1734,7 @@ class JsBackendTest {
             |        content:
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic, runAsync
+            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, runAsync
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
             |          export const console = globalConsole_0;
@@ -1747,7 +1748,7 @@ class JsBackendTest {
             |              try {
             |                t_0 = yield await_0(p);
             |              } catch {
-            |                t_0 = panic();
+            |                throw Error();
             |              }
             |              console.log(t_0);
             |          });
@@ -2499,6 +2500,16 @@ class JsBackendTest {
             |  }
             |}
         """.trimMargin(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = JsBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.js" to "export const viaConnected = (i) => i + 1;\n",
+        ),
+        listedCall = "_connected.viaConnected(",
+        unlistedCall = "_connected.viaBody(",
     )
 
     @Test

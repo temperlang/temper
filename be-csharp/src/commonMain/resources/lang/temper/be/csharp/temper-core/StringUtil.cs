@@ -55,6 +55,18 @@ namespace TemperLang.Core
             return c;
         }
 
+        /**
+         * The first index of target in s at or after start, or -1.
+         * Ordinal, since `string.IndexOf(string)` compares by culture,
+         * where NUL, soft hyphen, and other ignorable code points match
+         * the empty string.
+         */
+        public static int IndexOf(string s, string target, int start = 0)
+        {
+            start = Math.Min(Math.Max(start, 0), s.Length);
+            return s.IndexOf(target, start, StringComparison.Ordinal);
+        }
+
         public static int CountBetween(string s, int left, int right)
         {
             int limit = Math.Min(s.Length, right);

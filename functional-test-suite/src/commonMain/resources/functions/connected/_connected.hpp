@@ -14,6 +14,8 @@ std::int32_t prod(std::shared_ptr<Hidden> const& hidden, std::int32_t j);
 
 int32_t length(temper::core::NullableParam<std::string> s);
 
+std::int32_t twice(std::int32_t i);
+
 // Temper's connected Counter class, with the members Temper would generate.
 struct Counter {
     std::int32_t total_ = 0;

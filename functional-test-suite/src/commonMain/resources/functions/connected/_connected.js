@@ -27,6 +27,14 @@ export const length = (s) => {
   return s?.length ?? -1;
 };
 
+/**
+ * @param {number} i
+ * @returns {number}
+ */
+export const twice = (i) => {
+  return i * 2;
+};
+
 /** Temper's connected Counter class, with the members Temper would generate. */
 export class Counter {
   #total = 0;

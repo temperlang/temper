@@ -1,6 +1,7 @@
 package lang.temper.be.lua
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.FilePath
@@ -65,6 +66,25 @@ class LuaBackendTest {
                 |exports = {};
                 |exports.Hi = Hi;
                 |exports.end_ = end_;
+                |return exports;
+                |
+            """.trimMargin(),
+        )
+    }
+
+    @Test
+    fun listLiteralIsTableConstructor() {
+        // A call passes each element in its own register, and Lua has 255 per
+        // function, so `temper.listof(...)` over 250 elements did not load.
+        assertGenerated(
+            temper = """
+                |@keep let xs = ["a", "b", "c"];
+            """.trimMargin(),
+            lua = """
+                |local temper = require('temper-core');
+                |local xs, exports;
+                |xs = {'a', 'b', 'c'};
+                |exports = {};
                 |return exports;
                 |
             """.trimMargin(),
@@ -446,6 +466,17 @@ class LuaBackendTest {
             |    }
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),
+    )
+
+    @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = LuaBackend.Lua51,
+        connectedFiles = mapOf(
+            // Lua inlines this, so define it without looking like a call.
+            "_connected.lua" to "local _connected = {}\n_connected.viaConnected = function(i) return i + 1 end\n",
+        ),
+        listedCall = "_connected.viaConnected(",
+        unlistedCall = "_connected.viaBody(",
     )
 
     @Test

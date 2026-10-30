@@ -118,7 +118,7 @@ abstract class AbstractPyFunctionalTest(
                     // Also assert no warnings.
                     assertFalse("warning" in effort.stdout, "Warnings found")
                 } else {
-                    test.assertRunOutput(result)
+                    test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

@@ -8,8 +8,8 @@
   decodeFromJson__0 = fn (@impliedThis(PointJsonAdapter__0) this__1: PointJsonAdapter__0, t__0: JsonSyntaxTree, ic__0: InterchangeContext) /* return__1 */: Point__0 throws Bubble {
     getStatic(Point__0, \decodeFromJson)(t__0, ic__0)
   };
-## It's got an implied constructor even though that wasn't mentioned in the JsonInteropPass
   @fn @visibility(\public) @stay @fromType(PointJsonAdapter__0) let constructor__0;
+## It's got an implied constructor even though that wasn't mentioned in the JsonInteropPass
   constructor__0 = (@stay fn constructor(@impliedThis(PointJsonAdapter__0) this__2: PointJsonAdapter__0) /* return__2 */: Void {});
   @typeDecl(PointJsonAdapter__0) @stay let PointJsonAdapter__0;
   PointJsonAdapter__0 = type (PointJsonAdapter__0);
