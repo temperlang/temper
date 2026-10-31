@@ -31,9 +31,9 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
         issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it))
         issue(Ft.TypesNetresponseNotFound, cpp(it), interp(it), lua(it))
     }
-    // The interpreter runs connected functions' fallback bodies (#637), but
-    // has no fallback for connected types like this test's Counter yet.
-    456.let { issue(Ft.FunctionsConnected, interp(it)) }
+    // Connected types have no interpreter fallback yet; #637 covers only
+    // connected functions.
+    issue(Ft.TypesConnected, interp(456))
     issue(Ft.ClassesWriteBackThroughField, cpp(539))
     onlyFails(
         cpp(198),

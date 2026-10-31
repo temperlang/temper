@@ -31,7 +31,7 @@
 | [ControlFlowLoopReenterable][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ControlFlowLoops][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsAsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [FunctionsConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsConstructorCallbacks][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsDefaulting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [FunctionsLocals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -52,6 +52,7 @@
 | [SemanticsMutuallyReferencingTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsTypeCheckedLocals][] | ❌<sup>[58][]</sup> | ❌<sup>[198][]</sup> | ❌<sup>[58][]</sup> | ✅ | ❌<sup>[58][]</sup> | ❌<sup>[58][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[58][]</sup> |
 | [TestingAsserts][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDate][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDenseBitVector][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDeque][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -132,6 +133,7 @@
 [SemanticsMutuallyReferencingTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/mutually-referencing-types/mutually-referencing-types.temper.md
 [SemanticsTypeCheckedLocals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/semantics/type-checked-locals/type-checked-locals.temper.md
 [TestingAsserts]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/testing/asserts/asserts.temper.md
+[TypesConnected]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/connected/connected.temper.md
 [TypesDate]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/date/date.temper.md
 [TypesDenseBitVector]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/dense-bit-vector/dense-bit-vector.temper.md
 [TypesDeque]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/deque/deque.temper.md

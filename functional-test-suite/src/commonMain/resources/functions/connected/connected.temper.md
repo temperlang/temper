@@ -174,24 +174,3 @@ new Hider(3).plus(4): 1007
 ```log ~interp ~no-connected
 new Hider(3).times(4): 12
 ```
-
-## Connected classes
-
-A whole class can be connected. Each backend's connected code provides a class
-with the names and members Temper would have generated, and Temper uses it in
-place of generating one. No package dependencies here, so this runs everywhere.
-
-    @connected
-    export class Counter {
-      public add(i: Int): Void;
-      public total(): Int;
-    }
-
-    let counter = new Counter();
-    counter.add(2);
-    counter.add(3);
-    console.log("counter.total(): ${counter.total()}");
-
-```log
-counter.total(): 5
-```
