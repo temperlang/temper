@@ -280,6 +280,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.TestingAsserts)
 
     @Test
+    fun typesConnected() =
+        runFunctionalTest(Ft.TypesConnected)
+
+    @Test
     fun typesDate() =
         runFunctionalTest(Ft.TypesDate)
 

@@ -115,6 +115,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
             ),
         ),
     ),
+    TypesConnected(markdown("types/connected/connected.temper.md", "TypesConnected")),
     TypesDate(markdown("types/date/date.temper.md", "TypesDate")),
     TypesDenseBitVector(markdown("types/dense-bit-vector/dense-bit-vector.temper.md", "TypesDenseBitVector")),
     TypesDeque(markdown("types/deque/deque.temper.md", "TypesDeque")),

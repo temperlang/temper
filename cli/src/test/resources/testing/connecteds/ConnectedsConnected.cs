@@ -2,23 +2,20 @@ using R = Roaring.Net.CRoaring;
 
 namespace Connecteds
 {
-    static class ConnectedsConnected
+    public class Bitset
     {
-        internal static object NewBitsetConnected()
-        {
-            return new R::Roaring32Bitmap();
-        }
+        R::Roaring32Bitmap roaring = new R::Roaring32Bitmap();
 
-        internal static void BitsetAdd(object bitset, int i)
+        public void Add(int i)
         {
             // Two's complement is fine here, providing unique values.
-            ((R::Roaring32Bitmap)bitset).Add(unchecked((uint)i));
+            roaring.Add(unchecked((uint)i));
         }
 
-        internal static bool BitsetContains(object bitset, int i)
+        public bool Contains(int i)
         {
-            // Two's complement is fine here, providing unique values.
-            return ((R::Roaring32Bitmap)bitset).Contains(unchecked((uint)i));
+            // Again, two's complement is fine here.
+            return roaring.Contains(unchecked((uint)i));
         }
     }
 }

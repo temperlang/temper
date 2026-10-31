@@ -8,62 +8,25 @@ Got an AI recommendation to try RoaringBitmap as a 3rd-party dependency for
 connected testing. Expose it here as *Bitset*. In some ways, this is like
 Temper's *DenseBitVector*, but it's presumably more efficient for large cases.
 
-Because we don't yet support userspace connected types, just wrap an *AnyValue*
-and let backends handle that. But hide the actual class type under a sealed
-interface.
+Userspace connected types in Temper right now require implementing the type in
+host language code in a way that's compatible with Temper usage. If you want a
+large surface area with most code in Temper, then consider making an actual
+wrapped type internal, and use it from a public Temper type. Or possibly extend
+a `sealed` public Temper interface.
 
-    // TODO @connected on a class instead of needing to wrap things.
-    // TODO Fix rust internal impls of public sealed interfaces.
-    export /*sealed*/ interface Bitset {
+    @connected
+    export class Bitset {
       public add(i: Int): Void;
 
       public contains(i: Int): Boolean;
     }
-
-And keep the actual type hidden to avoid outside construction with a bad wrapped
-value. And we have to reference this type in exported module members to prevent
-Temper from pruning it today.
-
-    // TODO @connected
-    class BitsetWrapper(
-      private wrapped: AnyValue,
-    ) extends Bitset {
-      // TODO Also support connected instance and static methods.
-
-      public add(i: Int): Void {
-        bitsetAdd(wrapped, i);
-      }
-
-      public contains(i: Int): Boolean {
-        bitsetContains(wrapped, i)
-      }
-    }
-
-Since we don't yet support connected types or methods, make some top-level
-helpers here. The constructor needs to be exported. And make sure to reference
-the unexported subtype here.
-
-    export let newBitset(): Bitset {
-      new BitsetWrapper(newBitsetConnected())
-    }
-
-But our connected methods can be internal to the module.
-
-    @connected
-    let newBitsetConnected(): AnyValue;
-
-    @connected
-    let bitsetAdd(bitset: AnyValue, i: Int): Void;
-
-    @connected
-    let bitsetContains(bitset: AnyValue, i: Int): Boolean;
 
 ## Tests
 
 Just about any basic test of functionality will do here.
 
     test("bitset") {
-      let bitset = newBitset();
+      let bitset = new Bitset();
       // Check one we have.
       bitset.add(50);
       assert(bitset.contains(50));

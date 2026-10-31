@@ -2533,6 +2533,14 @@ class JsBackendTest {
                 |
                 |        @connected
                 |        export let length(s: String? = null): Int;
+                |
+                |        @connected
+                |        export class Box(
+                |          public width: Float64,
+                |          public height: Float64,
+                |        ) {
+                |          public area(): Float64;
+                |        }
                 |        ```,
                 |      _connected.js: ```
                 |        // Importing with "../" required here. See layout later for more.
@@ -2572,6 +2580,7 @@ class JsBackendTest {
             |            import {
             |              panic
             |            } from "@temperlang/core";
+            |            export const Box = _connected.Box;
             |            /**
             |             * @param {number} i_0
             |             * @returns {number}

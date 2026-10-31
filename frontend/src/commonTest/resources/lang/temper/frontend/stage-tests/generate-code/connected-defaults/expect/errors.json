@@ -1,0 +1,4 @@
+[
+    "Method scale of a connected class can't have default arguments, since host code implements it directly!",
+    "Method constructor of a connected class can't have default arguments, since host code implements it directly!"
+]

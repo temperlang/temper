@@ -127,6 +127,15 @@ val TmpL.Module.isStdLib: Boolean
         return config?.libraryName?.isStdLib == true
     }
 
+/**
+ * Whether this is a user's `@connected` type. Host code in the library's
+ * connected files provides it, with the names and members Temper would have
+ * generated, so backends generate no definition, only a binding to the host's
+ * type where the target language needs one.
+ */
+fun TmpL.TypeDeclaration.isUserConnected(module: TmpL.Module?): Boolean =
+    module?.isStdLib != true && metadata.any { it.key.symbol == connectedSymbol }
+
 val TmpL.Module.libraryName: DashedIdentifier?
     get() {
         val parent = this.parent as? TmpL.ModuleSet ?: return null

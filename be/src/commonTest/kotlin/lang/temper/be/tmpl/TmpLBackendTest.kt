@@ -2318,10 +2318,9 @@ class TmpLBackendTest {
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
             |  },
             |  errors: [
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
             |  ]
             |}
         """.trimMargin(),
@@ -2370,10 +2369,9 @@ class TmpLBackendTest {
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
             |  },
             |  errors: [
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
             |  ]
             |}
         """.trimMargin(),
@@ -2423,10 +2421,9 @@ class TmpLBackendTest {
             |    "uses.tmpl.map": "__DO_NOT_CARE__",
             |  },
             |  errors: [
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
             |  ]
             |}
         """.trimMargin(),
@@ -2499,11 +2496,11 @@ class TmpLBackendTest {
             |    foo.tmpl.map: "__DO_NOT_CARE__",
             |  },
             |  errors: [
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
             |  ]
             |}
         """.trimMargin(),
@@ -3764,9 +3761,8 @@ class TmpLBackendTest {
             |    "foo.tmpl.map": "__DO_NOT_CARE__",
             |  },
             |  errors: [
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
-            |    "At this time, users can connect only top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
+            |    "At this time, users can connect only classes or top-level functions!",
             |  ]
             |}
         """.trimMargin().stripDoubleHashCommentLinesToPutCommentsInlineBelow(),

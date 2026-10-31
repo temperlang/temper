@@ -15,6 +15,7 @@ import lang.temper.be.tmpl.cleanOutVoidVar
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.isNullValue
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isVoidish
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
@@ -699,6 +700,19 @@ class RustTranslator(
     }
 
     private fun processTypeDeclaration(decl: TmpL.TypeDeclaration) {
+        // The library's _connected.rs provides a user's connected class, so
+        // the class is just a name for it, re-exported from there.
+        if (decl.isUserConnected(module)) {
+            anyConnected = true
+            val pos = decl.pos
+            val hostName = decl.parsedTypeName?.symbol?.text ?: decl.name.name.rawDiagnostic
+            // As for connected functions: the root module's connected code
+            // hangs off the crate root, others' off their own module.
+            val base = if (isRoot) "crate" else "self"
+            val path = base.toKeyId(pos).extendWith("_connected".toId(pos)).extendWith(hostName.toId(pos))
+            moduleItems.add(Rust.Use(pos, path).toItem(pub = chooseVisibility(decl) ?: pubCrate(pos)))
+            return
+        }
         when (decl.kind) {
             TmpL.TypeDeclarationKind.Class -> processTypeDeclarationClass(decl)
             TmpL.TypeDeclarationKind.Enum -> {} // TODO

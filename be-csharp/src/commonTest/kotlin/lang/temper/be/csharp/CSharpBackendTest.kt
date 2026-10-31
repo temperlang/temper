@@ -1607,6 +1607,14 @@ class CSharpBackendTest {
                     |
                     |@connected
                     |export let length(s: String? = null): Int;
+                    |
+                    |@connected
+                    |export class Box(
+                    |  public width: Float64,
+                    |  public height: Float64,
+                    |) {
+                    |  public area(): Float64;
+                    |}
                 """.trimMargin(),
                 filePath("test", "IgnoreMe.txt") to """
                     |Hi there!!!

@@ -18,6 +18,7 @@ import lang.temper.be.tmpl.documentation
 import lang.temper.be.tmpl.isCommonlyImplied
 import lang.temper.be.tmpl.isPlainToString
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
@@ -274,7 +275,16 @@ class PyTranslator(
     private fun translate(t: TmpL.TopLevel): List<Py.Stmt> {
         return when (t) {
             is TmpL.GarbageTopLevel -> listOf(garbageStmt(t.pos, t.diagnostic))
-            is TmpL.TypeDeclaration -> classDef(t)
+            is TmpL.TypeDeclaration -> when {
+                // The library's __connected__.py provides a user's connected
+                // class, so the class is just a name for it.
+                t.isUserConnected(module) -> {
+                    val hostName = t.parsedTypeName?.symbol?.text ?: t.name.name.rawDiagnostic
+                    val host = Py.Name(t.pos, PyIdentifierName("_connected")).attribute(hostName)
+                    listOf(Py.Assign.simple(name(t.name), host))
+                }
+                else -> classDef(t)
+            }
             is TmpL.TypeConnection ->
                 listOf(Py.CommentLine(t.pos, "Type ${t.name.name} connected to ${t.to.typeName}"))
             is TmpL.PooledValueDeclaration -> listOf(Py.Assign.simple(name(t.name), expr(t.init)))

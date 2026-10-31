@@ -5,6 +5,7 @@ import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.mapParameters
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.referencedNames
@@ -3045,6 +3046,24 @@ class CppTranslator(
         headerTypeDecl: MutableList<Cpp.Global>,
         headerTypeDefs: MutableList<Cpp.Global>,
     ) {
+        // The library's _connected.hpp defines a user's connected class. The
+        // header only declares it, since _connected.hpp includes the header,
+        // and names it here; the source file includes _connected.hpp.
+        if (topLevel.isUserConnected(mod)) {
+            hasConnected = true
+            val hostNameText = topLevel.parsedTypeName?.symbol?.text ?: topLevel.name.name.rawDiagnostic
+            val hostName = cpp.singleName(hostNameText)
+            val connectedNamespace = cpp.singleName("_connected")
+            headerTypeDecl.add(cpp.namespace(connectedNamespace, listOf(cpp.structDecl(hostName))))
+            headerTypeDecl.add(
+                Cpp.TypeDef(
+                    topLevel.pos,
+                    cpp.scopedName(connectedNamespace, hostName.deepCopy()),
+                    cpp.name(topLevel.name),
+                ),
+            )
+            return
+        }
         val isInterface = topLevel.kind == TmpL.TypeDeclarationKind.Interface
         val superTypes = topLevel.superTypes
         // Populate type formal names for template struct
