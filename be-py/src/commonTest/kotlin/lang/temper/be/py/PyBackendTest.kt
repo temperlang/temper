@@ -1,6 +1,7 @@
 package lang.temper.be.py
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -122,6 +123,30 @@ class PyBackendTest {
             |        return a_19
             |    else:
             |        return b_20
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun toStringIsDunderStr() = assertGeneratedCode(
+        input = """
+            |export class Point(public x: Int) {
+            |  public toString(): String { "Point" }
+            |}
+        """.trimMargin(),
+        want = """
+            |from builtins import int as int0, str as str1
+            |class Point:
+            |    _x_4: 'int0'
+            |    __slots__ = ('_x_4',)
+            |    def to_string(this_0, /) -> 'str1':
+            |        return 'Point'
+            |    def __init__(this, /, x: 'int0') -> None:
+            |        this._x_4 = x
+            |    @property
+            |    def x(this_11, /) -> 'int0':
+            |        return this_11._x_4
+            |    __str__ = to_string
             |
         """.trimMargin(),
     )
@@ -540,20 +565,12 @@ class PyBackendTest {
         // But generate as good of code as we can, anyway.
         want = """
             |from typing import Any as Any1, Sequence as Sequence2
-            |from builtins import RuntimeError as RuntimeError3, isinstance as isinstance5, bool as bool6
-            |from temper_core import cast_by_type as cast_by_type4, list_get as list_get0
+            |from temper_core import cast_by_type as cast_by_type3, list_get as list_get0
+            |from builtins import isinstance as isinstance4, bool as bool5
             |_list_get_8 = list_get0
-            |def probe(thing_1: 'Any1', /) -> 'bool6':
-            |    things_3: 'Sequence2[Any1]'
-            |    if thing_1 is None:
-            |        raise RuntimeError3()
-            |    else:
-            |        things_3 = cast_by_type4(thing_1, Sequence2)
-            |    t_4: 'Any1' = _list_get_8(things_3, 0)
-            |    if not t_4 is None:
-            |        return isinstance5(t_4, Sequence2)
-            |    else:
-            |        return False
+            |def probe(thing_1: 'Any1', /) -> 'bool5':
+            |    things_3: 'Sequence2[Any1]' = cast_by_type3(thing_1, Sequence2)
+            |    return isinstance4(_list_get_8(things_3, 0), Sequence2)
             |
         """.trimMargin(),
         errors = listOf(
@@ -777,6 +794,16 @@ class PyBackendTest {
     )
 
     @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = PyBackend.Python3,
+        connectedFiles = mapOf(
+            "__connected__.py" to "class _connected:\n    def via_connected(i: int) -> int:\n        return i + 1\n",
+        ),
+        listedCall = "_connected.via_connected(",
+        unlistedCall = "_connected.via_body(",
+    )
+
+    @Test
     fun connected() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
@@ -792,6 +819,14 @@ class PyBackendTest {
             |
             |      @connected
             |      export let length(s: String? = null): Int;
+            |
+            |      @connected
+            |      export class Box(
+            |        public width: Float64,
+            |        public height: Float64,
+            |      ) {
+            |        public area(): Float64;
+            |      }
             |      ```,
             |    __connected__.py: ```
             |## All connected code goes into a single `_connected` namespace, using a class here.
@@ -837,22 +872,23 @@ class PyBackendTest {
             |              from builtins import int as int1, str as str3
             |              from typing import Union as Union2
             |              from temper_core import bubble as bubble0
-            |              _bubble_15 = bubble0
-            |              def sum(i_3: 'int1', j_4: 'int1', bonus_11: 'Union2[int1, None]' = None, /) -> 'int1':
-            |                  _bonus_11: 'Union2[int1, None]' = bonus_11
-            |                  bonus_5: 'int1'
-            |                  if _bonus_11 is None:
-            |                      bonus_5 = 0
+            |              _bubble_34 = bubble0
+            |              Box = _connected.Box
+            |              def sum(i_7: 'int1', j_8: 'int1', bonus_30: 'Union2[int1, None]' = None, /) -> 'int1':
+            |                  _bonus_30: 'Union2[int1, None]' = bonus_30
+            |                  bonus_9: 'int1'
+            |                  if _bonus_30 is None:
+            |                      bonus_9 = 0
             |                  else:
-            |                      bonus_5 = _bonus_11
+            |                      bonus_9 = _bonus_30
             |## Here's the connected call.
-            |                  return _connected.sum(i_3, j_4, bonus_5)
-            |              def inc(i_7: 'int1', /) -> 'int1':
-            |                  return sum(i_7, 1)
-            |              def length(s_9: 'Union2[str3, None]' = None, /) -> 'int1':
+            |                  return _connected.sum(i_7, j_8, bonus_9)
+            |              def inc(i_11: 'int1', /) -> 'int1':
+            |                  return sum(i_11, 1)
+            |              def length(s_13: 'Union2[str3, None]' = None, /) -> 'int1':
             |## And here we have a wasted assignment. TODO Clean this out?
-            |                  _s_9: 'Union2[str3, None]' = s_9
-            |                  return _connected.length(s_9)
+            |                  _s_13: 'Union2[str3, None]' = s_13
+            |                  return _connected.length(s_13)
             |
             |              ```,
             |          },

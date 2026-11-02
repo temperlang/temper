@@ -17,5 +17,9 @@ int32_t length(temper::core::NullableParam<std::string> s) {
     return s.has_value ? s.value.size() : -1;
 }
 
+std::int32_t twice(std::int32_t i) {
+    return i * 2;
+}
+
 } // namespace _connected
 } // namespace work

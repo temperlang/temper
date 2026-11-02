@@ -635,7 +635,7 @@ fun simplifyControlFlow(
                         val trueConditionIndex = block.size
                         val trueConditionPos = condition.pos.leftEdge
                         block.insert(at = trueConditionIndex) {
-                            V(trueConditionPos, TBoolean.valueTrue, WellKnownTypes.booleanType)
+                            V(trueConditionPos, TBoolean.valueTrue, WellKnownTypes.booleanType2)
                         }
                         condition = BlockChildReference(trueConditionIndex, trueConditionPos)
                     }

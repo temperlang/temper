@@ -81,7 +81,7 @@ class JsFunctionalTest : FunctionalTestRunner<JsBackend>(JsBackend.Factory) {
                     // assertTrue(ok) doesn't validate failing tests and prevents testing the test code.
                     assertTrue(!junitXml.isNullOrBlank())
                 } else {
-                    test.assertRunOutput(result)
+                    test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

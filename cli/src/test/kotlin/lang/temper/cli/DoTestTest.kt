@@ -302,6 +302,18 @@ class DoTestTest {
         )
     }
 
+    /** Checks that the backend config from `--no-connected` reaches the backend. */
+    @Test
+    fun connectedFallbackPyNoConnected() {
+        checkPassing(
+            name = "ConnectedFallbackPyNoConnected",
+            path = "/testing/connected-fallback",
+            backends = listOf(PyBackend.Python3.backendId),
+            libraryName = DashedIdentifier("connected-fallback"),
+            noConnected = true,
+        )
+    }
+
     @Test
     @Timeout(JAVA_TIMEOUT_SECONDS)
     fun testFailingRustBackend() = runWithCopyOfTestingDir(
@@ -455,10 +467,11 @@ private fun checkPassing(
     backends: List<BackendId>,
     libraryName: DashedIdentifier? = testLibraryName,
     verbose: Boolean = false,
+    noConnected: Boolean = false,
     extraChecks: (dir: Path, result: DoRunResult) -> Unit = { _, _ -> },
 ) {
     runWithTemporaryDirCopyOf(name, resourcePath(path)) { dir ->
-        val result = doTestResult(backends, name, dir, libraryName, verbose = verbose)
+        val result = doTestResult(backends, name, dir, libraryName, verbose = verbose, noConnected = noConnected)
         when (val tally = result.testTally) {
             null -> fail("No test tally")
             else -> when (val defined = tally.defined) {
@@ -478,6 +491,7 @@ private fun doTestResult(
     workRoot: Path,
     libraryName: DashedIdentifier?,
     verbose: Boolean = false,
+    noConnected: Boolean = false,
 ): DoRunResult {
     val cliConsole = Console(console.textOutput)
     if (verbose) { cliConsole.setLogLevel(Log.Fine) }
@@ -501,6 +515,7 @@ private fun doTestResult(
         workRoot = workRoot,
         ignoreFile = null,
         shellPreferences = shellPreferences,
+        backendConfig = backendConfigFor(noConnected = noConnected),
         moduleConfig = ModuleConfig.default,
         runTask = RunTask(
             request = RunTestsRequest(

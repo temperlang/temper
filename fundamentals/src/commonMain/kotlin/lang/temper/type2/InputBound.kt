@@ -16,6 +16,11 @@ import lang.temper.value.TEdge
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
 
+/**
+ * Information about constraints on an input expression's type
+ * implied by properties of the input expression and independent of the
+ * call to which it is an input.
+ */
 sealed interface InputBound : Positioned, TokenSerializable {
     fun solvedType(typeSolver: TypeSolver): PositionedType
 

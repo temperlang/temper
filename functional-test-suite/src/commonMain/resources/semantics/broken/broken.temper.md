@@ -10,6 +10,7 @@ backends, anyway.
 @meta:arg allowedErrors = setOf(
 @meta:arg     "BecauseNameUndeclared",
 @meta:arg     "BecauseTypeInfoMissing",
+@meta:arg     MessageTemplate.ExpectedFunctionType.name,
 @meta:arg     MessageTemplate.IllegalAssignment.name,
 @meta:arg     MessageTemplate.SignatureInputMismatch.name,
 @meta:arg     MessageTemplate.CannotTranslate.name,

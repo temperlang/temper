@@ -196,7 +196,7 @@ enum class MessageTemplate(
         CompilationPhase.Interpreter,
     ),
     IncompatibleVisibility(
-        "Type %s has method %s but it's visibility is %s which is narrower than the method it overrides in %s",
+        "Type %s has method %s but its visibility is %s which is narrower than the method it overrides in %s",
         CompilationPhase.Interpreter,
     ),
     IncompatibleSignature(
@@ -241,8 +241,20 @@ enum class MessageTemplate(
         "Function body required except for virtual methods or connected functions",
         CompilationPhase.CodeGeneration,
     ),
-    UserConnectedNotFun(
-        "At this time, users can connect only top-level functions",
+    UserConnectedNotClassOrFun(
+        "At this time, users can connect only classes or top-level functions",
+        CompilationPhase.CodeGeneration,
+    ),
+    ConnectedMethodDefaults(
+        "Method %s of a connected class can't have default arguments, since host code implements it directly",
+        CompilationPhase.Interpreter,
+    ),
+    UserConnectedBackendsNotNames(
+        "@connected expects a list of backend names, like [\"cpp\", \"rust\"], not %s",
+        CompilationPhase.Interpreter,
+    ),
+    UserConnectedBackendsNeedBody(
+        "A @connected function that lists backends needs a Temper body for the backends not listed",
         CompilationPhase.CodeGeneration,
     ),
     CannotExtend(
@@ -370,6 +382,10 @@ enum class MessageTemplate(
     ),
     ExpectedNonVoid(
         "Void expressions cannot be used as values",
+        CompilationPhase.Interpreter,
+    ),
+    TypeNotAllowedAsInput(
+        "Type %s not allowed as an input to a function call",
         CompilationPhase.Interpreter,
     ),
     ExpectedNoBubble(

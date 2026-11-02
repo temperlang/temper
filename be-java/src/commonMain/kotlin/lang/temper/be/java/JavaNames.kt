@@ -440,10 +440,10 @@ class JavaNames private constructor(
         error("Many name collisions with $base")
     }
 
-    fun samType(funcType: Signature2): Sam =
-        sams.getOrPut(funcType) {
-            Sam.standard(funcType)
-                ?: Sam.synthetic(syntheticSamName(funcType), funcType, pkg = currentModuleInfo!!.samPkg)
+    fun samType(sig: Signature2): Sam =
+        sams.getOrPut(sig) {
+            Sam.standard(sig)
+                ?: Sam.synthetic(syntheticSamName(sig), sig, pkg = currentModuleInfo!!.samPkg)
         }
 
     private var ignoredCounter = 1

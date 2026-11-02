@@ -24,6 +24,7 @@ import lang.temper.value.Value
 import lang.temper.value.elseIfSymbol
 import lang.temper.value.elseSymbol
 import lang.temper.value.nameContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.valueContained
 import lang.temper.value.void
 
@@ -153,7 +154,6 @@ internal object IfTransform : ControlFlowTransform("if") {
         val elseIfHandlerValue = Value(elseIfHandler)
         val elseHandlerValue = Value(elseHandler)
 
-        @Suppress("AssignedValueIsNeverRead") // It's read below.
         followChain = { subCursor ->
             val handler = when {
                 subCursor.consumeSymbol(elseIfSymbol) -> elseIfHandlerValue
@@ -269,7 +269,7 @@ private fun anyExhaustiveSealedType(branches: MutableList<Pair<TEdge?, TEdge>>):
             else if checkedName != nextCheckedName -> break@branches
             else -> {}
         }
-        val subtype = condition.childOrNull(2)?.valueContained?.stateVector as? ReifiedType ?: continue@branches
+        val subtype = condition.childOrNull(2)?.reifiedTypeContained ?: continue@branches
         val subdef = subtype.type2.definition
         supertypes@ for (supertype in subdef.superTypes) {
             val supershape = supertype.definition as? TypeShape

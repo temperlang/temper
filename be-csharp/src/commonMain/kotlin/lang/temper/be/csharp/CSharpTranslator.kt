@@ -10,7 +10,9 @@ import lang.temper.be.tmpl.TypedArg
 import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.isCommonlyImplied
+import lang.temper.be.tmpl.isPlainToString
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isYieldingStatement
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapParameters
@@ -728,6 +730,11 @@ internal class CSharpTranslator(
     }
 
     private fun processTypeDeclaration(decl: TmpL.TypeDeclaration) {
+        // A connected user type is hand-written C# with the same name and
+        // members, in the library's connected code, so generate nothing.
+        if (decl.isUserConnected(module)) {
+            return
+        }
         typeDeclarationInProcess = decl
         try {
             // Extract getters and setters so we can pair them.
@@ -1724,6 +1731,12 @@ internal class CSharpTranslator(
                         pos.leftEdge,
                         modAccess = modAccess,
                         modStatic = modStatic,
+                        modNew = when {
+                            // Override `object.ToString` rather than hide it, so `$"{x}"` and
+                            // `Console.WriteLine(x)` use it, unless renamed above.
+                            method.isPlainToString() && id === wantedId -> CSharp.ModNew.Override
+                            else -> CSharp.ModNew.Implied
+                        },
                     ),
                     typeParameters = typeParameters.map { it.second },
                     parameters = parameters,

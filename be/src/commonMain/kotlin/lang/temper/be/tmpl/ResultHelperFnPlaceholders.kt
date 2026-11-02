@@ -5,12 +5,11 @@ import lang.temper.builtin.makeTypeFormal
 import lang.temper.env.InterpMode
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.type2.mapType
 import lang.temper.value.ActualValues
 import lang.temper.value.BasicTypeInferences
@@ -25,7 +24,6 @@ import lang.temper.value.PartialResult
 import lang.temper.value.Tree
 import lang.temper.value.Value
 import lang.temper.value.ValueLeaf
-import lang.temper.value.typeFromSignature
 
 object ResultHelperFnPlaceholders {
     private const val IS_OK_RESULT_NAME = "isOkResult"
@@ -156,26 +154,25 @@ internal fun synthesizeCall(
     pos: Position,
     callee: CallableValue,
     args: List<Tree>,
-    returnType: StaticType? = null,
+    returnType: Type2? = null,
     typeActuals: List<Type2> = listOf(),
 ): CallTree {
     val sig = callee.sigs!![0]
 
     val calleeTree = ValueLeaf(doc, pos, Value(callee))
-    calleeTree.typeInferences = BasicTypeInferences(typeFromSignature(sig), listOf())
+    calleeTree.typeInferences = BasicTypeInferences(AdHocArrowTypes.definedTypeForSig(sig), listOf())
     val call = CallTree(doc, pos, listOf(calleeTree) + args)
     val bindings2 = buildMap {
         for ((f, a) in sig.typeFormals zip typeActuals) {
             this[f] = a
         }
     }
-    val bindings = bindings2.mapValues { hackMapNewStyleToOld(it.value) }
     val returnType = returnType
-        ?: hackMapNewStyleToOld(sig.returnType2.mapType(bindings2))
+        ?: sig.returnType2.mapType(bindings2)
     call.typeInferences = CallTypeInferences(
         returnType,
         sig,
-        bindings,
+        bindings2,
         listOf(),
     )
     return call

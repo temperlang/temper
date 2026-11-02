@@ -1,16 +1,24 @@
 package lang.temper.interp
 
+import lang.temper.builtin.Types
 import lang.temper.common.Log
+import lang.temper.env.InterpMode
 import lang.temper.log.MessageTemplate
 import lang.temper.name.Symbol
+import lang.temper.type.Abstractness
+import lang.temper.type.TypeShape
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
+import lang.temper.value.Fail
 import lang.temper.value.FunTree
 import lang.temper.value.MacroActuals
+import lang.temper.value.NotYet
 import lang.temper.value.Tree
 import lang.temper.value.Value
+import lang.temper.value.connectedBackendsFrom
 import lang.temper.value.connectedSymbol
 import lang.temper.value.initSymbol
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.void
@@ -18,32 +26,66 @@ import lang.temper.value.void
 /**
  * <!-- snippet: builtin/@connected -->
  * # `@connected` decorator
- * Connect types, members, and functions to native code. Each backend defines
+ * Connect types, members, and functions to backend code. Each backend defines
  * specific conventions for connected backend code. Internal backend translation
  * logic can also key on the QName of connected entities.
+ *
+ * A connected function may have a Temper body, its reference implementation,
+ * and list the backends that have connected code for it. Other backends, and the
+ * interpreter, use the body.
+ *
+ * ```temper inert
+ * @connected(["cpp", "rust"])
+ * export let foldCase(c: Int): Int {
+ *   // ... pure Temper ...
+ * }
+ * ```
+ *
+ * A listed backend must supply connected code, and `--no-connected` makes every
+ * backend use bodies wherever they exist. Without a list, every backend must
+ * supply connected code, and the body, if any, serves only the interpreter.
+ * An empty list, as in `@connected([])`, names no backend with backend code,
+ * so every backend uses the body.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,
+    optionalArgumentTypes = listOf(Types.anyValue),
     findDecoratorInsertions = ::findConnectedDecoratorInsertions,
-) { args ->
-    // Whether we have errors or not, move on with a void value.
-    void.also check@{
-        isProcessingCore && return@check
-        // At this stage, we don't need the location context.
-        isProcessingStd(sharedLocationContext = null) && return@check
-        val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
-        when {
-            typeDeclSymbol in metadata -> {
-                log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
+) decoratedValue@{ args ->
+    // An optional list of backends with connected code, as in `@connected(["cpp", "rust"])`,
+    // gets stored as the metadata value. See FnParts.connectedBackends.
+    // Partial interpretation doesn't build lists, so evaluate fully.
+    val backends: Value<*> = when (args.size) {
+        1 -> void
+        else -> when (val listResult = args.evaluate(1, InterpMode.Full)) {
+            is NotYet, is Fail -> return@decoratedValue listResult
+            is Value<*> -> when (connectedBackendsFrom(listResult)) {
+                null -> {
+                    // Report it but keep the declaration, connected as if without a list.
+                    log(Log.Error, MessageTemplate.UserConnectedBackendsNotNames, args.pos(1), listOf(listResult))
+                    void
+                }
+                else -> listResult
             }
-            else -> when (metadata[initSymbol]?.target) {
+        }
+    }
+    // Whether we have errors or not, move on.
+    backends.also check@{
+        // Only user code is checked: Core and std use connected features their own way.
+        isProcessingUserCode || return@check
+        val metadata = (args.rawTreeList.first() as? DeclTree)?.parts?.metadataSymbolMap ?: return@check
+        when (val type = metadata[typeDeclSymbol]?.reifiedTypeContained) {
+            null -> when (metadata[initSymbol]?.target) {
                 is FunTree -> {
                     // Neither instance nor static methods get in here because of different tree structures.
                     // That's good for now.
                 }
                 else -> {
-                    log(Log.Error, MessageTemplate.UserConnectedNotFun, pos, listOf())
+                    log(Log.Error, MessageTemplate.UserConnectedNotClassOrFun, pos, listOf())
                 }
+            }
+            else -> if ((type.type2.definition as? TypeShape)?.abstractness != Abstractness.Concrete) {
+                log(Log.Error, MessageTemplate.UserConnectedNotClassOrFun, pos, listOf())
             }
         }
     }

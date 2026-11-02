@@ -124,6 +124,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
     override fun runFunctionalTest(
         test: FunctionalTestBase,
         verbose: Boolean,
+        noConnected: Boolean,
     ) {
         val backendId = factory.backendId
         val diagnosticPreferences = getDiagnosticPreferences(test)
@@ -165,6 +166,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
                 preparedModules = preparedModules,
                 test = test,
                 adjusterFactory = backendOrganization.adjusterFactories[neededBackendId],
+                noConnected = noConnected,
             )
         }
 
@@ -210,6 +212,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
         preparedModules: PreparedFunctionalTest,
         test: FunctionalTestBase,
         adjusterFactory: BackendAdjusterFactory?,
+        noConnected: Boolean,
     ) = run {
         val supportedBackendList = listOf(backendId)
         val functionalTestLibraryConfiguration = LibraryConfiguration(
@@ -238,7 +241,7 @@ abstract class FunctionalTestRunner<BACKEND : Backend<BACKEND>>(
             Backend.Config.bundledWithMeta
         } else {
             Backend.Config.production
-        }
+        }.copy(noConnected = noConnected)
 
         val partitionedModules =
             if (needsBundling) {

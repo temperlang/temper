@@ -314,6 +314,9 @@ class JavaBackend private constructor(
 
     override val supportNetwork: SupportNetwork = factory.lang.supportNetwork
 
+    /** Every Java backend shares the same connected Java files, so `"java"` covers `java8`, too. */
+    override val connectedBackendNames: Set<String> get() = setOf("java", backendId.uniqueId)
+
     @PluginBackendId("java8")
     @BackendSupportLevel(isSupported = true, isTested = true)
     data object Java8 : JavaFactory(JavaLang.Java8)

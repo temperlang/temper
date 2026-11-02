@@ -1,5 +1,6 @@
 package lang.temper.be.cpp
 
+import lang.temper.common.TriState
 import lang.temper.format.FormattingHints
 import lang.temper.format.OutputToken
 import lang.temper.format.OutputTokenType
@@ -40,6 +41,13 @@ internal class CppFormattingHints : FormattingHints {
         }
         return super.spaceBetween(preceding, following)
     }
+
+    override fun shouldBreakBetween(preceding: OutputToken, following: OutputToken): TriState =
+        if (following === CppToks.calledInPlace) {
+            TriState.FALSE
+        } else {
+            super.shouldBreakBetween(preceding, following)
+        }
 
     override val localLevelIndents: Boolean
         get() = false

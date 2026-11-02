@@ -9,6 +9,7 @@ import lang.temper.be.tmpl.canBeNull
 import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.implicitTypeTag
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.parameterDefaultStatementsInfo
 import lang.temper.be.tmpl.withoutBubbleOrNull
@@ -2205,6 +2206,19 @@ private class ModuleParts(
             Lua.Name(stmt.name.pos, name)
         }
         needsPreDecl.add(name)
+        // The library's _connected.lua provides a user's connected class, so
+        // the class is just a name for it.
+        if (stmt.isUserConnected(mod)) {
+            anyConnected = true
+            val hostName = stmt.parsedTypeName?.symbol?.text ?: stmt.name.name.rawDiagnostic
+            return listOf(
+                Lua.SetStmt(
+                    stmt.pos,
+                    Lua.SetTargets(stmt.name.pos, listOf(Lua.NameSetTarget(stmt.name.pos, typeName()))),
+                    Lua.Exprs(stmt.pos, listOf("_connected".asName(stmt.pos).dot(hostName))),
+                ),
+            )
+        }
         ret.add(
             Lua.SetStmt(
                 stmt.pos,

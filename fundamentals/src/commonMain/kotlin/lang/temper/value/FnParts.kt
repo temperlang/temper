@@ -52,6 +52,15 @@ class FnParts internal constructor(
         else -> null
     }
 
+    /**
+     * The backends named by `@connected(["cpp", "rust"])`, which have connected code for this
+     * function, while others use its Temper body. Null for a plain `@connected` or none.
+     */
+    val connectedBackends: List<String>? get() = when {
+        connected -> connectedBackendsFrom(metadataSymbolMap[connectedSymbol]?.target?.valueContained)
+        else -> null
+    }
+
     val mayYield: Boolean? get() = when {
         superTypes.superTypeTree[WellKnownTypes.generatorFnTypeDefinition].isNotEmpty() -> true
         superTypes.isComplete -> false
@@ -144,3 +153,10 @@ data class SuperTypeParts(
 ) {
     val isComplete: Boolean get() = incomplete.isEmpty()
 }
+
+/**
+ * Unpacks the backend names that the `@connected` decorator stores as metadata, or null if
+ * [metadataValue] isn't a list, as for a plain `@connected` with no list.
+ */
+fun connectedBackendsFrom(metadataValue: Value<*>?): List<String>? =
+    TList.unpackOrNull(metadataValue)?.map { TString.unpackOrNull(it) ?: return null }

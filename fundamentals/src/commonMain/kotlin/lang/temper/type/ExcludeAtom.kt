@@ -3,6 +3,7 @@ package lang.temper.type
 import lang.temper.type2.DefinedType
 import lang.temper.type2.Nullity
 import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 
@@ -21,6 +22,20 @@ fun excludeBubble(t: Type2): Type2 =
     } else {
         null
     } ?: t
+
+/** `Never<T>` -> `T`, `Never<U>? -> `U?` */
+fun excludeNever(t: Type2): Type2 {
+    var unwrapped = t
+    // Never should not nest as in Never<Never<U>> but it costs us nothing to normalize here.
+    while (unwrapped.definition == WellKnownTypes.neverTypeDefinition && unwrapped.bindings.size == 1) {
+        val arg = unwrapped.bindings[0]
+        unwrapped = when (unwrapped.nullity) {
+            Nullity.NonNull -> arg
+            Nullity.OrNull -> arg.withNullity(Nullity.OrNull)
+        }
+    }
+    return unwrapped
+}
 
 /** The composition of [excludeNull] and [excludeBubble] */
 fun excludeNullAndBubble(t: StaticType): StaticType =
@@ -44,6 +59,8 @@ fun canBeNull(t: StaticType): Boolean = anyAtom(t) {
         null -> false
     }
 }
+
+fun canBeNull(t: Type2): Boolean = TypeContext2.admitsNull(t)
 
 fun excludeAtom(t: StaticType, exclude: (StaticType) -> Boolean): StaticType {
     if (exclude(t)) {

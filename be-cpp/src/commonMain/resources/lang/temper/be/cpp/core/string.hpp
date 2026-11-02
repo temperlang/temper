@@ -1,5 +1,8 @@
 #pragma once
 #include <cctype>
+#include <cerrno>
+#include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -303,15 +306,18 @@ namespace temper {
                 if (i != trimmed.size()) {
                     bubble("invalid float");
                 }
-                try {
-                    return std::stod(trimmed);
+                // Not std::stod: it throws out_of_range whenever strtod sets ERANGE, and strtod
+                // sets ERANGE for a result that underflows, subnormal or rounded to zero, as well
+                // as for one that overflows. The grammar check above leaves only range errors.
+                // An underflowing result is the nearest double, as on the other backends.
+                // An overflowing one still bubbles, as before and as on py; whether it should be
+                // Infinity instead is undecided (#557).
+                errno = 0;
+                double result = std::strtod(trimmed.c_str(), nullptr);
+                if (errno == ERANGE && std::isinf(result)) {
+                    bubble("invalid float");
                 }
-                catch (const TemperBubble&) {
-                    throw;
-                }
-                catch (const std::exception&) {
-                    bubble<double>("invalid float");
-                }
+                return result;
             }
 
             inline int32_t toInt32(const std::string& s) {

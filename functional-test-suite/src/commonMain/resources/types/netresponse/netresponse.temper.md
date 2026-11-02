@@ -17,17 +17,18 @@ injected automatically into functional tests.
 
         if (resp.status == 200) {
           let body: String = (await resp.bodyContent) ?? "missing";
-          // Either option above echoes at least some request info.
-          let bodyChar0 = String.fromCodePoint(body[String.begin]);
-          console.log("Thanks, server.  I got '${bodyChar0}'.");
+          // The local server echoes the method and whether the request's
+          // Content-Type was the one given to `post`.
+          console.log("Thanks, server.  I got ${body}.");
         } else {
           console.log("HTTP status was not 200: ${resp.status.toString()}!");
         }
       } orelse console.log("failed");
     }
 
-The server should respond with some json object.
+The server should respond with a json object saying it got a POST
+with a JSON body.
 
 ```log
-Thanks, server.  I got '{'.
+Thanks, server.  I got {"method": "POST", "json": true}.
 ```

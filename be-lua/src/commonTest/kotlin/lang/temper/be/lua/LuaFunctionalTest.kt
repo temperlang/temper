@@ -53,7 +53,7 @@ class LuaFunctionalTest : FunctionalTestRunner<LuaBackend>(LuaBackend.Lua51) {
                 if (test.runAsTest) {
                     assertTestingTest(test, result, Regex("""Test_\.test_(.*?)(?:__\d+)?"""))
                 } else {
-                    test.assertRunOutput(result)
+                    test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

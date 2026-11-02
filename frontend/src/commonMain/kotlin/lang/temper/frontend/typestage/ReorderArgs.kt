@@ -5,7 +5,7 @@ import lang.temper.common.subListToEnd
 import lang.temper.env.InterpMode
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LazyActualsList
-import lang.temper.type.FunctionType
+import lang.temper.type2.Signature2
 import lang.temper.value.CallTree
 import lang.temper.value.IdentityActualOrder
 import lang.temper.value.TNull
@@ -18,7 +18,7 @@ import lang.temper.value.freeTree
 
 internal class ReorderArgs(
     private val root: Tree,
-    private val variantForCall: (CallTree) -> FunctionType? = { null },
+    private val variantForCall: (CallTree) -> Signature2? = { null },
 ) {
     fun process() {
         walk(root)
@@ -37,14 +37,14 @@ internal class ReorderArgs(
     fun reorderCallTreeArgs(tree: CallTree) {
         // First see if anything is out of order (which could include outright errors) before doing expensive work.
         val variant = variantForCall(tree)
-            ?: tree.typeInferences?.variant as? FunctionType
+            ?: tree.typeInferences?.variant
             ?: return
         doReorderedCall(tree, variant)
     }
 
-    internal fun doReorderedCall(tree: CallTree, functionType: FunctionType) {
+    internal fun doReorderedCall(tree: CallTree, sig: Signature2) {
         // Adapt static type information to DynamicMessage to share reordering logic.
-        val args = buildPositionalArgs(tree, functionType) ?: return
+        val args = buildPositionalArgs(tree, sig) ?: return
         tree.replace(tree.indices) {
             for (preArgIndex in 0 until tree.firstArgumentIndex) {
                 Replant(freeTree(tree.child(preArgIndex)))
@@ -55,9 +55,9 @@ internal class ReorderArgs(
         }
     }
 
-    fun buildPositionalArgs(callTree: CallTree, functionType: FunctionType): List<Tree>? {
+    fun buildPositionalArgs(callTree: CallTree, sig: Signature2): List<Tree>? {
         val order = (
-            applicationOrderForActuals(actualsListFromTree(callTree), functionType)
+            applicationOrderForActuals(actualsListFromTree(callTree), sig)
                 as? Either.Left
             )?.item
         if (order is IdentityActualOrder?) { return null } // No reorder needed

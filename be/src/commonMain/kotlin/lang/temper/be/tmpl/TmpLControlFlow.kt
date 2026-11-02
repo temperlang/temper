@@ -30,7 +30,6 @@ import lang.temper.name.name
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.value.BasicTypeInferences
 import lang.temper.value.BlockChildReference
 import lang.temper.value.BlockTree
@@ -65,8 +64,8 @@ import lang.temper.value.isBubbleCall
 import lang.temper.value.isEmptyBlock
 import lang.temper.value.isPanicCall
 import lang.temper.value.jumpKind
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.ssaSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.toLispy
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeDeclSymbol
@@ -544,7 +543,7 @@ internal sealed class PreTranslated : Positioned {
                 // We're expecting to return a backend-specific result value, so we need to
                 // pack up any passing result as a result.
                 val returnedTree = returned.tree
-                val returnedType = returnedTree.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+                val returnedType = returnedTree.typeInferences?.type
                 if (returnedType?.definition != WellKnownTypes.resultTypeDefinition) {
                     // Check whether we're packing up a result.  It would be odd to pack a result
                     // and then unpack it.
@@ -1134,9 +1133,7 @@ private fun fixupBlockContent(stmts: List<PreTranslated>): List<PreTranslated> {
         val typeMetadata = metadata[fromTypeSymbol]
             ?: metadata[typePlaceholderSymbol]
             ?: continue
-        val type = typeMetadata.target.staticTypeContained?.let {
-            hackMapOldStyleToNew(it)
-        }
+        val type = typeMetadata.target.reifiedTypeContained?.type2
         if (type is DefinedNonNullType) {
             typesDeclared.add(type.definition)
         }
@@ -1480,7 +1477,7 @@ private fun removeReferencesAndAssignmentsToVoid(
         private fun makeEmptyValueWrapper(tree: Tree): PreTranslated.TreeWrapper {
             val valueLeaf = ValueLeaf(tree.document, tree.pos, emptyValue)
             valueLeaf.typeInferences = BasicTypeInferences(
-                WellKnownTypes.emptyType,
+                WellKnownTypes.emptyType2,
                 emptyList(),
             )
             return PreTranslated.TreeWrapper(valueLeaf)
@@ -1584,7 +1581,7 @@ private fun migrateConstAssignmentsOutOfTryCatch(
                             is ResolvedParsedName -> name.baseName
                             else -> ParsedName("t")
                         },
-                    ) to hackMapOldStyleToNew(sharedNameTables.typeInferencesForName.getValue(name).type)
+                    ) to sharedNameTables.typeInferencesForName.getValue(name).type
                 }
             }
         }

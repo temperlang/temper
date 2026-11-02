@@ -16,5 +16,10 @@ namespace Work
         {
             return s?.Length ?? -1;
         }
+
+        internal static int Twice(int i)
+        {
+            return i * 2;
+        }
     }
 }

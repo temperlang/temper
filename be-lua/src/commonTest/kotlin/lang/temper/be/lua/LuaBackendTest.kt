@@ -1,6 +1,7 @@
 package lang.temper.be.lua
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.FilePath
@@ -468,6 +469,17 @@ class LuaBackendTest {
     )
 
     @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = LuaBackend.Lua51,
+        connectedFiles = mapOf(
+            // Lua inlines this, so define it without looking like a call.
+            "_connected.lua" to "local _connected = {}\n_connected.viaConnected = function(i) return i + 1 end\n",
+        ),
+        listedCall = "_connected.viaConnected(",
+        unlistedCall = "_connected.viaBody(",
+    )
+
+    @Test
     fun connected() = assertGeneratedLua(
         inputs = listOf(
             filePath("something", "something.temper") to """
@@ -484,6 +496,14 @@ class LuaBackendTest {
                 |
                 |@connected
                 |export let length(s: String? = null): Int;
+                |
+                |@connected
+                |export class Box(
+                |  public width: Float64,
+                |  public height: Float64,
+                |) {
+                |  public area(): Float64;
+                |}
             """.trimMargin(),
             filePath("something", "deeper", "more-fun.temper") to """
                 |export let prod(i: Int, j: Int): Int {
@@ -514,7 +534,7 @@ class LuaBackendTest {
             |            "something-internal.lua": {
             |                "content": ```
             |                  local temper = require('temper-core');
-            |                  local prod, twice, sum, inc, length, exports;
+            |                  local prod, Box, twice, sum, inc, length, exports;
             |## Inline connected code *after* locals are defined to allow access from connected code.
             |                  local _connected = {}
             |                  do
@@ -525,6 +545,7 @@ class LuaBackendTest {
             |                  end
             |## Then other translated code follows, noting that things aren't defined during *init* above.
             |                  prod = temper.import('my-test-library/something/deeper', 'prod');
+            |                  Box = _connected.Box;
             |                  twice = function(i__0)
             |                    return prod(i__0, 2);
             |                  end;
@@ -547,6 +568,7 @@ class LuaBackendTest {
             |                    return _connected.length(s__0);
             |                  end;
             |                  exports = {};
+            |                  exports.Box = Box;
             |                  exports.twice = twice;
             |                  exports.sum = sum;
             |                  exports.inc = inc;

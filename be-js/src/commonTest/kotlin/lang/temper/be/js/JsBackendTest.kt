@@ -2,6 +2,7 @@
 
 package lang.temper.be.js
 
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.filePath
@@ -1434,7 +1435,7 @@ class JsBackendTest {
             |    "my-test-library": {
             |      "foo.internal.js": {
             |        content: ```
-            |          /** @returns {void} */
+            |          /** @returns {never} */
             |          export function f() {
             |            throw Error();
             |          };
@@ -1733,7 +1734,7 @@ class JsBackendTest {
             |        content:
             |          ```
             |          import {
-            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, panic, runAsync
+            |            globalConsole as globalConsole_0, PromiseBuilder as PromiseBuilder_0, adaptAwaiter as adaptAwaiter_0, runAsync
             |          } from "@temperlang/core";
             |          /** @type {Console_0} */
             |          export const console = globalConsole_0;
@@ -1747,7 +1748,7 @@ class JsBackendTest {
             |              try {
             |                t_0 = yield await_0(p);
             |              } catch {
-            |                t_0 = panic();
+            |                throw Error();
             |              }
             |              console.log(t_0);
             |          });
@@ -2502,6 +2503,16 @@ class JsBackendTest {
     )
 
     @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = JsBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.js" to "export const viaConnected = (i) => i + 1;\n",
+        ),
+        listedCall = "_connected.viaConnected(",
+        unlistedCall = "_connected.viaBody(",
+    )
+
+    @Test
     fun connected() = assertGeneratedCode(
         inputs = inputFileMapFromJson(
             """
@@ -2522,6 +2533,14 @@ class JsBackendTest {
                 |
                 |        @connected
                 |        export let length(s: String? = null): Int;
+                |
+                |        @connected
+                |        export class Box(
+                |          public width: Float64,
+                |          public height: Float64,
+                |        ) {
+                |          public area(): Float64;
+                |        }
                 |        ```,
                 |      _connected.js: ```
                 |        // Importing with "../" required here. See layout later for more.
@@ -2561,6 +2580,7 @@ class JsBackendTest {
             |            import {
             |              panic
             |            } from "@temperlang/core";
+            |            export const Box = _connected.Box;
             |            /**
             |             * @param {number} i_0
             |             * @returns {number}

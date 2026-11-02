@@ -5,16 +5,14 @@ import lang.temper.builtin.RttiCheckFunction
 import lang.temper.builtin.RuntimeTypeOperation
 import lang.temper.interp.errorNodeFor
 import lang.temper.log.Position
-import lang.temper.type.BubbleType
-import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
+import lang.temper.type2.MkType2
 import lang.temper.type2.NonNullType
 import lang.temper.type2.Nullity.NonNull
+import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
-import lang.temper.type2.hackMapNewStyleToOld
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.BubbleFn
@@ -36,7 +34,6 @@ import lang.temper.value.freeTree
 import lang.temper.value.functionContained
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.ssaSymbol
-import lang.temper.value.typeFromSignature
 import lang.temper.value.vIsNullFn
 import lang.temper.value.void
 
@@ -366,36 +363,31 @@ private fun Planting.plantCheck(
     V(
         targetPos,
         Value(ReifiedType(targetType), TType),
-        WellKnownTypes.typeType,
+        WellKnownTypes.typeType2,
     )
 }
 
 private fun callTypeForCheck(targetType: Type2, expr: Tree): CallTypeInferences? {
     val exprType = expr.typeInferences?.type ?: return null
-    val targetTypeOrBubble = MkType.or(hackMapNewStyleToOld(targetType), BubbleType)
-    val variant = MkType.fn(
-        emptyList(),
-        listOf(exprType),
+    val targetTypeOrBubble =
+        MkType2.result(targetType, WellKnownTypes.bubbleType2).get()
+    val variant = Signature2(
         targetTypeOrBubble,
+        false,
+        listOf(exprType),
     )
     return CallTypeInferences(targetTypeOrBubble, variant, mapOf(), listOf())
 }
 
 private fun bubbleFnCallTypeInferences(neverType: Type2): CallTypeInferences {
-    val neverTypeOld = hackMapNewStyleToOld(neverType)
     val (variant, bindings) = if (neverType.isVoidLike) {
         BubbleFn.sigs[0] to mapOf()
     } else {
         BubbleFn.sigs[1].let {
-            it to mapOf(it.typeFormals[0] to neverTypeOld)
+            it to mapOf(it.typeFormals[0] to neverType)
         }
     }
-    return CallTypeInferences(
-        neverTypeOld,
-        typeFromSignature(variant),
-        bindings,
-        listOf(),
-    )
+    return CallTypeInferences(neverType, variant, bindings, listOf())
 }
 
 internal fun preferSafeCastOps(rttiCall: CallTree, typeContext: TypeContext2) {
@@ -407,7 +399,7 @@ internal fun preferSafeCastOps(rttiCall: CallTree, typeContext: TypeContext2) {
 
     val target = targetTree.reifiedTypeContained ?: return
     val targetType = target.type2
-    val sourceType = expr.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+    val sourceType = expr.typeInferences?.type
         ?: return
     // Assume the null check has already been separated out.
     val targetTypeNotNull = targetType.withNullity(NonNull)

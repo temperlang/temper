@@ -24,7 +24,6 @@ import lang.temper.type.DotHelper
 import lang.temper.type.ExternalSet
 import lang.temper.type.InternalSet
 import lang.temper.type.ThisSet
-import lang.temper.type.TypeContext
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.TypeContext2
 import lang.temper.value.BasicTypeInferences
@@ -33,6 +32,7 @@ import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
 import lang.temper.value.DeclTree
+import lang.temper.value.ErrorFn
 import lang.temper.value.EscTree
 import lang.temper.value.FunTree
 import lang.temper.value.InnerTree
@@ -130,7 +130,6 @@ class Weaver private constructor(
     /** All names in the module that might be reassigned within their declaration's live range'. */
     private val varNames: Set<ResolvedName>,
 ) {
-    private val typeContext = TypeContext()
     private val typeContext2 = TypeContext2()
     private var blockResultCaptures: Map<BlockTree, CaptureResult> = mapOf()
 
@@ -221,7 +220,7 @@ class Weaver private constructor(
 
     private fun captureBlockResultsInTemporaries(tree: BlockTree) {
         val capturer = CaptureBlockResultsInTemporaries(
-            tree, typeContext, varNames,
+            tree, typeContext2, varNames,
             resultsAlreadyCaptured = resultsAlreadyCaptured,
         )
         capturer.capture()
@@ -565,6 +564,7 @@ class Weaver private constructor(
                             )
                         }
                     }
+                    ErrorFn -> {} // Leave errors in-situ
                     BuiltinFuns.setLocalFn,
                     BuiltinFuns.setpFn,
                     is DotHelper,
@@ -624,6 +624,18 @@ class Weaver private constructor(
                                     Block(tree.pos.rightEdge) {
                                         Replant(freeTree(tree))
                                         V(tree.pos.rightEdge.pos, void)
+                                    }
+                                },
+                            )
+                        } else if (
+                            pullSpecialsRootward &&
+                            hasNonNullNeverType(tree, typeContext2) &&
+                            !(isAssignment(parent) && edge === parent?.edgeOrNull(2))
+                        ) {
+                            heavies.add(
+                                edge to {
+                                    Block(tree.pos.rightEdge) {
+                                        Replant(freeTree(tree))
                                     }
                                 },
                             )
@@ -718,7 +730,7 @@ class Weaver private constructor(
                     val name = edge?.target as? RightNameLeaf
                     if (name?.content is InternalModularName) {
                         edge.replace {
-                            V(name.pos, void, WellKnownTypes.voidType)
+                            V(name.pos, void, WellKnownTypes.voidType2)
                         }
                     }
                 }
@@ -742,7 +754,7 @@ class Weaver private constructor(
                     // Garbage subtree
                     val replacement = ValueLeaf(edge.target.document, edge.target.pos, void)
                     replacement.typeInferences =
-                        BasicTypeInferences(WellKnownTypes.voidType, emptyList())
+                        BasicTypeInferences(WellKnownTypes.voidType2, emptyList())
                     edge.replace(replacement)
                 }
             }
@@ -979,4 +991,12 @@ private fun varNamesOf(t: Tree) = buildSet {
             }
         }
         .visitPreOrder()
+}
+
+private fun hasNonNullNeverType(
+    t: Tree,
+    tc: TypeContext2,
+): Boolean {
+    val t = t.typeInferences?.type ?: return false
+    return t.definition == WellKnownTypes.neverTypeDefinition && !tc.admitsNull(t)
 }

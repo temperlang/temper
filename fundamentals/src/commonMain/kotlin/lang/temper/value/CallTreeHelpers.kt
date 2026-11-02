@@ -1,9 +1,15 @@
 package lang.temper.value
 
 import lang.temper.type.DotHelper
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
-fun isNewCall(t: CallTree): Boolean {
-    if (t.size >= 2) { // `new` and constructor reference required
+@OptIn(ExperimentalContracts::class)
+fun isNewCall(t: Tree): Boolean {
+    contract {
+        returns(true) implies (t is CallTree)
+    }
+    if (t is CallTree && t.size >= 2) { // `new` and constructor reference required
         val callee = t.child(0).functionContained
         return callee is NamedBuiltinFun && callee.name == newBuiltinName.builtinKey
     }

@@ -1,0 +1,9 @@
+// Host code implements connected classes directly, so nothing would apply
+// default arguments to their methods, constructors included.
+@connected
+export class Scaler(
+  public factor: Float64 = 2.0, // BAD: a default for the constructor.
+) {
+  public scale(x: Float64, by: Float64 = 1.0): Float64; // BAD: a default.
+  public plain(x: Float64): Float64; // OK.
+}

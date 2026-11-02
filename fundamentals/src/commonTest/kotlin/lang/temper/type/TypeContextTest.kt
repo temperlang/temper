@@ -310,15 +310,15 @@ class TypeContextTest {
 
     @Test
     fun genericCommonSuperType() = TypeTestHarness(
-        //     G<*>
-        //    /    \
-        //  G<A>  G<B>
-        //  /        \
-        // H          I
+        // G<AnyValue>
+        //    / \
+        // G<A> G<B>
+        //  /     \
+        // H       I
         """
         |interface A;
         |interface B;
-        |interface G<T>;
+        |interface G<out T>;
         |interface H extends G<A>;
         |interface I extends G<B>;
         """.trimMargin(),
@@ -327,17 +327,17 @@ class TypeContextTest {
         val i = type("I")
         val a = type("A")
         val b = type("B")
+        val gOfAny = type("G<AnyValue>")
         val gOfA = type("G<A>")
         val gOfB = type("G<B>")
-        val gStar = type("G<*>")
 
-        val types = listOf(a, b, gOfA, gOfB, gStar, h, i)
+        val types = listOf(a, b, gOfAny, gOfA, gOfB, h, i)
 
         val isAPairs = types.map { it to it } + listOf(
-            gOfA to gStar,
-            gOfB to gStar,
-            h to gStar,
-            i to gStar,
+            gOfA to gOfAny,
+            gOfB to gOfAny,
+            h to gOfAny,
+            i to gOfAny,
             h to gOfA,
             i to gOfB,
         )
@@ -417,23 +417,17 @@ class TypeContextTest {
         val tBoolean = MkType.nominal(booleanDefinition)
         val comparableOfInt = MkType.nominal(comparableDefinition, listOf(tInt))
         val comparableOfBoolean = MkType.nominal(comparableDefinition, listOf(tBoolean))
-        val comparableStar = MkType.nominal(comparableDefinition, listOf(Wildcard))
 
         val types = listOf(
             comparableOfInt,
             comparableOfBoolean,
-            comparableStar,
             tInt,
             tBoolean,
         )
 
         val isAPairs = types.map { it to it } + listOf(
-            comparableOfInt to comparableStar,
-            comparableOfBoolean to comparableStar,
             tInt to comparableOfInt,
-            tInt to comparableStar,
             tBoolean to comparableOfBoolean,
-            tBoolean to comparableStar,
         )
 
         for (t in types) {

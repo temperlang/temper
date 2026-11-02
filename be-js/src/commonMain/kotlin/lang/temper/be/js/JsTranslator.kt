@@ -14,6 +14,7 @@ import lang.temper.be.tmpl.dependencyCategory
 import lang.temper.be.tmpl.findDeclaration
 import lang.temper.be.tmpl.implicitTypeTag
 import lang.temper.be.tmpl.isStdLib
+import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.isVoidConstant
 import lang.temper.be.tmpl.libraryName
 import lang.temper.be.tmpl.mapGeneric
@@ -993,12 +994,17 @@ internal class JsTranslator(
 
     private fun translateTypeDeclaration(d: TmpL.TypeDeclaration): List<Js.TopLevel> {
         val nameText = d.parsedTypeName?.symbol?.text ?: d.name.name.rawDiagnostic
-        val (mainDeclIndex, topLevels) = when (d.kind) {
-            TmpL.TypeDeclarationKind.Interface,
-            TmpL.TypeDeclarationKind.Class,
-            -> translateTypeDeclaration(d, nameText)
-            // TODO(mikesamuel): translateEnumType
-            TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
+        val (mainDeclIndex, topLevels) = when {
+            // The library's _connected.js provides a user's connected class,
+            // so the class is just a name for it: `const C = _connected.C`.
+            d.isUserConnected(module) -> 0 to listOf(connectedTypeBinding(d, nameText))
+            else -> when (d.kind) {
+                TmpL.TypeDeclarationKind.Interface,
+                TmpL.TypeDeclarationKind.Class,
+                -> translateTypeDeclaration(d, nameText)
+                // TODO(mikesamuel): translateEnumType
+                TmpL.TypeDeclarationKind.Enum -> translateTypeDeclaration(d, nameText)
+            }
         }
         // Export all prod top-levels from internal.
         val exported = when (genreTranslating) {
@@ -1710,6 +1716,26 @@ internal class JsTranslator(
         }
     }
 
+    private fun connectedTypeBinding(d: TmpL.TypeDeclaration, nameText: String): Js.VariableDeclaration {
+        hasConnected = true
+        val pos = d.pos
+        return Js.VariableDeclaration(
+            pos,
+            listOf(
+                Js.VariableDeclarator(
+                    pos,
+                    translateIdStrict(d.name),
+                    Js.MemberExpression(
+                        pos,
+                        obj = Js.Identifier(pos, connectedName, null),
+                        property = Js.Identifier(pos, JsIdentifierName.escaped(nameText), null),
+                    ),
+                ),
+            ),
+            Js.DeclarationKind.Const,
+        )
+    }
+
     private fun translateConnectedBody(
         d: TmpL.FunctionDeclaration,
         params: List<Js.Param>,
@@ -2145,12 +2171,10 @@ internal class JsTranslator(
             is TmpL.NominalType -> translateNominalType(t)
             // TODO Support @throws separately from return type, although TS doesn't care about it, so meh?
             // TODO See: https://github.com/microsoft/TypeScript/issues/31329
-            is TmpL.BubbleType, // because exceptions in JS
-            is TmpL.NeverType,
-            -> {
-                val tmpLLiteral = (t.codeFormattingTemplate as CodeFormattingTemplate.LiteralToken)
-                Js.Identifier(t.pos, JsIdentifierName("never"), BuiltinName(tmpLLiteral.token.text))
+            is TmpL.BubbleType -> { // because exceptions in JS
+                Js.Identifier(t.pos, JsIdentifierName("never"), bubbleBuiltinName)
             }
+            is TmpL.NeverType -> Js.Identifier(t.pos, JsIdentifierName("never"), neverBuiltinName)
             is TmpL.TopType -> {
                 val tmpLLiteral = (t.codeFormattingTemplate as CodeFormattingTemplate.LiteralToken)
                 Js.Identifier(t.pos, JsIdentifierName("unknown"), BuiltinName(tmpLLiteral.token.text))
@@ -2595,3 +2619,6 @@ private fun buildPublicFace(pos: Position, exporteds: List<Js.Identifier>, inter
 )
 
 internal val connectedName = JsIdentifierName("_connected")
+
+private val bubbleBuiltinName = BuiltinName(WellKnownTypes.bubbleTypeDefinition.word!!.text)
+private val neverBuiltinName = BuiltinName(WellKnownTypes.neverTypeDefinition.word!!.text)

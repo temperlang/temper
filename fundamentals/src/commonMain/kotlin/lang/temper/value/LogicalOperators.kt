@@ -7,8 +7,9 @@ import lang.temper.common.buildIntuitive
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
 import lang.temper.name.BuiltinName
-import lang.temper.type.MkType
 import lang.temper.type.WellKnownTypes
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Signature2
 
 /** The operators are defined in BuiltinFuns, so not accessible from this file :( */
 interface LogicalOperators {
@@ -24,17 +25,11 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
     val edge = parentBlock.dereference(this) ?: return
     val negation = LogicalAlgebra.not(logicalAlgebraFrom(edge.target))
 
-    val booleanType = WellKnownTypes.booleanType
-    val oneBoolToBoolType = MkType.fn(
-        emptyList(),
-        listOf(booleanType),
-        booleanType,
-    )
-    val twoBoolsToBoolType = MkType.fn(
-        emptyList(),
-        listOf(booleanType, booleanType),
-        booleanType,
-    )
+    val booleanType = WellKnownTypes.booleanType2
+    val oneBoolToBoolSig = Signature2(booleanType, false, listOf(booleanType))
+    val twoBoolsToBoolSig = Signature2(booleanType, false, listOf(booleanType, booleanType))
+    val oneBoolToBoolType = AdHocArrowTypes.definedTypeForSig(oneBoolToBoolSig)
+    val twoBoolsToBoolType = AdHocArrowTypes.definedTypeForSig(twoBoolsToBoolSig)
 
     val b = object : IntuitiveLogicalExpressionBuilder<Position, Tree, Tree> {
         override fun constant(x: Position, b: Boolean): Tree =
@@ -72,11 +67,7 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
                 val operatorTree = operator(doc, t.pos.leftEdge)
                 (operatorTree as BasicTypeInferencesTree).typeInferences =
                     BasicTypeInferences(twoBoolsToBoolType, emptyList())
-                val children = listOf(
-                    operatorTree,
-                    next,
-                    t,
-                )
+                val children = listOf(operatorTree, next, t)
                 val p = if (i == 0) {
                     pos
                 } else {
@@ -85,7 +76,7 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
                 t = CallTree(doc, p, children)
                 t.typeInferences = CallTypeInferences(
                     booleanType,
-                    twoBoolsToBoolType,
+                    twoBoolsToBoolSig,
                     emptyMap(),
                     emptyList(),
                 )
@@ -102,7 +93,7 @@ fun BlockChildReference.invertLogicalExpr(parentBlock: BlockTree, operators: Log
                 listOf(notFn, freeTree(operand)),
             )
             call.typeInferences = CallTypeInferences(
-                booleanType, oneBoolToBoolType, emptyMap(), emptyList(),
+                booleanType, oneBoolToBoolSig, emptyMap(), emptyList(),
             )
             return call
         }
