@@ -14,3 +14,14 @@ export class Counter {
     return this.#total;
   }
 }
+
+/** Temper's connected Doubler class, with the members Temper would generate. */
+export class Doubler {
+  /**
+   * @param {number} i
+   * @returns {number}
+   */
+  twice(i) {
+    return i * 2;
+  }
+}
