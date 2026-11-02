@@ -7,9 +7,9 @@ import temper.std.regex.Repeat;
 import temper.std.regex.CodePart;
 import temper.std.regex.Or;
 import temper.std.regex.CodeSet;
+import temper.std.regex.Sequence;
 import java.util.Map;
 import temper.core.Nullable;
-import temper.std.regex.Sequence;
 import temper.std.regex.Capture;
 import java.util.ArrayList;
 import static temper.std.regex.RegexGlobal.End;
@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 import static temper.std.regex.RegexGlobal.Dot;
 import java.util.LinkedHashMap;
 import static temper.std.regex.RegexGlobal.WordBoundary;
-import static temper.regex_parser.RegexParserGlobal.noSlots__293;
+import static temper.regex_parser.RegexParserGlobal.noSlots__294;
 final class Parser {
     public final String chars;
     public final Map<String, RegexNode> slots;
@@ -32,10 +32,10 @@ final class Parser {
     final Map<String, Boolean> names;
     boolean extended;
     boolean caseless;
-    public void error(String e__407) {
-        int position__409 = Core.stringCountBetween(this.chars, 0, this.pos);
-        @Nullable String t_574 = "at position " + Integer.toString(position__409) + ": " + e__407;
-        this.errorMessage = t_574;
+    public void error(String e__408) {
+        int position__410 = Core.stringCountBetween(this.chars, 0, this.pos);
+        @Nullable String t_575 = "at position " + Integer.toString(position__410) + ": " + e__408;
+        this.errorMessage = t_575;
         throw Core.bubble();
     }
     public boolean isDone() {
@@ -45,22 +45,22 @@ final class Parser {
         return this.chars.codePointAt(this.pos);
     }
     public void advance() {
-        int t_573 = Core.stringNext(this.chars, this.pos);
-        this.pos = t_573;
+        int t_574 = Core.stringNext(this.chars, this.pos);
+        this.pos = t_574;
     }
     public int read() {
-        int ret__418 = this.peek();
+        int ret__419 = this.peek();
         this.advance();
-        return ret__418;
+        return ret__419;
     }
-    public boolean matchChar(int s__420) {
-        boolean t_938;
+    public boolean matchChar(int s__421) {
+        boolean t_940;
         if (!this.isDone()) {
-            t_938 = this.peek() == s__420;
+            t_940 = this.peek() == s__421;
         } else {
-            t_938 = false;
+            t_940 = false;
         }
-        if (t_938) {
+        if (t_940) {
             this.advance();
             return true;
         } else {
@@ -76,211 +76,211 @@ final class Parser {
             return this.matchChar(63);
         }
     }
-    boolean isHexDigit(int c__425) {
-        boolean t_934;
-        if (c__425 >= 48) {
-            t_934 = c__425 <= 57;
+    boolean isHexDigit(int c__426) {
+        boolean t_936;
+        if (c__426 >= 48) {
+            t_936 = c__426 <= 57;
         } else {
-            t_934 = false;
+            t_936 = false;
         }
-        if (t_934) {
+        if (t_936) {
             return true;
         } else {
-            boolean t_936;
-            if (c__425 >= 97) {
-                t_936 = c__425 <= 102;
+            boolean t_938;
+            if (c__426 >= 97) {
+                t_938 = c__426 <= 102;
             } else {
-                t_936 = false;
+                t_938 = false;
             }
-            if (t_936) {
+            if (t_938) {
                 return true;
-            } else if (c__425 >= 65) {
-                return c__425 <= 70;
+            } else if (c__426 >= 65) {
+                return c__426 <= 70;
             } else {
                 return false;
             }
         }
     }
-    int hexValue(int c__428) {
-        boolean t_928;
-        if (c__428 >= 48) {
-            t_928 = c__428 <= 57;
+    int hexValue(int c__429) {
+        boolean t_930;
+        if (c__429 >= 48) {
+            t_930 = c__429 <= 57;
         } else {
-            t_928 = false;
+            t_930 = false;
         }
-        if (t_928) {
-            return c__428 - 48;
+        if (t_930) {
+            return c__429 - 48;
         } else {
-            boolean t_930;
-            if (c__428 >= 97) {
-                t_930 = c__428 <= 102;
+            boolean t_932;
+            if (c__429 >= 97) {
+                t_932 = c__429 <= 102;
             } else {
-                t_930 = false;
+                t_932 = false;
             }
-            if (t_930) {
-                return c__428 - 97 + 10;
+            if (t_932) {
+                return c__429 - 97 + 10;
             } else {
-                boolean t_932;
-                if (c__428 >= 65) {
-                    t_932 = c__428 <= 70;
+                boolean t_934;
+                if (c__429 >= 65) {
+                    t_934 = c__429 <= 70;
                 } else {
-                    t_932 = false;
+                    t_934 = false;
                 }
-                if (t_932) {
-                    return c__428 - 65 + 10;
+                if (t_934) {
+                    return c__429 - 65 + 10;
                 } else {
                     throw Core.bubble();
                 }
             }
         }
     }
-    int readHexDigits(int count__431, String escape__432) {
-        int codePoint__434 = 0;
-        int i__435 = 0;
-        while (i__435 < count__431) {
-            int t_926;
+    int readHexDigits(int count__432, String escape__433) {
+        int codePoint__435 = 0;
+        int i__436 = 0;
+        while (i__436 < count__432) {
+            int t_928;
             if (this.isDone()) {
-                this.error("incomplete " + escape__432 + " escape");
+                this.error("incomplete " + escape__433 + " escape");
             }
-            int c__436 = this.read();
-            int t_927 = codePoint__434 * 16;
+            int c__437 = this.read();
+            int t_929 = codePoint__435 * 16;
             try {
-                t_926 = this.hexValue(c__436);
+                t_928 = this.hexValue(c__437);
             } catch (RuntimeException ignored$1) {
-                this.error("invalid hex digit in " + escape__432 + " escape");
+                this.error("invalid hex digit in " + escape__433 + " escape");
                 throw Core.bubble();
             }
-            codePoint__434 = t_927 + t_926;
-            i__435 = i__435 + 1;
+            codePoint__435 = t_929 + t_928;
+            i__436 = i__436 + 1;
         }
-        return codePoint__434;
+        return codePoint__435;
     }
-    CodePoints codePointsOf(int codePoint__438) {
-        String t_925;
+    CodePoints codePointsOf(int codePoint__439) {
+        String t_927;
         try {
-            t_925 = Core.stringFromCodePoint(codePoint__438);
+            t_927 = Core.stringFromCodePoint(codePoint__439);
         } catch (RuntimeException ignored$2) {
-            this.error("invalid code point " + Integer.toString(codePoint__438, 16));
+            this.error("invalid code point " + Integer.toString(codePoint__439, 16));
             throw Core.bubble();
         }
-        return new CodePoints(t_925);
+        return new CodePoints(t_927);
     }
     RegexNode finishUnicodeEscape() {
         if (this.matchChar(123)) {
-            int codePoint__442 = 0;
-            int count__443 = 0;
+            int codePoint__443 = 0;
+            int count__444 = 0;
             while (!this.matchChar(125)) {
-                int t_917;
-                boolean t_915;
+                int t_919;
+                boolean t_917;
                 if (this.isDone()) {
-                    t_915 = true;
+                    t_917 = true;
                 } else {
-                    t_915 = count__443 >= 6;
+                    t_917 = count__444 >= 6;
                 }
-                if (t_915) {
+                if (t_917) {
                     this.error("invalid unicode escape");
                 }
-                int c__444 = this.read();
-                int t_918 = codePoint__442 * 16;
+                int c__445 = this.read();
+                int t_920 = codePoint__443 * 16;
                 try {
-                    t_917 = this.hexValue(c__444);
+                    t_919 = this.hexValue(c__445);
                 } catch (RuntimeException ignored$3) {
                     this.error("invalid hex digit in unicode escape");
                     throw Core.bubble();
                 }
-                codePoint__442 = t_918 + t_917;
-                count__443 = count__443 + 1;
+                codePoint__443 = t_920 + t_919;
+                count__444 = count__444 + 1;
             }
-            if (count__443 == 0) {
+            if (count__444 == 0) {
                 this.error("empty unicode escape");
             }
-            return this.codePointsOf(codePoint__442);
+            return this.codePointsOf(codePoint__443);
         } else {
-            int codePoint__445 = this.readHexDigits(4, "unicode");
-            boolean t_919;
-            if (codePoint__445 >= 55296) {
-                t_919 = codePoint__445 <= 56319;
+            int codePoint__446 = this.readHexDigits(4, "unicode");
+            boolean t_921;
+            if (codePoint__446 >= 55296) {
+                t_921 = codePoint__446 <= 56319;
             } else {
-                t_919 = false;
+                t_921 = false;
             }
-            if (t_919) {
-                boolean t_921;
-                if (!this.matchChar(92)) {
-                    t_921 = true;
-                } else {
-                    t_921 = !this.matchChar(117);
-                }
-                if (t_921) {
-                    this.error("high surrogate must be followed by a low surrogate");
-                }
-                int low__446 = this.readHexDigits(4, "unicode");
+            if (t_921) {
                 boolean t_923;
-                if (low__446 < 56320) {
+                if (!this.matchChar(92)) {
                     t_923 = true;
                 } else {
-                    t_923 = low__446 > 57343;
+                    t_923 = !this.matchChar(117);
                 }
                 if (t_923) {
                     this.error("high surrogate must be followed by a low surrogate");
                 }
-                codePoint__445 = 65536 + (codePoint__445 - 55296) * 1024 + (low__446 - 56320);
+                int low__447 = this.readHexDigits(4, "unicode");
+                boolean t_925;
+                if (low__447 < 56320) {
+                    t_925 = true;
+                } else {
+                    t_925 = low__447 > 57343;
+                }
+                if (t_925) {
+                    this.error("high surrogate must be followed by a low surrogate");
+                }
+                codePoint__446 = 65536 + (codePoint__446 - 55296) * 1024 + (low__447 - 56320);
             }
-            return this.codePointsOf(codePoint__445);
+            return this.codePointsOf(codePoint__446);
         }
     }
-    boolean matchText(String text__448) {
-        boolean return__220;
-        fn__449: {
-            int index__450 = this.pos;
-            String this__1033 = text__448;
-            int index__1035 = 0;
-            while (Core.stringHasIndex(this__1033, index__1035)) {
-                int codePoint__1036 = this__1033.codePointAt(index__1035);
-                int c__451 = codePoint__1036;
-                boolean t_913;
-                if (!Core.stringHasIndex(this.chars, index__450)) {
-                    t_913 = true;
+    boolean matchText(String text__449) {
+        boolean return__221;
+        fn__450: {
+            int index__451 = this.pos;
+            String this__1035 = text__449;
+            int index__1037 = 0;
+            while (Core.stringHasIndex(this__1035, index__1037)) {
+                int codePoint__1038 = this__1035.codePointAt(index__1037);
+                int c__452 = codePoint__1038;
+                boolean t_915;
+                if (!Core.stringHasIndex(this.chars, index__451)) {
+                    t_915 = true;
                 } else {
-                    t_913 = this.chars.codePointAt(index__450) != c__451;
+                    t_915 = this.chars.codePointAt(index__451) != c__452;
                 }
-                if (t_913) {
-                    return__220 = false;
-                    break fn__449;
+                if (t_915) {
+                    return__221 = false;
+                    break fn__450;
                 }
-                index__450 = Core.stringNext(this.chars, index__450);
-                index__1035 = Core.stringNext(this__1033, index__1035);
+                index__451 = Core.stringNext(this.chars, index__451);
+                index__1037 = Core.stringNext(this__1035, index__1037);
             }
-            this.pos = index__450;
+            this.pos = index__451;
             return true;
         }
-        return return__220;
+        return return__221;
     }
     void skipIgnored() {
         while (!this.isDone()) {
-            boolean t_907;
+            boolean t_909;
             if (this.extended) {
-                t_907 = RegexParserGlobal.isPatternSpace(this.peek());
+                t_909 = RegexParserGlobal.isPatternSpace(this.peek());
             } else {
-                t_907 = false;
+                t_909 = false;
             }
-            if (t_907) {
+            if (t_909) {
                 this.advance();
             } else {
-                boolean t_909;
+                boolean t_911;
                 if (this.extended) {
-                    t_909 = this.matchChar(35);
+                    t_911 = this.matchChar(35);
                 } else {
-                    t_909 = false;
+                    t_911 = false;
                 }
-                if (t_909) {
+                if (t_911) {
                     while (true) {
-                        boolean t_911;
+                        boolean t_913;
                         if (!this.isDone()) {
-                            t_911 = !this.matchChar(10);
+                            t_913 = !this.matchChar(10);
                         } else {
-                            t_911 = false;
+                            t_913 = false;
                         }
-                        if (!t_911) {
+                        if (!t_913) {
                             break;
                         }
                         this.advance();
@@ -299,22 +299,22 @@ final class Parser {
         }
     }
     boolean atFlagGroup() {
-        int index__456 = this.pos;
+        int index__457 = this.pos;
         while (true) {
-            boolean t_905;
-            if (Core.stringHasIndex(this.chars, index__456)) {
-                t_905 = RegexParserGlobal.isAsciiLetter(this.chars.codePointAt(index__456));
+            boolean t_907;
+            if (Core.stringHasIndex(this.chars, index__457)) {
+                t_907 = RegexParserGlobal.isAsciiLetter(this.chars.codePointAt(index__457));
             } else {
-                t_905 = false;
+                t_907 = false;
             }
-            if (!t_905) {
+            if (!t_907) {
                 break;
             }
-            index__456 = Core.stringNext(this.chars, index__456);
+            index__457 = Core.stringNext(this.chars, index__457);
         }
-        if (index__456 != this.pos) {
-            if (Core.stringHasIndex(this.chars, index__456)) {
-                return this.chars.codePointAt(index__456) == 58;
+        if (index__457 != this.pos) {
+            if (Core.stringHasIndex(this.chars, index__457)) {
+                return this.chars.codePointAt(index__457) == 58;
             } else {
                 return false;
             }
@@ -323,11 +323,11 @@ final class Parser {
         }
     }
     RegexNode readFlagGroup() {
-        boolean outerExtended__459 = this.extended;
-        boolean outerCaseless__460 = this.caseless;
+        boolean outerExtended__460 = this.extended;
+        boolean outerCaseless__461 = this.caseless;
         while (!this.matchChar(58)) {
-            int flag__461 = this.read();
-            switch (flag__461) {
+            int flag__462 = this.read();
+            switch (flag__462) {
                 case 105:
                     {
                     this.caseless = true;
@@ -340,194 +340,194 @@ final class Parser {
                 }
                 default:
                     {
-                    String t_1092 = Core.stringFromCodePoint(flag__461);
-                    this.error("inline flag (?" + t_1092 + ":...) is not supported");
+                    String t_1094 = Core.stringFromCodePoint(flag__462);
+                    this.error("inline flag (?" + t_1094 + ":...) is not supported");
                     break;
                 }
             }
         }
-        RegexNode regex__462 = this.readOr();
-        boolean rewrite__463;
+        RegexNode regex__463 = this.readOr();
+        boolean rewrite__464;
         if (this.caseless) {
-            rewrite__463 = !outerCaseless__460;
+            rewrite__464 = !outerCaseless__461;
         } else {
-            rewrite__463 = false;
+            rewrite__464 = false;
         }
-        this.extended = outerExtended__459;
-        this.caseless = outerCaseless__460;
+        this.extended = outerExtended__460;
+        this.caseless = outerCaseless__461;
         if (!this.matchChar(41)) {
             this.error("closing paren");
         }
-        if (rewrite__463) {
-            return RegexParserGlobal.ignoreCase(regex__462);
+        if (rewrite__464) {
+            return RegexParserGlobal.ignoreCase(regex__463);
         } else {
-            return regex__462;
+            return regex__463;
         }
     }
     boolean atShorthand() {
-        boolean return__224;
-        fn__465: {
-            boolean t_895;
-            if (this.isDone()) {
-                t_895 = true;
-            } else {
-                t_895 = this.peek() != 92;
-            }
-            if (t_895) {
-                return__224 = false;
-                break fn__465;
-            }
-            int after__466 = Core.stringNext(this.chars, this.pos);
-            if (!Core.stringHasIndex(this.chars, after__466)) {
-                return__224 = false;
-                break fn__465;
-            }
-            int subject_629 = this.chars.codePointAt(after__466);
+        boolean return__225;
+        fn__466: {
             boolean t_897;
-            switch (subject_629) {
+            if (this.isDone()) {
+                t_897 = true;
+            } else {
+                t_897 = this.peek() != 92;
+            }
+            if (t_897) {
+                return__225 = false;
+                break fn__466;
+            }
+            int after__467 = Core.stringNext(this.chars, this.pos);
+            if (!Core.stringHasIndex(this.chars, after__467)) {
+                return__225 = false;
+                break fn__466;
+            }
+            int subject_630 = this.chars.codePointAt(after__467);
+            boolean t_899;
+            switch (subject_630) {
                 case 100:
                     {
-                    t_897 = true;
+                    t_899 = true;
                     break;
                 }
                 case 68:
                     {
-                    t_897 = true;
+                    t_899 = true;
                     break;
                 }
                 case 115:
                     {
-                    t_897 = true;
+                    t_899 = true;
                     break;
                 }
                 case 83:
                     {
-                    t_897 = true;
+                    t_899 = true;
                     break;
                 }
                 case 119:
                     {
-                    t_897 = true;
+                    t_899 = true;
                     break;
                 }
                 default:
                     {
-                    t_897 = subject_629 == 87;
+                    t_899 = subject_630 == 87;
                     break;
                 }
             }
-            if (t_897) {
+            if (t_899) {
                 return true;
             } else {
                 return false;
             }
         }
-        return return__224;
+        return return__225;
     }
     public RegexNode charClassBody() {
-        boolean invert__469 = this.matchChar(94);
-        List<CodePart> opts__470 = new ArrayList<>();
-        List<RegexNode> negations__471 = new ArrayList<>();
-        StringBuilder optMembers__472 = new StringBuilder();
-        List<String> negatedMembers__473 = new ArrayList<>();
+        boolean invert__470 = this.matchChar(94);
+        List<CodePart> opts__471 = new ArrayList<>();
+        List<RegexNode> negations__472 = new ArrayList<>();
+        StringBuilder optMembers__473 = new StringBuilder();
+        List<String> negatedMembers__474 = new ArrayList<>();
         while (!this.matchChar(93)) {
             if (this.isDone()) {
                 this.error("missing closing ']'");
             }
             if (this.atShorthand()) {
                 this.advance();
-                int letter__474 = this.read();
-                boolean t_884;
-                switch (letter__474) {
+                int letter__475 = this.read();
+                boolean t_886;
+                switch (letter__475) {
                     case 68:
                         {
-                        t_884 = true;
+                        t_886 = true;
                         break;
                     }
                     case 83:
                         {
-                        t_884 = true;
+                        t_886 = true;
                         break;
                     }
                     default:
                         {
-                        t_884 = letter__474 == 87;
+                        t_886 = letter__475 == 87;
                         break;
                     }
                 }
-                if (t_884) {
-                    Core.listAdd(negations__471, new CodeSet(List.of(RegexParserGlobal.shorthandSet(letter__474)), true));
-                    Core.listAdd(negatedMembers__473, RegexParserGlobal.shorthandMembers(letter__474));
+                if (t_886) {
+                    Core.listAdd(negations__472, new CodeSet(List.of(RegexParserGlobal.shorthandSet(letter__475)), true));
+                    Core.listAdd(negatedMembers__474, RegexParserGlobal.shorthandMembers(letter__475));
                 } else {
-                    Core.listAdd(opts__470, RegexParserGlobal.shorthandSet(letter__474));
-                    optMembers__472.append(RegexParserGlobal.shorthandMembers(letter__474));
+                    Core.listAdd(opts__471, RegexParserGlobal.shorthandSet(letter__475));
+                    optMembers__473.append(RegexParserGlobal.shorthandMembers(letter__475));
                 }
                 if (this.matchChar(45)) {
                     if (this.matchChar(93)) {
-                        Core.listAdd(opts__470, new CodePoints("-"));
+                        Core.listAdd(opts__471, new CodePoints("-"));
                         break;
                     }
                     this.error("invalid range edge");
                 }
                 continue;
             }
-            CodePart first__475 = this.charClassUnit();
+            CodePart first__476 = this.charClassUnit();
             if (this.matchChar(45)) {
                 if (this.matchChar(93)) {
-                    Core.listAdd(opts__470, first__475);
-                    Core.listAdd(opts__470, new CodePoints("-"));
+                    Core.listAdd(opts__471, first__476);
+                    Core.listAdd(opts__471, new CodePoints("-"));
                     break;
                 }
                 if (this.isDone()) {
                     this.error("missing closing ']'");
                 }
-                CodePart second__476 = this.charClassUnit();
-                int min__477 = this.extractCode(first__475);
-                int max__478 = this.extractCode(second__476);
-                if (min__477 > max__478) {
+                CodePart second__477 = this.charClassUnit();
+                int min__478 = this.extractCode(first__476);
+                int max__479 = this.extractCode(second__477);
+                if (min__478 > max__479) {
                     this.error("character class range is out of order");
                 }
-                Core.listAdd(opts__470, new CodeRange(min__477, max__478));
+                Core.listAdd(opts__471, new CodeRange(min__478, max__479));
             } else {
-                Core.listAdd(opts__470, first__475);
+                Core.listAdd(opts__471, first__476);
             }
         }
-        List<CodePart> items__479 = List.copyOf(opts__470);
-        boolean t_889;
-        if (negations__471.isEmpty()) {
-            if (!invert__469) {
-                if (items__479.size() == 1) {
-                    t_889 = !(Core.listGet(items__479, 0) instanceof CodeRange);
+        List<CodePart> items__480 = List.copyOf(opts__471);
+        boolean t_891;
+        if (negations__472.isEmpty()) {
+            if (!invert__470) {
+                if (items__480.size() == 1) {
+                    t_891 = !(Core.listGet(items__480, 0) instanceof CodeRange);
                 } else {
-                    t_889 = false;
+                    t_891 = false;
                 }
             } else {
-                t_889 = false;
+                t_891 = false;
             }
         } else {
-            t_889 = false;
+            t_891 = false;
         }
-        if (t_889) {
-            return Core.listGet(items__479, 0);
-        } else if (negations__471.isEmpty()) {
-            return new CodeSet(items__479, invert__469);
-        } else if (!invert__469) {
-            if (!items__479.isEmpty()) {
-                Core.listAdd(negations__471, new CodeSet(items__479), 0);
+        if (t_891) {
+            return Core.listGet(items__480, 0);
+        } else if (negations__472.isEmpty()) {
+            return new CodeSet(items__480, invert__470);
+        } else if (!invert__470) {
+            if (!items__480.isEmpty()) {
+                Core.listAdd(negations__472, new CodeSet(items__480), 0);
             }
-            if (negations__471.size() == 1) {
-                return Core.listGet(negations__471, 0);
+            if (negations__472.size() == 1) {
+                return Core.listGet(negations__472, 0);
             } else {
-                return new Or(List.copyOf(negations__471));
+                return new Or(List.copyOf(negations__472));
             }
         } else {
-            List<CodePart> excluded__480;
+            List<CodePart> excluded__481;
             if (this.caseless) {
-                excluded__480 = RegexParserGlobal.ignoreCaseParts(items__479);
+                excluded__481 = RegexParserGlobal.ignoreCaseParts(items__480);
             } else {
-                excluded__480 = items__479;
+                excluded__481 = items__480;
             }
-            return RegexParserGlobal.negatedClass(excluded__480, optMembers__472.toString(), List.copyOf(negatedMembers__473));
+            return RegexParserGlobal.negatedClass(excluded__481, optMembers__473.toString(), List.copyOf(negatedMembers__474));
         }
     }
     CodePart charClassUnit() {
@@ -535,38 +535,38 @@ final class Parser {
             if (this.matchChar(98)) {
                 return new CodePoints("\b");
             } else {
-                RegexNode escape__483 = this.finishEscape();
+                RegexNode escape__484 = this.finishEscape();
                 try {
-                    return Core.cast(CodePart.class, escape__483);
+                    return Core.cast(CodePart.class, escape__484);
                 } catch (RuntimeException ignored$4) {
                     this.error("escape not allowed in a character class");
                     throw Core.bubble();
                 }
             }
         } else {
-            String t_1091 = Core.stringFromCodePoint(this.read());
-            return new CodePoints(t_1091);
+            String t_1093 = Core.stringFromCodePoint(this.read());
+            return new CodePoints(t_1093);
         }
     }
-    int extractCode(CodePart codePart__485) {
+    int extractCode(CodePart codePart__486) {
         try {
-            CodePoints t_881 = Core.cast(CodePoints.class, codePart__485);
-            return t_881.getValue().codePointAt(0);
+            CodePoints t_883 = Core.cast(CodePoints.class, codePart__486);
+            return t_883.getValue().codePointAt(0);
         } catch (RuntimeException ignored$5) {
             this.error("invalid range edge");
             throw Core.bubble();
         }
     }
     RegexNode finishHexEscape() {
-        int t_1089 = this.readHexDigits(2, "hex");
-        String t_1090 = Core.stringFromCodePoint(t_1089);
-        return new CodePoints(t_1090);
+        int t_1091 = this.readHexDigits(2, "hex");
+        String t_1092 = Core.stringFromCodePoint(t_1091);
+        return new CodePoints(t_1092);
     }
     RegexNode finishEscape() {
         if (this.isDone()) {
             this.error("trailing '\\' at end of pattern");
         }
-        int escapeCode__491 = this.peek();
+        int escapeCode__492 = this.peek();
         if (this.matchChar(48)) {
             return new CodePoints("\u0000");
         } else if (this.matchChar(97)) {
@@ -579,17 +579,17 @@ final class Parser {
             this.error("\\B (non-word boundary) is not supported");
             throw Core.bubble();
         } else if (this.matchChar(99)) {
-            boolean t_873;
+            boolean t_875;
             if (this.isDone()) {
-                t_873 = true;
+                t_875 = true;
             } else {
-                t_873 = !RegexParserGlobal.isAsciiLetter(this.peek());
+                t_875 = !RegexParserGlobal.isAsciiLetter(this.peek());
             }
-            if (t_873) {
+            if (t_875) {
                 this.error("\\c must be followed by a letter");
             }
-            String t_1085 = Core.stringFromCodePoint(this.read() % 32);
-            return new CodePoints(t_1085);
+            String t_1087 = Core.stringFromCodePoint(this.read() % 32);
+            return new CodePoints(t_1087);
         } else if (this.matchChar(100)) {
             return Digit;
         } else if (this.matchChar(68)) {
@@ -621,40 +621,40 @@ final class Parser {
         } else if (this.matchChar(122)) {
             return End;
         } else {
-            boolean t_875;
-            if (RegexParserGlobal.isAsciiPunctuation(escapeCode__491)) {
-                t_875 = true;
+            boolean t_877;
+            if (RegexParserGlobal.isAsciiPunctuation(escapeCode__492)) {
+                t_877 = true;
             } else {
-                t_875 = escapeCode__491 == 32;
+                t_877 = escapeCode__492 == 32;
             }
-            if (t_875) {
+            if (t_877) {
                 this.advance();
-                String t_1086 = Core.stringFromCodePoint(escapeCode__491);
-                return new CodePoints(t_1086);
+                String t_1088 = Core.stringFromCodePoint(escapeCode__492);
+                return new CodePoints(t_1088);
             } else {
-                boolean t_877;
+                boolean t_879;
                 if (this.peek() >= 49) {
-                    t_877 = this.peek() <= 57;
+                    t_879 = this.peek() <= 57;
                 } else {
-                    t_877 = false;
+                    t_879 = false;
                 }
-                if (t_877) {
-                    String t_1087 = Core.stringFromCodePoint(this.peek());
-                    this.error("backreferences (" + "\\" + t_1087 + ") are not supported");
+                if (t_879) {
+                    String t_1089 = Core.stringFromCodePoint(this.peek());
+                    this.error("backreferences (" + "\\" + t_1089 + ") are not supported");
                     throw Core.bubble();
                 } else {
-                    boolean t_879;
+                    boolean t_881;
                     if (this.matchChar(112)) {
-                        t_879 = true;
+                        t_881 = true;
                     } else {
-                        t_879 = this.matchChar(80);
+                        t_881 = this.matchChar(80);
                     }
-                    if (t_879) {
+                    if (t_881) {
                         this.error("Unicode property escapes (\\p{...}) are not supported");
                         throw Core.bubble();
                     } else {
-                        String t_1088 = Core.stringFromCodePoint(this.peek());
-                        this.error("unknown escape sequence: " + "\\" + t_1088);
+                        String t_1090 = Core.stringFromCodePoint(this.peek());
+                        this.error("unknown escape sequence: " + "\\" + t_1090);
                         throw Core.bubble();
                     }
                 }
@@ -663,174 +663,174 @@ final class Parser {
     }
     public int braceMin;
     public int braceMax;
-    int appendDigit(int count__495) {
-        int digit__497 = this.read() - 48;
-        if (count__495 > (2147483647 - digit__497) / 10) {
+    int appendDigit(int count__496) {
+        int digit__498 = this.read() - 48;
+        if (count__496 > (2147483647 - digit__498) / 10) {
             this.error("repeat count is too large");
         }
-        return count__495 * 10 + digit__497;
+        return count__496 * 10 + digit__498;
     }
     boolean tryParseBraceQuantifier() {
-        boolean return__231;
-        fn__499: {
-            int savedPos__500 = this.pos;
+        boolean return__232;
+        fn__500: {
+            int savedPos__501 = this.pos;
             if (!this.matchChar(123)) {
-                return__231 = false;
-                break fn__499;
+                return__232 = false;
+                break fn__500;
             }
-            int min__501 = 0;
-            int minDigits__502 = 0;
+            int min__502 = 0;
+            int minDigits__503 = 0;
             while (true) {
-                boolean t_867;
+                boolean t_869;
                 if (!this.isDone()) {
                     if (this.peek() >= 48) {
-                        t_867 = this.peek() <= 57;
+                        t_869 = this.peek() <= 57;
                     } else {
-                        t_867 = false;
+                        t_869 = false;
                     }
                 } else {
-                    t_867 = false;
+                    t_869 = false;
                 }
-                if (!t_867) {
+                if (!t_869) {
                     break;
                 }
-                min__501 = this.appendDigit(min__501);
-                minDigits__502 = minDigits__502 + 1;
+                min__502 = this.appendDigit(min__502);
+                minDigits__503 = minDigits__503 + 1;
             }
-            if (minDigits__502 == 0) {
-                this.pos = savedPos__500;
-                return__231 = false;
-                break fn__499;
+            if (minDigits__503 == 0) {
+                this.pos = savedPos__501;
+                return__232 = false;
+                break fn__500;
             }
             if (this.matchChar(125)) {
-                int t_566 = min__501;
-                this.braceMin = t_566;
-                this.braceMax = min__501;
-                return__231 = true;
-                break fn__499;
+                int t_567 = min__502;
+                this.braceMin = t_567;
+                this.braceMax = min__502;
+                return__232 = true;
+                break fn__500;
             }
             if (!this.matchChar(44)) {
-                this.pos = savedPos__500;
-                return__231 = false;
-                break fn__499;
+                this.pos = savedPos__501;
+                return__232 = false;
+                break fn__500;
             }
-            int max__503 = 0;
-            int maxDigits__504 = 0;
+            int max__504 = 0;
+            int maxDigits__505 = 0;
             while (true) {
-                boolean t_870;
+                boolean t_872;
                 if (!this.isDone()) {
                     if (this.peek() >= 48) {
-                        t_870 = this.peek() <= 57;
+                        t_872 = this.peek() <= 57;
                     } else {
-                        t_870 = false;
+                        t_872 = false;
                     }
                 } else {
-                    t_870 = false;
+                    t_872 = false;
                 }
-                if (!t_870) {
+                if (!t_872) {
                     break;
                 }
-                max__503 = this.appendDigit(max__503);
-                maxDigits__504 = maxDigits__504 + 1;
+                max__504 = this.appendDigit(max__504);
+                maxDigits__505 = maxDigits__505 + 1;
             }
             if (!this.matchChar(125)) {
-                this.pos = savedPos__500;
-                return__231 = false;
-                break fn__499;
+                this.pos = savedPos__501;
+                return__232 = false;
+                break fn__500;
             }
-            this.braceMin = min__501;
-            if (maxDigits__504 == 0) {
+            this.braceMin = min__502;
+            if (maxDigits__505 == 0) {
                 this.braceMax = -1;
             } else {
-                this.braceMax = max__503;
+                this.braceMax = max__504;
             }
             return true;
         }
-        return return__231;
+        return return__232;
     }
-    public RegexNode readPostfix(RegexNode exist__506) {
-        RegexNode return__232;
-        fn__507: {
-            Repeat repeat__508;
+    public RegexNode readPostfix(RegexNode exist__507) {
+        RegexNode return__233;
+        fn__508: {
+            Repeat repeat__509;
             if (this.matchChar(43)) {
-                repeat__508 = new Repeat(exist__506, 1, null, this.matchChar(63));
+                repeat__509 = new Repeat(exist__507, 1, null, this.matchChar(63));
             } else if (this.matchChar(42)) {
-                repeat__508 = new Repeat(exist__506, 0, null, this.matchChar(63));
+                repeat__509 = new Repeat(exist__507, 0, null, this.matchChar(63));
             } else if (this.matchChar(63)) {
-                repeat__508 = new Repeat(exist__506, 0, 1, this.matchChar(63));
+                repeat__509 = new Repeat(exist__507, 0, 1, this.matchChar(63));
             } else {
-                boolean t_1084 = this.tryParseBraceQuantifier();
-                if (t_1084) {
-                    boolean nonGreedy__509 = this.matchChar(63);
-                    boolean t_862;
+                boolean t_1086 = this.tryParseBraceQuantifier();
+                if (t_1086) {
+                    boolean nonGreedy__510 = this.matchChar(63);
+                    boolean t_864;
                     if (this.braceMax != -1) {
-                        t_862 = this.braceMin > this.braceMax;
+                        t_864 = this.braceMin > this.braceMax;
                     } else {
-                        t_862 = false;
+                        t_864 = false;
                     }
-                    if (t_862) {
+                    if (t_864) {
                         this.error("quantifier {" + Integer.toString(this.braceMin) + "," + Integer.toString(this.braceMax) + "} has min greater than max");
                     }
                     if (this.braceMax == -1) {
-                        repeat__508 = new Repeat(exist__506, this.braceMin, null, nonGreedy__509);
+                        repeat__509 = new Repeat(exist__507, this.braceMin, null, nonGreedy__510);
                     } else {
-                        repeat__508 = new Repeat(exist__506, this.braceMin, this.braceMax, nonGreedy__509);
+                        repeat__509 = new Repeat(exist__507, this.braceMin, this.braceMax, nonGreedy__510);
                     }
                 } else {
-                    return__232 = exist__506;
-                    break fn__507;
+                    return__233 = exist__507;
+                    break fn__508;
                 }
             }
-            boolean t_865;
+            boolean t_867;
             if (this.matchRepeat()) {
-                t_865 = true;
+                t_867 = true;
             } else {
-                t_865 = this.tryParseBraceQuantifier();
+                t_867 = this.tryParseBraceQuantifier();
             }
-            if (t_865) {
+            if (t_867) {
                 this.error("nothing to repeat");
             }
-            return repeat__508;
+            return repeat__509;
         }
-        return return__232;
+        return return__233;
     }
-    void claimName(String name__511) {
-        if (!RegexParserGlobal.isCaptureName(name__511)) {
-            this.error("invalid capture name '" + name__511 + "'; use an ASCII letter followed by ASCII letters or digits");
+    void claimName(String name__512) {
+        if (!RegexParserGlobal.isCaptureName(name__512)) {
+            this.error("invalid capture name '" + name__512 + "'; use an ASCII letter followed by ASCII letters or digits");
         }
-        if (this.names.containsKey(name__511)) {
-            this.error("duplicate capture name '" + name__511 + "'");
+        if (this.names.containsKey(name__512)) {
+            this.error("duplicate capture name '" + name__512 + "'");
         }
-        this.names.put(name__511, true);
+        this.names.put(name__512, true);
     }
-    void claimNames(RegexNode node__514) {
-        if (node__514 instanceof Capture) {
-            Capture t_851 = Core.cast(Capture.class, node__514);
-            this.claimName(t_851.getName());
-            this.claimNames(t_851.getItem());
-        } else if (node__514 instanceof Or) {
-            List<RegexNode> this__1037 = Core.cast(Or.class, node__514).getItems();
-            int n__1039 = this__1037.size();
-            int i__1040 = 0;
-            while (i__1040 < n__1039) {
-                RegexNode el__1041 = Core.listGet(this__1037, i__1040);
-                i__1040 = i__1040 + 1;
-                RegexNode item__516 = el__1041;
-                this.claimNames(item__516);
-            }
-        } else if (node__514 instanceof Sequence) {
-            List<RegexNode> this__1042 = Core.cast(Sequence.class, node__514).getItems();
-            int n__1044 = this__1042.size();
-            int i__1045 = 0;
-            while (i__1045 < n__1044) {
-                RegexNode el__1046 = Core.listGet(this__1042, i__1045);
-                i__1045 = i__1045 + 1;
-                RegexNode item__517 = el__1046;
+    void claimNames(RegexNode node__515) {
+        if (node__515 instanceof Capture) {
+            Capture t_853 = Core.cast(Capture.class, node__515);
+            this.claimName(t_853.getName());
+            this.claimNames(t_853.getItem());
+        } else if (node__515 instanceof Or) {
+            List<RegexNode> this__1039 = Core.cast(Or.class, node__515).getItems();
+            int n__1041 = this__1039.size();
+            int i__1042 = 0;
+            while (i__1042 < n__1041) {
+                RegexNode el__1043 = Core.listGet(this__1039, i__1042);
+                i__1042 = i__1042 + 1;
+                RegexNode item__517 = el__1043;
                 this.claimNames(item__517);
             }
-        } else if (node__514 instanceof Repeat) {
-            Repeat t_860 = Core.cast(Repeat.class, node__514);
-            this.claimNames(t_860.getItem());
+        } else if (node__515 instanceof Sequence) {
+            List<RegexNode> this__1044 = Core.cast(Sequence.class, node__515).getItems();
+            int n__1046 = this__1044.size();
+            int i__1047 = 0;
+            while (i__1047 < n__1046) {
+                RegexNode el__1048 = Core.listGet(this__1044, i__1047);
+                i__1047 = i__1047 + 1;
+                RegexNode item__518 = el__1048;
+                this.claimNames(item__518);
+            }
+        } else if (node__515 instanceof Repeat) {
+            Repeat t_862 = Core.cast(Repeat.class, node__515);
+            this.claimNames(t_862.getItem());
         }
     }
     public RegexNode readSingle() {
@@ -839,29 +839,32 @@ final class Parser {
         } else if (this.matchChar(40)) {
             if (this.matchChar(63)) {
                 if (this.matchChar(58)) {
-                    RegexNode regex__520 = this.readOr();
+                    RegexNode regex__521 = this.readOr();
                     if (!this.matchChar(41)) {
                         this.error("closing paren");
                     }
-                    return regex__520;
+                    return regex__521;
                 } else if (this.matchChar(36)) {
-                    StringBuilder parts__521 = new StringBuilder();
+                    StringBuilder parts__522 = new StringBuilder();
                     while (!this.matchChar(41)) {
                         if (this.isDone()) {
                             this.error("missing closing paren in (?$...)");
                         }
-                        Core.stringBuilderAppendCodePoint(parts__521, this.read());
+                        Core.stringBuilderAppendCodePoint(parts__522, this.read());
                     }
-                    String str__522 = parts__521.toString();
-                    RegexNode slot__523;
+                    String str__523 = parts__522.toString();
+                    RegexNode slot__524;
                     try {
-                        slot__523 = Core.mappedGet(this.slots, str__522);
+                        slot__524 = Core.mappedGet(this.slots, str__523);
                     } catch (RuntimeException ignored$6) {
-                        this.error("no such slot: " + str__522);
+                        this.error("no such slot: " + str__523);
                         throw Core.bubble();
                     }
-                    this.claimNames(slot__523);
-                    return slot__523;
+                    this.claimNames(slot__524);
+                    return slot__524;
+                } else if (this.matchChar(47)) {
+                    this.error("flags after a regex literal are not supported; use a group like (?i:...)");
+                    throw Core.bubble();
                 } else if (this.matchChar(61)) {
                     this.error("positive lookhead is not supported");
                     throw Core.bubble();
@@ -883,65 +886,65 @@ final class Parser {
                     return this.readFlagGroup();
                 } else {
                     if (!this.isDone()) {
-                        int checkPos__524 = this.pos;
-                        int fc__525 = this.read();
+                        int checkPos__525 = this.pos;
+                        int fc__526 = this.read();
                         if (!this.isDone()) {
-                            boolean t_842;
-                            if (fc__525 == 80) {
+                            boolean t_844;
+                            if (fc__526 == 80) {
                                 if (this.peek() == 60) {
-                                    t_842 = true;
+                                    t_844 = true;
                                 } else if (this.peek() == 61) {
-                                    t_842 = true;
+                                    t_844 = true;
                                 } else {
-                                    t_842 = this.peek() == 62;
+                                    t_844 = this.peek() == 62;
                                 }
                             } else {
-                                t_842 = false;
+                                t_844 = false;
                             }
-                            if (t_842) {
+                            if (t_844) {
                                 this.error("Python-style (?P...) groups are not supported; use (?name=pattern) instead");
                             }
                         }
-                        this.pos = checkPos__524;
+                        this.pos = checkPos__525;
                     }
-                    StringBuilder str__526 = new StringBuilder();
+                    StringBuilder str__527 = new StringBuilder();
                     while (this.matchChar(32)) {
                     }
                     while (true) {
-                        boolean t_846;
+                        boolean t_848;
                         if (!this.isDone()) {
                             if (this.peek() != 32) {
-                                t_846 = this.peek() != 61;
+                                t_848 = this.peek() != 61;
                             } else {
-                                t_846 = false;
+                                t_848 = false;
                             }
                         } else {
-                            t_846 = false;
+                            t_848 = false;
                         }
-                        if (!t_846) {
+                        if (!t_848) {
                             break;
                         }
-                        Core.stringBuilderAppendCodePoint(str__526, this.read());
+                        Core.stringBuilderAppendCodePoint(str__527, this.read());
                     }
                     while (this.matchChar(32)) {
                     }
                     if (!this.matchChar(61)) {
-                        this.error("missing = in (?" + str__526.toString() + "=...)");
+                        this.error("missing = in (?" + str__527.toString() + "=...)");
                     }
-                    String name__527 = str__526.toString();
-                    this.claimName(name__527);
-                    RegexNode regex__528 = this.readOr();
+                    String name__528 = str__527.toString();
+                    this.claimName(name__528);
+                    RegexNode regex__529 = this.readOr();
                     if (!this.matchChar(41)) {
                         this.error("closing paren");
                     }
-                    return new Capture(name__527, regex__528);
+                    return new Capture(name__528, regex__529);
                 }
             } else {
-                RegexNode regex__529 = this.readOr();
+                RegexNode regex__530 = this.readOr();
                 if (!this.matchChar(41)) {
                     this.error("closing paren");
                 }
-                return regex__529;
+                return regex__530;
             }
         } else if (this.matchChar(94)) {
             return Begin;
@@ -955,112 +958,122 @@ final class Parser {
             this.error("invalid repeat");
             throw Core.bubble();
         } else {
-            String t_1083 = Core.stringFromCodePoint(this.read());
-            return new CodePoints(t_1083);
+            String t_1085 = Core.stringFromCodePoint(this.read());
+            return new CodePoints(t_1085);
         }
     }
     public RegexNode readSeq() {
-        List<RegexNode> seq__534 = new ArrayList<>();
-        List<String> codeBuffer__535 = new ArrayList<>();
+        List<RegexNode> seq__535 = new ArrayList<>();
+        List<String> codeBuffer__536 = new ArrayList<>();
         class Local_1 {
-            void popCodeBuffer__532() {
-                if (!codeBuffer__535.isEmpty()) {
-                    Function<String, String> fn__1093 = it__537 -> it__537;
-                    Core.listAdd(seq__534, new CodePoints(Core.listJoinObj(codeBuffer__535, "", fn__1093)));
-                    codeBuffer__535.clear();
+            void popCodeBuffer__533() {
+                if (!codeBuffer__536.isEmpty()) {
+                    Function<String, String> fn__1095 = it__538 -> it__538;
+                    Core.listAdd(seq__535, new CodePoints(Core.listJoinObj(codeBuffer__536, "", fn__1095)));
+                    codeBuffer__536.clear();
                 }
             }
         }
         final Local_1 local$1 = new Local_1();
-        Consumer<RegexNode> add__533 = regex__538 -> {
-            if (regex__538 instanceof CodePoints) {
-                CodePoints t_834 = Core.cast(CodePoints.class, regex__538);
-                Core.listAdd(codeBuffer__535, t_834.getValue());
+        Consumer<RegexNode> add__534 = regex__539 -> {
+            if (regex__539 instanceof CodePoints) {
+                CodePoints t_836 = Core.cast(CodePoints.class, regex__539);
+                Core.listAdd(codeBuffer__536, t_836.getValue());
             } else {
-                local$1.popCodeBuffer__532();
-                Core.listAdd(seq__534, regex__538);
+                local$1.popCodeBuffer__533();
+                Core.listAdd(seq__535, regex__539);
             }
         };
         this.skipIgnored();
         while (true) {
-            boolean t_835;
+            boolean t_837;
             if (!this.isDone()) {
                 if (this.peek() != 124) {
-                    t_835 = this.peek() != 41;
+                    t_837 = this.peek() != 41;
                 } else {
-                    t_835 = false;
+                    t_837 = false;
                 }
             } else {
-                t_835 = false;
+                t_837 = false;
             }
-            if (!t_835) {
+            if (!t_837) {
                 break;
             }
-            RegexNode single__540 = this.readSingle();
+            RegexNode single__541 = this.readSingle();
             this.skipIgnored();
-            RegexNode regex__541 = this.readPostfix(single__540);
-            if (regex__541 instanceof Sequence) {
-                List<RegexNode> this__1047 = Core.cast(Sequence.class, regex__541).getItems();
-                int n__1049 = this__1047.size();
-                int i__1050 = 0;
-                while (i__1050 < n__1049) {
-                    RegexNode el__1051 = Core.listGet(this__1047, i__1050);
-                    i__1050 = i__1050 + 1;
-                    RegexNode item__542 = el__1051;
-                    add__533.accept(item__542);
+            RegexNode regex__542 = this.readPostfix(single__541);
+            if (regex__542 instanceof Sequence) {
+                List<RegexNode> this__1049 = Core.cast(Sequence.class, regex__542).getItems();
+                int n__1051 = this__1049.size();
+                int i__1052 = 0;
+                while (i__1052 < n__1051) {
+                    RegexNode el__1053 = Core.listGet(this__1049, i__1052);
+                    i__1052 = i__1052 + 1;
+                    RegexNode item__543 = el__1053;
+                    add__534.accept(item__543);
                 }
             } else {
-                add__533.accept(regex__541);
+                add__534.accept(regex__542);
             }
             this.skipIgnored();
         }
-        local$1.popCodeBuffer__532();
-        if (seq__534.size() == 1) {
-            return Core.listGet(seq__534, 0);
+        local$1.popCodeBuffer__533();
+        if (seq__535.size() == 1) {
+            return Core.listGet(seq__535, 0);
         } else {
-            return new Sequence(List.copyOf(seq__534));
+            return new Sequence(List.copyOf(seq__535));
         }
     }
     public RegexNode readOr() {
-        List<RegexNode> ors__545 = new ArrayList<>();
+        List<RegexNode> ors__546 = new ArrayList<>();
         while (true) {
-            boolean t_825;
-            if (!this.isDone()) {
-                t_825 = this.peek() != 41;
-            } else {
-                t_825 = false;
-            }
-            if (!t_825) {
-                break;
-            }
             boolean t_827;
-            if (ors__545.size() != 0) {
-                t_827 = !this.matchChar(124);
+            if (!this.isDone()) {
+                t_827 = this.peek() != 41;
             } else {
                 t_827 = false;
             }
-            if (t_827) {
+            if (!t_827) {
+                break;
+            }
+            boolean t_829;
+            if (ors__546.size() != 0) {
+                t_829 = !this.matchChar(124);
+            } else {
+                t_829 = false;
+            }
+            if (t_829) {
                 this.error("or");
             }
-            RegexNode regex__546 = this.readSeq();
-            if (regex__546 instanceof Or) {
-                Core.listAddAll(ors__545, Core.cast(Or.class, regex__546).getItems());
+            RegexNode regex__547 = this.readSeq();
+            if (regex__547 instanceof Or) {
+                Core.listAddAll(ors__546, Core.cast(Or.class, regex__547).getItems());
             } else {
-                Core.listAdd(ors__545, regex__546);
+                Core.listAdd(ors__546, regex__547);
             }
         }
-        if (ors__545.size() == 1) {
-            return Core.listGet(ors__545, 0);
-        } else {
-            return new Or(List.copyOf(ors__545));
+        int subject_648 = ors__546.size();
+        switch (subject_648) {
+            case 0:
+                {
+                return new Sequence(List.of());
+            }
+            case 1:
+                {
+                return Core.listGet(ors__546, 0);
+            }
+            default:
+                {
+                return new Or(List.copyOf(ors__546));
+            }
         }
     }
     public RegexNode readAll() {
-        RegexNode result__549 = this.readOr();
+        RegexNode result__550 = this.readOr();
         if (!this.isDone()) {
             this.error("unexpected ')'; unmatched closing parenthesis");
         }
-        return result__549;
+        return result__550;
     }
     public static final class Builder {
         String chars;
@@ -1077,26 +1090,26 @@ final class Parser {
             return new Parser(chars, slots);
         }
     }
-    public Parser(String chars__551, @Nullable Map<String, RegexNode> slots__681) {
-        Map<String, RegexNode> slots__552;
-        if (slots__681 == null) {
-            slots__552 = noSlots__293;
+    public Parser(String chars__552, @Nullable Map<String, RegexNode> slots__683) {
+        Map<String, RegexNode> slots__553;
+        if (slots__683 == null) {
+            slots__553 = noSlots__294;
         } else {
-            slots__552 = slots__681;
+            slots__553 = slots__683;
         }
-        this.chars = chars__551;
-        this.slots = slots__552;
+        this.chars = chars__552;
+        this.slots = slots__553;
         this.pos = 0;
         this.errorMessage = null;
-        Map<String, Boolean> t_555 = new LinkedHashMap<>();
-        this.names = t_555;
+        Map<String, Boolean> t_556 = new LinkedHashMap<>();
+        this.names = t_556;
         this.extended = false;
         this.caseless = false;
         this.braceMin = 0;
         this.braceMax = 0;
     }
-    public Parser(String chars__551) {
-        this(chars__551, null);
+    public Parser(String chars__552) {
+        this(chars__552, null);
     }
     public String getChars() {
         return this.chars;
@@ -1107,25 +1120,25 @@ final class Parser {
     public int getPos() {
         return this.pos;
     }
-    public void setPos(int newPos__605) {
-        this.pos = newPos__605;
+    public void setPos(int newPos__606) {
+        this.pos = newPos__606;
     }
     public @Nullable String getErrorMessage() {
         return this.errorMessage;
     }
-    public void setErrorMessage(@Nullable String newErrorMessage__612) {
-        this.errorMessage = newErrorMessage__612;
+    public void setErrorMessage(@Nullable String newErrorMessage__613) {
+        this.errorMessage = newErrorMessage__613;
     }
     public int getBraceMin() {
         return this.braceMin;
     }
-    public void setBraceMin(int newBraceMin__619) {
-        this.braceMin = newBraceMin__619;
+    public void setBraceMin(int newBraceMin__620) {
+        this.braceMin = newBraceMin__620;
     }
     public int getBraceMax() {
         return this.braceMax;
     }
-    public void setBraceMax(int newBraceMax__626) {
-        this.braceMax = newBraceMax__626;
+    public void setBraceMax(int newBraceMax__627) {
+        this.braceMax = newBraceMax__627;
     }
 }

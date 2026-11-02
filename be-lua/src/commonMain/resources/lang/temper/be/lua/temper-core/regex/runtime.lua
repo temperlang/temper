@@ -760,81 +760,81 @@ package.preload['temper-regex-engine/dfa/lua'] = function()
   local temper = require('temper-core');
   local Lua, exports;
   Lua = temper.type('Lua');
-  Lua.fromTable = function(table__20)
-    local r__22, fn__47;
-    r__22 = Lua(temper.listbuilder_constructor());
-    r__22:addTable(table__20);
-    fn__47 = function(s__23)
-      return s__23;
+  Lua.fromTable = function(table__19)
+    local r__21, fn__46;
+    r__21 = Lua(temper.listbuilder_constructor());
+    r__21:addTable(table__19);
+    fn__46 = function(s__22)
+      return s__22;
     end;
-    return temper.listed_join(r__22.buf, '', fn__47);
+    return temper.listed_join(r__21.buf, '', fn__46);
   end;
-  Lua.methods.addString = function(this__3, string__26)
-    temper.listbuilder_add(this__3.buf__18, string__26);
+  Lua.methods.addString = function(this__2, string__25)
+    temper.listbuilder_add(this__2.buf__17, string__25);
     return nil;
   end;
-  Lua.methods.addRow = function(this__4, row__29)
-    local id__31, i__32;
-    id__31 = temper.int32_tostring(row__29.name.id);
-    this__4:addString(temper.concat('rows[', id__31, '] = function(code)', '\n'));
-    i__32 = 0;
-    while (i__32 < temper.listed_length(row__29.keys)) do
-      local key__33, target__34, local_104, local_105, local_106;
-      key__33 = temper.listed_get(row__29.keys, i__32);
+  Lua.methods.addRow = function(this__3, row__28)
+    local id__30, i__31;
+    id__30 = temper.int32_tostring(row__28.name.id);
+    this__3:addString(temper.concat('rows[', id__30, '] = {'));
+    i__31 = 0;
+    while (i__31 < temper.listed_length(row__28.keys)) do
+      local key__32, target__33, local_104, local_105, local_106;
+      key__32 = temper.listed_get(row__28.keys, i__31);
       local_104, local_105, local_106 = temper.pcall(function()
-        target__34 = temper.mapped_get(row__29.map, key__33);
+        target__33 = temper.mapped_get(row__28.map, key__32);
       end);
       if local_104 then
       else
-        target__34 = temper.bubble();
+        target__33 = temper.bubble();
       end
-      if (i__32 == 0) then
-        this__4:addString('  if ');
-      else
-        this__4:addString('  elseif ');
-      end
-      this__4:addString(temper.concat('code == ', temper.int32_tostring(key__33), ' then return ', temper.int32_tostring(target__34.id), '\n'));
-      i__32 = temper.int32_add(i__32, 1);
+      this__3:addString(temper.concat('[', temper.int32_tostring(key__32), ']=', temper.int32_tostring(target__33.id), ','));
+      i__31 = temper.int32_add(i__31, 1);
     end
-    if not (temper.listed_length(row__29.keys) == 0) then
-      this__4:addString('  end\n');
+    this__3:addString('}\n');
+    this__3:addString(temper.concat('others[', id__30, '] = ', temper.int32_tostring(row__28.other.id), '\n'));
+    if row__28.ok then
+      this__3:addString(temper.concat('ok[', id__30, '] = true', '\n'));
     end
-    this__4:addString(temper.concat('  return ', temper.int32_tostring(row__29.other.id), '\n'));
+    return nil;
+  end;
+  Lua.methods.addTable = function(this__4, table__35)
+    local i__37;
+    this__4:addString("local temper = package.loaded['temper-core/prelude']\n");
+    this__4:addString('local string_byte = string.byte\n');
+    this__4:addString('local string_get = temper.string_get\n');
+    this__4:addString('local string_next = temper.string_next\n');
+    this__4:addString('local rows = {}\n');
+    this__4:addString('local others = {}\n');
+    this__4:addString('local ok = {}\n');
+    i__37 = 0;
+    while (i__37 < temper.listbuilder_length(table__35.rows)) do
+      this__4:addRow(temper.listed_get(table__35.rows, i__37));
+      i__37 = temper.int32_add(i__37, 1);
+    end
+    this__4:addString('return function(str, head)\n');
+    this__4:addString('  local row = 0\n');
+    this__4:addString('  while not ok[row] do\n');
+    this__4:addString('    if head > #str then return -1 end\n');
+    this__4:addString('    local code = string_byte(str, head)\n');
+    this__4:addString('    if code < 128 then\n');
+    this__4:addString('      head = head + 1\n');
+    this__4:addString('    else\n');
+    this__4:addString('      code = string_get(str, head)\n');
+    this__4:addString('      head = string_next(str, head)\n');
+    this__4:addString('    end\n');
+    this__4:addString('    row = rows[row][code] or others[row]\n');
+    this__4:addString('  end\n');
+    this__4:addString('  return head\n');
     this__4:addString('end\n');
-    if row__29.ok then
-      this__4:addString(temper.concat('ok[', id__31, '] = true', '\n'));
-    end
     return nil;
   end;
-  Lua.methods.addTable = function(this__5, table__36)
-    local i__38;
-    this__5:addString('local utf8_codepoint = utf8.codepoint\n');
-    this__5:addString('local utf8_offset = utf8.offset\n');
-    this__5:addString('local rows = {}\n');
-    this__5:addString('local ok = {}\n');
-    i__38 = 0;
-    while (i__38 < temper.listbuilder_length(table__36.rows)) do
-      this__5:addRow(temper.listed_get(table__36.rows, i__38));
-      i__38 = temper.int32_add(i__38, 1);
-    end
-    this__5:addString('return function(str, head)\n');
-    this__5:addString('  local row = 0\n');
-    this__5:addString('  while not ok[row] do\n');
-    this__5:addString('    if head > #str then return -1 end\n');
-    this__5:addString('    local code = utf8_codepoint(str, head)\n');
-    this__5:addString('    head = utf8_offset(str, 2, head)\n');
-    this__5:addString('    row = rows[row](code)\n');
-    this__5:addString('  end\n');
-    this__5:addString('  return head\n');
-    this__5:addString('end\n');
+  Lua.constructor = function(this__5, buf__39)
+    this__5.buf__17 = buf__39;
     return nil;
   end;
-  Lua.constructor = function(this__6, buf__40)
-    this__6.buf__18 = buf__40;
-    return nil;
-  end;
-  Lua.get.buf = function(this__43)
-    return this__43.buf__18;
+  Lua.get.buf = function(this__42)
+    return this__42.buf__17;
   end;
   exports = {};
   exports.Lua = Lua;
@@ -1598,6 +1598,9 @@ package.preload['temper-regex-engine/nfa/nfa'] = function()
       return nil;
     elseif temper.instance_of(regex__131, Or) then
       t_120 = temper.cast_to(regex__131, Or);
+      if temper.listed_isempty(t_120.items) then
+        input__132:addNext(this__13.engine__108.epsilon, output__133);
+      end
       i__147 = 0;
       while (i__147 < temper.list_length(t_120.items)) do
         this__13:buildRegex(temper.list_get(t_120.items, i__147), input__132, output__133);

@@ -70,6 +70,9 @@ jobs:
               env:
                   # Run a single instance to ensure randomized tests are repeatable
                   TEST_RANDOM_SEED: 123456
+            - name: Check vendored regex code
+              run: ./gradlew checkRegexVendored
+              timeout-minutes: 10
             - name: Save test reports
               uses: actions/upload-artifact@v4
               # check if the workflow failed and the prior step was the cause

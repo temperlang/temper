@@ -148,7 +148,13 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
         val regex = runCatching {
             RegexParserGlobal.parseWith(text, slots)!!
         }.getOrElse {
-            return@invoke reportRegexError(macroEnv)
+            // Null if the failure didn't come from the parser reporting an error.
+            val message = RegexParserGlobal.parseError(text, slots)
+            return@invoke if (message != null) {
+                reportRegexError(macroEnv, template = MessageTemplate.InvalidRegex, values = listOf(message))
+            } else {
+                reportRegexError(macroEnv)
+            }
         }
 
         // Replace the macro call with regex constructor calls.

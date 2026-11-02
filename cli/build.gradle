@@ -721,6 +721,9 @@ def vendoredLibrarySource = { String name, String repo, String commit, String di
 
 /** Builds the library at workRoot for one backend and returns that backend's output directory. */
 def temperBuild = { File workRoot, String backend ->
+    def out = new File(workRoot, "temper.out/$backend")
+    // Temper leaves old output in place, and a local checkout could have files it no longer generates.
+    delete out
     def run = providers.javaexec { spec ->
         spec.executable = jdkLauncher.executablePath.asFile
         spec.mainClass = mainClassName
@@ -736,7 +739,66 @@ def temperBuild = { File workRoot, String backend ->
                 run.standardError.asText.get()
         )
     }
-    new File(workRoot, "temper.out/$backend")
+    out
+}
+
+def regexParserJava = rootProject.file("regex-parser/src/main/java")
+def regexEngineRuntime = project(":be-lua").file(
+    "src/commonMain/resources/lang/temper/be/lua/temper-core/regex/runtime.lua"
+)
+
+/** Builds the regex parser and writes its Java to dest. */
+def writeRegexParserJava = { File dest ->
+    def src = vendoredLibrarySource(
+        "temper-regex-parser",
+        gradle.ext.regex_parser_repo,
+        gradle.ext.regex_parser_commit,
+        "regexParserDir",
+    )
+    def out = temperBuild(src, "java")
+    // The compiler only loads the parser and the std/regex it builds, so leave out the rest of std,
+    // the tests, and the generated entry points.
+    sync { spec ->
+        spec.from(new File(out, "std/src/main/java")) {
+            include "temper/std/regex/**"
+        }
+        spec.from(new File(out, "temper-regex-parser/src/main/java")) {
+            exclude "temper/regex_parser/tests/**", "temper/regex_parser/RegexParserMain.java"
+        }
+        spec.into dest
+        spec.exclude "**/*.map"
+        spec.includeEmptyDirs = false
+    }
+}
+
+/** Builds the regex engine and returns be-lua's runtime file's content. */
+def bundleRegexEngine = {
+    def src = vendoredLibrarySource(
+        "temper-regex-engine",
+        gradle.ext.regex_engine_repo,
+        gradle.ext.regex_engine_commit,
+        "regexEngineDir",
+    )
+    def out = temperBuild(src, "lua")
+    // Bundle the module be-lua's temper-core requires and everything it imports, each as a preloaded module.
+    // The library's init.lua also requires its tests and benchmarks, so leave it out.
+    def modules = new TreeMap<String, String>()
+    def pending = ["temper-regex-engine/nfa/nfa"]
+    while (!pending.isEmpty()) {
+        def module = pending.remove(pending.size() - 1)
+        if (!modules.containsKey(module)) {
+            def text = new File(out, "${module}.lua").getText("UTF-8")
+            modules[module] = text
+            (text =~ /(?:import|require)\('(temper-regex-engine\/[^']+)'/).each { pending.add(it[1]) }
+        }
+    }
+    def bundle = new StringBuilder()
+    modules.each { module, text ->
+        bundle.append("package.preload['$module'] = function()\n")
+        text.eachLine { bundle.append("  $it\n") }
+        bundle.append("end\n")
+    }
+    bundle.toString()
 }
 
 task updateRegexParser {
@@ -744,26 +806,7 @@ task updateRegexParser {
     description = "Regenerate regex-parser/src from temper-regex-parser at the pinned commit or -PregexParserDir."
     dependsOn sourceSets.main.runtimeClasspath
     doLast {
-        def src = vendoredLibrarySource(
-            "temper-regex-parser",
-            gradle.ext.regex_parser_repo,
-            gradle.ext.regex_parser_commit,
-            "regexParserDir",
-        )
-        def out = temperBuild(src, "java")
-        // The compiler only loads the parser and the std/regex it builds, so leave out the rest of std,
-        // the tests, and the generated entry points.
-        sync { spec ->
-            spec.from(new File(out, "std/src/main/java")) {
-                include "temper/std/regex/**"
-            }
-            spec.from(new File(out, "temper-regex-parser/src/main/java")) {
-                exclude "temper/regex_parser/tests/**", "temper/regex_parser/RegexParserMain.java"
-            }
-            spec.into rootProject.file("regex-parser/src/main/java")
-            spec.exclude "**/*.map"
-            spec.includeEmptyDirs = false
-        }
+        writeRegexParserJava(regexParserJava)
     }
 }
 
@@ -772,34 +815,32 @@ task updateRegexEngine {
     description = "Regenerate be-lua's regex runtime from temper-regex-engine at the pinned commit or -PregexEngineDir."
     dependsOn sourceSets.main.runtimeClasspath
     doLast {
-        def src = vendoredLibrarySource(
-            "temper-regex-engine",
-            gradle.ext.regex_engine_repo,
-            gradle.ext.regex_engine_commit,
-            "regexEngineDir",
-        )
-        def out = temperBuild(src, "lua")
-        // Bundle the module be-lua's temper-core requires and everything it imports, each as a preloaded module.
-        // The library's init.lua also requires its tests and benchmarks, so leave it out.
-        def modules = new TreeMap<String, String>()
-        def pending = ["temper-regex-engine/nfa/nfa"]
-        while (!pending.isEmpty()) {
-            def module = pending.remove(pending.size() - 1)
-            if (!modules.containsKey(module)) {
-                def text = new File(out, "${module}.lua").getText("UTF-8")
-                modules[module] = text
-                (text =~ /(?:import|require)\('(temper-regex-engine\/[^']+)'/).each { pending.add(it[1]) }
+        Files.writeString(regexEngineRuntime.toPath(), bundleRegexEngine())
+    }
+}
+
+// Not part of `check` because it fetches the pinned commits, so builds still work offline.
+task checkRegexVendored {
+    group = "Verification"
+    description = "Fail if regex-parser/src or be-lua's regex runtime differ from what the update tasks would write."
+    dependsOn sourceSets.main.runtimeClasspath
+    doLast {
+        def textsUnder = { File root ->
+            fileTree(root).files.collectEntries { file ->
+                [(root.toPath().relativize(file.toPath()).toString()): file.getText("UTF-8")]
             }
         }
-        def bundle = new StringBuilder()
-        modules.each { module, text ->
-            bundle.append("package.preload['$module'] = function()\n")
-            text.eachLine { bundle.append("  $it\n") }
-            bundle.append("end\n")
+        def fresh = layout.buildDirectory.dir("vendor/check").get().asFile
+        writeRegexParserJava(fresh)
+        def stale = []
+        if (textsUnder(fresh) != textsUnder(regexParserJava)) {
+            stale.add(":cli:updateRegexParser")
         }
-        def runtime = project(":be-lua").file(
-            "src/commonMain/resources/lang/temper/be/lua/temper-core/regex/runtime.lua"
-        )
-        Files.writeString(runtime.toPath(), bundle)
+        if (bundleRegexEngine() != regexEngineRuntime.getText("UTF-8")) {
+            stale.add(":cli:updateRegexEngine")
+        }
+        if (!stale.isEmpty()) {
+            throw new GradleException("Vendored regex code is out of date. Run ${stale.join(' and ')}.")
+        }
     }
 }

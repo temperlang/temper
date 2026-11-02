@@ -23,633 +23,633 @@ import static temper.std.regex.RegexGlobal.Space;
 public final class RegexParserGlobal {
     private RegexParserGlobal() {
     }
-    static final Map<String, RegexNode> noSlots__293;
-    static void formatTo(StringBuilder out__338, RegexNode node__339) {
-        if (node__339 instanceof CodePoints) {
-            String this__1061 = Core.cast(CodePoints.class, node__339).getValue();
-            int index__1063 = 0;
-            while (Core.stringHasIndex(this__1061, index__1063)) {
-                int codePoint__1064 = this__1061.codePointAt(index__1063);
-                int c__341 = codePoint__1064;
-                RegexParserGlobal.appendCode(out__338, c__341, false);
-                index__1063 = Core.stringNext(this__1061, index__1063);
+    static final Map<String, RegexNode> noSlots__294;
+    static void formatTo(StringBuilder out__339, RegexNode node__340) {
+        if (node__340 instanceof CodePoints) {
+            String this__1063 = Core.cast(CodePoints.class, node__340).getValue();
+            int index__1065 = 0;
+            while (Core.stringHasIndex(this__1063, index__1065)) {
+                int codePoint__1066 = this__1063.codePointAt(index__1065);
+                int c__342 = codePoint__1066;
+                RegexParserGlobal.appendCode(out__339, c__342, false);
+                index__1065 = Core.stringNext(this__1063, index__1065);
             }
-        } else if (node__339 instanceof CodeRange) {
-            CodeRange t_762 = Core.cast(CodeRange.class, node__339);
-            out__338.append("[");
-            RegexParserGlobal.appendCode(out__338, t_762.getMin(), true);
-            out__338.append("-");
-            RegexParserGlobal.appendCode(out__338, t_762.getMax(), true);
-            out__338.append("]");
-        } else if (node__339 instanceof CodeSet) {
-            CodeSet t_765 = Core.cast(CodeSet.class, node__339);
-            RegexParserGlobal.formatSet(out__338, t_765);
-        } else if (node__339 instanceof Or) {
-            Or t_768 = Core.cast(Or.class, node__339);
-            String separator__342 = "";
-            List<RegexNode> this__1065 = t_768.getItems();
-            int n__1067 = this__1065.size();
-            int i__1068 = 0;
-            while (i__1068 < n__1067) {
-                RegexNode el__1069 = Core.listGet(this__1065, i__1068);
-                i__1068 = i__1068 + 1;
-                RegexNode item__343 = el__1069;
-                out__338.append(separator__342);
-                separator__342 = "|";
-                RegexParserGlobal.formatTo(out__338, item__343);
+        } else if (node__340 instanceof CodeRange) {
+            CodeRange t_764 = Core.cast(CodeRange.class, node__340);
+            out__339.append("[");
+            RegexParserGlobal.appendCode(out__339, t_764.getMin(), true);
+            out__339.append("-");
+            RegexParserGlobal.appendCode(out__339, t_764.getMax(), true);
+            out__339.append("]");
+        } else if (node__340 instanceof CodeSet) {
+            CodeSet t_767 = Core.cast(CodeSet.class, node__340);
+            RegexParserGlobal.formatSet(out__339, t_767);
+        } else if (node__340 instanceof Or) {
+            Or t_770 = Core.cast(Or.class, node__340);
+            String separator__343 = "";
+            List<RegexNode> this__1067 = t_770.getItems();
+            int n__1069 = this__1067.size();
+            int i__1070 = 0;
+            while (i__1070 < n__1069) {
+                RegexNode el__1071 = Core.listGet(this__1067, i__1070);
+                i__1070 = i__1070 + 1;
+                RegexNode item__344 = el__1071;
+                out__339.append(separator__343);
+                separator__343 = "|";
+                RegexParserGlobal.formatTo(out__339, item__344);
             }
-        } else if (node__339 instanceof Sequence) {
-            List<RegexNode> this__1070 = Core.cast(Sequence.class, node__339).getItems();
-            int n__1072 = this__1070.size();
-            int i__1073 = 0;
-            while (i__1073 < n__1072) {
-                RegexNode el__1074 = Core.listGet(this__1070, i__1073);
-                i__1073 = i__1073 + 1;
-                RegexNode item__344 = el__1074;
-                boolean t_755 = item__344 instanceof Or;
-                RegexParserGlobal.formatGrouped(out__338, item__344, t_755);
+        } else if (node__340 instanceof Sequence) {
+            List<RegexNode> this__1072 = Core.cast(Sequence.class, node__340).getItems();
+            int n__1074 = this__1072.size();
+            int i__1075 = 0;
+            while (i__1075 < n__1074) {
+                RegexNode el__1076 = Core.listGet(this__1072, i__1075);
+                i__1075 = i__1075 + 1;
+                RegexNode item__345 = el__1076;
+                boolean t_757 = item__345 instanceof Or;
+                RegexParserGlobal.formatGrouped(out__339, item__345, t_757);
             }
-        } else if (node__339 instanceof Repeat) {
-            Repeat t_774 = Core.cast(Repeat.class, node__339);
-            RegexParserGlobal.formatGrouped(out__338, t_774.getItem(), RegexParserGlobal.needsGroupToRepeat(t_774.getItem()));
-            int min__345 = t_774.getMin();
-            @Nullable Integer max__346 = t_774.getMax();
-            if (max__346 == null) {
-                String t_775;
-                switch (min__345) {
+        } else if (node__340 instanceof Repeat) {
+            Repeat t_776 = Core.cast(Repeat.class, node__340);
+            RegexParserGlobal.formatGrouped(out__339, t_776.getItem(), RegexParserGlobal.needsGroupToRepeat(t_776.getItem()));
+            int min__346 = t_776.getMin();
+            @Nullable Integer max__347 = t_776.getMax();
+            if (max__347 == null) {
+                String t_777;
+                switch (min__346) {
                     case 0:
                         {
-                        t_775 = "*";
+                        t_777 = "*";
                         break;
                     }
                     case 1:
                         {
-                        t_775 = "+";
+                        t_777 = "+";
                         break;
                     }
                     default:
                         {
-                        t_775 = "{" + Integer.toString(min__345) + ",}";
+                        t_777 = "{" + Integer.toString(min__346) + ",}";
                         break;
                     }
                 }
-                out__338.append(t_775);
+                out__339.append(t_777);
             } else {
-                boolean t_778;
-                int max_731 = max__346.intValue();
-                if (min__345 == 0) {
-                    t_778 = max_731 == 1;
+                boolean t_780;
+                int max_733 = max__347.intValue();
+                if (min__346 == 0) {
+                    t_780 = max_733 == 1;
                 } else {
-                    t_778 = false;
+                    t_780 = false;
                 }
-                if (t_778) {
-                    out__338.append("?");
-                } else if (min__345 == max_731) {
-                    out__338.append("{" + Integer.toString(min__345) + "}");
+                if (t_780) {
+                    out__339.append("?");
+                } else if (min__346 == max_733) {
+                    out__339.append("{" + Integer.toString(min__346) + "}");
                 } else {
-                    out__338.append("{" + Integer.toString(min__345) + "," + Integer.toString(max_731) + "}");
+                    out__339.append("{" + Integer.toString(min__346) + "," + Integer.toString(max_733) + "}");
                 }
             }
-            if (t_774.isReluctant()) {
-                out__338.append("?");
+            if (t_776.isReluctant()) {
+                out__339.append("?");
             }
-        } else if (node__339 instanceof Capture) {
-            Capture t_782 = Core.cast(Capture.class, node__339);
-            out__338.append("(?" + t_782.getName() + "=");
-            RegexParserGlobal.formatTo(out__338, t_782.getItem());
-            out__338.append(")");
-        } else if (node__339 instanceof Special) {
-            Special t_785 = Core.cast(Special.class, node__339);
-            String t_1079 = RegexParserGlobal.specialText(t_785);
-            out__338.append(t_1079);
+        } else if (node__340 instanceof Capture) {
+            Capture t_784 = Core.cast(Capture.class, node__340);
+            out__339.append("(?" + t_784.getName() + "=");
+            RegexParserGlobal.formatTo(out__339, t_784.getItem());
+            out__339.append(")");
+        } else if (node__340 instanceof Special) {
+            Special t_787 = Core.cast(Special.class, node__340);
+            String t_1081 = RegexParserGlobal.specialText(t_787);
+            out__339.append(t_1081);
         } else {
             throw Core.bubble();
         }
     }
-    static boolean hasCode(String text__360, int code__361) {
-        boolean return__198;
-        fn__362: {
-            String this__998 = text__360;
-            int index__1000 = 0;
-            while (Core.stringHasIndex(this__998, index__1000)) {
-                int codePoint__1001 = this__998.codePointAt(index__1000);
-                int c__363 = codePoint__1001;
-                if (c__363 == code__361) {
-                    return__198 = true;
-                    break fn__362;
+    static boolean hasCode(String text__361, int code__362) {
+        boolean return__199;
+        fn__363: {
+            String this__1000 = text__361;
+            int index__1002 = 0;
+            while (Core.stringHasIndex(this__1000, index__1002)) {
+                int codePoint__1003 = this__1000.codePointAt(index__1002);
+                int c__364 = codePoint__1003;
+                if (c__364 == code__362) {
+                    return__199 = true;
+                    break fn__363;
                 }
-                index__1000 = Core.stringNext(this__998, index__1000);
+                index__1002 = Core.stringNext(this__1000, index__1002);
             }
             return false;
         }
-        return return__198;
+        return return__199;
     }
-    static boolean isPatternSpace(int c__374) {
-        return RegexParserGlobal.hasCode(" \t\n\u000b\f\r", c__374);
+    static boolean isPatternSpace(int c__375) {
+        return RegexParserGlobal.hasCode(" \t\n\u000b\f\r", c__375);
     }
-    static boolean isAsciiLetter(int c__347) {
+    static boolean isAsciiLetter(int c__348) {
+        boolean t_998;
+        if (c__348 >= 97) {
+            t_998 = c__348 <= 122;
+        } else {
+            t_998 = false;
+        }
+        if (t_998) {
+            return true;
+        } else if (c__348 >= 65) {
+            return c__348 <= 90;
+        } else {
+            return false;
+        }
+    }
+    static int otherCase(int letter__377) {
         boolean t_996;
-        if (c__347 >= 97) {
-            t_996 = c__347 <= 122;
+        if (letter__377 >= 97) {
+            t_996 = letter__377 <= 122;
         } else {
             t_996 = false;
         }
         if (t_996) {
-            return true;
-        } else if (c__347 >= 65) {
-            return c__347 <= 90;
+            return letter__377 - 97 + 65;
         } else {
-            return false;
+            return letter__377 - 65 + 97;
         }
     }
-    static int otherCase(int letter__376) {
-        boolean t_994;
-        if (letter__376 >= 97) {
-            t_994 = letter__376 <= 122;
-        } else {
-            t_994 = false;
-        }
-        if (t_994) {
-            return letter__376 - 97 + 65;
-        } else {
-            return letter__376 - 65 + 97;
-        }
-    }
-    static RegexNode ignoreCaseText(String text__384) {
-        List<RegexNode> pieces__386 = new ArrayList<>();
-        StringBuilder literal__387 = new StringBuilder();
-        String this__1002 = text__384;
-        int index__1004 = 0;
-        while (Core.stringHasIndex(this__1002, index__1004)) {
-            int codePoint__1005 = this__1002.codePointAt(index__1004);
-            int c__388 = codePoint__1005;
-            if (RegexParserGlobal.isAsciiLetter(c__388)) {
-                if (!literal__387.toString().isEmpty()) {
-                    Core.listAdd(pieces__386, new CodePoints(literal__387.toString()));
-                    literal__387.setLength(0);
+    static RegexNode ignoreCaseText(String text__385) {
+        List<RegexNode> pieces__387 = new ArrayList<>();
+        StringBuilder literal__388 = new StringBuilder();
+        String this__1004 = text__385;
+        int index__1006 = 0;
+        while (Core.stringHasIndex(this__1004, index__1006)) {
+            int codePoint__1007 = this__1004.codePointAt(index__1006);
+            int c__389 = codePoint__1007;
+            if (RegexParserGlobal.isAsciiLetter(c__389)) {
+                if (!literal__388.toString().isEmpty()) {
+                    Core.listAdd(pieces__387, new CodePoints(literal__388.toString()));
+                    literal__388.setLength(0);
                 }
-                StringBuilder both__389 = new StringBuilder();
-                Core.stringBuilderAppendCodePoint(both__389, c__388);
-                Core.stringBuilderAppendCodePoint(both__389, RegexParserGlobal.otherCase(c__388));
-                Core.listAdd(pieces__386, new CodeSet(List.of(new CodePoints(both__389.toString()))));
+                StringBuilder both__390 = new StringBuilder();
+                Core.stringBuilderAppendCodePoint(both__390, c__389);
+                Core.stringBuilderAppendCodePoint(both__390, RegexParserGlobal.otherCase(c__389));
+                Core.listAdd(pieces__387, new CodeSet(List.of(new CodePoints(both__390.toString()))));
             } else {
-                Core.stringBuilderAppendCodePoint(literal__387, c__388);
+                Core.stringBuilderAppendCodePoint(literal__388, c__389);
             }
-            index__1004 = Core.stringNext(this__1002, index__1004);
+            index__1006 = Core.stringNext(this__1004, index__1006);
         }
-        if (!literal__387.toString().isEmpty()) {
-            Core.listAdd(pieces__386, new CodePoints(literal__387.toString()));
+        if (!literal__388.toString().isEmpty()) {
+            Core.listAdd(pieces__387, new CodePoints(literal__388.toString()));
         }
-        int subject_575 = pieces__386.size();
-        switch (subject_575) {
+        int subject_576 = pieces__387.size();
+        switch (subject_576) {
             case 0:
                 {
-                return new CodePoints(text__384);
+                return new CodePoints(text__385);
             }
             case 1:
                 {
-                return Core.listGet(pieces__386, 0);
+                return Core.listGet(pieces__387, 0);
             }
             default:
                 {
-                return new Sequence(List.copyOf(pieces__386));
+                return new Sequence(List.copyOf(pieces__387));
             }
         }
     }
-    static List<CodePart> ignoreCaseParts(List<CodePart> items__390) {
-        List<CodePart> parts__392 = new ArrayList<>(items__390);
-        List<CodePart> this__1006 = items__390;
-        int n__1008 = this__1006.size();
-        int i__1009 = 0;
-        while (i__1009 < n__1008) {
-            CodePart el__1010 = Core.listGet(this__1006, i__1009);
-            i__1009 = i__1009 + 1;
-            CodePart item__393 = el__1010;
-            if (item__393 instanceof CodePoints) {
-                String this__1011 = Core.cast(CodePoints.class, item__393).getValue();
-                int index__1013 = 0;
-                while (Core.stringHasIndex(this__1011, index__1013)) {
-                    int codePoint__1014 = this__1011.codePointAt(index__1013);
-                    int c__394 = codePoint__1014;
-                    if (RegexParserGlobal.isAsciiLetter(c__394)) {
-                        String t_987 = Core.stringFromCodePoint(RegexParserGlobal.otherCase(c__394));
-                        Core.listAdd(parts__392, new CodePoints(t_987));
+    static List<CodePart> ignoreCaseParts(List<CodePart> items__391) {
+        List<CodePart> parts__393 = new ArrayList<>(items__391);
+        List<CodePart> this__1008 = items__391;
+        int n__1010 = this__1008.size();
+        int i__1011 = 0;
+        while (i__1011 < n__1010) {
+            CodePart el__1012 = Core.listGet(this__1008, i__1011);
+            i__1011 = i__1011 + 1;
+            CodePart item__394 = el__1012;
+            if (item__394 instanceof CodePoints) {
+                String this__1013 = Core.cast(CodePoints.class, item__394).getValue();
+                int index__1015 = 0;
+                while (Core.stringHasIndex(this__1013, index__1015)) {
+                    int codePoint__1016 = this__1013.codePointAt(index__1015);
+                    int c__395 = codePoint__1016;
+                    if (RegexParserGlobal.isAsciiLetter(c__395)) {
+                        String t_989 = Core.stringFromCodePoint(RegexParserGlobal.otherCase(c__395));
+                        Core.listAdd(parts__393, new CodePoints(t_989));
                     }
-                    index__1013 = Core.stringNext(this__1011, index__1013);
+                    index__1015 = Core.stringNext(this__1013, index__1015);
                 }
-            } else if (item__393 instanceof CodeRange) {
-                CodeRange t_993 = Core.cast(CodeRange.class, item__393);
-                int lowMin__395 = Math.max(t_993.getMin(), 97);
-                int lowMax__396 = Math.min(t_993.getMax(), 122);
-                if (lowMin__395 <= lowMax__396) {
-                    Core.listAdd(parts__392, new CodeRange(RegexParserGlobal.otherCase(lowMin__395), RegexParserGlobal.otherCase(lowMax__396)));
+            } else if (item__394 instanceof CodeRange) {
+                CodeRange t_995 = Core.cast(CodeRange.class, item__394);
+                int lowMin__396 = Math.max(t_995.getMin(), 97);
+                int lowMax__397 = Math.min(t_995.getMax(), 122);
+                if (lowMin__396 <= lowMax__397) {
+                    Core.listAdd(parts__393, new CodeRange(RegexParserGlobal.otherCase(lowMin__396), RegexParserGlobal.otherCase(lowMax__397)));
                 }
-                int upMin__397 = Math.max(t_993.getMin(), 65);
-                int upMax__398 = Math.min(t_993.getMax(), 90);
-                if (upMin__397 <= upMax__398) {
-                    Core.listAdd(parts__392, new CodeRange(RegexParserGlobal.otherCase(upMin__397), RegexParserGlobal.otherCase(upMax__398)));
+                int upMin__398 = Math.max(t_995.getMin(), 65);
+                int upMax__399 = Math.min(t_995.getMax(), 90);
+                if (upMin__398 <= upMax__399) {
+                    Core.listAdd(parts__393, new CodeRange(RegexParserGlobal.otherCase(upMin__398), RegexParserGlobal.otherCase(upMax__399)));
                 }
             }
         }
-        return List.copyOf(parts__392);
+        return List.copyOf(parts__393);
     }
-    static RegexNode ignoreCase(RegexNode node__378) {
-        if (node__378 instanceof CodePoints) {
-            return RegexParserGlobal.ignoreCaseText(Core.cast(CodePoints.class, node__378).getValue());
-        } else if (node__378 instanceof CodeRange) {
-            CodeRange t_971 = Core.cast(CodeRange.class, node__378);
-            return new CodeSet(RegexParserGlobal.ignoreCaseParts(List.of(t_971)));
-        } else if (node__378 instanceof CodeSet) {
-            CodeSet t_974 = Core.cast(CodeSet.class, node__378);
-            return new CodeSet(RegexParserGlobal.ignoreCaseParts(t_974.getItems()), t_974.isNegated());
-        } else if (node__378 instanceof Or) {
-            Function<RegexNode, RegexNode> fn__1095 = item__380 -> RegexParserGlobal.ignoreCase(item__380);
-            return new Or(Core.listMapObjToObj(Core.cast(Or.class, node__378).getItems(), fn__1095));
-        } else if (node__378 instanceof Sequence) {
-            Function<RegexNode, RegexNode> fn__1094 = item__382 -> RegexParserGlobal.ignoreCase(item__382);
-            return new Sequence(Core.listMapObjToObj(Core.cast(Sequence.class, node__378).getItems(), fn__1094));
-        } else if (node__378 instanceof Repeat) {
-            Repeat t_983 = Core.cast(Repeat.class, node__378);
-            return new Repeat(RegexParserGlobal.ignoreCase(t_983.getItem()), t_983.getMin(), t_983.getMax(), t_983.isReluctant());
-        } else if (node__378 instanceof Capture) {
-            Capture t_986 = Core.cast(Capture.class, node__378);
-            return new Capture(t_986.getName(), RegexParserGlobal.ignoreCase(t_986.getItem()));
+    static RegexNode ignoreCase(RegexNode node__379) {
+        if (node__379 instanceof CodePoints) {
+            return RegexParserGlobal.ignoreCaseText(Core.cast(CodePoints.class, node__379).getValue());
+        } else if (node__379 instanceof CodeRange) {
+            CodeRange t_973 = Core.cast(CodeRange.class, node__379);
+            return new CodeSet(RegexParserGlobal.ignoreCaseParts(List.of(t_973)));
+        } else if (node__379 instanceof CodeSet) {
+            CodeSet t_976 = Core.cast(CodeSet.class, node__379);
+            return new CodeSet(RegexParserGlobal.ignoreCaseParts(t_976.getItems()), t_976.isNegated());
+        } else if (node__379 instanceof Or) {
+            Function<RegexNode, RegexNode> fn__1097 = item__381 -> RegexParserGlobal.ignoreCase(item__381);
+            return new Or(Core.listMapObjToObj(Core.cast(Or.class, node__379).getItems(), fn__1097));
+        } else if (node__379 instanceof Sequence) {
+            Function<RegexNode, RegexNode> fn__1096 = item__383 -> RegexParserGlobal.ignoreCase(item__383);
+            return new Sequence(Core.listMapObjToObj(Core.cast(Sequence.class, node__379).getItems(), fn__1096));
+        } else if (node__379 instanceof Repeat) {
+            Repeat t_985 = Core.cast(Repeat.class, node__379);
+            return new Repeat(RegexParserGlobal.ignoreCase(t_985.getItem()), t_985.getMin(), t_985.getMax(), t_985.isReluctant());
+        } else if (node__379 instanceof Capture) {
+            Capture t_988 = Core.cast(Capture.class, node__379);
+            return new Capture(t_988.getName(), RegexParserGlobal.ignoreCase(t_988.getItem()));
         } else {
-            return node__378;
+            return node__379;
         }
     }
-    static SpecialSet shorthandSet(int letter__356) {
-        boolean t_962;
-        if (letter__356 == 100) {
-            t_962 = true;
+    static SpecialSet shorthandSet(int letter__357) {
+        boolean t_964;
+        if (letter__357 == 100) {
+            t_964 = true;
         } else {
-            t_962 = letter__356 == 68;
+            t_964 = letter__357 == 68;
         }
-        if (t_962) {
+        if (t_964) {
             return Digit;
         } else {
-            boolean t_964;
-            if (letter__356 == 115) {
-                t_964 = true;
+            boolean t_966;
+            if (letter__357 == 115) {
+                t_966 = true;
             } else {
-                t_964 = letter__356 == 83;
+                t_966 = letter__357 == 83;
             }
-            if (t_964) {
+            if (t_966) {
                 return Space;
             } else {
                 return Word;
             }
         }
     }
-    static String shorthandMembers(int letter__358) {
-        boolean t_958;
-        if (letter__358 == 100) {
-            t_958 = true;
+    static String shorthandMembers(int letter__359) {
+        boolean t_960;
+        if (letter__359 == 100) {
+            t_960 = true;
         } else {
-            t_958 = letter__358 == 68;
+            t_960 = letter__359 == 68;
         }
-        if (t_958) {
+        if (t_960) {
             return "0123456789";
         } else {
-            boolean t_960;
-            if (letter__358 == 115) {
-                t_960 = true;
+            boolean t_962;
+            if (letter__359 == 115) {
+                t_962 = true;
             } else {
-                t_960 = letter__358 == 83;
+                t_962 = letter__359 == 83;
             }
-            if (t_960) {
+            if (t_962) {
                 return "\t\n\u000b\f\r ";
             } else {
                 return "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
             }
         }
     }
-    static CodeSet negatedClass(List<CodePart> items__364, String itemMembers__365, List<String> required__366) {
-        StringBuilder kept__368 = new StringBuilder();
-        String this__1015 = Core.listGet(required__366, 0);
-        int index__1017 = 0;
-        while (Core.stringHasIndex(this__1015, index__1017)) {
-            int codePoint__1018 = this__1015.codePointAt(index__1017);
-            int code__369 = codePoint__1018;
-            boolean keep__370 = !RegexParserGlobal.hasCode(itemMembers__365, code__369);
-            List<String> this__1019 = required__366;
-            int n__1021 = this__1019.size();
-            int i__1022 = 0;
-            while (i__1022 < n__1021) {
-                String el__1023 = Core.listGet(this__1019, i__1022);
-                i__1022 = i__1022 + 1;
-                String members__371 = el__1023;
-                if (!RegexParserGlobal.hasCode(members__371, code__369)) {
-                    keep__370 = false;
+    static CodeSet negatedClass(List<CodePart> items__365, String itemMembers__366, List<String> required__367) {
+        StringBuilder kept__369 = new StringBuilder();
+        String this__1017 = Core.listGet(required__367, 0);
+        int index__1019 = 0;
+        while (Core.stringHasIndex(this__1017, index__1019)) {
+            int codePoint__1020 = this__1017.codePointAt(index__1019);
+            int code__370 = codePoint__1020;
+            boolean keep__371 = !RegexParserGlobal.hasCode(itemMembers__366, code__370);
+            List<String> this__1021 = required__367;
+            int n__1023 = this__1021.size();
+            int i__1024 = 0;
+            while (i__1024 < n__1023) {
+                String el__1025 = Core.listGet(this__1021, i__1024);
+                i__1024 = i__1024 + 1;
+                String members__372 = el__1025;
+                if (!RegexParserGlobal.hasCode(members__372, code__370)) {
+                    keep__371 = false;
                 }
             }
-            List<CodePart> this__1024 = items__364;
-            int n__1026 = this__1024.size();
-            int i__1027 = 0;
-            while (i__1027 < n__1026) {
-                CodePart el__1028 = Core.listGet(this__1024, i__1027);
-                i__1027 = i__1027 + 1;
-                CodePart item__372 = el__1028;
-                if (item__372 instanceof CodePoints) {
-                    if (RegexParserGlobal.hasCode(Core.cast(CodePoints.class, item__372).getValue(), code__369)) {
-                        keep__370 = false;
+            List<CodePart> this__1026 = items__365;
+            int n__1028 = this__1026.size();
+            int i__1029 = 0;
+            while (i__1029 < n__1028) {
+                CodePart el__1030 = Core.listGet(this__1026, i__1029);
+                i__1029 = i__1029 + 1;
+                CodePart item__373 = el__1030;
+                if (item__373 instanceof CodePoints) {
+                    if (RegexParserGlobal.hasCode(Core.cast(CodePoints.class, item__373).getValue(), code__370)) {
+                        keep__371 = false;
                     }
-                } else if (item__372 instanceof CodeRange) {
-                    CodeRange t_955 = Core.cast(CodeRange.class, item__372);
-                    boolean t_956;
-                    if (t_955.getMin() <= code__369) {
-                        t_956 = code__369 <= t_955.getMax();
+                } else if (item__373 instanceof CodeRange) {
+                    CodeRange t_957 = Core.cast(CodeRange.class, item__373);
+                    boolean t_958;
+                    if (t_957.getMin() <= code__370) {
+                        t_958 = code__370 <= t_957.getMax();
                     } else {
-                        t_956 = false;
+                        t_958 = false;
                     }
-                    if (t_956) {
-                        keep__370 = false;
+                    if (t_958) {
+                        keep__371 = false;
                     }
                 }
             }
-            if (keep__370) {
-                Core.stringBuilderAppendCodePoint(kept__368, code__369);
+            if (keep__371) {
+                Core.stringBuilderAppendCodePoint(kept__369, code__370);
             }
-            index__1017 = Core.stringNext(this__1015, index__1017);
+            index__1019 = Core.stringNext(this__1017, index__1019);
         }
-        String codes__373 = kept__368.toString();
-        if (codes__373.isEmpty()) {
+        String codes__374 = kept__369.toString();
+        if (codes__374.isEmpty()) {
             return new CodeSet(List.of());
         } else {
-            return new CodeSet(List.of(new CodePoints(codes__373)));
+            return new CodeSet(List.of(new CodePoints(codes__374)));
         }
     }
-    static boolean isAsciiPunctuation(int c__351) {
-        boolean t_944;
-        if (c__351 >= 33) {
-            t_944 = c__351 <= 47;
+    static boolean isAsciiPunctuation(int c__352) {
+        boolean t_946;
+        if (c__352 >= 33) {
+            t_946 = c__352 <= 47;
         } else {
-            t_944 = false;
+            t_946 = false;
         }
-        if (t_944) {
+        if (t_946) {
             return true;
         } else {
-            boolean t_946;
-            if (c__351 >= 58) {
-                t_946 = c__351 <= 64;
+            boolean t_948;
+            if (c__352 >= 58) {
+                t_948 = c__352 <= 64;
             } else {
-                t_946 = false;
+                t_948 = false;
             }
-            if (t_946) {
+            if (t_948) {
                 return true;
             } else {
-                boolean t_948;
-                if (c__351 >= 91) {
-                    t_948 = c__351 <= 96;
+                boolean t_950;
+                if (c__352 >= 91) {
+                    t_950 = c__352 <= 96;
                 } else {
-                    t_948 = false;
+                    t_950 = false;
                 }
-                if (t_948) {
+                if (t_950) {
                     return true;
-                } else if (c__351 >= 123) {
-                    return c__351 <= 126;
+                } else if (c__352 >= 123) {
+                    return c__352 <= 126;
                 } else {
                     return false;
                 }
             }
         }
     }
-    static boolean isAsciiDigit(int c__349) {
-        if (c__349 >= 48) {
-            return c__349 <= 57;
+    static boolean isAsciiDigit(int c__350) {
+        if (c__350 >= 48) {
+            return c__350 <= 57;
         } else {
             return false;
         }
     }
-    static boolean isCaptureName(String name__353) {
-        boolean return__195;
-        fn__354: {
-            boolean t_942;
-            if (name__353.isEmpty()) {
-                t_942 = true;
+    static boolean isCaptureName(String name__354) {
+        boolean return__196;
+        fn__355: {
+            boolean t_944;
+            if (name__354.isEmpty()) {
+                t_944 = true;
             } else {
-                t_942 = !RegexParserGlobal.isAsciiLetter(name__353.codePointAt(0));
+                t_944 = !RegexParserGlobal.isAsciiLetter(name__354.codePointAt(0));
             }
-            if (t_942) {
-                return__195 = false;
-                break fn__354;
+            if (t_944) {
+                return__196 = false;
+                break fn__355;
             }
-            String this__1029 = name__353;
-            int index__1031 = 0;
-            while (Core.stringHasIndex(this__1029, index__1031)) {
-                int codePoint__1032 = this__1029.codePointAt(index__1031);
-                int c__355 = codePoint__1032;
-                boolean t_940;
-                if (!RegexParserGlobal.isAsciiLetter(c__355)) {
-                    t_940 = !RegexParserGlobal.isAsciiDigit(c__355);
+            String this__1031 = name__354;
+            int index__1033 = 0;
+            while (Core.stringHasIndex(this__1031, index__1033)) {
+                int codePoint__1034 = this__1031.codePointAt(index__1033);
+                int c__356 = codePoint__1034;
+                boolean t_942;
+                if (!RegexParserGlobal.isAsciiLetter(c__356)) {
+                    t_942 = !RegexParserGlobal.isAsciiDigit(c__356);
                 } else {
-                    t_940 = false;
+                    t_942 = false;
                 }
-                if (t_940) {
-                    return__195 = false;
-                    break fn__354;
+                if (t_942) {
+                    return__196 = false;
+                    break fn__355;
                 }
-                index__1031 = Core.stringNext(this__1029, index__1031);
+                index__1033 = Core.stringNext(this__1031, index__1033);
             }
             return true;
         }
-        return return__195;
+        return return__196;
     }
-    public static RegexNode parseWith(String src__299, Map<String, RegexNode> slots__300) {
-        return new Parser(src__299, slots__300).readAll();
+    public static RegexNode parseWith(String src__300, Map<String, RegexNode> slots__301) {
+        return new Parser(src__300, slots__301).readAll();
     }
-    public static Regex compileWith(String src__294, Map<String, RegexNode> slots__295) {
-        RegexNode t_1082 = RegexParserGlobal.parseWith(src__294, slots__295);
-        return t_1082.compiled();
+    public static Regex compileWith(String src__295, Map<String, RegexNode> slots__296) {
+        RegexNode t_1084 = RegexParserGlobal.parseWith(src__295, slots__296);
+        return t_1084.compiled();
     }
-    public static RegexNode parse(String src__302) {
-        return new Parser(src__302).readAll();
+    public static RegexNode parse(String src__303) {
+        return new Parser(src__303).readAll();
     }
-    public static Regex compile(String src__297) {
-        RegexNode t_1081 = RegexParserGlobal.parse(src__297);
-        return t_1081.compiled();
+    public static Regex compile(String src__298) {
+        RegexNode t_1083 = RegexParserGlobal.parse(src__298);
+        return t_1083.compiled();
     }
-    static boolean isMeta(int c__316) {
-        return RegexParserGlobal.hasCode("\\^$.|?*+()[]{}", c__316);
+    static boolean isMeta(int c__317) {
+        return RegexParserGlobal.hasCode("\\^$.|?*+()[]{}", c__317);
     }
-    static void appendCode(StringBuilder out__318, int code__319, boolean inClass__320) {
-        switch (code__319) {
+    static void appendCode(StringBuilder out__319, int code__320, boolean inClass__321) {
+        switch (code__320) {
             case 9:
                 {
-                out__318.append("\\t");
+                out__319.append("\\t");
                 break;
             }
             case 10:
                 {
-                out__318.append("\\n");
+                out__319.append("\\n");
                 break;
             }
             case 11:
                 {
-                out__318.append("\\v");
+                out__319.append("\\v");
                 break;
             }
             case 12:
                 {
-                out__318.append("\\f");
+                out__319.append("\\f");
                 break;
             }
             case 13:
                 {
-                out__318.append("\\r");
+                out__319.append("\\r");
                 break;
             }
             default:
                 {
-                boolean t_818;
-                if (code__319 < 32) {
-                    t_818 = true;
+                boolean t_820;
+                if (code__320 < 32) {
+                    t_820 = true;
                 } else {
-                    t_818 = code__319 == 127;
+                    t_820 = code__320 == 127;
                 }
-                if (t_818) {
-                    out__318.append("\\" + "u{" + Integer.toString(code__319, 16) + "}");
+                if (t_820) {
+                    out__319.append("\\" + "u{" + Integer.toString(code__320, 16) + "}");
                 } else {
-                    boolean t_820;
-                    if (RegexParserGlobal.isMeta(code__319)) {
-                        t_820 = true;
-                    } else if (inClass__320) {
-                        t_820 = code__319 == 45;
+                    boolean t_822;
+                    if (RegexParserGlobal.isMeta(code__320)) {
+                        t_822 = true;
+                    } else if (inClass__321) {
+                        t_822 = code__320 == 45;
                     } else {
-                        t_820 = false;
+                        t_822 = false;
                     }
-                    if (t_820) {
-                        out__318.append("\\");
+                    if (t_822) {
+                        out__319.append("\\");
                     }
-                    Core.stringBuilderAppendCodePoint(out__318, code__319);
+                    Core.stringBuilderAppendCodePoint(out__319, code__320);
                 }
                 break;
             }
         }
     }
-    static String specialText(Special special__322) {
-        if (special__322 instanceof SpecialSet) {
-            SpecialSet t_817 = Core.cast(SpecialSet.class, special__322);
-            Regex regex__324 = t_817.compiled();
-            String subject_654 = Boolean.toString(regex__324.found("5")) + " " + Boolean.toString(regex__324.found("a")) + " " + Boolean.toString(regex__324.found(" "));
-            if (subject_654.equals("true false false")) {
+    static String specialText(Special special__323) {
+        if (special__323 instanceof SpecialSet) {
+            SpecialSet t_819 = Core.cast(SpecialSet.class, special__323);
+            Regex regex__325 = t_819.compiled();
+            String subject_656 = Boolean.toString(regex__325.found("5")) + " " + Boolean.toString(regex__325.found("a")) + " " + Boolean.toString(regex__325.found(" "));
+            if (subject_656.equals("true false false")) {
                 return "\\d";
-            } else if (subject_654.equals("false false true")) {
+            } else if (subject_656.equals("false false true")) {
                 return "\\s";
-            } else if (subject_654.equals("true true false")) {
+            } else if (subject_656.equals("true true false")) {
                 return "\\w";
             } else {
                 throw Core.bubble();
             }
         } else {
-            Regex aS__325 = new Sequence(List.of(new CodePoints("a"), special__322)).compiled();
-            Regex sA__326 = new Sequence(List.of(special__322, new CodePoints("a"))).compiled();
-            String subject_658 = Boolean.toString(aS__325.found("a")) + " " + Boolean.toString(aS__325.found("ab")) + " " + Boolean.toString(sA__326.found("a")) + " " + Boolean.toString(sA__326.found("ba"));
-            if (subject_658.equals("false true false true")) {
+            Regex aS__326 = new Sequence(List.of(new CodePoints("a"), special__323)).compiled();
+            Regex sA__327 = new Sequence(List.of(special__323, new CodePoints("a"))).compiled();
+            String subject_660 = Boolean.toString(aS__326.found("a")) + " " + Boolean.toString(aS__326.found("ab")) + " " + Boolean.toString(sA__327.found("a")) + " " + Boolean.toString(sA__327.found("ba"));
+            if (subject_660.equals("false true false true")) {
                 return ".";
-            } else if (subject_658.equals("false false true false")) {
+            } else if (subject_660.equals("false false true false")) {
                 return "^";
-            } else if (subject_658.equals("true false false false")) {
+            } else if (subject_660.equals("true false false false")) {
                 return "$";
-            } else if (subject_658.equals("true false true false")) {
+            } else if (subject_660.equals("true false true false")) {
                 return "\\b";
             } else {
                 throw Core.bubble();
             }
         }
     }
-    static void formatSet(StringBuilder out__327, CodeSet set__328) {
-        fn__329: {
-            String t_814;
-            boolean t_808;
-            if (set__328.isNegated()) {
-                if (set__328.getItems().size() == 1) {
-                    t_808 = Core.listGet(set__328.getItems(), 0) instanceof SpecialSet;
+    static void formatSet(StringBuilder out__328, CodeSet set__329) {
+        fn__330: {
+            String t_816;
+            boolean t_810;
+            if (set__329.isNegated()) {
+                if (set__329.getItems().size() == 1) {
+                    t_810 = Core.listGet(set__329.getItems(), 0) instanceof SpecialSet;
                 } else {
-                    t_808 = false;
+                    t_810 = false;
                 }
             } else {
-                t_808 = false;
+                t_810 = false;
             }
-            if (t_808) {
-                String t_813;
-                SpecialSet t_812 = Core.cast(SpecialSet.class, Core.listGet(set__328.getItems(), 0));
-                String subject_663 = RegexParserGlobal.specialText(t_812);
-                if (subject_663.equals("\\d")) {
-                    t_813 = "\\D";
-                } else if (subject_663.equals("\\s")) {
-                    t_813 = "\\S";
+            if (t_810) {
+                String t_815;
+                SpecialSet t_814 = Core.cast(SpecialSet.class, Core.listGet(set__329.getItems(), 0));
+                String subject_665 = RegexParserGlobal.specialText(t_814);
+                if (subject_665.equals("\\d")) {
+                    t_815 = "\\D";
+                } else if (subject_665.equals("\\s")) {
+                    t_815 = "\\S";
                 } else {
-                    t_813 = "\\W";
+                    t_815 = "\\W";
                 }
-                out__327.append(t_813);
-                break fn__329;
+                out__328.append(t_815);
+                break fn__330;
             }
-            if (set__328.isNegated()) {
-                t_814 = "[^";
+            if (set__329.isNegated()) {
+                t_816 = "[^";
             } else {
-                t_814 = "[";
+                t_816 = "[";
             }
-            out__327.append(t_814);
-            List<CodePart> this__1052 = set__328.getItems();
-            int n__1054 = this__1052.size();
-            int i__1055 = 0;
-            while (i__1055 < n__1054) {
-                CodePart el__1056 = Core.listGet(this__1052, i__1055);
-                i__1055 = i__1055 + 1;
-                CodePart item__330 = el__1056;
-                if (item__330 instanceof CodePoints) {
-                    String this__1057 = Core.cast(CodePoints.class, item__330).getValue();
-                    int index__1059 = 0;
-                    while (Core.stringHasIndex(this__1057, index__1059)) {
-                        int codePoint__1060 = this__1057.codePointAt(index__1059);
-                        int c__331 = codePoint__1060;
-                        RegexParserGlobal.appendCode(out__327, c__331, true);
-                        index__1059 = Core.stringNext(this__1057, index__1059);
+            out__328.append(t_816);
+            List<CodePart> this__1054 = set__329.getItems();
+            int n__1056 = this__1054.size();
+            int i__1057 = 0;
+            while (i__1057 < n__1056) {
+                CodePart el__1058 = Core.listGet(this__1054, i__1057);
+                i__1057 = i__1057 + 1;
+                CodePart item__331 = el__1058;
+                if (item__331 instanceof CodePoints) {
+                    String this__1059 = Core.cast(CodePoints.class, item__331).getValue();
+                    int index__1061 = 0;
+                    while (Core.stringHasIndex(this__1059, index__1061)) {
+                        int codePoint__1062 = this__1059.codePointAt(index__1061);
+                        int c__332 = codePoint__1062;
+                        RegexParserGlobal.appendCode(out__328, c__332, true);
+                        index__1061 = Core.stringNext(this__1059, index__1061);
                     }
-                } else if (item__330 instanceof CodeRange) {
-                    CodeRange t_802 = Core.cast(CodeRange.class, item__330);
-                    RegexParserGlobal.appendCode(out__327, t_802.getMin(), true);
-                    out__327.append("-");
-                    RegexParserGlobal.appendCode(out__327, t_802.getMax(), true);
-                } else if (item__330 instanceof SpecialSet) {
-                    SpecialSet t_805 = Core.cast(SpecialSet.class, item__330);
-                    String t_1080 = RegexParserGlobal.specialText(t_805);
-                    out__327.append(t_1080);
+                } else if (item__331 instanceof CodeRange) {
+                    CodeRange t_804 = Core.cast(CodeRange.class, item__331);
+                    RegexParserGlobal.appendCode(out__328, t_804.getMin(), true);
+                    out__328.append("-");
+                    RegexParserGlobal.appendCode(out__328, t_804.getMax(), true);
+                } else if (item__331 instanceof SpecialSet) {
+                    SpecialSet t_807 = Core.cast(SpecialSet.class, item__331);
+                    String t_1082 = RegexParserGlobal.specialText(t_807);
+                    out__328.append(t_1082);
                 } else {
                     throw Core.bubble();
                 }
             }
-            out__327.append("]");
+            out__328.append("]");
         }
     }
-    static void formatGrouped(StringBuilder out__334, RegexNode node__335, boolean grouped__336) {
-        if (grouped__336) {
-            out__334.append("(?:");
-            RegexParserGlobal.formatTo(out__334, node__335);
-            out__334.append(")");
+    static void formatGrouped(StringBuilder out__335, RegexNode node__336, boolean grouped__337) {
+        if (grouped__337) {
+            out__335.append("(?:");
+            RegexParserGlobal.formatTo(out__335, node__336);
+            out__335.append(")");
         } else {
-            RegexParserGlobal.formatTo(out__334, node__335);
+            RegexParserGlobal.formatTo(out__335, node__336);
         }
     }
-    static boolean needsGroupToRepeat(RegexNode node__332) {
-        if (node__332 instanceof CodePoints) {
-            CodePoints t_788 = Core.cast(CodePoints.class, node__332);
-            if (!Core.stringHasAtLeast(t_788.getValue(), 0, t_788.getValue().length(), 1)) {
+    static boolean needsGroupToRepeat(RegexNode node__333) {
+        if (node__333 instanceof CodePoints) {
+            CodePoints t_790 = Core.cast(CodePoints.class, node__333);
+            if (!Core.stringHasAtLeast(t_790.getValue(), 0, t_790.getValue().length(), 1)) {
                 return true;
             } else {
-                return Core.stringHasAtLeast(t_788.getValue(), 0, t_788.getValue().length(), 2);
+                return Core.stringHasAtLeast(t_790.getValue(), 0, t_790.getValue().length(), 2);
             }
         } else {
-            boolean t_793;
-            if (node__332 instanceof Sequence) {
-                t_793 = true;
-            } else if (node__332 instanceof Or) {
-                t_793 = true;
+            boolean t_795;
+            if (node__333 instanceof Sequence) {
+                t_795 = true;
+            } else if (node__333 instanceof Or) {
+                t_795 = true;
             } else {
-                t_793 = node__332 instanceof Repeat;
+                t_795 = node__333 instanceof Repeat;
             }
-            if (t_793) {
+            if (t_795) {
                 return true;
             } else {
                 return false;
@@ -661,51 +661,51 @@ public final class RegexParserGlobal {
      * Bubbles for node types this library doesn't know or code points that
      * aren't valid.
      */
-    public static String format(RegexNode node__304) {
-        StringBuilder out__306 = new StringBuilder();
-        RegexParserGlobal.formatTo(out__306, node__304);
-        return out__306.toString();
+    public static String format(RegexNode node__305) {
+        StringBuilder out__307 = new StringBuilder();
+        RegexParserGlobal.formatTo(out__307, node__305);
+        return out__307.toString();
     }
     /**
      * Escapes text so it matches literally, outside of a (?x:...) group.
      */
-    public static String escape(String text__307) {
-        StringBuilder out__309 = new StringBuilder();
-        String this__1075 = text__307;
-        int index__1077 = 0;
-        while (Core.stringHasIndex(this__1075, index__1077)) {
-            int codePoint__1078 = this__1075.codePointAt(index__1077);
-            int c__310 = codePoint__1078;
-            RegexParserGlobal.appendCode(out__309, c__310, false);
-            index__1077 = Core.stringNext(this__1075, index__1077);
+    public static String escape(String text__308) {
+        StringBuilder out__310 = new StringBuilder();
+        String this__1077 = text__308;
+        int index__1079 = 0;
+        while (Core.stringHasIndex(this__1077, index__1079)) {
+            int codePoint__1080 = this__1077.codePointAt(index__1079);
+            int c__311 = codePoint__1080;
+            RegexParserGlobal.appendCode(out__310, c__311, false);
+            index__1079 = Core.stringNext(this__1077, index__1079);
         }
-        return out__309.toString();
+        return out__310.toString();
     }
-    public static @Nullable String parseError(String src__311, @Nullable Map<String, RegexNode> slots__682) {
-        Map<String, RegexNode> slots__312;
-        if (slots__682 == null) {
-            slots__312 = noSlots__293;
+    public static @Nullable String parseError(String src__312, @Nullable Map<String, RegexNode> slots__684) {
+        Map<String, RegexNode> slots__313;
+        if (slots__684 == null) {
+            slots__313 = noSlots__294;
         } else {
-            slots__312 = slots__682;
+            slots__313 = slots__684;
         }
-        Parser parser__314 = new Parser(src__311, slots__312);
-        boolean parsed__315;
+        Parser parser__315 = new Parser(src__312, slots__313);
+        boolean parsed__316;
         try {
-            parser__314.readAll();
-            parsed__315 = true;
+            parser__315.readAll();
+            parsed__316 = true;
         } catch (RuntimeException ignored$7) {
-            parsed__315 = false;
+            parsed__316 = false;
         }
-        if (parsed__315) {
+        if (parsed__316) {
             return null;
         } else {
-            return parser__314.getErrorMessage();
+            return parser__315.getErrorMessage();
         }
     }
-    public static @Nullable String parseError(String src__311) {
-        return parseError(src__311, null);
+    public static @Nullable String parseError(String src__312) {
+        return parseError(src__312, null);
     }
     static {
-        noSlots__293 = Core.mapConstructor(List.of());
+        noSlots__294 = Core.mapConstructor(List.of());
     }
 }

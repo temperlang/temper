@@ -25,7 +25,7 @@
   void;
   let r3__0;
 ## (/g) unrecognized in rgx(list("(?/g)a.b*"), list());
-  r3__0 = error (UnrecognizedToken);
+  r3__0 = error (InvalidRegex);
   let b__0;
   b__0 = r3__0;
   void;

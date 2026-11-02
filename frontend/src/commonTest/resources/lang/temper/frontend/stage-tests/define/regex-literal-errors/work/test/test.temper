@@ -1,0 +1,3 @@
+let badName = /(?first_name=a)/;
+let badRange = /[z-a]/;
+let unclosed = rgx"(";

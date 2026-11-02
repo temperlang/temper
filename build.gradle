@@ -186,9 +186,8 @@ subprojects {
             }
         } else if (ext.temperProject == 'java') {
             // Project requests standard customizations for a 'java-library'-based project.
-            tasks.withType(JavaCompile).configureEach {
-                options.release = jvm_target_int
-            }
+            // A toolchain rather than --release, since some workflows run Gradle on an older JDK.
+            java.toolchain.languageVersion = JavaLanguageVersion.of(jvm_target_int)
         }
     }
 }

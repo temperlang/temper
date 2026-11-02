@@ -328,6 +328,12 @@ class DefineStageTest {
         stageTestDir = StageTestDir("define/regex-literal"),
     )
 
+    /** Errors in regex literals say what's wrong, as these rejections can surprise existing code. */
+    @Test
+    fun regexLiteralErrors() = assertModuleAtStage(
+        stageTestDir = StageTestDir("define/regex-literal-errors"),
+    )
+
     @Test
     fun fullyQualifiedNamesAllocated() = assertModuleAtStage(
         stageTestDir = StageTestDir("define/fully-qualified-names-allocated"),

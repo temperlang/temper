@@ -92,7 +92,7 @@ A `Regex` is composed of a potential variety of subtypes.
 
 Multiple types of groups exist:
 
-- [Capture](#capture) `/(?<name>...)/` to remember match groups for later use.
+- [Capture](#capture) `/(?name=...)/` to remember match groups for later use.
 - Non-capturing group syntax `/(?:...)/`, which is simply a [Regex](#regex)
   instance in the data model.
 

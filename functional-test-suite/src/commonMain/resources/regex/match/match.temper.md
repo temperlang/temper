@@ -384,12 +384,33 @@ exported names.
       }
     }
     let nodes: List<RegexNode> = [
-      Begin, Dot, End, WordBoundary, Digit, Space, Word, /$/.data, /a/.data,
+      Begin, Dot, End, WordBoundary, Digit, Space, Word,
+      /^/.data, /./.data, /$/.data, /\b/.data, /\d/.data, /\s/.data, /\w/.data,
+      /a/.data,
     ];
     console.log(nodes.join(", ") { node => specialName(node) });
 
 ```log
-begin, dot, end, boundary, digit, space, word, end, other
+begin, dot, end, boundary, digit, space, word, begin, dot, end, boundary, digit, space, word, other
+```
+
+### Empty patterns
+
+A pattern or group with nothing in it matches the empty string, even as one
+alternative among others.
+
+    console.log("empty group: ${/(?:)/.found("a")}");
+    console.log("empty literal: ${rgx"".found("a")}");
+    console.log("inside: ${/a(?:)b/.found("ab")}");
+    console.log("alternative: ${/a|(?:)/.found("b")}");
+    console.log("no alternatives: ${new Or([]).found("a")}");
+
+```log
+empty group: true
+empty literal: true
+inside: true
+alternative: true
+no alternatives: true
 ```
 
 ## Import
