@@ -6,6 +6,7 @@ import lang.temper.format.TokenSerializable
 import lang.temper.format.toStringViaTokenSink
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplateI
+import lang.temper.log.Position
 import lang.temper.log.Positioned
 
 /**
@@ -14,6 +15,26 @@ import lang.temper.log.Positioned
  */
 interface TypeReasonElement : Positioned {
     fun logTo(logSink: LogSink)
+
+    val messageString: String get() {
+        var messageString = "???"
+        logTo(
+            object : LogSink {
+                override fun log(
+                    level: Log.Level,
+                    template: MessageTemplateI,
+                    pos: Position,
+                    values: List<Any>,
+                    fyi: Boolean,
+                ) {
+                    messageString = template.format(values)
+                }
+
+                override val hasFatal: Boolean = false
+            },
+        )
+        return messageString
+    }
 }
 
 abstract class AbstractTypeReasonElement : TypeReasonElement, MessageTemplateI {

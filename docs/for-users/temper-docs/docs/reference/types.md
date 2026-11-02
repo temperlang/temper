@@ -3825,7 +3825,7 @@ Panic on index out of bounds.
 
 <a name="type&#45;List&#45;static&#45;of&#45;sig" class="snippet-anchor-name"></a>
 
-`static` `:` `fn(``):` [*List*](#type-List)&lt;*listT*&gt;
+`static` `:` `fn<`*listT*`>(``):` [*List*](#type-List)&lt;*listT*&gt;
 
 <!-- /snippet: type/List/static/of/sig -->
 
@@ -6249,7 +6249,7 @@ input that might refer to either *null* or a string value.
 
 <a name="type&#45;Null&#45;sig" class="snippet-anchor-name"></a>
 
-*Null* `extends` [*AnyValue*](#type-AnyValue), [*Equatable*](#type-Equatable)&lt;[*Null*](#type-Null)&gt;
+*Null* `extends` [*AnyValue*](#type-AnyValue)
 
 <!-- /snippet: type/Null/sig -->
 
@@ -6274,30 +6274,6 @@ input that might refer to either *null* or a string value.
 <!-- snippet: type/Null/methods -->
 
 <a name="type&#45;Null&#45;methods" class="snippet-anchor-name"></a>
-
-### methods
-
-<!-- snippet: type/Null/method/eq -->
-
-<a name="type&#45;Null&#45;method&#45;eq" class="snippet-anchor-name"></a>
-
-#### `Null.eq`
-
-<!-- snippet: type/Null/method/eq/sig -->
-
-<a name="type&#45;Null&#45;method&#45;eq&#45;sig" class="snippet-anchor-name"></a>
-
-`:` `fn(`[*Null*](#type-Null), [*Null*](#type-Null)`):` [*Boolean*](#type-Boolean)
-
-<!-- /snippet: type/Null/method/eq/sig -->
-
-<!-- snippet: type/Null/method/eq/commentary -->
-
-<a name="type&#45;Null&#45;method&#45;eq&#45;commentary" class="snippet-anchor-name"></a>
-
-<!-- /snippet: type/Null/method/eq/commentary -->
-
-<!-- /snippet: type/Null/method/eq -->
 
 <!-- /snippet: type/Null/methods -->
 

@@ -12,6 +12,7 @@ import kotlinx.cli.multiple
 import kotlinx.cli.optional
 import kotlinx.cli.required
 import kotlinx.coroutines.DelicateCoroutinesApi
+import lang.temper.be.Backend
 import lang.temper.be.BackendHelpTopicKeys
 import lang.temper.be.cli.EXIT_SUCCESS
 import lang.temper.be.cli.ExecInteractiveRepl
@@ -257,6 +258,12 @@ abstract class Main {
             description = "Enable verbose logging",
         ).default(false)
 
+        fun noConnectedOpt(argParser: ArgParser) = argParser.option(
+            type = ArgType.Boolean,
+            fullName = "no-connected",
+            description = "Use @connected functions' Temper bodies, where they have one, instead of connected code",
+        ).default(false)
+
         fun logFormatOpt(argParser: ArgParser) = argParser.option(
             type = ArgType.Choice<LogFormat>(
                 toVariant = { flagStr ->
@@ -342,6 +349,7 @@ abstract class Main {
                     val wr = workRootOpt(this)
                     val ignoreFile = ignoreFileOpt(this)
                     val backends = backendsOptDefaulting(this)
+                    val noConnected = noConnectedOpt(this)
                     val verbose = verboseOpt(this)
                     val logFormat = logFormatOpt(this)
 
@@ -355,6 +363,7 @@ abstract class Main {
                                 workRoot = wr.value,
                                 ignoreFile = ignoreFile.value.orNullIfDevNull,
                                 shellPreferences = shellPreferencesFor(verbose, cliConsole),
+                                backendConfig = backendConfigFor(noConnected.value),
                             )
                             result.ok
                         }
@@ -608,6 +617,7 @@ abstract class Main {
                             description = "Name of library to load.",
                         ).required()
                     val backend = backendOpt(this).required()
+                    val noConnected = noConnectedOpt(this)
                     val verbose = verboseOpt(this)
                     val logFormat = logFormatOpt(this)
                     val workRoot = workRootOpt(this)
@@ -629,6 +639,7 @@ abstract class Main {
                                     verbose = verbose,
                                     console = cliConsole,
                                 ),
+                                backendConfig = backendConfigFor(noConnected.value),
                                 moduleConfig = ModuleConfig.default,
                                 runTask = RunTask(
                                     request = request,
@@ -711,6 +722,7 @@ abstract class Main {
                             description = "Name of the library to test.",
                         )
                     val backends = backendsOptRequired(this, allowInterpreter = true)
+                    val noConnected = noConnectedOpt(this)
                     val verbose = verboseOpt(this)
                     val logFormat = logFormatOpt(this)
                     override fun execute() {
@@ -727,6 +739,7 @@ abstract class Main {
                                 workRoot = workRoot.value,
                                 ignoreFile = ignoreFile.value.orNullIfDevNull,
                                 shellPreferences = shellPreferencesFor(verbose, cliConsole),
+                                backendConfig = backendConfigFor(noConnected.value),
                                 runTask = RunTask(request, backends),
                             )
                             result.ok
@@ -1111,6 +1124,10 @@ private fun tryBuild(build: Build?): Boolean {
     }
     return result?.ok == true && taskResult?.errorFree != false
 }
+
+/** The backend configuration for builds, given the value of the `--no-connected` flag. */
+internal fun backendConfigFor(noConnected: Boolean): Backend.Config =
+    Backend.Config.production.copy(noConnected = noConnected)
 
 enum class LogFormat(val flagStr: String) {
     /**

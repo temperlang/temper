@@ -20,7 +20,6 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type.isVoidLike
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapNewStyleToOld
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.ControlFlow
@@ -252,7 +251,7 @@ internal class MakeResultsExplicit private constructor(
             }
             val capturedIn = outputName.content as? InternalModularName
             if (terminalExpressions.haveUnsetTerminalExpressions.isNotEmpty() && capturedIn != null) {
-                val result = NameCaptureResult(capturedIn, returnType?.let { hackMapNewStyleToOld(it) })
+                val result = NameCaptureResult(capturedIn, returnType)
                 val m = terminalExpressions.haveUnsetTerminalExpressions.associate {
                     it.pos to result
                 }

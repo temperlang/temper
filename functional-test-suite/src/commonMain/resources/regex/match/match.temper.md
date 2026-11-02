@@ -243,7 +243,7 @@ It was the worst of times.
 ### Word boundaries
 
 Define a regex for simple identifiers with word boundaries. For this case, be
-explicit rather than using `WordSpecial` for content.
+explicit rather than using `Word` for content.
 
 TODO Use regex interpolation once we have that.
 
@@ -363,6 +363,24 @@ A dash just before `]` is literal and keeps the member before it.
 
 ```log
 +-
+```
+
+### Specials and NUL in code sets
+
+Special sets inside code sets cover their whole ranges, and a negated set that
+starts at code point zero still excludes everything it lists.
+
+    console.log(/[\d.]+/.find("a7.89b").full.value);
+    console.log(/[\w.]+/.find("-azAZ.09_-").full.value);
+    console.log(/[\d5x]+/.find("-5x9-").full.value);
+    let notNulOrA = new CodeSet([new CodeRange(0, 0), new CodePoints("a")], true);
+    console.log(notNulOrA.compiled().find("ab").full.value);
+
+```log
+7.89
+azAZ.09_
+5x9
+b
 ```
 
 ### Telling specials apart

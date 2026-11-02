@@ -64,6 +64,7 @@ import lang.temper.value.LinearFlow
 import lang.temper.value.MacroEnvironment
 import lang.temper.value.MacroValue
 import lang.temper.value.NameLeaf
+import lang.temper.value.NamedJumpSpecifier
 import lang.temper.value.NotYet
 import lang.temper.value.Panic
 import lang.temper.value.PartialResult
@@ -777,6 +778,82 @@ class InterpreterTest {
             ) {
                 Call(Nyet) {}
                 Call(Da) {}
+            }
+        }
+    }
+
+    /**
+     * Before weaving, a jump can sit in a nested block apart from the block with its
+     * destination, so the interpreter fails at the jump, though the program wouldn't.
+     * Folding a call to a pure function must not let an `orelse` in its body take that
+     * failure for a bubble, or the fallback gets folded in for good.
+     */
+    @Test
+    fun orelseDoesNotTreatNotYetAsFailure() = assertResult(
+        inputText = "(fn { { outer: { do { break outer } }; 1 } orelse -100 })()",
+        stage = Stage.GenerateCode,
+        interpMode = InterpMode.Partial,
+        expectedJson = """
+            |"notYet"
+        """.trimMargin(),
+    ) { _, documentContext ->
+        val doc = Document(documentContext)
+        // With resolved names, the function is long-lived and pure, so its call may fold.
+        doc.markNamesResolved()
+        val pos = Position(doc.nameMaker.namingContext.loc, 0, 0)
+        val orElseLabel = doc.nameMaker.unusedSourceName(ParsedName("orelse"))
+        val outer = doc.nameMaker.unusedSourceName(ParsedName("outer"))
+        doc.treeFarm.grow(pos) {
+            Call {
+                Fn {
+                    Block(
+                        flowMaker = {
+                            StructuredFlow(
+                                ControlFlow.StmtBlock.wrap(
+                                    ControlFlow.OrElse(
+                                        pos,
+                                        ControlFlow.Labeled(
+                                            pos,
+                                            orElseLabel,
+                                            null,
+                                            ControlFlow.StmtBlock(
+                                                pos,
+                                                listOf(
+                                                    ControlFlow.Labeled(
+                                                        pos,
+                                                        outer,
+                                                        null,
+                                                        ControlFlow.StmtBlock.wrap(
+                                                            ControlFlow.Stmt(BlockChildReference(0, pos)),
+                                                        ),
+                                                    ),
+                                                    ControlFlow.Stmt(BlockChildReference(1, pos)),
+                                                ),
+                                            ),
+                                        ),
+                                        ControlFlow.StmtBlock.wrap(
+                                            ControlFlow.Stmt(BlockChildReference(2, pos)),
+                                        ),
+                                    ),
+                                ),
+                            )
+                        },
+                    ) {
+                        // Not yet woven into the function body, so `break outer` can't find
+                        // its destination.
+                        Block(
+                            flowMaker = {
+                                StructuredFlow(
+                                    ControlFlow.StmtBlock.wrap(
+                                        ControlFlow.Break(pos, NamedJumpSpecifier(outer)),
+                                    ),
+                                )
+                            },
+                        ) {}
+                        V(Value(1, TInt))
+                        V(Value(-100, TInt))
+                    }
+                }
             }
         }
     }

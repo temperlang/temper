@@ -9,12 +9,11 @@ import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.log.spanningPosition
-import lang.temper.type.BubbleType
-import lang.temper.type.MkType
 import lang.temper.type.TypeBindingMapper
 import lang.temper.type.TypeContext
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
+import lang.temper.type.excludeNever
 import lang.temper.value.ReifiedType
 import lang.temper.value.ResolutionProblem
 import lang.temper.value.TType
@@ -191,7 +190,8 @@ fun inferBounds(
             null
         }
         call.contextType?.let { contextType ->
-            solver.assignable(contextType, callPass)
+            val contextTypeNotNever = excludeNever(contextType)
+            solver.assignable(contextTypeNotNever, callPass)
         }
         for (outputBound in call.outputBounds) {
             when (outputBound) {
@@ -254,11 +254,10 @@ fun inferBounds(
 
         call.resultType = when (val solution = solver[callBundle.callPass]) {
             is Type2 -> {
-                val passType = hackMapNewStyleToOld(solution)
                 if (callee?.sig?.returnType2?.definition == WKT.resultTypeDefinition) {
-                    MkType.or(passType, BubbleType)
+                    MkType2.result(solution, WKT.bubbleType2).get()
                 } else {
-                    passType
+                    solution
                 }
             }
             is Unsolvable? -> null
@@ -268,7 +267,7 @@ fun inferBounds(
             var calleeHasProblems = false
             when (val solution = solver[callBundle.typeActuals]) {
                 is TypeListSolution -> {
-                    val (sig) = callee
+                    val sig = callee.sig
                     val n = min(solution.types.size, sig.typeFormals.size)
                     val bindingMap = (0 until n).associate { i ->
                         sig.typeFormals[i] to
@@ -278,7 +277,7 @@ fun inferBounds(
                             }
                     }
                     val bindings = bindingMap.mapValues { (_, actual2) -> hackMapNewStyleToOld(actual2) }
-                    call.bindings = bindings
+                    call.bindings = bindingMap
                     val bindingsMapper = TypeBindingMapper(bindings.entries)
                     for ((typeFormal, actual2) in bindingMap) {
                         val actualOldStyle = bindings.getValue(typeFormal)
@@ -421,7 +420,7 @@ fun inferBounds(
                         val incomplete = reifiedType.type2
                         if (incomplete.bindings.size < solution.bindings.size) {
                             edge.replace {
-                                V(Value(ReifiedType(solution), TType), type = WKT.typeType)
+                                V(Value(ReifiedType(solution), TType), type = WKT.typeType2)
                             }
                         }
                         // If there are too many bindings, leave it in place so we don't mask errors.

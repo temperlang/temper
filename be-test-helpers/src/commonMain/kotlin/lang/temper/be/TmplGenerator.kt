@@ -749,7 +749,7 @@ fun Type2.asTmpLType(): TmpL.Type {
                 ),
             )
         }
-        WellKnownTypes.neverTypeDefinition -> TmpL.NeverType(p0)
+        WellKnownTypes.neverTypeDefinition -> TmpL.NeverType(p0, bindings[0].asTmpLType())
         WellKnownTypes.anyValueTypeDefinition -> TmpL.TopType(p0)
         else -> this.asTmpLNominal()
     }

@@ -1,6 +1,7 @@
 package lang.temper.be.csharp
 
 import lang.temper.be.Backend
+import lang.temper.be.assertConnectedFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -518,6 +519,37 @@ class CSharpBackendTest {
             |    protected int X
             |    {
             |        get;
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun toStringOverridesObjectToString() = assertGeneratedUserClass(
+        temper = """
+            |export class Point(public x: Int) {
+            |  public toString(): String { "Point" }
+            |}
+        """.trimMargin(),
+        cSharpClassName = "Point",
+        csharp = """
+            |public class Point
+            |{
+            |    readonly int x;
+            |    public override string ToString()
+            |    {
+            |        return "Point";
+            |    }
+            |    public Point(int x__0)
+            |    {
+            |        this.x = x__0;
+            |    }
+            |    public int X
+            |    {
+            |        get
+            |        {
+            |            return this.x;
+            |        }
             |    }
             |}
         """.trimMargin(),
@@ -1511,6 +1543,21 @@ class CSharpBackendTest {
     )
 
     @Test
+    fun connectedFallback() = assertConnectedFallbacks(
+        factory = CSharpBackend.Factory,
+        connectedFiles = mapOf(
+            "FooConnected.cs" to """
+                |static class FooConnected
+                |{
+                |    internal static int ViaConnected(int i) => i + 1;
+                |}
+            """.trimMargin(),
+        ),
+        listedCall = "FooConnected.ViaConnected(",
+        unlistedCall = "FooConnected.ViaBody(",
+    )
+
+    @Test
     fun connected() = run {
         val connecteds = listOf(
             // Connected code needs explicit namespaces inside.
@@ -1560,6 +1607,14 @@ class CSharpBackendTest {
                     |
                     |@connected
                     |export let length(s: String? = null): Int;
+                    |
+                    |@connected
+                    |export class Box(
+                    |  public width: Float64,
+                    |  public height: Float64,
+                    |) {
+                    |  public area(): Float64;
+                    |}
                 """.trimMargin(),
                 filePath("test", "IgnoreMe.txt") to """
                     |Hi there!!!

@@ -23,7 +23,7 @@ class RegexFormatTest {
     fun dotnetSupplementaryCodePoints() {
         val pattern = Seq(
             listOf(
-                DotSpecial,
+                Dot,
                 CodePoints("ab🌊"),
                 // Include a supplementary code range outside of a code set.
                 CodeRange(0x20000, 0x40001),
@@ -79,13 +79,13 @@ class RegexFormatTest {
 val messyPattern = Seq(
     listOf(
         CodePoints("abc"),
-        CodeSet(listOf(SpaceSpecial, CodeRange('0'.code, '9'.code), CodePoints("_-=")), negated = true),
-        WordBoundarySpecial,
+        CodeSet(listOf(Space, CodeRange('0'.code, '9'.code), CodePoints("_-=")), negated = true),
+        WordBoundary,
         Or(
             listOf(
-                WordSpecial,
+                Word,
                 Repeat(
-                    Or(listOf(Seq(listOf(CodePoints("a"), DotSpecial)), CodePoints("cba"))),
+                    Or(listOf(Seq(listOf(CodePoints("a"), Dot)), CodePoints("cba"))),
                     min = 0,
                     max = null,
                     reluctant = false,

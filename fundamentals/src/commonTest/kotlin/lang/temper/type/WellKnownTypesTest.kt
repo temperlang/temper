@@ -11,8 +11,8 @@ class WellKnownTypesTest {
      * Test that supertype relationships before and after CoreModule loaded
      * are the same.
      *
-     * This allows other unit tests to be run even when [CoreModule] fails to initialize
-     * helping diagnose breaking changes to typing frontend code.
+     * This allows other unit tests to be run even when [CoreModule] fails to initialize,
+     * helping diagnose breaking changes to typing of frontend code.
      */
     @Test
     fun checkSuperTypeRelationshipsFullySpecifiedByWellKnownTypes() {

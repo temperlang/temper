@@ -1,24 +1,26 @@
 use roaring::RoaringBitmap;
 use std::any::{Any, TypeId};
-use std::sync::{Arc, Mutex};
-use temper_core::{cast, impl_any_value_trait, AnyValue, AnyValueTrait};
+use std::sync::{Arc, RwLock};
+use temper_core::{impl_any_value_trait, AnyValueTrait};
 
+/// Temper's connected Bitset class, shaped as Temper would generate it:
+/// a cheap-to-clone handle to shared state.
 #[derive(Clone)]
-struct RoaringWrapper(Arc<Mutex<RoaringBitmap>>);
-impl_any_value_trait!(RoaringWrapper, []);
+pub struct Bitset(Arc<RwLock<RoaringBitmap>>);
 
-pub(crate) fn new_bitset_connected() -> temper_core::AnyValue {
-    AnyValue::new(RoaringWrapper(Arc::new(Mutex::new(RoaringBitmap::new()))))
+impl Bitset {
+    pub fn new() -> Bitset {
+        Bitset(Arc::new(RwLock::new(RoaringBitmap::new())))
+    }
+
+    pub fn add(&self, i: i32) {
+        // Two's complement is fine here, providing unique values.
+        self.0.write().unwrap().insert(i as u32);
+    }
+
+    pub fn contains(&self, i: i32) -> bool {
+        self.0.read().unwrap().contains(i as u32)
+    }
 }
 
-pub(crate) fn bitset_add(bitset: temper_core::AnyValue, i: i32) {
-    let bitset = cast::<RoaringWrapper>(bitset).unwrap();
-    let mut bitset = bitset.0.lock().unwrap();
-    bitset.insert(i as u32);
-}
-
-pub(crate) fn bitset_contains(bitset: temper_core::AnyValue, i: i32) -> bool {
-    let bitset = cast::<RoaringWrapper>(bitset).unwrap();
-    let bitset = bitset.0.lock().unwrap();
-    bitset.contains(i as u32)
-}
+impl_any_value_trait!(Bitset, []);

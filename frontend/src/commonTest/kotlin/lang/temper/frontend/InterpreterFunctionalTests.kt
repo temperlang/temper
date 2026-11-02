@@ -71,6 +71,8 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
     override fun runFunctionalTest(
         test: FunctionalTestBase,
         verbose: Boolean,
+        // The interpreter always runs Temper bodies, so this changes only which output to expect.
+        noConnected: Boolean,
     ) {
         val preparedTest = prepareModulesForFunctionalTest(
             test,
@@ -164,7 +166,7 @@ class InterpreterFunctionalTests : FunctionalTestSuiteI {
                 )
             }
             else -> assertStringsEqual(
-                test.expectedOutput,
+                test.expectedOutput(backendId, noConnected = noConnected),
                 "$stdout",
             )
         }

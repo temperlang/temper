@@ -1,0 +1,13 @@
+@fn @connected((["cpp", "rust"])) let `test//`.withBody, @fn @connected `test//`.everywhere, @fn @connected((["cpp"])) `test//`.noBody, @fn @connected `test//`.notAList;
+`test//`.withBody = (@connected((["cpp", "rust"])) @stay fn withBody(i__0 /* aka i */: Int32) /* return__0 */: Int32 {
+    return__0 = i__0 + 1
+});
+`test//`.everywhere = (@connected @stay fn everywhere(i__1 /* aka i */: Int32) /* return__1 */: Int32 {
+    return__1 = abstractPanic()
+});
+`test//`.noBody = (@connected((["cpp"])) @stay fn noBody(i__2 /* aka i */: Int32) /* return__2 */: Int32 {
+    return__2 = abstractPanic()
+});
+`test//`.notAList = (@connected @stay fn notAList(i__3 /* aka i */: Int32) /* return__3 */: Int32 {
+    return__3 = i__3 + 2
+})

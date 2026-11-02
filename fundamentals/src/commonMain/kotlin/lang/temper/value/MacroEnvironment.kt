@@ -187,6 +187,14 @@ interface MacroEnvironment : InterpreterCallback, Positioned, ConfigurationKey.H
      */
     fun isProcessingStd(sharedLocationContext: SharedLocationContext?): Boolean
 
+    /**
+     * True if the macro call is in user code, outside Core and std, which
+     * use builtin features their own way, such as connected types. Doesn't
+     * need a [SharedLocationContext], as in [isProcessingStd]'s cheaper form.
+     */
+    val isProcessingUserCode: Boolean
+        get() = !isProcessingCore && !isProcessingStd(sharedLocationContext = null)
+
     override val promises: Promises
 
     override val configurationKey: ConfigurationKey

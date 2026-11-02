@@ -18,3 +18,7 @@ pub(crate) fn length(s: Option<impl temper_core::ToArcString>) -> i32 {
         None => -1,
     }
 }
+
+pub(crate) fn twice(i: i32) -> i32 {
+    i * 2
+}

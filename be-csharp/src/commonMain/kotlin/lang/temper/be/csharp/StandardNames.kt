@@ -155,6 +155,7 @@ object StandardNames {
     val temperCoreStringUtilGet = temperCoreStringUtil.member("Get")
     val temperCoreStringUtilHasAtLeast = temperCoreStringUtil.member("HasAtLeast")
     val temperCoreStringUtilHasIndex = temperCoreStringUtil.member("HasIndex")
+    val temperCoreStringUtilIndexOf = temperCoreStringUtil.member("IndexOf")
     val temperCoreStringUtilNext = temperCoreStringUtil.member("Next")
     val temperCoreStringUtilPrev = temperCoreStringUtil.member("Prev")
     val temperCoreStringUtilRequireStringIndex = temperCoreStringUtil.member("RequireStringIndex")

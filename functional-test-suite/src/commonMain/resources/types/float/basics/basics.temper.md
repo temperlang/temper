@@ -283,6 +283,19 @@ NaN to Int64: no
     checkParse("NaN");
     checkParse("-Infinity");
 
+A value too small for a normal Float64 parses to the nearest one: a subnormal,
+or zero with the input's sign. Subnormals are compared, not printed, because
+backends print the shortest round-trip form of them differently.
+
+    let checkTiny(string: String): Void {
+      let positive = (string.toFloat64() > 0.0).toString() orelse "failed";
+      console.log("Parse ${string} > 0 -> ${positive}");
+    }
+    checkTiny("2.225e-308");
+    checkTiny("5e-324");
+    checkParse("1e-400");
+    checkParse("-1e-400");
+
 Check against illegal Temper things, including some things that sometimes work
 in some backends by default. This makes sure we've done things carefully. Also,
 disallow forms not supported by JSON.
@@ -302,6 +315,10 @@ Parse  2  -> 2.0
 Parse 5e-1 -> 0.5
 Parse NaN -> NaN
 Parse -Infinity -> -Infinity
+Parse 2.225e-308 > 0 -> true
+Parse 5e-324 > 0 -> true
+Parse 1e-400 -> 0.0
+Parse -1e-400 -> -0.0
 Parse 2. -> failed
 Parse .2 -> failed
 Parse 2.0.0 -> failed

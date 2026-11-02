@@ -121,6 +121,26 @@ object AbstractPanic : NullaryNeverFn {
     override val callMayFailPerSe: Boolean = false
 }
 
+/**
+ * True if this function body is just the [AbstractPanic] placeholder that stands in for a
+ * missing body, as for a `@connected` function without a Temper body.
+ * Doesn't look inside nested functions.
+ */
+fun Tree?.isAbstractPanicBody(): Boolean = when (this) {
+    null -> false
+    is CallTree -> childOrNull(0)?.functionContained == AbstractPanic ||
+        // Later stages may assign the result, as in `return = abstractPanic()`.
+        children.any { it !is FunTree && it.isAbstractPanicBody() }
+    is BlockTree -> this.children.any { it.isAbstractPanicBody() }
+    is DeclTree,
+    is EscTree,
+    is FunTree,
+    is NameLeaf,
+    is StayLeaf,
+    is ValueLeaf,
+    -> false
+}
+
 fun Tree?.isPureVirtualBody(): Boolean = when (this) {
     null -> false
     is CallTree -> childOrNull(0)?.functionContained == PureVirtual

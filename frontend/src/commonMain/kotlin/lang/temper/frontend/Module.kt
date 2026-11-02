@@ -64,9 +64,9 @@ import lang.temper.name.NamingContext
 import lang.temper.name.ResolvedName
 import lang.temper.name.TemperName
 import lang.temper.stage.Stage
-import lang.temper.type.StaticType
 import lang.temper.type.TypeShape
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
 import lang.temper.value.BlockTree
 import lang.temper.value.DependencyCategory
 import lang.temper.value.DependencyCategoryConfigurable
@@ -233,7 +233,7 @@ class Module(
 
     private var _filePositions: Map<FilePath, FilePositions> = emptyMap()
     private var _outputName: ResolvedName? = null
-    private var _outputType: StaticType? = null
+    private var _outputType: Type2? = null
     private var _runResult: PartialResult? = null
     private var _ok: Boolean = true
     private var _exports: List<Export>? = null
@@ -522,7 +522,7 @@ class Module(
 
                     Stage.Type -> {
                         TypeStage(this, _tree!!, failLog, stageSpecificLogSink)
-                            .process { outputs: StageOutputs, outputName: ResolvedName?, outputType: StaticType? ->
+                            .process { outputs: StageOutputs, outputName: ResolvedName?, outputType: Type2? ->
                                 val result = outputs.result
                                 done(result !is Fail) {
                                     store(outputs, true)

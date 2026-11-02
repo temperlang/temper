@@ -23,6 +23,40 @@ pub use string::AsStr;
 // Putting these in a separate scope avoids deadlock when in a context where
 // there's also a write to the same lock.
 
+thread_local! {
+    /// How many library inits are running on this thread, nested.
+    static INITIALIZING: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Runs a library's init, marking this thread as initializing meanwhile, so a
+/// read of a module-level value that isn't set yet panics rather than
+/// re-entering init.
+pub fn initializing<T>(init: impl FnOnce() -> T) -> T {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            INITIALIZING.with(|depth| depth.set(depth.get() - 1));
+        }
+    }
+    INITIALIZING.with(|depth| depth.set(depth.get() + 1));
+    let _guard = Guard;
+    init()
+}
+
+/// Reads a module-level value, first initializing its library if it isn't
+/// set yet, so libraries work without an explicit `init` call. Libraries
+/// initialize whole, each module after those it imports, as `init` does.
+pub fn initialized<T>(get: impl Fn() -> Option<T>, init: impl FnOnce()) -> T {
+    if let Some(value) = get() {
+        return value;
+    }
+    if INITIALIZING.with(|depth| depth.get()) > 0 {
+        panic!("Temper module-level value read before its module initialized it");
+    }
+    init();
+    get().expect("Temper module-level value unset after its library's init")
+}
+
 pub fn read_locked<T: Clone>(x: &Arc<RwLock<T>>) -> T {
     x.read().unwrap().clone()
 }
@@ -451,7 +485,12 @@ impl Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        // Show the cause's message where there is one. Debug stays derived,
+        // since test reports parse its `MessageError("...")` form.
+        match &self.0 {
+            Some(source) => fmt::Display::fmt(source, f),
+            None => f.write_str("bubble"),
+        }
     }
 }
 
@@ -594,5 +633,30 @@ impl ToArcString for String {
 impl ToArcString for &str {
     fn to_arc_string(self) -> Arc<String> {
         Arc::new(self.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_display_shows_message_or_bubble() {
+        assert_eq!(Error::new().to_string(), "bubble");
+        assert_eq!(Error::with_optional_message(None).to_string(), "bubble");
+        let message = Some(Arc::new("bad input".to_string()));
+        let error = Error::with_optional_message(message);
+        assert_eq!(format!("{error}"), "bad input");
+        let source = i32_to_usize(-1).unwrap_err();
+        let expected = usize::try_from(-1i32).unwrap_err().to_string();
+        assert_eq!(source.to_string(), expected);
+    }
+
+    #[test]
+    fn error_debug_keeps_message_error_form() {
+        // RunRust.kt parses this form out of failing test output.
+        let error = Error::with_optional_message(Some(Arc::new("x".to_string())));
+        assert_eq!(format!("{error:?}"), r#"Error(Some(MessageError("x")))"#);
+        assert_eq!(format!("{:?}", Error::new()), "Error(None)");
     }
 }

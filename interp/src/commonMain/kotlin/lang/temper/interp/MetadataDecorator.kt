@@ -37,6 +37,8 @@ class MetadataDecorator(
     private val symbolKey: Symbol,
     override val name: String = "@${symbolKey.text}",
     argumentTypes: List<BaseReifiedType> = emptyList(),
+    /** Types for arguments that may follow [argumentTypes], as in `@connected` vs `@connected(["cpp"])`. */
+    optionalArgumentTypes: List<BaseReifiedType> = emptyList(),
     private val findDecoratorInsertions: (MacroActuals, Symbol) -> List<Pair<Tree, Int>> =
         ::findDefaultDecoratorInsertions,
     private val valuer: MacroEnvironment.(MacroActuals) -> PartialResult,
@@ -63,19 +65,28 @@ class MetadataDecorator(
                 }
                 valueFormalList.toList()
             },
+            optionalValueFormals = optionalArgumentTypes.map {
+                MacroValueFormal(
+                    symbol = null,
+                    reifiedType = it,
+                    ValueFormalKind.Optional,
+                )
+            },
         ),
     )
     private val keyValue = Value(symbolKey)
 
-    private val arity = argumentTypes.size + 1 // Preceding arguments plus the decorated
+    /** The decorated plus required arguments, up to optional arguments too. */
+    private val arity = (argumentTypes.size + 1)..(argumentTypes.size + optionalArgumentTypes.size + 1)
 
     override fun invoke(
         macroEnv: MacroEnvironment,
         interpMode: InterpMode,
     ): PartialResult {
         val args = macroEnv.args
-        if (args.size != arity) {
-            val fail = macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(arity))
+        if (args.size !in arity) {
+            val expected: Any = if (arity.first == arity.last) arity.first else arity
+            val fail = macroEnv.fail(MessageTemplate.ArityMismatch, values = listOf(expected))
             macroEnv.replaceMacroCallWithErrorNode(fail.info!!)
             return fail
         }

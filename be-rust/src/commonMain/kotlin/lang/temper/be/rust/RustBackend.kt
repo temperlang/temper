@@ -390,23 +390,38 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                                     ),
                                 ).let { listOf(it) },
                             ).let { add(Rust.ExprStatement(pos, it)) }
-                            // Init external dependencies.
-                            deps@ for (dep in deps) {
-                                // Only init deps that relate to actual temper libraries.
-                                // If connected deps need init, temper libs need to do that manually.
-                                dep.libraryName == null && continue@deps
-                                // ${dep.naming.crateName}::init(Some(crate::config().clone()))?;
-                                val config = crateConfig.deepCopy().call().wrapClone().wrapSome()
-                                val init =
-                                    listOf(dep.naming.crateName, "init").toPath(pos).call(listOf(config)).propagate()
-                                add(Rust.ExprStatement(pos, init))
+                            // Dependencies, then our modules, each after those it imports, marked as
+                            // initializing so reading a value that isn't set yet panics clearly.
+                            val inits = buildList {
+                                // Init external dependencies.
+                                deps@ for (dep in deps) {
+                                    // Only init deps that relate to actual temper libraries.
+                                    // If connected deps need init, temper libs need to do that manually.
+                                    dep.libraryName == null && continue@deps
+                                    // ${dep.naming.crateName}::init(Some(crate::config().clone()))?;
+                                    val config = crateConfig.deepCopy().call().wrapClone().wrapSome()
+                                    val init = listOf(dep.naming.crateName, "init").toPath(pos)
+                                        .call(listOf(config)).propagate()
+                                    add(Rust.ExprStatement(pos, init))
+                                }
+                                // Init internal modules.
+                                for (modName in modNames) {
+                                    // $modName::init()?;
+                                    val init = listOf(modName, "init").toPath(pos).call().propagate()
+                                    add(Rust.ExprStatement(pos, init))
+                                }
                             }
-                            // Init internal modules.
-                            for (modName in modNames) {
-                                // $modName::init()?;
-                                val init = listOf(modName, "init").toPath(pos).call().propagate()
-                                add(Rust.ExprStatement(pos, init))
-                            }
+                            // temper_core::initializing(|| -> temper_core::Result<()> { ...; Ok(()) })?;
+                            "temper_core::initializing".toId(pos).call(
+                                listOf(
+                                    Rust.Closure(
+                                        pos,
+                                        params = listOf(),
+                                        returnType = "()".toId(pos).wrapResult(),
+                                        value = Rust.Block(pos, statements = inits, result = "()".toId(pos).wrapOk()),
+                                    ),
+                                ),
+                            ).propagate().let { add(Rust.ExprStatement(pos, it)) }
                         },
                         result = run {
                             // Ok(crate::config().runner().clone())
@@ -414,6 +429,25 @@ private fun MutableList<Backend.OutputFileSpecification>.addLib(
                         },
                     ),
                 ).toItem(pub = pub.deepCopy()).let { add(it) }
+                // For reads of module-level values before any explicit init, with default config.
+                // pub(crate) fn init_on_first_use() { init(None).expect("..."); }
+                Rust.Function(
+                    pos,
+                    id = INIT_ON_FIRST_USE_NAME.toId(pos),
+                    params = listOf(),
+                    block = Rust.Block(
+                        pos,
+                        statements = listOf(
+                            Rust.ExprStatement(
+                                pos,
+                                "init".toId(pos).call(listOf(NONE_NAME.toId(pos))).methodCall(
+                                    "expect",
+                                    listOf(Rust.StringLiteral(pos, "initializing a Temper library on first use")),
+                                ),
+                            ),
+                        ),
+                    ),
+                ).toItem(pub = pubCrate(pos)).let { add(it) }
             },
         ),
         mimeType = RustBackend.mimeType,

@@ -1,0 +1,15 @@
+// Fine: backends not listed use the body.
+@connected(["cpp", "rust"])
+export let withBody(i: Int): Int { i + 1 }
+
+// Fine: no list means every backend has connected code, so no body is needed.
+@connected
+export let everywhere(i: Int): Int;
+
+// BAD: backends not listed would have no body to use.
+@connected(["cpp"])
+export let noBody(i: Int): Int;
+
+// BAD: not a list of backend names.
+@connected("cpp")
+export let notAList(i: Int): Int { i + 2 }

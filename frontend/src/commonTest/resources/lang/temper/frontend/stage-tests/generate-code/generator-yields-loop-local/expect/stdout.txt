@@ -1,0 +1,2 @@
+yielded 0
+yielded 10

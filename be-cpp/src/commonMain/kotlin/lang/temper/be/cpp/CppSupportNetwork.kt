@@ -52,58 +52,58 @@ internal object CppSupportNetwork : SupportNetwork {
         builtin: NamedBuiltinFun,
         genre: Genre,
     ): SupportCode? = when (val builtinOperatorId = builtin.builtinOperatorId) {
-        BuiltinOperatorId.BooleanNegation -> Like.unary("!")
-        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> Like.binary("&")
-        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> Like.binary("|")
-        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> Like.binary("^")
-        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~")
-        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<")
-        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>")
-        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("Int::ushr")
-        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("Int64::ushr")
-        BuiltinOperatorId.IsNull -> Like.core("is_null")
-        BuiltinOperatorId.NotNull -> Like.core("not_null")
-        BuiltinOperatorId.DivFltFlt -> Like.binary("/")
-        BuiltinOperatorId.DivIntInt -> Like.core("Int::div_wrap")
-        BuiltinOperatorId.DivIntInt64 -> Like.core("Int64::div_wrap")
-        BuiltinOperatorId.DivIntIntSafe -> Like.core("Int::div_safe")
-        BuiltinOperatorId.DivIntInt64Safe -> Like.core("Int64::div_safe")
-        BuiltinOperatorId.ModFltFlt -> Like.name("std", "fmod")
-        BuiltinOperatorId.ModIntInt -> Like.core("Int::mod_wrap")
-        BuiltinOperatorId.ModIntInt64 -> Like.core("Int64::mod_wrap")
-        BuiltinOperatorId.ModIntIntSafe -> Like.core("Int::mod_safe")
-        BuiltinOperatorId.ModIntInt64Safe -> Like.core("Int64::mod_safe")
-        BuiltinOperatorId.MinusFlt -> Like.unary("-")
-        BuiltinOperatorId.MinusFltFlt -> Like.binary("-")
+        BuiltinOperatorId.BooleanNegation -> Like.unary("!").pure()
+        BuiltinOperatorId.BitwiseAnd32, BuiltinOperatorId.BitwiseAnd64 -> Like.binary("&").pure()
+        BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> Like.binary("|").pure()
+        BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> Like.binary("^").pure()
+        BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~").pure()
+        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<").pure()
+        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>").pure()
+        BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("Int::ushr").pure()
+        BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("Int64::ushr").pure()
+        BuiltinOperatorId.IsNull -> Like.core("is_null").pure()
+        BuiltinOperatorId.NotNull -> Like.core("not_null").reads()
+        BuiltinOperatorId.DivFltFlt -> Like.binary("/").pure()
+        BuiltinOperatorId.DivIntInt -> Like.core("Int::div_wrap").reads()
+        BuiltinOperatorId.DivIntInt64 -> Like.core("Int64::div_wrap").reads()
+        BuiltinOperatorId.DivIntIntSafe -> Like.core("Int::div_safe").reads()
+        BuiltinOperatorId.DivIntInt64Safe -> Like.core("Int64::div_safe").reads()
+        BuiltinOperatorId.ModFltFlt -> Like.name("std", "fmod").pure()
+        BuiltinOperatorId.ModIntInt -> Like.core("Int::mod_wrap").reads()
+        BuiltinOperatorId.ModIntInt64 -> Like.core("Int64::mod_wrap").reads()
+        BuiltinOperatorId.ModIntIntSafe -> Like.core("Int::mod_safe").reads()
+        BuiltinOperatorId.ModIntInt64Safe -> Like.core("Int64::mod_safe").reads()
+        BuiltinOperatorId.MinusFlt -> Like.unary("-").pure()
+        BuiltinOperatorId.MinusFltFlt -> Like.binary("-").pure()
         // Int arithmetic uses wrapping core helpers that implement well-defined
         // two's-complement overflow in source, so the build does not rely on any
         // compiler flag (such as `-fwrapv`) to define overflow behavior. Float keeps
         // native operators.
-        BuiltinOperatorId.MinusInt -> Like.core("Int::neg")
-        BuiltinOperatorId.MinusInt64 -> Like.core("Int64::neg")
-        BuiltinOperatorId.MinusIntInt -> Like.core("Int::sub")
-        BuiltinOperatorId.MinusIntInt64 -> Like.core("Int64::sub")
-        BuiltinOperatorId.PlusFltFlt -> Like.binary("+")
-        BuiltinOperatorId.PlusIntInt -> Like.core("Int::add")
-        BuiltinOperatorId.PlusIntInt64 -> Like.core("Int64::add")
-        BuiltinOperatorId.TimesIntInt -> Like.core("Int::mul")
-        BuiltinOperatorId.TimesIntInt64 -> Like.core("Int64::mul")
-        BuiltinOperatorId.TimesFltFlt -> Like.binary("*")
-        BuiltinOperatorId.PowFltFlt -> Like.core("Float64::pow")
-        BuiltinOperatorId.LtIntInt -> Like.binary("<")
-        BuiltinOperatorId.LeIntInt -> Like.binary("<=")
-        BuiltinOperatorId.GtIntInt -> Like.binary(">")
-        BuiltinOperatorId.GeIntInt -> Like.binary(">=")
-        BuiltinOperatorId.EqBoolBool -> Like.binary("==")
-        BuiltinOperatorId.EqFltFlt -> Like.core("Float64::eq")
-        BuiltinOperatorId.EqIntInt -> Like.binary("==")
-        BuiltinOperatorId.EqLongLong -> Like.binary("==")
-        BuiltinOperatorId.EqStrStr -> Like.core("Compare::eq")
-        BuiltinOperatorId.CmpBoolBool -> Like.binary("Compare::cmp")
-        BuiltinOperatorId.CmpFltFlt -> Like.core("Float64::cmp")
-        BuiltinOperatorId.CmpIntInt -> Like.core("Compare::cmp")
-        BuiltinOperatorId.CmpLongLong -> Like.core("Compare::cmp")
-        BuiltinOperatorId.CmpStrStr -> Like.core("Compare::cmp")
+        BuiltinOperatorId.MinusInt -> Like.core("Int::neg").pure()
+        BuiltinOperatorId.MinusInt64 -> Like.core("Int64::neg").pure()
+        BuiltinOperatorId.MinusIntInt -> Like.core("Int::sub").pure()
+        BuiltinOperatorId.MinusIntInt64 -> Like.core("Int64::sub").pure()
+        BuiltinOperatorId.PlusFltFlt -> Like.binary("+").pure()
+        BuiltinOperatorId.PlusIntInt -> Like.core("Int::add").pure()
+        BuiltinOperatorId.PlusIntInt64 -> Like.core("Int64::add").pure()
+        BuiltinOperatorId.TimesIntInt -> Like.core("Int::mul").pure()
+        BuiltinOperatorId.TimesIntInt64 -> Like.core("Int64::mul").pure()
+        BuiltinOperatorId.TimesFltFlt -> Like.binary("*").pure()
+        BuiltinOperatorId.PowFltFlt -> Like.core("Float64::pow").pure()
+        BuiltinOperatorId.LtIntInt -> Like.binary("<").pure()
+        BuiltinOperatorId.LeIntInt -> Like.binary("<=").pure()
+        BuiltinOperatorId.GtIntInt -> Like.binary(">").pure()
+        BuiltinOperatorId.GeIntInt -> Like.binary(">=").pure()
+        BuiltinOperatorId.EqBoolBool -> Like.binary("==").pure()
+        BuiltinOperatorId.EqFltFlt -> Like.core("Float64::eq").pure()
+        BuiltinOperatorId.EqIntInt -> Like.binary("==").pure()
+        BuiltinOperatorId.EqLongLong -> Like.binary("==").pure()
+        BuiltinOperatorId.EqStrStr -> Like.core("Compare::eq").pure()
+        BuiltinOperatorId.CmpBoolBool -> Like.binary("Compare::cmp").pure()
+        BuiltinOperatorId.CmpFltFlt -> Like.core("Float64::cmp").pure()
+        BuiltinOperatorId.CmpIntInt -> Like.core("Compare::cmp").pure()
+        BuiltinOperatorId.CmpLongLong -> Like.core("Compare::cmp").pure()
+        BuiltinOperatorId.CmpStrStr -> Like.core("Compare::cmp").pure()
         BuiltinOperatorId.Bubble -> handle(builtinOperatorId) {
             // bubble() is template<class T = void> — need explicit type when used in expression context
             val cppRetType = translator.translateType2(retType)
@@ -116,7 +116,7 @@ internal object CppSupportNetwork : SupportNetwork {
             )
         }
         BuiltinOperatorId.Print -> Like.core("print")
-        BuiltinOperatorId.StrCat -> Like.core("cat")
+        BuiltinOperatorId.StrCat -> Like.core("cat").pure()
         BuiltinOperatorId.Listify -> handle(builtinOperatorId) {
             // List::make needs explicit template parameter since Elem can't be deduced
             val elemType = (retType as? DefinedType)?.bindings?.firstOrNull()
@@ -134,7 +134,7 @@ internal object CppSupportNetwork : SupportNetwork {
                     values,
                 )
             }
-        }
+        }.pure()
         BuiltinOperatorId.AdaptGeneratorFn -> Like.core("adapt_generator_fn")
         BuiltinOperatorId.SafeAdaptGeneratorFn -> Like.core("safe_adapt_generator_fn")
         BuiltinOperatorId.Async -> Like.core("async_run")
@@ -183,18 +183,18 @@ internal object CppSupportNetwork : SupportNetwork {
             fun put(key: String, code: SupportCode) {
                 require(table.put(key, code) == null) { "duplicate connectedRefs entry for '$key'" }
             }
-            put("core.getConsole()", Like.core("Console::get_console"))
-            put("core.empty()", Like.core("empty"))
+            put("core.getConsole()", Like.core("Console::get_console").pure())
+            put("core.empty()", Like.core("empty").pure())
             put("core.ignore()", Like.ignoring(theLastArg))
-            put("core.type Boolean.toString()", Like.core("Boolean::toString"))
-            put("std/temporal.type Date.day", Like.core("Date::getDay"))
-            put("std/temporal.type Date.month", Like.core("Date::getMonth"))
-            put("std/temporal.type Date.year", Like.core("Date::getYear"))
-            put("std/temporal.type Date.get dayOfWeek()", Like.core("Date::getDayOfWeek"))
-            put("std/temporal.type Date.toString()", Like.core("Date::toString"))
-            put("std/temporal.type Date.yearsBetween()", Like.core("Date::yearsBetween"))
+            put("core.type Boolean.toString()", Like.core("Boolean::toString").pure())
+            put("std/temporal.type Date.day", Like.core("Date::getDay").reads())
+            put("std/temporal.type Date.month", Like.core("Date::getMonth").reads())
+            put("std/temporal.type Date.year", Like.core("Date::getYear").reads())
+            put("std/temporal.type Date.get dayOfWeek()", Like.core("Date::getDayOfWeek").reads())
+            put("std/temporal.type Date.toString()", Like.core("Date::toString").reads())
+            put("std/temporal.type Date.yearsBetween()", Like.core("Date::yearsBetween").reads())
             for (prop in listOf("e", "pi")) {
-                put("core.type Float64.$prop", Like.core("Float64::$prop"))
+                put("core.type Float64.$prop", Like.core("Float64::$prop").pure())
             }
             for (fn in listOf(
                 "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh",
@@ -202,83 +202,91 @@ internal object CppSupportNetwork : SupportNetwork {
                 "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh",
                 "toInt32", "toInt32Unsafe", "toInt64", "toInt64Unsafe", "toString",
             )) {
-                put("core.type Float64.$fn()", Like.core("Float64::$fn"))
+                val code = Like.core("Float64::$fn")
+                put("core.type Float64.$fn()", if (fn == "toString") code.pure() else code.reads())
             }
             for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toString", "toInt64")) {
-                put("core.type Int32.$fn()", Like.core("Int::$fn"))
+                val code = Like.core("Int::$fn")
+                put("core.type Int32.$fn()", if (fn == "toString") code.pure() else code.reads())
             }
             for (fn in listOf("max", "min", "toFloat64", "toFloat64Unsafe", "toInt32", "toInt32Unsafe", "toString")) {
-                put("core.type Int64.$fn()", Like.core("Int64::$fn"))
+                val code = Like.core("Int64::$fn")
+                put("core.type Int64.$fn()", if (fn == "toString") code.pure() else code.reads())
             }
             put("core.type PromiseBuilder.breakPromise()", Like.core("breakpromise"))
             put("core.type PromiseBuilder.complete()", Like.core("complete"))
             put("core.type PromiseBuilder.get promise()", Like.core("getpromise"))
             put("core.type PromiseBuilder.constructor()", Like.coreWithRetTypeArgs("PromiseBuilderNs::make"))
-            put("core.type String.begin", Like.core("String::begin"))
+            put("core.type String.begin", Like.core("String::begin").pure())
             for (prop in listOf("isEmpty", "end")) {
-                put("core.type String.get $prop()", Like.core("String::$prop"))
+                put("core.type String.get $prop()", Like.core("String::$prop").reads())
             }
             for (fn in listOf(
                 "toInt64", "isEmpty", "begin", "end",
                 "get", "countBetween", "forEach", "hasAtLeast", "hasIndex", "next", "prev",
                 "slice", "split", "step", "toFloat64", "toInt32", "toString", "indexOf",
             )) {
-                put("core.type String.$fn()", Like.core("String::$fn"))
+                // forEach calls the function it is handed.
+                val code = Like.core("String::$fn")
+                put("core.type String.$fn()", if (fn == "forEach") code else code.reads())
             }
             // Cased separately: the C++ core symbols spell these `fromCodepoint`/`fromCodepoints`.
-            put("core.type String.fromCodePoint()", Like.core("String::fromCodepoint"))
-            put("core.type String.fromCodePoints()", Like.core("String::fromCodepoints"))
-            put("core.type StringIndex.none", Like.core("String::none"))
-            put("core.type StringIndexOption.compareTo()", Like.core("Compare::cmp"))
-            put("core.type StringIndexOption.eq()", Like.binary("=="))
-            put("core.type StringBuilder.constructor()", Like.coreWithRetTypeArgs("StringBuilder::make"))
-            put("core.type StringBuilder.get end()", Like.core("StringBuilder::end"))
+            put("core.type String.fromCodePoint()", Like.core("String::fromCodepoint").reads())
+            put("core.type String.fromCodePoints()", Like.core("String::fromCodepoints").reads())
+            put("core.type StringIndex.none", Like.core("String::none").pure())
+            put("core.type StringIndexOption.compareTo()", Like.core("Compare::cmp").pure())
+            put("core.type StringIndexOption.eq()", Like.binary("==").pure())
+            put("core.type StringBuilder.constructor()", Like.coreWithRetTypeArgs("StringBuilder::make").pure())
+            put("core.type StringBuilder.get end()", Like.core("StringBuilder::end").reads())
             for (fn in listOf("append", "appendBetween", "toString", "clear")) {
                 put("core.type StringBuilder.$fn()", Like.core("StringBuilder::$fn"))
             }
             put("core.type StringBuilder.appendCodePoint()", Like.core("StringBuilder::appendCodepoint"))
             put("core.type Console.log()", Like.core("Console::log"))
-            put("core.type List.get length()", Like.coreWithRetTypeArgs("List::length"))
-            for (fn in listOf("forEach", "get", "toList", "toListBuilder")) {
-                put("core.type List.$fn()", Like.core("List::$fn"))
+            put("core.type List.get length()", Like.coreWithRetTypeArgs("List::length").reads())
+            put("core.type List.forEach()", Like.core("List::forEach"))
+            for (fn in listOf("get", "toList", "toListBuilder")) {
+                put("core.type List.$fn()", Like.core("List::$fn").reads())
             }
             for (prop in listOf("isEmpty", "length")) {
-                put("core.type Listed.get $prop()", Like.core("List::$prop"))
+                put("core.type Listed.get $prop()", Like.core("List::$prop").reads())
             }
-            for (fn in listOf(
-                "filter", "join", "map", "slice", "get", "getOr",
-                "reduce", "sorted", "toList", "toListBuilder", "indexOf",
-            )) {
+            // These call the function they are handed.
+            for (fn in listOf("filter", "join", "map", "reduce", "sorted")) {
                 put("core.type Listed.$fn()", Like.core("List::$fn"))
             }
-            put("core.type ListBuilder.constructor()", Like.coreWithRetTypeArgs("ListBuilder::make"))
+            for (fn in listOf("slice", "get", "getOr", "toList", "toListBuilder", "indexOf")) {
+                put("core.type Listed.$fn()", Like.core("List::$fn").reads())
+            }
+            put("core.type ListBuilder.constructor()", Like.coreWithRetTypeArgs("ListBuilder::make").pure())
             for (fn in listOf("add", "addAll", "removeLast", "reverse", "splice", "set", "sort")) {
                 put("core.type ListBuilder.$fn()", Like.coreWithFirstArgTypeArgs("ListBuilder::$fn"))
             }
-            put("core.type ListBuilder.toList()", Like.core("List::toList"))
-            put("core.type ListBuilder.toListBuilder()", Like.core("List::toListBuilder"))
-            put("core.type ListBuilder.get length()", Like.core("List::length"))
-            put("core.type Map.constructor()", Like.coreWithRetTypeArgs("Map::make"))
-            put("core.type MapBuilder.constructor()", Like.coreWithRetTypeArgs("Map::make"))
+            put("core.type ListBuilder.toList()", Like.core("List::toList").reads())
+            put("core.type ListBuilder.toListBuilder()", Like.core("List::toListBuilder").reads())
+            put("core.type ListBuilder.get length()", Like.core("List::length").reads())
+            put("core.type Map.constructor()", Like.coreWithRetTypeArgs("Map::make").pure())
+            put("core.type MapBuilder.constructor()", Like.coreWithRetTypeArgs("Map::make").pure())
             for (fn in listOf("clear", "remove", "set")) {
                 put("core.type MapBuilder.$fn()", Like.coreWithFirstArgTypeArgs("MapBuilder::$fn"))
             }
-            put("core.type Pair.constructor()", Like.coreWithRetTypeArgs("PairFactory::make"))
-            put("core.type Mapped.get length()", Like.core("Mapped::length"))
+            put("core.type Pair.constructor()", Like.coreWithRetTypeArgs("PairFactory::make").pure())
+            put("core.type Mapped.get length()", Like.core("Mapped::length").reads())
             for (fn in listOf("get", "getOr", "has")) {
-                put("core.type Mapped.$fn()", Like.coreWithFirstArgTypeArgs("Mapped::$fn"))
+                put("core.type Mapped.$fn()", Like.coreWithFirstArgTypeArgs("Mapped::$fn").reads())
             }
-            for (fn in listOf(
-                "keys", "values", "toMap", "toMapBuilder", "toList",
-                "toListBuilder", "toListWith", "toListBuilderWith", "forEach",
-            )) {
+            // These call the function they are handed.
+            for (fn in listOf("toListWith", "toListBuilderWith", "forEach")) {
                 put("core.type Mapped.$fn()", Like.core("Mapped::$fn"))
             }
-            put("core.type DenseBitVector.constructor()", Like.coreWithRetTypeArgs("DenseBitVector::make"))
-            put("core.type DenseBitVector.get()", Like.core("DenseBitVector::get"))
+            for (fn in listOf("keys", "values", "toMap", "toMapBuilder", "toList", "toListBuilder")) {
+                put("core.type Mapped.$fn()", Like.core("Mapped::$fn").reads())
+            }
+            put("core.type DenseBitVector.constructor()", Like.coreWithRetTypeArgs("DenseBitVector::make").pure())
+            put("core.type DenseBitVector.get()", Like.core("DenseBitVector::get").reads())
             put("core.type DenseBitVector.set()", Like.core("DenseBitVector::set"))
-            put("core.type Deque.constructor()", Like.coreWithRetTypeArgs("Deque::make"))
-            put("core.type Deque.get isEmpty()", Like.coreWithRetTypeArgs("Deque::isEmpty"))
+            put("core.type Deque.constructor()", Like.coreWithRetTypeArgs("Deque::make").pure())
+            put("core.type Deque.get isEmpty()", Like.coreWithRetTypeArgs("Deque::isEmpty").reads())
             for (fn in listOf("add", "removeFirst")) {
                 put("core.type Deque.$fn()", Like.coreWithFirstArgTypeArgs("Deque::$fn"))
             }
@@ -294,7 +302,7 @@ internal object CppSupportNetwork : SupportNetwork {
             put("core.type Generator.next()", Like.core("next"))
             put("core.type SafeGenerator.next()", Like.core("next"))
             put("core.type SafeGenerator.nextSafe()", Like.core("next"))
-            put("core.doneResult()", Like.core("doneResult"))
+            put("core.doneResult()", Like.core("doneResult").pure())
         }
     }
 
@@ -444,7 +452,7 @@ internal object CppSupportNetwork : SupportNetwork {
             fn = TmpL.InlineSupportCodeWrapper(
                 fn.pos,
                 fn.type.copy(returnType2 = WellKnownTypes.booleanType2),
-                Like.binary(comparisonKind.intInfixer.kind.outputToken.text),
+                Like.binary(comparisonKind.intInfixer.kind.outputToken.text).pure(),
             ),
             typeActuals = tmpl.typeActuals.deepCopy(),
             parameters = freeParameters,
@@ -554,10 +562,35 @@ internal fun handle(builtinOperatorId: BuiltinOperatorId, generate: InlineContex
 internal fun handle(desc: String, generate: InlineContext.() -> Cpp.Expr) =
     CppInlineSupportCode(desc, generate)
 
+/**
+ * How a call to inline support code can interact with its sibling operands, for
+ * `CppTranslator.inOrder`, which orders operands that C++ would not. Code is [Acts] unless
+ * marked otherwise, so new support code is ordered until someone says it need not be.
+ */
+internal enum class SupportEffect {
+    /** Only computes a value from its operands, such as `Int::add` or `cat`. */
+    Pure,
+
+    /**
+     * Reads its operands' state or can fail, but writes nothing and calls nothing it was
+     * handed, such as `List::get`. Two of these can run in either order: a failure is a
+     * failure whichever comes first.
+     */
+    Reads,
+
+    /** May write state or call a function it was handed, such as `ListBuilder::add` or `List::map`. */
+    Acts,
+}
+
 internal class CppInlineSupportCode(
     val desc: String,
     val generate: InlineContext.() -> Cpp.Expr,
+    /** What the generated code can do besides compute from its operands; see [SupportEffect]. */
+    val effect: SupportEffect = SupportEffect.Acts,
 ) : InlineSupportCode<Cpp.Tree, CppTranslator> {
+    fun pure(): CppInlineSupportCode = CppInlineSupportCode(desc, generate, SupportEffect.Pure)
+    fun reads(): CppInlineSupportCode = CppInlineSupportCode(desc, generate, SupportEffect.Reads)
+
     override val needsThisEquivalent: Boolean = false
 
     override fun renderTo(tokenSink: TokenSink) {

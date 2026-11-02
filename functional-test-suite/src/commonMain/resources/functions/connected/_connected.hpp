@@ -14,5 +14,7 @@ std::int32_t prod(std::shared_ptr<Hidden> const& hidden, std::int32_t j);
 
 int32_t length(temper::core::NullableParam<std::string> s);
 
+std::int32_t twice(std::int32_t i);
+
 } // namespace _connected
 } // namespace work

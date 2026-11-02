@@ -373,7 +373,8 @@ namespace TemperLang.Core
             // Parse digits.
             while (index < text.Length)
             {
-                var c = char.ToLower(text[index]);
+                // Invariant, since culture can map I to dotless ı.
+                var c = char.ToLowerInvariant(text[index]);
                 if (char.IsWhiteSpace(c))
                 {
                     break;

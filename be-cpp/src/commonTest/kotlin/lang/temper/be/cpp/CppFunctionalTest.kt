@@ -57,7 +57,7 @@ class CppFunctionalTest : FunctionalTestRunner<CppBackend>(CppBackend.Cpp) {
                 if (test.runAsTest) {
                     assertTestingTest(test, result)
                 } else {
-                    test.assertRunOutput(result)
+                    test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

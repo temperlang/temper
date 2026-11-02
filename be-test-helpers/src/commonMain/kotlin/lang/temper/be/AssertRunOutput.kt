@@ -10,8 +10,11 @@ import lang.temper.tests.FunctionalTestBase
 import kotlin.test.assertIs
 import kotlin.test.fail
 
-/** For convenience in checkout output when running for simple output. */
-fun FunctionalTestBase.assertRunOutput(result: RResult<EffortSuccess, CliFailure>) {
+/**
+ * For convenience in checkout output when running for simple output, from code that
+ * [backend] generated, which tells which expected output applies.
+ */
+fun FunctionalTestBase.assertRunOutput(result: RResult<EffortSuccess, CliFailure>, backend: Backend<*>) {
     check(!runAsTest)
     when {
         expectRunFailure -> assertIs<RFailure<*>>(result)
@@ -19,7 +22,7 @@ fun FunctionalTestBase.assertRunOutput(result: RResult<EffortSuccess, CliFailure
             is RSuccess -> {
                 val effort = result.result
                 assertStringsEqual(
-                    expectedOutput,
+                    expectedOutput(backend.backendId, noConnected = backend.config.noConnected),
                     effort.stdout,
                     message = this::class.simpleName,
                 )

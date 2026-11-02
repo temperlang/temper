@@ -26,3 +26,11 @@ export const prod = (hidden, j) => {
 export const length = (s) => {
   return s?.length ?? -1;
 };
+
+/**
+ * @param {number} i
+ * @returns {number}
+ */
+export const twice = (i) => {
+  return i * 2;
+};

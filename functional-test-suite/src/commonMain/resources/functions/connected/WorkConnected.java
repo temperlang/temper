@@ -12,4 +12,8 @@ class WorkConnected {
     public static int length(String s) {
         return s == null ? -1 : s.length();
     }
+
+    static int twice(int i) {
+        return i * 2;
+    }
 }

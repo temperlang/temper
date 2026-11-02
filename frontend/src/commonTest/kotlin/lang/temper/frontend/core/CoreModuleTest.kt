@@ -78,7 +78,7 @@ class CoreModuleTest {
             overriddenMember?.superTypeMember,
         )
         val contextualizedType = overriddenMember?.superTypeMemberTypeInSubTypeContext
-        // We translated the type from the sub-type so that we use the YIELD_TYPE_NAME from SafeGenerator,
+        // We translated the type from the subtype so that we use the YIELD_TYPE_NAME from SafeGenerator,
         // but the Bubble type still shows up because that's declared on the super type.
         val yieldTypeName = "${WellKnownTypes.safeGeneratorTypeDefinition.typeParameters.first().name}"
         assertEquals(

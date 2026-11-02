@@ -562,6 +562,9 @@ class PyBackend private constructor(
 
     override val supportNetwork: SupportNetwork get() = PySupportNetwork
 
+    /** Every Python backend shares the same `__connected__.py` files. */
+    override val connectedBackendNames: Set<String> get() = setOf(PY_BACKEND_ID, backendId.uniqueId)
+
     private val dependencyNames = mutableSetOf<DashedIdentifier>()
 
     @PluginBackendId(PY_BACKEND_ID)

@@ -722,9 +722,10 @@ class Lexer(
                             if (commentEnd >= 0) {
                                 end = commentEnd
                                 open = OpenTokenType.NONE
-                                if (end == 0) {
-                                    // File start so we actually start with code, not comment.
-                                    // This can happen when we start with an indented code block.
+                                if (end == start) {
+                                    // No comment content, so lex code instead. This happens
+                                    // when an indented code block starts the file, or starts
+                                    // right where another code block ends.
                                     reenter = true
                                 }
                                 break

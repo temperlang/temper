@@ -301,3 +301,37 @@ hay 3: in the nick of ...
 hay 4: (nope)
 hay 5: (nope)
 ```
+
+Searching compares code points exactly, so characters that some
+locale-aware comparisons ignore, like NUL, soft hyphen (U+AD), and
+zero-width joiner (U+200D), still count, and only match themselves.
+
+    let foundAt(
+      haystack: String,
+      needle: String,
+      start: StringIndex = String.begin,
+    ): Int {
+      let index = haystack.indexOf(needle, start);
+      when (index) {
+        is StringIndex -> haystack.countBetween(String.begin, index);
+        else -> -1;
+      }
+    }
+
+    let nulHay = "ab\u{0}#\u{0}";
+    console.log("nul: ${foundAt(nulHay, "\u{0}").toString()}");
+    let afterNul = nulHay.next(nulHay.next(nulHay.next(String.begin)));
+    console.log("nul again: ${foundAt(nulHay, "\u{0}", afterNul).toString()}");
+    console.log("soft hyphen: ${foundAt("ab\u{AD}#", "\u{AD}").toString()}");
+    console.log("past soft hyphen: ${foundAt("ab\u{AD}#", "b#").toString()}");
+    console.log("zwj: ${foundAt("a\u{200D}b", "ab").toString()}");
+    console.log("composed: ${foundAt("e\u{301}", "\u{E9}").toString()}");
+
+```log
+nul: 2
+nul again: 4
+soft hyphen: 2
+past soft hyphen: -1
+zwj: -1
+composed: -1
+```

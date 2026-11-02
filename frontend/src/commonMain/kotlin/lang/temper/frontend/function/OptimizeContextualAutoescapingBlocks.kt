@@ -45,7 +45,6 @@ import lang.temper.type2.MkType2
 import lang.temper.type2.Signature2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withType
 import lang.temper.value.Abort
 import lang.temper.value.ActualValues
@@ -231,7 +230,7 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
                         val parent = t.incoming?.source as? CallTree
                         if (parent != null && parent.children.size == 2) {
                             val accumulator = parent.child(1) as? RightNameLeaf
-                            val accumulatorType = accumulator?.typeInferences?.type?.let { hackMapOldStyleToNew(it) }
+                            val accumulatorType = accumulator?.typeInferences?.type
                                 as? DefinedNonNullType
                             val autoescaperSuperType = contextualAutoescapingAccumulatorSuper(accumulatorType)
                                 ?: return@forEachContinuing

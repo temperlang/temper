@@ -339,7 +339,7 @@ class DocJsTranslatorTest {
             want = """
                 |// #region __BOILERPLATE__ {{{
                 |import {
-                |  type as type__0, panic
+                |  type as type__0
                 |} from "@temperlang/core";
                 |export class DiffResult_0 extends type__0() {
                 |};
@@ -349,7 +349,7 @@ class DocJsTranslatorTest {
                 | * @returns {DiffResult_0}
                 | */
                 |export function diff(a_3, b_4) {
-                |  return panic();
+                |  throw Error();
                 |};
                 |/** @type {string} */
                 |export const stringA = "foo";

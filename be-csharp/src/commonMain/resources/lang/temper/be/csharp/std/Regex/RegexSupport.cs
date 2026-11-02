@@ -85,7 +85,7 @@ namespace TemperLang.Std.Regex
                         ranges.Add(new IntRange(range.Min, range.Max + 1));
                         break;
                     case DigitSpecial:
-                        ranges.Add(new IntRange('0', '9'));
+                        ranges.Add(new IntRange('0', '9' + 1));
                         break;
                     case SpaceSpecial:
                         foreach (var code in " \t\n\r\x0C\x0B")
@@ -96,9 +96,9 @@ namespace TemperLang.Std.Regex
                     case WordSpecial:
                         // Go ascii for now.
                         ranges.Add(new IntRange('_'));
-                        ranges.Add(new IntRange('0', '9'));
-                        ranges.Add(new IntRange('A', 'Z'));
-                        ranges.Add(new IntRange('a', 'z'));
+                        ranges.Add(new IntRange('0', '9' + 1));
+                        ranges.Add(new IntRange('A', 'Z' + 1));
+                        ranges.Add(new IntRange('a', 'z' + 1));
                         break;
                 }
             }
@@ -302,6 +302,10 @@ namespace TemperLang.Std.Regex
                         }
                     }
                 }
+            }
+            if (orItems.Count == 0)
+            {
+                return new CodeSet(basicParts);
             }
             return new Or(orItems);
         }

@@ -1407,22 +1407,22 @@ class ControlFlowTest {
         val returnName = nameMaker.unusedSourceName(ParsedName("return"))
         val zero = Value(0, TInt)
         Decl {
-            Ln(returnName, WellKnownTypes.intType)
+            Ln(returnName, WellKnownTypes.intType2)
             V(varSymbol)
             V(void)
         }
         OrElse(
             or = {
-                Assign(returnName, WellKnownTypes.intType) {
+                Assign(returnName, WellKnownTypes.intType2) {
                     plantCallWithTypeInfo(BuiltinFuns.divIntIntFn) {
-                        V(zero, WellKnownTypes.intType)
-                        V(zero, WellKnownTypes.intType)
+                        V(zero, WellKnownTypes.intType2)
+                        V(zero, WellKnownTypes.intType2)
                     }
                 }
             },
             els = {
-                Assign(returnName, WellKnownTypes.intType) {
-                    V(zero, WellKnownTypes.intType)
+                Assign(returnName, WellKnownTypes.intType2) {
+                    V(zero, WellKnownTypes.intType2)
                 }
             },
         )

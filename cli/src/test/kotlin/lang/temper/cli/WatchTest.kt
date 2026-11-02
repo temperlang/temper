@@ -7,6 +7,7 @@ import lang.temper.be.lua.LuaBackend
 import lang.temper.be.py.PyBackend
 import lang.temper.common.currents.UnmanagedFuture
 import lang.temper.common.withCapturingConsole
+import lang.temper.frontend.Module
 import lang.temper.fs.FileSnapshot
 import lang.temper.fs.FileSystemSnapshot
 import lang.temper.fs.mkdir
@@ -17,8 +18,11 @@ import lang.temper.log.filePath
 import lang.temper.name.BackendId
 import lang.temper.tooling.buildrun.BuildDoneResult
 import org.junit.jupiter.api.Timeout
+import java.lang.ref.WeakReference
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.ForkJoinPool
@@ -63,7 +67,94 @@ class WatchTest {
         runTest("repeatWatchTest", listOf(JsBackend.Factory.backendId), buildLimit = 2, testBackendIds = listOf())
     }
 
+    @Test
+    fun watchReleasesOldBuilds() {
+        // Each build edits the library, so its modules are rebuilt. While the watcher is
+        // still running, a build's rebuilt modules should be collectable once newer builds
+        // have finished, so memory doesn't grow per build. A generic function type covers
+        // caches keyed by type formals. This checks the second build, because modules
+        // reused since the first build can still reach that build's other modules.
+        @Suppress("MagicNumber") // Arbitrary but small enough and good enough in testing.
+        val buildLimit = 5
+        val checkedBuild = 2
+        val checkedModules = mutableListOf<WeakReference<Module>>()
+        var stillReachable = -1
+        var reusedCount = -1
+        runWithTemporaryDirCopyOf(
+            "watchReleasesOldBuilds",
+            resourcePath("/testing/passing"),
+            subPath = Path("src"),
+        ) { dir ->
+            dir.resolve(".gitignore").writeText("")
+            val source = dir.resolve("src/test.temper")
+            Files.writeString(source, Files.readString(source) + "\nlet apply<T>(f: fn (T): T, x: T): T { f(x) }\n")
+            var buildCount = 0
+            var timer: Timer? = null
+            val (ok, output) = withCapturingConsole { capturingConsole ->
+                doWatch(
+                    executorService = ForkJoinPool.commonPool(),
+                    backends = listOf(JsBackend.Factory.backendId),
+                    testBackends = listOf(),
+                    buildLimit = buildLimit,
+                    shellPreferences = shellPreferencesForTest(capturingConsole),
+                    workRoot = dir,
+                    ignoreFile = dir.resolve(".gitignore"),
+                    userSignalledDone = UnmanagedFuture.newCompletableFuture("User signalled done"),
+                ) { watcher ->
+                    buildCount += 1
+                    if (buildCount == checkedBuild) {
+                        (watcher.lastBuildResult as? BuildDoneResult)?.partitionedModules
+                            ?.filter { (config) -> config.libraryName.text == "test-me" }
+                            ?.flatMap { (_, modules) -> modules }
+                            ?.mapTo(checkedModules) { WeakReference(it) }
+                    }
+                    if (buildCount == buildLimit) {
+                        // Modules reused unchanged by the latest build are legitimately alive.
+                        val current = Collections.newSetFromMap(IdentityHashMap<Module, Boolean>())
+                        (watcher.lastBuildResult as? BuildDoneResult)?.modulesInOrder?.let { current.addAll(it) }
+                        reusedCount = checkedModules.count { it.get() in current }
+                        stillReachable = countReachableAfterGc(checkedModules.filter { it.get() !in current })
+                    } else {
+                        timer = Timer()
+                        @Suppress("MagicNumber")
+                        timer!!.schedule(
+                            object : TimerTask() {
+                                override fun run() {
+                                    Files.writeString(source, Files.readString(source) + "\n// Keep on changing!")
+                                }
+                            },
+                            500,
+                        )
+                    }
+                }
+            }
+            timer?.cancel()
+            assertTrue(ok, "expected ok.  output follows:\n\n$output")
+            assertEquals(buildLimit, buildCount, "Build count wrong")
+        }
+        assertTrue(checkedModules.size > reusedCount, "Expected some modules to be rebuilt")
+        assertEquals(
+            0,
+            stillReachable,
+            "Rebuilt modules from build $checkedBuild still reachable " +
+                "(it had ${checkedModules.size}, latest reuses $reusedCount)",
+        )
+    }
+
     // None here for rust, but there's a DoTestTest case for Rust, which is good enough for now.
+}
+
+/** Collects garbage until the referents are gone or it gives up, and returns how many remain. */
+private fun countReachableAfterGc(refs: List<WeakReference<*>>): Int {
+    @Suppress("MagicNumber")
+    repeat(10) {
+        System.gc()
+        if (refs.all { it.get() == null }) {
+            return 0
+        }
+        Thread.sleep(100)
+    }
+    return refs.count { it.get() != null }
 }
 
 private fun runTest(

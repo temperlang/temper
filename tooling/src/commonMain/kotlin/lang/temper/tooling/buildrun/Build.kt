@@ -213,7 +213,7 @@ private fun stageLibraries(
     )
     moduleAdvancer.projectLogSink = projectLogSink
     fun makeCancellableContinueCondition(): ContinueCondition {
-        return CancellableContinueCondition(build, makeContinueCondition())
+        return CancellableContinueCondition(build.cancelGroup, makeContinueCondition())
     }
 
     fun makeTentativeLibraryConfiguration(
@@ -964,12 +964,18 @@ private fun mergeResultsFromInterpAndBackends(
 
 class AbortCurrentBuild : Error()
 
+/**
+ * Holds only the cancel group, not the [Build]. Modules keep their continue
+ * condition, and a build keeps the previous build's modules, so holding the
+ * build here would chain every build in a watch session together and keep
+ * them all from being collected.
+ */
 internal class CancellableContinueCondition(
-    private val build: Build,
+    private val cancelGroup: CancelGroup,
     private val cc: ContinueCondition,
 ) : ContinueCondition {
-    override fun shouldContinue(): Boolean = !build.isCancelled && cc.shouldContinue()
+    override fun shouldContinue(): Boolean = !cancelGroup.isCancelled && cc.shouldContinue()
 
     override fun toString(): String =
-        "CancellableContinueCondition(${if (build.isCancelled) "cancelled" else "building"}, ${cc})"
+        "CancellableContinueCondition(${if (cancelGroup.isCancelled) "cancelled" else "building"}, ${cc})"
 }

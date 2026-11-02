@@ -188,15 +188,15 @@ fun unpackRegex(value: Value<*>): RegexNode {
                 Repeat::class.simpleName -> unpackRepeat(state.properties)
                 "Sequence" -> unpackSeq(state.properties) // non-matched name for this one
                 // Special
-                BeginSpecial::class.simpleName -> BeginSpecial
-                DotSpecial::class.simpleName -> DotSpecial
-                EndSpecial::class.simpleName -> EndSpecial
-                GraphemeClusterSpecial::class.simpleName -> GraphemeClusterSpecial
-                WordBoundarySpecial::class.simpleName -> WordBoundarySpecial
+                "BeginSpecial" -> Begin
+                "DotSpecial" -> Dot
+                "EndSpecial" -> End
+                GraphemeCluster::class.simpleName -> GraphemeCluster
+                "WordBoundarySpecial" -> WordBoundary
                 // Special Set
-                DigitSpecial::class.simpleName -> DigitSpecial
-                SpaceSpecial::class.simpleName -> SpaceSpecial
-                WordSpecial::class.simpleName -> WordSpecial
+                "DigitSpecial" -> Digit
+                "SpaceSpecial" -> Space
+                "WordSpecial" -> Word
                 else -> TODO("Unpack pattern type: $typeName")
             }
         }

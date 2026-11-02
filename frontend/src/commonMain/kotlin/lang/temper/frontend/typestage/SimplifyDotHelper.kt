@@ -5,15 +5,12 @@ import lang.temper.common.Either
 import lang.temper.common.subListToEnd
 import lang.temper.frontend.maybeAdjustDotHelper
 import lang.temper.name.Symbol
-import lang.temper.type.AndType
 import lang.temper.type.DotHelper
 import lang.temper.type.DotMember
 import lang.temper.type.ExtensionResolution
 import lang.temper.type.ExternalCall
 import lang.temper.type.FunctionResolution
-import lang.temper.type.FunctionType
 import lang.temper.type.InstanceExtensionResolution
-import lang.temper.type.MkType
 import lang.temper.type.StaticExtensionResolution
 import lang.temper.type.StaticType
 import lang.temper.type.TypeDefinition
@@ -21,7 +18,12 @@ import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.VisibleMemberShape
 import lang.temper.type.WellKnownTypes
-import lang.temper.type.extractAtoms
+import lang.temper.type2.AdHocArrowTypes
+import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.TypeContext2
+import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.hackTryStaticTypeToSig
 import lang.temper.value.CallTree
 import lang.temper.value.NamedBuiltinFun
 import lang.temper.value.TFloat64
@@ -41,29 +43,19 @@ internal fun simplifyDotHelper(
     call: CallTree,
     dotHelper: DotHelper,
     variants: List<Variant>,
+    typeContext2: TypeContext2,
     retypeTree: (Tree) -> Unit,
 ) {
     val calleeEdge = call.edge(0)
     val callee = calleeEdge.target
     val typeInferences = call.typeInferences
-    val variantMatch = typeInferences?.variant
-    val variantFunctionType = variantMatch as? FunctionType
-    val variantMatchRefined = (variantFunctionType?.returnType as? AndType)?.let { andType ->
-        when {
-            typeInferences.type in andType.members -> MkType.fnDetails(
-                typeFormals = variantFunctionType.typeFormals,
-                valueFormals = variantFunctionType.valueFormals,
-                // Specialize the return type to the actually determined type.
-                returnType = typeInferences.type,
-            )
-            else -> null
-        }
-    }
+    val variantMatch = typeInferences?.variant ?: return
 
     // Give preference to members over extensions
     var chosenVariantResolution: VariantResolution? = null
     for ((variantType, resolution) in variants) {
-        if (variantType equivalent variantMatch || variantType equivalent variantMatchRefined) {
+        val variantSig = hackTryStaticTypeToSig(variantType)
+        if (variantSig != null && variantSig equivalent variantMatch) {
             chosenVariantResolution = chooseVariantResolution(chosenVariantResolution, resolution)
         }
     }
@@ -72,24 +64,24 @@ internal fun simplifyDotHelper(
         null,
         is Either.Left,
         -> {
-            val updatedType = when {
+            val updatedType: Type2? = when {
                 // If the resolution is to a method, not an extension, but to a different method, refine it.
                 chosenVariantResolution?.let { DotMember(it.leftOrNull.symbol) != dotHelper.member } == true -> {
                     // An overload now resolved to an individually named method.
-                    variantMatchRefined ?: variantMatch
+                    variantMatch.let { AdHocArrowTypes.definedTypeForSig(it) }
                 }
                 else -> when {
                     dotHelper.extensions.isNotEmpty() -> chosenVariantResolution?.let {
                         // Retain variants for now-known-as-non-extension call.
-                        MkType.or(
-                            variants.mapNotNull {
-                                if (it.second is Either.Left) {
-                                    it.first
-                                } else {
-                                    null
-                                }
-                            },
-                        )
+                        var simpleLub: Type2? = null
+                        for (variant in variants) {
+                            if (variant.second is Either.Left) {
+                                val variantType = hackMapOldStyleToNew(variant.first)
+                                simpleLub = simpleLub?.let { typeContext2.simpleLub(simpleLub, variantType) }
+                                    ?: variantType
+                            }
+                        }
+                        simpleLub
                     }
                     else -> null
                 }
@@ -142,7 +134,7 @@ internal fun simplifyDotHelper(
     // This means `++x` when x has a builtin numeric type ends up as `x = x + 1` which
     // is more readily translated than `x = x.succ()`.
     if (call.size == 2 && dotHelper.memberAccessor == ExternalCall) {
-        val subjectType = variantFunctionType?.valueFormals?.getOrNull(0)?.type
+        val subjectType = variantMatch.requiredInputTypes.getOrNull(0)
         inlineHelpersForSuccAndPred[subjectType to dotHelper.member]?.let { (newCallee, extraArg) ->
             val calleeEdge = call.edge(0)
             calleeEdge.replace { pos ->
@@ -156,9 +148,6 @@ internal fun simplifyDotHelper(
         }
     }
 
-    val functionTypes = variantMatch?.let {
-        extractAtoms(it) { atom -> atom as? FunctionType }
-    } ?: setOf()
     // Supply "this" types so we can figure out whether a referenced property is backed.
     val subjectTypeShapes = buildSet {
         fun addTypeShapesFrom(definition: TypeDefinition) {
@@ -168,10 +157,8 @@ internal fun simplifyDotHelper(
                     definition.superTypes.forEach { addTypeShapesFrom(it.definition) }
             }
         }
-        functionTypes.forEach { functionType ->
-            val thisArg = functionType.valueFormals.firstOrNull()
-            thisArg?.type?.let { addTypeShapesFrom(it.definition) }
-        }
+        val thisType = variantMatch.requiredInputTypes.firstOrNull()
+        thisType?.let { addTypeShapesFrom(it.definition) }
     }
     val callEdge = call.incoming!!
     if (maybeAdjustDotHelper(call, dotHelper, subjectTypeShapes, preserveExtensions = false)) {
@@ -179,25 +166,22 @@ internal fun simplifyDotHelper(
     }
 }
 
-private infix fun StaticType?.equivalent(other: StaticType?): Boolean =
-    if (this is FunctionType && other is FunctionType) {
-        val tvf = this.valueFormals
-        val ovf = other.valueFormals
-        var same = this.returnType == other.returnType &&
-            tvf.size == ovf.size &&
-            this.typeFormals == other.typeFormals
-        if (same) {
-            for ((i, element) in tvf.withIndex()) {
-                if (element.type != ovf[i].type) {
-                    same = false
-                    break
-                }
+private infix fun Signature2.equivalent(other: Signature2): Boolean {
+    val tvf = this.allValueFormals
+    val ovf = other.allValueFormals
+    var same = this.returnType == other.returnType &&
+        tvf.size == ovf.size &&
+        this.typeFormals == other.typeFormals
+    if (same) {
+        for ((i, element) in tvf.withIndex()) {
+            if (element.type != ovf[i].type || element.kind != ovf[i].kind) {
+                same = false
+                break
             }
         }
-        same
-    } else {
-        this == other
     }
+    return same
+}
 
 private val succDotMember = DotMember(Symbol("succ")) // `++` desugars to this
 private val predDotMember = DotMember(Symbol("pred")) // `--` desugars to this

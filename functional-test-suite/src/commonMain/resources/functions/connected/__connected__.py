@@ -11,3 +11,6 @@ class _connected:
 
     def length(string: str | None) -> int:
         return -1 if string is None else len(string)
+
+    def twice(i: int) -> int:
+        return i * 2

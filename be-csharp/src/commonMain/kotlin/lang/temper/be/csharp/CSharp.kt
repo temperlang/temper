@@ -48,6 +48,7 @@ object CSharp {
     enum class ModNew : FormattableEnum {
         Implied,
         New,
+        Override,
     }
 
     enum class ModStatic : FormattableEnum {

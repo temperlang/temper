@@ -17,12 +17,12 @@ data class UntypedCall(
     val inputBounds: List<InputBound>,
     /**
      * Equivalence bounds on the pass type.
-     * This is different from [contextType] which establishes an assignable to bound.
+     * This is different from [contextType] which establishes an assignable-to bound.
      */
     val outputBounds: List<OutputBound>,
     val hasTrailingBlock: Boolean,
     /**
-     * null or a type for the context in which the call is used.
+     * `null` or a type for the context in which the call is used.
      * For example, it could be the type from a declaration initialized with the result of the call.
      */
     val contextType: Type2?,
@@ -40,10 +40,10 @@ data class UntypedCall(
      */
     val inputTrees: List<Tree>,
 ) {
-    var resultType: StaticType? = null
-    var bindings: Map<TypeFormal, StaticType>? = null
+    var resultType: Type2? = null
+    var bindings: Map<TypeFormal, Type2>? = null
     var explanations: List<TypeReasonElement>? = null
     var chosenCallee: Int? = null
 
-    val passType: StaticType? get() = resultType?.let { excludeBubble(it) }
+    val passType: Type2? get() = resultType?.let { excludeBubble(it) }
 }

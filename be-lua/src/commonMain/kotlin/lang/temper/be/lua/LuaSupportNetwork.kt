@@ -340,6 +340,16 @@ internal object LuaSupportNetwork : SupportNetwork {
                         args[0],
                     )
                 }
+                // A table constructor, not a call to `temper.listof(...)`. Lua gives a
+                // call one register per argument, so a call with ~250 arguments does
+                // not load ("function or expression needs too many registers"). A
+                // constructor stores its items into the table in batches of 50.
+                BuiltinOperatorId.Listify -> InlineLua(
+                    builtin.builtinOperatorId.toString(),
+                    builtin.builtinOperatorId,
+                ) { pos, args ->
+                    buildTableList(pos, args)
+                }
                 // Inline string comparisons as native Lua operators (lexicographic, same as Temper).
                 BuiltinOperatorId.EqStrStr -> inlineBinaryOp(
                     builtin.builtinOperatorId.toString(), BinaryOpEnum.Eq, LuaOperatorDefinition.Eq,

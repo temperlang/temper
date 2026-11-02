@@ -48,8 +48,20 @@ class CppName(val text: String, allowKey: Boolean = false, raw: Boolean = false)
     override fun toString() = "CppName($text)"
 }
 
-fun fixName(name: String): String = if (cppKeywords.contains(name)) {
-    // If it was a keyword, it doesn't have bad chars.
+/**
+ * Namespace holding module-level storage. Generated code reads `temper_globals::x.value`
+ * directly; users call the accessor `x()`. Reserved like a keyword so no Temper name lands on it.
+ */
+internal const val GLOBALS_NAMESPACE = "temper_globals"
+
+/** Nested struct in each class holding its static field storage, like [GLOBALS_NAMESPACE]. */
+internal const val STATICS_STRUCT = "temper_statics"
+
+/** Names the backend uses itself, escaped like keywords when Temper code uses them. */
+private val backendReservedNames = setOf(GLOBALS_NAMESPACE, STATICS_STRUCT)
+
+fun fixName(name: String): String = if (cppKeywords.contains(name) || name in backendReservedNames) {
+    // If it was a keyword or reserved, it doesn't have bad chars.
     "${name}_"
 } else {
     // Otherwise, it might.

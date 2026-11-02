@@ -45,15 +45,15 @@ private fun Document.packRegex(regex: RegexNode): Value<*> {
         is Repeat -> makeRepeat(regex)
         is Seq -> makeSequence(regex)
         // Special
-        BeginSpecial -> makeEmpty(BeginSpecial::class)
-        DotSpecial -> makeEmpty(DotSpecial::class)
-        EndSpecial -> makeEmpty(EndSpecial::class)
-        GraphemeClusterSpecial -> makeEmpty(GraphemeClusterSpecial::class)
-        WordBoundarySpecial -> makeEmpty(WordBoundarySpecial::class)
+        Begin -> makeEmpty("BeginSpecial")
+        Dot -> makeEmpty("DotSpecial")
+        End -> makeEmpty("EndSpecial")
+        GraphemeCluster -> makeEmpty("GraphemeCluster")
+        WordBoundary -> makeEmpty("WordBoundarySpecial")
         // SpecialSet
-        DigitSpecial -> makeEmpty(DigitSpecial::class)
-        SpaceSpecial -> makeEmpty(SpaceSpecial::class)
-        WordSpecial -> makeEmpty(WordSpecial::class)
+        Digit -> makeEmpty("DigitSpecial")
+        Space -> makeEmpty("SpaceSpecial")
+        Word -> makeEmpty("WordSpecial")
     }
 }
 
@@ -127,8 +127,6 @@ private fun Int?.toValue() = when (this) {
 
 private fun String.toValue() = Value(this, TString)
 
-private fun Document.makeClass(kclass: KClass<*>) = makeClass(kclass.simpleName!!)
-
 private fun Document.makeClass(name: String) = TClass(
     // We could make a type shape with members, but we don't need one.
     TypeShapeImpl(
@@ -140,7 +138,7 @@ private fun Document.makeClass(name: String) = TClass(
     ),
 )
 
-private fun Document.makeEmpty(kclass: KClass<*>) = Value(makeInstance(), makeClass(kclass))
+private fun Document.makeEmpty(name: String) = Value(makeInstance(), makeClass(name))
 
 private fun Document.makeInstance(props: Map<String, Value<*>> = emptyMap()) = InstancePropertyRecord(
     // TODO: Shouldn't we be using the name from the instance's member names?

@@ -63,7 +63,7 @@ abstract class CppFunctionalTest(val version: CppVersion) : FunctionalTestRunner
             try {
                 when {
                     test.runAsTest -> assertTestingTest(test, result)
-                    else -> test.assertRunOutput(result)
+                    else -> test.assertRunOutput(result, backend)
                 }
                 pass = true
             } finally {

@@ -71,17 +71,17 @@ sealed class Special : RegexNode {
 }
 
 // The export is named `Special` but the underlying, unexported type is `Begin`.
-object BeginSpecial : Special()
-object EndSpecial : Special()
-object GraphemeClusterSpecial : Special() // TODO(tjp, regex): Can we support grapheme cluster in core dialect?
-object WordBoundarySpecial : Special()
+object Begin : Special()
+object End : Special()
+object GraphemeCluster : Special() // TODO(tjp, regex): Can we support grapheme cluster in core dialect?
+object WordBoundary : Special()
 
 /**
  * Dot is like a code set but not usable in CodeSet.
  * JS (MDN): "Matches any single character except line terminators: \n, \r, \u2028 or \u2029."
  * Python: "In the default mode, this matches any character except a newline."
  */
-object DotSpecial : Special()
+object Dot : Special()
 
 /** SpecialSet is a tailored set of code points that's also usable in [CodeSet]. */
 sealed class SpecialSet : CodePart, Special() {
@@ -89,7 +89,7 @@ sealed class SpecialSet : CodePart, Special() {
 }
 
 /** Expect that Indo-Arabic numerals are useful even in Unicode. */
-object DigitSpecial : SpecialSet() {
+object Digit : SpecialSet() {
     override val values get() = asciiDigitIntRangeSet
 }
 
@@ -100,7 +100,7 @@ object DigitSpecial : SpecialSet() {
  * In Python (ascii mode): [ \t\n\r\f\v]
  * See also: https://en.wikipedia.org/wiki/Template:Whitespace_(Unicode)
  */
-object SpaceSpecial : SpecialSet() {
+object Space : SpecialSet() {
     override val values get() = spaceIntRangeSet
 }
 
@@ -114,7 +114,7 @@ object SpaceSpecial : SpecialSet() {
  * - regex: Supports `\p`, maybe compatible with JS. Doesn't support PyPy.
  * TODO(tjp, tooling): Compare whatever Python implements with our IdParts.Continue and Unicode property sets.
  */
-object WordSpecial : SpecialSet() {
+object Word : SpecialSet() {
     // TODO(tjp, tooling): Some mode hinting for ascii vs unicode? Would need to be in SpecialSet.
     override val values get() = asciiWordIntRangeSet
 }

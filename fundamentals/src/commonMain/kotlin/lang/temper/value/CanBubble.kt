@@ -6,6 +6,8 @@ import lang.temper.type.StaticType
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.isBubbly
 import lang.temper.type2.Signature2
+import lang.temper.type2.Type2
+import lang.temper.type2.withType
 
 /**
  * True when the tree may bubble.
@@ -67,3 +69,11 @@ private fun canBubble(calleeType: StaticType): Boolean = when (calleeType) {
     is FunctionType -> calleeType.returnType.isBubbly
     else -> false
 }
+
+private fun canBubble(calleeType: Type2): Boolean = withType(
+    calleeType,
+    fn = { _, sig, _ ->
+        sig.returnType2.definition == WellKnownTypes.resultTypeDefinition
+    },
+    fallback = { false },
+)
