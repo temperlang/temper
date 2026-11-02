@@ -1,0 +1,103 @@
+// A toy contextual autoescaper following the conventions that
+// optimizeContextualAutoescapingBlocks relies on.
+// Its context is whether we're inside single quotes.
+// Interpolations outside quotes are bracketed, inside are angled.
+
+export interface ContextualAutoescapingAccumulator {}
+
+export sealed interface ParseEffect {}
+export class AppendParseEffect(public text: String) extends ParseEffect {}
+export class EventParseEffect(public event: String) extends ParseEffect {}
+
+export let Callout = fn (String, Boolean): Void;
+
+export class QState(public inQuote: Boolean) {}
+
+export class AfterPropagate(
+  public effects: List<ParseEffect>,
+  public stateAfter: QState,
+) {}
+
+export class Propagator {
+  public after(before: QState, known: String?): AfterPropagate {
+    if (known != null) {
+      let quotes = known.split("'").length - 1;
+      let inQuote = if (quotes % 2 == 0) { before.inQuote } else { !before.inQuote };
+      new AfterPropagate([new AppendParseEffect(known)], new QState(inQuote))
+    } else {
+      new AfterPropagate([], before)
+    }
+  }
+}
+
+export let propagateOver(
+  propagator: Propagator,
+  before: QState,
+  known: String?,
+  sameState: fn (QState, QState): Boolean,
+  callout: Callout?,
+): AfterPropagate {
+  propagator.after(before, known)
+}
+
+export interface Escaper {
+  apply(s: String): String;
+}
+
+export class BareEscaper extends Escaper {
+  public static instance = doPure { new BareEscaper() };
+  public apply(s: String): String { "[${s}]" }
+}
+
+export class QuotedEscaper extends Escaper {
+  public static instance = doPure { new QuotedEscaper() };
+  public apply(s: String): String { "<${s}>" }
+}
+
+// The optimizer calls escaperFor at compile time, when the instance
+// statics above aren't yet readable, so allocate here instead.
+export class Picker {
+  public escaperFor(state: QState, callout: Callout?): Escaper {
+    if (state.inQuote) { new QuotedEscaper() } else { new BareEscaper() }
+  }
+}
+
+export class QuoteBuilder extends ContextualAutoescapingAccumulator {
+  public static initialState(): QState { new QState(false) }
+  public static newCollector(): StringBuilder { new StringBuilder() }
+  public static propagator(): Propagator { new Propagator() }
+  public static picker(): Picker { new Picker() }
+  public static fromCollector(collector: StringBuilder): String { collector.toString() }
+  public static sameStatePredicate(): fn (QState, QState): Boolean {
+    fn (a: QState, b: QState): Boolean { a.inQuote == b.inQuote }
+  }
+  public static mergeStates(a: QState, b: QState, callout: Callout?): QState { a }
+  public static checkEndState(state: QState, callout: Callout): Void {
+    if (state.inQuote) {
+      callout("unclosed quote", false);
+    }
+  }
+
+  private var state: QState = QuoteBuilder.initialState();
+  private collector: StringBuilder = QuoteBuilder.newCollector();
+
+  public appendSafe(s: String): Void {
+    let after = propagateOver(
+      QuoteBuilder.propagator(), state, s, QuoteBuilder.sameStatePredicate(), null,
+    );
+    state = after.stateAfter;
+    for (let e of after.effects) {
+      if (e is AppendParseEffect) { collector.append(e.text); }
+    }
+  }
+
+  public append(s: String): Void {
+    let after = propagateOver(
+      QuoteBuilder.propagator(), state, null, QuoteBuilder.sameStatePredicate(), null,
+    );
+    state = after.stateAfter;
+    collector.append(QuoteBuilder.picker().escaperFor(state, null).apply(s));
+  }
+
+  public get accumulated(): String { QuoteBuilder.fromCollector(collector) }
+}

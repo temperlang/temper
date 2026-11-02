@@ -823,11 +823,14 @@ private fun optimizeAutoescaperUse(
             val callee = t.child(0)
             val fn = callee.functionContained
             if (fn is DotHelper && fn.memberAccessor is CallMemberAccessor) {
-                val subject = callee.child(fn.memberAccessor.firstArgumentIndex + 1)
-                if (subject is RightNameLeaf && subject.content == accumulatorName) {
+                // Since method calls have no separate bind step, the subject and
+                // argument follow the callee: `Call(DotHelper, subject, arg)`.
+                val subjectIndex = fn.memberAccessor.firstArgumentIndex + 1
+                val subject = t.childOrNull(subjectIndex)
+                if (subject is RightNameLeaf && subject.content == accumulatorName && t.size == subjectIndex + 2) {
                     val (_, classification) = methodClassification(fn.member)
                     if (classification != null) {
-                        val arg = t.child(1)
+                        val arg = t.child(subjectIndex + 1)
                         val (argToPropagateOver: Value<*>, argPos) = when (classification) {
                             AppendClassification.AppendSafe ->
                                 (arg.valueContained ?: return null) to arg.pos
@@ -1054,11 +1057,9 @@ private fun optimizeAutoescaperUse(
                 AppendClassification.AppendUnsafe -> {
                     check(escapers != null)
                     fun Planting.plantUnsafeAppend(): UnpositionedTreeTemplate<*> = Call(ps.pos) {
-                        val arg = freeTree(edge.target.child(1))
-                        Call(ps.callee) {
-                            V(ps.callee, Value(appendDotHelper))
-                            Rn(ps.subject, collector)
-                        }
+                        val arg = freeTree(edge.target.child(appendSubjectIndex(edge.target)!! + 1))
+                        V(ps.callee, Value(appendDotHelper))
+                        Rn(ps.subject, collector)
                         // Apply the escapers in order.
                         fun Planting.escapeArg(escapers: List<Type2>) {
                             if (escapers.isEmpty()) {
@@ -1238,6 +1239,18 @@ private fun <TREE : Tree> InterpretationContext.interpret(
     }
 }
 
+/**
+ * The index of the subject in a method call like `Call(DotHelper, subject, arg)`,
+ * or null if [t] is not a method call.
+ */
+private fun appendSubjectIndex(t: Tree): Int? {
+    if (t !is CallTree) { return null }
+    val fn = t.childOrNull(0)?.functionContained as? DotHelper ?: return null
+    val accessor = fn.memberAccessor
+    if (accessor !is CallMemberAccessor) { return null }
+    return accessor.firstArgumentIndex + 1
+}
+
 private enum class AppendClassification {
     AppendUnsafe,
     AppendSafe,
@@ -1249,11 +1262,11 @@ private data class AppendStmtPositions(
     val subject: Position,
     val arg: Position,
 ) {
-    constructor(t: Tree) : this(
+    constructor(t: Tree, subjectIndex: Int = appendSubjectIndex(t) ?: 1) : this(
         pos = t.pos,
         callee = t.childOrNull(0)?.pos ?: t.pos,
-        subject = t.childOrNull(0)?.childOrNull(1)?.pos ?: t.pos.leftEdge,
-        arg = t.childOrNull(1)?.pos ?: t.pos.rightEdge,
+        subject = t.childOrNull(subjectIndex)?.pos ?: t.pos.leftEdge,
+        arg = t.childOrNull(subjectIndex + 1)?.pos ?: t.pos.rightEdge,
     )
     constructor(p: Position) : this(p, p, p, p)
 }

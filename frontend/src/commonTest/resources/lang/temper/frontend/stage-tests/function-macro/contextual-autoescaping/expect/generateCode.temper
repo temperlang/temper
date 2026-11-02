@@ -1,0 +1,13 @@
+@stay @imported(\(`test//autoesc/`.QuoteBuilder)) let QuoteBuilder__0;
+QuoteBuilder__0 = type (QuoteBuilder);
+@fn let `test//`.f;
+`test//`.f = (@stay fn f(x__0 /* aka x */: String) /* return__0 */: String {
+    let collector#0: StringBuilder;
+    collector#0 = getStatic(QuoteBuilder, \newCollector)();
+    do_call_append(collector#0, "a ");
+    do_call_append(collector#0, do_call_apply(getStatic(BareEscaper, \instance), x__0));
+    do_call_append(collector#0, " 'b ");
+    do_call_append(collector#0, do_call_apply(getStatic(QuotedEscaper, \instance), x__0));
+    do_call_append(collector#0, "' c");
+    return__0 = getStatic(QuoteBuilder, \fromCollector)(collector#0)
+})

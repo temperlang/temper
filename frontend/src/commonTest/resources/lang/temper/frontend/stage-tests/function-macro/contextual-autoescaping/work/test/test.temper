@@ -1,0 +1,7 @@
+let { QuoteBuilder } = import("./autoesc");
+
+// The accumulator is replaced by its collector, and escapers are
+// picked at compile time based on whether we're inside quotes.
+export let f(x: String): String {
+  QuoteBuilder"a ${x} 'b ${x}' c"
+}
