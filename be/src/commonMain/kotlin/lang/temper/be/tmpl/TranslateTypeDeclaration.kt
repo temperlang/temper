@@ -759,7 +759,10 @@ internal fun translateTypeDeclaration(
 
     return TmpL.TypeDeclaration(
         pos,
-        metadata = translator.translateDeclarationMetadataValueMultimap(typeShape.metadata),
+        metadata = translator.typeMetadataForConnectedChoice(
+            typeShape,
+            translator.translateDeclarationMetadataValueMultimap(typeShape.metadata),
+        ),
         name = TmpL.Id(pos.leftEdge, typeShape.name),
         typeParameters = typeParameters,
         superTypes = superTypes,

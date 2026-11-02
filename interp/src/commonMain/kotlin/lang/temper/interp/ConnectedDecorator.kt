@@ -46,6 +46,11 @@ import lang.temper.value.void
  * supply connected code, and the body, if any, serves only the interpreter.
  * An empty list, as in `@connected([])`, names no backend with backend code,
  * so every backend uses the body.
+ *
+ * A connected class can have a Temper implementation the same way, with
+ * bodies for all of its methods. Either every method has a body, or none
+ * does. Its methods can't have default arguments, since connected code
+ * implements the same methods.
  */
 internal val connectedDecorator = MetadataDecorator(
     connectedSymbol,

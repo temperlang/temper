@@ -430,6 +430,13 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun connectedFallback() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/connected-fallback"),
+        // A connected class's Temper implementation must be complete, and listing
+        // backends requires one. Default arguments stay disallowed.
+    )
+
+    @Test
     fun sealedConnectedCasts() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/sealed-connected-casts"),
         // comments in the cast checker describe why this is the way it is.

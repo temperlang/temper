@@ -257,6 +257,15 @@ enum class MessageTemplate(
         "A @connected function that lists backends needs a Temper body for the backends not listed",
         CompilationPhase.CodeGeneration,
     ),
+    UserConnectedClassBackendsNeedBodies(
+        "Method %s of a @connected class that lists backends needs a Temper body for the backends not listed",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedClassPartialBodies(
+        "Method %s of a @connected class needs a Temper body, since other methods have one, " +
+            "and a Temper fallback must be complete",
+        CompilationPhase.CodeGeneration,
+    ),
     CannotExtend(
         "A class may not extend %s. Only named types and And(`&`) types may be extended",
         CompilationPhase.Interpreter,

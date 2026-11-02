@@ -1,6 +1,7 @@
 package lang.temper.be.java
 
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import kotlin.test.Test
@@ -2324,6 +2325,21 @@ class JavaBackendTest {
         ),
         listedCall = "FooConnected.viaConnected(",
         unlistedCall = "FooConnected.viaBody(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = JavaBackend.Java17,
+        connectedFiles = mapOf(
+            "ViaConnected.java" to """
+                |public final class ViaConnected {
+                |    public int get() {
+                |        return 1;
+                |    }
+                |}
+            """.trimMargin(),
+        ),
+        generatedClass = { "class $it" },
     )
 
     @Test

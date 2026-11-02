@@ -6,10 +6,18 @@ place of generating one. No package dependencies here, so this runs everywhere.
 
 Connected functions have their own test, `functions/connected`.
 
+A connected class can also have a complete Temper implementation, which the
+interpreter uses, as do backends under `--no-connected`. With no backend list,
+as here, every backend has connected code. A list, as in
+`@connected(["cpp", "rust"])`, would name the backends that do, and others would
+use the Temper implementation. A fallback must be complete: either every method
+has a Temper body, or none does.
+
     @connected
     export class Counter {
-      public add(i: Int): Void;
-      public total(): Int;
+      private var count: Int = 0;
+      public add(i: Int): Void { count += i; }
+      public total(): Int { count }
     }
 
     let counter = new Counter();

@@ -20,6 +20,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.SuperTypeTree2
 import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
+import lang.temper.value.connectedBackendsFrom
 import lang.temper.value.connectedSymbol
 import lang.temper.value.parameterNameSymbols
 
@@ -51,6 +52,51 @@ internal class TypeDeclChecker(val module: Module, val logSink: LogSink) {
         }
         checkOverridesCompatible(typeShape, superTypeShapes)
         checkConnectedDefaults(typeShape)
+        checkConnectedFallback(typeShape)
+    }
+
+    /**
+     * A user's connected class may have a complete Temper implementation, which
+     * the interpreter and backends without connected code use, but not a
+     * partial one. And listing backends, as in `@connected(["cpp", "rust"])`,
+     * means others need it, so the Temper implementation must be complete.
+     * See `tmpl/ConnectedChoice.kt` in `be`.
+     */
+    private fun checkConnectedFallback(typeShape: TypeShape) {
+        if (module.isEffectivelyCore || module.isEffectivelyStd) { return }
+        // Users can connect only classes, which the connected decorator checks.
+        if (typeShape.abstractness != Abstractness.Concrete) { return }
+        val metadata = typeShape.metadata
+        if (connectedSymbol !in metadata) { return }
+        val bodiless = typeShape.bodilessMethods
+        val listsBackends = connectedBackendsFrom(metadata[connectedSymbol]?.lastOrNull()) != null
+        val template = when {
+            bodiless.isEmpty() -> return
+            listsBackends -> MessageTemplate.UserConnectedClassBackendsNeedBodies
+            typeShape.methods.any { it !in bodiless && it.isWrittenNonConstructor() } ->
+                MessageTemplate.UserConnectedClassPartialBodies
+            else -> return
+        }
+        for (method in bodiless) {
+            logSink.log(
+                Log.Error,
+                template,
+                method.stay?.pos ?: typeShape.stayLeaf?.pos ?: unknownPos,
+                listOf(method.symbol.text),
+            )
+        }
+    }
+
+    /**
+     * Whether this is a method other than a constructor that's written in the
+     * class body, rather than an implied accessor for a backed property.
+     */
+    private fun MethodShape.isWrittenNonConstructor(): Boolean = when (methodKind) {
+        MethodKind.Constructor -> false
+        MethodKind.Normal -> true
+        MethodKind.Getter, MethodKind.Setter -> enclosingType.properties.none {
+            it.symbol == symbol && it.abstractness == Abstractness.Concrete
+        }
     }
 
     /**

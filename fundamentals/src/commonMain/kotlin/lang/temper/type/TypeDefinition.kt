@@ -348,6 +348,14 @@ sealed interface TypeShape : TypeDefinition {
     /** Shapes of methods for the type. */
     val methods: List<MethodShape>
 
+    /**
+     * Methods other than constructors that have no body, as when a user's `@connected` class
+     * leaves them to connected code. If there are none, a user's `@connected` class has a
+     * complete Temper implementation, which backends without connected code can use instead.
+     */
+    val bodilessMethods: List<MethodShape>
+        get() = methods.filter { it.isPureVirtual && it.methodKind != MethodKind.Constructor }
+
     /** Shapes of static properties for the type. */
     val staticProperties: List<StaticPropertyShape>
 

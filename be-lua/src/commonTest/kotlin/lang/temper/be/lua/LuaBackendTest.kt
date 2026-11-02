@@ -2,6 +2,7 @@ package lang.temper.be.lua
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.FilePath
@@ -477,6 +478,15 @@ class LuaBackendTest {
         ),
         listedCall = "_connected.viaConnected(",
         unlistedCall = "_connected.viaBody(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = LuaBackend.Lua51,
+        connectedFiles = mapOf(
+            "_connected.lua" to "local _connected = {}\n_connected.ViaConnected = {}\n",
+        ),
+        generatedClass = { "$it = temper.type(" },
     )
 
     @Test

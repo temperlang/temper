@@ -14,6 +14,7 @@ import lang.temper.log.CodeLocation
 import lang.temper.log.FilePath
 import lang.temper.log.Position
 import lang.temper.log.filePath
+import lang.temper.log.resolveFile
 import lang.temper.name.CoreCodeLocation
 import lang.temper.name.DashedIdentifier
 import lang.temper.name.ExportedName
@@ -135,6 +136,31 @@ val TmpL.Module.isStdLib: Boolean
  */
 fun TmpL.TypeDeclaration.isUserConnected(module: TmpL.Module?): Boolean =
     module?.isStdLib != true && metadata.any { it.key.symbol == connectedSymbol }
+
+/**
+ * Whether this is a user's `@connected` class that the backend generates from
+ * its Temper implementation instead, per `ConnectedChoice.kt`.
+ */
+fun TmpL.TypeDeclaration.isUserConnectedFallback(module: TmpL.Module?): Boolean =
+    module?.isStdLib != true && connectedSymbol in typeShape.metadata && !isUserConnected(module)
+
+/**
+ * Paths of connected files named for user `@connected` classes, like
+ * `Counter.java` beside the module, where the backend generates the class
+ * from its Temper implementation instead. Backends whose connected classes
+ * live in files of their own leave these out, so as not to define a class twice.
+ */
+fun TmpL.ModuleSet.connectedFilesReplacedByFallbacks(extension: String): Set<FilePath> = buildSet {
+    for (module in modules) {
+        val dir = module.codeLocation.codeLocation.sourceFile
+        for (topLevel in module.topLevels) {
+            if (topLevel is TmpL.TypeDeclaration && topLevel.isUserConnectedFallback(module)) {
+                val name = topLevel.parsedTypeName?.symbol?.text ?: continue
+                add(dir.resolveFile("$name$extension"))
+            }
+        }
+    }
+}
 
 val TmpL.Module.libraryName: DashedIdentifier?
     get() {

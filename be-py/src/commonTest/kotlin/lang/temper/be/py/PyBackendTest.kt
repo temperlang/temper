@@ -2,6 +2,7 @@ package lang.temper.be.py
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -801,6 +802,21 @@ class PyBackendTest {
         ),
         listedCall = "_connected.via_connected(",
         unlistedCall = "_connected.via_body(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = PyBackend.Python3,
+        connectedFiles = mapOf(
+            "__connected__.py" to """
+                |class _connected:
+                |    class ViaConnected:
+                |        def get(self, /) -> int:
+                |            return 1
+            """.trimMargin(),
+        ),
+        // The connected class is nested in `_connected` and indented.
+        generatedClass = { "\nclass $it:" },
     )
 
     @Test
