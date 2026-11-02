@@ -31,16 +31,22 @@ import lang.temper.value.newBuiltinName
 import lang.temper.value.regexLiteralBuiltinName
 import lang.temper.value.valueContained
 import temper.regex_parser.RegexParserGlobal
+import temper.std.regex.BeginSpecial
 import temper.std.regex.Capture
 import temper.std.regex.CodePoints
 import temper.std.regex.CodeRange
 import temper.std.regex.CodeSet
+import temper.std.regex.DigitSpecial
+import temper.std.regex.DotSpecial
+import temper.std.regex.EndSpecial
 import temper.std.regex.Or
-import temper.std.regex.RegexGlobal
 import temper.std.regex.RegexNode
 import temper.std.regex.Repeat
 import temper.std.regex.Sequence
+import temper.std.regex.SpaceSpecial
 import temper.std.regex.Special
+import temper.std.regex.WordBoundarySpecial
+import temper.std.regex.WordSpecial
 
 /**
  * <!-- snippet: builtin/rgx -->
@@ -157,17 +163,17 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
     }
 }
 
-// Specials are singletons whose classes are named differently from their
-// exports, so map the instances to the exported names.
-private val specialNames: Map<Special, String> = mapOf(
-    RegexGlobal.Begin to "Begin",
-    RegexGlobal.Dot to "Dot",
-    RegexGlobal.End to "End",
-    RegexGlobal.WordBoundary to "WordBoundary",
-    RegexGlobal.Digit to "Digit",
-    RegexGlobal.Space to "Space",
-    RegexGlobal.Word to "Word",
-)
+// Specials are singletons exported under names that differ from their classes.
+private fun specialName(special: Special): String = when (special) {
+    is BeginSpecial -> "Begin"
+    is DotSpecial -> "Dot"
+    is EndSpecial -> "End"
+    is WordBoundarySpecial -> "WordBoundary"
+    is DigitSpecial -> "Digit"
+    is SpaceSpecial -> "Space"
+    is WordSpecial -> "Word"
+    else -> error("unexpected special: ${special::class}")
+}
 
 private fun Planting.buildRegex(
     regex: RegexNode,
@@ -176,7 +182,7 @@ private fun Planting.buildRegex(
     // Simple Java names match Temper class names here by design, except for specials.
     fun Planting.makeName() = makeImportMeCall(
         macroEnv.pos,
-        Symbol(if (regex is Special) specialNames.getValue(regex) else regex.javaClass.simpleName),
+        Symbol(if (regex is Special) specialName(regex) else regex.javaClass.simpleName),
         "std/regex",
         macroEnv,
     )

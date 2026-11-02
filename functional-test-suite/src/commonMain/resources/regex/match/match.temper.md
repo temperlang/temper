@@ -355,10 +355,21 @@ them literally, both alone and in code sets.
 &~
 ```
 
+### Trailing dash in a code set
+
+A dash just before `]` is literal and keeps the member before it.
+
+    console.log(/[+-]+/.find("1+-2").full.value);
+
+```log
++-
+```
+
 ### Telling specials apart
 
 Specials don't support `==`, so code that walks regex data checks their
-classes instead. Regex literals use the same instances as the exported names.
+classes instead. Specials from regex literals have the same classes as the
+exported names.
 
     let specialName(node: RegexNode): String {
       when (node) {
