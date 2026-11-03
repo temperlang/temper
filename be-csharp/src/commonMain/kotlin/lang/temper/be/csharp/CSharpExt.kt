@@ -138,6 +138,10 @@ fun List<CSharp.Statement>.toStatementBlockOrNull(pos: Position) = when {
     else -> toBlock(pos)
 }
 
+/** Whether an `else` right after this would bind to an `if` inside it. */
+fun CSharp.Statement.endsWithIfWithoutElse(): Boolean =
+    this is CSharp.IfStatement && (alternate?.endsWithIfWithoutElse() ?: true)
+
 fun makeEmptyBlock(pos: Position): CSharp.BlockStatement =
     CSharp.BlockStatement(pos, listOf())
 

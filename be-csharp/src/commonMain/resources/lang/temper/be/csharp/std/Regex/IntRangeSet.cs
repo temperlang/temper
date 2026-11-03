@@ -56,10 +56,9 @@ namespace TemperLang.Std.Regex
         /// <param name="universe">Must include all the ranges given.</param>
         public static void Negate(List<IntRange> ranges, IntRange universe)
         {
-            var result = new List<IntRange>();
             if (ranges.Count == 0)
             {
-                result.Add(universe);
+                ranges.Add(universe);
                 return;
             }
             if (universe.Start > ranges[0].Start || universe.End < ranges[ranges.Count - 1].End)
@@ -78,15 +77,15 @@ namespace TemperLang.Std.Regex
                 {
                     // Common case, but maybe false for first range.
                     ranges[index] = new IntRange(start, range.Start);
-                    start = range.End;
                     index += 1;
                 }
+                start = range.End;
             }
             // See if we have any past the end of ranges.
             if (last.End < universe.End)
             {
                 var newLast = new IntRange(last.End, universe.End);
-                if (index < ranges.Count - 1)
+                if (index < ranges.Count)
                 {
                     ranges[index] = newLast;
                 }

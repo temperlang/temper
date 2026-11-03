@@ -243,6 +243,29 @@ It was the worst of times.
 -
 ```
 
+### Code sets with classes or reaching the last code point
+
+Some backends rewrite these sets, so check that classes keep the ends of
+their ranges and that negated sets reaching either end of Unicode work.
+Regex literals don't take `\u{…}` escapes, so build the latter.
+
+    console.log("digits: ${/[\d]+/.find("x09y").full.value}");
+    console.log("word: ${/[\w]+/.find("-azAZ09_-").full.value}");
+    console.log("not word: ${/[^\w]+/.find("a-9z").full.value}");
+    let notLow = oneOrMore(new CodeSet([new CodeRange(0, 0x2f)], true)).compiled();
+    console.log("not low: ${notLow.find("-/a🌍-").full.value}");
+    let notHigh =
+      oneOrMore(new CodeSet([new CodeRange(0x7f, 0x10ffff)], true)).compiled();
+    console.log("not high: ${notHigh.find("é-a🌍").full.value}");
+
+```log
+digits: 09
+word: azAZ09_
+not word: -
+not low: a🌍
+not high: -a
+```
+
 ### Word boundaries
 
 Define a regex for simple identifiers with word boundaries. For this case, be

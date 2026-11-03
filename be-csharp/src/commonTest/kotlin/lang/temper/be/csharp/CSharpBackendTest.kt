@@ -1021,6 +1021,53 @@ class CSharpBackendTest {
     )
 
     @Test
+    fun nestedIfWithoutElseKeepsBraces() = assertGeneratedGlobalClass(
+        // Without braces around the inner `if`, the `else` would bind to it.
+        temper = """
+            |export let pick(a: Boolean, b: Boolean, c: Boolean): Int {
+            |  var out = 0;
+            |  if (a) { if (b) { out = 1; } } else { out = 2; }
+            |  if (a) { if (b) { out = 3; } else if (c) { out = 4; } } else { out = 5; }
+            |  out
+            |}
+        """.trimMargin(),
+        usings = "",
+        csharp = """
+            |public static int Pick(bool a__0, bool b__0, bool c__0)
+            |{
+            |    int out__0 = 0;
+            |    if (a__0)
+            |    {
+            |        if (b__0)
+            |        {
+            |            out__0 = 1;
+            |        }
+            |    }
+            |    else
+            |    {
+            |        out__0 = 2;
+            |    }
+            |    if (a__0)
+            |    {
+            |        if (b__0)
+            |        {
+            |            out__0 = 3;
+            |        }
+            |        else if (c__0)
+            |        {
+            |            out__0 = 4;
+            |        }
+            |    }
+            |    else
+            |    {
+            |        out__0 = 5;
+            |    }
+            |    return out__0;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun publicGetterPrivateSetter() = assertGeneratedUserClass(
         // Also include private readonly and rw fields for variety.
         temper = """
