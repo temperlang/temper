@@ -41,6 +41,7 @@
 | [ImportsTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ImportsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesEmpty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [InterfacesGenericDefault][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPropertyMembers][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPureVirtual][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [NamesNonascii][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[228][]</sup> | ✅ | ✅ | ✅ |
@@ -122,6 +123,7 @@
 [ImportsTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/types/types.temper.md
 [ImportsValues]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/values/values.temper.md
 [InterfacesEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/empty/empty.temper.md
+[InterfacesGenericDefault]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/generic-default/generic-default.temper.md
 [InterfacesPropertyMembers]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/property-members/property-members.temper.md
 [InterfacesPureVirtual]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/pure-virtual/pure-virtual.temper.md
 [NamesNonascii]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/names/nonascii/nonascii.temper.md

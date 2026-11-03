@@ -52,6 +52,7 @@ import lang.temper.type.WellKnownTypes
 import lang.temper.type.excludeBubble
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.DefinedType
+import lang.temper.type2.MkType2
 import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
@@ -1972,11 +1973,36 @@ internal class CSharpTranslator(
                 val type = subject.passType
                 type.definition to translateExpression(subject) as CSharp.PrimaryExpression
             }
+            is TmpL.SuperSubject -> {
+                val (d, t) = translateTypeName(subject.typeName)
+                d to (translateSuperSubjectType(subject, d) ?: t as CSharp.PrimaryExpression)
+            }
             is TmpL.TypeSubject -> {
                 val (d, t) = translateTypeName(subject.typeName)
                 d to (t as CSharp.PrimaryExpression)
             }
         }
+    }
+
+    /**
+     * A generic super type needs its type arguments for calls to its static `…Default` helpers,
+     * as the sub type instantiates it, such as `IBar<T>.FDefault(this, x)` from `Far<T>: IBar<T>`.
+     */
+    private fun translateSuperSubjectType(
+        subject: TmpL.SuperSubject,
+        superDefinition: TypeDefinition,
+    ): CSharp.PrimaryExpression? {
+        if (subject.typeName !is TmpL.TemperTypeName) {
+            return null
+        }
+        val superShape = superDefinition as? TypeShape ?: return null
+        if (superShape.formals.isEmpty()) {
+            return null
+        }
+        val subShape = subject.subType
+        val subType = MkType2(subShape).actuals(subShape.formals.map { MkType2(it).get() }).get()
+        val superType = typeContext2.superTypeTreeOf(subType)[superShape].firstOrNull() ?: return null
+        return translateTypeFromFrontend(subject.pos, superType) as? CSharp.PrimaryExpression
     }
 
     private fun translateThis(expr: TmpL.Expression): CSharp.Expression {

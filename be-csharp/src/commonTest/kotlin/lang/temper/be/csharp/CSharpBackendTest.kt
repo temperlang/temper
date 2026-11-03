@@ -15,6 +15,7 @@ import lang.temper.log.FilePath
 import lang.temper.log.dirPath
 import lang.temper.log.filePath
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @SuppressWarnings("MaxLineLength")
 class CSharpBackendTest {
@@ -554,6 +555,55 @@ class CSharpBackendTest {
             |}
         """.trimMargin(),
     )
+
+    @Test
+    fun keywordMemberNamesAreEscaped() = assertGeneratedUserClass(
+        temper = """
+            |export class Happening(public event: Int, public namespace: String, public static: Boolean) {}
+        """.trimMargin(),
+        cSharpClassName = "Happening",
+        csharp = """
+            |public class Happening
+            |{
+            |    readonly int @event;
+            |    readonly string @namespace;
+            |    readonly bool @static;
+            |    public Happening(int event__0, string namespace__0, bool static__0)
+            |    {
+            |        this.@event = event__0;
+            |        this.@namespace = namespace__0;
+            |        this.@static = static__0;
+            |    }
+            |    public int Event
+            |    {
+            |        get
+            |        {
+            |            return this.@event;
+            |        }
+            |    }
+            |    public string Namespace
+            |    {
+            |        get
+            |        {
+            |            return this.@namespace;
+            |        }
+            |    }
+            |    public bool Static
+            |    {
+            |        get
+            |        {
+            |            return this.@static;
+            |        }
+            |    }
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
+    fun keywordsHaveNoStraySpaces() {
+        val bad = csharpAllKeywords.filter { keyword -> keyword.any { !it.isLetter() } }
+        assertEquals(listOf(), bad)
+    }
 
     @Test
     fun simplePanicValue() {
@@ -1170,7 +1220,7 @@ class CSharpBackendTest {
                         |    }
                         |    public bool F(C::Optional<T__2> x___1)
                         |    {
-                        |        return IBar.FDefault(this, x___1);
+                        |        return IBar<T__2>.FDefault(this, x___1);
                         |    }
                         |}
                     """.trimMargin(),
@@ -1191,6 +1241,60 @@ class CSharpBackendTest {
                         |        far__0 = new Far<int>();
                         |        console___0.Log(far__0.F(C::Optional.Of<int>(0)).ToString().ToLower());
                         |        console___0.Log(far__0.F(C::Optional<int>.None).ToString().ToLower());
+                        |    }
+                        |}
+                    """.trimMargin(),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun genericDefaultThroughIntermediateInterface() {
+        // Calls to inherited defaults need the super type's arguments as the class sees them.
+        assertGenerateWanted(
+            temper = """
+                |export interface Box<T> {
+                |  public describe(x: T): String { "box" }
+                |}
+                |export interface Labeled<A, B> extends Box<B> {}
+                |export class Named<T> extends Labeled<String, T> {}
+            """.trimMargin(),
+            classes = mapOf(
+                "IBox" to Content(
+                    usings = "",
+                    decls = """
+                        |public interface IBox<T__0>
+                        |{
+                        |    protected static string DescribeDefault(IBox<T__0> this__0, T__0 x__0)
+                        |    {
+                        |        return "box";
+                        |    }
+                        |    string Describe(T__0 x__0)
+                        |    {
+                        |        return DescribeDefault(this, x__0);
+                        |    }
+                        |}
+                    """.trimMargin(),
+                ),
+                "ILabeled" to Content(
+                    usings = "",
+                    decls = """
+                        |public interface ILabeled<A__0, B__0>: IBox<B__0>
+                        |{}
+                    """.trimMargin(),
+                ),
+                "Named" to Content(
+                    usings = "",
+                    decls = """
+                        |public class Named<T__1>: ILabeled<string, T__1>
+                        |{
+                        |    public Named()
+                        |    {
+                        |    }
+                        |    public string Describe(T__1 x___0)
+                        |    {
+                        |        return IBox<T__1>.DescribeDefault(this, x___0);
                         |    }
                         |}
                     """.trimMargin(),

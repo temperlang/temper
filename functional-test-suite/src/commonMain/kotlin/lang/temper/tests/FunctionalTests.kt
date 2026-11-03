@@ -71,6 +71,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     ImportsTypes(markdown("imports/types/types.temper.md", "ImportsTypes")),
     ImportsValues(markdown("imports/values/values.temper.md", "ImportsValues")),
     InterfacesEmpty(markdown("interfaces/empty/empty.temper.md", "InterfacesEmpty")),
+    InterfacesGenericDefault(markdown("interfaces/generic-default/generic-default.temper.md", "InterfacesGenericDefault")),
     InterfacesPropertyMembers(markdown("interfaces/property-members/property-members.temper.md", "InterfacesPropertyMembers")),
     InterfacesPureVirtual(markdown("interfaces/pure-virtual/pure-virtual.temper.md", "InterfacesPureVirtual")),
     NamesNonascii(markdown("names/nonascii/nonascii.temper.md", "NamesNonascii")),

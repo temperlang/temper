@@ -236,6 +236,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.InterfacesEmpty)
 
     @Test
+    fun interfacesGenericDefault() =
+        runFunctionalTest(Ft.InterfacesGenericDefault)
+
+    @Test
     fun interfacesPropertyMembers() =
         runFunctionalTest(Ft.InterfacesPropertyMembers)
 
