@@ -20,6 +20,10 @@ export class AfterPropagate(
 
 export class Propagator {
   public after(before: QState, known: String?): AfterPropagate {
+    // Stand in for a real propagator's cost. The optimizer runs this at
+    // compile time, and must not use up the importing module's step budget.
+    var busyWork = 0;
+    for (var i = 0; i < 1000; ++i) { busyWork += i; }
     if (known != null) {
       let quotes = known.split("'").length - 1;
       let inQuote = if (quotes % 2 == 0) { before.inQuote } else { !before.inQuote };

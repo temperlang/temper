@@ -302,12 +302,27 @@ internal fun optimizeContextualAutoescapingBlocks(iCtx: InterpretationContext, l
     for ((b, uses) in autoescUses) {
         structureBlock(b)
         for (use in uses) {
-            optimizeAutoescaperUse(use, iCtx, escaperUnraveler, logSink)
+            // Running the library's context propagation at compile time can take
+            // millions of interpreter steps, so give each use its own budget.
+            // On the module's budget, a few uses could exhaust it, and the module
+            // would then stop after this stage.
+            // If a use runs out, we skip optimizing it and it propagates at runtime.
+            var checksLeft = STEP_CHECKS_PER_USE
+            val useCtx = iCtx.copy(
+                interpreter = iCtx.interpreter.withContinueCondition { checksLeft-- > 0 },
+            )
+            optimizeAutoescaperUse(use, useCtx, escaperUnraveler, logSink)
         }
     }
 
     common.commit()
 }
+
+/**
+ * How many times the interpreter may check whether to continue while optimizing one use.
+ * It checks every 1024 steps, so this is about ten million steps, like a module's own budget.
+ */
+private const val STEP_CHECKS_PER_USE = 10_000
 
 private data class AutoescTypes(
     val contextualAutoescapingAccumulatorType: DefinedNonNullType,

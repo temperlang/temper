@@ -5,3 +5,9 @@ let { QuoteBuilder } = import("./autoesc");
 export let f(x: String): String {
   QuoteBuilder"a ${x} 'b ${x}' c"
 }
+
+// A second use. Together, the uses take more interpreter steps than the
+// module's budget, though each fits in the budget the optimizer gives it.
+export let g(x: String): String {
+  QuoteBuilder"'${x}'"
+}
