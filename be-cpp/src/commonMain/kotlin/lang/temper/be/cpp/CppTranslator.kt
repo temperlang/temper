@@ -4,6 +4,7 @@ import lang.temper.be.Backend
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLOperator
 import lang.temper.be.tmpl.TypedArg
+import lang.temper.be.tmpl.getterSlotKey
 import lang.temper.be.tmpl.isStdLib
 import lang.temper.be.tmpl.isUserConnected
 import lang.temper.be.tmpl.mapParameters
@@ -80,8 +81,9 @@ class CppTranslator(
     libraryRootToOutputDir: Map<FilePath, String> = emptyMap(),
     /**
      * Member dotNames (methods and getters) whose receiver may be mutated (transitively),
-     * from [lang.temper.be.tmpl.mutatingMemberNames]. A member whose dotName is absent
-     * does not mutate `this` and is emitted `const`. Keyed by dotName so the decision is
+     * from [lang.temper.be.tmpl.mutatingMemberNames]. A member whose key is absent
+     * does not mutate `this` and is emitted `const`. Keyed by dotName (getters by
+     * [lang.temper.be.tmpl.getterSlotKey]) so the decision is
      * uniform across an override slot, keeping const-ness consistent between an
      * interface's declaration and its concrete overrides.
      */
@@ -664,10 +666,10 @@ class CppTranslator(
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
      * receiver per the cross-member mutation analysis, or null otherwise. Keyed by the
-     * member's dotName so the decision is identical across an override slot.
+     * member's slot key so the decision is identical across an override slot.
      */
-    private fun memberConstQualifier(memberDotName: String): Cpp.MethodQualifier? =
-        if (memberDotName in mutatingMethodNames) null else Cpp.MethodQualifier.Const
+    private fun memberConstQualifier(memberSlotKey: String): Cpp.MethodQualifier? =
+        if (memberSlotKey in mutatingMethodNames) null else Cpp.MethodQualifier.Const
 
     private fun stdFunction(retType: Cpp.Type, paramTypes: List<Cpp.Type>): Cpp.Type {
         val retStr = renderToString(retType)
@@ -2414,7 +2416,7 @@ class CppTranslator(
                     ),
                 ),
                 // Backed getter reads a field: non-mutating, so const.
-                qual = memberConstQualifier(getterDotName),
+                qual = memberConstQualifier(getterSlotKey(getterDotName)),
             )
             emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
         } else {
@@ -2433,7 +2435,7 @@ class CppTranslator(
                         pureVirtualMethod(
                             translateType(member.returnType),
                             getterCppName,
-                            qual = memberConstQualifier(getterDotName),
+                            qual = memberConstQualifier(getterSlotKey(getterDotName)),
                         ),
                     )
                 }
@@ -2455,7 +2457,7 @@ class CppTranslator(
                             cpp.name(member.parameters.parameters.first().name),
                             body,
                         ),
-                        qual = memberConstQualifier(getterDotName),
+                        qual = memberConstQualifier(getterSlotKey(getterDotName)),
                     )
                     val needsVirtualGetter = isInterface ||
                         realSuperTypes.any()

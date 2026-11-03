@@ -104,6 +104,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.CastsAsExpr)
 
     @Test
+    fun castsGenericIs() =
+        runFunctionalTest(Ft.CastsGenericIs)
+
+    @Test
     fun castsSpecific() =
         runFunctionalTest(Ft.CastsSpecific)
 
@@ -118,6 +122,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun classesDirectGetter() =
         runFunctionalTest(Ft.ClassesDirectGetter)
+
+    @Test
+    fun classesGetterConstness() =
+        runFunctionalTest(Ft.ClassesGetterConstness)
 
     @Test
     fun classesInheritedGetter() =
@@ -322,6 +330,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun typesListEmpty() =
         runFunctionalTest(Ft.TypesListEmpty)
+
+    @Test
+    fun typesListLongLiteral() =
+        runFunctionalTest(Ft.TypesListLongLiteral)
 
     @Test
     fun typesListOperations() =
