@@ -172,7 +172,6 @@ import lang.temper.value.optionalSymbol
 import lang.temper.value.overloadSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staticExtensionSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
@@ -917,7 +916,7 @@ internal class Typer(
                 val typeActuals = effectiveCallee.children.subListToEnd(2)
                 effectiveCallee = effectiveCallee.child(1)
                 typeActuals.map { explicitActual ->
-                    val type = explicitActual.staticTypeContained ?: InvalidType
+                    val type = explicitActual.reifiedTypeContained?.type ?: InvalidType
                     type to explicitActual.pos
                 }
             } else if (isNewCall && effectiveCallee != null) {
@@ -1796,7 +1795,7 @@ internal class Typer(
         console.groupIf(DEBUG, "Typing assignment $name") {
             var type = ti.decisionType(right)
             if (DEBUG) {
-                console.log("Callee type=${tree.child(0).staticTypeContained}")
+                console.log("Callee type=${tree.child(0).reifiedTypeContained?.type}")
             }
             var initializerIndex = -1
             val initInfo: InitializerInfo? =
@@ -1950,7 +1949,7 @@ internal class Typer(
                 is FunctionType -> when {
                     generalType.typeFormals.size == tree.size - 2 -> run bindings@{
                         val typeActuals = (2..<tree.size).map { kidIndex ->
-                            tree.child(kidIndex).staticTypeContained ?: return@bindings null
+                            tree.child(kidIndex).reifiedTypeContained?.type ?: return@bindings null
                         }
                         MkType.bindFormals(generalType, generalType.typeFormals.zip(typeActuals).toMap())
                     }
@@ -2007,7 +2006,7 @@ internal class Typer(
                 val superTypes = SuperTypeTree(
                     buildSet {
                         superTypeEdges.forEach {
-                            val superType = it.target.staticTypeContained
+                            val superType = it.target.reifiedTypeContained?.type
                             val problem = when {
                                 superType == null ->
                                     BecauseUnresolvedTypeReference(it.target.pos, shortPseudoCode(it.target))
@@ -2813,7 +2812,7 @@ internal class Typer(
             // a syntactic static member reference which might resolve against an
             // @staticExtension declaration.
             // Delegate to the handler for getStatic special calls.
-            val possibleStaticTypeReceiver = thisArg.staticTypeContained
+            val possibleStaticTypeReceiver = thisArg.reifiedTypeContained?.type
             if (possibleStaticTypeReceiver != null) {
                 if (memberAccessor is SetMemberAccessor) {
                     // `C.n = x`.  There is no static counterpart to a setter, and typing

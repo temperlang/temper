@@ -12,7 +12,7 @@ import lang.temper.name.Symbol
 import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.stage.Stage
-import lang.temper.type.NominalType
+import lang.temper.type2.DefinedNonNullType
 import lang.temper.value.CallTree
 import lang.temper.value.DeclTree
 import lang.temper.value.Fail
@@ -32,7 +32,7 @@ import lang.temper.value.calleeBuiltinName
 import lang.temper.value.dotBuiltinName
 import lang.temper.value.eqBuiltinName
 import lang.temper.value.freeTree
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.toPseudoCode
 import lang.temper.value.typeSymbol
 import lang.temper.value.vInitSymbol
@@ -195,8 +195,8 @@ private fun nameIfTest(declTree: DeclTree): TemperName? {
                     is SourceName -> typeName.baseName.nameText
                     else -> null
                 }
-                is ValueLeaf -> when (val typeValue = type.staticTypeContained) {
-                    is NominalType -> when (val typeName = typeValue.definition.name) {
+                is ValueLeaf -> when (val typeValue = type.reifiedTypeContained?.type2) {
+                    is DefinedNonNullType -> when (val typeName = typeValue.definition.name) {
                         is ExportedName -> typeName.baseName.nameText
                         else -> null
                     }

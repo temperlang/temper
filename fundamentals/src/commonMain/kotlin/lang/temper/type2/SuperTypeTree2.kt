@@ -139,13 +139,11 @@ fun <TYPE : TypeOrPartialType> SuperTypeTreeForType2<TYPE>.forEachSuperType(
     }
 }
 
-fun hackMapOldStyleToNewAllowNever(t: StaticType, pos: Position? = null): Type2 =
-    if (t == OrType.emptyOrType) {
-        MkType2(neverTypeDefinition).position(pos).get()
-    } else {
-        hackMapOldStyleToNew(t, pos)
-    }
-
+/**
+ * Old-style never types lack the fallback type that `Never<T>` carries, so the empty [OrType]
+ * maps to a malformed `Never` with no type actual.  [hackMapNewStyleToOld] loses that fallback,
+ * so types that round-trip through old-style types come back malformed.
+ */
 fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
     when (t) {
         is OrType -> {

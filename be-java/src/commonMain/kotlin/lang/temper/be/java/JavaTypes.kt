@@ -311,7 +311,7 @@ sealed interface JavaType : TargetLanguageTypeName {
                 ).get()
             }
             is TmpL.BubbleType -> WKT.bubbleType2
-            is TmpL.NeverType -> MkType2(WKT.neverTypeDefinition).get()
+            is TmpL.NeverType -> MkType2(WKT.neverTypeDefinition).actuals(listOf(toFrontend(t.fallback))).get()
             is TmpL.TopType -> WKT.anyValueType2.withNullity(Nullity.OrNull)
         }
 

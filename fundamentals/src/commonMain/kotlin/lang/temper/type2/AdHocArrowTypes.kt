@@ -75,7 +75,7 @@ object AdHocArrowTypes {
             } else {
                 t.returnType
             }
-            add(hackMapOldStyleToNewAllowNever(returnTypeNoBubbles))
+            add(hackMapOldStyleToNew(returnTypeNoBubbles))
         }
 
         return MkType2(defn).actuals(actuals).position(pos).get()

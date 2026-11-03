@@ -78,7 +78,6 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.hackMapOldStyleToNew
-import lang.temper.type2.hackMapOldStyleToNewOrNull
 import lang.temper.type2.invalidSig
 import lang.temper.type2.isVoidLike
 import lang.temper.type2.mapType
@@ -156,7 +155,6 @@ import lang.temper.value.resolutionSymbol
 import lang.temper.value.returnedFromSymbol
 import lang.temper.value.ssaSymbol
 import lang.temper.value.staticSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.staySymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.testSymbol
@@ -1756,7 +1754,7 @@ class TmpLTranslator internal constructor(
                             constructorTree = constructorTree.child(1)
                             // TODO: capture type actuals and add them to the call expression.
                         }
-                        val constructedType = hackMapOldStyleToNewOrNull(constructorTree.staticTypeContained)
+                        val constructedType = constructorTree.reifiedTypeContained?.type2
                         if (constructedType is DefinedNonNullType) {
                             val typeName = translateTypeName(
                                 pos = constructorTree.pos,
@@ -2037,7 +2035,7 @@ class TmpLTranslator internal constructor(
         }
 
         val (_, typeChild, propertyChild) = tree.children
-        val type = hackMapOldStyleToNewOrNull(typeChild.staticTypeContained)
+        val type = typeChild.reifiedTypeContained?.type2
         val definition = (type as? DefinedNonNullType)?.definition
         val property = propertyChild.symbolContained
         if (definition == null || property == null) {
@@ -2165,7 +2163,7 @@ class TmpLTranslator internal constructor(
         val sourceType = expr.typeOrInvalid
         val sourceTypeNotNull = sourceType.withNullity(NonNull)
 
-        val targetType = hackMapOldStyleToNewOrNull(targetTree.staticTypeContained)
+        val targetType = targetTree.reifiedTypeContained?.type2
             ?: return garbageExpr(targetTree.pos, "Expected type, not ${targetTree.toPseudoCode()}")
         if (fn.runtimeTypeOperation.asLike) {
             if (sourceType == targetType) {

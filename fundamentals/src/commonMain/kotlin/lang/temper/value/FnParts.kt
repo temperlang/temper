@@ -38,7 +38,7 @@ class FnParts internal constructor(
                     else -> false
                 }
             }
-            val allOk = addNominalTypesTo(valueEdge.target.staticTypeContained, superTypes)
+            val allOk = addNominalTypesTo(valueEdge.target.reifiedTypeContained?.type, superTypes)
             if (!allOk) {
                 incomplete.add(valueEdge)
             }
@@ -74,7 +74,7 @@ class FnParts internal constructor(
         /** Given a metadata value tree following [typeFormalSymbol], extract the type formal. */
         fun unpackTypeFormal(tree: Tree): TypeFormal? {
             // During early stages, target is a block of stuff to be hoisted out
-            val type = tree.staticTypeContained
+            val type = tree.reifiedTypeContained?.type
             return if (type is NominalType && type.bindings.isEmpty()) {
                 type.definition as? TypeFormal
             } else {
