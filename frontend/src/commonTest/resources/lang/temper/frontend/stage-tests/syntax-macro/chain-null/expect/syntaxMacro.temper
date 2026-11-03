@@ -6,7 +6,7 @@ class(\word, \StringHolder, \concrete, true, @typeDefined(StringHolder__0) fn {
     @visibility(\public) let constructor__0 = fn constructor(@impliedThis(StringHolder__0) this__0: StringHolder__0, string__1 /* aka string */: String) /* return__0 */: Void {
       do {
         let t#0;
-        do_iset_string(type (StringHolder__0), this(StringHolder__0), t#0 = string__1);
+        do_tset_string(type (StringHolder__0), this(StringHolder__0), t#0 = string__1);
         t#0
       };
     };

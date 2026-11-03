@@ -28,6 +28,9 @@ import lang.temper.type.InternalSet
 import lang.temper.type.MethodShape
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
+import lang.temper.type.ThisCall
+import lang.temper.type.ThisGet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
@@ -768,9 +771,9 @@ private fun convertMemberUseToExternal(
     val accessor = dotHelper.memberAccessor
     if (accessor !is InternalMemberAccessor) { return }
     val externalAccessor = when (accessor) {
-        InternalCall -> ExternalCall
-        InternalGet -> ExternalGet
-        InternalSet -> ExternalSet
+        InternalCall, ThisCall -> ExternalCall
+        InternalGet, ThisGet -> ExternalGet
+        InternalSet, ThisSet -> ExternalSet
     }
     val convertedDotHelper = DotHelper(externalAccessor, dotHelper.member, dotHelper.extensions)
     val callee = callChildren[0]

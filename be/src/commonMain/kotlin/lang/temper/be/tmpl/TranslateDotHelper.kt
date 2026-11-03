@@ -21,6 +21,9 @@ import lang.temper.type.MethodShape
 import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.SetMemberAccessor
+import lang.temper.type.ThisCall
+import lang.temper.type.ThisGet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
@@ -68,7 +71,10 @@ internal object TranslateDotHelper {
             is TypeShape -> if (definition == WellKnownTypes.invalidTypeDefinition) {
                 emptySet()
             } else {
-                fn.accessibleMembers(definition).mapNotNullTo(mutableSetOf()) {
+                // Just let the accessing type shape be the subject type shape,
+                // since we should at least have errors in the frontend if it
+                // isn't.
+                fn.accessibleMembers(definition, definition).mapNotNullTo(mutableSetOf()) {
                     // We'll get both property shapes and method shapes, but for abstract properties
                     // we need either the getter or the setter.
                     val method = it as? MethodShape
@@ -297,10 +303,13 @@ internal object TranslateDotHelper {
                 return@translate when (connectedMethod.methodKind to dotHelper.memberAccessor) {
                     MethodKind.Normal to ExternalCall,
                     MethodKind.Normal to InternalCall,
+                    MethodKind.Normal to ThisCall,
                     MethodKind.Getter to ExternalGet,
                     MethodKind.Getter to InternalGet,
+                    MethodKind.Getter to ThisGet,
                     MethodKind.Setter to ExternalSet,
                     MethodKind.Setter to InternalSet,
+                    MethodKind.Setter to ThisSet,
                     -> translatedExpr(
                         translator.maybeInline(
                             TmpL.CallExpression(
