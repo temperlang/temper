@@ -85,6 +85,33 @@ But don't export the subtype. This was breaking be-rust.
 Sealed thing is foo.
 ```
 
+A generic interface can also extend another generic interface, passing along
+one of its own type parameters in a different position. Subtypes inherit the
+members of both, including a default method, with the type arguments filled in.
+
+    interface Holder<T> {
+      public get held(): T;
+      heldAnd(other: T): List<T> { [held, other] }
+    }
+
+    interface Labeled<L, T> extends Holder<T> {
+      public label(l: L): String;
+    }
+
+    class LabeledSub(public held: C) extends Labeled<String, C> {
+      public label(l: String): String { "${l}: ${held.x}" }
+    }
+
+    let labeled: Labeled<String, C> = new LabeledSub(a);
+    let heldAnd = labeled.heldAnd(b);
+    console.log("Labeled thing is ${labeled.label("first")}.");
+    console.log("Held are ${labeled.held.x} and ${heldAnd[1].x}.");
+
+```log
+Labeled thing is first: foo.
+Held are foo and bar.
+```
+
 Also a sealed interface with no subtypes. This is just here to see if backends
 break. There's no way to instantiate one.
 

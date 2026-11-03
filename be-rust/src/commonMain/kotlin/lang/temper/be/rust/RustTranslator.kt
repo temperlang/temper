@@ -64,6 +64,7 @@ import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
 import lang.temper.type2.TypeContext2
 import lang.temper.type2.TypeParamRef
+import lang.temper.type2.mapType
 import lang.temper.type2.withNullity
 import lang.temper.type2.withType
 import lang.temper.value.DeclTree
@@ -819,9 +820,12 @@ class RustTranslator(
         // Gather up instance methods by name so we can coordinate with supertypes as needed.
         val instanceMethods = associateInstanceMethods(decl)
         val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
-        sups@ for ((subShape, sup) in decl.typeShape.allInterfaces(allowStart = true)) {
+        sups@ for ((subShape, declaredSup) in decl.typeShape.allInterfaces(allowStart = true)) {
             // Only handle type shapes, and only unique ones.
-            val supShape = (sup.definition as? TypeShape) ?: continue@sups
+            val supShape = (declaredSup.definition as? TypeShape) ?: continue@sups
+            // Use the type arguments this type gives the supertype, which may pass through other supertypes.
+            val sup = instantiatedSuperType(decl, supShape) ?: declaredSup
+            val supBindings = superTypeBindings(supShape, sup)
             val supDecl = supShape.stayLeaf?.incoming?.source as? DeclTree
             // For sealed enums, this picks an arbitrary winner. TODO Allow diamonds and/or check against them earlier.
             handledSups.add(supShape.name) || continue@sups
@@ -912,8 +916,9 @@ class RustTranslator(
                             instanceMethods = instanceMethods,
                             methodKind = supMethod.methodKind,
                             methodName = supMethod.name.displayName,
-                            returnType = supMethod.descriptor.orInvalid.returnType2,
+                            returnType = supMethod.descriptor.orInvalid.returnType2.mapType(supBindings),
                             superShape = supMethod,
+                            bindings = supBindings,
                         )
                     }
                     // Properties also, because they only sometimes align with methods.
@@ -926,6 +931,7 @@ class RustTranslator(
                                 methodKind = MethodKind.Getter,
                                 methodName = BuiltinName("get.${supProperty.symbol.text}").displayName,
                                 superShape = supProperty,
+                                bindings = supBindings,
                             )
                         }
                         if (supProperty.setter == null && supProperty.hasSetter) {
@@ -936,6 +942,7 @@ class RustTranslator(
                                 methodKind = MethodKind.Setter,
                                 methodName = BuiltinName("set.${supProperty.symbol.text}").displayName,
                                 superShape = supProperty,
+                                bindings = supBindings,
                             )
                         }
                     }
@@ -954,12 +961,13 @@ class RustTranslator(
         methodName: String,
         superShape: VisibleMemberShape,
         returnType: Type2? = null,
+        bindings: Map<TypeFormal, Type2> = emptyMap(),
     ) {
         val isInterface = decl.kind == TmpL.TypeDeclarationKind.Interface
         when {
-            isInterface -> buildForwarderFromInterfaceToTrait(pos, superShape, methodKind)
+            isInterface -> buildForwarderFromInterfaceToTrait(pos, superShape, methodKind, bindings)
             else -> when (val method = instanceMethods[methodName]) {
-                null -> buildForwarderFromClassToTrait(pos, decl, superShape, methodKind)
+                null -> buildForwarderFromClassToTrait(pos, decl, superShape, methodKind, bindings)
                 else -> buildForwarder(method, returnType)
             }
         }.also { addAll(it) } // only one expected here, but meh
@@ -1212,10 +1220,19 @@ class RustTranslator(
         decl: TmpL.TypeDeclaration,
         superShape: VisibleMemberShape,
         methodKind: MethodKind,
+        bindings: Map<TypeFormal, Type2>,
     ): List<Rust.Item> = run {
         // We're here because this class has no matching member, so walk its supertypes to match the super method.
         // The method we inherit closest might be on a different branch.
-        val overrides = findOverrides(decl.typeShape, superShape, typeContext, logSink)
+        // Match it with the supertype's type arguments filled in, as this class inherits it.
+        val member = when {
+            superShape is MethodShape && bindings.isNotEmpty() ->
+                superShape.withEnclosingType(superShape.enclosingType).also {
+                    it.descriptor = superShape.descriptor?.mapType(bindings)
+                }
+            else -> superShape
+        }
+        val overrides = findOverrides(decl.typeShape, member, typeContext, logSink)
         val override = overrides.find overrides@{ override ->
             when (val foundMember = override.superTypeMember) {
                 is MethodShape -> !foundMember.isPureVirtual
@@ -1238,7 +1255,7 @@ class RustTranslator(
             // Just let the trait handle this one directly. Self-call here is infinite recursion.
             return listOf()
         }
-        buildForwarderFromClassToTrait(pos, targetType, superShape, methodKind)
+        buildForwarderFromClassToTrait(pos, targetType, superShape, methodKind, bindings)
     }
 
     private fun buildForwarderFromClassToTrait(
@@ -1246,8 +1263,9 @@ class RustTranslator(
         targetType: TypeShape?,
         superShape: VisibleMemberShape,
         methodKind: MethodKind,
+        bindings: Map<TypeFormal, Type2>,
     ): List<Rust.Item> = run {
-        buildForwarderToTrait(pos, targetType, superShape, methodKind) result@{ traitType, methodId, argIds ->
+        buildForwarderToTrait(pos, targetType, superShape, methodKind, bindings) result@{ traitType, methodId, argIds ->
             Rust.Call(
                 pos,
                 callee = traitType.extendWith(methodId.deepCopy()),
@@ -1268,9 +1286,11 @@ class RustTranslator(
         pos: Position,
         shape: VisibleMemberShape,
         methodKind: MethodKind,
+        bindings: Map<TypeFormal, Type2>,
     ): List<Rust.Item> = run {
         // From trait wrapper to trait, just forward the call with the unwrapped innards.
-        buildForwarderToTrait(pos, shape.enclosingType, shape, methodKind) result@{ traitType, methodId, argIds ->
+        val targetType = shape.enclosingType
+        buildForwarderToTrait(pos, targetType, shape, methodKind, bindings) result@{ traitType, methodId, argIds ->
             Rust.Call(
                 pos,
                 callee = traitType.extendWith(methodId.deepCopy()),
@@ -1287,6 +1307,8 @@ class RustTranslator(
         targetType: TypeShape?,
         shape: VisibleMemberShape,
         methodKind: MethodKind,
+        /** The supertype's type arguments, for its member types. */
+        bindings: Map<TypeFormal, Type2>,
         /** Trait type, method id, and arg ids, all ready to be used. */
         buildResult: (Rust.Path, Rust.Id, List<Rust.Id>) -> Rust.Expr?,
     ): List<Rust.Item> = run {
@@ -1311,16 +1333,16 @@ class RustTranslator(
                         var index = 0
                         for (paramType in sig.requiredInputTypes.subListToEnd(1)) {
                             val paramName = argIds[index++].deepCopy()
-                            val translatedType = translateType(paramType, pos)
+                            val translatedType = translateType(paramType.mapType(bindings), pos)
                             add(Rust.FunctionParam(pos, paramName, translatedType))
                         }
                         for (paramType in sig.optionalInputTypes) {
                             val paramName = argIds[index++].deepCopy()
-                            val translatedType = translateType(paramType, pos).option()
+                            val translatedType = translateType(paramType.mapType(bindings), pos).option()
                             add(Rust.FunctionParam(pos, paramName, translatedType))
                         }
                     },
-                    returnType = method.descriptor?.let { translateType(it.returnType2, pos = pos) },
+                    returnType = method.descriptor?.let { translateType(it.returnType2.mapType(bindings), pos = pos) },
                     block = Rust.Block(pos, result = traitType?.let { buildResult(it, methodId, argIds) }),
                 )
             }
@@ -1330,7 +1352,7 @@ class RustTranslator(
                     is Signature2 -> descriptor.returnType2
                     is Type2 -> descriptor
                     else -> null
-                }?.let { translateType(it, pos = pos) }
+                }?.let { translateType(it.mapType(bindings), pos = pos) }
                 Rust.Function(
                     pos,
                     id = methodId.deepCopy(),
@@ -1345,7 +1367,7 @@ class RustTranslator(
                     is Signature2 -> descriptor.requiredInputTypes.last()
                     is Type2 -> descriptor
                     else -> null
-                }?.let { translateType(it, pos = pos) }
+                }?.let { translateType(it.mapType(bindings), pos = pos) }
                 // We don't have param names here, so invent one.
                 val value = "value".toId(pos)
                 Rust.Function(
@@ -2852,8 +2874,23 @@ class RustTranslator(
         val superShape = inherited.memberOverride.superTypeMember
         val targetType = superShape.enclosingType
         val methodKind = (superShape as? MethodShape)?.methodKind ?: return listOf()
-        buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind)
+        val bindings = superTypeBindings(targetType, instantiatedSuperType(decl, targetType))
+        buildForwarderFromClassToTrait(inherited.pos, targetType, superShape, methodKind, bindings)
     }
+
+    /**
+     * The [superShape] type as [decl] instantiates it, with type arguments passed
+     * through any supertypes between, such as `Holder<C>` for `Labeled<String, C>`
+     * when `interface Labeled<L, T> extends Holder<T>`.
+     */
+    private fun instantiatedSuperType(decl: TmpL.TypeDeclaration, superShape: TypeShape): Type2? {
+        val subShape = decl.typeShape
+        val subType = MkType2(subShape).actuals(subShape.formals.map { MkType2(it).get() }).get()
+        return typeContext.superTypeTreeOf(subType)[superShape].firstOrNull()
+    }
+
+    private fun superTypeBindings(superShape: TypeShape, superType: Type2?): Map<TypeFormal, Type2> =
+        superType?.let { superShape.formals.zip(it.bindings).toMap() } ?: emptyMap()
 
     private fun translateModuleInitFailed(statement: TmpL.ModuleInitFailed): Rust.Statement {
         return Rust.ExprStatement(
