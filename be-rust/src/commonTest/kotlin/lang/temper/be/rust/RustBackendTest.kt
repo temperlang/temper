@@ -1091,6 +1091,54 @@ class RustBackendTest {
         """.trimMargin(),
     )
 
+    /** A module value read only by tests is a static, since tests can't see the init's locals. */
+    @Test
+    fun moduleValueUsedOnlyByTest() = assertGenerateWanted(
+        temper = """
+            |let limits = [1, 2];
+            |test("under") {
+            |  assert(1 < limits.length);
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            LIMITS.set(std::sync::Arc::new(vec![1, 2])).unwrap_or_else(| _ | panic!());
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |static LIMITS: std::sync::OnceLock<temper_core::List<i32>> = std::sync::OnceLock::new();
+            |pub (crate) fn limits() -> temper_core::List<i32> {
+            |    ( * temper_core::initialized(| | LIMITS.get(), crate::init_on_first_use)).clone()
+            |}
+            |#[cfg(test)]
+            |mod tests {
+            |    #[test]
+            |    fn under__0() -> temper_core::Result<()> {
+            |        crate::init(std::option::Option::None);
+            |        temper_std::init(std::option::Option::None);
+            |        let test___0 = temper_std::testing::Test::new();
+            |        #[derive(Clone)]
+            |        struct ClosureGroup___0 {}
+            |        impl ClosureGroup___0 {
+            |            fn r#fn(& self) -> std::sync::Arc<String> {
+            |                return std::sync::Arc::new("expected 1 <=> limits.length < 0".to_string());
+            |            }
+            |        }
+            |        let closure_group = ClosureGroup___0 {};
+            |        let r#fn = {
+            |            let closure_group = closure_group.clone();
+            |            std::sync::Arc::new(move | | closure_group.r#fn())
+            |        };
+            |        test___0.assert(1 < temper_core::ListedTrait::len( & limits()), r#fn.clone());
+            |        test___0.soft_fail_to_hard()
+            |    }
+            |    use super::*;
+            |}
+        """.trimMargin(),
+    )
+
     @Test
     fun coreUpcast() = assertGenerateWanted(
         temper = """

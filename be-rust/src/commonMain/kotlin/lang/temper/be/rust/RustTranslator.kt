@@ -315,8 +315,8 @@ class RustTranslator(
         // See which are referenced in other items. Like closure capture but top levels.
         items@ for (topLevel in module.topLevels) {
             val refs = when (topLevel) {
-                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration -> topLevel.referencedNames()
-//                is TmpL.Test -> TODO()
+                // Tests become functions in a `tests` module, so they can't read the module init's locals either.
+                is TmpL.ModuleFunctionDeclaration, is TmpL.TypeDeclaration, is TmpL.Test -> topLevel.referencedNames()
                 // A local function, such as one in a top-level `if` or an `async` block in a top-level loop, becomes
                 // an `fn` item in a closure group, and an `fn` item cannot read the module init's locals.
                 else -> topLevel.namesReferencedFromLocalFunctions()

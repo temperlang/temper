@@ -91,3 +91,16 @@ That's `normSquared` here.
       let vec = { x: 1.5, y: 2.5 };
       assert(vec.toString() == "(1.5, 2.5) size squared 8.5");
     }
+
+## Module values used only by tests
+
+A module value read only by tests still has to be visible to them, wherever a
+backend puts its tests.
+
+    let unitVecs = [new Vec2(1.0, 0.0), new Vec2(0.0, 1.0)];
+
+    test("module values") {
+      for (let vec of unitVecs) {
+        assert(normSquared(vec) == 1.0);
+      }
+    }
