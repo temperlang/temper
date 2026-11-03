@@ -469,7 +469,7 @@ sealed class RttiCheckFunction(
             //
             // If we haven't yet passed the TypeChecker, which can take into account
             // the static type to allow casting from String? to String but not
-            // from AnyValue to String, then suspend judgement about whether the
+            // from AnyValue to String, then suspend judgment about whether the
             // check is ok.
             val problem = problems(
                 Either.Right(x),
@@ -668,9 +668,9 @@ fun RttiCheckFunction.problems(
             exprCanBeNull == false && targetTypeNotNull.isNeverType ||
             !targetCanBeNull && exprTypeNotNull?.isNeverType == true
         ) {
-            Pair(exprType?.let { nominalOrNull(it) }, nominalOrNull(targetType))
+            Pair(exprType, nonNullValueType(targetType))
         } else {
-            Pair(exprTypeNotNull?.let { nominalOrNull(it) }, nominalOrNull(targetTypeNotNull))
+            Pair(exprTypeNotNull?.let { nonNullValueType(it) }, nonNullValueType(targetTypeNotNull))
         }
     if (exprTypeNominal != null && targetTypeNominal != null) {
         val exprDef = exprTypeNominal.definition as? TypeShape
@@ -717,25 +717,24 @@ fun RttiCheckFunction.problems(
         // Disallow introducing new type arguments.
         val introducedActualsTypes = mutableListOf<Type2>()
 
-        val sealedExprTypeNominals by lazy {
-            listOfNotNull(exprTypeNotNull?.let { nominalOrNull(it) }?.definition)
-                .filter { it.isSealed }.toSet()
+        val sealedExprTypeDefn by lazy {
+            val defn = exprTypeNotNull?.definition
+            if (defn.isSealed) { defn } else { null }
         }
 
-        for (nt in extractNominalTypes(targetType)) {
-            when (val definition = nt.definition) {
-                is TypeFormal -> formalTypes.add(nt)
-                is TypeShape -> {
-                    val mayDowncastTo = TBoolean.unpackOrNull(
-                        definition.metadata[mayDowncastToSymbol]?.lastOrNull(),
-                    )
-                    if (mayDowncastTo != null) {
-                        if (!mayDowncastTo) {
-                            disallowedDowncasts.add(nt)
-                        }
-                        continue
+        val nt = extractValueType(targetType)
+        when (val definition = nt?.definition) {
+            null -> {}
+            is TypeFormal -> formalTypes.add(nt)
+            is TypeShape -> {
+                val mayDowncastTo = TBoolean.unpackOrNull(
+                    definition.metadata[mayDowncastToSymbol]?.lastOrNull(),
+                )
+                if (mayDowncastTo != null) {
+                    if (!mayDowncastTo) {
+                        disallowedDowncasts.add(nt)
                     }
-
+                } else {
                     if (connectedSymbol in definition.metadata) {
                         // Probably not reliably castable because there might be multiple
                         // Temper type definitions connecting to the same target-language type.
@@ -772,10 +771,10 @@ fun RttiCheckFunction.problems(
                         } else {
                             // If walking from the subtype to the supertype following only sealed
                             // super-type edges leads to one of the sealed expr nominals, then we're ok.
-                            val sealedSupers = sealedExprTypeNominals
-                            if (sealedSupers.isNotEmpty()) {
+                            val sealedSuper = sealedExprTypeDefn
+                            if (sealedSuper != null) {
                                 fun connectedBySealedChain(ts: TypeShape): Boolean =
-                                    ts in sealedSupers ||
+                                    ts == sealedSuper ||
                                         ts.superTypes.any {
                                             val superTypeShape = it.definition as? TypeShape
                                             superTypeShape != null && superTypeShape.isSealed &&
@@ -846,16 +845,15 @@ private val TypeDefinition?.isSealed get() =
     this is TypeShape && sealedTypeSymbol in this.metadata
 
 /**
- * [t] if it is a non-null type that names a class, interface, or type formal,
- * as opposed to a special type like *Never*, *Result*, *Bubble*, or an ad-hoc function type.
+ * [t] if it is a non-null type that is not an ad-hoc function type
+ * or a return-only type like `Never<...>` or `Result<..., ...>`.
  */
-private fun nominalOrNull(t: Type2): Type2? {
+private fun nonNullValueType(t: Type2): Type2? {
     val definition = t.definition
     return if (
         t.nullity == Nullity.NonNull &&
         definition != WellKnownTypes.neverTypeDefinition &&
         definition != WellKnownTypes.resultTypeDefinition &&
-        definition != WellKnownTypes.bubbleTypeDefinition &&
         !AdHocArrowTypes.isAdhocArrowTypeDefinition(definition)
     ) {
         t
@@ -864,15 +862,15 @@ private fun nominalOrNull(t: Type2): Type2? {
     }
 }
 
-/** The nominal types that an RTTI check against [t] needs to distinguish. */
-private fun extractNominalTypes(t: Type2): List<Type2> {
+/** The value types (see above) that an RTTI check against [t] needs to distinguish. */
+private fun extractValueType(t: Type2): Type2? {
     val principal = withType(
         t,
         result = { pass, _, _ -> pass },
         never = { _, _, _ -> null },
         fallback = { it },
     )
-    return listOfNotNull(principal?.withNullity(Nullity.NonNull)?.let { nominalOrNull(it) })
+    return principal?.withNullity(Nullity.NonNull)?.let { nonNullValueType(it) }
 }
 
 private const val RTTI_CALL_TREE_SIZE = 3
