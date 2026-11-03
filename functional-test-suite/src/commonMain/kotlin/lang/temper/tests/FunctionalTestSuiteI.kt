@@ -252,6 +252,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.NamesNonascii)
 
     @Test
+    fun regexCodeSets() =
+        runFunctionalTest(Ft.RegexCodeSets)
+
+    @Test
     fun regexMatch() =
         runFunctionalTest(Ft.RegexMatch)
 

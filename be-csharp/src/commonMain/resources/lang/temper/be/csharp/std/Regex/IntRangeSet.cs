@@ -123,6 +123,7 @@ namespace TemperLang.Std.Regex
                     // First one. Always keep it.
                     current = range;
                     index = 0;
+                    ranges[index] = current;
                 }
                 else if (range.Start <= current.End)
                 {
@@ -132,9 +133,11 @@ namespace TemperLang.Std.Regex
                 }
                 else
                 {
-                    // Keep as separate new current.
+                    // Keep as separate new current, moving it down past
+                    // any merged or empty ranges.
                     current = range;
                     index += 1;
+                    ranges[index] = current;
                 }
             }
             // Trim excess.

@@ -45,6 +45,7 @@
 | [InterfacesPropertyMembers][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPureVirtual][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [NamesNonascii][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[228][]</sup> | ✅ | ✅ | ✅ |
+| [RegexCodeSets][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[166][]</sup> | ✅ | ✅ | ✅ |
 | [RegexMatch][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [RegexZeroAdvance][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[166][]</sup> | ✅ | ✅ | ✅ |
 | [RegressionMinimalRepro][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -127,6 +128,7 @@
 [InterfacesPropertyMembers]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/property-members/property-members.temper.md
 [InterfacesPureVirtual]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/pure-virtual/pure-virtual.temper.md
 [NamesNonascii]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/names/nonascii/nonascii.temper.md
+[RegexCodeSets]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/code-sets/code-sets.temper.md
 [RegexMatch]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/match/match.temper.md
 [RegexZeroAdvance]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/zero-advance/zero-advance.temper.md
 [RegressionMinimalRepro]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regression/minimal-repro/minimal-repro.temper.md

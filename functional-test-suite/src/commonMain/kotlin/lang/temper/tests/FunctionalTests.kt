@@ -75,6 +75,7 @@ enum class FunctionalTests(val test: FunctionalTestBase) {
     InterfacesPropertyMembers(markdown("interfaces/property-members/property-members.temper.md", "InterfacesPropertyMembers")),
     InterfacesPureVirtual(markdown("interfaces/pure-virtual/pure-virtual.temper.md", "InterfacesPureVirtual")),
     NamesNonascii(markdown("names/nonascii/nonascii.temper.md", "NamesNonascii")),
+    RegexCodeSets(markdown("regex/code-sets/code-sets.temper.md", "RegexCodeSets")),
     RegexMatch(markdown("regex/match/match.temper.md", "RegexMatch")),
     RegexZeroAdvance(markdown("regex/zero-advance/zero-advance.temper.md", "RegexZeroAdvance")),
     RegressionMinimalRepro(markdown("regression/minimal-repro/minimal-repro.temper.md", "RegressionMinimalRepro")),
