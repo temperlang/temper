@@ -31,15 +31,22 @@ import lang.temper.value.newBuiltinName
 import lang.temper.value.regexLiteralBuiltinName
 import lang.temper.value.valueContained
 import temper.regex_parser.RegexParserGlobal
+import temper.std.regex.BeginSpecial
 import temper.std.regex.Capture
 import temper.std.regex.CodePoints
 import temper.std.regex.CodeRange
 import temper.std.regex.CodeSet
+import temper.std.regex.DigitSpecial
+import temper.std.regex.DotSpecial
+import temper.std.regex.EndSpecial
 import temper.std.regex.Or
 import temper.std.regex.RegexNode
 import temper.std.regex.Repeat
 import temper.std.regex.Sequence
+import temper.std.regex.SpaceSpecial
 import temper.std.regex.Special
+import temper.std.regex.WordBoundarySpecial
+import temper.std.regex.WordSpecial
 
 /**
  * <!-- snippet: builtin/rgx -->
@@ -141,7 +148,13 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
         val regex = runCatching {
             RegexParserGlobal.parseWith(text, slots)!!
         }.getOrElse {
-            return@invoke reportRegexError(macroEnv)
+            // Null if the failure didn't come from the parser reporting an error.
+            val message = RegexParserGlobal.parseError(text, slots)
+            return@invoke if (message != null) {
+                reportRegexError(macroEnv, template = MessageTemplate.InvalidRegex, values = listOf(message))
+            } else {
+                reportRegexError(macroEnv)
+            }
         }
 
         // Replace the macro call with regex constructor calls.
@@ -156,14 +169,26 @@ internal object RegexLiteralMacro : BuiltinMacro(regexLiteralBuiltinName.builtin
     }
 }
 
+// Specials are singletons exported under names that differ from their classes.
+private fun specialName(special: Special): String = when (special) {
+    is BeginSpecial -> "Begin"
+    is DotSpecial -> "Dot"
+    is EndSpecial -> "End"
+    is WordBoundarySpecial -> "WordBoundary"
+    is DigitSpecial -> "Digit"
+    is SpaceSpecial -> "Space"
+    is WordSpecial -> "Word"
+    else -> error("unexpected special: ${special::class}")
+}
+
 private fun Planting.buildRegex(
     regex: RegexNode,
     macroEnv: MacroEnvironment,
 ): UnpositionedTreeTemplate<*> {
-    // Simple Java names match Temper class names here by design.
+    // Simple Java names match Temper class names here by design, except for specials.
     fun Planting.makeName() = makeImportMeCall(
         macroEnv.pos,
-        Symbol(regex.javaClass.simpleName),
+        Symbol(if (regex is Special) specialName(regex) else regex.javaClass.simpleName),
         "std/regex",
         macroEnv,
     )

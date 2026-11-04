@@ -77,6 +77,7 @@ enum class MessageTemplate(
     UnnormalizedIdentifier("Identifier is not in Unicode normal form NFKC", CompilationPhase.Lex),
     UnrecognizedStringEscape("Unrecognized escape sequence in quoted string", CompilationPhase.Lex),
     UnrecognizedToken("Syntax error", CompilationPhase.Lex),
+    InvalidRegex("Invalid regex %s", CompilationPhase.Lex),
     UnsupportedNestedMultiQuote("Multi-quoted string nesting not yet supported", CompilationPhase.Lex),
 
     // Parsing problems

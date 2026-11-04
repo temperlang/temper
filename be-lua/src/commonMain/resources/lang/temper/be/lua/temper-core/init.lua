@@ -2032,8 +2032,6 @@ do
             require('temper-core/regex/runtime')
             TemperRegexNFA = require("temper-regex-engine/nfa/nfa").TemperRegexNFA
         end
-        -- return TemperRegexNFA.fromRegex(regex.data)
-        -- retutrn TemperRegexNFA.fromRegexDFA(regex.data)
         return TemperRegexNFA.fromRegexLua(data, function(str)
             return load(str)()
         end)

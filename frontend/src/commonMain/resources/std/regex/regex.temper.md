@@ -98,7 +98,7 @@ A `Regex` is composed of a potential variety of subtypes.
 
 Multiple types of groups exist:
 
-- [Capture](#capture) `/(?<name>...)/` to remember match groups for later use.
+- [Capture](#capture) `/(?name=...)/` to remember match groups for later use.
 - Non-capturing group syntax `/(?:...)/`, which is simply a [Regex](#regex)
   instance in the data model.
 
@@ -147,7 +147,8 @@ export class CodePoints(
 ### Specials
 
 A number of special match forms exist. In the data model, these are empty
-classes.
+classes. Each has one exported instance, and since instances don't support
+`==`, the classes are exported too, so specials can be told apart with `is`.
 
 - `.` - `Dot` In default mode, matches any Unicode code point except newline.
 - `^` - `Begin` in default mode matches zero-length at the beginning of a
@@ -169,27 +170,26 @@ classes.
 
 ```
 export sealed interface Special extends RegexNode {}
-export let Begin: Special = doPure { (): Special => class Begin extends Special {}; new Begin() };
-export let Dot: Special = doPure { (): Special => class Dot extends Special {}; new Dot() };
-export let End: Special = doPure { (): Special => class End extends Special {}; new End() };
+export class BeginSpecial extends Special {}
+export let Begin: Special = doPure { (): Special => new BeginSpecial() };
+export class DotSpecial extends Special {}
+export let Dot: Special = doPure { (): Special => new DotSpecial() };
+export class EndSpecial extends Special {}
+export let End: Special = doPure { (): Special => new EndSpecial() };
 // TODO(tjp, regex): We can't easily support this at present across backends.
 // export let GraphemeCluster = doPure { (): Special =>
 //   class GraphemeCluster extends Special {}; new GraphemeCluster()
 // };
-export let WordBoundary: Special = doPure { (): Special =>
-  class WordBoundary extends Special {}; new WordBoundary()
-};
+export class WordBoundarySpecial extends Special {}
+export let WordBoundary: Special = doPure { (): Special => new WordBoundarySpecial() };
 
 export sealed interface SpecialSet extends CodePart & Special {}
-export let Digit: SpecialSet = doPure { (): SpecialSet =>
-  class Digit extends SpecialSet {}; new Digit()
-};
-export let Space: SpecialSet = doPure { (): SpecialSet =>
-  class Space extends SpecialSet {}; new Space()
-};
-export let Word: SpecialSet = doPure { (): SpecialSet =>
-  class Word extends SpecialSet {}; new Word()
-};
+export class DigitSpecial extends SpecialSet {}
+export let Digit: SpecialSet = doPure { (): SpecialSet => new DigitSpecial() };
+export class SpaceSpecial extends SpecialSet {}
+export let Space: SpecialSet = doPure { (): SpecialSet => new SpaceSpecial() };
+export class WordSpecial extends SpecialSet {}
+export let Word: SpecialSet = doPure { (): SpecialSet => new WordSpecial() };
 ```
 
 </details>
@@ -769,7 +769,7 @@ let buildEscapeNeeds(): List<Int> {
         needsNoEscape
       } else if (
         // Ampersand and tilde need escaped only in python for now, but meh.
-        // Escaping ampersand breaks JS though.  Fix that in temper-core/regex.js
+        // Escaping them breaks JS though, so temper-core/regex.js unescapes.
         code == Codes.ampersand ||
         code == Codes.backslash ||
         code == Codes.caret ||
@@ -825,7 +825,7 @@ class Codes {
   public static squareRight: Int = char']';
   public static star: Int = char'*';
   public static tab: Int = char'\t';
-  public static tilde: Int = char'*';
+  public static tilde: Int = char'~';
   public static upperA: Int = char'A';
   public static upperZ: Int = char'Z';
   public static space: Int = char' ';

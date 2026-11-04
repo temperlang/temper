@@ -1,1 +1,2146 @@
-package.preload['temper-regex-engine/ctype']=function()local a=require('temper-core')local b,c,d,e,f,g,h,i,j;b=function()local k,l,m,n;k=a.densebitvector_constructor(0.0)l=48.0;while l<=57.0 do a.densebitvector_set(k,l,true)l=l+1.0 end;m=65.0;while m<=90.0 do a.densebitvector_set(k,m,true)m=m+1.0 end;n=97.0;while n<=122.0 do a.densebitvector_set(k,n,true)n=n+1.0 end;a.densebitvector_set(k,95.0,true)return k end;c=function()local o;o=a.densebitvector_constructor(0.0)a.densebitvector_set(o,32.0,true)a.densebitvector_set(o,13.0,true)a.densebitvector_set(o,10.0,true)a.densebitvector_set(o,9.0,true)a.densebitvector_set(o,12.0,true)a.densebitvector_set(o,14.0,true)return o end;d=function(p,q)local r,s;r=a.listbuilder_constructor()s=0.0;while s<q do if a.densebitvector_get(p,s)then a.listbuilder_add(r,s)end;s=s+1.0 end;return r end;e=b()f=c()g=d(e,128.0)h=d(f,32.0)i=function(t)local u;if a.densebitvector_get(e,t)then u=true else u=t>=256.0 end;return u end;j={}j.wordChars=e;j.spaceChars=f;j.wordCharsList=g;j.spaceCharsList=h;j.isWordChar=i;return j end;package.preload['temper-regex-engine/dfa/dfa']=function()local a=require('temper-core')local v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,j;v=a.import('temper-regex-engine/nfa/matcher','charCodeMatcher')w=a.import('temper-regex-engine/nfa/matcher','fromChars')x=a.import('temper-regex-engine/util','regexToString')y=a.import('temper-regex-engine/util','bogusMatch')z=a.import('temper-regex-engine/util','chr')A=a.import('temper-regex-engine/nfa/matcher','SingleMatcher')B=a.import('temper-regex-engine/nfa/matcher','ContainsMatcher')C=a.import('temper-regex-engine/nfa/matcher','EpsilonMatcher')D=a.import('temper-regex-engine/nfa/matcher','StartGroupMatcher')E=a.import('temper-regex-engine/nfa/matcher','EndGroupMatcher')F=a.import('temper-regex-engine/nfa/matcher','WordBoundaryMatcher')G=a.import('temper-regex-engine/nfa/matcher','BeginMatcher')H=a.import('temper-regex-engine/nfa/matcher','EndMatcher')I=a.type('Target')I.methods.eq=function(Q,R)local S,T,U::V::if a.listed_length(R.name)~=a.listed_length(Q.name__113)then S=false;goto W end;U=0.0;while true do T=a.listed_length(Q.name__113)if not(U<T)then break end;if a.listed_get(R.name,U)~=a.listed_get(Q.name__113,U)then S=false;goto W end;U=U+1.0 end;S=true::W::return S end;I.methods.toString=function(X)local Y,Z,_::a0::if a.listed_length(X.name__113)==0.0 then Y='<error>'goto a1 end;Z=function(a2)return a.concat('v',a.int32_tostring(a2))end;_=a.listed_join(X.name__113,',',Z)Y=a.concat('{',_,'}')::a1::return Y end;I.methods.and_=function(a3,a4)local a5,a6,a7;a6=a.listbuilder_constructor()a7=0.0;while true do local a8;a5=a.listed_length(a3.name__113)if not(a7<a5)then break end;a8=a.listed_get(a3.name__113,a7)if a8~=a4 then a.listbuilder_add(a6,a8)end;a7=a7+1.0 end;a.listbuilder_add(a6,a4)return I(a6)end;I.methods.ands=function(a9,aa)local ab,ac,ad,ae,af,ag;ae=I(a9.name__113)af=ae;ag=0.0;while true do ab=a.listed_length(aa.name)if not(ag<ab)then break end;ac=a.listed_get(aa.name,ag)ad=af:and_(ac)af=ad;ag=ag+1.0 end;return af end;I.constructor=function(ah,ai)local aj,ak;aj=function(al,am)return al-am end;ak=a.listed_sorted(ai,aj)ah.name__113=ak;ah.id__114=-1.0;return nil end;I.get.name=function(an)return an.name__113 end;I.get.id=function(ao)return ao.id__114 end;I.set.id=function(ap,aq)ap.id__114=aq;return nil end;J=a.type('Row')J.methods.toString=function(ar)local as,at,au,av;as=ar.name__140:toString()at=function(aw)local ax,ay,az,aA,aB,aC,aD,aE,aF,aG,aH;if 32.0<=aw then aA=aw<=126.0 else aA=false end;if aA then ax=z(aw)aD=a.concat('#',ax)else ay=a.int32_tostring(aw)aD=ay end;aE,aF,aG=a.pcall(function()aB=a.mapped_get(ar.map__143,aw)aC=aB end)if aE then else az=a.bubble()aC=az end;aH=aC:toString()return a.concat('\n','  ',aD,' => ',aH)end;au=a.listed_join(ar.keys__142,'',at)av=a.concat('\n','  else => ',ar.other__141:toString())return a.concat(as,':',au,av)end;J.constructor=function(aI,aJ,aK,aL,aM,aN)aI.name__140=aJ;aI.other__141=aK;aI.keys__142=aL;aI.map__143=aM;aI.ok__144=aN;return nil end;J.get.name=function(aO)return aO.name__140 end;J.get.other=function(aP)return aP.other__141 end;J.get.keys=function(aQ)return aQ.keys__142 end;J.get.map=function(aR)return aR.map__143 end;J.get.ok=function(aS)return aS.ok__144 end;K=a.type('Table')K.get.targets=function(aT)return aT.targetsVar__163 end;K.methods.update=function(aU,aV)local aW,aX,aY::aZ::if a.listed_length(aV.name)==0.0 then aV['id']=-1.0;aW=nil;goto a_ end;aY=0.0;while true do aX=a.listed_length(aU.targets)if not(aY<aX)then break end;if a.listed_get(aU.targets,aY):eq(aV)then aV['id']=aY;aW=nil;goto a_ end;aY=aY+1.0 end;a.bubble()aW=nil::a_::return aW end;K.methods.finish=function(b0)local b1,b2,b3,b4,b5,b6,b7,b8,b9,ba,bb,bc;b9=a.listbuilder_constructor()ba=b9;b0.targetsVar__163=ba;bb=0.0;while true do local bd,be::bf::b1=a.listbuilder_length(b0.rows__160)if not(bb<b1)then break end;bd=a.listed_get(b0.rows__160,bb)be=0.0;while true do b2=a.listbuilder_length(b9)if not(be<b2)then break end;if a.listed_get(b9,be):eq(bd.name)then bd.name['id']=be;goto bg end;be=be+1.0 end;bd.name['id']=bb;a.listbuilder_add(b9,bd.name)::bg::bb=bb+1.0 end;bc=0.0;while true do local bh,bi;b3=a.listbuilder_length(b0.rows__160)if not(bc<b3)then break end;bh=a.listed_get(b0.rows__160,bc)b4=bh.other;b0:update(b4)bi=0.0;while true do local bj,bk,bl,bm,bn;b5=a.listed_length(bh.keys)if not(bi<b5)then break end;bj=a.listed_get(bh.keys,bi)bk,bl,bm=a.pcall(function()b7=a.mapped_get(bh.map,bj)b8=b7 end)if bk then else b6=a.bubble()b8=b6 end;bn=b8;b0:update(bn)bi=bi+1.0 end;bc=bc+1.0 end;return nil end;K.methods.has=function(bo,bp)local bq,br,bs::bt::bs=0.0;while true do br=a.listbuilder_length(bo.rows__160)if not(bs<br)then break end;if a.listed_get(bo.rows__160,bs).name:eq(bp)then bq=true;goto bu end;bs=bs+1.0 end;bq=false::bu::return bq end;K.methods.add=function(bv,bw)local bx;bx=bw.name;if not bv:has(bx)then a.listbuilder_add(bv.rows__160,bw)end;return nil end;K.methods.addEmpty=function(by,bz)local bA,bB,bC;bA=a.listof()bB=a.map_constructor(a.listof())bC=J(bz,N,bA,bB,false)by:add(bC)return nil end;K.methods.toString=function(bD)local bE;bE=function(bF)return bF:toString()end;return a.listed_join(bD.rows__160,'\n',bE)end;K.methods.foundAt=function(bG,bH,bI)local bJ,bK,bL,bM,bN,bO::bP::bN=a.string_end(bH)bO=0.0;while true do local bQ,bR,bS;bQ=a.listed_getor(bG.rows__160,bO,O)bR=a.string_get(bH,bI)bS=a.mapped_getor(bQ.map,bR,bQ.other)if bS.id<0.0 then bM=true else bM=a.stringindexoption_compareto_eq(bI,bN)end;if bM then if bQ.ok then bJ=bI;goto bT else bJ=-1.0;goto bT end end;bK=bS.id;bO=bK;bL=a.string_next(bH,bI)bI=bL end::bT::return bJ end;K.methods.foundAfter=function(bU,bV,bW)local bX,bY,bZ::b_::bZ=a.string_end(bV)while a.stringindexoption_compareto_ne(bW,bZ)do local c0;c0=bU:foundAt(bV,bW)if a.stringindexoption_compareto_ne(c0,-1.0)then bX=c0;goto c1 end;bY=a.string_next(bV,bW)bW=bY end;bX=-1.0::c1::return bX end;K.constructor=function(c2,c3,c4)c2.rows__160=c3;c2.targetsVar__163=c4;return nil end;K.get.rows=function(c5)return c5.rows__160 end;L=a.type('Alphabet__50')L.methods.add=function(c6,c7)if not a.mapped_getor(c6.map__215,c7,false)then a.listbuilder_add(c6.keys__214,c7)a.mapbuilder_set(c6.map__215,c7,true)end;return nil end;L.fromEngine=function(c8)local c9,ca,cb,cc,cd,ce,cf,cg;cf=L()cg=0.0;while true do local ch,ci;c9=a.listbuilder_length(c8.states)if not(cg<c9)then break end;ch=a.listed_get(c8.states,cg)ci=0.0;while true do local cj;ca=a.listbuilder_length(ch.next)if not(ci<ca)then break end;cb=a.listed_get(ch.next,ci)cj=cb.matcher;if a.instance_of(cj,B)then ce=a.cast_to(cj,B)if ce.want then local ck;ck=0.0;while true do cc=a.listed_length(ce.options)if not(ck<cc)then break end;cf:add(a.listed_get(ce.options,ck))ck=ck+1.0 end else local cl;cl=0.0;while true do cd=a.listed_length(ce.options)if not(cl<cd)then break end;cf:add(a.listed_get(ce.options,cl))cl=cl+1.0 end end elseif a.instance_of(cj,A)then cf:add(a.cast_to(cj,A).char)end;ci=ci+1.0 end;cg=cg+1.0 end;return cf end;L.constructor=function(cm)local cn,co;cn=a.listbuilder_constructor()cm.keys__214=cn;co=a.mapbuilder_constructor()cm.map__215=co;return nil end;L.get.keys=function(cp)return cp.keys__214 end;L.get.map=function(cq)return cq.map__215 end;M=a.type('DFA')M.none=function()return M(P)end;M.fromEngine=function(cr)local cs,ct,cu,cv,cw,cx,cy,cz,cA,cB,cC,cD,cE,cF,cG,cH,cI,cJ,cK,cL,cM,cN,cO;cJ=L.fromEngine(cr)cK=a.mapbuilder_constructor()cL=0.0;while true do local cP;ct=a.listbuilder_length(cr.states)if not(cL<ct)then break end;cP=a.listed_get(cr.states,cL)a.mapbuilder_set(cK,cP.id,cP)cL=cL+1.0 end;cM=K(a.listbuilder_constructor(),a.listof())cM:addEmpty(I(a.listof(0.0)))cN=true;cO=0.0;while true do local cQ,cR,cS,cT,cU,cV,cW,cX,cY,cZ;cu=a.listbuilder_length(cM.rows)if not(cO<cu)then break end;cQ=a.listed_get(cM.rows,cO)cv=I(a.listof())cR=cv;cS=a.listbuilder_constructor()cT=a.mapbuilder_constructor()cU=a.mapbuilder_constructor()cV=function(c_)local d0,d1,d2,d3,d4,d5,d6,d7,d8;d7=0.0;while true do local d9,da;d0=a.listbuilder_length(c_.next)if not(d7<d0)then break end;d1=a.listed_get(c_.next,d7)d9=d1.toState;da=d1.matcher;if a.instance_of(da,C)then cV(d9)else if a.instance_of(da,D)then d6=true else if a.instance_of(da,E)then d5=true else if a.instance_of(da,F)then d4=true else if a.instance_of(da,G)then d3=true else d2=a.instance_of(da,H)d3=d2 end;d4=d3 end;d5=d4 end;d6=d5 end;if d6 then cN=false end end;d7=d7+1.0 end;d8=c_.id;cR=cR:and_(d8)return nil end;cW=function(db,dc)local dd,de,df,dg,dh,di,dj,dk,dl,dm,dn,dp,dq,dr;dr=0.0;while true do local ds,dt;dd=a.listbuilder_length(dc.next)if not(dr<dd)then break end;de=a.listed_get(dc.next,dr)ds=de.toState;dt=de.matcher;if a.instance_of(dt,C)then cW(db,ds)else if a.instance_of(dt,D)then dn=true else if a.instance_of(dt,E)then dm=true else if a.instance_of(dt,F)then dl=true else if a.instance_of(dt,G)then dk=true else df=a.instance_of(dt,H)dk=df end;dl=dk end;dm=dl end;dn=dm end;if dn then cN=false end end;dr=dr+1.0 end;if not a.mapped_has(cT,db)then a.listbuilder_add(cS,db)dg=I(a.listof(dc.id))a.mapbuilder_set(cT,db,dg)else local du,dv,dw;du,dv,dw=a.pcall(function()dp=a.mapped_get(cT,db)dq=dp end)if du then else dh=a.bubble()dq=dh end;di=dc.id;dj=dq:and_(di)a.mapbuilder_set(cT,db,dj)end;return nil end;cX=function(dx)local dy,dz,dA,dB,dC,dD,dE,dF,dG,dH,dI,dJ,dK::dL::dz=dx.id;if a.mapped_getor(cU,dz,false)then dy=nil;goto dM end;dA=dx.id;a.mapbuilder_set(cU,dA,true)dK=0.0;while true do local dN,dO;dB=a.listbuilder_length(dx.next)if not(dK<dB)then break end;dC=a.listed_get(dx.next,dK)dN=dC.toState;dO=dC.matcher;if a.instance_of(dO,B)then dJ=a.cast_to(dO,B)if dJ.want then local dP;dP=0.0;while true do dD=a.listed_length(dJ.options)if not(dP<dD)then break end;dE=a.listed_get(dJ.options,dP)cW(dE,dN)dP=dP+1.0 end else local dQ;dQ=0.0;while true do local dR;dF=a.listbuilder_length(cJ.keys)if not(dQ<dF)then break end;dR=a.listed_get(cJ.keys,dQ)if not a.densebitvector_get(dJ.bitset,dR)then cW(dR,dN)elseif not a.mapped_has(cT,dR)then dG=I(a.listof())a.mapbuilder_set(cT,dR,dG)a.listbuilder_add(cS,dR)end;dQ=dQ+1.0 end;cV(dN)end elseif a.instance_of(dO,A)then dH=a.cast_to(dO,A).char;cW(dH,dN)elseif a.instance_of(dO,C)then cX(dN)else cN=false end;dK=dK+1.0 end;dI=dx.id;a.mapbuilder_set(cU,dI,false)dy=nil::dM::return dy end;cY=0.0;while true do local dS,dT,dU;cw=a.listed_length(cQ.name.name)if not(cY<cw)then break end;dS,dT,dU=a.pcall(function()cE=a.mapped_get(cK,a.listed_get(cQ.name.name,cY))cF=cE end)if dS then else cx=a.bubble()cF=cx end;cX(cF)cY=cY+1.0 end;if a.listed_length(cR.name)~=0.0 then cM:addEmpty(cR)end;cZ=0.0;while true do local dV,dW,dX,dY,dZ;cy=a.listbuilder_length(cS)if not(cZ<cy)then break end;dV=a.listed_get(cS,cZ)dW,dX,dY=a.pcall(function()cG=a.mapped_get(cT,dV)cH=cG end)if dW then else cz=a.bubble()cH=cz end;dZ=cH;cM:addEmpty(dZ)cZ=cZ+1.0 end;cA=cM.rows;cB=cQ.name;if a.listed_getor(cQ.name.name,0.0,-1.0)==1.0 then cI=true else cC=a.listed_getor(cQ.name.name,1.0,-1.0)cI=cC==1.0 end;cD=J(cB,cR,cS,cT,cI)a.listbuilder_set(cA,cO,cD)cO=cO+1.0 end;cM:finish()if not cN then cs=a.null else cs=M(cM)end;return cs end;M.methods.found=function(d_,e0,e1)return d_.table__230:foundAt(e0,e1)end;M.constructor=function(e2,e3)e2.table__230=e3;return nil end;M.get.table=function(e4)return e4.table__230 end;N=I(a.listof())O=J(N,N,a.listof(),a.map_constructor(a.listof()),false)P=K(a.listbuilder_constructor(),a.listof())j={}j.Target=I;j.Row=J;j.Table=K;j.DFA=M;return j end;package.preload['temper-regex-engine/dfa/javascript']=function()local a=require('temper-core')local e5,j;e5=a.type('Javascript')e5.fromTable=function(e6)local e7,e8,e9;e7=e5(a.listbuilder_constructor())e7:addTable(e6)e8=e7.buf;e9=function(ea)return ea end;return a.listed_join(e8,'',e9)end;e5.methods.addString=function(eb,ec)a.listbuilder_add(eb.buf__27,ec)return nil end;e5.methods.addTarget=function(ed,ee)local ef;if ee.id<0.0 then a.bubble()else ed:addString('q')ef=a.int32_tostring(ee.id)ed:addString(ef)end;return nil end;e5.methods.addRow=function(eg,eh)local ei,ej,ek,el,em,en,eo,ep,eq,er,es,et,eu,ev,ew,ex;eg:addString('const ')ew=eh.name;eg:addTarget(ew)eg:addString(' = ')eg:addString('(str, head) => {\n')if eh.ok then eg:addString('  let ret = -1;\n')if a.listed_length(eh.keys)~=0.0 then local ey;eg:addString('  switch (str.codePointAt(head)|0) {\n')ey=0.0;while true do local ez,eA,eB,eC,eD;ei=a.listed_length(eh.keys)if not(ey<ei)then break end;ez=a.listed_get(eh.keys,ey)eg:addString('  case ')ej=a.int32_tostring(ez)eg:addString(ej)eg:addString(':\n')eA,eB,eC=a.pcall(function()es=a.mapped_get(eh.map,ez)et=es end)if eA then else ek=a.bubble()et=ek end;eD=et;if eD.id>=0.0 then eg:addString('    ret = ')eg:addTarget(eD)eg:addString('(str, head + 1);\n')end;eg:addString('    break;\n')ey=ey+1.0 end;eg:addString('  default:\n')if eh.other.id>=0.0 then eg:addString('    ret = ')el=eh.other;eg:addTarget(el)eg:addString('(str, head + 1);\n')end;eg:addString('    break;\n')eg:addString('  }\n')elseif eh.other.id>=0.0 then eg:addString('  ret = ')em=eh.other;eg:addTarget(em)eg:addString('(str, head + 1);\n')end;eg:addString('  if (ret < 0) {\n')eg:addString('    return head;\n')eg:addString('  } else {\n')eg:addString('    return ret;\n')eg:addString('  }\n')elseif a.listed_length(eh.keys)~=0.0 then eg:addString('  switch (str.codePointAt(head)|0) {\n')ex=0.0;while true do local eE,eF,eG,eH,eI;en=a.listed_length(eh.keys)if not(ex<en)then break end;eE=a.listed_get(eh.keys,ex)eg:addString('  case ')eo=a.int32_tostring(eE)eg:addString(eo)eg:addString(':\n')eF,eG,eH=a.pcall(function()eu=a.mapped_get(eh.map,eE)ev=eu end)if eF then else ep=a.bubble()ev=ep end;eI=ev;if eI.id<0.0 then eg:addString('    return -1;\n')else eg:addString('    return ')eg:addTarget(eI)eg:addString('(str, head + 1);\n')end;eg:addString('    break;\n')ex=ex+1.0 end;eg:addString('  default:\n')if eh.other.id<0.0 then eg:addString('    return -1;\n')else eg:addString('    return ')eq=eh.other;eg:addTarget(eq)eg:addString('(str, head + 1);\n')end;eg:addString('    break;\n')eg:addString('  }\n')elseif eh.other.id<0.0 then eg:addString('  return -1;\n')else eg:addString('  return ')er=eh.other;eg:addTarget(er)eg:addString('(str, head + 1);\n')end;eg:addString('};\n')return nil end;e5.methods.addTable=function(eJ,eK)local eL,eM,eN;eN=0.0;while true do eL=a.listbuilder_length(eK.rows)if not(eN<eL)then break end;if a.listed_get(eK.rows,eN).name.id>=0.0 then eM=a.listed_get(eK.rows,eN)eJ:addRow(eM)end;eN=eN+1.0 end;eJ:addString('module.ret = q0;\n')return nil end;e5.constructor=function(eO,eP)eO.buf__27=eP;return nil end;e5.get.buf=function(eQ)return eQ.buf__27 end;j={}j.Javascript=e5;return j end;package.preload['temper-regex-engine/dfa/lua']=function()local a=require('temper-core')local eR,j;eR=a.type('Lua')eR.fromTable=function(eS)local eT,eU,eV;eT=eR(a.listbuilder_constructor())eT:addTable(eS)eU=eT.buf;eV=function(eW)return eW end;return a.listed_join(eU,'',eV)end;eR.methods.addString=function(eJ,eX)a.listbuilder_add(eJ.buf__30,eX)return nil end;eR.methods.addTarget=function(eO,eY)local eZ;if eY.id<0.0 then a.bubble()else eO:addString('q')eZ=a.int32_tostring(eY.id)eO:addString(eZ)end;return nil end;eR.methods.addRow=function(e_,f0)local f1,f2,f3,f4,f5,f6,f7,f8,f9,fa,fb,fc,fd,fe,ff;ff=f0.name;e_:addTarget(ff)e_:addString(' = function')e_:addString('(str, head)\n')if f0.ok then local ex;e_:addString('  if head > #str then return #str + 1 end\n')e_:addString('  local next = utf8_offset(str, 2, head)\n')e_:addString('  local code = utf8_codepoint(str, head)\n')e_:addString('  local ret = -1\n')ex=0.0;while true do local eE,fg,fh,fi,eI;f1=a.listed_length(f0.keys)if not(ex<f1)then break end;eE=a.listed_get(f0.keys,ex)if ex==0.0 then e_:addString('  if ')else e_:addString('  elseif ')end;e_:addString('code == ')f2=a.int32_tostring(eE)e_:addString(f2)e_:addString(' then\n')fg,fh,fi=a.pcall(function()fb=a.mapped_get(f0.map,eE)fc=fb end)if fg then else f3=a.bubble()fc=f3 end;eI=fc;if eI.id>=0.0 then e_:addString('    ret = ')e_:addTarget(eI)e_:addString('(str, next)\n')end;ex=ex+1.0 end;if a.listed_length(f0.keys)~=0.0 then e_:addString('  else\n')if f0.other.id>=0.0 then e_:addString('    ret = ')f4=f0.other;e_:addTarget(f4)e_:addString('(str, next)\n')end;e_:addString('  end\n')elseif f0.other.id>=0.0 then e_:addString('  ret = ')f5=f0.other;e_:addTarget(f5)e_:addString('(str, next)\n')end;e_:addString('  if ret < 0 then\n')e_:addString('    return head\n')e_:addString('  else\n')e_:addString('    return ret\n')e_:addString('  end\n')else local fj;e_:addString('  if head > #str then return -1 end\n')e_:addString('  local next = utf8_offset(str, 2, head)\n')e_:addString('  local code = utf8_codepoint(str, head)\n')fj=0.0;while true do local fk,fl,fm,fn,fo;f6=a.listed_length(f0.keys)if not(fj<f6)then break end;fk=a.listed_get(f0.keys,fj)if fj==0.0 then e_:addString('  if ')else e_:addString('  elseif ')end;e_:addString('code == ')f7=a.int32_tostring(fk)e_:addString(f7)e_:addString(' then\n')fl,fm,fn=a.pcall(function()fd=a.mapped_get(f0.map,fk)fe=fd end)if fl then else f8=a.bubble()fe=f8 end;fo=fe;if fo.id<0.0 then e_:addString('    return -1\n')else e_:addString('    return ')e_:addTarget(fo)e_:addString('(str, next)\n')end;fj=fj+1.0 end;if a.listed_length(f0.keys)~=0.0 then e_:addString('  else\n')if f0.other.id<0.0 then e_:addString('    return -1\n')else e_:addString('    return ')f9=f0.other;e_:addTarget(f9)e_:addString('(str, next)\n')end;e_:addString('  end\n')elseif f0.other.id<0.0 then e_:addString('  return -1\n')else e_:addString('  return ')fa=f0.other;e_:addTarget(fa)e_:addString('(str, next)\n')end end;e_:addString('end\n')return nil end;eR.methods.addTable=function(fp,fq)local fr,fs,ft,fu,fv,fw;fp:addString("local temper = package.loaded['temper-core/prelude']\n")fp:addString('local utf8_codepoint = utf8.codepoint\n')fp:addString('local utf8_offset = utf8.offset\n')fv=0.0;while true do fr=a.listbuilder_length(fq.rows)if not(fv<fr)then break end;if a.listed_get(fq.rows,fv).name.id>=0.0 then fp:addString('local ')fs=a.listed_get(fq.rows,fv).name;fp:addTarget(fs)fp:addString('\n')end;fv=fv+1.0 end;fw=0.0;while true do ft=a.listbuilder_length(fq.rows)if not(fw<ft)then break end;if a.listed_get(fq.rows,fw).name.id>=0.0 then fu=a.listed_get(fq.rows,fw)fp:addRow(fu)end;fw=fw+1.0 end;fp:addString('return q0\n')return nil end;eR.constructor=function(fx,fy)fx.buf__30=fy;return nil end;eR.get.buf=function(aI)return aI.buf__30 end;j={}j.Lua=eR;return j end;package.preload['temper-regex-engine/init']=function()require('temper-regex-engine/regex')require('temper-regex-engine/util')require('temper-regex-engine/ctype')require('temper-regex-engine/nfa/matcher')require('temper-regex-engine/nfa/state')require('temper-regex-engine/nfa/stack')require('temper-regex-engine/nfa/engine')require('temper-regex-engine/dfa/dfa')require('temper-regex-engine/dfa/lua')require('temper-regex-engine/dfa/javascript')require('temper-regex-engine/nfa/nfa')require('temper-regex-engine/native')require('temper-regex-engine/bench')require('temper-regex-engine/nfa/test')end;package.preload['temper-regex-engine/nfa/engine']=function()local a=require('temper-core')local fz,fA,fB,fC,fD,fE,fF,fG,fH,fI,fJ,v,w,x,z,y,fK,fL,fM,fN,E,D,C,fO,fP,fQ,fR,fS,j;fz=a.import('std/regex','entire')fA=a.import('std/regex','oneOrMore')fB=a.import('std/regex','optional')fC=a.import('std/regex','Begin')fD=a.import('std/regex','Dot')fE=a.import('std/regex','End')fF=a.import('std/regex','WordBoundary')fG=a.import('std/regex','Digit')fH=a.import('std/regex','Space')fI=a.import('std/regex','Word')fJ=a.import('temper-regex-engine/nfa/stack','noGroups')v=a.import('temper-regex-engine/nfa/matcher','charCodeMatcher')w=a.import('temper-regex-engine/nfa/matcher','fromChars')x=a.import('temper-regex-engine/util','regexToString')z=a.import('temper-regex-engine/util','chr')y=a.import('temper-regex-engine/util','bogusMatch')fK=a.import('temper-regex-engine/nfa/state','State')fL=a.import('temper-regex-engine/nfa/stack','StackStart')fM=a.import('temper-regex-engine/nfa/state','Next')fN=a.import('temper-regex-engine/nfa/stack','StackSlot')E=a.import('temper-regex-engine/nfa/matcher','EndGroupMatcher')D=a.import('temper-regex-engine/nfa/matcher','StartGroupMatcher')C=a.import('temper-regex-engine/nfa/matcher','EpsilonMatcher')fO=a.import('std/regex','Group')fP=a.import('std/regex','Match')fQ=a.type('Engine')fQ.newStateIn=function(fT)local fU;fU=fK(a.listbuilder_length(fT))a.listbuilder_add(fT,fU)return fU end;fQ.methods.newState=function(fV)return fQ.newStateIn(fV.states__79)end;fQ.methods.replace=function(fW,fX,fY)local fZ,f_,g0,g1,g2,g3,g4,g5,g6,g7,g8,g9,ga,gb,gc,gd,ge,gf,gg,gh,gi,gj,gk;gd=a.mapbuilder_constructor()ge=a.mapbuilder_constructor()gf=fL()gg=fM(fW.endState__81,fW.epsilon__82)gh=1.0;gi=a.stringbuilder_constructor()gj=1.0;while true do local gl;if not a.string_hasindex(fX,gj)then break end;fZ=fN(gj,fW.startState__80,gf,fJ)gl=fZ;while not a.int_eq(gl,gf)do local gm,gn,go,gp,gq,gr;gm=gl.index;gn=gl.state;go=gl.groups;f_=gl.next;gl=f_;if gn.id==fW.endState__81.id then a.stringbuilder_appendbetween(gi,fX,gh,gj)g0=fS(fX,gj,gm,gd,go)a.stringbuilder_append(gi,fY(g0))g1=a.string_prev(fX,gm)gj=g1;gh=gm;break end;gp=gn.next;gq=a.listbuilder_length(gp)gr=0.0;while gr<gq do local gs,gt,gu;g2=a.listed_getor(gp,gr,gg)gs=g2.matcher;gt=g2.toState;gu=gs:matches(fX,gm)if a.is_string_index(gu)then local gv,gw,gx,gy;gc=a.require_string_index(gu)if a.instance_of(gs,D)then a.mapbuilder_set(ge,a.cast_to(gs,D).name,gm)g3=fN(gc,gt,gl,go)gl=g3 elseif a.instance_of(gs,E)then gb=a.cast_to(gs,E)g4=gb.name;gv,gw,gx=a.pcall(function()g9=a.mapped_get(ge,gb.name)ga=g9 end)if gv then else g5=a.bubble()ga=g5 end;a.mapbuilder_set(gd,g4,a.pair_constructor(ga,gm))gy=a.listbuilder_constructor()a.listbuilder_add(gy,gb.name)a.listbuilder_addall(gy,go)g6=fN(gc,gt,gl,gy)gl=g6 else g7=fN(gc,gt,gl,go)gl=g7 end end;gr=gr+1.0 end end;g8=a.string_next(fX,gj)gj=g8 end;gk=a.string_end(fX)a.stringbuilder_appendbetween(gi,fX,gh,gk)return a.stringbuilder_tostring(gi)end;fQ.methods.split=function(gz,gA)local gB,gC,gD,gE,gF,gG,gH,gI,gJ,gK,gL,gM;gH=fL()gI=fM(gz.endState__81,gz.epsilon__82)gJ=1.0;gK=a.listbuilder_constructor()gL=1.0;while true do local gN;if not a.string_hasindex(gA,gL)then break end;gB=fN(gL,gz.startState__80,gH,fJ)gN=gB;while not a.int_eq(gN,gH)do local gO,gP,gQ,gR,gS;gO=gN.index;gP=gN.state;gC=gN.next;gN=gC;if gP.id==gz.endState__81.id then local gT;gT=a.string_slice(gA,gJ,gL)gD=a.string_prev(gA,gO)gL=gD;gJ=gO;a.listbuilder_add(gK,gT)break end;gQ=gP.next;gR=a.listbuilder_length(gQ)gS=0.0;while gS<gR do local gU,gV,gW;gE=a.listed_getor(gQ,gS,gI)gU=gE.matcher;gV=gE.toState;gW=gU:matches(gA,gO)if a.is_string_index(gW)then gF=fN(a.require_string_index(gW),gV,gN,fJ)gN=gF end;gS=gS+1.0 end end;gG=a.string_next(gA,gL)gL=gG end;gM=a.string_end(gA)a.listbuilder_add(gK,a.string_slice(gA,gJ,gM))return gK end;fQ.methods.found=function(gX,gY,gZ)local g_,h0,h1,h2,h3,h4,h5,h6,h7::h8::h5=fL()h6=fM(gX.endState__81,gX.epsilon__82)h7=1.0;while true do local h9;if not a.string_hasindex(gY,h7)then break end;h0=fN(h7,gX.startState__80,h5,fJ)h9=h0;while not a.int_eq(h9,h5)do local ha,hb,hc,hd,he;ha=h9.index;hb=h9.state;h1=h9.next;h9=h1;if hb.id==gX.endState__81.id then g_=ha;goto hf end;hc=hb.next;hd=a.listbuilder_length(hc)he=0.0;while he<hd do local hg,hh,hi;h2=a.listed_getor(hc,he,h6)hg=h2.matcher;hh=h2.toState;hi=hg:matches(gY,ha)if a.is_string_index(hi)then h3=fN(a.require_string_index(hi),hh,h9,fJ)h9=h3 end;he=he+1.0 end end;h4=a.string_next(gY,h7)h7=h4 end;g_=-1.0::hf::return g_ end;fQ.methods.find=function(eb,hj,hk)local hl,hm,hn,ho,hp,hq,hr,hs,ht,hu,hv,hw,hx,hy,hz,hA,hB,hC,hD,hE::hF::if a.is_null(hk)then hz=1.0 else hz=hk end;hA=a.mapbuilder_constructor()hB=a.mapbuilder_constructor()hC=fL()hD=fM(eb.endState__81,eb.epsilon__82)hE=hz;while true do local hG;if not a.string_hasindex(hj,hE)then break end;hm=fN(hE,eb.startState__80,hC,fJ)hG=hm;while not a.int_eq(hG,hC)do local hH,hI,hJ,hK,hL,hM;hH=hG.index;hI=hG.state;hJ=hG.groups;hn=hG.next;hG=hn;if hI.id==eb.endState__81.id then hl=fS(hj,hE,hH,hA,hJ)goto hN end;hK=hI.next;hL=a.listbuilder_length(hK)hM=0.0;while hM<hL do local hO,hP,hQ;ho=a.listed_getor(hK,hM,hD)hO=ho.matcher;hP=ho.toState;hQ=hO:matches(hj,hH)if a.is_string_index(hQ)then local hR,hS,hT,hU;hy=a.require_string_index(hQ)if a.instance_of(hO,D)then a.mapbuilder_set(hB,a.cast_to(hO,D).name,hH)hp=fN(hH,hP,hG,hJ)hG=hp elseif a.instance_of(hO,E)then hx=a.cast_to(hO,E)hq=hx.name;hR,hS,hT=a.pcall(function()hv=a.mapped_get(hB,hx.name)hw=hv end)if hR then else hr=a.bubble()hw=hr end;a.mapbuilder_set(hA,hq,a.pair_constructor(hw,hH))hU=a.listbuilder_constructor()a.listbuilder_add(hU,hx.name)a.listbuilder_addall(hU,hJ)hs=fN(hH,hP,hG,hU)hG=hs else ht=fN(hy,hP,hG,hJ)hG=ht end end;hM=hM+1.0 end end;hu=a.string_next(hj,hE)hE=hu end;hl=y()::hN::return hl end;fQ.constructor=function(eJ)local hV,hW,hX,hY;hV=a.listbuilder_constructor()eJ.states__79=hV;hW=fQ.newStateIn(eJ.states__79)eJ.startState__80=hW;hX=fQ.newStateIn(eJ.states__79)eJ.endState__81=hX;hY=C()eJ.epsilon__82=hY;return nil end;fQ.get.states=function(hZ)return hZ.states__79 end;fQ.get.startState=function(h_)return h_.startState__80 end;fQ.get.endState=function(i0)return i0.endState__81 end;fQ.get.epsilon=function(i1)return i1.epsilon__82 end;fR=function(i2,i3,i4,i5,i6)return fO(i3,i4,i5,i6)end;fS=function(i7,i8,i9,ia,ib)local ic,id,ie,ig,ih,ii,ij,ik,il,im,io,ip,iq,ir;im=a.mapbuilder_constructor()io=a.mapped_keys(ia)ip=0.0;while true do local is,it,iu,iv,iw,ix,iy;ic=a.listed_length(io)if not(ip<ic)then break end;is=a.listed_get(io,ip)it,iu,iv=a.pcall(function()ik=a.mapped_get(ia,is)il=ik end)if it then else id=a.bubble()il=id end;iw=il;ie=iw.key;ig=iw.value;ix=a.string_slice(i7,ie,ig)iy=0.0;while true do ih=a.listed_length(ib)if not(iy<ih)then break end;if a.str_eq(is,a.listed_getor(ib,iy,''))then ii=iw.key;ij=iw.value;a.mapbuilder_set(im,is,fR(i7,is,ix,ii,ij))end;iy=iy+1.0 end;ip=ip+1.0 end;iq=a.string_slice(i7,i8,i9)ir=fR(i7,'full',iq,i8,i9)return fP(ir,a.mapped_tomap(im))end;j={}j.Engine=fQ;return j end;package.preload['temper-regex-engine/nfa/matcher']=function()local a=require('temper-core')local i,e,f,g,h,x,y,z,iz,G,H,F,A,B,D,E,C,iA,w,v,j;i=a.import('temper-regex-engine/ctype','isWordChar')e=a.import('temper-regex-engine/ctype','wordChars')f=a.import('temper-regex-engine/ctype','spaceChars')g=a.import('temper-regex-engine/ctype','wordCharsList')h=a.import('temper-regex-engine/ctype','spaceCharsList')x=a.import('temper-regex-engine/util','regexToString')y=a.import('temper-regex-engine/util','bogusMatch')z=a.import('temper-regex-engine/util','chr')iz=a.type('Matcher')iz.methods.matches=function(eg,iB,iC)a.virtual()end;iz.methods.toString=function(eJ)a.virtual()end;G=a.type('BeginMatcher',iz)G.methods.matches=function(eO,iD,iE)local iF;if a.stringindexoption_compareto(iE,1.0)==0.0 then iF=iE else iF=-1.0 end;return iF end;G.methods.toString=function(e_)return'^'end;G.constructor=function(iG)return nil end;H=a.type('EndMatcher',iz)H.methods.matches=function(fp,iH,iI)local iJ,iK;iK=a.string_end(iH)if a.stringindexoption_compareto(iI,iK)==0.0 then iJ=iI else iJ=-1.0 end;return iJ end;H.methods.toString=function(fx)return'$'end;H.constructor=function(X)return nil end;F=a.type('WordBoundaryMatcher',iz)F.methods.matches=function(iL,iM,iN)local iO,iP,iQ,iR,iS,iT,iU,iV,iW;if a.stringindexoption_compareto_gt(iN,1.0)then iP=a.string_prev(iM,iN)iQ=a.string_get(iM,iP)iR=i(iQ)iU=iR else iU=false end;iW=a.string_end(iM)if a.stringindexoption_compareto_lt(iN,iW)then iS=a.string_get(iM,iN)iT=i(iS)iV=iT else iV=false end;if not a.int_eq(iU,iV)then iO=iN else iO=-1.0 end;return iO end;F.methods.toString=function(iX)return'\\b'end;F.constructor=function(aT)return nil end;A=a.type('SingleMatcher',iz)A.methods.matches=function(iY,iZ,i_)local j0,j1,j2,j3,j4;j4=a.string_end(iZ)if a.stringindexoption_compareto_lt(i_,j4)then j2=iY.char__110;j1=a.string_get(iZ,i_)j3=j2==j1 else j3=false end;if j3 then j0=a.string_next(iZ,i_)else j0=-1.0 end;return j0 end;A.methods.toString=function(j5)return z(j5.char__110)end;A.constructor=function(by,j6)by.char__110=j6;return nil end;A.get.char=function(j7)return j7.char__110 end;B=a.type('ContainsMatcher',iz)B.methods.matches=function(j8,j9,ja)local jb,jc,jd,je,jf;jf=a.string_end(j9)if a.stringindexoption_compareto_lt(ja,jf)then jc=a.string_get(j9,ja)jd=a.densebitvector_get(j8.bitset__119,jc)je=a.int_eq(jd,j8.want__121)else je=false end;if je then jb=a.string_next(j9,ja)else jb=-1.0 end;return jb end;B.methods.toString=function(jg)local jh,ji;ji=a.listed_join(jg.options__120,'',z)if not jg.want__121 then jh=a.concat('[^',ji,']')else jh=a.concat('[',ji,']')end;return jh end;B.constructor=function(jj,jk,jl,jm)jj.bitset__119=jk;jj.options__120=jl;jj.want__121=jm;return nil end;B.get.bitset=function(jn)return jn.bitset__119 end;B.get.options=function(jo)return jo.options__120 end;B.get.want=function(jp)return jp.want__121 end;D=a.type('StartGroupMatcher',iz)D.methods.matches=function(jq,jr,js)return js end;D.methods.toString=function(jt)return a.concat('<',jt.name__133,'>')end;D.constructor=function(ju,jv)ju.name__133=jv;return nil end;D.get.name=function(jw)return jw.name__133 end;E=a.type('EndGroupMatcher',iz)E.methods.matches=function(jx,jy,jz)return jz end;E.methods.toString=function(jA)return a.concat('</',jA.name__142,'>')end;E.constructor=function(jB,jC)jB.name__142=jC;return nil end;E.get.name=function(jD)return jD.name__142 end;C=a.type('EpsilonMatcher',iz)C.methods.matches=function(jE,jF,jG)return jG end;C.methods.toString=function(jH)return'\xce\xb5'end;C.constructor=function(jI)return nil end;iA=a.listof()w=function(jJ,jK)local jL,jM,jN,jO,jP,jQ::jR::if a.listed_length(jJ)==1.0 then jO=jK else jO=false end;if jO then jM=a.listed_get(jJ,0.0)jL=A(jM)goto jS end;jP=a.densebitvector_constructor(0.0)jQ=0.0;while true do jN=a.listed_length(jJ)if not(jQ<jN)then break end;a.densebitvector_set(jP,a.listed_get(jJ,jQ),true)jQ=jQ+1.0 end;jL=B(jP,jJ,jK)::jS::return jL end;v=function(jT)return w(a.listof(jT),true)end;j={}j.Matcher=iz;j.BeginMatcher=G;j.EndMatcher=H;j.WordBoundaryMatcher=F;j.SingleMatcher=A;j.ContainsMatcher=B;j.StartGroupMatcher=D;j.EndGroupMatcher=E;j.EpsilonMatcher=C;j.fromChars=w;j.charCodeMatcher=v;return j end;package.preload['temper-regex-engine/nfa/nfa']=function()local a=require('temper-core')local fz,fA,fB,fC,fD,fE,fF,fG,fH,fI,v,w,x,y,z,i,e,f,g,h,iz,jU,fQ,M,eR,e5,jV,jW,jX,jY,jZ,j_,k0,H,F,G,k1,D,E,k2,k3,k4,k5,k6,k7,j;fz=a.import('std/regex','entire')fA=a.import('std/regex','oneOrMore')fB=a.import('std/regex','optional')fC=a.import('std/regex','Begin')fD=a.import('std/regex','Dot')fE=a.import('std/regex','End')fF=a.import('std/regex','WordBoundary')fG=a.import('std/regex','Digit')fH=a.import('std/regex','Space')fI=a.import('std/regex','Word')v=a.import('temper-regex-engine/nfa/matcher','charCodeMatcher')w=a.import('temper-regex-engine/nfa/matcher','fromChars')x=a.import('temper-regex-engine/util','regexToString')y=a.import('temper-regex-engine/util','bogusMatch')z=a.import('temper-regex-engine/util','chr')i=a.import('temper-regex-engine/ctype','isWordChar')e=a.import('temper-regex-engine/ctype','wordChars')f=a.import('temper-regex-engine/ctype','spaceChars')g=a.import('temper-regex-engine/ctype','wordCharsList')h=a.import('temper-regex-engine/ctype','spaceCharsList')iz=a.import('temper-regex-engine/nfa/matcher','Matcher')jU=a.import('temper-regex-engine/regex','TemperRegex')fQ=a.import('temper-regex-engine/nfa/engine','Engine')M=a.import('temper-regex-engine/dfa/dfa','DFA')eR=a.import('temper-regex-engine/dfa/lua','Lua')e5=a.import('temper-regex-engine/dfa/javascript','Javascript')jV=a.import('std/regex','CodePoints')jW=a.import('std/regex','CodeSet')jX=a.import('std/regex','CodeRange')jY=a.import('std/regex','Or')jZ=a.import('std/regex','Repeat')j_=a.import('std/regex','Sequence')k0=a.import('std/regex','Special')H=a.import('temper-regex-engine/nfa/matcher','EndMatcher')F=a.import('temper-regex-engine/nfa/matcher','WordBoundaryMatcher')G=a.import('temper-regex-engine/nfa/matcher','BeginMatcher')k1=a.import('std/regex','Capture')D=a.import('temper-regex-engine/nfa/matcher','StartGroupMatcher')E=a.import('temper-regex-engine/nfa/matcher','EndGroupMatcher')k2=a.type('DFAMatcher__24',iz)k2.methods.matches=function(jt,k8,k9)return jt.table__134:foundAt(k8,k9)end;k2.methods.toString=function(jx)local ka,kb,kc,kd,ke,kf;kd,ke,kf=a.pcall(function()kb=x(jx.source__135)kc=kb end)if kd then else ka=a.bubble()kc=ka end;return a.concat('/',kc,'/')end;k2.constructor=function(a9,kg,kh)a9.table__134=kg;a9.source__135=kh;return nil end;k2.get.table=function(ki)return ki.table__134 end;k2.get.source=function(kj)return kj.source__135 end;k3=a.type('EvalMatcher__27',iz)k3.methods.matches=function(jE,hj,kk)return jE.matcher__145(hj,kk)end;k3.methods.toString=function(jH)local kl,km,kn,ko,kp,kq;ko,kp,kq=a.pcall(function()km=x(jH.source__146)kn=km end)if ko then else kl=a.bubble()kn=kl end;return a.concat('/',kn,'/')end;k3.constructor=function(b0,kr,ks)b0.matcher__145=kr;b0.source__146=ks;return nil end;k3.get.matcher=function(kt)return kt.matcher__145 end;k3.get.source=function(ku)return ku.source__146 end;k4=a.type('TemperRegexNFA',jU)k4.fromRegex=function(kv,kw)local kx,ky,kz,kA,kB;if a.is_null(kw)then kx=k5 else kx=kw end;ky=k4(fQ(),k6,kx)kz=ky.engine.startState;kA=ky.engine.endState;ky:buildRegex(kv,kz,kA)kB=function(kC)return ky.engine:found(kC,1.0)end;ky['runFound']=kB;return ky end;k4.fromRegexDFA=function(kD)local jh,kE,kF,kG,kH,kI,kJ,kK;kI=M.fromEngine(k4.fromRegex(kD).engine)kJ=function(kL)local S,kM,kN,kO,kP,kQ,kR;kQ=k4.fromRegex(kL)kR=M.fromEngine(kQ.engine)if not a.is_null(kR)then kM=a.instance_of(kR,M)else kM=false end;if kM then if a.is_null(kR)then kN=a.bubble()kP=kN else kP=kR end;kO=kP.table;S=k2(kO,kL)else S=a.null end;return S end;kK=k4.fromRegex(kD,kJ)if not a.is_null(kI)then kE=a.instance_of(kI,M)else kE=false end;if kE then local kS,kT;if a.is_null(kI)then kF=a.bubble()kH=kF else kH=kI end;kS=kH.table;kT=function(kU)return kS:foundAfter(kU,1.0)end;kG=kT;kK['runFound']=kG;jh=kK else jh=kK end;return jh end;k4.fromRegexLua=function(kV,kW)local kX,kY,kZ,k_,l0,l1,l2,l3;l1=M.fromEngine(k4.fromRegex(kV).engine)l2=function(l4)local l5,l6,l7,l8,l9,la,lb;la=k4.fromRegex(l4)lb=M.fromEngine(la.engine)if not a.is_null(lb)then l6=a.instance_of(lb,M)else l6=false end;if l6 then local lc;if a.is_null(lb)then l7=a.bubble()l9=l7 else l9=lb end;lc=eR.fromTable(l9.table)l8=kW(lc)l5=k3(l8,l4)else l5=a.null end;return l5 end;l3=k4.fromRegex(kV,l2)if not a.is_null(l1)then kY=a.instance_of(l1,M)else kY=false end;if kY then local ld;if a.is_null(l1)then kZ=a.bubble()l0=kZ else l0=l1 end;ld=eR.fromTable(l0.table)k_=kW(ld)l3['runFound']=k7(k_)kX=l3 else kX=l3 end;return kX end;k4.fromRegexJavascript=function(le,lf)local lg,lh,li,lj,lk,ll,lm,ln;ll=M.fromEngine(k4.fromRegex(le).engine)lm=function(lo)local lp,lq,lr,ls,lt,lu,lv;lu=k4.fromRegex(lo)lv=M.fromEngine(lu.engine)if not a.is_null(lv)then lq=a.instance_of(lv,M)else lq=false end;if lq then local lw;if a.is_null(lv)then lr=a.bubble()lt=lr else lt=lv end;lw=e5.fromTable(lt.table)ls=lf(lw)lp=k3(ls,lo)else lp=a.null end;return lp end;ln=k4.fromRegex(le,lm)if not a.is_null(ll)then lh=a.instance_of(ll,M)else lh=false end;if lh then local lx;if a.is_null(ll)then li=a.bubble()lk=li else lk=ll end;lx=e5.fromTable(lk.table)lj=lf(lx)ln['runFound']=k7(lj)lg=ln else lg=ln end;return lg end;k4.methods.buildRegex=function(ly,lz,lA,lB)local lC,lD,lE,lF,lG,lH,lI,lJ,lK,lL,lM,lN,lO,lP,lQ,lR,lS,lT,lU,lV,lW,lX,lY,lZ,l_,m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,ma,mb,mc,md,me,mf,mg,mh,mi,mj,mk,ml,mm,mn,mo,mp,mq,mr,ms,mt,mu,mv,mw,mx,my,mz,mA,mB,mC,mD,mE,mF,mG,mH,mI,mJ,mK::mL::mB=ly.subRegex__158(lz)if not a.is_null(mB)then lD=a.instance_of(mB,iz)else lD=false end;if lD then if a.is_null(mB)then lE=a.bubble()mm=lE else mm=mB end;lA:addNext(mm,lB)lC=nil;goto mM end;if a.instance_of(lz,k1)then local mN,mO;mu=a.cast_to(lz,k1)mN=ly.engine__156:newState()mO=ly.engine__156:newState()lF=D(mu.name)lA:addNext(lF,mN)lG=mu.item;ly:buildRegex(lG,mN,mO)mO:addNext(E(mu.name),lB)elseif a.instance_of(lz,jV)then mv=a.cast_to(lz,jV)mC=lA;mD=1.0;while true do local mP,mQ;if not a.string_hasindex(mv.value,mD)then break end;mP=a.string_get(mv.value,mD)lH=a.string_next(mv.value,mD)mD=lH;if a.string_hasindex(mv.value,mD)then lI=ly.engine__156:newState()mn=lI else mn=lB end;mQ=mn;lJ=v(mP)mC:addNext(lJ,mQ)mC=mQ end elseif a.instance_of(lz,jW)then mw=a.cast_to(lz,jW)mE=a.listbuilder_constructor()mF=0.0;while true do local mR,mS,mT;lK=a.list_length(mw.items)if not(mF<lK)then break end;mR=a.list_get(mw.items,mF)if a.instance_of(mR,jX)then local mU;mo=a.cast_to(mR,jX)lL=mo.min;mU=lL;while true do lM=mo.max;if not(mU<=lM)then break end;a.listbuilder_add(mE,mU)mU=mU+1.0 end elseif a.instance_of(mR,jV)then mp=a.cast_to(mR,jV)mS=a.string_split(mp.value,'')mT=0.0;while true do lN=a.list_length(mS)if not(mT<lN)then break end;a.listbuilder_add(mE,a.string_get(a.list_get(mS,mT),1.0))mT=mT+1.0 end end;mF=mF+1.0 end;lO=mw.negated;lP=w(mE,not lO)lA:addNext(lP,lB)elseif a.instance_of(lz,jY)then mx=a.cast_to(lz,jY)mG=0.0;while true do lQ=a.list_length(mx.items)if not(mG<lQ)then break end;lR=a.list_get(mx.items,mG)ly:buildRegex(lR,lA,lB)mG=mG+1.0 end elseif a.instance_of(lz,jZ)then my=a.cast_to(lz,jZ)mH=lA;mI=0.0;while true do local mV;lS=my.min;if not(mI<lS)then break end;mV=ly.engine__156:newState()lT=my.item;ly:buildRegex(lT,mH,mV)mH=mV;mI=mI+1.0 end;if not a.is_null(my.max)then local mW,mX,mY,mZ,m_;mX,mY,mZ=a.pcall(function()lU=my.max;if a.is_null(lU)then a.bubble()else mq=lU end;mW=mq end)if mX then else lV=a.bubble()mW=lV end;lW=my.min;m_=lW;while m_<mW do local n0;n0=ly.engine__156:newState()if not my.reluctant then lX=ly.engine__156.epsilon;mH:addNext(lX,lB)lY=my.item;ly:buildRegex(lY,mH,n0)else lZ=my.item;ly:buildRegex(lZ,mH,n0)l_=ly.engine__156.epsilon;mH:addNext(l_,lB)end;mH=n0;m_=m_+1.0 end;m0=ly.engine__156.epsilon;mH:addNext(m0,lB)elseif not my.reluctant then m1=ly.engine__156.epsilon;mH:addNext(m1,lB)m2=my.item;ly:buildRegex(m2,mH,mH)else m3=my.item;ly:buildRegex(m3,mH,mH)m4=ly.engine__156.epsilon;mH:addNext(m4,lB)end elseif a.instance_of(lz,j_)then mz=a.cast_to(lz,j_)m5=a.list_length(mz.items)if m5==0.0 then m6=ly.engine__156.epsilon;lA:addNext(m6,lB)elseif m5==1.0 then m7=a.list_get(mz.items,0.0)ly:buildRegex(m7,lA,lB)else local n1,n2,n3;n1=a.listbuilder_constructor()m8=a.listbuilder_constructor()n2=m8;n3=function(n4)local n5,n6,n7,n8,n9,na,nb;nb=0.0;while true do local nc;n5=a.listed_length(n4)if not(nb<n5)then break end;nc=a.listed_get(n4,nb)if a.int_eq(nc,fC)then na=true else if a.int_eq(nc,fE)then n9=true else if a.int_eq(nc,fF)then n8=true else n8=a.int_eq(nc,fD)end;n9=n8 end;na=n9 end;if na then if a.listbuilder_length(n2)~=0.0 then a.listbuilder_add(n1,n2)end;n6=a.listbuilder_constructor()n2=n6;a.listbuilder_add(n2,nc)elseif a.instance_of(nc,j_)then n7=a.cast_to(nc,j_).items;n3(n7)else a.listbuilder_add(n2,nc)end;nb=nb+1.0 end;return nil end;n3(mz.items)if a.listbuilder_length(n2)~=0.0 then a.listbuilder_add(n1,n2)end;if a.listbuilder_length(n1)==0.0 then m9=ly.engine__156.epsilon;lA:addNext(m9,lB)else local nd,ne;nd=lA;ne=0.0;while true do local nf,ng;ma=a.listbuilder_length(n1)if not(ne<ma)then break end;nf=a.listed_get(n1,ne)ng=0.0;while true do local nh;mb=a.listed_length(nf)if not(ng<mb)then break end;if ng+1.0~=a.listed_length(nf)then ms=true else mr=ne+1.0;mc=a.listbuilder_length(n1)ms=mr~=mc end;if ms then md=ly.engine__156:newState()mt=md else mt=lB end;nh=mt;me=a.listed_get(nf,ng)ly:buildRegex(me,nd,nh)nd=nh;ng=ng+1.0 end;ne=ne+1.0 end end end elseif a.instance_of(lz,k0)then mA=a.cast_to(lz,k0)if a.int_eq(mA,fC)then mf=G()lA:addNext(mf,lB)elseif a.int_eq(mA,fD)then mg=w(a.listof(0.0),false)lA:addNext(mg,lB)elseif a.int_eq(mA,fE)then mh=H()lA:addNext(mh,lB)elseif a.int_eq(mA,fF)then mi=F()lA:addNext(mi,lB)elseif a.int_eq(mA,fG)then mJ=a.listbuilder_constructor()mK=48.0;while mK<=57.0 do a.listbuilder_add(mJ,mK)mK=mK+1.0 end;mj=w(mJ,true)lA:addNext(mj,lB)elseif a.int_eq(mA,fH)then mk=w(h,true)lA:addNext(mk,lB)elseif a.int_eq(mA,fI)then ml=w(g,true)lA:addNext(ml,lB)else a.bubble()end end;lC=nil::mM::return lC end;k4.methods.replace=function(ni,nj,nk)return ni.engine__156:replace(nj,nk)end;k4.methods.split=function(nl,nm)return nl.engine__156:split(nm)end;k4.methods.found=function(iG,nn)return a.stringindexoption_compareto_ne(iG.runFound__157(nn),-1.0)end;k4.methods.find=function(no,np,nq)local nr;if a.is_null(nq)then nr=1.0 else nr=nq end;return no.engine__156:find(np,nr)end;k4.constructor=function(bG,ns,nt,nu)bG.engine__156=ns;bG.runFound__157=nt;bG.subRegex__158=nu;return nil end;k4.get.engine=function(nv)return nv.engine__156 end;k4.set.engine=function(nw,nx)nw.engine__156=nx;return nil end;k4.get.runFound=function(ny)return ny.runFound__157 end;k4.set.runFound=function(nz,nA)nz.runFound__157=nA;return nil end;k4.get.subRegex=function(nB)return nB.subRegex__158 end;k4.set.subRegex=function(ao,nC)ao.subRegex__158=nC;return nil end;k5=function(nD)return a.null end;k6=function(nE)return-1.0 end;k7=function(nF)local nG;nG=function(nH)local nI,nJ,nK,nL::nM::nK=1.0;nL=a.string_end(nH)while a.stringindexoption_compareto_ne(nK,nL)do local nN;nN=nF(nH,nK)if a.stringindexoption_compareto_ne(nN,-1.0)then nI=nN;goto nO end;nJ=a.string_next(nH,nK)nK=nJ end;nI=-1.0::nO::return nI end;return nG end;j={}j.TemperRegexNFA=k4;return j end;package.preload['temper-regex-engine/nfa/stack']=function()local a=require('temper-core')local fK,nP,fL,fN,fJ,j;fK=a.import('temper-regex-engine/nfa/state','State')nP=a.type('Stack')nP.get.index=function(nQ)end;nP.get.state=function(nR)end;nP.get.groups=function(nS)end;nP.get.next=function(nT)a.virtual()end;fL=a.type('StackStart',nP)fL.get.next=function(nU)return nU end;fL.constructor=function(fV,nV,nW,nX)local nY,nZ,n_,o0;if a.is_null(nV)then nZ=1.0 else nZ=nV end;if a.is_null(nW)then nY=fK(0.0)n_=nY else n_=nW end;if a.is_null(nX)then o0=a.listof()else o0=nX end;fV.index__22=nZ;fV.state__23=n_;fV.groups__24=o0;return nil end;fL.get.index=function(jj)return jj.index__22 end;fL.get.state=function(ah)return ah.state__23 end;fL.get.groups=function(o1)return o1.groups__24 end;fN=a.type('StackSlot',nP)fN.get.next=function(o2)return o2.slot__33 end;fN.constructor=function(ed,o3,o4,o5,o6)ed.index__31=o3;ed.state__32=o4;ed.slot__33=o5;ed.groups__34=o6;return nil end;fN.get.index=function(jB)return jB.index__31 end;fN.get.state=function(o7)return o7.state__32 end;fN.get.slot=function(o8)return o8.slot__33 end;fN.get.groups=function(c2)return c2.groups__34 end;fJ=a.listof()j={}j.Stack=nP;j.StackStart=fL;j.StackSlot=fN;j.noGroups=fJ;return j end;package.preload['temper-regex-engine/nfa/state']=function()local a=require('temper-core')local v,w,fM,fK,j;v=a.import('temper-regex-engine/nfa/matcher','charCodeMatcher')w=a.import('temper-regex-engine/nfa/matcher','fromChars')fM=a.type('Next')fM.constructor=function(o9,oa,ob)o9.toState__23=oa;o9.matcher__24=ob;return nil end;fM.get.toState=function(oc)return oc.toState__23 end;fM.get.matcher=function(jI)return jI.matcher__24 end;fK=a.type('State')fK.get.next=function(nU)return nU.nextVar__31 end;fK.methods.addNext=function(o2,od,oe)a.listbuilder_add(o2.next,fM(oe,od))return nil end;fK.methods.addNextFirst=function(of,og,oh)local oi,oj,ok,ol;oj=of.next;ok=a.listbuilder_constructor()of.nextVar__31=ok;a.listbuilder_add(of.next,fM(oh,og))ol=0.0;while true do oi=a.listbuilder_length(oj)if not(ol<oi)then break end;a.listbuilder_add(of.next,a.listed_get(oj,ol))ol=ol+1.0 end;return nil end;fK.constructor=function(fW,om)local on;fW.id__28=om;on=a.listbuilder_constructor()fW.nextVar__31=on;return nil end;fK.get.id=function(jj)return jj.id__28 end;fK.get.nextVar=function(ah)return ah.nextVar__31 end;fK.set.nextVar=function(eQ,oo)eQ.nextVar__31=oo;return nil end;j={}j.Next=fM;j.State=fK;return j end;package.preload['temper-regex-engine/regex']=function()local a=require('temper-core')local fz,fA,fB,fC,fD,fE,fF,fG,fH,fI,jU,j;fz=a.import('std/regex','entire')fA=a.import('std/regex','oneOrMore')fB=a.import('std/regex','optional')fC=a.import('std/regex','Begin')fD=a.import('std/regex','Dot')fE=a.import('std/regex','End')fF=a.import('std/regex','WordBoundary')fG=a.import('std/regex','Digit')fH=a.import('std/regex','Space')fI=a.import('std/regex','Word')jU=a.type('TemperRegex')jU.methods.replace=function(nT,op,oq)a.virtual()end;jU.methods.split=function(nU,os)a.virtual()end;jU.methods.found=function(o2,ot)a.virtual()end;jU.methods.find=function(of,ou,ov)local ow,ox;if a.is_null(ov)then ox=1.0 else ox=ov end;a.virtual()return ow end;j={}j.TemperRegex=jU;return j end;package.preload['temper-regex-engine/util']=function()local a=require('temper-core')local fz,fA,fB,fC,fD,fE,fF,fG,fH,fI,jV,jW,jX,jY,jZ,j_,k0,k1,fP,fO,x,y,z,j;fz=a.import('std/regex','entire')fA=a.import('std/regex','oneOrMore')fB=a.import('std/regex','optional')fC=a.import('std/regex','Begin')fD=a.import('std/regex','Dot')fE=a.import('std/regex','End')fF=a.import('std/regex','WordBoundary')fG=a.import('std/regex','Digit')fH=a.import('std/regex','Space')fI=a.import('std/regex','Word')jV=a.import('std/regex','CodePoints')jW=a.import('std/regex','CodeSet')jX=a.import('std/regex','CodeRange')jY=a.import('std/regex','Or')jZ=a.import('std/regex','Repeat')j_=a.import('std/regex','Sequence')k0=a.import('std/regex','Special')k1=a.import('std/regex','Capture')fP=a.import('std/regex','Match')fO=a.import('std/regex','Group')x=function(oy)local oz,oA,oB,oC,oD,oE,oF,oG,oH,oI,oJ,oK,oL,oM,oN,oO,oP,oQ,oR,oS,oT,oU,oV,oW,oX,oY,oZ,o_,p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,pa,pb,pc,pd,pe,pf,pg,ph,pi,pj,pk;if a.instance_of(oy,k1)then p0=a.cast_to(oy,k1)oA=p0.name;oR=x(p0.item)oz=a.concat('(?',oA,'=',oR,')')elseif a.instance_of(oy,jV)then p1=a.cast_to(oy,jV)oz=p1.value elseif a.instance_of(oy,jW)then p2=a.cast_to(oy,jW)p7=a.listbuilder_constructor()p8=0.0;while true do local pl;oB=a.list_length(p2.items)if not(p8<oB)then break end;pl=a.list_get(p2.items,p8)if a.instance_of(pl,jX)then oU=a.cast_to(pl,jX)oS=a.string_fromcodepoint(oU.min)oT=a.string_fromcodepoint(oU.max)a.listbuilder_add(p7,a.concat(oS,'-',oT))elseif a.instance_of(pl,jV)then a.listbuilder_add(p7,a.cast_to(pl,jV).value)end;p8=p8+1.0 end;if p2.negated then p9='^'else p9=''end;pa=function(pm)return pm end;oC=a.listed_join(p7,'',pa)oz=a.concat('[',p9,oC,']')elseif a.instance_of(oy,jY)then p3=a.cast_to(oy,jY)pb=a.mapbuilder_constructor()pc=function(pn)local po,pp,pq,pr;if a.instance_of(pn,jY)then local ps;pr=a.cast_to(pn,jY)ps=0.0;while true do po=a.list_length(pr.items)if not(ps<po)then break end;pp=a.list_get(pr.items,ps)pc(pp)ps=ps+1.0 end else pq=x(pn)a.mapbuilder_set(pb,pq,true)end;return nil end;pd=0.0;while true do oD=a.list_length(p3.items)if not(pd<oD)then break end;pc(a.list_get(p3.items,pd))pd=pd+1.0 end;oE=a.mapped_tolist(pb)pe=function(pt)return pt.key end;pf=a.listed_join(oE,'|',pe)oz=a.concat('(',pf,')')elseif a.instance_of(oy,jZ)then p4=a.cast_to(oy,jZ)if p4.min==0.0 then oF=p4.max;oV=oF==1.0 else oV=false end;if oV then pg='?'else if p4.min==0.0 then oG=p4.max;oW=a.is_null(oG)else oW=false end;if oW then pg='*'else if p4.min==1.0 then oH=p4.max;oX=a.is_null(oH)else oX=false end;if oX then pg='+'elseif p4.min==p4.max then oI=a.int32_tostring(p4.min)pg=a.concat('{',oI,'}')elseif a.is_null(p4.max)then oJ=a.int32_tostring(p4.min)pg=a.concat('{',oJ,',}')else oK=a.int32_tostring(p4.min)oL=p4.max;if a.is_null(oL)then a.bubble()else oY=oL end;oM=a.int32_tostring(oY)pg=a.concat('{',oK,',',oM,'}')end end end;if p4.reluctant then ph='?'else ph=''end;pi=x(p4.item)pj='%'oN=p4.item;if a.instance_of(oN,jW)then pj=pi elseif a.instance_of(oN,jV)then pk=a.cast_to(p4.item,jV)if a.string_hasindex(pk.value,1.0)then oO=a.string_hasindex(pk.value,a.string_next(pk.value,1.0))oZ=not oO else oZ=false end;if oZ then pj=pi else pj=a.concat(pi)end else pj=a.concat('(',pi,')')end;oz=a.concat(pj,pg,ph)elseif a.instance_of(oy,j_)then p5=a.cast_to(oy,j_)if a.list_length(p5.items)==0.0 then oz=''elseif a.list_length(p5.items)==1.0 then oP=a.list_get(p5.items,0.0)oz=x(oP)else local pu,pv,pw,px;pu=a.listbuilder_constructor()pv=0.0;while true do oQ=a.list_length(p5.items)if not(pv<oQ)then break end;o_=x(a.list_get(p5.items,pv))a.listbuilder_add(pu,o_)pv=pv+1.0 end;pw=function(py)return py end;px=a.listed_join(pu,'',pw)oz=a.concat('(',px,')')end elseif a.instance_of(oy,k0)then p6=a.cast_to(oy,k0)if a.int_eq(p6,fC)then oz='^'elseif a.int_eq(p6,fD)then oz='.'elseif a.int_eq(p6,fE)then oz='$'elseif a.int_eq(p6,fF)then oz='\\b'elseif a.int_eq(p6,fG)then oz='\\d'elseif a.int_eq(p6,fH)then oz='\\s'elseif a.int_eq(p6,fI)then oz='\\w'else a.bubble()end else a.bubble()end;return oz end;y=function()local pz;pz=1.0;return fP(fO('','',pz,pz),a.map_constructor(a.listof()))end;z=function(pA)local pB,pC,pD,pE,pF;pD,pE,pF=a.pcall(function()pC=a.string_fromcodepoint(pA)pB=pC end)if pD then else pB=a.bubble()end;return pB end;j={}j.regexToString=x;j.bogusMatch=y;j.chr=z;return j end
+package.preload['temper-regex-engine/ctype'] = function()
+  local temper = require('temper-core');
+  local wordCharsCalc, spaceCharsCalc, digitCharsCalc, bitsToList, wordChars, spaceChars, wordCharsList, spaceCharsList, digitCharsList, isWordChar, exports;
+  wordCharsCalc = function()
+    local bitset__16, i__17, i__18, i__19;
+    bitset__16 = temper.densebitvector_constructor(0);
+    i__17 = 48;
+    while (i__17 <= 57) do
+      temper.densebitvector_set(bitset__16, i__17, true);
+      i__17 = temper.int32_add(i__17, 1);
+    end
+    i__18 = 65;
+    while (i__18 <= 90) do
+      temper.densebitvector_set(bitset__16, i__18, true);
+      i__18 = temper.int32_add(i__18, 1);
+    end
+    i__19 = 97;
+    while (i__19 <= 122) do
+      temper.densebitvector_set(bitset__16, i__19, true);
+      i__19 = temper.int32_add(i__19, 1);
+    end
+    temper.densebitvector_set(bitset__16, 95, true);
+    return bitset__16;
+  end;
+  spaceCharsCalc = function()
+    local bitset__21;
+    bitset__21 = temper.densebitvector_constructor(0);
+    temper.densebitvector_set(bitset__21, 32, true);
+    temper.densebitvector_set(bitset__21, 13, true);
+    temper.densebitvector_set(bitset__21, 10, true);
+    temper.densebitvector_set(bitset__21, 9, true);
+    temper.densebitvector_set(bitset__21, 11, true);
+    temper.densebitvector_set(bitset__21, 12, true);
+    return bitset__21;
+  end;
+  digitCharsCalc = function()
+    local bitset__23, i__24;
+    bitset__23 = temper.densebitvector_constructor(0);
+    i__24 = 48;
+    while (i__24 <= 57) do
+      temper.densebitvector_set(bitset__23, i__24, true);
+      i__24 = temper.int32_add(i__24, 1);
+    end
+    return bitset__23;
+  end;
+  bitsToList = function(bitset__25, max__26)
+    local ls__28, i__29;
+    ls__28 = temper.listbuilder_constructor();
+    i__29 = 0;
+    while (i__29 < max__26) do
+      if temper.densebitvector_get(bitset__25, i__29) then
+        temper.listbuilder_add(ls__28, i__29);
+      end
+      i__29 = temper.int32_add(i__29, 1);
+    end
+    return ls__28;
+  end;
+  wordChars = wordCharsCalc();
+  spaceChars = spaceCharsCalc();
+  wordCharsList = bitsToList(wordChars, 128);
+  spaceCharsList = bitsToList(spaceChars, 128);
+  digitCharsList = bitsToList(digitCharsCalc(), 128);
+  isWordChar = function(c__30)
+    if temper.densebitvector_get(wordChars, c__30) then
+      return true;
+    else
+      return (c__30 >= 256);
+    end
+  end;
+  exports = {};
+  exports.wordChars = wordChars;
+  exports.spaceChars = spaceChars;
+  exports.wordCharsList = wordCharsList;
+  exports.spaceCharsList = spaceCharsList;
+  exports.digitCharsList = digitCharsList;
+  exports.isWordChar = isWordChar;
+  return exports;
+end
+package.preload['temper-regex-engine/dfa/dfa'] = function()
+  local temper = require('temper-core');
+  local charCodeMatcher, fromChars, regexToString, bogusMatch, chr, SingleMatcher, ContainsMatcher, BeginMatcher, WordBoundaryMatcher, EndMatcher, StartGroupMatcher, EpsilonMatcher, EndGroupMatcher, Target, Row, Table, Alphabet, DFA, noTarget, noTable, isEmptyEdge, epsilonClosure, exports;
+  charCodeMatcher = temper.import('temper-regex-engine/nfa/matcher', 'charCodeMatcher');
+  fromChars = temper.import('temper-regex-engine/nfa/matcher', 'fromChars');
+  regexToString = temper.import('temper-regex-engine/util', 'regexToString');
+  bogusMatch = temper.import('temper-regex-engine/util', 'bogusMatch');
+  chr = temper.import('temper-regex-engine/util', 'chr');
+  SingleMatcher = temper.import('temper-regex-engine/nfa/matcher', 'SingleMatcher');
+  ContainsMatcher = temper.import('temper-regex-engine/nfa/matcher', 'ContainsMatcher');
+  BeginMatcher = temper.import('temper-regex-engine/nfa/matcher', 'BeginMatcher');
+  WordBoundaryMatcher = temper.import('temper-regex-engine/nfa/matcher', 'WordBoundaryMatcher');
+  EndMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EndMatcher');
+  StartGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'StartGroupMatcher');
+  EpsilonMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EpsilonMatcher');
+  EndGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EndGroupMatcher');
+  Target = temper.type('Target');
+  Target.methods.eq = function(this__35, other__129)
+    local return__63, i__131;
+    ::continue_3::
+    if not (temper.listed_length(other__129.name) == temper.listed_length(this__35.name__126)) then
+      return__63 = false;
+      goto break_2;
+    end
+    i__131 = 0;
+    while (i__131 < temper.listed_length(this__35.name__126)) do
+      if not (temper.listed_get(other__129.name, i__131) == temper.listed_get(this__35.name__126, i__131)) then
+        return__63 = false;
+        goto break_2;
+      end
+      i__131 = temper.int32_add(i__131, 1);
+    end
+    do
+      return true;
+    end
+    ::break_2::return return__63;
+  end;
+  Target.methods.toString = function(this__36)
+    local return__64, fn__428, body__134;
+    ::continue_9::
+    if (temper.listed_length(this__36.name__126) == 0) then
+      return__64 = '<error>';
+      goto break_8;
+    end
+    fn__428 = function(x__135)
+      return temper.concat('v', temper.int32_tostring(x__135));
+    end;
+    body__134 = temper.listed_join(this__36.name__126, ',', fn__428);
+    do
+      return temper.concat('{', body__134, '}');
+    end
+    ::break_8::return return__64;
+  end;
+  Target.methods.has = function(this__37, id__138)
+    local return__66, i__140;
+    ::continue_11::i__140 = 0;
+    while (i__140 < temper.listed_length(this__37.name__126)) do
+      if (temper.listed_get(this__37.name__126, i__140) == id__138) then
+        return__66 = true;
+        goto break_10;
+      end
+      i__140 = temper.int32_add(i__140, 1);
+    end
+    do
+      return false;
+    end
+    ::break_10::return return__66;
+  end;
+  Target.methods.and_ = function(this__38, other__142)
+    local r__144, j__145;
+    r__144 = temper.listbuilder_constructor();
+    j__145 = 0;
+    while (j__145 < temper.listed_length(this__38.name__126)) do
+      local exist__146;
+      exist__146 = temper.listed_get(this__38.name__126, j__145);
+      if not (exist__146 == other__142) then
+        temper.listbuilder_add(r__144, exist__146);
+      end
+      j__145 = temper.int32_add(j__145, 1);
+    end
+    temper.listbuilder_add(r__144, other__142);
+    return Target(r__144);
+  end;
+  Target.methods.ands = function(this__39, other__148)
+    local ret__150, i__151;
+    ret__150 = Target(this__39.name__126);
+    i__151 = 0;
+    while (i__151 < temper.listed_length(other__148.name)) do
+      ret__150 = ret__150:and_(temper.listed_get(other__148.name, i__151));
+      i__151 = temper.int32_add(i__151, 1);
+    end
+    return ret__150;
+  end;
+  Target.constructor = function(this__61, arg__153)
+    local fn__427, t_63;
+    fn__427 = function(x__154, y__155)
+      return temper.int32_sub(x__154, y__155);
+    end;
+    t_63 = temper.listed_sorted(arg__153, fn__427);
+    this__61.name__126 = t_63;
+    this__61.id__127 = -1;
+    return nil;
+  end;
+  Target.get.name = function(this__311)
+    return this__311.name__126;
+  end;
+  Target.get.id = function(this__314)
+    return this__314.id__127;
+  end;
+  Target.set.id = function(this__318, newId__317)
+    this__318.id__127 = newId__317;
+    return nil;
+  end;
+  Row = temper.type('Row');
+  Row.methods.toString = function(this__40)
+    local nameStr__164, fn__426, mapStr__165, elseStr__170;
+    nameStr__164 = this__40.name__157:toString();
+    fn__426 = function(key__166)
+      local t_64, keyStr__168, t_65, local_66, local_67, local_68, valueStr__169;
+      if (32 <= key__166) then
+        t_65 = (key__166 <= 126);
+      else
+        t_65 = false;
+      end
+      if t_65 then
+        keyStr__168 = temper.concat('#', chr(key__166));
+      else
+        keyStr__168 = temper.int32_tostring(key__166);
+      end
+      local_66, local_67, local_68 = temper.pcall(function()
+        t_64 = temper.mapped_get(this__40.map__160, key__166);
+      end);
+      if local_66 then
+      else
+        t_64 = temper.bubble();
+      end
+      valueStr__169 = t_64:toString();
+      return temper.concat('\n', '  ', keyStr__168, ' => ', valueStr__169);
+    end;
+    mapStr__165 = temper.listed_join(this__40.keys__159, '', fn__426);
+    elseStr__170 = temper.concat('\n', '  else => ', this__40.other__158:toString());
+    return temper.concat(nameStr__164, ':', mapStr__165, elseStr__170);
+  end;
+  Row.constructor = function(this__70, name__172, other__173, keys__174, map__175, ok__176)
+    this__70.name__157 = name__172;
+    this__70.other__158 = other__173;
+    this__70.keys__159 = keys__174;
+    this__70.map__160 = map__175;
+    this__70.ok__161 = ok__176;
+    return nil;
+  end;
+  Row.get.name = function(this__321)
+    return this__321.name__157;
+  end;
+  Row.get.other = function(this__324)
+    return this__324.other__158;
+  end;
+  Row.get.keys = function(this__327)
+    return this__327.keys__159;
+  end;
+  Row.get.map = function(this__330)
+    return this__330.map__160;
+  end;
+  Row.get.ok = function(this__333)
+    return this__333.ok__161;
+  end;
+  Table = temper.type('Table');
+  Table.get.targets = function(this__42)
+    return this__42.targetsVar__180;
+  end;
+  Table.methods.update = function(this__43, t__182)
+    local return__81, j__184;
+    ::continue_13::return__81 = nil;
+    if (temper.listed_length(t__182.name) == 0) then
+      t__182['id'] = -1;
+      goto break_12;
+    end
+    j__184 = 0;
+    while (j__184 < temper.listed_length(this__43.targets)) do
+      if temper.listed_get(this__43.targets, j__184):eq(t__182) then
+        t__182['id'] = j__184;
+        goto break_12;
+      end
+      j__184 = temper.int32_add(j__184, 1);
+    end
+    temper.bubble();
+    ::break_12::return return__81;
+  end;
+  Table.methods.finish = function(this__44)
+    local build__187, t_70, i__188, i__192;
+    build__187 = temper.listbuilder_constructor();
+    t_70 = build__187;
+    this__44.targetsVar__180 = t_70;
+    i__188 = 0;
+    while (i__188 < temper.listbuilder_length(this__44.rows__177)) do
+      local row__190, j__191, t_72;
+      ::continue_15::row__190 = temper.listed_get(this__44.rows__177, i__188);
+      j__191 = 0;
+      while (j__191 < temper.listbuilder_length(build__187)) do
+        if temper.listed_get(build__187, j__191):eq(row__190.name) then
+          local t_71;
+          t_71 = j__191;
+          (row__190.name)['id'] = t_71;
+          goto break_14;
+        end
+        j__191 = temper.int32_add(j__191, 1);
+      end
+      t_72 = i__188;
+      (row__190.name)['id'] = t_72;
+      temper.listbuilder_add(build__187, row__190.name);
+      ::break_14::i__188 = temper.int32_add(i__188, 1);
+    end
+    i__192 = 0;
+    while (i__192 < temper.listbuilder_length(this__44.rows__177)) do
+      local row__193, j__194;
+      row__193 = temper.listed_get(this__44.rows__177, i__192);
+      this__44:update(row__193.other);
+      j__194 = 0;
+      while (j__194 < temper.listed_length(row__193.keys)) do
+        local key__196, cur__197, local_73, local_74, local_75;
+        key__196 = temper.listed_get(row__193.keys, j__194);
+        local_73, local_74, local_75 = temper.pcall(function()
+          cur__197 = temper.mapped_get(row__193.map, key__196);
+        end);
+        if local_73 then
+        else
+          cur__197 = temper.bubble();
+        end
+        this__44:update(cur__197);
+        j__194 = temper.int32_add(j__194, 1);
+      end
+      i__192 = temper.int32_add(i__192, 1);
+    end
+    return nil;
+  end;
+  Table.methods.has = function(this__45, name__199)
+    local return__83, i__201;
+    ::continue_17::i__201 = 0;
+    while (i__201 < temper.listbuilder_length(this__45.rows__177)) do
+      if (temper.listed_get(this__45.rows__177, i__201)).name:eq(name__199) then
+        return__83 = true;
+        goto break_16;
+      end
+      i__201 = temper.int32_add(i__201, 1);
+    end
+    do
+      return false;
+    end
+    ::break_16::return return__83;
+  end;
+  Table.methods.add = function(this__46, row__203)
+    if not this__46:has(row__203.name) then
+      temper.listbuilder_add(this__46.rows__177, row__203);
+    end
+    return nil;
+  end;
+  Table.methods.addEmpty = function(this__47, name__206)
+    this__47:add(Row(name__206, noTarget, temper.listof(), temper.map_constructor(temper.listof()), false));
+    return nil;
+  end;
+  Table.methods.toString = function(this__48)
+    local fn__425;
+    fn__425 = function(s__210)
+      return s__210:toString();
+    end;
+    return temper.listed_join(this__48.rows__177, '\n', fn__425);
+  end;
+  Table.methods.scan = function(this__49, str__213, head__214)
+    local cur__216;
+    cur__216 = temper.listed_get(this__49.rows__177, 0);
+    while true do
+      local t_77;
+      if not cur__216.ok then
+        t_77 = temper.string_hasindex(str__213, head__214);
+      else
+        t_77 = false;
+      end
+      if not t_77 then
+        break;
+      end
+      cur__216 = temper.listed_get(this__49.rows__177, (temper.mapped_getor(cur__216.map, temper.string_get(str__213, head__214), cur__216.other)).id);
+      head__214 = temper.string_next(str__213, head__214);
+    end
+    if cur__216.ok then
+      return head__214;
+    else
+      return -1.0;
+    end
+  end;
+  Table.constructor = function(this__77, rows__218, targets__219)
+    this__77.rows__177 = rows__218;
+    this__77.targetsVar__180 = targets__219;
+    return nil;
+  end;
+  Table.get.rows = function(this__336)
+    return this__336.rows__177;
+  end;
+  Alphabet = temper.type('Alphabet');
+  Alphabet.methods.add = function(this__52, key__223)
+    if not temper.mapped_getor(this__52.map__221, key__223, false) then
+      temper.listbuilder_add(this__52.keys__220, key__223);
+      temper.mapbuilder_set(this__52.map__221, key__223, true);
+    end
+    return nil;
+  end;
+  Alphabet.fromEngine = function(engine__226)
+    local ret__228, i__229;
+    ret__228 = Alphabet();
+    i__229 = 0;
+    while (i__229 < temper.listbuilder_length(engine__226.states)) do
+      local state__230, j__231;
+      state__230 = temper.listed_get(engine__226.states, i__229);
+      j__231 = 0;
+      while (j__231 < temper.listbuilder_length(state__230.next)) do
+        local t_78, matcher__232;
+        t_78 = temper.listed_get(state__230.next, j__231);
+        matcher__232 = t_78.matcher;
+        if temper.instance_of(matcher__232, ContainsMatcher) then
+          local t_79, k__233;
+          t_79 = temper.cast_to(matcher__232, ContainsMatcher);
+          k__233 = 0;
+          while (k__233 < temper.listed_length(t_79.options)) do
+            ret__228:add(temper.listed_get(t_79.options, k__233));
+            k__233 = temper.int32_add(k__233, 1);
+          end
+        elseif temper.instance_of(matcher__232, SingleMatcher) then
+          ret__228:add((temper.cast_to(matcher__232, SingleMatcher)).char);
+        end
+        j__231 = temper.int32_add(j__231, 1);
+      end
+      i__229 = temper.int32_add(i__229, 1);
+    end
+    return ret__228;
+  end;
+  Alphabet.constructor = function(this__89)
+    local t_80, t_81;
+    t_80 = temper.listbuilder_constructor();
+    this__89.keys__220 = t_80;
+    t_81 = temper.mapbuilder_constructor();
+    this__89.map__221 = t_81;
+    return nil;
+  end;
+  Alphabet.get.keys = function(this__339)
+    return this__339.keys__220;
+  end;
+  Alphabet.get.map = function(this__342)
+    return this__342.map__221;
+  end;
+  DFA = temper.type('DFA');
+  DFA.none = function()
+    return DFA(noTable);
+  end;
+  DFA.fromEngine = function(engine__248)
+    local return__98, alphabet__250, states__251, i__252, newTable__254, start__255, ok__256, i__257;
+    ::continue_19::alphabet__250 = Alphabet.fromEngine(engine__248);
+    states__251 = temper.mapbuilder_constructor();
+    i__252 = 0;
+    while (i__252 < temper.listbuilder_length(engine__248.states)) do
+      local state__253;
+      state__253 = temper.listed_get(engine__248.states, i__252);
+      temper.mapbuilder_set(states__251, state__253.id, state__253);
+      i__252 = temper.int32_add(i__252, 1);
+    end
+    newTable__254 = Table(temper.listbuilder_constructor(), temper.listof());
+    start__255 = epsilonClosure(engine__248.startState, noTarget);
+    newTable__254:addEmpty(start__255);
+    ok__256 = true;
+    i__257 = 0;
+    while (i__257 < temper.listbuilder_length(newTable__254.rows)) do
+      local t_82, row__261, other__262, keys__263, map__264, addOther__258, add__259, onState__260, j__285, j__286, t_101, t_102;
+      if (i__257 == 500) then
+        return__98 = temper.null;
+        goto break_18;
+      end
+      row__261 = temper.listed_get(newTable__254.rows, i__257);
+      other__262 = Target(temper.listof());
+      keys__263 = temper.listbuilder_constructor();
+      map__264 = temper.mapbuilder_constructor();
+      addOther__258 = function(toState__265)
+        local return__99, j__267;
+        ::continue_21::return__99 = nil;
+        if other__262:has(toState__265.id) then
+          goto break_20;
+        end
+        other__262 = other__262:and_(toState__265.id);
+        j__267 = 0;
+        while (j__267 < temper.listbuilder_length(toState__265.next)) do
+          local t_83, dest__268, matcher__269;
+          t_83 = temper.listed_get(toState__265.next, j__267);
+          dest__268 = t_83.toState;
+          matcher__269 = t_83.matcher;
+          if isEmptyEdge(matcher__269) then
+            addOther__258(dest__268);
+          else
+            local t_84;
+            if temper.instance_of(matcher__269, WordBoundaryMatcher) then
+              t_84 = true;
+            elseif temper.instance_of(matcher__269, BeginMatcher) then
+              t_84 = true;
+            else
+              t_84 = temper.instance_of(matcher__269, EndMatcher);
+            end
+            if t_84 then
+              ok__256 = false;
+            end
+          end
+          j__267 = temper.int32_add(j__267, 1);
+        end
+        ::break_20::return return__99;
+      end;
+      add__259 = function(char__270, toState__271)
+        local return__100, existing__273, j__274;
+        ::continue_23::return__100 = nil;
+        existing__273 = temper.mapped_getor(map__264, char__270, noTarget);
+        if existing__273:has(toState__271.id) then
+          goto break_22;
+        end
+        if not temper.mapped_has(map__264, char__270) then
+          temper.listbuilder_add(keys__263, char__270);
+        end
+        temper.mapbuilder_set(map__264, char__270, existing__273:and_(toState__271.id));
+        j__274 = 0;
+        while (j__274 < temper.listbuilder_length(toState__271.next)) do
+          local t_85, dest__275, matcher__276;
+          t_85 = temper.listed_get(toState__271.next, j__274);
+          dest__275 = t_85.toState;
+          matcher__276 = t_85.matcher;
+          if isEmptyEdge(matcher__276) then
+            add__259(char__270, dest__275);
+          else
+            local t_86;
+            if temper.instance_of(matcher__276, WordBoundaryMatcher) then
+              t_86 = true;
+            elseif temper.instance_of(matcher__276, BeginMatcher) then
+              t_86 = true;
+            else
+              t_86 = temper.instance_of(matcher__276, EndMatcher);
+            end
+            if t_86 then
+              ok__256 = false;
+            end
+          end
+          j__274 = temper.int32_add(j__274, 1);
+        end
+        ::break_22::return return__100;
+      end;
+      onState__260 = function(state__277)
+        local j__279;
+        j__279 = 0;
+        while (j__279 < temper.listbuilder_length(state__277.next)) do
+          local t_87, toState__280, matcher__281, t_88;
+          t_87 = temper.listed_get(state__277.next, j__279);
+          toState__280 = t_87.toState;
+          matcher__281 = t_87.matcher;
+          if temper.instance_of(matcher__281, ContainsMatcher) then
+            local t_89;
+            t_89 = temper.cast_to(matcher__281, ContainsMatcher);
+            if t_89.want then
+              local k__282;
+              k__282 = 0;
+              while (k__282 < temper.listed_length(t_89.options)) do
+                add__259(temper.listed_get(t_89.options, k__282), toState__280);
+                k__282 = temper.int32_add(k__282, 1);
+              end
+            else
+              local k__283;
+              k__283 = 0;
+              while (k__283 < temper.listbuilder_length(alphabet__250.keys)) do
+                local chr__284;
+                chr__284 = temper.listed_get(alphabet__250.keys, k__283);
+                if not temper.densebitvector_get(t_89.bitset, chr__284) then
+                  add__259(chr__284, toState__280);
+                elseif not temper.mapped_has(map__264, chr__284) then
+                  temper.mapbuilder_set(map__264, chr__284, Target(temper.listof()));
+                  temper.listbuilder_add(keys__263, chr__284);
+                end
+                k__283 = temper.int32_add(k__283, 1);
+              end
+              addOther__258(toState__280);
+            end
+          elseif temper.instance_of(matcher__281, SingleMatcher) then
+            t_88 = temper.cast_to(matcher__281, SingleMatcher);
+            add__259(t_88.char, toState__280);
+          else
+            local t_90;
+            if temper.instance_of(matcher__281, WordBoundaryMatcher) then
+              t_90 = true;
+            elseif temper.instance_of(matcher__281, BeginMatcher) then
+              t_90 = true;
+            else
+              t_90 = temper.instance_of(matcher__281, EndMatcher);
+            end
+            if t_90 then
+              ok__256 = false;
+            end
+          end
+          j__279 = temper.int32_add(j__279, 1);
+        end
+        return nil;
+      end;
+      j__285 = 0;
+      while (j__285 < temper.listed_length(row__261.name.name)) do
+        local t_91, local_92, local_93, local_94;
+        local_92, local_93, local_94 = temper.pcall(function()
+          t_91 = temper.mapped_get(states__251, temper.listed_get(row__261.name.name, j__285));
+        end);
+        if local_92 then
+        else
+          t_91 = temper.bubble();
+        end
+        onState__260(t_91);
+        j__285 = temper.int32_add(j__285, 1);
+      end
+      other__262 = other__262:ands(start__255);
+      newTable__254:addEmpty(other__262);
+      j__286 = 0;
+      while (j__286 < temper.listbuilder_length(keys__263)) do
+        local t_96, key__287, local_97, local_98, local_99, val__288;
+        key__287 = temper.listed_get(keys__263, j__286);
+        local_97, local_98, local_99 = temper.pcall(function()
+          t_96 = temper.mapped_get(map__264, key__287);
+        end);
+        if local_97 then
+        else
+          t_96 = temper.bubble();
+        end
+        val__288 = t_96:ands(start__255);
+        temper.mapbuilder_set(map__264, key__287, val__288);
+        newTable__254:addEmpty(val__288);
+        j__286 = temper.int32_add(j__286, 1);
+      end
+      t_101 = row__261.name;
+      t_102 = other__262;
+      if (temper.listed_getor(row__261.name.name, 0, -1) == 1) then
+        t_82 = true;
+      else
+        t_82 = (temper.listed_getor(row__261.name.name, 1, -1) == 1);
+      end
+      temper.listbuilder_set(newTable__254.rows, i__257, Row(t_101, t_102, keys__263, map__264, t_82));
+      i__257 = temper.int32_add(i__257, 1);
+    end
+    newTable__254:finish();
+    if not ok__256 then
+      return temper.null;
+    else
+      return DFA(newTable__254);
+    end
+    ::break_18::return return__98;
+  end;
+  DFA.methods.found = function(this__55, s__290, start__291)
+    return this__55.table__244:scan(s__290, start__291);
+  end;
+  DFA.constructor = function(this__95, table__294)
+    this__95.table__244 = table__294;
+    return nil;
+  end;
+  DFA.get.table = function(this__347)
+    return this__347.table__244;
+  end;
+  noTarget = Target(temper.listof());
+  noTable = Table(temper.listbuilder_constructor(), temper.listof());
+  isEmptyEdge = function(matcher__235)
+    if temper.instance_of(matcher__235, EpsilonMatcher) then
+      return true;
+    elseif temper.instance_of(matcher__235, StartGroupMatcher) then
+      return true;
+    else
+      return temper.instance_of(matcher__235, EndGroupMatcher);
+    end
+  end;
+  epsilonClosure = function(state__237, target__238)
+    local return__94, ret__240, j__241;
+    ::continue_25::
+    if target__238:has(state__237.id) then
+      return__94 = target__238;
+      goto break_24;
+    end
+    ret__240 = target__238:and_(state__237.id);
+    j__241 = 0;
+    while (j__241 < temper.listbuilder_length(state__237.next)) do
+      local t_103, toState__242, matcher__243;
+      t_103 = temper.listed_get(state__237.next, j__241);
+      toState__242 = t_103.toState;
+      matcher__243 = t_103.matcher;
+      if isEmptyEdge(matcher__243) then
+        ret__240 = epsilonClosure(toState__242, ret__240);
+      end
+      j__241 = temper.int32_add(j__241, 1);
+    end
+    do
+      return ret__240;
+    end
+    ::break_24::return return__94;
+  end;
+  exports = {};
+  exports.Target = Target;
+  exports.Row = Row;
+  exports.Table = Table;
+  exports.DFA = DFA;
+  return exports;
+end
+package.preload['temper-regex-engine/dfa/javascript'] = function()
+  local temper = require('temper-core');
+  local Javascript, exports;
+  Javascript = temper.type('Javascript');
+  Javascript.fromTable = function(table__19)
+    local r__21, fn__46;
+    r__21 = Javascript(temper.listbuilder_constructor());
+    r__21:addTable(table__19);
+    fn__46 = function(s__22)
+      return s__22;
+    end;
+    return temper.listed_join(r__21.buf, '', fn__46);
+  end;
+  Javascript.methods.addString = function(this__2, string__25)
+    temper.listbuilder_add(this__2.buf__17, string__25);
+    return nil;
+  end;
+  Javascript.methods.addRow = function(this__3, row__28)
+    local id__30;
+    id__30 = temper.int32_tostring(row__28.name.id);
+    this__3:addString(temper.concat('rows[', id__30, '] = (code) => {', '\n'));
+    if not (temper.listed_length(row__28.keys) == 0) then
+      local i__31;
+      this__3:addString('  switch (code) {\n');
+      i__31 = 0;
+      while (i__31 < temper.listed_length(row__28.keys)) do
+        local key__32, target__33, local_108, local_109, local_110;
+        key__32 = temper.listed_get(row__28.keys, i__31);
+        local_108, local_109, local_110 = temper.pcall(function()
+          target__33 = temper.mapped_get(row__28.map, key__32);
+        end);
+        if local_108 then
+        else
+          target__33 = temper.bubble();
+        end
+        this__3:addString(temper.concat('  case ', temper.int32_tostring(key__32), ': return ', temper.int32_tostring(target__33.id), ';', '\n'));
+        i__31 = temper.int32_add(i__31, 1);
+      end
+      this__3:addString('  }\n');
+    end
+    this__3:addString(temper.concat('  return ', temper.int32_tostring(row__28.other.id), ';', '\n'));
+    this__3:addString('};\n');
+    if row__28.ok then
+      this__3:addString(temper.concat('ok[', id__30, '] = true;', '\n'));
+    end
+    return nil;
+  end;
+  Javascript.methods.addTable = function(this__4, table__35)
+    local i__37;
+    this__4:addString('const rows = [];\n');
+    this__4:addString('const ok = [];\n');
+    i__37 = 0;
+    while (i__37 < temper.listbuilder_length(table__35.rows)) do
+      this__4:addRow(temper.listed_get(table__35.rows, i__37));
+      i__37 = temper.int32_add(i__37, 1);
+    end
+    this__4:addString('module.ret = (str, head) => {\n');
+    this__4:addString('  let row = 0;\n');
+    this__4:addString('  while (!ok[row]) {\n');
+    this__4:addString('    if (head >= str.length) return -1;\n');
+    this__4:addString('    const code = str.codePointAt(head);\n');
+    this__4:addString('    head += code > 0xffff ? 2 : 1;\n');
+    this__4:addString('    row = rows[row](code);\n');
+    this__4:addString('  }\n');
+    this__4:addString('  return head;\n');
+    this__4:addString('};\n');
+    return nil;
+  end;
+  Javascript.constructor = function(this__5, buf__39)
+    this__5.buf__17 = buf__39;
+    return nil;
+  end;
+  Javascript.get.buf = function(this__42)
+    return this__42.buf__17;
+  end;
+  exports = {};
+  exports.Javascript = Javascript;
+  return exports;
+end
+package.preload['temper-regex-engine/dfa/lua'] = function()
+  local temper = require('temper-core');
+  local Lua, exports;
+  Lua = temper.type('Lua');
+  Lua.fromTable = function(table__19)
+    local r__21, fn__46;
+    r__21 = Lua(temper.listbuilder_constructor());
+    r__21:addTable(table__19);
+    fn__46 = function(s__22)
+      return s__22;
+    end;
+    return temper.listed_join(r__21.buf, '', fn__46);
+  end;
+  Lua.methods.addString = function(this__2, string__25)
+    temper.listbuilder_add(this__2.buf__17, string__25);
+    return nil;
+  end;
+  Lua.methods.addRow = function(this__3, row__28)
+    local id__30, i__31;
+    id__30 = temper.int32_tostring(row__28.name.id);
+    this__3:addString(temper.concat('rows[', id__30, '] = {'));
+    i__31 = 0;
+    while (i__31 < temper.listed_length(row__28.keys)) do
+      local key__32, target__33, local_104, local_105, local_106;
+      key__32 = temper.listed_get(row__28.keys, i__31);
+      local_104, local_105, local_106 = temper.pcall(function()
+        target__33 = temper.mapped_get(row__28.map, key__32);
+      end);
+      if local_104 then
+      else
+        target__33 = temper.bubble();
+      end
+      this__3:addString(temper.concat('[', temper.int32_tostring(key__32), ']=', temper.int32_tostring(target__33.id), ','));
+      i__31 = temper.int32_add(i__31, 1);
+    end
+    this__3:addString('}\n');
+    this__3:addString(temper.concat('others[', id__30, '] = ', temper.int32_tostring(row__28.other.id), '\n'));
+    if row__28.ok then
+      this__3:addString(temper.concat('ok[', id__30, '] = true', '\n'));
+    end
+    return nil;
+  end;
+  Lua.methods.addTable = function(this__4, table__35)
+    local i__37;
+    this__4:addString("local temper = package.loaded['temper-core/prelude']\n");
+    this__4:addString('local string_byte = string.byte\n');
+    this__4:addString('local string_get = temper.string_get\n');
+    this__4:addString('local string_next = temper.string_next\n');
+    this__4:addString('local rows = {}\n');
+    this__4:addString('local others = {}\n');
+    this__4:addString('local ok = {}\n');
+    i__37 = 0;
+    while (i__37 < temper.listbuilder_length(table__35.rows)) do
+      this__4:addRow(temper.listed_get(table__35.rows, i__37));
+      i__37 = temper.int32_add(i__37, 1);
+    end
+    this__4:addString('return function(str, head)\n');
+    this__4:addString('  local row = 0\n');
+    this__4:addString('  while not ok[row] do\n');
+    this__4:addString('    if head > #str then return -1 end\n');
+    this__4:addString('    local code = string_byte(str, head)\n');
+    this__4:addString('    if code < 128 then\n');
+    this__4:addString('      head = head + 1\n');
+    this__4:addString('    else\n');
+    this__4:addString('      code = string_get(str, head)\n');
+    this__4:addString('      head = string_next(str, head)\n');
+    this__4:addString('    end\n');
+    this__4:addString('    row = rows[row][code] or others[row]\n');
+    this__4:addString('  end\n');
+    this__4:addString('  return head\n');
+    this__4:addString('end\n');
+    return nil;
+  end;
+  Lua.constructor = function(this__5, buf__39)
+    this__5.buf__17 = buf__39;
+    return nil;
+  end;
+  Lua.get.buf = function(this__42)
+    return this__42.buf__17;
+  end;
+  exports = {};
+  exports.Lua = Lua;
+  return exports;
+end
+package.preload['temper-regex-engine/nfa/engine'] = function()
+  local temper = require('temper-core');
+  local entire, oneOrMore, optional, Begin, Dot, End, WordBoundary, Digit, Space, Word, charCodeMatcher, fromChars, regexToString, chr, bogusMatch, State, StackSlot, EndGroupMatcher, StartGroupMatcher, Span, EpsilonMatcher, Group, Match, Hit, Engine, Marks, closeSpan, buildMatch, exports;
+  entire = temper.import('std/regex', 'entire');
+  oneOrMore = temper.import('std/regex', 'oneOrMore');
+  optional = temper.import('std/regex', 'optional');
+  Begin = temper.import('std/regex', 'Begin');
+  Dot = temper.import('std/regex', 'Dot');
+  End = temper.import('std/regex', 'End');
+  WordBoundary = temper.import('std/regex', 'WordBoundary');
+  Digit = temper.import('std/regex', 'Digit');
+  Space = temper.import('std/regex', 'Space');
+  Word = temper.import('std/regex', 'Word');
+  charCodeMatcher = temper.import('temper-regex-engine/nfa/matcher', 'charCodeMatcher');
+  fromChars = temper.import('temper-regex-engine/nfa/matcher', 'fromChars');
+  regexToString = temper.import('temper-regex-engine/util', 'regexToString');
+  chr = temper.import('temper-regex-engine/util', 'chr');
+  bogusMatch = temper.import('temper-regex-engine/util', 'bogusMatch');
+  State = temper.import('temper-regex-engine/nfa/state', 'State');
+  StackSlot = temper.import('temper-regex-engine/nfa/stack', 'StackSlot');
+  EndGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EndGroupMatcher');
+  StartGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'StartGroupMatcher');
+  Span = temper.import('temper-regex-engine/nfa/stack', 'Span');
+  EpsilonMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EpsilonMatcher');
+  Group = temper.import('std/regex', 'Group');
+  Match = temper.import('std/regex', 'Match');
+  Hit = temper.type('Hit');
+  Hit.constructor = function(this__33, begin__109, end__110, spans__111)
+    if (spans__111 == nil) then
+      spans__111 = temper.null;
+    end
+    this__33.begin__105 = begin__109;
+    this__33.end__106 = end__110;
+    this__33.spans__107 = spans__111;
+    return nil;
+  end;
+  Hit.get.begin = function(this__225)
+    return this__225.begin__105;
+  end;
+  Hit.get.end_ = function(this__228)
+    return this__228.end__106;
+  end;
+  Hit.get.spans = function(this__231)
+    return this__231.spans__107;
+  end;
+  Engine = temper.type('Engine');
+  Engine.newStateIn = function(states__123)
+    local ret__125;
+    ret__125 = State(temper.listbuilder_length(states__123));
+    temper.listbuilder_add(states__123, ret__125);
+    return ret__125;
+  end;
+  Engine.methods.newState = function(this__18)
+    return Engine.newStateIn(this__18.states__116);
+  end;
+  Engine.methods.addGroupName = function(this__19, name__129)
+    local return__41, i__131;
+    ::continue_3::return__41 = nil;
+    i__131 = 0;
+    while (i__131 < temper.listbuilder_length(this__19.groupNames__120)) do
+      if (temper.listed_get(this__19.groupNames__120, i__131) == name__129) then
+        goto break_2;
+      end
+      i__131 = temper.int32_add(i__131, 1);
+    end
+    temper.listbuilder_add(this__19.groupNames__120, name__129);
+    ::break_2::return return__41;
+  end;
+  Engine.methods.search = function(this__20, str__133, from__134)
+    local scanner__136, t_39;
+    scanner__136 = this__20.scan__121;
+    if temper.is_null(scanner__136) then
+      t_39 = true;
+    else
+      t_39 = not (scanner__136(str__133, from__134) == -1.0);
+    end
+    if t_39 then
+      return this__20:searchFrom(str__133, from__134);
+    else
+      return temper.null;
+    end
+  end;
+  Engine.methods.searchFrom = function(this__21, str__138, from__139)
+    local return__43, marks__141, stack__142, begin__143, beginPos__144;
+    ::continue_5::marks__141 = Marks(temper.listbuilder_length(this__21.states__116));
+    stack__142 = temper.listbuilder_constructor();
+    begin__143 = from__139;
+    beginPos__144 = 0;
+    while true do
+      temper.listbuilder_add(stack__142, StackSlot(begin__143, beginPos__144, this__21.startState__117, temper.null));
+      while not temper.listed_isempty(stack__142) do
+        local top__145, t_40;
+        top__145 = temper.listbuilder_removelast(stack__142);
+        if (top__145.state.incoming < 2) then
+          t_40 = true;
+        else
+          t_40 = marks__141:mark(top__145.state, top__145.pos);
+        end
+        if t_40 then
+          local index__146, next__147, c__148;
+          if (top__145.state.id == this__21.endState__118.id) then
+            return__43 = Hit(begin__143, top__145.index, top__145.spans);
+            goto break_4;
+          end
+          index__146 = top__145.index;
+          next__147 = top__145.state.next;
+          c__148 = temper.int32_sub(temper.listbuilder_length(next__147), 1);
+          while (c__148 >= 0) do
+            local t_41, matcher__149, toState__150, skip__151;
+            t_41 = temper.listed_get(next__147, c__148);
+            matcher__149 = t_41.matcher;
+            toState__150 = t_41.toState;
+            skip__151 = matcher__149:matches(str__138, index__146);
+            if temper.is_string_index(skip__151) then
+              local t_42, pos__152;
+              t_42 = temper.require_string_index(skip__151);
+              if (t_42 == index__146) then
+                pos__152 = top__145.pos;
+              else
+                pos__152 = temper.int32_add(top__145.pos, 1);
+              end
+              if not marks__141:has(toState__150, pos__152) then
+                local spans__153, t_43;
+                if temper.instance_of(matcher__149, StartGroupMatcher) then
+                  spans__153 = Span((temper.cast_to(matcher__149, StartGroupMatcher)).name, index__146, temper.null, top__145.spans);
+                elseif temper.instance_of(matcher__149, EndGroupMatcher) then
+                  t_43 = temper.cast_to(matcher__149, EndGroupMatcher);
+                  spans__153 = closeSpan(top__145.spans, t_43.name, index__146);
+                else
+                  spans__153 = top__145.spans;
+                end
+                temper.listbuilder_add(stack__142, StackSlot(t_42, pos__152, toState__150, spans__153));
+              end
+            end
+            c__148 = temper.int32_sub(c__148, 1);
+          end
+        end
+      end
+      if not temper.string_hasindex(str__138, begin__143) then
+        break;
+      end
+      begin__143 = temper.string_next(str__138, begin__143);
+      beginPos__144 = temper.int32_add(beginPos__144, 1);
+    end
+    do
+      return temper.null;
+    end
+    ::break_4::return return__43;
+  end;
+  Engine.methods.replace = function(this__22, str__155, replacer__156)
+    local ret__158, last__159, from__160;
+    ret__158 = temper.stringbuilder_constructor();
+    last__159 = 1.0;
+    from__160 = 1.0;
+    while true do
+      local hit__161;
+      hit__161 = this__22:search(str__155, from__160);
+      if not temper.is_null(hit__161) then
+        local hit_44;
+        hit_44 = hit__161;
+        temper.stringbuilder_appendbetween(ret__158, str__155, last__159, hit_44.begin);
+        temper.stringbuilder_append(ret__158, replacer__156(buildMatch(str__155, hit_44, this__22.groupNames__120)));
+        last__159 = hit_44.end_;
+        if not (hit_44.end_ == hit_44.begin) then
+          from__160 = hit_44.end_;
+        elseif temper.string_hasindex(str__155, hit_44.end_) then
+          from__160 = temper.string_next(str__155, hit_44.end_);
+        else
+          break;
+        end
+      else
+        break;
+      end
+    end
+    temper.stringbuilder_appendbetween(ret__158, str__155, last__159, temper.string_end(str__155));
+    return temper.stringbuilder_tostring(ret__158);
+  end;
+  Engine.methods.split = function(this__23, str__163)
+    local ret__165, last__166, from__167;
+    ret__165 = temper.listbuilder_constructor();
+    last__166 = 1.0;
+    from__167 = 1.0;
+    while true do
+      local hit__168;
+      hit__168 = this__23:search(str__163, from__167);
+      if not temper.is_null(hit__168) then
+        local hit_45;
+        hit_45 = hit__168;
+        if not temper.string_hasindex(str__163, hit_45.begin) then
+          break;
+        end
+        if (hit_45.end_ == last__166) then
+          from__167 = temper.string_next(str__163, hit_45.begin);
+        else
+          local t_46;
+          temper.listbuilder_add(ret__165, temper.string_slice(str__163, last__166, hit_45.begin));
+          last__166 = hit_45.end_;
+          if (hit_45.end_ == hit_45.begin) then
+            t_46 = temper.string_next(str__163, hit_45.end_);
+          else
+            t_46 = hit_45.end_;
+          end
+          from__167 = t_46;
+        end
+      else
+        break;
+      end
+    end
+    temper.listbuilder_add(ret__165, temper.string_slice(str__163, last__166, temper.string_end(str__163)));
+    return ret__165;
+  end;
+  Engine.methods.found = function(this__24, str__170, start__171)
+    local scanner__173;
+    scanner__173 = this__24.scan__121;
+    if not temper.is_null(scanner__173) then
+      return not (scanner__173(str__170, start__171) == -1.0);
+    else
+      return not temper.is_null(this__24:searchFrom(str__170, start__171));
+    end
+  end;
+  Engine.methods.find = function(this__25, str__175, begin__257)
+    local begin__176, hit__178;
+    if temper.is_null(begin__257) then
+      begin__176 = 1.0;
+    else
+      begin__176 = begin__257;
+    end
+    hit__178 = this__25:search(str__175, begin__176);
+    if not temper.is_null(hit__178) then
+      local hit_47;
+      hit_47 = hit__178;
+      return buildMatch(str__175, hit_47, this__25.groupNames__120);
+    else
+      return bogusMatch();
+    end
+  end;
+  Engine.constructor = function(this__37)
+    local t_48, t_49, t_50, t_51, t_52;
+    t_48 = temper.listbuilder_constructor();
+    this__37.states__116 = t_48;
+    t_49 = Engine.newStateIn(this__37.states__116);
+    this__37.startState__117 = t_49;
+    t_50 = Engine.newStateIn(this__37.states__116);
+    this__37.endState__118 = t_50;
+    t_51 = EpsilonMatcher();
+    this__37.epsilon__119 = t_51;
+    t_52 = temper.listbuilder_constructor();
+    this__37.groupNames__120 = t_52;
+    this__37.scan__121 = temper.null;
+    return nil;
+  end;
+  Engine.get.states = function(this__234)
+    return this__234.states__116;
+  end;
+  Engine.get.startState = function(this__237)
+    return this__237.startState__117;
+  end;
+  Engine.get.endState = function(this__240)
+    return this__240.endState__118;
+  end;
+  Engine.get.epsilon = function(this__243)
+    return this__243.epsilon__119;
+  end;
+  Engine.get.groupNames = function(this__246)
+    return this__246.groupNames__120;
+  end;
+  Engine.get.scan = function(this__249)
+    return this__249.scan__121;
+  end;
+  Engine.set.scan = function(this__253, newScan__252)
+    if (newScan__252 == nil) then
+      newScan__252 = temper.null;
+    end
+    this__253.scan__121 = newScan__252;
+    return nil;
+  end;
+  Marks = temper.type('Marks');
+  Marks.methods.mark = function(this__29, state__183, pos__184)
+    local bits__187, fresh__188;
+    if temper.listed_isempty(this__29.byState__181) then
+      local i__186;
+      i__186 = 0;
+      while (i__186 < this__29.stateCount__180) do
+        temper.listbuilder_add(this__29.byState__181, temper.densebitvector_constructor(0));
+        i__186 = temper.int32_add(i__186, 1);
+      end
+    end
+    bits__187 = temper.listed_get(this__29.byState__181, state__183.id);
+    fresh__188 = not temper.densebitvector_get(bits__187, pos__184);
+    temper.densebitvector_set(bits__187, pos__184, true);
+    return fresh__188;
+  end;
+  Marks.methods.has = function(this__30, state__190, pos__191)
+    if not temper.listed_isempty(this__30.byState__181) then
+      return temper.densebitvector_get(temper.listed_get(this__30.byState__181, state__190.id), pos__191);
+    else
+      return false;
+    end
+  end;
+  Marks.constructor = function(this__48, stateCount__194)
+    local t_53;
+    this__48.stateCount__180 = stateCount__194;
+    t_53 = temper.listbuilder_constructor();
+    this__48.byState__181 = t_53;
+    return nil;
+  end;
+  closeSpan = function(spans__195, name__196, end__197)
+    local return__52, rest__199;
+    if (spans__195 == nil) then
+      spans__195 = temper.null;
+    end
+    ::continue_7::rest__199 = spans__195;
+    while true do
+      local span__200;
+      span__200 = rest__199;
+      if not temper.is_null(span__200) then
+        local span_54, t_55;
+        span_54 = span__200;
+        if temper.is_null(span_54.end_) then
+          t_55 = (span_54.name == name__196);
+        else
+          t_55 = false;
+        end
+        if t_55 then
+          return__52 = Span(name__196, span_54.begin, end__197, spans__195);
+          goto break_6;
+        end
+        rest__199 = span_54.rest;
+      else
+        break;
+      end
+    end
+    do
+      return temper.bubble();
+    end
+    ::break_6::return return__52;
+  end;
+  buildMatch = function(str__201, hit__202, names__203)
+    local latest__205, rest__206, groups__209, i__210, full__212;
+    latest__205 = temper.mapbuilder_constructor();
+    rest__206 = hit__202.spans;
+    while true do
+      local span__207;
+      span__207 = rest__206;
+      if not temper.is_null(span__207) then
+        local span_56, end__208;
+        span_56 = span__207;
+        end__208 = span_56.end_;
+        if not temper.is_null(end__208) then
+          local end_57;
+          end_57 = end__208;
+          if not temper.mapped_has(latest__205, span_56.name) then
+            temper.mapbuilder_set(latest__205, span_56.name, Group(span_56.name, temper.string_slice(str__201, span_56.begin, end_57), span_56.begin, end_57));
+          end
+        end
+        rest__206 = span_56.rest;
+      else
+        break;
+      end
+    end
+    groups__209 = temper.mapbuilder_constructor();
+    i__210 = 0;
+    while (i__210 < temper.listed_length(names__203)) do
+      local name__211;
+      name__211 = temper.listed_get(names__203, i__210);
+      if temper.mapped_has(latest__205, name__211) then
+        local t_58, local_59, local_60, local_61;
+        local_59, local_60, local_61 = temper.pcall(function()
+          t_58 = temper.mapped_get(latest__205, name__211);
+        end);
+        if local_59 then
+        else
+          t_58 = temper.bubble();
+        end
+        temper.mapbuilder_set(groups__209, name__211, t_58);
+      end
+      i__210 = temper.int32_add(i__210, 1);
+    end
+    full__212 = Group('full', temper.string_slice(str__201, hit__202.begin, hit__202.end_), hit__202.begin, hit__202.end_);
+    return Match(full__212, temper.mapped_tomap(groups__209));
+  end;
+  exports = {};
+  exports.Engine = Engine;
+  return exports;
+end
+package.preload['temper-regex-engine/nfa/matcher'] = function()
+  local temper = require('temper-core');
+  local isWordChar, wordChars, spaceChars, wordCharsList, spaceCharsList, digitCharsList, regexToString, bogusMatch, chr, Matcher, BeginMatcher, EndMatcher, WordBoundaryMatcher, SingleMatcher, ContainsMatcher, StartGroupMatcher, EndGroupMatcher, EpsilonMatcher, noMatch, fromChars, charCodeMatcher, exports;
+  isWordChar = temper.import('temper-regex-engine/ctype', 'isWordChar');
+  wordChars = temper.import('temper-regex-engine/ctype', 'wordChars');
+  spaceChars = temper.import('temper-regex-engine/ctype', 'spaceChars');
+  wordCharsList = temper.import('temper-regex-engine/ctype', 'wordCharsList');
+  spaceCharsList = temper.import('temper-regex-engine/ctype', 'spaceCharsList');
+  digitCharsList = temper.import('temper-regex-engine/ctype', 'digitCharsList');
+  regexToString = temper.import('temper-regex-engine/util', 'regexToString');
+  bogusMatch = temper.import('temper-regex-engine/util', 'bogusMatch');
+  chr = temper.import('temper-regex-engine/util', 'chr');
+  Matcher = temper.type('Matcher');
+  Matcher.methods.matches = function(this__7, str__80, index__81)
+    temper.virtual();
+  end;
+  Matcher.methods.toString = function(this__8)
+    temper.virtual();
+  end;
+  BeginMatcher = temper.type('BeginMatcher', Matcher);
+  BeginMatcher.methods.matches = function(this__9, str__86, index__87)
+    if ((index__87 - 1.0) == 0) then
+      return index__87;
+    else
+      return -1.0;
+    end
+  end;
+  BeginMatcher.methods.toString = function(this__10)
+    return '^';
+  end;
+  BeginMatcher.constructor = function(this__33)
+    return nil;
+  end;
+  EndMatcher = temper.type('EndMatcher', Matcher);
+  EndMatcher.methods.matches = function(this__11, str__93, index__94)
+    if ((index__94 - temper.string_end(str__93)) == 0) then
+      return index__94;
+    else
+      return -1.0;
+    end
+  end;
+  EndMatcher.methods.toString = function(this__12)
+    return '$';
+  end;
+  EndMatcher.constructor = function(this__37)
+    return nil;
+  end;
+  WordBoundaryMatcher = temper.type('WordBoundaryMatcher', Matcher);
+  WordBoundaryMatcher.methods.matches = function(this__13, str__100, index__101)
+    local t_30, t_31;
+    if (index__101 > 1.0) then
+      t_30 = isWordChar(temper.string_get(str__100, temper.string_prev(str__100, index__101)));
+    else
+      t_30 = false;
+    end
+    if (index__101 < temper.string_end(str__100)) then
+      t_31 = isWordChar(temper.string_get(str__100, index__101));
+    else
+      t_31 = false;
+    end
+    if not temper.bool_eq(t_30, t_31) then
+      return index__101;
+    else
+      return -1.0;
+    end
+  end;
+  WordBoundaryMatcher.methods.toString = function(this__14)
+    return '\\b';
+  end;
+  WordBoundaryMatcher.constructor = function(this__41)
+    return nil;
+  end;
+  SingleMatcher = temper.type('SingleMatcher', Matcher);
+  SingleMatcher.methods.matches = function(this__18, str__113, index__114)
+    local t_32;
+    if (index__114 < temper.string_end(str__113)) then
+      t_32 = (this__18.char__111 == temper.string_get(str__113, index__114));
+    else
+      t_32 = false;
+    end
+    if t_32 then
+      return temper.string_next(str__113, index__114);
+    else
+      return -1.0;
+    end
+  end;
+  SingleMatcher.methods.toString = function(this__19)
+    return chr(this__19.char__111);
+  end;
+  SingleMatcher.constructor = function(this__46, char__119)
+    this__46.char__111 = char__119;
+    return nil;
+  end;
+  SingleMatcher.get.char = function(this__166)
+    return this__166.char__111;
+  end;
+  ContainsMatcher = temper.type('ContainsMatcher', Matcher);
+  ContainsMatcher.methods.matches = function(this__21, str__124, index__125)
+    local t_33;
+    if (index__125 < temper.string_end(str__124)) then
+      t_33 = temper.bool_eq(temper.densebitvector_get(this__21.bitset__120, temper.string_get(str__124, index__125)), this__21.want__122);
+    else
+      t_33 = false;
+    end
+    if t_33 then
+      return temper.string_next(str__124, index__125);
+    else
+      return -1.0;
+    end
+  end;
+  ContainsMatcher.methods.toString = function(this__22)
+    local inner__129;
+    inner__129 = temper.listed_join(this__22.options__121, '', chr);
+    if not this__22.want__122 then
+      return temper.concat('[^', inner__129, ']');
+    else
+      return temper.concat('[', inner__129, ']');
+    end
+  end;
+  ContainsMatcher.constructor = function(this__50, bitset__131, options__132, want__133)
+    this__50.bitset__120 = bitset__131;
+    this__50.options__121 = options__132;
+    this__50.want__122 = want__133;
+    return nil;
+  end;
+  ContainsMatcher.get.bitset = function(this__169)
+    return this__169.bitset__120;
+  end;
+  ContainsMatcher.get.options = function(this__172)
+    return this__172.options__121;
+  end;
+  ContainsMatcher.get.want = function(this__175)
+    return this__175.want__122;
+  end;
+  StartGroupMatcher = temper.type('StartGroupMatcher', Matcher);
+  StartGroupMatcher.methods.matches = function(this__24, str__136, index__137)
+    return index__137;
+  end;
+  StartGroupMatcher.methods.toString = function(this__25)
+    return temper.concat('<', this__25.name__134, '>');
+  end;
+  StartGroupMatcher.constructor = function(this__55, name__142)
+    this__55.name__134 = name__142;
+    return nil;
+  end;
+  StartGroupMatcher.get.name = function(this__178)
+    return this__178.name__134;
+  end;
+  EndGroupMatcher = temper.type('EndGroupMatcher', Matcher);
+  EndGroupMatcher.methods.matches = function(this__26, str__145, index__146)
+    return index__146;
+  end;
+  EndGroupMatcher.methods.toString = function(this__27)
+    return temper.concat('</', this__27.name__143, '>');
+  end;
+  EndGroupMatcher.constructor = function(this__59, name__151)
+    this__59.name__143 = name__151;
+    return nil;
+  end;
+  EndGroupMatcher.get.name = function(this__181)
+    return this__181.name__143;
+  end;
+  EpsilonMatcher = temper.type('EpsilonMatcher', Matcher);
+  EpsilonMatcher.methods.matches = function(this__28, str__153, index__154)
+    return index__154;
+  end;
+  EpsilonMatcher.methods.toString = function(this__29)
+    return '\xce\xb5';
+  end;
+  EpsilonMatcher.constructor = function(this__63)
+    return nil;
+  end;
+  noMatch = temper.listof();
+  fromChars = function(options__106, want__107)
+    local return__45, t_34, bitset__109, i__110;
+    ::continue_1::
+    if (temper.listed_length(options__106) == 1) then
+      t_34 = want__107;
+    else
+      t_34 = false;
+    end
+    if t_34 then
+      return__45 = SingleMatcher(temper.listed_get(options__106, 0));
+      goto break_0;
+    end
+    bitset__109 = temper.densebitvector_constructor(0);
+    i__110 = 0;
+    while (i__110 < temper.listed_length(options__106)) do
+      temper.densebitvector_set(bitset__109, temper.listed_get(options__106, i__110), true);
+      i__110 = temper.int32_add(i__110, 1);
+    end
+    do
+      return ContainsMatcher(bitset__109, options__106, want__107);
+    end
+    ::break_0::return return__45;
+  end;
+  charCodeMatcher = function(c__77)
+    return fromChars(temper.listof(c__77), true);
+  end;
+  exports = {};
+  exports.Matcher = Matcher;
+  exports.BeginMatcher = BeginMatcher;
+  exports.EndMatcher = EndMatcher;
+  exports.WordBoundaryMatcher = WordBoundaryMatcher;
+  exports.SingleMatcher = SingleMatcher;
+  exports.ContainsMatcher = ContainsMatcher;
+  exports.StartGroupMatcher = StartGroupMatcher;
+  exports.EndGroupMatcher = EndGroupMatcher;
+  exports.EpsilonMatcher = EpsilonMatcher;
+  exports.fromChars = fromChars;
+  exports.charCodeMatcher = charCodeMatcher;
+  return exports;
+end
+package.preload['temper-regex-engine/nfa/nfa'] = function()
+  local temper = require('temper-core');
+  local entire, oneOrMore, optional, Begin, Dot, End, WordBoundary, Digit, Space, Word, charCodeMatcher, fromChars, regexToString, bogusMatch, chr, isWordChar, wordChars, spaceChars, wordCharsList, spaceCharsList, digitCharsList, DFA, TemperRegex, Engine, Lua, Javascript, CodePoints, CodeSet, SpecialSet, CodeRange, Or, Repeat, Sequence, BeginSpecial, BeginMatcher, EndSpecial, EndMatcher, WordBoundarySpecial, WordBoundaryMatcher, DotSpecial, Capture, StartGroupMatcher, EndGroupMatcher, SpaceSpecial, DigitSpecial, withScan, TemperRegexNFA, setChars, exports;
+  entire = temper.import('std/regex', 'entire');
+  oneOrMore = temper.import('std/regex', 'oneOrMore');
+  optional = temper.import('std/regex', 'optional');
+  Begin = temper.import('std/regex', 'Begin');
+  Dot = temper.import('std/regex', 'Dot');
+  End = temper.import('std/regex', 'End');
+  WordBoundary = temper.import('std/regex', 'WordBoundary');
+  Digit = temper.import('std/regex', 'Digit');
+  Space = temper.import('std/regex', 'Space');
+  Word = temper.import('std/regex', 'Word');
+  charCodeMatcher = temper.import('temper-regex-engine/nfa/matcher', 'charCodeMatcher');
+  fromChars = temper.import('temper-regex-engine/nfa/matcher', 'fromChars');
+  regexToString = temper.import('temper-regex-engine/util', 'regexToString');
+  bogusMatch = temper.import('temper-regex-engine/util', 'bogusMatch');
+  chr = temper.import('temper-regex-engine/util', 'chr');
+  isWordChar = temper.import('temper-regex-engine/ctype', 'isWordChar');
+  wordChars = temper.import('temper-regex-engine/ctype', 'wordChars');
+  spaceChars = temper.import('temper-regex-engine/ctype', 'spaceChars');
+  wordCharsList = temper.import('temper-regex-engine/ctype', 'wordCharsList');
+  spaceCharsList = temper.import('temper-regex-engine/ctype', 'spaceCharsList');
+  digitCharsList = temper.import('temper-regex-engine/ctype', 'digitCharsList');
+  DFA = temper.import('temper-regex-engine/dfa/dfa', 'DFA');
+  TemperRegex = temper.import('temper-regex-engine/regex', 'TemperRegex');
+  Engine = temper.import('temper-regex-engine/nfa/engine', 'Engine');
+  Lua = temper.import('temper-regex-engine/dfa/lua', 'Lua');
+  Javascript = temper.import('temper-regex-engine/dfa/javascript', 'Javascript');
+  CodePoints = temper.import('std/regex', 'CodePoints');
+  CodeSet = temper.import('std/regex', 'CodeSet');
+  SpecialSet = temper.import('std/regex', 'SpecialSet');
+  CodeRange = temper.import('std/regex', 'CodeRange');
+  Or = temper.import('std/regex', 'Or');
+  Repeat = temper.import('std/regex', 'Repeat');
+  Sequence = temper.import('std/regex', 'Sequence');
+  BeginSpecial = temper.import('std/regex', 'BeginSpecial');
+  BeginMatcher = temper.import('temper-regex-engine/nfa/matcher', 'BeginMatcher');
+  EndSpecial = temper.import('std/regex', 'EndSpecial');
+  EndMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EndMatcher');
+  WordBoundarySpecial = temper.import('std/regex', 'WordBoundarySpecial');
+  WordBoundaryMatcher = temper.import('temper-regex-engine/nfa/matcher', 'WordBoundaryMatcher');
+  DotSpecial = temper.import('std/regex', 'DotSpecial');
+  Capture = temper.import('std/regex', 'Capture');
+  StartGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'StartGroupMatcher');
+  EndGroupMatcher = temper.import('temper-regex-engine/nfa/matcher', 'EndGroupMatcher');
+  SpaceSpecial = temper.import('std/regex', 'SpaceSpecial');
+  DigitSpecial = temper.import('std/regex', 'DigitSpecial');
+  withScan = function(regex__97, makeScan__98)
+    local nfa__100, dfa__101;
+    nfa__100 = TemperRegexNFA.fromRegex(regex__97);
+    dfa__101 = DFA.fromEngine(nfa__100.engine);
+    if not temper.is_null(dfa__101) then
+      local dfa_112, scan__102, t_113;
+      dfa_112 = dfa__101;
+      scan__102 = makeScan__98(dfa_112.table);
+      t_113 = function(str__103, from__104)
+        return scan__102(str__103, from__104);
+      end;
+      (nfa__100.engine)['scan'] = t_113;
+    end
+    return nfa__100;
+  end;
+  TemperRegexNFA = temper.type('TemperRegexNFA', TemperRegex);
+  TemperRegexNFA.fromRegex = function(regex__110)
+    local nfa__112;
+    nfa__112 = TemperRegexNFA(Engine());
+    nfa__112:buildRegex(regex__110, nfa__112.engine.startState, nfa__112.engine.endState);
+    return nfa__112;
+  end;
+  TemperRegexNFA.fromRegexDFA = function(regex__114)
+    local fn__266;
+    fn__266 = function(table__116)
+      local fn_114;
+      fn_114 = function(str__117, from__118)
+        return table__116:scan(str__117, from__118);
+      end;
+      return fn_114;
+    end;
+    return withScan(regex__114, fn__266);
+  end;
+  TemperRegexNFA.fromRegexLua = function(regex__121, load__122)
+    local fn__265;
+    fn__265 = function(table__124)
+      return load__122(Lua.fromTable(table__124));
+    end;
+    return withScan(regex__121, fn__265);
+  end;
+  TemperRegexNFA.fromRegexJavascript = function(regex__126, load__127)
+    local fn__264;
+    fn__264 = function(table__129)
+      return load__127(Javascript.fromTable(table__129));
+    end;
+    return withScan(regex__126, fn__264);
+  end;
+  TemperRegexNFA.methods.buildRegex = function(this__13, regex__131, input__132, output__133)
+    local t_115, lastState__137, index__138, t_116, ls__141, j__142, t_120, i__147, t_121, lastState__148, i__149, max__151, t_123, items__155, t_124;
+    if temper.instance_of(regex__131, Capture) then
+      local t_125, mid1__135, mid2__136;
+      t_125 = temper.cast_to(regex__131, Capture);
+      this__13.engine__108:addGroupName(t_125.name);
+      mid1__135 = this__13.engine__108:newState();
+      mid2__136 = this__13.engine__108:newState();
+      input__132:addNext(StartGroupMatcher(t_125.name), mid1__135);
+      this__13:buildRegex(t_125.item, mid1__135, mid2__136);
+      mid2__136:addNext(EndGroupMatcher(t_125.name), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, CodePoints) then
+      t_115 = temper.cast_to(regex__131, CodePoints);
+      if (#t_115.value == 0.0) then
+        input__132:addNext(this__13.engine__108.epsilon, output__133);
+      end
+      lastState__137 = input__132;
+      index__138 = 1.0;
+      while temper.string_hasindex(t_115.value, index__138) do
+        local chr__139, curState__140;
+        chr__139 = temper.string_get(t_115.value, index__138);
+        index__138 = temper.string_next(t_115.value, index__138);
+        if temper.string_hasindex(t_115.value, index__138) then
+          curState__140 = this__13.engine__108:newState();
+        else
+          curState__140 = output__133;
+        end
+        lastState__137:addNext(charCodeMatcher(chr__139), curState__140);
+        lastState__137 = curState__140;
+      end
+      return nil;
+    elseif temper.instance_of(regex__131, CodeSet) then
+      t_116 = temper.cast_to(regex__131, CodeSet);
+      ls__141 = temper.listbuilder_constructor();
+      j__142 = 0;
+      while (j__142 < temper.list_length(t_116.items)) do
+        local subRegex__143, t_117, split__145, i__146, t_118;
+        subRegex__143 = temper.list_get(t_116.items, j__142);
+        if temper.instance_of(subRegex__143, CodeRange) then
+          local t_119, i__144;
+          t_119 = temper.cast_to(subRegex__143, CodeRange);
+          i__144 = t_119.min;
+          while (i__144 <= t_119.max) do
+            temper.listbuilder_add(ls__141, i__144);
+            i__144 = temper.int32_add(i__144, 1);
+          end
+        elseif temper.instance_of(subRegex__143, CodePoints) then
+          t_117 = temper.cast_to(subRegex__143, CodePoints);
+          split__145 = temper.string_split(t_117.value, '');
+          i__146 = 0;
+          while (i__146 < temper.list_length(split__145)) do
+            temper.listbuilder_add(ls__141, temper.string_get(temper.list_get(split__145, i__146), 1.0));
+            i__146 = temper.int32_add(i__146, 1);
+          end
+        elseif temper.instance_of(subRegex__143, SpecialSet) then
+          t_118 = temper.cast_to(subRegex__143, SpecialSet);
+          temper.listbuilder_addall(ls__141, setChars(t_118));
+        end
+        j__142 = temper.int32_add(j__142, 1);
+      end
+      input__132:addNext(fromChars(ls__141, not t_116.negated), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, Or) then
+      t_120 = temper.cast_to(regex__131, Or);
+      if temper.listed_isempty(t_120.items) then
+        input__132:addNext(this__13.engine__108.epsilon, output__133);
+      end
+      i__147 = 0;
+      while (i__147 < temper.list_length(t_120.items)) do
+        this__13:buildRegex(temper.list_get(t_120.items, i__147), input__132, output__133);
+        i__147 = temper.int32_add(i__147, 1);
+      end
+      return nil;
+    elseif temper.instance_of(regex__131, Repeat) then
+      t_121 = temper.cast_to(regex__131, Repeat);
+      lastState__148 = input__132;
+      i__149 = 0;
+      while (i__149 < t_121.min) do
+        local curState__150;
+        curState__150 = this__13.engine__108:newState();
+        this__13:buildRegex(t_121.item, lastState__148, curState__150);
+        lastState__148 = curState__150;
+        i__149 = temper.int32_add(i__149, 1);
+      end
+      max__151 = t_121.max;
+      if not temper.is_null(max__151) then
+        local max_122, i__152;
+        max_122 = max__151;
+        i__152 = t_121.min;
+        while (i__152 < max_122) do
+          local curState__153;
+          curState__153 = this__13.engine__108:newState();
+          if t_121.reluctant then
+            lastState__148:addNext(this__13.engine__108.epsilon, output__133);
+            this__13:buildRegex(t_121.item, lastState__148, curState__153);
+          else
+            this__13:buildRegex(t_121.item, lastState__148, curState__153);
+            lastState__148:addNext(this__13.engine__108.epsilon, output__133);
+          end
+          lastState__148 = curState__153;
+          i__152 = temper.int32_add(i__152, 1);
+        end
+        lastState__148:addNext(this__13.engine__108.epsilon, output__133);
+        return nil;
+      else
+        local loop__154;
+        loop__154 = this__13.engine__108:newState();
+        lastState__148:addNext(this__13.engine__108.epsilon, loop__154);
+        if t_121.reluctant then
+          loop__154:addNext(this__13.engine__108.epsilon, output__133);
+          this__13:buildRegex(t_121.item, loop__154, loop__154);
+          return nil;
+        else
+          this__13:buildRegex(t_121.item, loop__154, loop__154);
+          loop__154:addNext(this__13.engine__108.epsilon, output__133);
+          return nil;
+        end
+      end
+    elseif temper.instance_of(regex__131, Sequence) then
+      t_123 = temper.cast_to(regex__131, Sequence);
+      items__155 = t_123.items;
+      if temper.listed_isempty(items__155) then
+        input__132:addNext(this__13.engine__108.epsilon, output__133);
+        return nil;
+      else
+        local v1__156, i__157;
+        v1__156 = input__132;
+        i__157 = 0;
+        while (i__157 < temper.list_length(items__155)) do
+          local v2__158;
+          if (temper.int32_add(i__157, 1) < temper.list_length(items__155)) then
+            v2__158 = this__13.engine__108:newState();
+          else
+            v2__158 = output__133;
+          end
+          this__13:buildRegex(temper.list_get(items__155, i__157), v1__156, v2__158);
+          v1__156 = v2__158;
+          i__157 = temper.int32_add(i__157, 1);
+        end
+        return nil;
+      end
+    elseif temper.instance_of(regex__131, BeginSpecial) then
+      input__132:addNext(BeginMatcher(), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, EndSpecial) then
+      input__132:addNext(EndMatcher(), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, WordBoundarySpecial) then
+      input__132:addNext(WordBoundaryMatcher(), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, DotSpecial) then
+      input__132:addNext(fromChars(temper.listof(10), false), output__133);
+      return nil;
+    elseif temper.instance_of(regex__131, SpecialSet) then
+      t_124 = temper.cast_to(regex__131, SpecialSet);
+      input__132:addNext(fromChars(setChars(t_124), true), output__133);
+      return nil;
+    else
+      return nil;
+    end
+  end;
+  TemperRegexNFA.methods.replace = function(this__14, text__160, format__161)
+    return this__14.engine__108:replace(text__160, format__161);
+  end;
+  TemperRegexNFA.methods.split = function(this__15, text__164)
+    return this__15.engine__108:split(text__164);
+  end;
+  TemperRegexNFA.methods.found = function(this__16, text__167)
+    return this__16.engine__108:found(text__167, 1.0);
+  end;
+  TemperRegexNFA.methods.find = function(this__17, text__170, begin__194)
+    local begin__171;
+    if temper.is_null(begin__194) then
+      begin__171 = 1.0;
+    else
+      begin__171 = begin__194;
+    end
+    return this__17.engine__108:find(text__170, begin__171);
+  end;
+  TemperRegexNFA.constructor = function(this__21, engine__174)
+    this__21.engine__108 = engine__174;
+    return nil;
+  end;
+  TemperRegexNFA.get.engine = function(this__180)
+    return this__180.engine__108;
+  end;
+  setChars = function(special__106)
+    if temper.instance_of(special__106, DigitSpecial) then
+      return digitCharsList;
+    elseif temper.instance_of(special__106, SpaceSpecial) then
+      return spaceCharsList;
+    else
+      return wordCharsList;
+    end
+  end;
+  exports = {};
+  exports.TemperRegexNFA = TemperRegexNFA;
+  return exports;
+end
+package.preload['temper-regex-engine/nfa/stack'] = function()
+  local temper = require('temper-core');
+  local Span, StackSlot, exports;
+  Span = temper.type('Span');
+  Span.constructor = function(this__0, name__14, begin__15, end__16, rest__17)
+    if (end__16 == nil) then
+      end__16 = temper.null;
+    end
+    if (rest__17 == nil) then
+      rest__17 = temper.null;
+    end
+    this__0.name__9 = name__14;
+    this__0.begin__10 = begin__15;
+    this__0.end__11 = end__16;
+    this__0.rest__12 = rest__17;
+    return nil;
+  end;
+  Span.get.name = function(this__36)
+    return this__36.name__9;
+  end;
+  Span.get.begin = function(this__39)
+    return this__39.begin__10;
+  end;
+  Span.get.end_ = function(this__42)
+    return this__42.end__11;
+  end;
+  Span.get.rest = function(this__45)
+    return this__45.rest__12;
+  end;
+  StackSlot = temper.type('StackSlot');
+  StackSlot.constructor = function(this__4, index__23, pos__24, state__25, spans__26)
+    if (spans__26 == nil) then
+      spans__26 = temper.null;
+    end
+    this__4.index__18 = index__23;
+    this__4.pos__19 = pos__24;
+    this__4.state__20 = state__25;
+    this__4.spans__21 = spans__26;
+    return nil;
+  end;
+  StackSlot.get.index = function(this__48)
+    return this__48.index__18;
+  end;
+  StackSlot.get.pos = function(this__51)
+    return this__51.pos__19;
+  end;
+  StackSlot.get.state = function(this__54)
+    return this__54.state__20;
+  end;
+  StackSlot.get.spans = function(this__57)
+    return this__57.spans__21;
+  end;
+  exports = {};
+  exports.Span = Span;
+  exports.StackSlot = StackSlot;
+  return exports;
+end
+package.preload['temper-regex-engine/nfa/state'] = function()
+  local temper = require('temper-core');
+  local charCodeMatcher, fromChars, Next, State, exports;
+  charCodeMatcher = temper.import('temper-regex-engine/nfa/matcher', 'charCodeMatcher');
+  fromChars = temper.import('temper-regex-engine/nfa/matcher', 'fromChars');
+  Next = temper.type('Next');
+  Next.constructor = function(this__6, toState__28, matcher__29)
+    this__6.toState__25 = toState__28;
+    this__6.matcher__26 = matcher__29;
+    return nil;
+  end;
+  Next.get.toState = function(this__72)
+    return this__72.toState__25;
+  end;
+  Next.get.matcher = function(this__75)
+    return this__75.matcher__26;
+  end;
+  State = temper.type('State');
+  State.get.next = function(this__3)
+    return this__3.nextVar__33;
+  end;
+  State.methods.addNext = function(this__4, matcher__36, toState__37)
+    local t_35;
+    temper.listbuilder_add(this__4.next, Next(toState__37, matcher__36));
+    t_35 = temper.int32_add(toState__37.incoming, 1);
+    toState__37['incoming'] = t_35;
+    return nil;
+  end;
+  State.methods.addNextFirst = function(this__5, matcher__40, toState__41)
+    local oldNext__43, t_36, t_37, i__44;
+    oldNext__43 = this__5.next;
+    t_36 = temper.listbuilder_constructor();
+    this__5.nextVar__33 = t_36;
+    temper.listbuilder_add(this__5.next, Next(toState__41, matcher__40));
+    t_37 = temper.int32_add(toState__41.incoming, 1);
+    toState__41['incoming'] = t_37;
+    i__44 = 0;
+    while (i__44 < temper.listbuilder_length(oldNext__43)) do
+      temper.listbuilder_add(this__5.next, temper.listed_get(oldNext__43, i__44));
+      i__44 = temper.int32_add(i__44, 1);
+    end
+    return nil;
+  end;
+  State.constructor = function(this__9, id__46)
+    local t_38;
+    this__9.id__30 = id__46;
+    t_38 = temper.listbuilder_constructor();
+    this__9.nextVar__33 = t_38;
+    this__9.incoming__34 = 0;
+    return nil;
+  end;
+  State.get.id = function(this__55)
+    return this__55.id__30;
+  end;
+  State.get.nextVar = function(this__58)
+    return this__58.nextVar__33;
+  end;
+  State.set.nextVar = function(this__62, newNextVar__61)
+    this__62.nextVar__33 = newNextVar__61;
+    return nil;
+  end;
+  State.get.incoming = function(this__65)
+    return this__65.incoming__34;
+  end;
+  State.set.incoming = function(this__69, newIncoming__68)
+    this__69.incoming__34 = newIncoming__68;
+    return nil;
+  end;
+  exports = {};
+  exports.Next = Next;
+  exports.State = State;
+  return exports;
+end
+package.preload['temper-regex-engine/regex'] = function()
+  local temper = require('temper-core');
+  local entire, oneOrMore, optional, Begin, Dot, End, WordBoundary, Digit, Space, Word, TemperRegex, exports;
+  entire = temper.import('std/regex', 'entire');
+  oneOrMore = temper.import('std/regex', 'oneOrMore');
+  optional = temper.import('std/regex', 'optional');
+  Begin = temper.import('std/regex', 'Begin');
+  Dot = temper.import('std/regex', 'Dot');
+  End = temper.import('std/regex', 'End');
+  WordBoundary = temper.import('std/regex', 'WordBoundary');
+  Digit = temper.import('std/regex', 'Digit');
+  Space = temper.import('std/regex', 'Space');
+  Word = temper.import('std/regex', 'Word');
+  TemperRegex = temper.type('TemperRegex');
+  TemperRegex.methods.replace = function(this__0, text__40, format__41)
+    temper.virtual();
+  end;
+  TemperRegex.methods.split = function(this__1, text__44)
+    temper.virtual();
+  end;
+  TemperRegex.methods.found = function(this__2, text__47)
+    temper.virtual();
+  end;
+  TemperRegex.methods.find = function(this__3, text__50, begin__51)
+    if (begin__51 == nil) then
+      begin__51 = temper.null;
+    end
+    temper.virtual();
+  end;
+  exports = {};
+  exports.TemperRegex = TemperRegex;
+  return exports;
+end
+package.preload['temper-regex-engine/util'] = function()
+  local temper = require('temper-core');
+  local entire, oneOrMore, optional, Begin, Dot, End, WordBoundary, Digit, Space, Word, CodePoints, CodeSet, CodeRange, Or, Repeat, Capture, Special, Sequence, BeginSpecial, DotSpecial, EndSpecial, WordBoundarySpecial, DigitSpecial, SpaceSpecial, WordSpecial, Match, Group, regexToString, bogusMatch, chr, exports;
+  entire = temper.import('std/regex', 'entire');
+  oneOrMore = temper.import('std/regex', 'oneOrMore');
+  optional = temper.import('std/regex', 'optional');
+  Begin = temper.import('std/regex', 'Begin');
+  Dot = temper.import('std/regex', 'Dot');
+  End = temper.import('std/regex', 'End');
+  WordBoundary = temper.import('std/regex', 'WordBoundary');
+  Digit = temper.import('std/regex', 'Digit');
+  Space = temper.import('std/regex', 'Space');
+  Word = temper.import('std/regex', 'Word');
+  CodePoints = temper.import('std/regex', 'CodePoints');
+  CodeSet = temper.import('std/regex', 'CodeSet');
+  CodeRange = temper.import('std/regex', 'CodeRange');
+  Or = temper.import('std/regex', 'Or');
+  Repeat = temper.import('std/regex', 'Repeat');
+  Capture = temper.import('std/regex', 'Capture');
+  Special = temper.import('std/regex', 'Special');
+  Sequence = temper.import('std/regex', 'Sequence');
+  BeginSpecial = temper.import('std/regex', 'BeginSpecial');
+  DotSpecial = temper.import('std/regex', 'DotSpecial');
+  EndSpecial = temper.import('std/regex', 'EndSpecial');
+  WordBoundarySpecial = temper.import('std/regex', 'WordBoundarySpecial');
+  DigitSpecial = temper.import('std/regex', 'DigitSpecial');
+  SpaceSpecial = temper.import('std/regex', 'SpaceSpecial');
+  WordSpecial = temper.import('std/regex', 'WordSpecial');
+  Match = temper.import('std/regex', 'Match');
+  Group = temper.import('std/regex', 'Group');
+  regexToString = function(base__52)
+    local t_0, ret__54, j__55, inv__57, fn__206, t_5, ret__61, add__60, i__65, fn__205, mid__66, t_8, mod__69, t_9, q__70, str__71, item__72, pat__73, t_19, t_20, value__74, t_21, t_22, strings__75, i__76, fn__204;
+    if temper.instance_of(base__52, Capture) then
+      local t_24, t_25;
+      t_24 = temper.cast_to(base__52, Capture);
+      t_25 = regexToString(t_24.item);
+      return temper.concat('(?', t_24.name, '=', t_25, ')');
+    elseif temper.instance_of(base__52, CodePoints) then
+      return (temper.cast_to(base__52, CodePoints)).value;
+    elseif temper.instance_of(base__52, CodeSet) then
+      t_0 = temper.cast_to(base__52, CodeSet);
+      ret__54 = temper.listbuilder_constructor();
+      j__55 = 0;
+      while (j__55 < temper.list_length(t_0.items)) do
+        local subBase__56;
+        subBase__56 = temper.list_get(t_0.items, j__55);
+        if temper.instance_of(subBase__56, CodeRange) then
+          local t_1, t_2, t_3;
+          t_1 = temper.cast_to(subBase__56, CodeRange);
+          t_2 = temper.string_fromcodepoint(t_1.min);
+          t_3 = temper.string_fromcodepoint(t_1.max);
+          temper.listbuilder_add(ret__54, temper.concat(t_2, '-', t_3));
+        else
+          local t_4;
+          t_4 = regexToString(subBase__56);
+          temper.listbuilder_add(ret__54, t_4);
+        end
+        j__55 = temper.int32_add(j__55, 1);
+      end
+      if t_0.negated then
+        inv__57 = '^';
+      else
+        inv__57 = '';
+      end
+      fn__206 = function(s__58)
+        return s__58;
+      end;
+      return temper.concat('[', inv__57, temper.listed_join(ret__54, '', fn__206), ']');
+    elseif temper.instance_of(base__52, Or) then
+      t_5 = temper.cast_to(base__52, Or);
+      ret__61 = temper.mapbuilder_constructor();
+      add__60 = function(ent__62)
+        if temper.instance_of(ent__62, Or) then
+          local t_6, i__64;
+          t_6 = temper.cast_to(ent__62, Or);
+          i__64 = 0;
+          while (i__64 < temper.list_length(t_6.items)) do
+            add__60(temper.list_get(t_6.items, i__64));
+            i__64 = temper.int32_add(i__64, 1);
+          end
+        else
+          local t_7;
+          t_7 = regexToString(ent__62);
+          temper.mapbuilder_set(ret__61, t_7, true);
+        end
+        return nil;
+      end;
+      i__65 = 0;
+      while (i__65 < temper.list_length(t_5.items)) do
+        add__60(temper.list_get(t_5.items, i__65));
+        i__65 = temper.int32_add(i__65, 1);
+      end
+      fn__205 = function(p__67)
+        return p__67.key;
+      end;
+      mid__66 = temper.listed_join(temper.mapped_tolist(ret__61), '|', fn__205);
+      return temper.concat('(?:', mid__66, ')');
+    elseif temper.instance_of(base__52, Repeat) then
+      t_8 = temper.cast_to(base__52, Repeat);
+      if (t_8.min == 0) then
+        local t_10, t_11;
+        t_11 = t_8.max;
+        if temper.is_null(t_11) then
+          t_10 = false;
+        else
+          t_10 = (t_11 == 1);
+        end
+        t_9 = t_10;
+      else
+        t_9 = false;
+      end
+      if t_9 then
+        mod__69 = '?';
+      else
+        local t_12;
+        if (t_8.min == 0) then
+          t_12 = temper.is_null(t_8.max);
+        else
+          t_12 = false;
+        end
+        if t_12 then
+          mod__69 = '*';
+        else
+          local t_13;
+          if (t_8.min == 1) then
+            t_13 = temper.is_null(t_8.max);
+          else
+            t_13 = false;
+          end
+          if t_13 then
+            mod__69 = '+';
+          else
+            local t_14, t_15, t_16;
+            t_15 = t_8.min;
+            t_16 = t_8.max;
+            if temper.is_null(t_16) then
+              t_14 = false;
+            else
+              t_14 = (t_15 == t_16);
+            end
+            if t_14 then
+              mod__69 = temper.concat('{', temper.int32_tostring(t_8.min), '}');
+            elseif temper.is_null(t_8.max) then
+              mod__69 = temper.concat('{', temper.int32_tostring(t_8.min), ',}');
+            else
+              local t_17, t_18;
+              t_18 = t_8.max;
+              if temper.is_null(t_18) then
+                temper.bubble();
+              else
+                t_17 = t_18;
+              end
+              mod__69 = temper.concat('{', temper.int32_tostring(t_8.min), ',', temper.int32_tostring(t_17), '}');
+            end
+          end
+        end
+      end
+      if t_8.reluctant then
+        q__70 = '?';
+      else
+        q__70 = '';
+      end
+      str__71 = regexToString(t_8.item);
+      item__72 = t_8.item;
+      if temper.instance_of(item__72, CodeSet) then
+        t_19 = true;
+      elseif temper.instance_of(item__72, Or) then
+        t_19 = true;
+      elseif temper.instance_of(item__72, Capture) then
+        t_19 = true;
+      else
+        t_19 = temper.instance_of(item__72, Special);
+      end
+      if t_19 then
+        pat__73 = str__71;
+      elseif temper.instance_of(item__72, CodePoints) then
+        t_20 = temper.cast_to(item__72, CodePoints);
+        value__74 = t_20.value;
+        if temper.string_hasindex(value__74, 1.0) then
+          t_21 = not temper.string_hasindex(value__74, temper.string_next(value__74, 1.0));
+        else
+          t_21 = false;
+        end
+        if t_21 then
+          pat__73 = str__71;
+        else
+          pat__73 = temper.concat('(?:', str__71, ')');
+        end
+      else
+        pat__73 = temper.concat('(?:', str__71, ')');
+      end
+      return temper.concat(pat__73, mod__69, q__70);
+    elseif temper.instance_of(base__52, Sequence) then
+      t_22 = temper.cast_to(base__52, Sequence);
+      strings__75 = temper.listbuilder_constructor();
+      i__76 = 0;
+      while (i__76 < temper.list_length(t_22.items)) do
+        local t_23;
+        t_23 = regexToString(temper.list_get(t_22.items, i__76));
+        temper.listbuilder_add(strings__75, t_23);
+        i__76 = temper.int32_add(i__76, 1);
+      end
+      fn__204 = function(x__77)
+        return x__77;
+      end;
+      return temper.listed_join(strings__75, '', fn__204);
+    elseif temper.instance_of(base__52, BeginSpecial) then
+      return '^';
+    elseif temper.instance_of(base__52, DotSpecial) then
+      return '.';
+    elseif temper.instance_of(base__52, EndSpecial) then
+      return '$';
+    elseif temper.instance_of(base__52, WordBoundarySpecial) then
+      return '\\b';
+    elseif temper.instance_of(base__52, DigitSpecial) then
+      return '\\d';
+    elseif temper.instance_of(base__52, SpaceSpecial) then
+      return '\\s';
+    elseif temper.instance_of(base__52, WordSpecial) then
+      return '\\w';
+    else
+      temper.bubble();
+    end
+  end;
+  bogusMatch = function()
+    local bogusEnd__79;
+    bogusEnd__79 = 1.0;
+    return Match(Group('', '', bogusEnd__79, bogusEnd__79), temper.map_constructor(temper.listof()));
+  end;
+  chr = function(i__80)
+    local local_26, local_27, local_28;
+    local_26, local_27, local_28 = temper.pcall(function()
+      return temper.string_fromcodepoint(i__80), 'return';
+    end);
+    if local_26 then
+      if (local_28 == 'return') then
+        return local_27;
+      end
+    else
+      return temper.bubble();
+    end
+  end;
+  exports = {};
+  exports.regexToString = regexToString;
+  exports.bogusMatch = bogusMatch;
+  exports.chr = chr;
+  return exports;
+end

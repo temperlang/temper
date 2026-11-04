@@ -28,7 +28,11 @@ namespace TemperLang.Std.Net
             }
             public string? ContentType {
                 get {
-                    return Headers["content-type"].FirstOrDefault();
+                    if (Headers.TryGetValue("content-type", out var values))
+                    {
+                        return values.FirstOrDefault();
+                    }
+                    return null;
                 }
             }
             public Task<string?> BodyContent { get; }
@@ -75,8 +79,9 @@ namespace TemperLang.Std.Net
                     request.Content = new StringContent(requestBody, Encoding.UTF8);
                     if (mimeType != null)
                     {
+                        // Parse because the constructor rejects parameters like charset.
                         request.Content.Headers.ContentType =
-                            new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+                            System.Net.Http.Headers.MediaTypeHeaderValue.Parse(mimeType);
                     }
                 }
 
@@ -87,10 +92,19 @@ namespace TemperLang.Std.Net
 
                 // Extract status and headers
                 var statusCode = response.StatusCode;
-                var headers = new Dictionary<string, IEnumerable<string>>();
+                // Header names ignore case, and those about the body, like the
+                // content type, aren't in response.Headers.
+                var headers = new Dictionary<string, IEnumerable<string>>(StringComparer.OrdinalIgnoreCase);
                 foreach (var header in response.Headers)
                 {
                     headers[header.Key] = header.Value;
+                }
+                if (response.Content != null)
+                {
+                    foreach (var header in response.Content.Headers)
+                    {
+                        headers[header.Key] = header.Value;
+                    }
                 }
 
                 var bodyTask = LoadBodyAsync(response);

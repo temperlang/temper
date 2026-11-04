@@ -1,0 +1,6 @@
+let badName__0;
+badName__0 = error (InvalidRegex);
+let badRange__0;
+badRange__0 = error (InvalidRegex);
+let unclosed__0;
+unclosed__0 = error (InvalidRegex);

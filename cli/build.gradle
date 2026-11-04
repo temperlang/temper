@@ -159,7 +159,7 @@ def mungeWindowsCommand(File command) {
 
 def distDir = new File(buildDir, "distributions")
 def jrePrefix = "jre4temper"
-def javaLauncher = javaToolchains.launcherFor {
+def jdkLauncher = javaToolchains.launcherFor {
     // Version number required here. Saying just `launcherFor(java.toolchain)` fails.
     languageVersion = JavaLanguageVersion.of(gradle.ext.jvm_target)
 }.get()
@@ -167,18 +167,18 @@ def javaLauncher = javaToolchains.launcherFor {
 def jreBaseName = {
     def arch = System.getProperty("os.arch")
     def os = System.getProperty("os.name").toLowerCase().split("\\s+")[0]
-    def vendor = javaLauncher.metadata.vendor.toLowerCase().split("\\s+").join("-")
+    def vendor = jdkLauncher.metadata.vendor.toLowerCase().split("\\s+").join("-")
     if (vendor == "oracle") {
         // Sadly, openjdk and official oracle both just say oracle, so go to extra effort here.
         def output = providers.exec {
             // This requires git present to build a jar, and that's ok.
-            commandLine([javaLauncher.executablePath, "--version"])
+            commandLine([jdkLauncher.executablePath, "--version"])
         }.standardOutput.asText.get()
         if (output.toString().toLowerCase().contains("openjdk")) {
             vendor = "oracle-openjdk"
         }
     }
-    def version = javaLauncher.metadata.javaRuntimeVersion.split("[^.\\d]")[0]
+    def version = jdkLauncher.metadata.javaRuntimeVersion.split("[^.\\d]")[0]
     "$jrePrefix-$vendor-$version-$os-$arch"
 }()
 
@@ -204,7 +204,7 @@ task linkJre(type: Exec) {
         }
     }
     commandLine(
-        new File(javaLauncher.executablePath.asFile.parentFile, "jlink"),
+        new File(jdkLauncher.executablePath.asFile.parentFile, "jlink"),
         // IMPORTANT!!! Run bundleJre manually after changing this if you want to see results.
         "--add-modules", "java.base,java.compiler,java.logging,java.management,java.naming,java.xml,jdk.unsupported,java.transaction.xa,jdk.zipfs",
         // If this default encoding change helps on Windows, it's worth having. Might also need chcp there.
@@ -692,4 +692,155 @@ task temper(type: JavaExec) {
     jvmArgs = [*Commandline.translateCommandline(System.getenv("TEMPER_OPTS"))]
     classpath = sourceSets.main.runtimeClasspath
     argsString = project.properties.get("cliArgs")
+}
+
+// Temper libraries vendored into the tree. Each update task builds a library with this build of temper and writes
+// the result where the compiler uses it. The library is the commit pinned in settings.gradle, unpacked under
+// build/vendor, or a local checkout passed as -P<dirProperty>=<path from the repo root>, which is built in place.
+
+/** Returns the root directory of the library's source. */
+def vendoredLibrarySource = { String name, String repo, String commit, String dirProperty ->
+    def checkout = findProperty(dirProperty)
+    if (checkout != null) {
+        return rootProject.file(checkout)
+    }
+    def dir = layout.buildDirectory.dir("vendor/$name").get().asFile
+    def archive = new File(dir, "${commit}.zip")
+    def src = new File(dir, commit)
+    delete src
+    dir.mkdirs()
+    // A commit's archive never changes, so one already downloaded is reused.
+    ant.get(src: "$repo/archive/${commit}.zip", dest: archive, skipexisting: true)
+    // Unlike Gradle's copy, Ant keeps .gitignore, which temper reads to skip files that aren't source.
+    ant.unzip(src: archive, dest: src) {
+        // GitHub nests the archive under <repo>-<commit>/.
+        cutdirsmapper(dirs: 1)
+    }
+    src
+}
+
+/** Builds the library at workRoot for one backend and returns that backend's output directory. */
+def temperBuild = { File workRoot, String backend ->
+    def out = new File(workRoot, "temper.out/$backend")
+    // Temper leaves old output in place, and a local checkout could have files it no longer generates.
+    delete out
+    def run = providers.javaexec { spec ->
+        spec.executable = jdkLauncher.executablePath.asFile
+        spec.mainClass = mainClassName
+        spec.classpath = sourceSets.main.runtimeClasspath
+        spec.args = ["build", "-b", backend, "-w", workRoot.path]
+        // Temper looks for an ignore file from the working directory up, so this finds the library's own.
+        spec.workingDir = workRoot
+        spec.ignoreExitValue = true
+    }
+    if (run.result.get().exitValue != 0) {
+        throw new GradleException(
+            "temper build -b $backend failed in $workRoot\n${run.standardOutput.asText.get()}" +
+                run.standardError.asText.get()
+        )
+    }
+    out
+}
+
+def regexParserJava = rootProject.file("regex-parser/src/main/java")
+def regexEngineRuntime = project(":be-lua").file(
+    "src/commonMain/resources/lang/temper/be/lua/temper-core/regex/runtime.lua"
+)
+
+/** Builds the regex parser and writes its Java to dest. */
+def writeRegexParserJava = { File dest ->
+    def src = vendoredLibrarySource(
+        "temper-regex-parser",
+        gradle.ext.regex_parser_repo,
+        gradle.ext.regex_parser_commit,
+        "regexParserDir",
+    )
+    def out = temperBuild(src, "java")
+    // The compiler only loads the parser and the std/regex it builds, so leave out the rest of std,
+    // the tests, and the generated entry points.
+    sync { spec ->
+        spec.from(new File(out, "std/src/main/java")) {
+            include "temper/std/regex/**"
+        }
+        spec.from(new File(out, "temper-regex-parser/src/main/java")) {
+            exclude "temper/regex_parser/tests/**", "temper/regex_parser/RegexParserMain.java"
+        }
+        spec.into dest
+        spec.exclude "**/*.map"
+        spec.includeEmptyDirs = false
+    }
+}
+
+/** Builds the regex engine and returns be-lua's runtime file's content. */
+def bundleRegexEngine = {
+    def src = vendoredLibrarySource(
+        "temper-regex-engine",
+        gradle.ext.regex_engine_repo,
+        gradle.ext.regex_engine_commit,
+        "regexEngineDir",
+    )
+    def out = temperBuild(src, "lua")
+    // Bundle the module be-lua's temper-core requires and everything it imports, each as a preloaded module.
+    // The library's init.lua also requires its tests and benchmarks, so leave it out.
+    def modules = new TreeMap<String, String>()
+    def pending = ["temper-regex-engine/nfa/nfa"]
+    while (!pending.isEmpty()) {
+        def module = pending.remove(pending.size() - 1)
+        if (!modules.containsKey(module)) {
+            def text = new File(out, "${module}.lua").getText("UTF-8")
+            modules[module] = text
+            (text =~ /(?:import|require)\('(temper-regex-engine\/[^']+)'/).each { pending.add(it[1]) }
+        }
+    }
+    def bundle = new StringBuilder()
+    modules.each { module, text ->
+        bundle.append("package.preload['$module'] = function()\n")
+        text.eachLine { bundle.append("  $it\n") }
+        bundle.append("end\n")
+    }
+    bundle.toString()
+}
+
+task updateRegexParser {
+    group = "ManualFix"
+    description = "Regenerate regex-parser/src from temper-regex-parser at the pinned commit or -PregexParserDir."
+    dependsOn sourceSets.main.runtimeClasspath
+    doLast {
+        writeRegexParserJava(regexParserJava)
+    }
+}
+
+task updateRegexEngine {
+    group = "ManualFix"
+    description = "Regenerate be-lua's regex runtime from temper-regex-engine at the pinned commit or -PregexEngineDir."
+    dependsOn sourceSets.main.runtimeClasspath
+    doLast {
+        Files.writeString(regexEngineRuntime.toPath(), bundleRegexEngine())
+    }
+}
+
+// Not part of `check` because it fetches the pinned commits, so builds still work offline.
+task checkRegexVendored {
+    group = "Verification"
+    description = "Fail if regex-parser/src or be-lua's regex runtime differ from what the update tasks would write."
+    dependsOn sourceSets.main.runtimeClasspath
+    doLast {
+        def textsUnder = { File root ->
+            fileTree(root).files.collectEntries { file ->
+                [(root.toPath().relativize(file.toPath()).toString()): file.getText("UTF-8")]
+            }
+        }
+        def fresh = layout.buildDirectory.dir("vendor/check").get().asFile
+        writeRegexParserJava(fresh)
+        def stale = []
+        if (textsUnder(fresh) != textsUnder(regexParserJava)) {
+            stale.add(":cli:updateRegexParser")
+        }
+        if (bundleRegexEngine() != regexEngineRuntime.getText("UTF-8")) {
+            stale.add(":cli:updateRegexEngine")
+        }
+        if (!stale.isEmpty()) {
+            throw new GradleException("Vendored regex code is out of date. Run ${stale.join(' and ')}.")
+        }
+    }
 }

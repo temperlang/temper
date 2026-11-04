@@ -42,6 +42,15 @@ class TestWebServer(private val requestedPort: Int = 0) {
             exchange.sendResponseHeaders(HTTP_NOT_FOUND, response.size.toLong())
             exchange.responseBody.use { it.write(response) }
         }
+        // Says what arrived, for checking what backends send.
+        server.createContext("/echo") { exchange ->
+            val body = exchange.requestBody.use { it.readBytes() }.decodeToString()
+            val type = exchange.requestHeaders.getFirst("Content-Type")
+            val response = "${exchange.requestMethod} $type $body".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "text/plain")
+            exchange.sendResponseHeaders(HTTP_OK, response.size.toLong())
+            exchange.responseBody.use { it.write(response) }
+        }
         server.start()
     }
 

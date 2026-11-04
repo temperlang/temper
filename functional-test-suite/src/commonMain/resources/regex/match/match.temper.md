@@ -231,16 +231,13 @@ And this should match nothing.
 
 But this should match a different kind of nothing, the empty string.
 
-```temper inert
-    // Ignore this case, because it fails on Lua.
-    // If enabled, we need a blank line added to the next log block.
     console.log(/[]*/.find(simplerLines).full.value);
-```
 
 ```log
 It was the best of times.
 It was the worst of times.
 -
+
 ```
 
 ### Word boundaries
@@ -326,6 +323,112 @@ It was the best;
 of times.;
 ;
 It was the worst of times.;
+```
+
+### Counted repeats
+
+Braces give exact, open-ended, and bounded repeat counts, greedy or reluctant.
+
+    let fourAs = "aaaa";
+    console.log(/a{2}/.find(fourAs).full.value);
+    console.log(/a{2,}/.find(fourAs).full.value);
+    console.log(/a{1,3}/.find(fourAs).full.value);
+    console.log(/a{1,3}?/.find(fourAs).full.value);
+
+```log
+aa
+aaaa
+aaa
+a
+```
+
+### Escaped punctuation
+
+Formatting escapes `~` and `&` for Python, and every backend still has to match
+them literally, both alone and in code sets.
+
+    console.log(/~&|[~&]+/.find("a~&b").full.value);
+    console.log(/[~&]+/.find("a&~b").full.value);
+
+```log
+~&
+&~
+```
+
+### Trailing dash in a code set
+
+A dash just before `]` is literal and keeps the member before it.
+
+    console.log(/[+-]+/.find("1+-2").full.value);
+
+```log
++-
+```
+
+### Specials and NUL in code sets
+
+Special sets inside code sets cover their whole ranges, and a negated set that
+starts at code point zero still excludes everything it lists.
+
+    console.log(/[\d.]+/.find("a7.89b").full.value);
+    console.log(/[\w.]+/.find("-azAZ.09_-").full.value);
+    console.log(/[\d5x]+/.find("-5x9-").full.value);
+    let notNulOrA = new CodeSet([new CodeRange(0, 0), new CodePoints("a")], true);
+    console.log(notNulOrA.compiled().find("ab").full.value);
+
+```log
+7.89
+azAZ.09_
+5x9
+b
+```
+
+### Telling specials apart
+
+Specials don't support `==`, so code that walks regex data checks their
+classes instead. Specials from regex literals have the same classes as the
+exported names.
+
+    let specialName(node: RegexNode): String {
+      when (node) {
+        is BeginSpecial -> "begin";
+        is DotSpecial -> "dot";
+        is EndSpecial -> "end";
+        is WordBoundarySpecial -> "boundary";
+        is DigitSpecial -> "digit";
+        is SpaceSpecial -> "space";
+        is WordSpecial -> "word";
+        else -> "other";
+      }
+    }
+    let nodes: List<RegexNode> = [
+      Begin, Dot, End, WordBoundary, Digit, Space, Word,
+      /^/.data, /./.data, /$/.data, /\b/.data, /\d/.data, /\s/.data, /\w/.data,
+      /a/.data,
+    ];
+    console.log(nodes.join(", ") { node => specialName(node) });
+
+```log
+begin, dot, end, boundary, digit, space, word, begin, dot, end, boundary, digit, space, word, other
+```
+
+### Empty patterns
+
+A pattern or group with nothing in it matches the empty string, even as one
+alternative among others.
+
+    console.log("empty group: ${/(?:)/.found("a")}");
+    console.log("empty literal: ${rgx"".found("a")}");
+    console.log("inside: ${/a(?:)b/.found("ab")}");
+    console.log("alternative: ${/a|(?:)/.found("b")}");
+    console.log("no alternatives: ${new Or([]).found("a")}");
+
+```log
+empty group: true
+empty literal: true
+inside: true
+alternative: true
+no alternatives: true
 ```
 
 ## Import

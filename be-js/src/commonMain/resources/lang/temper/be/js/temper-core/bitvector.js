@@ -49,7 +49,7 @@ export class DenseBitVector {
     const key = index >> 3;
     const shift = index & 7;
     if (len <= key) {
-      const next = new Uint8Array(len << 1);
+      const next = new Uint8Array(Math.max(len << 1, key + 1));
       next.set(values);
       next[key] = next[key] & ~(1 << shift) | (newBitValue << shift);
       this.values = next;

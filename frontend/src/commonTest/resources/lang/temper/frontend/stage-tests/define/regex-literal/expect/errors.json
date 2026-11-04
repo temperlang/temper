@@ -1,5 +1,5 @@
 [
-    "Syntax error!",
+    "Invalid regex at position 3: flags after a regex literal are not supported; use a group like (?i:...)!",
     "Syntax error!",
     "Syntax error!"
 ]

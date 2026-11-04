@@ -24,6 +24,18 @@ injected automatically into functional tests.
           console.log("HTTP status was not 200: ${resp.status.toString()}!");
         }
       } orelse console.log("failed");
+
+A post sends its body and MIME type, including any parameters on the type. The
+test server says what it got at `/echo`, and answers with its own content type.
+
+      do {
+        let req = new NetRequest("${url}/echo");
+        req.post("[]", "application/json; charset=utf-8");
+        let resp: NetResponse = await (req.send());
+        console.log("Content type ${resp.contentType ?? "missing"}.");
+        let body: String = (await resp.bodyContent) ?? "missing";
+        console.log(body);
+      } orelse console.log("failed");
     }
 
 The server should respond with a json object saying it got a POST
@@ -31,4 +43,6 @@ with a JSON body.
 
 ```log
 Thanks, server.  I got {"method": "POST", "json": true}.
+Content type text/plain.
+POST application/json; charset=utf-8 []
 ```

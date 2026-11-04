@@ -1,0 +1,5 @@
+[
+    "Invalid regex at position 13: invalid capture name 'first_name'; use an ASCII letter followed by ASCII letters or digits!",
+    "Invalid regex at position 4: character class range is out of order!",
+    "Invalid regex at position 1: closing paren!"
+]
