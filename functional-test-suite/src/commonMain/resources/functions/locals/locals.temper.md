@@ -109,8 +109,9 @@ thresh2 length = 1
 ```
 
 A parameter keeps the value passed, even when the callee reassigns the
-`var` it came from, or drops the object it was read from. Backends that
-pass strings by reference must copy such arguments.
+`var` it came from, or drops the object it was read from, itself or
+through what it calls. Backends that pass strings by reference must copy
+such arguments, but needn't when nothing the callee runs can change it.
 
     var current = "first";
     let replaceCurrent(old: String): String {
@@ -124,6 +125,8 @@ pass strings by reference must copy such arguments.
       public constructor(name: String) { this.name = name; }
     }
 
+    let bracketed(s: String): String { "(${s})" }
+
     class Labeled {
       public var label: String;
       public var child: Named;
@@ -132,7 +135,8 @@ pass strings by reference must copy such arguments.
         this.child = new Named("${label} child");
       }
       public relabel(): String {
-        "${this.describe(this.label)}; ${this.rename(this.child.name)}"
+        let changed = "${this.describe(this.label)}; ${this.rename(this.child.name)}";
+        "${changed}; ${this.grow(this.label)}; ${bracketed(this.label)}"
       }
       private describe(old: String): String {
         this.label = "new";
@@ -142,6 +146,11 @@ pass strings by reference must copy such arguments.
         this.child = new Named("new child");
         "${old} -> ${this.child.name}"
       }
+      private grow(old: String): String {
+        this.bump();
+        "${old} -> ${this.label}"
+      }
+      private bump(): Void { this.label = "${this.label}+"; }
     }
     console.log(new Labeled("old").relabel());
 
@@ -154,7 +163,7 @@ pass strings by reference must copy such arguments.
 
 ```log
 first -> second
-old -> new; old child -> new child
+old -> new; old child -> new child; new -> new+; (new+)
 hi -> hi!
 ```
 

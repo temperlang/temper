@@ -203,6 +203,9 @@ class CppTranslator(
     /** This module's parameters, locals, and module-level names that are never reassigned. */
     private val assignOnceNames = mutableSetOf<ResolvedName>()
 
+    /** Which fields this module's functions may assign, to skip copies where they can't. */
+    private var fieldWrites: FieldWrites? = null
+
     private fun collectOrderingFacts(tree: TmpL.Tree) {
         when (tree) {
             is TmpL.LocalFunctionDeclaration -> namesUsedInClosures.addAll(tree.body.referencedNames())
@@ -240,6 +243,7 @@ class CppTranslator(
         assignOnceProperties.clear()
         assignOnceNames.clear()
         collectOrderingFacts(mod)
+        fieldWrites = FieldWrites(mod)
         importedModules.clear()
         for (topLevel in mod.topLevels) {
             if (topLevel is TmpL.ModuleLevelDeclaration && !topLevel.assignOnce) {
@@ -1228,31 +1232,44 @@ class CppTranslator(
      *
      * For a call, the callee might assign a `var` field, a module's `var`, or a `var` local a
      * closure uses, or drop the last reference to an object whose field was passed, so an
-     * argument that reads one of those is copied to a temporary first ([passArg]). Anything
-     * else stays put during the call: a parameter (its own caller made the same promise), a
-     * local the callee can't reach, a field set once of an object something keeps alive, or
-     * a temporary, which lives until the call returns.
+     * argument that reads one of those is copied to a temporary first ([passArg]), unless
+     * [fieldWrites] shows the callee can't assign that field. Anything else stays put during
+     * the call: a parameter (its own caller made the same promise), a local the callee can't
+     * reach, a field set once of an object something keeps alive, or a temporary, which
+     * lives until the call returns.
      *
      * A local lives longer, while its own function may assign things too, so a string local
      * binds by `const &` only to a parameter, another local or module-level name set once, or
-     * a field set once of an object so held ([outlivesScope]). Temporaries die at the end of
-     * their statement, so a local copies anything else, as before.
+     * a field set once of an object so held ([outlivesScope]), or a `var` field of one when
+     * nothing its function runs can assign that field. Temporaries die at the end of their
+     * statement, so a local copies anything else, as before.
      */
 
-    /** Whether the value [expr] evaluates to could change, or its storage die, during a call. */
-    private fun mayChangeDuringCall(expr: TmpL.Expression): Boolean = when (expr) {
+    /**
+     * Whether the value [expr] evaluates to could change, or its storage die, during a call
+     * to [callee], from [FieldWrites.calleeOf], or to unknown code if null.
+     */
+    private fun mayChangeDuringCall(expr: TmpL.Expression, callee: ResolvedName?): Boolean = when (expr) {
         is TmpL.Reference -> isChangeableByCall(expr)
         is TmpL.GetBackedProperty ->
-            !isAssignOnceProperty(expr.property) || !objectOutlivesCall(expr.subject)
+            calleeMayAssign(callee, expr.property) || !objectOutlivesCall(expr.subject, callee)
         // Other getters return copies.
-        is TmpL.GetAbstractProperty -> isAssignOnceFieldOfClass(expr) && !objectOutlivesCall(expr.subject)
+        is TmpL.GetAbstractProperty ->
+            isAssignOnceFieldOfClass(expr) && !objectOutlivesCall(expr.subject, callee)
         // A temporary, which nothing else can reach.
         else -> false
     }
 
     /** Whether the object [subject] evaluates to stays alive until a call that reads it returns. */
-    private fun objectOutlivesCall(subject: TmpL.Subject): Boolean = when (subject) {
-        is TmpL.Expression -> !mayChangeDuringCall(subject)
+    private fun objectOutlivesCall(subject: TmpL.Subject, callee: ResolvedName?): Boolean = when (subject) {
+        is TmpL.Expression -> !mayChangeDuringCall(subject, callee)
+        else -> true
+    }
+
+    /** Whether a call to [callee] could assign the field [property] names, on any instance. */
+    private fun calleeMayAssign(callee: ResolvedName?, property: TmpL.PropertyId): Boolean = when {
+        isAssignOnceProperty(property) -> false
+        property is TmpL.InternalPropertyId -> fieldWrites?.mayAssign(callee, property.name.name) ?: true
         else -> true
     }
 
@@ -1263,21 +1280,35 @@ class CppTranslator(
     private fun outlivesScope(expr: TmpL.Expression): Boolean = when (expr) {
         is TmpL.This -> true
         is TmpL.Reference -> expr.id.name in assignOnceNames && !isChangeableByCall(expr)
-        is TmpL.GetBackedProperty -> isAssignOnceProperty(expr.property) && when (val subject = expr.subject) {
-            is TmpL.Expression -> outlivesScope(subject)
-            else -> false
-        }
+        is TmpL.GetBackedProperty -> !calleeMayAssign(enclosingFunction(expr), expr.property) &&
+            when (val subject = expr.subject) {
+                is TmpL.Expression -> outlivesScope(subject)
+                else -> false
+            }
         is TmpL.GetAbstractProperty ->
             isAssignOnceFieldOfClass(expr) && outlivesScope(expr.subject as TmpL.Expression)
         else -> false
     }
 
+    /** The function [tree] is in, whose running the scopes of its locals last for. */
+    private fun enclosingFunction(tree: TmpL.Tree): ResolvedName? {
+        var node: TmpL.Tree? = tree
+        while (node != null) {
+            if (node is TmpL.FunctionDeclarationOrMethod) {
+                return node.name.name
+            }
+            node = node.parent as? TmpL.Tree
+        }
+        return null
+    }
+
     /**
      * [translated], from [expr], as an argument: copied to a temporary when it's a string or
-     * indirect value the callee might change while it runs (see [mayChangeDuringCall]).
+     * indirect value the callee, [callee] or unknown code if null, might change while it runs
+     * (see [mayChangeDuringCall]).
      */
-    private fun passArg(expr: TmpL.Expression, translated: Cpp.Expr): Cpp.Expr {
-        if (!mayChangeDuringCall(expr)) {
+    private fun passArg(expr: TmpL.Expression, translated: Cpp.Expr, callee: ResolvedName? = null): Cpp.Expr {
+        if (!mayChangeDuringCall(expr, callee)) {
             return translated
         }
         val type = translateType2(expr.passType)
@@ -1384,6 +1415,7 @@ class CppTranslator(
                 val ctorParamTypes = ctxSig.requiredInputTypes.drop(
                     if (sig.hasThisFormal) 1 else 0,
                 )
+                val callee = fieldWrites?.calleeOf(fn)
                 val ctorArgs = expr.parameters.mapIndexed { idx, actualExpr ->
                     val optionalIdx = idx - numRequired
                     val isOptionalParam = optionalIdx >= 0
@@ -1400,7 +1432,7 @@ class CppTranslator(
                             )
                         }
                     } else {
-                        val translated = passArg(actualExpr, translateExpression(actualExpr))
+                        val translated = passArg(actualExpr, translateExpression(actualExpr), callee)
                         val paramType = ctorParamTypes.getOrNull(idx)
                         wrapArgForParam(
                             translated,
@@ -1462,6 +1494,7 @@ class CppTranslator(
                 }
                 val isSuperCall = (fn as? TmpL.MethodReference)?.subject is TmpL.SuperSubject
                 val paramTypes = ctxSig.requiredInputTypes
+                val callee = fieldWrites?.calleeOf(fn)
                 val translatedArgs = mutableListOf<Cpp.Expr>()
                 val parameters = when {
                     isSuperCall -> expr.parameters.subListToEnd(1) // called on (borrowed) `this`
@@ -1491,7 +1524,7 @@ class CppTranslator(
                             )
                         }
                     } else {
-                        val translated = passArg(actualExpr, translateExpression(actualExpr))
+                        val translated = passArg(actualExpr, translateExpression(actualExpr), callee)
                         val paramType = paramTypes.getOrNull(idx)
                         translatedArgs.add(
                             wrapArgForParam(

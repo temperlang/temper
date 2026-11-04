@@ -153,7 +153,10 @@ class CppBackendTest {
     fun argumentsTheCalleeMightChangeAreCopied() {
         // An argument read from a `var` the callee could assign, or from an object the callee
         // could drop, is copied, so a `const &` parameter never changes underneath. Fields set
-        // once of objects held still, and locals no closure uses, are passed as they are.
+        // once of objects held still, and locals no closure uses, are passed as they are. So
+        // is a `var` field when nothing the callee calls assigns it; one calling a function
+        // value, or something that assigns the field, gets a copy. Likewise a local set from
+        // a `var` field refers to it when nothing its function runs can assign it.
         assertGeneratedContains(
             temper = $$"""
                 |var current = "first";
@@ -172,13 +175,35 @@ class CppBackendTest {
                 |    this.child = new Named("new");
                 |    old
                 |  }
+                |  public measure(): Int {
+                |    let direct = countOf(this.label);
+                |    let nested = this.lengthOf(this.label);
+                |    let called = this.viaFn(this.label, fn (t: String): Int { countOf(t) });
+                |    let changed = this.indirect(this.label);
+                |    let kept = this.label;
+                |    direct + nested + called + changed + countOf(kept)
+                |  }
+                |  public peek(): Int {
+                |    let held = this.label;
+                |    this.lengthOf(held)
+                |  }
+                |  private lengthOf(s: String): Int { countOf(s) }
+                |  private viaFn(s: String, f: fn (String): Int): Int { f(s) }
+                |  private indirect(s: String): Int { countOf(this.describe(s)) }
                 |}
+                |let countOf(s: String): Int { if (s == "") { 0 } else { 1 } }
             """,
             cppContains = listOf(
                 "replaceCurrent(temper::core::copy_of(",
                 "describe(temper::core::copy_of(this_",
                 "describe(temper::core::copy_of(this_",
                 "describe(this_",
+                "int32_t direct = countOf(this_4->label);",
+                "int32_t nested = this_4->lengthOf(this_4->label);",
+                "int32_t called = this_4->viaFn(temper::core::copy_of(this_4->label), fn);",
+                "int32_t changed = this_4->indirect(temper::core::copy_of(this_4->label));",
+                "std::string kept = this_4->label;",
+                "std::string const & held = this_",
             ),
         )
     }
