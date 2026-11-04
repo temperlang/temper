@@ -702,7 +702,10 @@ class CppBuilder(
 
         /** C++ source text for a string literal holding [value], as UTF-8. */
         internal fun stringLiteralText(value: String): String {
-            // Encode the whole string as UTF-8 bytes for correct multi-byte character handling
+            // Write non-ASCII as octal escapes of its UTF-8 bytes, so the source stays ASCII and
+            // the literal holds UTF-8 whatever the compiler's execution character set. `?` (0x3F)
+            // never occurs inside a multi-byte sequence, so the trigraph check below is safe on
+            // bytes.
             val utf8Bytes = value.toByteArray(Charsets.UTF_8)
             val sb = StringBuilder()
             var hasNullByte = false
