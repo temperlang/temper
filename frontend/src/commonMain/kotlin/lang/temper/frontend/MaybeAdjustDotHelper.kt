@@ -196,9 +196,15 @@ internal fun maybeAdjustDotHelper(
     // do_icall_p(t, subject, arg) -> do_iget(t, subject)(arg)
     // do_call_p(    subject, arg) -> do_get(    subject)(arg)
     if (accessor is CallMemberAccessor && member is DotMember) {
-        val typeShapes = thisType?.let { listOf(it) }
-            ?: subjectTypeShapes
-        if (typeShapes != null && (!hasEnclosingType || thisType != null)) {
+        // Only a `this` subject is known to be of the enclosing type. Any other subject,
+        // even inside a class body, has its own type, which needn't have a property with
+        // the enclosing type's names.
+        val typeShapes = if (accessor is ThisAccessor) {
+            thisType?.let { listOf(it) }
+        } else {
+            subjectTypeShapes
+        }
+        if (typeShapes != null) {
             // We have enough type information to proceed
             var methodMatching = false
             var propertyMatching = false

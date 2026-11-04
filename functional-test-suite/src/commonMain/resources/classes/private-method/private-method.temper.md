@@ -59,3 +59,31 @@ same whole: true
 same rounded: true
 b spent: 2
 ```
+
+## Members named alike in other types
+
+Inside a class, a call on a value of another type finds that type's
+method, even when the class has a property of the same name.
+
+    interface Sink { end(): Int; }
+    class TenSink extends Sink { public end(): Int { 10 } }
+    class Note(public body: String) {
+      public text(more: String): Note { new Note("${body}${more}") }
+    }
+
+    class Label {
+      private end: Int;
+      public constructor(end: Int) { this.end = end; }
+      public get text(): String { "label" }
+      public close(sink: Sink): Int { sink.end() + end }
+      public noted(more: String): String { new Note(text).text(more).body }
+    }
+
+    let label = new Label(1);
+    console.log("close: ${label.close(new TenSink())}");
+    console.log("noted: ${label.noted("!")}");
+
+```log
+close: 11
+noted: label!
+```
