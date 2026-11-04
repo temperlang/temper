@@ -77,7 +77,7 @@ import lang.temper.value.PseudoCodeDetail
 import lang.temper.value.TBoolean
 import lang.temper.value.Tree
 import lang.temper.value.Value
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staySymbol
 import lang.temper.value.toPseudoCode
 import kotlin.test.fail
@@ -445,7 +445,7 @@ private val (Tree).typeDefinitions: List<TypeDefinitionSnapshot>
         val definitions = mutableSetOf<TypeDefinition>()
         TreeVisit.startingAt(this)
             .forEachContinuing {
-                val staticType = it.staticTypeContained
+                val staticType = it.reifiedTypeContained?.type
                 if (staticType is NominalType) {
                     definitions.add(staticType.definition)
                 }

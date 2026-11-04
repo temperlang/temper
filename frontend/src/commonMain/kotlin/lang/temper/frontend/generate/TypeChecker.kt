@@ -68,7 +68,7 @@ import lang.temper.value.ValueLeaf
 import lang.temper.value.arityRange
 import lang.temper.value.functionContained
 import lang.temper.value.nameContained
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.typeFromSignature
@@ -262,7 +262,7 @@ internal class TypeChecker(
         val meta = t.parts?.metadataSymbolMap ?: return
         meta[typeDeclSymbol]?.let { typeDeclEdge ->
             // Working on the type as a whole might reduce lookup effort vs. each member decl separately.
-            val type = typeDeclEdge.target.staticTypeContained ?: return@checkDecl
+            val type = typeDeclEdge.target.reifiedTypeContained?.type ?: return@checkDecl
             val shape = ((type as? NominalType)?.definition as? TypeShape) ?: return@checkDecl
             members@for (member in shape.members) {
                 val memberStay = member.stay ?: continue@members
@@ -595,8 +595,8 @@ internal class TypeChecker(
     private fun checkRttiCheckAllowed(tree: CallTree, checkFn: RttiCheckFunction) {
         val typeTree = tree.childOrNull(2) ?: return
         val checkedExpr = tree.child(1)
-        val targetType = typeTree.staticTypeContained ?: return
-        val exprType = hackMapNewStyleToOld(checkedExpr.typeInferences?.type ?: return)
+        val targetType = typeTree.reifiedTypeContained?.type2 ?: return
+        val exprType = checkedExpr.typeInferences?.type ?: return
         if (exprType.mentionsInvalid || targetType.mentionsInvalid) {
             return // Error reported elsewhere
         }

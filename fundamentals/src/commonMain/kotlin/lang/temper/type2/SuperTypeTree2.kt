@@ -139,13 +139,6 @@ fun <TYPE : TypeOrPartialType> SuperTypeTreeForType2<TYPE>.forEachSuperType(
     }
 }
 
-fun hackMapOldStyleToNewAllowNever(t: StaticType, pos: Position? = null): Type2 =
-    if (t == OrType.emptyOrType) {
-        MkType2(neverTypeDefinition).position(pos).get()
-    } else {
-        hackMapOldStyleToNew(t, pos)
-    }
-
 fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
     when (t) {
         is OrType -> {

@@ -5,7 +5,7 @@ import lang.temper.common.partiallyOrder
 import lang.temper.common.putMultiList
 import lang.temper.common.putMultiSet
 import lang.temper.name.TemperName
-import lang.temper.type.NominalType
+import lang.temper.type2.DefinedNonNullType
 import lang.temper.value.BlockTree
 import lang.temper.value.DeclTree
 import lang.temper.value.FunTree
@@ -16,7 +16,7 @@ import lang.temper.value.TEdge
 import lang.temper.value.Tree
 import lang.temper.value.importedSymbol
 import lang.temper.value.initSymbol
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.typeDefinedSymbol
 
 /**
@@ -128,7 +128,7 @@ private fun trackTops(
                         // Class definitions are by `class` call with a `\typeDefined` function inside,
                         // rather than by assignment to a left name.
                         val typeEdge = parts.metadataSymbolMap[typeDefinedSymbol] ?: return@parts
-                        val type = (typeEdge.target.staticTypeContained as? NominalType) ?: return@parts
+                        val type = (typeEdge.target.reifiedTypeContained?.type2 as? DefinedNonNullType) ?: return@parts
                         if (type.definition.name in topNames) {
                             add(type.definition.name)
                         }
