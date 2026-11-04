@@ -46,7 +46,7 @@
 | [InterfacesPropertyMembers][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPureVirtual][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [NamesNonascii][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[228][]</sup> | ✅ | ✅ | ✅ |
-| [RegexMatch][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [RegexMatch][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [RegexZeroAdvance][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[166][]</sup> | ✅ | ✅ | ✅ |
 | [RegressionMinimalRepro][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsBroken][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

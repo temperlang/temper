@@ -1,9 +1,11 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <iomanip>
 #include <memory>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,6 +29,306 @@ namespace temper {
                 CompiledRegex(std::regex r, std::vector<std::string> names)
                 : re(std::move(r)), groupNames(std::move(names)) {}
             };
+
+            // std::regex matches bytes, but Temper regexes match code points, and the formatter
+            // writes code points past ASCII as UTF-8, raw or as `\xHH` escapes. In a bracket,
+            // each of those bytes would be its own item, and a range ending past ASCII is out of
+            // order for signed `char` ("Invalid range in bracket expression"). So rewrite each
+            // code set reaching past ASCII, each negated set, and `.` into an alternation of an
+            // ASCII bracket and UTF-8 byte sequences, each matching exactly one code point.
+            namespace CodeSets {
+                typedef std::vector<std::pair<int32_t, int32_t>> Ranges;
+
+                const int32_t maxCode = 0x10FFFF;
+
+                inline Ranges normalize(Ranges ranges) {
+                    std::sort(ranges.begin(), ranges.end());
+                    Ranges out;
+                    for (const auto& r : ranges) {
+                        if (!out.empty() && r.first <= out.back().second + 1) {
+                            out.back().second = std::max(out.back().second, r.second);
+                        } else {
+                            out.push_back(r);
+                        }
+                    }
+                    return out;
+                }
+
+                inline Ranges complement(const Ranges& ranges) {
+                    Ranges out;
+                    int32_t next = 0;
+                    for (const auto& r : normalize(ranges)) {
+                        if (r.first > next) {
+                            out.push_back(std::make_pair(next, r.first - 1));
+                        }
+                        next = r.second + 1;
+                    }
+                    if (next <= maxCode) {
+                        out.push_back(std::make_pair(next, maxCode));
+                    }
+                    return out;
+                }
+
+                // `\d`, `\w`, and `\s` as std::regex has them for bytes: ASCII only.
+                inline void addClass(char c, Ranges& out) {
+                    Ranges ranges;
+                    switch (c) {
+                        case 'd': case 'D':
+                            ranges.push_back(std::make_pair('0', '9'));
+                            break;
+                        case 'w': case 'W':
+                            ranges.push_back(std::make_pair('0', '9'));
+                            ranges.push_back(std::make_pair('A', 'Z'));
+                            ranges.push_back(std::make_pair('_', '_'));
+                            ranges.push_back(std::make_pair('a', 'z'));
+                            break;
+                        default:
+                            ranges.push_back(std::make_pair('\t', '\r'));
+                            ranges.push_back(std::make_pair(' ', ' '));
+                            break;
+                    }
+                    if (c >= 'A' && c <= 'Z') {
+                        ranges = complement(ranges);
+                    }
+                    out.insert(out.end(), ranges.begin(), ranges.end());
+                }
+
+                inline int hexValue(char c) {
+                    if (c >= '0' && c <= '9') return c - '0';
+                    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+                    return -1;
+                }
+
+                // The byte at `i`, raw or as a `\xHH` escape, or -1 for any other escape.
+                inline int readByte(const std::string& pat, size_t& i) {
+                    if (pat[i] != '\\') {
+                        return static_cast<unsigned char>(pat[i++]);
+                    }
+                    if (i + 3 < pat.size() && pat[i + 1] == 'x') {
+                        int hi = hexValue(pat[i + 2]);
+                        int lo = hexValue(pat[i + 3]);
+                        if (hi >= 0 && lo >= 0) {
+                            i += 4;
+                            return hi * 16 + lo;
+                        }
+                    }
+                    return -1;
+                }
+
+                // A code point from its first byte and any UTF-8 continuation bytes after `i`.
+                inline int32_t readCode(int first, const std::string& pat, size_t& i) {
+                    if (first < 0) {
+                        throw std::regex_error(std::regex_constants::error_escape);
+                    }
+                    int extra = first >= 0xF0 ? 3 : first >= 0xE0 ? 2 : first >= 0xC0 ? 1 : 0;
+                    int32_t code = first & (extra == 0 ? 0xFF : 0x3F >> extra);
+                    for (int k = 0; k < extra; ++k) {
+                        int b = i < pat.size() ? readByte(pat, i) : -1;
+                        if (b < 0x80 || b > 0xBF) {
+                            throw std::regex_error(std::regex_constants::error_collate);
+                        }
+                        code = (code << 6) | (b & 0x3F);
+                    }
+                    return code;
+                }
+
+                inline void appendHex(std::string& out, int32_t b) {
+                    static const char digits[] = "0123456789abcdef";
+                    out.append("\\x");
+                    out.push_back(digits[(b >> 4) & 0xF]);
+                    out.push_back(digits[b & 0xF]);
+                }
+
+                inline int encode(int32_t code, int32_t* bytes) {
+                    if (code < 0x800) {
+                        bytes[0] = 0xC0 | (code >> 6);
+                        bytes[1] = 0x80 | (code & 0x3F);
+                        return 2;
+                    }
+                    if (code < 0x10000) {
+                        bytes[0] = 0xE0 | (code >> 12);
+                        bytes[1] = 0x80 | ((code >> 6) & 0x3F);
+                        bytes[2] = 0x80 | (code & 0x3F);
+                        return 3;
+                    }
+                    bytes[0] = 0xF0 | (code >> 18);
+                    bytes[1] = 0x80 | ((code >> 12) & 0x3F);
+                    bytes[2] = 0x80 | ((code >> 6) & 0x3F);
+                    bytes[3] = 0x80 | (code & 0x3F);
+                    return 4;
+                }
+
+                // Appends `|` and byte sequences matching the UTF-8 of codes `lo` to `hi`, all
+                // past ASCII, splitting until each byte position is one contiguous range.
+                inline void appendUtf8(int32_t lo, int32_t hi, std::string& out) {
+                    for (int32_t bound : {0x7FF, 0xFFFF}) {
+                        if (lo <= bound && bound < hi) {
+                            appendUtf8(lo, bound, out);
+                            appendUtf8(bound + 1, hi, out);
+                            return;
+                        }
+                    }
+                    for (int n = 1; n < 4; ++n) {
+                        int32_t m = (1 << (6 * n)) - 1;
+                        if ((lo & ~m) != (hi & ~m)) {
+                            if ((lo & m) != 0) {
+                                appendUtf8(lo, lo | m, out);
+                                appendUtf8((lo | m) + 1, hi, out);
+                                return;
+                            }
+                            if ((hi & m) != m) {
+                                appendUtf8(lo, (hi & ~m) - 1, out);
+                                appendUtf8(hi & ~m, hi, out);
+                                return;
+                            }
+                        }
+                    }
+                    int32_t loBytes[4];
+                    int32_t hiBytes[4];
+                    int size = encode(lo, loBytes);
+                    encode(hi, hiBytes);
+                    out.push_back('|');
+                    for (int k = 0; k < size; ++k) {
+                        if (loBytes[k] == hiBytes[k]) {
+                            appendHex(out, loBytes[k]);
+                        } else {
+                            out.push_back('[');
+                            appendHex(out, loBytes[k]);
+                            out.push_back('-');
+                            appendHex(out, hiBytes[k]);
+                            out.push_back(']');
+                        }
+                    }
+                }
+
+                // A group matching one code point in `ranges`.
+                inline std::string alternation(const Ranges& ranges) {
+                    std::string ascii;
+                    std::string rest;
+                    for (const auto& r : normalize(ranges)) {
+                        if (r.first < 0x80) {
+                            appendHex(ascii, r.first);
+                            int32_t asciiEnd = std::min(r.second, static_cast<int32_t>(0x7F));
+                            if (asciiEnd > r.first) {
+                                ascii.push_back('-');
+                                appendHex(ascii, asciiEnd);
+                            }
+                        }
+                        if (r.second >= 0x80) {
+                            appendUtf8(std::max(r.first, static_cast<int32_t>(0x80)), r.second, rest);
+                        }
+                    }
+                    if (ascii.empty() && rest.empty()) {
+                        return "(?!)";
+                    }
+                    std::string out("(?:");
+                    if (!ascii.empty()) {
+                        out.append("[").append(ascii).append("]").append(rest);
+                    } else {
+                        out.append(rest, 1, std::string::npos);
+                    }
+                    out.append(")");
+                    return out;
+                }
+
+                // The code set starting at `i`, just past its `[`, leaving `i` past its `]`.
+                inline std::string rewriteSet(const std::string& pat, size_t& i) {
+                    size_t start = i - 1;
+                    bool negated = i < pat.size() && pat[i] == '^';
+                    if (negated) {
+                        ++i;
+                    }
+                    Ranges ranges;
+                    // Reads one code into `code`, or adds a class escape and returns false.
+                    auto readItem = [&](int32_t& code) -> bool {
+                        if (pat[i] == '\\' && i + 1 < pat.size()) {
+                            char c = pat[i + 1];
+                            switch (c) {
+                                case 'd': case 'D': case 's': case 'S': case 'w': case 'W':
+                                    addClass(c, ranges);
+                                    i += 2;
+                                    return false;
+                                case 'b': code = '\b'; i += 2; return true;
+                                case 'f': code = '\f'; i += 2; return true;
+                                case 'n': code = '\n'; i += 2; return true;
+                                case 'r': code = '\r'; i += 2; return true;
+                                case 't': code = '\t'; i += 2; return true;
+                                case 'v': code = '\v'; i += 2; return true;
+                                case '0': code = 0; i += 2; return true;
+                                default: break;
+                            }
+                            int b = readByte(pat, i);
+                            if (b < 0) {
+                                // Any other escape is the code after the backslash.
+                                b = static_cast<unsigned char>(pat[i + 1]);
+                                i += 2;
+                            }
+                            code = readCode(b, pat, i);
+                            return true;
+                        }
+                        code = readCode(readByte(pat, i), pat, i);
+                        return true;
+                    };
+                    while (true) {
+                        if (i >= pat.size()) {
+                            throw std::regex_error(std::regex_constants::error_brack);
+                        }
+                        if (pat[i] == ']') {
+                            ++i;
+                            break;
+                        }
+                        int32_t lo = 0;
+                        if (!readItem(lo)) {
+                            continue;
+                        }
+                        int32_t hi = lo;
+                        if (i + 1 < pat.size() && pat[i] == '-' && pat[i + 1] != ']') {
+                            ++i;
+                            if (!readItem(hi) || hi < lo) {
+                                throw std::regex_error(std::regex_constants::error_range);
+                            }
+                        }
+                        ranges.push_back(std::make_pair(lo, hi));
+                    }
+                    if (negated) {
+                        return alternation(complement(ranges));
+                    }
+                    for (const auto& r : ranges) {
+                        if (r.second >= 0x80) {
+                            return alternation(ranges);
+                        }
+                    }
+                    return pat.substr(start, i - start);
+                }
+
+                inline std::string rewrite(const std::string& pat) {
+                    std::string out;
+                    out.reserve(pat.size());
+                    size_t i = 0;
+                    while (i < pat.size()) {
+                        char c = pat[i];
+                        if (c == '\\' && i + 1 < pat.size()) {
+                            out.append(pat, i, 2);
+                            i += 2;
+                        } else if (c == '[') {
+                            ++i;
+                            out.append(rewriteSet(pat, i));
+                        } else if (c == '.') {
+                            // Anything but a line terminator, as in ECMAScript.
+                            static const std::string dot = alternation(complement(Ranges{
+                                {'\n', '\n'}, {'\r', '\r'}, {0x2028, 0x2029},
+                            }));
+                            out.append(dot);
+                            ++i;
+                        } else {
+                            out.push_back(c);
+                            ++i;
+                        }
+                    }
+                    return out;
+                }
+            }
 
             // libstdc++'s std::regex rejects ECMAScript named-group syntax `(?<name>...)`
             // outright, so the Temper regex formatter's named captures would otherwise fail to
@@ -88,13 +390,14 @@ namespace temper {
             template<class T>
             std::shared_ptr<AnyValueBase> compileFormatted(std::shared_ptr<T>, std::string formatted) {
                 std::vector<std::string> names;
-                std::string rewritten = rewriteNamedGroups(formatted, names);
                 try {
+                    std::string rewritten = rewriteNamedGroups(CodeSets::rewrite(formatted), names);
                     return std::make_shared<CompiledRegex>(
                     std::regex(rewritten, std::regex::ECMAScript), std::move(names));
-                } catch (const std::regex_error&) {
-                    return std::make_shared<CompiledRegex>(
-                    std::regex("(?!)", std::regex::ECMAScript), std::vector<std::string>());
+                } catch (const std::regex_error& error) {
+                    // Fail loudly, as other backends do, rather than never matching.
+                    throw std::runtime_error(
+                    std::string("regex failed to compile: ").append(error.what()).append(": ").append(formatted));
                 }
             }
 

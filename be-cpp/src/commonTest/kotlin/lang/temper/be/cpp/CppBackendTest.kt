@@ -711,6 +711,39 @@ class CppBackendTest {
     }
 
     @Test
+    fun overridesTakeParametersLikeTheirInterface() {
+        // C++ overrides only on an exact signature match, so a type parameter goes as
+        // `Param<T>` (`T const &` for shared_ptr), and a reassigned parameter still goes
+        // by `const &`, copied into a local.
+        assertGeneratedContains(
+            temper = """
+                |export interface Wrapper<T> {
+                |  wrap(item: T, after: Wrapper<T>): T;
+                |}
+                |export class Box(public label: String) {}
+                |export class BoxWrapper extends Wrapper<Box> {
+                |  public wrap(item: Box, after: Wrapper<Box>): Box {
+                |    var it = item;
+                |    it = new Box("[" + it.label + "]");
+                |    it
+                |  }
+                |}
+                |export class Rewrapper extends Wrapper<Box> {
+                |  public wrap(var item: Box, after: Wrapper<Box>): Box {
+                |    item = new Box("<" + item.label + ">");
+                |    item
+                |  }
+                |}
+            """,
+            cppContains = listOf(
+                "T virtual wrap(temper::core::Param<T>, std::shared_ptr<Wrapper<T>> const &) const;",
+                "virtual wrap(std::shared_ptr<Box> const &, std::shared_ptr<Wrapper<std::shared_ptr<Box>>> const &)",
+                "std::shared_ptr<Box> item_",
+            ),
+        )
+    }
+
+    @Test
     fun constnessFollowsGetterCalls() {
         // A getter that hands out `this` isn't `const`, so neither is a method reading it.
         assertGeneratedContains(

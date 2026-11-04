@@ -37,7 +37,6 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     issue(Ft.ClassesWriteBackThroughField, cpp(539))
     onlyFails(
         cpp(198),
-        Ft.RegexMatch,
         Ft.TypesNetresponse,
     )
     onlyPasses(

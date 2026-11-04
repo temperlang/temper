@@ -2161,9 +2161,65 @@ class CppTranslator(
     private fun constRef(type: Cpp.Type): Cpp.Type =
         cpp.singleName(CppName("${renderToString(type)} const &", raw = true))
 
-    private fun translateParamType(formal: TmpL.Formal): Cpp.Type {
+    /**
+     * The C++ type a parameter is passed as. Shared_ptr and std::function parameters go by const
+     * reference to avoid a copy (and its atomic refcount bump) on every call, but only when never
+     * reassigned, since a const reference can't be rebound. std::function's type erasure means
+     * callers and function values interoperate either way.
+     *
+     * In a virtual member ([inOverrideSlot]), C++ overrides only when parameter types match
+     * exactly, and an interface's `T` may be an override's `Foo`, so passing depends on the type
+     * alone: indirect types go by const reference even when reassigned (see [overrideSlotParams]),
+     * and a bare type parameter goes as `temper::core::Param<T>`, which is `T const &` exactly
+     * when `T` is indirect.
+     */
+    private fun translateParamType(formal: TmpL.Formal, inOverrideSlot: Boolean = false): Cpp.Type {
+        val localType = paramLocalType(formal)
+        return when {
+            inOverrideSlot && !formal.optional && isTypeParameterType(formal.type.ot) ->
+                cpp.template(cpp.name(TEMPER_CORE_NAMESPACE, "Param"), localType)
+            (formal.assignOnce || inOverrideSlot) && isIndirectType(localType) -> constRef(localType)
+            else -> localType
+        }
+    }
+
+    private fun isTypeParameterType(type: TmpL.Type): Boolean =
+        type is TmpL.NominalType && isTypeParameterDef(type.typeName.sourceDefinition)
+
+    /**
+     * Parameters for a virtual member, plus statements that copy any reassigned parameter passed
+     * by `const &` into a local of its name, for the start of the body.
+     */
+    private fun overrideSlotParams(
+        formals: List<TmpL.Formal>,
+    ): Pair<List<Pair<Cpp.Type, Cpp.SingleName>>, List<Cpp.Stmt>> {
+        val copies = mutableListOf<Cpp.Stmt>()
+        val params = formals.map { formal ->
+            cpp.pos(formal) {
+                val type = translateParamType(formal, inOverrideSlot = true)
+                val name = cpp.name(formal.name)
+                val localType = paramLocalType(formal)
+                if (formal.assignOnce || renderToString(type) == renderToString(localType)) {
+                    type to name
+                } else {
+                    val passedName = cpp.tmp(name.id.text)
+                    copies.add(cpp.varDef(localType, name, passedName.deepCopy()))
+                    type to passedName
+                }
+            }
+        }
+        return params to copies
+    }
+
+    private fun prepend(stmts: List<Cpp.Stmt>, block: Cpp.BlockStmt): Cpp.BlockStmt = when {
+        stmts.isEmpty() -> block
+        else -> cpp.blockStmt(stmts + block.stmts)
+    }
+
+    /** A parameter's type as a local, before choosing how it's passed. */
+    private fun paramLocalType(formal: TmpL.Formal): Cpp.Type {
         val baseType = translateType(formal.type)
-        val withOptional = if (formal.optional && !isNullableType(formal.type.ot)) {
+        return if (formal.optional && !isNullableType(formal.type.ot)) {
             // Only wrap in NullableParam if the type isn't already nullable
             // (Nullable<T> for value types is already NullableParam<T>)
             cpp.template(
@@ -2173,12 +2229,6 @@ class CppTranslator(
         } else {
             baseType
         }
-        // Pass shared_ptr / std::function parameters by const reference to avoid a copy
-        // (and its atomic refcount bump) on every call — but only when the parameter is
-        // never reassigned, since a const reference can't be rebound. std::function's type
-        // erasure means callers/function-values interoperate regardless of by-value vs
-        // by-const-ref, so this stays a local change to function and method signatures.
-        return if (formal.assignOnce && isIndirectType(withOptional)) constRef(withOptional) else withOptional
     }
 
     /**
@@ -2494,21 +2544,16 @@ class CppTranslator(
                 val backingFieldName = cpp.singleName(
                     CppName(fixName(propDotName)),
                 )
+                val (params, paramCopies) = overrideSlotParams(valueParams)
                 val func = cpp.func(
                     cpp.scopedName(
                         cpp.name(topLevel.name),
                         setterCppName,
                     ),
                     translateType(member.returnType),
-                    valueParams.map { param ->
-                        cpp.pos(param) {
-                            val type = translateParamType(param)
-                            val name = cpp.name(param.name)
-                            type to name
-                        }
-                    },
+                    params,
                     cpp.blockStmt(
-                        listOf(
+                        paramCopies + listOf(
                             cpp.exprStmt(
                                 cpp.op(
                                     "=",
@@ -2541,7 +2586,7 @@ class CppTranslator(
                     if (setterKey !in declaredSetters) {
                         declaredSetters.add(setterKey)
                         val paramTypes = member.parameters.parameters.drop(1).map {
-                            translateParamType(it)
+                            translateParamType(it, inOverrideSlot = true)
                         }
                         add(
                             pureVirtualMethod(
@@ -2555,26 +2600,29 @@ class CppTranslator(
                     }
                 }
                 else -> {
+                    val needsVirtualSetter = isInterface ||
+                        realSuperTypes.any()
+                    val (params, paramCopies) = when {
+                        needsVirtualSetter -> overrideSlotParams(member.parameters.parameters.drop(1))
+                        else -> member.parameters.parameters.drop(1).map { param ->
+                            cpp.pos(param) { translateParamType(param) to cpp.name(param.name) }
+                        } to emptyList()
+                    }
                     val func = cpp.func(
                         cpp.scopedName(
                             cpp.name(topLevel.name),
                             setterCppName,
                         ),
                         translateType(member.returnType),
-                        member.parameters.parameters.drop(1).map { param ->
-                            cpp.pos(param) {
-                                val type = translateParamType(param)
-                                val name = cpp.name(param.name)
-                                type to name
-                            }
-                        },
-                        translateBlockWithThis(
-                            cpp.name(member.parameters.parameters.first().name),
-                            body,
+                        params,
+                        prepend(
+                            paramCopies,
+                            translateBlockWithThis(
+                                cpp.name(member.parameters.parameters.first().name),
+                                body,
+                            ),
                         ),
                     )
-                    val needsVirtualSetter = isInterface ||
-                        realSuperTypes.any()
                     val firstDecl = setterKey !in declaredSetters
                     if (firstDecl) declaredSetters.add(setterKey)
                     emitMethodDeclAndDef(
@@ -2620,7 +2668,7 @@ class CppTranslator(
         val methodQual = memberConstQualifier(member.dotName.dotNameText)
         when (val body = member.body) {
             null -> {
-                val paramTypes = methodFormals.map { translateParamType(it) }
+                val paramTypes = methodFormals.map { translateParamType(it, inOverrideSlot = true) }
                 add(
                     pureVirtualMethod(
                         translateType(member.returnType),
@@ -2711,18 +2759,21 @@ class CppTranslator(
             )
             val hasOptional =
                 methodFormals.any { it.optional }
+            // A generic method is a C++ template, which can't be virtual.
+            val (params, paramCopies) = when {
+                needsVirtual && typeFormals.isEmpty() -> overrideSlotParams(methodFormals)
+                else -> methodFormals.map { param ->
+                    cpp.pos(param) { translateParamType(param) to cpp.name(param.name) }
+                } to emptyList()
+            }
             val func = cpp.func(
                 when {
                     typeFormals.isNotEmpty() -> methodCppName
                     else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
                 },
                 translateType(member.returnType),
-                methodFormals.map { param ->
-                    cpp.pos(param) {
-                        translateParamType(param) to cpp.name(param.name)
-                    }
-                },
-                translateBody(),
+                params,
+                prepend(paramCopies, translateBody()),
                 qual = methodQual,
             )
             if (typeFormals.isNotEmpty()) {
