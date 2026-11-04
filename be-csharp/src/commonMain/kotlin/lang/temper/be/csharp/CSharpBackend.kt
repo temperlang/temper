@@ -10,6 +10,7 @@ import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.connectedFilesReplacedByFallbacks
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
 import lang.temper.frontend.BindingsInjector
@@ -187,7 +188,11 @@ class CSharpBackend(setup: BackendSetup<CSharpBackend>) : Backend<CSharpBackend>
             }
             // Connected source.
             val rootSize = libraryConfig.libraryRoot.segments.size
+            // A connected class's own file, like `Counter.cs`, would clash with the
+            // class generated from its Temper implementation, if used.
+            val replaced = finished.connectedFilesReplacedByFallbacks(FILE_EXTENSION)
             for (file in rawBackendFiles) {
+                if (file.key in replaced) { continue }
                 // Skip the library name dir and the file name, and keep the middle
                 val subspace = chooseSubspace(file.key.segments).subList(rootSize, file.key.segments.size - 1)
                 MetadataFileSpecification(

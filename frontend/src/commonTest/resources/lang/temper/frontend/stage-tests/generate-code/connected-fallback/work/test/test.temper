@@ -1,0 +1,42 @@
+// A connected class may have a complete Temper implementation, which the
+// interpreter and backends without connected code use.
+
+// Fine: every backend has connected code, and the interpreter uses this.
+@connected
+export class Whole {
+  private var n: Int = 0;
+  public bump(): Int { n += 1; n }
+}
+
+// Fine: backends not listed use the Temper implementation.
+@connected(["cpp", "rust"])
+export class Listed {
+  public twice(i: Int): Int { i * 2 }
+}
+
+// Fine: no Temper implementation, so every backend has connected code. The
+// implied getter for `x` doesn't count as a Temper implementation.
+@connected
+export class Bodiless(public x: Int) {
+  public three(): Int;
+}
+
+// BAD: a Temper implementation must be complete.
+@connected
+export class Partial {
+  public one(): Int { 1 }
+  public two(): Int;
+}
+
+// BAD: backends not listed would have no implementation to use.
+@connected(["cpp"])
+export class Unlisted {
+  public four(): Int;
+}
+
+// BAD: still no default arguments, even with a Temper implementation, since
+// connected code implements the same methods.
+@connected
+export class Defaulted {
+  public scale(x: Int, by: Int = 1): Int { x * by }
+}

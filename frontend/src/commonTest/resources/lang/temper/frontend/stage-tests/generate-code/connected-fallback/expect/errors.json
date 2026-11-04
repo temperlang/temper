@@ -1,0 +1,5 @@
+[
+    "Method two of a @connected class needs a Temper body, since other methods have one, and a Temper fallback must be complete!",
+    "Method four of a @connected class that lists backends needs a Temper body for the backends not listed!",
+    "Method scale of a connected class can't have default arguments, since host code implements it directly!"
+]
