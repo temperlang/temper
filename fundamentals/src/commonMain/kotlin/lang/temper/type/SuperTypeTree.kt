@@ -53,11 +53,7 @@ sealed class SuperTypeTree(
                 formals[it].name to t.bindings[it]
             }
             val mapper = TypeBindingMapper(formalNameToBinding)
-            val superTypes = when (defn) {
-                is TypeShape -> defn.superTypes
-                is TypeFormal -> defn.upperBounds
-            }
-            val remapped = superTypes.map { st ->
+            val remapped = defn.upperBounds.map { st ->
                 MkType.map(st, mapper) as NominalType
             }
             return remapped

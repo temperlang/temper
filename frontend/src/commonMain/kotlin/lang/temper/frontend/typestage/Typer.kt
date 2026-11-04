@@ -2893,11 +2893,8 @@ internal class Typer(
                     return
                 }
                 allThisVariants[thisVariant] = depth
-                val superTypes = when (val definition = thisVariant.definition) {
-                    is TypeShape -> definition.superTypes
-                    is TypeFormal -> definition.upperBounds
-                }
-                superTypes.forEach { superTypeUnbound ->
+                val definition = thisVariant.definition
+                definition.upperBounds.forEach { superTypeUnbound ->
                     val typeMapper = typeBindingMapper(thisVariant)
                     if (typeMapper != null) {
                         explodeThisType(typeMapper(superTypeUnbound) as NominalType, depth + 1)

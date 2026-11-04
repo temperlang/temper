@@ -1301,11 +1301,7 @@ fun TypeShape.hasSplitSupers(kind: MethodKind, name: String): Boolean = run {
             null -> findings[type.name] = foundEarlierOnThisPath // First here, so record either yea or nay.
         }
         // Found a reason to keep digging.
-        val superTypes = when (type) {
-            is TypeShape -> type.superTypes
-            is TypeFormal -> type.upperBounds
-        }
-        for (superType in superTypes) {
+        for (superType in type.upperBounds) {
             dig(superType.definition, foundByHere) && return@dig true
         }
         // No split findings on this path.

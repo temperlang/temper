@@ -61,6 +61,7 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val name: ResolvedName
     val word: Symbol?
     val formals: List<TypeFormal>
+    val upperBounds: List<NominalType>
     val sourceLocation: ModuleLocation
         get() = when (val name = this.name) {
             is ModularName -> name.origin.loc
@@ -138,7 +139,7 @@ sealed interface TypeFormal : TypeDefinition {
     val variance: Variance
 
     /** Required super-types for actual types that bind to this formal. */
-    val upperBounds: List<NominalType>
+    override val upperBounds: List<NominalType>
 
     override fun addStays(s: StaySink) {
         upperBounds.forEach { it.addStays(s) }
@@ -343,6 +344,8 @@ sealed interface TypeShape : TypeDefinition {
      * For example, `class C<T>` has a formal type parameter `T`.
      */
     val typeParameters: List<TypeParameterShape>
+
+    override val upperBounds: List<NominalType> get() = superTypes
 
     override val hasFormals: Boolean get() = typeParameters.isNotEmpty()
 
