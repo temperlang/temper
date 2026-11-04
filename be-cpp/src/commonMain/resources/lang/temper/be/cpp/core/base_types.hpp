@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include "temper_bubble.hpp"
+#include "str.hpp"
 #include "any_value.hpp"
 #include "nullable_param.hpp"
 
@@ -81,16 +82,16 @@ namespace temper {
         }
 
         template<class First, class... Rest>
-        void cat_impl(std::stringstream& dst, First fst, Rest... rest) {
+        void cat_impl(std::stringstream& dst, const First& fst, const Rest&... rest) {
             dst << fst;
             cat_impl(dst, rest...);
         }
 
         template<class... Args>
-        std::string cat(Args... args) {
+        Str cat(const Args&... args) {
             std::stringstream ss;
             cat_impl(ss, args...);
-            return ss.str();
+            return Str::written_to(ss.rdbuf());
         }
 
         template<class T = void>

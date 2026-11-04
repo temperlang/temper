@@ -432,9 +432,36 @@ class CppBuilder(
     }
 
     fun literal(value: String): Cpp.LiteralExpr {
+        val (quoted, sizeIfNul) = quoteUtf8(value)
+        // Use std::string(data, length) constructor for strings with embedded null bytes
+        // since const char* constructor stops at the first \0
+        return if (sizeIfNul != null) {
+            literal(raw("std::string($quoted, $sizeIfNul)"))
+        } else {
+            literal(raw(quoted))
+        }
+    }
+
+    /**
+     * A Temper String literal: `temper::core::Str()` when empty, otherwise a `TEMPER_STR(...)`
+     * made once, on first use, and shared from then on.
+     */
+    fun strLiteral(value: String): Cpp.LiteralExpr {
+        if (value.isEmpty()) {
+            return literal(raw("$TEMPER_CORE_NAMESPACE::Str()"))
+        }
+        val (quoted, sizeIfNul) = quoteUtf8(value)
+        return literal(raw(if (sizeIfNul != null) "TEMPER_STR($quoted, $sizeIfNul)" else "TEMPER_STR($quoted)"))
+    }
+
+    /**
+     * [value] as a quoted C++ literal of its UTF-8 bytes, and its size in bytes when it has a
+     * NUL, which a `char const *` would stop at.
+     */
+    private fun quoteUtf8(value: String): Pair<String, Int?> {
         // Encode the whole string as UTF-8 bytes for correct multi-byte character handling
         val utf8Bytes = value.toByteArray(Charsets.UTF_8)
-        val sb = StringBuilder()
+        val sb = StringBuilder("\"")
         var hasNullByte = false
         for (b in utf8Bytes) {
             @Suppress("MagicNumber") // 0xFF mask for unsigned byte conversion
@@ -450,13 +477,8 @@ class CppBuilder(
                 sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(OCTAL_ESCAPE_DIGITS, '0')}")
             }
         }
-        // Use std::string(data, length) constructor for strings with embedded null bytes
-        // since const char* constructor stops at the first \0
-        return if (hasNullByte) {
-            literal(raw("std::string(\"$sb\", ${utf8Bytes.size})"))
-        } else {
-            literal(raw("\"$sb\""))
-        }
+        sb.append('"')
+        return sb.toString() to if (hasNullByte) utf8Bytes.size else null
     }
 
     fun name(resolvedName: ResolvedName): Cpp.SingleName = singleName(cppNames.name(resolvedName))

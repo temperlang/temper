@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include "str.hpp"
 
 namespace temper {
     namespace core {
@@ -65,6 +66,42 @@ namespace temper {
             !(std::is_polymorphic<A>::value && std::is_polymorphic<B>::value), bool>::type
             eq(std::shared_ptr<A> a, std::shared_ptr<B> b) {
                 return static_cast<const void*>(a.get()) == static_cast<const void*>(b.get());
+            }
+
+            // Strings by reference, so comparing them never touches their counts.
+            inline bool eq(Str const & a, Str const & b) {
+                return a == b;
+            }
+            inline bool eq(Str const & a, char const * b) {
+                return a == b;
+            }
+            inline bool eq(char const * a, Str const & b) {
+                return a == b;
+            }
+            inline bool ne(Str const & a, Str const & b) {
+                return a != b;
+            }
+            inline bool ne(Str const & a, char const * b) {
+                return a != b;
+            }
+            inline bool ne(char const * a, Str const & b) {
+                return a != b;
+            }
+            inline bool lt(Str const & a, Str const & b) {
+                return a < b;
+            }
+            inline bool le(Str const & a, Str const & b) {
+                return a <= b;
+            }
+            inline bool gt(Str const & a, Str const & b) {
+                return a > b;
+            }
+            inline bool ge(Str const & a, Str const & b) {
+                return a >= b;
+            }
+            inline int32_t cmp(Str const & a, Str const & b) {
+                int c = a.compare(b);
+                return c < 0 ? -1 : (c > 0 ? 1 : 0);
             }
 
             inline bool eq(std::string a, const char* b) {

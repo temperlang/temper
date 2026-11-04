@@ -1,13 +1,14 @@
 #pragma once
 #include <string>
+#include "str.hpp"
 
 namespace temper {
     namespace core {
 
         namespace Boolean {
 
-            inline std::string toString(bool b) {
-                return b ? "true" : "false";
+            inline Str toString(bool b) {
+                return b ? TEMPER_STR("true") : TEMPER_STR("false");
             }
 
         }

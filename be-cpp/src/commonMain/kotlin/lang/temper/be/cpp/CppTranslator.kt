@@ -53,6 +53,9 @@ import lang.temper.value.connectedSymbol
 /** How the C++ backend renders Temper function types. Emitted and matched in one place. */
 private const val STD_FUNCTION_PREFIX = "std::function"
 
+/** Temper's String in C++: a shared, immutable string in temper/core/str.hpp. */
+private const val STR_TYPE_NAME = "Str"
+
 /**
  * Translates a TmpL module into C++ source files.
  *
@@ -682,7 +685,7 @@ class CppTranslator(
         WellKnownTypes.int64TypeDefinition -> cpp.type("int64_t")
         WellKnownTypes.float64TypeDefinition -> cpp.type("double")
         WellKnownTypes.booleanTypeDefinition -> cpp.type("bool")
-        WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
+        WellKnownTypes.stringTypeDefinition -> cpp.name(TEMPER_CORE_NAMESPACE, STR_TYPE_NAME)
         WellKnownTypes.voidTypeDefinition -> cpp.type("void")
         WellKnownTypes.stringIndexTypeDefinition -> cpp.type("int32_t")
         WellKnownTypes.stringIndexOptionTypeDefinition -> cpp.type("int32_t")
@@ -1576,7 +1579,7 @@ class CppTranslator(
                     else -> cpp.literal(d)
                 }
             }
-            TString -> cpp.literal(TString.unpack(value))
+            TString -> cpp.strLiteral(TString.unpack(value))
             TNull -> {
                 // nullptr converts to: shared_ptr nullptr,
                 // NullableParam has_value=false (for value types).
@@ -2148,10 +2151,14 @@ class CppTranslator(
         }
     }
 
-    /** A reference-counted (shared_ptr) or std::function type — expensive to copy. */
+    /**
+     * A reference-counted (shared_ptr, a String's temper::core::Str) or std::function type,
+     * whose copies cost a count bump or more.
+     */
     private fun isIndirectType(type: Cpp.Type): Boolean = when (type) {
         is Cpp.TemplateType -> leafNameOf(type.base) == "shared_ptr"
         is Cpp.SingleName -> type.id.text.startsWith(STD_FUNCTION_PREFIX)
+        is Cpp.ScopedName -> renderToString(type) == "$TEMPER_CORE_NAMESPACE::$STR_TYPE_NAME"
         else -> false
     }
 
@@ -2171,7 +2178,7 @@ class CppTranslator(
         } else {
             baseType
         }
-        // Pass shared_ptr / std::function parameters by const reference to avoid a copy
+        // Pass shared_ptr / Str / std::function parameters by const reference to avoid a copy
         // (and its atomic refcount bump) on every call — but only when the parameter is
         // never reassigned, since a const reference can't be rebound. std::function's type
         // erasure means callers/function-values interoperate regardless of by-value vs
