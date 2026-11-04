@@ -34,7 +34,7 @@ class CppBackendTest {
                 |    static temper::core::GlobalSlot<std::shared_ptr<temper::core::Console::Type>> console_0;
                 |    static temper::core::GlobalSlot<int32_t> x;
                 |  }
-                |  void greet(std::string name) {
+                |  void greet(std::string const & name) {
                 |    global_init_something();
                 |    temper::core::Console::log(temper_globals::console_0.value, "Hi:");
                 |    temper::core::Console::log(temper_globals::console_0.value, name);
@@ -57,7 +57,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  void global_init_something();
-                |  void greet(std::string);
+                |  void greet(std::string const &);
                 |}
                 |
             """,
@@ -105,6 +105,81 @@ class CppBackendTest {
                 |}
                 |
             """,
+        )
+    }
+
+    @Test
+    fun stringsPassByConstRef() {
+        // A string parameter goes by `const &`, in headers, function types, and local
+        // functions too; a reassigned one is copied into a local of its name. A getter of a
+        // string set once returns it by `const &`, and a local set once from a parameter or
+        // such a field refers to it. A local set from a reassigned parameter copies it.
+        assertGeneratedContains(
+            temper = $$"""
+                |export class Doc(public text: String) {
+                |  public firstPart(): String {
+                |    let text = this.text;
+                |    echo(text)
+                |  }
+                |}
+                |export let echo(text: String): String { text }
+                |export let shout(var s: String): String {
+                |  let before = s;
+                |  s = "${s}!";
+                |  "${before} ${s}"
+                |}
+                |export let textOf(doc: Doc): String {
+                |  let text = doc.text;
+                |  let shown(prefix: String): String { "${prefix}${text}" }
+                |  shown("> ")
+                |}
+                |export let apply(f: fn (String): Int, s: String): Int { f(s) }
+            """,
+            cppContains = listOf(
+                "std::string echo(std::string const &);",
+                "std::string shout(std::string const &);",
+                "int32_t apply(std::function<int32_t(std::string const &)> const &, std::string const &);",
+                "std::string const & get_text() const;",
+                "std::string const & text_12 = this_->text;",
+                "std::string const & text_23 = doc->get_text();",
+                "std::string shout(std::string const & s_1) {\n    std::string s = s_1;\n    std::string before = s;",
+                "std::function<std::string(std::string const &)> shown;",
+                "std::shared_ptr<Doc> make(std::string const &);",
+            ),
+        )
+    }
+
+    @Test
+    fun argumentsTheCalleeMightChangeAreCopied() {
+        // An argument read from a `var` the callee could assign, or from an object the callee
+        // could drop, is copied, so a `const &` parameter never changes underneath. Fields set
+        // once of objects held still, and locals no closure uses, are passed as they are.
+        assertGeneratedContains(
+            temper = $$"""
+                |var current = "first";
+                |export let replaceCurrent(old: String): String {
+                |  current = "second";
+                |  "${old} ${current}"
+                |}
+                |export let replaceNow(): String { replaceCurrent(current) }
+                |class Named(public name: String) {}
+                |export class Labeled(public var label: String, public var child: Named, public fixed: String) {
+                |  public relabel(): String {
+                |    "${this.describe(this.label)} ${this.describe(this.child.name)} ${this.describe(this.fixed)}"
+                |  }
+                |  private describe(old: String): String {
+                |    this.label = "new";
+                |    this.child = new Named("new");
+                |    old
+                |  }
+                |}
+            """,
+            cppContains = listOf(
+                "replaceCurrent(temper::core::copy_of(",
+                "describe(temper::core::copy_of(this_",
+                "describe(temper::core::copy_of(this_",
+                "describe(this_",
+            ),
         )
     }
 

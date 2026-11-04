@@ -17,6 +17,13 @@ namespace temper {
             typedef T type;
         };
 
+        // A copy, passed to a `const &` parameter in place of something, such as a
+        // `var` field, that the callee might change while it runs.
+        template<class T>
+        T copy_of(T const & value) {
+            return value;
+        }
+
         struct Never {
             template<class T>
             operator T() const {

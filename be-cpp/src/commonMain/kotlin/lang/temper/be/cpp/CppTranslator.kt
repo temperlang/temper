@@ -25,6 +25,7 @@ import lang.temper.name.ModularName
 import lang.temper.name.ModuleName
 import lang.temper.name.ResolvedName
 import lang.temper.name.SourceName
+import lang.temper.name.TemperName
 import lang.temper.name.Temporary
 import lang.temper.type.Abstractness
 import lang.temper.type.MethodKind
@@ -196,11 +197,26 @@ class CppTranslator(
     /** This module's properties that are set once, in the constructor, and only read after. */
     private val assignOnceProperties = mutableSetOf<ResolvedName>()
 
+    private fun isAssignOnceProperty(name: TemperName): Boolean =
+        name is ResolvedName && name in assignOnceProperties
+
+    /** This module's parameters, locals, and module-level names that are never reassigned. */
+    private val assignOnceNames = mutableSetOf<ResolvedName>()
+
     private fun collectOrderingFacts(tree: TmpL.Tree) {
         when (tree) {
             is TmpL.LocalFunctionDeclaration -> namesUsedInClosures.addAll(tree.body.referencedNames())
             is TmpL.InstanceProperty -> if (tree.assignOnce) {
                 assignOnceProperties.add(tree.name.name)
+            }
+            is TmpL.Formal -> if (tree.assignOnce) {
+                assignOnceNames.add(tree.name.name)
+            }
+            is TmpL.LocalDeclaration -> if (tree.assignOnce) {
+                assignOnceNames.add(tree.name.name)
+            }
+            is TmpL.ModuleLevelDeclaration -> if (tree.assignOnce) {
+                assignOnceNames.add(tree.name.name)
             }
             else -> {}
         }
@@ -222,6 +238,7 @@ class CppTranslator(
         moduleVarNames.clear()
         namesUsedInClosures.clear()
         assignOnceProperties.clear()
+        assignOnceNames.clear()
         collectOrderingFacts(mod)
         importedModules.clear()
         for (topLevel in mod.topLevels) {
@@ -671,7 +688,7 @@ class CppTranslator(
 
     private fun stdFunction(retType: Cpp.Type, paramTypes: List<Cpp.Type>): Cpp.Type {
         val retStr = renderToString(retType)
-        val paramStr = paramTypes.joinToString(", ") { renderToString(it) }
+        val paramStr = paramTypes.joinToString(", ") { renderToString(passedType(it)) }
         return cpp.singleName(CppName("$STD_FUNCTION_PREFIX<$retStr($paramStr)>", raw = true))
     }
 
@@ -1131,21 +1148,9 @@ class CppTranslator(
 
     private fun operandEffect(expr: TmpL.Expression): OperandEffect = when (expr) {
         is TmpL.ValueReference, is TmpL.This, is TmpL.FunInterfaceExpression -> OperandEffect.None
-        is TmpL.Reference -> {
-            val key = cpp.name(expr.id).id.text
-            val changeable = key in moduleVarNames ||
-                (key in mutableLocalsInScope && expr.id.name in namesUsedInClosures) ||
-                // Another module's `var` would be changed by that module's functions.
-                sourceModuleFor(expr.id.name) != null
-            if (changeable) OperandEffect.Reads else OperandEffect.None
-        }
+        is TmpL.Reference -> if (isChangeableByCall(expr)) OperandEffect.Reads else OperandEffect.None
         is TmpL.GetBackedProperty -> {
-            val property = expr.property
-            val own = if (property is TmpL.InternalPropertyId && property.name.name in assignOnceProperties) {
-                OperandEffect.None
-            } else {
-                OperandEffect.Reads
-            }
+            val own = if (isAssignOnceProperty(expr.property)) OperandEffect.None else OperandEffect.Reads
             maxOf(own, subjectEffect(expr.subject))
         }
         is TmpL.GetAbstractProperty -> if (isStoredFieldOfClass(expr)) {
@@ -1189,6 +1194,98 @@ class CppTranslator(
             is TmpL.InternalPropertyId -> shape.properties.firstOrNull { it.name == id.name.name }
         }
         return property?.abstractness == Abstractness.Concrete
+    }
+
+    /** Whether a call could assign what [expr] names: a module's `var`, or a `var` a closure uses. */
+    private fun isChangeableByCall(expr: TmpL.Reference): Boolean {
+        val key = cpp.name(expr.id).id.text
+        return key in moduleVarNames ||
+            (key in mutableLocalsInScope && expr.id.name in namesUsedInClosures) ||
+            // Another module's `var` would be changed by that module's functions.
+            sourceModuleFor(expr.id.name) != null
+    }
+
+    private fun isAssignOnceProperty(property: TmpL.PropertyId): Boolean =
+        property is TmpL.InternalPropertyId && property.name.name in assignOnceProperties
+
+    /** Whether [expr] reads a property of a class, set once, through the getter generated for it. */
+    private fun isAssignOnceFieldOfClass(expr: TmpL.GetAbstractProperty): Boolean {
+        if (!isStoredFieldOfClass(expr)) {
+            return false
+        }
+        val shape = (expr.subject as TmpL.Expression).passType.definition as TypeShape
+        val property = when (val id = expr.property) {
+            is TmpL.ExternalPropertyId -> shape.properties.firstOrNull { it.symbol.text == id.name.dotNameText }
+            is TmpL.InternalPropertyId -> shape.properties.firstOrNull { it.name == id.name.name }
+        }
+        return property != null && isAssignOnceProperty(property.name)
+    }
+
+    /*
+     * Strings and indirect values (shared_ptr, std::function) are passed by `const &`, so a
+     * parameter refers to the caller's value, and a string local may refer to one, rather than
+     * holding a copy. That is only sound while what it refers to neither changes nor dies.
+     *
+     * For a call, the callee might assign a `var` field, a module's `var`, or a `var` local a
+     * closure uses, or drop the last reference to an object whose field was passed, so an
+     * argument that reads one of those is copied to a temporary first ([passArg]). Anything
+     * else stays put during the call: a parameter (its own caller made the same promise), a
+     * local the callee can't reach, a field set once of an object something keeps alive, or
+     * a temporary, which lives until the call returns.
+     *
+     * A local lives longer, while its own function may assign things too, so a string local
+     * binds by `const &` only to a parameter, another local or module-level name set once, or
+     * a field set once of an object so held ([outlivesScope]). Temporaries die at the end of
+     * their statement, so a local copies anything else, as before.
+     */
+
+    /** Whether the value [expr] evaluates to could change, or its storage die, during a call. */
+    private fun mayChangeDuringCall(expr: TmpL.Expression): Boolean = when (expr) {
+        is TmpL.Reference -> isChangeableByCall(expr)
+        is TmpL.GetBackedProperty ->
+            !isAssignOnceProperty(expr.property) || !objectOutlivesCall(expr.subject)
+        // Other getters return copies.
+        is TmpL.GetAbstractProperty -> isAssignOnceFieldOfClass(expr) && !objectOutlivesCall(expr.subject)
+        // A temporary, which nothing else can reach.
+        else -> false
+    }
+
+    /** Whether the object [subject] evaluates to stays alive until a call that reads it returns. */
+    private fun objectOutlivesCall(subject: TmpL.Subject): Boolean = when (subject) {
+        is TmpL.Expression -> !mayChangeDuringCall(subject)
+        else -> true
+    }
+
+    /**
+     * Whether the value [expr] evaluates to stays, unchanged, as long as a local declared in
+     * the current scope, so the local can refer to it rather than copy it.
+     */
+    private fun outlivesScope(expr: TmpL.Expression): Boolean = when (expr) {
+        is TmpL.This -> true
+        is TmpL.Reference -> expr.id.name in assignOnceNames && !isChangeableByCall(expr)
+        is TmpL.GetBackedProperty -> isAssignOnceProperty(expr.property) && when (val subject = expr.subject) {
+            is TmpL.Expression -> outlivesScope(subject)
+            else -> false
+        }
+        is TmpL.GetAbstractProperty ->
+            isAssignOnceFieldOfClass(expr) && outlivesScope(expr.subject as TmpL.Expression)
+        else -> false
+    }
+
+    /**
+     * [translated], from [expr], as an argument: copied to a temporary when it's a string or
+     * indirect value the callee might change while it runs (see [mayChangeDuringCall]).
+     */
+    private fun passArg(expr: TmpL.Expression, translated: Cpp.Expr): Cpp.Expr {
+        if (!mayChangeDuringCall(expr)) {
+            return translated
+        }
+        val type = translateType2(expr.passType)
+        return if (isStringType(type) || isIndirectType(type)) {
+            cpp.callExpr(cpp.name(TEMPER_CORE_NAMESPACE, "copy_of"), translated)
+        } else {
+            translated
+        }
     }
 
     private fun subjectEffect(subject: TmpL.Subject): OperandEffect = when (subject) {
@@ -1303,7 +1400,7 @@ class CppTranslator(
                             )
                         }
                     } else {
-                        val translated = translateExpression(actualExpr)
+                        val translated = passArg(actualExpr, translateExpression(actualExpr))
                         val paramType = ctorParamTypes.getOrNull(idx)
                         wrapArgForParam(
                             translated,
@@ -1394,7 +1491,7 @@ class CppTranslator(
                             )
                         }
                     } else {
-                        val translated = translateExpression(actualExpr)
+                        val translated = passArg(actualExpr, translateExpression(actualExpr))
                         val paramType = paramTypes.getOrNull(idx)
                         translatedArgs.add(
                             wrapArgForParam(
@@ -1758,9 +1855,18 @@ class CppTranslator(
                     } else {
                         translatedInit
                     }
+                    // A string set once from a value that stays put refers to it instead of
+                    // copying its text (see [outlivesScope]).
+                    val localType = translateType(stmt.type).let { type ->
+                        when {
+                            stmt.assignOnce && initExpr != null && isStringType(type) && outlivesScope(initExpr) ->
+                                constRef(type)
+                            else -> type
+                        }
+                    }
                     listOf(
                         cpp.varDef(
-                            translateType(stmt.type),
+                            localType,
                             cpp.name(stmt.name),
                             finalInit,
                         ),
@@ -1771,9 +1877,13 @@ class CppTranslator(
             is TmpL.LocalFunctionDeclaration -> {
                 // Only emit the assignment here; the forward declaration
                 // is hoisted by translateBlock to support mutual recursion.
-                val params = stmt.parameters.parameters.map { param ->
-                    cpp.funcParam(translateType(param.type), cpp.name(param.name))
-                }
+                // Like the forward declaration, only strings go by `const &` here.
+                val (received, paramCopies) = receivedParams(
+                    stmt.parameters.parameters,
+                    localTypeOf = { translateType(it.type) },
+                    passedTypeOf = { passedType(translateType(it.type)) },
+                )
+                val params = received.map { (type, name) -> cpp.funcParam(type, name) }
                 // A coroutine state machine (produced by the coroutine→control-flow
                 // lowering) takes the generator as its sole argument and is invoked
                 // repeatedly via next(). Its persistent locals (case index, surviving
@@ -1810,7 +1920,7 @@ class CppTranslator(
                     params = params,
                     mutable = isCoroutineStateMachine,
                     ret = translateType(stmt.returnType),
-                    body = translateBlock(stmt.body),
+                    body = prepend(paramCopies, translateBlock(stmt.body)),
                 )
                 listOf(
                     cpp.exprStmt(cpp.op("=", cpp.name(stmt.name), lambda)),
@@ -1984,7 +2094,10 @@ class CppTranslator(
             // The object is evaluated before the new value, which C++ does not promise for
             // either `a->set_p(b)` or `a->p = b`.
             val subjectExpr = translateExpression(subject)
-            val rightExpr = translateExpression(right)
+            val rightExpr = when (setterName) {
+                null -> translateExpression(right)
+                else -> passArg(right, translateExpression(right))
+            }
             return listOf(
                 cpp.exprStmt(
                     inOrder(listOf(subject to subjectExpr, right to rightExpr)) { (s, r) ->
@@ -2003,11 +2116,11 @@ class CppTranslator(
                 is TmpL.Expression -> error("handled above")
                 is TmpL.ConnectedToTypeName -> cpp.callExpr(
                     cpp.scopedName(translateTypeName(subj), setterName),
-                    translateExpression(right),
+                    passArg(right, translateExpression(right)),
                 )
                 is TmpL.TemperTypeName -> cpp.callExpr(
                     cpp.scopedName(translateTypeName(subj), setterName),
-                    translateExpression(right),
+                    passArg(right, translateExpression(right)),
                 )
                 is TmpL.SuperSubject -> error("super property handled elsewhere")
             }
@@ -2038,7 +2151,7 @@ class CppTranslator(
     /** Emit a forward declaration for a local function: `std::function<Ret(Params...)> name` */
     private fun localFuncForwardDecl(stmt: TmpL.LocalFunctionDeclaration): Cpp.Stmt {
         val paramTypeStrs = stmt.parameters.parameters.joinToString(", ") { param ->
-            renderToString(translateType(param.type))
+            renderToString(passedType(translateType(param.type)))
         }
         val retTypeStr = renderToString(translateType(stmt.returnType))
         val funcTypeStr = "$STD_FUNCTION_PREFIX<$retTypeStr($paramTypeStrs)>"
@@ -2159,9 +2272,39 @@ class CppTranslator(
     private fun constRef(type: Cpp.Type): Cpp.Type =
         cpp.singleName(CppName("${renderToString(type)} const &", raw = true))
 
+    /** `std::string`, which costs a copy of its text to pass by value. */
+    private fun isStringType(type: Cpp.Type): Boolean = renderToString(type) == "std::string"
+
+    /**
+     * How a parameter of [type] is passed: a string always by `const &`, even when reassigned
+     * (see [receivedParams]), so the signature depends on the type alone and an override's
+     * parameters match the method it overrides.
+     */
+    private fun passedType(type: Cpp.Type): Cpp.Type = if (isStringType(type)) constRef(type) else type
+
+    /**
+     * The C++ type a parameter is passed as. A string goes by `const &` to avoid copying its
+     * text on every call (see [passedType]). Shared_ptr and std::function parameters go by
+     * `const &` to avoid a copy (and its atomic refcount bump), but only when never
+     * reassigned, since a const reference can't be rebound. std::function's type erasure means
+     * callers and function values interoperate either way.
+     *
+     * A caller passing something the callee might change during the call, such as a `var`
+     * field, passes a copy instead (see [passArg]), so a parameter never changes underneath.
+     */
     private fun translateParamType(formal: TmpL.Formal): Cpp.Type {
+        val localType = paramLocalType(formal)
+        return when {
+            isStringType(localType) -> constRef(localType)
+            formal.assignOnce && isIndirectType(localType) -> constRef(localType)
+            else -> localType
+        }
+    }
+
+    /** A parameter's type as a local, before choosing how it's passed. */
+    private fun paramLocalType(formal: TmpL.Formal): Cpp.Type {
         val baseType = translateType(formal.type)
-        val withOptional = if (formal.optional && !isNullableType(formal.type.ot)) {
+        return if (formal.optional && !isNullableType(formal.type.ot)) {
             // Only wrap in NullableParam if the type isn't already nullable
             // (Nullable<T> for value types is already NullableParam<T>)
             cpp.template(
@@ -2171,12 +2314,39 @@ class CppTranslator(
         } else {
             baseType
         }
-        // Pass shared_ptr / std::function parameters by const reference to avoid a copy
-        // (and its atomic refcount bump) on every call — but only when the parameter is
-        // never reassigned, since a const reference can't be rebound. std::function's type
-        // erasure means callers/function-values interoperate regardless of by-value vs
-        // by-const-ref, so this stays a local change to function and method signatures.
-        return if (formal.assignOnce && isIndirectType(withOptional)) constRef(withOptional) else withOptional
+    }
+
+    /**
+     * Parameters as received by a function's definition, plus statements for the start of its
+     * body that copy each reassigned string parameter, received by `const &` under another
+     * name, into a local of its own name.
+     */
+    private fun receivedParams(
+        formals: List<TmpL.Formal>,
+        localTypeOf: (TmpL.Formal) -> Cpp.Type = ::paramLocalType,
+        passedTypeOf: (TmpL.Formal) -> Cpp.Type = ::translateParamType,
+    ): Pair<List<Pair<Cpp.Type, Cpp.SingleName>>, List<Cpp.Stmt>> {
+        val copies = mutableListOf<Cpp.Stmt>()
+        val params = formals.map { formal ->
+            cpp.pos(formal) {
+                val type = passedTypeOf(formal)
+                val name = cpp.name(formal.name)
+                val localType = localTypeOf(formal)
+                if (formal.assignOnce || !isStringType(localType)) {
+                    type to name
+                } else {
+                    val passedName = cpp.tmp(name.id.text)
+                    copies.add(cpp.varDef(localType, name, passedName.deepCopy()))
+                    type to passedName
+                }
+            }
+        }
+        return params to copies
+    }
+
+    private fun prepend(stmts: List<Cpp.Stmt>, block: Cpp.BlockStmt): Cpp.BlockStmt = when {
+        stmts.isEmpty() -> block
+        else -> cpp.blockStmt(stmts + block.stmts)
     }
 
     /**
@@ -2210,10 +2380,10 @@ class CppTranslator(
                 firstOptionalIdx + numProvided,
             )
             val overloadParamTypes = providedFormals.map {
-                translateType(it.type)
+                passedType(translateType(it.type))
             }
             val overloadParams = providedFormals.map {
-                cpp.funcParam(translateType(it.type), cpp.name(it.name))
+                cpp.funcParam(passedType(translateType(it.type)), cpp.name(it.name))
             }
             val callArgs = formals.mapIndexed { idx, f ->
                 val alreadyNullable = isNullableType(f.type.ot)
@@ -2395,12 +2565,21 @@ class CppTranslator(
             val backingFieldName = cpp.singleName(
                 CppName(fixName(propDotName)),
             )
+            // A string set once can be read in place, without copying its text. A virtual
+            // getter keeps returning by value, as overrides computing the value must.
+            val returnType = translateType(member.returnType).let { type ->
+                when {
+                    !needsVirtual && isStringType(type) && isAssignOnceProperty(member.propertyShape.name) ->
+                        constRef(type)
+                    else -> type
+                }
+            }
             val func = cpp.func(
                 cpp.scopedName(
                     cpp.name(topLevel.name),
                     getterCppName,
                 ),
-                translateType(member.returnType),
+                returnType,
                 emptyList(),
                 cpp.blockStmt(
                     listOf(
@@ -2438,22 +2617,20 @@ class CppTranslator(
                     )
                 }
                 else -> {
+                    val (params, paramCopies) = receivedParams(member.parameters.parameters.drop(1))
                     val func = cpp.func(
                         cpp.scopedName(
                             cpp.name(topLevel.name),
                             getterCppName,
                         ),
                         translateType(member.returnType),
-                        member.parameters.parameters.drop(1).map { param ->
-                            cpp.pos(param) {
-                                val type = translateParamType(param)
-                                val name = cpp.name(param.name)
-                                type to name
-                            }
-                        },
-                        translateBlockWithThis(
-                            cpp.name(member.parameters.parameters.first().name),
-                            body,
+                        params,
+                        prepend(
+                            paramCopies,
+                            translateBlockWithThis(
+                                cpp.name(member.parameters.parameters.first().name),
+                                body,
+                            ),
                         ),
                         qual = memberConstQualifier(getterDotName),
                     )
@@ -2492,21 +2669,16 @@ class CppTranslator(
                 val backingFieldName = cpp.singleName(
                     CppName(fixName(propDotName)),
                 )
+                val (params, paramCopies) = receivedParams(valueParams)
                 val func = cpp.func(
                     cpp.scopedName(
                         cpp.name(topLevel.name),
                         setterCppName,
                     ),
                     translateType(member.returnType),
-                    valueParams.map { param ->
-                        cpp.pos(param) {
-                            val type = translateParamType(param)
-                            val name = cpp.name(param.name)
-                            type to name
-                        }
-                    },
+                    params,
                     cpp.blockStmt(
-                        listOf(
+                        paramCopies + listOf(
                             cpp.exprStmt(
                                 cpp.op(
                                     "=",
@@ -2553,22 +2725,20 @@ class CppTranslator(
                     }
                 }
                 else -> {
+                    val (params, paramCopies) = receivedParams(member.parameters.parameters.drop(1))
                     val func = cpp.func(
                         cpp.scopedName(
                             cpp.name(topLevel.name),
                             setterCppName,
                         ),
                         translateType(member.returnType),
-                        member.parameters.parameters.drop(1).map { param ->
-                            cpp.pos(param) {
-                                val type = translateParamType(param)
-                                val name = cpp.name(param.name)
-                                type to name
-                            }
-                        },
-                        translateBlockWithThis(
-                            cpp.name(member.parameters.parameters.first().name),
-                            body,
+                        params,
+                        prepend(
+                            paramCopies,
+                            translateBlockWithThis(
+                                cpp.name(member.parameters.parameters.first().name),
+                                body,
+                            ),
                         ),
                     )
                     val needsVirtualSetter = isInterface ||
@@ -2709,18 +2879,15 @@ class CppTranslator(
             )
             val hasOptional =
                 methodFormals.any { it.optional }
+            val (params, paramCopies) = receivedParams(methodFormals)
             val func = cpp.func(
                 when {
                     typeFormals.isNotEmpty() -> methodCppName
                     else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
                 },
                 translateType(member.returnType),
-                methodFormals.map { param ->
-                    cpp.pos(param) {
-                        translateParamType(param) to cpp.name(param.name)
-                    }
-                },
-                translateBody(),
+                params,
+                prepend(paramCopies, translateBody()),
                 qual = methodQual,
             )
             if (typeFormals.isNotEmpty()) {
@@ -2800,18 +2967,14 @@ class CppTranslator(
         val makeName = cpp.singleName(CppName("make"))
         val constructorFormals =
             member.parameters.parameters.drop(1)
-        val params = constructorFormals.map {
-            cpp.pos(it) {
-                cpp.funcParam(translateParamType(it), cpp.name(it.name))
-            }
-        }
-        val paramTypes = constructorFormals.map {
-            cpp.pos(it) { translateParamType(it) }
-        }
+        val (received, paramCopies) = receivedParams(constructorFormals)
+        val params = received.map { (type, name) -> cpp.funcParam(type, name) }
+        val paramTypes = received.map { it.first.deepCopy() }
         val objectType = sharedPtr(typeName)
         val body = cpp.pos(member.body) {
             cpp.blockStmt(
                 buildList {
+                    addAll(paramCopies)
                     // An entry point for users, so init the module first. Instances imply
                     // init already ran, so instance methods needn't.
                     if (moduleNeedsInit && isEntryPoint(topLevel, member.visibility)) {
@@ -3170,15 +3333,14 @@ class CppTranslator(
         // Populate type formal map BEFORE translating
         // return type, param types, and body
         val (savedTypeFormalNames, savedTypeFormalKeys) = saveTypeFormals(typeFormals)
-        val paramTypes = formals.map {
-            translateParamType(it)
-        }
-        val paramNames = formals.map { cpp.name(it.name) }
+        val (received, paramCopies) = receivedParams(formals)
+        val paramTypes = received.map { it.first }
+        val paramNames = received.map { it.second }
         val block = when {
             topLevel.metadata.any { it.key.symbol == connectedSymbol } && !mod!!.isStdLib ->
                 translateConnectedBody(topLevel, paramNames)
             else -> translateBlock(topLevel.body)
-        }.let { body ->
+        }.let { body -> prepend(paramCopies, body) }.let { body ->
             // Exported functions are entry points for users, so init the module first.
             when (topLevel.name.name) {
                 is ExportedName -> withInitCall(body)

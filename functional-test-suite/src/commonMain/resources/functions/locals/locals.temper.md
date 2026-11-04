@@ -108,6 +108,56 @@ thresh length = 1
 thresh2 length = 1
 ```
 
+A parameter keeps the value passed, even when the callee reassigns the
+`var` it came from, or drops the object it was read from. Backends that
+pass strings by reference must copy such arguments.
+
+    var current = "first";
+    let replaceCurrent(old: String): String {
+      current = "second";
+      "${old} -> ${current}"
+    }
+    console.log(replaceCurrent(current));
+
+    class Named {
+      public name: String;
+      public constructor(name: String) { this.name = name; }
+    }
+
+    class Labeled {
+      public var label: String;
+      public var child: Named;
+      public constructor(label: String) {
+        this.label = label;
+        this.child = new Named("${label} child");
+      }
+      public relabel(): String {
+        "${this.describe(this.label)}; ${this.rename(this.child.name)}"
+      }
+      private describe(old: String): String {
+        this.label = "new";
+        "${old} -> ${this.label}"
+      }
+      private rename(old: String): String {
+        this.child = new Named("new child");
+        "${old} -> ${this.child.name}"
+      }
+    }
+    console.log(new Labeled("old").relabel());
+
+    let shout(var s: String): String {
+      let before = s;
+      s = "${s}!";
+      "${before} -> ${s}"
+    }
+    console.log(shout("hi"));
+
+```log
+first -> second
+old -> new; old child -> new child
+hi -> hi!
+```
+
 Self recursive functions may need hoisting or a similar mechanism.
 
     let selfRecursion(x: List<Int>): Void {
