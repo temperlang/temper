@@ -65,6 +65,22 @@ Hi 🌏!!
 Back to square zero.
 ```
 
+## Question marks
+
+Runs of question marks stay as written, even where C++ would read them as
+trigraphs (`??=`, `??/`, `??>`).
+
+    builder.clear();
+    builder.append("a??=b??/c??>d???e");
+    let marks = builder.toString();
+    console.log(marks);
+    console.log("Same: ${marks == "a??=b??/c??>d???e"}");
+
+```log
+a??=b??/c??>d???e
+Same: true
+```
+
 
 ## StringBuilder property
 

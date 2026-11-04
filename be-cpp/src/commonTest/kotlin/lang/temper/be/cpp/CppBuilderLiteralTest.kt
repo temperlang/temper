@@ -36,6 +36,12 @@ class CppBuilderLiteralTest {
     }
 
     @Test
+    fun noTrigraphs() {
+        assertEquals(""""?\?= ?\?/ ?\?\?\? ?"""", literalString("??= ??/ ???? ?"))
+        assertEquals("? ?= ? ?/ ? ? ?", commentText("??= ??/ ???"))
+    }
+
+    @Test
     fun nullByteUsesStdString() {
         val result = literalString("ab\u0000cd")
         assertEquals("std::string(\"ab\\000cd\", 5)", result)

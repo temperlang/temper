@@ -438,12 +438,14 @@ class CppBackendTest {
         assertGeneratedContains(
             temper = $$"""
                 |export let greet(name: String): String {
-                |  return "Hello, ${name}!";
+                |  return "Hello, ${name}! ??= ??/ ??> ???";
                 |}
             """,
             cppContains = listOf(
                 "std::string greet(std::string",
                 "temper::core::cat(",
+                // No trigraphs: `?\?` keeps a second `?` from starting one.
+                """"! ?\?= ?\?/ ?\?> ?\?\?"""",
             ),
         )
     }
