@@ -721,7 +721,7 @@ internal fun TypeFormal.asTmpLTypeFormal() = TmpL.TypeFormal(
     p0,
     name = TmpL.Id(p0, this.name),
     definition = this,
-    upperBounds = this.superTypes.map { hackMapOldStyleToNew(it).asTmpLNominal() },
+    upperBounds = this.upperBounds.map { hackMapOldStyleToNew(it).asTmpLNominal() },
 )
 
 fun Type2.asTmpLType(): TmpL.Type {

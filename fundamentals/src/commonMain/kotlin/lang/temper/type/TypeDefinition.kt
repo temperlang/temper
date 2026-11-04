@@ -61,7 +61,6 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val name: ResolvedName
     val word: Symbol?
     val formals: List<TypeFormal>
-    val superTypes: List<NominalType>
     val sourceLocation: ModuleLocation
         get() = when (val name = this.name) {
             is ModularName -> name.origin.loc
@@ -93,12 +92,19 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
         tokenSink.emit(name.toToken(inOperatorPosition = false))
     }
 
-    /** Checks if this is a non-strict subtype of [maybeSup], ignoring [formals]. */
+    /**
+     * Checks if this is a non-strict subtype of [maybeSup], ignoring [formals].
+     * For a [TypeFormal], this follows its [upper bounds][TypeFormal.upperBounds].
+     */
     fun isSubOrSame(maybeSup: TypeDefinition): Boolean {
         if (this === maybeSup) {
             return true
         }
-        for (supType in superTypes) {
+        val supTypes = when (this) {
+            is TypeShape -> superTypes
+            is TypeFormal -> upperBounds
+        }
+        for (supType in supTypes) {
             if (supType.definition.isSubOrSame(maybeSup)) {
                 return true
             }
@@ -133,8 +139,6 @@ sealed interface TypeFormal : TypeDefinition {
 
     /** Required super-types for actual types that bind to this formal. */
     val upperBounds: List<NominalType>
-
-    override val superTypes get() = upperBounds
 
     override fun addStays(s: StaySink) {
         upperBounds.forEach { it.addStays(s) }
@@ -329,7 +333,7 @@ sealed interface TypeShape : TypeDefinition {
     val abstractness: Abstractness
 
     /** The resolved type expressions in the `extends` clause. */
-    override val superTypes: List<NominalType>
+    val superTypes: List<NominalType>
 
     /** For a sealed interface, return its direct non-type-formal subtypes' shapes. Null otherwise. */
     val sealedSubTypes: List<TypeShape>?

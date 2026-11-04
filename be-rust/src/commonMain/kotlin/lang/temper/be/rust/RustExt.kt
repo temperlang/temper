@@ -21,6 +21,7 @@ import lang.temper.name.ResolvedParsedName
 import lang.temper.name.identifiers.IdentStyle
 import lang.temper.type.Abstractness
 import lang.temper.type.TypeDefinition
+import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
 import lang.temper.type2.DefinedNonNullType
@@ -733,6 +734,10 @@ internal fun TypeDefinition.allInterfaces(
     if (allowStart && thisType is TypeShape && thisType.abstractness == Abstractness.Abstract) {
         // For interfaces, we need to implement in the trait for its own wrapper, so provide that here.
         yield(thisType to MkType2(thisType).position(pos).get())
+    }
+    val superTypes = when (thisType) {
+        is TypeShape -> thisType.superTypes
+        is TypeFormal -> thisType.upperBounds
     }
     types@ for (type in superTypes) {
         type.definition == WellKnownTypes.anyValueTypeDefinition && continue@types

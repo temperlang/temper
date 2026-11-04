@@ -23,7 +23,7 @@ class WellKnownTypesTest {
                     group("${wellKnownTypeDef.name}") {
                         for (tp in wellKnownTypeDef.typeParameters) {
                             group("<${tp.name}>") {
-                                for (st in tp.definition.superTypes) {
+                                for (st in tp.definition.upperBounds) {
                                     log("extends $st")
                                 }
                             }

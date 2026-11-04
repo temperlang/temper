@@ -479,7 +479,7 @@ private fun groupedByShape(ts: Iterable<TypeOrPartialType>): Map<TypeShape, Set<
             when (t) {
                 is TypeParamRef -> if (t.definition !in exploded) {
                     exploded.add(t.definition)
-                    t.definition.superTypes.forEach {
+                    t.definition.upperBounds.forEach {
                         put(hackMapOldStyleToNew(it))
                     }
                 }

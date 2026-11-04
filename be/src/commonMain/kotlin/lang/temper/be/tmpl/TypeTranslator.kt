@@ -65,7 +65,7 @@ internal class TypeTranslator(
                 TmpL.TypeFormal(
                     pos = pos,
                     name = TmpL.Id(pos, typeFormal.name),
-                    upperBounds = typeFormal.superTypes.map {
+                    upperBounds = typeFormal.upperBounds.map {
                         translateRegularTypeIgnoringNullity(pos, hackMapOldStyleToNew(it))
                     },
                     definition = typeFormal,

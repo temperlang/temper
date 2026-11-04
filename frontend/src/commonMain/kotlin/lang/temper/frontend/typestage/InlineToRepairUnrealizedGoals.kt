@@ -706,7 +706,7 @@ private fun representativeNominalValueType(ts: Iterable<StaticType>): NominalTyp
                     return t
                 }
 
-                is TypeFormal -> representativeNominalValueType(defn.superTypes)
+                is TypeFormal -> representativeNominalValueType(defn.upperBounds)
             }
 
             else -> {}

@@ -7,6 +7,7 @@ import lang.temper.name.CoreCodeLocation
 import lang.temper.name.ExportedName
 import lang.temper.name.SourceName
 import lang.temper.name.TemperName
+import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -283,7 +284,11 @@ internal class ReachabilityTracer {
                             when {
                                 def != null -> {
                                     // Supertypes aren't necessarily in trees, so dig for them.
-                                    def.superTypes.forEach { add(it.definition.name) }
+                                    val superTypes = when (def) {
+                                        is TypeShape -> def.superTypes
+                                        is TypeFormal -> def.upperBounds
+                                    }
+                                    superTypes.forEach { add(it.definition.name) }
                                     add(def.name)
                                     // Also loop around to imported names if any.
                                     importedNames[def.name]?.let { add(it) }

@@ -757,5 +757,5 @@ internal fun JavaType.hasQualifiedName(qn: QualifiedName): Boolean =
 private val TypeDefinition.isJavaClassLike: Boolean get() =
     when (this) {
         is TypeShape -> this.abstractness == Abstractness.Concrete
-        is TypeFormal -> this.superTypes.any { it.definition.isJavaClassLike }
+        is TypeFormal -> this.upperBounds.any { it.definition.isJavaClassLike }
     }
