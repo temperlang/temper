@@ -40,12 +40,12 @@ import lang.temper.name.LanguageLabel
  *
  * ## Strings
  *
- * `String` is `temper::core::Str` (`temper-core/str.hpp`): immutable UTF-8 text in one
- * reference-counted allocation, so a copy is a count bump. Literals are made once, on
+ * `String` is `temper::core::Str` (`temper-core/str.hpp`): immutable UTF-8 text shared through a
+ * `std::shared_ptr<std::string const>`, so a copy is a count bump. Literals are made once, on
  * first use. Hand-written C++ can pass `std::string` or `char const *` where a `Str` is
- * expected, and use a `Str` as a `std::string` (a copy) or, under C++17, a
- * `std::string_view`. `Str` can't be changed in place, and containers of strings hold
- * `Str` (`std::vector<temper::core::Str>`, `NullableParam<temper::core::Str>`, map keys).
+ * expected, and use a `Str` as a `std::string` (a copy) or, under C++17, a `std::string_view`.
+ * `Str` can't be changed in place, and containers of strings hold `Str`
+ * (`std::vector<temper::core::Str>`, `NullableParam<temper::core::Str>`, map keys).
  *
  * Inheritance uses `virtual public` for single-supertype classes to support diamond
  * hierarchies safely. Multi-inheritance uses plain `public` since the bases already
