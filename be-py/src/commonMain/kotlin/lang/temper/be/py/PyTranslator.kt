@@ -304,19 +304,14 @@ class PyTranslator(
 
     private fun classDef(t: TmpL.TypeDeclaration): List<Py.Stmt> {
         val stmtList = mutableListOf<Py.Stmt>()
-        val genericBases = mutableListOf<Py.CallArg>()
         val bases = mutableListOf<Py.CallArg>()
         val classDecorators = mutableListOf<Py.Decorator>()
 
         val className = ident(t.name)
         val classDocumentation = t.documentation?.prettyPleaseHelp()
 
-        var needsGeneric = true
         val needsProto = t.kind == TmpL.TypeDeclarationKind.Interface
         t.superTypes.forEach { nominalType ->
-            if (nominalType.params.isNotEmpty()) {
-                needsGeneric = false
-            }
             val superType = translateNominalType(nominalType)
             if (superType is Py.Subscript) {
                 // Types should be ordered so that supertypes are defined before subtypes,
@@ -342,18 +337,19 @@ class PyTranslator(
                 t.typeParameters.ot.typeParameters,
                 covariant = t.kind == TmpL.TypeDeclarationKind.Interface,
             )
-            if (needsGeneric) {
-                genericBases.add(
-                    Py.CallArg(
+            // Subscripted supertypes don't make this class generic, so always
+            // list its own type parameters. `Generic` goes after the other bases,
+            // which may already have it in their MRO.
+            bases.add(
+                Py.CallArg(
+                    t.pos,
+                    value = Py.Subscript(
                         t.pos,
-                        value = Py.Subscript(
-                            t.pos,
-                            request(GenericType).asRName(t.pos),
-                            t.typeParameters.ot.typeParameters.map { name(it.name) },
-                        ),
+                        request(GenericType).asRName(t.pos),
+                        t.typeParameters.ot.typeParameters.map { name(it.name) },
                     ),
-                )
-            }
+                ),
+            )
         }
         if (needsProto) {
             bases.add(
@@ -668,7 +664,7 @@ class PyTranslator(
                 t.pos,
                 decoratorList = classDecorators,
                 name = className,
-                args = genericBases + bases,
+                args = bases,
                 body = body,
             ),
         )

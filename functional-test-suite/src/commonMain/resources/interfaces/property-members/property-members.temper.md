@@ -85,6 +85,29 @@ But don't export the subtype. This was breaking be-rust.
 Sealed thing is foo.
 ```
 
+A generic interface can also extend another generic interface with type
+arguments. Python needs the extending interface to stay generic, so its
+subtypes can supply its own type arguments. A sealed interface can't have
+subtypes with new type parameters, so use an unsealed one here. Keep it
+empty, since Rust doesn't yet substitute type arguments into inherited members.
+
+    interface Holder<T> {}
+
+    interface Labeled<L> extends Holder<C> {
+      public label(l: L): String;
+    }
+
+    class LabeledSub(public thing: C) extends Labeled<String> {
+      public label(l: String): String { "${l}: ${thing.x}" }
+    }
+
+    let labeled: Labeled<String> = new LabeledSub(a);
+    console.log("Labeled thing is ${labeled.label("first")}.");
+
+```log
+Labeled thing is first: foo.
+```
+
 Also a sealed interface with no subtypes. This is just here to see if backends
 break. There's no way to instantiate one.
 
