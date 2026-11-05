@@ -2460,6 +2460,44 @@ class JavaBackendTest {
     }
 
     @Test
+    fun instanceOfGenericClassUsesWildcards() = assertGeneratedJavaRaw(
+        """
+            |export interface Effect<T> {}
+            |export class Append<T>(public text: String) extends Effect<T> {}
+            |export let isAppend<T>(e: Effect<T>): Boolean { e is Append<T> }
+        """.trimMargin(),
+        """
+            |pom.xml: "__DO_NOT_CARE__",
+            |src: { main: { java: { my_test_library: {
+            |  test: {
+            |    TestGlobal.java: {
+            |      content: ```
+            |        package my_test_library.test;
+            |        public final class TestGlobal {
+            |            private TestGlobal() {
+            |            }
+            |            public static<T__0> boolean isAppend(Effect<T__0> e__0) {
+            |                return e__0 instanceof Append<?>;
+            |            }
+            |        }
+            |
+            |        ```,
+            |    },
+            |    Append.java: "__DO_NOT_CARE__",
+            |    Effect.java: "__DO_NOT_CARE__",
+            |    TestMain.java: "__DO_NOT_CARE__",
+            |    TestGlobal.java.map: "__DO_NOT_CARE__",
+            |    Append.java.map: "__DO_NOT_CARE__",
+            |    Effect.java.map: "__DO_NOT_CARE__",
+            |    TestMain.java.map: "__DO_NOT_CARE__",
+            |  },
+            |  MyTestLibraryMain.java: "__DO_NOT_CARE__",
+            |  MyTestLibraryGlobal.java: "__DO_NOT_CARE__",
+            |} } } },
+        """.trimMargin(),
+    )
+
+    @Test
     fun instanceOfUsesReferenceType() = assertGeneratedJava(
         """
             |export let orZero(x: Int?): Int {

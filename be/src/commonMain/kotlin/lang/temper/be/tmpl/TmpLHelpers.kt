@@ -524,7 +524,24 @@ class ReceiverMember(
     val isSetter: Boolean,
     /** A generator member, whose lowered representation can't be const-qualified. */
     val mayYield: Boolean,
+    /** Whether this is a getter, keyed apart from its property's setter. */
+    val isGetter: Boolean = false,
 ) {
+    /**
+     * The key for this member's override slot in [mutatingMemberNames]. A property's
+     * getter and setter share a dotName, so they get [getterSlotKey] and [setterSlotKey]
+     * to keep the setter's mutation from reaching the getter.
+     */
+    val slotKey: String
+        get() = slotKey(dotName)
+
+    /** The [slotKey] of a member of this kind named [dotName], such as one this overrides. */
+    fun slotKey(dotName: String): String = when {
+        isGetter -> getterSlotKey(dotName)
+        isSetter -> setterSlotKey(dotName)
+        else -> dotName
+    }
+
     /** The receiver (`this`) parameter's resolved name, or null if the member has no parameters. */
     val thisName: ResolvedName?
         get() = parameters.parameters.firstOrNull()?.name?.name
@@ -535,11 +552,19 @@ fun TmpL.MemberOrGarbage.asReceiverMember(): ReceiverMember? = when (this) {
     is TmpL.NormalMethod ->
         ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = mayYield)
     is TmpL.Getter ->
-        ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = false)
+        ReceiverMember(
+            dotName.dotNameText, parameters, body, overridden, isSetter = false, mayYield = false, isGetter = true,
+        )
     is TmpL.Setter ->
         ReceiverMember(dotName.dotNameText, parameters, body, overridden, isSetter = true, mayYield = false)
     else -> null
 }
+
+/** The [mutatingMemberNames] key for the getter of the property with [dotName]. */
+fun getterSlotKey(dotName: String) = "get.$dotName"
+
+/** The [mutatingMemberNames] key for the setter of the property with [dotName]. */
+fun setterSlotKey(dotName: String) = "set.$dotName"
 
 /**
  * Whether this is a class's public instance `toString()` that takes only `this`, has no type
@@ -560,10 +585,12 @@ fun TmpL.MemberOrGarbage.isPlainToString(): Boolean {
 /**
  * Member dotNames (methods, getters, setters) across [modules] whose receiver (`this`)
  * may be mutated when the member runs — directly (a property write or setter call on
- * `this`) or transitively (calling another such member on `this`). Setters always
- * qualify. The result is keyed by dotName, so it is identical for every declaration in an
- * override slot, which is what lets a backend emit a `const`/readonly qualifier
- * consistently (C++ requires matching const-ness across a virtual override slot).
+ * `this`) or transitively (calling another such member, or reading a getter, on `this`).
+ * Setters always qualify. The result is keyed by [ReceiverMember.slotKey] (the dotName,
+ * or [getterSlotKey] or [setterSlotKey] for a property's accessors), so it is identical
+ * for every declaration in an override slot, which is what lets a backend emit a
+ * `const`/readonly qualifier consistently (C++ requires matching const-ness across a
+ * virtual override slot).
  *
  * This is a backend-agnostic mutation analysis. It is conservative: it errs toward
  * "mutates" (descending into nested closures, which share `this`), so a member is marked
@@ -591,6 +618,19 @@ fun mutatingMemberNames(
         overrideEquiv.getOrPut(b) { mutableSetOf() }.add(a)
     }
 
+    // Getter dotNames by the names an `InternalPropertyId` may use for their property.
+    val getterDotNames = mutableMapOf<TemperName, String>()
+    for (mod in modules) {
+        for (top in mod.topLevels) {
+            if (top !is TmpL.TypeDeclaration) continue
+            for (member in top.members) {
+                if (member !is TmpL.Getter) continue
+                getterDotNames[member.name.name] = member.dotName.dotNameText
+                getterDotNames[member.propertyShape.name] = member.dotName.dotNameText
+            }
+        }
+    }
+
     fun analyze(name: String, body: TmpL.Tree?, thisName: ResolvedName?) {
         if (body == null) return
         // `this` inside a member body is a reference to the member's first (receiver)
@@ -616,9 +656,22 @@ fun mutatingMemberNames(
                     }
                 }
                 is TmpL.PropertyReference -> {
-                    // Reading a property of `this` is fine; only recurse when the subject
-                    // is some other expression that might itself use `this` as a value.
-                    if (!isThisRef(node.subject)) walk(node.subject)
+                    // Reading a property of `this` is fine, unless it calls a getter that
+                    // mutates; only recurse when the subject is some other expression that
+                    // might itself use `this` as a value.
+                    if (isThisRef(node.subject)) {
+                        if (node is TmpL.GetAbstractProperty) {
+                            val getterDotName = when (val property = node.property) {
+                                is TmpL.ExternalPropertyId -> property.name.dotNameText
+                                is TmpL.InternalPropertyId -> getterDotNames[property.name.name]
+                            }
+                            if (getterDotName != null) {
+                                callsOnThis.getOrPut(name) { mutableSetOf() }.add(getterSlotKey(getterDotName))
+                            }
+                        }
+                    } else {
+                        walk(node.subject)
+                    }
                 }
                 else -> {
                     if (isThisRef(node)) {
@@ -641,10 +694,11 @@ fun mutatingMemberNames(
             for (member in top.members) {
                 val rm = member.asReceiverMember() ?: continue
                 // A setter always mutates its receiver.
-                if (rm.isSetter) directlyMutates.add(rm.dotName)
-                analyze(rm.dotName, rm.body, rm.thisName)
+                if (rm.isSetter) directlyMutates.add(rm.slotKey)
+                analyze(rm.slotKey, rm.body, rm.thisName)
                 for (sup in rm.overridden) {
-                    linkOverride(rm.dotName, sup.name.dotNameText)
+                    // A getter overrides a getter, and a setter a setter.
+                    linkOverride(rm.slotKey, rm.slotKey(sup.name.dotNameText))
                 }
             }
         }
