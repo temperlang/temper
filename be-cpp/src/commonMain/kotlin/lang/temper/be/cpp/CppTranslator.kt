@@ -613,6 +613,7 @@ class CppTranslator(
         templateMethodDefs: MutableList<Cpp.Global>,
         declMod: Cpp.DefMod? = null,
         emitDecl: Boolean = true,
+        virtSpec: Cpp.VirtSpecifier? = null,
     ) {
         val convention = when {
             needsVirtual -> virtualConvention
@@ -623,6 +624,7 @@ class CppTranslator(
         } else {
             cpp.funcDecl(func.decl.ret, convention, func.decl.name, func.decl.args, func.decl.qual)
         }
+        decl.virtSpec = virtSpec
         if (emitDecl) add(decl)
         if (isTemplate) {
             templateMethodDefs.add(func.def)
@@ -662,7 +664,13 @@ class CppTranslator(
         name: Cpp.SingleName,
         params: List<Cpp.FuncParam> = emptyList(),
         qual: Cpp.MethodQualifier? = null,
+        virtSpec: Cpp.VirtSpecifier? = null,
     ): Cpp.FuncDef = cpp.funcDef(null, null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
+        .also { it.virtSpec = virtSpec }
+
+    /** C++ `override` for a [member] that overrides a base one. */
+    private fun virtSpecFor(member: TmpL.InstanceMethod): Cpp.VirtSpecifier? =
+        if (member.overridden.isEmpty()) null else Cpp.VirtSpecifier.Override
 
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
@@ -2166,7 +2174,7 @@ class CppTranslator(
     private fun constRef(type: Cpp.Type): Cpp.Type =
         cpp.singleName(CppName("${renderToString(type)} const &", raw = true))
 
-    private fun translateParamType(formal: TmpL.Formal): Cpp.Type {
+    private fun translateParamType(formal: TmpL.Formal, byValue: Boolean = false): Cpp.Type {
         val baseType = translateType(formal.type)
         val withOptional = if (formal.optional && !isNullableType(formal.type.ot)) {
             // Only wrap in NullableParam if the type isn't already nullable
@@ -2183,7 +2191,34 @@ class CppTranslator(
         // never reassigned, since a const reference can't be rebound. std::function's type
         // erasure means callers/function-values interoperate regardless of by-value vs
         // by-const-ref, so this stays a local change to function and method signatures.
-        return if (formal.assignOnce && isIndirectType(withOptional)) constRef(withOptional) else withOptional
+        return if (!byValue && formal.assignOnce && isIndirectType(withOptional)) {
+            constRef(withOptional)
+        } else {
+            withOptional
+        }
+    }
+
+    /**
+     * Like [translateParamType] for [formal], the [index]th parameter of [member] after `this`.
+     * An override must keep the C++ signature it overrides, or it only overloads it, and calls
+     * through the base reach the base's pure-virtual body. So pass by value wherever an
+     * overridden declaration does, as for `label(l: String)` overriding `label(l: L)`.
+     */
+    private fun translateMethodParamType(member: TmpL.Method, index: Int, formal: TmpL.Formal): Cpp.Type {
+        val overridden = (member as? TmpL.InstanceMethod)?.overridden.orEmpty()
+        val byValue = overridden.any { superMethod ->
+            // Super signatures also list `this` first.
+            val superType = superMethod.parameters.formals.getOrNull(index + 1)?.type?.ot
+            superType != null && (isTypeFormal(superType) || !isIndirectType(translateType(superType)))
+        }
+        return translateParamType(formal, byValue = byValue)
+    }
+
+    /** Whether [type] is a type parameter, maybe nullable, which C++ takes by value. */
+    private fun isTypeFormal(type: TmpL.Type): Boolean = when (type) {
+        is TmpL.NominalType -> (type.typeName as? TmpL.TemperTypeName)?.typeDefinition is TypeFormal
+        is TmpL.TypeUnion -> type.types.any { isTypeFormal(it) }
+        else -> false
     }
 
     /**
@@ -2423,7 +2458,9 @@ class CppTranslator(
                 // Backed getter reads a field: non-mutating, so const.
                 qual = memberConstQualifier(getterDotName),
             )
-            emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
+            emitMethodDeclAndDef(
+                func, isTemplate, needsVirtual, impl, templateMethodDefs, virtSpec = virtSpecFor(member),
+            )
         } else {
             // Abstract getter — use get_ prefix to avoid
             // field/method name collision in subtypes
@@ -2441,6 +2478,7 @@ class CppTranslator(
                             translateType(member.returnType),
                             getterCppName,
                             qual = memberConstQualifier(getterDotName),
+                            virtSpec = virtSpecFor(member),
                         ),
                     )
                 }
@@ -2466,7 +2504,9 @@ class CppTranslator(
                     )
                     val needsVirtualGetter = isInterface ||
                         realSuperTypes.any()
-                    emitMethodDeclAndDef(func, isTemplate, needsVirtualGetter, impl, templateMethodDefs)
+                    emitMethodDeclAndDef(
+                        func, isTemplate, needsVirtualGetter, impl, templateMethodDefs, virtSpec = virtSpecFor(member),
+                    )
                 }
             }
         }
@@ -2505,9 +2545,9 @@ class CppTranslator(
                         setterCppName,
                     ),
                     translateType(member.returnType),
-                    valueParams.map { param ->
+                    valueParams.mapIndexed { i, param ->
                         cpp.pos(param) {
-                            val type = translateParamType(param)
+                            val type = translateMethodParamType(member, i, param)
                             val name = cpp.name(param.name)
                             type to name
                         }
@@ -2530,7 +2570,10 @@ class CppTranslator(
                 )
                 val firstDecl = setterKey !in declaredSetters
                 if (firstDecl) declaredSetters.add(setterKey)
-                emitMethodDeclAndDef(func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl)
+                emitMethodDeclAndDef(
+                    func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl,
+                    virtSpec = virtSpecFor(member),
+                )
             }
             // else: no supertypes, backed properties use direct field access
         } else {
@@ -2545,8 +2588,8 @@ class CppTranslator(
                 null -> {
                     if (setterKey !in declaredSetters) {
                         declaredSetters.add(setterKey)
-                        val paramTypes = member.parameters.parameters.drop(1).map {
-                            translateParamType(it)
+                        val paramTypes = member.parameters.parameters.drop(1).mapIndexed { i, it ->
+                            translateMethodParamType(member, i, it)
                         }
                         add(
                             pureVirtualMethod(
@@ -2555,6 +2598,7 @@ class CppTranslator(
                                 paramTypes.mapIndexed { i, t ->
                                     cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                                 },
+                                virtSpec = virtSpecFor(member),
                             ),
                         )
                     }
@@ -2566,9 +2610,9 @@ class CppTranslator(
                             setterCppName,
                         ),
                         translateType(member.returnType),
-                        member.parameters.parameters.drop(1).map { param ->
+                        member.parameters.parameters.drop(1).mapIndexed { i, param ->
                             cpp.pos(param) {
-                                val type = translateParamType(param)
+                                val type = translateMethodParamType(member, i, param)
                                 val name = cpp.name(param.name)
                                 type to name
                             }
@@ -2584,6 +2628,7 @@ class CppTranslator(
                     if (firstDecl) declaredSetters.add(setterKey)
                     emitMethodDeclAndDef(
                         func, isTemplate, needsVirtualSetter, impl, templateMethodDefs, emitDecl = firstDecl,
+                        virtSpec = virtSpecFor(member),
                     )
                 }
             }
@@ -2625,7 +2670,7 @@ class CppTranslator(
         val methodQual = memberConstQualifier(member.dotName.dotNameText)
         when (val body = member.body) {
             null -> {
-                val paramTypes = methodFormals.map { translateParamType(it) }
+                val paramTypes = methodFormals.mapIndexed { i, it -> translateMethodParamType(member, i, it) }
                 add(
                     pureVirtualMethod(
                         translateType(member.returnType),
@@ -2634,6 +2679,7 @@ class CppTranslator(
                             cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                         },
                         qual = methodQual,
+                        virtSpec = virtSpecFor(member),
                     ),
                 )
             }
@@ -2648,6 +2694,7 @@ class CppTranslator(
                 methodQual = methodQual,
                 // Methods need 'virtual' for polymorphic dispatch in C++
                 needsVirtual = isInterface || realSuperTypes.any(),
+                virtSpec = virtSpecFor(member),
             ) {
                 translateBlockWithThis(
                     cpp.name(member.parameters.parameters.first().name),
@@ -2705,6 +2752,7 @@ class CppTranslator(
         declMod: Cpp.DefMod? = null,
         methodQual: Cpp.MethodQualifier? = null,
         needsVirtual: Boolean = false,
+        virtSpec: Cpp.VirtSpecifier? = null,
         translateBody: () -> Cpp.BlockStmt,
     ) {
         // Save type formals before translating anything else.
@@ -2722,9 +2770,9 @@ class CppTranslator(
                     else -> cpp.scopedName(cpp.name(topLevel.name), methodCppName)
                 },
                 translateType(member.returnType),
-                methodFormals.map { param ->
+                methodFormals.mapIndexed { i, param ->
                     cpp.pos(param) {
-                        translateParamType(param) to cpp.name(param.name)
+                        translateMethodParamType(member, i, param) to cpp.name(param.name)
                     }
                 },
                 translateBody(),
@@ -2767,7 +2815,9 @@ class CppTranslator(
                     }
                 }
             } else {
-                emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs, declMod)
+                emitMethodDeclAndDef(
+                    func, isTemplate, needsVirtual, impl, templateMethodDefs, declMod, virtSpec = virtSpec,
+                )
                 if (hasOptional) {
                     val scopedName = cpp.scopedName(
                         cpp.name(topLevel.name),

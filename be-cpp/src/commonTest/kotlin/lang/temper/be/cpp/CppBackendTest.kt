@@ -329,8 +329,14 @@ class CppBackendTest {
                 |interface Animal {
                 |  public get name(): String;
                 |}
+                |interface Labeled<L> {
+                |  public label(l: L): String;
+                |}
                 |class Dog extends Animal {
                 |  public get name(): String { "Rex" }
+                |}
+                |class Tag extends Labeled<String> {
+                |  public label(l: String): String { l }
                 |}
                 |export let makeDog(): Animal {
                 |  return new Dog();
@@ -341,6 +347,10 @@ class CppBackendTest {
                 "virtual public Animal",
                 "virtual ~Animal",
                 "std::shared_ptr<Dog>",
+                "get_name() const override;",
+                // By value, as `Labeled<L>` declares it, not `Str const &`, which would
+                // only overload it.
+                "label(temper::core::Str) const override;",
             ),
         )
     }
@@ -633,7 +643,7 @@ class CppBackendTest {
                 "struct Circle",
                 "virtual public",
                 "get_radius()",
-                "area",
+                "double virtual area() const override;",
             ),
         )
     }

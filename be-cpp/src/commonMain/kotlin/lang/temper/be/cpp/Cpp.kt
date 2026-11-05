@@ -47,6 +47,10 @@ object Cpp {
         Const,
     }
 
+    enum class VirtSpecifier : FormattableEnum {
+        Override,
+    }
+
     enum class LambdaMod : FormattableEnum {
         Mutable,
     }
@@ -158,13 +162,14 @@ object Cpp {
         name: SingleName,
         args: Iterable<Type>,
         var qual: MethodQualifier? = null,
+        var virtSpec: VirtSpecifier? = null,
     ) : BaseTree(pos), Global, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() = sharedCodeFormattingTemplate2
         override val formatElementCount
-            get() = 7
+            get() = 8
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
@@ -176,6 +181,7 @@ object Cpp {
                 4 -> this.name
                 5 -> FormattableTreeGroup(this.args)
                 6 -> this.qual ?: FormattableTreeGroup.empty
+                7 -> this.virtSpec ?: FormattableTreeGroup.empty
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -200,14 +206,14 @@ object Cpp {
             get() = _args
             set(newValue) { updateTreeConnections(_args, newValue) }
         override fun deepCopy(): FuncDecl {
-            return FuncDecl(pos, attr = this.attr?.deepCopy(), mod = this.mod, ret = this.ret?.deepCopy(), convention = this.convention?.deepCopy(), name = this.name.deepCopy(), args = this.args.deepCopy(), qual = this.qual)
+            return FuncDecl(pos, attr = this.attr?.deepCopy(), mod = this.mod, ret = this.ret?.deepCopy(), convention = this.convention?.deepCopy(), name = this.name.deepCopy(), args = this.args.deepCopy(), qual = this.qual, virtSpec = this.virtSpec)
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is FuncDecl && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual
+            return other is FuncDecl && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual && this.virtSpec == other.virtSpec
         }
         override fun hashCode(): Int {
             var hc = attr.hashCode()
@@ -217,6 +223,7 @@ object Cpp {
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + qual.hashCode()
+            hc = 31 * hc + virtSpec.hashCode()
             return hc
         }
         init {
@@ -699,6 +706,7 @@ object Cpp {
         name: Name,
         args: Iterable<FuncParam>,
         var qual: MethodQualifier? = null,
+        var virtSpec: VirtSpecifier? = null,
         body: BlockStmt,
     ) : BaseTree(pos), Global, StructPart {
         override val operatorDefinition: CppOperatorDefinition?
@@ -706,7 +714,7 @@ object Cpp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() = sharedCodeFormattingTemplate8
         override val formatElementCount
-            get() = 8
+            get() = 9
         override fun formatElement(
             index: Int,
         ): IndexableFormattableTreeElement {
@@ -718,7 +726,8 @@ object Cpp {
                 4 -> this.name
                 5 -> FormattableTreeGroup(this.args)
                 6 -> this.qual ?: FormattableTreeGroup.empty
-                7 -> this.body
+                7 -> this.virtSpec ?: FormattableTreeGroup.empty
+                8 -> this.body
                 else -> throw IndexOutOfBoundsException("$index")
             }
         }
@@ -747,14 +756,14 @@ object Cpp {
             get() = _body
             set(newValue) { _body = updateTreeConnection(_body, newValue) }
         override fun deepCopy(): FuncDef {
-            return FuncDef(pos, attr = this.attr?.deepCopy(), mod = this.mod, ret = this.ret?.deepCopy(), convention = this.convention?.deepCopy(), name = this.name.deepCopy(), args = this.args.deepCopy(), qual = this.qual, body = this.body.deepCopy())
+            return FuncDef(pos, attr = this.attr?.deepCopy(), mod = this.mod, ret = this.ret?.deepCopy(), convention = this.convention?.deepCopy(), name = this.name.deepCopy(), args = this.args.deepCopy(), qual = this.qual, virtSpec = this.virtSpec, body = this.body.deepCopy())
         }
         override val childMemberRelationships
             get() = cmr
         override fun equals(
             other: Any?,
         ): Boolean {
-            return other is FuncDef && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual && this.body == other.body
+            return other is FuncDef && this.attr == other.attr && this.mod == other.mod && this.ret == other.ret && this.convention == other.convention && this.name == other.name && this.args == other.args && this.qual == other.qual && this.virtSpec == other.virtSpec && this.body == other.body
         }
         override fun hashCode(): Int {
             var hc = attr.hashCode()
@@ -764,6 +773,7 @@ object Cpp {
             hc = 31 * hc + name.hashCode()
             hc = 31 * hc + args.hashCode()
             hc = 31 * hc + qual.hashCode()
+            hc = 31 * hc + virtSpec.hashCode()
             hc = 31 * hc + body.hashCode()
             return hc
         }
@@ -3442,7 +3452,7 @@ object Cpp {
             ),
         )
 
-    /** `{{0}} {{1}} {{2}} {{3}} {{4}} ( {{5*,}} ) {{6}} ;` */
+    /** `{{0}} {{1}} {{2}} {{3}} {{4}} ( {{5*,}} ) {{6}} {{7}} ;` */
     private val sharedCodeFormattingTemplate2 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3458,6 +3468,7 @@ object Cpp {
                 ),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(6),
+                CodeFormattingTemplate.OneSubstitution(7),
                 CodeFormattingTemplate.LiteralToken(";", OutputTokenType.Punctuation),
             ),
         )
@@ -3536,7 +3547,7 @@ object Cpp {
             ),
         )
 
-    /** `{{0}} {{1}} {{2}} {{3}} {{4}} ( {{5*,}} ) {{6}} {{7}}` */
+    /** `{{0}} {{1}} {{2}} {{3}} {{4}} ( {{5*,}} ) {{6}} {{7}} {{8}}` */
     private val sharedCodeFormattingTemplate8 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -3553,6 +3564,7 @@ object Cpp {
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(6),
                 CodeFormattingTemplate.OneSubstitution(7),
+                CodeFormattingTemplate.OneSubstitution(8),
             ),
         )
 
