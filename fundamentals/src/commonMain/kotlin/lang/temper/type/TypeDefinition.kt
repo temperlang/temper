@@ -101,12 +101,8 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
         if (this === maybeSup) {
             return true
         }
-        val supTypes = when (this) {
-            is TypeShape -> superTypes
-            is TypeFormal -> upperBounds
-        }
-        for (supType in supTypes) {
-            if (supType.definition.isSubOrSame(maybeSup)) {
+        for (upperBound in upperBounds) {
+            if (upperBound.definition.isSubOrSame(maybeSup)) {
                 return true
             }
         }
