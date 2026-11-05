@@ -1,0 +1,20 @@
+[
+    {
+        "level": "error",
+        "template": "ExpectedNoBubble",
+        "values": [],
+        "formatted": "Cannot bubble from a function without Bubble in its return type!",
+        "loc": "test/test.temper",
+        "left": 1018,
+        "right": 1026
+    },
+    {
+        "level": "error",
+        "template": "ExpectedNoBubble",
+        "values": [],
+        "formatted": "Cannot bubble from a function without Bubble in its return type!",
+        "loc": "test/test.temper",
+        "left": 2003,
+        "right": 2011
+    }
+]

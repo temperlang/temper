@@ -369,6 +369,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun bubbleInForOfOverList() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/bubble-in-for-of-over-list"),
+    )
+
+    @Test
     fun awaiting() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/awaiting"),
         stagingFlags = setOf(StagingFlags.allowTopLevelAwait),
