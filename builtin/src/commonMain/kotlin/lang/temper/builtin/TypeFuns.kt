@@ -9,30 +9,25 @@ import lang.temper.log.LogEntry
 import lang.temper.log.MessageTemplate
 import lang.temper.log.Position
 import lang.temper.name.BuiltinName
-import lang.temper.name.Symbol
 import lang.temper.stage.Stage
 import lang.temper.type.Abstractness
-import lang.temper.type.AndType
-import lang.temper.type.FunctionType
-import lang.temper.type.InvalidType
-import lang.temper.type.MkType
-import lang.temper.type.NominalType
-import lang.temper.type.StaticType
-import lang.temper.type.TypeContext
 import lang.temper.type.TypeDefinition
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.Variance
 import lang.temper.type.WellKnownTypes
 import lang.temper.type.canBeNull
-import lang.temper.type.excludeNull
-import lang.temper.type.extractNominalTypes
 import lang.temper.type.isNeverType
+import lang.temper.type2.AdHocArrowTypes
 import lang.temper.type2.DefinedNonNullType
 import lang.temper.type2.MkType2
+import lang.temper.type2.Nullity
 import lang.temper.type2.Signature2
 import lang.temper.type2.Type2
-import lang.temper.type2.hackMapOldStyleToNew
+import lang.temper.type2.TypeContext2
+import lang.temper.type2.TypeParamRef
+import lang.temper.type2.withNullity
+import lang.temper.type2.withType
 import lang.temper.value.ActualValues
 import lang.temper.value.CallTree
 import lang.temper.value.Fail
@@ -318,8 +313,9 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
         interpMode: InterpMode,
     ): PartialResult {
         val typeFormals = mutableListOf<TypeFormal>()
-        val valueFormals = mutableListOf<FunctionType.ValueFormal>()
-        var returnType: StaticType? = null
+        val requiredInputTypes = mutableListOf<Type2>()
+        val optionalInputTypes = mutableListOf<Type2>()
+        var returnType: Type2? = null
         var problemIndex = -1
 
         var argIndexCounter = 0
@@ -327,12 +323,11 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
         argLoop@
         while (argIndexCounter <= lastArgIndex) {
             val argIndex = argIndexCounter++
-            val type = asReifiedType(args[argIndex])?.type
+            val type = asReifiedType(args[argIndex])?.type2
             when (args.key(argIndex)) {
                 typeFormalSymbol -> {
-                    val definition = (type as? NominalType)?.definition
-                    if (definition is TypeFormal && type.bindings.isEmpty()) {
-                        typeFormals.add(definition)
+                    if (type is TypeParamRef && type.nullity == Nullity.NonNull) {
+                        typeFormals.add(type.definition)
                     } else {
                         problemIndex = argIndex
                         break
@@ -344,26 +339,36 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
                         break
                     }
 
-                    var symbol: Symbol? = null
+                    var hasSymbol = false
                     var isOptional = false
                     // Expect metadata following type like
                     // \word \nameOfArg \optional void \restFormal void
                     while (argIndexCounter < lastArgIndex) {
                         when (args.key(argIndexCounter)) {
                             wordSymbol -> {
+                                // Function types do not preserve parameter names, but they are
+                                // syntactically allowed, so check that they're well-formed.
                                 val name = TSymbol.unpackOrNull(args.result(argIndexCounter))
-                                if (name == null || symbol != null) {
+                                if (name == null || hasSymbol) {
                                     problemIndex = argIndexCounter
                                     break@argLoop
                                 }
-                                symbol = name
+                                hasSymbol = true
                             }
                             optionalSymbol -> isOptional = true
                             else -> break
                         }
                         argIndexCounter += 1
                     }
-                    valueFormals.add(FunctionType.ValueFormal(symbol, type, isOptional))
+                    if (isOptional) {
+                        optionalInputTypes.add(type)
+                    } else if (optionalInputTypes.isEmpty()) {
+                        requiredInputTypes.add(type)
+                    } else {
+                        // Required inputs must precede optional inputs.
+                        problemIndex = argIndex
+                        break
+                    }
                 }
                 outTypeSymbol -> {
                     if (type == null || returnType != null) {
@@ -383,10 +388,11 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
         return if (problemIndex < 0) {
             val functionType = constructType(
                 typeFormals = typeFormals.toList(),
-                valueFormals = valueFormals.toList(),
+                requiredInputTypes = requiredInputTypes.toList(),
+                optionalInputTypes = optionalInputTypes.toList(),
                 returnType = returnType,
             )
-            Value(ReifiedType(hackMapOldStyleToNew(functionType)))
+            Value(ReifiedType(functionType))
         } else {
             Fail(
                 LogEntry(
@@ -401,9 +407,10 @@ internal abstract class AbstractFnTypeFn(name: String) : BuiltinFun(name, null) 
 
     abstract fun constructType(
         typeFormals: List<TypeFormal>,
-        valueFormals: List<FunctionType.ValueFormal>,
-        returnType: StaticType?,
-    ): StaticType
+        requiredInputTypes: List<Type2>,
+        optionalInputTypes: List<Type2>,
+        returnType: Type2?,
+    ): Type2
 }
 
 private const val FN_TYPE_NAME = "fn"
@@ -423,12 +430,17 @@ and which returns `ReturnType`."""
 internal object FnTypeFn : AbstractFnTypeFn(FN_TYPE_NAME) {
     override fun constructType(
         typeFormals: List<TypeFormal>,
-        valueFormals: List<FunctionType.ValueFormal>,
-        returnType: StaticType?,
-    ): FunctionType = MkType.fnDetails(
-        typeFormals = typeFormals,
-        valueFormals = valueFormals,
-        returnType = returnType ?: Types.void.type,
+        requiredInputTypes: List<Type2>,
+        optionalInputTypes: List<Type2>,
+        returnType: Type2?,
+    ): Type2 = AdHocArrowTypes.definedTypeForSig(
+        Signature2(
+            returnType2 = returnType ?: WellKnownTypes.voidType2,
+            hasThisFormal = false,
+            requiredInputTypes = requiredInputTypes,
+            optionalInputTypes = optionalInputTypes,
+            typeFormals = typeFormals,
+        ),
     )
 }
 
@@ -457,11 +469,11 @@ sealed class RttiCheckFunction(
             //
             // If we haven't yet passed the TypeChecker, which can take into account
             // the static type to allow casting from String? to String but not
-            // from AnyValue to String, then suspend judgement about whether the
+            // from AnyValue to String, then suspend judgment about whether the
             // check is ok.
             val problem = problems(
                 Either.Right(x),
-                reifiedType.type,
+                reifiedType.type2,
                 cb.pos,
             ).firstOrNull { it.level >= Log.Error }
             if (problem != null) {
@@ -640,15 +652,15 @@ inline fun asReifiedTypeListOr(
 }
 
 fun RttiCheckFunction.problems(
-    checked: Either<StaticType, Value<*>>,
-    targetType: StaticType,
+    checked: Either<Type2, Value<*>>,
+    targetType: Type2,
     pos: Position,
 ): List<LogEntry> {
     val exprType = checked.leftOrNull
     val exprCanBeNull = exprType?.let { canBeNull(it) }
     val targetCanBeNull = canBeNull(targetType)
-    val exprTypeNotNull = exprType?.let { excludeNull(it) }
-    val targetTypeNotNull = excludeNull(targetType)
+    val exprTypeNotNull = exprType?.withNullity(Nullity.NonNull)
+    val targetTypeNotNull = targetType.withNullity(Nullity.NonNull)
 
     // check whether the cast can succeed at all.
     val (exprTypeNominal, targetTypeNominal) =
@@ -656,9 +668,9 @@ fun RttiCheckFunction.problems(
             exprCanBeNull == false && targetTypeNotNull.isNeverType ||
             !targetCanBeNull && exprTypeNotNull?.isNeverType == true
         ) {
-            Pair(exprType as? NominalType, targetType as? NominalType)
+            Pair(exprType, nonNullValueType(targetType))
         } else {
-            Pair(exprTypeNotNull as? NominalType, targetTypeNotNull as? NominalType)
+            Pair(exprTypeNotNull?.let { nonNullValueType(it) }, nonNullValueType(targetTypeNotNull))
         }
     if (exprTypeNominal != null && targetTypeNominal != null) {
         val exprDef = exprTypeNominal.definition as? TypeShape
@@ -680,7 +692,7 @@ fun RttiCheckFunction.problems(
         }
     }
 
-    val typeContext = TypeContext()
+    val typeContext = TypeContext2()
     val isUp = exprTypeNotNull?.let { typeContext.isSubType(it, targetTypeNotNull) } ?: false
     val isDown = !isUp && exprTypeNotNull?.let { typeContext.isSubType(targetTypeNotNull, it) } ?: false
     if (exprTypeNotNull != null && !(isUp || isDown)) {
@@ -697,33 +709,32 @@ fun RttiCheckFunction.problems(
     val needsSubtypeCheck = exprTypeNotNull == null || isDown
     if (needsSubtypeCheck) {
         // Disallow casting to formal types
-        val formalTypes = mutableListOf<NominalType>()
+        val formalTypes = mutableListOf<Type2>()
         // Disallow casting to non-sealed, connected types
-        val connectedTypes = mutableListOf<NominalType>()
+        val connectedTypes = mutableListOf<Type2>()
         // Disallow casting to types marked as not cast targets
-        val disallowedDowncasts = mutableListOf<NominalType>()
+        val disallowedDowncasts = mutableListOf<Type2>()
         // Disallow introducing new type arguments.
-        val introducedActualsTypes = mutableListOf<NominalType>()
+        val introducedActualsTypes = mutableListOf<Type2>()
 
-        val sealedExprTypeNominals by lazy {
-            requiredDefinitions(exprTypeNotNull ?: InvalidType)
-                .filter { it.isSealed }.toSet()
+        val sealedExprTypeDefn by lazy {
+            val defn = exprTypeNotNull?.definition
+            if (defn.isSealed) { defn } else { null }
         }
 
-        for (nt in extractNominalTypes(targetType)) {
-            when (val definition = nt.definition) {
-                is TypeFormal -> formalTypes.add(nt)
-                is TypeShape -> {
-                    val mayDowncastTo = TBoolean.unpackOrNull(
-                        definition.metadata[mayDowncastToSymbol]?.lastOrNull(),
-                    )
-                    if (mayDowncastTo != null) {
-                        if (!mayDowncastTo) {
-                            disallowedDowncasts.add(nt)
-                        }
-                        continue
+        val nt = extractValueType(targetType)
+        when (val definition = nt?.definition) {
+            null -> {}
+            is TypeFormal -> formalTypes.add(nt)
+            is TypeShape -> {
+                val mayDowncastTo = TBoolean.unpackOrNull(
+                    definition.metadata[mayDowncastToSymbol]?.lastOrNull(),
+                )
+                if (mayDowncastTo != null) {
+                    if (!mayDowncastTo) {
+                        disallowedDowncasts.add(nt)
                     }
-
+                } else {
                     if (connectedSymbol in definition.metadata) {
                         // Probably not reliably castable because there might be multiple
                         // Temper type definitions connecting to the same target-language type.
@@ -760,10 +771,10 @@ fun RttiCheckFunction.problems(
                         } else {
                             // If walking from the subtype to the supertype following only sealed
                             // super-type edges leads to one of the sealed expr nominals, then we're ok.
-                            val sealedSupers = sealedExprTypeNominals
-                            if (sealedSupers.isNotEmpty()) {
+                            val sealedSuper = sealedExprTypeDefn
+                            if (sealedSuper != null) {
                                 fun connectedBySealedChain(ts: TypeShape): Boolean =
-                                    ts in sealedSupers ||
+                                    ts == sealedSuper ||
                                         ts.superTypes.any {
                                             val superTypeShape = it.definition as? TypeShape
                                             superTypeShape != null && superTypeShape.isSealed &&
@@ -833,15 +844,33 @@ fun RttiCheckFunction.problems(
 private val TypeDefinition?.isSealed get() =
     this is TypeShape && sealedTypeSymbol in this.metadata
 
-private fun requiredDefinitions(t: StaticType): List<TypeDefinition> = buildList {
-    fun unpackDefinitions(st: StaticType) {
-        when (st) {
-            is NominalType -> add(st.definition)
-            is AndType -> st.members.forEach { unpackDefinitions(it) }
-            else -> {}
-        }
+/**
+ * [t] if it is a non-null type that is not an ad-hoc function type
+ * or a return-only type like `Never<...>` or `Result<..., ...>`.
+ */
+private fun nonNullValueType(t: Type2): Type2? {
+    val definition = t.definition
+    return if (
+        t.nullity == Nullity.NonNull &&
+        definition != WellKnownTypes.neverTypeDefinition &&
+        definition != WellKnownTypes.resultTypeDefinition &&
+        !AdHocArrowTypes.isAdhocArrowTypeDefinition(definition)
+    ) {
+        t
+    } else {
+        null
     }
-    unpackDefinitions(t)
+}
+
+/** The value types (see above) that an RTTI check against [t] needs to distinguish. */
+private fun extractValueType(t: Type2): Type2? {
+    val principal = withType(
+        t,
+        result = { pass, _, _ -> pass },
+        never = { _, _, _ -> null },
+        fallback = { it },
+    )
+    return principal?.withNullity(Nullity.NonNull)?.let { nonNullValueType(it) }
 }
 
 private const val RTTI_CALL_TREE_SIZE = 3

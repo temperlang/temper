@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.generateCode
 import lang.temper.common.ListBackedLogSink
@@ -848,6 +849,15 @@ class CppBackendTest {
         ),
         listedCall = "_connected::viaConnected(",
         unlistedCall = "_connected::viaBody(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = CppBackend.Cpp,
+        connectedFiles = mapOf(
+            "_connected.hpp" to "struct ViaConnected {\n    std::int32_t get() { return 1; }\n};\n",
+        ),
+        generatedClass = { "struct $it :" },
     )
 
     @Test
