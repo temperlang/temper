@@ -2041,8 +2041,11 @@ class RustTranslator(
                             within = { tree ->
                                 when (tree) {
                                     is TmpL.SetBackedProperty -> {
-                                        val name = (tree.left.property as TmpL.InternalPropertyId).name.name
-                                        compute(name) { _, value: Int? -> value?.let { it + 1 } ?: 1 }
+                                        // Writes to other instances need no field locals.
+                                        if (isOwnField(tree.left)) {
+                                            val name = (tree.left.property as TmpL.InternalPropertyId).name.name
+                                            compute(name) { _, value: Int? -> value?.let { it + 1 } ?: 1 }
+                                        }
                                         false
                                     }
                                     else -> true
@@ -2305,8 +2308,21 @@ class RustTranslator(
 
     /** Whether [read] translates to `self.0.read().unwrap().<field>`. */
     private fun takesReadGuard(read: TmpL.GetProperty): Boolean =
-        read.property is TmpL.InternalPropertyId && insideMutableType &&
-            functionContextStack.lastOrNull()?.constructorMode != ConstructorMode.Init
+        read.property is TmpL.InternalPropertyId && insideMutableType && !usesFieldLocal(read)
+
+    /**
+     * Whether [ref] is `this.x` for the object under construction, which is still just field locals until
+     * every field is set. Other instances of the same class, such as `parent.x`, are already built.
+     */
+    private fun usesFieldLocal(ref: TmpL.PropertyReference): Boolean =
+        // We could be in static init for internal property access so might not have a function.
+        functionContextStack.lastOrNull()?.constructorMode == ConstructorMode.Init && isOwnField(ref)
+
+    private fun isOwnField(ref: TmpL.PropertyReference): Boolean {
+        val subject = ref.subject
+        return ref.property is TmpL.InternalPropertyId && subject is TmpL.This &&
+            subject.id.name == functionContextStack.lastOrNull()?.decl?.parameters?.thisName?.name
+    }
 
     /**
      * The guard in `self.0.read().unwrap().n` is a temporary, and Rust drops temporaries at the end of the
@@ -2341,10 +2357,7 @@ class RustTranslator(
             // A match keeps its scrutinee's temporaries alive through every arm.
             is TmpL.ComputedJumpStatement -> return true
             // The setter call, or the write guard, comes after the value, so the read guard is still held.
-            is TmpL.SetProperty -> if (
-                statement.left.property is TmpL.ExternalPropertyId ||
-                functionContextStack.lastOrNull()?.constructorMode != ConstructorMode.Init
-            ) {
+            is TmpL.SetProperty -> if (!usesFieldLocal(statement.left)) {
                 return true
             }
             is TmpL.Assignment -> decls[statement.left.name]?.let { decl ->
@@ -2973,8 +2986,7 @@ class RustTranslator(
     private fun translatePropertyReference(ref: TmpL.PropertyReference, lockName: String): Rust.Expr {
         val propertyId = translatePropertyId(ref.property)
         val isInternal = ref.property is TmpL.InternalPropertyId
-        // We could be in static init for internal property access so might not have a function.
-        if (isInternal && functionContextStack.lastOrNull()?.constructorMode == ConstructorMode.Init) {
+        if (usesFieldLocal(ref)) {
             // Use local vars until init is finished.
             return propertyId
         }
