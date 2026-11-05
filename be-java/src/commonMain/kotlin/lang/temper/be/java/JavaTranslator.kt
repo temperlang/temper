@@ -1862,13 +1862,18 @@ class JavaTranslator(
             }
 
         private fun instanceOf(io: TmpL.InstanceOfExpression): J.Expression {
-            return J.InstanceofExpr(
-                io.pos,
-                left = expr(io.expr),
-                right = JavaType.fromTmpL(io.checkedType, names)
-                    .asReferenceType()
-                    .toTypeAst(io.checkedType.pos),
-            )
+            val pos = io.checkedType.pos
+            val checked = JavaType.fromTmpL(io.checkedType, names).asReferenceType()
+            // Java 8 allows only reifiable types in instanceof, so `Append<?>`
+            // rather than `Append<T>`.
+            val right = when {
+                checked.args.isEmpty() -> checked.toTypeAst(pos)
+                else -> checked.name.toClassType(
+                    pos,
+                    J.TypeArguments(pos, checked.args.map { J.WildcardTypeArgument(pos) }),
+                )
+            }
+            return J.InstanceofExpr(io.pos, left = expr(io.expr), right = right)
         }
 
         private fun castExpr(pos: Position, rt: TmpL.AType, x: TmpL.Expression): J.StaticMethodInvocationExpr {

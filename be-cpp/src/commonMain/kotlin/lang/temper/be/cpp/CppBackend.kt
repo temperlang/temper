@@ -86,7 +86,7 @@ class CppBackend private constructor(
                 for (member in top.members) {
                     val rm = member.asReceiverMember() ?: continue
                     val hasOptional = rm.parameters.parameters.drop(1).any { it.optional }
-                    if (rm.mayYield || hasOptional) add(rm.dotName)
+                    if (rm.mayYield || hasOptional) add(rm.slotKey)
                 }
             }
         }
