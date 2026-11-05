@@ -18,7 +18,7 @@ namespace temper {
             typedef T type;
         };
 
-        // Whether a type is passed by `const &` (shared_ptr and std::function), matching
+        // Whether a type is passed by `const &` (shared_ptr, std::function, and Str), matching
         // the translator's choice for concrete types.
         template<class T>
         struct IsIndirect : std::false_type {};
@@ -28,6 +28,9 @@ namespace temper {
 
         template<class T>
         struct IsIndirect<std::function<T>> : std::true_type {};
+
+        template<>
+        struct IsIndirect<Str> : std::true_type {};
 
         // How a virtual member takes a type parameter's value, so a template's method
         // and its overrides for concrete types have the same signature.

@@ -348,9 +348,10 @@ class CppBackendTest {
                 "virtual ~Animal",
                 "std::shared_ptr<Dog>",
                 "get_name() const override;",
-                // By value, as `Labeled<L>` declares it, not `Str const &`, which would
-                // only overload it.
-                "label(temper::core::Str) const override;",
+                // `Labeled<L>` takes `temper::core::Param<L>`, which is `Str const &` for `Str`, so the
+                // override matches it rather than only overloading it.
+                "label(temper::core::Param<L>) const;",
+                "label(temper::core::Str const &) const override;",
             ),
         )
     }
@@ -716,7 +717,7 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 "int32_t virtual get_state() const;",
-                "std::string virtual describe() const;",
+                "temper::core::Str virtual describe() const;",
             ),
         )
     }
