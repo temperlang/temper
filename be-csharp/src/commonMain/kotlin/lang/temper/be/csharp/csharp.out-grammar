@@ -342,9 +342,16 @@ GotoStatement ::= "goto" & label%Identifier & ";";
 
 IfStatement ::=
       "if" & "(" & test%Expression & ")"
-    & consequent%Statement
-    & ((alternate%Statement => "else" & alternate) || ())
-    ;
+    & "{" & "\n" & consequent%Statement & "\n" & "}"
+    & (
+        (isElseIf==true => "else" & alternate%Statement)
+            || (hasElse==true => "else" & "{" & "\n" & alternate & "\n" & "}")
+            || ());
+IfStatement.isElseIf = `alternate is IfStatement`;
+IfStatement.hasElse = `
+alternate != null &&
+    (alternate !is BlockStatement || alternate?.childCount != 0)
+`;
 
 LabeledStatement ::= label%Identifier & ":" & statement%Statement;
 
