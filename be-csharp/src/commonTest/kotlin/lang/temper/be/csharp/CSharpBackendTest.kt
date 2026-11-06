@@ -2,6 +2,7 @@ package lang.temper.be.csharp
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -1706,6 +1707,15 @@ class CSharpBackendTest {
         ),
         listedCall = "FooConnected.ViaConnected(",
         unlistedCall = "FooConnected.ViaBody(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = CSharpBackend.Factory,
+        connectedFiles = mapOf(
+            "ViaConnected.cs" to "public class ViaConnected\n{\n    public int Get() => 1;\n}\n",
+        ),
+        generatedClass = { "class $it" },
     )
 
     @Test

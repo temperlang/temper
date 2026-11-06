@@ -282,8 +282,8 @@ internal class ReachabilityTracer {
                             val def = tree.typeDefContained()
                             when {
                                 def != null -> {
-                                    // Supertypes aren't necessarily in trees, so dig for them.
-                                    def.superTypes.forEach { add(it.definition.name) }
+                                    // Upper bounds aren't necessarily in trees, so dig for them.
+                                    def.upperBounds.forEach { add(it.definition.name) }
                                     add(def.name)
                                     // Also loop around to imported names if any.
                                     importedNames[def.name]?.let { add(it) }

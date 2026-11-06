@@ -134,6 +134,11 @@ namespace temper {
                 return static_cast<int32_t>(0u - static_cast<uint32_t>(a));
             }
 
+            // Shifts mask the count like Java and JS, since shifting by the width or
+            // more is undefined. Left shifts go through unsigned, as a signed `<<`
+            // that reaches the sign bit is undefined before C++20. Right shifts of
+            // negative values are implementation-defined before C++20 but arithmetic
+            // on every supported compiler (and required from C++20 on).
             inline int32_t shl(int32_t a, int32_t b) {
                 return static_cast<int32_t>(static_cast<uint32_t>(a) << (b & 31));
             }

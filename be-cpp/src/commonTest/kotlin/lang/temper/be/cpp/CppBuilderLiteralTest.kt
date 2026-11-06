@@ -36,6 +36,21 @@ class CppBuilderLiteralTest {
     }
 
     @Test
+    fun noTrigraphs() {
+        assertEquals(""""?\?= ?\?/ ?\?\?\? ?"""", literalString("??= ??/ ???? ?"))
+        assertEquals("? ?= ? ?/ ? ? ?", commentText("??= ??/ ???"))
+    }
+
+    @Test
+    fun digitsAfterEscapesStayDigits() {
+        // Octal escapes take at most three digits, and every escape has three, so a
+        // digit after one is never read into it.
+        assertEquals(""""?\?\0010"""", literalString("??\u00010"))
+        assertEquals(""""?\?\n0"""", literalString("??\n0"))
+        assertEquals(""""\342\202\2541"""", literalString("€1"))
+    }
+
+    @Test
     fun nullByteUsesStdString() {
         val result = literalString("ab\u0000cd")
         assertEquals("std::string(\"ab\\000cd\", 5)", result)

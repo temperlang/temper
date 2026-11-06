@@ -1,63 +1,63 @@
-let console#24;
-console#24 = doPure(@stay fn: Console {
+let console#0;
+console#0 = doPure(@stay fn: Console {
     getConsole()
 });
 I__0 extends AnyValue;
-@property(\next) @stay @fromType(I__0) let next__11;
+@property(\next) @stay @fromType(I__0) let next__0;
 @typeDecl(I__0) @stay let I__0;
 I__0 = type (I__0);
-@typeDecl(C__1) @stay let C__1;
-C__1 = type (C__1);
+@typeDecl(C__0) @stay let C__0;
+C__0 = type (C__0);
 interface(\word, \I, \concrete, false, @typeDefined(I__0) @stay fn {
     do {};
     do {}
 });
-C__1 extends I__0;
-@constructorProperty @property(\i) @visibility(\private) @stay @fromType(C__1) let i__12;
-@method(\f) @visibility(\public) @fn @stay @fromType(C__1) let f__13;
-f__13 = (@stay fn f(@impliedThis(C__1) this__2: C__1) {
-    fn__14: do {
-      getp(i__12, this__2)
+C__0 extends I__0;
+@constructorProperty @property(\i) @visibility(\private) @stay @fromType(C__0) let i__0;
+@method(\f) @visibility(\public) @fn @stay @fromType(C__0) let f__0;
+f__0 = (@stay fn f(@impliedThis(C__0) this__0: C__0) {
+    fn__0: do {
+      getp(i__0, this__0)
     }
 });
-@property(\next) @visibility(\public) @stay @fromType(C__1) let next__5;
-@method(\next) @getter @visibility(\public) @fn @stay @fromType(C__1) let nym`get.next__15`;
-nym`get.next__15` = fn nym`get.next`(@impliedThis(C__1) this__3: C__1) /* return__8 */{
-  fn__16: do {
+@property(\next) @visibility(\public) @stay @fromType(C__0) let next__1;
+@method(\next) @getter @visibility(\public) @fn @stay @fromType(C__0) let nym`get.next__0`;
+nym`get.next__0` = fn nym`get.next`(@impliedThis(C__0) this__1: C__0) /* return__0 */{
+  fn__1: do {
     do {
-      return__8 = do_icall_f(type (C__1), this__3) + 1;
-      break(\label, fn__16)
+      return__0 = do_tcall_f(type (C__0), this__1) + 1;
+      break(\label, fn__1)
     }
   }
 };
-@method(\next) @setter @visibility(\private) @fn @stay @fromType(C__1) let nym`set.next__17`;
-nym`set.next__17` = (@stay fn nym`set.next`(@impliedThis(C__1) this__4: C__1, newVal__18 /* aka newVal */) /* return__9 */: Void {
-    fn__19: do {
+@method(\next) @setter @visibility(\private) @fn @stay @fromType(C__0) let nym`set.next__0`;
+nym`set.next__0` = (@stay fn nym`set.next`(@impliedThis(C__0) this__2: C__0, newVal__0 /* aka newVal */) /* return__1 */: Void {
+    fn__2: do {
       do {
-        let t#23;
-        setp(i__12, this__4, t#23 = newVal__18 - 1);
-        t#23
+        let t#0;
+        setp(i__0, this__2, t#0 = newVal__0 - 1);
+        t#0
       }
     }
 });
-@fn @method(\constructor) @visibility(\public) @stay @fromType(C__1) let constructor__20;
-constructor__20 = (@stay fn constructor(@impliedThis(C__1) this__6: C__1, @optional(true) i__25 /* aka i */) /* return__7 */: Void {
-    let i__21 /* aka i */;
-    i__21 = {
-      if (isNull(i__25)) {
+@fn @method(\constructor) @visibility(\public) @stay @fromType(C__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(C__0) this__3: C__0, @optional(true) i__1 /* aka i */) /* return__2 */: Void {
+    let i__2 /* aka i */;
+    i__2 = {
+      if (isNull(i__1)) {
         0
       } else {
-        notNull(i__25)
+        notNull(i__1)
       }
     };
     void;
     do {
-      let t#22;
-      setp(i__12, this__6, t#22 = i__21);
-      t#22
+      let t#1;
+      setp(i__0, this__3, t#1 = i__2);
+      t#1
     };
 });
-class(\word, \C, \concrete, true, @typeDefined(C__1) fn {
+class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     do {};
     do {};
     do {};
@@ -66,10 +66,10 @@ class(\word, \C, \concrete, true, @typeDefined(C__1) fn {
     do {};
     do {}
 });
-let c__10;
-c__10 = new C__1();
-do_call_log(console#24, do_get_i(c__10), do_get_x(c__10), do_get_x(c__10), do_call_f(c__10));
+let c__0;
+c__0 = new C__0();
+do_call_log(console#0, do_get_i(c__0), do_get_x(c__0), do_get_x(c__0), do_call_f(c__0));
 do {
-  do_set_next(c__10, 42);
+  do_set_next(c__0, 42);
   42
 }

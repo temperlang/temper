@@ -7,6 +7,7 @@ import lang.temper.be.tmpl.SuperCallConfig
 import lang.temper.be.tmpl.SupportNetwork
 import lang.temper.be.tmpl.TmpL
 import lang.temper.be.tmpl.TmpLTranslator
+import lang.temper.be.tmpl.connectedFilesReplacedByFallbacks
 import lang.temper.be.tmpl.hasSplitSupers
 import lang.temper.be.tmpl.injectSuperCallMethods
 import lang.temper.common.MimeType
@@ -156,7 +157,11 @@ class JavaBackend private constructor(
         }
         // Copy raw java files into package dirs.
         val javaLibConfig = JavaLibraryConfig(libraryConfigurations.currentLibraryConfiguration)
+        // A connected class's own file, like `Counter.java`, would clash with the
+        // class generated from its Temper implementation, if used.
+        val replaced = finished.connectedFilesReplacedByFallbacks(sourceFileExtension)
         for (file in rawBackendFiles) {
+            if (file.key in replaced) { continue }
             val modulePath = file.key.segments.subList(0, file.key.segments.size - 1).asFilePath()
             val packageName = javaLibConfigs.packageNameFor(modulePath, javaLibConfig)
             val packagePath = dirPath(packageName.parts.map { it.outputNameText })

@@ -942,7 +942,7 @@ class TypeSolver(
                             is TypeShape -> out.typeShapes.add(defn)
                             is TypeFormal -> if (defn !in out.visited) {
                                 out.visited.add(defn)
-                                defn.superTypes.forEach {
+                                defn.upperBounds.forEach {
                                     // TODO: avoid cycles
                                     // TODO: set out.canBeNull if any super-type is
                                     // nullable.
@@ -1482,7 +1482,7 @@ class TypeSolver(
 
                 // Part I
                 for ((f, varRef) in typeFormalToVarRef) {
-                    for (superType in f.superTypes) {
+                    for (superType in f.upperBounds) {
                         val superType2 = hackMapOldStyleToNew(superType)
                         addConstraint(SubTypeConstraint(varRef, contextualizeType(superType2)))
                     }

@@ -17,6 +17,7 @@ import lang.temper.name.TemperName
 import lang.temper.name.unusedAnalogueFor
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
+import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
@@ -28,6 +29,9 @@ import lang.temper.type.InternalSet
 import lang.temper.type.MethodShape
 import lang.temper.type.NominalType
 import lang.temper.type.StaticType
+import lang.temper.type.ThisCall
+import lang.temper.type.ThisGet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeFormal
 import lang.temper.type.TypeShape
 import lang.temper.type.WellKnownTypes
@@ -643,7 +647,7 @@ private class InlineToRepairUnrealizedGoals(
     private fun getDefinitionOfCallee(call: CallTree): CalleeDefinition? {
         val callee = call.child(0)
 
-        // Look for a callee with the form (Call (Call DotHelper(ExternalBind) subject))
+        // Look for a callee with the form (Call DotHelper(ExternalCall) subject)
         val (dotHelper, thisArg) = run findDotHelper@{
             val possibleDotHelper = callee.functionContained
             if (possibleDotHelper is DotHelper) {
@@ -660,7 +664,7 @@ private class InlineToRepairUnrealizedGoals(
         // We could try other strategies.  If callee is by name,
         // it would be good to have some way to follow any chain
         // of names back to a named function declaration or exported name.
-        if (dotHelper != null && dotHelper.memberAccessor is ExternalCall) {
+        if (dotHelper != null && dotHelper.memberAccessor is CallMemberAccessor) {
             val thisType = thisArg?.typeInferences?.type ?: return null
             val thisShape = representativeTypeShapeFor(thisType) ?: return null
 
@@ -703,7 +707,7 @@ private fun representativeNominalValueType(ts: Iterable<StaticType>): NominalTyp
                     return t
                 }
 
-                is TypeFormal -> representativeNominalValueType(defn.superTypes)
+                is TypeFormal -> representativeNominalValueType(defn.upperBounds)
             }
 
             else -> {}
@@ -768,9 +772,9 @@ private fun convertMemberUseToExternal(
     val accessor = dotHelper.memberAccessor
     if (accessor !is InternalMemberAccessor) { return }
     val externalAccessor = when (accessor) {
-        InternalCall -> ExternalCall
-        InternalGet -> ExternalGet
-        InternalSet -> ExternalSet
+        InternalCall, ThisCall -> ExternalCall
+        InternalGet, ThisGet -> ExternalGet
+        InternalSet, ThisSet -> ExternalSet
     }
     val convertedDotHelper = DotHelper(externalAccessor, dotHelper.member, dotHelper.extensions)
     val callee = callChildren[0]

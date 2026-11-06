@@ -1,0 +1,221 @@
+var t#0, t#1, t#2, t#3, t#4, t#5, t#6, t#7;
+let console#0;
+console#0 = getConsole();
+@fn let identifiers__0, @fn allPositive__0, @fn @reach(\none) allPositiveNoBubble__0;
+@typeDecl(Version__0) @stay let Version__0;
+Version__0 = type (Version__0);
+identifiers__0 = (@stay fn identifiers(text__0 /* aka text */: String) /* return__0 */: List<String> throws Bubble {
+    let parts__0;
+    parts__0 = do_call_split(text__0, "+");
+    let ids__0;
+    if (do_get_length(parts__0) == 2) {
+      let ids__1;
+      ids__1 = do_call_split(do_call_get(parts__0, 1), ".");
+      let this__0: List<String>;
+      this__0 = ids__1;
+      let n__0;
+      n__0 = do_get_length(this__0);
+      var i__0;
+      i__0 = 0;
+      while (i__0 <=> n__0 < 0) {
+        let el__0: String;
+        el__0 = do_call_get(this__0, i__0);
+        i__0 = i__0 + 1;
+        let id__0;
+        id__0 = el__0;
+        if (do_get_isEmpty(id__0)) {
+          bubble()
+        }
+      };
+      ids__0 = ids__1
+    } else {
+      ids__0 = list()
+    };
+    return__0 = ids__0
+});
+allPositive__0 = (@stay fn allPositive(xs__0 /* aka xs */: List<Int32>) /* return__1 */: Boolean throws Bubble {
+    let this__1: List<Int32>;
+    this__1 = xs__0;
+    let n__1;
+    n__1 = do_get_length(this__1);
+    var i__1;
+    i__1 = 0;
+    while (i__1 <=> n__1 < 0) {
+      let el__1: Int32;
+      el__1 = do_call_get(this__1, i__1);
+      i__1 = i__1 + 1;
+      let x__0;
+      x__0 = el__1;
+      if (x__0 <=> 0 <= 0) {
+        bubble()
+      }
+    };
+    return__1 = true
+});
+allPositiveNoBubble__0 = (@stay fn allPositiveNoBubble(xs__1 /* aka xs */: List<Int32>) /* return__2 */: Boolean {
+    let this__2: List<Int32>;
+    this__2 = xs__1;
+    let n__2;
+    n__2 = do_get_length(this__2);
+    var i__2;
+    i__2 = 0;
+    while (i__2 <=> n__2 < 0) {
+      let el__2: Int32;
+      el__2 = do_call_get(this__2, i__2);
+      i__2 = i__2 + 1;
+      let x__1;
+      x__1 = el__2;
+      if (x__1 <=> 0 <= 0) {
+        bubble()
+      }
+    };
+    return__2 = true
+});
+@constructorProperty @visibility(\public) @stay @fromType(Version__0) let parts__1: List<String>;
+@fn @static @visibility(\public) @stay @fromType(Version__0) let parse__0;
+parse__0 = (@stay fn parse(text__1 /* aka text */: String) /* return__3 */: Version__0 throws Bubble {
+    let plusParts__0;
+    plusParts__0 = do_icall_split(type (Version__0), text__1, "+");
+    let parts__2;
+    if (do_iget_length(type (Version__0), plusParts__0) == 2) {
+      let ids__2;
+      ids__2 = do_icall_split(type (Version__0), do_icall_get(type (Version__0), plusParts__0, 1), ".");
+      let this__3: List<String>;
+      this__3 = ids__2;
+      let n__3;
+      n__3 = do_get_length(this__3);
+      var i__3;
+      i__3 = 0;
+      while (i__3 <=> n__3 < 0) {
+        let el__3: String;
+        el__3 = do_call_get(this__3, i__3);
+        i__3 = i__3 + 1;
+        let id__1;
+        id__1 = el__3;
+        if (do_iget_isEmpty(type (Version__0), id__1)) {
+          bubble()
+        }
+      };
+      parts__2 = ids__2
+    } else {
+      parts__2 = list()
+    };
+    return__3 = new Version__0(parts__2)
+});
+@visibility(\public) @fn @stay @fromType(Version__0) let allNonEmpty__0;
+allNonEmpty__0 = (@stay fn allNonEmpty(@impliedThis(Version__0) this__4: Version__0) /* return__4 */: Boolean throws Bubble {
+    let this__5: List<String>;
+    this__5 = getp(parts__1, this__4);
+    let n__4;
+    n__4 = do_get_length(this__5);
+    var i__4;
+    i__4 = 0;
+    while (i__4 <=> n__4 < 0) {
+      let el__4: String;
+      el__4 = do_call_get(this__5, i__4);
+      i__4 = i__4 + 1;
+      let part__0;
+      part__0 = el__4;
+      if (do_iget_isEmpty(type (Version__0), part__0)) {
+        bubble()
+      }
+    };
+    return__4 = true
+});
+@visibility(\public) @fn @stay @fromType(Version__0) let allNonEmptyNoBubble__0;
+allNonEmptyNoBubble__0 = (@stay fn allNonEmptyNoBubble(@impliedThis(Version__0) this__6: Version__0) /* return__5 */: Boolean {
+    let this__7: List<String>;
+    this__7 = getp(parts__1, this__6);
+    let n__5;
+    n__5 = do_get_length(this__7);
+    var i__5;
+    i__5 = 0;
+    while (i__5 <=> n__5 < 0) {
+      let el__5: String;
+      el__5 = do_call_get(this__7, i__5);
+      i__5 = i__5 + 1;
+      let part__1;
+      part__1 = el__5;
+      if (do_iget_isEmpty(type (Version__0), part__1)) {
+        bubble()
+      }
+    };
+    return__5 = true
+});
+@fn @visibility(\public) @stay @fromType(Version__0) let constructor__0;
+constructor__0 = (@stay fn constructor(@impliedThis(Version__0) this__8: Version__0, parts__3 /* aka parts */: List<String>) /* return__6 */: Void {
+    return__6 = void;
+    setp(parts__1, this__8, parts__3)
+});
+@fn @visibility(\public) @stay @fromType(Version__0) let getparts__0;
+getparts__0 = (@stay fn (@impliedThis(Version__0) this__9: Version__0) /* return__7 */: List<String> {
+    return__7 = getp(parts__1, this__9)
+});
+orelse#0: {
+  let t#8;
+  t#8 = (fn identifiers)("1.0.0+a.b");
+  let fn__0;
+  fn__0 = (@stay fn (s__0 /* aka s */) /* return__8 */{
+      return__8 = s__0
+  });
+  t#0 = do_call_join(t#8, ",", fn__0)
+} orelse {
+  t#0 = "bubbled"
+};
+do_call_log(console#0, t#0);
+orelse#1: {
+  let t#9;
+  t#9 = (fn identifiers)("1.0.0+a..b");
+  let fn__1;
+  fn__1 = (@stay fn (s__1 /* aka s */) /* return__9 */{
+      return__9 = s__1
+  });
+  t#1 = do_call_join(t#9, ",", fn__1)
+} orelse {
+  t#1 = "bubbled"
+};
+do_call_log(console#0, t#1);
+t#2 = true;
+do_call_log(console#0, do_call_toString(t#2));
+orelse#2: {
+  t#3 = (fn allPositive)(list(1, -2, 3))
+} orelse {
+  t#3 = false
+};
+do_call_log(console#0, do_call_toString(t#3));
+orelse#3: {
+  let t#10;
+  t#10 = getStatic(Version__0, \parse)("1.0.0+a.b");
+  let fn__2;
+  fn__2 = (@stay fn (s__2 /* aka s */) /* return__10 */{
+      return__10 = s__2
+  });
+  t#4 = do_call_join(do_get_parts(t#10), ",", fn__2)
+} orelse {
+  t#4 = "bubbled"
+};
+do_call_log(console#0, t#4);
+orelse#4: {
+  let t#11;
+  t#11 = getStatic(Version__0, \parse)("1.0.0+a..b");
+  let fn__3;
+  fn__3 = (@stay fn (s__3 /* aka s */) /* return__11 */{
+      return__11 = s__3
+  });
+  t#5 = do_call_join(do_get_parts(t#11), ",", fn__3)
+} orelse {
+  t#5 = "bubbled"
+};
+do_call_log(console#0, t#5);
+orelse#5: {
+  t#6 = do_call_allNonEmpty(new Version__0(list("a", "b")))
+} orelse {
+  t#6 = false
+};
+do_call_log(console#0, do_call_toString(t#6));
+orelse#6: {
+  t#7 = do_call_allNonEmpty(new Version__0(list("a", "")))
+} orelse {
+  t#7 = false
+};
+do_call_log(console#0, do_call_toString(t#7))

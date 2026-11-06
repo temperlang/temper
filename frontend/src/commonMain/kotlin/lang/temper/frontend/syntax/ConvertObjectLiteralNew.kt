@@ -29,7 +29,7 @@ import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.methodSymbol
 import lang.temper.value.newBuiltinName
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.void
@@ -151,7 +151,7 @@ private fun DeclTree.processDecl(env: PropertyEnv) {
     //   let x = ReifiedType(T);
     // - Local type declarations
     //   @method(\constructor) let f = ...
-    val typeContained = init?.staticTypeContained
+    val typeContained = init?.reifiedTypeContained?.type
     if (typeContained != null) {
         if (typeContained is NominalType) {
             val typeShape = (typeContained.definition as? TypeShape) ?: return
@@ -183,7 +183,7 @@ private fun DeclTree.processDecl(env: PropertyEnv) {
             if (methodFormals != null) {
                 val thisParts = methodFormals.getOrNull(0)?.parts
                 if (thisParts != null) {
-                    val type = thisParts.metadataSymbolMap[impliedThisSymbol]?.target?.staticTypeContained
+                    val type = thisParts.metadataSymbolMap[impliedThisSymbol]?.target?.reifiedTypeContained?.type
                     val nominalType = type as? NominalType ?: return
                     for (i in 1 until methodFormals.size) {
                         val formalParts = methodFormals[i].parts

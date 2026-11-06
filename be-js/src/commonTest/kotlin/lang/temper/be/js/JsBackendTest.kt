@@ -3,6 +3,7 @@
 package lang.temper.be.js
 
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import lang.temper.log.filePath
@@ -2510,6 +2511,15 @@ class JsBackendTest {
         ),
         listedCall = "_connected.viaConnected(",
         unlistedCall = "_connected.viaBody(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = JsBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.js" to "export class ViaConnected {\n  get() { return 1; }\n}\n",
+        ),
+        generatedClass = { "class $it" },
     )
 
     @Test

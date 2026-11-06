@@ -5,13 +5,13 @@
 @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__0 ⦂(fn (IntMaker, Int64): Int32 throws Bubble);
 toInt__0 = (@stay fn toInt(@impliedThis(IntMaker) this__0: IntMaker, int__0 /* aka int */: Int64) /* return__0 */: Int32 throws Bubble {
     fn__0: do {
-      return__0 = do_call_toInt32(int__0)
+      return__0 = do_icall_toInt32(type (IntMaker), int__0)
     };
 });
 @visibility(\public) @fn @stay @fromType(IntMaker) let toInt__1 ⦂(fn (IntMaker, String): Int32 throws Bubble);
 toInt__1 = (@stay fn toInt(@impliedThis(IntMaker) this__1: IntMaker, string__0 /* aka string */: String) /* return__1 */: Int32 throws Bubble {
     fn__1: do {
-      return__1 = do_call_toInt32(string__0, getp(radix__0, this__1))
+      return__1 = do_icall_toInt32(type (IntMaker), string__0, getp(radix__0, this__1))
     };
 });
 @fn @visibility(\public) @stay @fromType(IntMaker) let constructor__0 ⦂(fn (IntMaker, Int32): Void);

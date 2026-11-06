@@ -10,3 +10,9 @@ class _connected:
 
         def total(self, /) -> int:
             return self._total
+
+    class Doubler:
+        """Temper's connected Doubler class, with the members Temper would generate."""
+
+        def twice(self, i: int, /) -> int:
+            return i * 2

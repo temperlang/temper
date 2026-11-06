@@ -21,6 +21,9 @@ import lang.temper.type.MethodShape
 import lang.temper.type.OperatorMember
 import lang.temper.type.PropertyShape
 import lang.temper.type.StaticPropertyShape
+import lang.temper.type.ThisAccessor
+import lang.temper.type.ThisGet
+import lang.temper.type.ThisSet
 import lang.temper.type.TypeParameterShape
 import lang.temper.type.TypeShape
 import lang.temper.value.CallTree
@@ -38,7 +41,7 @@ import lang.temper.value.typeShapeAtLeafOrNull
  *
  * For example:
  *
- * - Internal [gets][InternalGet] and [sets][InternalSet] become calls to the special
+ * - Internal [gets][ThisGet] and [sets][ThisSet] become calls to the special
  *   [BuiltinFuns.getpFn] or [BuiltinFuns.setpFn] functions if the referenced property is a
  *   backed property to distinguish known assignments from (otherwise catastrophically recursive)
  *   invocations of a property's associated getter/setter.
@@ -98,10 +101,17 @@ internal fun maybeAdjustDotHelper(
         is DotMember -> thisType?.properties?.soleMatchingOrNull { it.symbol == member.dotName }
         is OperatorMember -> null
     }
+    // Access to another instance of the enclosing type, once typing shows the subject
+    // is one, reads and writes the backed property directly, as access through `this`
+    // does, since private properties have no getters or setters to call.
+    val subjectIsEnclosingType = thisType != null &&
+        subjectTypeShapes?.toSet() == setOf(thisType)
+    val isGet = accessor == ThisGet || (accessor == InternalGet && subjectIsEnclosingType)
+    val isSet = accessor == ThisSet || (accessor == InternalSet && subjectIsEnclosingType)
     if (
         !extensionsToPreserve &&
         property?.abstractness == Abstractness.Concrete &&
-        accessor == InternalGet && t.size == IGET_CALL_SIZE
+        isGet && t.size == IGET_CALL_SIZE
     ) {
         edge.replace { pos ->
             Call(pos) {
@@ -116,7 +126,7 @@ internal fun maybeAdjustDotHelper(
     if (
         !extensionsToPreserve &&
         property?.abstractness == Abstractness.Concrete &&
-        accessor == InternalSet && t.size == ISET_CALL_SIZE
+        isSet && t.size == ISET_CALL_SIZE
     ) {
         @Suppress("MagicNumber") // just list indices
         edge.replace { pos ->
@@ -150,7 +160,15 @@ internal fun maybeAdjustDotHelper(
                 return V(calleePos, alt)
             }
             val gets = when (accessor) {
-                is InternalMemberAccessor -> BuiltinFuns.vIGets
+                is InternalMemberAccessor -> {
+                    val contextTypeArg = t.child(accessor.enclosingTypeIndexOrNegativeOne + 1)
+                    val contextTypeDef = contextTypeArg.reifiedTypeContained?.type2?.definition
+                    when (typeReceiver.definition) {
+                        // We have type values resolved here so determine actual internal nature.
+                        contextTypeDef -> BuiltinFuns.vIGets
+                        else -> BuiltinFuns.vGets
+                    }
+                }
                 is ExternalMemberAccessor -> BuiltinFuns.vGets
             }
             return Call(pos) {
@@ -206,7 +224,11 @@ internal fun maybeAdjustDotHelper(
                 val endOfDotParts = accessor.firstArgumentIndex + 2
                 val dotParts = t.children.subList(1, endOfDotParts)
                 val newDotHelper = DotHelper(
-                    if (accessor is InternalMemberAccessor) { InternalGet } else { ExternalGet },
+                    when (accessor) {
+                        is ThisAccessor -> ThisGet
+                        is InternalMemberAccessor -> InternalGet
+                        else -> ExternalGet
+                    },
                     member,
                     adjDotHelper.extensions,
                 )
@@ -227,7 +249,7 @@ internal fun maybeAdjustDotHelper(
 
                 // We might want to adjust that do_get... to a getp, so
                 // call this recursively if it's internal.
-                if (newDotHelper.memberAccessor == InternalGet) {
+                if (newDotHelper.memberAccessor == ThisGet) {
                     maybeAdjustDotHelper(
                         edge.target.child(0) as CallTree,
                         newDotHelper,

@@ -1,0 +1,84 @@
+// `for...of` over a list turns into a `forEach` call with a block lambda.
+// `forEach` is marked `@inlineUnrealizedGoal`, so the lambda is inlined,
+// which puts each `bubble()` in the context of the enclosing function,
+// which may bubble.
+
+// The loop is in a block that computes a value, as in SemVer parsing.
+let identifiers(text: String): List<String> throws Bubble {
+  let parts = text.split("+");
+  let ids = if (parts.length == 2) {
+    let ids = parts[1].split(".");
+    for (let id of ids) {
+      if (id.isEmpty) { bubble() }
+    }
+    ids
+  } else {
+    []
+  };
+  ids
+}
+
+// The loop is a statement.
+let allPositive(xs: List<Int>): Boolean throws Bubble {
+  for (let x of xs) {
+    if (x <= 0) { bubble() }
+  }
+  true
+}
+
+// Like `allPositive`, but without `throws Bubble`.  The lambda is still
+// inlined, but then the `bubble()` is in a function that may not bubble,
+// so there is an error at the `bubble()` call.
+let allPositiveNoBubble(xs: List<Int>): Boolean {
+  for (let x of xs) {
+    if (x <= 0) { bubble() }
+  }
+  true
+}
+
+// The same loops inside a class definition, as in SemVer.  Inside a class,
+// member calls may use internal member accessors, which inlining needs
+// to handle too.
+class Version(
+  public parts: List<String>,
+) {
+  // A static method with the loop in a block that computes a value.
+  public static parse(text: String): Version throws Bubble {
+    let plusParts = text.split("+");
+    let parts = if (plusParts.length == 2) {
+      let ids = plusParts[1].split(".");
+      for (let id of ids) {
+        if (id.isEmpty) { bubble() }
+      }
+      ids
+    } else {
+      []
+    };
+    new Version(parts)
+  }
+
+  // An instance method that loops over a property.
+  public allNonEmpty(): Boolean throws Bubble {
+    for (let part of parts) {
+      if (part.isEmpty) { bubble() }
+    }
+    true
+  }
+
+  // Like `allNonEmpty`, but without `throws Bubble`, so an error.
+  public allNonEmptyNoBubble(): Boolean {
+    for (let part of parts) {
+      if (part.isEmpty) { bubble() }
+    }
+    true
+  }
+}
+
+console.log(identifiers("1.0.0+a.b").join(",") { s => s } orelse "bubbled");
+console.log(identifiers("1.0.0+a..b").join(",") { s => s } orelse "bubbled");
+console.log((allPositive([1, 2, 3]) orelse false).toString());
+console.log((allPositive([1, -2, 3]) orelse false).toString());
+console.log(do { Version.parse("1.0.0+a.b").parts.join(",") { s => s } } orelse "bubbled");
+console.log(do { Version.parse("1.0.0+a..b").parts.join(",") { s => s } } orelse "bubbled");
+console.log((new Version(["a", "b"]).allNonEmpty() orelse false).toString());
+console.log((new Version(["a", ""]).allNonEmpty() orelse false).toString());

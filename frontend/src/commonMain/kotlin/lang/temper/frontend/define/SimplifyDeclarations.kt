@@ -6,7 +6,6 @@ import lang.temper.frontend.prefixWith
 import lang.temper.name.InternalModularName
 import lang.temper.name.unusedAnalogueFor
 import lang.temper.type2.Nullity
-import lang.temper.type2.hackMapOldStyleToNew
 import lang.temper.type2.withNullity
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
@@ -28,7 +27,7 @@ import lang.temper.value.fnSymbol
 import lang.temper.value.freeTarget
 import lang.temper.value.initSymbol
 import lang.temper.value.lookThroughDecorations
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.typeSymbol
 import lang.temper.value.vInitSymbol
 import lang.temper.value.vOptionalSymbol
@@ -149,9 +148,7 @@ internal class SimplifyDeclarations(val simplifyFunTrees: Boolean = true) {
     private fun buildOptionalDefaulting(decl: DeclTree, dp: DeclParts, assignment: CallTree): Tree {
         // We're still pre-typing, so we might not have explicit types.
         val (type, nullableType) = dp.type?.let type@{ typeNode ->
-            val type = hackMapOldStyleToNew(
-                typeNode.staticTypeContained ?: return@type null,
-            )
+            val type = typeNode.reifiedTypeContained?.type2 ?: return@type null
             type to type.withNullity(Nullity.OrNull)
         } ?: (null to null)
         // Copy the decl for internal use, except the optional indicator.
