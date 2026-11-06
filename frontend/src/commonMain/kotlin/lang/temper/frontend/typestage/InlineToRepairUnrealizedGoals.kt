@@ -17,6 +17,7 @@ import lang.temper.name.TemperName
 import lang.temper.name.unusedAnalogueFor
 import lang.temper.type.Abstractness
 import lang.temper.type.AndType
+import lang.temper.type.CallMemberAccessor
 import lang.temper.type.DotHelper
 import lang.temper.type.ExternalCall
 import lang.temper.type.ExternalGet
@@ -646,7 +647,7 @@ private class InlineToRepairUnrealizedGoals(
     private fun getDefinitionOfCallee(call: CallTree): CalleeDefinition? {
         val callee = call.child(0)
 
-        // Look for a callee with the form (Call (Call DotHelper(ExternalBind) subject))
+        // Look for a callee with the form (Call DotHelper(ExternalCall) subject)
         val (dotHelper, thisArg) = run findDotHelper@{
             val possibleDotHelper = callee.functionContained
             if (possibleDotHelper is DotHelper) {
@@ -663,7 +664,7 @@ private class InlineToRepairUnrealizedGoals(
         // We could try other strategies.  If callee is by name,
         // it would be good to have some way to follow any chain
         // of names back to a named function declaration or exported name.
-        if (dotHelper != null && dotHelper.memberAccessor is ExternalCall) {
+        if (dotHelper != null && dotHelper.memberAccessor is CallMemberAccessor) {
             val thisType = thisArg?.typeInferences?.type ?: return null
             val thisShape = representativeTypeShapeFor(thisType) ?: return null
 
