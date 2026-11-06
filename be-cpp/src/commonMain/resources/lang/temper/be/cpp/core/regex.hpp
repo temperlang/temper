@@ -25,9 +25,9 @@ namespace temper {
                 // Names of the capturing groups, in the order they appear in the pattern.
                 // groupNames[k] is the name of capture group number k+1 (group 0 is the full
                 // match). Used to map std::smatch's numeric groups back to Temper's named ones.
-                std::vector<std::string> groupNames;
-                CompiledRegex(std::regex r, std::vector<std::string> names)
-                : re(std::move(r)), groupNames(std::move(names)) {}
+                std::vector<Str> groupNames;
+                CompiledRegex(std::regex r, const std::vector<std::string>& names)
+                : re(std::move(r)), groupNames(names.begin(), names.end()) {}
             };
 
             // std::regex matches bytes, but Temper regexes match code points, and the formatter
@@ -337,7 +337,7 @@ namespace temper {
             // `(?:...)`, the k-th recorded name corresponds exactly to std::regex capture group
             // number k+1. Escapes and character classes are skipped so a `(?<` appearing there
             // (e.g. as literal text) is not mistaken for a group opener.
-            inline std::string rewriteNamedGroups(const std::string& pat, std::vector<std::string>& names) {
+            inline std::string rewriteNamedGroups(const Str& pat, std::vector<std::string>& names) {
                 std::string out;
                 out.reserve(pat.size());
                 bool inClass = false;
@@ -388,7 +388,7 @@ namespace temper {
             }
 
             template<class T>
-            std::shared_ptr<AnyValueBase> compileFormatted(std::shared_ptr<T>, std::string formatted) {
+            std::shared_ptr<AnyValueBase> compileFormatted(std::shared_ptr<T>, const Str& formatted) {
                 std::vector<std::string> names;
                 try {
                     std::string rewritten = rewriteNamedGroups(CodeSets::rewrite(formatted), names);
@@ -402,19 +402,19 @@ namespace temper {
             }
 
             template<class T>
-            bool compiledFound(std::shared_ptr<T>, std::shared_ptr<AnyValueBase> compiled, std::string text) {
+            bool compiledFound(std::shared_ptr<T>, std::shared_ptr<AnyValueBase> compiled, const Str& text) {
                 std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
                 if (cr == nullptr) {
                     return false;
                 }
-                return std::regex_search(text, cr->re);
+                return std::regex_search(text.begin(), text.end(), cr->re);
             }
 
             template<class T, class RegexRefsT>
             std::pair<bool, decltype(std::declval<RegexRefsT>().get_match())> compiledFindImpl(
             std::shared_ptr<T>,
             std::shared_ptr<AnyValueBase> compiled,
-            std::string text,
+            const Str& text,
             int32_t beginIdx,
             std::shared_ptr<RegexRefsT> regexRefs
             ) {
@@ -438,23 +438,24 @@ namespace temper {
                 // context: `match_prev_avail` (when not at the very start) tells the engine
                 // a previous character exists, which keeps `^` from matching at every
                 // resumed position and lets `\b` consider the preceding character.
-                std::smatch sm;
-                std::string::const_iterator searchBegin = text.cbegin() + beginIdx;
+                std::cmatch sm;
+                Str::const_iterator searchBegin = text.begin() + beginIdx;
                 std::regex_constants::match_flag_type flags = std::regex_constants::match_default;
                 if (beginIdx > 0) {
                     flags |= std::regex_constants::match_prev_avail;
                 }
-                if (!std::regex_search(searchBegin, text.cend(), sm, cr->re, flags)) {
+                if (!std::regex_search(searchBegin, text.end(), sm, cr->re, flags)) {
                     return std::make_pair(false, empty_match);
                 }
                 int32_t matchBegin = static_cast<int32_t>(sm.position(0) + beginIdx);
                 int32_t matchEnd = static_cast<int32_t>(matchBegin + static_cast<int32_t>(sm.length(0)));
-                std::string fullValue = sm.str(0);
+                Str fullValue = matchBegin == 0 && matchEnd == clampLen
+                ? text : Str(sm[0].first, static_cast<size_t>(sm.length(0)));
                 decltype(regexRefs->get_group()) fullGroup = decltype(regexRefs->get_group())::element_type::make(
-                std::string("full"), fullValue, matchBegin, matchEnd
+                TEMPER_STR("full"), fullValue, matchBegin, matchEnd
                 );
-                std::shared_ptr<Mapped::Ordered<std::string, decltype(fullGroup)>> groups =
-                Map::make<std::string, decltype(fullGroup)>();
+                std::shared_ptr<Mapped::Ordered<Str, decltype(fullGroup)>> groups =
+                Map::make<Str, decltype(fullGroup)>();
                 // Map each named capture group back from its numeric std::smatch slot. Group
                 // number k+1 corresponds to cr->groupNames[k]. Unmatched optional groups (e.g.
                 // the untaken branch of an alternation) are skipped, matching the other backends.
@@ -463,8 +464,8 @@ namespace temper {
                     if (groupNum >= sm.size() || !sm[groupNum].matched) {
                         continue;
                     }
-                    const std::string& gname = cr->groupNames[gi];
-                    std::string gvalue = sm.str(groupNum);
+                    const Str& gname = cr->groupNames[gi];
+                    Str gvalue(sm[groupNum].first, static_cast<size_t>(sm.length(groupNum)));
                     int32_t gBegin = static_cast<int32_t>(sm.position(groupNum) + beginIdx);
                     int32_t gEnd = static_cast<int32_t>(gBegin + static_cast<int32_t>(sm.length(groupNum)));
                     decltype(fullGroup) group = decltype(regexRefs->get_group())::element_type::make(
@@ -485,7 +486,7 @@ namespace temper {
             compiledFind(
             std::shared_ptr<T> self,
             std::shared_ptr<AnyValueBase> compiled,
-            std::string text,
+            const Str& text,
             int32_t beginIdx,
             std::shared_ptr<RegexRefsT> regexRefs
             ) {
@@ -498,10 +499,10 @@ namespace temper {
             }
 
             template<class T, class FormatFn, class RegexRefsT>
-            std::string compiledReplace(
+            Str compiledReplace(
             std::shared_ptr<T> self,
             std::shared_ptr<AnyValueBase> compiled,
-            std::string text,
+            const Str& text,
             FormatFn formatFn,
             std::shared_ptr<RegexRefsT> regexRefs
             ) {
@@ -528,8 +529,9 @@ namespace temper {
                     decltype(match->get_full()) fullGroup = match->get_full();
                     int32_t mBegin = fullGroup->get_begin();
                     int32_t mEnd = fullGroup->get_end();
-                    result.append(text.substr(keepBegin, mBegin - keepBegin));
-                    result.append(formatFn(match));
+                    result.append(text.data() + keepBegin, static_cast<size_t>(mBegin - keepBegin));
+                    Str replacement = formatFn(match);
+                    result.append(replacement.data(), replacement.size());
                     keepBegin = mEnd;
                     if (mEnd > begin_pos) {
                         begin_pos = mEnd;
@@ -541,20 +543,20 @@ namespace temper {
                     return text;
                 }
                 if (keepBegin < textLen) {
-                    result.append(text.substr(keepBegin));
+                    result.append(text.data() + keepBegin, static_cast<size_t>(textLen - keepBegin));
                 }
                 return result;
             }
 
             template<class T, class RegexRefsT>
-            std::shared_ptr<std::vector<std::string>> compiledSplit(
+            std::shared_ptr<std::vector<Str>> compiledSplit(
             std::shared_ptr<T> self,
             std::shared_ptr<AnyValueBase> compiled,
-            std::string text,
+            const Str& text,
             std::shared_ptr<RegexRefsT> regexRefs
             ) {
                 std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
-                std::shared_ptr<std::vector<std::string>> parts = std::make_shared<std::vector<std::string>>();
+                std::shared_ptr<std::vector<Str>> parts = std::make_shared<std::vector<Str>>();
                 if (cr == nullptr) {
                     parts->push_back(text); return parts;
                 }
@@ -564,17 +566,17 @@ namespace temper {
                     std::pair<bool, decltype(regexRefs->get_match())> found =
                     compiledFindImpl(self, compiled, text, begin_pos, regexRefs);
                     if (!found.first) {
-                        parts->push_back(text.substr(begin_pos));
+                        parts->push_back(String::slice(text, begin_pos, textLen));
                         break;
                     }
                     decltype(regexRefs->get_match()) match = found.second;
                     decltype(match->get_full()) fullGroup = match->get_full();
                     int32_t mBegin = fullGroup->get_begin();
                     int32_t mEnd = fullGroup->get_end();
-                    parts->push_back(text.substr(begin_pos, mBegin - begin_pos));
+                    parts->push_back(String::slice(text, begin_pos, mBegin));
                     if (mEnd == begin_pos) {
                         if (begin_pos < textLen) {
-                            parts->push_back(text.substr(begin_pos, 1));
+                            parts->push_back(String::slice(text, begin_pos, begin_pos + 1));
                         }
                         begin_pos = begin_pos + 1;
                     } else {
@@ -585,8 +587,8 @@ namespace temper {
             }
 
             template<class T>
-            void pushCaptureName(std::shared_ptr<T>, std::shared_ptr<std::ostringstream> out, std::string name) {
-                StringBuilder::append(out, std::string("?<").append(name).append(">"));
+            void pushCaptureName(std::shared_ptr<T>, std::shared_ptr<std::ostringstream> out, const Str& name) {
+                *out << "?<" << name << ">";
             }
 
             template<class T>
@@ -595,10 +597,9 @@ namespace temper {
                 if (code < 0x80) {
                     std::string ch(1, static_cast<char>(code));
                     if (std::string("\\^$.|?*+()[]{}/-").find(ch) != std::string::npos) {
-                        StringBuilder::append(out, std::string("\\").append(ch));
-                    } else {
-                        StringBuilder::append(out, ch);
+                        *out << '\\';
                     }
+                    *out << ch;
                 } else {
                     std::string utf8;
                     if (code < 0x800) {
@@ -619,7 +620,7 @@ namespace temper {
                         oss << "\\x" << std::hex << std::setfill('0') << std::setw(2)
                         << static_cast<int>(static_cast<unsigned char>(utf8[i]));
                     }
-                    StringBuilder::append(out, oss.str());
+                    *out << oss.str();
                 }
             }
 

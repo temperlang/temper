@@ -133,7 +133,7 @@ namespace temper {
             }
 
             template<class Elem>
-            std::string join(const std::shared_ptr<std::vector<Elem>>& list, const std::string& separator) {
+            Str join(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator) {
                 std::ostringstream oss;
                 bool first = true;
                 for (const Elem& elem : *list) {
@@ -143,11 +143,11 @@ namespace temper {
                     oss << elem;
                     first = false;
                 }
-                return oss.str();
+                return Str::written_to(oss.rdbuf());
             }
 
             template<class Elem, class F>
-            std::string join(const std::shared_ptr<std::vector<Elem>>& list, const std::string& separator, F fn) {
+            Str join(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator, F fn) {
                 std::ostringstream oss;
                 bool first = true;
                 for (const Elem& elem : *list) {
@@ -157,7 +157,7 @@ namespace temper {
                     oss << fn(elem);
                     first = false;
                 }
-                return oss.str();
+                return Str::written_to(oss.rdbuf());
             }
 
             template<class Elem, class F>

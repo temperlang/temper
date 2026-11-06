@@ -19,13 +19,13 @@ namespace temper {
                 return std::min(a, b);
             }
 
-            inline std::string toString(int32_t i) {
+            inline Str toString(int32_t i) {
                 return std::to_string(i);
             }
 
-            inline std::string toString(int32_t i, int32_t radix) {
+            inline Str toString(int32_t i, int32_t radix) {
                 if (radix < 2 || radix > 36) {
-                    bubble<std::string>("radix must be between 2 and 36");
+                    bubble<Str>("radix must be between 2 and 36");
                 }
                 if (radix == 10) {
                     return std::to_string(i);

@@ -54,6 +54,9 @@ import lang.temper.value.connectedSymbol
 /** How the C++ backend renders Temper function types. Emitted and matched in one place. */
 private const val STD_FUNCTION_PREFIX = "std::function"
 
+/** Temper's String in C++: a shared, immutable string in temper/core/str.hpp. */
+private const val STR_TYPE_NAME = "Str"
+
 /**
  * Translates a TmpL module into C++ source files.
  *
@@ -612,6 +615,7 @@ class CppTranslator(
         templateMethodDefs: MutableList<Cpp.Global>,
         declMod: Cpp.DefMod? = null,
         emitDecl: Boolean = true,
+        virtSpec: Cpp.VirtSpecifier? = null,
     ) {
         val convention = when {
             needsVirtual -> virtualConvention
@@ -622,6 +626,7 @@ class CppTranslator(
         } else {
             cpp.funcDecl(func.decl.ret, convention, func.decl.name, func.decl.args, func.decl.qual)
         }
+        decl.virtSpec = virtSpec
         if (emitDecl) add(decl)
         if (isTemplate) {
             templateMethodDefs.add(func.def)
@@ -661,7 +666,13 @@ class CppTranslator(
         name: Cpp.SingleName,
         params: List<Cpp.FuncParam> = emptyList(),
         qual: Cpp.MethodQualifier? = null,
+        virtSpec: Cpp.VirtSpecifier? = null,
     ): Cpp.FuncDef = cpp.funcDef(null, null, retType, virtualConvention, name, params, pureVirtualBody(), qual = qual)
+        .also { it.virtSpec = virtSpec }
+
+    /** C++ `override` for a [member] that overrides a base one. */
+    private fun virtSpecFor(member: TmpL.InstanceMethod): Cpp.VirtSpecifier? =
+        if (member.overridden.isEmpty()) null else Cpp.VirtSpecifier.Override
 
     /**
      * The `const` qualifier for a member (method or getter) that does not mutate its
@@ -684,7 +695,7 @@ class CppTranslator(
         WellKnownTypes.int64TypeDefinition -> cpp.type("int64_t")
         WellKnownTypes.float64TypeDefinition -> cpp.type("double")
         WellKnownTypes.booleanTypeDefinition -> cpp.type("bool")
-        WellKnownTypes.stringTypeDefinition -> cpp.name("std", "string")
+        WellKnownTypes.stringTypeDefinition -> cpp.name(TEMPER_CORE_NAMESPACE, STR_TYPE_NAME)
         WellKnownTypes.voidTypeDefinition -> cpp.type("void")
         WellKnownTypes.stringIndexTypeDefinition -> cpp.type("int32_t")
         WellKnownTypes.stringIndexOptionTypeDefinition -> cpp.type("int32_t")
@@ -1578,7 +1589,7 @@ class CppTranslator(
                     else -> cpp.literal(d)
                 }
             }
-            TString -> cpp.literal(TString.unpack(value))
+            TString -> cpp.strLiteral(TString.unpack(value))
             TNull -> {
                 // nullptr converts to: shared_ptr nullptr,
                 // NullableParam has_value=false (for value types).
@@ -2150,10 +2161,14 @@ class CppTranslator(
         }
     }
 
-    /** A reference-counted (shared_ptr) or std::function type — expensive to copy. */
+    /**
+     * A reference-counted (shared_ptr, a String's temper::core::Str) or std::function type,
+     * whose copies cost a count bump or more.
+     */
     private fun isIndirectType(type: Cpp.Type): Boolean = when (type) {
         is Cpp.TemplateType -> leafNameOf(type.base) == "shared_ptr"
         is Cpp.SingleName -> type.id.text.startsWith(STD_FUNCTION_PREFIX)
+        is Cpp.ScopedName -> renderToString(type) == "$TEMPER_CORE_NAMESPACE::$STR_TYPE_NAME"
         else -> false
     }
 
@@ -2468,7 +2483,9 @@ class CppTranslator(
                 // Backed getter reads a field: non-mutating, so const.
                 qual = memberConstQualifier(getterSlotKey(getterDotName)),
             )
-            emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs)
+            emitMethodDeclAndDef(
+                func, isTemplate, needsVirtual, impl, templateMethodDefs, virtSpec = virtSpecFor(member),
+            )
         } else {
             // Abstract getter — use get_ prefix to avoid
             // field/method name collision in subtypes
@@ -2486,6 +2503,7 @@ class CppTranslator(
                             translateType(member.returnType),
                             getterCppName,
                             qual = memberConstQualifier(getterSlotKey(getterDotName)),
+                            virtSpec = virtSpecFor(member),
                         ),
                     )
                 }
@@ -2511,7 +2529,9 @@ class CppTranslator(
                     )
                     val needsVirtualGetter = isInterface ||
                         realSuperTypes.any()
-                    emitMethodDeclAndDef(func, isTemplate, needsVirtualGetter, impl, templateMethodDefs)
+                    emitMethodDeclAndDef(
+                        func, isTemplate, needsVirtualGetter, impl, templateMethodDefs, virtSpec = virtSpecFor(member),
+                    )
                 }
             }
         }
@@ -2570,7 +2590,10 @@ class CppTranslator(
                 )
                 val firstDecl = setterKey !in declaredSetters
                 if (firstDecl) declaredSetters.add(setterKey)
-                emitMethodDeclAndDef(func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl)
+                emitMethodDeclAndDef(
+                    func, isTemplate, true, impl, templateMethodDefs, emitDecl = firstDecl,
+                    virtSpec = virtSpecFor(member),
+                )
             }
             // else: no supertypes, backed properties use direct field access
         } else {
@@ -2595,6 +2618,7 @@ class CppTranslator(
                                 paramTypes.mapIndexed { i, t ->
                                     cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                                 },
+                                virtSpec = virtSpecFor(member),
                             ),
                         )
                     }
@@ -2627,6 +2651,7 @@ class CppTranslator(
                     if (firstDecl) declaredSetters.add(setterKey)
                     emitMethodDeclAndDef(
                         func, isTemplate, needsVirtualSetter, impl, templateMethodDefs, emitDecl = firstDecl,
+                        virtSpec = virtSpecFor(member),
                     )
                 }
             }
@@ -2677,6 +2702,7 @@ class CppTranslator(
                             cpp.funcParam(t, cpp.singleName(CppName("arg_$i")))
                         },
                         qual = methodQual,
+                        virtSpec = virtSpecFor(member),
                     ),
                 )
             }
@@ -2691,6 +2717,7 @@ class CppTranslator(
                 methodQual = methodQual,
                 // Methods need 'virtual' for polymorphic dispatch in C++
                 needsVirtual = isInterface || realSuperTypes.any(),
+                virtSpec = virtSpecFor(member),
             ) {
                 translateBlockWithThis(
                     cpp.name(member.parameters.parameters.first().name),
@@ -2748,6 +2775,7 @@ class CppTranslator(
         declMod: Cpp.DefMod? = null,
         methodQual: Cpp.MethodQualifier? = null,
         needsVirtual: Boolean = false,
+        virtSpec: Cpp.VirtSpecifier? = null,
         translateBody: () -> Cpp.BlockStmt,
     ) {
         // Save type formals before translating anything else.
@@ -2813,7 +2841,9 @@ class CppTranslator(
                     }
                 }
             } else {
-                emitMethodDeclAndDef(func, isTemplate, needsVirtual, impl, templateMethodDefs, declMod)
+                emitMethodDeclAndDef(
+                    func, isTemplate, needsVirtual, impl, templateMethodDefs, declMod, virtSpec = virtSpec,
+                )
                 if (hasOptional) {
                     val scopedName = cpp.scopedName(
                         cpp.name(topLevel.name),
