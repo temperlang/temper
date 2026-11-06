@@ -249,6 +249,10 @@ interface FunctionalTestSuiteI {
         runFunctionalTest(Ft.InterfacesEmpty)
 
     @Test
+    fun interfacesGenericDefault() =
+        runFunctionalTest(Ft.InterfacesGenericDefault)
+
+    @Test
     fun interfacesPropertyMembers() =
         runFunctionalTest(Ft.InterfacesPropertyMembers)
 
@@ -259,6 +263,10 @@ interface FunctionalTestSuiteI {
     @Test
     fun namesNonascii() =
         runFunctionalTest(Ft.NamesNonascii)
+
+    @Test
+    fun regexCodeSets() =
+        runFunctionalTest(Ft.RegexCodeSets)
 
     @Test
     fun regexMatch() =

@@ -25,13 +25,14 @@ namespace TemperLang.Std.Regex
             new List<IRegexNode> { SurrogateCodeRange, SurrogateCodeRange }
         );
 
+        // IntRange ends are exclusive.
         private static readonly IntRange CodeSetUniverse = new IntRange(
             0,
-            MaxSupplementalCodePoint
+            MaxSupplementalCodePoint + 1
         );
         private static readonly IntRange SupplementalIntRange = new IntRange(
             MinSupplementalCodePoint,
-            MaxSupplementalCodePoint
+            MaxSupplementalCodePoint + 1
         );
 
         internal static IRegexNode AdjustCodeSet(
@@ -85,7 +86,7 @@ namespace TemperLang.Std.Regex
                         ranges.Add(new IntRange(range.Min, range.Max + 1));
                         break;
                     case Digit:
-                        ranges.Add(new IntRange('0', '9'));
+                        ranges.Add(new IntRange('0', '9' + 1));
                         break;
                     case Space:
                         foreach (var code in " \t\n\r\x0C\x0B")
@@ -96,9 +97,9 @@ namespace TemperLang.Std.Regex
                     case Word:
                         // Go ascii for now.
                         ranges.Add(new IntRange('_'));
-                        ranges.Add(new IntRange('0', '9'));
-                        ranges.Add(new IntRange('A', 'Z'));
-                        ranges.Add(new IntRange('a', 'z'));
+                        ranges.Add(new IntRange('0', '9' + 1));
+                        ranges.Add(new IntRange('A', 'Z' + 1));
+                        ranges.Add(new IntRange('a', 'z' + 1));
                         break;
                 }
             }
@@ -302,6 +303,11 @@ namespace TemperLang.Std.Regex
                         }
                     }
                 }
+            }
+            if (orItems.Count == 0)
+            {
+                // Nothing supplemental, such as for `[\d]`.
+                return new CodeSet(basicParts);
             }
             return new Or(orItems);
         }
