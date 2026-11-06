@@ -1310,16 +1310,14 @@ internal class CSharpTranslator(
             as CSharp.Identifier
 
     private fun translateIfStatement(ifElse: TmpL.IfStatement): CSharp.Statement {
-        // Translating test lets us know if we're handling an optional check.
-        val test = translateExpression(ifElse.test)
-        var consequent = translateStatement(ifElse.consequent).toStatementOrBlock(ifElse.pos.leftEdge)
-        // Unset checks don't nest, so we can use flat state tracking here.
-        val alternate = ifElse.alternate?.let { translateStatement(it).toStatementBlockOrNull(ifElse.pos) }
-        if (alternate != null && consequent.endsWithIfWithoutElse()) {
-            // Keep the braces, or our `else` would bind to the inner `if`.
-            consequent = consequent.toBlock()
-        }
-        return CSharp.IfStatement(ifElse.pos, test = test, consequent = consequent, alternate = alternate)
+        return CSharp.IfStatement(
+            ifElse.pos,
+            // Translating test lets us know if we're handling an optional check.
+            test = translateExpression(ifElse.test),
+            consequent = translateStatement(ifElse.consequent).toStatementOrBlock(ifElse.pos.leftEdge),
+            // Unset checks don't nest, so we can use flat state tracking here.
+            alternate = ifElse.alternate?.let { translateStatement(it).toStatementBlockOrNull(ifElse.pos) },
+        )
     }
 
     private fun translateInfixOperation(expr: TmpL.InfixOperation): CSharp.Expression {
