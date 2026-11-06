@@ -85,27 +85,34 @@ But don't export the subtype. This was breaking be-rust.
 Sealed thing is foo.
 ```
 
-A generic interface can also extend another generic interface with type
-arguments. Python needs the extending interface to stay generic, so its
-subtypes can supply its own type arguments. A sealed interface can't have
-subtypes with new type parameters, so use an unsealed one here. Keep it
-empty, since Rust doesn't yet substitute type arguments into inherited members.
+A generic interface can also extend another generic interface, passing along
+one of its own type parameters in a different position. Subtypes inherit the
+members of both, including a default method, with the type arguments filled in.
+Python needs the extending interface to stay generic, so its subtypes can
+supply its own type arguments. A sealed interface can't have subtypes with new
+type parameters, so use an unsealed one here.
 
-    interface Holder<T> {}
+    interface Holder<T> {
+      public get held(): T;
+      heldAnd(other: T): List<T> { [held, other] }
+    }
 
-    interface Labeled<L> extends Holder<C> {
+    interface Labeled<L, T> extends Holder<T> {
       public label(l: L): String;
     }
 
-    class LabeledSub(public thing: C) extends Labeled<String> {
-      public label(l: String): String { "${l}: ${thing.x}" }
+    class LabeledSub(public held: C) extends Labeled<String, C> {
+      public label(l: String): String { "${l}: ${held.x}" }
     }
 
-    let labeled: Labeled<String> = new LabeledSub(a);
+    let labeled: Labeled<String, C> = new LabeledSub(a);
+    let heldAnd = labeled.heldAnd(b);
     console.log("Labeled thing is ${labeled.label("first")}.");
+    console.log("Held are ${labeled.held.x} and ${heldAnd[1].x}.");
 
 ```log
 Labeled thing is first: foo.
+Held are foo and bar.
 ```
 
 Also a sealed interface with no subtypes. This is just here to see if backends
