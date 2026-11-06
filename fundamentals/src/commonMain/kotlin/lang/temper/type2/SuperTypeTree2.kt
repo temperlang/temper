@@ -84,7 +84,7 @@ sealed class SuperTypeTree2<TYPE : TypeOrPartialType>(
             val formalNameToBinding: Map<TypeFormal, TypeLike> = indices.associate {
                 formals[it] to t.bindings[it]
             }
-            val remapped = defn.superTypes.map { st ->
+            val remapped = defn.upperBounds.map { st ->
                 c.cast(
                     hackMapOldStyleToNew(st)
                         .mapType(emptyMap(), formalNameToBinding),

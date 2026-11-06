@@ -154,7 +154,7 @@ internal fun simplifyDotHelper(
             when (definition) {
                 is TypeShape -> add(definition)
                 is TypeFormal ->
-                    definition.superTypes.forEach { addTypeShapesFrom(it.definition) }
+                    definition.upperBounds.forEach { addTypeShapesFrom(it.definition) }
             }
         }
         val thisType = variantMatch.requiredInputTypes.firstOrNull()

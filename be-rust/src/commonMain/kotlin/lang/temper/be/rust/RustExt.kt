@@ -734,7 +734,7 @@ internal fun TypeDefinition.allInterfaces(
         // For interfaces, we need to implement in the trait for its own wrapper, so provide that here.
         yield(thisType to MkType2(thisType).position(pos).get())
     }
-    types@ for (type in superTypes) {
+    types@ for (type in thisType.upperBounds) {
         type.definition == WellKnownTypes.anyValueTypeDefinition && continue@types
         val superType = hackMapOldStyleToNew(type)
         if (superType is DefinedNonNullType) { // Not a type parameter upper bound
