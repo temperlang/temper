@@ -140,6 +140,7 @@ namespace temper {
                 return static_cast<int64_t>(0ull - static_cast<uint64_t>(a));
             }
 
+            // Shifts as in Int::shl, with the count masked to 63.
             inline int64_t shl(int64_t a, int64_t b) {
                 return static_cast<int64_t>(static_cast<uint64_t>(a) << (b & 63));
             }
