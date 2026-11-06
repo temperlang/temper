@@ -297,7 +297,7 @@ internal open class TestSupportNetwork(
         fun boxes(t: Type2): Boolean {
             val simpler = excludeNullAndBubble(t)
             return when (val definition = simpler.definition) {
-                is TypeFormal -> definition.superTypes.any { boxes(hackMapOldStyleToNew(it)) }
+                is TypeFormal -> definition.upperBounds.any { boxes(hackMapOldStyleToNew(it)) }
                 is TypeShape ->
                     true ==
                         (definition.name as? ResolvedParsedName)

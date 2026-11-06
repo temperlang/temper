@@ -84,7 +84,7 @@ sealed class SuperTypeTree2<TYPE : TypeOrPartialType>(
             val formalNameToBinding: Map<TypeFormal, TypeLike> = indices.associate {
                 formals[it] to t.bindings[it]
             }
-            val remapped = defn.superTypes.map { st ->
+            val remapped = defn.upperBounds.map { st ->
                 c.cast(
                     hackMapOldStyleToNew(st)
                         .mapType(emptyMap(), formalNameToBinding),
@@ -138,13 +138,6 @@ fun <TYPE : TypeOrPartialType> SuperTypeTreeForType2<TYPE>.forEachSuperType(
         }
     }
 }
-
-fun hackMapOldStyleToNewAllowNever(t: StaticType, pos: Position? = null): Type2 =
-    if (t == OrType.emptyOrType) {
-        MkType2(neverTypeDefinition).position(pos).get()
-    } else {
-        hackMapOldStyleToNew(t, pos)
-    }
 
 fun hackMapOldStyleToNew(t: StaticType, pos: Position? = null): Type2 =
     when (t) {

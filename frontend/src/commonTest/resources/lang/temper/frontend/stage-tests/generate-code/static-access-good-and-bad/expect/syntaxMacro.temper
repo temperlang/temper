@@ -18,12 +18,12 @@ class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     };
     @visibility(\public) @fn let g__0 = fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int) /* return__2 */: Int {
       fn__2: do {
-        2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0)) * do_iget_bp(type (C__0), this(C__0)) * do_iget_b(type (C__0), this(C__0))
+        2 * igetStatic(C__0, \f)(i__2) * igetStatic(C__0, \fp)(i__2) * do_tget_bp(type (C__0), this(C__0)) * do_tget_b(type (C__0), this(C__0)) * do_tget_bp(type (C__0), this(C__0)) * do_tget_b(type (C__0), this(C__0))
       }
     };
     @visibility(\public) @fn let h__0 = fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int) /* return__3 */: Int {
       fn__3: do {
-        2 * f__0(i__3) * fp__0(i__3) * do_icall_g(type (C__0), this(C__0), i__3) * do_icall_g(type (C__0), this(C__0), i__3)
+        2 * f__0(i__3) * fp__0(i__3) * do_tcall_g(type (C__0), this(C__0), i__3) * do_tcall_g(type (C__0), this(C__0), i__3)
       }
     };
     @fn @static @visibility(\public) let g2__0 = fn g2(i__4 /* aka i */: Int) /* return__4 */: Int {
@@ -38,12 +38,12 @@ class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     };
     @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__2: C__0) /* return__6 */: Void {
       do {
-        do_iset_bp(type (C__0), this(C__0), 1);
+        do_tset_bp(type (C__0), this(C__0), 1);
         1
       };
       do {
         let t#0;
-        do_iset_b(type (C__0), this(C__0), t#0 = do_iget_bp(type (C__0), this(C__0)) + 1);
+        do_tset_b(type (C__0), this(C__0), t#0 = do_tget_bp(type (C__0), this(C__0)) + 1);
         t#0
       };
     };

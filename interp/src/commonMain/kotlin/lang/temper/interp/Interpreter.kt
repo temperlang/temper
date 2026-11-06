@@ -176,6 +176,21 @@ class Interpreter(
     private val replacementPolicy: ReplacementPolicy = ReplacementPolicy.Discard,
 ) {
 
+    /**
+     * An interpreter like this one, but with its own [continueCondition], so work done
+     * through it doesn't count against this one's.
+     */
+    fun withContinueCondition(continueCondition: ContinueCondition) = Interpreter(
+        failLog = failLog,
+        logSink = logSink,
+        stage = stage,
+        nameMaker = nameMaker,
+        continueCondition = continueCondition,
+        features = features,
+        connecteds = connecteds,
+        replacementPolicy = replacementPolicy,
+    )
+
     private var stepCount = 0
     private var goingOutOfStyle = stage == Stage.Run
     private val isProcessingCore = nameMaker.namingContext.isCore

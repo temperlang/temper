@@ -369,14 +369,28 @@ sealed class MemberAccessor(
     override fun toString(): String = prefix
 }
 
-/** Access to a member from within its definition via a `this` subject. */
+/**
+ * Access to a member from within some type context. The enclosing type at the
+ * access point is stored as a call argument for access later. It should be
+ * checked against the subject type when the type is known.
+ *
+ * For [ThisAccessor] instances, the type is verified in advance, but it still
+ * shares the type context argument with other internal accessors. Those that
+ * aren't verified should also implement [MaybeSameTypeAccessor].
+ */
 sealed class InternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = 0) {
     override fun prefix(member: VisibleMemberShape) = prefix(DotMember(member.symbol))
 }
 
-/** Access to a member from outside the type's definition. */
+/** Indicates unverified access from some internal class context. */
+sealed interface MaybeSameTypeAccessor
+
+/** Indicates known access via `this`, which also is always internal. */
+sealed interface ThisAccessor
+
+/** Access to a member from outside a type definition. */
 sealed class ExternalMemberAccessor(
     prefix: String,
 ) : MemberAccessor(prefix, enclosingTypeIndexOrNegativeOne = -1) {
@@ -396,9 +410,12 @@ sealed interface SetMemberAccessor
 sealed interface CallMemberAccessor
 
 /** Reading a property internally. */
-object InternalGet : InternalMemberAccessor("iget"), GetMemberAccessor
-object InternalSet : InternalMemberAccessor("iset"), SetMemberAccessor
-object InternalCall : InternalMemberAccessor("icall"), CallMemberAccessor
+object ThisGet : InternalMemberAccessor("tget"), GetMemberAccessor, ThisAccessor
+object ThisSet : InternalMemberAccessor("tset"), SetMemberAccessor, ThisAccessor
+object ThisCall : InternalMemberAccessor("tcall"), CallMemberAccessor, ThisAccessor
+object InternalGet : InternalMemberAccessor("iget"), GetMemberAccessor, MaybeSameTypeAccessor
+object InternalSet : InternalMemberAccessor("iset"), SetMemberAccessor, MaybeSameTypeAccessor
+object InternalCall : InternalMemberAccessor("icall"), CallMemberAccessor, MaybeSameTypeAccessor
 object ExternalGet : ExternalMemberAccessor("get"), GetMemberAccessor
 object ExternalSet : ExternalMemberAccessor("set"), SetMemberAccessor
 object ExternalCall : ExternalMemberAccessor("call"), CallMemberAccessor

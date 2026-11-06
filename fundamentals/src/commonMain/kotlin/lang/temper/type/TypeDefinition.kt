@@ -61,7 +61,7 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
     val name: ResolvedName
     val word: Symbol?
     val formals: List<TypeFormal>
-    val superTypes: List<NominalType>
+    val upperBounds: List<NominalType>
     val sourceLocation: ModuleLocation
         get() = when (val name = this.name) {
             is ModularName -> name.origin.loc
@@ -93,13 +93,16 @@ sealed interface TypeDefinition : StayReferrer, Structured, TokenSerializable, P
         tokenSink.emit(name.toToken(inOperatorPosition = false))
     }
 
-    /** Checks if this is a non-strict subtype of [maybeSup], ignoring [formals]. */
+    /**
+     * Checks if this is a non-strict subtype of [maybeSup], ignoring [formals].
+     * For a [TypeFormal], this follows its [upper bounds][TypeFormal.upperBounds].
+     */
     fun isSubOrSame(maybeSup: TypeDefinition): Boolean {
         if (this === maybeSup) {
             return true
         }
-        for (supType in superTypes) {
-            if (supType.definition.isSubOrSame(maybeSup)) {
+        for (upperBound in upperBounds) {
+            if (upperBound.definition.isSubOrSame(maybeSup)) {
                 return true
             }
         }
@@ -132,9 +135,7 @@ sealed interface TypeFormal : TypeDefinition {
     val variance: Variance
 
     /** Required super-types for actual types that bind to this formal. */
-    val upperBounds: List<NominalType>
-
-    override val superTypes get() = upperBounds
+    override val upperBounds: List<NominalType>
 
     override fun addStays(s: StaySink) {
         upperBounds.forEach { it.addStays(s) }
@@ -329,7 +330,7 @@ sealed interface TypeShape : TypeDefinition {
     val abstractness: Abstractness
 
     /** The resolved type expressions in the `extends` clause. */
-    override val superTypes: List<NominalType>
+    val superTypes: List<NominalType>
 
     /** For a sealed interface, return its direct non-type-formal subtypes' shapes. Null otherwise. */
     val sealedSubTypes: List<TypeShape>?
@@ -340,6 +341,8 @@ sealed interface TypeShape : TypeDefinition {
      */
     val typeParameters: List<TypeParameterShape>
 
+    override val upperBounds: List<NominalType> get() = superTypes
+
     override val hasFormals: Boolean get() = typeParameters.isNotEmpty()
 
     /** Shapes of properties for the type. */
@@ -347,6 +350,14 @@ sealed interface TypeShape : TypeDefinition {
 
     /** Shapes of methods for the type. */
     val methods: List<MethodShape>
+
+    /**
+     * Methods other than constructors that have no body, as when a user's `@connected` class
+     * leaves them to connected code. If there are none, a user's `@connected` class has a
+     * complete Temper implementation, which backends without connected code can use instead.
+     */
+    val bodilessMethods: List<MethodShape>
+        get() = methods.filter { it.isPureVirtual && it.methodKind != MethodKind.Constructor }
 
     /** Shapes of static properties for the type. */
     val staticProperties: List<StaticPropertyShape>

@@ -88,6 +88,9 @@ Sealed thing is foo.
 A generic interface can also extend another generic interface, passing along
 one of its own type parameters in a different position. Subtypes inherit the
 members of both, including a default method, with the type arguments filled in.
+Python needs the extending interface to stay generic, so its subtypes can
+supply its own type arguments. A sealed interface can't have subtypes with new
+type parameters, so use an unsealed one here.
 
     interface Holder<T> {
       public get held(): T;

@@ -49,14 +49,21 @@ object NodeSpecifics : RunnerSpecifics {
     )
 }
 
-// According to https://github.com/nodejs/Release#readme
-// v14 remains maintained through 30 April 2023.
-// v16 is the earliest that supports RegExp.hasIndices
-// v18 was released on 2022-04-19 and entered EOL in 2025.
-// v20 enters active support on 2023-10-24.
-// v25 was released on 2025-10-15.
+/**
+ * Supported versions of node.
+ *
+ * v16 is the earliest that supports RegExp.hasIndices
+ *
+ * According to https://github.com/nodejs/Release/blob/main/schedule.json
+ * linked from https://github.com/nodejs/Release#readme :
+ *
+ * - v18 was released on 2022-04-19 and entered EOL in 2025.
+ * - v20 ended support on 2026-04-30.
+ * - v25 ended support on 2026-06-01.
+ * - v26 was released on 2026-05-05.
+ */
 @Suppress("MagicNumber")
-val nodeVersions = SemVer(18, 0, 0) until SemVer(25, 99, 99)
+val nodeVersions = SemVer(18, 0, 0) until SemVer(26, 99, 99)
 
 object NodeCommand : VersionedTool {
     override val cliNames = listOf("node")

@@ -169,8 +169,8 @@ internal class ExportChecker(val module: Module) {
                 checkType2(hackMapOldStyleToNew(bound), pos = pos)
             }
         }
-        // Super types.
-        for (type in def.superTypes) {
+        // Upper bounds.
+        for (type in def.upperBounds) {
             // TODO More precise pos. And I'm not sure this one is even in the tree by now.
             // TODO Add stay leaves early on for extends clauses?
             checkType2(hackMapOldStyleToNew(type), pos = pos)

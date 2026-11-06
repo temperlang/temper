@@ -21,22 +21,22 @@ constructor__0 = (@stay fn constructor(@impliedThis(C) this__2: C) /* return__2 
     setp(propNotVar__0, this__2, 1);
     setp(propVar__0, this__2, 2);
     setp(propVar__0, this__2, 3);
-    do_iset_wrong(type (C), this__2, 4);
+    do_tset_wrong(type (C), this__2, 4);
     let t#0;
-    t#0 = do_iget_extraSetter(type (C), this__2);
-    do_iset_extraGetter(type (C), this__2, t#0);
+    t#0 = do_tget_extraSetter(type (C), this__2);
+    do_tset_extraGetter(type (C), this__2, t#0);
     let t#1;
-    t#1 = do_iget_extraGetter(type (C), this__2);
-    do_iset_extraSetter(type (C), this__2, t#1);
+    t#1 = do_tget_extraGetter(type (C), this__2);
+    do_tset_extraSetter(type (C), this__2, t#1);
     let t#2;
-    t#2 = do_iget_superGetter(type (C), this__2);
-    do_iset_extraSetter(type (C), this__2, t#2);
+    t#2 = do_tget_superGetter(type (C), this__2);
+    do_tset_extraSetter(type (C), this__2, t#2);
     let t#3;
     t#3 = getp(propNotVar__0, this__2);
-    do_iset_superGetter(type (C), this__2, t#3);
+    do_tset_superGetter(type (C), this__2, t#3);
     let t#4;
     t#4 = getp(propNotVar__0, this__2);
-    do_iset_superSetter(type (C), this__2, t#4)
+    do_tset_superSetter(type (C), this__2, t#4)
 });
 @visibility(\public) @fn @stay @fromType(C) let update__0;
 update__0 = (@stay fn update(@impliedThis(C) this__3: C, i__1 /* aka i */: Int32) /* return__3 */: Void {

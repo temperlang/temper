@@ -28,7 +28,7 @@ g__0 = fn g(@impliedThis(C__0) this__0: C__0, i__2 /* aka i */: Int32) /* return
 @visibility(\public) @fn @stay @fromType(C__0) let h__0;
 h__0 = (@stay fn h(@impliedThis(C__0) this__1: C__0, i__3 /* aka i */: Int32) /* return__3 */: Int32 {
     fn__3: do {
-      return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_icall_g(type (C__0), this__1, i__3) * do_icall_g(type (C__0), this__1, i__3)
+      return__3 = 2 * (fn f)(i__3) * (fn fp)(i__3) * do_tcall_g(type (C__0), this__1, i__3) * do_tcall_g(type (C__0), this__1, i__3)
     };
 });
 @fn @static @visibility(\public) @stay @fromType(C__0) let g2__0;

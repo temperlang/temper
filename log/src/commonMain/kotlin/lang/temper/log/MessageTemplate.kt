@@ -16,6 +16,10 @@ enum class MessageTemplate(
     PreStagingModule("Pre-staging module from %s", CompilationPhase.Staging),
     StartingStage("Starting stage %s", CompilationPhase.Staging),
     StagePromotionFailed("Promotion to stage %s failed", CompilationPhase.Staging),
+    StoppedEarly(
+        "Stopped before stage %s: ran out of interpreter steps or was cancelled",
+        CompilationPhase.Staging,
+    ),
     LibraryConfigured("Configured library %s", CompilationPhase.Staging),
     AllDone("Bye", CompilationPhase.Staging),
     NonValueResultFromRunStage(
@@ -255,6 +259,15 @@ enum class MessageTemplate(
     ),
     UserConnectedBackendsNeedBody(
         "A @connected function that lists backends needs a Temper body for the backends not listed",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedClassBackendsNeedBodies(
+        "Method %s of a @connected class that lists backends needs a Temper body for the backends not listed",
+        CompilationPhase.CodeGeneration,
+    ),
+    UserConnectedClassPartialBodies(
+        "Method %s of a @connected class needs a Temper body, since other methods have one, " +
+            "and a Temper fallback must be complete",
         CompilationPhase.CodeGeneration,
     ),
     CannotExtend(

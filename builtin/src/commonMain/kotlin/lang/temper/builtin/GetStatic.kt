@@ -128,11 +128,16 @@ sealed class GetStaticOp : SpecialFunction, NamedBuiltinFun {
     }
 }
 
+/** Called from outside the class. */
 internal object GetStatic : GetStaticOp() {
     override val name: String = getStaticBuiltinName.builtinKey
     override fun canSee(property: StaticPropertyShape) = property.visibility == Visibility.Public
 }
 
+/**
+ * Actually determined to be called from inside the class. This differs from
+ * early stages for [lang.temper.type.InternalMemberAccessor].
+ */
 internal object InternalGetStatic : GetStaticOp() {
     override val name: String = internalGetStaticBuiltinName.builtinKey
     override fun canSee(property: StaticPropertyShape) = true

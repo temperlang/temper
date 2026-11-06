@@ -7,12 +7,12 @@ class(\word, \C, \concrete, true, @typeDefined(C__0) fn {
     @visibility(\public) let constructor__0 = fn constructor(@impliedThis(C__0) this__0: C__0, x__1 /* aka x */: Int, @constructorProperty y__0 /* aka y */: Int) /* return__0 */: Void {
       do {
         let t#0;
-        do_iset_x(type (C__0), this(C__0), t#0 = x__1);
+        do_tset_x(type (C__0), this(C__0), t#0 = x__1);
         t#0
       };
       do {
         let t#1;
-        do_iset_z(type (C__0), this(C__0), t#1 = y__0 + 1);
+        do_tset_z(type (C__0), this(C__0), t#1 = y__0 + 1);
         t#1
       };
     };

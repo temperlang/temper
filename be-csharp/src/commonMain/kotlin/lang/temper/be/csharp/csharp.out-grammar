@@ -340,11 +340,20 @@ ExpressionStatement {
 // Also goto case/default, but we don't need those right now.
 GotoStatement ::= "goto" & label%Identifier & ";";
 
+// Braces around the consequent keep an `else` from binding to an inner `if`.
+// The formatter skips a block's own braces inside them, as in js.out-grammar.
 IfStatement ::=
       "if" & "(" & test%Expression & ")"
-    & consequent%Statement
-    & ((alternate%Statement => "else" & alternate) || ())
-    ;
+    & "{" & "\n" & consequent%Statement & "\n" & "}"
+    & (
+        (isElseIf==true => "else" & alternate%Statement)
+            || (hasElse==true => "else" & "{" & "\n" & alternate & "\n" & "}")
+            || ());
+IfStatement.isElseIf = `alternate is IfStatement`;
+IfStatement.hasElse = `
+alternate != null &&
+    (alternate !is BlockStatement || alternate?.childCount != 0)
+`;
 
 LabeledStatement ::= label%Identifier & ":" & statement%Statement;
 

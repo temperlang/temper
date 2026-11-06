@@ -1,6 +1,7 @@
 package lang.temper.be.java
 
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
 import kotlin.test.Test
@@ -2327,6 +2328,21 @@ class JavaBackendTest {
     )
 
     @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = JavaBackend.Java17,
+        connectedFiles = mapOf(
+            "ViaConnected.java" to """
+                |public final class ViaConnected {
+                |    public int get() {
+                |        return 1;
+                |    }
+                |}
+            """.trimMargin(),
+        ),
+        generatedClass = { "class $it" },
+    )
+
+    @Test
     fun connected() = assertGeneratedJavaRaw(
         inputs = inputFileMapFromJson(
             // Test using a submodule.
@@ -2442,6 +2458,44 @@ class JavaBackendTest {
             """.javaMethod(),
         )
     }
+
+    @Test
+    fun instanceOfGenericClassUsesWildcards() = assertGeneratedJavaRaw(
+        """
+            |export interface Effect<T> {}
+            |export class Append<T>(public text: String) extends Effect<T> {}
+            |export let isAppend<T>(e: Effect<T>): Boolean { e is Append<T> }
+        """.trimMargin(),
+        """
+            |pom.xml: "__DO_NOT_CARE__",
+            |src: { main: { java: { my_test_library: {
+            |  test: {
+            |    TestGlobal.java: {
+            |      content: ```
+            |        package my_test_library.test;
+            |        public final class TestGlobal {
+            |            private TestGlobal() {
+            |            }
+            |            public static<T__0> boolean isAppend(Effect<T__0> e__0) {
+            |                return e__0 instanceof Append<?>;
+            |            }
+            |        }
+            |
+            |        ```,
+            |    },
+            |    Append.java: "__DO_NOT_CARE__",
+            |    Effect.java: "__DO_NOT_CARE__",
+            |    TestMain.java: "__DO_NOT_CARE__",
+            |    TestGlobal.java.map: "__DO_NOT_CARE__",
+            |    Append.java.map: "__DO_NOT_CARE__",
+            |    Effect.java.map: "__DO_NOT_CARE__",
+            |    TestMain.java.map: "__DO_NOT_CARE__",
+            |  },
+            |  MyTestLibraryMain.java: "__DO_NOT_CARE__",
+            |  MyTestLibraryGlobal.java: "__DO_NOT_CARE__",
+            |} } } },
+        """.trimMargin(),
+    )
 
     @Test
     fun instanceOfUsesReferenceType() = assertGeneratedJava(

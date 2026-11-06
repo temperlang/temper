@@ -77,10 +77,10 @@ import lang.temper.value.jsonNameSymbol
 import lang.temper.value.jsonSymbol
 import lang.temper.value.lookThroughDecorations
 import lang.temper.value.methodSymbol
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.sealedTypeSymbol
 import lang.temper.value.setterSymbol
 import lang.temper.value.staticExtensionSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.symbolContained
 import lang.temper.value.typeDefinedSymbol
 import lang.temper.value.typeDefinitionAtLeafOrNull
@@ -195,7 +195,7 @@ private fun findJsonDecoratedTypeDecls(
 
             is CallTree -> if (isExtendsCall(t)) {
                 val (_, subT, superT) = t.children
-                val subTypeShape = subT.staticTypeContained as? NominalType
+                val subTypeShape = subT.reifiedTypeContained?.type as? NominalType
                 val superType = superT.typeShapeAtLeafOrNull
                 if (subTypeShape != null && superType != null) {
                     extendsCalls.putMultiSet(superType, subTypeShape)
@@ -245,7 +245,7 @@ private fun findJsonDecoratedTypeDecls(
                 typeShape.properties.forEach { p ->
                     val decl = p.stay?.incoming?.source as? DeclTree
                     val parts = decl?.parts ?: return@forEach
-                    val type = parts.metadataSymbolMap[typeSymbol]?.target?.staticTypeContained
+                    val type = parts.metadataSymbolMap[typeSymbol]?.target?.reifiedTypeContained?.type
                     var jsonPropertyKey = p.symbol.text
                     var shouldEncode = p.abstractness == Abstractness.Concrete
                     parts.metadataSymbolMap[jsonNameSymbol]?.let { customNameEdge ->

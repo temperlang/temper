@@ -2,6 +2,7 @@ package lang.temper.be.py
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -111,7 +112,7 @@ class PyBackendTest {
             |    _v_13: 'int5'
             |    __slots__ = ('_v_13',)
             |    def less(this_3, other_15: 'N', /) -> 'bool4':
-            |        return this_3._v_13 < other_15.v
+            |        return this_3._v_13 < other_15._v_13
             |    def __init__(this, /, v: 'int5') -> None:
             |        this._v_13 = v
             |    @property
@@ -123,6 +124,64 @@ class PyBackendTest {
             |        return a_19
             |    else:
             |        return b_20
+            |
+        """.trimMargin(),
+    )
+
+    @Test
+    fun genericSubtypesStayGeneric() = assertGeneratedCode(
+        // Subscripted supertypes don't make a class generic, so it needs its
+        // own `Generic[...]`, after the other bases for a consistent MRO.
+        input = """
+            |export interface Base<T> {
+            |  get(): T;
+            |}
+            |export interface Mid<U, T> extends Base<T> {
+            |  other(u: U): T;
+            |}
+            |export class Leaf extends Mid<Int, String> {
+            |  public get(): String { "x" }
+            |  public other(u: Int): String { "y" }
+            |}
+            |export interface Named extends Base<String> {}
+            |export class Box<T>(public t: T) extends Named {
+            |  public get(): String { "box" }
+            |}
+        """.trimMargin(),
+        want = """
+            |from typing import Any as Any0, TypeVar as TypeVar1, Generic as Generic2
+            |from abc import ABCMeta as ABCMeta3
+            |from builtins import RuntimeError as RuntimeError4, int as int5, str as str6
+            |T_0 = TypeVar1('T_0', bound = 'Any0', covariant = True)
+            |class Base(Generic2[T_0], metaclass = ABCMeta3):
+            |    def get(this_1, /) -> 'T_0':
+            |        raise RuntimeError4()
+            |U_2 = TypeVar1('U_2', bound = 'Any0', covariant = True)
+            |T_3 = TypeVar1('T_3', bound = 'Any0', covariant = True)
+            |class Mid(Base['T_3'], Generic2[U_2, T_3], metaclass = ABCMeta3):
+            |    def other(this_4, u_21: 'U_2', /) -> 'T_3':
+            |        raise RuntimeError4()
+            |class Leaf(Mid['int5', 'str6']):
+            |    __slots__ = ()
+            |    def get(this_5, /) -> 'str6':
+            |        return 'x'
+            |    def other(this_6, u_26: 'int5', /) -> 'str6':
+            |        return 'y'
+            |    def __init__(this, /) -> None:
+            |        pass
+            |class Named(Base['str6'], metaclass = ABCMeta3):
+            |    pass
+            |T_7 = TypeVar1('T_7', bound = 'Any0')
+            |class Box(Named, Generic2[T_7]):
+            |    _t_29: 'T_7'
+            |    __slots__ = ('_t_29',)
+            |    def get(this_8, /) -> 'str6':
+            |        return 'box'
+            |    def __init__(this_15, /, t: 'T_7') -> None:
+            |        this_15._t_29 = t
+            |    @property
+            |    def t(this_36, /) -> 'T_7':
+            |        return this_36._t_29
             |
         """.trimMargin(),
     )
@@ -801,6 +860,21 @@ class PyBackendTest {
         ),
         listedCall = "_connected.via_connected(",
         unlistedCall = "_connected.via_body(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = PyBackend.Python3,
+        connectedFiles = mapOf(
+            "__connected__.py" to """
+                |class _connected:
+                |    class ViaConnected:
+                |        def get(self, /) -> int:
+                |            return 1
+            """.trimMargin(),
+        ),
+        // The connected class is nested in `_connected` and indented.
+        generatedClass = { "\nclass $it:" },
     )
 
     @Test

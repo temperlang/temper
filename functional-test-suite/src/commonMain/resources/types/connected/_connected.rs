@@ -22,3 +22,19 @@ impl Counter {
 }
 
 impl_any_value_trait!(Counter, []);
+
+/// Temper's connected Doubler class, a handle like Counter, with no state.
+#[derive(Clone)]
+pub struct Doubler(Arc<()>);
+
+impl Doubler {
+    pub fn new() -> Doubler {
+        Doubler(Arc::new(()))
+    }
+
+    pub fn twice(&self, i: i32) -> i32 {
+        i * 2
+    }
+}
+
+impl_any_value_trait!(Doubler, []);

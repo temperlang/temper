@@ -45,7 +45,7 @@ interface FunctionalTestSuiteI {
      * Runs a specific test.
      *
      * @param noConnected true to use Temper bodies instead of connected code for `@connected`
-     *     functions wherever they have one, as for `temper test --no-connected`.
+     *     functions and classes wherever they have one, as for `temper test --no-connected`.
      */
     fun runFunctionalTest(
         test: FunctionalTestBase,
@@ -76,6 +76,11 @@ interface FunctionalTestSuiteI {
     @Test
     fun functionsConnectedNoConnected() =
         runFunctionalTest(Ft.FunctionsConnected, noConnected = true)
+
+    /** Likewise for [Ft.TypesConnected], with the Temper implementation of its connected class. */
+    @Test
+    fun typesConnectedNoConnected() =
+        runFunctionalTest(Ft.TypesConnected, noConnected = true)
 
     /**
      * Test methods are updated via `./gradlew kcodegen:up`.

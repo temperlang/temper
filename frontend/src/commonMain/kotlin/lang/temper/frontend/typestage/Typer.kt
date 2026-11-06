@@ -172,7 +172,6 @@ import lang.temper.value.optionalSymbol
 import lang.temper.value.overloadSymbol
 import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staticExtensionSymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.superSymbol
 import lang.temper.value.symbolContained
 import lang.temper.value.toLispy
@@ -917,7 +916,7 @@ internal class Typer(
                 val typeActuals = effectiveCallee.children.subListToEnd(2)
                 effectiveCallee = effectiveCallee.child(1)
                 typeActuals.map { explicitActual ->
-                    val type = explicitActual.staticTypeContained ?: InvalidType
+                    val type = explicitActual.reifiedTypeContained?.type ?: InvalidType
                     type to explicitActual.pos
                 }
             } else if (isNewCall && effectiveCallee != null) {
@@ -1796,7 +1795,7 @@ internal class Typer(
         console.groupIf(DEBUG, "Typing assignment $name") {
             var type = ti.decisionType(right)
             if (DEBUG) {
-                console.log("Callee type=${tree.child(0).staticTypeContained}")
+                console.log("Callee type=${tree.child(0).reifiedTypeContained?.type}")
             }
             var initializerIndex = -1
             val initInfo: InitializerInfo? =
@@ -1950,7 +1949,7 @@ internal class Typer(
                 is FunctionType -> when {
                     generalType.typeFormals.size == tree.size - 2 -> run bindings@{
                         val typeActuals = (2..<tree.size).map { kidIndex ->
-                            tree.child(kidIndex).staticTypeContained ?: return@bindings null
+                            tree.child(kidIndex).reifiedTypeContained?.type ?: return@bindings null
                         }
                         MkType.bindFormals(generalType, generalType.typeFormals.zip(typeActuals).toMap())
                     }
@@ -2007,7 +2006,7 @@ internal class Typer(
                 val superTypes = SuperTypeTree(
                     buildSet {
                         superTypeEdges.forEach {
-                            val superType = it.target.staticTypeContained
+                            val superType = it.target.reifiedTypeContained?.type
                             val problem = when {
                                 superType == null ->
                                     BecauseUnresolvedTypeReference(it.target.pos, shortPseudoCode(it.target))
@@ -2813,7 +2812,7 @@ internal class Typer(
             // a syntactic static member reference which might resolve against an
             // @staticExtension declaration.
             // Delegate to the handler for getStatic special calls.
-            val possibleStaticTypeReceiver = thisArg.staticTypeContained
+            val possibleStaticTypeReceiver = thisArg.reifiedTypeContained?.type
             if (possibleStaticTypeReceiver != null) {
                 if (memberAccessor is SetMemberAccessor) {
                     // `C.n = x`.  There is no static counterpart to a setter, and typing
@@ -2850,7 +2849,7 @@ internal class Typer(
                         when (val definition = type.definition) {
                             is TypeShape -> out.add(type)
                             is TypeFormal -> {
-                                definition.superTypes.forEach { findNominalTypes(it, out) }
+                                definition.upperBounds.forEach { findNominalTypes(it, out) }
                             }
                         }
                     }
@@ -2894,7 +2893,8 @@ internal class Typer(
                     return
                 }
                 allThisVariants[thisVariant] = depth
-                thisVariant.definition.superTypes.forEach { superTypeUnbound ->
+                val definition = thisVariant.definition
+                definition.upperBounds.forEach { superTypeUnbound ->
                     val typeMapper = typeBindingMapper(thisVariant)
                     if (typeMapper != null) {
                         explodeThisType(typeMapper(superTypeUnbound) as NominalType, depth + 1)
@@ -2909,29 +2909,39 @@ internal class Typer(
             }
 
             // TODO: consolidate this with AccessibleFilter
-            val useMember: (VisibleMemberShape) -> MemberUsage2 = {
+            val useMember: (VisibleMemberShape) -> MemberUsage2 = { memberShape ->
                 // Either it's public or we're reading from within the class definition.
                 // TODO: check protected vs private.  This is sensitive to whether something is
                 // reached directly or via super-type walking above.
                 console.groupIf(DEBUG, "filtering") {
                     if (DEBUG) {
-                        console.log("filteree: $it")
+                        console.log("filteree: $memberShape")
                     }
-                    val visible = it.visibility == Visibility.Public ||
-                        memberAccessor is InternalMemberAccessor
+                    val visible = when {
+                        memberShape.visibility == Visibility.Public -> true
+                        // Through `this` or another instance alike, a private member is visible
+                        // only within the type that declares it, not in its subtypes.
+                        memberAccessor is InternalMemberAccessor -> {
+                            // Check the lexical context type vs the member subject type, since we have both here now.
+                            val enclosingTypeArg = t.child(1 + memberAccessor.enclosingTypeIndexOrNegativeOne)
+                            val enclosingTypeDef = enclosingTypeArg.reifiedTypeContained?.type2?.definition
+                            // TODO Convert known externals later to external as a clarification/optimization?
+                            enclosingTypeDef == memberShape.enclosingType
+                        }
+                        else -> false
+                    }
                     val compatible = when (memberAccessor) {
                         is GetMemberAccessor ->
-                            it is PropertyShape ||
-                                (it is MethodShape && it.methodKind == MethodKind.Getter)
+                            memberShape is PropertyShape ||
+                                (memberShape is MethodShape && memberShape.methodKind == MethodKind.Getter)
                         // TODO: method or constructor references
                         is SetMemberAccessor ->
-                            (it is PropertyShape && it.hasSetter) ||
-                                (it is MethodShape && it.methodKind == MethodKind.Setter)
-
+                            (memberShape is PropertyShape && memberShape.hasSetter) ||
+                                (memberShape is MethodShape && memberShape.methodKind == MethodKind.Setter)
                         is CallMemberAccessor ->
-                            it is MethodShape &&
+                            memberShape is MethodShape &&
                                 // TODO: call of value of property with function type via getter
-                                it.methodKind == MethodKind.Normal
+                                memberShape.methodKind == MethodKind.Normal
                     }
                     if (DEBUG) {
                         console.log("visible=$visible, compatible=$compatible")
@@ -3024,13 +3034,6 @@ internal class Typer(
             // irrelevant overloads.
             filterOutDeeperMembers(memberTypesGrouped, allThisVariants, typeContext2)
 
-            // Might need a type argument since the internal member accessors expect the this-type.
-            val containingType = if (memberAccessor is InternalMemberAccessor) {
-                WellKnownTypes.typeType
-            } else {
-                null
-            }
-
             // We need to, after typing, decide whether a DotHelper with extensions should use one
             // of the regular members or one of the extensions.
             // We recall this later to get that relationship between extensions and members.
@@ -3058,17 +3061,18 @@ internal class Typer(
                             // shape.
                             val asMethodType = when (memberShape) {
                                 is PropertyShape -> {
+                                    // Skip containing types here because those aren't really args.
                                     if (memberAccessor is SetMemberAccessor) {
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType, memberShapeType),
+                                            valueFormals = listOfNotNull(nominalType, memberShapeType),
                                             returnType = Types.void.type,
                                         )
                                     } else {
                                         check(memberAccessor is GetMemberAccessor)
                                         MkType.fn(
                                             typeFormals = emptyList(),
-                                            valueFormals = listOfNotNull(containingType, nominalType),
+                                            valueFormals = listOfNotNull(nominalType),
                                             returnType = memberShapeType,
                                         )
                                     }
