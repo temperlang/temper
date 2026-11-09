@@ -36,8 +36,8 @@ import lang.temper.value.TreeType
 import lang.temper.value.importedSymbol
 import lang.temper.value.methodSymbol
 import lang.temper.value.propertySymbol
+import lang.temper.value.reifiedTypeContained
 import lang.temper.value.staticPropertySymbol
-import lang.temper.value.staticTypeContained
 import lang.temper.value.typeDeclSymbol
 import lang.temper.value.valueContained
 import lang.temper.value.varSymbol
@@ -599,7 +599,7 @@ fun correlateTypes(tree: ToolTree, infoMap: Map<Position, List<TypeInfo>>): Tool
 fun extractTypes(tree: Tree) = treeToPosMap(tree) { node, _ ->
     val typeDecl = when (node) {
         is DeclTree -> {
-            node.parts?.metadataSymbolMap?.get(typeDeclSymbol)?.target?.staticTypeContained
+            node.parts?.metadataSymbolMap?.get(typeDeclSymbol)?.target?.reifiedTypeContained?.type
         }
         else -> null
     }

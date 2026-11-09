@@ -8,10 +8,12 @@
 | [AlgosHelloWorldObject][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [AlgosMyersDiff][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [CastsAsExpr][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [CastsGenericIs][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [CastsSpecific][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesAngleCall][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesCallOverrideFromSubtype][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesDirectGetter][] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [ClassesGetterConstness][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesInheritedGetter][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesObjectLiterals][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ClassesPrivateMethod][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -41,10 +43,12 @@
 | [ImportsTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [ImportsValues][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesEmpty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [InterfacesGenericDefault][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPropertyMembers][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [InterfacesPureVirtual][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [NamesNonascii][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[228][]</sup> | ✅ | ✅ | ✅ |
-| [RegexMatch][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [RegexCodeSets][] | ❌<sup>[198][]</sup> | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[166][]</sup> | ✅ | ✅ | ✅ |
+| [RegexMatch][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [RegexZeroAdvance][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ❌<sup>[166][]</sup> | ✅ | ✅ | ✅ |
 | [RegressionMinimalRepro][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsBroken][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -52,7 +56,7 @@
 | [SemanticsMutuallyReferencingTypes][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [SemanticsTypeCheckedLocals][] | ❌<sup>[58][]</sup> | ❌<sup>[198][]</sup> | ❌<sup>[58][]</sup> | ✅ | ❌<sup>[58][]</sup> | ❌<sup>[58][]</sup> | ✅ | ✅ | ✅ | ✅ | ❌<sup>[58][]</sup> |
 | [TestingAsserts][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [TypesConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ❌<sup>[456][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesConnected][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDate][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDenseBitVector][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesDeque][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -63,6 +67,7 @@
 | [TypesIntShifty][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesJsonSyntaxTree][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListEmpty][] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [TypesListLongLiteral][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListOperations][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListReduce][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [TypesListSorting][] | ✅ | ❌<sup>[198][]</sup> | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -79,7 +84,6 @@
 [198]: https://github.com/temperlang/temper/issues/198
 [214]: https://github.com/temperlang/temper/issues/214
 [228]: https://github.com/temperlang/temper/issues/228
-[456]: https://github.com/temperlang/temper/issues/456
 [520]: https://github.com/temperlang/temper/issues/520
 [539]: https://github.com/temperlang/temper/issues/539
 [58]: https://github.com/temperlang/temper/issues/58
@@ -89,10 +93,12 @@
 [AlgosHelloWorldObject]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/hello-world-object/hello-world-object.temper.md
 [AlgosMyersDiff]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/algos/myers-diff/myers-diff.temper.md
 [CastsAsExpr]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/casts/as-expr/as-expr.temper.md
+[CastsGenericIs]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/casts/generic-is/generic-is.temper.md
 [CastsSpecific]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/casts/specific/specific.temper.md
 [ClassesAngleCall]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/angle-call/angle-call.temper.md
 [ClassesCallOverrideFromSubtype]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/call-override-from-subtype/call-override-from-subtype.temper.md
 [ClassesDirectGetter]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/direct-getter/direct-getter.temper.md
+[ClassesGetterConstness]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/getter-constness/getter-constness.temper.md
 [ClassesInheritedGetter]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/inherited-getter/inherited-getter.temper.md
 [ClassesObjectLiterals]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/object-literals/object-literals.temper.md
 [ClassesPrivateMethod]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/classes/private-method/private-method.temper.md
@@ -122,9 +128,11 @@
 [ImportsTypes]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/types/types.temper.md
 [ImportsValues]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/imports/values/values.temper.md
 [InterfacesEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/empty/empty.temper.md
+[InterfacesGenericDefault]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/generic-default/generic-default.temper.md
 [InterfacesPropertyMembers]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/property-members/property-members.temper.md
 [InterfacesPureVirtual]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/interfaces/pure-virtual/pure-virtual.temper.md
 [NamesNonascii]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/names/nonascii/nonascii.temper.md
+[RegexCodeSets]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/code-sets/code-sets.temper.md
 [RegexMatch]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/match/match.temper.md
 [RegexZeroAdvance]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regex/zero-advance/zero-advance.temper.md
 [RegressionMinimalRepro]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/regression/minimal-repro/minimal-repro.temper.md
@@ -144,6 +152,7 @@
 [TypesIntShifty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/int/shifty/shifty.temper.md
 [TypesJsonSyntaxTree]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/json-syntax-tree/json-syntax-tree.temper.md
 [TypesListEmpty]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/empty/empty.temper.md
+[TypesListLongLiteral]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/long-literal/long-literal.temper.md
 [TypesListOperations]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/operations/operations.temper.md
 [TypesListReduce]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/reduce/reduce.temper.md
 [TypesListSorting]: https://github.com/temperlang/temper/blob/main/functional-test-suite/src/commonMain/resources/types/list/sorting/sorting.temper.md

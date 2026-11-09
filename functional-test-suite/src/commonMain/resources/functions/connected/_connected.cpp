@@ -13,7 +13,7 @@ std::int32_t prod(std::shared_ptr<Hidden> const& hidden, std::int32_t j) {
     return support.prod(hidden->get_i(), j);
 }
 
-int32_t length(temper::core::NullableParam<std::string> s) {
+int32_t length(temper::core::NullableParam<temper::core::Str> s) {
     return s.has_value ? s.value.size() : -1;
 }
 

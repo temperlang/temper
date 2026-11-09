@@ -2232,10 +2232,12 @@ object CSharp {
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
-                if (alternate != null) {
+                if (isElseIf) {
                     sharedCodeFormattingTemplate80
-                } else {
+                } else if (hasElse) {
                     sharedCodeFormattingTemplate81
+                } else {
+                    sharedCodeFormattingTemplate82
                 }
         override val formatElementCount
             get() = 3
@@ -2261,6 +2263,12 @@ object CSharp {
         var alternate: Statement?
             get() = _alternate
             set(newValue) { _alternate = updateTreeConnection(_alternate, newValue) }
+        val isElseIf: Boolean
+            get() = alternate is IfStatement
+        val hasElse: Boolean
+            get() =
+                alternate != null &&
+                    (alternate !is BlockStatement || alternate?.childCount != 0)
         override fun deepCopy(): IfStatement {
             return IfStatement(pos, test = this.test.deepCopy(), consequent = this.consequent.deepCopy(), alternate = this.alternate?.deepCopy())
         }
@@ -2299,7 +2307,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate82
+            get() = sharedCodeFormattingTemplate83
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2354,7 +2362,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate83
+            get() = sharedCodeFormattingTemplate84
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2410,9 +2418,9 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expr != null) {
-                    sharedCodeFormattingTemplate84
-                } else {
                     sharedCodeFormattingTemplate85
+                } else {
+                    sharedCodeFormattingTemplate86
                 }
         override val formatElementCount
             get() = 1
@@ -2459,7 +2467,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate86
+            get() = sharedCodeFormattingTemplate87
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2517,13 +2525,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (catchBlock != null && finallyBlock != null) {
-                    sharedCodeFormattingTemplate87
-                } else if (catchBlock != null) {
                     sharedCodeFormattingTemplate88
-                } else if (finallyBlock != null) {
+                } else if (catchBlock != null) {
                     sharedCodeFormattingTemplate89
-                } else {
+                } else if (finallyBlock != null) {
                     sharedCodeFormattingTemplate90
+                } else {
+                    sharedCodeFormattingTemplate91
                 }
         override val formatElementCount
             get() = 3
@@ -2587,7 +2595,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate91
+            get() = sharedCodeFormattingTemplate92
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -2641,7 +2649,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate92
+            get() = sharedCodeFormattingTemplate93
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2694,13 +2702,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (expr != null && block != null) {
-                    sharedCodeFormattingTemplate93
-                } else if (expr != null) {
                     sharedCodeFormattingTemplate94
-                } else if (block != null) {
+                } else if (expr != null) {
                     sharedCodeFormattingTemplate95
-                } else {
+                } else if (block != null) {
                     sharedCodeFormattingTemplate96
+                } else {
+                    sharedCodeFormattingTemplate97
                 }
         override val formatElementCount
             get() = 2
@@ -2755,7 +2763,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate97
+            get() = sharedCodeFormattingTemplate98
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -2804,9 +2812,9 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (typeArgs.isNotEmpty()) {
-                    sharedCodeFormattingTemplate98
-                } else {
                     sharedCodeFormattingTemplate99
+                } else {
+                    sharedCodeFormattingTemplate100
                 }
         override val formatElementCount
             get() = 3
@@ -2873,13 +2881,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (type != null && members.isNotEmpty()) {
-                    sharedCodeFormattingTemplate100
-                } else if (type != null) {
                     sharedCodeFormattingTemplate101
-                } else if (members.isNotEmpty()) {
+                } else if (type != null) {
                     sharedCodeFormattingTemplate102
-                } else {
+                } else if (members.isNotEmpty()) {
                     sharedCodeFormattingTemplate103
+                } else {
+                    sharedCodeFormattingTemplate104
                 }
         override val formatElementCount
             get() = 3
@@ -2946,13 +2954,13 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (left != null && right != null) {
-                    sharedCodeFormattingTemplate104
+                    sharedCodeFormattingTemplate105
                 } else if (left != null) {
                     sharedCodeFormattingTemplate70
                 } else if (right != null) {
-                    sharedCodeFormattingTemplate105
-                } else {
                     sharedCodeFormattingTemplate106
+                } else {
+                    sharedCodeFormattingTemplate107
                 }
         override val formatElementCount
             get() = 3
@@ -3015,7 +3023,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate107
+            get() = sharedCodeFormattingTemplate108
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3061,7 +3069,7 @@ object CSharp {
         override val operatorDefinition
             get() = CSharpOperatorDefinition.Cast
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate108
+            get() = sharedCodeFormattingTemplate109
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3116,7 +3124,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate109
+            get() = sharedCodeFormattingTemplate110
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3176,7 +3184,7 @@ object CSharp {
         override val operatorDefinition
             get() = CSharpOperatorDefinition.Atom
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate110
+            get() = sharedCodeFormattingTemplate111
         override val formatElementCount
             get() = 2
         override fun formatElement(
@@ -3231,7 +3239,7 @@ object CSharp {
         override val operatorDefinition: CSharpOperatorDefinition?
             get() = null
         override val codeFormattingTemplate: CodeFormattingTemplate
-            get() = sharedCodeFormattingTemplate111
+            get() = sharedCodeFormattingTemplate112
         override val formatElementCount
             get() = 1
         override fun formatElement(
@@ -3310,9 +3318,9 @@ object CSharp {
         override val codeFormattingTemplate: CodeFormattingTemplate
             get() =
                 if (name != null) {
-                    sharedCodeFormattingTemplate82
+                    sharedCodeFormattingTemplate83
                 } else {
-                    sharedCodeFormattingTemplate106
+                    sharedCodeFormattingTemplate107
                 }
         override val formatElementCount
             get() = 2
@@ -4794,7 +4802,7 @@ object CSharp {
             ),
         )
 
-    /** `if ( {{0}} ) {{1}} else {{2}}` */
+    /** `if ( {{0}} ) \{ \n {{1}} \n \} else {{2}}` */
     private val sharedCodeFormattingTemplate80 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4802,13 +4810,17 @@ object CSharp {
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
                 CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
                 CodeFormattingTemplate.OneSubstitution(2),
             ),
         )
 
-    /** `if ( {{0}} ) {{1}}` */
+    /** `if ( {{0}} ) \{ \n {{1}} \n \} else \{ \n {{2}} \n \}` */
     private val sharedCodeFormattingTemplate81 =
         CodeFormattingTemplate.Concatenation(
             listOf(
@@ -4816,12 +4828,38 @@ object CSharp {
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
                 CodeFormattingTemplate.OneSubstitution(0),
                 CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
                 CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.LiteralToken("else", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.OneSubstitution(2),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
+            ),
+        )
+
+    /** `if ( {{0}} ) \{ \n {{1}} \n \}` */
+    private val sharedCodeFormattingTemplate82 =
+        CodeFormattingTemplate.Concatenation(
+            listOf(
+                CodeFormattingTemplate.LiteralToken("if", OutputTokenType.Word),
+                CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.OneSubstitution(0),
+                CodeFormattingTemplate.LiteralToken(")", OutputTokenType.Punctuation, TokenAssociation.Bracket),
+                CodeFormattingTemplate.LiteralToken("{", OutputTokenType.Punctuation),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.OneSubstitution(1),
+                CodeFormattingTemplate.NewLine,
+                CodeFormattingTemplate.LiteralToken("}", OutputTokenType.Punctuation),
             ),
         )
 
     /** `{{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate82 =
+    private val sharedCodeFormattingTemplate83 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4831,7 +4869,7 @@ object CSharp {
         )
 
     /** `{{0}} {{1*,}} ;` */
-    private val sharedCodeFormattingTemplate83 =
+    private val sharedCodeFormattingTemplate84 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -4844,7 +4882,7 @@ object CSharp {
         )
 
     /** `return {{0}} ;` */
-    private val sharedCodeFormattingTemplate84 =
+    private val sharedCodeFormattingTemplate85 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -4854,7 +4892,7 @@ object CSharp {
         )
 
     /** `return ;` */
-    private val sharedCodeFormattingTemplate85 =
+    private val sharedCodeFormattingTemplate86 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("return", OutputTokenType.Word),
@@ -4863,7 +4901,7 @@ object CSharp {
         )
 
     /** `switch ( {{0}} ) \{ \n {{1*\n}} \n \}` */
-    private val sharedCodeFormattingTemplate86 =
+    private val sharedCodeFormattingTemplate87 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("switch", OutputTokenType.Word),
@@ -4882,7 +4920,7 @@ object CSharp {
         )
 
     /** `try {{0}} catch {{1}} finally {{2}}` */
-    private val sharedCodeFormattingTemplate87 =
+    private val sharedCodeFormattingTemplate88 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4895,7 +4933,7 @@ object CSharp {
         )
 
     /** `try {{0}} catch {{1}}` */
-    private val sharedCodeFormattingTemplate88 =
+    private val sharedCodeFormattingTemplate89 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4906,7 +4944,7 @@ object CSharp {
         )
 
     /** `try {{0}} finally {{2}}` */
-    private val sharedCodeFormattingTemplate89 =
+    private val sharedCodeFormattingTemplate90 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4917,7 +4955,7 @@ object CSharp {
         )
 
     /** `try {{0}}` */
-    private val sharedCodeFormattingTemplate90 =
+    private val sharedCodeFormattingTemplate91 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("try", OutputTokenType.Word),
@@ -4926,7 +4964,7 @@ object CSharp {
         )
 
     /** `while ( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate91 =
+    private val sharedCodeFormattingTemplate92 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("while", OutputTokenType.Word),
@@ -4938,7 +4976,7 @@ object CSharp {
         )
 
     /** `yield return {{0}} ;` */
-    private val sharedCodeFormattingTemplate92 =
+    private val sharedCodeFormattingTemplate93 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("yield", OutputTokenType.Word),
@@ -4949,7 +4987,7 @@ object CSharp {
         )
 
     /** `case {{0}} : {{1}}` */
-    private val sharedCodeFormattingTemplate93 =
+    private val sharedCodeFormattingTemplate94 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
@@ -4960,7 +4998,7 @@ object CSharp {
         )
 
     /** `case {{0}} :` */
-    private val sharedCodeFormattingTemplate94 =
+    private val sharedCodeFormattingTemplate95 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("case", OutputTokenType.Word),
@@ -4970,7 +5008,7 @@ object CSharp {
         )
 
     /** `default : {{1}}` */
-    private val sharedCodeFormattingTemplate95 =
+    private val sharedCodeFormattingTemplate96 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word),
@@ -4980,7 +5018,7 @@ object CSharp {
         )
 
     /** `default :` */
-    private val sharedCodeFormattingTemplate96 =
+    private val sharedCodeFormattingTemplate97 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("default", OutputTokenType.Word),
@@ -4989,7 +5027,7 @@ object CSharp {
         )
 
     /** `await ( {{0}} )` */
-    private val sharedCodeFormattingTemplate97 =
+    private val sharedCodeFormattingTemplate98 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("await", OutputTokenType.Word),
@@ -5000,7 +5038,7 @@ object CSharp {
         )
 
     /** `{{0}} < {{1*,}} > ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate98 =
+    private val sharedCodeFormattingTemplate99 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5020,7 +5058,7 @@ object CSharp {
         )
 
     /** `{{0}} ( {{2*,}} )` */
-    private val sharedCodeFormattingTemplate99 =
+    private val sharedCodeFormattingTemplate100 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5034,7 +5072,7 @@ object CSharp {
         )
 
     /** `new {{0}} ( {{1*,}} ) \{ {{2*,}} \}` */
-    private val sharedCodeFormattingTemplate100 =
+    private val sharedCodeFormattingTemplate101 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -5055,7 +5093,7 @@ object CSharp {
         )
 
     /** `new {{0}} ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate101 =
+    private val sharedCodeFormattingTemplate102 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -5070,7 +5108,7 @@ object CSharp {
         )
 
     /** `new ( {{1*,}} ) \{ {{2*,}} \}` */
-    private val sharedCodeFormattingTemplate102 =
+    private val sharedCodeFormattingTemplate103 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -5090,7 +5128,7 @@ object CSharp {
         )
 
     /** `new ( {{1*,}} )` */
-    private val sharedCodeFormattingTemplate103 =
+    private val sharedCodeFormattingTemplate104 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("new", OutputTokenType.Word),
@@ -5104,7 +5142,7 @@ object CSharp {
         )
 
     /** `{{0}} {{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate104 =
+    private val sharedCodeFormattingTemplate105 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5114,7 +5152,7 @@ object CSharp {
         )
 
     /** `{{1}} {{2}}` */
-    private val sharedCodeFormattingTemplate105 =
+    private val sharedCodeFormattingTemplate106 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(1),
@@ -5123,11 +5161,11 @@ object CSharp {
         )
 
     /** `{{1}}` */
-    private val sharedCodeFormattingTemplate106 =
+    private val sharedCodeFormattingTemplate107 =
         CodeFormattingTemplate.OneSubstitution(1)
 
     /** `throw {{0}}` */
-    private val sharedCodeFormattingTemplate107 =
+    private val sharedCodeFormattingTemplate108 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("throw", OutputTokenType.Word),
@@ -5136,7 +5174,7 @@ object CSharp {
         )
 
     /** `( {{0}} ) {{1}}` */
-    private val sharedCodeFormattingTemplate108 =
+    private val sharedCodeFormattingTemplate109 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("(", OutputTokenType.Punctuation, TokenAssociation.Bracket),
@@ -5147,7 +5185,7 @@ object CSharp {
         )
 
     /** `{{0}} [ {{1*,}} ]` */
-    private val sharedCodeFormattingTemplate109 =
+    private val sharedCodeFormattingTemplate110 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5161,7 +5199,7 @@ object CSharp {
         )
 
     /** `{{0}} . {{1}}` */
-    private val sharedCodeFormattingTemplate110 =
+    private val sharedCodeFormattingTemplate111 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.OneSubstitution(0),
@@ -5171,7 +5209,7 @@ object CSharp {
         )
 
     /** `typeof ( {{0}} )` */
-    private val sharedCodeFormattingTemplate111 =
+    private val sharedCodeFormattingTemplate112 =
         CodeFormattingTemplate.Concatenation(
             listOf(
                 CodeFormattingTemplate.LiteralToken("typeof", OutputTokenType.Word),

@@ -248,7 +248,8 @@ class TypeTestHarness(
         override fun top() = WellKnownTypes.anyValueOrNullType2
         override fun invalid() = WellKnownTypes.invalidType2
         override fun bubble() = WellKnownTypes.bubbleType2
-        override fun never() = MkType2(WellKnownTypes.neverTypeDefinition).get()
+        override fun never(): Type2 =
+            error("Bare `Never` is not a well-formed Type2; write `Never<T>` with a fallback type")
         override fun make(
             defn: TypeDefinition,
             bindings: List<Type2>,

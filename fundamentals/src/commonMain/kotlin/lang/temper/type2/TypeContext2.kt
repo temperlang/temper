@@ -720,8 +720,8 @@ class TypeContext2 {
                         continue
                     } // In case of inheritance cycles.
                     seen.add(head)
-                    for (superType in head.superTypes) {
-                        val superTypeDefinition = superType.definition
+                    for (upperBound in head.upperBounds) {
+                        val superTypeDefinition = upperBound.definition
                         val longerChain = Cons(superTypeDefinition, chain)
                         if (superTypeDefinition == t) {
                             fullChain = longerChain

@@ -2,6 +2,7 @@ package lang.temper.be.rust
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.inputFileMapFromJson
 import lang.temper.common.stripDoubleHashCommentLinesToPutCommentsInlineBelow
@@ -202,6 +203,15 @@ class RustBackendTest {
         ),
         listedCall = "_connected::via_connected(",
         unlistedCall = "_connected::via_body(",
+    )
+
+    @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = RustBackend.Factory,
+        connectedFiles = mapOf(
+            "_connected.rs" to "#[derive(Clone)]\npub struct ViaConnected;\n",
+        ),
+        generatedClass = { "struct $it" },
     )
 
     @Test
@@ -1091,6 +1101,54 @@ class RustBackendTest {
         """.trimMargin(),
     )
 
+    /** A module value read only by tests is a static, since tests can't see the init's locals. */
+    @Test
+    fun moduleValueUsedOnlyByTest() = assertGenerateWanted(
+        temper = """
+            |let limits = [1, 2];
+            |test("under") {
+            |  assert(1 < limits.length);
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            LIMITS.set(std::sync::Arc::new(vec![1, 2])).unwrap_or_else(| _ | panic!());
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |static LIMITS: std::sync::OnceLock<temper_core::List<i32>> = std::sync::OnceLock::new();
+            |pub (crate) fn limits() -> temper_core::List<i32> {
+            |    ( * temper_core::initialized(| | LIMITS.get(), crate::init_on_first_use)).clone()
+            |}
+            |#[cfg(test)]
+            |mod tests {
+            |    #[test]
+            |    fn under__0() -> temper_core::Result<()> {
+            |        crate::init(std::option::Option::None);
+            |        temper_std::init(std::option::Option::None);
+            |        let test___0 = temper_std::testing::Test::new();
+            |        #[derive(Clone)]
+            |        struct ClosureGroup___0 {}
+            |        impl ClosureGroup___0 {
+            |            fn r#fn(& self) -> std::sync::Arc<String> {
+            |                return std::sync::Arc::new("expected 1 <=> limits.length < 0".to_string());
+            |            }
+            |        }
+            |        let closure_group = ClosureGroup___0 {};
+            |        let r#fn = {
+            |            let closure_group = closure_group.clone();
+            |            std::sync::Arc::new(move | | closure_group.r#fn())
+            |        };
+            |        test___0.assert(1 < temper_core::ListedTrait::len( & limits()), r#fn.clone());
+            |        test___0.soft_fail_to_hard()
+            |    }
+            |    use super::*;
+            |}
+        """.trimMargin(),
+    )
+
     @Test
     fun coreUpcast() = assertGenerateWanted(
         temper = """
@@ -1940,8 +1998,8 @@ class RustBackendTest {
                 |        E::new(self.clone())
                 |    }
                 |}
-                |impl DTrait<T> for F {
-                |    fn clone_boxed(& self) -> D<T> {
+                |impl DTrait<i32> for F {
+                |    fn clone_boxed(& self) -> D<i32> {
                 |        D::new(self.clone())
                 |    }
                 |    fn whatever(& self) -> std::sync::Arc<String> {
@@ -1951,7 +2009,7 @@ class RustBackendTest {
                 |        self.thing()
                 |    }
                 |}
-                |temper_core::impl_any_value_trait!(F, [B<C<A>>, A, E<i32>, D<T>]);
+                |temper_core::impl_any_value_trait!(F, [B<C<A>>, A, E<i32>, D<i32>]);
             """.trimMargin(),
         )
     }
@@ -3001,6 +3059,269 @@ class RustBackendTest {
             |    }
             |}
             |temper_core::impl_any_value_trait!(Lo, [Hi]);
+        """.trimMargin(),
+    )
+
+    /** Inherited members, including defaults, take type arguments from the class through a sealed interface. */
+    @Test
+    fun superGenericDefault() = assertGenerateWanted(
+        temper = """
+            |export interface Base<T> {
+            |  pick(x: T): T;
+            |  many(x: T): List<T> { [pick(x)] }
+            |}
+            |export sealed interface Mid extends Base<String> {}
+            |export class Leaf extends Mid {
+            |  public pick(x: String): String { x }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |pub trait BaseTrait<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+            |    fn clone_boxed(& self) -> Base<T>;
+            |    fn pick(& self, x__0: T) -> T;
+            |    fn many(& self, x__1: T) -> temper_core::List<T> {
+            |        return std::sync::Arc::new(vec![self.pick(x__1.clone())]);
+            |    }
+            |}
+            |#[derive(Clone)]
+            |pub struct Base<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn BaseTrait<T>>);
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Base<T> {
+            |    pub fn new(selfish: impl BaseTrait<T> + 'static) -> Base<T> {
+            |        Base(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> BaseTrait<T> for Base<T> {
+            |    fn clone_boxed(& self) -> Base<T> {
+            |        BaseTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn pick(& self, arg1: T) -> T {
+            |        BaseTrait::pick( & ( * self.0), arg1)
+            |    }
+            |    fn many(& self, arg1: T) -> temper_core::List<T> {
+            |        BaseTrait::many( & ( * self.0), arg1)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Base<T>);
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Base<T> {
+            |    type Target = dyn BaseTrait<T>;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |pub enum MidEnum {
+            |    Leaf(Leaf)
+            |}
+            |pub trait MidTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + BaseTrait<std::sync::Arc<String>> {
+            |    fn as_enum(& self) -> MidEnum;
+            |    fn clone_boxed(& self) -> Mid;
+            |}
+            |#[derive(Clone)]
+            |pub struct Mid(std::sync::Arc<dyn MidTrait>);
+            |impl Mid {
+            |    pub fn new(selfish: impl MidTrait + 'static) -> Mid {
+            |        Mid(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |impl MidTrait for Mid {
+            |    fn as_enum(& self) -> MidEnum {
+            |        MidTrait::as_enum( & ( * self.0))
+            |    }
+            |    fn clone_boxed(& self) -> Mid {
+            |        MidTrait::clone_boxed( & ( * self.0))
+            |    }
+            |}
+            |impl BaseTrait<std::sync::Arc<String>> for Mid {
+            |    fn clone_boxed(& self) -> Base<std::sync::Arc<String>> {
+            |        BaseTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn pick(& self, arg1: std::sync::Arc<String>) -> std::sync::Arc<String> {
+            |        BaseTrait::pick( & ( * self.0), arg1)
+            |    }
+            |    fn many(& self, arg1: std::sync::Arc<String>) -> temper_core::List<std::sync::Arc<String>> {
+            |        BaseTrait::many( & ( * self.0), arg1)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Mid);
+            |impl std::ops::Deref for Mid {
+            |    type Target = dyn MidTrait;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |struct LeafStruct {}
+            |#[derive(Clone)]
+            |pub struct Leaf(std::sync::Arc<LeafStruct>);
+            |impl Leaf {
+            |    pub fn pick(& self, x__2: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+            |        let x__2 = x__2.to_arc_string();
+            |        return x__2.clone();
+            |    }
+            |    pub fn new() -> Leaf {
+            |        let selfish = Leaf(std::sync::Arc::new(LeafStruct {}));
+            |        return selfish;
+            |    }
+            |}
+            |impl MidTrait for Leaf {
+            |    fn as_enum(& self) -> MidEnum {
+            |        MidEnum::Leaf(self.clone())
+            |    }
+            |    fn clone_boxed(& self) -> Mid {
+            |        Mid::new(self.clone())
+            |    }
+            |}
+            |impl BaseTrait<std::sync::Arc<String>> for Leaf {
+            |    fn clone_boxed(& self) -> Base<std::sync::Arc<String>> {
+            |        Base::new(self.clone())
+            |    }
+            |    fn pick(& self, x__2: std::sync::Arc<String>) -> std::sync::Arc<String> {
+            |        self.pick(x__2)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Leaf, [Mid, Base<std::sync::Arc<String>>]);
+        """.trimMargin(),
+    )
+
+    /** An intermediate interface can pass its type parameter to its supertype in a different position. */
+    @Test
+    fun superGenericReordered() = assertGenerateWanted(
+        temper = """
+            |export interface Holder<T> {
+            |  public get held(): T;
+            |  pick(x: T): T;
+            |}
+            |export interface Labeled<L, T> extends Holder<T> {
+            |  label(l: L): String;
+            |}
+            |export class LabeledSub(public held: Int) extends Labeled<String, Int> {
+            |  public pick(x: Int): Int { x }
+            |  public label(l: String): String { l }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |pub trait HolderTrait<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync {
+            |    fn clone_boxed(& self) -> Holder<T>;
+            |    fn held(& self) -> T;
+            |    fn pick(& self, x__0: T) -> T;
+            |}
+            |#[derive(Clone)]
+            |pub struct Holder<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn HolderTrait<T>>);
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Holder<T> {
+            |    pub fn new(selfish: impl HolderTrait<T> + 'static) -> Holder<T> {
+            |        Holder(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HolderTrait<T> for Holder<T> {
+            |    fn clone_boxed(& self) -> Holder<T> {
+            |        HolderTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn held(& self) -> T {
+            |        HolderTrait::held( & ( * self.0))
+            |    }
+            |    fn pick(& self, arg1: T) -> T {
+            |        HolderTrait::pick( & ( * self.0), arg1)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Holder<T>);
+            |impl<T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Holder<T> {
+            |    type Target = dyn HolderTrait<T>;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |pub trait LabeledTrait<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>: temper_core::AsAnyValue + temper_core::AnyValueTrait + std::marker::Send + std::marker::Sync + HolderTrait<T> {
+            |    fn clone_boxed(& self) -> Labeled<L, T>;
+            |    fn label(& self, l__0: L) -> std::sync::Arc<String>;
+            |}
+            |#[derive(Clone)]
+            |pub struct Labeled<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static>(std::sync::Arc<dyn LabeledTrait<L, T>>);
+            |impl<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> Labeled<L, T> {
+            |    pub fn new(selfish: impl LabeledTrait<L, T> + 'static) -> Labeled<L, T> {
+            |        Labeled(std::sync::Arc::new(selfish))
+            |    }
+            |}
+            |impl<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> LabeledTrait<L, T> for Labeled<L, T> {
+            |    fn clone_boxed(& self) -> Labeled<L, T> {
+            |        LabeledTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn label(& self, arg1: L) -> std::sync::Arc<String> {
+            |        LabeledTrait::label( & ( * self.0), arg1)
+            |    }
+            |}
+            |impl<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> HolderTrait<T> for Labeled<L, T> {
+            |    fn clone_boxed(& self) -> Holder<T> {
+            |        HolderTrait::clone_boxed( & ( * self.0))
+            |    }
+            |    fn held(& self) -> T {
+            |        HolderTrait::held( & ( * self.0))
+            |    }
+            |    fn pick(& self, arg1: T) -> T {
+            |        HolderTrait::pick( & ( * self.0), arg1)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait_for_interface!(Labeled<L, T>);
+            |impl<L: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static, T: std::clone::Clone + std::marker::Send + std::marker::Sync + 'static> std::ops::Deref for Labeled<L, T> {
+            |    type Target = dyn LabeledTrait<L, T>;
+            |    fn deref(& self) -> & Self::Target {
+            |        & ( * self.0)
+            |    }
+            |}
+            |struct LabeledSubStruct {
+            |    held: i32
+            |}
+            |#[derive(Clone)]
+            |pub struct LabeledSub(std::sync::Arc<LabeledSubStruct>);
+            |impl LabeledSub {
+            |    pub fn pick(& self, x__1: i32) -> i32 {
+            |        return x__1;
+            |    }
+            |    pub fn label(& self, l__1: impl temper_core::ToArcString) -> std::sync::Arc<String> {
+            |        let l__1 = l__1.to_arc_string();
+            |        return l__1.clone();
+            |    }
+            |    pub fn new(held__0: i32) -> LabeledSub {
+            |        let held;
+            |        held = held__0;
+            |        let selfish = LabeledSub(std::sync::Arc::new(LabeledSubStruct {
+            |                    held
+            |        }));
+            |        return selfish;
+            |    }
+            |    pub fn held(& self) -> i32 {
+            |        return self.0.held;
+            |    }
+            |}
+            |impl LabeledTrait<std::sync::Arc<String>, i32> for LabeledSub {
+            |    fn clone_boxed(& self) -> Labeled<std::sync::Arc<String>, i32> {
+            |        Labeled::new(self.clone())
+            |    }
+            |    fn label(& self, l__1: std::sync::Arc<String>) -> std::sync::Arc<String> {
+            |        self.label(l__1)
+            |    }
+            |}
+            |impl HolderTrait<i32> for LabeledSub {
+            |    fn clone_boxed(& self) -> Holder<i32> {
+            |        Holder::new(self.clone())
+            |    }
+            |    fn held(& self) -> i32 {
+            |        self.held()
+            |    }
+            |    fn pick(& self, x__1: i32) -> i32 {
+            |        self.pick(x__1)
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(LabeledSub, [Labeled<std::sync::Arc<String>, i32>, Holder<i32>]);
         """.trimMargin(),
     )
 

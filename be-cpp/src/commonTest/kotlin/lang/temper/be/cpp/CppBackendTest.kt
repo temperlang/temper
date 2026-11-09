@@ -2,6 +2,7 @@ package lang.temper.be.cpp
 
 import lang.temper.be.Backend
 import lang.temper.be.assertConnectedFallbacks
+import lang.temper.be.assertConnectedTypeFallbacks
 import lang.temper.be.assertGeneratedCode
 import lang.temper.be.generateCode
 import lang.temper.common.ListBackedLogSink
@@ -34,9 +35,9 @@ class CppBackendTest {
                 |    static temper::core::GlobalSlot<std::shared_ptr<temper::core::Console::Type>> console_0;
                 |    static temper::core::GlobalSlot<int32_t> x;
                 |  }
-                |  void greet(std::string name) {
+                |  void greet(temper::core::Str const & name) {
                 |    global_init_something();
-                |    temper::core::Console::log(temper_globals::console_0.value, "Hi:");
+                |    temper::core::Console::log(temper_globals::console_0.value, TEMPER_STR("Hi:"));
                 |    temper::core::Console::log(temper_globals::console_0.value, name);
                 |  }
                 |  void global_init_something() {
@@ -44,9 +45,9 @@ class CppBackendTest {
                 |        temper_globals::console_0.construct();
                 |        temper_globals::x.construct();
                 |        temper_globals::console_0.value = temper::core::Console::get_console();
-                |        greet("world");
+                |        greet(TEMPER_STR("world"));
                 |        temper_globals::x.value = 3;
-                |        greet(temper::core::cat("world ", temper::core::Int::toString(3)));
+                |        greet(temper::core::cat(TEMPER_STR("world "), temper::core::Int::toString(3)));
                 |    });
                 |  }
                 |}
@@ -57,7 +58,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  void global_init_something();
-                |  void greet(std::string);
+                |  void greet(temper::core::Str const &);
                 |}
                 |
             """,
@@ -328,8 +329,14 @@ class CppBackendTest {
                 |interface Animal {
                 |  public get name(): String;
                 |}
+                |interface Labeled<L> {
+                |  public label(l: L): String;
+                |}
                 |class Dog extends Animal {
                 |  public get name(): String { "Rex" }
+                |}
+                |class Tag extends Labeled<String> {
+                |  public label(l: String): String { l }
                 |}
                 |export let makeDog(): Animal {
                 |  return new Dog();
@@ -340,6 +347,11 @@ class CppBackendTest {
                 "virtual public Animal",
                 "virtual ~Animal",
                 "std::shared_ptr<Dog>",
+                "get_name() const override;",
+                // `Labeled<L>` takes `temper::core::Param<L>`, which is `Str const &` for `Str`, so the
+                // override matches it rather than only overloading it.
+                "label(temper::core::Param<L>) const;",
+                "label(temper::core::Str const &) const override;",
             ),
         )
     }
@@ -415,6 +427,26 @@ class CppBackendTest {
     }
 
     @Test
+    fun shifts() {
+        assertGeneratedContains(
+            temper = """
+                |export let shl(a: Int, b: Int): Int { a << b }
+                |export let shr(a: Int, b: Int): Int { a >> b }
+                |export let shl64(a: Int64, b: Int): Int64 { a << b }
+                |export let shr64(a: Int64, b: Int): Int64 { a >> b }
+            """,
+            cppContains = listOf(
+                // Shifts lower to core helpers that are defined for every operand,
+                // not native `<<` and `>>`.
+                "return temper::core::Int::shl(a, b);",
+                "return temper::core::Int::shr(",
+                "return temper::core::Int64::shl(",
+                "return temper::core::Int64::shr(",
+            ),
+        )
+    }
+
+    @Test
     fun forOfLoop() {
         assertGeneratedContains(
             temper = """
@@ -438,12 +470,14 @@ class CppBackendTest {
         assertGeneratedContains(
             temper = $$"""
                 |export let greet(name: String): String {
-                |  return "Hello, ${name}!";
+                |  return "Hello, ${name}! ??= ??/ ??> ???";
                 |}
             """,
             cppContains = listOf(
-                "std::string greet(std::string",
+                "temper::core::Str greet(temper::core::Str const & name)",
                 "temper::core::cat(",
+                // No trigraphs: `?\?` keeps a second `?` from starting one.
+                """"! ?\?= ?\?/ ?\?> ?\?\?"""",
             ),
         )
     }
@@ -558,7 +592,7 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                "std::string greet(",
+                "temper::core::Str greet(temper::core::NullableParam<temper::core::Str> name)",
                 "World",
             ),
         )
@@ -632,7 +666,7 @@ class CppBackendTest {
                 "struct Circle",
                 "virtual public",
                 "get_radius()",
-                "area",
+                "double virtual area() const override;",
             ),
         )
     }
@@ -658,6 +692,109 @@ class CppBackendTest {
     }
 
     @Test
+    fun instanceOfGenericClassKeepsTypeArguments() {
+        // `e is Append<T>` must check against `Append<T>`, since a bare class template
+        // name isn't a type, and so must the narrowed reads after it and `as`.
+        assertGeneratedContains(
+            temper = """
+                |export interface Effect<T> {}
+                |export class Append<T>(public text: String) extends Effect<T> {}
+                |export let texts<T>(effects: List<Effect<T>>): String {
+                |  let out = new StringBuilder();
+                |  for (let e of effects) {
+                |    if (e is Append<T>) { out.append(e.text); }
+                |  }
+                |  out.toString()
+                |}
+                |export let firstText<T>(effect: Effect<T>): String {
+                |  do { (effect as Append<T>).text } orelse "none"
+                |}
+            """,
+            cppContains = listOf(
+                "std::dynamic_pointer_cast<Append<T_",
+                "temper::core::checked_cast<Append<T_",
+            ),
+            cppLacks = listOf(
+                "std::dynamic_pointer_cast<Append>",
+            ),
+        )
+    }
+
+    @Test
+    fun getterBesideSetterIsConst() {
+        // A getter that only reads stays `const` though its property has a setter, so
+        // a `const` method can read it.
+        assertGeneratedContains(
+            temper = """
+                |export interface HasState {
+                |  get state(): Int;
+                |  set state(x: Int): Void;
+                |}
+                |export class Holder extends HasState {
+                |  private var current: Int = 0;
+                |  public get state(): Int { current }
+                |  public set state(x: Int): Void { current = x; }
+                |  public describe(): String { this.state.toString() }
+                |}
+            """,
+            cppContains = listOf(
+                "int32_t virtual get_state() const;",
+                "temper::core::Str virtual describe() const;",
+            ),
+        )
+    }
+
+    @Test
+    fun overridesTakeParametersLikeTheirInterface() {
+        // C++ overrides only on an exact signature match, so a type parameter goes as
+        // `Param<T>` (`T const &` for shared_ptr), and a reassigned parameter still goes
+        // by `const &`, copied into a local.
+        assertGeneratedContains(
+            temper = """
+                |export interface Wrapper<T> {
+                |  wrap(item: T, after: Wrapper<T>): T;
+                |}
+                |export class Box(public label: String) {}
+                |export class BoxWrapper extends Wrapper<Box> {
+                |  public wrap(item: Box, after: Wrapper<Box>): Box {
+                |    var it = item;
+                |    it = new Box("[" + it.label + "]");
+                |    it
+                |  }
+                |}
+                |export class Rewrapper extends Wrapper<Box> {
+                |  public wrap(var item: Box, after: Wrapper<Box>): Box {
+                |    item = new Box("<" + item.label + ">");
+                |    item
+                |  }
+                |}
+            """,
+            cppContains = listOf(
+                "T virtual wrap(temper::core::Param<T>, std::shared_ptr<Wrapper<T>> const &) const;",
+                "virtual wrap(std::shared_ptr<Box> const &, std::shared_ptr<Wrapper<std::shared_ptr<Box>>> const &)",
+                "std::shared_ptr<Box> item_",
+            ),
+        )
+    }
+
+    @Test
+    fun constnessFollowsGetterCalls() {
+        // A getter that hands out `this` isn't `const`, so neither is a method reading it.
+        assertGeneratedContains(
+            temper = """
+                |export class Node {
+                |  public get self(): Node { this }
+                |  public selfAgain(): Node { this.self }
+                |}
+            """,
+            cppContains = listOf(
+                "get_self();",
+                "selfAgain();",
+            ),
+        )
+    }
+
+    @Test
     fun operandsThatCanAffectEachOtherAreBoundInOrder() {
         assertGeneratedContains(
             temper = """
@@ -675,7 +812,7 @@ class CppBackendTest {
             // runs. Operands that cannot affect each other stay as they were.
             cppContains = listOf(
                 """
-                    |        temper::core::Console::log(temper_globals::console_0.value, temper::core::cat("args ", [&]() -> auto {
+                    |        temper::core::Console::log(temper_globals::console_0.value, temper::core::cat(TEMPER_STR("args "), [&]() -> auto {
                     |              auto arg_3 = temper_globals::c.value->bump();
                     |              auto arg_4 = temper_globals::c.value->get_n();
                     |              return show(arg_3, arg_4);
@@ -686,7 +823,7 @@ class CppBackendTest {
                     |                auto arg_6 = temper_globals::c.value->get_n();
                     |                return temper::core::Int::add(arg_5, arg_6);
                 """.trimMargin(),
-                """temper::core::cat("none ", show(temper_globals::c.value->get_n(), 1), " ", "2 3")""",
+                """temper::core::cat(TEMPER_STR("none "), show(temper_globals::c.value->get_n(), 1), TEMPER_STR(" "), TEMPER_STR("2 3"))""",
             ),
         )
     }
@@ -851,6 +988,15 @@ class CppBackendTest {
     )
 
     @Test
+    fun connectedTypeFallback() = assertConnectedTypeFallbacks(
+        factory = CppBackend.Cpp,
+        connectedFiles = mapOf(
+            "_connected.hpp" to "struct ViaConnected {\n    std::int32_t get() { return 1; }\n};\n",
+        ),
+        generatedClass = { "struct $it :" },
+    )
+
+    @Test
     fun connected() {
         assertGeneratedCode(
             backendConfig = Backend.Config.production,
@@ -954,7 +1100,7 @@ class CppBackendTest {
                 |                      global_init_something();
                 |                      return sum(i_15, 1);
                 |                    }
-                |                    int32_t length(temper::core::NullableParam<std::string> s) {
+                |                    int32_t length(temper::core::NullableParam<temper::core::Str> s) {
                 |                      global_init_something();
                 |                      return _connected::length(s);
                 |                    }
@@ -985,7 +1131,7 @@ class CppBackendTest {
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);
                 |                    int32_t inc(int32_t);
-                |                    int32_t length(temper::core::NullableParam<std::string>);
+                |                    int32_t length(temper::core::NullableParam<temper::core::Str>);
                 |                    int32_t length();
                 |                  }
                 |
@@ -1019,6 +1165,7 @@ class CppBackendTest {
 private fun assertGeneratedContains(
     temper: String,
     cppContains: List<String>,
+    cppLacks: List<String> = emptyList(),
 ) {
     val logSink = ListBackedLogSink()
     val result = generateCode(
@@ -1048,6 +1195,12 @@ private fun assertGeneratedContains(
         assertTrue(
             allContent.contains(expected),
             "Generated code should contain '$expected' but didn't.\n$allContent",
+        )
+    }
+    for (unexpected in cppLacks) {
+        assertTrue(
+            !allContent.contains(unexpected),
+            "Generated code shouldn't contain '$unexpected' but did.\n$allContent",
         )
     }
 }

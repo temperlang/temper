@@ -24,5 +24,16 @@ struct Counter {
     }
 };
 
+// Temper's connected Doubler class, with the members Temper would generate.
+struct Doubler {
+    static std::shared_ptr<Doubler> make() {
+        return std::make_shared<Doubler>();
+    }
+
+    std::int32_t twice(std::int32_t i) {
+        return i * 2;
+    }
+};
+
 } // namespace _connected
 } // namespace work

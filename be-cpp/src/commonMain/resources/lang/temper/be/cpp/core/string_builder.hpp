@@ -14,29 +14,33 @@ namespace temper {
                 return std::make_shared<std::ostringstream>();
             }
 
-            inline void append(const std::shared_ptr<std::ostringstream>& sb, std::string s) {
+            inline void append(const std::shared_ptr<std::ostringstream>& sb, const Str& s) {
                 *sb << s;
             }
 
-            inline void appendBetween(const std::shared_ptr<std::ostringstream>& sb, std::string s, int32_t start, int32_t end_pos) {
+            inline void appendBetween(const std::shared_ptr<std::ostringstream>& sb, const Str& s, int32_t start, int32_t end_pos) {
                 if (start < 0) {
                     start = 0;
+                }
+                if (end_pos > static_cast<int32_t>(s.size())) {
+                    end_pos = static_cast<int32_t>(s.size());
                 }
                 if (end_pos <= start) {
                     return;
                 }
-                *sb << s.substr(start, end_pos - start);
+                sb->write(s.data() + start, end_pos - start);
             }
 
             inline void appendCodepoint(const std::shared_ptr<std::ostringstream>& sb, int32_t cp) {
-                if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
+                if (!String::isValidCodepoint(cp)) {
                     bubble<void>("Invalid code point");
                 }
-                *sb << String::fromCodepoint(cp);
+                char bytes[4];
+                sb->write(bytes, String::encodeUtf8(cp, bytes));
             }
 
-            inline std::string toString(const std::shared_ptr<std::ostringstream>& sb) {
-                return sb->str();
+            inline Str toString(const std::shared_ptr<std::ostringstream>& sb) {
+                return Str::written_to(sb->rdbuf());
             }
 
             inline void clear(const std::shared_ptr<std::ostringstream>& sb) {

@@ -243,6 +243,22 @@ It was the worst of times.
 -
 ```
 
+### Negated code sets
+
+Some backends rewrite negated sets, so check that one reaching the start
+of Unicode works, and that a set whose first codes merge into one range
+keeps the codes after. Regex literals don't take `\u{…}` escapes, so
+build the former. More code sets are in the regex code sets test.
+
+    let notLow = oneOrMore(new CodeSet([new CodeRange(0, 0x2f)], true)).compiled();
+    console.log("not low: ${notLow.find("-/a🌍-").full.value}");
+    console.log("not space or >: ${/[^\t\n >]+/.find("ab>c").full.value}");
+
+```log
+not low: a🌍
+not space or >: ab
+```
+
 ### Word boundaries
 
 Define a regex for simple identifiers with word boundaries. For this case, be

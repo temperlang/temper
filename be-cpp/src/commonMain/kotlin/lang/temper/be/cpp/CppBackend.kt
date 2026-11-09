@@ -36,7 +36,16 @@ import lang.temper.name.LanguageLabel
  *
  * Each Temper module produces one .hpp (declarations) and one .cpp (definitions) file.
  * Temper classes and interfaces become C++ structs with `shared_ptr` wrapping via `Object<T>`.
- * Value types (Int, Int64, Float64, Boolean, String) are unwrapped to native C++ types.
+ * Value types (Int, Int64, Float64, Boolean) are unwrapped to native C++ types.
+ *
+ * ## Strings
+ *
+ * `String` is `temper::core::Str` (`temper-core/str.hpp`): immutable UTF-8 text shared through a
+ * `std::shared_ptr<std::string const>`, so a copy is a count bump. Literals are made once, on
+ * first use. Hand-written C++ can pass `std::string` or `char const *` where a `Str` is
+ * expected, and use a `Str` as a `std::string` (a copy) or, under C++17, a `std::string_view`.
+ * `Str` can't be changed in place, and containers of strings hold `Str`
+ * (`std::vector<temper::core::Str>`, `NullableParam<temper::core::Str>`, map keys).
  *
  * Inheritance uses `virtual public` for single-supertype classes to support diamond
  * hierarchies safely. Multi-inheritance uses plain `public` since the bases already
@@ -86,7 +95,7 @@ class CppBackend private constructor(
                 for (member in top.members) {
                     val rm = member.asReceiverMember() ?: continue
                     val hasOptional = rm.parameters.parameters.drop(1).any { it.optional }
-                    if (rm.mayYield || hasOptional) add(rm.dotName)
+                    if (rm.mayYield || hasOptional) add(rm.slotKey)
                 }
             }
         }
@@ -215,16 +224,14 @@ class CppBackend private constructor(
             // exception handling, JUnit-XML serialization, and file writing.
             appendLine("  return temper::core::run_tests({")
             for ((funcName, rawName) in testInfos) {
-                val escapedName = rawName
-                    .replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                appendLine("    { \"$escapedName\", []() -> temper::core::TestOutcome {")
+                val nameLiteral = CppBuilder.stringLiteralText(rawName)
+                appendLine("    { $nameLiteral, []() -> temper::core::TestOutcome {")
                 appendLine("      auto t = $testNs::Test::make();")
                 appendLine("      $funcName(t);")
                 appendLine("      auto mc = t->messagesCombined();")
                 appendLine(
                     "      std::string messages = temper::core::is_null(mc)" +
-                        " ? std::string() : (std::string)mc;",
+                        " ? std::string() : temper::core::Str(mc).str();",
                 )
                 appendLine("      return { (bool)t->get_passing(), messages };")
                 appendLine("    } },")
@@ -267,6 +274,7 @@ class CppBackend private constructor(
                 return declareResources(
                     dirPath("lang", "temper", "be", "cpp", "core"),
                     filePath("temper_bubble.hpp"),
+                    filePath("str.hpp"),
                     filePath("any_value.hpp"),
                     filePath("nullable_param.hpp"),
                     filePath("pair.hpp"),

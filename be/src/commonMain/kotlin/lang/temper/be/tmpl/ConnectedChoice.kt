@@ -1,5 +1,6 @@
 package lang.temper.be.tmpl
 
+import lang.temper.type.TypeShape
 import lang.temper.value.FnParts
 import lang.temper.value.MetadataMap
 import lang.temper.value.connectedBackendsFrom
@@ -8,10 +9,13 @@ import lang.temper.value.isAbstractPanicBody
 import lang.temper.value.isCore
 import lang.temper.value.valueContained
 
-// Pure-Temper fallbacks for user-space `@connected` functions.
+// Pure-Temper fallbacks for user-space `@connected` functions and classes.
 //
 // A user-space `@connected` function may have a Temper body, its reference implementation, and
 // may list the backends that have connected code, as in `@connected(["cpp", "rust"])`.
+// Likewise, a user-space `@connected` class may have a complete Temper implementation, with
+// bodies for all its methods, which works like a function's body below. The frontend rejects
+// classes with bodies for only some methods.
 // While translating to TmpL, each backend decides which to use:
 //
 // - A listed backend uses connected code from the module's connected files (`_connected.rs`,
@@ -25,13 +29,13 @@ import lang.temper.value.valueContained
 // - Under `--no-connected` ([lang.temper.be.Backend.Config.noConnected]), every backend uses
 //   the body wherever there is one.
 //
-// Backends recognize connected functions by their `@connected` metadata, so using the body
-// just means leaving that metadata off the TmpL declaration. The frontend never inlines or
-// precomputes calls to these functions, since the answer depends on the backend.
+// Backends recognize connected functions and classes by their `@connected` metadata, so using
+// the body just means leaving that metadata off the TmpL declaration. The frontend never
+// inlines or precomputes calls to these functions, since the answer depends on the backend.
 //
 // Core and std connected code isn't affected by any of this.
 
-/** Which implementation a backend uses for a user-space `@connected` function. */
+/** Which implementation a backend uses for a user-space `@connected` function or class. */
 internal enum class ConnectedChoice {
     /** Call the backend's connected code from its connected files. */
     Connected,
@@ -41,11 +45,12 @@ internal enum class ConnectedChoice {
 }
 
 /**
- * Decides which implementation a backend uses for a user-space `@connected` function.
+ * Decides which implementation a backend uses for a user-space `@connected` function or class.
  *
  * @param listedBackends from `@connected([...])`, or null for a plain `@connected`.
- * @param hasBody whether the function has a Temper body. Lists require bodies, which the
- *   frontend checks, so without one, we use connected code as before lists.
+ * @param hasBody whether the function has a Temper body, or the class bodies for all its
+ *   methods. Lists require bodies, which the frontend checks, so without one, we use connected
+ *   code as before lists.
  * @param backendNames the names by which [listedBackends] can mean this backend.
  */
 internal fun chooseConnected(
@@ -84,6 +89,35 @@ internal fun TmpLTranslator.metadataForConnectedChoice(
     val choice = chooseConnected(
         listedBackends = listedBackends,
         hasBody = !parts.body.isAbstractPanicBody(),
+        backendNames = backend.connectedBackendNames,
+        noConnected = backend.config.noConnected,
+    )
+    return when (choice) {
+        ConnectedChoice.Body -> metadata.filter { it.key.symbol != connectedSymbol }
+        ConnectedChoice.Connected -> metadata
+    }
+}
+
+/**
+ * Adjusts the TmpL [metadata] of a type declaration per [chooseConnected], dropping
+ * `@connected` metadata when the class's Temper implementation should be used, so the
+ * backend generates it like any other class.
+ */
+internal fun TmpLTranslator.typeMetadataForConnectedChoice(
+    typeShape: TypeShape,
+    metadata: List<TmpL.DeclarationMetadata>,
+): List<TmpL.DeclarationMetadata> {
+    if (metadata.none { it.key.symbol == connectedSymbol }) {
+        return metadata
+    }
+    // Leave core and std alone, as their connected code works differently.
+    if (document.isCore || libraryConfigurations.currentLibraryConfiguration.libraryName.isStdLib) {
+        return metadata
+    }
+    val backend = dependencyResolver.backend
+    val choice = chooseConnected(
+        listedBackends = connectedBackendsFrom(typeShape.metadata[connectedSymbol]?.lastOrNull()),
+        hasBody = typeShape.bodilessMethods.isEmpty(),
         backendNames = backend.connectedBackendNames,
         noConnected = backend.config.noConnected,
     )

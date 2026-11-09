@@ -12,7 +12,7 @@ std::int32_t sum(std::int32_t i, std::int32_t j, std::int32_t bonus);
 
 std::int32_t prod(std::shared_ptr<Hidden> const& hidden, std::int32_t j);
 
-int32_t length(temper::core::NullableParam<std::string> s);
+int32_t length(temper::core::NullableParam<temper::core::Str> s);
 
 std::int32_t twice(std::int32_t i);
 

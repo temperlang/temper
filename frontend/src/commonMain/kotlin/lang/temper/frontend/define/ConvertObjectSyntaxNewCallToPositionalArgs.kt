@@ -8,8 +8,7 @@ import lang.temper.env.InterpMode
 import lang.temper.interp.EmptyEnvironment
 import lang.temper.interp.LazyActualsList
 import lang.temper.type.MethodKind
-import lang.temper.type.NominalType
-import lang.temper.type.TypeShape
+import lang.temper.type2.DefinedNonNullType
 import lang.temper.value.BlockTree
 import lang.temper.value.CallTree
 import lang.temper.value.TNull
@@ -17,7 +16,7 @@ import lang.temper.value.firstArgumentIndex
 import lang.temper.value.freeTree
 import lang.temper.value.isNewCall
 import lang.temper.value.parameterNameSymbols
-import lang.temper.value.staticTypeContained
+import lang.temper.value.reifiedTypeContained
 import kotlin.math.max
 import kotlin.math.min
 
@@ -37,8 +36,8 @@ internal fun convertObjectSyntax(root: BlockTree) {
 }
 
 internal fun convertObjectSyntaxNewCallToPositionalArgs(newCall: CallTree) {
-    val constructedType = newCall.childOrNull(1)?.staticTypeContained as? NominalType ?: return
-    val typeShape = constructedType.definition as? TypeShape ?: return
+    val constructedType = newCall.childOrNull(1)?.reifiedTypeContained?.type2 as? DefinedNonNullType ?: return
+    val typeShape = constructedType.definition
     val argList = newCall.children.subListToEnd(newCall.firstArgumentIndex)
     if (argList.isEmpty()) {
         return

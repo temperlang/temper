@@ -369,6 +369,11 @@ class GenerateCodeStageTest {
     )
 
     @Test
+    fun bubbleInForOfOverList() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/bubble-in-for-of-over-list"),
+    )
+
+    @Test
     fun awaiting() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/awaiting"),
         stagingFlags = setOf(StagingFlags.allowTopLevelAwait),
@@ -427,6 +432,13 @@ class GenerateCodeStageTest {
     @Test
     fun connectedDefaults() = assertModuleAtStage(
         stageTestDir = StageTestDir("generate-code/connected-defaults"),
+    )
+
+    @Test
+    fun connectedFallback() = assertModuleAtStage(
+        stageTestDir = StageTestDir("generate-code/connected-fallback"),
+        // A connected class's Temper implementation must be complete, and listing
+        // backends requires one. Default arguments stay disallowed.
     )
 
     @Test

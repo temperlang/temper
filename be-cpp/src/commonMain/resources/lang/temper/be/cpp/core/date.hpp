@@ -47,7 +47,7 @@ namespace temper {
             }
 
             template<class D>
-            std::string toString(
+            Str toString(
             const std::shared_ptr<D>& d,
             typename std::enable_if<
             std::is_same<decltype(std::declval<D>().year), int32_t>::value
@@ -99,7 +99,7 @@ namespace temper {
             }
 
             template<class D>
-            std::shared_ptr<D> fromIso(std::string isoString) {
+            std::shared_ptr<D> fromIso(const Str& isoString) {
                 size_t pos = 0;
                 bool is_negative = false;
                 if (!isoString.empty() && isoString[0] == '-') {

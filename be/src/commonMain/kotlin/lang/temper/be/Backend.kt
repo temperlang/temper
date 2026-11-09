@@ -46,6 +46,7 @@ import lang.temper.log.FilePathSegment
 import lang.temper.log.FileRelatedCodeLocation
 import lang.temper.log.LogSink
 import lang.temper.log.MessageTemplate
+import lang.temper.log.Position
 import lang.temper.log.bannedPathSegmentNames
 import lang.temper.log.filePath
 import lang.temper.log.last
@@ -59,6 +60,7 @@ import lang.temper.name.ModuleLocation
 import lang.temper.name.ModuleName
 import lang.temper.name.TemperName
 import lang.temper.name.identifiers.IdentStyle
+import lang.temper.stage.Stage
 import lang.temper.value.Fail
 import lang.temper.value.OccasionallyHelpful
 import lang.temper.value.Value
@@ -168,6 +170,15 @@ abstract class Backend<SELF : Backend<SELF>>(
                 val result = module.runResult
                 if (result is Fail) {
                     result.info?.logTo(logSink)
+                }
+                // A module that stopped early may have no error of its own to explain why.
+                if (module.ok && module.stoppedEarly) {
+                    logSink.log(
+                        level = Log.Error,
+                        template = MessageTemplate.StoppedEarly,
+                        pos = Position(module.loc, 0, 0),
+                        values = listOf(Stage.after(module.stageCompleted) ?: Stage.GenerateCode),
+                    )
                 }
             }
             logSink.log(

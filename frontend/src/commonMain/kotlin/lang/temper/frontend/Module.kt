@@ -242,6 +242,14 @@ class Module(
     private var inProgress = false
 
     override val ok get() = _ok
+
+    /**
+     * True if the continue condition stopped processing, for example because the
+     * module used up its interpreter step budget.
+     * The module can't advance further, though it may still be [ok].
+     */
+    val stoppedEarly get() = continueConditionReturnedFalse
+
     override val filePositions get() = _filePositions
     val sources get() = _sources
 

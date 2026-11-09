@@ -19,13 +19,13 @@ namespace temper {
                 return std::min(a, b);
             }
 
-            inline std::string toString(int64_t i) {
+            inline Str toString(int64_t i) {
                 return std::to_string(i);
             }
 
-            inline std::string toString(int64_t i, int32_t radix) {
+            inline Str toString(int64_t i, int32_t radix) {
                 if (radix < 2 || radix > 36) {
-                    bubble<std::string>("radix must be between 2 and 36");
+                    bubble<Str>("radix must be between 2 and 36");
                 }
                 if (radix == 10) {
                     return std::to_string(i);
@@ -140,6 +140,7 @@ namespace temper {
                 return static_cast<int64_t>(0ull - static_cast<uint64_t>(a));
             }
 
+            // Shifts as in Int::shl, with the count masked to 63.
             inline int64_t shl(int64_t a, int64_t b) {
                 return static_cast<int64_t>(static_cast<uint64_t>(a) << (b & 63));
             }

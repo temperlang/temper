@@ -65,6 +65,38 @@ Hi 🌏!!
 Back to square zero.
 ```
 
+## Question marks
+
+Runs of question marks stay as written, even where C++ would read them as
+trigraphs (`??=`, `??/`, `??>`).
+
+    builder.clear();
+    builder.append("a??=b??/c??>d???e");
+    let marks = builder.toString();
+    console.log(marks);
+    console.log("Same: ${marks == "a??=b??/c??>d???e"}");
+
+```log
+a??=b??/c??>d???e
+Same: true
+```
+
+A digit after an escaped character stays a digit, even where C++ writes
+that character as an octal escape (`\001`, `\342`), which takes at most
+three digits. Building the same text at run time uses no escapes.
+
+    builder.clear();
+    builder.append("??");
+    builder.appendCodePoint(1) orelse console.log("No U+1.");
+    builder.append("0");
+    builder.appendCodePoint(0x20AC) orelse console.log("No euro.");
+    builder.append("1");
+    console.log("Digits after escapes: ${builder.toString() == "??\u{1}0\u{20AC}1"}");
+
+```log
+Digits after escapes: true
+```
+
 
 ## StringBuilder property
 

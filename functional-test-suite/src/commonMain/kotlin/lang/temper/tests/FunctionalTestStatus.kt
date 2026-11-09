@@ -26,18 +26,18 @@ val functionalTestStatus: Map<Ft, List<IssueCheck>> = buildMap {
     issue(Ft.ControlFlowAsyncWaiters, lua(144))
     issue(Ft.ControlFlowAwaitInLoop, cpp(520), lua(144))
     issue(Ft.RegexZeroAdvance, lua(166))
+    // Lua's regex runtime fails on these sets, and ranges up to U+10FFFF
+    // are very slow there.
+    issue(Ft.RegexCodeSets, lua(166))
     issue(Ft.NamesNonascii, lua(228))
     214.let {
         issue(Ft.TypesNetresponse, cpp(it), interp(it), lua(it))
         issue(Ft.TypesNetresponseNotFound, cpp(it), interp(it), lua(it))
     }
-    // Connected types have no interpreter fallback yet; #637 covers only
-    // connected functions.
-    issue(Ft.TypesConnected, interp(456))
     issue(Ft.ClassesWriteBackThroughField, cpp(539))
     onlyFails(
         cpp(198),
-        Ft.RegexMatch,
+        Ft.RegexCodeSets,
         Ft.TypesNetresponse,
     )
     onlyPasses(

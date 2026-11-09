@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include "temper_bubble.hpp"
+#include "str.hpp"
 #include "any_value.hpp"
 #include "nullable_param.hpp"
 
@@ -16,6 +17,25 @@ namespace temper {
         struct NonDeduced {
             typedef T type;
         };
+
+        // Whether a type is passed by `const &` (shared_ptr, std::function, and Str), matching
+        // the translator's choice for concrete types.
+        template<class T>
+        struct IsIndirect : std::false_type {};
+
+        template<class T>
+        struct IsIndirect<std::shared_ptr<T>> : std::true_type {};
+
+        template<class T>
+        struct IsIndirect<std::function<T>> : std::true_type {};
+
+        template<>
+        struct IsIndirect<Str> : std::true_type {};
+
+        // How a virtual member takes a type parameter's value, so a template's method
+        // and its overrides for concrete types have the same signature.
+        template<class T>
+        using Param = typename std::conditional<IsIndirect<T>::value, T const &, T>::type;
 
         struct Never {
             template<class T>
@@ -81,16 +101,16 @@ namespace temper {
         }
 
         template<class First, class... Rest>
-        void cat_impl(std::stringstream& dst, First fst, Rest... rest) {
+        void cat_impl(std::stringstream& dst, const First& fst, const Rest&... rest) {
             dst << fst;
             cat_impl(dst, rest...);
         }
 
         template<class... Args>
-        std::string cat(Args... args) {
+        Str cat(const Args&... args) {
             std::stringstream ss;
             cat_impl(ss, args...);
-            return ss.str();
+            return Str::written_to(ss.rdbuf());
         }
 
         template<class T = void>

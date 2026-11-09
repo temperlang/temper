@@ -95,6 +95,18 @@ class FunctionMacroStageTest {
         module.deliverContent(root)
     }
 
+    /**
+     * The contextual autoescaping optimization picks escapers at compile time
+     * for types that extend one named `ContextualAutoescapingAccumulator`.
+     * Nothing else in Temper's tests triggers it, so this uses a toy accumulator.
+     * Running to GenerateCode checks that later stages accept the rewritten calls.
+     */
+    @Test
+    fun contextualAutoescaping() = assertModuleAtStage(
+        stageTestDir = StageTestDir("function-macro/contextual-autoescaping"),
+        stage = Stage.GenerateCode,
+    )
+
     @Test
     fun multiInitErrorInClass() = assertModuleAtStage(
         stageTestDir = StageTestDir("function-macro/multi-init-error-in-class"),

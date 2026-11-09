@@ -32,19 +32,15 @@ namespace temper {
                 return any_box(std::forward<Arg>(arg));
             }
 
-            template<class Elem>
-            void make_push(std::shared_ptr<std::vector<Elem>>) {}
-
-            template<class Elem, class First, class... Rest>
-            void make_push(const std::shared_ptr<std::vector<Elem>>& list, First first, Rest... rest) {
-                list->push_back(convert_elem<Elem>(first));
-                make_push(list, rest...);
-            }
-
             template<class Elem, class... Args>
             std::shared_ptr<std::vector<Elem>> make(Args... args) {
                 std::shared_ptr<std::vector<Elem>> list = std::make_shared<std::vector<Elem>>();
-                make_push<Elem>(list, args...);
+                list->reserve(sizeof...(Args));
+                // Expand the pack in a braced list, which runs in order, rather than
+                // recursing, which copied the rest of the pack at each step and ran past
+                // the compiler's template depth for long list literals.
+                int expand[] = {0, (list->push_back(convert_elem<Elem>(std::move(args))), 0)...};
+                (void) expand;
                 return list;
             }
 
@@ -137,7 +133,7 @@ namespace temper {
             }
 
             template<class Elem>
-            std::string join(const std::shared_ptr<std::vector<Elem>>& list, const std::string& separator) {
+            Str join(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator) {
                 std::ostringstream oss;
                 bool first = true;
                 for (const Elem& elem : *list) {
@@ -147,11 +143,11 @@ namespace temper {
                     oss << elem;
                     first = false;
                 }
-                return oss.str();
+                return Str::written_to(oss.rdbuf());
             }
 
             template<class Elem, class F>
-            std::string join(const std::shared_ptr<std::vector<Elem>>& list, const std::string& separator, F fn) {
+            Str join(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator, F fn) {
                 std::ostringstream oss;
                 bool first = true;
                 for (const Elem& elem : *list) {
@@ -161,7 +157,7 @@ namespace temper {
                     oss << fn(elem);
                     first = false;
                 }
-                return oss.str();
+                return Str::written_to(oss.rdbuf());
             }
 
             template<class Elem, class F>

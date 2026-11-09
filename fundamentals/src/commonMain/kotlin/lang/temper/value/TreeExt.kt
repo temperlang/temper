@@ -2,7 +2,6 @@ package lang.temper.value
 
 import lang.temper.name.Symbol
 import lang.temper.name.TemperName
-import lang.temper.type.StaticType
 import lang.temper.type2.Nullity
 import lang.temper.type2.withType
 
@@ -48,9 +47,6 @@ val Tree.booleanContained: Boolean? get() = valueContained(TBoolean)
 /** [valueContained] for [TType] */
 val Tree.reifiedTypeContained: ReifiedType? get() = valueContained(TType)
 
-val Tree.staticTypeContained: StaticType?
-    get() = this.reifiedTypeContained?.type
-
 val Tree.nameContained: TemperName? get() = (this as? NameLeaf)?.content
 
 fun Tree.typeDefContained() = reifiedTypeContained?.type2?.let {
@@ -72,7 +68,6 @@ val TEdge.symbolContained get() = this.target.symbolContained
 val TEdge.booleanContained get() = this.target.booleanContained
 val TEdge.functionContained get() = this.target.functionContained
 val TEdge.reifiedTypeContained get() = this.target.reifiedTypeContained
-val TEdge.staticTypeContained get() = this.target.staticTypeContained
 val TEdge.nameContained get() = this.target.nameContained
 fun <T : Any> TEdge.valueContained(rt: TypeTag<T>): T? {
     return rt.unpackOrNull(valueContained)
