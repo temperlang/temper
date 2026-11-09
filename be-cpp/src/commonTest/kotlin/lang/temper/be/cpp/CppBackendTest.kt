@@ -35,9 +35,9 @@ class CppBackendTest {
                 |    static temper::core::GlobalSlot<std::shared_ptr<temper::core::Console::Type>> console_0;
                 |    static temper::core::GlobalSlot<int32_t> x;
                 |  }
-                |  void greet(std::string name) {
+                |  void greet(temper::core::Str const & name) {
                 |    global_init_something();
-                |    temper::core::Console::log(temper_globals::console_0.value, "Hi:");
+                |    temper::core::Console::log(temper_globals::console_0.value, TEMPER_STR("Hi:"));
                 |    temper::core::Console::log(temper_globals::console_0.value, name);
                 |  }
                 |  void global_init_something() {
@@ -45,9 +45,9 @@ class CppBackendTest {
                 |        temper_globals::console_0.construct();
                 |        temper_globals::x.construct();
                 |        temper_globals::console_0.value = temper::core::Console::get_console();
-                |        greet("world");
+                |        greet(TEMPER_STR("world"));
                 |        temper_globals::x.value = 3;
-                |        greet(temper::core::cat("world ", temper::core::Int::toString(3)));
+                |        greet(temper::core::cat(TEMPER_STR("world "), temper::core::Int::toString(3)));
                 |    });
                 |  }
                 |}
@@ -58,7 +58,7 @@ class CppBackendTest {
                 |#include <temper-core/core.hpp>
                 |namespace my_test_library {
                 |  void global_init_something();
-                |  void greet(std::string);
+                |  void greet(temper::core::Str const &);
                 |}
                 |
             """,
@@ -329,8 +329,14 @@ class CppBackendTest {
                 |interface Animal {
                 |  public get name(): String;
                 |}
+                |interface Labeled<L> {
+                |  public label(l: L): String;
+                |}
                 |class Dog extends Animal {
                 |  public get name(): String { "Rex" }
+                |}
+                |class Tag extends Labeled<String> {
+                |  public label(l: String): String { l }
                 |}
                 |export let makeDog(): Animal {
                 |  return new Dog();
@@ -341,6 +347,11 @@ class CppBackendTest {
                 "virtual public Animal",
                 "virtual ~Animal",
                 "std::shared_ptr<Dog>",
+                "get_name() const override;",
+                // `Labeled<L>` takes `temper::core::Param<L>`, which is `Str const &` for `Str`, so the
+                // override matches it rather than only overloading it.
+                "label(temper::core::Param<L>) const;",
+                "label(temper::core::Str const &) const override;",
             ),
         )
     }
@@ -463,7 +474,7 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                "std::string greet(std::string",
+                "temper::core::Str greet(temper::core::Str const & name)",
                 "temper::core::cat(",
                 // No trigraphs: `?\?` keeps a second `?` from starting one.
                 """"! ?\?= ?\?/ ?\?> ?\?\?"""",
@@ -581,7 +592,7 @@ class CppBackendTest {
                 |}
             """,
             cppContains = listOf(
-                "std::string greet(",
+                "temper::core::Str greet(temper::core::NullableParam<temper::core::Str> name)",
                 "World",
             ),
         )
@@ -655,7 +666,7 @@ class CppBackendTest {
                 "struct Circle",
                 "virtual public",
                 "get_radius()",
-                "area",
+                "double virtual area() const override;",
             ),
         )
     }
@@ -728,7 +739,7 @@ class CppBackendTest {
             """,
             cppContains = listOf(
                 "int32_t virtual get_state() const;",
-                "std::string virtual describe() const;",
+                "temper::core::Str virtual describe() const;",
             ),
         )
     }
@@ -801,7 +812,7 @@ class CppBackendTest {
             // runs. Operands that cannot affect each other stay as they were.
             cppContains = listOf(
                 """
-                    |        temper::core::Console::log(temper_globals::console_0.value, temper::core::cat("args ", [&]() -> auto {
+                    |        temper::core::Console::log(temper_globals::console_0.value, temper::core::cat(TEMPER_STR("args "), [&]() -> auto {
                     |              auto arg_3 = temper_globals::c.value->bump();
                     |              auto arg_4 = temper_globals::c.value->get_n();
                     |              return show(arg_3, arg_4);
@@ -812,7 +823,7 @@ class CppBackendTest {
                     |                auto arg_6 = temper_globals::c.value->get_n();
                     |                return temper::core::Int::add(arg_5, arg_6);
                 """.trimMargin(),
-                """temper::core::cat("none ", show(temper_globals::c.value->get_n(), 1), " ", "2 3")""",
+                """temper::core::cat(TEMPER_STR("none "), show(temper_globals::c.value->get_n(), 1), TEMPER_STR(" "), TEMPER_STR("2 3"))""",
             ),
         )
     }
@@ -1089,7 +1100,7 @@ class CppBackendTest {
                 |                      global_init_something();
                 |                      return sum(i_15, 1);
                 |                    }
-                |                    int32_t length(temper::core::NullableParam<std::string> s) {
+                |                    int32_t length(temper::core::NullableParam<temper::core::Str> s) {
                 |                      global_init_something();
                 |                      return _connected::length(s);
                 |                    }
@@ -1120,7 +1131,7 @@ class CppBackendTest {
                 |                    int32_t sum(int32_t, int32_t, temper::core::NullableParam<int32_t>);
                 |                    int32_t sum(int32_t, int32_t);
                 |                    int32_t inc(int32_t);
-                |                    int32_t length(temper::core::NullableParam<std::string>);
+                |                    int32_t length(temper::core::NullableParam<temper::core::Str>);
                 |                    int32_t length();
                 |                  }
                 |

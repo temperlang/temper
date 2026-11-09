@@ -445,6 +445,18 @@ class CppBuilder(
 
     fun literal(value: String): Cpp.LiteralExpr = literal(raw(stringLiteralText(value)))
 
+    /**
+     * A Temper String literal: `temper::core::Str()` when empty, otherwise a `TEMPER_STR(...)`
+     * made once, on first use, and shared from then on.
+     */
+    fun strLiteral(value: String): Cpp.LiteralExpr {
+        if (value.isEmpty()) {
+            return literal(raw("$TEMPER_CORE_NAMESPACE::Str()"))
+        }
+        val (quoted, sizeIfNul) = quotedUtf8(value)
+        return literal(raw(if (sizeIfNul != null) "TEMPER_STR($quoted, $sizeIfNul)" else "TEMPER_STR($quoted)"))
+    }
+
     fun name(resolvedName: ResolvedName): Cpp.SingleName = singleName(cppNames.name(resolvedName))
 
     fun name(id: TmpL.Id): Cpp.SingleName = singleName(cppNames.name(id))
@@ -702,12 +714,23 @@ class CppBuilder(
 
         /** C++ source text for a string literal holding [value], as UTF-8. */
         internal fun stringLiteralText(value: String): String {
+            val (quoted, sizeIfNul) = quotedUtf8(value)
+            // Use std::string(data, length) constructor for strings with embedded null bytes
+            // since const char* constructor stops at the first \0
+            return if (sizeIfNul != null) "std::string($quoted, $sizeIfNul)" else quoted
+        }
+
+        /**
+         * [value] as a quoted C++ literal of its UTF-8 bytes, and its size in bytes when it has
+         * a NUL, which a `char const *` would stop at.
+         */
+        internal fun quotedUtf8(value: String): Pair<String, Int?> {
             // Write non-ASCII as octal escapes of its UTF-8 bytes, so the source stays ASCII and
             // the literal holds UTF-8 whatever the compiler's execution character set. `?` (0x3F)
             // never occurs inside a multi-byte sequence, so the trigraph check below is safe on
             // bytes.
             val utf8Bytes = value.toByteArray(Charsets.UTF_8)
-            val sb = StringBuilder()
+            val sb = StringBuilder("\"")
             var hasNullByte = false
             var prev = '\u0000'
             for (b in utf8Bytes) {
@@ -729,13 +752,8 @@ class CppBuilder(
                 }
                 prev = ch
             }
-            // Use std::string(data, length) constructor for strings with embedded null bytes
-            // since const char* constructor stops at the first \0
-            return if (hasNullByte) {
-                "std::string(\"$sb\", ${utf8Bytes.size})"
-            } else {
-                "\"$sb\""
-            }
+            sb.append('"')
+            return sb.toString() to if (hasNullByte) utf8Bytes.size else null
         }
     }
 }

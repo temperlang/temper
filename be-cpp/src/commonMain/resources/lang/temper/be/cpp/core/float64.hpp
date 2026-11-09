@@ -149,7 +149,7 @@ namespace temper {
                 return static_cast<int64_t>(f);
             }
 
-            inline std::string toString(double f) {
+            inline Str toString(double f) {
                 if (std::isnan(f)) {
                     return "NaN";
                 }
@@ -245,8 +245,8 @@ namespace temper {
             }
 
             template<class T>
-            inline std::string toString(const NullableParam<T>& v) {
-                return v.has_value ? toString(v.value) : "null";
+            inline Str toString(const NullableParam<T>& v) {
+                return v.has_value ? toString(v.value) : TEMPER_STR("null");
             }
 
         }

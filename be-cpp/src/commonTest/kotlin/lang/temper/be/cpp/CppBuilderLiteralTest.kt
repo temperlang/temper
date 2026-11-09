@@ -57,6 +57,14 @@ class CppBuilderLiteralTest {
     }
 
     @Test
+    fun strLiterals() {
+        val cpp = CppBuilder(CppNames())
+        assertEquals("temper::core::Str()", cpp.strLiteral("").toString())
+        assertEquals("TEMPER_STR(\"hi\")", cpp.strLiteral("hi").toString())
+        assertEquals("TEMPER_STR(\"ab\\000cd\", 5)", cpp.strLiteral("ab\u0000cd").toString())
+    }
+
+    @Test
     fun multiByteUtf8() {
         // Euro sign U+20AC is 3 bytes in UTF-8: E2 82 AC
         val result = literalString("\u20AC")
