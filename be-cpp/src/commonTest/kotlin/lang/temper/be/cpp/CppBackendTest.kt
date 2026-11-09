@@ -427,6 +427,26 @@ class CppBackendTest {
     }
 
     @Test
+    fun shifts() {
+        assertGeneratedContains(
+            temper = """
+                |export let shl(a: Int, b: Int): Int { a << b }
+                |export let shr(a: Int, b: Int): Int { a >> b }
+                |export let shl64(a: Int64, b: Int): Int64 { a << b }
+                |export let shr64(a: Int64, b: Int): Int64 { a >> b }
+            """,
+            cppContains = listOf(
+                // Shifts lower to core helpers that are defined for every operand,
+                // not native `<<` and `>>`.
+                "return temper::core::Int::shl(a, b);",
+                "return temper::core::Int::shr(",
+                "return temper::core::Int64::shl(",
+                "return temper::core::Int64::shr(",
+            ),
+        )
+    }
+
+    @Test
     fun forOfLoop() {
         assertGeneratedContains(
             temper = """
@@ -450,12 +470,14 @@ class CppBackendTest {
         assertGeneratedContains(
             temper = $$"""
                 |export let greet(name: String): String {
-                |  return "Hello, ${name}!";
+                |  return "Hello, ${name}! ??= ??/ ??> ???";
                 |}
             """,
             cppContains = listOf(
                 "temper::core::Str greet(temper::core::Str const & name)",
                 "temper::core::cat(",
+                // No trigraphs: `?\?` keeps a second `?` from starting one.
+                """"! ?\?= ?\?/ ?\?> ?\?\?"""",
             ),
         )
     }

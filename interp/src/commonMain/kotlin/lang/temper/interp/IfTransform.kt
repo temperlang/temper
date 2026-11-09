@@ -270,7 +270,8 @@ private fun anyExhaustiveSealedType(branches: MutableList<Pair<TEdge?, TEdge>>):
             else -> {}
         }
         val subtype = condition.childOrNull(2)?.reifiedTypeContained ?: continue@branches
-        val subdef = subtype.type2.definition
+        // Only type shapes can be among a sealed type's sub-types.
+        val subdef = subtype.type2.definition as? TypeShape ?: continue@branches
         supertypes@ for (supertype in subdef.superTypes) {
             val supershape = supertype.definition as? TypeShape
             val sealedSubs = supershape?.sealedSubTypes ?: continue@supertypes

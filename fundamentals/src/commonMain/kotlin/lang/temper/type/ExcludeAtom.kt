@@ -51,7 +51,7 @@ fun excludeNullAndBubble(t: Type2): Type2 = withType(
 fun canBeNull(t: StaticType): Boolean = anyAtom(t) {
     when (val d = (it as? NominalType)?.definition) {
         is TypeFormal -> {
-            SuperTypeTree(d.superTypes)[WellKnownTypes.nullTypeDefinition].isNotEmpty()
+            SuperTypeTree(d.upperBounds)[WellKnownTypes.nullTypeDefinition].isNotEmpty()
         }
         is TypeShapeImpl ->
             d == WellKnownTypes.nullTypeDefinition ||

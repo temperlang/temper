@@ -17,9 +17,21 @@ internal fun safeCppNamespace(name: String): String =
     if (name in cppReservedNamespaces) "temper_$name" else name
 
 fun Cpp.Expr.withComment(text: String, prefix: Boolean = true): Cpp.Expr = if (prefix) {
-    Cpp.PreComment(pos, Cpp.Raw(pos, text), this)
+    Cpp.PreComment(pos, Cpp.Raw(pos, commentText(text)), this)
 } else {
-    Cpp.PostComment(pos, this, Cpp.Raw(pos, text))
+    Cpp.PostComment(pos, this, Cpp.Raw(pos, commentText(text)))
+}
+
+/**
+ * Keeps comment [text] free of trigraphs, which C++14 replaces even in comments, where
+ * `??/` at the end of a `//` line would splice the next line into the comment.
+ */
+internal fun commentText(text: String): String {
+    var result = text
+    while ("??" in result) {
+        result = result.replace("??", "? ?")
+    }
+    return result
 }
 
 class CppBuilder(
@@ -431,16 +443,7 @@ class CppBuilder(
         return literal(raw("$value"))
     }
 
-    fun literal(value: String): Cpp.LiteralExpr {
-        val (quoted, sizeIfNul) = quoteUtf8(value)
-        // Use std::string(data, length) constructor for strings with embedded null bytes
-        // since const char* constructor stops at the first \0
-        return if (sizeIfNul != null) {
-            literal(raw("std::string($quoted, $sizeIfNul)"))
-        } else {
-            literal(raw(quoted))
-        }
-    }
+    fun literal(value: String): Cpp.LiteralExpr = literal(raw(stringLiteralText(value)))
 
     /**
      * A Temper String literal: `temper::core::Str()` when empty, otherwise a `TEMPER_STR(...)`
@@ -450,35 +453,8 @@ class CppBuilder(
         if (value.isEmpty()) {
             return literal(raw("$TEMPER_CORE_NAMESPACE::Str()"))
         }
-        val (quoted, sizeIfNul) = quoteUtf8(value)
+        val (quoted, sizeIfNul) = quotedUtf8(value)
         return literal(raw(if (sizeIfNul != null) "TEMPER_STR($quoted, $sizeIfNul)" else "TEMPER_STR($quoted)"))
-    }
-
-    /**
-     * [value] as a quoted C++ literal of its UTF-8 bytes, and its size in bytes when it has a
-     * NUL, which a `char const *` would stop at.
-     */
-    private fun quoteUtf8(value: String): Pair<String, Int?> {
-        // Encode the whole string as UTF-8 bytes for correct multi-byte character handling
-        val utf8Bytes = value.toByteArray(Charsets.UTF_8)
-        val sb = StringBuilder("\"")
-        var hasNullByte = false
-        for (b in utf8Bytes) {
-            @Suppress("MagicNumber") // 0xFF mask for unsigned byte conversion
-            val unsigned = b.toInt() and 0xFF
-            if (unsigned == 0) hasNullByte = true
-            val ch = unsigned.toChar()
-            val escaped = escapeCodes[ch]
-            if (escaped != null) {
-                sb.append(escaped)
-            } else if (ch in ' '..'~') {
-                sb.append(ch)
-            } else {
-                sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(OCTAL_ESCAPE_DIGITS, '0')}")
-            }
-        }
-        sb.append('"')
-        return sb.toString() to if (hasNullByte) utf8Bytes.size else null
     }
 
     fun name(resolvedName: ResolvedName): Cpp.SingleName = singleName(cppNames.name(resolvedName))
@@ -504,7 +480,7 @@ class CppBuilder(
         return singleName(CppName(safeCppNamespace(base)))
     }
 
-    fun comment(text: String): Cpp.Comment = comment(raw(text))
+    fun comment(text: String): Cpp.Comment = comment(raw(commentText(text)))
 
     fun pragma(text: String): Cpp.Pragma = pragma(raw(text))
     fun pragma(vararg parts: String): Cpp.Pragma = pragma(parts.joinToString(" "))
@@ -735,5 +711,49 @@ class CppBuilder(
             39.toChar() to "\\'",
             92.toChar() to "\\\\",
         )
+
+        /** C++ source text for a string literal holding [value], as UTF-8. */
+        internal fun stringLiteralText(value: String): String {
+            val (quoted, sizeIfNul) = quotedUtf8(value)
+            // Use std::string(data, length) constructor for strings with embedded null bytes
+            // since const char* constructor stops at the first \0
+            return if (sizeIfNul != null) "std::string($quoted, $sizeIfNul)" else quoted
+        }
+
+        /**
+         * [value] as a quoted C++ literal of its UTF-8 bytes, and its size in bytes when it has
+         * a NUL, which a `char const *` would stop at.
+         */
+        internal fun quotedUtf8(value: String): Pair<String, Int?> {
+            // Write non-ASCII as octal escapes of its UTF-8 bytes, so the source stays ASCII and
+            // the literal holds UTF-8 whatever the compiler's execution character set. `?` (0x3F)
+            // never occurs inside a multi-byte sequence, so the trigraph check below is safe on
+            // bytes.
+            val utf8Bytes = value.toByteArray(Charsets.UTF_8)
+            val sb = StringBuilder("\"")
+            var hasNullByte = false
+            var prev = '\u0000'
+            for (b in utf8Bytes) {
+                @Suppress("MagicNumber") // 0xFF mask for unsigned byte conversion
+                val unsigned = b.toInt() and 0xFF
+                if (unsigned == 0) hasNullByte = true
+                val ch = unsigned.toChar()
+                val escaped = escapeCodes[ch]
+                if (escaped != null) {
+                    sb.append(escaped)
+                } else if (ch == '?' && prev == '?') {
+                    // C++14 reads `??=`, `??/`, `??>`, and the like as trigraphs, so write the
+                    // second `?` of any pair as `\?`.
+                    sb.append("\\?")
+                } else if (ch in ' '..'~') {
+                    sb.append(ch)
+                } else {
+                    sb.append("\\${unsigned.toString(OCTAL_RADIX).padStart(OCTAL_ESCAPE_DIGITS, '0')}")
+                }
+                prev = ch
+            }
+            sb.append('"')
+            return sb.toString() to if (hasNullByte) utf8Bytes.size else null
+        }
     }
 }

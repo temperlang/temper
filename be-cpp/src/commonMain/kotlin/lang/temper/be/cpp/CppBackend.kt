@@ -224,10 +224,8 @@ class CppBackend private constructor(
             // exception handling, JUnit-XML serialization, and file writing.
             appendLine("  return temper::core::run_tests({")
             for ((funcName, rawName) in testInfos) {
-                val escapedName = rawName
-                    .replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                appendLine("    { \"$escapedName\", []() -> temper::core::TestOutcome {")
+                val nameLiteral = CppBuilder.stringLiteralText(rawName)
+                appendLine("    { $nameLiteral, []() -> temper::core::TestOutcome {")
                 appendLine("      auto t = $testNs::Test::make();")
                 appendLine("      $funcName(t);")
                 appendLine("      auto mc = t->messagesCombined();")

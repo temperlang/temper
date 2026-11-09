@@ -58,8 +58,13 @@ internal object CppSupportNetwork : SupportNetwork {
         BuiltinOperatorId.BitwiseOr32, BuiltinOperatorId.BitwiseOr64 -> Like.binary("|").pure()
         BuiltinOperatorId.BitwiseXor32, BuiltinOperatorId.BitwiseXor64 -> Like.binary("^").pure()
         BuiltinOperatorId.BitwiseNegation32, BuiltinOperatorId.BitwiseNegation64 -> Like.unary("~").pure()
-        BuiltinOperatorId.BitwiseShl32, BuiltinOperatorId.BitwiseShl64 -> Like.binary("<<").pure()
-        BuiltinOperatorId.BitwiseShr32, BuiltinOperatorId.BitwiseShr64 -> Like.binary(">>").pure()
+        // Shifts use core helpers that mask the count and shift left as unsigned,
+        // since a bare `<<` or `>>` is undefined in C++14 for large counts or a
+        // left shift into or past the sign bit.
+        BuiltinOperatorId.BitwiseShl32 -> Like.core("Int::shl").pure()
+        BuiltinOperatorId.BitwiseShl64 -> Like.core("Int64::shl").pure()
+        BuiltinOperatorId.BitwiseShr32 -> Like.core("Int::shr").pure()
+        BuiltinOperatorId.BitwiseShr64 -> Like.core("Int64::shr").pure()
         BuiltinOperatorId.BitwiseShrUnsigned32 -> Like.core("Int::ushr").pure()
         BuiltinOperatorId.BitwiseShrUnsigned64 -> Like.core("Int64::ushr").pure()
         BuiltinOperatorId.IsNull -> Like.core("is_null").pure()

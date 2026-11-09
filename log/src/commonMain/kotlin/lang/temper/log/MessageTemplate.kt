@@ -16,6 +16,10 @@ enum class MessageTemplate(
     PreStagingModule("Pre-staging module from %s", CompilationPhase.Staging),
     StartingStage("Starting stage %s", CompilationPhase.Staging),
     StagePromotionFailed("Promotion to stage %s failed", CompilationPhase.Staging),
+    StoppedEarly(
+        "Stopped before stage %s: ran out of interpreter steps or was cancelled",
+        CompilationPhase.Staging,
+    ),
     LibraryConfigured("Configured library %s", CompilationPhase.Staging),
     AllDone("Bye", CompilationPhase.Staging),
     NonValueResultFromRunStage(
