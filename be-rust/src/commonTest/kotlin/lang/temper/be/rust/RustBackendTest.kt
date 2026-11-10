@@ -2454,6 +2454,76 @@ class RustBackendTest {
     )
 
     @Test
+    fun constructorReadsOtherInstance() = assertGenerateWanted(
+        // Only `this.depth` and `this.size` are the constructor's field locals, not those of `parent` or `other`.
+        temper = """
+            |export class Tally {
+            |  public depth: Int;
+            |  public var size: Int;
+            |  public constructor(parent: Tally?, other: Tally) {
+            |    this.depth = if (parent == null) { 0 } else { parent.depth + 1 };
+            |    this.size = other.size + this.depth;
+            |  }
+            |}
+        """.trimMargin(),
+        rust = """
+            |pub (crate) fn init() -> temper_core::Result<()> {
+            |    static INIT_ONCE: std::sync::OnceLock<temper_core::Result<()>> = std::sync::OnceLock::new();
+            |    INIT_ONCE.get_or_init(| |{
+            |            std::result::Result::Ok(())
+            |    }).clone()
+            |}
+            |struct TallyStruct {
+            |    depth: i32, size: i32
+            |}
+            |#[derive(Clone)]
+            |pub struct Tally(std::sync::Arc<std::sync::RwLock<TallyStruct>>);
+            |impl Tally {
+            |    pub fn new(parent__0: std::option::Option<Tally>, other__0: Tally) -> Tally {
+            |        let depth;
+            |        let size;
+            |        let t___0: i32;
+            |        if parent__0.is_none() {
+            |            t___0 = 0;
+            |        } else {
+            |            let parent___0: Tally = parent__0.clone().unwrap();
+            |            t___0 = parent___0.0.read().unwrap().depth.wrapping_add(1);
+            |        }
+            |        depth = t___0;
+            |        let t___1: i32 = other__0.0.read().unwrap().size.wrapping_add(depth);
+            |        size = t___1;
+            |        let selfish = Tally(std::sync::Arc::new(std::sync::RwLock::new(TallyStruct {
+            |                        depth, size
+            |        })));
+            |        return selfish;
+            |    }
+            |    pub fn depth(& self) -> i32 {
+            |        return self.0.read().unwrap().depth;
+            |    }
+            |    pub fn size(& self) -> i32 {
+            |        return self.0.read().unwrap().size;
+            |    }
+            |    pub fn set_size(& self, newSize__0: i32) {
+            |        self.0.write().unwrap().size = newSize__0;
+            |    }
+            |}
+            |temper_core::impl_any_value_trait!(Tally, []);
+            |pub mod builders {
+            |    #[derive(Clone)]
+            |    pub struct TallyBuilder {
+            |        pub parent: std::option::Option<Tally>, pub other: Tally
+            |    }
+            |    impl TallyBuilder {
+            |        pub fn build(self) -> Tally {
+            |            Tally::new(self.parent, self.other)
+            |        }
+            |    }
+            |    use super::*;
+            |}
+        """.trimMargin(),
+    )
+
+    @Test
     fun imports() = assertGenerateWanted(
         listOf(
             ModuleInfo(

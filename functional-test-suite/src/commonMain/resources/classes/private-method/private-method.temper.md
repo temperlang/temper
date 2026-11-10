@@ -87,3 +87,32 @@ method, even when the class has a property of the same name.
 close: 11
 noted: label!
 ```
+
+## Other instances in constructors
+
+A constructor can read the fields of other instances too, even before
+it has set its own: `parent.depth` and `children[i].size` below aren't
+the new object's `depth` and `size`.
+
+    class Tally {
+      public depth: Int;
+      private size: Int;
+      public constructor(size: Int, parent: Tally?, children: List<Tally>) {
+        this.depth = if (parent == null) { 0 } else { parent.depth + 1 };
+        var sum = size;
+        for (var i = 0; i < children.length; ++i) { sum += children[i].size; }
+        this.size = sum + this.depth;
+      }
+      public get total(): Int { size }
+    }
+
+    let leaf = new Tally(2, null, []);
+    let mid = new Tally(3, leaf, [leaf, leaf]);
+    let top = new Tally(1, mid, [mid, leaf]);
+    console.log("depths: ${leaf.depth} ${mid.depth} ${top.depth}");
+    console.log("totals: ${leaf.total} ${mid.total} ${top.total}");
+
+```log
+depths: 0 1 2
+totals: 2 8 13
+```
