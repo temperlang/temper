@@ -135,6 +135,9 @@ public final class BasicsGlobal {
         double bigger = big * big * big * big * big * big * big * big;
         bigger = bigger;
         console.log(Core.float64ToString(bigger));
+        double middling = -1500.0 * one;
+        console.log(Core.float64ToString(middling) + " " + Core.float64ToString(1000000.0 * one) + " " + Core.float64ToString(9999999.0 * one) + " " + Core.float64ToString(0.001 * one));
+        console.log(Core.float64ToString(1e21 * one) + " " + Core.float64ToString(1.5e-10 * one) + " " + Core.float64ToString(2e23 * one));
         double biggest = bigger * bigger * bigger * bigger * bigger * bigger;
         biggest = biggest;
         console.log("biggest " + Core.float64ToString(biggest));

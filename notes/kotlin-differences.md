@@ -747,6 +747,17 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   `0.3000000000000000`, which doesn't read back; the Python and JS
   runtimes round-trip. Tempest matches the interpreter for now
   ([milestone-3.md](history/milestone-3.md), "Numbers"); it should round-trip.
+- **C++ `Float64.toString`** prints `%g`-style at the shortest
+  precision that reads back, so `-1500.0` is `-1.5e+03` and `1e6`
+  `1.0e+06`. Tempest's C++ runtime writes Java's form, as the
+  interpreter and the Java runtime do: plain for 1e-3 <= |x| < 1e7,
+  `e+N` exponents otherwise, and the fewest digits that read back, but
+  at least two (`4.9e-324`). The other runtimes still differ from each
+  other where exponents start (C# from 1e15, Python and Lua from 1e16,
+  JS from 1e21, and below 1e-3 to 1e-6), C# pads exponents (`1.0e-05`),
+  Rust's drops the `.0` below 1 (`1e-5`), and Lua's keeps 16 digits.
+  Test: temper-be-cpp/tests/functional.rs, `FLOAT_FORMAT`; funtest
+  types/float/basics on every backend, where they all agree.
 - **`String.toFloat64`** takes JVM syntax beyond its docs (`1f`, `-.5`,
   `0x1p3`, `02`, `+Infinity`). Tempest follows the docs.
   Test: settle/run.cases, "Float64 formatting, order and methods, as

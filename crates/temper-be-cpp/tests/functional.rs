@@ -13,7 +13,8 @@
 //! shared programs (`crates/temper-be-testkit/programs/`), which cover
 //! operators, jumps, module state, string order, nullables, and classes beyond
 //! those tests, and on programs of C++'s own: names C++ takes
-//! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]), and objects
+//! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]),
+//! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
 //! a call frees while it runs ([`LIFETIMES`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
@@ -143,6 +144,27 @@ const DISCARDED: &str = "# Discarded
       if (problem == null) { \"ok ${lexer.seen.toString()}\" } else { \"problem\" }
     }
     console.log(finish([\"a\", \"b\"]));
+";
+
+/// `Float64.toString` across its range, as Kotlin's interpreter and the
+/// Java runtime give it: plain from 1e-3 up to 1e7, shortest round-trip
+/// digits, at least two and the closest such (`4.9e-324`), and at a
+/// power of two the digits above where the closest below don't read back
+/// (2^-1017). Other backends move where exponents start, so the shared
+/// `types/float/basics` checks only where all agree; Kotlin's C++ wrote
+/// `-1.5e+03`.
+const FLOAT_FORMAT: &str = "# Float format
+
+    var one = 1.0;
+    one = one;
+    let show(xs: List<Float64>): Void {
+      console.log(xs.join(\" \") { x => (x * one).toString() });
+    }
+    show([-1500.0, 1e6, 9999999.0, 1e7, 1e15, 1e16, 1e20, 1e21]);
+    show([0.001, 9.999999999999998e-4, 1e-4, 1e-5, 1e-6, 1e-7]);
+    show([0.1, 1.0 / 3.0, 0.1 + 0.2, 123456789012345680.0, 9999999.999999998]);
+    show([5e-324, 2.2250738585072014e-308, 7.120236347223045e-307]);
+    show([1.7976931348623157e308, -0.0, NaN, 1e999, -1e999]);
 ";
 
 /// Objects that a call frees while it runs, which C++ must keep alive:
@@ -360,6 +382,20 @@ fn cases() -> Vec<Case> {
         "discarded.temper.md",
         DISCARDED,
         vec!["ok 3".into()],
+    ));
+    cases.push(Case::inline(
+        "float-format",
+        "float-format.temper.md",
+        FLOAT_FORMAT,
+        [
+            "-1500.0 1000000.0 9999999.0 1.0e+7 1.0e+15 1.0e+16 1.0e+20 1.0e+21",
+            "0.001 9.999999999999998e-4 1.0e-4 1.0e-5 1.0e-6 1.0e-7",
+            "0.1 0.3333333333333333 0.30000000000000004 1.2345678901234568e+17 9999999.999999998",
+            "4.9e-324 2.2250738585072014e-308 7.120236347223045e-307",
+            "1.7976931348623157e+308 -0.0 NaN Infinity -Infinity",
+        ]
+        .map(String::from)
+        .to_vec(),
     ));
     cases.push(Case::inline(
         "bit-vector",

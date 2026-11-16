@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
-#include <sstream>
 #include <string>
 #include "base_types.hpp"
 #include "nullable_param.hpp"
@@ -153,6 +153,16 @@ namespace temper {
                 return static_cast<int64_t>(f);
             }
 
+            // Java's `Double.toString`, as Kotlin's interpreter and the
+            // Java and Rust runtimes give it, with `e+N` exponents: plain
+            // for 1e-3 <= |f| < 1e7, else one digit before the point; the
+            // shortest digits that read back as `f`, but at least two, the
+            // closest such (`4.9e-324`); and a digit after the point
+            // always (`1500.0`, `1.0e+7`). `%.*e` rounds correctly (glibc,
+            // and MSVC's UCRT), so the first precision that reads back has
+            // the closest digits of that length; `std::to_chars` would do
+            // it all, but is C++17 and missing for doubles in older
+            // standard libraries.
             inline Str toString(double f) {
                 if (std::isnan(f)) {
                     return "NaN";
@@ -160,39 +170,91 @@ namespace temper {
                 if (std::isinf(f)) {
                     return f > 0 ? "Infinity" : "-Infinity";
                 }
-                if (f == 0.0 && std::signbit(f)) {
-                    return "-0.0";
+                if (f == 0.0) {
+                    return std::signbit(f) ? "-0.0" : "0.0";
                 }
-                for (int prec = 1; prec <= 21; ++prec) {
-                    std::ostringstream oss;
-                    oss.precision(prec);
-                    oss << f;
-                    std::string s = oss.str();
-                    char* end_ptr;
-                    double parsed = std::strtod(s.c_str(), &end_ptr);
-                    if (parsed == f && *end_ptr == '\0') {
-                        if (s.find('.') == std::string::npos) {
-                            size_t epos = s.find('e');
-                            if (epos != std::string::npos) {
-                                s.insert(epos, ".0");
-                            } else {
-                                s.append(".0");
-                            }
+                // Shortest digits, without sign or point, and the exponent.
+                std::string digits;
+                int exponent = 0;
+                // At a power of two, the gap below is half that above, so
+                // the closest digits of a length may not read back where
+                // the next ones up do (`7.120236347223045e-307`, 2^-1017).
+                double magnitude = std::fabs(f);
+                int binary_exponent;
+                bool power_of_two = std::frexp(magnitude, &binary_exponent) == 0.5;
+                for (int prec = 1; prec <= 16; ++prec) {
+                    // "-d.ddddddddddddddddde-308" and a NUL fit.
+                    char buf[32];
+                    std::snprintf(buf, sizeof buf, "%.*e", prec, magnitude);
+                    // Whatever the C locale's point is.
+                    digits.clear();
+                    const char* p = buf;
+                    for (; *p != '\0' && *p != 'e'; ++p) {
+                        if (*p >= '0' && *p <= '9') {
+                            digits.push_back(*p);
                         }
-                        return s;
+                    }
+                    exponent = std::atoi(p + 1);
+                    if (std::strtod(buf, nullptr) == magnitude || prec == 16) {
+                        break;
+                    }
+                    if (power_of_two) {
+                        std::string up = digits;
+                        size_t i = up.size();
+                        while (i > 0 && up[i - 1] == '9') {
+                            up[--i] = '0';
+                        }
+                        int up_exponent = exponent;
+                        if (i == 0) {
+                            up.insert(0, 1, '1');
+                            up.pop_back();
+                            ++up_exponent;
+                        } else {
+                            ++up[i - 1];
+                        }
+                        // Whole digits, which read the same in every locale.
+                        std::string text = up + "e" + std::to_string(up_exponent - prec);
+                        if (std::strtod(text.c_str(), nullptr) == magnitude) {
+                            digits = up;
+                            exponent = up_exponent;
+                            break;
+                        }
                     }
                 }
-                std::ostringstream oss;
-                oss.precision(17);
-                oss << f;
-                std::string s = oss.str();
-                if (s.find('.') == std::string::npos) {
-                    size_t epos = s.find('e');
-                    if (epos != std::string::npos) {
-                        s.insert(epos, ".0");
+                bool negative = f < 0;
+                size_t last = digits.find_last_not_of('0');
+                digits.erase(last == std::string::npos ? 1 : last + 1);
+                std::string s;
+                if (negative) {
+                    s.push_back('-');
+                }
+                if (exponent >= -3 && exponent < 7) {
+                    if (exponent < 0) {
+                        s.append("0.");
+                        s.append(static_cast<size_t>(-exponent - 1), '0');
+                        s.append(digits);
                     } else {
-                        s.append(".0");
+                        size_t whole = static_cast<size_t>(exponent) + 1;
+                        if (digits.size() > whole) {
+                            s.append(digits, 0, whole);
+                            s.push_back('.');
+                            s.append(digits, whole, std::string::npos);
+                        } else {
+                            s.append(digits);
+                            s.append(whole - digits.size(), '0');
+                            s.append(".0");
+                        }
                     }
+                } else {
+                    s.push_back(digits[0]);
+                    s.push_back('.');
+                    if (digits.size() > 1) {
+                        s.append(digits, 1, std::string::npos);
+                    } else {
+                        s.push_back('0');
+                    }
+                    s.append(exponent < 0 ? "e-" : "e+");
+                    s.append(std::to_string(exponent < 0 ? -exponent : exponent));
                 }
                 return s;
             }

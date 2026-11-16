@@ -152,6 +152,19 @@ String outputs
 9.999999999919205e+207
 ```
 
+Every backend writes values from 1e-3 up to 1e7 plain, and big and tiny ones
+with an exponent. Where exponents start between, from 1e7 to 1e21 and from
+1e-7 to 1e-3, backends differ, as on the smallest subnormals' digits.
+
+    let middling = -1500.0 * one;
+    console.log("${middling} ${1e6 * one} ${9999999.0 * one} ${0.001 * one}");
+    console.log("${1e21 * one} ${1.5e-10 * one} ${2e23 * one}");
+
+```log
+-1500.0 1000000.0 9999999.0 0.001
+1.0e+21 1.5e-10 2.0e+23
+```
+
 # Diverging cases
 
 ## Overflow/Infinity

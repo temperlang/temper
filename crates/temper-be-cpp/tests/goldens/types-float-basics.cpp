@@ -144,6 +144,9 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, core::Float64::toString(big));
     double bigger = big * big * big * big * big * big * big * big;
     core::Console::log(temper_globals::console.value, core::Float64::toString(bigger));
+    double middling = -1500.0 * one;
+    core::Console::log(temper_globals::console.value, core::Float64::toString(middling) + " " + core::Float64::toString(1000000.0 * one) + " " + core::Float64::toString(9999999.0 * one) + " " + core::Float64::toString(0.001 * one));
+    core::Console::log(temper_globals::console.value, core::Float64::toString(1e21 * one) + " " + core::Float64::toString(1.5e-10 * one) + " " + core::Float64::toString(2e23 * one));
     double biggest = bigger * bigger * bigger * bigger * bigger * bigger;
     core::Console::log(temper_globals::console.value, "biggest " + core::Float64::toString(biggest));
     double tiniest = one / biggest;

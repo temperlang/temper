@@ -17,6 +17,7 @@
 - [Generated packages need the matching runtimes](#generated-packages-need-the-matching-runtimes)
 - [Fixes for code Temper 0.6.0 accepted](#fixes-for-code-temper-060-accepted)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
+- [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
 
@@ -404,6 +405,13 @@ there, as on Lua 5.3 and later, instead of giving NaN or an infinity;
 works, and base 36 writes `x`. Each `Int64` constant is made once, as
 its module loads, so a loop's `Int64` literals don't call the runtime
 each time round.
+
+## C++: `Float64.toString` as on the JVM
+
+C++ writes a `Float64` as the interpreter and Java do: plain from 1e-3 up
+to 1e7 (`-1500.0`, not `-1.5e+03`), and otherwise with one digit before
+the point and an `e+N` or `e-N` exponent (`1.0e+7`), in the fewest
+digits that read back as the same number.
 
 ## `temper` and its `TEMPER_*` settings
 

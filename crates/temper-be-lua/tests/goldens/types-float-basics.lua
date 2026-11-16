@@ -138,6 +138,9 @@ local big = 99999999999999.0 * 999999999999.0
 print(temper.float64_tostring(big))
 local bigger = big * big * big * big * big * big * big * big
 print(temper.float64_tostring(bigger))
+local middling = -1500.0 * one
+print(temper.float64_tostring(middling) .. " " .. temper.float64_tostring(1000000.0 * one) .. " " .. temper.float64_tostring(9999999.0 * one) .. " " .. temper.float64_tostring(0.001 * one))
+print(temper.float64_tostring(1e21 * one) .. " " .. temper.float64_tostring(1.5e-10 * one) .. " " .. temper.float64_tostring(2e23 * one))
 local biggest = bigger * bigger * bigger * bigger * bigger * bigger
 print("biggest " .. temper.float64_tostring(biggest))
 local tiniest = one / biggest

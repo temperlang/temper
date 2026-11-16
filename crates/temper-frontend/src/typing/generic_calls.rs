@@ -300,7 +300,14 @@ impl Settle {
             // extends MapKey<K>` does, so it's checked with what they're
             // bound to put in; the message shows it as declared.
             let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
-            let fits = types.is_subtype(actual, wanted) != Some(false);
+            // Kotlin's check takes a nullable type as fitting `AnyValue`,
+            // so `new PromiseBuilder<String?>()` and `f<Int?>(null)` for
+            // `<T extends AnyValue>` (or `<T>`) pass.
+            let seen = match *types.get(actual) {
+                TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
+                _ => actual,
+            };
+            let fits = types.is_subtype(seen, wanted) != Some(false);
             if fits || !types.is_known(wanted) {
                 continue;
             }

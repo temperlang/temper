@@ -120,6 +120,9 @@ _console.log(_float64_to_string(_big))
 _bigger: float = _big * _big * _big * _big * _big * _big * _big * _big
 _bigger = _bigger
 _console.log(_float64_to_string(_bigger))
+_middling: float = -1500.0 * _one
+_console.log(f'{_float64_to_string(_middling)} {_float64_to_string(1000000.0 * _one)} {_float64_to_string(9999999.0 * _one)} {_float64_to_string(0.001 * _one)}')
+_console.log(f'{_float64_to_string(1e21 * _one)} {_float64_to_string(1.5e-10 * _one)} {_float64_to_string(2e23 * _one)}')
 _biggest: float = _bigger * _bigger * _bigger * _bigger * _bigger * _bigger
 _biggest = _biggest
 _console.log(f'biggest {_float64_to_string(_biggest)}')

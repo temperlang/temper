@@ -89,6 +89,20 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let mut bigger = big * big * big * big * big * big * big * big;
             bigger = bigger;
             println!("{}", temper_core::float64::to_string(bigger));
+            let middling = -1500.0 * one;
+            println!(
+                "{} {} {} {}",
+                temper_core::float64::to_string(middling),
+                temper_core::float64::to_string(1000000.0 * one),
+                temper_core::float64::to_string(9999999.0 * one),
+                temper_core::float64::to_string(0.001 * one)
+            );
+            println!(
+                "{} {} {}",
+                temper_core::float64::to_string(1e21 * one),
+                temper_core::float64::to_string(1.5e-10 * one),
+                temper_core::float64::to_string(2e23 * one)
+            );
             let mut biggest = bigger * bigger * bigger * bigger * bigger * bigger;
             biggest = biggest;
             println!("biggest {}", temper_core::float64::to_string(biggest));
