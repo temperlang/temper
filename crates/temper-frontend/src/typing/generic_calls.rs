@@ -296,8 +296,12 @@ impl Settle {
             let types = &mut self.typing.types;
             let param = types.param(formal);
             let bound = types.upper(param);
-            let fits = types.is_subtype(actual, bound) != Some(false);
-            if fits || types.mentions(bound, &solved.formals) || !types.is_known(bound) {
+            // A bound may name the call's own type parameters, as `K
+            // extends MapKey<K>` does, so it's checked with what they're
+            // bound to put in; the message shows it as declared.
+            let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
+            let fits = types.is_subtype(actual, wanted) != Some(false);
+            if fits || !types.is_known(wanted) {
                 continue;
             }
             let message = Message::TypeFormalBound(

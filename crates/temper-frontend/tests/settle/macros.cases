@@ -411,33 +411,35 @@ class C<@imu T, U extends I<U>>(public x: T) extends I<T> {
   public get(): T { x }
   public pick<V>(v: V): V { v }
 }
+class R extends I<R> { public get(): R { this } }
 let f<T>(x: T): T { x }
-let c = new C<Int, I<Int>>(1);
-console.log("${f<String>("a")} ${c.pick<Int>(2)} ${c is C<Int, I<Int>>}");
+let c = new C<Int, R>(1);
+console.log("${f<String>("a")} ${c.pick<Int>(2)} ${c is C<Int, R>}");
 --- settled
 (Block
-  (Interface ^I:0 (TypeParam ^T:4) (Method ^get:6 (Signature T:4)))
+  (Interface ^I:0 (TypeParam ^T:5) (Method ^get:7 (Signature T:5)))
   (Class
     ^C:1
-    (TypeParam ^T:7)
-    (TypeParam ^U:8 (Call <> I:0 U:8))
-    (Call <> I:0 T:7)
-    (Param ^x:10 T:7)
-    (Method ^get:11 (Fn T:7 (Block x:10)))
-    (Method ^pick:12 (Fn (TypeParam ^V:13) (Let ^v:14 V:13) V:13 (Block v:14))))
-  (Let ^f:2 (Fn (TypeParam ^T:15) (Let ^x:16 T:15) T:15 (Block x:16)))
-  (Let ^c:3 (Call new (Call <> C:1 Int (Call <> I:0 Int)) 1))
+    (TypeParam ^T:8)
+    (TypeParam ^U:9 (Call <> I:0 U:9))
+    (Call <> I:0 T:8)
+    (Param ^x:11 T:8)
+    (Method ^get:12 (Fn T:8 (Block x:11)))
+    (Method ^pick:13 (Fn (TypeParam ^V:14) (Let ^v:15 V:14) V:14 (Block v:15))))
+  (Class ^R:2 (Call <> I:0 R:2) (Method ^get:17 (Fn R:2 (Block this#16))))
+  (Let ^f:3 (Fn (TypeParam ^T:18) (Let ^x:19 T:18) T:18 (Block x:19)))
+  (Let ^c:4 (Call new (Call <> C:1 Int R:2) 1))
   (Call
     (Call . console \log)
     (Call
       cat
-      (Call f:2 \typeArg String "a")
+      (Call f:3 \typeArg String "a")
       " "
-      (Call (Call . c:3 \pick) \typeArg Int 2)
+      (Call (Call . c:4 \pick) \typeArg Int 2)
       " "
-      (Call is c:3 (Call <> C:1 Int (Call <> I:0 Int)))))
+      (Call is c:4 (Call <> C:1 Int R:2))))
   #void)
-hint 253..272: Unnecessary type check to C<Int32, I<Int32>> from expression with type C<Int32, I<Int32>> which is a subtype
+hint 298..312: Unnecessary type check to C<Int32, R> from expression with type C<Int32, R> which is a subtype
 log a 2 true
 
 === class members

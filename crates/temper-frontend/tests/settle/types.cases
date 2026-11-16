@@ -1382,6 +1382,71 @@ error 279..280: Actual arguments do not match signature: <T extends AnyValue>(fn
 error 292..293: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32, Int32]
 error 302..306: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32?, Int32]
 
+=== a bound naming its own type parameter is checked with it put in
+// As Kotlin Temper reports them, apart from names: `T extends Ord<T>` and
+// core's `K extends MapKey<K>` are checked as `Ord<P>` and `MapKey<P>`.
+interface Ord<T> { cmp(o: T): Int; }
+class N(public n: Int) extends Ord<N> { public cmp(o: N): Int { n - o.n } }
+class P(public x: Int) {}
+class Holder<T extends Ord<T>>(public t: T) {}
+let least<T extends Ord<T>>(a: T, b: T): T { if (a.cmp(b) <= 0) { a } else { b } }
+let f(): Void {
+  let a = new Holder<N>(new N(1));
+  let b = new Holder<P>(new P(1));
+  let c = new Holder(new P(2));
+  let d = least(new N(1), new N(2));
+  let e = least(new P(1), new P(2));
+  let g = new Map<P, String>([]);
+  let h = new MapBuilder<P, String>();
+  let i = new Map<String, Int>([]);
+}
+--- settled
+(Block
+  (Interface
+    ^Ord:0
+    (TypeParam ^T:6)
+    (Method ^cmp:8 (Signature (Let ^o:9 T:6) Int)))
+  (Class
+    ^N:1
+    (Call <> Ord:0 N:1)
+    (Param ^n:11 Int)
+    (Method
+      ^cmp:12
+      (Fn (Let ^o:13 N:1) Int (Block (Call - n:11 (Call . o:13 \n))))))
+  (Class ^P:2 (Param ^x:15 Int))
+  (Class ^Holder:3 (TypeParam ^T:16 (Call <> Ord:0 T:16)) (Param ^t:18 T:16))
+  (Let
+    ^least:4
+    (Fn
+      (TypeParam ^T:19 (Call <> Ord:0 T:19))
+      (Let ^a:20 T:19)
+      (Let ^b:21 T:19)
+      T:19
+      (Block
+        (If
+          (Call <= (Call (Call . a:20 \cmp) b:21) 0)
+          (Block a:20)
+          (Block b:21)))))
+  (Let
+    ^f:5
+    (Fn
+      Void
+      (Block
+        (Let ^a:22 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
+        (Let ^b:23 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
+        (Let ^c:24 (Call new Holder:3 (Call new P:2 2)))
+        (Let ^d:25 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
+        (Let ^e:26 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
+        (Let ^g:27 (Call new (Call <> Map P:2 String) (Call list)))
+        (Let ^h:28 (Call new (Call <> MapBuilder P:2 String)))
+        (Let ^i:29 (Call new (Call <> Map String Int) (Call list)))
+        #void))))
+error 478..501: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 513..533: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 582..607: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 619..641: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 653..680: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+
 === list literals' types, as Kotlin Temper reports them
 // A list literal is a `List` of its elements' common type. The input was
 // also built with Kotlin Temper: every error matches in message and
