@@ -8,6 +8,7 @@
 - [🚨Breaking change: Multiline string syntax (yes, again)](#breaking-change-multiline-string-syntax-yes-again)
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
+- [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
 - [`++ls[i]` gives the new value](#lsi-gives-the-new-value)
 - [Unassigned locals in `for … of` bodies are errors](#unassigned-locals-in-for--of-bodies-are-errors)
@@ -301,6 +302,27 @@ Now they don't, but if you need a comparison operator, always put spaces
 around it.
 
 See the builtin/< reference article for details.
+
+## 🚨Breaking change: Python parameters keep builtins' names
+
+Generated Python keeps a parameter's name when a Python builtin has it,
+where Temper 0.6.0 added a trailing `_`. A constructor's parameters,
+which Python code may pass by name, change with it: for
+
+```temper inert
+export class Option(public help: String, public max: Int) {}
+```
+
+Python callers now write `Option(help="…", max=9)`, not
+`Option(help_="…", max_=9)`. Callers using the old names, such as
+`help_=`, must drop the `_`. This includes std's: `temper_std.regex`'s
+`CodeRange` and `Repeat` take `min=` and `max=`. Keywords still take
+the `_` (`from_`), and so do module-level names (`max_`).
+
+Inside a function that names a parameter or local like a builtin it
+also uses, generated code reaches the builtin through Python's
+`builtins` module (`_builtins.len(items)`); elsewhere builtins stay as
+they are.
 
 ## Rust crates depend on `temper-std` only when they use it
 

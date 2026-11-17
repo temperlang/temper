@@ -154,12 +154,12 @@ def _held(h: Holder[_T], /) -> _T:
 
 
 def _total(ns: _Sequence[int], /) -> int:
-    sum_ = 0
+    sum = 0
     i = 0
     while i < len(ns):
-        sum_ = _int_add(sum_, _list_get(ns, i))
+        sum = _int_add(sum, _list_get(ns, i))
         i = _int_add(i, 1)
-    return sum_
+    return sum
 
 
 def _indexed() -> None:
@@ -196,7 +196,7 @@ def _both() -> None:
     x = _int_add(t, 1)
     t2 = y
     y = _int_add(t2, 1)
-    locals_ = _int_add(t, t2)
+    locals = _int_add(t, t2)
     p = Counter(100)
     q = Counter(1000)
     t = p.n
@@ -221,7 +221,7 @@ def _both() -> None:
     t2 = _list_get(b, k)
     _list_builder_set(b, k, _int_add(t2, 1))
     items = _int_add(t, t2)
-    _console.log(f'{locals_} {x} {y} {fields} {same} {p.n} {q.n} {items} {_list_get(a, 0)} {_list_get(b, 0)}')
+    _console.log(f'{locals} {x} {y} {fields} {same} {p.n} {q.n} {items} {_list_get(a, 0)} {_list_get(b, 0)}')
 
 
 def _bump(key: str, /) -> int:

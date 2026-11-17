@@ -63,8 +63,8 @@ _console.log(f'Found both {_first.full.value} and {_second.full.value}.')
 _more_text: str = '🌍aaabbcee🌎abcd🌏'
 
 
-def _fn(match_: _Match, /) -> str:
-    groups = match_.groups
+def _fn(match: _Match, /) -> str:
+    groups = match.groups
     try:
         option1 = groups['option1'].value
     except Exception:
@@ -73,13 +73,13 @@ def _fn(match_: _Match, /) -> str:
         alpha_option2 = groups['alphaOption2'].value
     except Exception:
         alpha_option2 = ''
-    begin = _string_count_between(_more_text, 0, match_.full.begin)
+    begin = _string_count_between(_more_text, 0, match.full.begin)
     return f'-{option1}{alpha_option2}{begin}-'
 
 
 _replaced: str = _catcher.replace(_more_text, _fn)
 _console.log(f'replaced: {_replaced}')
-_not_replaced: str = _catcher.replace('nope', lambda match_: 'hi')
+_not_replaced: str = _catcher.replace('nope', lambda match: 'hi')
 _console.log(f'not replaced: {_not_replaced}')
 _no_match: str
 try:

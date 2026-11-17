@@ -275,16 +275,16 @@ def _each(values: _Sequence[float], f: _Callable[[float], None], /) -> None:
 
 
 def _total(values: _Sequence[float], /) -> float:
-    sum_ = 0.0
+    sum = 0.0
     def fn(x: float, /) -> None:
-        nonlocal sum_
+        nonlocal sum
         try:
             part = x / 2.0
-            sum_ = sum_ + part
+            sum = sum + part
         except Exception:
             raise BaseException('panic')
     _each(values, fn)
-    return sum_
+    return sum
 
 
 def _half(x: float, /) -> float:
@@ -487,9 +487,9 @@ class Held(_Generic[_T_2]):
     _item: _T_2
     _next: 'Held[_T_2] | None'
 
-    def __init__(self, /, item: _T_2, next_: 'Held[_T_2] | None') -> None:
+    def __init__(self, /, item: _T_2, next: 'Held[_T_2] | None') -> None:
         self._item = item
-        self._next = next_
+        self._next = next
 
     @property
     def item(self, /) -> _T_2:

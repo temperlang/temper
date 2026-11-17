@@ -23,8 +23,8 @@ class _Entry:
     _id: int
     _group: int
 
-    def __init__(self, /, id_: int, group: int) -> None:
-        self._id = id_
+    def __init__(self, /, id: int, group: int) -> None:
+        self._id = id
         self._group = group
 
     @property

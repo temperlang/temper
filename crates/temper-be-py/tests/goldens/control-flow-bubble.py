@@ -65,15 +65,15 @@ def _first_over(n: int, /) -> int:
 
 
 def _sum_skipping(n: int, /) -> int:
-    sum_ = 0
+    sum = 0
     i = 0
     while i < 5:
         if i == n:
             i = _int_add(i, 1)
             continue
-        sum_ = _int_add(sum_, i)
+        sum = _int_add(sum, i)
         i = _int_add(i, 1)
-    return sum_
+    return sum
 
 
 def _ten_times(n: int, /) -> int:

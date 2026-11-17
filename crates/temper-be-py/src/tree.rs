@@ -5,6 +5,7 @@
 //! them, and lays out code as PEP 8 does: four-space indents, and two
 //! blank lines around top-level functions.
 
+use std::collections::BTreeSet;
 use std::fmt::Write;
 
 /// A binary operator.
@@ -113,6 +114,14 @@ pub enum FPart {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Name(String),
+    /// A builtin, as `len`: bare, unless the function it's in hides it
+    /// by a name of its own, which [`qualify_builtins`] turns into
+    /// `builtins.len`.
+    Builtin(&'static str),
+    /// A type's annotation where an expression goes, as is (`Box[int]`,
+    /// or quoted, `'list[Any]'`): its builtins' names are reached as
+    /// [`Expr::Builtin`]'s are.
+    Type(String),
     Int(i64),
     Float(f64),
     Str(String),
@@ -161,6 +170,10 @@ impl Expr {
         Expr::Name(name.into())
     }
 
+    pub fn builtin(name: &'static str) -> Expr {
+        Expr::Builtin(name)
+    }
+
     pub fn call(self, args: Vec<Expr>) -> Expr {
         Expr::Call(Box::new(self), args)
     }
@@ -183,6 +196,8 @@ impl Expr {
             Expr::Float(f) if f.is_sign_negative() && f.is_finite() => UNARY,
             Expr::Float(f) if !f.is_finite() => PRIMARY,
             Expr::Name(_)
+            | Expr::Builtin(_)
+            | Expr::Type(_)
             | Expr::Int(_)
             | Expr::Float(_)
             | Expr::Str(_)
@@ -394,7 +409,8 @@ fn float_literal(f: f64) -> String {
 /// Prints an expression, parenthesized if it binds looser than `min`.
 pub fn expr(e: &Expr, min: u8) -> String {
     let text = match e {
-        Expr::Name(n) => n.clone(),
+        Expr::Name(n) | Expr::Type(n) => n.clone(),
+        Expr::Builtin(n) => n.to_string(),
         Expr::Int(n) => n.to_string(),
         Expr::Float(f) => float_literal(*f),
         Expr::Str(s) => string_literal(s),
@@ -473,6 +489,47 @@ fn fstring(parts: &[FPart], min: u8) -> String {
             FPart::Expr { expr: e, .. } => expr(e, IF_ELSE),
         })
         .collect();
+    if let Some(q) = fstring_quote(parts, &exprs) {
+        let mut out = format!("f{q}");
+        for (part, e) in parts.iter().zip(&exprs) {
+            match part {
+                FPart::Lit(s) => escape_into(&mut out, s, q, true),
+                FPart::Expr { .. } => {
+                    out.push('{');
+                    out.push_str(e);
+                    out.push('}');
+                }
+            }
+        }
+        out.push(q);
+        return out;
+    }
+    expr(&plus_chain(parts), min)
+}
+
+/// An f-string's parts as a `+` chain, each part that isn't a string in
+/// `str(…)`.
+fn plus_chain(parts: &[FPart]) -> Expr {
+    let terms: Vec<Expr> = parts
+        .iter()
+        .map(|p| match p {
+            FPart::Lit(s) => Expr::Str(s.clone()),
+            FPart::Expr { expr: e, str: true } => Expr::builtin("str").call(vec![e.clone()]),
+            FPart::Expr {
+                expr: e,
+                str: false,
+            } => e.clone(),
+        })
+        .collect();
+    terms
+        .into_iter()
+        .reduce(|a, b| Expr::bin(Bin::Add, a, b))
+        .unwrap_or(Expr::Str(String::new()))
+}
+
+/// The quote an f-string of these parts, its expressions printed as
+/// `exprs`, takes: `None` where Python 3.11 can't take them in braces.
+fn fstring_quote(parts: &[FPart], exprs: &[String]) -> Option<char> {
     let lits: String = parts
         .iter()
         .filter_map(|p| match p {
@@ -491,39 +548,7 @@ fn fstring(parts: &[FPart], min: u8) -> String {
         '\''
     };
     let other = if preferred == '\'' { '"' } else { '\'' };
-    let quote = [preferred, other].into_iter().find(|&q| inner(q));
-    if let Some(q) = quote {
-        let mut out = format!("f{q}");
-        for (part, e) in parts.iter().zip(&exprs) {
-            match part {
-                FPart::Lit(s) => escape_into(&mut out, s, q, true),
-                FPart::Expr { .. } => {
-                    out.push('{');
-                    out.push_str(e);
-                    out.push('}');
-                }
-            }
-        }
-        out.push(q);
-        return out;
-    }
-    // Fall back to `+`.
-    let terms: Vec<Expr> = parts
-        .iter()
-        .map(|p| match p {
-            FPart::Lit(s) => Expr::Str(s.clone()),
-            FPart::Expr { expr: e, str: true } => Expr::name("str").call(vec![e.clone()]),
-            FPart::Expr {
-                expr: e,
-                str: false,
-            } => e.clone(),
-        })
-        .collect();
-    let chain = terms
-        .into_iter()
-        .reduce(|a, b| Expr::bin(Bin::Add, a, b))
-        .unwrap_or(Expr::Str(String::new()));
-    expr(&chain, min)
+    [preferred, other].into_iter().find(|&q| inner(q))
 }
 
 /// Marks each module-level function or class whose name starts with `_`
@@ -571,7 +596,11 @@ fn names_in(text: &str) -> impl Iterator<Item = &str> {
 pub fn module(m: &Module) -> String {
     let mut out = String::new();
     for (module, alias) in &m.modules {
-        let _ = writeln!(out, "import {module} as {alias}");
+        match module == alias {
+            true => writeln!(out, "import {module}"),
+            false => writeln!(out, "import {module} as {alias}"),
+        }
+        .unwrap_or_default();
     }
     for (from, names) in &m.imports {
         let line = format!("from {from} import {}", names.join(", "));
@@ -633,6 +662,377 @@ pub fn module(m: &Module) -> String {
         previous_def = Some(is_def);
     }
     ignores_at_ends(out)
+}
+
+/// Reaches the builtins that a function's own names hide through the
+/// `builtins` module, imported as `alias`: in each function and lambda, an
+/// [`Expr::Builtin`], or a name in an annotation or an [`Expr::Type`],
+/// that the function or one around it binds (a parameter, a local, a
+/// nested `def`), as Python decides locality per function, becomes
+/// `alias.name` (`_builtins.len(items)` beside a parameter `len`), as
+/// does the printer's `float('inf')`;
+/// elsewhere builtins stay bare. `builtins` lists the builtins module's
+/// names. A class body adds nothing it binds, as its members avoid the
+/// names it prints (`names::CLASS_BODY`), and decorators stay as they are:
+/// `property` and `staticmethod` in class bodies, and a property's own
+/// name, `map.setter`. Whether any was reached so.
+pub fn qualify_builtins(body: &mut [Stmt], builtins: &[&str], alias: &str) -> bool {
+    let mut q = Qualify {
+        builtins,
+        alias,
+        used: false,
+    };
+    let hidden = q.hidden(&BTreeSet::new(), &[], body, None);
+    q.stmts(body, &hidden);
+    q.used
+}
+
+struct Qualify<'a> {
+    builtins: &'a [&'a str],
+    alias: &'a str,
+    used: bool,
+}
+
+impl Qualify<'_> {
+    /// `outer`'s names, with the builtins' names a function binds: its
+    /// parameters, and what its body or a lambda's value binds outside
+    /// nested functions.
+    fn hidden(
+        &self,
+        outer: &BTreeSet<String>,
+        params: &[&str],
+        body: &[Stmt],
+        value: Option<&Expr>,
+    ) -> BTreeSet<String> {
+        let mut bound: Vec<String> = params.iter().map(|p| p.to_string()).collect();
+        for s in body {
+            bound_by_stmt(s, &mut bound);
+        }
+        if let Some(e) = value {
+            bound_by_expr(e, &mut bound);
+        }
+        let mut hidden = outer.clone();
+        hidden.extend((bound.into_iter()).filter(|n| self.builtins.contains(&n.as_str())));
+        hidden
+    }
+
+    fn stmts(&mut self, body: &mut [Stmt], hidden: &BTreeSet<String>) {
+        for s in body {
+            self.stmt(s, hidden);
+        }
+    }
+
+    fn stmt(&mut self, s: &mut Stmt, hidden: &BTreeSet<String>) {
+        match s {
+            Stmt::Expr(e) | Stmt::Raise(e) | Stmt::Return(Some(e)) => self.expr(e, hidden),
+            Stmt::Assign { target, ann, value } => {
+                self.expr(target, hidden);
+                if let Some(ann) = ann {
+                    self.ann(ann, hidden);
+                }
+                self.expr(value, hidden);
+            }
+            Stmt::Declare { ann, .. } => self.ann(ann, hidden),
+            Stmt::If { cond, then, els } => {
+                self.expr(cond, hidden);
+                self.stmts(then, hidden);
+                self.stmts(els, hidden);
+            }
+            Stmt::While { cond, body } => {
+                self.expr(cond, hidden);
+                self.stmts(body, hidden);
+            }
+            Stmt::Def {
+                params,
+                result,
+                body,
+                ..
+            } => {
+                // Annotations, as decorators, are evaluated where the
+                // `def` is, its body in its own scope.
+                for (_, ann) in params.iter_mut() {
+                    self.ann(ann, hidden);
+                }
+                self.ann(result, hidden);
+                let names: Vec<&str> = params.iter().map(|(n, _)| n.as_str()).collect();
+                let inner = self.hidden(hidden, &names, body, None);
+                self.stmts(body, &inner);
+            }
+            Stmt::Commented(s, _) => self.stmt(s, hidden),
+            Stmt::Try {
+                body,
+                except,
+                finally,
+            } => {
+                self.stmts(body, hidden);
+                if let Some(except) = except {
+                    self.stmts(except, hidden);
+                }
+                self.stmts(finally, hidden);
+            }
+            Stmt::Assert(cond, message) => {
+                self.expr(cond, hidden);
+                if let Some(m) = message {
+                    self.expr(m, hidden);
+                }
+            }
+            Stmt::With { context, body, .. } => {
+                self.expr(context, hidden);
+                self.stmts(body, hidden);
+            }
+            Stmt::Class { bases, body, .. } => {
+                for base in bases.iter_mut() {
+                    self.ann(base, hidden);
+                }
+                self.stmts(body, hidden);
+            }
+            Stmt::Return(None)
+            | Stmt::Break
+            | Stmt::Continue
+            | Stmt::Global(_)
+            | Stmt::Nonlocal(_) => {}
+        }
+    }
+
+    fn expr(&mut self, e: &mut Expr, hidden: &BTreeSet<String>) {
+        match e {
+            Expr::Builtin(name) if hidden.contains(*name) => {
+                self.used = true;
+                *e = Expr::name(self.alias).attr(*name);
+            }
+            Expr::Type(text) => self.ann(text, hidden),
+            // `float('inf')`, which the printer writes.
+            Expr::Float(f) if !f.is_finite() && hidden.contains("float") => {
+                self.used = true;
+                let text = float_literal(*f);
+                let arg = text.trim_start_matches("float('").trim_end_matches("')");
+                *e = (Expr::name(self.alias).attr("float")).call(vec![Expr::Str(arg.into())]);
+            }
+            Expr::Lambda(params, body) => {
+                let names: Vec<&str> = params.iter().map(String::as_str).collect();
+                let inner = self.hidden(hidden, &names, &[], Some(body));
+                self.expr(body, &inner);
+            }
+            // Where `str` is hidden and the parts can't go in an f-string,
+            // the `+` chain the printer would make, with `str` reached.
+            Expr::FString(parts) => {
+                for part in parts.iter_mut() {
+                    if let FPart::Expr { expr: e, .. } = part {
+                        self.expr(e, hidden);
+                    }
+                }
+                let needs_str = parts
+                    .iter()
+                    .any(|p| matches!(p, FPart::Expr { str: true, .. }));
+                if needs_str && hidden.contains("str") {
+                    let exprs: Vec<String> = (parts.iter())
+                        .map(|p| match p {
+                            FPart::Lit(_) => String::new(),
+                            FPart::Expr { expr: e, .. } => expr(e, IF_ELSE),
+                        })
+                        .collect();
+                    if fstring_quote(parts, &exprs).is_none() {
+                        let mut chain = plus_chain(parts);
+                        self.expr(&mut chain, hidden);
+                        *e = chain;
+                    }
+                }
+            }
+            Expr::Call(f, args) => {
+                self.expr(f, hidden);
+                for a in args {
+                    self.expr(a, hidden);
+                }
+            }
+            Expr::Attr(obj, _) | Expr::Unary(_, obj) | Expr::Walrus(_, obj) => {
+                self.expr(obj, hidden)
+            }
+            Expr::Ignored(inner, _) => self.expr(inner, hidden),
+            Expr::Yield(Some(value)) => self.expr(value, hidden),
+            Expr::Bin(_, left, right) | Expr::Index(left, right) => {
+                self.expr(left, hidden);
+                self.expr(right, hidden);
+            }
+            Expr::IfElse { cond, then, els } => {
+                self.expr(cond, hidden);
+                self.expr(then, hidden);
+                self.expr(els, hidden);
+            }
+            Expr::Slice(obj, begin, end) => {
+                self.expr(obj, hidden);
+                self.expr(begin, hidden);
+                self.expr(end, hidden);
+            }
+            Expr::Tuple(items) | Expr::List(items) => {
+                for i in items {
+                    self.expr(i, hidden);
+                }
+            }
+            Expr::Name(_)
+            | Expr::Builtin(_)
+            | Expr::Int(_)
+            | Expr::Float(_)
+            | Expr::Str(_)
+            | Expr::Bool(_)
+            | Expr::None
+            | Expr::Ellipsis
+            | Expr::EmptyDict
+            | Expr::Yield(None) => {}
+        }
+    }
+
+    /// An annotation's names that `hidden` has, but after a `.`, reached
+    /// through the alias: they're types, never a function's own names.
+    fn ann(&mut self, text: &mut String, hidden: &BTreeSet<String>) {
+        if hidden.is_empty() {
+            return;
+        }
+        let mut out = String::new();
+        let mut word = String::new();
+        let mut after_dot = false;
+        let mut flush = |word: &mut String, out: &mut String, after_dot: bool| {
+            if !after_dot && hidden.contains(word.as_str()) {
+                self.used = true;
+                out.push_str(self.alias);
+                out.push('.');
+            }
+            out.push_str(word);
+            word.clear();
+        };
+        for c in text.chars() {
+            if c == '_' || c.is_alphanumeric() {
+                word.push(c);
+                continue;
+            }
+            if !word.is_empty() {
+                flush(&mut word, &mut out, after_dot);
+            }
+            after_dot = c == '.';
+            out.push(c);
+        }
+        if !word.is_empty() {
+            flush(&mut word, &mut out, after_dot);
+        }
+        *text = out;
+    }
+}
+
+/// What a statement binds in its function, but in nested functions and
+/// classes: assigned and declared names, `with … as` names, walruses,
+/// and a nested `def`'s or class's own name.
+fn bound_by_stmt(s: &Stmt, bound: &mut Vec<String>) {
+    match s {
+        Stmt::Expr(e) | Stmt::Raise(e) | Stmt::Return(Some(e)) => bound_by_expr(e, bound),
+        Stmt::Assign { target, value, .. } => {
+            if let Expr::Name(n) = target {
+                bound.push(n.clone());
+            }
+            bound_by_expr(target, bound);
+            bound_by_expr(value, bound);
+        }
+        Stmt::Declare { target, .. } => bound.push(target.clone()),
+        Stmt::If { cond, then, els } => {
+            bound_by_expr(cond, bound);
+            for s in then.iter().chain(els) {
+                bound_by_stmt(s, bound);
+            }
+        }
+        Stmt::While { cond, body } => {
+            bound_by_expr(cond, bound);
+            for s in body {
+                bound_by_stmt(s, bound);
+            }
+        }
+        Stmt::Def { name, .. } | Stmt::Class { name, .. } => bound.push(name.clone()),
+        Stmt::Commented(s, _) => bound_by_stmt(s, bound),
+        Stmt::Try {
+            body,
+            except,
+            finally,
+        } => {
+            let except = except.iter().flatten();
+            for s in body.iter().chain(except).chain(finally) {
+                bound_by_stmt(s, bound);
+            }
+        }
+        Stmt::Assert(cond, message) => {
+            bound_by_expr(cond, bound);
+            if let Some(m) = message {
+                bound_by_expr(m, bound);
+            }
+        }
+        Stmt::With {
+            context,
+            name,
+            body,
+        } => {
+            bound_by_expr(context, bound);
+            bound.extend(name.iter().cloned());
+            for s in body {
+                bound_by_stmt(s, bound);
+            }
+        }
+        Stmt::Return(None) | Stmt::Break | Stmt::Continue | Stmt::Global(_) | Stmt::Nonlocal(_) => {
+        }
+    }
+}
+
+/// The walruses' names in an expression, but in lambdas.
+fn bound_by_expr(e: &Expr, bound: &mut Vec<String>) {
+    match e {
+        Expr::Walrus(name, value) => {
+            bound.push(name.clone());
+            bound_by_expr(value, bound);
+        }
+        Expr::Lambda(..) => {}
+        Expr::Call(f, args) => {
+            bound_by_expr(f, bound);
+            for a in args {
+                bound_by_expr(a, bound);
+            }
+        }
+        Expr::Attr(obj, _) | Expr::Unary(_, obj) | Expr::Ignored(obj, _) => {
+            bound_by_expr(obj, bound)
+        }
+        Expr::Yield(Some(value)) => bound_by_expr(value, bound),
+        Expr::Bin(_, left, right) | Expr::Index(left, right) => {
+            bound_by_expr(left, bound);
+            bound_by_expr(right, bound);
+        }
+        Expr::IfElse { cond, then, els } => {
+            for e in [cond, then, els] {
+                bound_by_expr(e, bound);
+            }
+        }
+        Expr::Slice(obj, begin, end) => {
+            for e in [obj, begin, end] {
+                bound_by_expr(e, bound);
+            }
+        }
+        Expr::Tuple(items) | Expr::List(items) => {
+            for i in items {
+                bound_by_expr(i, bound);
+            }
+        }
+        Expr::FString(parts) => {
+            for part in parts {
+                if let FPart::Expr { expr: e, .. } = part {
+                    bound_by_expr(e, bound);
+                }
+            }
+        }
+        Expr::Name(_)
+        | Expr::Builtin(_)
+        | Expr::Type(_)
+        | Expr::Int(_)
+        | Expr::Float(_)
+        | Expr::Str(_)
+        | Expr::Bool(_)
+        | Expr::None
+        | Expr::Ellipsis
+        | Expr::EmptyDict
+        | Expr::Yield(None) => {}
+    }
 }
 
 fn indent(out: &mut String, depth: usize) {
@@ -911,5 +1311,84 @@ mod tests {
             },
         ];
         assert_eq!(expr(&Expr::FString(quoted), 0), "'a' + str(f('\\'\"'))");
+    }
+
+    /// A builtin a function's own names hide is reached through
+    /// `builtins` there, and in what's nested in it, and only there: its
+    /// annotations, but after a `.`, and an f-string's `str` where it
+    /// falls back to `+`; a lambda's own parameter hides one in it alone.
+    #[test]
+    fn hidden_builtins_qualified() {
+        let def = |name: &str, params: &[(&str, &str)], body: Vec<Stmt>| Stmt::Def {
+            decorators: Vec::new(),
+            name: name.into(),
+            params: (params.iter())
+                .map(|(n, t)| (n.to_string(), t.to_string()))
+                .collect(),
+            positional: params.len(),
+            result: "int".into(),
+            body,
+        };
+        let len_of = |x: &str| Expr::builtin("len").call(vec![n(x)]);
+        let quoted = Expr::FString(vec![FPart::Expr {
+            expr: n("f").call(vec![Expr::Str("'\"".into())]),
+            str: true,
+        }]);
+        let mut body = vec![
+            def(
+                "f",
+                &[("str", "str"), ("xs", "list[int]")],
+                vec![
+                    Stmt::Declare {
+                        target: "n".into(),
+                        ann: "x.str | str".into(),
+                    },
+                    Stmt::Expr(quoted),
+                    Stmt::Return(Some(Expr::Lambda(
+                        vec!["xs".into()],
+                        Box::new(len_of("xs")),
+                    ))),
+                ],
+            ),
+            def(
+                "g",
+                &[("xs", "str")],
+                vec![Stmt::Return(Some(Expr::Lambda(
+                    vec!["len".into()],
+                    Box::new(len_of("len")),
+                )))],
+            ),
+            Stmt::Expr(len_of("xs")),
+        ];
+        assert!(qualify_builtins(&mut body, &["len", "str"], "_b"));
+        let text = module(&Module {
+            body,
+            ..Module::default()
+        });
+        assert!(
+            text.contains("def f(str: str, xs: list[int], /) -> int:"),
+            "{text}"
+        );
+        assert!(text.contains("    n: x.str | _b.str\n"), "{text}");
+        assert!(text.contains("    _b.str(f('\\'\"'))\n"), "{text}");
+        assert!(text.contains("    return lambda xs: len(xs)\n"), "{text}");
+        assert!(
+            text.contains("    return lambda len: _b.len(len)\n"),
+            "{text}"
+        );
+        assert!(text.ends_with("\nlen(xs)\n"), "{text}");
+        let mut inf = vec![def(
+            "h",
+            &[("float", "float")],
+            vec![Stmt::Return(Some(Expr::Float(f64::NEG_INFINITY)))],
+        )];
+        assert!(qualify_builtins(&mut inf, &["float"], "_b"));
+        let text = module(&Module {
+            body: inf,
+            ..Module::default()
+        });
+        assert!(text.contains("    return _b.float('-inf')\n"), "{text}");
+        let mut bare = vec![Stmt::Expr(len_of("xs"))];
+        assert!(!qualify_builtins(&mut bare, &["len"], "_b"));
     }
 }

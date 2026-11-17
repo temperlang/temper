@@ -151,7 +151,9 @@ package `__init__.py` does `from .<root> import *` and imports every module.
 
 **Naming.** Values, functions, methods and properties are snake_case; types
 keep their case. Reserved words get `_` (`from_`; `to` stays `to`). Internal
-top levels get a leading `_`.
+top levels get a leading `_`. Tempest differs: parameters and locals named
+like builtins keep their names (`help=`, not Kotlin's `help_=`)
+([kotlin-differences.md](kotlin-differences.md)).
 
 **Keep:** module layout, names after snake_case conversion, constructor
 keyword names, properties, `Future`, exception types.
@@ -469,3 +471,12 @@ getter, and C++'s single namespace if item 9 is declined.
    `rust-version`, so exact pins stop conflicting in users' dependency
    graphs. Raising the MSRV changes what users need, so it's a
    compatibility change to announce; Kotlin's be-rust would follow.
+12. **Python: parameters keep builtins' names** (done in tempest,
+   2026-11-17, the user's decision). Kotlin's give a parameter named
+   for a builtin a `_`, so a constructor's parameters, which callers
+   may pass by name, read `Option(help_=…)`. Tempest's keep the name
+   (`help=`), escaping only keywords, and reach a builtin a function's
+   own names hide through `builtins`, so the API never depends on a
+   body ([kotlin-differences.md](kotlin-differences.md), "Python
+   parameters named like builtins"). Callers using `help_=` must use
+   `help=`; Kotlin's be-py would follow.

@@ -86,7 +86,7 @@ def _drive(steps: int, body: _Callable[[], _Generator[_Any, _Any, None]], /) -> 
 
 
 def _sum_from(xs: _Sequence[int], least: int, /) -> int:
-    sum_ = 0
+    sum = 0
     length = len(xs)
     i = 0
     while i < length:
@@ -94,8 +94,8 @@ def _sum_from(xs: _Sequence[int], least: int, /) -> int:
         i = _int_add(i, 1)
         if x < least:
             continue
-        sum_ = _int_add(sum_, x)
-    return sum_
+        sum = _int_add(sum, x)
+    return sum
 
 
 def _doubles(s: str, /) -> int:

@@ -54,25 +54,25 @@ def _constant_capture_nested(x: _Sequence[int], a: int, /) -> None:
 
 
 def _mutable_capture(x: _Sequence[int], /) -> None:
-    sum_ = 0
+    sum = 0
     def fn(n: int, /) -> int:
-        nonlocal sum_
-        sum_ = _int_add(sum_, n)
-        return sum_
+        nonlocal sum
+        sum = _int_add(sum, n)
+        return sum
     out = _list_map(x, fn)
-    _console.log(f'mutableCapture = {_show(out)}; sum={sum_}')
+    _console.log(f'mutableCapture = {_show(out)}; sum={sum}')
 
 
 def _mutable_capture_nested(x: _Sequence[int], /) -> None:
-    sum_ = 0
+    sum = 0
     def fn() -> _Sequence[int]:
         def fn2(n: int, /) -> int:
-            nonlocal sum_
-            sum_ = _int_add(sum_, n)
-            return sum_
+            nonlocal sum
+            sum = _int_add(sum, n)
+            return sum
         return _list_map(x, fn2)
     out = _nest_block(fn)
-    _console.log(f'mutableCaptureNested = {_show(out)}; sum={sum_}')
+    _console.log(f'mutableCaptureNested = {_show(out)}; sum={sum}')
 
 
 def thresh(values: _Sequence[int], value: int, /) -> None:

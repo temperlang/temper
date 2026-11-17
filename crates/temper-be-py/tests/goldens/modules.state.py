@@ -5,8 +5,8 @@ class State:
     __slots__ = ('_id',)
     _id: int
 
-    def __init__(self, /, id_: int) -> None:
-        self._id = id_
+    def __init__(self, /, id: int) -> None:
+        self._id = id
 
     @property
     def id(self, /) -> int:

@@ -388,7 +388,9 @@ words get a trailing `_` (`from_`); and internal top levels get a
 leading `_`. Its reserved list is Python's keywords plus the builtins
 and runtime names its translator prints. Kotlin compatibility covers
 the public surface only: parameters are positional-only, so their
-names, like locals', are free to be pretty.
+names, like locals', are free to be pretty; but a constructor's may be
+passed by name, and those keep builtins' names, where Kotlin's take a
+`_` (2026-11-17, "Parameters and locals" below).
 
 **Example,** Python:
 
@@ -509,6 +511,23 @@ the Python backend's first variant:
   and `clone_boxed`, and, unchanged, Java's (a field obscures a type of
   its name) and C++'s (a member hides a name in its member functions).
   Lua's and C#'s are their keywords alone.
+- **Parameters and locals** (2026-11-17, `NamingRules::local_reserved`):
+  where a backend reaches what a function's own names would hide some
+  other way, its parameters and source-named locals are escaped against
+  that list instead of `reserved`; compiler-made locals still avoid all
+  of `reserved`, being free to take another name, and module-level
+  names and members keep theirs. Python's is its keywords (not soft
+  keywords), dunder names, and `self`, so a constructor's parameters,
+  which Python callers may pass by name, keep builtins' names (`help`,
+  `min`, `type`) whatever the body does, and so do locals (`sum`,
+  `next`), which keeps a parameter's default in place (`if max is None:
+  max = 10`). Its translator marks every builtin it prints, in code and
+  in annotations, and where a function or one around it binds the name,
+  prints it through the `builtins` module, imported once under a name
+  nothing else in the module has (`_builtins.len(items)`); elsewhere
+  builtins stay bare. Its imports already make way for any
+  declaration's name, so a parameter named for a runtime helper keeps
+  its name too. Other backends set none.
 - **Not named:** labels (Python prints none), and core's declarations
   (the connection table's names).
 - **With modules** (2026-10-30): other libraries' declarations (std's

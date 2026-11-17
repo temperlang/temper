@@ -218,6 +218,15 @@ suffer the [singly evaluated default expression pitfall][default-pitfall].
 
 Names translate to Python's conventions: `snake_case` for functions,
 methods, and properties, and a leading `_` for what isn't exported.
+A name that's a Python keyword gets a trailing `_` (`from_`). A
+parameter or local keeps its name even when a builtin has it, so a
+constructor's parameters, which Python code may pass by name, are
+`Option(help=…, type=…)`. Where a function's own names hide a builtin
+its code needs, it reaches the builtin through the `builtins` module
+(`_builtins.len(items)`). A module-level name that a builtin has gets
+a trailing `_` (`max_`), as does a member named for a builtin that a
+class body uses (`int_`, `property_`); other members keep theirs
+(`map`).
 
 On Windows, before Python 3.15, logging characters outside the
 system's code page (as `✅`) to a pipe or file needs Python's UTF-8

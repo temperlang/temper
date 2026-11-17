@@ -61,9 +61,9 @@ def fibonacci() -> _Generator[_Any, _Any, None]:
         b = 1
         while True:
             yield a
-            next_ = _int_add(a, b)
+            next = _int_add(a, b)
             a = b
-            b = next_
+            b = next
     return _generated(fn)
 
 

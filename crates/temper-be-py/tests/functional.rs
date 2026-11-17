@@ -80,7 +80,7 @@ const PROGRAMS: [&str; 15] = [
 ];
 
 fn cases() -> Vec<Case> {
-    kit::cases_with(
+    let mut cases = kit::cases_with(
         "py",
         &PROGRAMS,
         &[
@@ -103,7 +103,39 @@ fn cases() -> Vec<Case> {
             &kit::NET[..],
         ]
         .concat(),
-    )
+    );
+    // This crate's own programs, in `tests/programs/`.
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
+    for name in PY_PROGRAMS {
+        let path = dir.join(format!("{name}.temper.md"));
+        let text = fs::read_to_string(&path).unwrap();
+        let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
+        case.expected = log_blocks(&case.sources[0].1);
+        case.dir = dir.clone();
+        cases.push(case);
+    }
+    cases
+}
+
+/// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
+/// parameters named like Python's builtins, which keep their names
+/// (`host_interop` passes one by name).
+const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+
+/// The lines of a program's log blocks, in order.
+fn log_blocks(text: &str) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut in_log = false;
+    for line in text.lines() {
+        if in_log && line.starts_with("```") {
+            in_log = false;
+        } else if in_log {
+            lines.push(line.to_string());
+        } else if line.starts_with("```log") {
+            in_log = true;
+        }
+    }
+    lines
 }
 
 /// A case's generated files.
@@ -705,8 +737,10 @@ fn runs() {
         let mut modules = Vec::new();
         // The cases to type-check, for `check_types`.
         let mut checked = Vec::new();
-        // `async-turns`'s import path, for `host_interop`.
+        // `async-turns`'s import path, and `py-builtin-params`'s project,
+        // for `host_interop`.
         let mut interop = None;
+        let mut builtin_params = None;
         for case in cases() {
             let path = &case.key;
             let root = out.join(path);
@@ -738,6 +772,9 @@ fn runs() {
             let path_var = env::join_paths(&projects).unwrap();
             if case.key == "async-turns" {
                 interop = Some((projects.clone(), case.expected.clone()));
+            }
+            if case.key == "py-builtin-params" {
+                builtin_params = Some((project.clone(), case.expected.clone()));
             }
             let tests = project.join("tests");
             if tests.exists() {
@@ -794,9 +831,11 @@ fn runs() {
             }
         }
         run_batch(&python, &batch, &mut failures);
-        if let Some((projects, logged)) = interop {
+        if let (Some((mut projects, logged)), Some((project, then))) = (interop, builtin_params) {
+            projects.push(project);
             let checkers = (mypy.as_deref(), pyright.as_deref());
-            host_interop(&python, checkers, &out, &projects, &logged, &mut failures);
+            let logs = [&logged[..], &then[..]];
+            host_interop(&python, checkers, &out, &projects, logs, &mut failures);
         }
         check_types(
             &out,
@@ -824,15 +863,17 @@ fn runs() {
 /// standard way: it awaits a generated promise with `.result()`, with
 /// asyncio, and with asyncio as the runner; blocks on one inside a turn,
 /// which fails clearly; and loops over a generated generator, which a
-/// failed step leaves done. mypy and pyright check it, strict, as they
-/// do generated code, so a bare `await` of a generated promise must
-/// type-check.
+/// failed step leaves done; and, once `py-builtin-params`'s import has
+/// logged `then`, passes its constructor its parameters by name
+/// (`help=`), as they keep their names. mypy and pyright check it,
+/// strict, as they do generated code, so a bare `await` of a generated
+/// promise must type-check.
 fn host_interop(
     python: &str,
     (mypy, pyright): (Option<&str>, Option<&str>),
     out: &Path,
     projects: &[PathBuf],
-    logged: &[String],
+    [logged, then]: [&[String]; 2],
     failures: &mut Vec<String>,
 ) {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/interop.py");
@@ -883,6 +924,9 @@ fn host_interop(
             ]
             .map(String::from),
         )
+        // `py_builtin_params`'s own log, as it's imported.
+        .chain(then.iter().cloned())
+        .chain(["by name flag: how 9".to_string()])
         .collect();
     kit::check_log(failures, "host interop", &run, &expected);
 }

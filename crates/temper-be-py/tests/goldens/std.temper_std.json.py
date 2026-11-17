@@ -771,11 +771,11 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
                     t_0 = _decode_hex_unsigned(source_text, start_hex, i_next)
                 else:
                     t_0 = -1
-                hex_ = t_0
-                if hex_ < 0:
+                hex = t_0
+                if hex < 0:
                     _expected_token_error(source_text, i_next, err_out, 'four hex digits')
                     return -1
-                decoded_cp = hex_
+                decoded_cp = hex
             else:
                 _expected_token_error(source_text, i_next, err_out, 'escape sequence')
                 return -1

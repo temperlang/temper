@@ -14,9 +14,9 @@ class Node:
     _value: int
     _next: 'Node | None'
 
-    def __init__(self, /, value: int, next_: 'Node | None') -> None:
+    def __init__(self, /, value: int, next: 'Node | None') -> None:
         self._value = value
-        self._next = next_
+        self._next = next
 
     @property
     def value(self, /) -> int:

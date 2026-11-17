@@ -42,18 +42,18 @@ def _color_to_hex(color: _Sequence[bool], /) -> str:
     return f'#{c}'
 
 
-def _print_map(name: str, map_: _MappingProxyType[str, str], /) -> None:
+def _print_map(name: str, map: _MappingProxyType[str, str], /) -> None:
     _console.log(f'--- {name} ---')
     def fn(key: str, value: str, /) -> None:
         _console.log(f'{key} = {value}')
-    _mapped_for_each(map_, fn)
+    _mapped_for_each(map, fn)
 
 
-def _print_map_builder(name: str, map_: dict[str, str], /) -> None:
+def _print_map_builder(name: str, map: dict[str, str], /) -> None:
     _console.log(f'--- {name} ---')
     def fn(key: str, value: str, /) -> None:
         _console.log(f'{key} = {value}')
-    _mapped_for_each(map_, fn)
+    _mapped_for_each(map, fn)
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)

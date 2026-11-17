@@ -3,12 +3,16 @@
 //! Python backend gives them; a leading `_` on module-level names that
 //! aren't exported; a trailing `_` on reserved words (`from_`); and
 //! Python's keywords, builtins, and the runtime names the translator
-//! prints, reserved.
+//! prints, reserved at module level. Parameters and source-named locals
+//! avoid only keywords, `self`, and dunder names ([`LOCAL_RESERVED`]):
+//! `help`, `len`, and `type` keep their names, and where a function's own
+//! names hide a builtin its code uses, the translator reaches the builtin
+//! through the `builtins` module (`tree::qualify_builtins`).
 
 use temper_tmpl::DeclKind;
 use temper_tmpl::naming::{Case, NamingRules};
 
-/// Keywords and soft keywords.
+/// Keywords, which no name may be.
 pub const KEYWORDS: &[&str] = &[
     "False",
     "None",
@@ -46,13 +50,16 @@ pub const KEYWORDS: &[&str] = &[
     "while",
     "with",
     "yield",
-    "_",
-    "case",
-    "match",
-    "type",
 ];
 
-/// Builtins (with the keywords, Kotlin's `pyReservedWordsAndNames`).
+/// Soft keywords, which are names but where a statement starts with one:
+/// free for a parameter or a local (`type`), reserved elsewhere, as
+/// Kotlin's.
+pub const SOFT_KEYWORDS: &[&str] = &["_", "case", "match", "type"];
+
+/// Builtins (with the keywords and [`DUNDERS`], Kotlin's
+/// `pyReservedWordsAndNames`), which a parameter or a local may hide: the
+/// translator then reaches them through `builtins`.
 pub const BUILTINS: &[&str] = &[
     "ArithmeticError",
     "AssertionError",
@@ -122,14 +129,6 @@ pub const BUILTINS: &[&str] = &[
     "ValueError",
     "Warning",
     "ZeroDivisionError",
-    "__build_class__",
-    "__debug__",
-    "__doc__",
-    "__import__",
-    "__loader__",
-    "__name__",
-    "__package__",
-    "__spec__",
     "abs",
     "all",
     "any",
@@ -203,6 +202,27 @@ pub const BUILTINS: &[&str] = &[
     "vars",
     "zip",
 ];
+
+/// Dunder names every module has, reserved everywhere: `__debug__`
+/// can't be assigned, and a module's own `__name__` (which the translator
+/// prints for a console's name) isn't `builtins`'.
+pub const DUNDERS: &[&str] = &[
+    "__build_class__",
+    "__debug__",
+    "__doc__",
+    "__import__",
+    "__loader__",
+    "__name__",
+    "__package__",
+    "__spec__",
+];
+
+/// What a parameter or a source-named local may not take, beside
+/// [`KEYWORDS`] and [`DUNDERS`]: `self`, a method's receiver. The
+/// translator's imports make way for any declaration's name
+/// (`Translator::import`), so a parameter named for a runtime helper
+/// (`bubble`) keeps its name too.
+pub const LOCAL_RESERVED: &[&str] = &["self"];
 
 /// The names the translator may import (from `temper_core`, `math`,
 /// `abc`, and `typing`), and `self`, a method's receiver.
@@ -281,8 +301,9 @@ fn identifier(c: char, first: bool) -> bool {
 
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
-    reserved: &[KEYWORDS, BUILTINS, IMPORTED],
-    member_reserved: &[KEYWORDS, CLASS_BODY],
+    reserved: &[KEYWORDS, SOFT_KEYWORDS, BUILTINS, DUNDERS, IMPORTED],
+    member_reserved: &[KEYWORDS, SOFT_KEYWORDS, CLASS_BODY],
+    local_reserved: Some(&[KEYWORDS, DUNDERS, LOCAL_RESERVED]),
     case,
     private_prefix: "_",
     escape_suffix: "_",
@@ -530,7 +551,7 @@ pub fn package_name(name: &str) -> String {
         .chars()
         .map(|c| if c == '-' || c == '.' { '_' } else { c })
         .collect();
-    if KEYWORDS.contains(&out.as_str()) {
+    if KEYWORDS.contains(&out.as_str()) || SOFT_KEYWORDS.contains(&out.as_str()) {
         out.push('_');
     }
     out

@@ -113,6 +113,7 @@ pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, PRINTED],
     // A field obscures a type of its name in its class (`Math.min`).
     member_reserved: &[KEYWORDS, PRINTED],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",

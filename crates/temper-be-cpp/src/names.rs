@@ -182,6 +182,7 @@ pub const RULES: NamingRules = NamingRules {
     // A member hides a name in its member functions (`int32_t`), and
     // every struct has `make` and `shared_from_this`.
     member_reserved: &[KEYWORDS, PRINTED, MACROS],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",

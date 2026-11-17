@@ -52,6 +52,15 @@ pub struct NamingRules {
     /// and decorators in class bodies (`int`, `property`). A builtin's
     /// name is free, as Kotlin's members have it (JS `get`, Python `map`).
     pub member_reserved: &'static [&'static [&'static str]],
+    /// Lists of names a function's parameters and source-named locals may
+    /// not take, in place of [`reserved`](Self::reserved), where the
+    /// translator reaches what such a name would hide another way: Python
+    /// keeps a parameter named `help` or `len`, and reaches a builtin a
+    /// function's own name hides through `builtins`, so a constructor's
+    /// parameters, which callers may pass by name, never depend on its
+    /// body. Compiler-made locals still avoid all of `reserved`, being
+    /// free to take another name. `None`: `reserved`.
+    pub local_reserved: Option<&'static [&'static [&'static str]]>,
     /// The case for a kind of declaration, exported or not.
     pub case: fn(DeclKind, bool) -> Case,
     /// Put before module-level names that aren't exported: `_` in Python.
@@ -567,6 +576,10 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
         .iter()
         .flat_map(|l| l.iter().copied())
         .collect();
+    let local_reserved: HashSet<&str> = match rules.local_reserved {
+        Some(lists) => lists.iter().flat_map(|l| l.iter().copied()).collect(),
+        None => reserved.clone(),
+    };
     // Other libraries' declarations, but core's, which backends reach
     // through their runtimes: as their own library's naming named them,
     // from its interface, std's too.
@@ -624,7 +637,7 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
         name_module(
             p,
             rules,
-            &reserved,
+            [&reserved, &local_reserved],
             &member_reserved,
             module,
             &shared,
@@ -756,7 +769,7 @@ fn choose(
 fn name_module(
     p: &Program,
     rules: &NamingRules,
-    reserved: &HashSet<&str>,
+    [reserved, local_reserved]: [&HashSet<&str>; 2],
     member_reserved: &HashSet<&str>,
     module: &Module,
     shared: &HashSet<String>,
@@ -889,7 +902,7 @@ fn name_module(
                 }
             }
         }
-        name_function(p, rules, reserved, literal, &around, map);
+        name_function(p, rules, [reserved, local_reserved], literal, &around, map);
         if let Some(decl) = decl {
             before.push((decl, at));
         }
@@ -897,6 +910,7 @@ fn name_module(
     for &item in module.items.iter().chain(&module.tests) {
         match p.nodes.get(item) {
             Node::Function { .. } | Node::BodilessFunction { .. } | Node::Test { .. } => {
+                let reserved = [reserved, local_reserved];
                 name_function(p, rules, reserved, item, &HashSet::new(), map)
             }
             Node::Class { members, .. } | Node::Interface { members, .. } => {
@@ -907,6 +921,7 @@ fn name_module(
                     | Node::Function { .. }
                     | Node::BodilessFunction { .. } = p.nodes.get(member)
                     {
+                        let reserved = [reserved, local_reserved];
                         name_function(p, rules, reserved, member, &HashSet::new(), map);
                     }
                 }
@@ -1129,11 +1144,12 @@ impl Live {
 }
 
 /// Names a function's parameters and locals, none taking a name in
-/// `around`.
+/// `around`: compiler-made ones avoid `reserved`, and parameters and
+/// source-named locals `local_reserved` ([`NamingRules::local_reserved`]).
 fn name_function(
     p: &Program,
     rules: &NamingRules,
-    reserved: &HashSet<&str>,
+    [reserved, local_reserved]: [&HashSet<&str>; 2],
     function: NodeId,
     around: &HashSet<String>,
     map: &mut NameMap,
@@ -1184,6 +1200,7 @@ fn name_function(
         }
         let range = ranges.get(&d).copied().unwrap_or((0, u32::MAX));
         let cands = candidates(p, rules, d, false);
+        let reserved = if made(d) { reserved } else { local_reserved };
         let (name, suffixed) = choose(rules, reserved, &cands, |c| {
             !outer.contains(c)
                 && !named.iter().any(|(other, n)| {

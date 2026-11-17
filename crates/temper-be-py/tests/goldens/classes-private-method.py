@@ -119,12 +119,12 @@ class _Tally:
 
     def __init__(self, /, size: int, parent: '_Tally | None', children: '_Sequence[_Tally]') -> None:
         self._depth = 0 if parent is None else _int_add(parent._depth, 1)
-        sum_ = size
+        sum = size
         i = 0
         while i < len(children):
-            sum_ = _int_add(sum_, _list_get(children, i)._size)
+            sum = _int_add(sum, _list_get(children, i)._size)
             i = _int_add(i, 1)
-        self._size = _int_add(sum_, self._depth)
+        self._size = _int_add(sum, self._depth)
 
     @property
     def depth(self, /) -> int:

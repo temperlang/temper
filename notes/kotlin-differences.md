@@ -1893,6 +1893,24 @@ copied Kotlin's:
   constructor, and a Rust method `new`, `clone`, or `clone_boxed` clashes
   with the one every class has. Tempest gives those a `_`.
   Test: programs/renamed.temper.md (`Builtins`).
+- **Python parameters named like builtins** (2026-11-17, the user's
+  decision): Kotlin's Python gives every parameter and local named for
+  a builtin a `_` (`help_`, `min_`, `type_`), so a constructor's
+  parameters, which Python callers may pass by name, read `help_=`.
+  Tempest's keep their names unless they're keywords (`from_`,
+  `lambda_`, `class_`; soft keywords such as `type` stay), and so do
+  source-named locals (`sum`, `next`); compiler-made locals, members,
+  and module-level names escape as before. Where a function's own names
+  hide a builtin that its code calls or annotates with, it reaches the
+  builtin through `builtins`, imported once as `_builtins`
+  (`_builtins.len(items)` beside a parameter `len`), so the API never
+  depends on a function's body. Callers using `help_=` must use
+  `help=`; this differs from Temper 0.6.0's generated API, including
+  std's (`CodeRange` and `Repeat` take `min=` and `max=` in
+  `temper_std.regex`).
+  Test: temper-be-py/tests/programs/py-builtin-params.temper.md, its
+  golden, and `runs`' host interop (`Option(help=…)`), checked by mypy
+  and pyright.
 - **Lua's `goto`:** Kotlin's list of Lua keywords leaves out `goto`
   (reserved since Lua 5.2), so a Temper name `goto` gives Lua that
   doesn't parse; tempest reserves it. And Kotlin says it supports Lua

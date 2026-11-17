@@ -637,6 +637,7 @@ impl<'a> Translator<'a> {
             }
         }
         self.block(module.init, &mut body)?;
+        self.qualify_builtins(&mut body);
         tree::mark_unused(&mut body);
         let exports = self.exports(module);
         let mut module = self.finish(body);
@@ -1115,6 +1116,27 @@ impl<'a> Translator<'a> {
         self.def(item, decl, params, Some(body), name, decorators)
     }
 
+    /// Reaches the builtins a function's own names hide through
+    /// `builtins` (`tree::qualify_builtins`), imported, where any is, as
+    /// `_builtins` (in a tests file, `builtins`), past any name in use.
+    fn qualify_builtins(&mut self, body: &mut [Stmt]) {
+        let mut alias = match self.here.is_none() {
+            true => "builtins".to_string(),
+            false => "_builtins".to_string(),
+        };
+        while self.own.contains(&alias)
+            || self.names.has_name(&alias)
+            || self.aliases.values().any(|a| *a == alias)
+            || self.modules.values().any(|a| *a == alias)
+            || self.type_vars.values().any(|a| *a == alias)
+        {
+            alias.push('_');
+        }
+        if tree::qualify_builtins(body, crate::names::BUILTINS, &alias) {
+            self.modules.insert("builtins".into(), alias);
+        }
+    }
+
     /// The file's imports, taken, with its body.
     fn finish(&mut self, body: Vec<Stmt>) -> tree::Module {
         let imports = std::mem::take(&mut self.imports);
@@ -1195,11 +1217,12 @@ impl<'a> Translator<'a> {
             });
         }
         self.import("unittest", "TestCase");
-        let body = vec![Stmt::Class {
+        let mut body = vec![Stmt::Class {
             name: class.to_string(),
             bases: vec!["TestCase".into()],
             body: methods,
         }];
+        self.qualify_builtins(&mut body);
         Ok(Some(self.finish(body)))
     }
 
@@ -1301,7 +1324,7 @@ impl<'a> Translator<'a> {
                 });
             }
             Node::Bubble { .. } | Node::Error { .. } => {
-                out.push(Stmt::Raise(Expr::name("RuntimeError").call(vec![])))
+                out.push(Stmt::Raise(Expr::builtin("RuntimeError").call(vec![])))
             }
             Node::Panic {} => out.push(panic()),
             _ => {
@@ -1738,7 +1761,7 @@ impl<'a> Translator<'a> {
             Ok(out)
         };
         Ok(match connection {
-            Connection::Builtin(name) => Expr::name(name).call(present(args)?),
+            Connection::Builtin(name) => Expr::builtin(name).call(present(args)?),
             Connection::Method(name) => {
                 let mut args = present(args)?;
                 if args.is_empty() {
@@ -1794,8 +1817,8 @@ impl<'a> Translator<'a> {
             Node::VoidLit {} => Expr::None,
             // The class of the type's values: `type(None)` for `Void`.
             Node::TypeValue { of } => match p.types.get(of) {
-                TypeData::Scalar(Scalar::Void) => Expr::name("type").call(vec![Expr::None]),
-                TypeData::Scalar(s) => Expr::name(match s {
+                TypeData::Scalar(Scalar::Void) => Expr::builtin("type").call(vec![Expr::None]),
+                TypeData::Scalar(s) => Expr::builtin(match s {
                     Scalar::Boolean => "bool",
                     Scalar::Int32 | Scalar::Int64 => "int",
                     Scalar::Float64 => "float",
@@ -2116,7 +2139,7 @@ impl<'a> Translator<'a> {
                     return Ok(Expr::name(name).call(vec![value]));
                 }
                 let class = match p.types.get(p.nodes.ty(id)) {
-                    TypeData::Scalar(s) => Expr::name(match s {
+                    TypeData::Scalar(s) => Expr::builtin(match s {
                         Scalar::Boolean => "bool",
                         Scalar::Int32 | Scalar::Int64 => "int",
                         Scalar::Float64 => "float",
@@ -2142,7 +2165,9 @@ impl<'a> Translator<'a> {
                 // A step's result: a 1-tuple for a value, else `None`.
                 match nominal_decl(p, ty).map(|d| self.qname(d)).as_deref() {
                     Some("core.type ValueResult") => {
-                        return Ok(Expr::name("isinstance").call(vec![value, Expr::name("tuple")]));
+                        return Ok(
+                            Expr::builtin("isinstance").call(vec![value, Expr::builtin("tuple")])
+                        );
                     }
                     Some("core.type DoneResult") => {
                         return Ok(Expr::bin(Bin::Is, value, Expr::None));
@@ -2150,7 +2175,7 @@ impl<'a> Translator<'a> {
                     _ => {}
                 }
                 let class = self.type_ref(ty)?;
-                Expr::name("isinstance").call(vec![value, class])
+                Expr::builtin("isinstance").call(vec![value, class])
             }
             // A `tuple`, as Kotlin's.
             Node::ListLit { items } => Expr::Tuple(present(self.args(p.nodes.list(items))?)?),
@@ -2220,7 +2245,7 @@ impl<'a> Translator<'a> {
         }
         if lits == 0 {
             let terms = parts.into_iter().map(|p| match p {
-                FPart::Expr { expr, str: true } => Expr::name("str").call(vec![expr]),
+                FPart::Expr { expr, str: true } => Expr::builtin("str").call(vec![expr]),
                 FPart::Expr { expr, .. } => expr,
                 FPart::Lit(s) => Expr::Str(s),
             });
@@ -2357,7 +2382,7 @@ fn not(e: Expr) -> Expr {
 /// Kotlin's raises `RuntimeError`, as `bubble()` does, so an `orelse`
 /// caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {
-    Stmt::Raise(Expr::name("BaseException").call(vec![Expr::Str("panic".into())]))
+    Stmt::Raise(Expr::builtin("BaseException").call(vec![Expr::Str("panic".into())]))
 }
 
 /// `t = value` after `stmts`, unless they end by raising.

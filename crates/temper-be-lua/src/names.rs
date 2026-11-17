@@ -59,6 +59,7 @@ fn identifier(c: char, first: bool) -> bool {
 pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, SPECIAL, PRINTED],
     member_reserved: &[KEYWORDS],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",

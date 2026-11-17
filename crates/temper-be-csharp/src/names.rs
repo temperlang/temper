@@ -125,6 +125,7 @@ fn identifier(c: char, first: bool) -> bool {
 pub const RULES: NamingRules = NamingRules {
     reserved: &[],
     member_reserved: &[],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",

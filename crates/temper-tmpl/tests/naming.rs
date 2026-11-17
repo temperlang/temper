@@ -62,6 +62,7 @@ fn identifier(c: char, first: bool) -> bool {
 const RULES: NamingRules = NamingRules {
     reserved: &[&["if", "str", "min"]],
     member_reserved: &[&["if"]],
+    local_reserved: None,
     case,
     private_prefix: "_",
     escape_suffix: "_",
@@ -134,6 +135,40 @@ fn shares_and_suffixes_only_on_conflict() {
     assert_eq!(name(9), "");
     assert_eq!(names.suffixed(), [DeclId(6), DeclId(10)]);
     assert!(names.clashes().is_empty());
+}
+
+/// Under `local_reserved`, parameters and source-named locals avoid only
+/// its names, as Python's keep a builtin's (`str`, `min`), while
+/// compiler-made locals and module-level names still avoid all of
+/// `reserved`.
+#[test]
+fn locals_reserved_apart() {
+    let rules = NamingRules {
+        local_reserved: Some(&[&["if"]]),
+        ..RULES
+    };
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+module t#0 {
+  fn str#1(min#2: Int32, if#3: Int32): Int32 {
+    let str#4: Int32 = %Int32.add(min#2, if#3);
+    let ~min#5: Int32 = str#4;
+    return ~min#5;
+  }
+
+  init {
+  }
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let names = assign(&p, &rules);
+    let name = |d: u32| names.get(DeclId(d));
+    assert_eq!(name(1), "_str");
+    assert_eq!((name(2), name(3), name(4)), ("min", "if_", "str"));
+    assert_eq!(name(5), "min_");
+    assert!(names.suffixed().is_empty());
 }
 
 #[test]

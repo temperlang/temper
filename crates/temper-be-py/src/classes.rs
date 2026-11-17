@@ -132,8 +132,13 @@ impl Translator<'_> {
                 let Some((from, name)) = crate::translate::core_type(&q) else {
                     return not_yet(format!("a type test of {q}"));
                 };
-                let name = self.import_type(from, name);
-                Ok(Expr::name(name.split('[').next().unwrap_or(&name)))
+                // A builtin, bare, as `dict`, or reached through
+                // `builtins` where the function's own names hide it.
+                let bare = name.split('[').next().unwrap_or(name);
+                if from == "builtins" {
+                    return Ok(Expr::builtin(bare));
+                }
+                Ok(Expr::name(self.import(from, bare)))
             }
             Some(decl) => Ok(self.class_ref(decl)),
             None => not_yet(format!("a type test of {}", self.p.show_type(ty))),
@@ -288,7 +293,7 @@ impl Translator<'_> {
         if self.qname(method) == "core.type SafeGenerator.nextSafe()" {
             return Some(
                 self.expr(receiver)
-                    .map(|g| Stmt::Expr(Expr::name("next").call(vec![g, Expr::None]))),
+                    .map(|g| Stmt::Expr(Expr::builtin("next").call(vec![g, Expr::None]))),
             );
         }
         match self.connected_std(method)?.as_str() {
@@ -296,7 +301,7 @@ impl Translator<'_> {
                 let combined = test.attr("messages_combined").call(Vec::new());
                 Stmt::Assert(
                     Expr::Bool(false),
-                    Some(Expr::name("str").call(vec![combined])),
+                    Some(Expr::builtin("str").call(vec![combined])),
                 )
             })),
             _ => None,
@@ -593,7 +598,7 @@ impl Translator<'_> {
                     positional: 1,
                     result: ann,
                     body: vec![Stmt::Raise(
-                        Expr::name("AttributeError").call(vec![message]),
+                        Expr::builtin("AttributeError").call(vec![message]),
                     )],
                 });
             }
@@ -643,7 +648,7 @@ impl Translator<'_> {
         };
         let class = self.type_ref(param)?;
         let other = Expr::name("other");
-        let test = Expr::name("isinstance").call(vec![other.clone(), class]);
+        let test = Expr::builtin("isinstance").call(vec![other.clone(), class]);
         let call = Expr::name("self").attr(name).call(vec![other]);
         Ok(Stmt::Def {
             decorators: Vec::new(),
@@ -829,7 +834,7 @@ impl Translator<'_> {
                 for &a in &super_args {
                     texts.push(self.ann(a)?);
                 }
-                callee = Expr::name(format!("{n}[{}]", texts.join(", ")));
+                callee = Expr::Type(format!("{n}[{}]", texts.join(", ")));
             }
             let call = callee.attr(name).call(args);
             let (result_ann, body) = match p.signature(decl) {

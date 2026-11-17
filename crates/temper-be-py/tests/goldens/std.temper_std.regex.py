@@ -65,8 +65,8 @@ class RegexNode(metaclass=_ABCMeta):
     def find(self, text: str, /) -> 'Match':
         return self.compiled().find(text)
 
-    def replace(self, text: str, format_: '_Callable[[Match], str]', /) -> str:
-        return self.compiled().replace(text, format_)
+    def replace(self, text: str, format: '_Callable[[Match], str]', /) -> str:
+        return self.compiled().replace(text, format)
 
     def split(self, text: str, /) -> _Sequence[str]:
         return self.compiled().split(text)
@@ -136,9 +136,9 @@ class CodeRange(CodePart):
     _min: int
     _max: int
 
-    def __init__(self, /, min_: int, max_: int) -> None:
-        self._min = min_
-        self._max = max_
+    def __init__(self, /, min: int, max: int) -> None:
+        self._min = min
+        self._max = max
 
     @property
     def min(self, /) -> int:
@@ -236,12 +236,12 @@ class Repeat(RegexNode):
     _max: int | None
     _reluctant: bool
 
-    def __init__(self, /, item: RegexNode, min_: int, max_: int | None, reluctant: bool | None = None) -> None:
+    def __init__(self, /, item: RegexNode, min: int, max: int | None, reluctant: bool | None = None) -> None:
         if reluctant is None:
             reluctant = False
         self._item = item
-        self._min = min_
-        self._max = max_
+        self._min = min
+        self._max = max
         self._reluctant = reluctant
 
     @property
@@ -481,18 +481,18 @@ class _RegexRefs:
     _match_: Match
     _or_object: Or
 
-    def __init__(self, /, code_points: CodePoints | None = None, group: Group | None = None, match_: Match | None = None, or_object: Or | None = None) -> None:
+    def __init__(self, /, code_points: CodePoints | None = None, group: Group | None = None, match: Match | None = None, or_object: Or | None = None) -> None:
         if code_points is None:
             code_points = CodePoints('')
         if group is None:
             group = Group('', '', 0, 0)
-        if match_ is None:
-            match_ = Match(group, _map_constructor((_Pair('', group),)))
+        if match is None:
+            match = Match(group, _map_constructor((_Pair('', group),)))
         if or_object is None:
             or_object = Or(())
         self._code_points = code_points
         self._group = group
-        self._match_ = match_
+        self._match_ = match
         self._or_object = or_object
 
     @property
@@ -649,22 +649,22 @@ class _RegexFormatter:
         self._out.append('(?:')
         self._push_regex(repeat.item)
         self._out.append(')')
-        min_ = repeat.min
-        max_: int | None = repeat.max
+        min = repeat.min
+        max: int | None = repeat.max
         if False:
             pass
-        elif min_ == 0 and max_ == 1:
+        elif min == 0 and max == 1:
             self._out.append('?')
-        elif min_ == 0 and max_ is None:
+        elif min == 0 and max is None:
             self._out.append('*')
-        elif min_ == 1 and max_ is None:
+        elif min == 1 and max is None:
             self._out.append('+')
         else:
-            self._out.append(f'{{{min_}')
-            if min_ != max_:
+            self._out.append(f'{{{min}')
+            if min != max:
                 self._out.append(',')
-                if max_ is not None:
-                    self._out.append(str(max_))
+                if max is not None:
+                    self._out.append(str(max))
             self._out.append('}')
         if repeat.reluctant:
             self._out.append('?')
@@ -681,14 +681,14 @@ class _RegexFormatter:
             if not value:
                 return None
             else:
-                max_ = 0
+                max = 0
                 index = 0
                 while len(value) > index:
-                    next_ = _string_get(value, index)
-                    if next_ > max_:
-                        max_ = next_
+                    next = _string_get(value, index)
+                    if next > max:
+                        max = next
                     index = _string_next(value, index)
-                return max_
+                return max
         elif isinstance(code_part, CodeRange):
             return code_part.max
         elif code_part.eq(digit):
@@ -723,8 +723,8 @@ class Regex:
             begin = 0
         return _regex_compiled_find(self, self._compiled, text, begin, _regex_refs)
 
-    def replace(self, text: str, format_: _Callable[[Match], str], /) -> str:
-        return _regex_compiled_replace(self, self._compiled, text, format_, _regex_refs)
+    def replace(self, text: str, format: _Callable[[Match], str], /) -> str:
+        return _regex_compiled_replace(self, self._compiled, text, format, _regex_refs)
 
     def split(self, text: str, /) -> _Sequence[str]:
         return _regex_compiled_split(self, self._compiled, text, _regex_refs)
