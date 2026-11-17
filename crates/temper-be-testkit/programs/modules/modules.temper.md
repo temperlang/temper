@@ -56,3 +56,14 @@ calls 0
 ```log
 calls now 3
 ```
+
+`core`'s `Ratio` has an `@operator("==")` method, which `==` calls
+here too, with a nullable side or not.
+
+    let { Ratio, ratioOf } = import("./core");
+    let half = new Ratio(1, 2);
+    console.log("${half == new Ratio(2, 4)} ${ratioOf(3, 6) == half} ${half != ratioOf(1, 0)}");
+
+```log
+true true true
+```

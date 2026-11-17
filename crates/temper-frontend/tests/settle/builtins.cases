@@ -1090,9 +1090,9 @@ let b4(n: Int): Float64 { mi(n) ** mf(n) }
 error 507..510: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, Int32]
 error 513..518: Cannot bubble from a function without Bubble in its return type
 error 554..559: Actual arguments do not match signature: (String, String) -> Boolean expected [String, String], but got [String, Int32]
-error 594..595: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, Int32]
+error 594..595: K does not support infix `==`; give it a method marked `@operator("==")`
 error 599..604: Cannot bubble from a function without Bubble in its return type
-error 639..649: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
+error 639..649: K does not support infix `==`; give it a method marked `@operator("==")`
 error 639..644: Cannot bubble from a function without Bubble in its return type
 error 682..685: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, String]
 error 674..679: Cannot bubble from a function without Bubble in its return type

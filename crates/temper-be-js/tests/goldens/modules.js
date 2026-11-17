@@ -1,5 +1,5 @@
 import { type } from "@temperlang/core";
-import { share } from "./core.js";
+import { Ratio, ratioOf, share } from "./core.js";
 import { base, bump, calls, intDoubled, twice } from "./helpers.js";
 import { greet } from "./helpers/deep.js";
 import { describe } from "./machine.js";
@@ -38,3 +38,18 @@ bump();
 bump();
 console.log(`calls ${calls2}`);
 console.log(`calls now ${bump()}`);
+const half = new Ratio(1, 2);
+/** @type {boolean} */
+let t$0;
+{
+  const left = ratioOf(3, 6);
+  t$0 = left == null ? false : left.eq(half);
+}
+/** @type {boolean} */
+let t$1;
+{
+  const left2 = half;
+  const right = ratioOf(1, 0);
+  t$1 = right == null ? false : left2.eq(right);
+}
+console.log(`${half.eq(new Ratio(2, 4))} ${t$0} ${!t$1}`);

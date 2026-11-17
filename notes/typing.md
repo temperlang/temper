@@ -976,12 +976,24 @@ and `class_operator` in `interp.rs`):
   nullable second operand or `null` (`[C, C?]`) for `<=>` and the
   comparisons, but not for `==` and `!=`, which Kotlin expands to null
   checks first. Otherwise the builtin variants apply, which no class's
-  value fits, so `k == k` for a class without the method is "… (Int32,
-  Int32) -> Boolean expected [Int32, Int32], but got [K, K]", as is a
-  nullable first operand even of a class with one (`[H?, H]`).
+  value fits. Where Kotlin then reports `k == k` for a class without
+  the method as "… (Int32, Int32) -> Boolean expected [Int32, Int32],
+  but got [K, K]" (temperlang/temper#508), tempest says what's missing,
+  as temperlang/temper#515 proposes: "K does not support infix `==`;
+  give it a method marked `@operator("==")`" (`@operator("<=>")` for
+  `<=>` and the comparisons, naming the operator as written). A nullable
+  first operand, even of a class with the method, keeps Kotlin's
+  message (`[H?, H]`), as does a first operand of a builtin type.
 - **Interfaces** are checked as classes are, since `is` narrows a value
   to a class with the method where wanted: `i == j` for an interface
-  without the method is "… but got [I, I]".
+  without the method is "I does not support infix `==`; …".
+- **Generic classes** are checked as other classes are, with the
+  receiver's type arguments put in: `e == f` for an `Eq<Int>` and an
+  `Eq<String>` is "… (Eq<Int32>, Eq<Int32>) -> Boolean expected
+  [Eq<Int32>, Eq<Int32>], but got [Eq<Int32>, Eq<String>]", and `b == b`
+  for a `Box<Int>` without the method is "Box<Int32> does not support
+  infix `==`; …" (2026-11-16; before, `==` compared identities there,
+  even with the method, and `<` stopped translation).
 - **Not checked:** a first operand of a class or interface with a
   supertype typing doesn't know.
 

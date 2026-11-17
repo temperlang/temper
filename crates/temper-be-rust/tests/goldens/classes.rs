@@ -42,6 +42,59 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 "{}",
                 Holder::new(Loose::new(3), "a") == Holder::new(Loose::new(-3), "a")
             );
+            let loose = Loose::new(2);
+            println!(
+                "{} {} {} {}",
+                loose.mirrors(Loose::new(-2)),
+                {
+                    let left = maybe_loose(-2);
+                    if let Some(left) = &left {
+                        left.eq(loose.clone())
+                    } else {
+                        false
+                    }
+                },
+                {
+                    let left2 = loose.clone();
+                    let right = maybe_loose(0);
+                    if let Some(right) = &right {
+                        left2.eq(right.clone())
+                    } else {
+                        false
+                    }
+                },
+                !{
+                    let left3 = maybe_loose(0);
+                    if let Some(left3) = &left3 {
+                        left3.eq(loose.clone())
+                    } else {
+                        false
+                    }
+                }
+            );
+            let matched = {
+                let subject = maybe_loose(-2);
+                if if let Some(subject) = &subject {
+                    subject.eq(loose.clone())
+                } else {
+                    false
+                } {
+                    Arc::new("loose".to_string())
+                } else {
+                    Arc::new("other".to_string())
+                }
+            };
+            println!("{matched}");
+            let b1: Boxed<Arc<String>> = Boxed::new(Arc::new("x".to_string()), 1);
+            let b3: Boxed<Arc<String>> = Boxed::new(Arc::new("z".to_string()), 2);
+            println!(
+                "{} {} {} {} {}",
+                b1.0.value,
+                b1 == Boxed::new(Arc::new("y".to_string()), 1),
+                b1 != b3,
+                b1.same_as(Boxed::new(Arc::new("y".to_string()), 1)),
+                b3.same_as(b1.clone())
+            );
             println!(
                 "{} {}",
                 Version::new(1, 2).compare_to(Version::new(1, 3)) < 0,
@@ -65,6 +118,60 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 st.0.size,
                 st.size_now(),
                 temper_core::ListedTrait::len(&st.items())
+            );
+            println!(
+                "{}",
+                compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
+                    if let Some(a) = &a {
+                        if let Some(b) = &b {
+                            a.eq(b.clone())
+                        } else {
+                            false
+                        }
+                    } else {
+                        b.is_none()
+                    }
+                }))
+            );
+            println!(
+                "{}",
+                compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
+                    !(if let Some(a) = &a {
+                        if let Some(b) = &b {
+                            a.eq(b.clone())
+                        } else {
+                            false
+                        }
+                    } else {
+                        b.is_none()
+                    })
+                }))
+            );
+            println!(
+                "{}",
+                compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
+                    if let Some(b) = &b {
+                        if let Some(a) = &a {
+                            b.eq(a.clone())
+                        } else {
+                            false
+                        }
+                    } else {
+                        a.is_none()
+                    }
+                }))
+            );
+            println!(
+                "{}",
+                compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
+                    if a.is_none() {
+                        return false;
+                    }
+                    if b.is_none() {
+                        return false;
+                    }
+                    a.as_ref().unwrap().mirrors(b.clone().unwrap())
+                }))
             );
             let _favorite = same(std::any::TypeId::of::<i64>());
             let mut named: i32 = 0;
@@ -342,6 +449,14 @@ impl Loose {
             self.0.n == other.0.n.wrapping_neg()
         }
     }
+
+    pub fn mirrors(&self, other: Loose) -> bool {
+        if other.eq(self.clone()) {
+            self.eq(other.clone())
+        } else {
+            false
+        }
+    }
 }
 
 impl PartialEq for Loose {
@@ -351,6 +466,48 @@ impl PartialEq for Loose {
 }
 
 temper_core::impl_any_value_trait!(Loose, []);
+
+pub(crate) fn maybe_loose(n: i32) -> Option<Loose> {
+    if n == 0 {
+        None
+    } else {
+        Some(Loose::new(n))
+    }
+}
+
+struct BoxedStruct<T: Clone + Send + Sync + 'static> {
+    value: T,
+    tag: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct Boxed<T: Clone + Send + Sync + 'static>(Arc<BoxedStruct<T>>);
+
+impl<T: Clone + Send + Sync + 'static> Boxed<T> {
+    pub fn new(value: T, tag: i32) -> Boxed<T> {
+        Boxed(Arc::new(BoxedStruct { value, tag }))
+    }
+
+    pub fn eq(&self, other: Boxed<T>) -> bool {
+        self.0.tag == other.0.tag
+    }
+
+    pub fn same_as(&self, other: Boxed<T>) -> bool {
+        if self.eq(other.clone()) {
+            other.eq(self.clone())
+        } else {
+            false
+        }
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> PartialEq for Boxed<T> {
+    fn eq(&self, other: &Boxed<T>) -> bool {
+        Boxed::eq(self, other.clone())
+    }
+}
+
+temper_core::impl_any_value_trait!(Boxed<T>, []);
 
 struct HolderStruct {
     loose: Loose,
@@ -449,6 +606,39 @@ temper_core::impl_any_value_trait!(Stock, []);
 
 pub(crate) fn shape(x: Shape) -> Shape {
     x.clone()
+}
+
+pub(crate) fn compared(
+    eq: Arc<dyn Fn(Option<Loose>, Option<Loose>) -> bool + Send + Sync>,
+) -> Arc<String> {
+    let ns: temper_core::List<i32> = Arc::new(vec![0, 1, -1, 2]);
+    let out: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
+    {
+        let length = temper_core::ListedTrait::len(&ns);
+        let mut i: i32 = 0;
+        while i < length {
+            let a = temper_core::ListedTrait::get(&ns, i);
+            i = i.wrapping_add(1);
+            {
+                let length2 = temper_core::ListedTrait::len(&ns);
+                let mut i2: i32 = 0;
+                while i2 < length2 {
+                    let b = temper_core::ListedTrait::get(&ns, i2);
+                    i2 = i2.wrapping_add(1);
+                    temper_core::listed::add(
+                        &out,
+                        if eq(maybe_loose(a), maybe_loose(b)) {
+                            Arc::new("T".to_string())
+                        } else {
+                            Arc::new("f".to_string())
+                        },
+                        None,
+                    );
+                }
+            }
+        }
+    }
+    temper_core::listed::join(&out, Arc::new(String::new()), &(|s: Arc<String>| s.clone()))
 }
 
 pub(crate) fn type_named(n: i32) -> std::any::TypeId {

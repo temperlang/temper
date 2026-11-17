@@ -954,6 +954,16 @@ console.log("c == null -> ${c == null}"); //!outputs "c == null -> false"
 // ✅
 ```
 
+A class without such a method has no `==`, so comparing its values is
+an error, and likewise `<` and the other comparisons without an
+[`@operator("<=>")`](#operator-decorator) method.
+
+```temper
+class P(public x: Int) {}
+new P(1) == new P(1)
+// ❌ P does not support infix `==`; give it a method marked `@operator("==")`!
+```
+
 ### `>`
 `a > b` is [*true*](#true) when *a* orders after *b*, and is a compile-time
 error if the two are not mutually comparable.
@@ -1159,6 +1169,10 @@ test("something important") {
 }
 // ⏸️
 ```
+
+Without a message, `assert(c)` says `expected c` if it fails, and
+`assert(a == b)` shows both values, as `expected a == (2) not (3)`,
+where it can: where a side has no `toString()`, it's `expected a == b`.
 
 ### `break` statement
 `break` jumps to the end of a block.

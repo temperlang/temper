@@ -1,5 +1,6 @@
 from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
 from collections.abc import (
+    Callable as _Callable,
     MutableSequence as _MutableSequence,
     Sequence as _Sequence,
 )
@@ -11,11 +12,19 @@ from temper_core import (
     int_mul as _int_mul,
     int_negate as _int_negate,
     int_sub as _int_sub,
+    list_get as _list_get,
     list_join as _list_join,
 )
-from typing import ClassVar as _ClassVar
+from typing import (
+    ClassVar as _ClassVar,
+    Generic as _Generic,
+    TypeVar as _TypeVar,
+    cast as _cast,
+)
 
 __all__ = ('Shape', 'Rect', 'Square')
+
+_T = _TypeVar('_T')
 
 
 class Shape(metaclass=_ABCMeta):
@@ -170,6 +179,49 @@ class _Loose:
     def __eq__(self, other: object, /) -> bool:
         return isinstance(other, _Loose) and self.eq(other)
 
+    def mirrors(self, other: '_Loose', /) -> bool:
+        if other == self:
+            return self == other
+        else:
+            return False
+
+
+def _maybe_loose(n: int, /) -> _Loose | None:
+    if n == 0:
+        return None
+    else:
+        return _Loose(n)
+
+
+class _Boxed(_Generic[_T]):
+    __slots__ = ('_value', '_tag')
+    _value: _T
+    _tag: int
+
+    def __init__(self, /, value: _T, tag: int) -> None:
+        self._value = value
+        self._tag = tag
+
+    @property
+    def value(self, /) -> _T:
+        return self._value
+
+    @property
+    def tag(self, /) -> int:
+        return self._tag
+
+    def eq(self, other: '_Boxed[_T]', /) -> bool:
+        return self._tag == other._tag
+
+    def __eq__(self, other: object, /) -> bool:
+        return isinstance(other, _Boxed) and self.eq(_cast('_Boxed[_T]', other))
+
+    def same_as(self, other: '_Boxed[_T]', /) -> bool:
+        if self == other:
+            return other == self
+        else:
+            return False
+
 
 class _Holder:
     __slots__ = ('_loose', '_tag')
@@ -259,6 +311,23 @@ def _shape(x: Shape, /) -> Shape:
     return x
 
 
+def _compared(eq: _Callable[[_Loose | None, _Loose | None], bool], /) -> str:
+    ns = (0, 1, -1, 2)
+    out: _MutableSequence[str] = []
+    length = len(ns)
+    i = 0
+    while i < length:
+        a = _list_get(ns, i)
+        i = _int_add(i, 1)
+        length2 = len(ns)
+        i2 = 0
+        while i2 < length2:
+            b = _list_get(ns, i2)
+            i2 = _int_add(i2, 1)
+            out.append('T' if eq(_maybe_loose(a), _maybe_loose(b)) else 'f')
+    return _list_join(out, '', lambda s: s)
+
+
 def _type_named(n: int, /) -> type:
     if n == 0:
         return type(None)
@@ -332,6 +401,18 @@ _added: int = _t2
 _console.log(f'{_added} {_c.count}')
 _console.log(f'{_boolean_to_string(_Point(1, 2) == _Point(1, 2))} {_boolean_to_string(_Point(1, 2) != _Point(2, 1))}')
 _console.log(_boolean_to_string(_Holder(_Loose(3), 'a') == _Holder(_Loose(-3), 'a')))
+_loose: _Loose = _Loose(2)
+_t_1 = _boolean_to_string(_loose.mirrors(_Loose(-2)))
+_t_0 = _boolean_to_string(False if (_left := _maybe_loose(-2)) is None else _left == _loose)
+_left2 = _loose
+_right: _Loose | None = _maybe_loose(0)
+_console.log(f'{_t_1} {_t_0} {_boolean_to_string(False if _right is None else _left2 == _right)} {_boolean_to_string(not (False if (_left3 := _maybe_loose(0)) is None else _left3 == _loose))}')
+_subject: _Loose | None = _maybe_loose(-2)
+_matched: str = 'loose' if (False if _subject is None else _subject == _loose) else 'other'
+_console.log(_matched)
+_b1: _Boxed[str] = _Boxed('x', 1)
+_b3: _Boxed[str] = _Boxed('z', 2)
+_console.log(f"{_b1.value} {_boolean_to_string(_b1 == _Boxed('y', 1))} {_boolean_to_string(_b1 != _b3)} {_boolean_to_string(_b1.same_as(_Boxed('y', 1)))} {_boolean_to_string(_b3.same_as(_b1))}")
 _console.log(f'{_boolean_to_string(_Version(1, 2).compare_to(_Version(1, 3)) < 0)} {_boolean_to_string(_Version(2, 0).compare_to(_Version(1, 9)) >= 0)}')
 _console.log(f'{_boolean_to_string(isinstance(_q, Square))} {_boolean_to_string(isinstance(_s, Square))}')
 _sq: Square = _cast_by_type(_q, Square)
@@ -341,6 +422,20 @@ if isinstance(_s, Rect):
 _st: _Stock = _Stock((4, 5))
 _st.items = (1, 2, 3)
 _console.log(f'{_st.count} {_st.size} {_st.size_now()} {len(_st.items)}')
+_console.log(_compared(lambda a, b: b is None if a is None else False if b is None else a == b))
+_console.log(_compared(lambda a, b: not (b is None if a is None else False if b is None else a == b)))
+_console.log(_compared(lambda a, b: a is None if b is None else False if a is None else b == a))
+
+
+def _fn4(a: _Loose | None, b: _Loose | None, /) -> bool:
+    if a is None:
+        return False
+    if b is None:
+        return False
+    return a.mirrors(b)
+
+
+_console.log(_compared(_fn4))
 _favorite: type = _same(int)
 _named: int = 0
 _i = 0

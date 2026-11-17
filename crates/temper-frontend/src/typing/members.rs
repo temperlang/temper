@@ -1084,6 +1084,60 @@ impl Settle {
         }
     }
 
+    /// Whether a string template can show a value of type `t`, not null:
+    /// one of a builtin type or class with a `toString()` method, its own
+    /// or inherited; a type parameter's by its bound. True where typing
+    /// doesn't know, so only a known lack is reported.
+    pub(crate) fn has_to_string(&mut self, t: TypeId) -> bool {
+        let mut t = t;
+        for _ in 0..8 {
+            match *self.typing.types.get(t) {
+                TypeData::Nullable(inner) => t = inner,
+                TypeData::Param(_) => t = self.typing.types.upper(t),
+                _ => break,
+            }
+        }
+        let types = &self.typing.types;
+        match *types.get(types.base(t)) {
+            TypeData::Builtin(i) => {
+                let mut name = match TYPES[i as usize] {
+                    "Int" => "Int32",
+                    other => other,
+                };
+                if matches!(name, "String" | "Boolean" | "Int32" | "Int64" | "Float64") {
+                    return true;
+                }
+                loop {
+                    let shown = (core_class(name).members.iter()).any(|m| {
+                        m.name == "toString"
+                            && !m.is_static
+                            && matches!(m.kind, CoreMemberKind::Method { .. })
+                    });
+                    if shown {
+                        return true;
+                    }
+                    match builtin_supertype(name) {
+                        Some(sup) => name = sup,
+                        None => return false,
+                    }
+                }
+            }
+            TypeData::Class(symbol) => {
+                let Some(class) = self.scopes.symbol(symbol).decl else {
+                    return true;
+                };
+                let Some(name) = self.lib.names.find("toString") else {
+                    return false;
+                };
+                let tree = &self.lib.tree;
+                (self.members_named(class, name, false).iter())
+                    .any(|&m| tree.data(m) & ROLE_MASK == ROLE_METHOD)
+            }
+            TypeData::Fn { .. } => false,
+            _ => true,
+        }
+    }
+
     /// A class's members named `name`: its instances' own and inherited
     /// ones, or if `statics`, its own static ones. Not constructors, nor
     /// `@noProperty` inputs, which only initializers read, by name.

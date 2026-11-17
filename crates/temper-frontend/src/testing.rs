@@ -14,7 +14,8 @@
 //!   nearest enclosing function's parameter named `test` or typed `Test`.
 //!   Without a message, it's `"expected c"`, from the source text, or for
 //!   `assert(a == b)`, `do { let a# = a; let b# = b; t.assert(a# == b#, fn
-//!   { "expected a == (${b#}) not (${a#})" }) }`.
+//!   { "expected a == (${b#}) not (${a#})" }) }`, or the plain message
+//!   where `a` or `b` has no `toString()`, once typing knows.
 //! - Each module with tests gets an expression running them,
 //!   `r#([t#test, …])`, a JUnit XML report ([`crate::settle::SettledModule::tests`]),
 //!   which [`crate::interp::run_tests`] evaluates after the program runs.
@@ -209,7 +210,11 @@ impl Settle {
             self.rewrite(call, NodeKind::Call, 0, &[method, condition, message]);
             return true;
         };
-        // Kotlin's message names the left side and shows both values.
+        // Kotlin's message names the left side and shows both values;
+        // where one can't be shown, it's the plain one instead
+        // ([`Settle::settle_assert_messages`]).
+        let plain = Value::String(format!("expected {}", text(self, condition)));
+        let plain = self.lib.add_value(plain, span, call);
         let before = Value::String(format!("expected {} == (", text(self, actual)));
         let mut statements = Vec::new();
         let mut temporary = |s: &mut Self, value: NodeId, hint: &str| {
@@ -243,6 +248,7 @@ impl Settle {
         parts.push(actual(self));
         parts.push(self.lib.add_value(Value::String(")".into()), span, call));
         let text = self.lib.add(NodeKind::Call, span, 0, &parts, call);
+        self.assert_messages.push((text, plain));
         let message = self.constant_fn(text, span, call);
         statements.push(
             self.lib
@@ -250,6 +256,25 @@ impl Settle {
         );
         self.rewrite(call, NodeKind::Block, 0, &statements);
         true
+    }
+
+    /// Once typing is done, each `assert(a == b)` message made this round
+    /// that shows a value without a `toString()`, as a class's without
+    /// one, or a list, becomes the plain one, `"expected a == b"`, so it
+    /// translates and runs, where Kotlin Temper reports "No member
+    /// toString" at the `assert`.
+    pub(crate) fn settle_assert_messages(&mut self) {
+        for (text, plain) in std::mem::take(&mut self.assert_messages) {
+            let parts = self.lib.tree.children(text)[1..].to_vec();
+            let hidden = parts.into_iter().any(|part| {
+                self.lib.tree.kind(part) != NodeKind::Value
+                    && (self.typing.expr(part)).is_some_and(|t| !self.has_to_string(t))
+            });
+            if hidden {
+                let data = self.lib.tree.data(plain);
+                self.rewrite(text, NodeKind::Value, data, &[]);
+            }
+        }
     }
 
     /// `fn { value }`.

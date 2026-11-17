@@ -641,7 +641,9 @@ impl Translator<'_> {
     }
 
     /// `__eq__`, by an `@operator("==")` method: false for an object of
-    /// another type, as Python's protocol has it.
+    /// another type, as Python's protocol has it. A generic class's casts
+    /// what `isinstance` narrows to, `_Boxed[Unknown]` to pyright, to its
+    /// parameter's type, `cast('_Boxed[_T]', other)`.
     fn eq_hook(&mut self, method: DeclId, name: &str) -> R<Stmt> {
         let Some(param) = self.p.signature(method).map(|s| s.params[0]) else {
             return not_yet("an `==` method's parameter");
@@ -649,7 +651,14 @@ impl Translator<'_> {
         let class = self.type_ref(param)?;
         let other = Expr::name("other");
         let test = Expr::builtin("isinstance").call(vec![other.clone(), class]);
-        let call = Expr::name("self").attr(name).call(vec![other]);
+        let arg = if self.p.types.args(param).is_empty() {
+            other
+        } else {
+            let (ann, _) = self.ann_raw(param)?;
+            let cast = self.import("typing", "cast");
+            Expr::name(cast).call(vec![Expr::Str(ann), other])
+        };
+        let call = Expr::name("self").attr(name).call(vec![arg]);
         Ok(Stmt::Def {
             decorators: Vec::new(),
             name: "__eq__".into(),

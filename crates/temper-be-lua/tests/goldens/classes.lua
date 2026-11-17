@@ -189,6 +189,7 @@ end
 ---@class classes.Loose
 ---@field n integer
 ---@field eq fun(self: classes.Loose, other: classes.Loose): boolean
+---@field mirrors fun(self: classes.Loose, other: classes.Loose): boolean
 
 ---@class classes.Loose.type: temper.Type
 ---@operator call: classes.Loose
@@ -208,6 +209,63 @@ function Loose.methods.eq(this, other)
     return true
   else
     return this.n == temper.int32_unm(other.n)
+  end
+end
+
+---@param this classes.Loose
+---@param other classes.Loose
+---@return boolean
+function Loose.methods.mirrors(this, other)
+  if other:eq(this) then
+    return this:eq(other)
+  else
+    return false
+  end
+end
+
+---@param n integer
+---@return classes.Loose|temper.Null
+local function maybeLoose(n)
+  if n == 0 then
+    return temper.null
+  else
+    return Loose(n)
+  end
+end
+
+---@class classes.Boxed
+---@field value any
+---@field tag integer
+---@field eq fun(self: classes.Boxed, other: classes.Boxed): boolean
+---@field sameAs fun(self: classes.Boxed, other: classes.Boxed): boolean
+
+---@class classes.Boxed.type: temper.Type
+---@operator call: classes.Boxed
+local Boxed = temper.type("classes.Boxed")
+
+---@param this classes.Boxed
+---@param value any
+---@param tag integer
+function Boxed.constructor(this, value, tag)
+  this.value = value
+  this.tag = tag
+end
+
+---@param this classes.Boxed
+---@param other classes.Boxed
+---@return boolean
+function Boxed.methods.eq(this, other)
+  return this.tag == other.tag
+end
+
+---@param this classes.Boxed
+---@param other classes.Boxed
+---@return boolean
+function Boxed.methods.sameAs(this, other)
+  if this:eq(other) then
+    return other:eq(this)
+  else
+    return false
   end
 end
 
@@ -315,6 +373,31 @@ local function shape(x)
   return x
 end
 
+---@param eq fun(arg0: classes.Loose|temper.Null, arg1: classes.Loose|temper.Null): boolean
+---@return string
+local function compared(eq)
+  local ns = { 0, 1, -1, 2 }
+  local out = temper.listbuilder_constructor()
+  do
+    local length = temper.list_length(ns)
+    local i = 0
+    while i < length do
+      local a = temper.list_get(ns, i)
+      i = temper.int32_add(i, 1)
+      do
+        local length2 = temper.list_length(ns)
+        local i2 = 0
+        while i2 < length2 do
+          local b = temper.list_get(ns, i2)
+          i2 = temper.int32_add(i2, 1)
+          temper.listbuilder_add(out, eq(maybeLoose(a), maybeLoose(b)) and "T" or "f")
+        end
+      end
+    end
+  end
+  return temper.listed_join(out, "", function(s) return s end)
+end
+
 ---@param n integer
 ---@return string
 local function typeNamed(n)
@@ -419,6 +502,19 @@ local added = t2
 print(added .. " " .. c.count)
 print(tostring(Point(1, 2):eq(Point(1, 2))) .. " " .. tostring(not Point(1, 2):eq(Point(2, 1))))
 print(tostring(Holder(Loose(3), "a"):eq(Holder(Loose(-3), "a"))))
+local loose = Loose(2)
+local string = tostring(loose:mirrors(Loose(-2))) .. " "
+local left = maybeLoose(-2)
+local left2 = loose
+local right = maybeLoose(0)
+local left3 = maybeLoose(0)
+print(string .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
+local subject = maybeLoose(-2)
+local matched = not temper.is_null(subject) and (subject --[[@as classes.Loose]]):eq(loose) and "loose" or "other"
+print(matched)
+local b1 = Boxed("x", 1)
+local b3 = Boxed("z", 2)
+print(b1.value .. " " .. tostring(b1:eq(Boxed("y", 1))) .. " " .. tostring(not b1:eq(b3)) .. " " .. tostring(b1:sameAs(Boxed("y", 1))) .. " " .. tostring(b3:sameAs(b1)))
 print(tostring(Version(1, 2):compareTo(Version(1, 3)) < 0) .. " " .. tostring(Version(2, 0):compareTo(Version(1, 9)) >= 0))
 print(tostring(temper.instance_of(q, Square)) .. " " .. tostring(temper.instance_of(s, Square)))
 local sq = temper.cast_to(q, Square)
@@ -429,6 +525,24 @@ end
 local st = Stock({ 4, 5 })
 st.items = { 1, 2, 3 }
 print(st.count .. " " .. st.size .. " " .. st:sizeNow() .. " " .. temper.list_length(st.items))
+print(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
+print(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
+print(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))
+
+---@param a classes.Loose|temper.Null
+---@param b classes.Loose|temper.Null
+---@return boolean
+local function fn4(a, b)
+  if temper.is_null(a) then
+    return false
+  end
+  if temper.is_null(b) then
+    return false
+  end
+  return (a --[[@as classes.Loose]]):mirrors(b --[[@as classes.Loose]])
+end
+
+print(compared(fn4))
 local favorite = same("number")
 local named = 0
 do

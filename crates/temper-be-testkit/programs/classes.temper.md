@@ -5,9 +5,11 @@ or its own), methods, getters and setters, a setter with no getter
 (assigned as a value too), static fields and functions,
 private members read on another instance, a `@noProperty` input that
 initializers read, though a getter and setter share its name, interfaces
-with abstract and default members, `@auto("==")` and `@operator` methods, `toString`, `is`, `as`, and narrowing. Calls chain on
-objects that methods return, which C++ must keep alive. The log is what
-the interpreter gives.
+with abstract and default members, `@auto("==")` and `@operator` methods
+(`==` with a nullable side, in a `when`, with `this`, and on a generic
+class), `toString`, `is`, `as`, and narrowing. Calls chain on objects
+that methods return, which C++ must keep alive. The log is what the
+interpreter gives.
 
     export interface Shape {
       public get area(): Int;
@@ -51,6 +53,15 @@ the interpreter gives.
     class Loose(public n: Int) {
       @operator("==")
       public eq(other: Loose): Boolean { n == other.n || n == -other.n }
+      public mirrors(other: Loose): Boolean { other == this && this == other }
+    }
+
+    let maybeLoose(n: Int): Loose? { if (n == 0) { null } else { new Loose(n) } }
+
+    class Boxed<T>(public value: T, public tag: Int) {
+      @operator("==")
+      public eq(other: Boxed<T>): Boolean { tag == other.tag }
+      public sameAs(other: Boxed<T>): Boolean { this == other && other == this }
     }
 
     @auto("==")
@@ -94,6 +105,16 @@ the interpreter gives.
     console.log("${added} ${c.count}");
     console.log("${new Point(1, 2) == new Point(1, 2)} ${new Point(1, 2) != new Point(2, 1)}");
     console.log("${new Holder(new Loose(3), "a") == new Holder(new Loose(-3), "a")}");
+    let loose = new Loose(2);
+    console.log("${loose.mirrors(new Loose(-2))} ${maybeLoose(-2) == loose} ${loose == maybeLoose(0)} ${maybeLoose(0) != loose}");
+    let matched = when (maybeLoose(-2)) {
+      loose -> "loose";
+      else -> "other";
+    };
+    console.log(matched);
+    let b1 = new Boxed("x", 1);
+    let b3 = new Boxed("z", 2);
+    console.log("${b1.value} ${b1 == new Boxed("y", 1)} ${b1 != b3} ${b1.sameAs(new Boxed("y", 1))} ${b3.sameAs(b1)}");
     console.log("${new Version(1, 2) < new Version(1, 3)} ${new Version(2, 0) >= new Version(1, 9)}");
     console.log("${q is Square} ${s is Square}");
     let sq = q as Square;
@@ -119,11 +140,46 @@ true
 2 17
 true true
 true
+true true false true
+loose
+x true true true false
 true true
 true false
 16
 2
 2 2 3 3
+```
+
+## Equality, every way round
+
+A table of `==` and `!=` on `Loose`, whose `@operator("==")` method
+counts `n` and `-n` the same, for each pair of `null`, 1, -1, and 2,
+through function literals: `T` where they're equal.
+
+    let compared(eq: fn (Loose?, Loose?): Boolean): String {
+      let ns = [0, 1, -1, 2];
+      let out = new ListBuilder<String>();
+      for (let a of ns) {
+        for (let b of ns) {
+          out.add(if (eq(maybeLoose(a), maybeLoose(b))) { "T" } else { "f" });
+        }
+      }
+      out.join("") { (s: String): String => s }
+    }
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => a == b });
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => a != b });
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => b == a });
+    console.log(compared(fn (a: Loose?, b: Loose?): Boolean {
+      if (a == null) { return false; }
+      if (b == null) { return false; }
+      a.mirrors(b)
+    }));
+
+```log
+TffffTTffTTffffT
+fTTTTffTTffTTTTf
+TffffTTffTTffffT
+fffffTTffTTffffT
 ```
 
 ## Types as values

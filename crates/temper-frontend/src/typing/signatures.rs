@@ -13,7 +13,8 @@
 //!
 //! `==`, `!=`, `<=>` and the comparisons whose first operand is of a class
 //! call its method marked `@operator` instead, if it has one; if it has
-//! none, the builtin variants apply, which no class's value fits.
+//! none, the builtin variants apply, which no class's value fits, and the
+//! error names the operator the class lacks.
 
 use super::Site;
 use crate::builtins::{Builtin, Constant, Function};
@@ -223,7 +224,9 @@ impl Settle {
             Cmp | Lt | Le | Gt | Ge => MEMBER_OPERATOR_CMP,
             _ => return None,
         };
-        let TypeData::Class(symbol) = *self.typing.types.get(t) else {
+        // A generic class's too, as `Box<Int>`'s.
+        let types = &self.typing.types;
+        let TypeData::Class(symbol) = *types.get(types.base(t)) else {
             return None;
         };
         let class = self.scopes.symbol(symbol).decl?;
@@ -245,8 +248,15 @@ impl Settle {
         let this = self.known_type(a);
         let (owner, param, ret) = match self.class_operator(f, this)? {
             OperatorMethod::Method { owner, method } => {
-                let sig = self.member_type(method);
-                let owner = self.class_type(owner);
+                // A generic class's, with its type arguments put in, as
+                // `(Box<Int32>, Box<Int32>) -> Boolean`.
+                let (sig, owner) = match self.receiver(this) {
+                    Some(r) if !self.typing.types.args(this).is_empty() => {
+                        let owner = if r.class == owner { this } else { UNKNOWN };
+                        (self.member_type_in(method, &r), owner)
+                    }
+                    _ => (self.member_type(method), self.class_type(owner)),
+                };
                 match self.typing.types.get(sig) {
                     TypeData::Fn { params, ret, .. } if params.len() == 1 => {
                         (owner, params[0].ty, *ret)
@@ -343,13 +353,48 @@ impl Settle {
                 _ => self.show(t),
             })
             .collect::<Vec<_>>();
-        let expected = self.show_list(sig.params);
-        let message = Message::SignatureMismatch(
-            self.show_sig(sig),
-            format!("[{expected}]"),
-            format!("[{}]", got.join(", ")),
-        );
+        let message = match self.missing_operator(f, args) {
+            Some(message) => message,
+            None => {
+                let expected = self.show_list(sig.params);
+                Message::SignatureMismatch(
+                    self.show_sig(sig),
+                    format!("[{expected}]"),
+                    format!("[{}]", got.join(", ")),
+                )
+            }
+        };
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// For an operator a class's or interface's value doesn't fit as the
+    /// first operand, "C does not support infix `==`; give it a method
+    /// marked `@operator("==")`", rather than the mismatch against
+    /// `Int32`'s variant that Kotlin Temper reports (temperlang/temper#508).
+    fn missing_operator(&mut self, f: Function, args: &[NodeId]) -> Option<Message> {
+        let (op, method, flag) = match f {
+            Function::Eq => ("==", "==", MEMBER_OPERATOR_EQ),
+            Function::Ne => ("!=", "==", MEMBER_OPERATOR_EQ),
+            Function::Cmp => ("<=>", "<=>", MEMBER_OPERATOR_CMP),
+            Function::Lt => ("<", "<=>", MEMBER_OPERATOR_CMP),
+            Function::Le => ("<=", "<=>", MEMBER_OPERATOR_CMP),
+            Function::Gt => (">", "<=>", MEMBER_OPERATOR_CMP),
+            Function::Ge => (">=", "<=>", MEMBER_OPERATOR_CMP),
+            _ => return None,
+        };
+        // Not a nullable value's, which no operator method takes.
+        let t = self.known_type(*args.first()?);
+        let types = &self.typing.types;
+        let &TypeData::Class(symbol) = types.get(types.base(t)) else {
+            return None;
+        };
+        let class = self.scopes.symbol(symbol).decl?;
+        match self.operator_method(class, flag) {
+            OperatorMethod::Builtin => {
+                Some(Message::NoSuchOperator(self.show(t), op.into(), method))
+            }
+            _ => None,
+        }
     }
 
     /// Whether a callee is `console.log`.

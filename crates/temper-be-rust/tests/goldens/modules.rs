@@ -23,6 +23,28 @@ pub(crate) fn init() -> temper_core::Result<()> {
             crate::helpers::bump();
             println!("calls {calls2}");
             println!("calls now {}", crate::helpers::bump());
+            let half = crate::core::Ratio::new(1, 2);
+            println!(
+                "{} {} {}",
+                half == crate::core::Ratio::new(2, 4),
+                {
+                    let left = crate::core::ratio_of(3, 6);
+                    if let Some(left) = &left {
+                        left.eq(half.clone())
+                    } else {
+                        false
+                    }
+                },
+                !{
+                    let left2 = half.clone();
+                    let right = crate::core::ratio_of(1, 0);
+                    if let Some(right) = &right {
+                        left2.eq(right.clone())
+                    } else {
+                        false
+                    }
+                }
+            );
             Ok(())
         })
         .clone()

@@ -1,15 +1,49 @@
 package classes;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiPredicate;
 import java.util.logging.Logger;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.Nullable;
 
 public final class ClassesGlobal {
     private ClassesGlobal() {}
 
+    static @Nullable Loose maybeLoose(int n) {
+        if (n == 0) {
+            return null;
+        } else {
+            return new Loose(n);
+        }
+    }
+
     static Shape shape(Shape x) {
         return x;
+    }
+
+    static String compared(BiPredicate<@Nullable Loose, @Nullable Loose> eq) {
+        List<Integer> ns = List.of(0, 1, -1, 2);
+        List<String> out = new ArrayList<>();
+        {
+            int length = ns.size();
+            int i = 0;
+            while (i < length) {
+                int a = Core.listGet(ns, i);
+                i = i + 1;
+                {
+                    int length2 = ns.size();
+                    int i2 = 0;
+                    while (i2 < length2) {
+                        int b = Core.listGet(ns, i2);
+                        i2 = i2 + 1;
+                        out.add(eq.test(maybeLoose(a), maybeLoose(b)) ? "T" : "f");
+                    }
+                }
+            }
+        }
+        return Core.listJoinObj(out, "", s -> s);
     }
 
     static Class<?> typeNamed(int n) {
@@ -59,6 +93,21 @@ public final class ClassesGlobal {
         console.log(added + " " + c.count);
         console.log(new Point(1, 2).eq(new Point(1, 2)) + " " + !new Point(1, 2).eq(new Point(2, 1)));
         console.log(Boolean.toString(new Holder(new Loose(3), "a").eq(new Holder(new Loose(-3), "a"))));
+        Loose loose = new Loose(2);
+        String t3 = loose.mirrors(new Loose(-2)) + " ";
+        @Nullable Loose left = maybeLoose(-2);
+        String t4 = t3 + (left == null ? false : left.eq(loose)) + " ";
+        Loose left2 = loose;
+        @Nullable Loose right = maybeLoose(0);
+        String t5 = t4 + (right == null ? false : left2.eq(right)) + " ";
+        @Nullable Loose left3 = maybeLoose(0);
+        console.log(t5 + !(left3 == null ? false : left3.eq(loose)));
+        @Nullable Loose subject = maybeLoose(-2);
+        String matched = (subject == null ? false : subject.eq(loose)) ? "loose" : "other";
+        console.log(matched);
+        Boxed<String> b1 = new Boxed<String>("x", 1);
+        Boxed<String> b3 = new Boxed<String>("z", 2);
+        console.log(b1.value + " " + b1.eq(new Boxed<String>("y", 1)) + " " + !b1.eq(b3) + " " + b1.sameAs(new Boxed<String>("y", 1)) + " " + b3.sameAs(b1));
         console.log((new Version(1, 2).compareTo(new Version(1, 3)) < 0) + " " + (new Version(2, 0).compareTo(new Version(1, 9)) >= 0));
         console.log((q instanceof Square) + " " + (s instanceof Square));
         Square sq = (Square) q;
@@ -69,6 +118,19 @@ public final class ClassesGlobal {
         Stock st = new Stock(List.of(4, 5));
         st.setItems(List.of(1, 2, 3));
         console.log(st.count + " " + st.size + " " + st.sizeNow() + " " + st.getItems().size());
+        console.log(compared((a, b) -> a == null ? b == null : b == null ? false : a.eq(b)));
+        console.log(compared((a, b) -> !(a == null ? b == null : b == null ? false : a.eq(b))));
+        console.log(compared((a, b) -> b == null ? a == null : a == null ? false : b.eq(a)));
+        BiPredicate<@Nullable Loose, @Nullable Loose> fn4 = (a, b) -> {
+            if (a == null) {
+                return false;
+            }
+            if (b == null) {
+                return false;
+            }
+            return a.mirrors(b);
+        };
+        console.log(compared(fn4));
         Class<?> favorite = same(Long.class);
         int named = 0;
         {

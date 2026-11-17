@@ -29,5 +29,11 @@ public static class ModulesGlobal
         HelpersGlobal.Bump();
         console.Log("calls " + calls.ToString(CultureInfo.InvariantCulture));
         console.Log("calls now " + HelpersGlobal.Bump().ToString(CultureInfo.InvariantCulture));
+        Ratio half = new Ratio(1, 2);
+        string @string = (half.Eq(new Ratio(2, 4)) ? "true" : "false") + " ";
+        Ratio? left = CoreGlobal.RatioOf(3, 6);
+        Ratio left2 = half;
+        Ratio? right = CoreGlobal.RatioOf(1, 0);
+        console.Log(@string + ((left == null ? false : left.Eq(half)) ? "true" : "false") + " " + (!(right == null ? false : left2.Eq(right)) ? "true" : "false"));
     }
 }

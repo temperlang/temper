@@ -1749,11 +1749,13 @@ impl<'a> Translator<'a> {
         let rust = format!("{name}{fish}");
         if !p.is_virtual(method) {
             // Rust's `==` where both sides are values; a side narrowed
-            // from a nullable one is a reference, which `==` won't take
-            // beside a value, so then the method, as Kotlin's.
-            let narrowed = |n: NodeId| matches!(p.nodes.get(n), Node::NonNull { .. });
+            // from a nullable one, or `this` (`self`, a `&Self`), is a
+            // reference, which `==` won't take beside a value, so then
+            // the method, as Kotlin's.
+            let reference =
+                |n: NodeId| matches!(p.nodes.get(n), Node::NonNull { .. } | Node::This {});
             if let [other] = args {
-                if self.eq_hook(method) && !narrowed(receiver) && !narrowed(*other) {
+                if self.eq_hook(method) && !reference(receiver) && !reference(*other) {
                     let a = self.expr(receiver, Want::Borrowed)?;
                     let b = self.expr(*other, Want::Borrowed)?;
                     return Ok(Expr::bin(Bin::Eq, a, b));

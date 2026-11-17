@@ -6,7 +6,9 @@ local twice = require("modules/helpers").twice
 local intDoubled = require("modules/helpers").intDoubled
 local base = require("modules/helpers").base
 local bump = require("modules/helpers").bump
+local Ratio = require("modules/core").Ratio
 local share = require("modules/core").share
+local ratioOf = require("modules/core").ratioOf
 local describe = require("modules/machine").describe
 
 ---@type integer
@@ -41,5 +43,11 @@ bump()
 bump()
 print("calls " .. calls2)
 print("calls now " .. bump())
+local half = Ratio(1, 2)
+local string = tostring(half:eq(Ratio(2, 4))) .. " "
+local left = ratioOf(3, 6)
+local left2 = half
+local right = ratioOf(1, 0)
+print(string .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(half)) .. " " .. tostring(not (not temper.is_null(right) and left2:eq(right --[[@as modules.core.Ratio]]))))
 
 return { sum = sum }

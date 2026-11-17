@@ -219,6 +219,33 @@ fn backends_left_out() {
     }
 }
 
+/// Tests of a class's `==`, its method marked `@operator("==")`, in
+/// `assert`: with a nullable side, either way round, and a failing one,
+/// whose message can't show the class's values, which have no
+/// `toString()`, so it's the plain one; and a nullable list's, which
+/// has none either.
+const CLASS_ASSERTS: (&str, &str) = (
+    "c.temper",
+    "class P(public n: Int) {\n\
+     \x20 @operator(\"==\")\n\
+     \x20 public eq(other: P): Boolean { n == other.n }\n\
+     }\n\
+     let maybeP(n: Int): P? { if (n > 0) { new P(n) } else { null } }\n\
+     let names(n: Int): List<String>? { if (n > 0) { [\"a\"] } else { null } }\n\
+     test(\"c\") {\n\
+     \x20 let p = new P(1);\n\
+     \x20 assert(p == new P(1));\n\
+     \x20 assert(maybeP(1) == p);\n\
+     \x20 assert(p == maybeP(1));\n\
+     \x20 assert(maybeP(0) == null);\n\
+     \x20 assert(names(0) == null);\n\
+     }\n\
+     test(\"d\") { assert(new P(1) == maybeP(2)) }\n",
+);
+
+/// What a failing test of [`CLASS_ASSERTS`] says, lowercased.
+const CLASS_ASSERT_FAILED: &str = "  failed  d - expected new p(1) == maybep(2)\n";
+
 /// A fresh directory for a test, with a library of these files beside its
 /// config file, removed when the test is done.
 fn with_library(test: &str, files: &[(&str, &str)], f: impl FnOnce(&str)) {
@@ -274,16 +301,22 @@ fn test_a_library() {
             "test(\"b\") { assert(1 + 1 == 3) }\n",
         )
         .unwrap();
+        fs::write(Path::new(dir).join(CLASS_ASSERTS.0), CLASS_ASSERTS.1).unwrap();
+        let mut runs = vec![tempest(&["test", "--std", &std_dir, dir])];
         if cfg!(feature = "py") && Command::new("python3").arg("--version").output().is_ok() {
-            let (code, out, _) = tempest(&["test", "-b", "py", dir]);
+            runs.push(tempest(&["test", "-b", "py", dir]));
+        }
+        for (code, out, err) in runs {
             assert!(
                 out.contains("  failed  b - expected 1 + 1 == (3) not (2)"),
-                "{out}"
+                "{out}{err}"
             );
-            assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}");
+            assert!(out.to_lowercase().contains(CLASS_ASSERT_FAILED), "{out}");
+            assert!(out.ends_with("Tests passed: 2 of 4\n"), "{out}");
             assert_eq!(code, 1);
         }
         fs::remove_file(Path::new(dir).join("b.temper")).unwrap();
+        fs::remove_file(Path::new(dir).join(CLASS_ASSERTS.0)).unwrap();
         // Each with the steps it took on the interpreter.
         let (code, out, _) = tempest(&["test", "-v", "--std", &std_dir, dir]);
         assert!(out.contains("  ok      a ("), "{out}");
@@ -833,11 +866,16 @@ fn test_a_library_in_cpp() {
     let files = [
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
     ];
     with_library("cpp-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "cpp", dir]);
         assert!(out.contains("  failed  b - expected"), "{out}{err}");
-        assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}{err}");
+        assert!(
+            out.to_lowercase().contains(CLASS_ASSERT_FAILED),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 2 of 4\n"), "{out}{err}");
         assert_eq!(code, 1);
         assert!(
             Path::new(dir)
@@ -847,8 +885,9 @@ fn test_a_library_in_cpp() {
     });
 }
 
-/// `temper test -b BACKEND` on a small library, one test passing and
-/// one failing, on every backend whose tools run here: it builds, runs
+/// `temper test -b BACKEND` on a small library, two tests passing and
+/// two failing, one of them [`CLASS_ASSERTS`]'s, on every backend whose
+/// tools run here: it builds, runs
 /// the language's own test tools, and reads their results, so each
 /// backend's runner (its crate's `tools` module) is tested on every push without the
 /// real libraries, which run nightly. A backend whose tools are missing is
@@ -858,6 +897,7 @@ fn test_a_library_on_each_backend() {
     let files = [
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
     ];
     for backend in ["js", "lua", "rust", "java", "csharp"] {
         if !built_in(backend) {
@@ -876,8 +916,10 @@ fn test_a_library_on_each_backend() {
             // As each tool names it: `b`, or C#'s method `B`.
             let failed = out.to_lowercase().contains("  failed  b - expected");
             assert!(failed, "{backend}:\n{out}{err}");
+            let failed = out.to_lowercase().contains(CLASS_ASSERT_FAILED);
+            assert!(failed, "{backend}:\n{out}{err}");
             assert!(
-                out.ends_with("Tests passed: 1 of 2\n"),
+                out.ends_with("Tests passed: 2 of 4\n"),
                 "{backend}:\n{out}{err}"
             );
             assert_eq!(code, 1, "{backend}");

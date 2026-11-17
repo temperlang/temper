@@ -391,7 +391,7 @@ impl<'a> Translator<'a> {
     }
 
     /// A type's annotation, unquoted, and whether it needs quotes.
-    fn ann_raw(&mut self, ty: TypeId) -> R<(String, bool)> {
+    pub(crate) fn ann_raw(&mut self, ty: TypeId) -> R<(String, bool)> {
         Ok(match self.p.types.get(ty) {
             TypeData::Scalar(s) => (
                 match s {

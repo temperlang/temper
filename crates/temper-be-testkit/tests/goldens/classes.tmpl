@@ -1,109 +1,110 @@
 tmpl 1 model 1 library classes 0.0.0
 
-uses `temper-core`#49 0.0.0-alpha.0.0 {
-  class List#50<T#51> extends Listed#52<T#51> {
-    connected get length#105(): Int32;
+uses `temper-core`#57 0.0.0-alpha.0.0 {
+  class List#58<T#59> extends Listed#60<T#59> {
+    connected get length#125(): Int32;
+    connected method get#146(index: Int32): T#59;
   }
-  interface Listed#52<T#53> {
-    connected method join#127(separator: String, stringify: fn (T#53): String): String;
+  interface Listed#60<T#61> {
+    connected method join#156(separator: String, stringify: fn (T#61): String): String;
   }
-  class ListBuilder#60<T#61> extends Listed#52<T#61> {
-    connected method add#122(newValue: T#61, at?: Int32): Void;
-    connected constructor constructor#130(): ListBuilder#60<T#61>;
+  class ListBuilder#68<T#69> extends Listed#60<T#69> {
+    connected constructor constructor#145(): ListBuilder#68<T#69>;
+    connected method add#155(newValue: T#69, at?: Int32): Void;
   }
-  class Int32#84 {
-    connected method toString#85(radix?: Int32): String;
+  class Int32#98 {
+    connected method toString#99(radix?: Int32): String;
   }
-  interface Console#110 {
-    connected method log#111(message: String): Void;
+  interface Console#130 {
+    connected method log#131(message: String): Void;
   }
-  class Boolean#113 {
-    connected method toString#114(): String;
+  class Boolean#133 {
+    connected method toString#134(): String;
   }
-  connected fn getConsole#132(name?: String): Console#110;
+  connected fn getConsole#183(name?: String): Console#130;
 }
 
 module classes#0 {
-  let ~console#112: Console#110;
+  let ~console#132: Console#130;
 
   export interface Shape#1 {
-    abstract get area#11(): Int32;
-    method describe#12(): String {
-      return %String.cat("shape of area ", this.area#11().toString#85(omitted));
+    abstract get area#13(): Int32;
+    method describe#14(): String {
+      return %String.cat("shape of area ", this.area#13().toString#99(omitted));
     }
   }
 
   export class Rect#2 extends Shape#1 {
-    let w#13: Int32;
-    let h#14: Int32;
-    constructor constructor#19(w#87: Int32, h#88: Int32): Rect#2 {
-      this.w#13 = w#87;
-      this.h#14 = h#88;
+    let w#15: Int32;
+    let h#16: Int32;
+    constructor constructor#21(w#101: Int32, h#102: Int32): Rect#2 {
+      this.w#15 = w#101;
+      this.h#16 = h#102;
     }
-    static let unit#15: Rect#2;
-    get area#16(): Int32 {
-      return %Int32.mul(this.w#13, this.h#14);
+    static let unit#17: Rect#2;
+    get area#18(): Int32 {
+      return %Int32.mul(this.w#15, this.h#16);
     }
-    method toString#17(): String {
-      return %String.cat(%String.cat(%String.cat(%String.cat("Rect(", this.w#13.toString#85(omitted)), ", "), this.h#14.toString#85(omitted)), ")");
+    method toString#19(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat("Rect(", this.w#15.toString#99(omitted)), ", "), this.h#16.toString#99(omitted)), ")");
     }
-    method scaled#18(k#86: Int32): Rect#2 {
-      return new constructor#19(%Int32.mul(this.w#13, k#86), %Int32.mul(this.h#14, k#86));
+    method scaled#20(k#100: Int32): Rect#2 {
+      return new constructor#21(%Int32.mul(this.w#15, k#100), %Int32.mul(this.h#16, k#100));
     }
   }
 
   export class Square#3 extends Shape#1 {
-    private let side#20: Int32;
-    constructor constructor#23(side#89: Int32): Square#3 {
-      this.side#20 = side#89;
+    private let side#22: Int32;
+    constructor constructor#25(side#103: Int32): Square#3 {
+      this.side#22 = side#103;
     }
-    get area#21(): Int32 {
-      return %Int32.mul(this.side#20, this.side#20);
+    get area#23(): Int32 {
+      return %Int32.mul(this.side#22, this.side#22);
     }
-    method describe#22(): String {
-      return %String.cat("square of side ", this.side#20.toString#85(omitted));
+    method describe#24(): String {
+      return %String.cat("square of side ", this.side#22.toString#99(omitted));
     }
   }
 
   class Counter#4 {
-    var count#24: Int32;
-    private var hidden#25: Int32;
-    constructor constructor#32(): Counter#4 {
-      this.count#24 = 0;
-      this.hidden#25 = 0;
+    var count#26: Int32;
+    private var hidden#27: Int32;
+    constructor constructor#34(): Counter#4 {
+      this.count#26 = 0;
+      this.hidden#27 = 0;
     }
-    get doubled#26(): Int32 {
-      return %Int32.mul(this.count#24, 2);
+    get doubled#28(): Int32 {
+      return %Int32.mul(this.count#26, 2);
     }
-    set doubled#27(value#90: Int32): Void {
-      this.count#24 = %Int32.sub(value#90, this.count#24);
+    set doubled#29(value#104: Int32): Void {
+      this.count#26 = %Int32.sub(value#104, this.count#26);
     }
-    set added#28(value#91: Int32): Void {
-      this.count#24 = %Int32.add(this.count#24, value#91);
+    set added#30(value#105: Int32): Void {
+      this.count#26 = %Int32.add(this.count#26, value#105);
     }
-    method bump#29(): Counter#4 {
-      this.count#24 = %Int32.add(this.count#24, 1);
-      this.hidden#25 = %Int32.add(this.hidden#25, 1);
+    method bump#31(): Counter#4 {
+      this.count#26 = %Int32.add(this.count#26, 1);
+      this.hidden#27 = %Int32.add(this.hidden#27, 1);
       return this;
     }
-    method same#30(other#92: Counter#4): Boolean {
-      return %Int32.eq(this.hidden#25, other#92.hidden#25);
+    method same#32(other#106: Counter#4): Boolean {
+      return %Int32.eq(this.hidden#27, other#106.hidden#27);
     }
-    static fn zero#31(): Counter#4 {
-      return new constructor#32();
+    static fn zero#33(): Counter#4 {
+      return new constructor#34();
     }
   }
 
   class Point#5 {
-    let x#33: Int32;
-    let y#34: Int32;
-    constructor constructor#36(x#94: Int32, y#95: Int32): Point#5 {
-      this.x#33 = x#94;
-      this.y#34 = y#95;
+    let x#35: Int32;
+    let y#36: Int32;
+    constructor constructor#38(x#108: Int32, y#109: Int32): Point#5 {
+      this.x#35 = x#108;
+      this.y#36 = y#109;
     }
-    auto operator("==") method eq#35(other#93: Point#5): Boolean {
-      if (%Int32.eq(this.x#33, other#93.x#33)) {
-        return %Int32.eq(this.y#34, other#93.y#34);
+    auto operator("==") method eq#37(other#107: Point#5): Boolean {
+      if (%Int32.eq(this.x#35, other#107.x#35)) {
+        return %Int32.eq(this.y#36, other#107.y#36);
       } else {
         return false;
       }
@@ -111,101 +112,168 @@ module classes#0 {
   }
 
   class Loose#6 {
-    let n#37: Int32;
-    constructor constructor#39(n#97: Int32): Loose#6 {
-      this.n#37 = n#97;
+    let n#39: Int32;
+    constructor constructor#42(n#112: Int32): Loose#6 {
+      this.n#39 = n#112;
     }
-    operator("==") method eq#38(other#96: Loose#6): Boolean {
-      if (%Int32.eq(this.n#37, other#96.n#37)) {
+    operator("==") method eq#40(other#110: Loose#6): Boolean {
+      if (%Int32.eq(this.n#39, other#110.n#39)) {
         return true;
       } else {
-        return %Int32.eq(this.n#37, %Int32.neg(other#96.n#37));
+        return %Int32.eq(this.n#39, %Int32.neg(other#110.n#39));
       }
     }
-  }
-
-  class Holder#7 {
-    let loose#40: Loose#6;
-    let tag#41: String;
-    constructor constructor#43(loose#99: Loose#6, tag#100: String): Holder#7 {
-      this.loose#40 = loose#99;
-      this.tag#41 = tag#100;
-    }
-    auto operator("==") method eq#42(other#98: Holder#7): Boolean {
-      if (this.loose#40.eq#38(other#98.loose#40)) {
-        return %String.eq(this.tag#41, other#98.tag#41);
+    method mirrors#41(other#111: Loose#6): Boolean {
+      if (other#111.eq#40(this)) {
+        return this.eq#40(other#111);
       } else {
         return false;
       }
     }
   }
 
-  class Version#8 {
-    let major#44: Int32;
-    let minor#45: Int32;
-    constructor constructor#47(major#102: Int32, minor#103: Int32): Version#8 {
-      this.major#44 = major#102;
-      this.minor#45 = minor#103;
+  fn maybeLoose#78(n#113: Int32): Loose#6? {
+    if (%Int32.eq(n#113, 0)) {
+      return (null): Loose#6?;
+    } else {
+      return (asNullable(new constructor#42(n#113))): Loose#6?;
     }
-    operator("<=>") method compareTo#46(other#101: Version#8): Int32 {
-      if (%Boolean.not(%Int32.eq(this.major#44, other#101.major#44))) {
-        return %Int32.cmp(this.major#44, other#101.major#44);
+  }
+
+  class Boxed#7<T#12> {
+    let value#43: T#12;
+    let tag#44: Int32;
+    constructor constructor#47(value#116: T#12, tag#117: Int32): Boxed#7<T#12> {
+      this.value#43 = value#116;
+      this.tag#44 = tag#117;
+    }
+    operator("==") method eq#45(other#114: Boxed#7<T#12>): Boolean {
+      return %Int32.eq(this.tag#44, other#114.tag#44);
+    }
+    method sameAs#46(other#115: Boxed#7<T#12>): Boolean {
+      if (this.eq#45(other#115)) {
+        return other#115.eq#45(this);
       } else {
-        return %Int32.cmp(this.minor#45, other#101.minor#45);
+        return false;
       }
     }
   }
 
-  class Stock#9 {
-    let count#48: Int32;
-    private var itemsVar#54: List#50<Int32>;
-    get items#55(): List#50<Int32> {
-      return this.itemsVar#54;
+  class Holder#8 {
+    let loose#48: Loose#6;
+    let tag#49: String;
+    constructor constructor#51(loose#119: Loose#6, tag#120: String): Holder#8 {
+      this.loose#48 = loose#119;
+      this.tag#49 = tag#120;
     }
-    set items#56(value#104: List#50<Int32>): Void {
-      this.itemsVar#54 = value#104;
-    }
-    let size#57: Int32;
-    constructor constructor#59(items#106: List#50<Int32>, count#107?: Int32?): Stock#9 {
-      let count#108: Int32 = (coalesce(count#107, items#106.length#105())): Int32;
-      this.count#48 = count#108;
-      this.itemsVar#54 = items#106;
-      this.size#57 = items#106.length#105();
-    }
-    method sizeNow#58(): Int32 {
-      return this.items#55().length#105();
+    auto operator("==") method eq#50(other#118: Holder#8): Boolean {
+      if (this.loose#48.eq#40(other#118.loose#48)) {
+        return %String.eq(this.tag#49, other#118.tag#49);
+      } else {
+        return false;
+      }
     }
   }
 
-  fn shape#70(x#109: Shape#1): Shape#1 {
-    return x#109;
+  class Version#9 {
+    let major#52: Int32;
+    let minor#53: Int32;
+    constructor constructor#55(major#122: Int32, minor#123: Int32): Version#9 {
+      this.major#52 = major#122;
+      this.minor#53 = minor#123;
+    }
+    operator("<=>") method compareTo#54(other#121: Version#9): Int32 {
+      if (%Boolean.not(%Int32.eq(this.major#52, other#121.major#52))) {
+        return %Int32.cmp(this.major#52, other#121.major#52);
+      } else {
+        return %Int32.cmp(this.minor#53, other#121.minor#53);
+      }
+    }
   }
 
-  let r#71: Rect#2;
+  class Stock#10 {
+    let count#56: Int32;
+    private var itemsVar#62: List#58<Int32>;
+    get items#63(): List#58<Int32> {
+      return this.itemsVar#62;
+    }
+    set items#64(value#124: List#58<Int32>): Void {
+      this.itemsVar#62 = value#124;
+    }
+    let size#65: Int32;
+    constructor constructor#67(items#126: List#58<Int32>, count#127?: Int32?): Stock#10 {
+      let count#128: Int32 = (coalesce(count#127, items#126.length#125())): Int32;
+      this.count#56 = count#128;
+      this.itemsVar#62 = items#126;
+      this.size#65 = items#126.length#125();
+    }
+    method sizeNow#66(): Int32 {
+      return this.items#63().length#125();
+    }
+  }
 
-  let s#72: Shape#1;
+  fn shape#79(x#129: Shape#1): Shape#1 {
+    return x#129;
+  }
 
-  let q#73: Shape#1;
+  let r#80: Rect#2;
 
-  let c#74: Counter#4;
+  let s#81: Shape#1;
 
-  let added#75: Int32;
+  let q#82: Shape#1;
 
-  let sq#76: Square#3;
+  let c#83: Counter#4;
 
-  let st#77: Stock#9;
+  let added#84: Int32;
 
-  fn typeNamed#78(n#117: Int32): Type {
+  let loose#85: Loose#6;
+
+  let matched#86: String;
+
+  let b1#87: Boxed#7<String>;
+
+  let b3#88: Boxed#7<String>;
+
+  let sq#89: Square#3;
+
+  let st#90: Stock#10;
+
+  fn compared#91(eq#142: fn (Loose#6?, Loose#6?): Boolean): String {
+    let ns#143: List#58<Int32> = (list(0, 1, %Int32.neg(1), 2)): List#58<Int32>;
+    let out#144: ListBuilder#68<String> = new constructor#145<String>();
     {
-      if (%Int32.eq(n#117, 0)) {
+      let ~length#147: Int32 = ns#143.length#125();
+      var ~i#148: Int32 = 0;
+      ~loop#149: while (%Int32.lt(~i#148, ~length#147)) {
+        let a#150: Int32 = ns#143.get#146(~i#148);
+        ~i#148 = %Int32.add(~i#148, 1);
+        {
+          let ~length#151: Int32 = ns#143.length#125();
+          var ~i#152: Int32 = 0;
+          ~loop#153: while (%Int32.lt(~i#152, ~length#151)) {
+            let b#154: Int32 = ns#143.get#146(~i#152);
+            ~i#152 = %Int32.add(~i#152, 1);
+            out#144.add#155((if (eq#142(maybeLoose#78(a#150), maybeLoose#78(b#154))) "T" else "f"): String, omitted);
+          }
+        }
+      }
+    }
+    return out#144.join#156("", (fn ~fn#157(s#158: String): String {
+      return s#158;
+    }): fn (String): String);
+  }
+
+  fn typeNamed#92(n#171: Int32): Type {
+    {
+      if (%Int32.eq(n#171, 0)) {
         return typeValue(Void);
-      } else if (%Int32.eq(n#117, 1)) {
+      } else if (%Int32.eq(n#171, 1)) {
         return typeValue(Boolean);
-      } else if (%Int32.eq(n#117, 2)) {
+      } else if (%Int32.eq(n#171, 2)) {
         return typeValue(Int32);
-      } else if (%Int32.eq(n#117, 3)) {
+      } else if (%Int32.eq(n#171, 3)) {
         return typeValue(Int64);
-      } else if (%Int32.eq(n#117, 4)) {
+      } else if (%Int32.eq(n#171, 4)) {
         return typeValue(Float64);
       } else {
         return typeValue(String);
@@ -213,98 +281,123 @@ module classes#0 {
     }
   }
 
-  fn same#79(t#118: Type): Type {
-    return t#118;
+  fn same#93(t#172: Type): Type {
+    return t#172;
   }
 
-  let favorite#80: Type;
+  let favorite#94: Type;
 
-  var named#81: Int32;
+  var named#95: Int32;
 
-  class Sql#10 {
-    private let parts#62: ListBuilder#60<String>;
-    constructor constructor#69(): Sql#10 {
-      this.parts#62 = new constructor#130<String>();
+  class Sql#11 {
+    private let parts#70: ListBuilder#68<String>;
+    constructor constructor#77(): Sql#11 {
+      this.parts#70 = new constructor#145<String>();
     }
-    method appendSafe#63(s#121: String): Void {
-      this.parts#62.add#122(s#121, omitted);
+    method appendSafe#71(s#175: String): Void {
+      this.parts#70.add#155(s#175, omitted);
     }
-    method appendString#64(x#123: String?): Void {
-      this.parts#62.add#122((if (isNull(x#123)) "NULL" else %String.cat(%String.cat("'", (nonNull(x#123)): String), "'")): String, omitted);
+    method appendString#72(x#176: String?): Void {
+      this.parts#70.add#155((if (isNull(x#176)) "NULL" else %String.cat(%String.cat("'", (nonNull(x#176)): String), "'")): String, omitted);
     }
-    method appendInt#65(x#124: Int32): Void {
-      this.parts#62.add#122(x#124.toString#85(omitted), omitted);
+    method appendInt#73(x#177: Int32): Void {
+      this.parts#70.add#155(x#177.toString#99(omitted), omitted);
     }
-    method appendShape#66(x#125: Shape#1): Void {
-      this.parts#62.add#122(%String.cat("shape ", x#125.area#11().toString#85(omitted)), omitted);
+    method appendShape#74(x#178: Shape#1): Void {
+      this.parts#70.add#155(%String.cat("shape ", x#178.area#13().toString#99(omitted)), omitted);
     }
-    method appendRect#67(x#126: Rect#2): Void {
-      this.parts#62.add#122(%String.cat("rect ", x#126.toString#17()), omitted);
+    method appendRect#75(x#179: Rect#2): Void {
+      this.parts#70.add#155(%String.cat("rect ", x#179.toString#19()), omitted);
     }
-    get accumulated#68(): String {
-      return this.parts#62.join#127("", (fn ~fn#128(p#129: String): String {
-        return p#129;
+    get accumulated#76(): String {
+      return this.parts#70.join#156("", (fn ~fn#180(p#181: String): String {
+        return p#181;
       }): fn (String): String);
     }
   }
 
-  let sql#82: Sql#10;
+  let sql#96: Sql#11;
 
-  let seven#83: Int32;
+  let seven#97: Int32;
 
   init {
-    init ~console#112 = getConsole#132(omitted);
-    init unit#15 = new constructor#19(1, 1);
-    init r#71 = new constructor#19(2, 3);
-    ~console#112.log#111(r#71.toString#17());
-    ~console#112.log#111(r#71.area#16().toString#85(omitted));
-    init s#72 = shape#70((upcast(r#71)): Shape#1);
-    ~console#112.log#111(s#72.describe#12());
-    init q#73 = shape#70((upcast(new constructor#23(4))): Shape#1);
-    ~console#112.log#111(q#73.describe#12());
-    ~console#112.log#111(q#73.area#11().toString#85(omitted));
-    ~console#112.log#111(r#71.scaled#18(2).scaled#18(3).area#16().toString#85(omitted));
-    ~console#112.log#111(unit#15.scaled#18(5).toString#17());
-    init c#74 = zero#31();
-    c#74.bump#29().bump#29();
-    ~console#112.log#111(c#74.count#24.toString#85(omitted));
-    c#74.doubled#27(10);
-    ~console#112.log#111(c#74.doubled#26().toString#85(omitted));
-    ~console#112.log#111(c#74.same#30(new constructor#32().bump#29().bump#29()).toString#114());
-    c#74.added#28(5);
-    init added#75 = (value { let ~t#116: Int32 = (value { let ~t#115: Int32 = 2; c#74.added#28(~t#115); ~t#115 }): Int32; c#74.added#28(~t#116); ~t#116 }): Int32;
-    ~console#112.log#111(%String.cat(%String.cat(added#75.toString#85(omitted), " "), c#74.count#24.toString#85(omitted)));
-    ~console#112.log#111(%String.cat(%String.cat(new constructor#36(1, 2).eq#35(new constructor#36(1, 2)).toString#114(), " "), %Boolean.not(new constructor#36(1, 2).eq#35(new constructor#36(2, 1))).toString#114()));
-    ~console#112.log#111(new constructor#43(new constructor#39(3), "a").eq#42(new constructor#43(new constructor#39(%Int32.neg(3)), "a")).toString#114());
-    ~console#112.log#111(%String.cat(%String.cat(%Int32.lt(new constructor#47(1, 2).compareTo#46(new constructor#47(1, 3)), 0).toString#114(), " "), %Int32.ge(new constructor#47(2, 0).compareTo#46(new constructor#47(1, 9)), 0).toString#114()));
-    ~console#112.log#111(%String.cat(%String.cat(is(q#73, Square#3).toString#114(), " "), is(s#72, Square#3).toString#114()));
-    init sq#76 = (as(q#73)^): Square#3;
-    ~console#112.log#111(sq#76.area#21().toString#85(omitted));
-    if (is(s#72, Rect#2)) {
-      ~console#112.log#111(((downcast(s#72)): Rect#2).w#13.toString#85(omitted));
+    init ~console#132 = getConsole#183(omitted);
+    init unit#17 = new constructor#21(1, 1);
+    init r#80 = new constructor#21(2, 3);
+    ~console#132.log#131(r#80.toString#19());
+    ~console#132.log#131(r#80.area#18().toString#99(omitted));
+    init s#81 = shape#79((upcast(r#80)): Shape#1);
+    ~console#132.log#131(s#81.describe#14());
+    init q#82 = shape#79((upcast(new constructor#25(4))): Shape#1);
+    ~console#132.log#131(q#82.describe#14());
+    ~console#132.log#131(q#82.area#13().toString#99(omitted));
+    ~console#132.log#131(r#80.scaled#20(2).scaled#20(3).area#18().toString#99(omitted));
+    ~console#132.log#131(unit#17.scaled#20(5).toString#19());
+    init c#83 = zero#33();
+    c#83.bump#31().bump#31();
+    ~console#132.log#131(c#83.count#26.toString#99(omitted));
+    c#83.doubled#29(10);
+    ~console#132.log#131(c#83.doubled#28().toString#99(omitted));
+    ~console#132.log#131(c#83.same#32(new constructor#34().bump#31().bump#31()).toString#134());
+    c#83.added#30(5);
+    init added#84 = (value { let ~t#136: Int32 = (value { let ~t#135: Int32 = 2; c#83.added#30(~t#135); ~t#135 }): Int32; c#83.added#30(~t#136); ~t#136 }): Int32;
+    ~console#132.log#131(%String.cat(%String.cat(added#84.toString#99(omitted), " "), c#83.count#26.toString#99(omitted)));
+    ~console#132.log#131(%String.cat(%String.cat(new constructor#38(1, 2).eq#37(new constructor#38(1, 2)).toString#134(), " "), %Boolean.not(new constructor#38(1, 2).eq#37(new constructor#38(2, 1))).toString#134()));
+    ~console#132.log#131(new constructor#51(new constructor#42(3), "a").eq#50(new constructor#51(new constructor#42(%Int32.neg(3)), "a")).toString#134());
+    init loose#85 = new constructor#42(2);
+    ~console#132.log#131(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(loose#85.mirrors#41(new constructor#42(%Int32.neg(2))).toString#134(), " "), ((value { let ~left#137: Loose#6? = maybeLoose#78(%Int32.neg(2)); (if (isNull(~left#137)) false else ((nonNull(~left#137)): Loose#6).eq#40(loose#85)): Boolean }): Boolean).toString#134()), " "), ((value { let ~left#138: Loose#6 = loose#85; let ~right#139: Loose#6? = maybeLoose#78(0); (if (isNull(~right#139)) false else ~left#138.eq#40((nonNull(~right#139)): Loose#6)): Boolean }): Boolean).toString#134()), " "), %Boolean.not((value { let ~left#140: Loose#6? = maybeLoose#78(0); (if (isNull(~left#140)) false else ((nonNull(~left#140)): Loose#6).eq#40(loose#85)): Boolean }): Boolean).toString#134()));
+    init matched#86 = (value { let subject#141: Loose#6? = maybeLoose#78(%Int32.neg(2)); (if ((if (isNull(subject#141)) false else ((nonNull(subject#141)): Loose#6).eq#40(loose#85)): Boolean) "loose" else "other"): String }): String;
+    ~console#132.log#131(matched#86);
+    init b1#87 = new constructor#47<String>("x", 1);
+    init b3#88 = new constructor#47<String>("z", 2);
+    ~console#132.log#131(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(b1#87.value#43, " "), b1#87.eq#45(new constructor#47<String>("y", 1)).toString#134()), " "), %Boolean.not(b1#87.eq#45(b3#88)).toString#134()), " "), b1#87.sameAs#46(new constructor#47<String>("y", 1)).toString#134()), " "), b3#88.sameAs#46(b1#87).toString#134()));
+    ~console#132.log#131(%String.cat(%String.cat(%Int32.lt(new constructor#55(1, 2).compareTo#54(new constructor#55(1, 3)), 0).toString#134(), " "), %Int32.ge(new constructor#55(2, 0).compareTo#54(new constructor#55(1, 9)), 0).toString#134()));
+    ~console#132.log#131(%String.cat(%String.cat(is(q#82, Square#3).toString#134(), " "), is(s#81, Square#3).toString#134()));
+    init sq#89 = (as(q#82)^): Square#3;
+    ~console#132.log#131(sq#89.area#23().toString#99(omitted));
+    if (is(s#81, Rect#2)) {
+      ~console#132.log#131(((downcast(s#81)): Rect#2).w#15.toString#99(omitted));
     }
-    init st#77 = new constructor#59((list(4, 5)): List#50<Int32>, omitted);
-    st#77.items#56((list(1, 2, 3)): List#50<Int32>);
-    ~console#112.log#111(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(st#77.count#48.toString#85(omitted), " "), st#77.size#57.toString#85(omitted)), " "), st#77.sizeNow#58().toString#85(omitted)), " "), st#77.items#55().length#105().toString#85(omitted)));
-    init favorite#80 = same#79(typeValue(Int64));
-    init named#81 = 0;
+    init st#90 = new constructor#67((list(4, 5)): List#58<Int32>, omitted);
+    st#90.items#64((list(1, 2, 3)): List#58<Int32>);
+    ~console#132.log#131(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(st#90.count#56.toString#99(omitted), " "), st#90.size#65.toString#99(omitted)), " "), st#90.sizeNow#66().toString#99(omitted)), " "), st#90.items#63().length#125().toString#99(omitted)));
+    ~console#132.log#131(compared#91((fn ~fn#159(a#160: Loose#6?, b#161: Loose#6?): Boolean {
+      return (if (isNull(a#160)) isNull(b#161) else (if (isNull(b#161)) false else ((nonNull(a#160)): Loose#6).eq#40((nonNull(b#161)): Loose#6)): Boolean): Boolean;
+    }): fn (Loose#6?, Loose#6?): Boolean));
+    ~console#132.log#131(compared#91((fn ~fn#162(a#163: Loose#6?, b#164: Loose#6?): Boolean {
+      return %Boolean.not((if (isNull(a#163)) isNull(b#164) else (if (isNull(b#164)) false else ((nonNull(a#163)): Loose#6).eq#40((nonNull(b#164)): Loose#6)): Boolean): Boolean);
+    }): fn (Loose#6?, Loose#6?): Boolean));
+    ~console#132.log#131(compared#91((fn ~fn#165(a#166: Loose#6?, b#167: Loose#6?): Boolean {
+      return (if (isNull(b#167)) isNull(a#166) else (if (isNull(a#166)) false else ((nonNull(b#167)): Loose#6).eq#40((nonNull(a#166)): Loose#6)): Boolean): Boolean;
+    }): fn (Loose#6?, Loose#6?): Boolean));
+    ~console#132.log#131(compared#91((fn ~fn#168(a#169: Loose#6?, b#170: Loose#6?): Boolean {
+      if (isNull(a#169)) {
+        return false;
+      }
+      if (isNull(b#170)) {
+        return false;
+      }
+      return ((nonNull(a#169)): Loose#6).mirrors#41((nonNull(b#170)): Loose#6);
+    }): fn (Loose#6?, Loose#6?): Boolean));
+    init favorite#94 = same#93(typeValue(Int64));
+    init named#95 = 0;
     {
-      var i#119: Int32 = 0;
-      ~loop#120: while (%Int32.lt(i#119, 6)) {
-        typeNamed#78(i#119);
-        named#81 = %Int32.add(named#81, 1);
-        i#119 = %Int32.add(i#119, 1);
+      var i#173: Int32 = 0;
+      ~loop#174: while (%Int32.lt(i#173, 6)) {
+        typeNamed#92(i#173);
+        named#95 = %Int32.add(named#95, 1);
+        i#173 = %Int32.add(i#173, 1);
       }
     }
-    ~console#112.log#111(%String.cat(named#81.toString#85(omitted), " types"));
-    init sql#82 = new constructor#69();
-    sql#82.appendString#64((asNullable("it")): String?);
-    sql#82.appendString#64((null): String?);
-    sql#82.appendInt#65(3);
-    sql#82.appendShape#66((upcast(new constructor#23(2))): Shape#1);
-    sql#82.appendRect#67(new constructor#19(1, 2));
-    ~console#112.log#111(sql#82.accumulated#68());
-    init seven#83 = 7;
-    ~console#112.log#111((value { let accumulator#131: Sql#10 = new constructor#69(); { accumulator#131.appendSafe#63("SELECT "); accumulator#131.appendInt#65(seven#83); accumulator#131.appendSafe#63(", "); accumulator#131.appendString#64((asNullable("x")): String?); accumulator#131.appendSafe#63(" FROM "); accumulator#131.appendRect#67(new constructor#19(2, 2)); } accumulator#131.accumulated#68() }): String);
+    ~console#132.log#131(%String.cat(named#95.toString#99(omitted), " types"));
+    init sql#96 = new constructor#77();
+    sql#96.appendString#72((asNullable("it")): String?);
+    sql#96.appendString#72((null): String?);
+    sql#96.appendInt#73(3);
+    sql#96.appendShape#74((upcast(new constructor#25(2))): Shape#1);
+    sql#96.appendRect#75(new constructor#21(1, 2));
+    ~console#132.log#131(sql#96.accumulated#76());
+    init seven#97 = 7;
+    ~console#132.log#131((value { let accumulator#182: Sql#11 = new constructor#77(); { accumulator#182.appendSafe#71("SELECT "); accumulator#182.appendInt#73(seven#97); accumulator#182.appendSafe#71(", "); accumulator#182.appendString#72((asNullable("x")): String?); accumulator#182.appendSafe#71(" FROM "); accumulator#182.appendRect#75(new constructor#21(2, 2)); } accumulator#182.accumulated#76() }): String);
   }
 }

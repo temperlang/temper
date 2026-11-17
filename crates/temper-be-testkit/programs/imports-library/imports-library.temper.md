@@ -12,6 +12,13 @@ spelled as `renamed`'s own naming spelled it.
 
     console.log("both ${both(2).toString()}");
 
+Another library's class's `@operator("==")` method, which `==` calls,
+with a nullable side too.
+
+    let { Ratio, ratioOf } = import("modules/core");
+    let third = new Ratio(1, 3);
+    console.log("ratio ${third == new Ratio(3, 9)} ${ratioOf(2, 6) == third} ${ratioOf(1, 0) == third}");
+
     let { lambda, native, Checked, Builtins } = import("renamed");
     let checked = new Checked(lambda(native));
     console.log(
@@ -31,7 +38,9 @@ share 3 42
 own, state 1 engine 4 parts 5
 calls 0
 calls now 3
+true true true
 both 29
+ratio true true false
 renamed 6 5 3
 builtins 4 5 6 6 #4 40 41
 print 7

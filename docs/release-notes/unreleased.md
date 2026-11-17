@@ -17,6 +17,7 @@
 - [Extension methods](#extension-methods)
 - [Generated packages need the matching runtimes](#generated-packages-need-the-matching-runtimes)
 - [Fixes for code Temper 0.6.0 accepted](#fixes-for-code-temper-060-accepted)
+- [Classes' `==`](#classes-)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
@@ -415,6 +416,22 @@ writes them, or from a release's packages
   as a parameter of an undeclared type, fails where it runs when it's
   in a string template or has a method called, instead of keeping the
   module from being translated.
+
+## Classes' `==`
+
+- `assert(a == b)` translates for every backend when a side has no
+  `toString()`, as a class's value without one, or a list. If it fails,
+  its message is `expected a == b`, without the values, where Temper
+  0.6.0 reported "No member toString" at the `assert`.
+- In Rust, `other == this` in a class with an `@operator("==")` method
+  compiles; it was `other == self`, comparing a value with a reference.
+- `==` and `!=` on a generic class's values, as a `Box<Int>`'s, call its
+  `@operator("==")` method on every backend, as the interpreter did,
+  where the backends compared identities.
+- `==`, `!=`, `<`, and the other comparisons, on a class's or
+  interface's value that has no method marked `@operator` for them, say
+  so: "P does not support infix `==`; give it a method marked
+  `@operator("==")`", instead of a mismatch with `Int32`'s signature.
 
 ## Lua: `Int64` on LuaJIT and Lua 5.1
 

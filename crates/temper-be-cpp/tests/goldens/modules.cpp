@@ -138,7 +138,19 @@ namespace modules {
 // optional.
 void global_init_core();
 
+struct Ratio;
+
+struct Ratio : public std::enable_shared_from_this<Ratio> {
+  int32_t n;
+  int32_t d;
+  static std::shared_ptr<Ratio> make(int32_t n, int32_t d);
+  bool eq(std::shared_ptr<Ratio> const & other) const;
+  int32_t get_n() const;
+  int32_t get_d() const;
+};
+
 int32_t share(int32_t n, int32_t d);
+std::shared_ptr<Ratio> ratioOf(int32_t n, int32_t d);
 
 }  // namespace modules
 
@@ -154,6 +166,33 @@ int32_t share(int32_t n, int32_t d) {
     return core::Int::div_wrap(n, d);
   } catch (core::TemperBubble const &) {
     return 0;
+  }
+}
+
+std::shared_ptr<Ratio> Ratio::make(int32_t n, int32_t d) {
+  std::shared_ptr<Ratio> self = std::make_shared<Ratio>();
+  self->n = n;
+  self->d = d;
+  return self;
+}
+
+bool Ratio::eq(std::shared_ptr<Ratio> const & other) const {
+  return core::Int::mul(this->n, other->d) == core::Int::mul(other->n, this->d);
+}
+
+int32_t Ratio::get_n() const {
+  return this->n;
+}
+
+int32_t Ratio::get_d() const {
+  return this->d;
+}
+
+std::shared_ptr<Ratio> ratioOf(int32_t n, int32_t d) {
+  if (d == 0) {
+    return nullptr;
+  } else {
+    return Ratio::make(n, d);
   }
 }
 
@@ -415,6 +454,12 @@ void global_init_init() {
     bump();
     core::Console::log(console2, "calls " + std::to_string(calls2));
     core::Console::log(console2, "calls now " + std::to_string(bump()));
+    std::shared_ptr<Ratio> half = Ratio::make(1, 2);
+    core::Str string = core::Boolean::toString(half->eq(Ratio::make(2, 4))) + " ";
+    std::shared_ptr<Ratio> left = ratioOf(3, 6);
+    std::shared_ptr<Ratio> left2 = half;
+    std::shared_ptr<Ratio> right = ratioOf(1, 0);
+    core::Console::log(console2, string + core::Boolean::toString(left == nullptr ? false : left->eq(half)) + " " + core::Boolean::toString(!(right == nullptr ? false : left2->eq(right))));
   });
 }
 

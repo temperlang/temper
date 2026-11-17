@@ -318,15 +318,25 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   reported, and calls then fail at run time. Tempest doesn't report it
   yet either (`typing.rs` skips `Void` results).
 - **`assert(list == null)`** with a nullable list fails with "Cannot
-  assign to Invalid from String". Not fixed in tempest either: the
-  message `assert` makes, as Kotlin's, interpolates both sides
-  (`expected none == (${none}) not (…)`), and a `List<Int>?` has no
-  `toString`, so typing leaves those reads unresolved and tmpl can't
-  translate the test (checked 2026-11-04 in `every_expression_is_typed`).
-  A fix: a message that shows only values that can be shown. Deferred,
-  as a message of one's own works around it: `assert(list == null) {
-  "list isn't null" }` types, translates, and runs.
-  Test: settle.rs, `every_expression_is_typed` (the workaround).
+  assign to Invalid from String", and `assert(a == b)` for a class's
+  values without a `toString()`, as one with only an `@operator("==")`
+  method, with "No member toString in C": the message `assert` makes
+  interpolates both sides (`expected a == (${b}) not (${a})`). Tempest
+  (2026-11-16) makes the plain message, `expected a == b`, where typing
+  finds a side it can't show, so the test translates and runs on every
+  backend.
+  Test: repl/specials.cases, "a failing assert(a == b) shows the values
+  it can, else says the plain message"; tempest's cli.rs,
+  `test_a_library_on_each_backend` (`CLASS_ASSERTS`).
+- **`==` or `<` on a class without an `@operator` method** reports
+  "Actual arguments do not match signature: (Int32, Int32) -> Boolean
+  expected [Int32, Int32], but got [P, P]", against the first builtin
+  variant (temperlang/temper#508). Tempest says what's missing, in the
+  words of temperlang/temper#515: "P does not support infix `==`; give
+  it a method marked `@operator("==")`", naming the operator as written
+  (`<`, not `<=>`) and the one to mark (2026-11-16).
+  Test: settle/class-types.cases, "operators a class doesn't define name
+  its type and the method to mark".
 - **An interface's backed property** isn't reported, then fails at run
   time. Tempest reports it ([milestone-3.md](history/milestone-3.md), "Classes").
   Test: settle/classes.cases, "interfaces have no constructor parameters

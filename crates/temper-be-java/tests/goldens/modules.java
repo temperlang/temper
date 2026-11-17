@@ -2,11 +2,13 @@ package modules;
 
 import java.util.logging.Logger;
 import modules.core.CoreGlobal;
+import modules.core.Ratio;
 import modules.helpers.HelpersGlobal;
 import modules.helpers.deep.DeepGlobal;
 import modules.machine.MachineGlobal;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.Nullable;
 
 public final class ModulesGlobal {
     private ModulesGlobal() {}
@@ -29,5 +31,12 @@ public final class ModulesGlobal {
         HelpersGlobal.bump();
         console.log("calls " + calls2);
         console.log("calls now " + HelpersGlobal.bump());
+        Ratio half = new Ratio(1, 2);
+        String t = half.eq(new Ratio(2, 4)) + " ";
+        @Nullable Ratio left = CoreGlobal.ratioOf(3, 6);
+        String t2 = t + (left == null ? false : left.eq(half)) + " ";
+        Ratio left2 = half;
+        @Nullable Ratio right = CoreGlobal.ratioOf(1, 0);
+        console.log(t2 + !(right == null ? false : left2.eq(right)));
     }
 }

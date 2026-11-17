@@ -173,6 +173,7 @@ impl Settle {
             overloads: HashMap::new(),
             tests: Vec::new(),
             test_runners: Vec::new(),
+            assert_messages: Vec::new(),
             passed: Vec::new(),
             removed: HashSet::new(),
             object_literals: BTreeMap::new(),
@@ -232,6 +233,7 @@ impl Settle {
             self.queue_typing();
             if self.run() {
                 self.check_types();
+                self.settle_assert_messages();
                 typed = true;
             }
         }
@@ -340,6 +342,10 @@ pub(crate) struct Settle {
     /// `runTestCases` is imported as (`testing`).
     pub(crate) tests: Vec<(ModuleId, NodeId)>,
     pub(crate) test_runners: Vec<(ModuleId, NodeId)>,
+    /// Each `assert(a == b)`'s message showing both values, with its
+    /// plain one, `"expected a == b"`, to use where a value can't be
+    /// shown ([`Settle::settle_assert_messages`]).
+    pub(crate) assert_messages: Vec<(NodeId, NodeId)>,
     /// Lookups that resolved past a scope that wasn't complete yet, as a
     /// statement's macro name or when forced: the scope, name and use.
     passed: Vec<(ScopeId, NameId, Span)>,

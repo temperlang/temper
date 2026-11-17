@@ -803,7 +803,7 @@ error 832..833: Expected subtype of D, but got I
 error 889..890: Expected subtype of D, but got I
 error 942..943: Expected subtype of D, but got I
 error 968..969: Cannot assign to D from I
-error 996..1002: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [I, I]
+error 996..1002: I does not support infix `==`; give it a method marked `@operator("==")`
 hint 1063..1069: Unnecessary type check to I from expression with type D which is a subtype
 error 1473..1474: Expected subtype of D, but got I
 

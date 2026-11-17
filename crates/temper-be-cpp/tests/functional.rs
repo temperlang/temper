@@ -1063,7 +1063,7 @@ const FIRST_USE: &[FirstUse] = &[
             ("modules::twice(2)", "hello, helpers from deep\n4"),
             (
                 "modules::sum(3)",
-                "hello, modules from deep\nsum 17\nshare 3 42\nown, state 1 engine 4 parts 5\ncalls 0\ncalls now 3\n17",
+                "hello, modules from deep\nsum 17\nshare 3 42\nown, state 1 engine 4 parts 5\ncalls 0\ncalls now 3\ntrue true true\n17",
             ),
         ],
     },

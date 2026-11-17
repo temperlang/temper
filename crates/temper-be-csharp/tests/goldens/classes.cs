@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -8,9 +9,47 @@ public static class ClassesGlobal
 {
     internal static readonly Rect rectUnit;
 
+    internal static Loose? MaybeLoose(int n)
+    {
+        if (n == 0)
+        {
+            return null;
+        }
+        else
+        {
+            return new Loose(n);
+        }
+    }
+
     internal static IShape Shape(IShape x)
     {
         return x;
+    }
+
+    internal static string Compared(Func<Loose?, Loose?, bool> eq)
+    {
+        IReadOnlyList<int> ns = Listed.CreateReadOnlyList<int>(0, 1, -1, 2);
+        IList<string> @out = new List<string>();
+        {
+            int length = ns.Count;
+            int i = 0;
+            while (i < length)
+            {
+                int a = ns[i];
+                i = i + 1;
+                {
+                    int length2 = ns.Count;
+                    int i2 = 0;
+                    while (i2 < length2)
+                    {
+                        int b = ns[i2];
+                        i2 = i2 + 1;
+                        @out.Add(eq(MaybeLoose(a), MaybeLoose(b)) ? "T" : "f");
+                    }
+                }
+            }
+        }
+        return Listed.Join(@out, "", (string s) => s);
     }
 
     internal static Type TypeNamed(int n)
@@ -79,6 +118,20 @@ public static class ClassesGlobal
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{added} {c.Count}"));
         console.Log((new Point(1, 2).Eq(new Point(1, 2)) ? "true" : "false") + " " + (!new Point(1, 2).Eq(new Point(2, 1)) ? "true" : "false"));
         console.Log(new Holder(new Loose(3), "a").Eq(new Holder(new Loose(-3), "a")) ? "true" : "false");
+        Loose loose = new Loose(2);
+        string @string = (loose.Mirrors(new Loose(-2)) ? "true" : "false") + " ";
+        Loose? left = MaybeLoose(-2);
+        Loose left2 = loose;
+        Loose? right = MaybeLoose(0);
+        Loose? left3 = MaybeLoose(0);
+        console.Log(@string + ((left == null ? false : left.Eq(loose)) ? "true" : "false") + " " + ((right == null ? false : left2.Eq(right)) ? "true" : "false") + " " + (!(left3 == null ? false : left3.Eq(loose)) ? "true" : "false"));
+        string matched;
+        Loose? subject = MaybeLoose(-2);
+        matched = (subject == null ? false : subject.Eq(loose)) ? "loose" : "other";
+        console.Log(matched);
+        Boxed<string> b1 = new Boxed<string>("x", 1);
+        Boxed<string> b3 = new Boxed<string>("z", 2);
+        console.Log(b1.Value + " " + (b1.Eq(new Boxed<string>("y", 1)) ? "true" : "false") + " " + (!b1.Eq(b3) ? "true" : "false") + " " + (b1.SameAs(new Boxed<string>("y", 1)) ? "true" : "false") + " " + (b3.SameAs(b1) ? "true" : "false"));
         console.Log((new Version(1, 2).CompareTo(new Version(1, 3)) < 0 ? "true" : "false") + " " + (new Version(2, 0).CompareTo(new Version(1, 9)) >= 0 ? "true" : "false"));
         console.Log((q is Square ? "true" : "false") + " " + (s is Square ? "true" : "false"));
         Square sq = (Square)q;
@@ -90,6 +143,22 @@ public static class ClassesGlobal
         Stock st = new Stock(Listed.CreateReadOnlyList<int>(4, 5));
         st.Items = Listed.CreateReadOnlyList<int>(1, 2, 3);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{st.Count} {st.Size} {st.SizeNow()} {st.Items.Count}"));
+        console.Log(Compared((Loose? a, Loose? b) => a == null ? b == null : b == null ? false : a.Eq(b)));
+        console.Log(Compared((Loose? a, Loose? b) => !(a == null ? b == null : b == null ? false : a.Eq(b))));
+        console.Log(Compared((Loose? a, Loose? b) => b == null ? a == null : a == null ? false : b.Eq(a)));
+        bool fn4(Loose? a, Loose? b)
+        {
+            if (a == null)
+            {
+                return false;
+            }
+            if (b == null)
+            {
+                return false;
+            }
+            return a.Mirrors(b);
+        }
+        console.Log(Compared(fn4));
         Type favorite = Same(typeof(long));
         int named = 0;
         {

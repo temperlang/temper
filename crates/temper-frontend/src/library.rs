@@ -210,6 +210,13 @@ pub enum Message {
     /// picks: the variant, the types it wants, and the arguments'. Kotlin's
     /// `SignatureInputMismatch`.
     SignatureMismatch(String, String, String),
+    /// An operator with no meaning for its first operand's class or
+    /// interface, which has no method marked `@operator` for it: the
+    /// type, the operator as written, and the one to mark, `==` or
+    /// `<=>`. Kotlin Temper reports "Actual arguments do not match
+    /// signature" against `Int32`'s variant; this is the wording of
+    /// temperlang/temper#515.
+    NoSuchOperator(String, String, &'static str),
     /// A method a class inherits from more than one supertype, none
     /// overriding the others: the inputs, `this` first, and each one's
     /// signature. Kotlin's `NoCalleeMatching`.
@@ -464,6 +471,9 @@ impl Message {
             Message::MissingReturnType => "Explicit return type required".into(),
             Message::SignatureMismatch(sig, expected, got) => format!(
                 "Actual arguments do not match signature: {sig} expected {expected}, but got {got}"
+            ),
+            Message::NoSuchOperator(ty, op, method) => format!(
+                "{ty} does not support infix `{op}`; give it a method marked `@operator(\"{method}\")`"
             ),
             Message::TypeFormalBound(formal, actual, bound) => format!(
                 "Type formal <{formal}> cannot bind to {actual} which does not fit upper bounds [{bound}]"

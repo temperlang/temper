@@ -1426,9 +1426,9 @@ console.log("${e == empty()} ${e is Empty}");
     (Call . console \log)
     (Call cat (Call == e:2 (Call empty)) " " (Call is e:2 Empty)))
   #void)
-error 155..175: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [R, R]
+error 155..175: R does not support infix `==`; give it a method marked `@operator("==")`
 hint 228..238: Unnecessary type check to Empty from expression with type Empty which is a subtype
-Failed: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [R, R]
+Failed: R does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality from a sealed supertype
 @auto("==")
@@ -1464,8 +1464,8 @@ console.log("${new L(1) == new L(1)} ${new L(1) == new L(2)} ${new M(1) == new M
       " "
       (Call == (Call new M:2 1) (Call new M:2 1))))
   #void)
-error 159..179: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [M, M]
-Failed: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [M, M]
+error 159..179: M does not support infix `==`; give it a method marked `@operator("==")`
+Failed: M does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality calls each field's own ==
 class Loose(public n: Int) {
