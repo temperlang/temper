@@ -343,10 +343,11 @@ impl Types {
     /// wanted, `T?` from `Int32?` or `Int32`, and function types'
     /// parameters and results, with a `@fun` interface's type as the
     /// function type it stands for, unless both are of one interface.
-    /// Each solution goes into `actuals` at the formal's index; one solved
-    /// two different ways goes into `conflicts` too. Only fully known types are solutions, and not null, `Never`,
-    /// `Void` or a nullable type for a bare `T`, whose bound is never
-    /// nullable.
+    /// Each solution goes into `actuals` at the formal's index, `Dog` and
+    /// `Dog?` joined; one solved two different ways goes into `conflicts`
+    /// too. Only fully known types are solutions, and not null, `Never`,
+    /// or `Void`; a nullable type is one for a bare `T`, as for Kotlin
+    /// Temper, whose bound check takes it as fitting only `AnyValue`.
     pub fn unify(
         &mut self,
         pattern: TypeId,
@@ -361,7 +362,7 @@ impl Types {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null | Nullable(_))
+                if matches!(self.get(actual), Never | Null)
                     || actual == VOID
                     || !self.is_known(actual)
                 {
@@ -369,8 +370,11 @@ impl Types {
                 }
                 match actuals[i] {
                     UNKNOWN => actuals[i] = actual,
-                    solved if solved != actual => conflicts[i] = true,
-                    _ => {}
+                    // `Dog` and `Dog?` solve it as `Dog?`, as in Kotlin.
+                    solved if self.nullable(solved) == self.nullable(actual) => {
+                        actuals[i] = self.join(solved, actual);
+                    }
+                    _ => conflicts[i] = true,
                 }
             }
             (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, conflicts),

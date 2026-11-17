@@ -529,7 +529,11 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   not match signature: … expected [String], but got [Int32]"), solving
   from the type wanted first, where `let c: String = id(1)` reports the
   assignment; tempest matches both ([typing.md](typing.md), "Generic
-  calls").
+  calls"). A nullable constant Kotlin folds to null, as a top-level
+  `let d: Dog? = null`, passed as `id(d)` for `id<T extends Animal>`, is
+  "Expected subtype of Animal, but got Animal?" at the argument; tempest
+  reports it as it does any `Dog?`, "Type formal <T extends Animal>
+  cannot bind to Dog? …", at the call, as Kotlin does in a function.
 - **A generic call that's an argument** isn't checked against the
   parameter: `takeLS(wrap(1))`, for `takeLS(xs: List<String>)` and
   `wrap<T>(x: T): List<T>`, passes, where `let xs: List<String> =
