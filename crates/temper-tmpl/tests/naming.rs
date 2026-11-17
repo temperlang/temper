@@ -425,3 +425,40 @@ fn exports_keep_public_names() {
     assert_eq!(names.get(DeclId(3)), "min_");
     assert_eq!(names.public(DeclId(3)), "min");
 }
+
+/// A declaration marked `keep` or `keepTest` claims its name before
+/// others, as an export does: host code, the library's or its tests',
+/// calls it by that name.
+#[test]
+fn kept_names_are_claimed_first() {
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+module t#0 {
+  fn fooBar#1(): Int32 {
+    return 1;
+  }
+
+  keep fn foo_bar#2(): Int32 {
+    return 2;
+  }
+
+  fn bazQux#3(): Int32 {
+    return 3;
+  }
+
+  keepTest fn baz_qux#4(): Int32 {
+    return 4;
+  }
+
+  init {
+  }
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let names = assign(&p, &RULES);
+    let name = |d: u32| names.get(DeclId(d));
+    assert_eq!((name(2), name(1)), ("_foo_bar", "_foo_bar2"));
+    assert_eq!((name(4), name(3)), ("_baz_qux", "_baz_qux2"));
+}

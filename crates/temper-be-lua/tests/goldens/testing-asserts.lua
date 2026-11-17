@@ -99,6 +99,31 @@ local function assertMoreThings(t, helper, strings)
   end
 end
 
+---@class asserts.KeptForHost
+---@field n integer
+
+---@class asserts.KeptForHost.type: temper.Type
+---@operator call: asserts.KeptForHost
+local KeptForHost = temper.type("asserts.KeptForHost")
+
+---@param this asserts.KeptForHost
+---@param n integer
+function KeptForHost.constructor(this, n)
+  this.n = n
+end
+
+---@param helper asserts.TestHelper
+---@return integer
+local function sumOf(helper)
+  return temper.int32_add(helper.i, helper.j)
+end
+
+---@param helper asserts.TestHelper
+---@return integer
+local function keptForTests(helper)
+  return sumOf(helper)
+end
+
 local name = "case"
 local unitVecs = { Vec2(1.0, 0.0), Vec2(0.0, 1.0) }
 

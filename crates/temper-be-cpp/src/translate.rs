@@ -39,7 +39,9 @@
 //! so the library builds and runs without std, which tmpl doesn't
 //! translate yet, and a test build ([`crate::test_main`]) has them; the
 //! private functions only they call are in that `#ifdef` too
-//! ([`Item::TestsOnly`]), where they are in the module. Functions are
+//! ([`Item::TestsOnly`]), where they are in the module, as are `@keepTest`
+//! functions the library doesn't call, for tests' host code, which the
+//! header declares there. Functions are
 //! functions, `static` unless exported or called by a template in the
 //! header (a generic function's body), which the header declares; the
 //! init block is the body of the module's init function,
@@ -164,6 +166,9 @@ pub struct Translated {
     pub test_includes: Vec<String>,
     /// Its tests' prototypes, without the `;`.
     pub test_prototypes: Vec<String>,
+    /// Its `@keepTest` functions' prototypes, without the `;`, for tests'
+    /// host code: declared only where the tests are.
+    pub kept_for_tests: Vec<String>,
     /// Its classes' and interfaces' structs, for the header: each
     /// declared, then each defined, supertypes first.
     pub classes: String,
@@ -687,6 +692,9 @@ impl<'a> Translator<'a> {
         // prototypes.
         let mut functions: Vec<Item> = Vec::new();
         let mut exported_functions = Vec::new();
+        // `@keepTest` functions' prototypes, which the header declares
+        // only where `TEMPER_TESTS` is defined.
+        let mut kept_for_tests = Vec::new();
         let mut defined: HashSet<DeclId> = HashSet::new();
         let mut early: Vec<DeclId> = Vec::new();
         let mut structs = Vec::new();
@@ -856,8 +864,15 @@ impl<'a> Translator<'a> {
                     };
                     // `@keep`: for host code, which calls it by its
                     // name, so declared in the header, as Kotlin declares
-                    // every function.
-                    let keep = p.decls.get(decl).facts.contains(Facts::KEEP);
+                    // every function; `@keepTest`: for tests' host code,
+                    // so the same, but where the tests are, unless the
+                    // library uses it too.
+                    let facts = p.decls.get(decl).facts;
+                    let keep = facts.contains(Facts::KEEP) || facts.contains(Facts::KEEP_TEST);
+                    let for_tests = !f.exported
+                        && !facts.contains(Facts::KEEP)
+                        && facts.contains(Facts::KEEP_TEST)
+                        && !live.contains(&decl);
                     if keep {
                         f.exported = true;
                     }
@@ -888,12 +903,14 @@ impl<'a> Translator<'a> {
                             templates.push(f);
                             continue;
                         }
-                        if f.exported {
+                        if f.exported && for_tests {
+                            kept_for_tests.push(header_signature(&f));
+                        } else if f.exported {
                             exported_functions.push(header_signature(&f));
                         } else if !called.contains(&decl) && !keep {
                             continue;
                         }
-                        functions.push(match tests {
+                        functions.push(match tests || for_tests {
                             true => Item::TestsOnly(Box::new(Item::Function(f))),
                             false => Item::Function(f),
                         });
@@ -1144,6 +1161,7 @@ impl<'a> Translator<'a> {
             header_includes,
             test_includes,
             test_prototypes,
+            kept_for_tests,
             classes: host_class_names(&host_classes) + &classes::structs(p, structs),
             templates,
             host: host_used,

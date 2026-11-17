@@ -1074,6 +1074,16 @@ Other differences we won't copy:
 
 ## Later (backends and tooling)
 
+- **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
+  kept for tests' host code, and the private functions only it and tests
+  call, are defined, and it's declared in the header, only where
+  `TEMPER_TESTS` is, as tests are; Kotlin's C++ ignores reach and
+  defines everything always. Tempest's C++ used to drop it, as nothing
+  in Temper calls it, so tests' host code calling it wouldn't link.
+  Every top-level declaration now carries `@keep` and `@keepTest` into
+  tmpl, classes and interfaces too (`keep` and `keepTest` in its text).
+  Test: temper-be-cpp/tests/functional.rs, `kept_for_tests`; funtest
+  `testing/asserts` ("Kept for host code").
 - **Diagnostic levels** (2026-11-10): a diagnostic is an error or it
   isn't. Kotlin's info level is tempest's hint (`Level::Hint`), advice
   about correct code, now "Unnecessary type check" and a content tag's

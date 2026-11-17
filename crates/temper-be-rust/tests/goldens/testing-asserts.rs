@@ -121,6 +121,30 @@ pub(crate) fn unit_vecs() -> temper_core::List<Vec2> {
     crate::support::initialized(|| UNIT_VECS.get()).clone()
 }
 
+struct KeptForHostStruct {
+    n: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct KeptForHost(Arc<KeptForHostStruct>);
+
+impl KeptForHost {
+    #[allow(dead_code)]
+    pub fn new(n: i32) -> KeptForHost {
+        KeptForHost(Arc::new(KeptForHostStruct { n }))
+    }
+}
+
+temper_core::impl_any_value_trait!(KeptForHost, []);
+
+pub(crate) fn sum_of(helper: TestHelper) -> i32 {
+    helper.0.i.wrapping_add(helper.0.j)
+}
+
+pub(crate) fn kept_for_tests(helper: TestHelper) -> i32 {
+    sum_of(helper.clone())
+}
+
 pub mod builders {
     use super::*;
 

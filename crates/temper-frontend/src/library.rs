@@ -610,6 +610,8 @@ pub struct Library {
     pub connected: std::collections::HashMap<NodeId, Connected>,
     /// Declarations marked `@keep`, which host code may use.
     pub kept: std::collections::HashSet<NodeId>,
+    /// Declarations marked `@keepTest`, which tests' host code may use.
+    pub kept_for_tests: std::collections::HashSet<NodeId>,
     /// Regex literals without interpolations, as the calls that compile
     /// them, which the interpreter compiles once and keeps
     /// ([`crate::interp`]): a compiled `Regex` can't change, so each run

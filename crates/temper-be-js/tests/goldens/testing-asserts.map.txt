@@ -25,43 +25,64 @@
 33:13 -> ../asserts.temper.md:57:11  t.assert(actual === expected <- assert(s == "hi");
 35:11 -> ../asserts.temper.md:50:48  j = (j + 1) | 0; <- j += 1) {
 38:7 -> ../asserts.temper.md:49:43  i = (i + 1) | 0; <- i += 1) {
-43:1 -> ../asserts.temper.md:77:5  export class Vec2 extends ty <- export class Vec2(
-43:14 -> ../asserts.temper.md:77:18 (Vec2)  Vec2 extends type() { <- Vec2(
-43:18 -> ../asserts.temper.md:77:5   extends type() { <- export class Vec2(
-44:3 -> ../asserts.temper.md:78:14  /** @type {number} */ <- x: Float64,
-45:3 -> ../asserts.temper.md:78:14  #x; <- x: Float64,
-46:3 -> ../asserts.temper.md:79:14  /** @type {number} */ <- y: Float64,
-47:3 -> ../asserts.temper.md:79:14  #y; <- y: Float64,
-57:3 -> ../asserts.temper.md:77:5  /** <- export class Vec2(
-61:3 -> ../asserts.temper.md:77:5  constructor(x, y) { <- export class Vec2(
-63:5 -> ../asserts.temper.md:78:14  this.#x = x; <- x: Float64,
-64:5 -> ../asserts.temper.md:79:14  this.#y = y; <- y: Float64,
-67:3 -> ../asserts.temper.md:78:14  /** @returns {number} */ <- x: Float64,
-68:3 -> ../asserts.temper.md:78:14  get x() { <- x: Float64,
-68:7 -> ../asserts.temper.md:78:14 (x)  x() { <- x: Float64,
-72:3 -> ../asserts.temper.md:79:14  /** @returns {number} */ <- y: Float64,
-73:3 -> ../asserts.temper.md:79:14  get y() { <- y: Float64,
-73:7 -> ../asserts.temper.md:79:14 (y)  y() { <- y: Float64,
-77:3 -> ../asserts.temper.md:81:14  /** @returns {string} */ <- toString(): String {
-78:3 -> ../asserts.temper.md:81:14 (toString)  toString() { <- toString(): String {
-79:5 -> ../asserts.temper.md:86:9  return `(${float64ToString(t <- "(${x}, ${y}) size squared $
-83:1 -> ../asserts.temper.md:65:5  export class TestHelper exte <- class TestHelper(
-83:14 -> ../asserts.temper.md:65:11 (TestHelper)  TestHelper extends type() { <- TestHelper(
-83:24 -> ../asserts.temper.md:65:5   extends type() { <- class TestHelper(
-84:3 -> ../asserts.temper.md:66:14  /** @type {number} */ <- let i: Int,
-85:3 -> ../asserts.temper.md:66:14  #i; <- let i: Int,
-86:3 -> ../asserts.temper.md:67:14  /** @type {number} */ <- let j: Int,
-87:3 -> ../asserts.temper.md:67:14  #j; <- let j: Int,
-97:3 -> ../asserts.temper.md:65:5  /** <- class TestHelper(
-101:3 -> ../asserts.temper.md:65:5  constructor(i, j) { <- class TestHelper(
-103:5 -> ../asserts.temper.md:66:14  this.#i = i; <- let i: Int,
-104:5 -> ../asserts.temper.md:67:14  this.#j = j; <- let j: Int,
-107:3 -> ../asserts.temper.md:66:14  /** @returns {number} */ <- let i: Int,
-108:3 -> ../asserts.temper.md:66:14  get i() { <- let i: Int,
-108:7 -> ../asserts.temper.md:66:18 (i)  i() { <- i: Int,
-112:3 -> ../asserts.temper.md:67:14  /** @returns {number} */ <- let j: Int,
-113:3 -> ../asserts.temper.md:67:14  get j() { <- let j: Int,
-113:7 -> ../asserts.temper.md:67:18 (j)  j() { <- j: Int,
-118:1 -> ../asserts.temper.md:26:5  const name = "case"; <- let name = "case";
-119:1 -> ../asserts.temper.md:100:5  /** @type {readonly Vec2[]} <- let unitVecs = [new Vec2(1.0
-120:1 -> ../asserts.temper.md:100:5  export const unitVecs = Obje <- let unitVecs = [new Vec2(1.0
+43:1 -> ../asserts.temper.md:121:5  /** <- let sumOf(helper: TestHelper
+47:1 -> ../asserts.temper.md:121:5  function sumOf(helper) { <- let sumOf(helper: TestHelper
+47:10 -> ../asserts.temper.md:121:9 (sumOf)  sumOf(helper) { <- sumOf(helper: TestHelper): I
+47:15 -> ../asserts.temper.md:121:5  (helper) { <- let sumOf(helper: TestHelper
+48:3 -> ../asserts.temper.md:121:42  return (helper.i + helper.j) <- helper.i + helper.j }
+51:1 -> ../asserts.temper.md:118:5  /** <- @keepTest
+55:1 -> ../asserts.temper.md:118:5  function keptForTests(helper <- @keepTest
+55:10 -> ../asserts.temper.md:119:9 (keptForTests)  keptForTests(helper) { <- keptForTests(helper: TestHel
+55:22 -> ../asserts.temper.md:118:5  (helper) { <- @keepTest
+56:3 -> ../asserts.temper.md:119:49  return sumOf(helper); <- sumOf(helper) }
+59:1 -> ../asserts.temper.md:77:5  export class Vec2 extends ty <- export class Vec2(
+59:14 -> ../asserts.temper.md:77:18 (Vec2)  Vec2 extends type() { <- Vec2(
+59:18 -> ../asserts.temper.md:77:5   extends type() { <- export class Vec2(
+60:3 -> ../asserts.temper.md:78:14  /** @type {number} */ <- x: Float64,
+61:3 -> ../asserts.temper.md:78:14  #x; <- x: Float64,
+62:3 -> ../asserts.temper.md:79:14  /** @type {number} */ <- y: Float64,
+63:3 -> ../asserts.temper.md:79:14  #y; <- y: Float64,
+73:3 -> ../asserts.temper.md:77:5  /** <- export class Vec2(
+77:3 -> ../asserts.temper.md:77:5  constructor(x, y) { <- export class Vec2(
+79:5 -> ../asserts.temper.md:78:14  this.#x = x; <- x: Float64,
+80:5 -> ../asserts.temper.md:79:14  this.#y = y; <- y: Float64,
+83:3 -> ../asserts.temper.md:78:14  /** @returns {number} */ <- x: Float64,
+84:3 -> ../asserts.temper.md:78:14  get x() { <- x: Float64,
+84:7 -> ../asserts.temper.md:78:14 (x)  x() { <- x: Float64,
+88:3 -> ../asserts.temper.md:79:14  /** @returns {number} */ <- y: Float64,
+89:3 -> ../asserts.temper.md:79:14  get y() { <- y: Float64,
+89:7 -> ../asserts.temper.md:79:14 (y)  y() { <- y: Float64,
+93:3 -> ../asserts.temper.md:81:14  /** @returns {string} */ <- toString(): String {
+94:3 -> ../asserts.temper.md:81:14 (toString)  toString() { <- toString(): String {
+95:5 -> ../asserts.temper.md:86:9  return `(${float64ToString(t <- "(${x}, ${y}) size squared $
+99:1 -> ../asserts.temper.md:65:5  export class TestHelper exte <- class TestHelper(
+99:14 -> ../asserts.temper.md:65:11 (TestHelper)  TestHelper extends type() { <- TestHelper(
+99:24 -> ../asserts.temper.md:65:5   extends type() { <- class TestHelper(
+100:3 -> ../asserts.temper.md:66:14  /** @type {number} */ <- let i: Int,
+101:3 -> ../asserts.temper.md:66:14  #i; <- let i: Int,
+102:3 -> ../asserts.temper.md:67:14  /** @type {number} */ <- let j: Int,
+103:3 -> ../asserts.temper.md:67:14  #j; <- let j: Int,
+113:3 -> ../asserts.temper.md:65:5  /** <- class TestHelper(
+117:3 -> ../asserts.temper.md:65:5  constructor(i, j) { <- class TestHelper(
+119:5 -> ../asserts.temper.md:66:14  this.#i = i; <- let i: Int,
+120:5 -> ../asserts.temper.md:67:14  this.#j = j; <- let j: Int,
+123:3 -> ../asserts.temper.md:66:14  /** @returns {number} */ <- let i: Int,
+124:3 -> ../asserts.temper.md:66:14  get i() { <- let i: Int,
+124:7 -> ../asserts.temper.md:66:18 (i)  i() { <- i: Int,
+128:3 -> ../asserts.temper.md:67:14  /** @returns {number} */ <- let j: Int,
+129:3 -> ../asserts.temper.md:67:14  get j() { <- let j: Int,
+129:7 -> ../asserts.temper.md:67:18 (j)  j() { <- j: Int,
+134:1 -> ../asserts.temper.md:115:5  class KeptForHost extends ty <- @keep
+134:7 -> ../asserts.temper.md:116:11 (KeptForHost)  KeptForHost extends type() { <- KeptForHost(public let n: In
+134:18 -> ../asserts.temper.md:115:5   extends type() { <- @keep
+135:3 -> ../asserts.temper.md:116:30  /** @type {number} */ <- let n: Int) {}
+136:3 -> ../asserts.temper.md:116:30  #n; <- let n: Int) {}
+138:3 -> ../asserts.temper.md:115:5  /** @param {number} n */ <- @keep
+139:3 -> ../asserts.temper.md:115:5  constructor(n) { <- @keep
+141:5 -> ../asserts.temper.md:116:30  this.#n = n; <- let n: Int) {}
+144:3 -> ../asserts.temper.md:116:30  /** @returns {number} */ <- let n: Int) {}
+145:3 -> ../asserts.temper.md:116:30  get n() { <- let n: Int) {}
+145:7 -> ../asserts.temper.md:116:34 (n)  n() { <- n: Int) {}
+150:1 -> ../asserts.temper.md:26:5  const name = "case"; <- let name = "case";
+151:1 -> ../asserts.temper.md:100:5  /** @type {readonly Vec2[]} <- let unitVecs = [new Vec2(1.0
+152:1 -> ../asserts.temper.md:100:5  export const unitVecs = Obje <- let unitVecs = [new Vec2(1.0

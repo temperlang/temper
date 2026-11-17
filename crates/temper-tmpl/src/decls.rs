@@ -152,6 +152,9 @@ impl Facts {
     /// calls make a generator that runs the body a step at a time, and its
     /// body's `return`s have no value (notes/tmpl/nodes.md, "Coroutines").
     pub const GENERATOR: Facts = Facts(4096);
+    /// Marked `@keepTest`: kept for tests' host code, as `KEEP` is for the
+    /// library's, so its name is claimed first too, and tests reach it.
+    pub const KEEP_TEST: Facts = Facts(8192);
 
     pub fn contains(self, other: Facts) -> bool {
         self.0 & other.0 == other.0

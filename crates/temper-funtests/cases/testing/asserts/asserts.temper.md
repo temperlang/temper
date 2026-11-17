@@ -104,3 +104,18 @@ backend puts its tests.
         assert(normSquared(vec) == 1.0);
       }
     }
+
+## Kept for host code
+
+A declaration that only host code uses, which no Temper code calls, is kept by
+`@keep` for the library's host code, or by `@keepTest` for its tests' alone,
+with what it uses. These run in no test here: each backend's output keeps them,
+the second only where its tests are.
+
+    @keep
+    class KeptForHost(public let n: Int) {}
+
+    @keepTest
+    let keptForTests(helper: TestHelper): Int { sumOf(helper) }
+
+    let sumOf(helper: TestHelper): Int { helper.i + helper.j }

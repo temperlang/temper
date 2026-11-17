@@ -189,7 +189,8 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// = _connected::Counter;`), which host code defines. A module that
 /// takes either includes its `_connected.hpp` in its `.cpp`; the header
 /// also declares `@keep` functions, which host code calls (`work::sumOf3`),
-/// and host code reads unexported classes there too. Needed host code
+/// and, where `TEMPER_TESTS` is defined, `@keepTest` ones, which tests'
+/// host code calls; host code reads unexported classes there too. Needed host code
 /// that's missing is [`NotYet`], where Kotlin's fails in `g++`.
 ///
 /// Kotlin also copies the runtime beside the library, as `temper-core/`,
@@ -679,10 +680,18 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
         out.push('\n');
     }
     out.push_str(&t.templates);
-    if !t.test_prototypes.is_empty() {
-        out.push_str("\n#ifdef TEMPER_TESTS\n// Tests, which `test.cpp` runs.\n");
-        for f in &t.test_prototypes {
-            out.push_str(&format!("{f};\n"));
+    if !t.kept_for_tests.is_empty() || !t.test_prototypes.is_empty() {
+        out.push_str("\n#ifdef TEMPER_TESTS\n");
+        for (comment, prototypes) in [
+            ("For tests' host code (`@keepTest`).", &t.kept_for_tests),
+            ("Tests, which `test.cpp` runs.", &t.test_prototypes),
+        ] {
+            if !prototypes.is_empty() {
+                out.push_str(&format!("// {comment}\n"));
+            }
+            for f in prototypes {
+                out.push_str(&format!("{f};\n"));
+            }
         }
         out.push_str("#endif\n");
     }

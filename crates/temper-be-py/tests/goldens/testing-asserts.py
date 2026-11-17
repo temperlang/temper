@@ -77,5 +77,25 @@ def _assert_more_things(t: _Test, helper: _TestHelper, strings: _Sequence[_Seque
         i = _int_add(i, 1)
 
 
+class _KeptForHost:  # pyright: ignore[reportUnusedClass]
+    __slots__ = ('_n',)
+    _n: int
+
+    def __init__(self, /, n: int) -> None:
+        self._n = n
+
+    @property
+    def n(self, /) -> int:
+        return self._n
+
+
+def _sum_of(helper: _TestHelper, /) -> int:
+    return _int_add(helper.i, helper.j)
+
+
+def _kept_for_tests(helper: _TestHelper, /) -> int:  # pyright: ignore[reportUnusedFunction]
+    return _sum_of(helper)
+
+
 _name: str = 'case'
 _unit_vecs: _Sequence[Vec2] = (Vec2(1.0, 0.0), Vec2(0.0, 1.0))

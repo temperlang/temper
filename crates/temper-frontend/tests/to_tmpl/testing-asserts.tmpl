@@ -1,129 +1,144 @@
 tmpl 1 model 1 library asserts 0.0.0
 
-uses std#13 0.0.0-alpha.0.0 {
-  module testing#14 {
-    class Test#15 {
-      connected method assert#40(success: Boolean, message: fn (): String): Void;
+uses std#16 0.0.0-alpha.0.0 {
+  module testing#17 {
+    class Test#18 {
+      connected method assert#45(success: Boolean, message: fn (): String): Void;
     }
   }
 }
 
-uses `temper-core`#16 0.0.0-alpha.0.0 {
-  class List#17<T#18> extends Listed#19<T#18> {
-    connected get length#34(): Int32;
-    connected method get#37(index: Int32): T#18;
+uses `temper-core`#19 0.0.0-alpha.0.0 {
+  class List#20<T#21> extends Listed#22<T#21> {
+    connected get length#39(): Int32;
+    connected method get#42(index: Int32): T#21;
   }
-  interface Listed#19<T#20> {}
-  class Float64#22 {
-    connected method toString#23(): String;
+  interface Listed#22<T#23> {}
+  class Float64#27 {
+    connected method toString#28(): String;
   }
-  class Int32#42 {
-    connected method toString#43(radix?: Int32): String;
+  class Int32#47 {
+    connected method toString#48(radix?: Int32): String;
   }
 }
 
 module asserts#0 {
-  let name#10: String;
+  let name#13: String;
 
   export class Vec2#1 {
-    let x#3: Float64;
-    let y#4: Float64;
-    constructor constructor#6(x#24: Float64, y#25: Float64): Vec2#1 {
-      this.x#3 = x#24;
-      this.y#4 = y#25;
+    let x#4: Float64;
+    let y#5: Float64;
+    constructor constructor#7(x#29: Float64, y#30: Float64): Vec2#1 {
+      this.x#4 = x#29;
+      this.y#5 = y#30;
     }
-    method toString#5(): String {
-      return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat("(", this.x#3.toString#23()), ", "), this.y#4.toString#23()), ") size squared "), normSquared#11(this).toString#23());
+    method toString#6(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat("(", this.x#4.toString#28()), ", "), this.y#5.toString#28()), ") size squared "), normSquared#14(this).toString#28());
     }
   }
 
-  fn normSquared#11(vec#26: Vec2#1): Float64 {
-    return %Float64.add(%Float64.mul(vec#26.x#3, vec#26.x#3), %Float64.mul(vec#26.y#4, vec#26.y#4));
+  fn normSquared#14(vec#31: Vec2#1): Float64 {
+    return %Float64.add(%Float64.mul(vec#31.x#4, vec#31.x#4), %Float64.mul(vec#31.y#5, vec#31.y#5));
   }
 
   class TestHelper#2 {
-    let i#7: Int32;
-    let j#8: Int32;
-    constructor constructor#9(i#27: Int32, j#28: Int32): TestHelper#2 {
-      this.i#7 = i#27;
-      this.j#8 = j#28;
+    let i#8: Int32;
+    let j#9: Int32;
+    constructor constructor#10(i#32: Int32, j#33: Int32): TestHelper#2 {
+      this.i#8 = i#32;
+      this.j#9 = j#33;
     }
   }
 
-  fn assertMoreThings#12(t#29: Test#15, helper#30: TestHelper#2, strings#31: List#17<List#17<String>>): Void throws Bubble {
+  fn assertMoreThings#15(t#34: Test#18, helper#35: TestHelper#2, strings#36: List#20<List#20<String>>): Void throws Bubble {
     {
-      var i#32: Int32 = 0;
-      ~loop#33: while (%Int32.lt(i#32, strings#31.length#34())) {
+      var i#37: Int32 = 0;
+      ~loop#38: while (%Int32.lt(i#37, strings#36.length#39())) {
         {
-          var j#35: Int32 = 0;
-          ~loop#36: while (%Int32.lt(j#35, strings#31.get#37(i#32).length#34())) {
+          var j#40: Int32 = 0;
+          ~loop#41: while (%Int32.lt(j#40, strings#36.get#42(i#37).length#39())) {
             {
-              let actual#38: Int32 = helper#30.i#7;
-              let expected#39: Int32 = helper#30.j#8;
-              t#29.assert#40(%Int32.eq(actual#38, expected#39), (fn ~fn#41(): String [actual#38, expected#39] {
-                return %String.cat(%String.cat(%String.cat(%String.cat("expected helper.i == (", expected#39.toString#43(omitted)), ") not ("), actual#38.toString#43(omitted)), ")");
+              let actual#43: Int32 = helper#35.i#8;
+              let expected#44: Int32 = helper#35.j#9;
+              t#34.assert#45(%Int32.eq(actual#43, expected#44), (fn ~fn#46(): String [actual#43, expected#44] {
+                return %String.cat(%String.cat(%String.cat(%String.cat("expected helper.i == (", expected#44.toString#48(omitted)), ") not ("), actual#43.toString#48(omitted)), ")");
               }): fn (): String);
             }
-            let s#44: String = strings#31.get#37(i#32).get#37(j#35);
+            let s#49: String = strings#36.get#42(i#37).get#42(j#40);
             {
-              let actual#45: String = s#44;
-              let expected#46: String = "hi";
-              t#29.assert#40(%String.eq(actual#45, expected#46), (fn ~fn#47(): String [actual#45, expected#46] {
-                return %String.cat(%String.cat(%String.cat(%String.cat("expected s == (", expected#46), ") not ("), actual#45), ")");
+              let actual#50: String = s#49;
+              let expected#51: String = "hi";
+              t#34.assert#45(%String.eq(actual#50, expected#51), (fn ~fn#52(): String [actual#50, expected#51] {
+                return %String.cat(%String.cat(%String.cat(%String.cat("expected s == (", expected#51), ") not ("), actual#50), ")");
               }): fn (): String);
             }
-            j#35 = %Int32.add(j#35, 1);
+            j#40 = %Int32.add(j#40, 1);
           }
         }
-        i#32 = %Int32.add(i#32, 1);
+        i#37 = %Int32.add(i#37, 1);
       }
     }
   }
 
-  let unitVecs#21: List#17<Vec2#1>;
+  let unitVecs#24: List#20<Vec2#1>;
 
-  init {
-    init name#10 = "case";
-    init unitVecs#21 = (list(new constructor#6(1.0, 0.0), new constructor#6(0.0, 1.0))): List#17<Vec2#1>;
+  keep class KeptForHost#3 {
+    let n#11: Int32;
+    constructor constructor#12(n#53: Int32): KeptForHost#3 {
+      this.n#11 = n#53;
+    }
   }
 
-  test "a test case" ~test#48(test#49: Test#15): Void throws Bubble {
-    test#49.assert#40(%Float64.eq(normSquared#11(new constructor#6(0.0, 0.0)), 0.0), (fn ~fn#50(): String {
+  fn sumOf#25(helper#54: TestHelper#2): Int32 {
+    return %Int32.add(helper#54.i#8, helper#54.j#9);
+  }
+
+  keepTest fn keptForTests#26(helper#55: TestHelper#2): Int32 {
+    return sumOf#25(helper#55);
+  }
+
+  init {
+    init name#13 = "case";
+    init unitVecs#24 = (list(new constructor#7(1.0, 0.0), new constructor#7(0.0, 1.0))): List#20<Vec2#1>;
+  }
+
+  test "a test case" ~test#56(test#57: Test#18): Void throws Bubble {
+    test#57.assert#45(%Float64.eq(normSquared#14(new constructor#7(0.0, 0.0)), 0.0), (fn ~fn#58(): String {
       return "Oh noes";
     }): fn (): String);
   }
 
-  test "a failing test" ~test#51(test#52: Test#15): Void throws Bubble {
-    test#52.assert#40(false, (fn ~fn#53(): String {
+  test "a failing test" ~test#59(test#60: Test#18): Void throws Bubble {
+    test#60.assert#45(false, (fn ~fn#61(): String {
       return "because it's wrong";
     }): fn (): String);
-    let helper#54: TestHelper#2 = new constructor#9(3, 2);
-    assertMoreThings#12(test#52, helper#54, (list((list("bye")): List#17<String>)): List#17<List#17<String>>)^;
+    let helper#62: TestHelper#2 = new constructor#10(3, 2);
+    assertMoreThings#15(test#60, helper#62, (list((list("bye")): List#20<String>)): List#20<List#20<String>>)^;
   }
 
-  test "exported" ~test#55(test#56: Test#15): Void throws Bubble {
-    let vec#57: Vec2#1 = new constructor#6(1.5, 2.5);
+  test "exported" ~test#63(test#64: Test#18): Void throws Bubble {
+    let vec#65: Vec2#1 = new constructor#7(1.5, 2.5);
     {
-      let actual#58: String = vec#57.toString#5();
-      let expected#59: String = "(1.5, 2.5) size squared 8.5";
-      test#56.assert#40(%String.eq(actual#58, expected#59), (fn ~fn#60(): String [actual#58, expected#59] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected vec.toString() == (", expected#59), ") not ("), actual#58), ")");
+      let actual#66: String = vec#65.toString#6();
+      let expected#67: String = "(1.5, 2.5) size squared 8.5";
+      test#64.assert#45(%String.eq(actual#66, expected#67), (fn ~fn#68(): String [actual#66, expected#67] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected vec.toString() == (", expected#67), ") not ("), actual#66), ")");
       }): fn (): String);
     }
   }
 
-  test "module values" ~test#61(test#62: Test#15): Void throws Bubble {
+  test "module values" ~test#69(test#70: Test#18): Void throws Bubble {
     {
-      let ~length#63: Int32 = unitVecs#21.length#34();
-      var ~i#64: Int32 = 0;
-      ~loop#65: while (%Int32.lt(~i#64, ~length#63)) {
-        let vec#66: Vec2#1 = unitVecs#21.get#37(~i#64);
-        ~i#64 = %Int32.add(~i#64, 1);
+      let ~length#71: Int32 = unitVecs#24.length#39();
+      var ~i#72: Int32 = 0;
+      ~loop#73: while (%Int32.lt(~i#72, ~length#71)) {
+        let vec#74: Vec2#1 = unitVecs#24.get#42(~i#72);
+        ~i#72 = %Int32.add(~i#72, 1);
         {
-          let actual#67: Float64 = normSquared#11(vec#66);
-          let expected#68: Float64 = 1.0;
-          test#62.assert#40(%Float64.eq(actual#67, expected#68), (fn ~fn#69(): String [actual#67, expected#68] {
-            return %String.cat(%String.cat(%String.cat(%String.cat("expected normSquared(vec) == (", expected#68.toString#23()), ") not ("), actual#67.toString#23()), ")");
+          let actual#75: Float64 = normSquared#14(vec#74);
+          let expected#76: Float64 = 1.0;
+          test#70.assert#45(%Float64.eq(actual#75, expected#76), (fn ~fn#77(): String [actual#75, expected#76] {
+            return %String.cat(%String.cat(%String.cat(%String.cat("expected normSquared(vec) == (", expected#76.toString#28()), ") not ("), actual#75.toString#28()), ")");
           }): fn (): String);
         }
       }

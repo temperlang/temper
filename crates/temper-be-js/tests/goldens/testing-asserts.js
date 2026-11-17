@@ -40,6 +40,22 @@ export function assertMoreThings(t, helper, strings) {
   }
 }
 
+/**
+ * @param {TestHelper} helper
+ * @returns {number}
+ */
+function sumOf(helper) {
+  return (helper.i + helper.j) | 0;
+}
+
+/**
+ * @param {TestHelper} helper
+ * @returns {number}
+ */
+function keptForTests(helper) {
+  return sumOf(helper);
+}
+
 export class Vec2 extends type() {
   /** @type {number} */
   #x;
@@ -112,6 +128,22 @@ export class TestHelper extends type() {
   /** @returns {number} */
   get j() {
     return this.#j;
+  }
+}
+
+class KeptForHost extends type() {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
   }
 }
 

@@ -39,6 +39,14 @@ public final class AssertsGlobal {
         }
     }
 
+    static int sumOf(TestHelper helper) {
+        return helper.i + helper.j;
+    }
+
+    static int keptForTests(TestHelper helper) {
+        return sumOf(helper);
+    }
+
     static {
         String name = "case";
         unitVecs = List.of(new Vec2(1.0, 0.0), new Vec2(0.0, 1.0));

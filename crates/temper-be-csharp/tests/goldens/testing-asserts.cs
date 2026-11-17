@@ -43,6 +43,16 @@ public static class AssertsGlobal
         }
     }
 
+    internal static int SumOf(TestHelper helper)
+    {
+        return helper.I + helper.J;
+    }
+
+    internal static int KeptForTests(TestHelper helper)
+    {
+        return SumOf(helper);
+    }
+
     internal static string FormatFloat64(double d)
     {
         if (double.IsInfinity(d))

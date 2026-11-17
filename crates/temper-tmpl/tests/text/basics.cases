@@ -363,6 +363,34 @@ module bar#0 in "foo/bar" {
   }
 }
 
+=== keep and keepTest on every kind of top-level declaration
+tmpl 1 model 1 library kept 0.1.0
+
+module kept#0 {
+  keep fn forHost#1(): Int32 {
+    return 1;
+  }
+
+  keepTest fn forTests#2(): Int32 {
+    return 2;
+  }
+
+  keep keepTest let both#3: Int32;
+
+  keepTest var counted#4: Int32;
+
+  keep class HostClass#5 {
+    constructor constructor#7(): HostClass#5 {}
+  }
+
+  keepTest interface TestInterface#6 {}
+
+  init {
+    init both#3 = 3;
+    init counted#4 = 4;
+  }
+}
+
 === hand-written: comments, layout, gaps in ids, and redundant types
 tmpl 1 model 1 library hand 0.1.0
 // Comments and layout are free; ids needn't be dense.

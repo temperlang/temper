@@ -13,6 +13,7 @@ void global_init_init();
 
 struct Vec2;
 struct TestHelper;
+struct KeptForHost;
 
 struct Vec2 : public std::enable_shared_from_this<Vec2> {
   double x;
@@ -31,8 +32,16 @@ struct TestHelper : public std::enable_shared_from_this<TestHelper> {
   int32_t get_j() const;
 };
 
+struct KeptForHost : public std::enable_shared_from_this<KeptForHost> {
+  int32_t n;
+  static std::shared_ptr<KeptForHost> make(int32_t n);
+  int32_t get_n() const;
+};
+
 
 #ifdef TEMPER_TESTS
+// For tests' host code (`@keepTest`).
+int32_t keptForTests(std::shared_ptr<TestHelper> const & helper);
 // Tests, which `test.cpp` runs.
 void aTestCase(std::shared_ptr<temper_std::Test> const & test);
 void aFailingTest(std::shared_ptr<temper_std::Test> const & test);
@@ -122,6 +131,26 @@ static void assertMoreThings(std::shared_ptr<temper_std::Test> const & t, std::s
       i = core::Int::add(i, 1);
     }
   }
+}
+#endif  // TEMPER_TESTS
+
+std::shared_ptr<KeptForHost> KeptForHost::make(int32_t n) {
+  std::shared_ptr<KeptForHost> self = std::make_shared<KeptForHost>();
+  self->n = n;
+  return self;
+}
+
+int32_t KeptForHost::get_n() const {
+  return this->n;
+}
+
+#ifdef TEMPER_TESTS
+static int32_t sumOf(std::shared_ptr<TestHelper> const & helper) {
+  return core::Int::add(helper->i, helper->j);
+}
+
+int32_t keptForTests(std::shared_ptr<TestHelper> const & helper) {
+  return asserts::sumOf(helper);
 }
 #endif  // TEMPER_TESTS
 

@@ -70,6 +70,7 @@ impl Translator<'_> {
             if self.data(node) & crate::core::CLASS_FUN != 0 {
                 self.b.add_facts(decl, Facts::FUN);
             }
+            self.keep_facts(decl, node);
             self.decl_spans(decl, node);
             self.classes.insert(node, decl);
             self.class_order.push(node);

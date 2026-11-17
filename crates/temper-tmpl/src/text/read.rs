@@ -417,13 +417,14 @@ enum Member {
     StaticFunction(Head),
 }
 
-/// What may precede a declaration: `qname "…"`, `keep`, `connected`, maybe
-/// with backends, `export`, and a member's `private`, `protected`, `auto`,
-/// and `operator("…")`.
+/// What may precede a declaration: `qname "…"`, `keep`, `keepTest`,
+/// `connected`, maybe with backends, `export`, and a member's `private`,
+/// `protected`, `auto`, and `operator("…")`.
 #[derive(Default)]
 struct Marks {
     qname: Option<String>,
     keep: bool,
+    keep_test: bool,
     connected: Option<Vec<String>>,
     export: bool,
     /// The member's marks, as facts.
@@ -764,6 +765,7 @@ impl Reader {
             marks.qname = Some(qname);
         }
         marks.keep = self.eat_word("keep");
+        marks.keep_test = self.eat_word("keepTest");
         if self.eat_word("connected") {
             let mut backends = Vec::new();
             if self.eat("(") {
@@ -813,6 +815,9 @@ impl Reader {
         }
         if marks.keep {
             self.b.add_facts(decl, Facts::KEEP);
+        }
+        if marks.keep_test {
+            self.b.add_facts(decl, Facts::KEEP_TEST);
         }
         if let Some(backends) = &marks.connected {
             let backends: Vec<&str> = backends.iter().map(String::as_str).collect();
@@ -1313,6 +1318,7 @@ impl Reader {
             let marks = self.marks()?;
             if marks.export
                 || marks.keep
+                || marks.keep_test
                 || marks.connected.is_some()
                 || marks.member != Facts::NONE
             {

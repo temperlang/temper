@@ -218,7 +218,8 @@ impl Writer {
     }
 
     /// A declaration's doc comment and marks, each line started: `///`
-    /// lines, then `qname "…"`, `keep`, `connected`, and `export`.
+    /// lines, then `qname "…"`, `keep`, `keepTest`, `connected`, and
+    /// `export`.
     fn marks(&mut self, p: &Program, decl: DeclId) {
         let d = p.decls.get(decl);
         if !d.doc.is_none() {
@@ -235,8 +236,8 @@ impl Writer {
         self.inline_marks(p, decl);
     }
 
-    /// `qname "…"`, `keep`, `connected(…)`, and `export`, each followed by
-    /// a space.
+    /// `qname "…"`, `keep`, `keepTest`, `connected(…)`, and `export`, each
+    /// followed by a space.
     fn inline_marks(&mut self, p: &Program, decl: DeclId) {
         let d = p.decls.get(decl);
         if !d.qname.is_none() {
@@ -246,6 +247,9 @@ impl Writer {
         }
         if d.facts.contains(Facts::KEEP) {
             self.out.push_str("keep ");
+        }
+        if d.facts.contains(Facts::KEEP_TEST) {
+            self.out.push_str("keepTest ");
         }
         if d.facts.contains(Facts::CONNECTED) {
             self.out.push_str("connected");

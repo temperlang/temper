@@ -700,12 +700,13 @@ fn module_level(p: &Program, module: &Module) -> Vec<DeclId> {
 }
 
 /// Whether a declaration's name is fixed, so it claims its name before
-/// others: exported, connected, or kept.
+/// others: exported, connected, or kept, for host code or its tests'.
 fn claims_first(p: &Program, d: DeclId) -> bool {
     let facts = p.decls.get(d).facts;
     facts.contains(Facts::EXPORTED)
         || facts.contains(Facts::CONNECTED)
         || facts.contains(Facts::KEEP)
+        || facts.contains(Facts::KEEP_TEST)
 }
 
 /// The module-level declarations a function refers to, as

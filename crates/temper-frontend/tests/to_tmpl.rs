@@ -26,7 +26,7 @@ use temper_frontend::to_tmpl::{NotYet, gaps, to_tmpl};
 use temper_syntax::lex::SourceKind;
 use temper_tmpl::coroutines::{CoroutineStrategy, lower};
 use temper_tmpl::version::current_as_sentinel;
-use temper_tmpl::{Node, Profile, Program, difference, text, validate};
+use temper_tmpl::{Facts, Node, Profile, Program, difference, text, validate};
 
 /// The functional tests subset A covers, by their paths.
 const SUBSET_A: [&str; 7] = [
@@ -630,5 +630,55 @@ fn console_first_used_in_a_test() {
         let written = text::write(&program);
         assert!(written.contains("let ~console#"), "{written}");
         assert!(written.contains("getConsole"), "{written}");
+    });
+}
+
+/// `@keep` and `@keepTest` mark every kind of top-level declaration,
+/// classes and interfaces included, as Kotlin's `ReachabilityTracer`
+/// reads both on any declaration: `KEEP` (kept for host code) and
+/// `KEEP_TEST` (kept for tests' host code), each alone or both.
+#[test]
+fn keep_marks_every_top_level_kind() {
+    with_stack(|| {
+        let source = "
+    @keep let forHost(): Int { 1 }
+    @keepTest let forTests(): Int { 2 }
+    @keep @keepTest let forBoth(): Int { 3 }
+    @keep let hostValue = 4;
+    @keepTest var testCount = 5;
+    @keep class HostClass {}
+    @keepTest class TestClass {}
+    @keep interface HostInterface {}
+    @keepTest interface TestInterface {}
+    let neither(): Int { 6 }
+    test(\"t\") { assert(forTests() + testCount == 7); }
+";
+        let program = translate_source("kept", source);
+        let module = program.modules[0].decl;
+        let facts = |name: &str| {
+            let found = (program.decls.ids())
+                .filter(|&d| program.decls.contains(d))
+                .find(|&d| program.decls.get(d).owner == module && program.name(d) == name)
+                .unwrap_or_else(|| panic!("no {name}"));
+            let facts = program.decls.get(found).facts;
+            (
+                facts.contains(Facts::KEEP),
+                facts.contains(Facts::KEEP_TEST),
+            )
+        };
+        assert_eq!(facts("forHost"), (true, false));
+        assert_eq!(facts("forTests"), (false, true));
+        assert_eq!(facts("forBoth"), (true, true));
+        assert_eq!(facts("hostValue"), (true, false));
+        assert_eq!(facts("testCount"), (false, true));
+        assert_eq!(facts("HostClass"), (true, false));
+        assert_eq!(facts("TestClass"), (false, true));
+        assert_eq!(facts("HostInterface"), (true, false));
+        assert_eq!(facts("TestInterface"), (false, true));
+        assert_eq!(facts("neither"), (false, false));
+        // And text writes them.
+        let written = text::write(&program);
+        assert!(written.contains("keep keepTest fn forBoth#"), "{written}");
+        assert!(written.contains("keepTest class TestClass#"), "{written}");
     });
 }
