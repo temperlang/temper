@@ -21,9 +21,9 @@ License, Version 2.0 <LICENSE-APACHE> or <https://www.apache.org/licenses/LICENS
 or the MIT license <LICENSE-MIT> or <https://opensource.org/licenses/MIT>,
 at your option.
 
-Temper's compiler and tools, written in Rust, are part of the Temper
-project and under the same terms. Third-party materials it includes, such as
-Unicode data, are listed with their notices in NOTICE.
+Temper's compiler and tools are part of the Temper project and under
+the same terms. Third-party materials it includes, such as Unicode
+data, are listed with their notices in NOTICE.
 
 The Temper Language Documentation is licensed under the CC-BY-SA 4.0
 license <LICENSE-CC-BY-SA-4.0> or <https://creativecommons.org/licenses/by-sa/4.0/>.
