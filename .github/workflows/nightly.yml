@@ -16,7 +16,12 @@
 # .github/nightly-libraries.json (name, repository, ref, and backends),
 # one job each, so adding one is a line there, not a step here, with
 # C#'s and Java's compiler warnings on generated code as failures
-# (`TEMPER_STRICT_WARNINGS`); per-push
+# (`TEMPER_STRICT_WARNINGS`), and each library's generated Python
+# type-checked, as the Python backend's tests check theirs (mypy and
+# pyright, strict, at ci.yml's pins), against a ratchet: a count over
+# its allowance in .github/ci-tools/library-py-baseline.json (0 if
+# unlisted) fails the job, and one under it asks for the allowance to
+# be lowered (.github/ci-tools/check_library_py.py); per-push
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
@@ -160,15 +165,19 @@ jobs:
         run: |
           cargo fetch --locked --manifest-path crates/temper-be-rust/runtime/temper-core/Cargo.toml
           cargo fetch --locked --manifest-path compat/rust-std-deps/Cargo.toml
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        # As in ci.yml.
+        with:
+          version: "0.13.5"
+          checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # Mocha (with TypeScript and pyright) from CI's lockfile.
-      - name: Mocha
-        working-directory: .github/ci-tools
-        run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+      # Mocha, for generated JS's tests, and the checkers at ci.yml's
+      # pins (mypy and pyright, for the type checks below), as the
+      # toolchains action installs them.
+      - name: Checkers for generated code, and Mocha
+        run: uv run .github/ci-tools/install.py
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
@@ -202,6 +211,19 @@ jobs:
           # C#'s and Java's compiler warnings on generated code fail the
           # tests, as in the backends' own tests.
           TEMPER_STRICT_WARNINGS: "1"
+      # The library's generated Python, as `temper test -b py` left it
+      # in temper.out/py, its packages (not its tests, std, or the
+      # runtime) checked by mypy and pyright, strict, as the Python
+      # backend's tests check theirs, against a ratchet: a count over its
+      # allowance in .github/ci-tools/library-py-baseline.json (0 for a
+      # library or checker it doesn't list) fails the job; one under it
+      # passes with a notice to lower the allowance in the same change,
+      # so allowances only shrink. `--strict` would ignore the baseline
+      # and allow none. Even after a backend's tests fail, as it reports
+      # separately.
+      - name: Python type checks
+        if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' py ') }}
+        run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
 
   # Each checker of generated code at its latest release, the others at
   # ci.yml's pins, on the tests of the backend it checks. A failure here

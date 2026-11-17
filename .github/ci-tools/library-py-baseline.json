@@ -1,0 +1,16 @@
+{
+  "argmas": {"mypy": 0, "pyright": 0},
+  "chromarite": {"mypy": 4, "pyright": 0},
+  "hrefine": {"mypy": 0, "pyright": 3},
+  "kelpto": {"mypy": 0, "pyright": 0},
+  "kelpto-commonmark-tests": {"mypy": 0, "pyright": 0},
+  "kelpto-core": {"mypy": 0, "pyright": 0},
+  "kelpto-gfm-tests": {"mypy": 0, "pyright": 0},
+  "kelpto-html": {"mypy": 0, "pyright": 403},
+  "kelpto-html5lib-tokenizer-tests": {"mypy": 0, "pyright": 0},
+  "kelpto-md": {"mypy": 0, "pyright": 1},
+  "kelpto-sample-tests": {"mypy": 0, "pyright": 1},
+  "kelpto-wpt-tree-construction-tests": {"mypy": 0, "pyright": 0},
+  "ordable": {"mypy": 0, "pyright": 0},
+  "wherewith": {"mypy": 0, "pyright": 6}
+}

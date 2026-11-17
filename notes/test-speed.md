@@ -384,7 +384,11 @@ Two kinds of runs, kept apart:
 - **Nightly:** real libraries' tests on every backend each passes on,
   from a list, `.github/nightly-libraries.json` (name, repository, ref,
   and backends), one job per library (`.github/workflows/nightly.yml`,
-  "libraries"). Adding a library is a line of data.
+  "libraries"). Adding a library is a line of data. Where a library
+  runs on `py`, its generated packages are then type-checked (mypy and
+  pyright, strict, as the Python backend's tests), each count held to
+  its allowance in `.github/ci-tools/library-py-baseline.json`, a
+  ratchet that only shrinks (`check_library_py.py`).
 
 Meant to grow to hundreds of libraries: keep the list data, and each
 job one library with its backends, so the plan job can later shard the

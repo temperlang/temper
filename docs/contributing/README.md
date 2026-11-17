@@ -107,7 +107,9 @@ each language's toolchain (`temper test -b` on small fixture libraries
 for every backend among them), the wasm build, and the functional
 tests, all on Rust 1.85.0. A nightly job tests C++ on more compilers
 and under sanitizers, and runs real libraries' tests on every backend,
-from a list (`.github/nightly-libraries.json`;
+and type-checks their generated Python against a ratchet of allowed
+errors ([CI](ci.md), "Real libraries' Python types, nightly"), from a
+list (`.github/nightly-libraries.json`;
 [test speed](../../notes/test-speed.md), "Real libraries, nightly").
 [CI and supply chain](ci.md) says what CI pins (actions, crates, and
 the checkers of generated code), why, and how to bump a pin.

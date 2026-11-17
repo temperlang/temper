@@ -805,7 +805,9 @@ What has to change first, found while writing this:
   (`runaway_tests_fail_alone`, `runaway_top_level_is_cut_short`).
 - **JUnit reading**: unit tests in [`tools.rs`](../../../crates/temper-tmpl/src/tools.rs).
 - **Real libraries**, nightly: each library in
-  `.github/nightly-libraries.json` on the backends it passes on.
+  `.github/nightly-libraries.json` on the backends it passes on, and
+  its generated Python type-checked against a ratchet
+  (`.github/ci-tools/library-py-baseline.json`).
 
 Not covered: Windows paths (CI is Linux), a tool that hangs, a config
 that isn't plain lines, nested ignore files against Kotlin's reading,

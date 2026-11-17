@@ -289,6 +289,20 @@ pyright, mypy, or LuaLS), the rest at their pins. They block nothing: a
 failure, named for its checker and with the versions in its summary,
 is the cue to fix the backend or the tests before bumping that pin.
 
+## Real libraries' Python types, nightly
+
+Each nightly `libraries` job that tests a library on `py` then
+type-checks the library's generated packages, tests aside, with mypy
+and pyright, strict and at their pins, as the Python backend's tests
+check theirs ([check_library_py.py](../../.github/ci-tools/check_library_py.py),
+which also runs locally on a `temper.out/py`). It's a ratchet:
+[library-py-baseline.json](../../.github/ci-tools/library-py-baseline.json)
+gives each library's allowed errors per checker (none, if unlisted), a
+count over its allowance fails the job, and one under it passes with a
+notice to lower the allowance in the same change, so allowances only
+shrink. Once every count is 0, `--strict` allows none whatever the
+baseline says.
+
 ## Bumping a pin
 
 - **Actions:** Dependabot ([.github/dependabot.yml](../../.github/dependabot.yml))

@@ -70,8 +70,8 @@ browser.
   every backend, and the generated code passes each language's strict
   checkers (clippy, `tsc --strict`, pyright and mypy, LuaLS, and
   compilers with warnings as errors).
-- **Real libraries** (Hrefine, Chromarite, Ordable, Kelpto, and
-  Wherewith) pass all their tests in all seven languages.
+- **Real libraries** (Hrefine, Chromarite, Ordable, Kelpto, Wherewith,
+  and Argmas) pass all their tests in all seven languages.
 - **Editors:** a language server, `temper lsp`, and a VS Code
   extension ([editors/vscode](editors/vscode/README.md)).
 - **The command line**, `temper`, has `build`, `test`, `run`,
