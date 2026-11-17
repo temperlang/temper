@@ -54,16 +54,16 @@ local function sum(i, j, bonus)
   return temper.int32_add(sumOf3(i, j, bonus), 1000)
 end
 
----@param string? string|temper.Null
+---@param string_? string|temper.Null
 ---@return integer
-local function length(string)
-  if string == nil then
-    string = temper.null
+local function length(string_)
+  if string_ == nil then
+    string_ = temper.null
   end
-  if temper.is_null(string) then
+  if temper.is_null(string_) then
     return 999
   else
-    return temper.int32_add(temper.string_countbetween(string --[[@as string]], 1, temper.string_end(string --[[@as string]])), 1000)
+    return temper.int32_add(temper.string_countbetween(string_ --[[@as string]], 1, temper.string_end(string_ --[[@as string]])), 1000)
   end
 end
 

@@ -59,7 +59,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 use temper_be_lua::translate::INT64_LOCALS;
-use temper_be_lua::{LUA, OutFile, translate};
+use temper_be_lua::{LUA, OutFile, names, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// A library of names that Lua reserves or the translator prints (Lua's
@@ -100,6 +100,86 @@ const HIDING_LOG: [&str; 5] = [
     "\"it's\" \\ a\u{0}1 \u{202E}x",
     "2 -4 7",
 ];
+
+/// Lua's standard globals as a module's values and functions, and as
+/// parameters, locals, and temporaries, each taking `_`
+/// ([`names::GLOBALS`]), so none hides what the output reaches
+/// (`math.huge` for `1E999`, `error("panic")`, `tostring`) or host code
+/// might, while exports keep their names as their module's keys
+/// (`string = string_`, and `exports.pairs` for a `var` that functions
+/// write); `no_lua_global_is_declared` checks the output declares none.
+const GLOBALS: &str = r#"# Globals
+
+    let table = [1, 2, 3];
+    export var string = "s";
+    export var pairs = 0;
+    export let type(next: Int, math: Int): Int { pairs += 1; next * math }
+    let half(error: Int): Int throws Bubble {
+      if (error % 2 != 0) { bubble(); }
+      error / 2
+    }
+    let select(error: Int, table: List<Int>): Int {
+      let string = half(error) orelse panic();
+      var select = 0;
+      for (let next of table) { select += next; }
+      select + string
+    }
+    let huge(math: Float64): Float64 { math * 1E999 }
+    string = "${type(2, 3).toString()} ${select(4, table).toString()}";
+    console.log("${string} ${huge(2.0).toString()} ${type(1, 1) == select(2, [])} ${pairs}");
+    for (let string of ["ab", "c"]) { console.log("${string}!"); }
+"#;
+
+/// What [`GLOBALS`] logs.
+const GLOBALS_LOG: [&str; 3] = ["6 8 Infinity true 2", "ab!", "c!"];
+
+/// The names a Lua chunk declares: its locals, functions, parameters, and
+/// loop variables.
+fn declared(lua: &str) -> Vec<&str> {
+    fn names(list: &str) -> impl Iterator<Item = &str> {
+        list.split(',').map(str::trim).filter(|n| !n.is_empty())
+    }
+    let mut out = Vec::new();
+    for line in lua.lines().map(str::trim_start) {
+        if line.starts_with("--") {
+            continue;
+        }
+        let rest = line.strip_prefix("local ").unwrap_or(line);
+        if let Some(f) = rest.strip_prefix("function ") {
+            let (name, params) = f.split_once('(').unwrap_or((f, ""));
+            out.push(name.trim());
+            out.extend(names(params.split(')').next().unwrap_or("")));
+        } else if line.starts_with("local ") {
+            out.extend(names(rest.split('=').next().unwrap_or(rest)));
+        } else if let Some(f) = line.strip_prefix("for ") {
+            out.extend(names(f.split([' ', '=']).next().unwrap_or("")));
+            if let Some((vars, _)) = f.split_once(" in ") {
+                out.extend(names(vars));
+            }
+        }
+        if let Some((_, f)) = line.split_once("function(") {
+            out.extend(names(f.split(')').next().unwrap_or("")));
+        }
+    }
+    out
+}
+
+/// [`GLOBALS`]'s output declares none of Lua's globals.
+#[test]
+fn no_lua_global_is_declared() {
+    let case = Case::inline("globals", "globals.temper.md", GLOBALS, vec![]);
+    let files = generate(&case);
+    let declared = declared(&files[0].text);
+    assert!(declared.contains(&"string_"), "{declared:?}");
+    let text = &files[0].text;
+    for key in ["string = string_", "type = type_", "exports.pairs ="] {
+        assert!(text.contains(key), "no `{key}` in\n{text}");
+    }
+    let hiding: Vec<_> = (declared.iter())
+        .filter(|n| names::GLOBALS.contains(n) || names::SPECIAL.contains(n))
+        .collect();
+    assert!(hiding.is_empty(), "declared {hiding:?}\n{}", files[0].text);
+}
 
 /// What Lua can't write inline, hoisted before its statement: an `if`
 /// value of `Boolean`s whose condition does something, `orelse` on the
@@ -356,6 +436,13 @@ fn cases() -> Vec<Case> {
         "hiding.temper.md",
         HIDING,
         hiding_log,
+    ));
+    let globals_log = GLOBALS_LOG.iter().map(|s| s.to_string()).collect();
+    cases.push(Case::inline(
+        "globals",
+        "globals.temper.md",
+        GLOBALS,
+        globals_log,
     ));
     cases.push(Case::inline(
         "repeats",

@@ -503,12 +503,12 @@ print(added .. " " .. c.count)
 print(tostring(Point(1, 2):eq(Point(1, 2))) .. " " .. tostring(not Point(1, 2):eq(Point(2, 1))))
 print(tostring(Holder(Loose(3), "a"):eq(Holder(Loose(-3), "a"))))
 local loose = Loose(2)
-local string = tostring(loose:mirrors(Loose(-2))) .. " "
+local string_ = tostring(loose:mirrors(Loose(-2))) .. " "
 local left = maybeLoose(-2)
 local left2 = loose
 local right = maybeLoose(0)
 local left3 = maybeLoose(0)
-print(string .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
+print(string_ .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
 local subject = maybeLoose(-2)
 local matched = not temper.is_null(subject) and (subject --[[@as classes.Loose]]):eq(loose) and "loose" or "other"
 print(matched)

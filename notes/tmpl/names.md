@@ -497,8 +497,12 @@ the Python backend's first variant:
   `_3cc_3bd_3bf_3bc_3b1`, where Kotlin's, after NFKD, is
   `x3bfx301x3bdx3bfx3bcx3b1__2`). Its reserved lists are Lua 5.4's
   keywords (`goto` too, which Kotlin's list leaves out), `_ENV` and
-  `_G`, and what the translator prints (`temper`, `print`, `tostring`,
-  `math`, `require`, `exports`, and `module`), each taking `_`. Its
+  `_G`, Lua's standard globals, 5.1's and LuaJIT's too (`string`,
+  `type`, `error`, `unpack`, `bit`; 2026-11-17, since a module's host
+  code is inlined in it and may reach any of them), and what else the
+  translator prints (`temper`, `exports`, and `with_tostring`), each
+  taking `_`; an export keeps its name as its module's table's key
+  (`NameMap::public`, below). Its
   labels are `goto` targets, as C#'s: `continue` ending the body of a
   loop that a `continue` of its own needs, and `continue_NAME` and
   `break_NAME` for jumps from inner loops, from the same source names.
@@ -532,6 +536,14 @@ the Python backend's first variant:
   builtins stay bare. Its imports already make way for any
   declaration's name, so a parameter named for a runtime helper keeps
   its name too. Other backends set none.
+- **Exports' public names** (2026-11-17, `NameMap::public`): an
+  export's name as its module's table or namespace keys it, escaped
+  only by `member_reserved`, as a member's is, where its own name
+  escapes further; dependents read it from the `Interface` beside the
+  name they bind. Lua's module tables use it (`return { string =
+  string_ }`), since a field hides nothing; where the binding is the
+  key (Python's module attributes) it goes unused. Two exports whose
+  public names collide clash.
 - **Not named:** labels (Python prints none), and core's declarations
   (the connection table's names).
 - **With modules** (2026-10-30): other libraries' declarations (std's

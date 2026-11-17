@@ -696,9 +696,9 @@ if not temper.pcall(function()
 end) then
   error("panic")
 end
-local string = record.name .. " " .. tostring(record.active) .. " "
+local string_ = record.name .. " " .. tostring(record.active) .. " "
 local subject = record.nickname
-print(string .. (temper.is_null(subject) and "none" or (subject --[[@as string]])) .. " " .. temper.list_length(record.points))
+print(string_ .. (temper.is_null(subject) and "none" or (subject --[[@as string]])) .. " " .. temper.list_length(record.points))
 ---@type string
 local t_1
 if not temper.pcall(function()

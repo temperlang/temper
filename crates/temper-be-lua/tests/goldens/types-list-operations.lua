@@ -6,10 +6,10 @@ local function reportLength(list)
   print("Length: " .. temper.listed_length(list))
 end
 
----@param string string
+---@param string_ string
 ---@param sep string
-local function reportSplit(string, sep)
-  local strings = temper.string_split(string, sep)
+local function reportSplit(string_, sep)
+  local strings = temper.string_split(string_, sep)
   local len = tostring(temper.list_length(strings))
   print("Split " .. temper.listed_join(strings, ", ", function(x) return x end) .. " - " .. len)
 end

@@ -48,8 +48,8 @@ do
     end) then
       bubbled = true
     end
-    local error = p.jsonError
-    print("`" .. s2 .. "` has" .. (bubbled and "" or " no") .. " error: " .. (temper.is_null(error) and "MISSING ERROR" or (error --[[@as string]])))
+    local error_ = p.jsonError
+    print("`" .. s2 .. "` has" .. (bubbled and "" or " no") .. " error: " .. (temper.is_null(error_) and "MISSING ERROR" or (error_ --[[@as string]])))
   end
 end
 local selectCodePoints = "\000\001\002\003\004\005\006\007\008\t\n\011\012\r\014\015\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031 -𐀀--퟿\226\128\168\226\128\169\194\133"

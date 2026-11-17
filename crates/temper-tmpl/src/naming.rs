@@ -135,6 +135,7 @@ pub struct NamingRules {
 #[derive(Clone, Debug, Default)]
 pub struct NameMap {
     names: Vec<String>,
+    public: HashMap<DeclId, String>,
     suffixed: Vec<DeclId>,
     clashes: Vec<String>,
     missing: Vec<String>,
@@ -144,6 +145,17 @@ impl NameMap {
     /// A declaration's name; empty for one the pass doesn't name.
     pub fn get(&self, decl: DeclId) -> &str {
         self.names.get(decl.index()).map_or("", String::as_str)
+    }
+
+    /// An export's public name, as its module's table or namespace keys
+    /// it: its name escaped only by the rules' `member_reserved`, as a
+    /// member's is, where that differs from its own (Lua's `local
+    /// string_`, exported as `string`); else [`get`](Self::get)'s. Another
+    /// library's, from its [`Interface`].
+    pub fn public(&self, decl: DeclId) -> &str {
+        self.public
+            .get(&decl)
+            .map_or_else(|| self.get(decl), String::as_str)
     }
 
     /// Whether any declaration has this name: for a target that names
@@ -188,6 +200,8 @@ pub struct Interface {
     /// Names by qname, without a disambiguation index; `None` for a qname
     /// two declarations share, which a dependent can't tell apart.
     names: HashMap<String, Option<String>>,
+    /// Public names ([`NameMap::public`]) by qname, where they differ.
+    public: HashMap<String, String>,
 }
 
 impl Interface {
@@ -198,6 +212,7 @@ impl Interface {
         let mut out = Interface {
             library: qname_library(&p.library.name).to_string(),
             names: HashMap::new(),
+            public: HashMap::new(),
         };
         for d in p.decls.ids() {
             if !is_shared(p, d) || is_external(p, d) || names.get(d).is_empty() {
@@ -206,6 +221,9 @@ impl Interface {
             let Some(key) = qname_key(&qnames, d) else {
                 continue;
             };
+            if names.public(d) != names.get(d) {
+                out.public.insert(key.clone(), names.public(d).to_string());
+            }
             let name = names.get(d).to_string();
             out.names
                 .entry(key)
@@ -218,6 +236,12 @@ impl Interface {
     /// The name of the declaration with this qname (without its index).
     pub fn get(&self, qname: &str) -> Option<&str> {
         self.names.get(qname)?.as_deref()
+    }
+
+    /// The public name of the declaration with this qname, where it
+    /// differs from [`get`](Self::get)'s.
+    pub fn public(&self, qname: &str) -> Option<&str> {
+        self.public.get(qname).map(String::as_str)
     }
 
     /// Gives a declaration this name, as a library cache would read it
@@ -598,6 +622,10 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
         let interface = p.interfaces.iter().find(|i| i.library == library);
         let key = qname_key(&qnames, d);
         let found = interface.zip(key.as_deref()).and_then(|(i, k)| i.get(k));
+        let public = interface.zip(key.as_deref()).and_then(|(i, k)| i.public(k));
+        if let Some(public) = public {
+            map.public.insert(d, public.to_string());
+        }
         map.names[d.index()] = match found {
             Some(name) => name.to_string(),
             None => {
@@ -861,6 +889,28 @@ fn name_module(
             values.insert(name.clone());
         }
         map.names[d.index()] = name;
+    }
+    // Exports keep their public names, as members do, where their own
+    // escape further; one that another's name or public name has clashes.
+    let level = module_level(p, module);
+    let mut keys: HashSet<String> = level.iter().map(|&d| map.get(d).to_string()).collect();
+    for &d in &level {
+        if !p.decls.get(d).facts.contains(Facts::EXPORTED) {
+            continue;
+        }
+        let own = candidates(p, rules, d, true)[0].clone();
+        let key = escape(rules, member_reserved, own);
+        if key == map.get(d) {
+            continue;
+        }
+        if keys.insert(key.clone()) {
+            map.public.insert(d, key);
+        } else {
+            map.clashes.push(format!(
+                "`{}` can't be exported as `{key}`, which another declaration has",
+                p.name(d)
+            ));
+        }
     }
 
     // Where the init is one function, a literal in it avoids the names of

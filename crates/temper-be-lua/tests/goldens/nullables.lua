@@ -11,10 +11,10 @@ local Node = temper.type("nullables.Node")
 
 ---@param this nullables.Node
 ---@param value integer
----@param next nullables.Node|temper.Null
-function Node.constructor(this, value, next)
+---@param next_ nullables.Node|temper.Null
+function Node.constructor(this, value, next_)
   this.value = value
-  this.next = next
+  this.next = next_
 end
 
 ---@param this nullables.Node

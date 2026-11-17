@@ -423,7 +423,8 @@ impl<'a> Translator<'a> {
         }
         if is_var(p, decl) {
             let path = Expr::Str(require_path(p, module));
-            return Some(Expr::name("require").call(vec![path]).member(name));
+            let key = self.key(decl);
+            return Some(Expr::name("require").call(vec![path]).member(key));
         }
         Some(Expr::name(name))
     }
@@ -437,13 +438,21 @@ impl<'a> Translator<'a> {
         self.names.get(decl).to_string()
     }
 
+    /// An export's key in its module's table: its public name, which
+    /// Lua's globals don't escape, as a table's field hides nothing.
+    fn key(&self, decl: DeclId) -> String {
+        let decl = self.defaulted.get(&decl).copied().unwrap_or(decl);
+        self.names.public(decl).to_string()
+    }
+
     /// A module-level declaration, or a local, as code refers to it: its
-    /// name, or a table's field.
+    /// name, or a table's field (an export's by its key).
     pub(crate) fn access(&self, decl: DeclId) -> Expr {
         if let Some(e) = self.other(decl) {
             return e;
         }
         match self.fields.get(&decl) {
+            Some(&EXPORTS) => Expr::name(EXPORTS).member(self.key(decl)),
             Some(table) => Expr::name(*table).member(self.name(decl)),
             None => Expr::name(self.name(decl)),
         }
@@ -630,7 +639,7 @@ impl<'a> Translator<'a> {
                 imports.push(Stmt::Local {
                     name: self.name(d),
                     ty: None,
-                    value: Some(required.member(self.name(d))),
+                    value: Some(required.member(self.key(d))),
                 });
             }
         }
@@ -966,7 +975,7 @@ impl<'a> Translator<'a> {
             for &d in &exports {
                 if self.fields.get(&d) != Some(&EXPORTS) {
                     tail.push(Stmt::Assign {
-                        target: Expr::name(EXPORTS).member(self.name(d)),
+                        target: Expr::name(EXPORTS).member(self.key(d)),
                         value: self.access(d),
                     });
                 }
@@ -974,7 +983,7 @@ impl<'a> Translator<'a> {
             tail.push(Stmt::Return(Some(Expr::name(EXPORTS))));
         } else {
             let mut entries: Vec<(String, Expr)> = (exports.iter())
-                .map(|&d| (self.name(d), self.access(d)))
+                .map(|&d| (self.key(d), self.access(d)))
                 .collect();
             if let Some(table) = test_table {
                 entries.push((TEST_KEY.into(), table));
@@ -1085,7 +1094,7 @@ impl<'a> Translator<'a> {
                 body.push(Stmt::Local {
                     name: self.name(d),
                     ty: None,
-                    value: Some(require(path.clone()).member(self.name(d))),
+                    value: Some(require(path.clone()).member(self.key(d))),
                 });
             }
         }

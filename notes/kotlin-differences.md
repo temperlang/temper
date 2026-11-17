@@ -1958,6 +1958,17 @@ copied Kotlin's:
   without those parses on 5.1 too.
   Test: temper-be-lua/tests/functional.rs, `HIDING` (`end(goto: Int)`),
   for the name; Lua 5.1 isn't tested.
+- **Lua names hiding standard globals:** Kotlin's Lua escapes only
+  keywords, so a local, parameter, or module value named `string`,
+  `table`, `type`, `error`, or another of Lua's standard globals hides
+  it for the rest of its scope, from inlined host code too. Tempest's
+  give those names a `_` (`string_`), Lua 5.1's and LuaJIT's globals
+  (`unpack`, `bit`, `jit`) included. Members, and exports as their
+  module's table keys them, keep their names (`string = string_`), so
+  the API is Kotlin's.
+  Test: temper-be-lua/tests/functional.rs, `GLOBALS` and
+  `no_lua_global_is_declared`; temper-tmpl/tests/naming.rs,
+  `exports_keep_public_names`.
 - **Lua bodies:** besides numbered names, Kotlin's Lua declares every
   module-level name in one `local` line at the top and assigns each
   later, keeps a `0.0` for the console, wraps early returns in labels

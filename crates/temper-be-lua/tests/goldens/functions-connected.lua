@@ -54,16 +54,16 @@ local function sum(i, j, bonus)
   return _connected.sum(i, j, bonus)
 end
 
----@param string? string|temper.Null
+---@param string_? string|temper.Null
 ---@return integer
-local function length(string)
-  if string == nil then
-    string = temper.null
+local function length(string_)
+  if string_ == nil then
+    string_ = temper.null
   end
-  if string == nil then
-    string = temper.null
+  if string_ == nil then
+    string_ = temper.null
   end
-  return _connected.length(string)
+  return _connected.length(string_)
 end
 
 ---@param i integer

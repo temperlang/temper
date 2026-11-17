@@ -4,28 +4,28 @@ local int64_9223372036854775807 = temper.int64_constructor(2147483647, 429496729
 local int64_neg9223372036854775808 = temper.int64_constructor(-2147483648, 0)
 local int64_neg1 = temper.int64_constructor(-1)
 
----@param string string
-local function checkParse32(string)
+---@param string_ string
+local function checkParse32(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = tostring(temper.string_toint32(string, 16))
+    converted = tostring(temper.string_toint32(string_, 16))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
----@param string string
-local function checkParse64(string)
+---@param string_ string
+local function checkParse64(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = temper.int64_tostring(temper.string_toint64(string, 16))
+    converted = temper.int64_tostring(temper.string_toint64(string_, 16))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
 print("Int32")

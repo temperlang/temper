@@ -40,10 +40,10 @@ do
   local length = temper.list_length(strings)
   local i = 0
   while i < length do
-    local string = temper.list_get(strings, i)
+    local string_ = temper.list_get(strings, i)
     i = temper.int32_add(i, 1)
-    print("found " .. string .. ": " .. tostring(regex:found(string)))
-    print("matches " .. string .. ": " .. tostring(full:found(string)))
+    print("found " .. string_ .. ": " .. tostring(regex:found(string_)))
+    print("matches " .. string_ .. ": " .. tostring(full:found(string_)))
   end
 end
 local catcher = Sequence({ Repeat(CodePoints("a"), 1, temper.null, false), Capture("intro", Repeat(CodePoints("b"), 1, temper.null, false)), CodePoints("c"), Repeat(Or({ Capture("option1", CodePoints("d")), Capture("alphaOption2", CodePoints("e")) }), 1, temper.null, false) }):compiled()

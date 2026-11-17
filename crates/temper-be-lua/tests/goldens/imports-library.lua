@@ -17,10 +17,10 @@ end
 
 print("both " .. both(2))
 local third = Ratio(1, 3)
-local string = "ratio " .. tostring(third:eq(Ratio(3, 9))) .. " "
+local string_ = "ratio " .. tostring(third:eq(Ratio(3, 9))) .. " "
 local left = ratioOf(2, 6)
 local left2 = ratioOf(1, 0)
-print(string .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(third)) .. " " .. tostring(not temper.is_null(left2) and (left2 --[[@as modules.core.Ratio]]):eq(third)))
+print(string_ .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(third)) .. " " .. tostring(not temper.is_null(left2) and (left2 --[[@as modules.core.Ratio]]):eq(third)))
 local checked = Checked(lambda(native))
 print("renamed " .. checked:delete() .. " " .. checked.local_ .. " " .. checked.end_)
 local b = Builtins(4)
