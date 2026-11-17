@@ -370,8 +370,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   parameters named as written (Kotlin writes `T__0`): a binding outside
   its parameter's bound, "Type formal <T extends Animal> cannot bind to
   Int32 which does not fit upper bounds [Animal]", at the call, and
-  then nothing else for the call (not for a bound that names the function's
-  own type parameters, as `<T extends MapKey<T>>`, yet); the wrong
+  then nothing else for the call; a bound that names the function's own
+  type parameters, as `<T extends MapKey<T>>`, is checked with the
+  bindings put in, and a nullable type fits `AnyValue`, as in Kotlin's
+  check (`f<Int?>(null)` for `<T>`); the wrong
   number of arguments, "No callee matches inputs [Int32] among [<T
   extends AnyValue>(T, Int32) -> T]", at the call, where every
   argument's type is known; and arguments that don't fit the signature
@@ -407,9 +409,13 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   nothing binds takes what the type wanted binds ("Inference", below).
 - **Builtin types' constructors** are solved the same way, from core's
   `constructor`, as `<K, V>(K, V) -> Pair<K, V>`, with their type
-  parameters' bounds not read, so unchecked: `new Pair(1, "a")`, `new
-  Map(pairs)`, `new ListBuilder<Int>()`, and through an alias, as std's
-  `new TestResult(…)`.
+  parameters' bounds as core declares them, so `new Map<P, String>([])`
+  for a class `P` is "Type formal <K extends MapKey<K>> cannot bind to P
+  which does not fit upper bounds [MapKey<K>]", as in Kotlin; one core
+  doesn't declare, as `T` in `Deque<T>`, is unchecked: `new Pair(1,
+  "a")`, `new Map(pairs)`, `new ListBuilder<Int>()`, and through an
+  alias, as std's `new TestResult(…)`. Bounds aren't checked in type
+  expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.
 - **Not yet:** Kotlin's choice among two ways arguments bind a type
   parameter, as `ls.reduceFrom(0, addS)` for `addS(a: String, x: Int):
   String`, where Kotlin binds `O` to `String` and reports the `0`.

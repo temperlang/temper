@@ -12,7 +12,9 @@
 //! builtin type, maybe given arguments, nullable, or a function type, or
 //! one of the type's own type parameters or a method's own (`O` in
 //! `map<O>`, which has no bound); anything else is unknown, as is a
-//! parameter that isn't written `name: Type`.
+//! parameter that isn't written `name: Type`. The type's own type
+//! parameters' bounds are read the same way, as `MapKey<K>` for `K` in
+//! `Map<K extends MapKey<K>, V>`.
 
 use crate::builtins::TYPES;
 use std::sync::OnceLock;
@@ -109,6 +111,10 @@ pub(super) struct CoreClass {
     pub type_params: usize,
     /// Its type parameters' names, as `K` and `V`.
     pub type_param_names: Vec<String>,
+    /// Its type parameters' bounds, as `MapKey<K>` for `K` and unknown for
+    /// `V` in `Map<K extends MapKey<K>, V>`: unknown where none is
+    /// written, as `T` in `Deque<T>` may be nullable.
+    pub type_param_bounds: Vec<CoreType>,
     pub members: Vec<CoreMember>,
 }
 
@@ -120,6 +126,7 @@ pub(super) fn core_class(type_name: &str) -> &'static CoreClass {
     static EMPTY: CoreClass = CoreClass {
         type_params: 0,
         type_param_names: Vec::new(),
+        type_param_bounds: Vec::new(),
         members: Vec::new(),
     };
     match READ_TYPES.iter().position(|&t| t == type_name) {
@@ -170,6 +177,7 @@ fn read_class(name: &str) -> CoreClass {
         ast: &ast,
         base: start,
         type_params: Vec::new(),
+        type_param_bounds: Vec::new(),
         own_params: Vec::new(),
     };
     let mut members = Vec::new();
@@ -181,6 +189,7 @@ fn read_class(name: &str) -> CoreClass {
     CoreClass {
         type_params: reader.type_params.len(),
         type_param_names: reader.type_params,
+        type_param_bounds: reader.type_param_bounds,
         members,
     }
 }
@@ -359,6 +368,8 @@ struct Reader<'a> {
     base: usize,
     /// The type's own type parameters' names, in order.
     type_params: Vec<String>,
+    /// Their bounds, in order, unknown where none is written.
+    type_param_bounds: Vec<CoreType>,
     /// The type parameters of the method being read, in order, and
     /// whether each has a bound, which isn't read, so it's unknown.
     own_params: Vec<(String, bool)>,
@@ -385,19 +396,26 @@ impl<'a> Reader<'a> {
 
     /// `(Call class \word ^Name \typeArg T … (Fun (Block members)))`, or
     /// `interface`, maybe in a block or under decorations; notes its type
-    /// parameters' names.
+    /// parameters' names, and then their bounds, which may name them.
     fn class_body(&mut self, node: NodeId) -> Option<NodeId> {
         let tree = self.ast.tree();
         match (tree.kind(node), self.call_parts(node)) {
             (NodeKind::Block, _) => tree.children(node).iter().find_map(|&c| self.class_body(c)),
             (_, Some((Some("@"), [_, target]))) => self.class_body(*target),
             (_, Some((Some("class" | "interface"), args))) => {
-                for pair in args.windows(2) {
-                    if self.symbol(pair[0]) == Some("typeArg") {
-                        let name = self.type_param_name(pair[1]).unwrap_or_default();
-                        self.type_params.push(name.to_string());
-                    }
+                let params: Vec<NodeId> = (args.windows(2))
+                    .filter(|pair| self.symbol(pair[0]) == Some("typeArg"))
+                    .map(|pair| pair[1])
+                    .collect();
+                for &p in &params {
+                    let name = self.type_param_name(p).unwrap_or_default();
+                    self.type_params.push(name.to_string());
                 }
+                self.type_param_bounds = (params.iter())
+                    .map(|&p| {
+                        (self.type_param_bound(p)).map_or(CoreType::Unknown, |b| self.type_of(b))
+                    })
+                    .collect();
                 let fun = *args.last()?;
                 let block = *tree.children(fun).last()?;
                 (tree.kind(fun) == NodeKind::Fun && tree.kind(block) == NodeKind::Block)
@@ -415,6 +433,19 @@ impl<'a> Reader<'a> {
             (NodeKind::RightName | NodeKind::LeftName, _) => self.text(node),
             (_, Some((Some("@"), [_, target]))) => self.type_param_name(*target),
             (NodeKind::Block, _) => self.type_param_name(*tree.children(node).get(1)?),
+            _ => None,
+        }
+    }
+
+    /// A type parameter's bound, as `MapKey<K>` in `K extends MapKey<K>`
+    /// (`(Block \typeArg K \super …)`), maybe decorated, if it has one.
+    fn type_param_bound(&self, node: NodeId) -> Option<NodeId> {
+        let tree = self.ast.tree();
+        match (tree.kind(node), self.call_parts(node)) {
+            (_, Some((Some("@"), [_, target]))) => self.type_param_bound(*target),
+            (NodeKind::Block, _) => (tree.children(node).windows(2))
+                .find(|pair| self.symbol(pair[0]) == Some("super"))
+                .map(|pair| pair[1]),
             _ => None,
         }
     }
@@ -749,6 +780,22 @@ mod tests {
         assert_eq!(core_class("Listed").type_params, 1);
         assert_eq!(core_class("Map").type_params, 2);
         assert_eq!(core_class("DoneResult").type_params, 1);
+        // Bounds as declared, which may name the type's own parameters;
+        // unknown where none is written.
+        let map_key = CoreType::Applied(
+            TYPES.iter().position(|&n| n == "MapKey").unwrap() as u8,
+            vec![t.clone()],
+        );
+        assert_eq!(
+            core_class("Map").type_param_bounds,
+            [map_key.clone(), CoreType::Unknown]
+        );
+        assert_eq!(core_class("MapBuilder").type_param_bounds[0], map_key);
+        assert_eq!(
+            core_class("PromiseBuilder").type_param_bounds,
+            [builtin("AnyValue")]
+        );
+        assert_eq!(core_class("Deque").type_param_bounds, [CoreType::Unknown]);
         assert_eq!(
             find("Listed", "length").kind,
             CoreMemberKind::Value(int.clone())

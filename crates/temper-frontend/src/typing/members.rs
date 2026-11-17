@@ -579,9 +579,10 @@ impl Settle {
     /// as `new Pair(1, "a")` or `new ListBuilder<Int>()`, maybe through
     /// an alias, as a generic
     /// function of the type's own type parameters, `<K, V>(K, V) ->
-    /// Pair<K, V>`, with the call's type arguments. Their bounds aren't
-    /// read, so they're unknown and unchecked: `T` in `Deque<T>` may be
-    /// nullable, as in `new Deque<D?>()`.
+    /// Pair<K, V>`, with the call's type arguments. Their bounds are as
+    /// core declares them, as `MapKey<K>` for `Map`'s `K`, so a call is
+    /// checked against them, and unknown where it declares none: `T` in
+    /// `Deque<T>` may be nullable, as in `new Deque<D?>()`.
     pub(super) fn core_generic_new(
         &mut self,
         args: &[NodeId],
@@ -633,11 +634,17 @@ impl Settle {
                 let formals: Vec<SymbolId> = (class.type_param_names.iter())
                     .map(|p| {
                         let name = self.lib.names.intern(p);
-                        let symbol = self.scopes.unnamed_type_param(name);
-                        self.typing.types.set_bound(symbol, UNKNOWN);
-                        symbol
+                        self.scopes.unnamed_type_param(name)
                     })
                     .collect();
+                // A bound may name the type's own type parameters, as
+                // `MapKey<K>` does.
+                let types = &mut self.typing.types;
+                let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
+                for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
+                    let bound = core_type(types, bound, &own, &[]);
+                    types.set_bound(formal, bound);
+                }
                 self.typing.core_formals.insert(key, formals.clone());
                 formals
             }

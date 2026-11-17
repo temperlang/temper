@@ -1384,12 +1384,20 @@ error 302..306: Actual arguments do not match signature: <T extends AnyValue>(In
 
 === a bound naming its own type parameter is checked with it put in
 // As Kotlin Temper reports them, apart from names: `T extends Ord<T>` and
-// core's `K extends MapKey<K>` are checked as `Ord<P>` and `MapKey<P>`.
+// core's `K extends MapKey<K>` are checked as `Ord<P>` and `MapKey<P>`,
+// where a `K extends MapKey<K>` of the caller's own fits. A nullable type
+// fits `AnyValue`, as in Kotlin's check.
 interface Ord<T> { cmp(o: T): Int; }
 class N(public n: Int) extends Ord<N> { public cmp(o: N): Int { n - o.n } }
 class P(public x: Int) {}
 class Holder<T extends Ord<T>>(public t: T) {}
 let least<T extends Ord<T>>(a: T, b: T): T { if (a.cmp(b) <= 0) { a } else { b } }
+let keyed<K extends MapKey<K>, V>(k: K, v: V): Map<K, V> {
+  let b = new MapBuilder<K, V>();
+  b[k] = v;
+  new Map<K, V>([new Pair(k, v)])
+}
+let same<T>(x: T): T { x }
 let f(): Void {
   let a = new Holder<N>(new N(1));
   let b = new Holder<P>(new P(1));
@@ -1399,53 +1407,80 @@ let f(): Void {
   let g = new Map<P, String>([]);
   let h = new MapBuilder<P, String>();
   let i = new Map<String, Int>([]);
+  let j = new Map([new Pair(new P(1), "a")]);
+  let k = new MapBuilder<Int64, String>();
+  let l = keyed(1, "a");
+  let m = new PromiseBuilder<String?>();
+  let n = same<Int?>(null);
 }
 --- settled
 (Block
   (Interface
     ^Ord:0
-    (TypeParam ^T:6)
-    (Method ^cmp:8 (Signature (Let ^o:9 T:6) Int)))
+    (TypeParam ^T:8)
+    (Method ^cmp:10 (Signature (Let ^o:11 T:8) Int)))
   (Class
     ^N:1
     (Call <> Ord:0 N:1)
-    (Param ^n:11 Int)
+    (Param ^n:13 Int)
     (Method
-      ^cmp:12
-      (Fn (Let ^o:13 N:1) Int (Block (Call - n:11 (Call . o:13 \n))))))
-  (Class ^P:2 (Param ^x:15 Int))
-  (Class ^Holder:3 (TypeParam ^T:16 (Call <> Ord:0 T:16)) (Param ^t:18 T:16))
+      ^cmp:14
+      (Fn (Let ^o:15 N:1) Int (Block (Call - n:13 (Call . o:15 \n))))))
+  (Class ^P:2 (Param ^x:17 Int))
+  (Class ^Holder:3 (TypeParam ^T:18 (Call <> Ord:0 T:18)) (Param ^t:20 T:18))
   (Let
     ^least:4
     (Fn
-      (TypeParam ^T:19 (Call <> Ord:0 T:19))
-      (Let ^a:20 T:19)
-      (Let ^b:21 T:19)
-      T:19
+      (TypeParam ^T:21 (Call <> Ord:0 T:21))
+      (Let ^a:22 T:21)
+      (Let ^b:23 T:21)
+      T:21
       (Block
         (If
-          (Call <= (Call (Call . a:20 \cmp) b:21) 0)
-          (Block a:20)
-          (Block b:21)))))
+          (Call <= (Call (Call . a:22 \cmp) b:23) 0)
+          (Block a:22)
+          (Block b:23)))))
   (Let
-    ^f:5
+    ^keyed:5
+    (Fn
+      (TypeParam ^K:24 (Call <> MapKey K:24))
+      (TypeParam ^V:25)
+      (Let ^k:26 K:24)
+      (Let ^v:27 V:25)
+      (Call <> Map K:24 V:25)
+      (Block
+        (Let ^b:28 (Call new (Call <> MapBuilder K:24 V:25)))
+        (Call (Call . b:28 \set) k:26 v:27)
+        (Call new (Call <> Map K:24 V:25) (Call list (Call new Pair k:26 v:27))))))
+  (Let ^same:6 (Fn (TypeParam ^T:29) (Let ^x:30 T:29) T:29 (Block x:30)))
+  (Let
+    ^f:7
     (Fn
       Void
       (Block
-        (Let ^a:22 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
-        (Let ^b:23 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
-        (Let ^c:24 (Call new Holder:3 (Call new P:2 2)))
-        (Let ^d:25 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
-        (Let ^e:26 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
-        (Let ^g:27 (Call new (Call <> Map P:2 String) (Call list)))
-        (Let ^h:28 (Call new (Call <> MapBuilder P:2 String)))
-        (Let ^i:29 (Call new (Call <> Map String Int) (Call list)))
+        (Let ^a:31 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
+        (Let ^b:32 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
+        (Let ^c:33 (Call new Holder:3 (Call new P:2 2)))
+        (Let ^d:34 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
+        (Let ^e:35 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
+        (Let ^g:36 (Call new (Call <> Map P:2 String) (Call list)))
+        (Let ^h:37 (Call new (Call <> MapBuilder P:2 String)))
+        (Let ^i:38 (Call new (Call <> Map String Int) (Call list)))
+        (Let
+          ^j:39
+          (Call new Map (Call list (Call new Pair (Call new P:2 1) "a"))))
+        (Let ^k:40 (Call new (Call <> MapBuilder Int64 String)))
+        (Let ^l:41 (Call keyed:5 1 "a"))
+        (Let ^m:42 (Call new (Call <> PromiseBuilder (Call ? String))))
+        (Let ^n:43 (Call same:6 \typeArg (Call ? Int) null))
         #void))))
-error 478..501: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 513..533: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 582..607: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
-error 619..641: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
-error 653..680: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 763..786: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 798..818: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 867..892: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 904..926: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 938..965: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1013..1047: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1059..1090: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
 
 === list literals' types, as Kotlin Temper reports them
 // A list literal is a `List` of its elements' common type. The input was
