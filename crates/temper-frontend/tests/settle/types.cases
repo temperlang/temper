@@ -218,6 +218,163 @@ error 298..304: Cannot assign to Int32 from Void
 error 345..346: Cannot assign to String from Int32
 error 421..424: Cannot assign to Int32 from String
 
+=== if and orelse values whose branches have no common type
+// Each branch is assigned on its own, as Kotlin Temper does (Kotlin: at
+// an empty position at the branch's end); an argument or a condition
+// that doesn't fit is an AnyValue, as in Kotlin. `orelse` binds looser
+// than `==`, so `p("7") orelse 0i64 == x` is `p("7") orelse (0i64 ==
+// x)`, which can't be a Boolean.
+let p(text: String): Int64 throws Bubble { text.toInt64() }
+let takesB(b: Boolean): Void {}
+class C(public b: Boolean) {}
+var z: Boolean = true;
+let y: Boolean = p("1") orelse false;
+z = p("2") orelse false;
+takesB(p("3") orelse false);
+let r1(): Boolean { return p("4") orelse false; }
+let r2(): Boolean { p("5") orelse false }
+let y2: Int64 = p("6") orelse false;
+let x = 1i64;
+let a1: Boolean = p("7") orelse 0i64 == x;
+takesB(p("8") orelse 0i64 == x);
+if (p("9") orelse 0i64 == x) { console.log("y"); }
+let w: Boolean = if (z) { 1i64 } else { false };
+let n1: Boolean = (p("1") orelse p("2")) orelse false;
+let n2: Boolean = p("1") orelse (if (z) { false } else { p("2") });
+let c = new C(p("1") orelse false);
+--- settled
+(Block
+  (Let
+    ^p:0
+    (Fn
+      (Let ^text:14 String)
+      (Call throws Int64 Bubble)
+      (Block (Call (Call . text:14 \toInt64)))))
+  (Let ^takesB:1 (Fn (Let ^b:15 Boolean) Void (Block)))
+  (Class ^C:2 (Param ^b:17 Boolean))
+  (Var ^z:3 Boolean true)
+  (Let ^y:4 Boolean (Orelse (Call p:0 "1") false))
+  (Assign z:3 (Orelse (Call p:0 "2") false))
+  (Call takesB:1 (Orelse (Call p:0 "3") false))
+  (Let
+    ^r1:5
+    (Fn Boolean (Block (Return @556 (Orelse (Call p:0 "4") false)) #void)))
+  (Let ^r2:6 (Fn Boolean (Block (Orelse (Call p:0 "5") false))))
+  (Let ^y2:7 Int64 (Orelse (Call p:0 "6") false))
+  (Let ^x:8 1i64)
+  (Let ^a1:9 Boolean (Orelse (Call p:0 "7") (Call == 0i64 x:8)))
+  (Call takesB:1 (Orelse (Call p:0 "8") (Call == 0i64 x:8)))
+  (If
+    (Orelse (Call p:0 "9") (Call == 0i64 x:8))
+    (Block (Call (Call . console \log) "y") #void)
+    (Block))
+  (Let ^w:10 Boolean (If z:3 (Block 1i64) (Block false)))
+  (Let ^n1:11 Boolean (Orelse (Orelse (Call p:0 "1") (Call p:0 "2")) false))
+  (Let
+    ^n2:12
+    Boolean
+    (Orelse (Call p:0 "1") (If z:3 (Block false) (Block (Call p:0 "2")))))
+  (Let ^c:13 (Call new C:2 (Orelse (Call p:0 "1") false)))
+  #void)
+error 481..487: Cannot assign to Boolean from Int64
+error 506..512: Cannot assign to Boolean from Int64
+error 534..553: Expected subtype of Boolean, but got AnyValue
+error 583..589: Cannot assign to Boolean from Int64
+error 626..632: Cannot assign to Boolean from Int64
+error 678..683: Cannot assign to Int64 from Boolean
+error 717..723: Cannot assign to Boolean from Int64
+error 749..772: Expected subtype of Boolean, but got AnyValue
+error 779..802: Expected value of type Boolean not AnyValue
+error 850..858: Cannot assign to Boolean from Int64
+error 894..900: Cannot assign to Boolean from Int64
+error 908..914: Cannot assign to Boolean from Int64
+error 948..954: Cannot assign to Boolean from Int64
+error 985..995: Cannot assign to Boolean from Int64
+error 1012..1031: Expected subtype of Boolean, but got AnyValue
+Failed: Expected a Boolean, not Int64
+
+=== if and orelse values whose branches fit where they're used
+// Valid: a fallback that fits, panic() and a jump (Never), null for
+// a nullable, nested orelse, and branches whose classes have two common
+// interfaces, so no one common type, but fit either.
+interface I {}
+interface J {}
+class A extends I, J {}
+class B extends I, J {}
+let p(text: String): Int64 throws Bubble { text.toInt64() }
+let takesI(i: I): String { "i" }
+let ok1: Int64 = p("x") orelse 0i64;
+let ok2: Int64 = p("2") orelse panic();
+let ok3: Int64? = p("x") orelse null;
+let ok4: Int64 = (p("x") orelse p("4")) orelse 0i64;
+let ok5: Int64 = p("x") orelse (p("y") orelse 5i64);
+let ok6(s: String): Int64 { let n = p(s) orelse do { return -6i64; }; n }
+let ok7: AnyValue = p("x") orelse false;
+let ok8: Boolean = (p("x") orelse 0i64) == 0i64;
+let ok9: I = if (ok8) { new A() } else { new B() };
+var v: Int64 = 0i64;
+v = p("x") orelse 11i64;
+console.log("${ok1} ${ok2} ${ok3} ${ok4} ${ok5} ${ok6("x")} ${ok8} ${v}");
+console.log(takesI(if (ok8) { new A() } else { new B() }));
+--- settled
+(Block
+  (Interface ^I:0)
+  (Interface ^J:1)
+  (Class ^A:2 I:0 J:1)
+  (Class ^B:3 I:0 J:1)
+  (Let
+    ^p:4
+    (Fn
+      (Let ^text:20 String)
+      (Call throws Int64 Bubble)
+      (Block (Call (Call . text:20 \toInt64)))))
+  (Let ^takesI:5 (Fn (Let ^i:21 I:0) String (Block "i")))
+  (Let ^ok1:6 Int64 (Orelse (Call p:4 "x") 0i64))
+  (Let ^ok2:7 Int64 (Orelse (Call p:4 "2") (Call panic)))
+  (Let ^ok3:8 (Call ? Int64) (Orelse (Call p:4 "x") null))
+  (Let ^ok4:9 Int64 (Orelse (Orelse (Call p:4 "x") (Call p:4 "4")) 0i64))
+  (Let ^ok5:10 Int64 (Orelse (Call p:4 "x") (Orelse (Call p:4 "y") 5i64)))
+  (Let
+    ^ok6:11
+    (Fn
+      (Let ^s:22 String)
+      Int64
+      (Block
+        (Let
+          ^n:23
+          (Orelse (Call p:4 s:22) (Block (Return @588 (Call - 6i64)) #void)))
+        n:23)))
+  (Let ^ok7:12 AnyValue (Orelse (Call p:4 "x") false))
+  (Let ^ok8:13 Boolean (Call == (Orelse (Call p:4 "x") 0i64) 0i64))
+  (Let ^ok9:14 I:0 (If ok8:13 (Block (Call new A:2)) (Block (Call new B:3))))
+  (Var ^v:15 Int64 0i64)
+  (Assign v:15 (Orelse (Call p:4 "x") 11i64))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      ok1:6
+      " "
+      ok2:7
+      " "
+      ok3:8
+      " "
+      ok4:9
+      " "
+      ok5:10
+      " "
+      (Call ok6:11 "x")
+      " "
+      ok8:13
+      " "
+      v:15))
+  (Call
+    (Call . console \log)
+    (Call takesI:5 (If ok8:13 (Block (Call new A:2)) (Block (Call new B:3)))))
+  #void)
+log 0 2 null 4 5 -6 true 11
+log i
+
 === calls of known functions
 let f(a: Int, b: String = "b"): Void {}
 f(1);

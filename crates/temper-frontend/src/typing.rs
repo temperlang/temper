@@ -1260,8 +1260,13 @@ impl Settle {
                 self.check_connected_class(node);
             }
             (NodeKind::If, Some(condition), _) => {
-                let t = self.known_type(condition);
-                if self.is_mismatch(t, BOOLEAN) && t != NULL {
+                let mut t = self.known_type(condition);
+                let mut mismatch = self.is_mismatch(t, BOOLEAN);
+                if let Some(leaves) = self.unjoined_leaves(condition, t) {
+                    mismatch = !self.leaves_fit(&leaves, BOOLEAN);
+                    t = self.unjoined_type(&leaves);
+                }
+                if mismatch && t != NULL {
                     let (expected, got) = (self.show(BOOLEAN), self.show(t));
                     let span = self.lib.tree.span(condition);
                     let message = Message::ExpectedValueOfType(expected, got);
@@ -1676,6 +1681,24 @@ impl Settle {
     /// Reports storing `value` where a `t` is wanted, if it can't be one.
     fn check_value(&mut self, t: TypeId, value: NodeId, site: Site) {
         let s = self.known_type(value);
+        // An `if` or `orelse` whose branches have no common type, as `p()
+        // orelse false` for `p(): Int64`: as Kotlin Temper does, each
+        // branch is assigned on its own, but an argument that doesn't fit
+        // is an `AnyValue`.
+        if let Some(leaves) = self.unjoined_leaves(value, s) {
+            if !matches!(site, Site::Arg | Site::Field) {
+                for leaf in leaves {
+                    self.check_value(t, leaf, Site::Init);
+                }
+            } else if !self.leaves_fit(&leaves, t) {
+                let joined = self.unjoined_type(&leaves);
+                let (to, from) = (self.show(t), self.show(joined));
+                let span = self.lib.tree.span(value);
+                self.lib
+                    .report(Level::Error, Message::ExpectedSubType(to, from), span);
+            }
+            return;
+        }
         let value_span = self.lib.tree.span(value);
         // Kotlin Temper solves a generic call or a list literal from the
         // type wanted, and reports its arguments instead; not for a call's
@@ -1722,6 +1745,65 @@ impl Settle {
             Site::Arg | Site::Field => (Message::ExpectedSubType(to, from), value_span),
         };
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// The branches of an `if` or `orelse` value of type `t`, through
+    /// nested ones, when they have no common type (`t` is unknown) though
+    /// each one's type is known, as `p()` and `false` in `p() orelse
+    /// false` for `p(): Int64`.
+    fn unjoined_leaves(&mut self, value: NodeId, t: TypeId) -> Option<Vec<NodeId>> {
+        if t != UNKNOWN || !matches!(self.lib.tree.kind(value), NodeKind::If | NodeKind::Orelse) {
+            return None;
+        }
+        let mut leaves = Vec::new();
+        self.branch_leaves(value, &mut leaves);
+        for &leaf in &leaves {
+            let t = self.known_type(leaf);
+            if !self.typing.types.is_known(t) {
+                return None;
+            }
+        }
+        Some(leaves)
+    }
+
+    /// Adds the branches of `node`'s value to `out`, through nested `if`s
+    /// and `orelse`s, or else `node` itself.
+    fn branch_leaves(&self, node: NodeId, out: &mut Vec<NodeId>) {
+        let children = self.lib.tree.children(node);
+        match self.lib.tree.kind(node) {
+            NodeKind::If if children.len() == 3 => {
+                self.branch_leaves(children[1], out);
+                self.branch_leaves(children[2], out);
+            }
+            NodeKind::Orelse if children.len() == 2 => {
+                self.branch_leaves(children[0], out);
+                self.branch_leaves(children[1], out);
+            }
+            _ => out.push(node),
+        }
+    }
+
+    /// Whether every one of these branches' values can be a `t`.
+    fn leaves_fit(&mut self, leaves: &[NodeId], t: TypeId) -> bool {
+        leaves.iter().all(|&leaf| {
+            let s = self.known_type(leaf);
+            !self.is_mismatch(s, t)
+        })
+    }
+
+    /// The type Kotlin Temper gives a value whose branches have no common
+    /// type: `AnyValue`, or `AnyValue?` if a branch may be null.
+    fn unjoined_type(&mut self, leaves: &[NodeId]) -> TypeId {
+        let mut nullable = false;
+        for &leaf in leaves {
+            let t = self.known_type(leaf);
+            nullable |= t == NULL || matches!(self.typing.types.get(t), TypeData::Nullable(_));
+        }
+        if nullable {
+            self.typing.types.nullable(ANY_VALUE)
+        } else {
+            ANY_VALUE
+        }
     }
 
     /// Whether Kotlin Temper might work out an expression's value while

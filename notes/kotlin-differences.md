@@ -564,9 +564,14 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   else { return -1; }`, is "Cannot assign to String from Int32" at an
   empty position at the end of the first branch. Tempest reports it at
   the `if` ([milestone-4.md](history/milestone-4.md), "Every expression typed,
-  first part").
+  first part"). Where an `if`'s or `orelse`'s branches have no common
+  type, as `let y: Boolean = p() orelse false` for `p(): Int64`, both
+  check each branch on its own, with the same message, but Kotlin
+  reports each at an empty position at the branch's end, and tempest at
+  the branch.
   Test: settle/types.cases, "where Kotlin Temper's errors are missing,
-  misplaced, or wrong" (`s1`).
+  misplaced, or wrong" (`s1`), and "if and orelse values whose branches
+  have no common type".
 - **`m is MapBuilder`** for `m: Map<Int32, String>`, a check that can
   never succeed, is "Could not infer type actuals for (AnyValue?, Type)
   -> Boolean given [Map<Int32, String>, Type] in context unknown", a
