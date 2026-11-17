@@ -9,14 +9,15 @@
 //! run under a lock ([`calls_nothing`]); and what evaluating an
 //! expression may do that the order of evaluation would show, for
 //! targets that don't evaluate operands left to right ([`Effects`]).
-//! And what a module imports: the declarations of other modules, the
-//! program's own or other libraries', that its nodes and declared types
-//! name ([`imports`]). And function values: the signature a value of a
-//! type has ([`fun_signature`]), what a function literal captures
-//! ([`captures`]), and which captured locals are assigned, which some
-//! targets keep in cells ([`assigned_captures`]), and the groups of local
-//! functions that use each other or themselves ([`function_groups`]). And
-//! the defaults a function's body starts with ([`defaults`]).
+//! And what a subtree names ([`named`]), and what a module imports: the
+//! declarations of other modules, the program's own or other libraries',
+//! that its nodes and declared types name ([`imports`]). And function
+//! values: the signature a value of a type has ([`fun_signature`]), what
+//! a function literal captures ([`captures`]), and which captured locals
+//! are assigned, which some targets keep in cells ([`assigned_captures`]),
+//! and the groups of local functions that use each other or themselves
+//! ([`function_groups`]). And the defaults a function's body starts with
+//! ([`defaults`]).
 
 use crate::decls::{DeclKind, Facts};
 use crate::ids::TypeId;
@@ -108,84 +109,12 @@ pub struct Import {
 /// through its runtime, aren't included.
 pub fn imports(p: &Program, module: DeclId, roots: &[NodeId]) -> Vec<Import> {
     let mut found: Vec<DeclId> = Vec::new();
-    let add = |d: DeclId, found: &mut Vec<DeclId>| {
-        let top = top_level(p, d);
-        if let Some(top) = top {
-            if !found.contains(&top) {
-                found.push(top);
-            }
-        }
-    };
     for &root in roots {
-        walk(p, root, &mut |id| {
-            let node = p.nodes.get(id);
-            match node {
-                Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
-                    add(callee, &mut found)
+        named(p, root, &mut |d| {
+            if let Some(top) = top_level(p, d) {
+                if !found.contains(&top) {
+                    found.push(top);
                 }
-                Node::GetModuleLet { target } | Node::SetModuleLet { target, .. } => {
-                    add(target, &mut found)
-                }
-                // Classes, through what's used of them.
-                Node::New { ctor: d, .. }
-                | Node::GetStatic { target: d }
-                | Node::InitStatic { target: d, .. } => add(d, &mut found),
-                Node::Is { ty, .. } | Node::TypeValue { of: ty } => {
-                    let mut types = Vec::new();
-                    nominals(p, ty, &mut types);
-                    for t in types {
-                        add(t, &mut found);
-                    }
-                }
-                _ => {}
-            }
-            let ty = p.nodes.ty(id);
-            let written = matches!(
-                node,
-                Node::Upcast { .. }
-                    | Node::Downcast { .. }
-                    | Node::Null {}
-                    | Node::NonNull { .. }
-                    | Node::FunctionLiteral { .. }
-                    | Node::FunctionRef { .. }
-                    | Node::ToFun { .. }
-                    | Node::FromFun { .. }
-            );
-            if written && !ty.is_none() {
-                let mut types = Vec::new();
-                nominals(p, ty, &mut types);
-                for t in types {
-                    add(t, &mut found);
-                }
-            }
-            let defined = match node {
-                Node::Function { decl, .. }
-                | Node::BodilessFunction { decl, .. }
-                | Node::Test { decl, .. }
-                | Node::Param { decl }
-                | Node::ModuleLet { decl }
-                | Node::Field { decl }
-                | Node::StaticField { decl }
-                | Node::Method { decl, .. }
-                | Node::AbstractMethod { decl, .. }
-                | Node::FunctionLiteral { decl, .. } => decl,
-                Node::Class { decl, .. } | Node::Interface { decl, .. } => {
-                    for &s in p.decls.supers(decl) {
-                        let mut types = Vec::new();
-                        nominals(p, s, &mut types);
-                        for t in types {
-                            add(t, &mut found);
-                        }
-                    }
-                    return;
-                }
-                Node::Let { local, .. } => local,
-                _ => return,
-            };
-            let mut types = Vec::new();
-            nominals(p, p.decls.get(defined).ty, &mut types);
-            for t in types {
-                add(t, &mut found);
             }
         });
     }
@@ -214,6 +143,86 @@ pub fn imports(p: &Program, module: DeclId, roots: &[NodeId]) -> Vec<Import> {
     groups
 }
 
+/// The declarations a subtree names: the functions it calls or refers
+/// to, the module `let`s it reads or writes, the constructors and static
+/// fields it uses, and the classes and interfaces in the types it checks
+/// (`is`, type values), writes (casts, `null`, function values), and
+/// declares (of functions, parameters, locals, module `let`s, and
+/// fields), and the supertypes of a class or interface it defines. A
+/// member found stands for its class ([`imports`] takes each one's top
+/// level). Each may come more than once.
+pub fn named(p: &Program, root: NodeId, found: &mut impl FnMut(DeclId)) {
+    walk(p, root, &mut |id| {
+        let node = p.nodes.get(id);
+        match node {
+            Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
+                found(callee)
+            }
+            Node::GetModuleLet { target } | Node::SetModuleLet { target, .. } => found(target),
+            // Classes, through what's used of them.
+            Node::New { ctor: d, .. }
+            | Node::GetStatic { target: d }
+            | Node::InitStatic { target: d, .. } => found(d),
+            Node::Is { ty, .. } | Node::TypeValue { of: ty } => {
+                let mut types = Vec::new();
+                nominals(p, ty, &mut types);
+                for t in types {
+                    found(t);
+                }
+            }
+            _ => {}
+        }
+        let ty = p.nodes.ty(id);
+        let written = matches!(
+            node,
+            Node::Upcast { .. }
+                | Node::Downcast { .. }
+                | Node::Null {}
+                | Node::NonNull { .. }
+                | Node::FunctionLiteral { .. }
+                | Node::FunctionRef { .. }
+                | Node::ToFun { .. }
+                | Node::FromFun { .. }
+        );
+        if written && !ty.is_none() {
+            let mut types = Vec::new();
+            nominals(p, ty, &mut types);
+            for t in types {
+                found(t);
+            }
+        }
+        let defined = match node {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::Test { decl, .. }
+            | Node::Param { decl }
+            | Node::ModuleLet { decl }
+            | Node::Field { decl }
+            | Node::StaticField { decl }
+            | Node::Method { decl, .. }
+            | Node::AbstractMethod { decl, .. }
+            | Node::FunctionLiteral { decl, .. } => decl,
+            Node::Class { decl, .. } | Node::Interface { decl, .. } => {
+                for &s in p.decls.supers(decl) {
+                    let mut types = Vec::new();
+                    nominals(p, s, &mut types);
+                    for t in types {
+                        found(t);
+                    }
+                }
+                return;
+            }
+            Node::Let { local, .. } => local,
+            _ => return,
+        };
+        let mut types = Vec::new();
+        nominals(p, p.decls.get(defined).ty, &mut types);
+        for t in types {
+            found(t);
+        }
+    });
+}
+
 /// What a module's items and init block import ([`imports`]).
 pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
     let roots: Vec<NodeId> = (module.items.iter().copied())
@@ -230,7 +239,7 @@ pub fn test_imports(p: &Program, module: &Module) -> Vec<Import> {
 /// The top-level declaration a declaration is or is a member of: itself
 /// for a function, module `let`, class, or interface owned by a module or
 /// a `uses` library, else its owner's.
-fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
+pub(crate) fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
     let mut d = decl;
     for _ in 0..p.decls.len() {
         if !p.decls.contains(d) {
@@ -252,7 +261,7 @@ fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
 }
 
 /// The classes and interfaces a type names, through function types.
-fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
+pub(crate) fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
     if !p.types.contains(ty) {
         return;
     }
@@ -388,6 +397,19 @@ pub const PURE_CORE: &[&str] = &[
     "core.type String.get isEmpty()",
 ];
 
+/// The declarations of core's that [`PURE_CORE`] names.
+pub(crate) fn pure_core(p: &Program) -> HashSet<DeclId> {
+    let qnames = QNames::derive(p);
+    (p.decls.ids())
+        .filter(|&d| p.decls.contains(d) && is_external(p, d))
+        .filter(|&d| {
+            qnames
+                .get(d)
+                .is_some_and(|q| PURE_CORE.binary_search(&q.to_string().as_str()).is_ok())
+        })
+        .collect()
+}
+
 /// What evaluating an expression may do that the order of evaluation
 /// would show (notes/tmpl/analyses.md, "Order-sensitive operands").
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -443,19 +465,8 @@ pub struct Effects {
 impl Effects {
     /// The effects of `module`'s functions.
     pub fn of(p: &Program, module: &Module) -> Effects {
-        let qnames = QNames::derive(p);
-        let pure = p
-            .decls
-            .ids()
-            .filter(|&d| p.decls.contains(d) && is_external(p, d))
-            .filter(|&d| {
-                qnames
-                    .get(d)
-                    .is_some_and(|q| PURE_CORE.binary_search(&q.to_string().as_str()).is_ok())
-            })
-            .collect();
         let mut effects = Effects {
-            pure,
+            pure: pure_core(p),
             ..Effects::default()
         };
         let mut functions = Vec::new();

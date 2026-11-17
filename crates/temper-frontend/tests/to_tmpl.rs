@@ -15,7 +15,10 @@
 //!   review the diff.
 //! - `every_functional_test_translates_or_says_why`: no functional test
 //!   panics the translation or gives tmpl the validator rejects; the rest
-//!   say what isn't covered yet.
+//!   say what isn't covered yet. Each that translates, and std, is split
+//!   by reach so that each part keeps what it uses ([`check_split`]).
+//! - `reach_as_kotlins_*`: Kotlin Temper's own reachability tests, nearly
+//!   as written, reached as Kotlin marks them.
 
 use std::{env, fs, path::PathBuf};
 use temper_frontend::library::Library;
@@ -24,9 +27,11 @@ use temper_frontend::settle::{Settled, settle};
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::{NotYet, gaps, to_tmpl};
 use temper_syntax::lex::SourceKind;
+use temper_tmpl::analysis::walk;
 use temper_tmpl::coroutines::{CoroutineStrategy, lower};
+use temper_tmpl::reach::{Reach, reach};
 use temper_tmpl::version::current_as_sentinel;
-use temper_tmpl::{Facts, Node, Profile, Program, difference, text, validate};
+use temper_tmpl::{Facts, Node, NodeId, Profile, Program, difference, text, validate};
 
 /// The functional tests subset A covers, by their paths.
 const SUBSET_A: [&str; 7] = [
@@ -307,6 +312,7 @@ fn every_functional_test_translates_or_says_why() {
                 Ok(program) => {
                     let problems = validate(&program, &Profile::full());
                     assert!(problems.is_empty(), "{test}: {problems:#?}");
+                    check_split(test, &program);
                     ok.push(test.as_str());
                 }
                 Err(e) => assert!(!e.what.is_empty(), "{test}"),
@@ -349,6 +355,7 @@ fn std_library() {
             .unwrap_or_else(|e| panic!("std: {e}"));
         let problems = validate(&program, &Profile::full());
         assert!(problems.is_empty(), "std: {problems:#?}");
+        check_split("std", &program);
         let full = text::write(&program);
         let back = text::read(&full).unwrap_or_else(|e| panic!("std: {e}\n{full}"));
         assert_eq!(difference(&program, &back), None, "std");
@@ -553,6 +560,14 @@ fn gaps_lists_every_gap() {
 
 /// Translates one source file, with std, into tmpl, validated.
 fn translate_source(name: &str, source: &str) -> Program {
+    let (program, errors) = translate_with_errors(name, source);
+    assert!(errors.is_empty(), "{errors:?}");
+    program
+}
+
+/// Translates one source file, with std, into tmpl, validated, and the
+/// errors reported.
+fn translate_with_errors(name: &str, source: &str) -> (Program, Vec<String>) {
     let mut library = Library::new();
     library.add_file(&format!("{name}.temper.md"), source, SourceKind::Markdown);
     load_imports(&Sources::standard(), &mut library);
@@ -561,11 +576,10 @@ fn translate_source(name: &str, source: &str) -> Program {
         .filter(|d| d.level == temper_frontend::library::Level::Error)
         .map(|d| d.message.text())
         .collect();
-    assert!(errors.is_empty(), "{errors:?}");
     let program = to_tmpl(&settled, name).unwrap_or_else(|e| panic!("{e}"));
     let problems = validate(&program, &Profile::full());
     assert!(problems.is_empty(), "{problems:#?}");
-    program
+    (program, errors)
 }
 
 /// What Kelpto needed of typing, as Kotlin Temper types it: a `when`
@@ -681,4 +695,203 @@ fn keep_marks_every_top_level_kind() {
         assert!(written.contains("keep keepTest fn forBoth#"), "{written}");
         assert!(written.contains("keepTest class TestClass#"), "{written}");
     });
+}
+
+/// Each of a program's own top-level declarations, by name, with its
+/// reach, sorted by name.
+fn reaches(program: &Program) -> Vec<(String, Reach)> {
+    let reached = reach(program);
+    let mut found: Vec<(String, Reach)> = (program.decls.ids())
+        .filter_map(|d| Some((program.name(d).to_string(), reached.get(d)?)))
+        .collect();
+    found.sort_by(|a, b| a.0.cmp(&b.0));
+    found
+}
+
+/// The names with a reach.
+fn reached_as(found: &[(String, Reach)], reach: Reach) -> Vec<&str> {
+    (found.iter())
+        .filter(|(_, r)| *r == reach)
+        .map(|(n, _)| n.as_str())
+        .collect()
+}
+
+/// Kotlin Temper's `generate-code/export-some` stage test, its source as
+/// it is but for its test, `test("testCase") { … }` where Kotlin's is
+/// `@test("testCase") let testCase(): Void { … }`, a form tempest doesn't
+/// read yet: what's reached as Kotlin's `ReachabilityTracer` marks it, the
+/// library's unmarked, `@reach(\test)` the tests', and `@reach(\none)`
+/// nothing's. Kotlin's `console` is tempest's `~console`, named `console`.
+#[test]
+fn reach_as_kotlins_export_some() {
+    with_stack(|| {
+        let source = "
+    // Various reachability things.
+
+    export let exportedInt = 1;
+    let unreachableInt = 2;
+
+    export let exportedFunction(b: Boolean): Void { if (b) { conditionallyExportReachable() } }
+
+    let conditionallyExportReachable(): Void { console.log(\"\") }
+    let transitivelyTestReachable(): Void { console.log(\"\") }
+    let exportAndTestReachable(): Void { console.log(\"\") }
+    let initReachable(): Void { transitivelyInitReachable(); console.log(\"\") }
+    let transitivelyInitReachable(): Void { console.log(\"\") }
+    let unreachableFunction(): Void { console.log(\"\") }
+
+    export class ExportedClass(
+      private let propertyOfExportedClass: UsedOnlyAsPropertyType
+    ) {
+      private let methodOfExportedClass(): Void { exportAndTestReachable() }
+    }
+
+    class TestReachableClass {
+      private let methodOfTestReachable(): Void {
+        transitivelyTestReachable();
+        exportAndTestReachable();
+      }
+    }
+
+    test(\"testCase\") {
+      new TestReachableClass();
+      testKeptAndTestCalled();
+    }
+
+    class UsedOnlyAsPropertyType {}
+
+    initReachable();
+
+    // Now also try out decorations for keeping.
+
+    let keepReachable(): Void { console.log(\"\"); }
+    let testKeepReachable(): Void { console.log(\"\"); }
+
+    @keep
+    let kept(): Void { keepReachable(); }
+
+    @keep
+    class KeptClass {
+      public keptClassMethod(): Void {}
+    }
+
+    @keepTest
+    let testKept(): Void { testKeepReachable(); }
+
+    // Double-checking this one doesn't get marked test-reachable twice.
+    @keepTest
+    let testKeptAndTestCalled(): Void { console.log(\"\"); }
+";
+        // Kotlin's error too.
+        let (program, errors) = translate_with_errors("test", source);
+        assert_eq!(
+            errors,
+            ["Export depends publicly on non-exported symbol UsedOnlyAsPropertyType"]
+        );
+        let found = reaches(&program);
+        assert_eq!(
+            reached_as(&found, Reach::Library),
+            [
+                "ExportedClass",
+                "KeptClass",
+                "UsedOnlyAsPropertyType",
+                "conditionallyExportReachable",
+                "console",
+                "exportAndTestReachable",
+                "exportedFunction",
+                "exportedInt",
+                "initReachable",
+                "keepReachable",
+                "kept",
+                "transitivelyInitReachable",
+            ]
+        );
+        assert_eq!(
+            reached_as(&found, Reach::Test),
+            [
+                "TestReachableClass",
+                "testKeepReachable",
+                "testKept",
+                "testKeptAndTestCalled",
+                "transitivelyTestReachable",
+            ]
+        );
+        assert_eq!(
+            reached_as(&found, Reach::Unreached),
+            ["unreachableFunction", "unreachableInt"]
+        );
+    });
+}
+
+/// Kotlin Temper's `generate-code/init-assignment-reachability` stage
+/// test, its source as it is: a `var` assigned again in the init block is
+/// kept, as Kotlin doesn't drop the assignments, and a `let` nothing reads
+/// isn't.
+#[test]
+fn reach_as_kotlins_init_assignment_reachability() {
+    with_stack(|| {
+        let source = "
+    // We don't eliminate var reassignments, so keep associated declarations.
+    var hi = 0;
+    hi = 1;
+    // Non-var for contrast.
+    let ha = 2;
+";
+        let program = translate_source("test", source);
+        let found = reaches(&program);
+        assert_eq!(reached_as(&found, Reach::Library), ["hi"]);
+        assert_eq!(reached_as(&found, Reach::Unreached), ["ha"]);
+    });
+}
+
+/// Each module's split by reach ([`temper_tmpl::reach`]) keeps what its
+/// parts use: what the library's items and init call, refer to, read,
+/// set, or construct is the library's, and what the tests and their
+/// items and init do is the library's or the tests'. Every item and init
+/// statement is in one part.
+fn check_split(test: &str, p: &Program) {
+    let reached = reach(p);
+    for module in &p.modules {
+        let split = reached.split(p, module);
+        let library: Vec<NodeId> = (split.items.iter()).chain(&split.init).copied().collect();
+        let tests: Vec<NodeId> = (split.test_items.iter())
+            .chain(&split.test_init)
+            .chain(&module.tests)
+            .copied()
+            .collect();
+        for (roots, allowed) in [
+            (library, &[Reach::Library][..]),
+            (tests, &[Reach::Library, Reach::Test][..]),
+        ] {
+            for root in roots {
+                walk(p, root, &mut |id| {
+                    let used = match p.nodes.get(id) {
+                        Node::CallFunction { callee: d, .. }
+                        | Node::FunctionRef { target: d }
+                        | Node::GetModuleLet { target: d }
+                        | Node::SetModuleLet { target: d, .. }
+                        | Node::InitLet { target: d, .. }
+                        | Node::Local { local: d } => d,
+                        Node::New { ctor, .. } => p.decls.get(ctor).owner,
+                        _ => return,
+                    };
+                    if let Some(r) = reached.get(used) {
+                        assert!(allowed.contains(&r), "{test}: {} is {r:?}", p.name(used));
+                    }
+                });
+            }
+        }
+        let stmts = match p.nodes.get(module.init) {
+            Node::Block { stmts } => p.nodes.list(stmts).len(),
+            _ => 0,
+        };
+        let parts = [
+            &split.items,
+            &split.init,
+            &split.test_items,
+            &split.test_init,
+        ];
+        let placed = parts.iter().map(|part| part.len()).sum::<usize>() + split.unreached.len();
+        assert_eq!(placed, module.items.len() + stmts, "{test}");
+    }
 }

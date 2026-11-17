@@ -22,6 +22,8 @@
 //! - [`naming`], the naming pass, which gives each declaration a pretty
 //!   output name by a target's [`naming::NamingRules`];
 //! - [`analysis`], analyses that passes and backends share;
+//! - [`reach`], which declarations the library needs, which only its
+//!   tests do, and which nothing does, and each module split by it;
 //! - [`host`], a library's host code, and which connected declarations
 //!   each backend takes from it;
 //! - [`source_map`], Source Map v3 files from spans, for backends;
@@ -46,6 +48,7 @@ mod nodes;
 pub mod ops;
 mod profile;
 pub mod qname;
+pub mod reach;
 mod same;
 pub mod schema;
 pub mod source_map;

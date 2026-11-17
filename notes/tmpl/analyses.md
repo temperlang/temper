@@ -34,6 +34,39 @@ program it came from; stored facts are rechecked by recomputing them.
 - **Naming hints** (`naming::hints`): candidate names for any
   expression a pass hoists or copies ([names.md](names.md)), so every pass and backend
   names what it adds well, and function bodies read as hand-written.
+- **Reachability** (As built, 2026-11-17): `reach::reach` says which
+  of a program's own top-level declarations its library needs, which
+  only its tests do, and which nothing does, as Kotlin's
+  `ReachabilityTracer` marks them (`@reach(\test)`, `@reach(\none)`),
+  and `Reached::split` splits a module by it: the library's items and
+  init statements, the tests' (what only tests reach, and the init
+  statements that set it, to run before the tests), and what's left out.
+  - **Units:** functions, module `let`s and `var`s, classes and
+    interfaces (each whole, members and all, as Kotlin traces them), and
+    the init block's top-level locals; each with its item and the init
+    statements that set it, a static field's going with its class.
+  - **Roots:** the library's are exports, `keep`s, and init statements
+    that may do something: any that sets no unit, and any that sets one
+    with a value that isn't simple (anything but literals, names,
+    function values, and list literals, conversions, operators that
+    can't bubble, and core's pure calls such as `getConsole()`, of
+    those). The tests' are tests and `keepTest`s. Connected
+    declarations aren't roots, as in Kotlin: host code uses only what's
+    exported or kept.
+  - **Tracing** follows mentions, not flow: what a unit's nodes call,
+    refer to, read, set, or construct; the classes their types,
+    expressions' types, and members used name; supertypes; and type
+    parameters' bounds. The library's roots go first, so what both reach
+    is the library's.
+  - **A backend asks it of the program it translates,** after its
+    lowerings: errors' lowering may drop a call (C++'s `errors` program
+    no longer calls `passedOn`, whose argument's type is an error).
+  - **Not yet:** backends don't consume it; each will in its own step
+    (C++'s own liveness and Rust's test-only `let`s first). Checked
+    against C++'s liveness on every case its tests build: they agree on
+    every private function but `passedOn`, above. Per-member
+    pruning, and finer rules for which initializers may do something
+    (a constructor without effects), are later.
 - **Type queries:** subtyping, substitution, member lookup, operator
   methods, override chains, and which interface method bodies a class
   inherits (for Go and Rust trait defaults).

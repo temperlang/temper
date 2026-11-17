@@ -1074,6 +1074,27 @@ Other differences we won't copy:
 
 ## Later (backends and tooling)
 
+- **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
+  library needs, what only tests do, and what nothing does, as Kotlin's
+  `ReachabilityTracer` does in its frontend
+  ([analyses.md](tmpl/analyses.md), "Reachability"); no backend uses it
+  yet. Differences:
+  - An initializer is a root only if it may do something: a list literal
+    of simple values, an operator that can't bubble, and core's pure
+    calls (`getConsole()`) aren't. Kotlin's is a root unless it's a
+    value, a name, or a function after constant folding, so its
+    `console = getConsole()` always is, and its `console` is always the
+    library's.
+  - A static field's initializer that may do something keeps its class;
+    Kotlin's keeps only what the initializer names.
+  - Expressions' types, and the classes of members used, are traced too,
+    so a class used only through a cast or a method call is reached.
+  - Not yet: Kotlin's `@test("name") let f(): Void { … }`, a test
+    declared by decorating a function, which tempest's frontend reads as
+    an ordinary function, so what it alone uses is unreached.
+  Test: temper-tmpl/tests/reach.rs; temper-frontend/tests/to_tmpl.rs,
+  `reach_as_kotlins_export_some` and
+  `reach_as_kotlins_init_assignment_reachability`.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where
