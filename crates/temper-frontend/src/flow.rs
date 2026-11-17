@@ -17,7 +17,8 @@
 //! is a null check or `is` check of a name, negated at most once. This
 //! also narrows through `&&`, `||` and `!`, `while` conditions, and after
 //! an `if` whose other branch always leaves, as `if (a == null) {
-//! return; }`, so it accepts all Kotlin does, and more.
+//! return; }` or `{ panic(); }`, or calls a function whose result is
+//! `Never<T>`, so it accepts all Kotlin does, and more.
 
 use crate::builtins::{Builtin, Constant, Function};
 use crate::core;
@@ -178,7 +179,8 @@ impl Settle {
                 for &child in children {
                     env = self.flow(child, env, walk);
                 }
-                env
+                // Nothing runs after `panic()` or a `Never<T>` call.
+                if self.never_returns(node) { None } else { env }
             }
         }
     }

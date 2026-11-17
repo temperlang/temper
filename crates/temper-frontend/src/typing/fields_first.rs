@@ -27,7 +27,6 @@
 //! its body; and a path that bubbles or panics needs nothing set. Each
 //! offending use of `this` gets one error, naming the fields not yet set.
 
-use crate::builtins::{Builtin, Function};
 use crate::core::{
     self, CLASS_INTERFACE, FN_LOOP_BODY, MEMBER_STATIC, ROLE_CONSTRUCTOR, ROLE_GETTER, ROLE_MASK,
     ROLE_METHOD, ROLE_PARAM, ROLE_SETTER,
@@ -404,8 +403,7 @@ impl Settle {
                 for &arg in args {
                     set = self.fields_flow(cx, arg, set);
                 }
-                if self.scopes.resolved_builtin(callee) == Some(Builtin::Function(Function::Panic))
-                {
+                if self.never_returns(node) {
                     return None;
                 }
                 set

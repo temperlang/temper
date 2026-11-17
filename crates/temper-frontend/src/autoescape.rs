@@ -862,8 +862,9 @@ impl<'a> Analysis<'a> {
     /// outside it carries that state there ([`Analysis::exit`]), as do
     /// those in `for … of` bodies, whose jumps leave the function; other
     /// functions' can't reach out. It completes with the state, unless
-    /// it's a jump, `return`, `bubble()` or `panic()` itself, which never
-    /// complete. Anything else, as a call typed `Never`, is taken to
+    /// it's a jump, `return`, `bubble()`, `panic()`, or a call whose result
+    /// is `Never<T>` itself, which never complete
+    /// ([`crate::typing::never_returns`]). Anything else is taken to
     /// complete, which can only add a state to the joins after it.
     fn pass(&mut self, node: NodeId, state: Val) -> After {
         let (s, tree) = (self.s, &self.s.library.tree);
@@ -882,10 +883,7 @@ impl<'a> Analysis<'a> {
             }
             stack.extend(tree.children(n));
         }
-        let panics = tree.kind(node) == NodeKind::Call
-            && (tree.children(node).first()).is_some_and(|&c| {
-                s.scopes.resolved_builtin(c) == Some(Builtin::Function(Function::Panic))
-            });
+        let panics = crate::typing::never_returns(tree, &s.scopes, &s.typing, node);
         let never = matches!(
             tree.kind(node),
             NodeKind::Return | NodeKind::Break | NodeKind::Continue | NodeKind::Fail

@@ -336,10 +336,13 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   from `Int32?` or `Int32`, and function types' parameters and results.
   A type parameter matched to two different types is left unknown,
   since Kotlin may find a common supertype (`pair(1, "a")` passes there),
-  and only fully known types bind: not null, `Never`, `Void`, a nullable
-  type for a bare `T`, or a function literal's type, which takes its
-  own from the solved call ("Function literals and target typing",
-  below). What doesn't bind is unknown.
+  unless one is the other made nullable, as `Dog` and `Dog?` bind `Dog?`.
+  Only fully known types bind: not null, `Never`, `Void`, or a function
+  literal's type, which takes its own from the solved call ("Function
+  literals and target typing", below). A nullable type binds a bare `T`,
+  as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
+  Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
+  while it fits an `AnyValue` bound. What doesn't bind is unknown.
 - **Folding:** Kotlin folds a call of constants (`may_fold`) to its
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:

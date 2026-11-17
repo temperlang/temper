@@ -455,6 +455,8 @@ impl<'a> Translator<'a> {
                 }
             }
             TypeData::Function { .. } => self.fn_type(ty)?,
+            // A result that never returns, kept by `temper_tmpl::nevers`.
+            TypeData::Never(_) => "never".to_string(),
             // A function type's `=>` would take the `| null`.
             TypeData::Nullable(inner) => {
                 let text = self.ty(inner)?;

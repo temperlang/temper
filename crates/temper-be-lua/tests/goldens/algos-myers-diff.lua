@@ -18,12 +18,12 @@ local ChangeTypeUnchanged
 local Change = temper.type("myers-diff.Change")
 
 ---@param this myers-diff.Change
----@param type string
+---@param type_ string
 ---@param leftIndex integer
 ---@param rightIndex integer
 ---@param items any[]
-function Change.constructor(this, type, leftIndex, rightIndex, items)
-  this.type = type
+function Change.constructor(this, type_, leftIndex, rightIndex, items)
+  this.type = type_
   this.leftIndex = leftIndex
   this.rightIndex = rightIndex
   this.items = items

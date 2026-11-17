@@ -146,6 +146,76 @@ static core::Str viaOrElse(int32_t n) {
   return std::to_string(value) + " " + std::to_string(value2) + " " + std::to_string(value3);
 }
 
+static int32_t unreachableInt() {
+  core::panic();
+}
+
+template <class T>
+static T failAs(T) {
+  core::bubble();
+}
+
+static void bail() {
+  core::bubble();
+}
+
+static core::NullableParam<core::Str> noName() {
+  return nullptr;
+}
+
+static void stop() {
+  core::panic();
+}
+
+static int32_t half(int32_t n) {
+  if (n % 2 != 0) {
+    bail();
+    core::panic();
+  }
+  if (n < 0) {
+    return failAs<int32_t>(n);
+  } else {
+    return n / 2;
+  }
+}
+
+static int32_t pick(bool b) {
+  if (b) {
+    return 1;
+  } else {
+    return unreachableInt();
+  }
+}
+
+static core::NullableParam<core::Str> named(bool b) {
+  if (b) {
+    return TEMPER_STR("named");
+  } else {
+    return noName();
+  }
+}
+
+static int32_t chosen(bool b) {
+  int32_t x;
+  if (b) {
+    x = 3;
+    core::Console::log(temper_globals::console.value, TEMPER_STR("chosen"));
+  } else {
+    unreachableInt();
+    core::panic();
+  }
+  return x;
+}
+
+static core::Str shout(core::NullableParam<core::Str> s) {
+  if (s == nullptr) {
+    stop();
+    core::panic();
+  }
+  core::Str t = s.value;
+  return t + "!";
+}
+
 static void branch(int32_t a, int32_t b) {
   core::Str c = a == 0 ? (b == 0 ? TEMPER_STR("00") : b == 1 ? TEMPER_STR("01") : b == 2 ? TEMPER_STR("02") : TEMPER_STR("0x")) : a == 1 ? TEMPER_STR("1x") : a == 2 ? TEMPER_STR("2x") : a == 3 ? TEMPER_STR("3x") : TEMPER_STR("xx");
   core::Console::log(temper_globals::console.value, "branch(" + std::to_string(a) + ", " + std::to_string(b) + ") -> " + c);
@@ -180,6 +250,33 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + core::Boolean::toString(bubble::isNone(value3)));
     core::Console::log(temper_globals::console.value, viaOrElse(2));
     core::Console::log(temper_globals::console.value, viaOrElse(12));
+    core::Str string = std::to_string(pick(true)) + " ";
+    core::NullableParam<core::Str> subject = named(true);
+    core::NullableParam<core::Str> subject2 = named(false);
+    core::Console::log(temper_globals::console.value, string + (subject == nullptr ? TEMPER_STR("-") : subject.value) + " " + (subject2 == nullptr ? TEMPER_STR("null") : subject2.value));
+    int32_t value4;
+    try {
+      value4 = half(4);
+    } catch (core::TemperBubble const &) {
+      value4 = -1;
+    }
+    int32_t int32 = value4;
+    int32_t value5;
+    try {
+      value5 = half(3);
+    } catch (core::TemperBubble const &) {
+      value5 = -1;
+    }
+    int32_t value6 = value5;
+    int32_t value7;
+    try {
+      value7 = half(-2);
+    } catch (core::TemperBubble const &) {
+      value7 = -1;
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + std::to_string(value6) + " " + std::to_string(value7));
+    int32_t value8 = chosen(true);
+    core::Console::log(temper_globals::console.value, std::to_string(value8) + " " + bubble::shout(TEMPER_STR("hey")));
     branch(0, 2);
     branch(2, 0);
   });

@@ -492,6 +492,9 @@ impl<'a> Translator<'a> {
     /// A type as C++ writes it in a `.cpp`, `temper::core` as `core`.
     fn ty(&self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "bool",
@@ -3182,6 +3185,7 @@ fn depends(p: &Program, t: TypeId) -> bool {
         return false;
     }
     match p.types.get(t) {
+        TypeData::Never(inner) => depends(p, inner),
         TypeData::TypeParam { .. } => true,
         TypeData::Scalar(_) => false,
         TypeData::Nullable(inner) => depends(p, inner),
@@ -3200,6 +3204,7 @@ fn mentions_type(p: &Program) -> bool {
             return false;
         }
         match p.types.get(t) {
+            TypeData::Never(inner) => has(p, inner),
             TypeData::Scalar(s) => s == Scalar::Type,
             TypeData::Nullable(inner) => has(p, inner),
             TypeData::Function { params, result, .. } => {

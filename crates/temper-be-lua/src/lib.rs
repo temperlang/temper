@@ -167,6 +167,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // Operands that run before an `orelse` or a block's value, which Lua
     // writes as statements before, held first (`temper_tmpl::spill`).
     // `Switch` as `if`s, which Lua has no other way to write.

@@ -2451,6 +2451,7 @@ g.nextSafe();
       (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
   (Call (Call . g:1 \nextSafe))
   #void)
+error 266..311: Expected subtype of String, but got AnyValue
 log false true
 log bubbled
 log true true

@@ -116,6 +116,56 @@ an `orelse` there took its fallback for things that aren't bubbles: a `break`,
 9 10 -1
 ```
 
+## Helpers that never return
+
+A helper that only panics or bubbles may declare `Never<T>` as its
+result: it never returns, but stands for a `T` where it's called, and
+translates to `T` where a language has no bottom type. Here as a
+function, a generic one, a nullable `Never<String?>?`, which admits
+null, and a `Never<Void>` that bubbles, as std's `Test` has; the shared
+`classes` program has one as a method. A call of one ends its path, as
+`panic()` does, so a local assigned on the other paths is assigned after
+it, and a null check that leaves through one narrows.
+
+    let unreachableInt(): Never<Int> { panic() }
+    let failAs<T>(fallback: T): Never<T> throws Bubble { bubble() }
+    let bail(): Never<Void> throws Bubble { bubble() }
+    let noName(): Never<String?>? { null }
+    let stop(): Never<Void> { panic() }
+
+    let half(n: Int): Int throws Bubble {
+      if (n % 2 != 0) { bail() }
+      if (n < 0) { failAs(n) } else { n / 2 }
+    }
+    let pick(b: Boolean): Int { if (b) { 1 } else { unreachableInt() } }
+    let named(b: Boolean): String? { if (b) { "named" } else { noName() } }
+    let chosen(b: Boolean): Int {
+      let x: Int;
+      if (b) {
+        x = 3;
+        console.log("chosen");
+      } else {
+        unreachableInt();
+      }
+      x
+    }
+    let shout(s: String?): String {
+      if (s == null) { stop() }
+      let t: String = s;
+      "${t}!"
+    }
+
+    console.log("${pick(true)} ${named(true) ?? "-"} ${named(false) ?? "null"}");
+    console.log("${half(4) orelse -1} ${half(3) orelse -1} ${half(-2) orelse -1}");
+    console.log("${chosen(true)} ${shout("hey")}");
+
+```log
+1 named null
+2 -1 -1
+chosen
+3 hey!
+```
+
 ## Match miscellany
 
 This code doesn't have anything to do with bubbling, but it failed in Lua, and

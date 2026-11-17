@@ -18,7 +18,11 @@
 //!   many as its callee has type parameters (a constructor's class's),
 //!   each within its type parameter's bounds (but a builtin type's),
 //!   with each argument's and the result's type put in;
-//!   **T5** types well formed. `Error` nodes are exempt from T2 and T3.
+//!   **T5** types well formed, `Never<T>` only as a result or a value's
+//!   type, and only where the profile has
+//!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
+//!   exempt from T2 and T3, and a `Never<T>` child fits where its `T`
+//!   does (T3), as it never completes (F1, R5).
 //! - **R1** ids exist; **R2** references name the right kind of
 //!   declaration (`CallMethod` a method or getter); **R3** locals read and assigned in scope, within their
 //!   function, a run of function `let`s' in all of their literals
@@ -26,7 +30,8 @@
 //!   **R6** only a `var` assigned twice, a parameter only if `var`, and a
 //!   module `let` initialized once.
 //! - **F1** no falling off the end of a function with a result (nothing
-//!   after a `return`, jump, `bubble()`, or `panic()` runs); **F2**
+//!   after a `return`, jump, `bubble()`, `panic()`, or a `Never<T>`
+//!   value runs); **F2**
 //!   `return` has a value exactly when the result isn't `Void`; **F3**
 //!   `MAY_BUBBLE` exactly on calls that may bubble; **F4** a call that may
 //!   bubble only in a function that may (or in an init block, where it
@@ -195,6 +200,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
         v.structure_module(p, module, profile);
     }
     if v.problems.is_empty() {
+        v.bottom_types(p, profile);
         v.declarations(p);
         for (i, module) in p.modules.iter().enumerate() {
             v.module = (module.decl, i);
@@ -644,6 +650,10 @@ impl Validator {
                         self.decl_problem(Rule::T5, decl, message)
                     }
                 }
+                (_, Some(TypeData::Never(_))) => {
+                    let message = format!("a {} isn't typed Never, only a result", d.kind.name());
+                    self.decl_problem(Rule::T5, decl, message)
+                }
                 (_, Some(TypeData::Nullable(inner))) => {
                     if inner == TypeId::VOID {
                         let message = "Void isn't nullable".into();
@@ -689,6 +699,31 @@ impl Validator {
             }
         }
         self.qnames(p);
+    }
+
+    /// T5: `Never<T>` only where the profile keeps a bottom type
+    /// ([`Features::NEVER`](crate::Features::NEVER)), which
+    /// [`crate::nevers::lower`] leaves only there.
+    fn bottom_types(&mut self, p: &Program, profile: &Profile) {
+        if profile.native.contains(crate::Features::NEVER) {
+            return;
+        }
+        let never = |ty: TypeId| {
+            let sig = p.types.signature(ty);
+            p.types.is_never(ty) || sig.is_some_and(|s| p.types.is_never(s.result))
+        };
+        for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
+            if never(p.decls.get(decl).ty) {
+                let message = "a result is Never<T>, but the profile has no bottom type".into();
+                self.decl_problem(Rule::T5, decl, message);
+            }
+        }
+        for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
+            if p.types.is_never(p.nodes.ty(id)) {
+                let message = "a value is Never<T>, but the profile has no bottom type".into();
+                self.node_problem(Rule::T5, id, message);
+            }
+        }
     }
 
     /// Q1 and Q2: every declaration that should have a qname has one, and
@@ -1199,10 +1234,12 @@ impl Validator {
         }
     }
 
-    /// Checks that a child's type is exactly what its role wants.
+    /// Checks that a child's type is exactly what its role wants, or
+    /// `Never<T>` for a `T` that is, which never completes.
     fn fits(&mut self, p: &Program, child: NodeId, want: TypeId, role: &str) {
         let have = p.nodes.ty(child);
-        if have != want && p.nodes.kind(child) != Kind::Error && !have.is_none() {
+        let fits = have == want || p.types.fallback(have) == want;
+        if !fits && p.nodes.kind(child) != Kind::Error && !have.is_none() {
             let message = format!(
                 "{role} is {}, but should be {}",
                 p.show_type(have),
@@ -1741,7 +1778,8 @@ impl Validator {
             }
             Node::NonNull { value } | Node::AsNullable { value } => {
                 self.expr(p, value, flow);
-                let have = p.nodes.ty(value);
+                // A `Never<T>` converts as the `T` it stands for.
+                let have = p.types.fallback(p.nodes.ty(value));
                 let (nullable, plain) = if p.nodes.kind(id) == Kind::NonNull {
                     (have, ty)
                 } else {
@@ -1934,7 +1972,7 @@ impl Validator {
             }
             Node::Upcast { value } | Node::Downcast { value } => {
                 self.expr(p, value, flow);
-                let have = p.nodes.ty(value);
+                let have = p.types.fallback(p.nodes.ty(value));
                 let (sub, sup) = if p.nodes.kind(id) == Kind::Upcast {
                     (have, ty)
                 } else {
@@ -2043,6 +2081,11 @@ impl Validator {
                 }
             }
             _ => {}
+        }
+        // A `Never<T>`, as a call of a function declaring it, never
+        // completes: nothing after it runs.
+        if p.types.is_never(ty) {
+            flow.live = false;
         }
     }
 

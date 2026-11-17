@@ -28,7 +28,6 @@
 //! Each read reported counts as assigning, so each path reports a local
 //! once.
 
-use crate::builtins::{Builtin, Function};
 use crate::core::{self, FN_LOOP_BODY, MEMBER_CONNECTED};
 use crate::library::{Level, Message};
 use crate::scope::SymbolKind;
@@ -350,11 +349,11 @@ impl Settle {
                 if cx.bubbling.contains(&node) {
                     self.may_fail(cx, &pending);
                 }
-                let callee = children.first().copied();
-                let panics = callee.is_some_and(|c| {
-                    self.scopes.resolved_builtin(c) == Some(Builtin::Function(Function::Panic))
-                });
-                if panics { None } else { pending }
+                if self.never_returns(node) {
+                    None
+                } else {
+                    pending
+                }
             }
             _ => {
                 let mut pending = Some(now);

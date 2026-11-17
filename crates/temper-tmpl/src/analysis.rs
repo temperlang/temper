@@ -271,7 +271,9 @@ fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
                 }
             }
         }
-        crate::types::TypeData::Nullable(t) => nominals(p, t, out),
+        crate::types::TypeData::Nullable(t) | crate::types::TypeData::Never(t) => {
+            nominals(p, t, out)
+        }
         crate::types::TypeData::Scalar(_) => {}
     }
 }

@@ -66,6 +66,14 @@ public final class ClassesGlobal {
         return t;
     }
 
+    static <T> T orFail(boolean ok, T x, Failing<T> f) {
+        if (ok) {
+            return x;
+        } else {
+            return f.fail();
+        }
+    }
+
     static {
         Console console = Core.getConsole(Logger.getLogger("classes"));
         Rect r = new Rect(2, 3);
@@ -158,5 +166,8 @@ public final class ClassesGlobal {
         accumulator.appendSafe(" FROM ");
         accumulator.appendRect(new Rect(2, 2));
         console.log(accumulator.getAccumulated());
+        Limited stepper = new Stepper(3);
+        console.log("next " + stepper.next(1));
+        console.log(orFail(true, 4, new IntFailing()) + " " + orFail(true, "s", new AnyFailing<String>()));
     }
 }

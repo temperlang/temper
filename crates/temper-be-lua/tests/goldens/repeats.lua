@@ -8,8 +8,8 @@ local function odds(n)
   repeat
     do
       i = temper.int32_add(i, 1)
-      local bit = temper.band(i, 1)
-      if bit == 0 then
+      local bit_ = temper.band(i, 1)
+      if bit_ == 0 then
         goto continue
       end
       sum = temper.int32_add(sum, i)
@@ -21,7 +21,7 @@ end
 
 ---@param n integer
 ---@return integer
-local function pairs(n)
+local function pairs_(n)
   local count = 0
   local i = 0
   while i < n do
@@ -49,7 +49,7 @@ local function positive(n)
 end
 
 print(tostring(odds(9)))
-print(tostring(pairs(4)))
+print(tostring(pairs_(4)))
 print(tostring(positive(3)))
 
 return {}

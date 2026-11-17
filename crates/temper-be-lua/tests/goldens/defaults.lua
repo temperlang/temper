@@ -6,7 +6,7 @@ local wrap = require("defaults/helpers").wrap
 local calls
 
 ---@return integer
-local function next()
+local function next_()
   calls = temper.int32_add(calls, 1)
   return calls
 end
@@ -21,7 +21,7 @@ local function range(start, end_, step)
   end
   ---@cast end_ integer
   if temper.is_null(step) then
-    step = next()
+    step = next_()
   end
   ---@cast step integer
   return start .. ".." .. end_ .. " by " .. step

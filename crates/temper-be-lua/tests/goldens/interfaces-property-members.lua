@@ -265,12 +265,12 @@ local high2b = Low2("to be")
 local high2c = Low2("to be")
 local high3 = Low3()
 local high3b = Low3()
-local pairs = { temper.pair_constructor(high1, high1b), temper.pair_constructor(high1b, high1c), temper.pair_constructor(high1, high2), temper.pair_constructor(high2, high2b), temper.pair_constructor(high2b, high2c), temper.pair_constructor(high1, high3), temper.pair_constructor(high3, high3b) }
+local pairs_ = { temper.pair_constructor(high1, high1b), temper.pair_constructor(high1b, high1c), temper.pair_constructor(high1, high2), temper.pair_constructor(high2, high2b), temper.pair_constructor(high2b, high2c), temper.pair_constructor(high1, high3), temper.pair_constructor(high3, high3b) }
 do
-  local length = temper.list_length(pairs)
+  local length = temper.list_length(pairs_)
   local i2 = 0
   while i2 < length do
-    local pair = temper.list_get(pairs, i2)
+    local pair = temper.list_get(pairs_, i2)
     i2 = temper.int32_add(i2, 1)
     print(pair.key:toString() .. " == " .. pair.value:toString() .. ": " .. tostring(pair.key:eq(pair.value)))
   end

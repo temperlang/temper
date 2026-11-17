@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -167,6 +168,104 @@ public static class BubbleGlobal
         return string.Create(CultureInfo.InvariantCulture, $"{t2} {t3} {t4}");
     }
 
+    internal static int UnreachableInt()
+    {
+        Environment.FailFast("panic");
+        throw new InvalidOperationException();
+    }
+
+    internal static T FailAs<T>(T fallback)
+    {
+        return Core.Bubble<T>();
+    }
+
+    internal static void Bail()
+    {
+        Core.Bubble();
+    }
+
+    internal static string? NoName()
+    {
+        return null;
+    }
+
+    internal static void Stop()
+    {
+        Environment.FailFast("panic");
+        throw new InvalidOperationException();
+    }
+
+    internal static int Half(int n)
+    {
+        if (Core.ModSafe(n, 2) != 0)
+        {
+            Bail();
+            Environment.FailFast("panic");
+            throw new InvalidOperationException();
+        }
+        if (n < 0)
+        {
+            return FailAs(n);
+        }
+        else
+        {
+            return Core.DivSafe(n, 2);
+        }
+    }
+
+    internal static int Pick(bool b)
+    {
+        if (b)
+        {
+            return 1;
+        }
+        else
+        {
+            return UnreachableInt();
+        }
+    }
+
+    internal static string? Named(bool b)
+    {
+        if (b)
+        {
+            return "named";
+        }
+        else
+        {
+            return NoName();
+        }
+    }
+
+    internal static int Chosen(bool b)
+    {
+        int x;
+        if (b)
+        {
+            x = 3;
+            console.Log("chosen");
+        }
+        else
+        {
+            UnreachableInt();
+            Environment.FailFast("panic");
+            throw new InvalidOperationException();
+        }
+        return x;
+    }
+
+    internal static string Shout(string? s)
+    {
+        if (s == null)
+        {
+            Stop();
+            Environment.FailFast("panic");
+            throw new InvalidOperationException();
+        }
+        string t = s;
+        return t + "!";
+    }
+
     internal static void Branch(int a, int b)
     {
         string c = a == 0 ? (b == 0 ? "00" : b == 1 ? "01" : b == 2 ? "02" : "0x") : a == 1 ? "1x" : a == 2 ? "2x" : a == 3 ? "3x" : "xx";
@@ -210,6 +309,39 @@ public static class BubbleGlobal
         console.Log(t6.ToString(CultureInfo.InvariantCulture) + " " + (IsNone(t7) ? "true" : "false"));
         console.Log(ViaOrElse(2));
         console.Log(ViaOrElse(12));
+        string @string = Pick(true).ToString(CultureInfo.InvariantCulture) + " ";
+        string? subject = Named(true);
+        string? subject2 = Named(false);
+        console.Log(@string + (subject == null ? "-" : subject) + " " + (subject2 == null ? "null" : subject2));
+        int t8;
+        try
+        {
+            t8 = Half(4);
+        }
+        catch
+        {
+            t8 = -1;
+        }
+        int t9;
+        try
+        {
+            t9 = Half(3);
+        }
+        catch
+        {
+            t9 = -1;
+        }
+        int t10;
+        try
+        {
+            t10 = Half(-2);
+        }
+        catch
+        {
+            t10 = -1;
+        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{t8} {t9} {t10}"));
+        console.Log(Chosen(true).ToString(CultureInfo.InvariantCulture) + " " + Shout("hey"));
         Branch(0, 2);
         Branch(2, 0);
     }

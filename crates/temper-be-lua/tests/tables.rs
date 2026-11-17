@@ -128,7 +128,7 @@ fn helpers_are_the_runtimes_and_typed() {
         "with_tostring",
     ] {
         assert!(
-            names::PRINTED.contains(&printed),
+            names::RULES.reserved.iter().any(|l| l.contains(&printed)),
             "{printed} isn't reserved"
         );
     }

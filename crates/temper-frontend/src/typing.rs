@@ -446,6 +446,11 @@ impl Settle {
         Ok(t)
     }
 
+    /// [`never_returns`] here.
+    pub(crate) fn never_returns(&self, node: NodeId) -> bool {
+        never_returns(&self.lib.tree, &self.scopes, &self.typing, node)
+    }
+
     /// Whether a statement jumps away from the block it's in: `return`,
     /// `continue`, a failure, or `break`, unless to that block's end.
     fn jumps_from(&self, statement: NodeId, block: NodeId) -> bool {
@@ -732,7 +737,12 @@ impl Settle {
                 };
                 let symbol = self.scopes.symbol(b);
                 match symbol.kind {
-                    SymbolKind::Builtin(Builtin::Type(i)) => self.typing.types.builtin(i),
+                    // A bare `Never`, an error ([`Settle::check_bare_never`]),
+                    // is unknown, as an undeclared type is.
+                    SymbolKind::Builtin(Builtin::Type(i)) => match self.typing.types.builtin(i) {
+                        NEVER => UNKNOWN,
+                        t => t,
+                    },
                     SymbolKind::TypeParam => self.type_param_type(b),
                     _ => match self.type_decl(b) {
                         Some(class) => self.class_type(class),
@@ -858,24 +868,18 @@ impl Settle {
         }
     }
 
-    /// A generic type given arguments, as `List<Int>` or `Box<String>`.
-    /// `Never<T>` is `Never` for now; not a class given the wrong number
-    /// of them.
+    /// A generic type given arguments, as `List<Int>`, `Never<Int>`
+    /// ([`Types::apply_builtin`]), or `Box<String>`; not a class given the
+    /// wrong number of them.
     fn applied_type(&mut self, base: NodeId, args: &[NodeId]) -> TypeId {
         let Some(b) = self.scopes.resolved(base) else {
             return UNKNOWN;
         };
         let base = match self.scopes.symbol(b).kind {
             SymbolKind::Builtin(Builtin::Type(i)) => {
-                let t = self.typing.types.builtin(i);
-                // `Never<T>` is the bottom type until it carries its `T`.
-                if t == NEVER && args.len() == 1 {
-                    return NEVER;
-                }
-                if t == NEVER || t == ANY_VALUE || self.typing.types.is_final(t) {
-                    return UNKNOWN;
-                }
-                t
+                let base = self.typing.types.builtin(i);
+                let args = args.iter().map(|&a| self.eval_type(a)).collect();
+                return self.typing.types.apply_builtin(base, args);
             }
             _ => {
                 let Some(class) = self.type_decl(b) else {
@@ -1199,6 +1203,7 @@ impl Settle {
         let first = self.lib.tree.children(node).first().copied();
         let last = self.lib.tree.children(node).last().copied();
         match (self.lib.tree.kind(node), first, last) {
+            (NodeKind::RightName, ..) => self.check_bare_never(node),
             (NodeKind::Let, ..) => self.check_let(node),
             (NodeKind::Assign, Some(target), Some(value)) if count == 2 => {
                 if let Some(decl) = self.local_target(target) {
@@ -1227,10 +1232,15 @@ impl Settle {
                     }
                     let mut results = Vec::new();
                     self.results(body, &mut results);
+                    // A `Never<T>` function whose body completes with
+                    // `Void`, as Kotlin Temper reports it; but a loop, which
+                    // may never end.
+                    let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
                     for result in results {
                         // Kotlin Temper reports a Void result where one is
                         // wanted at odd positions; not yet here.
-                        if self.known_type(result) != VOID {
+                        let void = self.known_type(result) == VOID;
+                        if !void || (never && self.lib.tree.kind(result) != NodeKind::Loop) {
                             self.check_value(t, result, Site::Result);
                         }
                     }
@@ -1260,8 +1270,13 @@ impl Settle {
                 self.check_connected_class(node);
             }
             (NodeKind::If, Some(condition), _) => {
-                let t = self.known_type(condition);
-                if self.is_mismatch(t, BOOLEAN) && t != NULL {
+                let mut t = self.known_type(condition);
+                let mut mismatch = self.is_mismatch(t, BOOLEAN);
+                if let Some(leaves) = self.unjoined_leaves(condition, t) {
+                    mismatch = !self.leaves_fit(&leaves, BOOLEAN);
+                    t = self.unjoined_type(&leaves);
+                }
+                if mismatch && t != NULL {
                     let (expected, got) = (self.show(BOOLEAN), self.show(t));
                     let span = self.lib.tree.span(condition);
                     let message = Message::ExpectedValueOfType(expected, got);
@@ -1657,12 +1672,34 @@ impl Settle {
             .any(|&m| tree.data(m) & ROLE_MASK == core::ROLE_SETTER)
     }
 
+    /// Reports `Never` named without the type it stands for, as `let f():
+    /// Never`: only `Never<T>` is a type ([`Types::never_of`]), which
+    /// says what its uses translate to.
+    fn check_bare_never(&mut self, node: NodeId) {
+        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(node) else {
+            return;
+        };
+        let tree = &self.lib.tree;
+        let applied = (self.typing.parent(node)).is_some_and(|p| {
+            tree.kind(p) == NodeKind::Call
+                && tree.children(p).get(1) == Some(&node)
+                && (self.scopes.resolved_builtin(tree.children(p)[0]))
+                    == Some(Builtin::Function(Function::Angle))
+        });
+        if self.typing.types.builtin(i) == NEVER && !applied {
+            let span = self.lib.tree.span(node);
+            self.lib.report(Level::Error, Message::BareNever, span);
+        }
+    }
+
     /// Reports a `Void` value stored in a declaration or passed as an
-    /// argument, as `let x = b()` for `b(): Void` or `c(void)`, at `site`,
-    /// unless an error is reported there already, as Kotlin Temper
-    /// reports one error per position.
+    /// argument, as `let x = b()` for `b(): Void` or `c(void)`, or a
+    /// `Never<Void>` one ([`Types::is_void_like`]), at `site`, unless an
+    /// error is reported there already, as Kotlin Temper reports one error
+    /// per position.
     fn check_not_void(&mut self, value: NodeId, site: NodeId) {
-        if self.known_type(value) != VOID {
+        let t = self.known_type(value);
+        if !self.typing.types.is_void_like(t) {
             return;
         }
         let span = self.lib.tree.span(site);
@@ -1676,6 +1713,24 @@ impl Settle {
     /// Reports storing `value` where a `t` is wanted, if it can't be one.
     fn check_value(&mut self, t: TypeId, value: NodeId, site: Site) {
         let s = self.known_type(value);
+        // An `if` or `orelse` whose branches have no common type, as `p()
+        // orelse false` for `p(): Int64`: as Kotlin Temper does, each
+        // branch is assigned on its own, but an argument that doesn't fit
+        // is an `AnyValue`.
+        if let Some(leaves) = self.unjoined_leaves(value, s) {
+            if !matches!(site, Site::Arg | Site::Field) {
+                for leaf in leaves {
+                    self.check_value(t, leaf, Site::Init);
+                }
+            } else if !self.leaves_fit(&leaves, t) {
+                let joined = self.unjoined_type(&leaves);
+                let (to, from) = (self.show(t), self.show(joined));
+                let span = self.lib.tree.span(value);
+                self.lib
+                    .report(Level::Error, Message::ExpectedSubType(to, from), span);
+            }
+            return;
+        }
         let value_span = self.lib.tree.span(value);
         // Kotlin Temper solves a generic call or a list literal from the
         // type wanted, and reports its arguments instead; not for a call's
@@ -1713,6 +1768,13 @@ impl Settle {
         if self.check_fun_adapter(s, t, value, span) {
             return;
         }
+        // A `Never<Void>` is shown as the `Void` it stands for, as Kotlin
+        // Temper shows it.
+        let s = if self.typing.types.is_void_like(s) {
+            VOID
+        } else {
+            s
+        };
         let (to, from) = (self.show(t), self.show(s));
         let (message, span) = match site {
             Site::Init | Site::Result => (Message::CannotAssign(to, from), value_span),
@@ -1722,6 +1784,65 @@ impl Settle {
             Site::Arg | Site::Field => (Message::ExpectedSubType(to, from), value_span),
         };
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// The branches of an `if` or `orelse` value of type `t`, through
+    /// nested ones, when they have no common type (`t` is unknown) though
+    /// each one's type is known, as `p()` and `false` in `p() orelse
+    /// false` for `p(): Int64`.
+    fn unjoined_leaves(&mut self, value: NodeId, t: TypeId) -> Option<Vec<NodeId>> {
+        if t != UNKNOWN || !matches!(self.lib.tree.kind(value), NodeKind::If | NodeKind::Orelse) {
+            return None;
+        }
+        let mut leaves = Vec::new();
+        self.branch_leaves(value, &mut leaves);
+        for &leaf in &leaves {
+            let t = self.known_type(leaf);
+            if !self.typing.types.is_known(t) {
+                return None;
+            }
+        }
+        Some(leaves)
+    }
+
+    /// Adds the branches of `node`'s value to `out`, through nested `if`s
+    /// and `orelse`s, or else `node` itself.
+    fn branch_leaves(&self, node: NodeId, out: &mut Vec<NodeId>) {
+        let children = self.lib.tree.children(node);
+        match self.lib.tree.kind(node) {
+            NodeKind::If if children.len() == 3 => {
+                self.branch_leaves(children[1], out);
+                self.branch_leaves(children[2], out);
+            }
+            NodeKind::Orelse if children.len() == 2 => {
+                self.branch_leaves(children[0], out);
+                self.branch_leaves(children[1], out);
+            }
+            _ => out.push(node),
+        }
+    }
+
+    /// Whether every one of these branches' values can be a `t`.
+    fn leaves_fit(&mut self, leaves: &[NodeId], t: TypeId) -> bool {
+        leaves.iter().all(|&leaf| {
+            let s = self.known_type(leaf);
+            !self.is_mismatch(s, t)
+        })
+    }
+
+    /// The type Kotlin Temper gives a value whose branches have no common
+    /// type: `AnyValue`, or `AnyValue?` if a branch may be null.
+    fn unjoined_type(&mut self, leaves: &[NodeId]) -> TypeId {
+        let mut nullable = false;
+        for &leaf in leaves {
+            let t = self.known_type(leaf);
+            nullable |= t == NULL || matches!(self.typing.types.get(t), TypeData::Nullable(_));
+        }
+        if nullable {
+            self.typing.types.nullable(ANY_VALUE)
+        } else {
+            ANY_VALUE
+        }
     }
 
     /// Whether Kotlin Temper might work out an expression's value while
@@ -1802,4 +1923,50 @@ impl Settle {
         };
         self.typing.types.display(t, &class_name)
     }
+}
+
+/// Whether a node is a call that never returns normally, after which
+/// nothing runs, as after `return`: `panic()`, or a call of a function or
+/// method whose result is `Never<T>`, by the call's type once typed, or
+/// before, as flow facts are found, by the declaration its callee's name
+/// resolves to, which a method called on an object isn't yet.
+pub(crate) fn never_returns(
+    tree: &temper_syntax::tree::Tree,
+    scopes: &crate::scope::Scopes,
+    typing: &Typing,
+    node: NodeId,
+) -> bool {
+    let Some(&callee) = (tree.kind(node) == NodeKind::Call)
+        .then(|| tree.children(node).first())
+        .flatten()
+    else {
+        return false;
+    };
+    let is = |n: NodeId, what: Function| {
+        tree.kind(n) == NodeKind::Call
+            && (tree.children(n).first())
+                .is_some_and(|&c| scopes.resolved_builtin(c) == Some(Builtin::Function(what)))
+    };
+    if is(node, Function::Panic) {
+        return true;
+    }
+    if let Some(t) = typing.expr(node) {
+        return matches!(typing.types.get(t), TypeData::NeverOf(_));
+    }
+    let decl = (scopes.resolved(callee)).and_then(|b| scopes.symbol(b).decl);
+    let f = decl
+        .filter(|&d| tree.kind(d) == NodeKind::Let)
+        .and_then(|d| core::let_parts(tree, d).2)
+        .filter(|&f| tree.kind(f) == NodeKind::Fn);
+    let Some(mut out) = f.and_then(|f| core::fn_parts(tree, f).1) else {
+        return false;
+    };
+    if is(out, Function::Throws) {
+        out = tree.children(out)[1];
+    }
+    is(out, Function::Angle)
+        && matches!(
+            scopes.resolved_builtin(tree.children(out)[1]),
+            Some(Builtin::Type(i)) if crate::builtins::TYPES[i as usize] == "Never"
+        )
 }

@@ -365,3 +365,63 @@ fn other_libraries_names_are_their_own_namings() {
         ]
     );
 }
+
+/// A library exporting `min`, which its rules reserve for names but not
+/// for members, and keeping `str` private.
+const PUBLIC_DEPENDENCY: &str = "tmpl 1 model 1 library dep 0.0.0
+
+module dep#0 {
+  export fn min#1(): Int32 {
+    return 1;
+  }
+
+  fn str#2(): Int32 {
+    return 2;
+  }
+
+  init {
+  }
+}
+";
+
+/// A library that uses `dep`'s `min`.
+const PUBLIC_DEPENDENT: &str = "tmpl 1 model 1 library app 0.0.0
+
+uses `dep`#1 0.0.0 {
+  module ``#2 {
+    fn min#3(): Int32;
+  }
+}
+
+module app#0 {
+  export fn one#4(): Int32 {
+    return min#3();
+  }
+
+  init {
+  }
+}
+";
+
+#[test]
+fn exports_keep_public_names() {
+    // An export's own name escapes as any name does, but its public
+    // name, as its module keys it, only as a member's does.
+    let dep = text::read(PUBLIC_DEPENDENCY).unwrap_or_else(|e| panic!("{e}"));
+    let dep_names = assign(&dep, &RULES);
+    assert_eq!(dep_names.get(DeclId(1)), "min_");
+    assert_eq!(dep_names.public(DeclId(1)), "min");
+    assert_eq!(dep_names.get(DeclId(2)), "_str");
+    assert_eq!(dep_names.public(DeclId(2)), "_str");
+    assert!(dep_names.clashes().is_empty());
+    // A dependent binds what the dependency's naming named it, and reads
+    // it by its public name.
+    let interface = Interface::of(&dep, &dep_names);
+    assert_eq!(interface.get("dep.min()"), Some("min_"));
+    assert_eq!(interface.public("dep.min()"), Some("min"));
+    let mut app = text::read(PUBLIC_DEPENDENT).unwrap_or_else(|e| panic!("{e}"));
+    app.interfaces = vec![interface];
+    let names = assign(&app, &RULES);
+    assert_eq!(names.get(DeclId(3)), "min_");
+    assert_eq!(names.public(DeclId(3)), "min");
+}

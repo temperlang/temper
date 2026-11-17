@@ -609,6 +609,14 @@ impl Translator<'_> {
 
     fn ty(&mut self, t: ft::TypeId, at: FNode) -> Tx<TypeId> {
         match self.s.typing.types.get(t) {
+            // A function's result that never returns, as std's
+            // `Test.bail()`, and its calls' type: tmpl's `Never<T>`, which
+            // backends without a bottom type lower to the `T` it stands
+            // for, as core's docs say (`temper_tmpl::nevers`).
+            &FTypeData::NeverOf(inner) => {
+                let inner = self.ty(inner, at)?;
+                return Ok(self.b.never(inner));
+            }
             &FTypeData::Param(symbol) => {
                 return match self.type_params.get(&symbol) {
                     Some(&d) => Ok(self.b.program().decls.get(d).ty),
@@ -667,13 +675,7 @@ impl Translator<'_> {
                 types.push(if p.optional { self.b.nullable(ty) } else { ty });
                 optional.push(p.optional);
             }
-            // `Never<Void>`, as std's `Test.bail()` returns: a function
-            // that never returns normally, typed by its fallback, `Void`,
-            // which is all the frontend's `Never` keeps.
-            let result = match self.s.typing.types.get(ret) {
-                FTypeData::Never => TypeId::VOID,
-                _ => self.ty(ret, at)?,
-            };
+            let result = self.ty(ret, at)?;
             return Ok(self.b.function_type_with(&types, &optional, result, throws));
         }
         if let FTypeData::Class(symbol) = *self.s.typing.types.get(t) {
@@ -738,7 +740,7 @@ impl Translator<'_> {
             _ => {
                 let what = match self.s.typing.types.get(t) {
                     FTypeData::Unknown => "an expression of unknown type",
-                    FTypeData::Never => "type Never",
+                    FTypeData::Never | FTypeData::NeverOf(_) => "type Never",
                     FTypeData::Null => "null",
                     FTypeData::Builtin(_) => "a builtin type core's fixture lacks",
                     FTypeData::Class(_) => "a class or interface type",
@@ -800,7 +802,12 @@ impl Translator<'_> {
         let init = core::let_parts(&self.s.library.tree, decl).2;
         let t = (typing.decls.get(&decl).copied()).or_else(|| init.and_then(|i| typing.expr(i)));
         match t {
-            Some(t) => self.ty(t, decl),
+            // A local, parameter, or field holds a `T`, never a
+            // `Never<T>`, as `let x = stop()` would have it.
+            Some(t) => {
+                let ty = self.ty(t, decl)?;
+                Ok(self.b.program().types.fallback(ty))
+            }
             None => self.unknown_ty(decl),
         }
     }
@@ -932,6 +939,10 @@ impl Translator<'_> {
             TypeData::Nullable(inner) => {
                 let inner = self.core_type(inner);
                 self.b.nullable(inner)
+            }
+            TypeData::Never(inner) => {
+                let inner = self.core_type(inner);
+                self.b.never(inner)
             }
             TypeData::TypeParam { decl } => {
                 let d = self.external(decl);
@@ -1651,7 +1662,9 @@ impl Translator<'_> {
         }
         let mut stmts = Vec::new();
         self.defaults(&defaulted, &mut stmts)?;
-        if result == TypeId::VOID {
+        // A `Never<Void>` function's body runs as a `Void` one's, its
+        // end never reached.
+        if self.b.program().types.fallback(result) == TypeId::VOID {
             self.stmts(body, &mut stmts)?;
         } else {
             self.tail_stmts(body, &mut stmts)?;
@@ -1689,9 +1702,10 @@ impl Translator<'_> {
             self.predeclare_functions(&children)?;
             for &child in children.iter() {
                 self.stmt(child, out)?;
-                // What follows a loop that never ends, or an error, can't
-                // run, and Java and Rust reject it.
-                if self.never_ends(child) || self.fails(child) {
+                // What follows a loop that never ends, a call that never
+                // returns, or an error, can't run, and Java and Rust reject
+                // it.
+                if self.never_ends(child) || self.never_returns(child) || self.fails(child) {
                     break;
                 }
             }
@@ -2172,7 +2186,7 @@ impl Translator<'_> {
                 let (&last, rest) = children.split_last().unwrap();
                 for &child in rest {
                     self.stmt(child, out)?;
-                    if self.is_jump(child) {
+                    if self.is_jump(child) || self.never_returns(child) {
                         // What follows can't run.
                         return Ok(());
                     }
@@ -2522,6 +2536,12 @@ impl Translator<'_> {
         self.made(stmt, node)
     }
 
+    /// Whether a node is a call that never returns: `panic()`, or a call
+    /// whose result is `Never<T>` ([`crate::typing::never_returns`]).
+    fn never_returns(&self, node: FNode) -> bool {
+        crate::typing::never_returns(&self.s.library.tree, &self.s.scopes, &self.s.typing, node)
+    }
+
     fn never_completes(&self, node: FNode) -> bool {
         match self.kind(node) {
             NodeKind::Fail => true,
@@ -2556,8 +2576,9 @@ impl Translator<'_> {
         if let Some((&last, rest)) = children.split_last() {
             for &child in rest {
                 self.stmt(child, out)?;
-                // Nothing after an error runs, and Java and Rust reject it.
-                if self.fails(child) {
+                // Nothing after an error, or a call that never returns,
+                // runs, and Java and Rust reject it.
+                if self.fails(child) || self.never_returns(child) {
                     return Ok(());
                 }
             }

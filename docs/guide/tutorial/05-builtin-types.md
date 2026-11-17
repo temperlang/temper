@@ -35,9 +35,11 @@ some of these types:
   functions that might fail, usually `Bubble` is a better choice than making
   the type nullable with `?`.
   And for functions whose result should be ignored, use `Void`.
-- `Never` - The subtype of all other types, representing computations that never
-  complete, such as infinite loops. Computations that exit abnormally use
-  `Bubble`, not `Never`.
+- `Never<T>` - The type of computations that never complete, such as infinite
+  loops or a function that always panics. It stands for `T`, and is a subtype
+  only of `T` and what `T` is, so a `Never<Int>` call fits where an `Int` is
+  wanted, and translates to `T` in languages without a bottom type.
+  Computations that exit abnormally use `Bubble`, not `Never`.
 - `Invalid` - A type for when a type can't be computed.
 
 As suggested above, sometimes we can distinguish types at runtime, but this

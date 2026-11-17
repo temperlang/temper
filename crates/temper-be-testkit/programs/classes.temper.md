@@ -248,3 +248,39 @@ the method by its own name, as Kotlin's do.
 'it'NULL3shape 4rect Rect(1, 2)
 SELECT 7, 'x' FROM rect Rect(2, 2)
 ```
+
+## Methods that never return
+
+A method may declare `Never<T>` as its result, which never returns but
+stands for a `T` where it's called. An override declares the result it
+overrides exactly, `Never<T>` for `Never<T>`, as for any other type, so
+each backend's override has the signature its language requires: here
+through an interface, a generic interface given `Int`, and a generic
+class that passes its own type parameter on.
+
+    export interface Limited {
+      next(n: Int): Int;
+      tooFar(): Never<Int>;
+    }
+    export class Stepper(public limit: Int) extends Limited {
+      public next(n: Int): Int { if (n < limit) { n + 1 } else { tooFar() } }
+      public tooFar(): Never<Int> { panic() }
+    }
+    interface Failing<T> {
+      fail(): Never<T>;
+    }
+    class IntFailing extends Failing<Int> {
+      public fail(): Never<Int> { panic() }
+    }
+    class AnyFailing<T> extends Failing<T> {
+      public fail(): Never<T> { panic() }
+    }
+    let orFail<T>(ok: Boolean, x: T, f: Failing<T>): T { if (ok) { x } else { f.fail() } }
+    let stepper: Limited = new Stepper(3);
+    console.log("next ${stepper.next(1)}");
+    console.log("${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing<String>())}");
+
+```log
+next 2
+4 s
+```

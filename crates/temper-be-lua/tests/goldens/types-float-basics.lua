@@ -39,28 +39,28 @@ local function add(a, b)
   return a + b
 end
 
----@param string string
-local function checkParse(string)
+---@param string_ string
+local function checkParse(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = temper.float64_tostring(temper.string_tofloat64(string))
+    converted = temper.float64_tostring(temper.string_tofloat64(string_))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
----@param string string
-local function checkTiny(string)
+---@param string_ string
+local function checkTiny(string_)
   ---@type string
   local positive
   if not temper.pcall(function()
-    positive = tostring(temper.float_cmp(temper.string_tofloat64(string), 0.0) > 0)
+    positive = tostring(temper.float_cmp(temper.string_tofloat64(string_), 0.0) > 0)
   end) then
     positive = "failed"
   end
-  print("Parse " .. string .. " > 0 -> " .. positive)
+  print("Parse " .. string_ .. " > 0 -> " .. positive)
 end
 
 local negativeZero = -0.0
