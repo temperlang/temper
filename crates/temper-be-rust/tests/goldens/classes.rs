@@ -204,6 +204,17 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 }
                 accumulator.accumulated()
             });
+            let stepper = Limited::new(Stepper::new(3));
+            println!("next {}", stepper.next(1));
+            println!(
+                "{} {}",
+                or_fail(true, 4, Failing::new(IntFailing::new())),
+                or_fail(
+                    true,
+                    Arc::new("s".to_string()),
+                    Failing::new(AnyFailing::new()),
+                )
+            );
             Ok(())
         })
         .clone()
@@ -715,6 +726,196 @@ impl Sql {
 }
 
 temper_core::impl_any_value_trait!(Sql, []);
+
+pub trait LimitedTrait: temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync {
+    fn clone_boxed(&self) -> Limited;
+
+    fn next(&self, n: i32) -> i32;
+
+    fn too_far(&self) -> i32;
+}
+
+#[derive(Clone)]
+pub struct Limited(Arc<dyn LimitedTrait>);
+
+impl Limited {
+    pub fn new(selfish: impl LimitedTrait + 'static) -> Limited {
+        Limited(Arc::new(selfish))
+    }
+}
+
+impl LimitedTrait for Limited {
+    fn clone_boxed(&self) -> Limited {
+        LimitedTrait::clone_boxed(&*self.0)
+    }
+
+    fn next(&self, n: i32) -> i32 {
+        LimitedTrait::next(&*self.0, n)
+    }
+
+    fn too_far(&self) -> i32 {
+        LimitedTrait::too_far(&*self.0)
+    }
+}
+
+temper_core::impl_any_value_trait_for_interface!(Limited);
+
+impl std::ops::Deref for Limited {
+    type Target = dyn LimitedTrait;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+struct StepperStruct {
+    limit: i32,
+}
+
+#[derive(Clone)]
+pub struct Stepper(Arc<StepperStruct>);
+
+impl Stepper {
+    pub fn new(limit: i32) -> Stepper {
+        Stepper(Arc::new(StepperStruct { limit }))
+    }
+
+    pub fn next(&self, n: i32) -> i32 {
+        if n < self.0.limit {
+            n.wrapping_add(1)
+        } else {
+            self.too_far()
+        }
+    }
+
+    pub fn too_far(&self) -> i32 {
+        panic!();
+    }
+
+    pub fn limit(&self) -> i32 {
+        self.0.limit
+    }
+}
+
+impl LimitedTrait for Stepper {
+    fn clone_boxed(&self) -> Limited {
+        Limited::new(self.clone())
+    }
+
+    fn next(&self, n: i32) -> i32 {
+        self.next(n)
+    }
+
+    fn too_far(&self) -> i32 {
+        self.too_far()
+    }
+}
+
+temper_core::impl_any_value_trait!(Stepper, [Limited]);
+
+pub(crate) trait FailingTrait<T: Clone + Send + Sync + 'static>:
+    temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync
+{
+    #[allow(dead_code)]
+    fn clone_boxed(&self) -> Failing<T>;
+
+    fn fail(&self) -> T;
+}
+
+#[derive(Clone)]
+pub(crate) struct Failing<T: Clone + Send + Sync + 'static>(Arc<dyn FailingTrait<T>>);
+
+impl<T: Clone + Send + Sync + 'static> Failing<T> {
+    pub fn new(selfish: impl FailingTrait<T> + 'static) -> Failing<T> {
+        Failing(Arc::new(selfish))
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> FailingTrait<T> for Failing<T> {
+    fn clone_boxed(&self) -> Failing<T> {
+        FailingTrait::clone_boxed(&*self.0)
+    }
+
+    fn fail(&self) -> T {
+        FailingTrait::fail(&*self.0)
+    }
+}
+
+temper_core::impl_any_value_trait_for_interface!(Failing<T>);
+
+impl<T: Clone + Send + Sync + 'static> std::ops::Deref for Failing<T> {
+    type Target = dyn FailingTrait<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+struct IntFailingStruct {}
+
+#[derive(Clone)]
+pub(crate) struct IntFailing(Arc<IntFailingStruct>);
+
+impl IntFailing {
+    pub fn new() -> IntFailing {
+        IntFailing(Arc::new(IntFailingStruct {}))
+    }
+
+    pub fn fail(&self) -> i32 {
+        panic!();
+    }
+}
+
+impl FailingTrait<i32> for IntFailing {
+    fn clone_boxed(&self) -> Failing<i32> {
+        Failing::new(self.clone())
+    }
+
+    fn fail(&self) -> i32 {
+        self.fail()
+    }
+}
+
+temper_core::impl_any_value_trait!(IntFailing, [Failing<i32>]);
+
+struct AnyFailingStruct<T: Clone + Send + Sync + 'static> {
+    phantom_t: std::marker::PhantomData<T>,
+}
+
+#[derive(Clone)]
+pub(crate) struct AnyFailing<T: Clone + Send + Sync + 'static>(Arc<AnyFailingStruct<T>>);
+
+impl<T: Clone + Send + Sync + 'static> AnyFailing<T> {
+    pub fn new() -> AnyFailing<T> {
+        AnyFailing(Arc::new(AnyFailingStruct {
+            phantom_t: std::marker::PhantomData,
+        }))
+    }
+
+    pub fn fail(&self) -> T {
+        panic!();
+    }
+}
+
+impl<T: Clone + Send + Sync + 'static> FailingTrait<T> for AnyFailing<T> {
+    fn clone_boxed(&self) -> Failing<T> {
+        Failing::new(self.clone())
+    }
+
+    fn fail(&self) -> T {
+        self.fail()
+    }
+}
+
+temper_core::impl_any_value_trait!(AnyFailing<T>, [Failing<T>]);
+
+pub(crate) fn or_fail<T: Clone + Send + Sync + 'static>(ok: bool, x: T, f: Failing<T>) -> T {
+    if ok {
+        x.clone()
+    } else {
+        f.fail()
+    }
+}
 
 pub mod builders {
     use super::*;

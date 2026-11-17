@@ -20,7 +20,11 @@ impl Features {
     /// the `Error` fails where it runs, as a statically typed target's
     /// compiler would reject the code.
     pub const RUNS_TYPE_ERRORS: Features = Features(4);
-    pub const ALL: Features = Features(7);
+    /// A bottom type, as a function's result: `Never<T>` kept where
+    /// [`crate::nevers::may_keep`] allows; without it, `T` everywhere
+    /// ([`crate::nevers::lower`]).
+    pub const NEVER: Features = Features(8);
+    pub const ALL: Features = Features(15);
 
     pub const fn with(self, other: Features) -> Features {
         Features(self.0 | other.0)

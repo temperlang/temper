@@ -218,6 +218,7 @@ impl Translator<'_> {
     fn mentions_type_param(&self, ty: TypeId) -> bool {
         let p = self.p;
         match p.types.get(ty) {
+            TypeData::Never(t) => self.mentions_type_param(t),
             TypeData::TypeParam { .. } => true,
             TypeData::Nullable(t) => self.mentions_type_param(t),
             TypeData::Nominal { args, .. } => {
@@ -235,6 +236,7 @@ impl Translator<'_> {
     fn simple_name(&self, ty: TypeId) -> String {
         let p = self.p;
         match p.types.get(p.types.non_null(ty)) {
+            TypeData::Never(t) => self.simple_name(t),
             TypeData::Scalar(Scalar::AnyValue) => "Any".into(),
             TypeData::Scalar(s) => s.name().into(),
             TypeData::Function { .. } => "Function".into(),

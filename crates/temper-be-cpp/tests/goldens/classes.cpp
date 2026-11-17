@@ -23,6 +23,13 @@ struct Holder;
 struct Version;
 struct Stock;
 struct Sql;
+struct Limited;
+struct Stepper;
+template <class T>
+struct Failing;
+struct IntFailing;
+template <class T>
+struct AnyFailing;
 
 struct Shape : public virtual temper::core::AnyValueBase {
   virtual int32_t get_area() const = 0;
@@ -134,6 +141,35 @@ struct Sql : public std::enable_shared_from_this<Sql> {
   temper::core::Str get_accumulated() const;
 };
 
+struct Limited : public virtual temper::core::AnyValueBase {
+  virtual int32_t next(int32_t n) const = 0;
+  virtual int32_t tooFar() const = 0;
+};
+
+struct Stepper : public virtual Limited {
+  int32_t limit;
+  static std::shared_ptr<Stepper> make(int32_t limit);
+  int32_t next(int32_t n) const override;
+  int32_t tooFar() const override;
+  int32_t get_limit() const;
+};
+
+template <class T>
+struct Failing : public virtual temper::core::AnyValueBase {
+  virtual T fail() const = 0;
+};
+
+struct IntFailing : public virtual Failing<int32_t> {
+  static std::shared_ptr<IntFailing> make();
+  int32_t fail() const override;
+};
+
+template <class T>
+struct AnyFailing : public virtual Failing<T> {
+  static std::shared_ptr<AnyFailing<T>> make();
+  T fail() const override;
+};
+
 template <class T>
 std::shared_ptr<Boxed<T>> Boxed<T>::make(T value, int32_t tag) {
   std::shared_ptr<Boxed<T>> self = std::make_shared<Boxed<T>>();
@@ -165,6 +201,17 @@ T Boxed<T>::get_value() const {
 template <class T>
 int32_t Boxed<T>::get_tag() const {
   return this->tag;
+}
+
+template <class T>
+std::shared_ptr<AnyFailing<T>> AnyFailing<T>::make() {
+  std::shared_ptr<AnyFailing<T>> self = std::make_shared<AnyFailing<T>>();
+  return self;
+}
+
+template <class T>
+T AnyFailing<T>::fail() const {
+  temper::core::panic();
 }
 
 }  // namespace classes
@@ -491,6 +538,48 @@ core::Str Sql::get_accumulated() const {
   return core::List::join(this->parts, core::Str(), [](core::Str p) -> core::Str { return p; });
 }
 
+std::shared_ptr<Stepper> Stepper::make(int32_t limit) {
+  global_init_init();
+  std::shared_ptr<Stepper> self = std::make_shared<Stepper>();
+  self->limit = limit;
+  return self;
+}
+
+int32_t Stepper::next(int32_t n) const {
+  std::shared_ptr<Stepper const> self = std::shared_ptr<Stepper const>(shared_from_this(), this);
+  if (n < self->limit) {
+    return core::Int::add(n, 1);
+  } else {
+    return self->tooFar();
+  }
+}
+
+int32_t Stepper::tooFar() const {
+  core::panic();
+}
+
+int32_t Stepper::get_limit() const {
+  return this->limit;
+}
+
+std::shared_ptr<IntFailing> IntFailing::make() {
+  std::shared_ptr<IntFailing> self = std::make_shared<IntFailing>();
+  return self;
+}
+
+int32_t IntFailing::fail() const {
+  core::panic();
+}
+
+template <class T>
+static T orFail(bool ok, T x, std::shared_ptr<Failing<T>> const & f) {
+  if (ok) {
+    return x;
+  } else {
+    return f->fail();
+  }
+}
+
 void global_init_init() {
   core::init_once([] {
     Rect::temper_statics::unit.construct();
@@ -587,6 +676,10 @@ void global_init_init() {
       accumulator->appendRect(Rect::make(2, 2));
     }
     core::Console::log(console, accumulator->get_accumulated());
+    std::shared_ptr<Limited> stepper = core::to_base<Limited>(Stepper::make(3));
+    core::Console::log(console, "next " + std::to_string(stepper->next(1)));
+    int32_t int32 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
+    core::Console::log(console, std::to_string(int32) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
   });
 }
 

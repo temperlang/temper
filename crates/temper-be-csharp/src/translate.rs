@@ -587,6 +587,9 @@ impl<'a> Translator<'a> {
     /// A type as C# writes it, its namespace imported if it needs to be.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "bool",
@@ -3425,7 +3428,8 @@ fn completes(s: &Stmt) -> bool {
         | Stmt::Return(_)
         | Stmt::YieldBreak
         | Stmt::Bubble(_)
-        | Stmt::Throw(_) => false,
+        | Stmt::Throw(_)
+        | Stmt::Expr(Expr::Throw(_)) => false,
         Stmt::TryCatch { body, catch } => body.iter().all(completes) || catch.iter().all(completes),
         // A label is reached by a `goto` from before it.
         Stmt::Block(body) if body.iter().any(|s| matches!(s, Stmt::Label(_))) => true,

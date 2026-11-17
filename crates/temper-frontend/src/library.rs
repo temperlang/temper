@@ -189,6 +189,10 @@ pub enum Message {
     ExpectedValueOfType(String, String),
     /// A `Void` value stored or passed. Kotlin's `ExpectedNonVoid`.
     VoidAsValue,
+    /// `Never` without the type it stands for, which Kotlin Temper
+    /// rejects only where it's used, with odd messages ("Cannot translate
+    /// Never").
+    BareNever,
     /// A call with too few or too many arguments: how many parameters.
     ArityMismatch(usize),
     /// `object.key` where `object`'s type has no member `key`: the key
@@ -326,6 +330,7 @@ impl Message {
         matches!(
             self,
             Message::CannotAssign(..)
+                | Message::BareNever
                 | Message::ExportNeedsNonExported(..)
                 | Message::ExpectedSubType(..)
                 | Message::ExpectedValueOfType(..)
@@ -459,6 +464,9 @@ impl Message {
                 format!("Expected value of type {expected} not {got}")
             }
             Message::VoidAsValue => "Void expressions cannot be used as values".into(),
+            Message::BareNever => {
+                "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
+            }
             Message::ArityMismatch(n) => format!("Wrong number of arguments.  Expected {n}"),
             Message::NoMember(key, t) => format!("No member {key} in {t}"),
             Message::NotPubliclyAccessible(key, class) => {

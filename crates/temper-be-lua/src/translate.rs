@@ -490,6 +490,9 @@ impl<'a> Translator<'a> {
     /// A type as LuaCATS writes it, for LuaLS's checker.
     pub(crate) fn ty(&self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "nil",
                 Scalar::Boolean => "boolean",
@@ -1197,7 +1200,7 @@ impl<'a> Translator<'a> {
                     out.push(decl);
                 }
             }
-            TypeData::Nullable(t) => self.function_type_params(t, out),
+            TypeData::Nullable(t) | TypeData::Never(t) => self.function_type_params(t, out),
             TypeData::Function { .. } => {
                 if let Some(sig) = p.types.signature(ty) {
                     for &t in sig.params.iter().chain([&sig.result]) {

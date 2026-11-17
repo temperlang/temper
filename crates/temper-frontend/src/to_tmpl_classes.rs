@@ -719,7 +719,13 @@ impl Translator<'_> {
     /// it's a subtype, or downcast if it's a supertype that typing found
     /// narrowed.
     pub(super) fn fit(&mut self, value: NodeId, want: TypeId) -> NodeId {
-        let have = self.b.program().nodes.ty(value);
+        // A `Never<T>`, as a call of a function that never returns, fits
+        // as the `T` it stands for.
+        let as_is = self.b.program().nodes.ty(value);
+        let have = self.b.program().types.fallback(as_is);
+        if as_is == want {
+            return value;
+        }
         if have.is_none() && !want.is_none() {
             // `null`, `bubble()`, or `panic()`, typed by its place.
             self.b.retype(value, want);
@@ -741,7 +747,8 @@ impl Translator<'_> {
             let types = &self.b.program().types;
             let inner = types.non_null(want);
             let value = self.fit(value, inner);
-            if self.b.program().nodes.ty(value) != inner {
+            let types = &self.b.program().types;
+            if types.fallback(self.b.program().nodes.ty(value)) != inner {
                 return value;
             }
             let made = self.b.as_nullable(value);

@@ -390,6 +390,9 @@ impl<'a> Translator<'a> {
     /// A type as Rust writes it.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "()",
                 Scalar::Boolean => "bool",
@@ -1258,6 +1261,12 @@ impl<'a> Translator<'a> {
                         continue;
                     }
                     self.stmt(stmts[i], out)?;
+                    // What follows a `return` or `panic!()`, as a
+                    // connected call may be written, can't run, and rustc
+                    // warns of it (`unreachable_code`).
+                    if crate::tree::diverges(out) {
+                        break;
+                    }
                     i += 1;
                 }
                 Ok(())

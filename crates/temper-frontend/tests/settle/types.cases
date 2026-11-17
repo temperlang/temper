@@ -3263,3 +3263,219 @@ error 244..247: Expected subtype of Act, but got Act?
 log hi 1
 log hi 1
 Failed: Null is not a function
+
+=== Never<T> stands for its T
+// Valid: a Never<T> where its T fits, as a function, a generic one, a
+// method, a nullable Never<String?>?, which admits null, and std's bail
+// pattern, a Never<Void> that bubbles, in a statement. Errors: a
+// Never<T> isn't a subtype of every type, and a Never<Void> value is
+// shown as the Void it stands for, as Kotlin Temper shows it; nor is a
+// value that completes a Never<T>.
+let stopInt(): Never<Int> { panic() }
+let stop(): Never<Void> { panic() }
+let fail<T>(x: T): Never<T> { panic() }
+let noName(): Never<String?>? { null }
+let bail(): Never<Void> throws Bubble { bubble() }
+let stillStops(): Never<Void> { stop() }
+let wider(): Never<AnyValue> { stopInt() }
+class C {
+  public get(b: Boolean): Int { if (b) { 1 } else { stopC() } }
+  private stopC(): Never<Int> { panic() }
+}
+let f(b: Boolean): Int { if (b) { 1 } else { stopInt() } }
+let k(b: Boolean): String { if (b) { "k" } else { fail("z") } }
+let m(b: Boolean): String? { if (b) { "m" } else { noName() } }
+let n(b: Boolean): Int throws Bubble { if (b) { bail() } 2 }
+let l(b: Boolean): List<Int> { if (b) { [1] } else { [stopInt(), 2] } }
+let g(b: Boolean): String { if (b) { "x" } else { stopInt() } }
+let h(b: Boolean): String { if (b) { "x" } else { stop() } }
+let i(): String? { stopInt() }
+let j(): Void { let x = stop(); }
+let completes(): Never<Int> { 5 }
+let otherNever(): Never<Int> { fail("s") }
+console.log("${f(true)} ${k(true)} ${m(false) ?? "null"} ${new C().get(true)} ${n(true) orelse -1} ${l(true)[0]}");
+--- settled
+(Block
+  (Let ^stopInt:0 (Fn (Call <> Never Int) (Block (Call panic))))
+  (Let ^stop:1 (Fn (Call <> Never Void) (Block (Call panic))))
+  (Let
+    ^fail:2
+    (Fn
+      (TypeParam ^T:19)
+      (Let ^x:20 T:19)
+      (Call <> Never T:19)
+      (Block (Call panic))))
+  (Let ^noName:3 (Fn (Call ? (Call <> Never (Call ? String))) (Block null)))
+  (Let ^bail:4 (Fn (Call throws (Call <> Never Void) Bubble) (Block (Fail))))
+  (Let ^stillStops:5 (Fn (Call <> Never Void) (Block (Call stop:1))))
+  (Let ^wider:6 (Fn (Call <> Never AnyValue) (Block (Call stopInt:0))))
+  (Class
+    ^C:7
+    (Method
+      ^get:22
+      (Fn
+        (Let ^b:24 Boolean)
+        Int
+        (Block (If b:24 (Block 1) (Block (Call stopC:23))))))
+    (Method private ^stopC:23 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Let
+    ^f:8
+    (Fn
+      (Let ^b:25 Boolean)
+      Int
+      (Block (If b:25 (Block 1) (Block (Call stopInt:0))))))
+  (Let
+    ^k:9
+    (Fn
+      (Let ^b:26 Boolean)
+      String
+      (Block (If b:26 (Block "k") (Block (Call fail:2 "z"))))))
+  (Let
+    ^m:10
+    (Fn
+      (Let ^b:27 Boolean)
+      (Call ? String)
+      (Block (If b:27 (Block "m") (Block (Call noName:3))))))
+  (Let
+    ^n:11
+    (Fn
+      (Let ^b:28 Boolean)
+      (Call throws Int Bubble)
+      (Block (If b:28 (Block (Call bail:4)) (Block)) 2)))
+  (Let
+    ^l:12
+    (Fn
+      (Let ^b:29 Boolean)
+      (Call <> List Int)
+      (Block
+        (If b:29 (Block (Call list 1)) (Block (Call list (Call stopInt:0) 2))))))
+  (Let
+    ^g:13
+    (Fn
+      (Let ^b:30 Boolean)
+      String
+      (Block (If b:30 (Block "x") (Block (Call stopInt:0))))))
+  (Let
+    ^h:14
+    (Fn
+      (Let ^b:31 Boolean)
+      String
+      (Block (If b:31 (Block "x") (Block (Call stop:1))))))
+  (Let ^i:15 (Fn (Call ? String) (Block (Call stopInt:0))))
+  (Let ^j:16 (Fn Void (Block (Let ^x:32 (Call stop:1)) #void)))
+  (Let ^completes:17 (Fn (Call <> Never Int) (Block 5)))
+  (Let ^otherNever:18 (Fn (Call <> Never Int) (Block (Call fail:2 "s"))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call f:8 true)
+      " "
+      (Call k:9 true)
+      " "
+      (Block
+        (Let ^subject#33 (Call m:10 false))
+        (If (Call == subject#33 #null) "null" subject#33))
+      " "
+      (Call (Call . (Call new C:7) \get) true)
+      " "
+      (Orelse (Call n:11 true) (Call - 1))
+      " "
+      (Call [] (Call l:12 true) 0)))
+  #void)
+error 1164..1173: Cannot assign to String from Never<Int32>
+error 1228..1234: Cannot assign to String from Void
+error 1258..1267: Cannot assign to String? from Never<Int32>
+error 1294..1300: Void expressions cannot be used as values
+error 1334..1335: Cannot assign to Never<Int32> from Int32
+error 1374..1377: Actual arguments do not match signature: <T extends AnyValue>(T) -> Never<T> expected [Int32], but got [String]
+log 1 k null 1 -1 1
+
+=== Never<T> results in overrides, and Never alone
+// As Kotlin Temper's, an override declares the result it overrides
+// exactly, Never<T> for Never<T>, also as a generic supertype sees it,
+// but neither a Never<Int> for an Int nor the reverse, whose signatures
+// would differ on backends without covariant results. Never alone,
+// which Kotlin rejects where used, is an error, its type unknown.
+interface I {
+  value(): Int;
+  stop(): Never<Int>;
+}
+class Fits extends I {
+  public value(): Int { 1 }
+  public stop(): Never<Int> { panic() }
+}
+class Stops extends I {
+  public value(): Never<Int> { panic() }
+  public stop(): Never<Int> { panic() }
+}
+class Returns extends I {
+  public value(): Int { 1 }
+  public stop(): Int { 2 }
+}
+interface G<T> {
+  fail(): Never<T>;
+}
+class GInt extends G<Int> {
+  public fail(): Never<Int> { panic() }
+}
+class GAny<T> extends G<T> {
+  public fail(): Never<T> { panic() }
+}
+class GPlain<T> extends G<T> {
+  public fail(): T { panic() }
+}
+let bare(): Never { panic() }
+let bareParam(x: Never): Int { 1 }
+console.log("${new Fits().value()}");
+--- settled
+(Block
+  (Interface
+    ^I:0
+    (Method ^value:11 (Signature Int))
+    (Method ^stop:12 (Signature (Call <> Never Int))))
+  (Class
+    ^Fits:1
+    I:0
+    (Method ^value:14 (Fn Int (Block 1)))
+    (Method ^stop:15 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^Stops:2
+    I:0
+    (Method ^value:17 (Fn (Call <> Never Int) (Block (Call panic))))
+    (Method ^stop:18 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^Returns:3
+    I:0
+    (Method ^value:20 (Fn Int (Block 1)))
+    (Method ^stop:21 (Fn Int (Block 2))))
+  (Interface
+    ^G:4
+    (TypeParam ^T:22)
+    (Method ^fail:24 (Signature (Call <> Never T:22))))
+  (Class
+    ^GInt:5
+    (Call <> G:4 Int)
+    (Method ^fail:26 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^GAny:6
+    (TypeParam ^T:27)
+    (Call <> G:4 T:27)
+    (Method ^fail:29 (Fn (Call <> Never T:27) (Block (Call panic)))))
+  (Class
+    ^GPlain:7
+    (TypeParam ^T:30)
+    (Call <> G:4 T:30)
+    (Method ^fail:32 (Fn T:30 (Block (Call panic)))))
+  (Let ^bare:8 (Fn Never (Block (Call panic))))
+  (Let ^bareParam:9 (Fn (Let ^x:33 Never) Int (Block 1)))
+  (Call
+    (Call . console \log)
+    (Call cat (Call (Call . (Call new Fits:1) \value))))
+  #void)
+error 528..559: Type Stops has method value with signature value(): Never<Int32>, but it should be value(): Int32 to correctly override from I
+error 665..682: Type Returns has method stop with signature stop(): Int32, but it should be stop(): Never<Int32> to correctly override from I
+error 903..924: Type GPlain has method fail with signature fail(): T, but it should be fail(): Never<T> to correctly override from G
+error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
+error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
+log 1

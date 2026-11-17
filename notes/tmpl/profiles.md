@@ -64,6 +64,7 @@ kept; otherwise lowered):
 | Assigned captures | native (`nonlocal`) | no: cells | C#, JS, Lua native; C++, Java cells |
 | Properties | native (`@property`) | no: methods | C#, JS native; C++, Java, Lua methods |
 | `Void` as a value | no | native (`()`) | JS, Lua native |
+| Bottom type, `Never<T>` as a result (`NEVER`, built 2026-11-17; `nevers::lower`, [types.md](types.md#never)) | native (`NoReturn`) | no: `T` | JS native (`never`); others `T` |
 | Left-to-right arguments | native | native | all but C++ |
 | Null-safe `EqNullable` | native | native (`Option`) | JS for builtin types; others expanded |
 

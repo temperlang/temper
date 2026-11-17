@@ -185,3 +185,34 @@ as a `Class<?>` in Java, `typeof(void)` as a `Type` in C#,
 C++. JavaScript and Lua have no value for a builtin type, so they write
 its `typeof` or `type()` name, as `"undefined"` and `"nil"`, typed
 `string` (kotlin-differences.md, "Types as values").
+
+## Never
+
+As built (2026-11-17, Proposed): **`Never(T)`** (text `Never<Int32>`),
+interned once per `T` (`TypeTable::never`), which is neither nullable nor
+a `Never`: the result of a function or method that never returns
+normally, as the frontend's `Never<T>` declares it (core's docs), and the
+type of each call of one. It's only a result or a value's type, never a
+local's, parameter's, or field's (T5), and `Never<T>?` is `T?`
+(`TypeTable::nullable`), since only null comes from it.
+
+- **It fits where `T` does** (T3; `TypeTable::fallback`), as a call's
+  value returned from a function whose result is `T`, and converts as
+  `T` (`AsNullable`, `Upcast`).
+- **Control doesn't go on past it** (F1, R5), as after `panic()`: a
+  local assigned on every other path is assigned after an `if` whose
+  branch calls one, and a function's body may end with one.
+- **Overrides match exactly,** as the frontend has them: a method's
+  `Never<T>` overrides only a `Never<T>`, so every target's override has
+  the signature its language requires.
+
+**Lowering** (`nevers::lower`, by the profile's `NEVER`): a target with
+a bottom type keeps `Never<T>` as the result of a function or method
+that overrides nothing and that nothing overrides, and that isn't read
+as a value (`nevers::may_keep`), and writes it as its own: Python's
+`NoReturn`, JS's `never` in JSDoc. Everywhere else, and everywhere for
+the other targets, it becomes `T`, and a call that ends its block as a
+statement gets a `panic()` after it, so the target's compiler sees that
+control stops there (Java's definite assignment, Rust's, a function's
+end). A target whose bottom type fits fewer places picks its own subset
+of those (`nevers::lower_where`).

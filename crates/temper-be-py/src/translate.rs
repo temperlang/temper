@@ -467,6 +467,8 @@ impl<'a> Translator<'a> {
                 }
             }
             TypeData::Function { .. } => self.callable(ty)?,
+            // A result that never returns, kept by `temper_tmpl::nevers`.
+            TypeData::Never(_) => (self.import_type("typing", "NoReturn"), false),
             TypeData::Nullable(inner) => {
                 let (inner, quote) = self.ann_raw(inner)?;
                 (format!("{inner} | None"), quote)
@@ -559,6 +561,17 @@ impl<'a> Translator<'a> {
                         [b] => Some(self.ann_raw(*b)?.0),
                         _ => return not_yet("a type parameter with more than one bound"),
                     };
+                    // A function's type parameter that its signature names
+                    // only as one parameter's type, as `x: T` with a
+                    // `NoReturn` result, binds nothing, so it's its bound,
+                    // as pyright's strict `reportInvalidTypeVarUse` wants.
+                    let own = p.decls.get(decl).kind != DeclKind::Class
+                        && p.decls.get(decl).kind != DeclKind::Interface;
+                    if own && only_as_a_parameter(p, decl, p.decls.get(tp).ty) {
+                        let plain = bound.clone().unwrap_or_else(|| "object".into());
+                        self.type_vars.insert(tp, plain);
+                        continue;
+                    }
                     let shared = made
                         .iter()
                         .find(|(n, s, b)| *s == source && *b == bound && !outer.contains(n));
@@ -2673,4 +2686,36 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type Promise" | "core.type PromiseBuilder" => ("temper_core", "TemperFuture"),
         _ => return None,
     })
+}
+
+/// Whether a function's signature names the type parameter whose type
+/// is `param` only once, as one parameter's whole type, `T` or `T?`.
+fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
+    fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
+        if ty == param {
+            return 1;
+        }
+        if !p.types.contains(ty) {
+            return 0;
+        }
+        match p.types.get(ty) {
+            TypeData::Nullable(t) => count(p, t, param),
+            // `NoReturn`, which names none.
+            TypeData::Never(_) => 0,
+            TypeData::Nominal { args, .. } => {
+                p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
+            }
+            TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
+                (sig.params.iter().chain([&sig.result]))
+                    .map(|&t| count(p, t, param))
+                    .sum()
+            }),
+            TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
+        }
+    }
+    let Some(sig) = p.signature(decl) else {
+        return false;
+    };
+    let bare = (sig.params.iter()).any(|&t| p.types.non_null(t) == param);
+    bare && count(p, p.decls.get(decl).ty, param) == 1
 }

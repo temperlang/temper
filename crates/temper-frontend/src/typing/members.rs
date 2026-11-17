@@ -20,7 +20,7 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeKind, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, ClassInfo, NEVER, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
+    ANY_VALUE, ClassInfo, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
 };
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
@@ -1273,8 +1273,7 @@ fn core_signature(
 
 /// A type in a builtin type's member's signature, with `args` put in for
 /// the type's own type parameters and `own` for a method's, unknown where
-/// `own` has none. A generic type that typing doesn't take arguments for,
-/// as `Never<T>`, is unknown.
+/// `own` has none.
 fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -> TypeId {
     match t {
         CoreType::Unknown => UNKNOWN,
@@ -1283,11 +1282,8 @@ fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -
         CoreType::Own(i) => own.get(*i as usize).copied().unwrap_or(UNKNOWN),
         CoreType::Applied(base, xs) => {
             let base = types.builtin(*base);
-            if base == NEVER || base == ANY_VALUE || types.is_final(base) {
-                return UNKNOWN;
-            }
             let args = xs.iter().map(|x| core_type(types, x, args, own)).collect();
-            types.intern(TypeData::Applied { base, args })
+            types.apply_builtin(base, args)
         }
         CoreType::Nullable(inner) => {
             let inner = core_type(types, inner, args, own);

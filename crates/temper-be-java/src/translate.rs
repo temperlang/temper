@@ -244,6 +244,9 @@ impl<'a> Translator<'a> {
     /// A type as Java writes it, imported if it needs to be.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "boolean",

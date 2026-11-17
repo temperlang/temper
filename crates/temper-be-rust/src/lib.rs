@@ -260,6 +260,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered =
         temper_tmpl::coroutines::lower(p, variant.profile.coroutines).map_err(NotYet::new)?;

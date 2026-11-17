@@ -476,6 +476,98 @@ function Sql.get.accumulated(this)
   return temper.listed_join(this.parts, "", function(p) return p end)
 end
 
+---@class classes.Limited
+---@field next fun(self: classes.Limited, n: integer): integer
+---@field tooFar fun(self: classes.Limited): integer
+
+---@class classes.Limited.type: temper.Type
+local Limited = temper.type("classes.Limited")
+
+---@class classes.Stepper: classes.Limited
+---@field limit integer
+---@field next fun(self: classes.Stepper, n: integer): integer
+---@field tooFar fun(self: classes.Stepper): integer
+
+---@class classes.Stepper.type: temper.Type
+---@operator call: classes.Stepper
+local Stepper = temper.type("classes.Stepper", Limited)
+
+---@param this classes.Stepper
+---@param limit integer
+function Stepper.constructor(this, limit)
+  this.limit = limit
+end
+
+---@param this classes.Stepper
+---@param n integer
+---@return integer
+function Stepper.methods.next(this, n)
+  if n < this.limit then
+    return temper.int32_add(n, 1)
+  else
+    return this:tooFar()
+  end
+end
+
+---@param this classes.Stepper
+---@return integer
+function Stepper.methods.tooFar(this)
+  error("panic")
+end
+
+---@class classes.Failing
+---@field fail fun(self: classes.Failing): any
+
+---@class classes.Failing.type: temper.Type
+local Failing = temper.type("classes.Failing")
+
+---@class classes.IntFailing: classes.Failing
+---@field fail fun(self: classes.IntFailing): integer
+
+---@class classes.IntFailing.type: temper.Type
+---@operator call: classes.IntFailing
+local IntFailing = temper.type("classes.IntFailing", Failing)
+
+---@param this classes.IntFailing
+function IntFailing.constructor(this)
+end
+
+---@param this classes.IntFailing
+---@return integer
+function IntFailing.methods.fail(this)
+  error("panic")
+end
+
+---@class classes.AnyFailing: classes.Failing
+---@field fail fun(self: classes.AnyFailing): any
+
+---@class classes.AnyFailing.type: temper.Type
+---@operator call: classes.AnyFailing
+local AnyFailing = temper.type("classes.AnyFailing", Failing)
+
+---@param this classes.AnyFailing
+function AnyFailing.constructor(this)
+end
+
+---@param this classes.AnyFailing
+---@return any
+function AnyFailing.methods.fail(this)
+  error("panic")
+end
+
+---@generic T
+---@param ok boolean
+---@param x T
+---@param f classes.Failing
+---@return T
+local function orFail(ok, x, f)
+  if ok then
+    return x
+  else
+    return f:fail()
+  end
+end
+
 Rect.unit = Rect(1, 1)
 local r = Rect(2, 3)
 print(r:toString())
@@ -570,5 +662,14 @@ accumulator:appendString("x")
 accumulator:appendSafe(" FROM ")
 accumulator:appendRect(Rect(2, 2))
 print(accumulator.accumulated)
+local stepper = Stepper(3)
+print("next " .. stepper:next(1))
+print(orFail(true, 4, IntFailing()) .. " " .. orFail(true, "s", AnyFailing()))
 
-return { Shape = Shape, Rect = Rect, Square = Square }
+return {
+  Shape = Shape,
+  Rect = Rect,
+  Square = Square,
+  Limited = Limited,
+  Stepper = Stepper,
+}

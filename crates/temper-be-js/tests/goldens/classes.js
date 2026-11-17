@@ -2,6 +2,7 @@ import {
   cmpInt32,
   listedGet,
   listedJoin,
+  panic,
   requireInstanceOf,
   type,
 } from "@temperlang/core";
@@ -83,6 +84,21 @@ function typeNamed(n) {
  */
 function same(t) {
   return t;
+}
+
+/**
+ * @template T
+ * @param {boolean} ok
+ * @param {T} x
+ * @param {Failing<T>} f
+ * @returns {T}
+ */
+function orFail(ok, x, f) {
+  if (ok) {
+    return x;
+  } else {
+    return f.fail();
+  }
 }
 
 export class Shape extends type() {
@@ -567,6 +583,67 @@ class Sql extends type() {
   }
 }
 
+export class Limited extends type() {
+  /** @type {(n: number) => number} */
+  next = /** @type {any} */ (undefined);
+  /** @type {() => number} */
+  tooFar = /** @type {any} */ (undefined);
+}
+
+export class Stepper extends type(Limited) {
+  /** @type {number} */
+  #limit;
+
+  /** @param {number} limit */
+  constructor(limit) {
+    super();
+    this.#limit = limit;
+  }
+
+  /** @returns {number} */
+  get limit() {
+    return this.#limit;
+  }
+
+  /**
+   * @param {number} n
+   * @returns {number}
+   */
+  next(n) {
+    if (n < this.#limit) {
+      return (n + 1) | 0;
+    } else {
+      return this.tooFar();
+    }
+  }
+
+  /** @returns {number} */
+  tooFar() {
+    panic();
+  }
+}
+
+/** @template T */
+class Failing extends type() {
+  /** @type {() => T} */
+  fail = /** @type {any} */ (undefined);
+}
+
+class IntFailing extends type(Failing) {
+  /** @returns {number} */
+  fail() {
+    panic();
+  }
+}
+
+/** @template T */
+class AnyFailing extends type(Failing) {
+  /** @returns {T} */
+  fail() {
+    panic();
+  }
+}
+
 Rect$unit = new Rect(1, 1);
 const r = new Rect(2, 3);
 console.log(r.toString());
@@ -701,3 +778,6 @@ let t$6;
   t$6 = accumulator.accumulated;
 }
 console.log(t$6);
+const stepper = new Stepper(3);
+console.log(`next ${stepper.next(1)}`);
+console.log(`${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing())}`);

@@ -641,6 +641,17 @@ impl Reader {
                     self.next();
                     return Ok(ty);
                 }
+                if text == "Never" && *self.peek_at(1) == Tok::Punct("<") {
+                    self.next();
+                    let [of] = self.type_args()?[..] else {
+                        return self.error("Never takes one type argument");
+                    };
+                    let types = &self.b.program().types;
+                    if types.is_nullable(of) || types.is_never(of) {
+                        return self.error("Never's type argument is neither nullable nor a Never");
+                    }
+                    return Ok(self.b.never(of));
+                }
             }
             Tok::Decl { .. } => {
                 let decl = self.reference()?;

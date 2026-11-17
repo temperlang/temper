@@ -22,7 +22,7 @@ from typing import (
     cast as _cast,
 )
 
-__all__ = ('Shape', 'Rect', 'Square')
+__all__ = ('Shape', 'Rect', 'Square', 'Limited', 'Stepper')
 
 _T = _TypeVar('_T')
 
@@ -374,6 +374,68 @@ class _Sql:
         return _list_join(self._parts, '', lambda p: p)
 
 
+class Limited(metaclass=_ABCMeta):
+    __slots__ = ()
+
+    @_abstractmethod
+    def next(self, n: int, /) -> int:
+        ...
+
+    @_abstractmethod
+    def too_far(self, /) -> int:
+        ...
+
+
+class Stepper(Limited):
+    __slots__ = ('_limit',)
+    _limit: int
+
+    def __init__(self, /, limit: int) -> None:
+        self._limit = limit
+
+    @property
+    def limit(self, /) -> int:
+        return self._limit
+
+    def next(self, n: int, /) -> int:
+        if n < self._limit:
+            return _int_add(n, 1)
+        else:
+            return self.too_far()
+
+    def too_far(self, /) -> int:
+        raise BaseException('panic')
+
+
+class _Failing(_Generic[_T], metaclass=_ABCMeta):
+    __slots__ = ()
+
+    @_abstractmethod
+    def fail(self, /) -> _T:
+        ...
+
+
+class _IntFailing(_Failing[int]):
+    __slots__ = ()
+
+    def fail(self, /) -> int:
+        raise BaseException('panic')
+
+
+class _AnyFailing(_Failing[_T], _Generic[_T]):
+    __slots__ = ()
+
+    def fail(self, /) -> _T:
+        raise BaseException('panic')
+
+
+def _or_fail(ok: bool, x: _T, f: _Failing[_T], /) -> _T:
+    if ok:
+        return x
+    else:
+        return f.fail()
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 Rect.unit = Rect(1, 1)
 _r: Rect = Rect(2, 3)
@@ -460,3 +522,6 @@ _accumulator.append_string('x')
 _accumulator.append_safe(' FROM ')
 _accumulator.append_rect(Rect(2, 2))
 _console.log(_accumulator.accumulated)
+_stepper: Limited = Stepper(3)
+_console.log(f'next {_stepper.next(1)}')
+_console.log(f"{_or_fail(True, 4, _IntFailing())} {_or_fail(True, 's', _AnyFailing())}")

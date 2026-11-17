@@ -228,6 +228,11 @@ impl Builder {
         self.p.types.nullable(ty)
     }
 
+    /// `Never<T>` ([`crate::TypeTable::never`]).
+    pub fn never(&mut self, ty: TypeId) -> TypeId {
+        self.p.types.never(ty)
+    }
+
     /// A library this one uses; external declarations are owned by it.
     pub fn uses(&mut self, library: &str, version: &str) -> DeclId {
         let decl = self.declare(DeclKind::Library, library, DeclId::NONE, TypeId::NONE);
@@ -855,6 +860,16 @@ impl Builder {
         ) {
             self.p.nodes.set_ty(node, ty);
         }
+    }
+
+    /// Gives a node a new type and payload slots, for a pass that lowers
+    /// the types in a program ([`crate::nevers`]), and leaves its kind and
+    /// children.
+    pub(crate) fn retype_lowered(&mut self, node: NodeId, ty: TypeId, slots: (u32, u32)) {
+        let n = &self.p.nodes;
+        let (kind, flags) = (n.kind(node), n.flags(node));
+        let kids = n.kids(node).to_vec();
+        self.p.nodes.replace(node, kind, ty, slots, flags, &kids);
     }
 
     /// `null`, typed as the nullable type its place wants.

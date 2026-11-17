@@ -171,6 +171,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))
         .then(|| temper_tmpl::switches::to_if_chains(p))

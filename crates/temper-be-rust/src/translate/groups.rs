@@ -269,6 +269,7 @@ impl Translator<'_> {
     fn mentions_type_param(&self, ty: TypeId) -> bool {
         let p = self.p;
         match p.types.get(ty) {
+            TypeData::Never(t) => self.mentions_type_param(t),
             TypeData::TypeParam { .. } => true,
             TypeData::Nullable(t) => self.mentions_type_param(t),
             TypeData::Nominal { args, .. } => {

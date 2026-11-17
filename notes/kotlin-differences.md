@@ -758,6 +758,44 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   use them"; settle/types.cases, "instance extensions' errors, as
   Kotlin Temper reports them"; programs/functions and programs/modules,
   on every backend.
+- **`Never<T>`** (2026-11-17), as core declares it, is a subtype only
+  of itself, of its `T` and what `T` is, and of `Never<U>` for such a
+  `U`. Both check it so: `if (b) { "x" } else { stopInt() }` for
+  `stopInt(): Never<Int>` is "Cannot assign to String from Never<Int32>"
+  where a `String` is wanted, and a `Never<Void>` value is shown as
+  `Void`, as at the end of an `Int` function's body, in `p() orelse
+  stop()`, `s ?? stop()`, or a `when` branch. Both require an override to
+  declare the result it overrides exactly, so neither a `Never<Int>`
+  method for an `Int` one nor the reverse (Kotlin shows the `Never<Int>`
+  as "Never<Void>"), and both report a `Never<Void>` function whose body
+  completes ("Cannot assign to Never<Void> from Void"; Kotlin's says
+  "Never"). A call of such a function ends its path, as `panic()`'s
+  does: code after it is unreachable, a local assigned on the other
+  paths is assigned after it, and a null check that leaves through one
+  narrows; Kotlin checks no definite assignment in these cases, and
+  narrows after none of them, nor after `panic()` or `return`. Kotlin's
+  backends translate a `Never<T>` result to a bottom type or `void`:
+  C++, C#, and Java `void`, Python `NoReturn`, JS `never`, and Rust `!`,
+  where it crashes ("Cannot translate Never"); so C++'s `return
+  stopInt()` doesn't compile, and Kotlin's other backends run such code
+  only where it folds the call away. Tempest's tmpl keeps `Never<T>`
+  ([tmpl/types.md](tmpl/types.md#never)): Python (`NoReturn`) and JS
+  (`never`) keep it as the result of a function or method that overrides
+  nothing and that nothing overrides, and every other place and backend
+  has `T`, core's fallback, with a `panic()` after a call that ends its
+  block, so each compiler sees that control stops there. Kotlin also
+  accepts a `Never<String>` returned where a `Never<Int>` is declared,
+  which tempest reports, and rejects `Never` alone only where it's used
+  ("No callee matches inputs [] among [() -> Never<Void>, …]" at a
+  `panic()` in its body, "Cannot translate Never"); tempest reports it
+  where it's written, "Never needs the type it stands for, as Never<Int>
+  or Never<Void>", its type then unknown.
+  Test: settle/types.cases, "Never<T> stands for its T" and "Never<T>
+  results in overrides, and Never alone"; settle/flow.cases, "calls that
+  never return end their paths, as panic() does"; temper-tmpl's
+  tests/nevers.rs; the funtest control-flow/bubble ("Helpers that never
+  return") and programs/classes ("Methods that never return"), on every
+  backend.
 
 ### Interpreter, core and std
 

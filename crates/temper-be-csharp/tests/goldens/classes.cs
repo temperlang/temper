@@ -87,6 +87,18 @@ public static class ClassesGlobal
         return t;
     }
 
+    internal static T OrFail<T>(bool ok, T x, IFailing<T> f)
+    {
+        if (ok)
+        {
+            return x;
+        }
+        else
+        {
+            return f.Fail();
+        }
+    }
+
     static ClassesGlobal()
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("Classes");
@@ -189,5 +201,8 @@ public static class ClassesGlobal
             accumulator.AppendRect(new Rect(2, 2));
         }
         console.Log(accumulator.Accumulated);
+        ILimited stepper = new Stepper(3);
+        console.Log("next " + stepper.Next(1).ToString(CultureInfo.InvariantCulture));
+        console.Log(OrFail(true, 4, new IntFailing()).ToString(CultureInfo.InvariantCulture) + " " + OrFail(true, "s", new AnyFailing<string>()));
     }
 }

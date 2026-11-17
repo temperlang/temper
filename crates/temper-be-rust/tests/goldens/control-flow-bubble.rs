@@ -16,6 +16,27 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             println!("{}", via_or_else(2));
             println!("{}", via_or_else(12));
+            println!(
+                "{} {} {}",
+                pick(true),
+                {
+                    let subject = named(true);
+                    subject.clone().unwrap_or_else(|| Arc::new("-".to_string()))
+                },
+                {
+                    let subject2 = named(false);
+                    subject2
+                        .clone()
+                        .unwrap_or_else(|| Arc::new("null".to_string()))
+                }
+            );
+            println!(
+                "{} {} {}",
+                half(4).unwrap_or(-1),
+                half(3).unwrap_or(-1),
+                half(-2).unwrap_or(-1)
+            );
+            println!("{} {}", chosen(true), shout(Some("hey")));
             branch(0, 2);
             branch(2, 0);
             Ok(())
@@ -125,6 +146,76 @@ pub(crate) fn via_or_else(n: i32) -> Arc<String> {
         sum_skipping(n).unwrap_or(-1),
         ten_times(n).unwrap_or(-1)
     ))
+}
+
+pub(crate) fn unreachable_int() -> i32 {
+    panic!();
+}
+
+pub(crate) fn fail_as<T: Clone + Send + Sync + 'static>(fallback: T) -> temper_core::Result<T> {
+    Err(temper_core::Error::new())
+}
+
+pub(crate) fn bail() -> temper_core::Result<()> {
+    Err(temper_core::Error::new())
+}
+
+pub(crate) fn no_name() -> Option<Arc<String>> {
+    None
+}
+
+pub(crate) fn stop() {
+    panic!();
+}
+
+pub(crate) fn half(n: i32) -> temper_core::Result<i32> {
+    if n.wrapping_rem(2) != 0 {
+        bail()?;
+        panic!();
+    }
+    if n < 0 {
+        fail_as(n)
+    } else {
+        Ok(n.wrapping_div(2))
+    }
+}
+
+pub(crate) fn pick(b: bool) -> i32 {
+    if b {
+        1
+    } else {
+        unreachable_int()
+    }
+}
+
+pub(crate) fn named(b: bool) -> Option<Arc<String>> {
+    if b {
+        Some(Arc::new("named".to_string()))
+    } else {
+        no_name()
+    }
+}
+
+pub(crate) fn chosen(b: bool) -> i32 {
+    let x: i32;
+    if b {
+        x = 3;
+        println!("chosen");
+    } else {
+        unreachable_int();
+        panic!();
+    }
+    x
+}
+
+pub(crate) fn shout(s: Option<impl ToArcString>) -> Arc<String> {
+    let s = s.map(|x| x.to_arc_string());
+    if s.is_none() {
+        stop();
+        panic!();
+    }
+    let t = s.clone().unwrap();
+    Arc::new(format!("{t}!"))
 }
 
 pub(crate) fn branch(a: i32, b: i32) {
