@@ -1911,6 +1911,24 @@ copied Kotlin's:
   Test: temper-be-py/tests/programs/py-builtin-params.temper.md, its
   golden, and `runs`' host interop (`Option(help=…)`), checked by mypy
   and pyright.
+- **Python names bound more than once** (2026-11-17): Kotlin's Python
+  numbers every local and annotates each, so no name is bound twice.
+  Tempest's locals share a name where Python's one scope per function
+  allows (nullables above), and only some are annotated, so a name a
+  function binds more than once (shared, or a `var` assigned again) is
+  annotated only where first bound, with its widest type, and there
+  only where checkers may infer the value as narrower: nullable, an
+  interface's, `AnyValue`'s, a generic or function type's (a tuple for
+  a `Sequence`, a list literal's length). A first binding narrower than
+  that type, or a walrus (`??`), is declared on its own line before it;
+  a parameter shares no name with a nullable local of its type. A cast's
+  local is annotated also under `orelse`, and a builder made from a
+  list literal is annotated, which pyright would take for a list of
+  literals. Otherwise mypy rejected a later annotation (`no-redef`) or
+  a wider value (a `Sequence` after a tuple), as in Argmas and
+  Wherewith.
+  Test: temper-be-py/tests/programs/py-builtin-params.temper.md, its
+  golden, checked by mypy and pyright.
 - **Lua's `goto`:** Kotlin's list of Lua keywords leaves out `goto`
   (reserved since Lua 5.2), so a Temper name `goto` gives Lua that
   doesn't parse; tempest reserves it. And Kotlin says it supports Lua

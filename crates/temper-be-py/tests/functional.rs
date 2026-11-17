@@ -119,7 +119,8 @@ fn cases() -> Vec<Case> {
 
 /// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
 /// parameters named like Python's builtins, which keep their names
-/// (`host_interop` passes one by name).
+/// (`host_interop` passes one by name), and names a function binds more
+/// than once, annotated once.
 const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
 
 /// The lines of a program's log blocks, in order.

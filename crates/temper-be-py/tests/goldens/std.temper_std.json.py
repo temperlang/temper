@@ -598,6 +598,7 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
             if _mapped_has(m, key):
                 if multis is None:  # pyright: ignore[reportUnnecessaryComparison]
                     multis = {}
+                mb: dict[str, _MutableSequence[JsonSyntaxTree]]
                 try:
                     mb = _cast_none(multis)
                 except Exception:
@@ -617,7 +618,7 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
                 t_1.append(value)
             else:
                 _map_builder_set(m, key, (value,))
-        multis: dict[str, _MutableSequence[JsonSyntaxTree]] | None = multis
+        multis = multis
         if multis is not None:
             def fn(k: str, vs: _MutableSequence[JsonSyntaxTree], /) -> None:
                 _map_builder_set(m, k, tuple(vs))

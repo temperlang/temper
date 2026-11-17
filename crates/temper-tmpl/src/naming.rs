@@ -84,7 +84,9 @@ pub struct NamingRules {
     pub block_scoped: bool,
     /// Whether two of a function's locals that share a name must have
     /// the same type, with or without null, as for Python's checkers,
-    /// which give a name one declared type in a function; and a local
+    /// which give a name one declared type in a function (though not a
+    /// parameter and a nullable local of its type, as the parameter's
+    /// annotation is the name's type); and a local
     /// declared inside another's initializer can't share its name, as a
     /// walrus would assign it before the other's annotation. Only for
     /// function-scoped targets.
@@ -1211,9 +1213,13 @@ fn name_function(
                     } else {
                         let (s, e) = ranges.get(other).copied().unwrap_or((0, u32::MAX));
                         // `T` and `T?` may share, as a parameter's
-                        // default's local and the parameter do.
+                        // default's local and the parameter do; but not a
+                        // parameter and a wider local, as its annotation
+                        // gives the name its type.
                         let (a, b) = (p.decls.get(d).ty, p.decls.get(*other).ty);
-                        let differ = p.types.non_null(a) != p.types.non_null(b);
+                        let wider =
+                            param(*other) && p.types.is_nullable(a) && !p.types.is_nullable(b);
+                        let differ = p.types.non_null(a) != p.types.non_null(b) || wider;
                         // Nor may a local declared inside another's
                         // initializer, which Python's walrus would
                         // assign before the other's annotation.

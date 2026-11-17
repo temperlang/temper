@@ -63,7 +63,7 @@ pub struct Translator<'a> {
     pre: Vec<Stmt>,
     /// Locals whose `let` a `??` became, to assign where first read, as
     /// `(subject := f())`.
-    walrus: BTreeMap<DeclId, Expr>,
+    walrus: BTreeMap<DeclId, (Expr, TypeId)>,
     /// Temporaries made so far, for their numbers.
     temps: usize,
     /// How many functions deep the translation is: 0 at module level.
@@ -90,11 +90,40 @@ pub struct Translator<'a> {
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
-    /// Locals annotated so far in the function being translated, by name,
-    /// with their annotations: one in a later block, which Python's scope
-    /// shares, is annotated again only where its type differs, since
-    /// mypy rejects another annotation of a name (`no-redef`).
-    annotated: BTreeMap<String, String>,
+    /// How the function being translated, or the module's init, binds
+    /// its locals' names ([`Bindings`]).
+    bindings: Bindings,
+}
+
+/// How a Python scope (a function's, or the module's init) binds its
+/// locals' names. Python gives a name one type in a scope, and mypy takes
+/// it from the name's first binding, its annotation or else its value's
+/// type, and rejects a later annotation (`no-redef`). So a name bound more
+/// than once, by several locals sharing it (as the naming pass lets those
+/// of one type, with or without null) or by a `var` assigned again, is
+/// annotated only where first bound, with its widest type, and only
+/// where its value's type may be narrower. A first binding of a narrower
+/// type (not null, where another is nullable) is declared on its own
+/// line before it, so its value narrows it, as is a walrus that binds it
+/// first, which can't annotate.
+struct Bindings {
+    /// The function or module whose locals these are.
+    owner: DeclId,
+    /// The names bound more than once, each with its widest type: its
+    /// locals' type, nullable where any of theirs is.
+    rebound: BTreeMap<String, TypeId>,
+    /// The names bound so far, parameters' first.
+    bound: BTreeSet<String>,
+}
+
+impl Default for Bindings {
+    fn default() -> Bindings {
+        Bindings {
+            owner: DeclId::NONE,
+            rebound: BTreeMap::new(),
+            bound: BTreeSet::new(),
+        }
+    }
 }
 
 /// Where a value goes, for [`Translator::value_into`].
@@ -141,7 +170,7 @@ impl<'a> Translator<'a> {
             loop_lets: BTreeSet::new(),
             widen: BTreeSet::new(),
             awaiters: Vec::new(),
-            annotated: BTreeMap::new(),
+            bindings: Bindings::default(),
             defaulted: BTreeSet::new(),
         }
     }
@@ -636,7 +665,10 @@ impl<'a> Translator<'a> {
                 _ => {}
             }
         }
-        self.block(module.init, &mut body)?;
+        self.bindings = self.bindings_of(module.decl, module.init, &[]);
+        let init = self.block(module.init, &mut body);
+        self.bindings = Bindings::default();
+        init?;
         self.qualify_builtins(&mut body);
         tree::mark_unused(&mut body);
         let exports = self.exports(module);
@@ -772,7 +804,14 @@ impl<'a> Translator<'a> {
                 }
                 self.in_def += 1;
                 let temps = std::mem::take(&mut self.temps);
-                let annotated = std::mem::take(&mut self.annotated);
+                let param_decls: Vec<DeclId> = (self.p.nodes.list(params).iter())
+                    .filter_map(|&param| match self.p.nodes.get(param) {
+                        Node::Param { decl } => Some(decl),
+                        _ => None,
+                    })
+                    .collect();
+                let bindings = self.bindings_of(decl, block, &param_decls);
+                let bindings = std::mem::replace(&mut self.bindings, bindings);
                 // What the statement around a literal hoists stays there,
                 // out of the literal's body.
                 let pre = std::mem::take(&mut self.pre);
@@ -786,7 +825,7 @@ impl<'a> Translator<'a> {
                 let body = self.block(block, &mut stmts);
                 self.type_args = saved_args;
                 self.pre = pre;
-                self.annotated = annotated;
+                self.bindings = bindings;
                 self.temps = temps;
                 self.in_def -= 1;
                 body?;
@@ -801,6 +840,81 @@ impl<'a> Translator<'a> {
             result,
             body: stmts,
         })
+    }
+
+    /// The bindings of the locals of `owner`, a function or module, in
+    /// `root`, its body or init, after `params`, which are bound first.
+    fn bindings_of(&self, owner: DeclId, root: NodeId, params: &[DeclId]) -> Bindings {
+        let p = self.p;
+        let mut decls: Vec<DeclId> = params.to_vec();
+        let mut assigned = BTreeSet::new();
+        analysis::walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::Let { local, .. } if p.decls.get(local).owner == owner => decls.push(local),
+            Node::Assign { local, .. } if p.decls.get(local).owner == owner => {
+                assigned.insert(local);
+            }
+            _ => {}
+        });
+        let mut by_name: BTreeMap<String, Vec<DeclId>> = BTreeMap::new();
+        for d in decls {
+            by_name.entry(self.name(d)).or_default().push(d);
+        }
+        let rebound = (by_name.into_iter())
+            .filter(|(_, ds)| ds.len() > 1 || ds.iter().any(|d| assigned.contains(d)))
+            .map(|(name, ds)| {
+                let ty = |d: &DeclId| p.decls.get(*d).ty;
+                let wide = ds.iter().map(ty).find(|&t| p.types.is_nullable(t));
+                (name, wide.unwrap_or_else(|| ty(&ds[0])))
+            })
+            .collect();
+        let bound = params.iter().map(|&d| self.name(d)).collect();
+        Bindings {
+            owner,
+            rebound,
+            bound,
+        }
+    }
+
+    /// A local's name's widest type, if its scope binds the name more
+    /// than once.
+    fn rebound(&self, local: DeclId) -> Option<TypeId> {
+        if self.p.decls.get(local).owner != self.bindings.owner {
+            return None;
+        }
+        self.bindings.rebound.get(&self.name(local)).copied()
+    }
+
+    /// Whether a type is core's `ListBuilder`'s, `MapBuilder`'s, or
+    /// `Deque`'s, whose element types are invariant.
+    fn mutable_collection(&self, ty: TypeId) -> bool {
+        match self.p.types.get(ty) {
+            TypeData::Nominal { decl, .. } => matches!(
+                self.qname(decl).as_str(),
+                "core.type ListBuilder" | "core.type MapBuilder" | "core.type Deque"
+            ),
+            _ => false,
+        }
+    }
+
+    /// Whether checkers may infer a value of a type, unannotated, as a
+    /// narrower type than its annotation: a nullable one's as never null;
+    /// an interface's, or `AnyValue`'s, as the class of the value; a
+    /// generic one's, as a tuple, a list literal's, or a class's instance
+    /// with its arguments' types (`tuple[int, int]` for `Sequence[int]`,
+    /// `Pair[str, tuple[int]]`); or a function type's. Temper's classes
+    /// have no subclasses, so a value's type is its class.
+    fn may_infer_narrower(&self, ty: TypeId) -> bool {
+        let p = self.p;
+        match p.types.get(ty) {
+            TypeData::Nominal { decl, args } => {
+                !p.types.list(args).is_empty()
+                    || p.decls.get(decl).kind == DeclKind::Interface
+                    || p.decls.get(decl).facts.contains(Facts::FUN)
+            }
+            TypeData::Scalar(s) => s == Scalar::AnyValue,
+            TypeData::TypeParam { .. } => false,
+            _ => true,
+        }
     }
 
     /// A function's or method's own type parameters that appear in none
@@ -1169,7 +1283,10 @@ impl<'a> Translator<'a> {
         let mut used = BTreeSet::new();
         for &test in &module.tests {
             let Node::Test {
-                name, params, body, ..
+                decl,
+                name,
+                params,
+                body,
             } = self.p.nodes.get(test)
             else {
                 continue;
@@ -1188,7 +1305,9 @@ impl<'a> Translator<'a> {
             let mut stmts = Vec::new();
             self.in_def += 1;
             let temps = std::mem::take(&mut self.temps);
+            self.bindings = self.bindings_of(decl, body, &[param]);
             let translated = self.block(body, &mut stmts);
+            self.bindings = Bindings::default();
             self.temps = temps;
             self.in_def -= 1;
             translated?;
@@ -1431,6 +1550,7 @@ impl<'a> Translator<'a> {
                     unreachable!()
                 };
                 let name = self.name(local);
+                self.bindings.bound.insert(name.clone());
                 let def = self.literal_def(init, decl, params, body, name)?;
                 out.append(&mut self.pre);
                 out.push(def);
@@ -1466,9 +1586,13 @@ impl<'a> Translator<'a> {
                         // `{}`, `deque()`, or `new_unbound_promise()`,
                         // whose element types checkers can't infer, and
                         // casts, as `cast_by_type` gives its argument's type
-                        // where that's a supertype.
+                        // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
-                        let empty = match p.nodes.get(init) {
+                        let mut value = init;
+                        while let Node::OrElse { body, .. } = p.nodes.get(value) {
+                            value = body;
+                        }
+                        let empty = match p.nodes.get(value) {
                             Node::New { ctor, .. } => matches!(
                                 self.qname(ctor).as_str(),
                                 "core.type ListBuilder.constructor()"
@@ -1477,21 +1601,44 @@ impl<'a> Translator<'a> {
                                     | "core.type PromiseBuilder.constructor()"
                             ),
                             Node::As { .. } => true,
-                            _ => false,
-                        };
-                        // One that rebinds a local of its name (`let x = x`)
-                        // keeps its annotation, which widens what pyright
-                        // narrowed.
-                        let rebinds = matches!(p.nodes.get(init),
-                            Node::Local { local: l } if self.name(l) == target);
-                        let ann = if p.types.is_nullable(ty) || empty {
-                            let ann = self.ann(ty)?;
-                            match self.annotated.insert(target.clone(), ann.clone()) {
-                                Some(before) if before == ann && !rebinds => None,
-                                _ => Some(ann),
+                            // Or a builder made from a list literal, which
+                            // pyright may take for a list of its items'
+                            // literal types (`list[Literal[0]]`).
+                            _ => {
+                                self.mutable_collection(ty)
+                                    && (p.nodes.kids(value).iter())
+                                        .any(|&k| matches!(p.nodes.get(k), Node::ListLit { .. }))
                             }
-                        } else {
-                            None
+                        };
+                        let ann = match self.rebound(local) {
+                            // A name bound more than once: annotated only
+                            // where first bound, and there only where its
+                            // value may be narrower than its widest type,
+                            // as a tuple is than a `Sequence`, a class than
+                            // its interface, or a generic class's instance
+                            // than its declared type arguments. One whose
+                            // own type is narrower, never null, is declared
+                            // first, so its value narrows it.
+                            Some(wide) if self.bindings.bound.insert(target.clone()) => {
+                                let narrower = empty
+                                    || p.nodes.ty(init) != wide
+                                    || self.may_infer_narrower(wide);
+                                match narrower {
+                                    true if ty != wide => {
+                                        let ann = self.ann(wide)?;
+                                        out.push(Stmt::Declare {
+                                            target: target.clone(),
+                                            ann,
+                                        });
+                                        None
+                                    }
+                                    true => Some(self.ann(wide)?),
+                                    false => None,
+                                }
+                            }
+                            Some(_) => None,
+                            None if p.types.is_nullable(ty) || empty => Some(self.ann(ty)?),
+                            None => None,
                         };
                         self.value_into(init, Sink::Assign(Expr::name(target.clone()), ann), out)?;
                         // A local nothing reads, as `whatIAm` in
@@ -1510,9 +1657,13 @@ impl<'a> Translator<'a> {
                             }
                         }
                     }
+                    // Not again where bound already.
                     None => {
-                        let ann = self.ann(p.decls.get(local).ty)?;
-                        out.push(Stmt::Declare { target, ann });
+                        let rebound = self.rebound(local);
+                        if self.bindings.bound.insert(target.clone()) || rebound.is_none() {
+                            let ann = self.ann(rebound.unwrap_or(p.decls.get(local).ty))?;
+                            out.push(Stmt::Declare { target, ann });
+                        }
                     }
                 }
             }
@@ -1828,7 +1979,24 @@ impl<'a> Translator<'a> {
                 _ => return not_yet("this type as a value"),
             },
             Node::Local { local: decl } => match self.walrus.remove(&decl) {
-                Some(value) => Expr::Walrus(self.name(decl), Box::new(value)),
+                // A walrus can't annotate, so one that binds a name bound
+                // again later is declared first where its value may be
+                // narrower.
+                Some((value, ty)) => {
+                    let name = self.name(decl);
+                    if let Some(wide) = self.rebound(decl) {
+                        let narrower =
+                            ty != wide || self.may_infer_narrower(self.p.types.non_null(wide));
+                        if self.bindings.bound.insert(name.clone()) && narrower {
+                            let ann = self.ann(wide)?;
+                            self.pre.push(Stmt::Declare {
+                                target: name.clone(),
+                                ann,
+                            });
+                        }
+                    }
+                    Expr::Walrus(name, Box::new(value))
+                }
                 None => Expr::name(self.name(decl)),
             },
             Node::GetModuleLet { target: decl } => self.top(decl),
@@ -1985,8 +2153,9 @@ impl<'a> Translator<'a> {
                     ) = (p.nodes.get(*only), p.nodes.get(cond))
                     {
                         if matches!(p.nodes.get(read), Node::Local { local: l } if l == local) {
+                            let ty = p.nodes.ty(init);
                             let init = self.expr(init)?;
-                            self.walrus.insert(local, init);
+                            self.walrus.insert(local, (init, ty));
                             return self.expr(value);
                         }
                     }
