@@ -50,7 +50,10 @@ and its sources in the first compiler's tree
 including reference pages generated there from doc comments in the
 compiler's source. They're Markdown source here, edited
 by hand ([how, and how the docs site is built](contributing/docs.md)).
-The [blog](https://temperlang.dev/blog/) stays in its own repository.
+The [blog](https://temperlang.dev/blog/) stays in its own repository,
+[temperlang/temperlang-blog](https://github.com/temperlang/temperlang-blog),
+under its own license, CC BY-NC-SA 4.0; the site includes it from the
+`blog/` submodule.
 
 Copyright The Temper Project Contributors. The documentation is
 licensed under [CC BY-SA 4.0](../LICENSE-CC-BY-SA-4.0); see

@@ -16,8 +16,8 @@ with the [guide](../guide/README.md) instead.
 Also see the [standard library](../std/README.md), and what each
 [target language](../backends/README.md) makes of Temper.
 
-These pages began as the reference on
-[temperlang.dev](https://temperlang.dev/reference/), parts of it
+These pages began as the reference on temperlang.dev
+([its sources](https://github.com/temperlang/temper/tree/kotlin-final/docs/for-users/temper-docs/docs/reference)), parts of it
 generated there from doc comments in the compiler's source; they're
 hand-edited Markdown now ([about these docs](../contributing/docs.md)).
 Grammar rules, once drawn as railroad diagrams, are written out as

@@ -191,6 +191,12 @@ code, pre, kbd, samp {
 .doc .logo { margin: 0 auto; }
 .doc hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
 
+/* The blog: a post's date and authors, and the index's excerpts. */
+.doc .byline { color: var(--muted); font-size: 0.95em; margin-top: -0.4em; }
+.doc .post-summary + .post-summary { margin-top: 2em; }
+.doc picture { display: block; margin: 0 0 1em; }
+.doc picture img { display: block; }
+
 /* A `temper inert` block, Temper that isn't compiled: tinted, labeled. */
 .doc pre.inert {
   position: relative;

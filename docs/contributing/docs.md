@@ -125,7 +125,7 @@ The old site's addresses map to these pages, for redirects:
 | `/reference/backend/` | [internals/kotlin/writing-a-backend.md](../internals/kotlin/writing-a-backend.md) |
 | `/reference/out-grammar/` | [internals/kotlin/out-grammars.md](../internals/kotlin/out-grammars.md) |
 | `/legal/playground-terms/` | [legal/playground-terms.md](../legal/playground-terms.md) |
-| `/blog/` | stays in its own repository, `temperlang/temperlang-blog` |
+| `/blog/` and its posts | the same addresses, from the `blog/` submodule ([the site](#the-site)) |
 
 Anchors changed too: the old pages linked generated anchors, such as
 `#type-Boolean`; these link GitHub's heading anchors, such as
@@ -136,8 +136,20 @@ Anchors changed too: the old pages linked generated anchors, such as
 The [docs site](https://temperlang.dev/) is README.md
 as its home page and every page of docs/ at the same path, as
 `.html`, with the
-[playground](https://temperlang.dev/playground/) beside
+[playground](https://temperlang.dev/playground/) and the
+[blog](https://temperlang.dev/blog/) beside
 them.
+
+The blog stays in its own repository,
+[temperlang/temperlang-blog](https://github.com/temperlang/temperlang-blog),
+a git submodule at `blog/`, under its own license, CC BY-NC-SA 4.0
+(its `LICENSE`), unlike the docs; its pages' footer says so. Its posts
+keep the addresses they had on temperlang.dev, `blog/YYYY/MM/DD/SLUG/`,
+the slug from the title, as mkdocs-material's blog plugin made them;
+those marked `draft: true` in their front matter are left out.
+`blog/index.html` lists the rest, newest first, each with its excerpt:
+up to a `<!-- more -->` line, else its first paragraph. A post goes up
+by committing it there, then moving the submodule forward here.
 
 [Kelpto](https://github.com/temperlang/kelpto), the lossless Markdown
 and HTML library written in Temper, renders it: `temper` builds Kelpto
@@ -189,7 +201,8 @@ runs `npm ci` there when they change. Drawings are cached in
 diagrams shrink to fit only so far, then scroll sideways.
 
 To preview it, with Kelpto checked out beside this repository
-(`../kelpto`, or `--kelpto DIR`) and `temper` built:
+(`../kelpto`, or `--kelpto DIR`), the blog checked out
+(`git submodule update --init`), and `temper` built:
 
     uv run site/playground/build.py --out site/_out/site/playground   # optional
     uv run site/docs/build.py [--chromium PATH | --no-diagrams]
@@ -202,8 +215,8 @@ installs. Without one, the build stops and says so; `--no-diagrams`
 shows their source instead. The pages take about ten seconds, and
 drawing every diagram, uncached, about seven more. CI
 ([pages.yml](../../.github/workflows/pages.yml)) does the same on each
-push to `main` that changes the docs or the playground, with the Kelpto
-commit in site/docs' [`kelpto-ref`](../../site/docs/kelpto-ref); move
+push to `main` that changes the docs, the blog, or the playground, with
+the Kelpto commit in site/docs' [`kelpto-ref`](../../site/docs/kelpto-ref); move
 that forward to pick up Kelpto's fixes. CI
 ([ci.yml](../../.github/workflows/ci.yml)) builds it too, diagrams and
 link check included, on every push and pull request.

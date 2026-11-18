@@ -79,7 +79,8 @@ jobs:
   #
   # - `code`: anything but notes/, docs/, and README.md;
   # - `docs`: `code`, or docs/ or README.md, which `core`'s REPL
-  #   transcripts test, and `release`'s docs' examples and docs site.
+  #   transcripts test, and `release`'s docs' examples and docs site; or
+  #   blog, the submodule, which the docs site builds.
   #
   # notes/ is read only by `lint` (its links and charts), which always
   # runs. With nothing to compare with (a new branch, or a base that
@@ -112,7 +113,7 @@ jobs:
             while IFS= read -r file; do
               case "$file" in
                 "" | notes/*) ;;
-                docs/* | README.md) docs=true ;;
+                docs/* | README.md | blog) docs=true ;;
                 *) code=true; docs=true ;;
               esac
             done <<< "$files"
@@ -361,9 +362,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        # The whole history and the tags, for the version.
+        # The whole history and the tags, for the version; and the blog,
+        # a submodule, for the docs site.
         with:
           fetch-depth: 0
+          submodules: true
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         with:
           targets: wasm32-unknown-unknown

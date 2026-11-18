@@ -20,8 +20,9 @@ HTML, and rendered by Kelpto's `renderSafe`. Then this script adds what
 Kelpto doesn't do (yet): GitHub's heading anchors, GitHub's alerts,
 Temper highlighting (with the VS Code extension's grammar, through
 editors/vscode/check_grammar.py's tokenizer), and links rewritten for
-the site: `.md` to `.html` (`README.md` to `index.html`), and the
-playground's absolute link to its relative path. Links to files outside
+the site: `.md` to `.html` (`README.md` to `index.html`), and links to
+temperlang.dev (as the playground's), and the blog's links from the
+site's root, to relative paths. Links to files outside
 docs/ (sources in the repository) go to them on GitHub, at REPO_URL, at
 the commit the site is built from: `--commit REV`, else `$GITHUB_SHA` (in
 GitHub Actions), else HEAD. If the working tree has uncommitted changes,
@@ -41,9 +42,18 @@ attributes, inline styles, comments). Each removal must be on the list
 in site/docs/removals.txt, with its reason, or the build fails, so
 content isn't lost from a page unnoticed.
 
+The blog is temperlang/temperlang-blog, a submodule at blog/ with its
+own license (CC BY-NC-SA 4.0, named in its pages' footer): each post
+in blog/posts/ that isn't `draft: true` in its front matter goes at the
+address mkdocs-material's blog plugin gave it on temperlang.dev,
+`blog/YYYY/MM/DD/SLUG/`, the slug from its title, with its date and
+authors (from blog/.authors.yml); blog/index.md, then the posts, newest
+first, each with its excerpt (to a `<!-- more -->` line, else its first
+paragraph), make `blog/index.html`; and blog/images/ is copied.
+
 Writes to `--out DIR` (default `site/_out/site/`): `index.html` from
-README.md, `docs/…` from docs/, `assets/site.css` (style.css, then
-site/shared's header.css), `assets/header.js`, and the licenses as
+README.md, `docs/…` from docs/, `blog/…`, `assets/site.css` (style.css,
+then site/shared's header.css), `assets/header.js`, and the licenses as
 `.txt`. The header, the footer, and the theme toggle are site/shared's,
 which the playground's build uses too. The playground goes in
 `playground/` beside them, built by site/playground/build.py. Then it
@@ -64,6 +74,8 @@ import shutil
 import subprocess
 import sys
 import time
+import unicodedata
+from datetime import date
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -107,6 +119,11 @@ SCOPE_CLASSES = [
     ("keyword", "k"),
 ]
 GRAMMARS = {"temper": "source.temper", "tempermd": "text.html.markdown.temper"}
+# The blog, a submodule, and where a post's excerpt ends: a line of its
+# own, kept through rendering as a paragraph of this word.
+BLOG = ROOT / "blog"
+MORE = re.compile(r"^<!-- more -->[ \t]*$", re.M)
+MORE_WORD = "temper-blog-more"
 
 
 # Inert blocks
@@ -365,6 +382,57 @@ def out_path(src: str) -> str:
     return src[: -len(".md")] + ".html"
 
 
+def simple_yaml(lines: list[str], indent: int = 0, at: int = 0) -> tuple[dict | list | None, int]:
+    """The YAML the blog uses, by indentation: mappings, lists of scalars,
+    and plain scalars (`true` and `false` as booleans). Gives the value
+    and the line after it."""
+    value: dict | list | None = None
+    while at < len(lines):
+        line = lines[at]
+        depth = len(line) - len(line.lstrip())
+        if not line.strip() or line.lstrip().startswith("#"):
+            at += 1
+            continue
+        if depth < indent:
+            break
+        item = line.strip()
+        if item.startswith("- "):
+            value = value if isinstance(value, list) else []
+            value.append(yaml_scalar(item[2:]))
+            at += 1
+            continue
+        key, _, rest = item.partition(":")
+        value = value if isinstance(value, dict) else {}
+        if rest.strip():
+            value[key.strip()] = yaml_scalar(rest)
+            at += 1
+        else:
+            value[key.strip()], at = simple_yaml(lines, depth + 1, at + 1)
+    return value, at
+
+
+def yaml_scalar(text: str) -> str | bool:
+    text = text.strip()
+    if text in ("true", "false"):
+        return text == "true"
+    return text[1:-1] if len(text) > 1 and text[0] == text[-1] and text[0] in "'\"" else text
+
+
+def front_matter(text: str) -> tuple[dict, str]:
+    """A Markdown file's `---` front matter, and the rest."""
+    m = re.match(r"---\n(.*?)\n---\n", text, re.S)
+    if not m:
+        return {}, text
+    return simple_yaml(m.group(1).splitlines())[0] or {}, text[m.end() :]
+
+
+def post_slug(title: str) -> str:
+    """mkdocs-material's default slug for a post: Python-Markdown's
+    toc.slugify of its title."""
+    text = unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode()
+    return re.sub(r"[-\s]+", "-", re.sub(r"[^\w\s-]", "", text).strip().lower())
+
+
 def text_of(fragment: str) -> str:
     return html.unescape(re.sub(r"<[^>]+>", "", fragment)).strip()
 
@@ -469,10 +537,60 @@ class Site:
         self.highlighter = highlighter
         self.out = out
         self.sources = ["README.md"] + sorted(p.relative_to(ROOT).as_posix() for p in DOCS.rglob("*.md"))
-        self.outside: list[str] = []  # links outside the repository, and images not on the site
+        self.outside: list[str] = []  # links outside the repository, images not on the site, and unknown authors
+        self.posts, self.drafts = self.blog_posts()
+        self.sources += ["blog/index.md", *self.posts]
+        self.out_paths = {s: out_path(s) for s in self.sources} | {s: post["page"] for s, post in self.posts.items()}
         self.removed: list[str] = []
         self.titles: dict[str, str] = {}
         self.headings: dict[str, list[tuple[str, str]]] = {}  # h2s: id, text
+
+    def blog_posts(self) -> tuple[dict[str, dict], int]:
+        """The blog's published posts, newest first, by source: each one's
+        text (without its front matter), page, date, and authors; and how
+        many drafts were left out."""
+        if not (BLOG / "index.md").is_file():
+            sys.exit("build.py: no blog in blog/ (a submodule); run `git submodule update --init`")
+        authors = (simple_yaml((BLOG / ".authors.yml").read_text().splitlines())[0] or {}).get("authors", {})
+        posts, drafts = [], 0
+        for f in sorted((BLOG / "posts").glob("*.md")):
+            meta, text = front_matter(f.read_text())
+            if meta.get("draft") is True:
+                drafts += 1
+                continue
+            src = f.relative_to(ROOT).as_posix()
+            title = re.search(r"^# (.+)$", text, re.M)
+            if not title or "date" not in meta:
+                sys.exit(f"build.py: {src} needs a `date` in its front matter and a `# Title`")
+            day = date.fromisoformat(str(meta["date"])[:10])
+            names = []
+            for a in meta.get("authors") or []:
+                if a not in authors:
+                    self.outside.append(f"{src}: author {a} isn't in blog/.authors.yml")
+                    continue
+                name = html.escape(authors[a].get("name", a))
+                names.append(f'<a href="{html.escape(authors[a]["url"])}">{name}</a>' if authors[a].get("url") else name)
+            page = f"blog/{day:%Y/%m/%d}/{post_slug(title.group(1))}/index.html"
+            text = MORE.sub(f"\n{MORE_WORD}\n", text, count=1)
+            posts.append((day, src, {"text": text, "page": page, "date": day, "authors": names}))
+        return {src: post for _, src, post in sorted(posts, reverse=True)}, drafts
+
+    @staticmethod
+    def byline(post: dict) -> str:
+        day = post["date"]
+        shown = f'<time datetime="{day.isoformat()}">{day:%B} {day.day}, {day.year}</time>'
+        return f'<p class="byline">{" · ".join([shown, ", ".join(post["authors"])] if post["authors"] else [shown])}</p>'
+
+    def blog_index(self, excerpts: dict[str, str]) -> str:
+        """The blog's index's list of posts, newest first, with excerpts."""
+        items = []
+        for src, post in self.posts.items():
+            href = relative(post["page"], "blog/index.html")
+            items.append(
+                f'<article class="post-summary"><h2><a href="{href}">{html.escape(self.titles[src])}</a></h2>'
+                f'{self.byline(post)}{excerpts[src]}<p><a href="{href}">Continue reading</a></p></article>'
+            )
+        return "".join(items)
 
     # Links
 
@@ -495,6 +613,8 @@ class Site:
             return "index.html" + tail, None
         if path in TEXT_FILES:
             return path + ".txt" + tail, None
+        if path.startswith("blog/") and file.is_file():
+            return self.out_paths.get(path, path) + tail, None
         return None, path
 
     def rewrite_links(self, body: str, src: str, page: str) -> str:
@@ -503,8 +623,11 @@ class Site:
             repository on GitHub (if `github`); else None."""
             if href.startswith("#"):
                 return href
+            if href.startswith("/") and not href.startswith("//"):  # the blog's images
+                href = SITE_URL + href[1:]
             if href.startswith(SITE_URL):
-                return relative(href[len(SITE_URL) :] or "index.html", page)
+                path, hash_, fragment = href[len(SITE_URL) :].partition("#")
+                return relative(path + "index.html" if not path or path.endswith("/") else path, page) + hash_ + fragment
             if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:|//", href):
                 return href
             target, outside = self.target(href, src)
@@ -537,7 +660,7 @@ class Site:
             return f'{m.group(1)}"{html.escape(new)}"'
 
         body = re.sub(r"<a\b([^>]*)>(.*?)</a>", anchor, body, flags=re.S)
-        return re.sub(r'(<img\b[^>]*?\bsrc=)"([^"]*)"', image, body)
+        return re.sub(r'(<(?:img|source)\b[^>]*?\b(?:src|srcset)=)"([^"]*)"', image, body)
 
     # Blocks
 
@@ -663,6 +786,9 @@ class Site:
         if section:
             label = dict(SECTIONS)[section]
             pages = self.section_pages(section)
+        elif src.startswith("blog/"):
+            label = "Blog"
+            pages = ["blog/index.md", *self.posts]
         else:
             label = "Documentation"
             pages = ["docs/README.md"] + [f"docs/{s}/README.md" for s, _ in SECTIONS] + ["docs/inconsistencies.md"]
@@ -676,17 +802,20 @@ class Site:
                 links = "".join(f'<li><a href="#{i}">{html.escape(t)}</a></li>' for i, t in self.headings[s])
                 sub = f'<ul class="toc">{links}</ul>'
             items.append(
-                f'<li class="depth-{max(depth, 0)}"><a href="{relative(out_path(s), page)}"{current}>'
+                f'<li class="depth-{max(depth, 0)}"><a href="{relative(self.out_paths[s], page)}"{current}>'
                 f"{html.escape(title)}</a>{sub}</li>"
             )
         return f'<nav class="side" aria-label="{label}"><p class="side-title">{label}</p><ul>{"".join(items)}</ul></nav>'
 
     def page(self, src: str, body: str) -> str:
-        page = out_path(src)
+        page = self.out_paths[src]
         title = "Temper" if src == "README.md" else f"{self.titles.get(src, src)} · Temper"
         css = relative("assets/site.css", page)
         js = relative("assets/header.js", page)
         kelpto = 'Rendered by <a href="https://github.com/temperlang/kelpto">Kelpto</a>'
+        extra = (kelpto,)
+        if src.startswith("blog/"):
+            extra = (f'Blog posts are licensed <a href="{relative("blog/LICENSE.txt", page)}">CC BY-NC-SA 4.0</a>', kelpto)
         return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -706,7 +835,7 @@ class Site:
 </main>
 {self.sidebar(src, page)}
 </div>
-{shared.footer(page, self.repo.commit, (kelpto,))}
+{shared.footer(page, self.repo.commit, extra)}
 </body>
 </html>
 """
@@ -716,29 +845,40 @@ class Site:
     def build(self) -> int:
         bodies = {}
         for src in self.sources:
-            body, removed = self.kelpto.render(mark_inert((ROOT / src).read_text()))
+            text = self.posts[src]["text"] if src in self.posts else (ROOT / src).read_text()
+            body, removed = self.kelpto.render(mark_inert(text))
             self.removed += [f"{src}: {r}" for r in removed]
             bodies[src] = body
         if self.diagrams:
             self.diagrams.draw(
                 {html.unescape(m.group(2)) for b in bodies.values() for m in self.CODE_BLOCK.finditer(b) if m.group(1) == "mermaid"}
             )
+        excerpts = {}
         for src, body in bodies.items():
-            page = out_path(src)
+            page = self.out_paths[src]
             body = self.code_blocks(body)
             body = self.alerts(body)
             body = self.heading_ids(body, src)
+            if src in self.posts:
+                # The excerpt: after the title, to the marker, else the first paragraph.
+                after = body.partition("</h1>")[2]
+                head, more, _ = after.partition(f"<p>{MORE_WORD}</p>")
+                first = re.search(r"<p>.*?</p>", after, re.S)
+                excerpt = head if more else first.group(0) if first else ""
+                excerpts[src] = self.rewrite_links(excerpt, src, "blog/index.html")
+                body = body.replace(f"<p>{MORE_WORD}</p>", "", 1).replace("</h1>", "</h1>" + self.byline(self.posts[src]), 1)
             body = self.rewrite_links(body, src, page)
             body = self.logos(body)
             body = re.sub(r"<table>", '<div class="table-wrap"><table>', body).replace("</table>", "</table></div>")
             bodies[src] = body
+        bodies["blog/index.md"] += self.blog_index(excerpts)
         if self.out.exists():
             for child in self.out.iterdir():
                 if child.name != "playground":  # built by site/playground/build.py
                     shutil.rmtree(child) if child.is_dir() else child.unlink()
         self.out.mkdir(parents=True, exist_ok=True)
         for src, body in bodies.items():
-            dest = self.out / out_path(src)
+            dest = self.out / self.out_paths[src]
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(self.page(src, body))
         for f in DOCS.rglob("*"):
@@ -748,6 +888,9 @@ class Site:
                 shutil.copyfile(f, dest)
         for name in TEXT_FILES:
             shutil.copyfile(ROOT / name, self.out / f"{name}.txt")
+        if (BLOG / "images").is_dir():
+            shutil.copytree(BLOG / "images", self.out / "blog" / "images")
+        shutil.copyfile(BLOG / "LICENSE", self.out / "blog" / "LICENSE.txt")
         (self.out / "assets").mkdir(exist_ok=True)
         (self.out / "assets" / "site.css").write_text((HERE / "style.css").read_text() + "\n" + shared.CSS.read_text())
         shutil.copyfile(shared.JS, self.out / "assets" / "header.js")
@@ -794,10 +937,11 @@ def check_removals(removed: list[str], allowed_text: str) -> list[str]:
 
 
 def check(out: Path) -> tuple[list[str], int, list[str]]:
-    """Every relative href and src in the site leads to a file, and every
-    fragment to an id in it, on the docs pages and the playground's page
-    (its header and About). Gives the problems, the links checked, and
-    what wasn't checked (the playground, when it isn't built)."""
+    """Every relative href, src, and srcset in the site leads to a file,
+    and every fragment to an id in it, on the docs and blog pages and the
+    playground's page (its header and About). Gives the problems, the
+    links checked, and what wasn't checked (the playground, when it isn't
+    built)."""
     pages = {p: p.read_text() for p in out.rglob("*.html") if "playground" not in p.relative_to(out).parts[:1]}
     if (play := out / "playground" / "index.html").is_file():
         pages[play] = play.read_text()
@@ -805,7 +949,7 @@ def check(out: Path) -> tuple[list[str], int, list[str]]:
     problems, skipped, count = [], [], 0
     for page, text in pages.items():
         where = page.relative_to(out).as_posix()
-        for href in re.findall(r'\b(?:href|src)="([^"]*)"', text):
+        for href in re.findall(r'\b(?:href|src|srcset)="([^"]*)"', text):
             href = html.unescape(href)
             if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:|//", href):
                 continue
@@ -860,6 +1004,7 @@ def main() -> int:
         print(f"build.py: {len(diagrams.svgs)} Mermaid diagrams, light and dark: {diagrams.drawn} drawn, {diagrams.cached} cached ({diagrams.seconds:.1f} s)")
     else:
         print("build.py: Mermaid diagrams shown as source (--no-diagrams)")
+    print(f"build.py: the blog's posts: {len(site.posts)} published, {site.drafts} drafts left out")
     paths = {path for _, path, _ in repo.links}
     print(f"build.py: {len(repo.links)} links to {len(paths)} repository files not on the site, to {REPO_URL} at {repo.commit[:12]}, checked in git")
     if repo.dirty:
