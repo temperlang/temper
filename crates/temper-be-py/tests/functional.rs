@@ -217,6 +217,25 @@ fn test_parts_apart() {
     });
 }
 
+/// A library only the tests use is in `pyproject.toml`'s `test`
+/// dependency group (PEP 735), which installing the package skips, not
+/// its dependencies.
+#[test]
+fn test_only_libraries_grouped() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let pyproject = &files[0].text;
+        let (dependencies, rest) = pyproject.split_once("\n]\n").unwrap();
+        assert!(dependencies.contains("\"temper-core=="), "{pyproject}");
+        assert!(!dependencies.contains("temper-std"), "{pyproject}");
+        assert!(
+            rest.contains("\n[dependency-groups]\ntest = [\n    \"temper-std=="),
+            "{pyproject}"
+        );
+    });
+}
+
 /// Python 3.11 or later, if there is one.
 fn python() -> Option<String> {
     let candidates = match env::var("PYTHON") {

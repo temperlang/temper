@@ -120,11 +120,21 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 
 /// `pyproject.toml`'s dependencies, as Kotlin writes them: the runtime
 /// and each library used, by its name, with `==` its version where it
-/// sets one, in PEP 440's spelling, a quoted line each, sorted.
-fn dependencies(p: &Program) -> String {
-    let runtime = version::current().spell(Spelling::Python);
-    let mut lines = vec![format!("temper-core=={runtime}")];
+/// sets one, in PEP 440's spelling, a quoted line each, sorted; with
+/// `tests`, instead those only the tests use
+/// ([`temper_tmpl::analysis::test_only_libraries`]), for the `test`
+/// dependency group, which installing the package skips.
+fn dependencies(p: &Program, tests: bool) -> String {
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
+    let mut lines = Vec::new();
+    if !tests {
+        let runtime = version::current().spell(Spelling::Python);
+        lines.push(format!("temper-core=={runtime}"));
+    }
     for (name, version) in p.dependencies() {
+        if tests_only.iter().any(|t| t == name) != tests {
+            continue;
+        }
         let name = translate::library_name(p, name);
         let name = name.as_str();
         lines.push(match version {
@@ -306,7 +316,7 @@ authors = [ {authors} ]
 dependencies = [
 {dependencies}
 ]
-{urls}
+{test_group}{urls}
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -315,7 +325,11 @@ build-backend = "hatchling.build"
         version = version::respell(p.version_or_default(), Spelling::Python),
         description = quoted(meta.get("description").unwrap_or("")),
         license = quoted(license),
-        dependencies = dependencies(p),
+        dependencies = dependencies(p, false),
+        test_group = match dependencies(p, true) {
+            lines if lines.is_empty() => String::new(),
+            lines => format!("\n[dependency-groups]\ntest = [\n{lines}\n]\n"),
+        },
     );
     // Host code's other files, beside the modules, as Kotlin copies them;
     // each `__connected__.py` starts its module's file instead.

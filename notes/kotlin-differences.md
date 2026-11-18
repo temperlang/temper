@@ -1177,6 +1177,12 @@ Other differences we won't copy:
   shared `reach` program), and `runs`, which builds the library first
   and then its tests against it (C#'s with `InternalsVisibleTo`), as
   Maven and MSBuild do, and the goldens.
+- **Python's test dependency group** (2026-11-18): a library only the
+  tests use goes in `pyproject.toml`'s `[dependency-groups]` `test`
+  group (PEP 735), which installing the package skips, where Kotlin's
+  lists every library under `dependencies`. Lua's rockspec lists them
+  under `test_dependencies`, as Kotlin's does. Test: Python's
+  tests/functional.rs, `test_only_libraries_grouped`.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where
