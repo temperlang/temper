@@ -10,6 +10,18 @@ namespace temper {
     namespace core {
         namespace DenseBitVector {
 
+            // Grows a vector to `size` bits, opaque to g++'s optimizer: inlined
+            // where it knows the vector's size, g++ 12 to 14 at -O3 report a false
+            // -Warray-bounds in libstdc++'s vector<bool> insert (as list.hpp's
+            // reserve_items notes), failing -Wall -Werror release builds. Growing
+            // is rare, so the call costs little.
+#if defined(__GNUC__) && !defined(__clang__)
+            __attribute__((noipa))
+#endif
+            inline void grow(std::vector<bool>& bv, std::size_t size) {
+                bv.resize(size, false);
+            }
+
             inline std::shared_ptr<std::vector<bool>> make(int32_t size) {
                 return std::make_shared<std::vector<bool>>(size, false);
             }
@@ -31,7 +43,7 @@ namespace temper {
                     if (!value) {
                         return;
                     }
-                    bv->resize(static_cast<std::size_t>(index) + 1, false);
+                    grow(*bv, static_cast<std::size_t>(index) + 1);
                 }
                 (*bv)[index] = value;
             }
