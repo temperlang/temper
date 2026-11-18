@@ -20,7 +20,7 @@ run takes about as long as its slowest job:
 
 | Job | What it checks |
 | --- | --- |
-| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
+| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
 | `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
@@ -199,6 +199,32 @@ platform before anything is published: its contents, `version`,
 ([smoke.py](../../.github/ci-tools/smoke.py)). nightly.yml's
 `platforms` jobs test the rest, with each language's tools.
 
+### Nightly: size and speed
+
+[stats.yml](../../.github/workflows/stats.yml) measures `main`'s latest
+commit every night (04:23 UTC, skipped if `stats` already has rows for
+it) and whenever it's run by hand (**Actions → Stats → Run
+workflow**), and records the rows on the `stats` branch
+([Size and speed](size-and-speed.md) says what's measured). Three jobs:
+`recent` reads the last row's commit; `measure`, read-only, runs the
+measurements on one `ubuntu-24.04` runner, with every backend's
+toolchain and no build cache, and passes the rows on as an artifact,
+even after a failed step; and `commit`, the only job that can write
+(`contents: write`), only for `main` and only in temperlang/temper,
+appends them to `stats`' CSV, redraws its charts, and commits them.
+
+The commit goes through GitHub's GraphQL API, `createCommitOnBranch`
+([commit_stats.py](../../.github/ci-tools/commit_stats.py), by `gh api
+graphql`), with the workflow's own token: GitHub makes the commit, so
+it's signed by GitHub and shows as Verified, authored by
+`github-actions[bot]`, with no key to keep and no `git push`. It names
+the head it expects (`expectedHeadOid`); if `stats` moved meanwhile, the
+job checks out the new head, appends its rows again, and tries once
+more. One run at a time (`concurrency`), so two never race.
+[pages.yml](../../.github/workflows/pages.yml) checks `stats` out too,
+and copies the charts onto the docs site, so it also runs every
+morning (06:47 UTC), after the night's commit.
+
 ### On a `v` tag: the release
 
 [release.yml](../../.github/workflows/release.yml) checks the tag
@@ -218,7 +244,8 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   contents: read`) except where a job needs more: the `release` and
   `nightly` job in [binaries.yml](../../.github/workflows/binaries.yml)
   and the `release` job in
-  [release.yml](../../.github/workflows/release.yml) (`contents:
+  [release.yml](../../.github/workflows/release.yml) and the `commit`
+  job in [stats.yml](../../.github/workflows/stats.yml) (`contents:
   write`), and [pages.yml](../../.github/workflows/pages.yml) (`pages:
   write`, `id-token: write`). release.yml's call of binaries.yml grants
   it `contents: write` too, as a called workflow can't otherwise have
@@ -255,8 +282,8 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   .NET 6, and Node 24, as the tests', and Java 8, the Maven toolchain
   temper-core's pom asks for; Maven as the image has it.
 
-- **Runner images:** ci.yml's and pages.yml's jobs are pinned to
-  `ubuntu-24.04`, for Lua (above); nightly.yml's `platforms` and `platforms-quick` to the
+- **Runner images:** ci.yml's, stats.yml's, and pages.yml's jobs are
+  pinned to `ubuntu-24.04`, for Lua (above); nightly.yml's `platforms` and `platforms-quick` to the
   images in its table above, so a new image arrives as a deliberate
   bump, not a surprise.
 

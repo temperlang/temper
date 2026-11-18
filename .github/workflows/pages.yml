@@ -2,6 +2,8 @@
 # submodule, rendered by Kelpto) and the playground (site/playground)
 # to GitHub Pages: the docs at https://temperlang.dev/, the playground
 # at playground/ there. Kelpto's commit is in site/docs/kelpto-ref. The
+# size and speed charts come from the `stats` branch, which stats.yml
+# commits to every night, so the site is rebuilt every morning too. The
 # repository's Pages source must be GitHub Actions, with temperlang.dev
 # as its custom domain (Settings, Pages).
 name: Pages
@@ -22,6 +24,9 @@ on:
       - .gitmodules
       - .github/workflows/pages.yml
   workflow_dispatch:
+  # For the night's charts from `stats` (stats.yml, at 04:23).
+  schedule:
+    - cron: "47 6 * * *"
 
 permissions:
   contents: read
@@ -69,6 +74,13 @@ jobs:
           repository: temperlang/kelpto
           ref: ${{ steps.kelpto.outputs.ref }}
           path: .kelpto
+      # The size and speed charts, which build.py copies onto the site
+      # for the pages that show them.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: stats
+          path: stats
+          persist-credentials: false
       # The wasm, npm ci, tsc, and esbuild.
       - name: Playground
         run: uv run site/playground/build.py --out _site/playground
@@ -92,7 +104,7 @@ jobs:
       - name: Docs site
         run: |
           cargo build --locked --release -p tempest
-          uv run site/docs/build.py --kelpto .kelpto --out _site
+          uv run site/docs/build.py --kelpto .kelpto --stats stats --out _site
       # Published as built (no Jekyll, as the source is GitHub Actions);
       # upload-pages-artifact leaves out dotfiles.
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

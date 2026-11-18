@@ -3,13 +3,15 @@
 # ///
 """Prints the latest size and speed measurements as a Markdown table.
 
-Reads notes/size-and-speed.csv. For each metric (`what`) and its
-conditions, leaving out `tree=`, `load=`, and `files=`, it shows the rows
+Reads size-and-speed.csv in a checkout of the `stats` branch (stats/,
+beside this repository's files), or `--csv FILE`. For each metric
+(`what`) and its conditions, leaving out `tree=`, `load=`, `files=`, and
+the runner's `cpu=` and `cores=`, it shows the rows
 from the latest date and commit, as a range if there are several, and
 skips conditions not measured on the metric's latest date. Sizes in bytes
 show as KiB. Give metric ids to show only those, in that order.
 
-    uv run compat/size_speed_table.py [WHAT ...]
+    uv run compat/size_speed_table.py [--csv FILE] [WHAT ...]
 """
 
 import argparse
@@ -18,8 +20,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV = ROOT / "notes/size-and-speed.csv"
-IGNORED = ("tree=", "load=", "files=")
+CSV = ROOT / "stats/size-and-speed.csv"
+IGNORED = ("tree=", "load=", "files=", "cpu=", "cores=")
 
 
 def main() -> int:

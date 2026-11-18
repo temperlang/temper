@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Measures tempest binary size and peak memory, with Kotlin for reference.
+"""Measures tempest binary size and peak memory, with Kotlin's for reference.
 
 Sizes are for the `small` profile (size-optimized, LTO, stripped) and the
 plain release profile, plus `temper-wasm` built for wasm32 (`small-wasm`, the
@@ -10,12 +10,17 @@ same but aborting on panic), raw and gzipped. Peak memory is the maximum residen
 all once, and also build grammar trees for it all, and also settle each
 file as a library), for our binaries and for Kotlin's oracles on the JVM.
 
-    uv run compat/measure_size.py [--record] [--shares] [DIR ...]
+    uv run compat/measure_size.py [--record] [--csv FILE] [--shares] [--no-kotlin] [DIR ...]
 
-`--record` also appends the results as rows to notes/size-and-speed.csv,
-with today's date, the commit, and `tree=dirty` if the work tree has
-changes, and redraws the charts (size_speed_charts.py). Explain them in
+DIR defaults to the Temper, Chromarite, and Ordable checkouts beside this
+repository. `--record` also appends the results as rows to the CSV (the
+`stats` branch's, checked out at stats/, or `--csv FILE`), with today's
+date, the commit, and `tree=dirty` if the work tree has changes, through
+record_times.py, which says what else it adds in GitHub Actions; redraw
+the charts after with size_speed_charts.py. Explain them in
 notes/size-and-speed.md only where rows can't.
+`--no-kotlin` leaves out Kotlin's peak memory, which needs a Kotlin
+Temper install (check_lex.py), as the nightly stats workflow does.
 `--shares` also measures each backend's share of the small `tempest` and
 of wasm: the build with every backend less the build without that one
 (`backend-<name>-small`, `backend-<name>-wasm`), and what any one brings
@@ -32,8 +37,6 @@ process, which set a floor of this process's own size on every reading
 
 import argparse
 import ctypes
-import csv
-import datetime
 import gzip
 import os
 import signal
@@ -44,7 +47,7 @@ from pathlib import Path
 from check_lex import DEFAULT_DIRS, ROOT, temper_files
 from check_ast import commands as ast_commands
 from check_parse import commands
-import size_speed_charts
+import record_times
 
 BINARIES = ["lex-tokens", "parse-tree", "ast-tree", "run-temper", "tempest"]
 # Binaries built with temper-frontend's default features, which include `net`.
@@ -52,7 +55,6 @@ NET = {"run-temper", "tempest"}
 # The `tempest` crate's binary is `temper`; its rows keep the crate's
 # name, as the earlier rows have it.
 FILES = {"tempest": "temper"}
-CSV = ROOT / "notes/size-and-speed.csv"
 BACKENDS = ["py", "rust", "js", "java", "csharp", "cpp", "lua"]
 WASM = ROOT / "target/wasm32-unknown-unknown/small-wasm/temper_wasm.wasm"
 
@@ -60,16 +62,19 @@ WASM = ROOT / "target/wasm32-unknown-unknown/small-wasm/temper_wasm.wasm"
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("dirs", nargs="*", type=Path, default=DEFAULT_DIRS)
-    parser.add_argument("--record", action="store_true", help="append results to notes/size-and-speed.csv")
+    parser.add_argument("--record", action="store_true", help="append results to the CSV")
+    parser.add_argument("--csv", type=Path, default=record_times.CSV, help="the CSV (default stats/size-and-speed.csv)")
     parser.add_argument("--shares", action="store_true", help="also measure each backend's share")
+    parser.add_argument("--no-kotlin", action="store_true", help="leave out Kotlin's peak memory")
     args = parser.parse_args()
     rows: list[tuple[str, str, str, str]] = []  # what, value, unit, conditions
+    dirty = bool(record_times.git("status", "--porcelain", "--untracked-files=no"))
     if args.shares:
         rows += shares()
 
-    kotlin, _ = commands()  # Also builds the release binaries.
-    kotlin_ast, _ = ast_commands()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "temper-frontend", "-p", "tempest"], cwd=ROOT, check=True)
+    kotlin, kotlin_ast = ([], []) if args.no_kotlin else (commands()[0], ast_commands()[0])
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "temper-syntax", "-p", "temper-frontend", "-p", "tempest"],
+                   cwd=ROOT, check=True)
     subprocess.run(
         ["cargo", "build", "-q", "--profile", "small", "-p", "temper-syntax", "-p", "temper-frontend", "-p", "tempest"],
         cwd=ROOT,
@@ -101,31 +106,20 @@ def main() -> int:
         ("lex, parse and build trees for", "peak-memory-ast-all", "ast-tree", kotlin_ast),
     ):
         rust = peak_kib([str(ROOT / "target/small" / printer), "--bench", "1", *files])
-        jvm = peak_kib(oracle + ["--bench", "1", *files])
-        print(f"peak memory, {what} all: rust {rust / 1024:.1f} MiB, kotlin (JVM) {jvm / 1024:.1f} MiB")
-        rows += [(metric, mib(rust), "MiB", f"run=rust;{count}"), (metric, mib(jvm), "MiB", f"run=kotlin-jvm;{count}")]
+        print(f"peak memory, {what} all: rust {rust / 1024:.1f} MiB")
+        rows.append((metric, mib(rust), "MiB", f"run=rust;{count}"))
+        if oracle:
+            jvm = peak_kib(oracle + ["--bench", "1", *files])
+            print(f"peak memory, {what} all: kotlin (JVM) {jvm / 1024:.1f} MiB")
+            rows.append((metric, mib(jvm), "MiB", f"run=kotlin-jvm;{count}"))
     rust = peak_kib([str(ROOT / "target/small/run-temper"), "--bench", "1", *files])
     print(f"peak memory, lex, parse, build trees for and settle all: rust {rust / 1024:.1f} MiB")
     rows.append(("peak-memory-settle-all", mib(rust), "MiB", f"run=rust;{count}"))
     if args.record:
-        record(rows)
+        tree = record_times.conditions(dirty=dirty)
+        record_times.write([record_times.row(what, value, unit, ";".join(filter(None, (cond, tree))), "measure_size.py")
+                            for what, value, unit, cond in rows], args.csv)
     return 0
-
-
-def record(rows: list[tuple[str, str, str, str]]) -> None:
-    """Appends rows to the CSV, marking them `tree=dirty` if there are changes."""
-    git = ["git", "-C", str(ROOT)]
-    commit = subprocess.run([*git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True)
-    status = subprocess.run([*git, "status", "--porcelain"], capture_output=True, text=True, check=True)
-    tree = "tree=dirty" if status.stdout.strip() else ""
-    date = datetime.date.today().isoformat()
-    with CSV.open("a", newline="") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        for what, value, unit, conditions in rows:
-            conditions = ";".join(c for c in (conditions, tree) if c)
-            writer.writerow([date, commit.stdout.strip(), what, value, "", unit, conditions, "measure_size.py"])
-    size_speed_charts.render()
-    print(f"recorded {len(rows)} rows in {CSV.name}")
 
 
 def small_sizes(features: list[str]) -> tuple[int, int, int]:
