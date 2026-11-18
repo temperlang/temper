@@ -9,7 +9,7 @@ point is greater. Each line compares two strings with `<=>`, `<`, `<=`,
 after an equal prefix, two pairs that differ only in their second unit,
 a string that's a prefix of the other, the empty string, and ASCII,
 whose `<=>` is still -1, 0, or 1, as `Float64`'s is, last. The log is
-what tempest's interpreter gives.
+what the interpreter gives.
 
     let show(a: String, b: String): String {
       "${(a <=> b).toString()} ${(a < b).toString()} ${(a <= b).toString()} ${(a > b).toString()} ${(a >= b).toString()}"

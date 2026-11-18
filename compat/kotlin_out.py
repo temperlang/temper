@@ -116,7 +116,9 @@ def main():
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("# Kotlin Temper's temper.out for the functional tests tempest translates,\n")
         f.write("# from compat/kotlin_out.py: library, backend, then a file or a\n")
-        f.write("# package file's field.\n")
+        f.write("# package file's field. Recorded at Kotlin Temper 69f1a5b0, its\n")
+        f.write("# last sync; once tempest replaces Kotlin Temper, there's no Kotlin\n")
+        f.write("# output to re-record this from.\n")
         f.write("\n".join(out) + "\n")
     print(f"{len(out)} lines")
 

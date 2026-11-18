@@ -251,8 +251,9 @@ impl Translator<'_> {
             .is_some_and(|g| g.members.contains(&local))
     }
 
-    /// `base`, or `base2`, `base3`, …, whichever no declaration is named.
-    fn free_name(&self, base: &str) -> String {
+    /// `base`, or `base2`, `base3`, …, whichever no declaration is named,
+    /// for what the translation adds (a group's struct, a held value).
+    pub(crate) fn free_name(&self, base: &str) -> String {
         let p = self.p;
         let taken = |n: &str| p.decls.ids().any(|d| self.names.get(d) == n);
         (1..)
@@ -268,6 +269,7 @@ impl Translator<'_> {
     fn mentions_type_param(&self, ty: TypeId) -> bool {
         let p = self.p;
         match p.types.get(ty) {
+            TypeData::Never(t) => self.mentions_type_param(t),
             TypeData::TypeParam { .. } => true,
             TypeData::Nullable(t) => self.mentions_type_param(t),
             TypeData::Nominal { args, .. } => {

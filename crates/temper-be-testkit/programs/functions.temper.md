@@ -7,8 +7,13 @@ core's list members that take functions (`map`, `filter`, `join`, and
 closures made in a loop, each capturing that time round's `let`, in a
 function and in a generator, which is stepped once past its end; and
 loops: `continue` in a `for … of`, and a `for` whose second
-declaration reads the first. The log is what tempest's interpreter
-gives.
+declaration reads the first; a local function that calls itself, in a
+block that's a `let`'s value and in one that's a function's; and a
+nullable `@fun` value held in a local and called after a null check;
+and instance extensions, functions marked `@extension("name")` that
+`x.name(…)` calls with `x` first, of a builtin type, a generic one, a
+nullable one, and a class, whose own method of that name wins where its
+parameters fit. The log is what the interpreter gives.
 
     @fun interface Counter(): Int;
     @fun interface IntOp(x: Int): Int;
@@ -96,6 +101,70 @@ gives.
       n
     }
     console.log("sum ${sumFrom(ns, 4)} doubles ${doubles("bookkeeper")}");
+    let climb(x: Int): Int {
+      var d = when (x) {
+        0 -> do {
+          let down(n: Int): Int { if (n <= x) { 0 } else { down(n - 1) + 1 } }
+          down(3)
+        }
+        else -> return -1;
+      };
+      d += 1;
+      when (d) {
+        4 -> do {
+          let top = d + 1;
+          let up(n: Int): Int { if (n >= top) { n } else { up(n + 1) } }
+          up(d)
+        }
+        else -> d
+      }
+    }
+    console.log("climb ${climb(0)} ${climb(1)}");
+    class Gate() {
+      public var check: IntOp? = null;
+      public allows(n: Int): Boolean {
+        let c = check;
+        c == null || c(n) > 0
+      }
+      public passed(n: Int): Int {
+        let c = check;
+        if (c != null) { c(n) } else { n }
+      }
+    }
+    let gate = new Gate();
+    console.log("gate ${gate.allows(0)} ${gate.passed(4)}");
+    gate.check = fn (x: Int): Int { x - 1 };
+    console.log("gate ${gate.allows(1)} ${gate.allows(2)} ${gate.passed(4)}");
+
+    @extension("isPalindrome")
+    let stringIsPalindrome(s: String): Boolean {
+      var i = String.begin;
+      var j = s.end;
+      while (i < j) {
+        j = s.prev(j);
+        if (s[i] != s[j]) { return false }
+        i = s.next(i);
+      }
+      return true
+    }
+    @extension("orZero") let intOrZero(n: Int?): Int { n ?? 0 }
+    @extension("firstOr")
+    let listFirstOr<T>(ls: List<T>, d: T): T {
+      if (ls.isEmpty) { d } else { ls[0] }
+    }
+    @extension("padded")
+    let stringPadded(s: String, n: Int, fill: String = "."): String {
+      var out = s;
+      for (var i = 0; i < n; ++i) { out = "${out}${fill}" }
+      out
+    }
+    @extension("passed")
+    let gatePassed(g: Gate, s: String): String { "${s} ${g.allows(1)}" }
+    let none: Int? = if (gate.allows(0)) { 3 } else { null };
+    console.log("${"step on no pets".isPalindrome()} ${"steps".isPalindrome()}");
+    console.log("${none.orZero()} ${[4, 5].firstOr(0)} ${["x"].firstOr("-")}");
+    console.log("${"ab".padded(2)} ${"ab".padded(1, "*")}");
+    console.log("${gate.passed(4)} ${gate.passed("gate")}");
 
 ```log
 count 12
@@ -109,4 +178,11 @@ hits 2
 0 10 20
 0 1 10 11 20 21
 sum 17 doubles 3
+climb 5 -1
+gate true 4
+gate false true 3
+true false
+0 4 x
+ab.. ab*
+3 gate false
 ```

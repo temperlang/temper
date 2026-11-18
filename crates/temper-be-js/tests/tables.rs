@@ -1,7 +1,7 @@
 //! The JS variant's tables: every operator spelled, and every
 //! connection keyed by a connected declaration of core, every type
-//! connection by a type of core, and every runtime helper exported by the
-//! vendored `@temperlang/core` and reserved by the naming rules.
+//! connection by a type of core, and every runtime helper exported by
+//! `@temperlang/core` and reserved by the naming rules.
 
 use std::fs;
 use std::path::PathBuf;
@@ -75,8 +75,7 @@ fn type_connections_name_core_types() {
 
 #[test]
 fn helpers_are_the_runtimes_and_reserved() {
-    let dir =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vendor/temper/be-js/temper-core");
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core");
     let mut exported = String::new();
     for entry in fs::read_dir(dir).unwrap() {
         let path = entry.unwrap().path();

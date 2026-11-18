@@ -43,7 +43,7 @@ pub(super) const PRELUDE: &str = r#"@connected let replHost(which: Int, a: AnyVa
  */
 let help(about: AnyValue? = null): Void { replHost(0, about, null) }
 /**
- * Shows input `n` at one of tempest's steps: "parsed", "settled" (the
+ * Shows input `n` at one of the compiler's steps: "parsed", "settled" (the
  * default), "types", "module", or "tmpl".
  */
 let describe(n: Int, step: String = "settled"): Void { replHost(1, n, step) }
@@ -152,7 +152,7 @@ pub(super) fn host(state: Rc<RefCell<Specials>>, sink: Sink) -> Host {
             }
         }));
         let shown = shown.unwrap_or_else(|_| {
-            Err("tempest: internal error (a bug in tempest, not in your code)".into())
+            Err("temper: internal error (a bug in Temper, not in your code)".into())
         });
         Some(shown.map(|text| {
             if !text.is_empty() {
@@ -187,14 +187,14 @@ impl Specials {
     /// What `help()` shows.
     fn overview(&self) -> String {
         let mut out = String::from(
-            "tempest repl runs each Temper input against what earlier inputs declared,\n\
+            "temper repl runs each Temper input against what earlier inputs declared,\n\
              printing its result as interactive#N: value.\n\
              \n\
              The REPL's own functions:\n\
             \x20 help()              this\n\
             \x20 help(\"name\")        a declaration's signature and docs, as help(\"greet\");\n\
             \x20                     a function's or type's also as help(greet)\n\
-            \x20 describe(n, step)   input n at one of tempest's steps (\"settled\" if none):\n",
+            \x20 describe(n, step)   input n at one of the compiler's steps (\"settled\" if none):\n",
         );
         for (step, what) in STEPS {
             out.push_str(&format!("      {:<9} {what}\n", format!("\"{step}\"")));
@@ -352,6 +352,8 @@ impl Specials {
         self.input(n)?;
         let mut library = Library::new();
         library.libraries = self.libraries.clone();
+        // Any later input may use what one declares.
+        library.keep_all = true;
         library.add_file(
             "interactive.temper",
             &self.module(s, n)?,
@@ -537,7 +539,7 @@ impl Specials {
     fn input(&self, n: usize) -> Result<(FileId, ScopeId), String> {
         self.inputs[n].ok_or_else(|| {
             format!(
-                "input {n} failed as it was settled, a bug in tempest, so it has nothing to show"
+                "input {n} failed as it was settled, a bug in Temper, so it has nothing to show"
             )
         })
     }

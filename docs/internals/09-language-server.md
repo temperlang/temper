@@ -1,6 +1,6 @@
 # 9. The language server and editors
 
-`tempest lsp` is a language server: an editor starts it, talks to it
+`temper lsp` is a language server: an editor starts it, talks to it
 over stdin and stdout, and gets errors as you type, hover, go to
 definition, completion, find references, rename, an outline, and
 signature help. It answers from the same
@@ -11,7 +11,7 @@ TextMate grammars for highlighting.
 
 ```mermaid
 flowchart LR
-  vscode["VS Code: extension.ts, vscode-languageclient"] -->|"JSON-RPC over stdio"| loop["tempest lsp: serve"]
+  vscode["VS Code: extension.ts, vscode-languageclient"] -->|"JSON-RPC over stdio"| loop["temper lsp: serve"]
   loop --> docs["Open documents"]
   docs --> sources["Sources: memory layer, then disk, std built in"]
   sources --> unit["The library around a file"]
@@ -24,17 +24,17 @@ flowchart LR
 ## One loop, no async
 
 The server is one plain loop, [`serve`](../../crates/temper-lsp/src/lib.rs),
-in the `temper-lsp` crate, which `tempest lsp` runs. A thread reads
+in the `temper-lsp` crate, which `temper lsp` runs. A thread reads
 messages, each a `Content-Length` header and JSON, and hands them over
 a channel; the loop waits for the next message or a timer, whichever
 comes first. Messages are `serde_json` values, and their params and
 results `lsp-types`' structs; no async runtime. Only the native
-`tempest` uses the crate, so the wasm build, which answers the
+`temper` uses the crate, so the wasm build, which answers the
 playground itself, doesn't carry it or those crates. What this costs
 (no cancellation, one request at a time) and the alternatives:
 [one synchronous loop, in detail](detail/09-language-server.md#one-synchronous-loop).
 
-A panic, a bug in tempest, doesn't end the server: each request and
+A panic, a bug in Temper, doesn't end the server: each request and
 each analysis is caught, the request answered with an error and the
 analysis's document given an "internal error" diagnostic, and the
 server goes on
@@ -48,7 +48,7 @@ server goes on
   [`Sources`](../../crates/temper-frontend/src/sources.rs) in front of
   the disk, so a library sees unsaved edits in every file.
 - **A unit** is what's settled together: the library around a file,
-  found as `tempest build` finds libraries (the nearest
+  found as `temper build` finds libraries (the nearest
   `config.temper.md`, under its work root), or else the file alone.
   One [`Analysis`](../../crates/temper-analysis/src/lib.rs) answers for
   all of its files, so references and rename cross files.
@@ -109,9 +109,9 @@ How a query finds what's at a position:
   `editors/vscode/check_grammar.py` scopes samples with a small
   TextMate tokenizer.
 - **The client** ([`extension.ts`](../../editors/vscode/src/extension.ts))
-  starts `tempest lsp` with `vscode-languageclient`. The server is
-  `temper.server.path` if set, then the tempest bundled in the package,
-  then `tempest` on `PATH`, only a file that's there
+  starts `temper lsp` with `vscode-languageclient`. The server is
+  `temper.server.path` if set, then the `temper` bundled in the package,
+  then `temper` on `PATH`, only a file that's there
   ([`search`](../../editors/vscode/src/server.ts)); none, or one that
   doesn't start, is an error notification naming what was tried, with
   a button to the setting.
@@ -129,7 +129,7 @@ How a query finds what's at a position:
   the scrolls it caused, so neither echoes back.
 - **Packaging:** `editors/vscode/build.py` checks the types, bundles
   with esbuild, and runs `vsce package`: a universal `.vsix` without
-  tempest, and one per platform with it in `bin/` (linux, darwin, and
+  `temper`, and one per platform with it in `bin/` (linux, darwin, and
   win32, each x64 and arm64), which the Binaries workflow builds from
   its release binaries.
 - **Tests in VS Code:** with `--test`, `test/suite.ts` runs in a real

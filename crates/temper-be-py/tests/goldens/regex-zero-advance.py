@@ -16,7 +16,7 @@ __all__ = ('bulletize_list',)
 
 
 def bulletize_list(text: str, /) -> str:
-    replaced = _comma_item_start_regex.replace(text, lambda match_: '\n- ')
+    replaced = _comma_item_start_regex.replace(text, lambda match: '\n- ')
     return replaced[_string_next(replaced, 0) : len(replaced)]
 
 

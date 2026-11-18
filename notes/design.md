@@ -289,9 +289,9 @@ for example), while user-space connected types wrap them. Per-backend code
 or decorators in Temper source stay avoided, though an opt-in for people
 who need them could come someday.
 
-Core and std sources belong in tempest's own tree eventually, built into
-the single binary. Std already is: the binaries and the wasm build embed
-the vendored copy, `vendor/temper/std` (temper-frontend's `stdlib`), and
+Core and std sources are in tempest's own tree (`lib/core/` and
+`lib/std/`), built into the single binary: the binaries and the wasm
+build embed `lib/std/` (temper-frontend's `stdlib`), and
 `--std DIR` overrides it for testing against another copy. The frontend
 reads every file through one `Sources` value (temper-frontend's
 `sources`): layers mounted at path prefixes, from the disk, the built-in
@@ -405,8 +405,8 @@ with less:
 - **Shared lowerings** run on tmpl first, chosen by the backend's profile
   (section 7), and the shared naming pass names everything (section 8).
 - **The runtime support libraries** (`temper-core` for each language) are
-  Kotlin Temper's, vendored in `vendor/temper/`, with a few fixes kept as
-  patches that each sync re-applies, which keeps runtime APIs identical.
+  Kotlin Temper's, with a few changes, in each backend crate's
+  `runtime/`, which keeps runtime APIs identical.
 - **Idiomatic output:** real loops and conditionals, source names, no
   needless temporaries.
 

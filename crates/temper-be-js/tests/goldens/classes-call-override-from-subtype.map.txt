@@ -1,66 +1,61 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../call-override-from-subtype.temper.md:17:5  /** <- let checkFromOutside(slipste
-7:1 -> ../call-override-from-subtype.temper.md:17:5  function checkFromOutside(sl <- let checkFromOutside(slipste
-7:10 -> ../call-override-from-subtype.temper.md:17:9 (checkFromOutside)  checkFromOutside(slipster) { <- checkFromOutside(slipster: S
-7:26 -> ../call-override-from-subtype.temper.md:17:5  (slipster) { <- let checkFromOutside(slipste
-8:3 -> ../call-override-from-subtype.temper.md:18:7  return slipster.thingums === <- slipster.thingums == 5
-11:1 -> ../call-override-from-subtype.temper.md:6:5  class Slappy extends type() <- interface Slappy {
-11:7 -> ../call-override-from-subtype.temper.md:6:15 (Slappy)  Slappy extends type() { <- Slappy {
-11:13 -> ../call-override-from-subtype.temper.md:6:5   extends type() { <- interface Slappy {
-12:3 -> ../call-override-from-subtype.temper.md:7:14  /** @type {number} */ <- get thingums(): Int;
-13:3 -> ../call-override-from-subtype.temper.md:7:14  thingums = /** @type {any} * <- get thingums(): Int;
-16:1 -> ../call-override-from-subtype.temper.md:10:5  class Slippy extends type(Sl <- class Slippy extends Slappy
-16:7 -> ../call-override-from-subtype.temper.md:10:11 (Slippy)  Slippy extends type(Slappy) <- Slippy extends Slappy {
-16:13 -> ../call-override-from-subtype.temper.md:10:5   extends type(Slappy) { <- class Slippy extends Slappy
-17:3 -> ../call-override-from-subtype.temper.md:11:14  /** @returns {boolean} */ <- checkOverridden(): Boolean {
-18:3 -> ../call-override-from-subtype.temper.md:11:14 (checkOverridden)  checkOverridden() { <- checkOverridden(): Boolean {
-19:5 -> ../call-override-from-subtype.temper.md:11:43  return this.thingums === 1; <- this.thingums == 1 }
-22:3 -> ../call-override-from-subtype.temper.md:12:14  /** @returns {boolean} */ <- checkOwn(): Boolean { this.t
-23:3 -> ../call-override-from-subtype.temper.md:12:14 (checkOwn)  checkOwn() { <- checkOwn(): Boolean { this.t
-24:5 -> ../call-override-from-subtype.temper.md:12:36  return this.thingumses === 2 <- this.thingumses == 2 }
-27:3 -> ../call-override-from-subtype.temper.md:13:14  /** @returns {number} */ <- get thingums(): Int { 3 }
-28:3 -> ../call-override-from-subtype.temper.md:13:14  get thingums() { <- get thingums(): Int { 3 }
-28:7 -> ../call-override-from-subtype.temper.md:13:18 (thingums)  thingums() { <- thingums(): Int { 3 }
-29:5 -> ../call-override-from-subtype.temper.md:13:36  return 3; <- 3 }
-32:3 -> ../call-override-from-subtype.temper.md:14:14  /** @returns {number} */ <- get thingumses(): Int { 4 }
-33:3 -> ../call-override-from-subtype.temper.md:14:14  get thingumses() { <- get thingumses(): Int { 4 }
-33:7 -> ../call-override-from-subtype.temper.md:14:18 (thingumses)  thingumses() { <- thingumses(): Int { 4 }
-34:5 -> ../call-override-from-subtype.temper.md:14:38  return 4; <- 4 }
-38:1 -> ../call-override-from-subtype.temper.md:49:5  class A extends type() { <- interface A {
-38:7 -> ../call-override-from-subtype.temper.md:49:15 (A)  A extends type() { <- A {
-38:8 -> ../call-override-from-subtype.temper.md:49:5   extends type() { <- interface A {
-39:3 -> ../call-override-from-subtype.temper.md:50:7  /** @returns {string} */ <- a(): String { "A wins!" }
-40:3 -> ../call-override-from-subtype.temper.md:50:7 (a)  a() { <- a(): String { "A wins!" }
-41:5 -> ../call-override-from-subtype.temper.md:50:21  return "A wins!"; <- "A wins!" }
-44:3 -> ../call-override-from-subtype.temper.md:51:7  /** @returns {string} */ <- get thing(): String { "A has
-45:3 -> ../call-override-from-subtype.temper.md:51:7  get thing() { <- get thing(): String { "A has
-45:7 -> ../call-override-from-subtype.temper.md:51:11 (thing)  thing() { <- thing(): String { "A has thi
-46:5 -> ../call-override-from-subtype.temper.md:51:29  return "A has thing!"; <- "A has thing!" }
-50:1 -> ../call-override-from-subtype.temper.md:53:5  class B extends type(A) {} <- interface B extends A {}
-50:7 -> ../call-override-from-subtype.temper.md:53:15 (B)  B extends type(A) {} <- B extends A {}
-50:8 -> ../call-override-from-subtype.temper.md:53:5   extends type(A) {} <- interface B extends A {}
-52:1 -> ../call-override-from-subtype.temper.md:54:5  class C extends type(A) { <- interface C extends A {
-52:7 -> ../call-override-from-subtype.temper.md:54:15 (C)  C extends type(A) { <- C extends A {
-52:8 -> ../call-override-from-subtype.temper.md:54:5   extends type(A) { <- interface C extends A {
-53:3 -> ../call-override-from-subtype.temper.md:55:7  /** @returns {string} */ <- a(): String { "C wins!" }
-54:3 -> ../call-override-from-subtype.temper.md:55:7 (a)  a() { <- a(): String { "C wins!" }
-55:5 -> ../call-override-from-subtype.temper.md:55:21  return "C wins!"; <- "C wins!" }
-58:3 -> ../call-override-from-subtype.temper.md:56:7  /** @returns {string} */ <- get thing(): String { "C has
-59:3 -> ../call-override-from-subtype.temper.md:56:7  get thing() { <- get thing(): String { "C has
-59:7 -> ../call-override-from-subtype.temper.md:56:11 (thing)  thing() { <- thing(): String { "C has thi
-60:5 -> ../call-override-from-subtype.temper.md:56:29  return "C has thing!"; <- "C has thing!" }
-64:1 -> ../call-override-from-subtype.temper.md:58:5  class D extends type(B, C) { <- class D extends B & C {}
-64:7 -> ../call-override-from-subtype.temper.md:58:11 (D)  D extends type(B, C) { <- D extends B & C {}
-64:8 -> ../call-override-from-subtype.temper.md:58:5   extends type(B, C) { <- class D extends B & C {}
-76:1 -> ../call-override-from-subtype.temper.md:71:5  class ASplit extends type() <- interface ASplit { a(): Stri
-76:7 -> ../call-override-from-subtype.temper.md:71:15 (ASplit)  ASplit extends type() { <- ASplit { a(): String { "A wi
-76:13 -> ../call-override-from-subtype.temper.md:71:5   extends type() { <- interface ASplit { a(): Stri
-77:3 -> ../call-override-from-subtype.temper.md:71:24  /** @returns {string} */ <- a(): String { "A wins!" } }
-78:3 -> ../call-override-from-subtype.temper.md:71:24 (a)  a() { <- a(): String { "A wins!" } }
-79:5 -> ../call-override-from-subtype.temper.md:71:38  return "A wins!"; <- "A wins!" } }
-83:1 -> ../call-override-from-subtype.temper.md:72:5  class BSplit extends type(AS <- interface BSplit extends ASp
-83:7 -> ../call-override-from-subtype.temper.md:72:15 (BSplit)  BSplit extends type(ASplit) <- BSplit extends ASplit {}
-83:13 -> ../call-override-from-subtype.temper.md:72:5   extends type(ASplit) {} <- interface BSplit extends ASp
+3:1 -> ../call-override-from-subtype.temper.md:6:5  class Slappy extends type() <- interface Slappy {
+3:7 -> ../call-override-from-subtype.temper.md:6:15 (Slappy)  Slappy extends type() { <- Slappy {
+3:13 -> ../call-override-from-subtype.temper.md:6:5   extends type() { <- interface Slappy {
+4:3 -> ../call-override-from-subtype.temper.md:7:14  /** @type {number} */ <- get thingums(): Int;
+5:3 -> ../call-override-from-subtype.temper.md:7:14  thingums = /** @type {any} * <- get thingums(): Int;
+8:1 -> ../call-override-from-subtype.temper.md:10:5  class Slippy extends type(Sl <- class Slippy extends Slappy
+8:7 -> ../call-override-from-subtype.temper.md:10:11 (Slippy)  Slippy extends type(Slappy) <- Slippy extends Slappy {
+8:13 -> ../call-override-from-subtype.temper.md:10:5   extends type(Slappy) { <- class Slippy extends Slappy
+9:3 -> ../call-override-from-subtype.temper.md:11:14  /** @returns {boolean} */ <- checkOverridden(): Boolean {
+10:3 -> ../call-override-from-subtype.temper.md:11:14 (checkOverridden)  checkOverridden() { <- checkOverridden(): Boolean {
+11:5 -> ../call-override-from-subtype.temper.md:11:43  return this.thingums === 1; <- this.thingums == 1 }
+14:3 -> ../call-override-from-subtype.temper.md:12:14  /** @returns {boolean} */ <- checkOwn(): Boolean { this.t
+15:3 -> ../call-override-from-subtype.temper.md:12:14 (checkOwn)  checkOwn() { <- checkOwn(): Boolean { this.t
+16:5 -> ../call-override-from-subtype.temper.md:12:36  return this.thingumses === 2 <- this.thingumses == 2 }
+19:3 -> ../call-override-from-subtype.temper.md:13:14  /** @returns {number} */ <- get thingums(): Int { 3 }
+20:3 -> ../call-override-from-subtype.temper.md:13:14  get thingums() { <- get thingums(): Int { 3 }
+20:7 -> ../call-override-from-subtype.temper.md:13:18 (thingums)  thingums() { <- thingums(): Int { 3 }
+21:5 -> ../call-override-from-subtype.temper.md:13:36  return 3; <- 3 }
+24:3 -> ../call-override-from-subtype.temper.md:14:14  /** @returns {number} */ <- get thingumses(): Int { 4 }
+25:3 -> ../call-override-from-subtype.temper.md:14:14  get thingumses() { <- get thingumses(): Int { 4 }
+25:7 -> ../call-override-from-subtype.temper.md:14:18 (thingumses)  thingumses() { <- thingumses(): Int { 4 }
+26:5 -> ../call-override-from-subtype.temper.md:14:38  return 4; <- 4 }
+30:1 -> ../call-override-from-subtype.temper.md:49:5  class A extends type() { <- interface A {
+30:7 -> ../call-override-from-subtype.temper.md:49:15 (A)  A extends type() { <- A {
+30:8 -> ../call-override-from-subtype.temper.md:49:5   extends type() { <- interface A {
+31:3 -> ../call-override-from-subtype.temper.md:50:7  /** @returns {string} */ <- a(): String { "A wins!" }
+32:3 -> ../call-override-from-subtype.temper.md:50:7 (a)  a() { <- a(): String { "A wins!" }
+33:5 -> ../call-override-from-subtype.temper.md:50:21  return "A wins!"; <- "A wins!" }
+36:3 -> ../call-override-from-subtype.temper.md:51:7  /** @returns {string} */ <- get thing(): String { "A has
+37:3 -> ../call-override-from-subtype.temper.md:51:7  get thing() { <- get thing(): String { "A has
+37:7 -> ../call-override-from-subtype.temper.md:51:11 (thing)  thing() { <- thing(): String { "A has thi
+38:5 -> ../call-override-from-subtype.temper.md:51:29  return "A has thing!"; <- "A has thing!" }
+42:1 -> ../call-override-from-subtype.temper.md:53:5  class B extends type(A) { <- interface B extends A {}
+42:7 -> ../call-override-from-subtype.temper.md:53:15 (B)  B extends type(A) { <- B extends A {}
+42:8 -> ../call-override-from-subtype.temper.md:53:5   extends type(A) { <- interface B extends A {}
+49:1 -> ../call-override-from-subtype.temper.md:54:5  class C extends type(A) { <- interface C extends A {
+49:7 -> ../call-override-from-subtype.temper.md:54:15 (C)  C extends type(A) { <- C extends A {
+49:8 -> ../call-override-from-subtype.temper.md:54:5   extends type(A) { <- interface C extends A {
+50:3 -> ../call-override-from-subtype.temper.md:55:7  /** @returns {string} */ <- a(): String { "C wins!" }
+51:3 -> ../call-override-from-subtype.temper.md:55:7 (a)  a() { <- a(): String { "C wins!" }
+52:5 -> ../call-override-from-subtype.temper.md:55:21  return "C wins!"; <- "C wins!" }
+55:3 -> ../call-override-from-subtype.temper.md:56:7  /** @returns {string} */ <- get thing(): String { "C has
+56:3 -> ../call-override-from-subtype.temper.md:56:7  get thing() { <- get thing(): String { "C has
+56:7 -> ../call-override-from-subtype.temper.md:56:11 (thing)  thing() { <- thing(): String { "C has thi
+57:5 -> ../call-override-from-subtype.temper.md:56:29  return "C has thing!"; <- "C has thing!" }
+61:1 -> ../call-override-from-subtype.temper.md:58:5  class D extends type(B, C) { <- class D extends B & C {}
+61:7 -> ../call-override-from-subtype.temper.md:58:11 (D)  D extends type(B, C) { <- D extends B & C {}
+61:8 -> ../call-override-from-subtype.temper.md:58:5   extends type(B, C) { <- class D extends B & C {}
+73:1 -> ../call-override-from-subtype.temper.md:71:5  class ASplit extends type() <- interface ASplit { a(): Stri
+73:7 -> ../call-override-from-subtype.temper.md:71:15 (ASplit)  ASplit extends type() { <- ASplit { a(): String { "A wi
+73:13 -> ../call-override-from-subtype.temper.md:71:5   extends type() { <- interface ASplit { a(): Stri
+74:3 -> ../call-override-from-subtype.temper.md:71:24  /** @returns {string} */ <- a(): String { "A wins!" } }
+75:3 -> ../call-override-from-subtype.temper.md:71:24 (a)  a() { <- a(): String { "A wins!" } }
+76:5 -> ../call-override-from-subtype.temper.md:71:38  return "A wins!"; <- "A wins!" } }
+80:1 -> ../call-override-from-subtype.temper.md:72:5  class BSplit extends type(AS <- interface BSplit extends ASp
+80:7 -> ../call-override-from-subtype.temper.md:72:15 (BSplit)  BSplit extends type(ASplit) <- BSplit extends ASplit {}
+80:13 -> ../call-override-from-subtype.temper.md:72:5   extends type(ASplit) { <- interface BSplit extends ASp
 85:1 -> ../call-override-from-subtype.temper.md:73:5  class CSplit extends type() <- interface CSplit { a(): Stri
 85:7 -> ../call-override-from-subtype.temper.md:73:15 (CSplit)  CSplit extends type() { <- CSplit { a(): String { "C wi
 85:13 -> ../call-override-from-subtype.temper.md:73:5   extends type() { <- interface CSplit { a(): Stri
@@ -84,28 +79,25 @@
 109:5 -> ../call-override-from-subtype.temper.md:91:52  return "B1 wins!"; <- "B1 wins!" } }
 113:1 -> ../call-override-from-subtype.temper.md:92:5  class B2Deep extends type(B1 <- interface B2Deep extends B1D
 113:7 -> ../call-override-from-subtype.temper.md:92:15 (B2Deep)  B2Deep extends type(B1Deep) <- B2Deep extends B1Deep {}
-113:13 -> ../call-override-from-subtype.temper.md:92:5   extends type(B1Deep) {} <- interface B2Deep extends B1D
-115:1 -> ../call-override-from-subtype.temper.md:93:5  class B3Deep extends type(B2 <- interface B3Deep extends B2D
-115:7 -> ../call-override-from-subtype.temper.md:93:15 (B3Deep)  B3Deep extends type(B2Deep) <- B3Deep extends B2Deep {}
-115:13 -> ../call-override-from-subtype.temper.md:93:5   extends type(B2Deep) {} <- interface B3Deep extends B2D
-117:1 -> ../call-override-from-subtype.temper.md:99:5  class CDeep extends type(ADe <- interface CDeep extends ADee
-117:7 -> ../call-override-from-subtype.temper.md:99:15 (CDeep)  CDeep extends type(ADeep) {} <- CDeep extends ADeep {}
-117:12 -> ../call-override-from-subtype.temper.md:99:5   extends type(ADeep) {} <- interface CDeep extends ADee
-119:1 -> ../call-override-from-subtype.temper.md:100:5  class DDeep extends type(B2D <- class DDeep extends B2Deep &
-119:7 -> ../call-override-from-subtype.temper.md:100:11 (DDeep)  DDeep extends type(B2Deep, C <- DDeep extends B2Deep & CDeep
-119:12 -> ../call-override-from-subtype.temper.md:100:5   extends type(B2Deep, CDeep) <- class DDeep extends B2Deep &
-126:1 -> ../call-override-from-subtype.temper.md:109:5  class EDeep extends type(CDe <- class EDeep extends CDeep &
-126:7 -> ../call-override-from-subtype.temper.md:109:11 (EDeep)  EDeep extends type(CDeep, B2 <- EDeep extends CDeep & B2Deep
-126:12 -> ../call-override-from-subtype.temper.md:109:5   extends type(CDeep, B2Deep) <- class EDeep extends CDeep &
-133:1 -> ../call-override-from-subtype.temper.md:23:5  const slippy = new Slippy(); <- let slippy = new Slippy();
-134:1 -> ../call-override-from-subtype.temper.md:24:5  const slappy = slippy; <- let slappy: Slappy = slippy;
-135:1 -> ../call-override-from-subtype.temper.md:25:5  console.log(slippy.thingums. <- console.log(slippy.thingums.
-136:1 -> ../call-override-from-subtype.temper.md:26:5  console.log(slappy.thingums. <- console.log(slappy.thingums.
-137:1 -> ../call-override-from-subtype.temper.md:27:5  console.log(slippy.thingumse <- console.log(slippy.thingumse
-138:1 -> ../call-override-from-subtype.temper.md:28:5  console.log(slippy.checkOver <- console.log(slippy.checkOver
-139:1 -> ../call-override-from-subtype.temper.md:29:5  console.log(slippy.checkOwn( <- console.log(slippy.checkOwn(
-140:1 -> ../call-override-from-subtype.temper.md:59:5  console.log(new D().a()); <- console.log(new D().a());
-141:1 -> ../call-override-from-subtype.temper.md:60:5  console.log(new D().thing); <- console.log(new D().thing);
-142:1 -> ../call-override-from-subtype.temper.md:75:5  console.log(new DSplit().a() <- console.log(new DSplit().a()
-143:1 -> ../call-override-from-subtype.temper.md:101:5  console.log(new DDeep().a()) <- console.log(new DDeep().a())
-144:1 -> ../call-override-from-subtype.temper.md:110:5  console.log(new EDeep().a()) <- console.log(new EDeep().a())
+113:13 -> ../call-override-from-subtype.temper.md:92:5   extends type(B1Deep) { <- interface B2Deep extends B1D
+118:1 -> ../call-override-from-subtype.temper.md:99:5  class CDeep extends type(ADe <- interface CDeep extends ADee
+118:7 -> ../call-override-from-subtype.temper.md:99:15 (CDeep)  CDeep extends type(ADeep) { <- CDeep extends ADeep {}
+118:12 -> ../call-override-from-subtype.temper.md:99:5   extends type(ADeep) { <- interface CDeep extends ADee
+123:1 -> ../call-override-from-subtype.temper.md:100:5  class DDeep extends type(B2D <- class DDeep extends B2Deep &
+123:7 -> ../call-override-from-subtype.temper.md:100:11 (DDeep)  DDeep extends type(B2Deep, C <- DDeep extends B2Deep & CDeep
+123:12 -> ../call-override-from-subtype.temper.md:100:5   extends type(B2Deep, CDeep) <- class DDeep extends B2Deep &
+130:1 -> ../call-override-from-subtype.temper.md:109:5  class EDeep extends type(CDe <- class EDeep extends CDeep &
+130:7 -> ../call-override-from-subtype.temper.md:109:11 (EDeep)  EDeep extends type(CDeep, B2 <- EDeep extends CDeep & B2Deep
+130:12 -> ../call-override-from-subtype.temper.md:109:5   extends type(CDeep, B2Deep) <- class EDeep extends CDeep &
+137:1 -> ../call-override-from-subtype.temper.md:23:5  const slippy = new Slippy(); <- let slippy = new Slippy();
+138:1 -> ../call-override-from-subtype.temper.md:24:5  const slappy = slippy; <- let slappy: Slappy = slippy;
+139:1 -> ../call-override-from-subtype.temper.md:25:5  console.log(slippy.thingums. <- console.log(slippy.thingums.
+140:1 -> ../call-override-from-subtype.temper.md:26:5  console.log(slappy.thingums. <- console.log(slappy.thingums.
+141:1 -> ../call-override-from-subtype.temper.md:27:5  console.log(slippy.thingumse <- console.log(slippy.thingumse
+142:1 -> ../call-override-from-subtype.temper.md:28:5  console.log(slippy.checkOver <- console.log(slippy.checkOver
+143:1 -> ../call-override-from-subtype.temper.md:29:5  console.log(slippy.checkOwn( <- console.log(slippy.checkOwn(
+144:1 -> ../call-override-from-subtype.temper.md:59:5  console.log(new D().a()); <- console.log(new D().a());
+145:1 -> ../call-override-from-subtype.temper.md:60:5  console.log(new D().thing); <- console.log(new D().thing);
+146:1 -> ../call-override-from-subtype.temper.md:75:5  console.log(new DSplit().a() <- console.log(new DSplit().a()
+147:1 -> ../call-override-from-subtype.temper.md:101:5  console.log(new DDeep().a()) <- console.log(new DDeep().a())
+148:1 -> ../call-override-from-subtype.temper.md:110:5  console.log(new EDeep().a()) <- console.log(new EDeep().a())

@@ -156,6 +156,37 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 sum_from(ns.clone(), 4),
                 doubles("bookkeeper")
             );
+            println!("climb {} {}", climb(0), climb(1));
+            let gate = Gate::new();
+            println!("gate {} {}", gate.allows(0), gate.passed(4));
+            *gate.0.check.write().unwrap() = Some(Arc::new(move |x: i32| x.wrapping_sub(1)));
+            println!(
+                "gate {} {} {}",
+                gate.allows(1),
+                gate.allows(2),
+                gate.passed(4)
+            );
+            let none = if gate.allows(0) { Some(3) } else { None };
+            println!(
+                "{} {}",
+                string_is_palindrome("step on no pets"),
+                string_is_palindrome("steps")
+            );
+            println!(
+                "{} {} {}",
+                int_or_zero(none),
+                list_first_or(Arc::new(vec![4, 5]), 0),
+                list_first_or(
+                    Arc::new(vec![Arc::new("x".to_string())]),
+                    Arc::new("-".to_string()),
+                )
+            );
+            println!(
+                "{} {}",
+                string_padded("ab", 2, None::<Arc<String>>),
+                string_padded("ab", 1, Some("*"))
+            );
+            println!("{} {}", gate.passed(4), gate_passed(gate.clone(), "gate"));
             Ok(())
         })
         .clone()
@@ -276,4 +307,145 @@ pub(crate) fn doubles(s: impl ToArcString) -> i32 {
         }
     }
     n
+}
+
+pub(crate) fn climb(x: i32) -> i32 {
+    let mut d: i32;
+    if x == 0 {
+        #[derive(Clone)]
+        struct DownGroup {
+            x: i32,
+        }
+        impl DownGroup {
+            fn down(&self, n: i32) -> i32 {
+                let x = self.x;
+                if n <= x {
+                    0
+                } else {
+                    self.down(n.wrapping_sub(1)).wrapping_add(1)
+                }
+            }
+        }
+        let down_group = DownGroup { x };
+        let down = Arc::new(move |a0: i32| down_group.down(a0));
+        d = down(3);
+    } else {
+        return -1;
+    }
+    d = d.wrapping_add(1);
+    if d == 4 {
+        let top = d.wrapping_add(1);
+        #[derive(Clone)]
+        struct UpGroup {
+            top: i32,
+        }
+        impl UpGroup {
+            fn up(&self, n: i32) -> i32 {
+                let top = self.top;
+                if n >= top {
+                    n
+                } else {
+                    self.up(n.wrapping_add(1))
+                }
+            }
+        }
+        let up_group = UpGroup { top };
+        let up = Arc::new(move |a0: i32| up_group.up(a0));
+        up(d)
+    } else {
+        d
+    }
+}
+
+struct GateStruct {
+    check: RwLock<Option<Arc<dyn Fn(i32) -> i32 + Send + Sync>>>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Gate(Arc<GateStruct>);
+
+impl Gate {
+    pub fn new() -> Gate {
+        Gate(Arc::new(GateStruct {
+            check: RwLock::new(None),
+        }))
+    }
+
+    pub fn allows(&self, n: i32) -> bool {
+        let c = self.check();
+        if let Some(c) = &c {
+            c(n) > 0
+        } else {
+            true
+        }
+    }
+
+    pub fn passed(&self, n: i32) -> i32 {
+        let c = self.check();
+        if let Some(c) = &c {
+            c(n)
+        } else {
+            n
+        }
+    }
+
+    pub fn check(&self) -> Option<Arc<dyn Fn(i32) -> i32 + Send + Sync>> {
+        self.0.check.read().unwrap().clone()
+    }
+}
+
+temper_core::impl_any_value_trait!(Gate, []);
+
+pub(crate) fn string_is_palindrome(s: impl ToArcString) -> bool {
+    let s = s.to_arc_string();
+    let mut i: usize = 0usize;
+    let mut j = s.len();
+    while (Some(i).cmp(&Some(j)) as i32) < 0 {
+        j = temper_core::string::prev(&s, j);
+        if temper_core::string::get(&s, i) != temper_core::string::get(&s, j) {
+            return false;
+        }
+        i = temper_core::string::next(&s, i);
+    }
+    true
+}
+
+pub(crate) fn int_or_zero(n: Option<i32>) -> i32 {
+    n.unwrap_or(0)
+}
+
+pub(crate) fn list_first_or<T: Clone + Send + Sync + 'static>(
+    ls: impl temper_core::ToList<T>,
+    d: T,
+) -> T {
+    let ls = ls.to_list();
+    if temper_core::ListedTrait::is_empty(&ls) {
+        d.clone()
+    } else {
+        temper_core::ListedTrait::get(&ls, 0)
+    }
+}
+
+pub(crate) fn string_padded(
+    s: impl ToArcString,
+    n: i32,
+    fill: Option<impl ToArcString>,
+) -> Arc<String> {
+    let s = s.to_arc_string();
+    let fill = fill.map(|x| x.to_arc_string());
+    let fill = fill.unwrap_or_else(|| Arc::new(".".to_string()));
+    let mut out = s.clone();
+    {
+        let mut i: i32 = 0;
+        while i < n {
+            out = Arc::new(format!("{out}{fill}"));
+            i = i.wrapping_add(1);
+        }
+    }
+    out.clone()
+}
+
+pub(crate) fn gate_passed(g: Gate, s: impl ToArcString) -> Arc<String> {
+    let s = s.to_arc_string();
+    Arc::new(format!("{s} {}", g.allows(1)))
 }

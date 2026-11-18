@@ -64,6 +64,7 @@ impl Builder {
                 has_spans: false,
                 host: Default::default(),
                 interfaces: Vec::new(),
+                metadata: Vec::new(),
             },
         }
     }
@@ -121,6 +122,8 @@ impl Builder {
         for m in &mut modules {
             roots.extend(m.items.iter_mut());
             roots.push(&mut m.init);
+            roots.extend(m.test_items.iter_mut());
+            roots.extend(m.test_init.iter_mut());
             roots.extend(m.tests.iter_mut());
         }
         self.p.nodes = self.p.nodes.renumbered(&mut roots);
@@ -227,6 +230,11 @@ impl Builder {
         self.p.types.nullable(ty)
     }
 
+    /// `Never<T>` ([`crate::TypeTable::never`]).
+    pub fn never(&mut self, ty: TypeId) -> TypeId {
+        self.p.types.never(ty)
+    }
+
     /// A library this one uses; external declarations are owned by it.
     pub fn uses(&mut self, library: &str, version: &str) -> DeclId {
         let decl = self.declare(DeclKind::Library, library, DeclId::NONE, TypeId::NONE);
@@ -255,6 +263,8 @@ impl Builder {
             path: String::new(),
             items: Vec::new(),
             init: NodeId::NONE,
+            test_items: Vec::new(),
+            test_init: None,
             tests: Vec::new(),
         });
     }
@@ -371,6 +381,17 @@ impl Builder {
 
     pub fn set_init(&mut self, module: DeclId, block: NodeId) {
         self.module_mut(module).init = block;
+    }
+
+    /// Adds an item that only tests reach ([`Module::test_items`]).
+    pub fn add_test_item(&mut self, module: DeclId, item: NodeId) {
+        self.module_mut(module).test_items.push(item);
+    }
+
+    /// Sets the block of init statements that set what only tests reach
+    /// ([`Module::test_init`]).
+    pub fn set_test_init(&mut self, module: DeclId, block: Option<NodeId>) {
+        self.module_mut(module).test_init = block;
     }
 
     fn module_mut(&mut self, module: DeclId) -> &mut Module {
@@ -854,6 +875,16 @@ impl Builder {
         ) {
             self.p.nodes.set_ty(node, ty);
         }
+    }
+
+    /// Gives a node a new type and payload slots, for a pass that lowers
+    /// the types in a program ([`crate::nevers`]), and leaves its kind and
+    /// children.
+    pub(crate) fn retype_lowered(&mut self, node: NodeId, ty: TypeId, slots: (u32, u32)) {
+        let n = &self.p.nodes;
+        let (kind, flags) = (n.kind(node), n.flags(node));
+        let kids = n.kids(node).to_vec();
+        self.p.nodes.replace(node, kind, ty, slots, flags, &kids);
     }
 
     /// `null`, typed as the nullable type its place wants.

@@ -120,9 +120,9 @@ To make this easier, we also plan to support interpolating regex values into
 let regex3 = rgx"${regex}?d";
 ```
 
-See [*regex.temper.md*](../../../vendor/temper/std/regex/regex.temper.md) in the Temper source for the full current schema
+See [*regex.temper.md*](../../../lib/std/regex/regex.temper.md) in the Temper source for the full current schema
 and features. We plan to extend this in the future (see [issue#9](https://github.com/temperlang/temper/issues/9), [issue#16](https://github.com/temperlang/temper/issues/16),
-and more). Also see [*match.temper.md*](../../../vendor/temper/functional-tests/regex/match/match.temper.md) for more examples of
+and more). Also see [*match.temper.md*](../../../crates/temper-funtests/cases/regex/match/match.temper.md) for more examples of
 using the features.
 
 Again, for regex values that are stable at compile time, we plan to support

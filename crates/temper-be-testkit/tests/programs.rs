@@ -19,7 +19,7 @@ fn programs_log_as_the_interpreter_does() {
             let [(path, text)] = &case.sources[..] else {
                 continue;
             };
-            if !path.ends_with(".temper.md") || path.contains("functional-tests") {
+            if !path.ends_with(".temper.md") || path.contains("temper-funtests/cases/") {
                 continue;
             }
             let (failure, output) = kit::interpret(&case);
@@ -52,7 +52,7 @@ fn programs_translate_to_tmpl() {
         let mut goldens = kit::Goldens::new(env!("CARGO_MANIFEST_DIR"));
         for case in kit::cases("rust", &kit::PROGRAMS) {
             let path = &case.sources[0].0;
-            if path.ends_with(".tmpl") || path.contains("functional-tests") {
+            if path.ends_with(".tmpl") || path.contains("temper-funtests/cases/") {
                 continue;
             }
             let mut program = kit::program(&case);

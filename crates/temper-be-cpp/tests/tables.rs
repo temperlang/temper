@@ -1,6 +1,6 @@
 //! The C++ variant's tables: every operator spelled, every connection
 //! keyed by a connected declaration of core, every type connection by a
-//! type of core, and every runtime function called one that the vendored
+//! type of core, and every runtime function called one that
 //! `temper-core` has.
 
 use std::fs;
@@ -72,10 +72,9 @@ fn type_connections_name_core_types() {
     }
 }
 
-/// The text of every header of the vendored runtime.
+/// The text of every header of the runtime.
 fn runtime() -> String {
-    let dir =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vendor/temper/be-cpp/temper-core");
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core");
     let mut text = String::new();
     for entry in fs::read_dir(dir).unwrap() {
         text.push_str(&fs::read_to_string(entry.unwrap().path()).unwrap());
@@ -122,7 +121,7 @@ fn runtime_functions_are_the_runtimes() {
             .trim_start_matches("<temper-core/")
             .trim_end_matches('>');
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../vendor/temper/be-cpp/temper-core")
+            .join("runtime/temper-core")
             .join(file);
         assert!(dir.exists(), "{header} isn't temper-core's");
     }

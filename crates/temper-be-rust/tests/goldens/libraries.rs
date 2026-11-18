@@ -11,6 +11,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
             CASING__LAST
                 .set(Casing::named("last"))
                 .unwrap_or_else(|_| panic!());
+            CASING__MARK
+                .set(Arc::new("#".to_string()))
+                .unwrap_or_else(|_| panic!());
             *TICKS.write().unwrap() = Some(0);
             EXTRAS.set(Arc::new(vec![1])).unwrap_or_else(|_| panic!());
             let grid = Grid::new(2, Arc::new(vec![1.0, 2.0, 3.0, 4.0]));
@@ -138,7 +141,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 tick_while()
             );
             println!(
-                "{} {} {} {} {} {} {}",
+                "{} {} {} {} {} {} {} {}",
                 shape_name(shape_of(1)),
                 shape_name(shape_of(2)),
                 temper_core::ListedTrait::len(&sizes(shape_of(1))),
@@ -159,7 +162,8 @@ pub(crate) fn init() -> temper_core::Result<()> {
                         Arc::new("null".to_string())
                     }
                 },
-                Casing::last()
+                Casing::last(),
+                Casing::first().marked()
             );
             let carry = Carry::new(3);
             println!(
@@ -325,6 +329,8 @@ static CASING__FIRST: OnceLock<Casing> = OnceLock::new();
 
 static CASING__LAST: OnceLock<Casing> = OnceLock::new();
 
+static CASING__MARK: OnceLock<Arc<String>> = OnceLock::new();
+
 impl Casing {
     #[allow(clippy::should_implement_trait)]
     pub fn eq(&self, other: Casing) -> bool {
@@ -351,6 +357,14 @@ impl Casing {
 
     pub fn last() -> Casing {
         crate::support::initialized(|| CASING__LAST.get()).clone()
+    }
+
+    fn mark() -> Arc<String> {
+        crate::support::initialized(|| CASING__MARK.get()).clone()
+    }
+
+    pub fn marked(&self) -> Arc<String> {
+        Arc::new(format!("{}{}", Casing::mark(), self.0.name))
     }
 
     pub fn name(&self) -> Arc<String> {

@@ -2,8 +2,8 @@
 
 > [!NOTE]
 > This page describes Temper's first compiler, written in Kotlin
-> ([about these pages](README.md)). tempest's backends work differently:
-> see [how tempest works: backends](../06-backends.md).
+> ([about these pages](README.md)). This compiler's backends work differently:
+> see [how the compiler works: backends](../06-backends.md).
 
 ## How this fits in
 

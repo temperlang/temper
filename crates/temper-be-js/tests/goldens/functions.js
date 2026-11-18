@@ -7,6 +7,7 @@ import {
   listedSorted,
   stringGet,
   stringNext,
+  stringPrev,
   type,
 } from "@temperlang/core";
 
@@ -108,6 +109,124 @@ function doubles(s) {
   return n;
 }
 
+/**
+ * @param {number} x
+ * @returns {number}
+ */
+function climb(x) {
+  /** @type {number} */
+  let d;
+  if (x === 0) {
+    /**
+     * @param {number} n
+     * @returns {number}
+     */
+    function down(n) {
+      if (n <= x) {
+        return 0;
+      } else {
+        return (down((n - 1) | 0) + 1) | 0;
+      }
+    }
+    d = down(3);
+  } else {
+    return -1;
+  }
+  d = (d + 1) | 0;
+  {
+    if (d === 4) {
+      const top = (d + 1) | 0;
+      /**
+       * @param {number} n
+       * @returns {number}
+       */
+      function up(n) {
+        if (n >= top) {
+          return n;
+        } else {
+          return up((n + 1) | 0);
+        }
+      }
+      return up(d);
+    } else {
+      return d;
+    }
+  }
+}
+
+/**
+ * @param {string} s
+ * @returns {boolean}
+ */
+function stringIsPalindrome(s) {
+  let i = 0;
+  let j = s.length;
+  while (i - j < 0) {
+    j = stringPrev(s, j);
+    if (stringGet(s, i) !== stringGet(s, j)) {
+      return false;
+    }
+    i = stringNext(s, i);
+  }
+  return true;
+}
+
+/**
+ * @param {number | null} n
+ * @returns {number}
+ */
+function intOrZero(n) {
+  {
+    if (n == null) {
+      return 0;
+    } else {
+      return n;
+    }
+  }
+}
+
+/**
+ * @template T
+ * @param {readonly T[]} ls
+ * @param {T} d
+ * @returns {T}
+ */
+function listFirstOr(ls, d) {
+  if (!ls.length) {
+    return d;
+  } else {
+    return listedGet(/** @type {T[]} */ (ls), 0);
+  }
+}
+
+/**
+ * @param {string} s
+ * @param {number} n
+ * @param {string | null} [fill]
+ * @returns {string}
+ */
+function stringPadded(s, n, fill) {
+  fill ??= ".";
+  let out = s;
+  {
+    let i = 0;
+    while (i < n) {
+      out = out + fill;
+      i = (i + 1) | 0;
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {Gate} g
+ * @param {string} s
+ * @returns {string}
+ */
+function gatePassed(g, s) {
+  return `${s} ${g.allows(1)}`;
+}
+
 class Scaler extends type() {
   /**
    * @param {number} x
@@ -155,6 +274,52 @@ class Button extends type() {
   /** @returns {string} */
   press() {
     return `${this.#label} ${this.#onPress()}`;
+  }
+}
+
+class Gate extends type() {
+  /** @type {((arg0: number) => number) | null} */
+  #check;
+
+  constructor() {
+    super();
+    this.#check = null;
+  }
+
+  /** @returns {((arg0: number) => number) | null} */
+  get check() {
+    return this.#check;
+  }
+
+  /** @param {((arg0: number) => number) | null} value */
+  set check(value) {
+    this.#check = value;
+  }
+
+  /**
+   * @param {number} n
+   * @returns {boolean}
+   */
+  allows(n) {
+    const c = this.#check;
+    if (c == null) {
+      return true;
+    } else {
+      return c(n) > 0;
+    }
+  }
+
+  /**
+   * @param {number} n
+   * @returns {number}
+   */
+  passed(n) {
+    const c = this.#check;
+    if (c != null) {
+      return c(n);
+    } else {
+      return n;
+    }
   }
 }
 
@@ -225,3 +390,13 @@ function* fn8(doAwait) {
 
 drive(5, adaptAwaiter(fn8));
 console.log(`sum ${sumFrom(ns, 4)} doubles ${doubles("bookkeeper")}`);
+console.log(`climb ${climb(0)} ${climb(1)}`);
+const gate = new Gate();
+console.log(`gate ${gate.allows(0)} ${gate.passed(4)}`);
+gate.check = (x) => (x - 1) | 0;
+console.log(`gate ${gate.allows(1)} ${gate.allows(2)} ${gate.passed(4)}`);
+const none = gate.allows(0) ? 3 : null;
+console.log(`${stringIsPalindrome("step on no pets")} ${stringIsPalindrome("steps")}`);
+console.log(`${intOrZero(none)} ${listFirstOr(Object.freeze([4, 5]), 0)} ${listFirstOr(Object.freeze(["x"]), "-")}`);
+console.log(`${stringPadded("ab", 2)} ${stringPadded("ab", 1, "*")}`);
+console.log(`${gate.passed(4)} ${gatePassed(gate, "gate")}`);

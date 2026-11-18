@@ -3,7 +3,7 @@
 # ///
 """Builds, tests, and packages the VS Code extension into out/.
 
-    uv run editors/vscode/build.py [--deps DIR] [--tempest PATH] [--binaries DIR] [--test]
+    uv run editors/vscode/build.py [--deps DIR] [--temper PATH] [--binaries DIR] [--test]
 
 1. Installs the npm packages from package-lock.json with `npm ci`, into
    editors/vscode/node_modules, or with `--deps`, into that directory,
@@ -15,16 +15,16 @@
    VS Code's Node, vscode-languageclient included, `vscode` left to VS
    Code), the preview's webview script into out/preview.js, and the
    tests into out/.
-4. Runs the tests of finding tempest (src/server.test.ts) and of the
+4. Runs the tests of finding temper (src/server.test.ts) and of the
    preview's pure parts (src/page.test.ts) with Node's own test runner,
    the grammars' check (check_grammar.py), and the grammars run by VS
    Code's own TextMate engine over samples and the repository's literate
    files (test/grammar.mjs).
 5. Packages with `vsce package`: out/temper-VERSION.vsix, the universal
-   package, with no tempest; and a platform package,
-   out/temper-TARGET-VERSION.vsix, for each tempest given, with it in
-   bin/: `--tempest PATH` for this machine's platform, and `--binaries
-   DIR` for each `DIR/tempest-RUST_TARGET/tempest[.exe]` (as binaries.yml
+   package, with no temper; and a platform package,
+   out/temper-TARGET-VERSION.vsix, for each temper given, with it in
+   bin/: `--temper PATH` for this machine's platform, and `--binaries
+   DIR` for each `DIR/temper-RUST_TARGET/temper[.exe]` (as binaries.yml
    unpacks its builds).
 6. With `--test`, runs test/suite.ts in a real VS Code (test/run.ts, with
    @vscode/test-electron) on this platform's package, unpacked. VS Code
@@ -68,7 +68,7 @@ FILES = [
     "syntaxes/temper-markdown.tmLanguage.json",
 ]
 # VS Code's platform targets, as `vsce package --target` names them, and
-# Rust's for the tempest each bundles.
+# Rust's for the temper each bundles.
 TARGETS = {
     "linux-x64": "x86_64-unknown-linux-gnu",
     "linux-arm64": "aarch64-unknown-linux-gnu",
@@ -137,7 +137,7 @@ def build_version(base: str) -> str:
     return f"{major}.{minor}.{STAMP}"
 
 
-def package(bin_dir: Path, target: str | None, tempest: Path | None) -> Path:
+def package(bin_dir: Path, target: str | None, temper: Path | None) -> Path:
     """Writes a .vsix with `vsce package`, from a staging directory holding
     just what ships, and checks what it holds."""
     meta = json.loads((HERE / "package.json").read_text())
@@ -147,7 +147,7 @@ def package(bin_dir: Path, target: str | None, tempest: Path | None) -> Path:
     # The package needs only what VS Code reads, not the build's tools.
     shipped = {k: v for k, v in meta.items() if k not in ("devDependencies", "private")}
     meta["version"] = shipped["version"] = build_version(meta["version"])
-    shipped["files"] = [f for f in FILES if f not in ("package.json", "README.md")] + ["LICENSE.txt"] + (["bin/"] if tempest else [])
+    shipped["files"] = [f for f in FILES if f not in ("package.json", "README.md")] + ["LICENSE.txt"] + (["bin/"] if temper else [])
     for name in FILES:
         (stage / name).parent.mkdir(parents=True, exist_ok=True)
         if name == "package.json":
@@ -158,10 +158,10 @@ def package(bin_dir: Path, target: str | None, tempest: Path | None) -> Path:
     license = "\n\n".join((ROOT / n).read_text() for n in ["COPYRIGHT", "LICENSE-APACHE", "LICENSE-MIT", "NOTICE"])
     (stage / "LICENSE.txt").write_text(license)
     exe = None
-    if tempest:
-        exe = "bin/tempest.exe" if target and target.startswith("win32") else "bin/tempest"
+    if temper:
+        exe = "bin/temper.exe" if target and target.startswith("win32") else "bin/temper"
         (stage / "bin").mkdir()
-        shutil.copyfile(tempest, stage / exe)
+        shutil.copyfile(temper, stage / exe)
         (stage / exe).chmod(0o755)
     name = f"{meta['name']}-{target}-{meta['version']}" if target else f"{meta['name']}-{meta['version']}"
     vsix = OUT / f"{name}.vsix"
@@ -195,7 +195,7 @@ def vscode_test(vsix: Path, cache: Path) -> None:
     shutil.rmtree(unpacked, ignore_errors=True)
     with zipfile.ZipFile(vsix) as z:
         z.extractall(unpacked)
-        # zipfile drops the mode bits, so the tempest in bin/ is restored's.
+        # zipfile drops the mode bits, so the temper in bin/ is restored's.
         for info in z.infolist():
             mode = info.external_attr >> 16
             if mode & stat.S_IXUSR:
@@ -214,8 +214,8 @@ def vscode_test(vsix: Path, cache: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--deps", type=Path, help="install npm packages (and VS Code, for --test) here, outside the work tree")
-    parser.add_argument("--tempest", type=Path, help="bundle this tempest in a package for this machine's platform")
-    parser.add_argument("--binaries", type=Path, help="bundle each DIR/tempest-RUST_TARGET/tempest[.exe] in its platform's package")
+    parser.add_argument("--temper", type=Path, help="bundle this temper in a package for this machine's platform")
+    parser.add_argument("--binaries", type=Path, help="bundle each DIR/temper-RUST_TARGET/temper[.exe] in its platform's package")
     parser.add_argument("--test", action="store_true", help="run the tests in a real VS Code on this platform's package")
     args = parser.parse_args()
     bin_dir = install(args.deps) / ".bin"
@@ -238,17 +238,17 @@ def main() -> None:
     bundles: dict[str, Path] = {}
     if args.binaries:
         for target, rust in TARGETS.items():
-            for exe in ["tempest", "tempest.exe"]:
-                if (args.binaries / f"tempest-{rust}" / exe).is_file():
-                    bundles[target] = args.binaries / f"tempest-{rust}" / exe
-    if args.tempest:
-        bundles[host_target()] = args.tempest
+            for exe in ["temper", "temper.exe"]:
+                if (args.binaries / f"temper-{rust}" / exe).is_file():
+                    bundles[target] = args.binaries / f"temper-{rust}" / exe
+    if args.temper:
+        bundles[host_target()] = args.temper
     package(bin_dir, None, None)
-    built = {target: package(bin_dir, target, tempest) for target, tempest in bundles.items()}
+    built = {target: package(bin_dir, target, temper) for target, temper in bundles.items()}
     if args.test:
         host = built.get(host_target())
         if not host:
-            sys.exit(f"build.py: --test needs a tempest for {host_target()}: --tempest PATH")
+            sys.exit(f"build.py: --test needs a temper for {host_target()}: --temper PATH")
         cache = (args.deps.resolve() if args.deps else HERE) / ".vscode-test"
         vscode_test(host, cache)
 

@@ -12,8 +12,11 @@
 //! parameters, results, and declarations without a value, so
 //! `tsc --checkJs --strict` passes on the output.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! JS's rules ([`names::RULES`]), then [`translate`] into JS's output tree
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the
+//! tests files, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with JS's rules ([`names::RULES`]),
+//! then [`translate`] into JS's output tree
 //! ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer, which can mark where
 //! statements and functions' names come from for a source map
@@ -56,6 +59,7 @@ use std::fmt;
 use temper_tmpl::coroutines::CoroutineStrategy;
 use temper_tmpl::naming::{NamingRules, assign_checked};
 use temper_tmpl::source_map::source_map;
+use temper_tmpl::version::{self, Spelling};
 use temper_tmpl::{DeclId, Facts, Features, Node, Profile, Program};
 
 /// A named set of translation choices for JavaScript.
@@ -65,8 +69,6 @@ pub struct Variant {
     /// What it handles natively, which lowering and validation read.
     pub profile: Profile,
     pub rules: NamingRules,
-    /// The `@temperlang/core` version its output depends on.
-    pub runtime_version: &'static str,
 }
 
 /// The first variant: Kotlin-compatible API and names, pretty bodies.
@@ -75,11 +77,10 @@ pub struct Variant {
 pub static JS: Variant = Variant {
     name: "js",
     profile: Profile {
-        native: Features::RUNS_TYPE_ERRORS,
+        native: Features::RUNS_TYPE_ERRORS.with(Features::NEVER),
         coroutines: CoroutineStrategy::TranslateToGenerator,
     },
     rules: names::RULES,
-    runtime_version: "0.6.0",
 };
 
 /// Every variant, by name.
@@ -110,6 +111,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     } else {
         runtime::FILES
     },
+    runtime_version: &runtime::VERSION,
     rules: &JS.rules,
     translate: |p, maps| generate(p, &JS, maps).map_err(|e| e.to_string()),
     default: true,
@@ -134,10 +136,12 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 ///
 /// The package takes the library's name; the root module's files take it
 /// with `_` for `-`, and other modules' their paths. A module imports
-/// another's exports from its public file, and its tests import from its
-/// `.internal.js`, which exports what they use, and a setter, `NAME$set`,
-/// for each `var` they assign. Kotlin also copies `@temperlang/core` beside the package;
-/// `tempest build` does too ([`runtime`]).
+/// another's exports from its public file. Its tests file has what only
+/// its tests reach, before them, and imports from its `.internal.js`,
+/// which exports what they use, and a setter, `NAME$set`, for each `var`
+/// they assign, so a library that only its tests check doesn't import
+/// std's `testing` (nor Node's `assert`), as a browser bundle can't. Kotlin also copies `@temperlang/core` beside the package;
+/// `temper build` does too ([`runtime`]).
 ///
 /// A library's own `.js` and `.mjs` files, its host code, are copied
 /// into the package at their paths under its root, as Kotlin copies them
@@ -177,11 +181,20 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))
         .then(|| temper_tmpl::switches::to_if_chains(p))
         .flatten();
     let p = chained.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests files, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let package = &p.library.name;
     let mut translator = translate::Translator::new(p, &names);
@@ -285,19 +298,45 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     } else {
         ""
     };
-    let dev = if tested {
-        r#",
-    "devDependencies": {
-        "mocha": "^10.0.0",
-        "mocha-junit-reporter": "^2.0.2"
-    }"#
-    } else {
-        ""
+    // Sorted, as Kotlin's: `@temperlang/core` first. A library only the
+    // tests use is a dev dependency.
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
+    let (mut dependencies, mut dev) = (
+        vec![format!(
+            "        \"@temperlang/core\": \"{}\"",
+            version::current().spell(Spelling::SemVer)
+        )],
+        Vec::new(),
+    );
+    for (name, version) in p.dependencies() {
+        let line = format!(
+            "        \"{}\": \"{}\"",
+            translate::package_of(p, name),
+            match version {
+                "0.0.0" => "*".to_string(),
+                v => version::respell(v, Spelling::SemVer),
+            }
+        );
+        match tests_only.iter().any(|l| l == name) {
+            true => dev.push(line),
+            false => dependencies.push(line),
+        }
+    }
+    if tested {
+        dev.push("        \"mocha\": \"^10.0.0\"".into());
+        dev.push("        \"mocha-junit-reporter\": \"^2.0.2\"".into());
+    }
+    let dev = match dev.is_empty() {
+        true => String::new(),
+        false => format!(
+            ",\n    \"devDependencies\": {{\n{}\n    }}",
+            dev.join(",\n")
+        ),
     };
     let package_json = format!(
         r#"{{
     "name": "{name}",
-    "type": "module",
+{metadata}    "type": "module",
     "exports": {{
 {entries}
         ".": "./index.js"
@@ -308,21 +347,10 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
 }}
 "#,
         // std's is `@temperlang/std`, as its importers name it.
-        name = translate::package_of(package),
+        name = translate::package_of(p, package),
+        metadata = package_metadata(p),
         entries = entries.join("\n"),
-        dependencies = {
-            // Sorted, as Kotlin's: `@temperlang/core` first.
-            let mut lines = vec![format!(
-                "        \"@temperlang/core\": \"{}\"",
-                variant.runtime_version
-            )];
-            for (name, version) in p.dependencies() {
-                let name = translate::package_of(name);
-                let version = if version == "0.0.0" { "*" } else { version };
-                lines.push(format!("        \"{name}\": \"{version}\""));
-            }
-            lines.join(",\n")
-        },
+        dependencies = dependencies.join(",\n"),
     );
     files.insert(
         0,
@@ -357,4 +385,37 @@ fn public_module(exports: &[String], leaf: &str) -> String {
         let list: String = exports.iter().map(|e| ["  ", e, ",\n"].concat()).collect();
         format!("export {{\n{list}}} from \"./{leaf}.internal.js\";\n")
     }
+}
+
+/// The library's version, where it sets one, and its config's metadata,
+/// as package.json's fields in Kotlin's order, a line each: `version`,
+/// `author`, `description`, `homepage`, `license`, and `repository`,
+/// as git's, which Kotlin leaves out.
+fn package_metadata(p: &Program) -> String {
+    let meta = p.metadata();
+    let quoted = temper_tmpl::json_string;
+    let mut out = String::new();
+    if !matches!(p.library.version.as_str(), "0.0.0" | "") {
+        out.push_str(&format!(
+            "    \"version\": {},\n",
+            quoted(&version::respell(&p.library.version, Spelling::SemVer))
+        ));
+    }
+    for (field, key) in [
+        ("author", "authors"),
+        ("description", "description"),
+        ("homepage", "homepage"),
+        ("license", "license"),
+    ] {
+        if let Some(value) = meta.get(key) {
+            out.push_str(&format!("    \"{field}\": {},\n", quoted(value)));
+        }
+    }
+    if let Some(url) = meta.get("repository") {
+        out.push_str(&format!(
+            "    \"repository\": {{ \"type\": \"git\", \"url\": {} }},\n",
+            quoted(url)
+        ));
+    }
+    out
 }

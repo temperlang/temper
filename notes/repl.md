@@ -109,7 +109,7 @@ The user's answers to the open questions at the end:
   each whole, a name declared again among them renamed `x__2`.
 - **Security:** `escape_controls` for what the REPL prints of its own,
   snippets included (marks under the escapes); logs pass through.
-- **Leftovers:** input 0's tests run once (t361); a later input's
+- **Leftovers:** input 0's tests run once; a later input's
   `test(...)` says tests don't run in the REPL; a name
   used by an earlier input before a later one declares it gets a note.
 - Tests: `specials.cases` (frontend), `temper-driver/tests/repl/tools.cases`,

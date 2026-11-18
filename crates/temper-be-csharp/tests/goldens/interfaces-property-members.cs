@@ -32,8 +32,10 @@ public static class PropertyMembersGlobal
         console.Log("Genericallier, x is still " + ((II)dj.Thing).X + ".");
         ISi<C> si = new SSub<C>(a);
         console.Log("Sealed thing is " + si.Thing.X + ".");
-        ILabeled<string> labeled = new LabeledSub(a);
+        ILabeled<string, C> labeled = new LabeledSub(a);
+        IReadOnlyList<C> heldAnd = ((IHolder<C>)labeled).HeldAnd(b);
         console.Log("Labeled thing is " + labeled.Label("first") + ".");
+        console.Log("Held are " + ((IHolder<C>)labeled).Held.X + " and " + heldAnd[1].X + ".");
         IHigh high1 = new Low1(11);
         IHigh high1b = new Low1(12);
         IHigh high1c = new Low1(12);

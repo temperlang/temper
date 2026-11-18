@@ -1,88 +1,86 @@
 tmpl 1 model 1 library connected 0.0.0
 
-uses `temper-core`#26 0.1.0 {
-  class String#27 {
-    connected method countBetween#28(begin: StringIndex#29, end: StringIndex#29): Int32;
-    connected static let begin#31: StringIndex#29;
-    connected get end#32(): StringIndex#29;
+uses `temper-core`#25 0.0.0-alpha.0.0 {
+  class String#26 {
+    connected method countBetween#27(begin: StringIndex#28, end: StringIndex#28): Int32;
+    connected static let begin#30: StringIndex#28;
+    connected get end#31(): StringIndex#28;
   }
-  class StringIndex#29 extends StringIndexOption#30 {}
-  interface StringIndexOption#30 {}
-  interface Console#33 {
-    connected method log#34(message: String): Void;
+  class StringIndex#28 extends StringIndexOption#29 {}
+  interface StringIndexOption#29 {}
+  interface Console#32 {
+    connected method log#33(message: String): Void;
   }
-  class Int32#36 {
-    connected method toString#37(radix?: Int32): String;
+  class Int32#35 {
+    connected method toString#36(radix?: Int32): String;
   }
-  connected fn getConsole#45(name?: String): Console#33;
+  connected fn getConsole#44(name?: String): Console#32;
 }
 
 module connected#0 {
-  let ~console#35: Console#33;
+  let ~console#34: Console#32;
 
-  keep fn sumOf3#10(a#17: Int32, b#18: Int32, c#19: Int32): Int32 {
-    return %Int32.add(%Int32.add(a#17, b#18), c#19);
+  keep fn sumOf3#9(a#16: Int32, b#17: Int32, c#18: Int32): Int32 {
+    return %Int32.add(%Int32.add(a#16, b#17), c#18);
   }
 
-  connected export fn sum#11(i#20: Int32, j#21: Int32, bonus#22?: Int32?): Int32 {
-    let bonus#23: Int32 = (coalesce(bonus#22, 0)): Int32;
-    return %Int32.add(sumOf3#10(i#20, j#21, bonus#23), 1000);
+  connected export fn sum#10(i#19: Int32, j#20: Int32, bonus#21?: Int32?): Int32 {
+    let bonus#22: Int32 = (coalesce(bonus#21, 0)): Int32;
+    return %Int32.add(sumOf3#9(i#19, j#20, bonus#22), 1000);
   }
 
-  connected("cpp", "csharp", "java", "js", "lua", "py", "rust") export fn length#12(string#24?: String?): Int32 {
-    let string#25: String? = (coalesce(string#24, (null): String?)): String?;
-    if (isNull(string#25)) {
+  connected("cpp", "csharp", "java", "js", "lua", "py", "rust") export fn length#11(string#23?: String?): Int32 {
+    let string#24: String? = (coalesce(string#23, (null): String?)): String?;
+    if (isNull(string#24)) {
       return 999;
     } else {
-      return %Int32.add(((nonNull(string#25)): String).countBetween#28(begin#31, ((nonNull(string#25)): String).end#32()), 1000);
+      return %Int32.add(((nonNull(string#24)): String).countBetween#27(begin#30, ((nonNull(string#24)): String).end#31()), 1000);
     }
   }
 
-  connected("cpp", "csharp", "java", "js", "py", "rust") export fn twice#13(i#38: Int32): Int32 {
-    return %Int32.add(%Int32.mul(i#38, 2), 1000);
+  connected("cpp", "csharp", "java", "js", "py", "rust") export fn twice#12(i#37: Int32): Int32 {
+    return %Int32.add(%Int32.mul(i#37, 2), 1000);
   }
 
   class Hidden#1 {
     let i#3: Int32;
-    constructor constructor#4(i#39: Int32): Hidden#1 {
-      this.i#3 = i#39;
+    constructor constructor#4(i#38: Int32): Hidden#1 {
+      this.i#3 = i#38;
     }
   }
 
-  connected fn prod#14(hidden#40: Hidden#1, j#41: Int32): Int32;
+  connected fn prod#13(hidden#39: Hidden#1, j#40: Int32): Int32;
 
-  let isConnected#15: Boolean;
+  let isConnected#14: Boolean;
 
   export class Hider#2 {
-    private let i#5: Int32;
-    private let hidden#6: Hidden#1;
-    constructor constructor#9(i#44: Int32): Hider#2 {
-      this.i#5 = i#44;
-      this.hidden#6 = new constructor#4(this.i#5);
+    private let hidden#5: Hidden#1;
+    constructor constructor#8(i#43: Int32): Hider#2 {
+      this.hidden#5 = new constructor#4(i#43);
     }
-    method plus#7(j#42: Int32): Int32 {
-      return sum#11(this.hidden#6.i#3, j#42, omitted);
+    method plus#6(j#41: Int32): Int32 {
+      return sum#10(this.hidden#5.i#3, j#41, omitted);
     }
-    method times#8(j#43: Int32): Int32 {
-      return prod#14(this.hidden#6, j#43);
+    method times#7(j#42: Int32): Int32 {
+      return prod#13(this.hidden#5, j#42);
     }
   }
 
-  let hider#16: Hider#2;
+  let hider#15: Hider#2;
 
   init {
-    init ~console#35 = getConsole#45(omitted);
-    ~console#35.log#34(%String.cat("sum(1, 2): ", sum#11(1, 2, omitted).toString#37(omitted)));
-    ~console#35.log#34(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("length \"\" vs null vs (): ", length#12((asNullable("")): String?).toString#37(omitted)), " vs "), length#12((null): String?).toString#37(omitted)), " vs "), length#12(omitted).toString#37(omitted)));
-    ~console#35.log#34(%String.cat("twice(5): ", twice#13(5).toString#37(omitted)));
-    init isConnected#15 = %Int32.eq(sum#11(1, 2, omitted), 3);
-    if (isConnected#15) {
-      ~console#35.log#34(%String.cat("prod(new Hidden(1), 2): ", prod#14(new constructor#4(1), 2).toString#37(omitted)));
+    init ~console#34 = getConsole#44(omitted);
+    ~console#34.log#33(%String.cat("sum(1, 2): ", sum#10(1, 2, omitted).toString#36(omitted)));
+    ~console#34.log#33(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("length \"\" vs null vs (): ", length#11((asNullable("")): String?).toString#36(omitted)), " vs "), length#11((null): String?).toString#36(omitted)), " vs "), length#11(omitted).toString#36(omitted)));
+    ~console#34.log#33(%String.cat("twice(5): ", twice#12(5).toString#36(omitted)));
+    init isConnected#14 = %Int32.eq(sum#10(1, 2, omitted), 3);
+    if (isConnected#14) {
+      ~console#34.log#33(%String.cat("prod(new Hidden(1), 2): ", prod#13(new constructor#4(1), 2).toString#36(omitted)));
     }
-    init hider#16 = new constructor#9(3);
-    ~console#35.log#34(%String.cat("new Hider(3).plus(4): ", hider#16.plus#7(4).toString#37(omitted)));
-    if (isConnected#15) {
-      ~console#35.log#34(%String.cat("new Hider(3).times(4): ", hider#16.times#8(4).toString#37(omitted)));
+    init hider#15 = new constructor#8(3);
+    ~console#34.log#33(%String.cat("new Hider(3).plus(4): ", hider#15.plus#6(4).toString#36(omitted)));
+    if (isConnected#14) {
+      ~console#34.log#33(%String.cat("new Hider(3).times(4): ", hider#15.times#7(4).toString#36(omitted)));
     }
   }
 }

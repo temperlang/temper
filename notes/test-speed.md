@@ -33,7 +33,7 @@ First guesses, to be checked against measurements:
   install. The Lua backend's harness does this (below, "Lua's fast path,
   as tried").
 - **JS:** link packages into one `node_modules` and run everything in one
-  Node process. The functional-test harness already copies the vendored
+  Node process. The functional-test harness already copies the
   runtime this way instead of running `npm install`.
 - **Rust:** a persistent target directory, `temper-core` built once per
   machine, one test binary per library, and a dev profile tuned for build
@@ -198,7 +198,7 @@ runs each):
 ## Python's functional tests in bulk, as tried (2026-11-04)
 
 `temper-be-py`'s `runs` started a `python -c` per case that logs (71 of
-them), each importing the runtime afresh. In bulk (`TEMPEST_PY_BULK=1`
+them), each importing the runtime afresh. In bulk (`TEMPER_PY_BULK=1`
 then, the default since 2026-11-05, below), it runs them all in one interpreter instead (`tests/bulk_runner.py`): each
 case's projects go first on `sys.path`, its package is imported, its
 async work awaited (without shutting the runtime's executor down), and
@@ -267,7 +267,7 @@ absolute ones, with a message, which counts as a failed run).
   temper-be-py` with checkers required, went from 432 s (under load) to
   8.3 s (`funtest-py-s`).
 
-**Bulk is now the default** (`TEMPEST_PY_BULK=0` runs each case alone):
+**Bulk is now the default** (`TEMPER_PY_BULK=0` runs each case alone):
 with the checks batched, process start-ups are most of what's left, and
 bulk halves them. Results stay as precise, since any case that doesn't
 log what it expects is rerun alone and that result reported. What bulk
@@ -321,7 +321,7 @@ templates, instantiated again in every file.
   group that fails is compiled file by file, whose errors are reported,
   naming the file, as alone. Tried by hand: a warning injected into
   `hello-world` failed with its file's own message, and a clash between
-  two files fell back and passed (`TEMPEST_CPP_BULK=0` builds each file
+  two files fell back and passed (`TEMPER_CPP_BULK=0` builds each file
   alone).
 - **A work queue,** not batches of four that wait for their slowest.
 - **Measured** (`runs`, warm, other agents busy): 213 s before;
@@ -336,7 +336,7 @@ templates, instantiated again in every file.
   makes the warnings per file. ccache isn't installed, and `ld.gold`
   links the ASan runner only 0.1 s faster.
 
-`TEMPEST_CXXFLAGS` adds options to every build but ThreadSanitizer's;
+`TEMPER_CXXFLAGS` adds options to every build but ThreadSanitizer's;
 the nightly workflow (`.github/workflows/nightly.yml`) uses it to
 run everything under ASan and UBSan, and runs the tests under g++ 12
 and 14, by `CXX`.
@@ -384,7 +384,11 @@ Two kinds of runs, kept apart:
 - **Nightly:** real libraries' tests on every backend each passes on,
   from a list, `.github/nightly-libraries.json` (name, repository, ref,
   and backends), one job per library (`.github/workflows/nightly.yml`,
-  "libraries"). Adding a library is a line of data.
+  "libraries"). Adding a library is a line of data. Where a library
+  runs on `py`, its generated packages are then type-checked (mypy and
+  pyright, strict, as the Python backend's tests), each count held to
+  its allowance in `.github/ci-tools/library-py-baseline.json`, a
+  ratchet that only shrinks (`check_library_py.py`).
 
 Meant to grow to hundreds of libraries: keep the list data, and each
 job one library with its backends, so the plan job can later shard the

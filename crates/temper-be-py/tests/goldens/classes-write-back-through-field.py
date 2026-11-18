@@ -60,12 +60,10 @@ class _Pong:
     __slots__ = ()
 
     def pong(self, a: _Ping, /) -> None:
-        o = a
-        o.n = _int_add(o.n, 1)
+        a.n = _int_add(a.n, 1)
 
     def bump(self, a: _Ping, by: int, /) -> int:
-        o = a
-        o.n = _int_add(o.n, by)
+        a.n = _int_add(a.n, by)
         return a.n
 
 

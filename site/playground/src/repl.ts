@@ -2,7 +2,7 @@
 // `repl_*` in a worker of its own (repl-worker.ts), with the editor's
 // code as input 0.
 //
-// - Enter asks the worker whether the cell's text is whole (`tempest
+// - Enter asks the worker whether the cell's text is whole (`temper
 //   repl`'s rule); if it is, each input it splits into runs in turn,
 //   else Enter starts a new line, indented by the brackets open.
 //   Shift+Enter always starts a new line; Ctrl or Cmd+Enter, and Run,

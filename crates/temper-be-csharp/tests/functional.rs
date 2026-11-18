@@ -9,8 +9,8 @@
 //! under `--no-connected` (`CONNECTED`), and with divisions that can't
 //! fail and maps (`DIVISIONS`), and with labeled loops' jumps and classes
 //! declared in functions (`LOOPS_AND_CLASSES`), and with generators,
-//! `async`, and `await`, as iterators (`ASYNC`), from the vendored copy
-//! (`temper-funtests`), and on the shared programs
+//! `async`, and `await`, as iterators (`ASYNC`), in `temper-funtests`'s
+//! `cases/`, and on the shared programs
 //! (`crates/temper-be-testkit/programs/`), which cover operators,
 //! jumps, module state, string order, several modules, imports, tests,
 //! classes, and nullables beyond those tests.
@@ -24,8 +24,8 @@
 //!   `testing.tests.TestingTests.cs`). To accept new or changed output,
 //!   run with `UPDATE_SNAPSHOTS=1` and review the diff.
 //! - `runs`: without MSBuild or NuGet, Roslyn's `csc` (from the SDK that
-//!   `dotnet` finds, or `DOTNET`) compiles the vendored `TemperLang.Core`
-//!   (`vendor/temper/be-csharp/temper-core`) once, for .NET 6 as its
+//!   `dotnet` finds, or `DOTNET`) compiles `TemperLang.Core`
+//!   (`crates/temper-be-csharp/runtime/temper-core`) once, for .NET 6 as its
 //!   `.csproj` says, into `CARGO_TARGET_TMPDIR`, reused until its sources
 //!   or the SDK change; then every generated library's sources in one more
 //!   `csc` run, with nullable reference types on, every warning, and every
@@ -43,11 +43,14 @@
 //!   after `types/int/basics`) takes a number (`basics2`), but for one
 //!   with host code, which names its namespace, so compiles, as strictly,
 //!   into an assembly of its own, with its own `Program.cs`. A test that
-//!   runs as tests (`TESTS`) compiles with std, as strictly, against
-//!   MSTest's framework from NuGet's cache, and runs by reflection
+//!   runs as tests (`TESTS`, and the shared programs of `AS_TESTS`)
+//!   compiles with std, as strictly, against MSTest's framework from
+//!   NuGet's cache, the library and then its tests' project against it,
+//!   which sees its internals, so the library builds without what only
+//!   tests reach, and runs by reflection
 //!   ([`RUN_TESTS`]), its failures compared with its `expectedFailures`.
 //!   Skipped, with a message, without `dotnet`, the .NET 6 targeting pack,
-//!   or those packages; with `TEMPEST_REQUIRE_CHECKERS` set, as in CI,
+//!   or those packages; with `TEMPER_REQUIRE_CHECKERS` set, as in CI,
 //!   any of them missing fails it instead.
 
 use std::path::{Path, PathBuf};
@@ -221,8 +224,8 @@ fn generate(case: &Case) -> Vec<OutFile> {
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))
 }
 
-fn vendored() -> PathBuf {
-    kit::vendored("be-csharp")
+fn runtime_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime")
 }
 
 #[test]
@@ -230,7 +233,8 @@ fn goldens() {
     kit::with_stack(|| {
         let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
         let template = |name: &str| {
-            let text = fs::read_to_string(vendored().join("library-template").join(name)).unwrap();
+            let text =
+                fs::read_to_string(runtime_dir().join("library-template").join(name)).unwrap();
             text.trim_start_matches('\u{feff}').to_string()
         };
         let program_template = template("Program.cs");
@@ -309,6 +313,54 @@ fn goldens() {
     });
 }
 
+/// What only the `reach` program's tests reach is only in the tests'
+/// project, and what nothing reaches nowhere, as tmpl's
+/// `reach::partition` splits the program; `runs` builds the library
+/// without its tests, and runs its test, which passes only if they're
+/// set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".cs"))).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        let tests_only = [
+            "ForTests",
+            "testFactor",
+            "testCount",
+            "ITestShape",
+            "TestSquare",
+            "AddArea",
+        ];
+        let unreached = [
+            "UnreachedFunction",
+            "UnreachedClass",
+            "IUnreachedInterface",
+            "unreachedValue",
+        ];
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
+    });
+}
+
+/// A helper that what only tests reach and the tests both use is the
+/// test class's once.
+#[test]
+fn test_class_helpers_once() {
+    kit::with_stack(|| {
+        let text = "# Helped\n\n    let shownForTests(x: Float64): String { x.toString() }\n\n    test(\"shows\") {\n      assert(shownForTests(1.5) == 1.5.toString());\n    }\n";
+        let case = Case::inline("helped", "helped.temper.md", text, Vec::new());
+        let files = generate(&case);
+        let tests = (files.iter())
+            .find(|f| f.path.ends_with("/tests/HelpedTests.cs"))
+            .unwrap();
+        let defined = tests.text.matches("static string FormatFloat64(").count();
+        assert_eq!(defined, 1, "{}", tests.text);
+    });
+}
+
 /// Host code a library needs but lacks fails its translation, naming the
 /// file, rather than C#'s compiler.
 #[test]
@@ -328,8 +380,8 @@ fn missing_host_code() {
 
 #[test]
 fn logging_template_is_kotlins() {
-    let vendored = fs::read_to_string(vendored().join("library-template/Logging.cs")).unwrap();
-    assert_eq!(LOGGING_TEMPLATE, vendored.trim_start_matches('\u{feff}'));
+    let template = fs::read_to_string(runtime_dir().join("library-template/Logging.cs")).unwrap();
+    assert_eq!(LOGGING_TEMPLATE, template.trim_start_matches('\u{feff}'));
 }
 
 /// What compiling and running C# needs, from the .NET SDK and NuGet's
@@ -459,7 +511,7 @@ fn find_dotnet() -> Result<Dotnet, String> {
         if !dll.is_file() {
             return Err(format!(
                 "no {id} 8.0.0 in NuGet's cache ({}); `dotnet restore` of \
-                 vendor/temper/be-csharp/temper-core's project, copied elsewhere, puts it there",
+                 crates/temper-be-csharp/runtime/temper-core's project, copied elsewhere, puts it there",
                 cache.display()
             ));
         }
@@ -481,7 +533,9 @@ fn find_dotnet() -> Result<Dotnet, String> {
 const DEFINES: &str = "TRACE;RELEASE;NET;NET6_0;NETCOREAPP;NET5_0_OR_GREATER;NET6_0_OR_GREATER";
 
 impl Dotnet {
-    /// `csc` with the references and the options given.
+    /// `csc` with the references and the options given, its sources named
+    /// in a response file beside its output (`-out:`), since a command
+    /// line naming them all can be more than Windows takes.
     fn csc(&self, options: &[String], extra: &[&Path], sources: &[PathBuf]) -> Output {
         let mut command = Command::new(&self.dotnet);
         command
@@ -504,7 +558,20 @@ impl Dotnet {
         for r in extra {
             command.arg(format!("-r:{}", r.display()));
         }
-        command.args(sources).output().unwrap()
+        let out = (options.iter())
+            .find_map(|o| o.strip_prefix("-out:"))
+            .expect("csc's -out:");
+        let rsp = PathBuf::from(format!("{out}.sources.rsp"));
+        // One quoted path to a line; a `"` can't be in a Windows path.
+        let lines: Vec<String> = (sources.iter())
+            .map(|s| format!("\"{}\"\n", s.display()))
+            .collect();
+        fs::create_dir_all(rsp.parent().unwrap()).unwrap();
+        fs::write(&rsp, lines.concat()).unwrap();
+        command.arg(format!("@{}", rsp.display()));
+        command
+            .output()
+            .unwrap_or_else(|e| panic!("csc, {} files in {}: {e}", sources.len(), rsp.display()))
     }
 }
 
@@ -516,7 +583,7 @@ fn runtime_assembly(dotnet: &Dotnet) -> PathBuf {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-csharp-runtime");
     let dll = root.join("TemperLang.Core.dll");
     let mut sources = Vec::new();
-    kit::files_with(&vendored().join("temper-core"), "cs", &mut sources);
+    kit::files_with(&runtime_dir().join("temper-core"), "cs", &mut sources);
     let options = vec![
         "-target:library".to_string(),
         "-optimize+".into(),
@@ -545,6 +612,19 @@ fn analyzer_config() -> String {
     config
 }
 
+/// A file's path as a global analyzer config's section names it: absolute,
+/// with `/` between its parts on every system, as Roslyn wants section
+/// names, which are `.editorconfig` paths; on Windows, as `D:/a/b.cs`,
+/// which Roslyn matches with the file csc is given as `D:\a\b.cs`, its
+/// separators made `/`.
+fn section_path(path: &Path) -> String {
+    let path = path.display().to_string();
+    match cfg!(windows) {
+        true => path.replace('\\', "/"),
+        false => path,
+    }
+}
+
 /// The options that compile std's output, written in `dir`, to `dll`:
 /// `strict`'s, with [`analyzer_config`]'s rules off for std's support
 /// code, Kotlin's own C# (`RegexSupport.cs`), in a configuration of its
@@ -560,7 +640,7 @@ fn std_options(
         if (temper_be_csharp::STD_SUPPORT.iter()).any(|(_, name, _)| file.path.ends_with(name)) {
             config.push_str(&format!(
                 "\n[{}]\ndotnet_analyzer_diagnostic.severity = none\n",
-                dir.join(&file.path).display()
+                section_path(&dir.join(&file.path))
             ));
         }
     }
@@ -763,10 +843,14 @@ fn runs() {
         if let Some(mstest) = &mstest {
             let options = std_options(&strict, &std_dll, &std, &std_root);
             let build = dotnet.csc(&options, &[&runtime, mstest], &std_sources);
+            // The configuration too, whose sections, for std's support
+            // code, csc may not have matched with its files.
             assert!(
                 build.status.success(),
-                "csc, std (nullable, every warning and analyzer an error):\n{}",
-                String::from_utf8_lossy(&build.stdout)
+                "csc, std (nullable, every warning and analyzer an error):\n{}\n{}:\n{}",
+                String::from_utf8_lossy(&build.stdout),
+                std_root.join("std.globalconfig").display(),
+                fs::read_to_string(std_root.join("std.globalconfig")).unwrap_or_default()
             );
             fs::copy(mstest, bin.join(mstest.file_name().unwrap())).unwrap();
         }
@@ -1002,8 +1086,9 @@ static class RunTests
 }
 "#;
 
-/// A run as tests, as Kotlin's `RunCSharp`: std, then the library with
-/// its tests, each compiled strictly by `csc` against MSTest's framework
+/// A run as tests, as Kotlin's `RunCSharp`: std, then the library, then
+/// its tests against it, each compiled strictly by `csc` against MSTest's
+/// framework
 /// ([`mstest`]), its tests run by [`RUN_TESTS`], and their failures
 /// compared with its `expectedFailures`.
 fn run_tests(
@@ -1047,16 +1132,51 @@ fn run_tests(
         ));
         return;
     }
-    let library = bin.join(format!("{}.dll", names::root_namespace(&case.library)));
-    let sources = write(generate(case));
-    let build = dotnet.csc(&strict(&library), &[runtime, &mstest, &std_dll], &sources);
-    if !build.status.success() {
-        failures.push(format!(
-            "{}: csc, the library and its tests:\n{}",
-            case.key,
-            String::from_utf8_lossy(&build.stdout)
-        ));
-        return;
+    // The library, then its tests' project, against it, as MSBuild builds
+    // them, so the library builds without what only its tests reach, and
+    // they see its internals as its project's `InternalsVisibleTo` lets
+    // them.
+    let root = names::root_namespace(&case.library);
+    let library = bin.join(format!("{root}.dll"));
+    let tests = bin.join(format!("{root}Test.dll"));
+    let (mut main, tested): (Vec<PathBuf>, Vec<PathBuf>) = (write(generate(case)).into_iter())
+        .partition(|path| !path.starts_with(dir.join(&case.library).join("tests")));
+    let visible = dir.join("InternalsVisibleTo.cs");
+    fs::write(
+        &visible,
+        format!("[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(\"{root}Test\")]\n"),
+    )
+    .unwrap();
+    main.push(visible);
+    let steps = [
+        (
+            "the library",
+            &library,
+            vec![runtime, mstest.as_path(), std_dll.as_path()],
+            &main,
+        ),
+        (
+            "its tests",
+            &tests,
+            vec![
+                runtime,
+                mstest.as_path(),
+                std_dll.as_path(),
+                library.as_path(),
+            ],
+            &tested,
+        ),
+    ];
+    for (what, dll, refs, sources) in steps {
+        let build = dotnet.csc(&strict(dll), &refs, sources);
+        if !build.status.success() {
+            failures.push(format!(
+                "{}: csc, {what}:\n{}",
+                case.key,
+                String::from_utf8_lossy(&build.stdout)
+            ));
+            return;
+        }
     }
     let runner = dir.join("RunTests.cs");
     fs::write(&runner, RUN_TESTS).unwrap();
@@ -1084,7 +1204,7 @@ fn run_tests(
     let run = Command::new(&dotnet.dotnet)
         .env("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
         .arg(&exe)
-        .arg(&library)
+        .arg(&tests)
         .output()
         .unwrap();
     let actual = kit::runner_failures(&String::from_utf8_lossy(&run.stdout));

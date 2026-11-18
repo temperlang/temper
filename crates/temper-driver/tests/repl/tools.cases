@@ -3,14 +3,14 @@
 === help lists what the REPL offers
 help()
 --- transcript
-tempest repl runs each Temper input against what earlier inputs declared,
+temper repl runs each Temper input against what earlier inputs declared,
 printing its result as interactive#N: value.
 
 The REPL's own functions:
   help()              this
   help("name")        a declaration's signature and docs, as help("greet");
                       a function's or type's also as help(greet)
-  describe(n, step)   input n at one of tempest's steps ("settled" if none):
+  describe(n, step)   input n at one of the compiler's steps ("settled" if none):
       "parsed"  the parser's tree, before names are resolved
       "settled" the tree once settled: macros expanded, names resolved
       "types"   each declaration's type, and the result's
@@ -339,14 +339,17 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .clone()
 }
 
+#[allow(dead_code)]
 struct PointStruct {
     x: i32,
     y: i32,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct Point(Arc<PointStruct>);
 
+#[allow(dead_code)]
 impl Point {
     pub fn new(x: i32, y: i32) -> Point {
         Point(Arc::new(PointStruct { x, y }))
@@ -422,7 +425,7 @@ interactive#0: void
 tmpl 1 model 1 library interactive 0.0.0
 
 module interactive#0 {
-  fn twice#1(n#2: Int32): Int32 {
+  keep fn twice#1(n#2: Int32): Int32 {
     return %Int32.mul(n#2, 2);
   }
 

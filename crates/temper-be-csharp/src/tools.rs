@@ -1,13 +1,13 @@
-//! How C# runs built libraries' tests, for `tempest test -b csharp`, as
+//! How C# runs built libraries' tests, for `temper test -b csharp`, as
 //! Kotlin's `RunCSharp`: `dotnet test --logger:junit` in each library's
 //! `tests` project (`DOTNET`), its packages restored from NuGet's cache
 //! or feed, reading `TestResults/TestResults.xml`; then `dotnet
-//! build-server shutdown`, so nothing stays running. `tempest run -b
+//! build-server shutdown`, so nothing stays running. `temper run -b
 //! csharp` builds the library's `program` project quietly, then runs it
 //! with `dotnet run --no-build`, as Kotlin's `dotnet run` does.
 //!
 //! The compiler's warnings are hidden (`WarningLevel=0`), as in Kotlin,
-//! unless `TEMPEST_STRICT_WARNINGS` is set ([`strict_warnings`]): then
+//! unless `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then
 //! the tests are built with every warning (`WarningLevel=9999`, as this
 //! crate's own tests compile generated code), and any in std, the
 //! libraries, or their tests fails them; the runtime's, Kotlin's, which
@@ -80,7 +80,7 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
         let warned = warnings(&String::from_utf8_lossy(&run.stdout), &runtime);
         if !warned.is_empty() {
             return Err(format!(
-                "{} compiler warnings (TEMPEST_STRICT_WARNINGS)\n{}",
+                "{} compiler warnings (TEMPER_STRICT_WARNINGS)\n{}",
                 warned.len(),
                 warned.join("\n")
             ));

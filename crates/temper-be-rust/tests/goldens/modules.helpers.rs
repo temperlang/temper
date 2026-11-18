@@ -18,6 +18,10 @@ pub fn twice(x: i32) -> i32 {
     x.wrapping_mul(2)
 }
 
+pub fn int_doubled(x: i32) -> i32 {
+    twice(x)
+}
+
 static BASE: OnceLock<i32> = OnceLock::new();
 
 pub fn base() -> i32 {

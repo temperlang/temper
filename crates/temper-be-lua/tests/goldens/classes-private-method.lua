@@ -211,6 +211,38 @@ function Label.methods.noted(this, more)
   return Note(this.text):text(more).body
 end
 
+---@class private-method.Tally
+---@field depth integer
+---@field size integer
+---@field total integer
+
+---@class private-method.Tally.type: temper.Type
+---@operator call: private-method.Tally
+local Tally = temper.type("private-method.Tally")
+
+---@param this private-method.Tally
+---@param size integer
+---@param parent private-method.Tally|temper.Null
+---@param children private-method.Tally[]
+function Tally.constructor(this, size, parent, children)
+  this.depth = temper.is_null(parent) and 0 or temper.int32_add((parent --[[@as private-method.Tally]]).depth, 1)
+  local sum = size
+  do
+    local i = 0
+    while i < temper.list_length(children) do
+      sum = temper.int32_add(sum, temper.list_get(children, i).size)
+      i = temper.int32_add(i, 1)
+    end
+  end
+  this.size = temper.int32_add(sum, this.depth)
+end
+
+---@param this private-method.Tally
+---@return integer
+function Tally.get.total(this)
+  return this.size
+end
+
 local c = C()
 print("method1(10)=" .. c:method1(10))
 print("method2(10)=" .. c:method2(10))
@@ -225,5 +257,10 @@ print("b spent: " .. b.timesSpent)
 local label = Label(1)
 print("close: " .. label:close(TenSink()))
 print("noted: " .. label:noted("!"))
+local leaf = Tally(2, temper.null, {})
+local mid = Tally(3, leaf, { leaf, leaf })
+local top = Tally(1, mid, { mid, leaf })
+print("depths: " .. leaf.depth .. " " .. mid.depth .. " " .. top.depth)
+print("totals: " .. leaf.total .. " " .. mid.total .. " " .. top.total)
 
 return {}

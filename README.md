@@ -21,7 +21,7 @@
 every programming language community. It's a language designed for one
 purpose: to translate well to all the others. You write a library in
 Temper, and get idiomatic, semantically equivalent libraries in each
-language, with their tests.
+language, with their tests, that pass each language's strict checkers.
 
 ```temper
 export let half(x: Int): Int {
@@ -57,27 +57,17 @@ and likewise in each of these[\*](#not-endorsed-or-affiliated):
 
 ## This repository
 
-This is **tempest**, Temper's compiler written from scratch in Rust
-(edition 2024): the same language, behavior, and generated APIs as
-Temper's first compiler, from a much smaller, simpler, and faster
-code base. It's one small binary, `tempest`, and it also runs in the
-browser.
+This repo contains the source for:
 
-- **The whole pipeline works:** parsing, the settle loop (names,
-  macros, and types), an interpreter, tmpl (the backend IR), and seven
-  backends.
-- **Temper's functional tests** all pass on the interpreter and on
-  every backend, and the generated code passes each language's strict
-  checkers (clippy, `tsc --strict`, pyright and mypy, LuaLS, and
-  compilers with warnings as errors).
-- **Real libraries** (Hrefine, Chromarite, Ordable, Kelpto, and
-  Wherewith) pass all their tests in all seven languages.
-- **Editors:** a language server, `tempest lsp`, and a VS Code
-  extension ([editors/vscode](editors/vscode/README.md)).
-- **The command line** takes `temper`'s commands and flags: `build`,
-  `test`, `run`, `repl`, `init`, `serve`, `version`, `license`,
-  `licenses`, and `help`; `watch` and `doc` are coming
-  ([docs/tools/cli.md](docs/tools/cli.md)).
+- Temper's compiler and core tooling, built as one binary, `temper`, for
+  building and testing Temper libraries from
+  [the command line](docs/tools/cli.md), and as WebAssembly for use
+  in web browsers.
+- Temper's core and standard libraries, and each language's runtime
+  support.
+- Editor support: a language server, `temper lsp`, for any editor, and
+  a VS Code extension ([editors/vscode](editors/vscode/README.md)).
+- Documentation and website content for Temper.
 
 ## Try it
 
@@ -85,11 +75,16 @@ browser.
   [playground](https://temperlang.github.io/tempest/playground/)
   runs the whole compiler as wasm: type Temper and see every
   language's output, errors, and test results as you type.
+- **Download** `temper` for Linux, macOS (Apple silicon), or Windows
+  from the [releases](https://github.com/temperlang/tempest/releases)
+  (the `nightly` prerelease follows `main`), with the VS Code
+  extension's `.vsix` files beside it
+  ([getting started](docs/guide/getting-started.md#set-up-temper-tools-and-vs-code-support)).
 - **From source,** with [Rust](https://rustup.rs/) 1.85 or later:
 
       cargo build --release -p tempest
-      target/release/tempest test DIR        # run a library's tests
-      target/release/tempest build -w DIR    # write temper.out/LANGUAGE/…
+      target/release/temper test DIR        # run a library's tests
+      target/release/temper build -w DIR    # write temper.out/LANGUAGE/…
 
   A library is a directory with a `config.temper.md`; the
   [getting started guide](docs/guide/getting-started.md) makes one.
@@ -112,7 +107,7 @@ playground:
 - [Tools](docs/tools/README.md): the command line, editors, and the
   playground.
 - [Contributing](docs/contributing/README.md), and
-  [how tempest works](docs/internals/README.md), stage by stage.
+  [how the compiler works](docs/internals/README.md), stage by stage.
 - [Release notes](docs/release-notes/README.md).
 
 ## Community

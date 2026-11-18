@@ -14,7 +14,7 @@ on:
       - editors/vscode/syntaxes/**
       - editors/vscode/check_grammar.py
       - crates/**
-      - vendor/temper/**
+      - lib/**
       - Cargo.lock
       - README.md
       - .github/workflows/pages.yml
@@ -40,6 +40,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # The whole history and the tags, so the playground's About
+        # names the version (`0.7.0-alpha.0.123`).
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         with:
           targets: wasm32-unknown-unknown
@@ -55,7 +59,7 @@ jobs:
           checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
       - id: kelpto
         run: echo "ref=$(tr -d '[:space:]' < site/docs/kelpto-ref)" >> "$GITHUB_OUTPUT"
-      # Public; built for Python by tempest below.
+      # Public; built for Python by `temper` below.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: temperlang/kelpto
@@ -64,7 +68,7 @@ jobs:
       # The wasm, npm ci, tsc, and esbuild.
       - name: Playground
         run: uv run site/playground/build.py --out _site/playground
-      # README.md and docs/, rendered by Kelpto, which tempest builds for
+      # README.md and docs/, rendered by Kelpto, which `temper` builds for
       # Python. It ends by checking every link on the site, into the
       # playground too, and fails if any is broken. Links to repository
       # files outside docs/ go to GitHub at $GITHUB_SHA, checked against

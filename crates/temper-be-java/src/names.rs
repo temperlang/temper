@@ -111,6 +111,9 @@ fn identifier(c: char, first: bool) -> bool {
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, PRINTED],
+    // A field obscures a type of its name in its class (`Math.min`).
+    member_reserved: &[KEYWORDS, PRINTED],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",
@@ -119,10 +122,12 @@ pub const RULES: NamingRules = NamingRules {
     identifier,
     block_scoped: true,
     same_type_shares: false,
+    hoists_block_values: false,
     init_literals_avoid_module: true,
     members_prefixed: false,
     fields_apart: false,
     types_apart: true,
+    modules_share_names: false,
 };
 
 /// A library's package, as Kotlin's `safeIdentifier` makes it from the

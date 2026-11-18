@@ -1,17 +1,17 @@
 package property_members;
 
-final class LabeledSub implements Labeled<String> {
-    public final C thing;
+final class LabeledSub implements Labeled<String, C> {
+    public final C held;
 
-    public LabeledSub(C thing) {
-        this.thing = thing;
+    public LabeledSub(C held) {
+        this.held = held;
     }
 
     public String label(String l) {
-        return l + ": " + this.thing.x;
+        return l + ": " + this.held.x;
     }
 
-    public C getThing() {
-        return this.thing;
+    public C getHeld() {
+        return this.held;
     }
 }

@@ -36,7 +36,7 @@ const INVENTORY: &[(&str, usize, &str)] = &[
     ),
     (
         "crates/temper-wasm/src/lib.rs",
-        17,
+        18,
         "#[unsafe(no_mangle)] on the playground's exports, and nothing else",
     ),
     (
@@ -45,10 +45,9 @@ const INVENTORY: &[(&str, usize, &str)] = &[
         "#[unsafe(no_mangle)] on the REPL's exports, and nothing else",
     ),
     (
-        "vendor/temper/be-rust/temper-core/src/lib.rs",
+        "crates/temper-be-rust/runtime/temper-core/src/lib.rs",
         1,
-        "Temper's Rust runtime, vendored unchanged (compat/sync_temper.py) \
-         and built apart from the workspace: cast's read of a value whose \
+        "The Rust backend's runtime, built apart from the workspace: cast's read of a value whose \
          TypeId is the target's",
     ),
 ];

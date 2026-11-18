@@ -3,12 +3,12 @@ from temper_core import int_add as _int_add
 __all__ = ('wrap', 'Pad')
 
 
-def wrap(text: str, open_: str | None = None, close: str | None = None, /) -> str:
-    if open_ is None:
-        open_ = '['
+def wrap(text: str, open: str | None = None, close: str | None = None, /) -> str:
+    if open is None:
+        open = '['
     if close is None:
-        close = open_
-    return open_ + text + close
+        close = open
+    return open + text + close
 
 
 class Pad:

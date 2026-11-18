@@ -77,14 +77,12 @@ impl Pong {
     }
 
     pub fn pong(&self, a: Ping) {
-        let o = a.clone();
-        *o.0.n.write().unwrap() = o.n().wrapping_add(1);
+        *a.0.n.write().unwrap() = a.n().wrapping_add(1);
     }
 
     pub fn bump(&self, a: Ping, by: i32) -> i32 {
         {
-            let o = a.clone();
-            *o.0.n.write().unwrap() = o.n().wrapping_add(by);
+            *a.0.n.write().unwrap() = a.n().wrapping_add(by);
         }
         a.n()
     }

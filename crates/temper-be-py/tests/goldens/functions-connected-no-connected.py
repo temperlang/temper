@@ -64,13 +64,11 @@ def _prod(hidden: _Hidden, j: int, /) -> int:
 
 
 class Hider:
-    __slots__ = ('_i', '_hidden')
-    _i: int
+    __slots__ = ('_hidden',)
     _hidden: _Hidden
 
     def __init__(self, /, i: int) -> None:
-        self._i = i
-        self._hidden = _Hidden(self._i)
+        self._hidden = _Hidden(i)
 
     def plus(self, j: int, /) -> int:
         return sum_(self._hidden.i, j)

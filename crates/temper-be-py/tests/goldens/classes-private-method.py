@@ -1,10 +1,12 @@
 from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
+from collections.abc import Sequence as _Sequence
 from temper_core import (
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     int_div as _int_div,
     int_mul as _int_mul,
+    list_get as _list_get,
 )
 
 __all__ = ()
@@ -110,6 +112,29 @@ class _Label:
         return _Note(self.text).text(more).body
 
 
+class _Tally:
+    __slots__ = ('_depth', '_size')
+    _depth: int
+    _size: int
+
+    def __init__(self, /, size: int, parent: '_Tally | None', children: '_Sequence[_Tally]') -> None:
+        self._depth = 0 if parent is None else _int_add(parent._depth, 1)
+        sum = size
+        i = 0
+        while i < len(children):
+            sum = _int_add(sum, _list_get(children, i)._size)
+            i = _int_add(i, 1)
+        self._size = _int_add(sum, self._depth)
+
+    @property
+    def depth(self, /) -> int:
+        return self._depth
+
+    @property
+    def total(self, /) -> int:
+        return self._size
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _c: _C = _C()
 _console.log(f'method1(10)={_c.method1(10)}')
@@ -125,3 +150,8 @@ _console.log(f'b spent: {_b.times_spent}')
 _label: _Label = _Label(1)
 _console.log(f'close: {_label.close(_TenSink())}')
 _console.log(f"noted: {_label.noted('!')}")
+_leaf: _Tally = _Tally(2, None, ())
+_mid: _Tally = _Tally(3, _leaf, (_leaf, _leaf))
+_top: _Tally = _Tally(1, _mid, (_mid, _leaf))
+_console.log(f'depths: {_leaf.depth} {_mid.depth} {_top.depth}')
+_console.log(f'totals: {_leaf.total} {_mid.total} {_top.total}')

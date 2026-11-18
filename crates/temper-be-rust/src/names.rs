@@ -55,6 +55,12 @@ pub const PRINTED: &[&str] = &[
     "temper_core",
 ];
 
+/// The methods the translator defines or calls on a class's or an
+/// interface's type, which a member of the same name would clash with:
+/// the rest of [`PRINTED`] names paths and locals, which a method or
+/// field never hides (`core`, `init`, `std`). Sorted.
+pub const MEMBER_PRINTED: &[&str] = &["clone", "clone_boxed", "new"];
+
 fn case(kind: DeclKind, _exported: bool) -> Case {
     match kind {
         DeclKind::Class | DeclKind::Interface => Case::Keep,
@@ -69,6 +75,8 @@ fn identifier(c: char, first: bool) -> bool {
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, PRINTED],
+    member_reserved: &[KEYWORDS, MEMBER_PRINTED],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",
@@ -77,10 +85,12 @@ pub const RULES: NamingRules = NamingRules {
     identifier,
     block_scoped: false,
     same_type_shares: false,
+    hoists_block_values: false,
     init_literals_avoid_module: false,
     members_prefixed: false,
     fields_apart: true,
     types_apart: false,
+    modules_share_names: false,
 };
 
 /// The crate name cargo gives a package: dashes become underscores, as

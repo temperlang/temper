@@ -34,4 +34,69 @@ export class Checked extends type() {
   }
 }
 
+export class Builtins extends type() {
+  /** @type {number} */
+  #hash;
+
+  /** @param {number} hash */
+  constructor(hash) {
+    super();
+    this.#hash = hash;
+  }
+
+  /** @returns {number} */
+  get hash() {
+    return this.#hash;
+  }
+
+  /**
+   * @param {number} i
+   * @returns {number}
+   */
+  get(i) {
+    return (this.#hash + i) | 0;
+  }
+
+  /**
+   * @param {number} i
+   * @returns {number}
+   */
+  set(i) {
+    return Math.imul(i, 2);
+  }
+
+  /**
+   * @param {number} i
+   * @returns {number}
+   */
+  map(i) {
+    return (i + 1) | 0;
+  }
+
+  /** @returns {string} */
+  format() {
+    return `#${this.#hash}`;
+  }
+
+  /** @returns {number} */
+  get int() {
+    return Math.imul(this.#hash, 10);
+  }
+
+  /** @returns {number} */
+  later() {
+    return (this.int + 1) | 0;
+  }
+
+  /** @returns {number} */
+  init() {
+    return (this.#hash + 3) | 0;
+  }
+
+  /** @returns {string} */
+  print() {
+    return `print ${this.init()}`;
+  }
+}
+
 export const native = 2;

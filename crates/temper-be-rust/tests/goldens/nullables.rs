@@ -33,6 +33,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 same_int(None, Some(3))
             );
             println!("{} {}", parse("12"), parse("x"));
+            println!("{} {} {}", halved("12", 2), halved("x", 2), halved("12", 0));
             println!("{}", checked(7));
             println!("{} {}", or_zero(None), or_zero(Some(5)));
             varying();
@@ -120,6 +121,11 @@ pub(crate) fn same_int(a: Option<i32>, b: Option<i32>) -> bool {
 pub(crate) fn parse(s: impl ToArcString) -> i32 {
     let s = s.to_arc_string();
     temper_core::string::to_int(&s, None).unwrap_or(-1)
+}
+
+pub(crate) fn halved(s: impl ToArcString, d: i32) -> i32 {
+    let s = s.to_arc_string();
+    (|| temper_core::int_div(temper_core::string::to_int(&s, None)?, d))().unwrap_or(-1)
 }
 
 pub(crate) fn positive(n: i32) -> temper_core::Result<i32> {

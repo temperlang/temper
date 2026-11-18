@@ -35,7 +35,7 @@ the example, Share, and the compile's status.
   once (the page calls it in two halves, `analyze` and `finish`, so
   errors show first) and returns JSON with the diagnostics (UTF-16 offsets, as
   editors count, plus line and column), what the interpreter logged and
-  its tests' results, as `tempest test` reports them, and each backend's
+  its tests' results, as `temper test` reports them, and each backend's
   files. `std_library` gives std's own JavaScript, once. Their types are
   in `src/api.ts`, narrowed from the JSON where it comes in. The module
   imports the clock (`Date.now()`) and the REPL's log stream from the
@@ -52,7 +52,7 @@ the example, Share, and the compile's status.
   JavaScript's, run in a worker of its own (`src/js-worker.ts`): each
   generated module becomes a blob URL, with imports rewritten to the
   library's, std's, and the bundled `@temperlang/core` runtime from
-  `vendor/temper/be-js/`. Its tests register with `it`, as under Mocha.
+  `crates/temper-be-js/runtime/`. Its tests register with `it`, as under Mocha.
 - **Highlighting:** Temper's is a small stream language
   (`src/temper-language.ts`); the backends' are CodeMirror's legacy
   modes.
@@ -107,5 +107,5 @@ The worker keeps the source it last settled, and the wasm's `hover`,
       node site/playground/smoke.mjs [DIR] [--site SITE] [--chromium PATH]
 
   or `build.py --smoke`. Chromium is `--chromium`, else
-  `$TEMPEST_CHROMIUM`, else Playwright's (`npx playwright-core install
+  `$TEMPER_CHROMIUM`, else Playwright's (`npx playwright-core install
   --only-shell chromium` in `site/docs/mermaid`). CI runs both.

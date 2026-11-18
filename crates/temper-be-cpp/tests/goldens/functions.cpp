@@ -14,6 +14,7 @@ struct Counter;
 struct IntOp;
 struct Scaler;
 struct Button;
+struct Gate;
 
 struct Counter : public virtual temper::core::AnyValueBase {
   virtual int32_t apply() const = 0;
@@ -35,6 +36,14 @@ struct Button : public std::enable_shared_from_this<Button> {
   temper::core::Str press() const;
   temper::core::Str get_label() const;
   std::function<int32_t()> get_onPress() const;
+};
+
+struct Gate : public std::enable_shared_from_this<Gate> {
+  temper::core::NullableParam<std::function<int32_t(int32_t)>> check;
+  static std::shared_ptr<Gate> make();
+  bool allows(int32_t n) const;
+  int32_t passed(int32_t n) const;
+  temper::core::NullableParam<std::function<int32_t(int32_t)>> get_check();
 };
 
 }  // namespace functions_program
@@ -146,6 +155,129 @@ static int32_t doubles(core::Str const & s) {
   return n;
 }
 
+static int32_t climb(int32_t x) {
+  int32_t d;
+  if (x == 0) {
+    struct DownGroup {
+      int32_t x;
+      int32_t down(int32_t n) const {
+        if (n <= x) {
+          return 0;
+        } else {
+          return core::Int::add(down(core::Int::sub(n, 1)), 1);
+        }
+      }
+    };
+    DownGroup const down_group = DownGroup{x};
+    std::function<int32_t(int32_t)> down = [=](int32_t a0) -> int32_t { return down_group.down(a0); };
+    d = down(3);
+  } else {
+    return -1;
+  }
+  d = core::Int::add(d, 1);
+  {
+    if (d == 4) {
+      int32_t top = core::Int::add(d, 1);
+      struct UpGroup {
+        int32_t top;
+        int32_t up(int32_t n) const {
+          if (n >= top) {
+            return n;
+          } else {
+            return up(core::Int::add(n, 1));
+          }
+        }
+      };
+      UpGroup const up_group = UpGroup{top};
+      std::function<int32_t(int32_t)> up = [=](int32_t a0) -> int32_t { return up_group.up(a0); };
+      return up(d);
+    } else {
+      return d;
+    }
+  }
+}
+
+std::shared_ptr<Gate> Gate::make() {
+  std::shared_ptr<Gate> self = std::make_shared<Gate>();
+  self->check = nullptr;
+  return self;
+}
+
+bool Gate::allows(int32_t n) const {
+  core::NullableParam<std::function<int32_t(int32_t)>> c = this->check;
+  if (c == nullptr) {
+    return true;
+  } else {
+    return c.value(n) > 0;
+  }
+}
+
+int32_t Gate::passed(int32_t n) const {
+  core::NullableParam<std::function<int32_t(int32_t)>> c = this->check;
+  if (c != nullptr) {
+    return c.value(n);
+  } else {
+    return n;
+  }
+}
+
+core::NullableParam<std::function<int32_t(int32_t)>> Gate::get_check() {
+  return this->check;
+}
+
+static bool stringIsPalindrome(core::Str const & s) {
+  int32_t i = core::String::begin();
+  int32_t j = core::String::end(s);
+  while (core::Compare::cmp(i, j) < 0) {
+    j = core::String::prev(s, j);
+    if (core::String::get(s, i) != core::String::get(s, j)) {
+      return false;
+    }
+    i = core::String::next(s, i);
+  }
+  return true;
+}
+
+static int32_t intOrZero(core::NullableParam<int32_t> n) {
+  {
+    if (n == nullptr) {
+      return 0;
+    } else {
+      return n.value;
+    }
+  }
+}
+
+template <class T>
+static T listFirstOr(std::shared_ptr<std::vector<T>> const & ls, T d) {
+  if (core::List::isEmpty<T>(ls)) {
+    return d;
+  } else {
+    return core::List::get<T>(ls, 0);
+  }
+}
+
+static core::Str stringPadded(core::Str const & s, int32_t n, core::NullableParam<core::Str> fill) {
+  core::Str fill2 = fill == nullptr ? TEMPER_STR(".") : fill.value;
+  core::Str out = s;
+  {
+    int32_t i = 0;
+    while (i < n) {
+      out = out + fill2;
+      i = core::Int::add(i, 1);
+    }
+  }
+  return out;
+}
+
+static core::Str stringPadded(core::Str const & s, int32_t n) {
+  return stringPadded(s, n, nullptr);
+}
+
+static core::Str gatePassed(std::shared_ptr<Gate> const & g, core::Str const & s) {
+  return s + " " + core::Boolean::toString(g->allows(1));
+}
+
 void global_init_init() {
   core::init_once([] {
     temper_globals::console.construct();
@@ -242,6 +374,21 @@ void global_init_init() {
     };
     functions_program::drive(5, fn8);
     core::Console::log(temper_globals::console.value, "sum " + std::to_string(functions_program::sumFrom(ns, 4)) + " doubles " + std::to_string(functions_program::doubles(TEMPER_STR("bookkeeper"))));
+    int32_t value4 = climb(0);
+    core::Console::log(temper_globals::console.value, "climb " + std::to_string(value4) + " " + std::to_string(climb(1)));
+    std::shared_ptr<Gate> gate = Gate::make();
+    bool boolean = gate->allows(0);
+    core::Console::log(temper_globals::console.value, "gate " + core::Boolean::toString(boolean) + " " + std::to_string(gate->passed(4)));
+    gate->check = [](int32_t x) -> int32_t { return core::Int::sub(x, 1); };
+    bool value5 = gate->allows(1);
+    bool value6 = gate->allows(2);
+    core::Console::log(temper_globals::console.value, "gate " + core::Boolean::toString(value5) + " " + core::Boolean::toString(value6) + " " + std::to_string(gate->passed(4)));
+    core::NullableParam<int32_t> none = gate->allows(0) ? core::NullableParam<int32_t>(3) : nullptr;
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(functions_program::stringIsPalindrome(TEMPER_STR("step on no pets"))) + " " + core::Boolean::toString(functions_program::stringIsPalindrome(TEMPER_STR("steps"))));
+    core::Console::log(temper_globals::console.value, std::to_string(functions_program::intOrZero(none)) + " " + std::to_string(functions_program::listFirstOr<int32_t>(core::List::make<int32_t>(4, 5), 0)) + " " + functions_program::listFirstOr<core::Str>(core::List::make<core::Str>(TEMPER_STR("x")), TEMPER_STR("-")));
+    core::Console::log(temper_globals::console.value, functions_program::stringPadded(TEMPER_STR("ab"), 2) + " " + functions_program::stringPadded(TEMPER_STR("ab"), 1, TEMPER_STR("*")));
+    int32_t value7 = gate->passed(4);
+    core::Console::log(temper_globals::console.value, std::to_string(value7) + " " + functions_program::gatePassed(gate, TEMPER_STR("gate")));
   });
 }
 

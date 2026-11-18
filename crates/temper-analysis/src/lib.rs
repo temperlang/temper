@@ -248,10 +248,12 @@ impl Analysis<'_> {
         let library = &self.settled.library;
         (library.diagnostics.iter())
             .map(|d| {
-                // "No member" spans `obj.name`, as Kotlin's does; editors
-                // underline just the name.
+                // "No member" and "not publicly accessible" span
+                // `obj.name`, as Kotlin's do; editors underline just the
+                // name.
                 let span = match d.message {
-                    temper_frontend::library::Message::NoMember(..) => {
+                    temper_frontend::library::Message::NoMember(..)
+                    | temper_frontend::library::Message::NotPubliclyAccessible(..) => {
                         self.member_name_span(d.span)
                     }
                     _ => d.span,

@@ -48,7 +48,7 @@ and settle tests use:
   reader's. With core's declarations (2026-10-29), `tests/qname.rs`
   checks qnames against Kotlin's examples and their derivation, and
   `tests/core_fixture.rs` checks `tests/fixtures/core.tmpl`, a `uses`
-  section for core's members, against the vendored `core.temper`. Beside them, `tests/model.rs` tests what text can't
+  section for core's members, against `lib/core/core.temper`. Beside them, `tests/model.rs` tests what text can't
   express (broken structure, spans), and `tests/round_trip.rs`
   generates random valid programs, which must validate without
   problems and round trip (`TMPL_FUZZ_SEED`, `TMPL_FUZZ_ROUNDS`).
@@ -87,7 +87,7 @@ As built with the Python backend (2026-10-30):
   installed at their latest versions each run, since the two sometimes
   disagree; locally mypy is optional (`MYPY` names one). A test skips a
   missing checker with a message, except in CI, where
-  `TEMPEST_REQUIRE_CHECKERS` makes a missing one fail.
+  `TEMPER_REQUIRE_CHECKERS` makes a missing one fail.
 - **Rust** (2026-10-30): the compiler, by building every generated
   crate, and clippy, with `-D warnings` but for three lints that fire
   on what the functional tests do on purpose (`self_assignment` for
@@ -96,18 +96,18 @@ As built with the Python backend (2026-10-30):
   `foo`, which Kotlin's output avoids only by numbering every name).
   The crates build offline in one cargo workspace with one target
   directory, kept under `CARGO_TARGET_TMPDIR` so builds are
-  incremental, against the vendored `temper-core` and its `Cargo.lock`;
+  incremental, against the runtime, `temper-core`, and its `Cargo.lock`;
   `temper-core`'s one dependency, `indexmap`, must be in cargo's cache
   (CI fetches it first). The goldens are also checked to be as rustfmt
   lays them out. A missing cargo, clippy, rustfmt, or `indexmap` skips
-  with a message, or fails with `TEMPEST_REQUIRE_CHECKERS`. The shared
+  with a message, or fails with `TEMPER_REQUIRE_CHECKERS`. The shared
   programs (`crates/temper-be-testkit/programs/`, the Rust backend's
   own until 2026-10-30) cover what the functional tests don't yet; one
   is hand-written tmpl, for constructs the frontend doesn't translate
   yet.
 - **JS** (2026-10-30): each generated package runs under Node (`node`,
-  or `NODE`) against the vendored `@temperlang/core`
-  (`vendor/temper/be-js/temper-core`), copied into a `node_modules`
+  or `NODE`) against the runtime, `@temperlang/core`
+  (`crates/temper-be-js/runtime/temper-core`), copied into a `node_modules`
   beside the packages, and TypeScript's checker, `tsc --checkJs --allowJs
   --noEmit --strict --module nodenext`, checks all of them in one run
   (`tsc`, or `TSC`), with JSDoc as their only annotations. It checks
@@ -126,7 +126,7 @@ As built with the Python backend (2026-10-30):
   timers; Deno's shim reportedly lacks `beforeEach`/`afterEach`), so
   plain `describe`/`it`/`assert` would be the portable subset. A
   missing Node or `tsc` skips with a message, or fails
-  with `TEMPEST_REQUIRE_CHECKERS`. Besides the 7 functional tests, the
+  with `TEMPER_REQUIRE_CHECKERS`. Besides the 7 functional tests, the
   JS backend runs the shared programs
   (`crates/temper-be-testkit/programs/`), with goldens of its own.
 - **JS source maps** (2026-10-30): goldens of each program's map,
@@ -140,8 +140,8 @@ As built with the Python backend (2026-10-30):
   these with the run test, on its Node 24, so a missing Node fails
   there.
 - **Java** (2026-10-30): the compiler is the checker. Without Maven,
-  `javac` (or `JAVAC`) compiles the vendored `temper-core`
-  (`vendor/temper/be-java/temper-core`) once, for Java 8 as its
+  `javac` (or `JAVAC`) compiles the runtime, `temper-core`
+  (`crates/temper-be-java/runtime/temper-core`) once, for Java 8 as its
   `pom.xml` says, into `CARGO_TARGET_TMPDIR`, kept until its sources or
   the JDK change; then every generated package and a harness that runs
   `module-state` from 8 threads, in one `javac` run, with `--release 17
@@ -150,7 +150,7 @@ As built with the Python backend (2026-10-30):
   leaves out of `javadoc`'s too. No lint is allowed, and Kotlin's own
   output passes the same flags. Then `java` (or `JAVA`) runs each
   program's main class. CI sets up Temurin 21. A missing `javac` or
-  `java` skips with a message, or fails with `TEMPEST_REQUIRE_CHECKERS`.
+  `java` skips with a message, or fails with `TEMPER_REQUIRE_CHECKERS`.
   Besides the 7 functional tests, it runs the Rust backend's programs,
   as JS does. A test that runs as tests (`testing/asserts`) compiles
   with std and JUnit 5.9.2's jars from Maven's cache (CI fetches them
@@ -158,8 +158,8 @@ As built with the Python backend (2026-10-30):
   (2026-11-03).
 - **C#** (2026-10-30): the compiler is the checker, with the .NET
   analyzers. Without MSBuild or NuGet, Roslyn's `csc` (from the newest
-  .NET 6 SDK that `dotnet`, or `DOTNET`, lists) compiles the vendored
-  `TemperLang.Core` (`vendor/temper/be-csharp/temper-core`) once, as
+  .NET 6 SDK that `dotnet`, or `DOTNET`, lists) compiles the runtime,
+  `TemperLang.Core` (`crates/temper-be-csharp/runtime/temper-core`) once, as
   its `.csproj` does for .NET 6, into `CARGO_TARGET_TMPDIR`, kept until
   its sources or the SDK change; then every generated library's sources
   in one `csc` run, against .NET 6's reference assemblies, with C# 10,
@@ -176,7 +176,7 @@ As built with the Python backend (2026-10-30):
   `Microsoft.Extensions.Logging` 8.0.0, comes from NuGet's cache, never
   the network; CI restores a copy of the runtime's project to put it
   there. A missing SDK, targeting pack, or package skips with a
-  message, or fails with `TEMPEST_REQUIRE_CHECKERS`. Besides the 7
+  message, or fails with `TEMPER_REQUIRE_CHECKERS`. Besides the 7
   functional tests, it runs the Rust backend's programs, and one of its
   own, `hiding`: names that would hide the classes the translator names
   (`Math`, `Core`, `Support`), which it qualifies from `global::`, a
@@ -207,7 +207,7 @@ As built with the Python backend (2026-10-30):
 - **C++** (2026-10-30): the compiler is the checker, with sanitizers.
   Without CMake, `g++` (or `CXX`) compiles every generated `.cpp`
   (each library's `init.cpp` and `main.cpp`, and a runner) against the
-  vendored, header-only `temper-core` (`vendor/temper/be-cpp`), with
+  header-only runtime, `temper-core` (`crates/temper-be-cpp/runtime`), with
   `-std=c++14`, as Kotlin's, and `-Wall -Wextra -Wpedantic -Werror`
   plus 33 more warnings (the test's `STRICT`), through a precompiled
   header of the runtime per set of options, kept in `CARGO_TARGET_TMPDIR`
@@ -225,7 +225,7 @@ As built with the Python backend (2026-10-30):
   randomization; CI narrows it
   with `sysctl vm.mmap_rnd_bits=28`). Any sanitizer report fails the
   test. A missing `g++` skips with a message, or fails with
-  `TEMPEST_REQUIRE_CHECKERS`. Besides the 7 functional tests and the
+  `TEMPER_REQUIRE_CHECKERS`. Besides the 7 functional tests and the
   Rust backend's programs, one of its own, `hiding`: names C++
   reserves or the translator prints (`std`, `core`, `int32_t`,
   `explicit`, `M_PI`), `Boolean`'s `<`, a trigraph and a NUL in
@@ -233,15 +233,15 @@ As built with the Python backend (2026-10-30):
   with CMake, as a user's project would (not in the tests). `strict`
   (2026-11-09) compiles every generated `.cpp` again, not linked, at
   `-O2` with `STRICT` by `g++-12` and `g++-14` (those installed, or
-  `TEMPEST_STRICT_CXX`'s list), as release builds would, and the newest
+  `TEMPER_STRICT_CXX`'s list), as release builds would, and the newest
   GCC at `-O3` too: `-O1` misses some of GCC's path-following warnings,
   such as a null upcast's `-Wnull-dereference`, and only `-O3` showed
   libstdc++'s `vector<bool>` `-Warray-bounds`. CI adds clang++ with its own set
   (`CLANG_STRICT`), which only CI checks.
 - **Lua** (2026-10-30): no compiler, so the checks are a run, a parse,
   and a type checker. With `lua` (or `LUA`), from one directory holding
-  every generated library and a copy of the vendored `temper-core`
-  (`vendor/temper/be-lua/temper-core`), with Kotlin's `LUA_PATH`
+  every generated library and a copy of the runtime, `temper-core`
+  (`crates/temper-be-lua/runtime/temper-core`), with Kotlin's `LUA_PATH`
   (`?.lua;?/init.lua`) and no LuaRocks, one process requires each
   library in turn, after a line naming it, and each must log what the
   test expects of `lua`; `fibonacci` also runs alone, as Kotlin's
@@ -262,7 +262,7 @@ As built with the Python backend (2026-10-30):
   and runs the programs again under LuaJIT 2.1 (`LUA` names the
   interpreter).
   A missing `lua` or LuaLS skips with a
-  message, or fails with `TEMPEST_REQUIRE_CHECKERS`. Besides the 7
+  message, or fails with `TEMPER_REQUIRE_CHECKERS`. Besides the 7
   functional tests and the Rust backend's four programs, three of its
   own: `hiding` (checked against the interpreter), `repeats` (tmpl, for
   jumps the frontend doesn't translate yet), and `locals` (generated:

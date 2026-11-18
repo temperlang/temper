@@ -28,8 +28,8 @@ Every backend crate has much the same files:
 | `ops.rs` | How each builtin operator is spelled |
 | `connected.rs` | How each of core's `connected` declarations maps to the language's runtime, `temper-core` |
 | `tree.rs` | The output tree and its printer, which adds parentheses only where precedence needs them, and lays out code in the language's usual style |
-| `runtime.rs` | The runtime's files, copied beside the output by `tempest build` |
-| `tools.rs` | Natively, how the language runs built libraries' tests, for `tempest test -b`, and a library's top level, for `tempest run -b`: finding its tools, their command lines, and reading their results |
+| `runtime.rs` | The runtime's files, copied beside the output by `temper build` |
+| `tools.rs` | Natively, how the language runs built libraries' tests, for `temper test -b`, and a library's top level, for `temper run -b`: finding its tools, their command lines, and reading their results |
 
 Which lowerings each backend runs, in what order, and how the seven
 differ: [the pipeline](detail/06-backends.md#the-pipeline-each-backend-runs)
@@ -44,10 +44,10 @@ writes it by default, and its `tools.rs`'s
 backend means one crate, one line there, and its name among the known
 ones ([the command](07-cli.md#one-compile-path)).
 
-Each language's runtime is vendored from Temper in `vendor/temper/`,
-with a few fixes kept as patches in `vendor/temper-patches/`. So
-generated code calls the same runtime APIs as before
-([runtimes and their patches, in detail](detail/06-backends.md#kotlins-runtimes-vendored-with-patches)).
+Each language's runtime is in its backend crate's `runtime/`, begun as
+Kotlin Temper's with a few changes, so generated code calls the same
+runtime APIs as before
+([the runtimes and their changes, in detail](detail/06-backends.md#the-runtimes-from-kotlin-tempers)).
 
 ## Worked example
 

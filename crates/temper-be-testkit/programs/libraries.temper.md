@@ -20,7 +20,8 @@ module's private `let`, which C++ defines in the header; and what
 Kelpto needs: a `when` whose `is` checks cover a sealed interface,
 without `else`, two classes joined to the interface they share, a `[]`
 branch typed by the other, `?.` on `this`'s getter by its bare name, a
-private static function that a static field's value calls, a field set
+private static function that a static field's value calls, a private
+static field a getter reads, a field set
 in a constructor and again in a branch, a parameter's null default kept
 in a field, and an `if`'s number value whose method Rust calls; and
 what a library's contextual autoescaping uses:
@@ -34,7 +35,7 @@ class extending it and the interface it extends inherits, an override
 of a method that takes a type parameter's value, a trait method's
 `String?` given an `if`'s value, `when`s of only `null` and `panic()`,
 `orelse continue`, and `--i` in a loop's condition. The log is what
-tempest's interpreter gives.
+the interpreter gives.
 
     export let parseGrid(s: String): Grid throws Bubble {
       if (s == "") { bubble() }
@@ -65,7 +66,11 @@ tempest's interpreter gives.
 
       private static named(name: String): Casing { new Casing(name) }
 
-      public static last = named("last");
+      public static last = Casing.named("last");
+
+      private static mark = "#";
+
+      public get marked(): String { "${Casing.mark}${name}" }
     }
 
     export sealed interface Shape { public get size(): Int; }
@@ -234,7 +239,7 @@ tempest's interpreter gives.
     let digits = [1, 2, 4, 3];
     console.log("${byteAt(digits, true, 1)} ${byteAt(digits, false, 0)} ${ascending(digits)} ${firstDrop(digits)} ${sizeWith(digits)}");
     console.log("${tickIf(true)} ${tickIf(false)} ${ticked()} ${tickWhile()}");
-    console.log("${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${new Dot(1).grown} ${new Dot(3).grown} ${Casing.last.toString()}");
+    console.log("${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${new Dot(1).grown} ${new Dot(3).grown} ${Casing.last.toString()} ${Casing.first.marked}");
     let carry = new Carry(3);
     console.log("${carry.carrying} ${carry.state} ${new Carry(0).carrying} ${tagged().label} ${tagged("x").label} ${weight(42)} ${weight(60)}");
 
@@ -409,7 +414,7 @@ true
 true
 34 18 true 3 5
 1 23 true 3
-dot line 2 0 20 null last
+dot line 2 0 20 null last #first
 true 3 false null x 44 67
 waf1t2m2
 Held(<a>) <a> true false true false

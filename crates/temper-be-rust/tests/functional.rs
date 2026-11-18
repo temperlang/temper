@@ -1,6 +1,6 @@
 //! The Rust backend on Kotlin Temper's functional tests that tmpl's
-//! translation covers so far, from the vendored copy
-//! (`temper-funtests`), with the class tests (`kit::CLASSES`), those
+//! translation covers so far, in `temper-funtests`'s
+//! `cases/`, with the class tests (`kit::CLASSES`), those
 //! with nullable types and `orelse` (`kit::NULLABLES`), those with
 //! generics (`kit::GENERICS`), those with function values
 //! (`kit::FUNCTIONS`), those with parameters' defaults
@@ -31,23 +31,25 @@
 //!   review the diff.
 //! - `runs`: the generated crates, in one cargo workspace with one target
 //!   directory (under `CARGO_TARGET_TMPDIR`, kept between runs so builds
-//!   are incremental), build offline against the vendored `temper-core`
-//!   (`vendor/temper/be-rust/temper-core`, with its `Cargo.lock`), and
+//!   are incremental), build offline against `temper-core`
+//!   (`crates/temper-be-rust/runtime/temper-core`, with its `Cargo.lock`), and
 //!   each program logs what the test expects of Kotlin's `rust` backend;
 //!   a harness also runs `module-state` from 8 threads, with no `init`
 //!   first, which their first reads run, and another calls libraries
-//!   with no `init` ([`FIRST_USE`]). Then clippy finds
-//!   nothing in them with `-D warnings`, apart from three lints that
-//!   fire on what the tests do on purpose ([`ALLOWED_LINTS`]), and dead
-//!   code in a test that declares what it never uses ([`UNUSED`]). The
-//!   workspace has std's crate, `temper-std`, as std builds as a library;
-//!   `testing`'s tests build and run against it, and a test that runs as
-//!   tests (`testing/asserts`) runs by `cargo test`, its failures
+//!   with no `init` ([`FIRST_USE`]). Then clippy finds nothing in them
+//!   with `-D warnings`, each crate built with and without `cfg(test)`
+//!   (`--all-targets`), so what only tests use is only for tests, apart
+//!   from lints that fire on what the tests do on purpose
+//!   ([`ALLOWED_LINTS`]), and dead code in a test that declares what it
+//!   never uses ([`UNUSED`]). The workspace has std's crate,
+//!   `temper-std`, as std builds as a library; `testing`'s tests build
+//!   and run against it, and a test that runs as tests
+//!   (`testing/asserts`, and the shared `reach`) runs by `cargo test`, its failures
 //!   compared with its `expectedFailures`, as Kotlin's `RunRust` reads
 //!   them ([`cargo_test_failures`]). Skipped, with a message, without cargo
 //!   or clippy, or if `temper-core`'s one dependency, `indexmap`, isn't
-//!   in cargo's cache (`cargo fetch` in the vendored `temper-core` puts
-//!   it there); with `TEMPEST_REQUIRE_CHECKERS` set, as in CI, any of
+//!   in cargo's cache (`cargo fetch` in `temper-core` puts
+//!   it there); with `TEMPER_REQUIRE_CHECKERS` set, as in CI, any of
 //!   those fails it instead.
 
 use std::path::{Path, PathBuf};
@@ -79,37 +81,29 @@ const ALLOWED_LINTS: [&str; 8] = [
     "clippy::if_same_then_else",
 ];
 
-/// The tests that declare what they never use, a function, a default
-/// method that every class overrides, a parameter, or locals, on purpose
-/// (`read`'s module `let`s, whose reads Temper inlines, and `map`'s
-/// copies it never reads and a closure's `value`, and `broken`'s
-/// functions with errors, never called, one ignoring a parameter, and
-/// `errors`' functions whose errors leave parameters unread, and
-/// `angle-call`'s `Hi`, whose field nothing reads), so rustc's
-/// `dead_code` and `unused_variables` are allowed in them.
-const UNUSED: [&str; 8] = [
+/// The tests that declare what they never use, on purpose: a default
+/// method that every class overrides (`call-override-from-subtype`'s),
+/// a field (`mutually-referencing-types`'), or parameters
+/// (`bubble`'s, `errors`' functions whose errors leave them unread, and
+/// `json-adapters`' decoders, which read their `ic` only to pass it to
+/// another adapter, as Kotlin's `@json` writes them), so rustc's
+/// `dead_code` and `unused_variables` are allowed in them. What nothing
+/// reaches isn't written (`temper_tmpl::reach`), and what only tests
+/// reach is `#[cfg(test)]`, so unused functions, classes, and module
+/// values are no reason to be here.
+const UNUSED: [&str; 5] = [
     "call-override-from-subtype",
     "mutually-referencing-types",
     "bubble",
-    "read",
-    "map",
-    "broken",
-    "angle-call",
     "errors",
+    "json-adapters",
 ];
 
 /// Tests, by key, that store what they never read: `functions/connected`'s
 /// `Hider(@noProperty i: Int)`, which tempest's frontend makes a private
-/// field, read only by the constructor, where Kotlin's makes none; and
-/// `testing/asserts`, whose class and function used only by its tests
-/// aren't `#[cfg(test)]` yet (only module `let`s are), and whose `name`,
-/// read only in a test's name, which Temper folds. Their packages are
-/// linted as [`UNUSED`]'s are.
-const UNUSED_KEYS: [&str; 3] = [
-    "functions-connected",
-    "functions-connected-no-connected",
-    "testing-asserts",
-];
+/// field, read only by the constructor, where Kotlin's makes none. Their
+/// packages are linted as [`UNUSED`]'s are.
+const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-connected"];
 
 /// Tests, by key, whose root module's layout differs from rustfmt's, and
 /// isn't checked against it yet: std's regex built structurally, calls
@@ -118,13 +112,16 @@ const UNUSED_KEYS: [&str; 3] = [
 /// printer does, and breaks a `let` before its value; and state machines
 /// nested deep in `async` blocks, where rustfmt lays out a closure's
 /// header past its width differently, and a generic type past it, as
-/// `functions`' generator has.
-const LAYOUT_GAPS: [&str; 5] = [
+/// `functions`' generator has; and `json-adapters`' nested calls, whose `?`
+/// call rustfmt doesn't overflow there, and a `let` of a chain whose
+/// first line is just 100 wide, which rustfmt breaks inside the call.
+const LAYOUT_GAPS: [&str; 6] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
     "control-flow-async",
     "control-flow-async-waiters",
+    "json-adapters",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
@@ -254,10 +251,11 @@ fn goldens() {
                 main.starts_with(&format!("fn main() {{\n    {krate}::init(None)")),
                 "{main}"
             );
+            let core = temper_tmpl::version::current();
             assert!(
-                files[0].text.contains(
-                    "\n[dependencies]\ntemper-core = { path = \"../temper-core\", version = \"=0.6.0\" }\n"
-                ),
+                files[0].text.contains(&format!(
+                    "\n[dependencies]\ntemper-core = {{ path = \"../temper-core\", version = \"={core}\" }}\n"
+                )),
                 "{}",
                 files[0].text
             );
@@ -277,7 +275,7 @@ fn goldens() {
             }
             goldens.check(&format!("{}.rs", case.key), &files[3].text);
             // `lib.rs` and `Cargo.toml` where modules or libraries show.
-            if !case.sources[0].0.contains("functional-tests")
+            if !case.sources[0].0.contains("temper-funtests/cases/")
                 && (files.len() > 5 || files[0].text.contains("std"))
                 || !case.libraries.is_empty()
             {
@@ -329,8 +327,96 @@ fn missing_host_code() {
     });
 }
 
+/// The shared `reach` program's test parts only in `#[cfg(test)]` items
+/// and statements, and what nothing reaches nowhere, as tmpl's
+/// `reach::partition` splits the program; `runs_and_lints` builds and
+/// lints it with and without `cfg(test)`, and runs its test.
+#[test]
+fn test_parts_apart() {
+    let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+    kit::with_stack(move || {
+        let file = &generate(&case)[3];
+        let lines = (under_cfg_test(&file.text).into_iter())
+            .map(|(tests, line)| (file.path.as_str(), tests, line));
+        let tests_only = [
+            "for_tests",
+            "test_factor",
+            "TEST_FACTOR",
+            "test_count",
+            "TEST_COUNT",
+            "TestShape",
+            "TestSquare",
+            "add_area",
+        ];
+        let unreached = [
+            "unreached_function",
+            "UnreachedClass",
+            "UnreachedInterface",
+            "unreached_value",
+            "UNREACHED_VALUE",
+        ];
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
+        // `checked`'s static is the library's, set by its init, and its
+        // getter only for tests.
+        let text = &file.text;
+        let getter = (text.lines()).position(|l| l.starts_with("pub(crate) fn checked("));
+        assert!(
+            getter.is_some_and(|at| text.lines().nth(at - 1) == Some("#[cfg(test)]")),
+            "{text}"
+        );
+    });
+}
+
+/// Each line of a rustfmt-laid Rust file, and whether it's in an item or
+/// statement marked `#[cfg(test)]`: from that attribute through the line
+/// at its indent that ends what follows it (`}` or `;`), past any other
+/// attributes.
+fn under_cfg_test(text: &str) -> Vec<(bool, &str)> {
+    let mut out = Vec::new();
+    let mut inside: Option<usize> = None;
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        match inside {
+            Some(at) => {
+                out.push((true, line));
+                let ends = indent == at
+                    && !trimmed.starts_with("#[")
+                    && (trimmed.ends_with('}') || trimmed.ends_with(';'));
+                if ends {
+                    inside = None;
+                }
+            }
+            None => {
+                if trimmed == "#[cfg(test)]" {
+                    inside = Some(indent);
+                }
+                out.push((inside.is_some(), line));
+            }
+        }
+    }
+    out
+}
+
+/// What the translation doesn't cover yet says where, from the
+/// innermost node with a span.
+#[test]
+fn not_yet_says_where() {
+    let text = "export class P(public x: Float64?) {}\n\
+                export let same(a: P, b: P): Boolean {\n  a.x == b.x\n}\n";
+    let case = Case::inline("where", "where.temper", text, Vec::new());
+    kit::with_stack(move || {
+        let error = translate(&kit::program_for(&case, &RUST.rules), &RUST).unwrap_err();
+        assert_eq!(error.at.as_deref(), Some("where.temper:3:3"), "{error}");
+        assert!(
+            error.to_string().ends_with(" at where.temper:3:3"),
+            "{error}"
+        );
+    });
+}
+
 fn runtime() -> PathBuf {
-    kit::vendored("be-rust/temper-core")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core")
 }
 
 /// The harness that runs `module-state` from several threads.
@@ -376,7 +462,7 @@ values = { path = \"../values\" }
 ";
 
 /// The crate of `tests/host/interop.rs`, host code that uses
-/// `async-turns`.
+/// `async-turns` and `class-edges`.
 const HOST_INTEROP: &str = "[package]
 name = \"host-interop\"
 version = \"0.0.0\"
@@ -384,6 +470,7 @@ edition = \"2021\"
 
 [dependencies]
 async-turns = { path = \"../async-turns\" }
+class-edges = { path = \"../class-edges\" }
 temper-core = { path = \"../temper-core\" }
 ";
 
@@ -530,7 +617,16 @@ fn runs_and_lints() {
                 list.join(", ")
             ),
         );
-        kit::copy_dir(&runtime(), &root.join("temper-core"), &["target"]);
+        // The runtime as `temper build` writes it, naming the version
+        // the libraries depend on.
+        let filled = temper_tmpl::version::fill_runtime(
+            temper_be_rust::runtime::FILES,
+            &temper_be_rust::runtime::VERSION,
+            temper_tmpl::version::current(),
+        );
+        for (path, text) in &filled {
+            kit::write_if_changed(&root.join("temper-core").join(path), text);
+        }
         if !root.join("Cargo.lock").exists() {
             // indexmap and its dependencies at the versions temper-core
             // was tested with.
@@ -548,7 +644,7 @@ fn runs_and_lints() {
         if !fetch.status.success() {
             kit::missing(&format!(
                 "temper-core's dependencies aren't in cargo's cache (`cargo fetch` in \
-                 vendor/temper/be-rust/temper-core gets them):\n{}",
+                 crates/temper-be-rust/runtime/temper-core gets them):\n{}",
                 String::from_utf8_lossy(&fetch.stderr)
             ));
             return;
@@ -581,7 +677,7 @@ fn runs_and_lints() {
         // standard way: it `.await`s a generated promise on a std-only
         // executor, blocks on one inside a turn, which fails clearly, and
         // loops over a generated generator with `for`, which a failed step
-        // leaves done.
+        // leaves done; then it builds a generic class with its builder.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -593,6 +689,8 @@ fn runs_and_lints() {
                         "then done true",
                         "fibonacci 0,1,1,2,3,5,8,13",
                         "collatz 7,22,11,34,17,52,26,13,40,20,10,5,16,8,4,2,1",
+                        "builder Ann",
+                        "options Ann + Cy",
                     ]
                     .map(String::from),
                 )

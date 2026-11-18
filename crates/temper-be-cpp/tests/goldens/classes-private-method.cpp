@@ -16,6 +16,7 @@ struct Sink;
 struct TenSink;
 struct Note;
 struct Label;
+struct Tally;
 
 struct C : public std::enable_shared_from_this<C> {
   static std::shared_ptr<C> make();
@@ -60,6 +61,14 @@ struct Label : public std::enable_shared_from_this<Label> {
   temper::core::Str get_text() const;
   int32_t close(std::shared_ptr<Sink> const & sink) const;
   temper::core::Str noted(temper::core::Str const & more) const;
+};
+
+struct Tally : public std::enable_shared_from_this<Tally> {
+  int32_t depth;
+  int32_t size;
+  static std::shared_ptr<Tally> make(int32_t size, std::shared_ptr<Tally> const & parent, std::shared_ptr<std::vector<std::shared_ptr<Tally>>> const & children);
+  int32_t get_total() const;
+  int32_t get_depth() const;
 };
 
 }  // namespace private_method
@@ -176,6 +185,29 @@ core::Str Label::noted(core::Str const & more) const {
   return Note::make(self->get_text())->text(more)->body;
 }
 
+std::shared_ptr<Tally> Tally::make(int32_t size, std::shared_ptr<Tally> const & parent, std::shared_ptr<std::vector<std::shared_ptr<Tally>>> const & children) {
+  std::shared_ptr<Tally> self = std::make_shared<Tally>();
+  self->depth = parent == nullptr ? 0 : core::Int::add(parent->depth, 1);
+  int32_t sum = size;
+  {
+    int32_t i = 0;
+    while (i < core::List::length<std::shared_ptr<Tally>>(children)) {
+      sum = core::Int::add(sum, core::List::get<std::shared_ptr<Tally>>(children, i)->size);
+      i = core::Int::add(i, 1);
+    }
+  }
+  self->size = core::Int::add(sum, self->depth);
+  return self;
+}
+
+int32_t Tally::get_total() const {
+  return this->size;
+}
+
+int32_t Tally::get_depth() const {
+  return this->depth;
+}
+
 void global_init_init() {
   core::init_once([] {
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
@@ -193,6 +225,11 @@ void global_init_init() {
     std::shared_ptr<Label> label = Label::make(1);
     core::Console::log(console, "close: " + std::to_string(label->close(core::to_base<Sink>(TenSink::make()))));
     core::Console::log(console, "noted: " + label->noted(TEMPER_STR("!")));
+    std::shared_ptr<Tally> leaf = Tally::make(2, nullptr, core::List::make<std::shared_ptr<Tally>>());
+    std::shared_ptr<Tally> mid = Tally::make(3, leaf, core::List::make<std::shared_ptr<Tally>>(leaf, leaf));
+    std::shared_ptr<Tally> top = Tally::make(1, mid, core::List::make<std::shared_ptr<Tally>>(mid, leaf));
+    core::Console::log(console, "depths: " + std::to_string(leaf->depth) + " " + std::to_string(mid->depth) + " " + std::to_string(top->depth));
+    core::Console::log(console, "totals: " + std::to_string(leaf->get_total()) + " " + std::to_string(mid->get_total()) + " " + std::to_string(top->get_total()));
   });
 }
 

@@ -8,10 +8,10 @@ uses that rely on identity, per file and in total.
 Covers Kotlin Temper's functional tests, each built as check_functional.py
 builds it (std's files it imports aren't counted there), std as one
 library, and the libraries under each LIBRARY directory given, found as
-`tempest test` finds them (each directory with a config.temper.md). Uses
-`run-temper --untyped`. The tests and std come from vendor/temper/ (see
-compat/sync_temper.py), or, with --temper, from a Temper checkout. Lists
-the functional tests with no expression of unknown type, then the most
+`temper test` finds them (each directory with a config.temper.md). Uses
+`run-temper --untyped`. The tests and std come from this repository's
+crates/temper-funtests/cases/ and lib/std/, or, with --temper, from a Kotlin
+Temper checkout. Lists the functional tests with no expression of unknown type, then the most
 common kinds of what's left.
 
     uv run compat/count_untyped.py [--verbose] [--causes N] [--temper DIR] [LIBRARY ...]
@@ -28,8 +28,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SUITE = ROOT / "vendor/temper/functional-tests"
-STD = ROOT / "vendor/temper/std"
+SUITE = ROOT / "crates" / "temper-funtests" / "cases"
+STD = ROOT / "lib" / "std"
 FILE = re.compile(r"^file (.*) exprs (\d+) untyped (\d+) calls (\d+) unresolved (\d+) identity (\d+)$")
 ITEM = re.compile(r"^  (untyped|unresolved|identity) (\d+:\d+) (.*?) \| (.*)$")
 

@@ -1,6 +1,6 @@
 //! The Python backend on Kotlin Temper's functional tests that tmpl's
-//! translation covers so far, from the vendored copy
-//! (`temper-funtests`), and on the shared programs
+//! translation covers so far, in `temper-funtests`'s
+//! `cases/`, and on the shared programs
 //! (`crates/temper-be-testkit/programs/`) that it covers so far:
 //! `string-order`, which every backend runs; `modules`,
 //! `imports-library`, and `testing`, for modules, imports, and tests;
@@ -29,8 +29,8 @@
 //!   (`modules.helpers.deep.py`, `testing.tests.test_testing.py`). To
 //!   accept new or changed output, run with `UPDATE_SNAPSHOTS=1` and
 //!   review the diff.
-//! - `runs`: each test's generated Python runs, against the vendored
-//!   `temper_core` runtime (`vendor/temper/be-py/temper-core`), and logs
+//! - `runs`: each test's generated Python runs, against the
+//!   `temper_core` runtime (`crates/temper-be-py/runtime/temper-core`), and logs
 //!   what the test expects of Kotlin's `py` backend; and type checkers
 //!   find no problems in it, in strict mode: mypy and pyright, each where
 //!   installed (on `PATH`, or named by `MYPY` or `PYRIGHT`), except for
@@ -39,7 +39,7 @@
 //!   once per case; a case it finds problems in is checked again alone,
 //!   and that message reported (`check_types`). Skipped, with
 //!   a message, without Python 3.11 or later (`python3`, or `PYTHON`);
-//!   with `TEMPEST_REQUIRE_CHECKERS` set, as in CI, a missing Python or
+//!   with `TEMPER_REQUIRE_CHECKERS` set, as in CI, a missing Python or
 //!   checker fails it instead. A library that imports another
 //!   (`imports-library`) runs with it beside it. `python -m py_compile`
 //!   checks each tests file; a test that runs as tests
@@ -51,7 +51,7 @@
 //!   (`tests/module_names.py`). The cases that log run in one
 //!   interpreter (`tests/bulk_runner.py`), and any that doesn't log what
 //!   it expects runs again alone, whose result counts; with
-//!   `TEMPEST_PY_BULK=0`, each runs alone (notes/test-speed.md,
+//!   `TEMPER_PY_BULK=0`, each runs alone (notes/test-speed.md,
 //!   "Python's functional tests in bulk").
 
 use std::path::{Path, PathBuf};
@@ -61,7 +61,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 14] = [
+const PROGRAMS: [&str; 16] = [
     "classes",
     "nullables",
     "generics",
@@ -76,10 +76,12 @@ const PROGRAMS: [&str; 14] = [
     "errors",
     "triple",
     "content-tags",
+    "json-adapters",
+    "reach",
 ];
 
 fn cases() -> Vec<Case> {
-    kit::cases_with(
+    let mut cases = kit::cases_with(
         "py",
         &PROGRAMS,
         &[
@@ -102,7 +104,40 @@ fn cases() -> Vec<Case> {
             &kit::NET[..],
         ]
         .concat(),
-    )
+    );
+    // This crate's own programs, in `tests/programs/`.
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
+    for name in PY_PROGRAMS {
+        let path = dir.join(format!("{name}.temper.md"));
+        let text = fs::read_to_string(&path).unwrap();
+        let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
+        case.expected = log_blocks(&case.sources[0].1);
+        case.dir = dir.clone();
+        cases.push(case);
+    }
+    cases
+}
+
+/// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
+/// parameters named like Python's builtins, which keep their names
+/// (`host_interop` passes one by name), and names a function binds more
+/// than once, annotated once.
+const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+
+/// The lines of a program's log blocks, in order.
+fn log_blocks(text: &str) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut in_log = false;
+    for line in text.lines() {
+        if in_log && line.starts_with("```") {
+            in_log = false;
+        } else if in_log {
+            lines.push(line.to_string());
+        } else if line.starts_with("```log") {
+            in_log = true;
+        }
+    }
+    lines
 }
 
 /// A case's generated files.
@@ -152,6 +187,55 @@ fn goldens() {
     });
 }
 
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter()).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        let tests_only = [
+            "for_tests",
+            "test_factor",
+            "test_count",
+            "TestShape",
+            "TestSquare",
+            "add_area",
+        ];
+        let unreached = [
+            "unreached_function",
+            "UnreachedClass",
+            "UnreachedInterface",
+            "unreached_value",
+        ];
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
+    });
+}
+
+/// A library only the tests use is in `pyproject.toml`'s `test`
+/// dependency group (PEP 735), which installing the package skips, not
+/// its dependencies.
+#[test]
+fn test_only_libraries_grouped() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let pyproject = &files[0].text;
+        let (dependencies, rest) = pyproject.split_once("\n]\n").unwrap();
+        assert!(dependencies.contains("\"temper-core=="), "{pyproject}");
+        assert!(!dependencies.contains("temper-std"), "{pyproject}");
+        assert!(
+            rest.contains("\n[dependency-groups]\ntest = [\n    \"temper-std=="),
+            "{pyproject}"
+        );
+    });
+}
+
 /// Python 3.11 or later, if there is one.
 fn python() -> Option<String> {
     let candidates = match env::var("PYTHON") {
@@ -167,6 +251,15 @@ fn python() -> Option<String> {
             .output()
             .is_ok_and(|o| o.status.success())
     })
+}
+
+/// Python in UTF-8 mode (`PYTHONUTF8=1`), as `temper run -b py` runs it:
+/// else, on Windows, its standard streams and files are in the system's
+/// code page, which can't write what cases log, as `✅`.
+fn python_command(python: &str) -> Command {
+    let mut command = Command::new(python);
+    command.env("PYTHONUTF8", "1");
+    command
 }
 
 /// A library's modules among its generated files: the `.py` files in its
@@ -194,7 +287,7 @@ fn library_modules<'f>(
 /// `_`.
 fn check_module_names(python: &str, modules: &[PathBuf], failures: &mut Vec<String>) {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/module_names.py");
-    let check = Command::new(python)
+    let check = python_command(python)
         .arg("-B")
         .arg(&script)
         .args(modules)
@@ -225,8 +318,8 @@ fn run_alone(
          with top_level_turn():\n    import {package}\n\
          await_safe_to_exit()\n"
     );
-    // -B: write no bytecode into the vendored runtime.
-    Command::new(python)
+    // -B: write no bytecode into the runtime.
+    python_command(python)
         .args(["-B", "-c", &script])
         .env("PYTHONPATH", env::join_paths(projects).unwrap())
         .current_dir(root)
@@ -282,7 +375,7 @@ fn run_batch(python: &str, batch: &[Logged], failures: &mut Vec<String>) {
         })
         .collect();
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/bulk_runner.py");
-    let mut child = Command::new(python)
+    let mut child = python_command(python)
         .arg("-B")
         .arg(&script)
         .env("PYTHONPATH", &runtime)
@@ -533,7 +626,8 @@ fn trace<'o>(stdout: &'o str, cases: &[&Checked]) -> Vec<Vec<&'o str>> {
 fn checks_traced_to_cases() {
     let case = |key: &str| Checked {
         key: key.to_string(),
-        root: PathBuf::from("/out").join(key),
+        // With `/` on every platform, as the lines below have it.
+        root: PathBuf::from(format!("/out/{key}")),
         projects: Vec::new(),
         library: "lib".to_string(),
         package: "lib".to_string(),
@@ -665,7 +759,7 @@ fn check_types(
 }
 
 fn runtime() -> PathBuf {
-    kit::vendored("be-py/temper-core")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core")
 }
 
 #[test]
@@ -687,15 +781,17 @@ fn runs() {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-py");
         let mut failures = Vec::new();
         // The cases that log run in one interpreter after the others
-        // (`run_batch`), unless `TEMPEST_PY_BULK=0`.
-        let bulk = env::var("TEMPEST_PY_BULK").map_or(true, |v| v != "0");
+        // (`run_batch`), unless `TEMPER_PY_BULK=0`.
+        let bulk = env::var("TEMPER_PY_BULK").map_or(true, |v| v != "0");
         let mut batch = Vec::new();
         // Every library module generated, for `check_module_names`.
         let mut modules = Vec::new();
         // The cases to type-check, for `check_types`.
         let mut checked = Vec::new();
-        // `async-turns`'s import path, for `host_interop`.
+        // `async-turns`'s import path, and `py-builtin-params`'s project,
+        // for `host_interop`.
         let mut interop = None;
+        let mut builtin_params = None;
         for case in cases() {
             let path = &case.key;
             let root = out.join(path);
@@ -728,11 +824,14 @@ fn runs() {
             if case.key == "async-turns" {
                 interop = Some((projects.clone(), case.expected.clone()));
             }
+            if case.key == "py-builtin-params" {
+                builtin_params = Some((project.clone(), case.expected.clone()));
+            }
             let tests = project.join("tests");
             if tests.exists() {
                 let mut files = Vec::new();
                 kit::files_with(&tests, "py", &mut files);
-                let compile = Command::new(&python)
+                let compile = python_command(&python)
                     .args(["-B", "-m", "py_compile"])
                     .args(&files)
                     .output()
@@ -747,7 +846,7 @@ fn runs() {
             if case.tests.is_some() {
                 // As Kotlin's `RunPython`: `temper_core.testing` runs the
                 // project's tests and writes their JUnit XML.
-                let run = Command::new(&python)
+                let run = python_command(&python)
                     .args(["-B", "-m", "temper_core.testing", "result.xml"])
                     .env("PYTHONPATH", &path_var)
                     .current_dir(&project)
@@ -783,9 +882,11 @@ fn runs() {
             }
         }
         run_batch(&python, &batch, &mut failures);
-        if let Some((projects, logged)) = interop {
+        if let (Some((mut projects, logged)), Some((project, then))) = (interop, builtin_params) {
+            projects.push(project);
             let checkers = (mypy.as_deref(), pyright.as_deref());
-            host_interop(&python, checkers, &out, &projects, &logged, &mut failures);
+            let logs = [&logged[..], &then[..]];
+            host_interop(&python, checkers, &out, &projects, logs, &mut failures);
         }
         check_types(
             &out,
@@ -813,15 +914,17 @@ fn runs() {
 /// standard way: it awaits a generated promise with `.result()`, with
 /// asyncio, and with asyncio as the runner; blocks on one inside a turn,
 /// which fails clearly; and loops over a generated generator, which a
-/// failed step leaves done. mypy and pyright check it, strict, as they
-/// do generated code, so a bare `await` of a generated promise must
-/// type-check.
+/// failed step leaves done; and, once `py-builtin-params`'s import has
+/// logged `then`, passes its constructor its parameters by name
+/// (`help=`), as they keep their names. mypy and pyright check it,
+/// strict, as they do generated code, so a bare `await` of a generated
+/// promise must type-check.
 fn host_interop(
     python: &str,
     (mypy, pyright): (Option<&str>, Option<&str>),
     out: &Path,
     projects: &[PathBuf],
-    logged: &[String],
+    [logged, then]: [&[String]; 2],
     failures: &mut Vec<String>,
 ) {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/interop.py");
@@ -851,7 +954,7 @@ fn host_interop(
             ));
         }
     }
-    let run = Command::new(python)
+    let run = python_command(python)
         .arg("-B")
         .arg(&script)
         .env("PYTHONPATH", env::join_paths(projects).unwrap())
@@ -872,6 +975,9 @@ fn host_interop(
             ]
             .map(String::from),
         )
+        // `py_builtin_params`'s own log, as it's imported.
+        .chain(then.iter().cloned())
+        .chain(["by name flag: how 9".to_string()])
         .collect();
     kit::check_log(failures, "host interop", &run, &expected);
 }

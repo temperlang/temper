@@ -8,7 +8,10 @@ from temper_core import (
     Pair as _Pair,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
+    int_mul as _int_mul,
+    int_sub as _int_sub,
     list_builder_add as _list_builder_add,
+    list_builder_set as _list_builder_set,
     list_get as _list_get,
     list_get_or as _list_get_or,
     list_slice as _list_slice,
@@ -19,7 +22,16 @@ from temper_core import (
 from types import MappingProxyType as _MappingProxyType
 from typing import Generic as _Generic, TypeVar as _TypeVar
 
-__all__ = ('Holder', 'Box', 'Named', 'Shelf', 'Scene', 'Stage', 'first')
+__all__ = (
+    'Holder',
+    'Box',
+    'Named',
+    'Counter',
+    'Shelf',
+    'Scene',
+    'Stage',
+    'first',
+)
 
 _T = _TypeVar('_T')
 _T_2 = _TypeVar('_T_2', bound='Named')
@@ -68,6 +80,22 @@ class Named:
         return self._name
 
 
+class Counter:
+    __slots__ = ('_n',)
+    _n: int
+
+    def __init__(self, /, n: int) -> None:
+        self._n = n
+
+    @property
+    def n(self, /) -> int:
+        return self._n
+
+    @n.setter
+    def n(self, value: int, /) -> None:
+        self._n = value
+
+
 class Shelf(_Generic[_T_2]):
     __slots__ = ('_items',)
     _items: _Sequence[_T_2]
@@ -110,8 +138,12 @@ def _relayed(x: _T, /) -> _T:
     return _tagged(x)
 
 
+def _none_in(length: int, /) -> bool:
+    return length == 0
+
+
 def first(items: _Sequence[_T], fallback: _T, /) -> _T:
-    if not items:
+    if _none_in(len(items)):
         return fallback
     else:
         return _list_get(items, 0)
@@ -122,12 +154,85 @@ def _held(h: Holder[_T], /) -> _T:
 
 
 def _total(ns: _Sequence[int], /) -> int:
-    sum_ = 0
+    sum = 0
     i = 0
     while i < len(ns):
-        sum_ = _int_add(sum_, _list_get(ns, i))
+        sum = _int_add(sum, _list_get(ns, i))
         i = _int_add(i, 1)
-    return sum_
+    return sum
+
+
+def _indexed() -> None:
+    counts: _MutableSequence[int] = []
+    counts.append(1)
+    counts.append(10)
+    at = 0
+    k = at
+    _list_builder_set(counts, k, _int_add(_list_get(counts, k), 4))
+    _list_builder_set(counts, 1, _int_mul(_list_get(counts, 1), 3))
+    t = at
+    at = _int_add(t, 1)
+    k = t
+    t = _list_get(counts, k)
+    _list_builder_set(counts, k, _int_add(t, 1))
+    was = t
+    k = at
+    t = _int_add(_list_get(counts, k), 1)
+    _list_builder_set(counts, k, t)
+    pre = t
+    t = _list_get(counts, 0)
+    _list_builder_set(counts, 0, _int_sub(t, 1))
+    post = t
+    t = _int_sub(_list_get(counts, 0), 1)
+    _list_builder_set(counts, 0, t)
+    down = t
+    _console.log(f'{was} {pre} {post} {down} {at}')
+
+
+def _both() -> None:
+    x = 1
+    y = 10
+    t = x
+    x = _int_add(t, 1)
+    t2 = y
+    y = _int_add(t2, 1)
+    locals = _int_add(t, t2)
+    p = Counter(100)
+    q = Counter(1000)
+    t = p.n
+    p.n = _int_add(t, 1)
+    t2 = q.n
+    q.n = _int_add(t2, 1)
+    fields = _int_add(t, t2)
+    t = p.n
+    p.n = _int_add(t, 1)
+    t2 = p.n
+    p.n = _int_add(t2, 1)
+    same = _int_add(t, t2)
+    a: _MutableSequence[int] = []
+    a.append(3)
+    b: _MutableSequence[int] = []
+    b.append(30)
+    i = 0
+    k = i
+    t = _list_get(a, k)
+    _list_builder_set(a, k, _int_add(t, 1))
+    k = i
+    t2 = _list_get(b, k)
+    _list_builder_set(b, k, _int_add(t2, 1))
+    items = _int_add(t, t2)
+    _console.log(f'{locals} {x} {y} {fields} {same} {p.n} {q.n} {items} {_list_get(a, 0)} {_list_get(b, 0)}')
+
+
+def _bump(key: str, /) -> int:
+    _map_builder_set(_tally, key, _int_sub(_tally[key], 1))
+    t = _tally[key]
+    _map_builder_set(_tally, key, _int_add(t, 1))
+    before = t
+    t = _int_add(_tally[key], 1)
+    _map_builder_set(_tally, key, t)
+    after = t
+    return _int_add(before, after)
 
 
 def _first_same(a: _Sequence[int], b: _Sequence[int], /) -> bool:
@@ -180,4 +285,24 @@ except Exception:
     _t_2 = 0
 _console.log('null' if (_subject5 := None if (_subject6 := _t_2) is None else str(_subject6)) is None else _subject5)
 _console.log(str(len(list(_mb.keys()))))
+_indexed()
+_both()
+_tally: dict[str, int] = {}
+_map_builder_set(_tally, 'k', 2)
+_t_3: int
+try:
+    _t_3 = _bump('k')
+except Exception:
+    _t_3 = -1
+_t_4: int
+try:
+    _t_4 = _bump('z')
+except Exception:
+    _t_4 = -1
+_t_5: int
+try:
+    _t_5 = _tally['k']
+except Exception:
+    _t_5 = -1
+_console.log(f'{_t_3} {_t_4} {_t_5}')
 _console.log(f'{_boolean_to_string(_first_same((1000,), (1000,)))} {_boolean_to_string(_first_same((1000,), (7,)))}')

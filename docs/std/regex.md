@@ -21,8 +21,8 @@ console.log(word.replace("hi-there") { m => "[${m.full.value}]" }); //!outputs "
 The [regular expressions tutorial](../guide/tutorial/07-regex.md) walks
 through the dialect and the data model. A named group is `(?name=…)`.
 
-> **Note:** Temper's first compiler also accepts `(?<name>…)`, as the
-> std's own docs write it; tempest says `lookaround and (?<name>...)
+> **Note:** Temper's earlier releases also accept `(?<name>…)`, as the
+> std's own docs write it; now it says `lookaround and (?<name>...)
 > aren't supported; use (?name=pattern)`
 > ([inconsistencies](../inconsistencies.md#i22-named-groups-in-regular-expressions)).
 
@@ -42,4 +42,4 @@ specials `Begin`, `End`, `Dot`, `WordBoundary`, `Digit`, `Space`, and
 `Word`. Any of them `compiled()` is a `Regex`. Character classes and
 Unicode properties aren't supported yet.
 
-Source: [regex.temper.md](../../vendor/temper/std/regex/regex.temper.md).
+Source: [regex.temper.md](../../lib/std/regex/regex.temper.md).

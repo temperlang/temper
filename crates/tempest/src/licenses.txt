@@ -1,7 +1,7 @@
-Third-party crates built into tempest, made from Cargo's metadata
+Third-party crates built into temper, made from Cargo's metadata
 (crates/tempest/tests/licenses.rs; do not edit). Each may be used under
 the license named. Where that offers MIT or Apache-2.0, whose texts
-`tempest license` prints, its copyright lines follow; otherwise, its
+`temper license` prints, its copyright lines follow; otherwise, its
 license files in full. "Some platforms only" marks crates that only
 some platforms' builds have.
 

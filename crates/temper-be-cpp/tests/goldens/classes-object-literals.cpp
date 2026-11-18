@@ -89,7 +89,6 @@ namespace object_literals {
 void global_init_init();
 
 struct Person;
-struct Named;
 struct Whatever;
 struct Moreover;
 
@@ -102,13 +101,6 @@ struct Person : public virtual Stringable {
   bool eq(std::shared_ptr<Person> const & other) const;
   temper::core::Str get_name() const;
   int32_t get_age() const;
-};
-
-struct Named : public virtual Stringable {
-  temper::core::Str name;
-  static std::shared_ptr<Named> make(temper::core::Str const & name);
-  temper::core::Str toString() const override;
-  temper::core::Str get_name() const;
 };
 
 struct Whatever : public std::enable_shared_from_this<Whatever> {
@@ -176,20 +168,6 @@ core::Str Person::get_name() const {
 
 int32_t Person::get_age() const {
   return this->age;
-}
-
-std::shared_ptr<Named> Named::make(core::Str const & name) {
-  std::shared_ptr<Named> self = std::make_shared<Named>();
-  self->name = name;
-  return self;
-}
-
-core::Str Named::toString() const {
-  return "Named " + this->name;
-}
-
-core::Str Named::get_name() const {
-  return this->name;
 }
 
 std::shared_ptr<Whatever> Whatever::make(int32_t blech) {

@@ -1,6 +1,6 @@
 //! The Lua variant's tables: every operator spelled, every connection
 //! keyed by a connected declaration of core, every type connection by a
-//! type of core, every runtime helper defined by the vendored
+//! type of core, every runtime helper defined by
 //! `temper-core` and typed in LuaLS's view of it, and the runtime's
 //! version the one the rockspec names.
 
@@ -70,7 +70,7 @@ fn type_connections_name_core_types() {
 }
 
 fn runtime() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vendor/temper/be-lua/temper-core")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core")
 }
 
 #[test]
@@ -91,6 +91,7 @@ fn helpers_are_the_runtimes_and_typed() {
     helpers.extend([
         "bubble",
         "int32_tostring",
+        "int64_constructor",
         "type",
         "instance_of",
         "cast_to",
@@ -127,19 +128,30 @@ fn helpers_are_the_runtimes_and_typed() {
         "with_tostring",
     ] {
         assert!(
-            names::PRINTED.contains(&printed),
+            names::RULES.reserved.iter().any(|l| l.contains(&printed)),
             "{printed} isn't reserved"
         );
     }
 }
 
+/// The rockspec `temper build` writes names the version generated
+/// rockspecs depend on, in its name and its text.
 #[test]
 fn runtime_version_is_the_rockspecs() {
-    let spec = fs::read_to_string(runtime().join("temper-core-dev-1.rockspec")).unwrap();
-    assert!(
-        spec.contains(&format!("version = \"{}-1\"", LUA.runtime_version)),
-        "{spec}"
+    use temper_tmpl::version::{Spelling, current, fill_runtime};
+    let filled = fill_runtime(
+        temper_be_lua::runtime::FILES,
+        &temper_be_lua::runtime::VERSION,
+        current(),
     );
+    let rock = current().spell(Spelling::Rockspec);
+    let name = format!("temper-core-{rock}.rockspec");
+    let (_, written) = (filled.iter()).find(|(p, _)| *p == name).unwrap();
+    assert!(
+        written.contains(&format!("version = \"{rock}\"")),
+        "{written}"
+    );
+    let spec = fs::read_to_string(runtime().join("temper-core-dev-1.rockspec")).unwrap();
     assert!(
         spec.contains(&format!("\"lua >= {}\"", LUA.lua_version)),
         "{spec}"

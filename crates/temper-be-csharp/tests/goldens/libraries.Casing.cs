@@ -47,4 +47,20 @@ public class Casing
             return LibrariesGlobal.casingLast;
         }
     }
+
+    private static string Mark
+    {
+        get
+        {
+            return LibrariesGlobal.casingMark;
+        }
+    }
+
+    public string Marked
+    {
+        get
+        {
+            return Casing.Mark + this.name;
+        }
+    }
 }

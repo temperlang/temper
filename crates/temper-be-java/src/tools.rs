@@ -1,14 +1,14 @@
-//! How Java runs built libraries' tests, for `tempest test -b java`:
+//! How Java runs built libraries' tests, for `temper test -b java`:
 //! `javac` on the runtime, std, and the libraries, then on a library's
 //! tests, against JUnit 5's jars in Maven's local repository, as
 //! Kotlin's `pom.xml` names them, and a small runner of JUnit's launcher
 //! under `java`, as this crate's own tests do; Kotlin runs Maven
-//! instead, which needs its network. `tempest run -b java` compiles the
+//! instead, which needs its network. `temper run -b java` compiles the
 //! runtime, std, and the libraries the same way, quietly, and runs the
 //! library's `…Main` class under `java`, as Kotlin runs it by exec.
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
-//! `TEMPEST_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
+//! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
 //! tests compile std, the libraries, and their tests with every lint as
 //! an error, as this crate's own tests do, and the runtime, Kotlin's, on
 //! its own, quietly.
@@ -65,22 +65,29 @@ fn lints(strict: bool) -> &'static [&'static str] {
     }
 }
 
-/// `javac` on `files` into a directory, against a class path.
+/// `javac` on `files` into a directory, against a class path; the files
+/// are named in an argument file beside the directory ([`argfile`]).
 fn javac(
     into: &Path,
     classpath: &std::ffi::OsStr,
     files: &[PathBuf],
     strict: bool,
 ) -> Result<(), String> {
+    let list = into.with_extension("args");
+    let sources = (list.parent())
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|()| argfile(&list, files))
+        .map_err(|e| format!("{}: {e}", list.display()))?;
     let built = output(
         Command::new(tool("JAVAC", "javac"))
+            .arg(ARGFILE_ENCODING)
             .args(["-encoding", "UTF-8"])
             .args(lints(strict))
             .arg("-d")
             .arg(into)
             .arg("-cp")
             .arg(classpath)
-            .args(files),
+            .arg(sources),
         "javac",
     )?;
     match built.status.success() {
@@ -89,8 +96,39 @@ fn javac(
     }
 }
 
+/// Writes `args` to `path` as a javac argument file, one to a line,
+/// quoted, with `\` and `"` escaped as javac reads them, and gives
+/// javac's argument naming it, `@path`. A library's sources, std's, and
+/// the runtime's, named on the command line, can be more than Windows
+/// takes (32K characters).
+pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsString> {
+    let mut text = String::new();
+    for arg in args {
+        text.push('"');
+        for c in arg.to_string_lossy().chars() {
+            match c {
+                '\\' => text.push_str("\\\\"),
+                '"' => text.push_str("\\\""),
+                '\n' => text.push_str("\\n"),
+                '\r' => text.push_str("\\r"),
+                c => text.push(c),
+            }
+        }
+        text.push_str("\"\n");
+    }
+    std::fs::write(path, text)?;
+    let mut at = std::ffi::OsString::from("@");
+    at.push(path);
+    Ok(at)
+}
+
+/// javac's option that has it read an argument file ([`argfile`]) as
+/// UTF-8, as written; JDK 18 and later read it so by default, and
+/// earlier ones by the system's code page.
+pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
+
 /// Compiles as [`test`] does, without JUnit, into
-/// `temper.out/java/LIBRARY/target/tempest/classes`, and runs the
+/// `temper.out/java/LIBRARY/target/temper/classes`, and runs the
 /// library's main class, the one its `…Main.java` declares.
 fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
     let here = dir.join(&library.name);
@@ -108,7 +146,7 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
                 .replace(['/', '\\'], ".")
         })
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
-    let classes = here.join("target/tempest/classes");
+    let classes = here.join("target/temper/classes");
     let _ = std::fs::remove_dir_all(&classes);
     compile_main(dir, all, &classes, &[], std::ffi::OsStr::new(""), false)?;
     program(
@@ -151,7 +189,7 @@ pub const JUNIT: [&str; 7] = [
 /// Runs the tests compiled into the directory it's given through JUnit's
 /// launcher, printing a line per test: `ok`, or `failed` and its
 /// message, then its name, tab separated, with newlines as `\n`.
-pub const RUN_TESTS: &str = r#"package tempest;
+pub const RUN_TESTS: &str = r#"package temper;
 
 import java.nio.file.Paths;
 import java.util.Set;
@@ -191,19 +229,19 @@ public final class RunTests {
 
 /// Compiles the runtime, std, the libraries, and a library's tests with
 /// `javac` (`JAVAC`), against JUnit's jars in Maven's local repository,
-/// into `temper.out/java/LIBRARY/target/tempest`, and runs them with
+/// into `temper.out/java/LIBRARY/target/temper`, and runs them with
 /// `java` (`JAVA`) through JUnit's launcher ([`RUN_TESTS`]).
 fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
     let jars = junit_jars().map_err(|missing| {
         format!(
-            "no {} (JUnit, as Kotlin's pom.xml names it)",
+            "no {} (JUnit, as the generated pom.xml names it)",
             missing.display()
         )
     })?;
-    let out = dir.join(&library.name).join("target/tempest");
+    let out = dir.join(&library.name).join("target/temper");
     let _ = std::fs::remove_dir_all(&out);
     let (main, tests) = (out.join("classes"), out.join("test-classes"));
-    let runner = out.join("tempest/RunTests.java");
+    let runner = out.join("temper/RunTests.java");
     let written = runner
         .parent()
         .map_or(Ok(()), std::fs::create_dir_all)
@@ -227,7 +265,7 @@ fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
         Command::new(tool("JAVA", "java"))
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
             .arg(everything)
-            .arg("tempest.RunTests")
+            .arg("temper.RunTests")
             .arg(&tests),
         "java",
     )?;

@@ -151,7 +151,7 @@ export let area(shape: Shape): Float64 {
 ### Test
 
 Test your code across languages. Temper `test` integrates with well-known frameworks such as
-*[JUnit]*, *[Mocha]*, and *[Pytest]*. You can test your libraries in Temper to build confidence
+*[JUnit]*, *[Mocha]*, and Python's *[unittest]*. You can test your libraries in Temper to build confidence
 in its correctness and also build confidence in each translation's fidelity.
 
 ```temper
@@ -212,5 +212,5 @@ Excited about Temper?
 
 [JUnit]: https://junit.org
 [Mocha]: https://mochajs.org
-[Pytest]: https://pytest.org
+[unittest]: https://docs.python.org/3/library/unittest.html
 [LSP]: https://microsoft.github.io/language-server-protocol/

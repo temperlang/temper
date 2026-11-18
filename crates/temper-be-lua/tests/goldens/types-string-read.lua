@@ -54,20 +54,20 @@ local function fromCodesNoInline(codes)
   return temper.string_fromcodepoints(codes)
 end
 
----@param string string
+---@param string_ string
 ---@param radix? integer|temper.Null
-local function checkParse(string, radix)
+local function checkParse(string_, radix)
   if radix == nil then
     radix = temper.null
   end
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = tostring(not temper.is_null(radix) and temper.string_toint32(string, radix --[[@as integer]]) or temper.string_toint32(string))
+    converted = tostring(not temper.is_null(radix) and temper.string_toint32(string_, radix --[[@as integer]]) or temper.string_toint32(string_))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
 ---@param label string
@@ -173,9 +173,6 @@ local needle = "time"
 local after1 = reportFound("found 1", hay, needle)
 local after2 = reportFound("found 2", hay, needle, after1)
 reportFound("found 3", hay, needle, after2)
-local hay2 = "time comes for us all"
-local hay3 = "in the nick of time"
-local hay4 = "tim"
 reportFound("hay 2", "time comes for us all", needle)
 reportFound("hay 3", "in the nick of time", needle)
 reportFound("hay 4", "my name is tim", needle)

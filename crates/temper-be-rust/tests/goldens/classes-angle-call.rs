@@ -16,40 +16,6 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .clone()
 }
 
-struct BlahStruct<T: Clone + Send + Sync + 'static> {
-    phantom_t: std::marker::PhantomData<T>,
-}
-
-#[derive(Clone)]
-pub(crate) struct Blah<T: Clone + Send + Sync + 'static>(Arc<BlahStruct<T>>);
-
-impl<T: Clone + Send + Sync + 'static> Blah<T> {
-    #[allow(dead_code)]
-    pub fn new() -> Blah<T> {
-        Blah(Arc::new(BlahStruct {
-            phantom_t: std::marker::PhantomData,
-        }))
-    }
-}
-
-temper_core::impl_any_value_trait!(Blah<T>, []);
-
-struct HiStruct {
-    thing: Blah<Arc<String>>,
-}
-
-#[derive(Clone)]
-pub(crate) struct Hi(Arc<HiStruct>);
-
-impl Hi {
-    #[allow(dead_code)]
-    pub fn new(thing: Blah<Arc<String>>) -> Hi {
-        Hi(Arc::new(HiStruct { thing }))
-    }
-}
-
-temper_core::impl_any_value_trait!(Hi, []);
-
 pub(crate) fn whatever(n: i32) -> std::any::TypeId {
     if n == 0 {
         println!("0");

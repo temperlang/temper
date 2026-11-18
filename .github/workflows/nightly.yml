@@ -6,25 +6,30 @@
 # 14, from Ubuntu's archive if the image lacks them), named by `CXX`,
 # and once more with every build but ThreadSanitizer's also under
 # AddressSanitizer and UndefinedBehaviorSanitizer, through
-# `TEMPEST_CXXFLAGS`, so the plain programs and the tests run sanitized
+# `TEMPER_CXXFLAGS`, so the plain programs and the tests run sanitized
 # too. Not clang++: the tests'
 # warnings (`STRICT`) are GCC's; ci.yml's `strict` compiles generated C++
 # with clang++ too, with clang's.
 #
-# Also real libraries' tests, as `tempest test -b` runs them, on each
+# Also real libraries' tests, as `temper test -b` runs them, on each
 # backend each passes on: the libraries are data, listed in
 # .github/nightly-libraries.json (name, repository, ref, and backends),
 # one job each, so adding one is a line there, not a step here, with
 # C#'s and Java's compiler warnings on generated code as failures
-# (`TEMPEST_STRICT_WARNINGS`); per-push
-# CI (ci.yml) tests `tempest test` and `build` on small fixtures instead
+# (`TEMPER_STRICT_WARNINGS`), and each library's generated Python
+# type-checked, as the Python backend's tests check theirs (mypy and
+# pyright, strict, at ci.yml's pins), against a ratchet: a count over
+# its allowance in .github/ci-tools/library-py-baseline.json (0 if
+# unlisted) fails the job, and one under it asks for the allowance to
+# be lowered (.github/ci-tools/check_library_py.py); per-push
+# CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
 # And an early warning for the checkers of generated code: the backends'
 # tests with the latest TypeScript, pyright, mypy, or LuaLS in place of
 # the version ci.yml pins, one job each, so a failure names its checker.
 #
-# And the platforms tempest is released for but Linux x64, which ci.yml
+# And the platforms `temper` is released for but Linux x64, which ci.yml
 # tests on every push: Linux Arm64, macOS Arm64, and Windows x64 and
 # Arm64, natively: every night, the code that differs by platform
 # (`platforms-quick`), and weekly (Sundays), every backend's tests with
@@ -115,12 +120,12 @@ jobs:
           cargo test --locked -p temper-be-cpp
         env:
           CXX: ${{ matrix.cxx }}
-          TEMPEST_CXXFLAGS: ${{ matrix.cxxflags }}
+          TEMPER_CXXFLAGS: ${{ matrix.cxxflags }}
           # Not `strict` again: ci.yml builds with g++ 12 and 14 and
           # clang++ at -O2 on every push.
-          TEMPEST_STRICT_CXX: ""
+          TEMPER_STRICT_CXX: ""
           ASAN_OPTIONS: detect_leaks=0
-          TEMPEST_REQUIRE_CHECKERS: "1"
+          TEMPER_REQUIRE_CHECKERS: "1"
 
   # The list of libraries, as a matrix. When there are many, this is
   # where to shard or rotate them (a slice per night), keeping each job
@@ -158,17 +163,21 @@ jobs:
       # Each backend's tools, as CI's (ci.yml says why each).
       - name: Crates for generated Rust
         run: |
-          cargo fetch --locked --manifest-path vendor/temper/be-rust/temper-core/Cargo.toml
+          cargo fetch --locked --manifest-path crates/temper-be-rust/runtime/temper-core/Cargo.toml
           cargo fetch --locked --manifest-path compat/rust-std-deps/Cargo.toml
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        # As in ci.yml.
+        with:
+          version: "0.13.5"
+          checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # Mocha (with TypeScript and pyright) from CI's lockfile.
-      - name: Mocha
-        working-directory: .github/ci-tools
-        run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+      # Mocha, for generated JS's tests, and the checkers at ci.yml's
+      # pins (mypy and pyright, for the type checks below), as the
+      # toolchains action installs them.
+      - name: Checkers for generated code, and Mocha
+        run: uv run .github/ci-tools/install.py
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
@@ -193,7 +202,7 @@ jobs:
           status=0
           for backend in ${{ matrix.library.backends }}; do
             echo "::group::$backend"
-            target/release/tempest test -b "$backend" library || status=1
+            target/release/temper test -b "$backend" library || status=1
             echo "::endgroup::"
           done
           exit $status
@@ -201,7 +210,20 @@ jobs:
           DOTNET_CLI_TELEMETRY_OPTOUT: "1"
           # C#'s and Java's compiler warnings on generated code fail the
           # tests, as in the backends' own tests.
-          TEMPEST_STRICT_WARNINGS: "1"
+          TEMPER_STRICT_WARNINGS: "1"
+      # The library's generated Python, as `temper test -b py` left it
+      # in temper.out/py, its packages (not its tests, std, or the
+      # runtime) checked by mypy and pyright, strict, as the Python
+      # backend's tests check theirs, against a ratchet: a count over its
+      # allowance in .github/ci-tools/library-py-baseline.json (0 for a
+      # library or checker it doesn't list) fails the job; one under it
+      # passes with a notice to lower the allowance in the same change,
+      # so allowances only shrink. `--strict` would ignore the baseline
+      # and allow none. Even after a backend's tests fail, as it reports
+      # separately.
+      - name: Python type checks
+        if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' py ') }}
+        run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
 
   # Each checker of generated code at its latest release, the others at
   # ci.yml's pins, on the tests of the backend it checks. A failure here
@@ -262,7 +284,7 @@ jobs:
         env:
           CHECKER: ${{ matrix.checker }}
           VERSIONS: ${{ steps.checkers.outputs.versions }}
-          TEMPEST_REQUIRE_CHECKERS: "1"
+          TEMPER_REQUIRE_CHECKERS: "1"
 
   # The platforms binaries.yml releases for but Linux x64, which ci.yml
   # covers on every push, natively, on each OS and architecture's own
@@ -273,7 +295,7 @@ jobs:
   # SIGINT or the console's handler, ANSI color on Windows' console, and
   # where history is kept) and children.rs's (process groups and time
   # limits; on Windows, only time limits), counted (tests-ran.sh), so a
-  # platform where they're all left out fails; and all of tempest's
+  # platform where they're all left out fails; and all the CLI's
   # tests, built without backends. A debug build, warnings errors, as
   # clippy only runs on Linux.
   platforms-quick:
@@ -320,7 +342,7 @@ jobs:
           cargo test --locked -p temper-os
       # The line editor's, color's, and history's unit tests (on Windows,
       # history's reparse-point check in place of Unix's modes, owners,
-      # and links), and `tempest repl` as a command: piped input, its
+      # and links), and `temper repl` as a command: piped input, its
       # flags, color, UTF-8 bytes through unchanged, relative imports,
       # and Ctrl-C: SIGINT on Unix, Ctrl-Break on Windows. The terminal
       # test needs Linux's `script`, so runs on Linux Arm64 too. At
@@ -329,7 +351,7 @@ jobs:
       - name: REPL
         if: ${{ !cancelled() }}
         run: |
-          bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --bin tempest repl::
+          bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --bin temper repl::
           bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --test repl
       # What a session prints, and the docs' transcripts.
       - name: REPL sessions
@@ -340,15 +362,20 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
-      - name: All of tempest's tests, without backends
+      - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features
+      # The language server's tests, on this platform's paths and URIs
+      # (on Windows, `file:///c%3A/...` as VS Code sends them).
+      - name: Language server
+        if: ${{ !cancelled() }}
+        run: cargo test --locked -p temper-lsp
 
   # Weekly, and on demand, `platforms`: the same, then every backend's
   # tests, with its toolchain set up as on Linux
-  # (.github/actions/toolchains), and tempest's with those backends
-  # built in, checkers required (TEMPEST_REQUIRE_CHECKERS) but for what
-  # a platform lacks, which is named (TEMPEST_ALLOW_MISSING, or left out
+  # (.github/actions/toolchains), and the CLI's with those backends
+  # built in, checkers required (TEMPER_REQUIRE_CHECKERS) but for what
+  # a platform lacks, which is named (TEMPER_ALLOW_MISSING, or left out
   # of `backends`) and listed in docs/contributing/ci.md. It repeats
   # `platforms-quick`'s steps, which share its build, so every run of
   # either tests the REPL and child processes. One job per platform, so
@@ -372,7 +399,7 @@ jobs:
             apt: g++-12 g++-14 clang
             strict-cxx: g++-12 g++-14 clang++
             cpp: cargo test --locked -p temper-be-cpp
-          # C++ by Apple's clang through CMake (tempest's tests); the C++
+          # C++ by Apple's clang through CMake (the CLI's tests); the C++
           # backend's own runs use g++'s options and sanitizers, so are
           # skipped here and on Windows, by name.
           - os: macos-15
@@ -397,11 +424,11 @@ jobs:
     timeout-minutes: 120
     env:
       RUSTFLAGS: -D warnings
-      TEMPEST_REQUIRE_CHECKERS: "1"
+      TEMPER_REQUIRE_CHECKERS: "1"
       # LuaLS is checked against a SHA-256 recorded for each platform
       # (.github/ci-tools/install.py), and only Linux x64's is recorded,
       # so the Lua tests' type check is skipped here, with a message.
-      TEMPEST_ALLOW_MISSING: LuaLS
+      TEMPER_ALLOW_MISSING: LuaLS
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
     defaults:
       run:
@@ -438,7 +465,7 @@ jobs:
           cargo test --locked -p temper-os
       # The line editor's, color's, and history's unit tests (on Windows,
       # history's reparse-point check in place of Unix's modes, owners,
-      # and links), and `tempest repl` as a command: piped input, its
+      # and links), and `temper repl` as a command: piped input, its
       # flags, color, UTF-8 bytes through unchanged, relative imports,
       # and Ctrl-C: SIGINT on Unix, Ctrl-Break on Windows. The terminal
       # test needs Linux's `script`, so runs on Linux Arm64 too. At
@@ -447,7 +474,7 @@ jobs:
       - name: REPL
         if: ${{ !cancelled() }}
         run: |
-          bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --bin tempest repl::
+          bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --bin temper repl::
           bash .github/ci-tools/tests-ran.sh 11 cargo test --locked -p tempest --test repl
       # What a session prints, and the docs' transcripts.
       - name: REPL sessions
@@ -458,9 +485,14 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
-      - name: All of tempest's tests, without backends
+      - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features
+      # The language server's tests, on this platform's paths and URIs
+      # (on Windows, `file:///c%3A/...` as VS Code sends them).
+      - name: Language server
+        if: ${{ !cancelled() }}
+        run: cargo test --locked -p temper-lsp
       - name: Toolchains
         if: ${{ !cancelled() }}
         uses: ./.github/actions/toolchains
@@ -488,18 +520,18 @@ jobs:
         if: ${{ !cancelled() && contains(matrix.backends, 'rust') }}
         run: |
           cargo test --locked -p temper-be-rust
-          cargo test --locked --manifest-path vendor/temper/be-rust/temper-core/Cargo.toml --target-dir target/vendor-temper-core
+          cargo test --locked --manifest-path crates/temper-be-rust/runtime/temper-core/Cargo.toml --target-dir target/rust-runtime
       - name: C++
         if: ${{ !cancelled() && contains(matrix.backends, 'cpp') }}
         run: ${{ matrix.cpp }}
         env:
-          TEMPEST_STRICT_CXX: ${{ matrix.strict-cxx }}
-      # tempest's tests with this platform's backends built in:
-      # `tempest test -b`, `build`, and `run` on small libraries, and
+          TEMPER_STRICT_CXX: ${{ matrix.strict-cxx }}
+      # The CLI's tests with this platform's backends built in:
+      # `temper test -b`, `build`, and `run` on small libraries, and
       # CMake's build of generated C++. Without RUSTFLAGS, as on Linux,
-      # since `tempest test -b rust` runs cargo on generated crates, which
-      # would take them too; so tempest is built again here.
-      - name: All of tempest's tests, with this platform's backends
+      # since `temper test -b rust` runs cargo on generated crates, which
+      # would take them too; so `temper` is built again here.
+      - name: All of the CLI's tests, with this platform's backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features --features "net $BACKENDS"
         env:

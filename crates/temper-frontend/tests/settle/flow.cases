@@ -399,6 +399,167 @@ let e6(): Void { var c: String? = "q"; c = "r"; take(c) }
 error 283..291: Expected subtype of String, but got String?
 error 391..392: Expected subtype of String, but got String?
 
+=== null checks let a nullable value's members be used
+// Kotlin Temper accepts each of these but `a3`, the `return` after a
+// null check, which narrows beyond it ("narrowed beyond Kotlin Temper").
+class Counter(public var n: Int) {
+  public inc(): Void { n += 1; }
+  public get next(): Counter? { null }
+}
+let a1(c: Counter?): Int? { c?.n }
+let a2(c: Counter?): Int { if (c != null) { c.n } else { 0 } }
+let a3(c: Counter?): Int { if (c == null) { return 0 }; c.n }
+let a4(c: Counter?): Int { if (c is Counter) { c.n } else { 0 } }
+let a5(c: Counter?): Int { (c ?? new Counter(0)).n }
+let a6(c: Counter?): Int { when (c) { null -> 0; else -> c.n } }
+let a7(c: Counter?): Int { c?.n ?? 0 }
+let a8(c: Counter?): Void { c?.inc(); }
+let a9(c: Counter?): Void { if (c != null) { c.n = 3; c.inc() } }
+let a10(c: Counter): Int? { c.next?.n }
+let a11(c: Counter?): Int { if (c != null && c.n > 0) { c.n } else { 0 } }
+let a12(s: String?, ls: List<Int>?): Boolean {
+  if (s == null || ls == null) { return false };
+  s.isEmpty && ls.length == 0
+}
+let a13(c: Counter?): Int { while (c != null) { return c.n }; 0 }
+console.log("${a1(null) ?? -1} ${a2(new Counter(2))} ${a7(null)} ${a12("", [])}");
+--- settled
+(Block
+  (Class
+    ^Counter:0
+    (Param var ^n:15 Int)
+    (Method ^inc:16 (Fn Void (Block (Assign n:15 (Call + n:15 1)) #void)))
+    (Get ^next:17 (Fn (Call ? Counter:0) (Block null))))
+  (Let
+    ^a1:1
+    (Fn
+      (Let ^c:18 (Call ? Counter:0))
+      (Call ? Int)
+      (Block (Block (If (Call == c:18 #null) #null (Call . c:18 \n))))))
+  (Let
+    ^a2:2
+    (Fn
+      (Let ^c:19 (Call ? Counter:0))
+      Int
+      (Block (If (Call != c:19 null) (Block (Call . c:19 \n)) (Block 0)))))
+  (Let
+    ^a3:3
+    (Fn
+      (Let ^c:20 (Call ? Counter:0))
+      Int
+      (Block
+        (If (Call == c:20 null) (Block (Return @351 0)) (Block))
+        (Call . c:20 \n))))
+  (Let
+    ^a4:4
+    (Fn
+      (Let ^c:21 (Call ? Counter:0))
+      Int
+      (Block (If (Call is c:21 Counter:0) (Block (Call . c:21 \n)) (Block 0)))))
+  (Let
+    ^a5:5
+    (Fn
+      (Let ^c:22 (Call ? Counter:0))
+      Int
+      (Block
+        (Call
+          .
+          (Block (If (Call == c:22 #null) (Call new Counter:0 0) c:22))
+          \n))))
+  (Let
+    ^a6:6
+    (Fn
+      (Let ^c:23 (Call ? Counter:0))
+      Int
+      (Block (Block (If (Call == c:23 null) 0 (Call . c:23 \n))))))
+  (Let
+    ^a7:7
+    (Fn
+      (Let ^c:24 (Call ? Counter:0))
+      Int
+      (Block
+        (Block
+          (Let
+            ^subject#25
+            (Block (If (Call == c:24 #null) #null (Call . c:24 \n))))
+          (If (Call == subject#25 #null) 0 subject#25)))))
+  (Let
+    ^a8:8
+    (Fn
+      (Let ^c:26 (Call ? Counter:0))
+      Void
+      (Block
+        (Block (If (Call == c:26 #null) #null (Call (Call . c:26 \inc))))
+        #void)))
+  (Let
+    ^a9:9
+    (Fn
+      (Let ^c:27 (Call ? Counter:0))
+      Void
+      (Block
+        (If
+          (Call != c:27 null)
+          (Block (Assign (Call . c:27 \n) 3) (Call (Call . c:27 \inc)))
+          (Block)))))
+  (Let
+    ^a10:10
+    (Fn
+      (Let ^c:28 Counter:0)
+      (Call ? Int)
+      (Block
+        (Block
+          (Let ^subject#29 (Call . c:28 \next))
+          (If (Call == subject#29 #null) #null (Call . subject#29 \n))))))
+  (Let
+    ^a11:11
+    (Fn
+      (Let ^c:30 (Call ? Counter:0))
+      Int
+      (Block
+        (If
+          (If (Call != c:30 null) (Call > (Call . c:30 \n) 0) #false)
+          (Block (Call . c:30 \n))
+          (Block 0)))))
+  (Let
+    ^a12:12
+    (Fn
+      (Let ^s:31 (Call ? String))
+      (Let ^ls:32 (Call ? (Call <> List Int)))
+      Boolean
+      (Block
+        (If
+          (If (Call == s:31 null) #true (Call == ls:32 null))
+          (Block (Return @857 false))
+          (Block))
+        (If (Call . s:31 \isEmpty) (Call == (Call . ls:32 \length) 0) #false))))
+  (Let
+    ^a13:13
+    (Fn
+      (Let ^c:33 (Call ? Counter:0))
+      Int
+      (Block
+        (Loop
+          (If
+            (Call != c:33 null)
+            (Block (Return @985 (Call . c:33 \n)))
+            (Break @1013)))
+        0)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Block
+        (Let ^subject#34 (Call a1:1 null))
+        (If (Call == subject#34 #null) (Call - 1) subject#34))
+      " "
+      (Call a2:2 (Call new Counter:0 2))
+      " "
+      (Call a7:7 null)
+      " "
+      (Call a12:12 "" (Call list))))
+  #void)
+log -1 2 0 true
+
 === functions get the facts at their block's start, closures where they're made
 let take(s: String): Void {}
 let run(f: fn (): String): String { f() }
@@ -642,6 +803,502 @@ error 832..833: Expected subtype of D, but got I
 error 889..890: Expected subtype of D, but got I
 error 942..943: Expected subtype of D, but got I
 error 968..969: Cannot assign to D from I
-error 996..1002: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [I, I]
+error 996..1002: I does not support infix `==`; give it a method marked `@operator("==")`
 hint 1063..1069: Unnecessary type check to I from expression with type D which is a subtype
 error 1473..1474: Expected subtype of D, but got I
+
+=== locals read before they're assigned on some path, as Kotlin Temper's UseBeforeInit reports them
+// Kotlin also says where the paths that miss it are. An orelse's
+// fallback follows what may fail in its body, as the division, but not
+// the assignment of s.
+let maybe(b: Boolean): Int {
+  let a, c;
+  if (b) {
+    a = 1;
+  } else {
+    c = 2;
+  }
+  a + c
+}
+let missingElse(b: Boolean): Void {
+  let x;
+  if (b) {
+    x = 1;
+  }
+  console.log(x.toString());
+}
+let loops(b: Boolean, xs: List<Int>): Int {
+  var w;
+  while (b) { w = 1; }
+  let y;
+  for (let x of xs) { y = x; }
+  var z;
+  z += 1;
+  w + y + z
+}
+let failing(b: Boolean, n: Int): Int {
+  let q;
+  let r = do { q = 10 / n; 0 } orelse 2;
+  let s;
+  (s = n) orelse panic();
+  let t;
+  when (b) {
+    true -> t = 1;
+  }
+  q + r + s + t
+}
+// A read reported once per path; a function's own locals are checked,
+// its outer function's aren't, wherever it's called.
+let once(b: Boolean): Int {
+  let u;
+  if (b) { u = 1; }
+  let f(): Int { u };
+  let g(): Int { let v; v };
+  u + u + f() + g()
+}
+console.log(maybe(true).toString());
+console.log("after");
+--- settled
+(Block
+  (Let
+    ^maybe:0
+    (Fn
+      (Let ^b:5 Boolean)
+      Int
+      (Block
+        (Let ^a:6)
+        (Let ^c:7)
+        (If b:5 (Block (Assign a:6 1) #void) (Block (Assign c:7 2) #void))
+        (Call + a:6 c:7))))
+  (Let
+    ^missingElse:1
+    (Fn
+      (Let ^b:8 Boolean)
+      Void
+      (Block
+        (Let ^x:9)
+        (If b:8 (Block (Assign x:9 1) #void) (Block))
+        (Call (Call . console \log) (Call (Call . x:9 \toString)))
+        #void)))
+  (Let
+    ^loops:2
+    (Fn
+      (Let ^b:10 Boolean)
+      (Let ^xs:11 (Call <> List Int))
+      Int
+      (Block
+        (Var ^w:12)
+        (Loop (If b:10 (Block (Assign w:12 1) #void) (Break @418)))
+        (Let ^y:13)
+        (Loop
+          (Block
+            (Call
+              (Call . xs:11 \forEach)
+              (Fn (Let ^x:15) (Block (Assign y:13 x:15) #void)))
+            (Break @450)))
+        (Var ^z:14)
+        (Assign z:14 (Call + z:14 1))
+        (Call + (Call + w:12 y:13) z:14))))
+  (Let
+    ^failing:3
+    (Fn
+      (Let ^b:16 Boolean)
+      (Let ^n:17 Int)
+      Int
+      (Block
+        (Let ^q:18)
+        (Let ^r:19 (Orelse (Block (Assign q:18 (Call / 10 n:17)) 0) 2))
+        (Let ^s:20)
+        (Orelse (Assign s:20 n:17) (Call panic))
+        (Let ^t:21)
+        (Block (If (Call == b:16 true) (Assign t:21 1) (Block)))
+        (Call + (Call + (Call + q:18 r:19) s:20) t:21))))
+  (Let
+    ^once:4
+    (Fn
+      (Let ^b:22 Boolean)
+      Int
+      (Block
+        (Let ^u:23)
+        (If b:22 (Block (Assign u:23 1) #void) (Block))
+        (Let ^f:24 (Fn Int (Block u:23)))
+        (Let ^g:25 (Fn Int (Block (Let ^v:26) v:26)))
+        (Call + (Call + (Call + u:23 u:23) (Call f:24)) (Call g:25)))))
+  (Call (Call . console \log) (Call (Call . (Call maybe:0 true) \toString)))
+  (Call (Call . console \log) "after")
+  #void)
+error 253..254: a is not initialized along branches
+error 257..258: c is not initialized along branches
+error 346..347: x is not initialized along branches
+error 490..491: z is not initialized along branches
+error 500..501: w is not initialized along branches
+error 504..505: y is not initialized along branches
+error 683..684: q is not initialized along branches
+error 695..696: t is not initialized along branches
+error 927..928: v is not initialized along branches
+error 934..935: u is not initialized along branches
+Failed: a is not initialized along branches
+
+=== locals assigned on every path, as Kotlin Temper's UseBeforeInit accepts them
+let branches(b: Boolean): Int {
+  let x;
+  if (b) { x = 1; } else { x = 2; }
+  let y;
+  if (b) { y = 1; } else { return 0; }
+  let z;
+  when (b) {
+    true -> z = 1;
+    else -> z = 2;
+  }
+  let u;
+  if (b) { u = 1; } else { panic(); }
+  x + y + z + u
+}
+let bubbles(b: Boolean): Int throws Bubble {
+  let v;
+  if (b) { v = 1; } else { bubble(); }
+  v
+}
+let loops(b: Boolean): Int {
+  let x;
+  do { x = 3; } while (x < 2);
+  var w;
+  while (true) { w = 1; break; }
+  var n;
+  for (;;) { if (b) { n = 1; break; } }
+  let k;
+  for (var i = 0; i < 3; i += 1) {
+    if (i == 1) { continue; }
+  }
+  k = 4;
+  x + w + n + k
+}
+let failing(n: Int): Int {
+  let q;
+  do { q = 10 / n; } orelse do { q = 2; }
+  let r;
+  do { r = 4 / 2; } orelse panic();
+  q + r
+}
+let later(): Int {
+  let x;
+  let f(): Int { x };
+  x = 1;
+  f()
+}
+let x;
+if (branches(true) > 0) { x = 1; } else { x = 2; }
+console.log("${x} ${branches(true)} ${loops(true)} ${failing(0)} ${later()} ${bubbles(true) orelse 0}");
+--- settled
+(Block
+  (Let
+    ^branches:0
+    (Fn
+      (Let ^b:6 Boolean)
+      Int
+      (Block
+        (Let ^x:7)
+        (If b:6 (Block (Assign x:7 1) #void) (Block (Assign x:7 2) #void))
+        (Let ^y:8)
+        (If b:6 (Block (Assign y:8 1) #void) (Block (Return @0 0) #void))
+        (Let ^z:9)
+        (Block (If (Call == b:6 true) (Assign z:9 1) (Assign z:9 2)))
+        (Let ^u:10)
+        (If b:6 (Block (Assign u:10 1) #void) (Block (Call panic) #void))
+        (Call + (Call + (Call + x:7 y:8) z:9) u:10))))
+  (Let
+    ^bubbles:1
+    (Fn
+      (Let ^b:11 Boolean)
+      (Call throws Int Bubble)
+      (Block
+        (Let ^v:12)
+        (If b:11 (Block (Assign v:12 1) #void) (Block (Fail) #void))
+        v:12)))
+  (Let
+    ^loops:2
+    (Fn
+      (Let ^b:13 Boolean)
+      Int
+      (Block
+        (Let ^x:14)
+        (Loop
+          (Block (Assign x:14 3) #void)
+          (If (Call < x:14 2) (Block) (Break @393)))
+        (Var ^w:15)
+        (Loop (If true (Block (Assign w:15 1) (Break @433) #void) (Break @433)))
+        (Var ^n:16)
+        (Block
+          (Loop
+            (Block (If b:13 (Block (Assign n:16 1) (Break @475) #void) (Block)))))
+        (Let ^k:17)
+        (Block
+          (Var ^i:18 0)
+          (Loop
+            (If
+              (Call < i:18 3)
+              (Block
+                (If (Call == i:18 1) (Block (Continue @524) #void) (Block)))
+              (Break @524))
+            (Assign i:18 (Call + i:18 1))))
+        (Assign k:17 4)
+        (Call + (Call + (Call + x:14 w:15) n:16) k:17))))
+  (Let
+    ^failing:3
+    (Fn
+      (Let ^n:19 Int)
+      Int
+      (Block
+        (Let ^q:20)
+        (Orelse
+          (Block (Assign q:20 (Call / 10 n:19)) #void)
+          (Block (Assign q:20 2) #void))
+        (Let ^r:21)
+        (Orelse (Block (Assign r:21 (Call / 4 2)) #void) (Call panic))
+        (Call + q:20 r:21))))
+  (Let
+    ^later:4
+    (Fn
+      Int
+      (Block
+        (Let ^x:22)
+        (Let ^f:23 (Fn Int (Block x:22)))
+        (Assign x:22 1)
+        (Call f:23))))
+  (Let ^x:5)
+  (If
+    (Call > (Call branches:0 true) 0)
+    (Block (Assign x:5 1) #void)
+    (Block (Assign x:5 2) #void))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      x:5
+      " "
+      (Call branches:0 true)
+      " "
+      (Call loops:2 true)
+      " "
+      (Call failing:3 0)
+      " "
+      (Call later:4)
+      " "
+      (Orelse (Call bubbles:1 true) 0)))
+  #void)
+log 1 4 9 4 1 1
+
+=== calls that never return end their paths, as panic() does
+// A call of a function whose result is Never<T> (any T, Void too) ends
+// its path, as panic() does: a local assigned on the other paths is
+// assigned after it, a null check that leaves through it narrows, and
+// code after it is unreachable. Where a value is wanted, it's still its
+// type, as Kotlin Temper has it: a Never<Int> fits an Int, but a
+// Never<Void> doesn't ("from Void"), at the end of a body, in an orelse,
+// a ??, or a when. Kotlin narrows after none of these, nor after
+// panic() or return, and checks no definite assignment here.
+let stop(): Never<Void> { panic() }
+let stopInt(): Never<Int> { panic() }
+let stopStr(): Never<String> { panic() }
+let p(s: String): Int throws Bubble { s.toInt32() }
+let plain(): Void {}
+let assigned(b: Boolean): Int {
+  let x: Int;
+  if (b) { x = 1 } else { stop() }
+  x
+}
+let assignedInt(b: Boolean): Int {
+  let x: Int;
+  if (b) { x = 1 } else { stopInt() }
+  x
+}
+let unassigned(b: Boolean): Int {
+  let x: Int;
+  if (b) { x = 1 } else { plain() }
+  x
+}
+let narrowed(s: String?): String {
+  if (s == null) { stop() }
+  let t: String = s;
+  t
+}
+let narrowedByPanic(s: String?): String {
+  if (s == null) { panic() }
+  s
+}
+let endsInt(b: Boolean): Int {
+  if (b) { return 1 }
+  stopInt()
+}
+let orElseInt(s: String): Int { p(s) orelse stopInt() }
+let coalesced(s: String?): String { s ?? stopStr() }
+let whenInt(n: Int): Int { when (n) { 1 -> 2; else -> stopInt() } }
+let after(): Int {
+  stop();
+  5
+}
+let inLoop(n: Int): Int {
+  var i = 0;
+  while (i < n) {
+    if (i > 3) { stop() }
+    i += 1;
+  }
+  i
+}
+let endsVoid(b: Boolean): Int {
+  if (b) { return 1 }
+  stop()
+}
+let orElseVoid(s: String): Int { p(s) orelse stop() }
+let coalescedVoid(s: String?): String { s ?? stop() }
+let whenVoid(n: Int): Int { when (n) { 1 -> 2; else -> stop() } }
+console.log("${assigned(true)} ${assignedInt(true)} ${narrowed("n")} ${narrowedByPanic("p")}");
+console.log("${endsInt(true)} ${orElseInt("4")} ${coalesced("c")} ${whenInt(1)} ${inLoop(2)}");
+--- settled
+(Block
+  (Let ^stop:0 (Fn (Call <> Never Void) (Block (Call panic))))
+  (Let ^stopInt:1 (Fn (Call <> Never Int) (Block (Call panic))))
+  (Let ^stopStr:2 (Fn (Call <> Never String) (Block (Call panic))))
+  (Let
+    ^p:3
+    (Fn
+      (Let ^s:20 String)
+      (Call throws Int Bubble)
+      (Block (Call (Call . s:20 \toInt32)))))
+  (Let ^plain:4 (Fn Void (Block)))
+  (Let
+    ^assigned:5
+    (Fn
+      (Let ^b:21 Boolean)
+      Int
+      (Block
+        (Let ^x:22 Int)
+        (If b:21 (Block (Assign x:22 1)) (Block (Call stop:0)))
+        x:22)))
+  (Let
+    ^assignedInt:6
+    (Fn
+      (Let ^b:23 Boolean)
+      Int
+      (Block
+        (Let ^x:24 Int)
+        (If b:23 (Block (Assign x:24 1)) (Block (Call stopInt:1)))
+        x:24)))
+  (Let
+    ^unassigned:7
+    (Fn
+      (Let ^b:25 Boolean)
+      Int
+      (Block
+        (Let ^x:26 Int)
+        (If b:25 (Block (Assign x:26 1)) (Block (Call plain:4)))
+        x:26)))
+  (Let
+    ^narrowed:8
+    (Fn
+      (Let ^s:27 (Call ? String))
+      String
+      (Block
+        (If (Call == s:27 null) (Block (Call stop:0)) (Block))
+        (Let ^t:28 String s:27)
+        t:28)))
+  (Let
+    ^narrowedByPanic:9
+    (Fn
+      (Let ^s:29 (Call ? String))
+      String
+      (Block (If (Call == s:29 null) (Block (Call panic)) (Block)) s:29)))
+  (Let
+    ^endsInt:10
+    (Fn
+      (Let ^b:30 Boolean)
+      Int
+      (Block (If b:30 (Block (Return @1178 1)) (Block)) (Call stopInt:1))))
+  (Let
+    ^orElseInt:11
+    (Fn
+      (Let ^s:31 String)
+      Int
+      (Block (Orelse (Call p:3 s:31) (Call stopInt:1)))))
+  (Let
+    ^coalesced:12
+    (Fn
+      (Let ^s:32 (Call ? String))
+      String
+      (Block (Block (If (Call == s:32 #null) (Call stopStr:2) s:32)))))
+  (Let
+    ^whenInt:13
+    (Fn
+      (Let ^n:33 Int)
+      Int
+      (Block (Block (If (Call == n:33 1) 2 (Call stopInt:1))))))
+  (Let ^after:14 (Fn Int (Block (Call stop:0) 5)))
+  (Let
+    ^inLoop:15
+    (Fn
+      (Let ^n:34 Int)
+      Int
+      (Block
+        (Var ^i:35 0)
+        (Loop
+          (If
+            (Call < i:35 n:34)
+            (Block
+              (If (Call > i:35 3) (Block (Call stop:0)) (Block))
+              (Assign i:35 (Call + i:35 1))
+              #void)
+            (Break @1498)))
+        i:35)))
+  (Let
+    ^endsVoid:16
+    (Fn
+      (Let ^b:36 Boolean)
+      Int
+      (Block (If b:36 (Block (Return @1562 1)) (Block)) (Call stop:0))))
+  (Let
+    ^orElseVoid:17
+    (Fn (Let ^s:37 String) Int (Block (Orelse (Call p:3 s:37) (Call stop:0)))))
+  (Let
+    ^coalescedVoid:18
+    (Fn
+      (Let ^s:38 (Call ? String))
+      String
+      (Block (Block (If (Call == s:38 #null) (Call stop:0) s:38)))))
+  (Let
+    ^whenVoid:19
+    (Fn
+      (Let ^n:39 Int)
+      Int
+      (Block (Block (If (Call == n:39 1) 2 (Call stop:0))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call assigned:5 true)
+      " "
+      (Call assignedInt:6 true)
+      " "
+      (Call narrowed:8 "n")
+      " "
+      (Call narrowedByPanic:9 "p")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call endsInt:10 true)
+      " "
+      (Call orElseInt:11 "4")
+      " "
+      (Call coalesced:12 "c")
+      " "
+      (Call whenInt:13 1)
+      " "
+      (Call inLoop:15 2)))
+  #void)
+error 1618..1624: Cannot assign to Int32 from Void
+error 1672..1678: Cannot assign to Int32 from Void
+error 1726..1732: Cannot assign to String from Void
+error 1790..1796: Cannot assign to Int32 from Void
+error 1007..1008: x is not initialized along branches
+log 1 1 n p
+log 1 4 c 2 2

@@ -10,7 +10,7 @@ Pinned by default, as PR CI runs them:
 - mypy at MYPY, by `uv tool install`
 - LuaLS at LUALS, its download checked against LUALS_SHA256, on the
   platforms with a recorded hash; elsewhere it's left out, with a
-  message, and the workflow lets the tests skip it (TEMPEST_ALLOW_MISSING)
+  message, and the workflow lets the tests skip it (TEMPER_ALLOW_MISSING)
 
 Runs on Linux, macOS, and Windows. On Windows, npm's tools are .cmd
 files, which Rust's Command (the tests') doesn't find by name, so their

@@ -8,7 +8,7 @@ architecture (vswhere), runs its vcvarsall.bat, and passes on what that
 changed: new PATH entries through GITHUB_PATH, other variables through
 GITHUB_ENV. Then CMake's generator is Ninja (Visual Studio's own, on
 the PATH vcvarsall sets), which, unlike Visual Studio's generators,
-puts each program where `tempest test -b cpp` and `run -b cpp` look for
+puts each program where `temper test -b cpp` and `run -b cpp` look for
 it (build/NAME), and its C and C++ compilers are cl. No third-party
 action, so nothing more to pin.
 
@@ -51,6 +51,14 @@ def main() -> None:
         elif before.get(key.upper()) != value:
             env[key] = value
     env |= {"CMAKE_GENERATOR": "Ninja", "CC": "cl", "CXX": "cl"}
+    # With VCINSTALLDIR set, rustc takes `link.exe` from PATH, where Git
+    # Bash puts its own coreutils `link` first (/usr/bin), so name
+    # MSVC's linker outright for cargo's later builds.
+    linker = next((Path(p) / "link.exe" for p in new_path if (Path(p) / "link.exe").is_file()), None)
+    if linker is None:
+        sys.exit("msvc_env.py: vcvarsall's PATH has no link.exe")
+    target = "AARCH64" if arm else "X86_64"
+    env[f"CARGO_TARGET_{target}_PC_WINDOWS_MSVC_LINKER"] = str(linker)
     with open(os.environ["GITHUB_PATH"], "a") as f:
         # Each line goes ahead of the earlier ones, so the first ends up first.
         f.writelines(f"{p}\n" for p in reversed(new_path))

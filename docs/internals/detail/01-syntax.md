@@ -97,7 +97,7 @@ the comparisons end ([below](#known-weaknesses-and-planned-changes)).
 **Why:** compatibility is the first requirement, and a faithful port is
 the cheapest way to prove it. The grammar can be simplified later, once
 Kotlin is no longer the reference, with the trees the compat scripts
-print as the safety net. Tempest's choice; not something the team asked
+print as the safety net. This compiler's choice; not something the team asked
 for.
 
 ### One tree type, in flat arrays
@@ -132,7 +132,7 @@ constructs; the settle loop treats that as `unreachable!`. A node has no
 parent link; passes that need one build their own (typing's `parents`).
 
 **Why:** the design's main bet on speed and memory
-([notes/design.md](../../../notes/design.md), section 3). Tempest's
+([notes/design.md](../../../notes/design.md), section 3). This compiler's
 choice.
 
 ### Two copies: the parse tree and the working tree
@@ -155,7 +155,7 @@ every settled node a way back to source for spans and the editor.
 in each `Parsed`: the lexer's and the adapters'.
 
 **Why:** the language server and the playground need the parse tree,
-and the settle loop needs to rewrite in place. Tempest's choice,
+and the settle loop needs to rewrite in place. This compiler's choice,
 matching Kotlin's CST and AST split in spirit.
 
 ### Keywords are names, and almost everything is an operator
@@ -167,9 +167,9 @@ operator its precedence, arity, and token, and calls (`f(x)`), blocks
 grammar step then gives everything one of a few shapes, where `if` is
 just a callee. What a name means comes later, from macros.
 
-This is Temper's design, not tempest's: Kotlin Temper parses the same
+This is Temper's design, not this compiler's: Kotlin Temper parses the same
 way, and the language relies on it for user-defined control flow.
-Tempest keeps two small word lists Kotlin has too: modifier words such
+This compiler keeps two small word lists Kotlin has too: modifier words such
 as `public` and `var`, which the adapter turns into decorators
 (`MODIFIERS` in [`adapt`](../../../crates/temper-syntax/src/adapt.rs)),
 and `return`, `throw`, and `yield`, which the lexer lets precede a regex
@@ -198,7 +198,7 @@ the first idea listed there for speed.
 ### Bracket recovery
 
 **Chosen:** [`balance`](../../../crates/temper-syntax/src/balance.rs), an
-adapter step of tempest's own. Only when brackets don't balance, it
+adapter step of this compiler's own. Only when brackets don't balance, it
 closes an unclosed `(` or `[` at the nearest plausible place (a line at
 or left of the opener's, a `{` that starts a body, a `;` outside
 `for (...)`), drops an unmatched closer, matches a `}` by indentation
@@ -220,7 +220,7 @@ program, and the compat checks still match exactly.
 place), and then the follow-on errors are odd. There's no fuzzer
 comparing recovery with an intended fix, only properties.
 
-**Why:** errors as values end to end. Tempest's choice (2026-11-06),
+**Why:** errors as values end to end. This compiler's choice (2026-11-06),
 recommended for Kotlin too
 ([notes/kotlin-differences.md](../../../notes/kotlin-differences.md),
 "Bracket recovery").
@@ -249,7 +249,7 @@ parses as before.
 **Cons:** a guess: in a formal (`let f(x Int)`, missing a `:`), the
 message names an operator, and the function is still lost.
 
-**Why:** errors as values, as for bracket recovery. Tempest's choice
+**Why:** errors as values, as for bracket recovery. This compiler's choice
 (2026-11-09), recommended for Kotlin too
 ([notes/kotlin-differences.md](../../../notes/kotlin-differences.md),
 "Missing operators").
@@ -329,7 +329,7 @@ settling added for 818 files when last measured.
 ### Literate files and NFKC without dependencies
 
 **Chosen:** [`find_blocks`](../../../crates/temper-syntax/src/literate.rs)
-is a small CommonMark block scanner of tempest's own, giving the same
+is a small CommonMark block scanner of this compiler's own, giving the same
 ranges as Kotlin's commonmark-java. [`nfkc`](../../../crates/temper-syntax/src/nfkc.rs)
 checks identifiers against tables generated from the JDK
 (`compat/gen_nfkc.py`, Unicode 15.0.0 for Java 21).

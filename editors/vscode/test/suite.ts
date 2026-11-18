@@ -2,7 +2,7 @@
 // @vscode/test-electron: VS Code loads this module in its extension host
 // and calls `run`. The workspace is a library, with shapes.temper and
 // use.temper, and the extension is the platform package as built, so
-// these talk to its bundled tempest.
+// these talk to its bundled temper.
 
 import assert from "node:assert/strict";
 import { statSync } from "node:fs";
@@ -30,8 +30,8 @@ export async function run(): Promise<void> {
   assert.ok(extension, "the Temper extension is installed");
   const api = await extension.activate();
   const server = api.server();
-  assert.equal(server?.from, "bundled", `uses the bundled tempest, not ${JSON.stringify(server)}`);
-  console.log(`tempest: ${server?.command}`);
+  assert.equal(server?.from, "bundled", `uses the bundled temper, not ${JSON.stringify(server)}`);
+  console.log(`temper: ${server?.command}`);
 
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   assert.ok(folder, "a workspace folder");
@@ -51,7 +51,7 @@ export async function run(): Promise<void> {
     });
     assert.equal(d?.range.start.line, 1);
     assert.equal(d?.severity, vscode.DiagnosticSeverity.Error);
-    assert.equal(d?.source, "tempest");
+    assert.equal(d?.source, "temper");
     // Fixed as typed: an incremental change, `String` to `Int`.
     const edit = new vscode.WorkspaceEdit();
     edit.replace(uses, new vscode.Range(1, 7, 1, 13), "Int");
@@ -124,7 +124,7 @@ export async function run(): Promise<void> {
     const [first] = found;
     const [uri, range] = first && "uri" in first ? [first.uri, first.range] : [first?.targetUri, first?.targetSelectionRange ?? first?.targetRange];
     assert.ok(uri && range, "a location");
-    assert.match(uri.path, /\/tempest-std-[0-9a-f]+\/core\/core\.temper$/);
+    assert.match(uri.path, /\/temper-std-[0-9a-f]+\/core\/core\.temper$/);
     // Read-only on disk, and to VS Code, as the extension marks it
     // (readonly.ts).
     assert.equal((statSync(uri.fsPath).mode & 0o222), 0, "no write permission");
@@ -222,14 +222,14 @@ export async function run(): Promise<void> {
     assert.ok(!after.some((m) => m.type === "scrolled"), JSON.stringify(after));
   });
 
-  // Last, as it stops the server: a tempest that isn't there says so,
+  // Last, as it stops the server: a temper that isn't there says so,
   // naming what was tried and the setting, rather than failing to spawn.
-  test("a missing tempest says what was tried", async () => {
+  test("a missing temper says what was tried", async () => {
     const config = vscode.workspace.getConfiguration("temper");
-    await config.update("server.path", "/nowhere/tempest", vscode.ConfigurationTarget.Global);
+    await config.update("server.path", "/nowhere/temper", vscode.ConfigurationTarget.Global);
     try {
       const message = await until("an error", () => api.error());
-      assert.match(message, /tried temper\.server\.path, \/nowhere\/tempest\)/);
+      assert.match(message, /tried temper\.server\.path, \/nowhere\/temper\)/);
       assert.match(message, /Temper: Server Path/);
       assert.equal(api.client(), undefined);
     } finally {

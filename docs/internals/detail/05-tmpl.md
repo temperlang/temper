@@ -61,7 +61,7 @@ own `translate`.
 
 Each says what was chosen, what else was on the table, its pros and
 cons, how Kotlin Temper does it, and whose call it was: *team-agreed*,
-*tempest's* (the user's call, often recorded as "Decided" in
+*this compiler's* (the user's call, often recorded as "Decided" in
 notes/tmpl/), or *open*.
 
 ### One starting form, independent of the frontend
@@ -84,7 +84,7 @@ and the editor tools reuse it.
 backends need must be carried explicitly, which grows the model (the
 crate is about 14,900 lines, against a plan of 4,000–7,000).
 
-**Status:** tempest's, "Decided" 2026-10-29
+**Status:** this compiler's, "Decided" 2026-10-29
 ([notes/tmpl/overview.md](../../../notes/tmpl/overview.md), "Core
 decisions").
 
@@ -110,7 +110,7 @@ construction (its `Boolean ==` in Lua, JS, and Python; overview.md,
 **Cons:** `to_tmpl` does more work, and the validator has more to
 check; every new language feature means new nodes or facts.
 
-**Status:** tempest's; typed operators "Decided" 2026-10-29.
+**Status:** this compiler's; typed operators "Decided" 2026-10-29.
 
 ### Columns in an arena, kinds from one schema
 
@@ -262,7 +262,7 @@ has the table.
 **Kotlin Temper** chooses per backend through `SupportNetwork`
 properties (`bubbleStrategy`, `coroutineStrategy`,
 `functionTypeStrategy`, `computedJumpStrategy`), read during TmpL
-translation. **Status:** the shape is tempest's; a shared
+translation. **Status:** the shape is this compiler's; a shared
 `prepare(program, profile)` with hoisting is planned
 ([notes/tmpl/roadmap.md](../../../notes/tmpl/roadmap.md), "Lowering
 that backends duplicate").
@@ -290,7 +290,7 @@ needs names before a lowering runs the pass twice (C++, for its
 order-of-evaluation analysis before `spill`).
 
 **Kotlin Temper** names per backend, numbering many names
-(`values__139`). **Status:** tempest's ([design.md](../../../notes/design.md),
+(`values__139`). **Status:** this compiler's ([design.md](../../../notes/design.md),
 section 8); keeping public names exactly Kotlin's is required for
 compatibility ([notes/api-compat.md](../../../notes/api-compat.md)).
 

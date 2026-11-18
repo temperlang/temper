@@ -1,10 +1,10 @@
-# How tempest works
+# How the compiler works
 
-Tempest is Temper's compiler written from scratch in Rust. It reads
+This is Temper's compiler, written from scratch in Rust. It reads
 Temper source, works out what every name means and what type every
 value has, and then writes the same program in seven languages: C++,
 C#, Java, JavaScript, Lua, Python, and Rust. It can also run a program
-directly, with a small interpreter, which is how `tempest test` and the
+directly, with a small interpreter, which is how `temper test` and the
 playground's Run button work. The whole compiler is one small binary,
 and the same code builds to wasm for the browser.
 
@@ -54,7 +54,7 @@ flowchart LR
   be --> driver
   analysis --> lsp["temper-lsp"]
   analysis --> wasm
-  driver --> cli["tempest (command)"]
+  driver --> cli["tempest (the temper command)"]
   lsp --> cli
   driver --> wasm["temper-wasm (playground)"]
 ```
@@ -67,8 +67,8 @@ flowchart LR
 | [`temper-tmpl`](../../crates/temper-tmpl/src/lib.rs) | tmpl itself, plus the lowerings and naming that every backend shares, and what a backend is to tools ([`Backend`](../../crates/temper-tmpl/src/backend.rs)), with the helpers their test runners share ([`tools`](../../crates/temper-tmpl/src/tools.rs)) |
 | `temper-be-*` | One crate per language: tmpl in, source files out, and natively, how the language runs tests (its `tools` module). Each depends only on `temper-tmpl` |
 | [`temper-driver`](../../crates/temper-driver/src/lib.rs) | The registry of backends, the one compile path, `build`, and running tests with any backend's tools |
-| [`temper-lsp`](../../crates/temper-lsp/src/lib.rs) | The language server, `tempest lsp` |
-| [`tempest`](../../crates/tempest/src/main.rs) | The command: argument parsing and output, for `build`, `test`, `lsp`, and one backend's files |
+| [`temper-lsp`](../../crates/temper-lsp/src/lib.rs) | The language server, `temper lsp` |
+| [`tempest`](../../crates/tempest/src/main.rs) | The `temper` command: argument parsing and output, for `build`, `test`, `lsp`, and one backend's files |
 | [`temper-wasm`](../../crates/temper-wasm/src/lib.rs) | The compiler as wasm, for the playground |
 
 ## Reading order
@@ -82,12 +82,14 @@ flowchart LR
 5. [tmpl](05-tmpl.md): the backend IR, and the lowerings backends share.
 6. [Backends](06-backends.md): tmpl in, C++, C#, Java, JavaScript, Lua,
    Python, or Rust out.
-7. [The tempest command](07-cli.md): `build` and `test`, and running
+7. [The `temper` command](07-cli.md): `build` and `test`, and running
    tests with each language's own tools.
 8. [Wasm, the playground, watch, and a language server](08-playground.md):
    the same compiler in a browser, and in an editor.
-9. [The language server and editors](09-language-server.md): `tempest
+9. [The language server and editors](09-language-server.md): `temper
    lsp`, its queries, and the VS Code extension.
+10. [Where tests go](10-tests.md): a cheat sheet for adding tests, for
+    readers who know Kotlin Temper's.
 
 ## The running example
 

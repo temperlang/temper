@@ -8,6 +8,7 @@ from temper_core import (
     int_mul as _int_mul,
     string_to_int32 as _string_to_int32,
 )
+from typing import NoReturn as _NoReturn
 
 __all__ = ()
 
@@ -65,15 +66,15 @@ def _first_over(n: int, /) -> int:
 
 
 def _sum_skipping(n: int, /) -> int:
-    sum_ = 0
+    sum = 0
     i = 0
     while i < 5:
         if i == n:
             i = _int_add(i, 1)
             continue
-        sum_ = _int_add(sum_, i)
+        sum = _int_add(sum, i)
         i = _int_add(i, 1)
-    return sum_
+    return sum
 
 
 def _ten_times(n: int, /) -> int:
@@ -108,6 +109,66 @@ def _via_or_else(n: int, /) -> str:
     return f'{t_0} {t_1} {t_2}'
 
 
+def _unreachable_int() -> _NoReturn:
+    raise BaseException('panic')
+
+
+def _fail_as(fallback: object, /) -> _NoReturn:
+    raise RuntimeError()
+
+
+def _bail() -> _NoReturn:
+    raise RuntimeError()
+
+
+def _no_name() -> str | None:
+    return None
+
+
+def _stop() -> _NoReturn:
+    raise BaseException('panic')
+
+
+def _half(n: int, /) -> int:
+    if _arith_int_mod(n, 2) != 0:
+        _bail()
+    if n < 0:
+        return _fail_as(n)
+    else:
+        return _int_div(n, 2)
+
+
+def _pick(b: bool, /) -> int:
+    if b:
+        return 1
+    else:
+        return _unreachable_int()
+
+
+def _named(b: bool, /) -> str | None:
+    if b:
+        return 'named'
+    else:
+        return _no_name()
+
+
+def _chosen(b: bool, /) -> int:
+    x: int
+    if b:
+        x = 3
+        _console.log('chosen')
+    else:
+        _unreachable_int()
+    return x
+
+
+def _shout(s: str | None, /) -> str:
+    if s is None:
+        _stop()
+    t = s
+    return f'{t}!'
+
+
 def _branch(a: int, b: int, /) -> None:
     c = ('00' if b == 0 else '01' if b == 1 else '02' if b == 2 else '0x') if a == 0 else '1x' if a == 1 else '2x' if a == 2 else '3x' if a == 3 else 'xx'
     _console.log(f'branch({a}, {b}) -> {c}')
@@ -136,5 +197,23 @@ except Exception:
 _console.log(f'{_t_1} {_boolean_to_string(_is_none(_t_2))}')
 _console.log(_via_or_else(2))
 _console.log(_via_or_else(12))
+_console.log(f"{_pick(True)} {'-' if (_subject := _named(True)) is None else _subject} {'null' if (_subject2 := _named(False)) is None else _subject2}")
+_t_3: int
+try:
+    _t_3 = _half(4)
+except Exception:
+    _t_3 = -1
+_t_4: int
+try:
+    _t_4 = _half(3)
+except Exception:
+    _t_4 = -1
+_t_5: int
+try:
+    _t_5 = _half(-2)
+except Exception:
+    _t_5 = -1
+_console.log(f'{_t_3} {_t_4} {_t_5}')
+_console.log(f"{_chosen(True)} {_shout('hey')}")
 _branch(0, 2)
 _branch(2, 0)

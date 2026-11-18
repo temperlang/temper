@@ -63,9 +63,9 @@ local function fibonacci()
     local b = 1
     while true do
       temper.yield(a)
-      local next = temper.int32_add(a, b)
+      local next_ = temper.int32_add(a, b)
       a = b
-      b = next
+      b = next_
     end
   end
   return generated(temper.adapt_generator_fn(fn))

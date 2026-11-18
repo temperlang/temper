@@ -23,6 +23,7 @@ and names mean, see the [language reference](../../language/README.md).
   - [Names as ids, symbols in one table](#names-as-ids-symbols-in-one-table)
   - [Builtin macros in Rust, rewriting in place](#builtin-macros-in-rust-rewriting-in-place)
   - [Decorators matched by name](#decorators-matched-by-name)
+  - [`@json`'s members generated as Temper text](#jsons-members-generated-as-temper-text)
   - [Imported modules settled with the importer](#imported-modules-settled-with-the-importer)
   - [Top levels in dependency order](#top-levels-in-dependency-order)
 - [The main types and functions](#the-main-types-and-functions)
@@ -103,7 +104,7 @@ a fixed point.
 **Why:** Temper's macros can declare names other statements need, and
 can need types before they know what to produce, so any fixed stage
 order is wrong for some program ([notes/design.md](../../../notes/design.md),
-section 5). Tempest's design, not yet presented to the team.
+section 5). This compiler's design, not yet presented to the team.
 
 ### A scheduler that knows nothing of Temper
 
@@ -191,7 +192,7 @@ and decide object literals). Between them,
 [`drop_dead_branches`](../../../crates/temper-frontend/src/dead_branches.rs)
 keeps only the live branch of an `if (false)` whose dead branch has an
 error, after folding an undeclared name's `!= null` to `true`. Kotlin
-does both silently; tempest reports the errors as errors and folds only
+does both silently; this compiler reports the errors as errors and folds only
 to recover, so the code generated past them runs as Kotlin's does. Then
 [`find_flow_facts`](../../../crates/temper-frontend/src/flow.rs)
 walks every function. After them, typing's checks and recording, then
@@ -322,6 +323,29 @@ and `label` in [`enter_block`](../../../crates/temper-frontend/src/settle.rs).
 
 **Status:** a known shortcut, with a plan to resolve decorators as
 builtins.
+
+### `@json`'s members generated as Temper text
+
+**Chosen:** when the class macro lowers a `@json` type,
+[`json_members`](../../../crates/temper-frontend/src/json.rs) writes its
+`encodeToJson`, `decodeFromJson`, and `jsonAdapter` and its adapter
+class as Temper source with placeholders, parses it
+([`add_fragment`](../../../crates/temper-frontend/src/library.rs)), and
+puts in for each placeholder a copy of the type's own type expression, a
+value, or a name resolved in `std/json` ([`resolve_std_ref`](../../../crates/temper-frontend/src/json.rs)),
+whatever the module imports. The members are lowered as written ones
+are, and the adapter class is read after the type's statement. A sealed
+interface's decoder needs all its subtypes, so it's a placeholder call
+until the module's scope is complete
+([`json_sealed_body`](../../../crates/temper-frontend/src/json.rs)). The
+generated nodes are all spanned at the `@json`, with empty spans, so a
+local is visible from where it's declared on.
+
+**How Kotlin Temper does it:** `JsonInteropPass` builds the same code as
+trees of resolved names, between the define and type stages.
+
+**Cons:** text is parsed again for each type, and an error in generated
+code points only at the `@json`.
 
 ### Imported modules settled with the importer
 

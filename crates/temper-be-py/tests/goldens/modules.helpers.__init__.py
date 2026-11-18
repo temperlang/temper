@@ -5,11 +5,15 @@ from temper_core import (
     int_mul as _int_mul,
 )
 
-__all__ = ('twice', 'base', 'calls', 'bump')
+__all__ = ('twice', 'int_doubled', 'base', 'calls', 'bump')
 
 
 def twice(x: int, /) -> int:
     return _int_mul(x, 2)
+
+
+def int_doubled(x: int, /) -> int:
+    return twice(x)
 
 
 def bump() -> int:

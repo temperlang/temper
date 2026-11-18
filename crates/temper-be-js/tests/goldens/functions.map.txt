@@ -1,149 +1,257 @@
 # generated line:column -> source:line:column, and the text at each
-13:1 -> ../functions.temper.md:16:5  /** <- let makeCounter(start: Int):
-17:1 -> ../functions.temper.md:16:5  function makeCounter(start) <- let makeCounter(start: Int):
-17:10 -> ../functions.temper.md:16:9 (makeCounter)  makeCounter(start) { <- makeCounter(start: Int): Cou
-17:21 -> ../functions.temper.md:16:5  (start) { <- let makeCounter(start: Int):
-18:3 -> ../functions.temper.md:17:7  let count = start; <- var count = start;
-19:3 -> ../functions.temper.md:18:7  /** @returns {number} */ <- fn (): Int {
-20:3 -> ../functions.temper.md:18:7  function fn() { <- fn (): Int {
-21:5 -> ../functions.temper.md:19:9  count = (count + 1) | 0; <- count += 1;
-22:5 -> ../functions.temper.md:20:9  return count; <- count
-24:3 -> ../functions.temper.md:18:7  return fn; <- fn (): Int {
-27:1 -> ../functions.temper.md:24:5  /** <- let twice(f: IntOp): IntOp {
-31:1 -> ../functions.temper.md:24:5  function twice(f) { <- let twice(f: IntOp): IntOp {
-31:10 -> ../functions.temper.md:24:9 (twice)  twice(f) { <- twice(f: IntOp): IntOp {
-31:15 -> ../functions.temper.md:24:5  (f) { <- let twice(f: IntOp): IntOp {
-32:3 -> ../functions.temper.md:25:7  return (x) => f(f(x)); <- fn (x: Int): Int { f(f(x)) }
-35:1 -> ../functions.temper.md:28:5  /** <- let applyTo(f: IntOp, x: Int
-40:1 -> ../functions.temper.md:28:5  function applyTo(f, x) { <- let applyTo(f: IntOp, x: Int
-40:10 -> ../functions.temper.md:28:9 (applyTo)  applyTo(f, x) { <- applyTo(f: IntOp, x: Int): I
-40:17 -> ../functions.temper.md:28:5  (f, x) { <- let applyTo(f: IntOp, x: Int
-41:3 -> ../functions.temper.md:28:42  return f(x); <- f(x) }
-44:1 -> ../functions.temper.md:30:5  /** <- let addOne(x: Int): Int { x
-48:1 -> ../functions.temper.md:30:5  function addOne(x) { <- let addOne(x: Int): Int { x
-48:10 -> ../functions.temper.md:30:9 (addOne)  addOne(x) { <- addOne(x: Int): Int { x + 1
-48:16 -> ../functions.temper.md:30:5  (x) { <- let addOne(x: Int): Int { x
-49:3 -> ../functions.temper.md:30:31  return (x + 1) | 0; <- x + 1 }
-52:1 -> ../functions.temper.md:66:5  /** <- let drive(steps: Int, body:
-56:1 -> ../functions.temper.md:66:5  function drive(steps, body) <- let drive(steps: Int, body:
-56:10 -> ../functions.temper.md:66:9 (drive)  drive(steps, body) { <- drive(steps: Int, body: fn (
-56:15 -> ../functions.temper.md:66:5  (steps, body) { <- let drive(steps: Int, body:
-57:3 -> ../functions.temper.md:67:7  /** @type {Generator<{}>} */ <- let g = body();
-58:3 -> ../functions.temper.md:67:7  const g = body(); <- let g = body();
-59:3 -> ../functions.temper.md:68:7  { <- for (var s = 0; s < steps; s
-60:5 -> ../functions.temper.md:68:12  let s = 0; <- var s = 0; s < steps; s += 1
-61:5 -> ../functions.temper.md:68:7  while (s < steps) { <- for (var s = 0; s < steps; s
-62:7 -> ../functions.temper.md:68:44  g.next(); <- g.nextSafe(); }
-63:7 -> ../functions.temper.md:68:34  s = (s + 1) | 0; <- s += 1) { g.nextSafe(); }
-68:1 -> ../functions.temper.md:81:5  /** <- let sumFrom(xs: List<Int>, l
-73:1 -> ../functions.temper.md:81:5  function sumFrom(xs, least) <- let sumFrom(xs: List<Int>, l
-73:10 -> ../functions.temper.md:81:9 (sumFrom)  sumFrom(xs, least) { <- sumFrom(xs: List<Int>, least
-73:17 -> ../functions.temper.md:81:5  (xs, least) { <- let sumFrom(xs: List<Int>, l
-74:3 -> ../functions.temper.md:82:7  let sum = 0; <- var sum = 0;
-75:3 -> ../functions.temper.md:83:7  { <- for (let x of xs) {
-76:5 -> ../functions.temper.md:83:7  const length = xs.length; <- for (let x of xs) {
-77:5 -> ../functions.temper.md:83:7  let i = 0; <- for (let x of xs) {
-78:5 -> ../functions.temper.md:83:7  while (i < length) { <- for (let x of xs) {
-79:7 -> ../functions.temper.md:83:7  const x = listedGet(/** @typ <- for (let x of xs) {
-80:7 -> ../functions.temper.md:83:7  i = (i + 1) | 0; <- for (let x of xs) {
-81:7 -> ../functions.temper.md:84:9  if (x < least) { <- if (x < least) { continue; }
-82:9 -> ../functions.temper.md:84:26  continue; <- continue; }
-84:7 -> ../functions.temper.md:85:9  sum = (sum + x) | 0; <- sum += x;
-87:3 -> ../functions.temper.md:87:7  return sum; <- sum
-90:1 -> ../functions.temper.md:89:5  /** <- let doubles(s: String): Int
-94:1 -> ../functions.temper.md:89:5  function doubles(s) { <- let doubles(s: String): Int
-94:10 -> ../functions.temper.md:89:9 (doubles)  doubles(s) { <- doubles(s: String): Int {
-94:17 -> ../functions.temper.md:89:5  (s) { <- let doubles(s: String): Int
-95:3 -> ../functions.temper.md:90:7  let n = 0; <- var n = 0;
-96:3 -> ../functions.temper.md:91:7  const end = s.length; <- let end = s.end;
-97:3 -> ../functions.temper.md:92:7  { <- for (var i = String.begin, p
-98:5 -> ../functions.temper.md:92:12  let i = 0; <- var i = String.begin, prev =
-99:5 -> ../functions.temper.md:92:12  let prev = i; <- var i = String.begin, prev =
-100:5 -> ../functions.temper.md:92:7  while (i - end < 0) { <- for (var i = String.begin, p
-101:7 -> ../functions.temper.md:93:9  if (prev - i < 0 && stringGe <- if (prev < i && s[prev] == s
-102:9 -> ../functions.temper.md:93:44  n = (n + 1) | 0; <- n += 1; }
-104:7 -> ../functions.temper.md:94:9  prev = i; <- prev = i;
-105:7 -> ../functions.temper.md:92:53  i = stringNext(s, i); <- i = s.next(i)) {
-108:3 -> ../functions.temper.md:96:7  return n; <- n
-111:1 -> ../functions.temper.md:32:5  class Scaler extends type() <- class Scaler {
-111:7 -> ../functions.temper.md:32:11 (Scaler)  Scaler extends type() { <- Scaler {
-111:13 -> ../functions.temper.md:32:5   extends type() { <- class Scaler {
-112:3 -> ../functions.temper.md:33:21  /** <- triple(x: Int): Int { x * 3
-116:3 -> ../functions.temper.md:33:21  static triple(x) { <- triple(x: Int): Int { x * 3
-116:10 -> ../functions.temper.md:33:21 (triple)  triple(x) { <- triple(x: Int): Int { x * 3
-117:5 -> ../functions.temper.md:33:43  return Math.imul(x, 3); <- x * 3 }
-121:1 -> ../functions.temper.md:36:5  class Button extends type() <- class Button(public label: S
-121:7 -> ../functions.temper.md:36:11 (Button)  Button extends type() { <- Button(public label: String,
-121:13 -> ../functions.temper.md:36:5   extends type() { <- class Button(public label: S
-122:3 -> ../functions.temper.md:36:25  /** @type {string} */ <- label: String, public onPres
-123:3 -> ../functions.temper.md:36:25  #label; <- label: String, public onPres
-124:3 -> ../functions.temper.md:36:47  /** @type {() => number} */ <- onPress: Counter) {
-125:3 -> ../functions.temper.md:36:47  #onPress; <- onPress: Counter) {
-135:3 -> ../functions.temper.md:36:5  /** <- class Button(public label: S
-139:3 -> ../functions.temper.md:36:5  constructor(label, onPress) <- class Button(public label: S
-141:5 -> ../functions.temper.md:36:25  this.#label = label; <- label: String, public onPres
-142:5 -> ../functions.temper.md:36:47  this.#onPress = onPress; <- onPress: Counter) {
-145:3 -> ../functions.temper.md:36:25  /** @returns {string} */ <- label: String, public onPres
-146:3 -> ../functions.temper.md:36:25  get label() { <- label: String, public onPres
-146:7 -> ../functions.temper.md:36:25 (label)  label() { <- label: String, public onPres
-150:3 -> ../functions.temper.md:36:47  /** @returns {() => number} <- onPress: Counter) {
-151:3 -> ../functions.temper.md:36:47  get onPress() { <- onPress: Counter) {
-151:7 -> ../functions.temper.md:36:47 (onPress)  onPress() { <- onPress: Counter) {
-155:3 -> ../functions.temper.md:37:14  /** @returns {string} */ <- press(): String { "${label}
-156:3 -> ../functions.temper.md:37:14 (press)  press() { <- press(): String { "${label}
-157:5 -> ../functions.temper.md:37:32  return `${this.#label} ${thi <- "${label} ${onPress()}" }
-161:1 -> ../functions.temper.md:40:5  const counter = makeCounter( <- let counter = makeCounter(10
-162:1 -> ../functions.temper.md:41:5  counter(); <- counter();
-163:1 -> ../functions.temper.md:42:5  console.log(`count ${counter <- console.log("count ${counter
-164:1 -> ../functions.temper.md:43:5  const other = makeCounter(0) <- let other = makeCounter(0);
-165:1 -> ../functions.temper.md:44:5  console.log(`other ${other() <- console.log("other ${other()
-166:1 -> ../functions.temper.md:45:5  const addTwo = twice(addOne) <- let addTwo = twice(addOne);
-167:1 -> ../functions.temper.md:46:5  console.log(`twice ${addTwo( <- console.log("twice ${addTwo(
-168:1 -> ../functions.temper.md:47:5  console.log(`triple ${applyT <- console.log("triple ${applyT
-169:1 -> ../functions.temper.md:48:5  /** @type {readonly number[] <- let ns: List<Int> = [5, 2, 8
-170:1 -> ../functions.temper.md:48:5  const ns = Object.freeze([5, <- let ns: List<Int> = [5, 2, 8
-171:1 -> ../functions.temper.md:49:5  /** @type {readonly number[] <- let doubled = ns.map { (n: I
-172:1 -> ../functions.temper.md:49:5  const doubled = listedMap(/* <- let doubled = ns.map { (n: I
-173:1 -> ../functions.temper.md:50:5  /** @type {readonly number[] <- let big = doubled.filter { (
-174:1 -> ../functions.temper.md:50:5  const big = listedFilter(/** <- let big = doubled.filter { (
-175:1 -> ../functions.temper.md:51:5  console.log(listedJoin(/** @ <- console.log(big.join(", ") {
-176:1 -> ../functions.temper.md:52:5  /** @type {readonly number[] <- let order = ns.sorted { (a:
-177:1 -> ../functions.temper.md:52:5  const order = listedSorted(/ <- let order = ns.sorted { (a:
-178:1 -> ../functions.temper.md:53:5  console.log(listedJoin(/** @ <- console.log(order.join(" ")
-179:1 -> ../functions.temper.md:54:5  let total = 0; <- var total = 0;
-180:1 -> ../functions.temper.md:55:5  { <- ns.forEach { (n: Int): Void
-181:3 -> ../functions.temper.md:55:5  const length = ns.length; <- ns.forEach { (n: Int): Void
-182:3 -> ../functions.temper.md:55:5  let i2 = 0; <- ns.forEach { (n: Int): Void
-183:3 -> ../functions.temper.md:55:5  while (i2 < length) { <- ns.forEach { (n: Int): Void
-184:5 -> ../functions.temper.md:55:5  const n = listedGet(/** @typ <- ns.forEach { (n: Int): Void
-185:5 -> ../functions.temper.md:55:5  i2 = (i2 + 1) | 0; <- ns.forEach { (n: Int): Void
-186:5 -> ../functions.temper.md:55:36  total = (total + n) | 0; <- total += n; };
-189:1 -> ../functions.temper.md:56:5  console.log(`total ${total}` <- console.log("total ${total}"
-190:1 -> ../functions.temper.md:57:5  const button = new Button("h <- let button = new Button("hit
-191:1 -> ../functions.temper.md:58:5  button.press(); <- button.press();
-192:1 -> ../functions.temper.md:59:5  console.log(button.press()); <- console.log(button.press());
-193:1 -> ../functions.temper.md:60:5  /** @type {(() => number)[]} <- let makers = new ListBuilder
-194:1 -> ../functions.temper.md:60:5  const makers = []; <- let makers = new ListBuilder
-195:1 -> ../functions.temper.md:61:5  { <- for (var i = 0; i < 3; i +=
-196:3 -> ../functions.temper.md:61:10  let i = 0; <- var i = 0; i < 3; i += 1) {
-197:3 -> ../functions.temper.md:61:5  while (i < 3) { <- for (var i = 0; i < 3; i +=
-198:5 -> ../functions.temper.md:62:7  const k = Math.imul(i, 10); <- let k = i * 10;
-199:5 -> ../functions.temper.md:63:7  makers.push(() => k); <- makers.add(fn (): Int { k })
-200:5 -> ../functions.temper.md:61:28  i = (i + 1) | 0; <- i += 1) {
-203:1 -> ../functions.temper.md:65:5  console.log(listedJoin(maker <- console.log(makers.join(" ")
-205:1 -> ../functions.temper.md:70:14  /** <- { (): GeneratorResult<Empty>
-209:1 -> ../functions.temper.md:70:14  function* fn8(doAwait) { <- { (): GeneratorResult<Empty>
-210:3 -> ../functions.temper.md:71:7  /** @type {(() => number)[]} <- let fs = new ListBuilder<Cou
-211:3 -> ../functions.temper.md:71:7  const fs = []; <- let fs = new ListBuilder<Cou
-212:3 -> ../functions.temper.md:72:7  { <- for (var i = 0; i < 3; i +=
-213:5 -> ../functions.temper.md:72:12  let i = 0; <- var i = 0; i < 3; i += 1) {
-214:5 -> ../functions.temper.md:72:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
-215:7 -> ../functions.temper.md:73:9  const j = Math.imul(i, 10); <- let j = i * 10;
-216:7 -> ../functions.temper.md:74:9  fs.push(() => j); <- fs.add(fn (): Int { j });
-217:7 -> ../functions.temper.md:75:9  yield; <- yield();
-218:7 -> ../functions.temper.md:76:9  fs.push(() => (j + 1) | 0); <- fs.add(fn (): Int { j + 1 })
-219:7 -> ../functions.temper.md:72:30  i = (i + 1) | 0; <- i += 1) {
-222:3 -> ../functions.temper.md:78:7  console.log(listedJoin(fs, " <- console.log(fs.join(" ") { (
-223:3 -> ../functions.temper.md:79:7  yield; <- yield();
-226:1 -> ../functions.temper.md:70:5  drive(5, adaptAwaiter(fn8)); <- drive(5) { (): GeneratorResu
-227:1 -> ../functions.temper.md:98:5  console.log(`sum ${sumFrom(n <- console.log("sum ${sumFrom(n
+14:1 -> ../functions.temper.md:21:5  /** <- let makeCounter(start: Int):
+18:1 -> ../functions.temper.md:21:5  function makeCounter(start) <- let makeCounter(start: Int):
+18:10 -> ../functions.temper.md:21:9 (makeCounter)  makeCounter(start) { <- makeCounter(start: Int): Cou
+18:21 -> ../functions.temper.md:21:5  (start) { <- let makeCounter(start: Int):
+19:3 -> ../functions.temper.md:22:7  let count = start; <- var count = start;
+20:3 -> ../functions.temper.md:23:7  /** @returns {number} */ <- fn (): Int {
+21:3 -> ../functions.temper.md:23:7  function fn() { <- fn (): Int {
+22:5 -> ../functions.temper.md:24:9  count = (count + 1) | 0; <- count += 1;
+23:5 -> ../functions.temper.md:25:9  return count; <- count
+25:3 -> ../functions.temper.md:23:7  return fn; <- fn (): Int {
+28:1 -> ../functions.temper.md:29:5  /** <- let twice(f: IntOp): IntOp {
+32:1 -> ../functions.temper.md:29:5  function twice(f) { <- let twice(f: IntOp): IntOp {
+32:10 -> ../functions.temper.md:29:9 (twice)  twice(f) { <- twice(f: IntOp): IntOp {
+32:15 -> ../functions.temper.md:29:5  (f) { <- let twice(f: IntOp): IntOp {
+33:3 -> ../functions.temper.md:30:7  return (x) => f(f(x)); <- fn (x: Int): Int { f(f(x)) }
+36:1 -> ../functions.temper.md:33:5  /** <- let applyTo(f: IntOp, x: Int
+41:1 -> ../functions.temper.md:33:5  function applyTo(f, x) { <- let applyTo(f: IntOp, x: Int
+41:10 -> ../functions.temper.md:33:9 (applyTo)  applyTo(f, x) { <- applyTo(f: IntOp, x: Int): I
+41:17 -> ../functions.temper.md:33:5  (f, x) { <- let applyTo(f: IntOp, x: Int
+42:3 -> ../functions.temper.md:33:42  return f(x); <- f(x) }
+45:1 -> ../functions.temper.md:35:5  /** <- let addOne(x: Int): Int { x
+49:1 -> ../functions.temper.md:35:5  function addOne(x) { <- let addOne(x: Int): Int { x
+49:10 -> ../functions.temper.md:35:9 (addOne)  addOne(x) { <- addOne(x: Int): Int { x + 1
+49:16 -> ../functions.temper.md:35:5  (x) { <- let addOne(x: Int): Int { x
+50:3 -> ../functions.temper.md:35:31  return (x + 1) | 0; <- x + 1 }
+53:1 -> ../functions.temper.md:71:5  /** <- let drive(steps: Int, body:
+57:1 -> ../functions.temper.md:71:5  function drive(steps, body) <- let drive(steps: Int, body:
+57:10 -> ../functions.temper.md:71:9 (drive)  drive(steps, body) { <- drive(steps: Int, body: fn (
+57:15 -> ../functions.temper.md:71:5  (steps, body) { <- let drive(steps: Int, body:
+58:3 -> ../functions.temper.md:72:7  /** @type {Generator<{}>} */ <- let g = body();
+59:3 -> ../functions.temper.md:72:7  const g = body(); <- let g = body();
+60:3 -> ../functions.temper.md:73:7  { <- for (var s = 0; s < steps; s
+61:5 -> ../functions.temper.md:73:12  let s = 0; <- var s = 0; s < steps; s += 1
+62:5 -> ../functions.temper.md:73:7  while (s < steps) { <- for (var s = 0; s < steps; s
+63:7 -> ../functions.temper.md:73:44  g.next(); <- g.nextSafe(); }
+64:7 -> ../functions.temper.md:73:34  s = (s + 1) | 0; <- s += 1) { g.nextSafe(); }
+69:1 -> ../functions.temper.md:86:5  /** <- let sumFrom(xs: List<Int>, l
+74:1 -> ../functions.temper.md:86:5  function sumFrom(xs, least) <- let sumFrom(xs: List<Int>, l
+74:10 -> ../functions.temper.md:86:9 (sumFrom)  sumFrom(xs, least) { <- sumFrom(xs: List<Int>, least
+74:17 -> ../functions.temper.md:86:5  (xs, least) { <- let sumFrom(xs: List<Int>, l
+75:3 -> ../functions.temper.md:87:7  let sum = 0; <- var sum = 0;
+76:3 -> ../functions.temper.md:88:7  { <- for (let x of xs) {
+77:5 -> ../functions.temper.md:88:7  const length = xs.length; <- for (let x of xs) {
+78:5 -> ../functions.temper.md:88:7  let i = 0; <- for (let x of xs) {
+79:5 -> ../functions.temper.md:88:7  while (i < length) { <- for (let x of xs) {
+80:7 -> ../functions.temper.md:88:7  const x = listedGet(/** @typ <- for (let x of xs) {
+81:7 -> ../functions.temper.md:88:7  i = (i + 1) | 0; <- for (let x of xs) {
+82:7 -> ../functions.temper.md:89:9  if (x < least) { <- if (x < least) { continue; }
+83:9 -> ../functions.temper.md:89:26  continue; <- continue; }
+85:7 -> ../functions.temper.md:90:9  sum = (sum + x) | 0; <- sum += x;
+88:3 -> ../functions.temper.md:92:7  return sum; <- sum
+91:1 -> ../functions.temper.md:94:5  /** <- let doubles(s: String): Int
+95:1 -> ../functions.temper.md:94:5  function doubles(s) { <- let doubles(s: String): Int
+95:10 -> ../functions.temper.md:94:9 (doubles)  doubles(s) { <- doubles(s: String): Int {
+95:17 -> ../functions.temper.md:94:5  (s) { <- let doubles(s: String): Int
+96:3 -> ../functions.temper.md:95:7  let n = 0; <- var n = 0;
+97:3 -> ../functions.temper.md:96:7  const end = s.length; <- let end = s.end;
+98:3 -> ../functions.temper.md:97:7  { <- for (var i = String.begin, p
+99:5 -> ../functions.temper.md:97:12  let i = 0; <- var i = String.begin, prev =
+100:5 -> ../functions.temper.md:97:12  let prev = i; <- var i = String.begin, prev =
+101:5 -> ../functions.temper.md:97:7  while (i - end < 0) { <- for (var i = String.begin, p
+102:7 -> ../functions.temper.md:98:9  if (prev - i < 0 && stringGe <- if (prev < i && s[prev] == s
+103:9 -> ../functions.temper.md:98:44  n = (n + 1) | 0; <- n += 1; }
+105:7 -> ../functions.temper.md:99:9  prev = i; <- prev = i;
+106:7 -> ../functions.temper.md:97:53  i = stringNext(s, i); <- i = s.next(i)) {
+109:3 -> ../functions.temper.md:101:7  return n; <- n
+112:1 -> ../functions.temper.md:104:5  /** <- let climb(x: Int): Int {
+116:1 -> ../functions.temper.md:104:5  function climb(x) { <- let climb(x: Int): Int {
+116:10 -> ../functions.temper.md:104:9 (climb)  climb(x) { <- climb(x: Int): Int {
+116:15 -> ../functions.temper.md:104:5  (x) { <- let climb(x: Int): Int {
+117:3 -> ../functions.temper.md:105:7  /** @type {number} */ <- var d = when (x) {
+118:3 -> ../functions.temper.md:105:7  let d; <- var d = when (x) {
+119:3 -> ../functions.temper.md:106:14  if (x === 0) { <- do {
+120:5 -> ../functions.temper.md:107:11  /** <- let down(n: Int): Int { if (
+124:5 -> ../functions.temper.md:107:11  function down(n) { <- let down(n: Int): Int { if (
+124:14 -> ../functions.temper.md:107:15 (down)  down(n) { <- down(n: Int): Int { if (n <=
+124:18 -> ../functions.temper.md:107:11  (n) { <- let down(n: Int): Int { if (
+125:7 -> ../functions.temper.md:107:35  if (n <= x) { <- if (n <= x) { 0 } else { dow
+126:9 -> ../functions.temper.md:107:49  return 0; <- 0 } else { down(n - 1) + 1 }
+128:9 -> ../functions.temper.md:107:60  return (down((n - 1) | 0) + <- down(n - 1) + 1 } }
+131:5 -> ../functions.temper.md:108:11  d = down(3); <- down(3)
+133:5 -> ../functions.temper.md:110:17  return -1; <- return -1;
+135:3 -> ../functions.temper.md:112:7  d = (d + 1) | 0; <- d += 1;
+136:3 -> ../functions.temper.md:113:7  { <- when (d) {
+137:5 -> ../functions.temper.md:114:14  if (d === 4) { <- do {
+138:7 -> ../functions.temper.md:115:11  const top = (d + 1) | 0; <- let top = d + 1;
+139:7 -> ../functions.temper.md:116:11  /** <- let up(n: Int): Int { if (n
+143:7 -> ../functions.temper.md:116:11  function up(n) { <- let up(n: Int): Int { if (n
+143:16 -> ../functions.temper.md:116:15 (up)  up(n) { <- up(n: Int): Int { if (n >= t
+143:18 -> ../functions.temper.md:116:11  (n) { <- let up(n: Int): Int { if (n
+144:9 -> ../functions.temper.md:116:33  if (n >= top) { <- if (n >= top) { n } else { u
+145:11 -> ../functions.temper.md:116:49  return n; <- n } else { up(n + 1) } }
+147:11 -> ../functions.temper.md:116:60  return up((n + 1) | 0); <- up(n + 1) } }
+150:7 -> ../functions.temper.md:117:11  return up(d); <- up(d)
+152:7 -> ../functions.temper.md:119:17  return d; <- d
+157:1 -> ../functions.temper.md:139:5  /** <- @extension("isPalindrome")
+161:1 -> ../functions.temper.md:139:5  function stringIsPalindrome( <- @extension("isPalindrome")
+161:10 -> ../functions.temper.md:140:9 (stringIsPalindrome)  stringIsPalindrome(s) { <- stringIsPalindrome(s: String
+161:28 -> ../functions.temper.md:139:5  (s) { <- @extension("isPalindrome")
+162:3 -> ../functions.temper.md:141:7  let i = 0; <- var i = String.begin;
+163:3 -> ../functions.temper.md:142:7  let j = s.length; <- var j = s.end;
+164:3 -> ../functions.temper.md:143:7  while (i - j < 0) { <- while (i < j) {
+165:5 -> ../functions.temper.md:144:9  j = stringPrev(s, j); <- j = s.prev(j);
+166:5 -> ../functions.temper.md:145:9  if (stringGet(s, i) !== stri <- if (s[i] != s[j]) { return f
+167:7 -> ../functions.temper.md:145:29  return false; <- return false }
+169:5 -> ../functions.temper.md:146:9  i = stringNext(s, i); <- i = s.next(i);
+171:3 -> ../functions.temper.md:148:7  return true; <- return true
+174:1 -> ../functions.temper.md:150:5  /** <- @extension("orZero") let int
+178:1 -> ../functions.temper.md:150:5  function intOrZero(n) { <- @extension("orZero") let int
+178:10 -> ../functions.temper.md:150:30 (intOrZero)  intOrZero(n) { <- intOrZero(n: Int?): Int { n
+178:19 -> ../functions.temper.md:150:5  (n) { <- @extension("orZero") let int
+179:3 -> ../functions.temper.md:150:56  { <- n ?? 0 }
+180:5 -> ../functions.temper.md:150:56  if (n == null) { <- n ?? 0 }
+181:7 -> ../functions.temper.md:150:61  return 0; <- 0 }
+183:7 -> ../functions.temper.md:150:56  return n; <- n ?? 0 }
+188:1 -> ../functions.temper.md:151:5  /** <- @extension("firstOr")
+194:1 -> ../functions.temper.md:151:5  function listFirstOr(ls, d) <- @extension("firstOr")
+194:10 -> ../functions.temper.md:152:9 (listFirstOr)  listFirstOr(ls, d) { <- listFirstOr<T>(ls: List<T>,
+194:21 -> ../functions.temper.md:151:5  (ls, d) { <- @extension("firstOr")
+195:3 -> ../functions.temper.md:153:7  if (!ls.length) { <- if (ls.isEmpty) { d } else {
+196:5 -> ../functions.temper.md:153:25  return d; <- d } else { ls[0] }
+198:5 -> ../functions.temper.md:153:36  return listedGet(/** @type { <- ls[0] }
+202:1 -> ../functions.temper.md:155:5  /** <- @extension("padded")
+208:1 -> ../functions.temper.md:155:5  function stringPadded(s, n, <- @extension("padded")
+208:10 -> ../functions.temper.md:156:9 (stringPadded)  stringPadded(s, n, fill) { <- stringPadded(s: String, n: I
+208:22 -> ../functions.temper.md:155:5  (s, n, fill) { <- @extension("padded")
+209:3 -> ../functions.temper.md:156:41  fill ??= "."; <- fill: String = "."): String
+210:3 -> ../functions.temper.md:157:7  let out = s; <- var out = s;
+211:3 -> ../functions.temper.md:158:7  { <- for (var i = 0; i < n; ++i)
+212:5 -> ../functions.temper.md:158:12  let i = 0; <- var i = 0; i < n; ++i) { out
+213:5 -> ../functions.temper.md:158:7  while (i < n) { <- for (var i = 0; i < n; ++i)
+214:7 -> ../functions.temper.md:158:37  out = out + fill; <- out = "${out}${fill}" }
+215:7 -> ../functions.temper.md:158:30  i = (i + 1) | 0; <- ++i) { out = "${out}${fill}"
+218:3 -> ../functions.temper.md:159:7  return out; <- out
+221:1 -> ../functions.temper.md:161:5  /** <- @extension("passed")
+226:1 -> ../functions.temper.md:161:5  function gatePassed(g, s) { <- @extension("passed")
+226:10 -> ../functions.temper.md:162:9 (gatePassed)  gatePassed(g, s) { <- gatePassed(g: Gate, s: Strin
+226:20 -> ../functions.temper.md:161:5  (g, s) { <- @extension("passed")
+227:3 -> ../functions.temper.md:162:50  return `${s} ${g.allows(1)}` <- "${s} ${g.allows(1)}" }
+230:1 -> ../functions.temper.md:37:5  class Scaler extends type() <- class Scaler {
+230:7 -> ../functions.temper.md:37:11 (Scaler)  Scaler extends type() { <- Scaler {
+230:13 -> ../functions.temper.md:37:5   extends type() { <- class Scaler {
+231:3 -> ../functions.temper.md:38:21  /** <- triple(x: Int): Int { x * 3
+235:3 -> ../functions.temper.md:38:21  static triple(x) { <- triple(x: Int): Int { x * 3
+235:10 -> ../functions.temper.md:38:21 (triple)  triple(x) { <- triple(x: Int): Int { x * 3
+236:5 -> ../functions.temper.md:38:43  return Math.imul(x, 3); <- x * 3 }
+240:1 -> ../functions.temper.md:41:5  class Button extends type() <- class Button(public label: S
+240:7 -> ../functions.temper.md:41:11 (Button)  Button extends type() { <- Button(public label: String,
+240:13 -> ../functions.temper.md:41:5   extends type() { <- class Button(public label: S
+241:3 -> ../functions.temper.md:41:25  /** @type {string} */ <- label: String, public onPres
+242:3 -> ../functions.temper.md:41:25  #label; <- label: String, public onPres
+243:3 -> ../functions.temper.md:41:47  /** @type {() => number} */ <- onPress: Counter) {
+244:3 -> ../functions.temper.md:41:47  #onPress; <- onPress: Counter) {
+254:3 -> ../functions.temper.md:41:5  /** <- class Button(public label: S
+258:3 -> ../functions.temper.md:41:5  constructor(label, onPress) <- class Button(public label: S
+260:5 -> ../functions.temper.md:41:25  this.#label = label; <- label: String, public onPres
+261:5 -> ../functions.temper.md:41:47  this.#onPress = onPress; <- onPress: Counter) {
+264:3 -> ../functions.temper.md:41:25  /** @returns {string} */ <- label: String, public onPres
+265:3 -> ../functions.temper.md:41:25  get label() { <- label: String, public onPres
+265:7 -> ../functions.temper.md:41:25 (label)  label() { <- label: String, public onPres
+269:3 -> ../functions.temper.md:41:47  /** @returns {() => number} <- onPress: Counter) {
+270:3 -> ../functions.temper.md:41:47  get onPress() { <- onPress: Counter) {
+270:7 -> ../functions.temper.md:41:47 (onPress)  onPress() { <- onPress: Counter) {
+274:3 -> ../functions.temper.md:42:14  /** @returns {string} */ <- press(): String { "${label}
+275:3 -> ../functions.temper.md:42:14 (press)  press() { <- press(): String { "${label}
+276:5 -> ../functions.temper.md:42:32  return `${this.#label} ${thi <- "${label} ${onPress()}" }
+280:1 -> ../functions.temper.md:123:5  class Gate extends type() { <- class Gate() {
+280:7 -> ../functions.temper.md:123:11 (Gate)  Gate extends type() { <- Gate() {
+280:11 -> ../functions.temper.md:123:5   extends type() { <- class Gate() {
+281:3 -> ../functions.temper.md:124:17  /** @type {((arg0: number) = <-  check: IntOp? = null;
+282:3 -> ../functions.temper.md:124:17  #check; <-  check: IntOp? = null;
+284:3 -> ../functions.temper.md:123:5  constructor() { <- class Gate() {
+286:5 -> ../functions.temper.md:124:17  this.#check = null; <-  check: IntOp? = null;
+289:3 -> ../functions.temper.md:124:17  /** @returns {((arg0: number <-  check: IntOp? = null;
+290:3 -> ../functions.temper.md:124:17  get check() { <-  check: IntOp? = null;
+290:7 -> ../functions.temper.md:124:18 (check)  check() { <- check: IntOp? = null;
+294:3 -> ../functions.temper.md:124:17  /** @param {((arg0: number) <-  check: IntOp? = null;
+295:3 -> ../functions.temper.md:124:17  set check(value) { <-  check: IntOp? = null;
+295:7 -> ../functions.temper.md:124:18 (check)  check(value) { <- check: IntOp? = null;
+299:3 -> ../functions.temper.md:125:14  /** <- allows(n: Int): Boolean {
+303:3 -> ../functions.temper.md:125:14 (allows)  allows(n) { <- allows(n: Int): Boolean {
+304:5 -> ../functions.temper.md:126:9  const c = this.#check; <- let c = check;
+305:5 -> ../functions.temper.md:127:9  if (c == null) { <- c == null || c(n) > 0
+306:7 -> ../functions.temper.md:127:9  return true; <- c == null || c(n) > 0
+308:7 -> ../functions.temper.md:127:22  return c(n) > 0; <- c(n) > 0
+312:3 -> ../functions.temper.md:129:14  /** <- passed(n: Int): Int {
+316:3 -> ../functions.temper.md:129:14 (passed)  passed(n) { <- passed(n: Int): Int {
+317:5 -> ../functions.temper.md:130:9  const c = this.#check; <- let c = check;
+318:5 -> ../functions.temper.md:131:9  if (c != null) { <- if (c != null) { c(n) } else
+319:7 -> ../functions.temper.md:131:26  return c(n); <- c(n) } else { n }
+321:7 -> ../functions.temper.md:131:40  return n; <- n }
+326:1 -> ../functions.temper.md:45:5  const counter = makeCounter( <- let counter = makeCounter(10
+327:1 -> ../functions.temper.md:46:5  counter(); <- counter();
+328:1 -> ../functions.temper.md:47:5  console.log(`count ${counter <- console.log("count ${counter
+329:1 -> ../functions.temper.md:48:5  const other = makeCounter(0) <- let other = makeCounter(0);
+330:1 -> ../functions.temper.md:49:5  console.log(`other ${other() <- console.log("other ${other()
+331:1 -> ../functions.temper.md:50:5  const addTwo = twice(addOne) <- let addTwo = twice(addOne);
+332:1 -> ../functions.temper.md:51:5  console.log(`twice ${addTwo( <- console.log("twice ${addTwo(
+333:1 -> ../functions.temper.md:52:5  console.log(`triple ${applyT <- console.log("triple ${applyT
+334:1 -> ../functions.temper.md:53:5  /** @type {readonly number[] <- let ns: List<Int> = [5, 2, 8
+335:1 -> ../functions.temper.md:53:5  const ns = Object.freeze([5, <- let ns: List<Int> = [5, 2, 8
+336:1 -> ../functions.temper.md:54:5  /** @type {readonly number[] <- let doubled = ns.map { (n: I
+337:1 -> ../functions.temper.md:54:5  const doubled = listedMap(/* <- let doubled = ns.map { (n: I
+338:1 -> ../functions.temper.md:55:5  /** @type {readonly number[] <- let big = doubled.filter { (
+339:1 -> ../functions.temper.md:55:5  const big = listedFilter(/** <- let big = doubled.filter { (
+340:1 -> ../functions.temper.md:56:5  console.log(listedJoin(/** @ <- console.log(big.join(", ") {
+341:1 -> ../functions.temper.md:57:5  /** @type {readonly number[] <- let order = ns.sorted { (a:
+342:1 -> ../functions.temper.md:57:5  const order = listedSorted(/ <- let order = ns.sorted { (a:
+343:1 -> ../functions.temper.md:58:5  console.log(listedJoin(/** @ <- console.log(order.join(" ")
+344:1 -> ../functions.temper.md:59:5  let total = 0; <- var total = 0;
+345:1 -> ../functions.temper.md:60:5  { <- ns.forEach { (n: Int): Void
+346:3 -> ../functions.temper.md:60:5  const length = ns.length; <- ns.forEach { (n: Int): Void
+347:3 -> ../functions.temper.md:60:5  let i2 = 0; <- ns.forEach { (n: Int): Void
+348:3 -> ../functions.temper.md:60:5  while (i2 < length) { <- ns.forEach { (n: Int): Void
+349:5 -> ../functions.temper.md:60:5  const n = listedGet(/** @typ <- ns.forEach { (n: Int): Void
+350:5 -> ../functions.temper.md:60:5  i2 = (i2 + 1) | 0; <- ns.forEach { (n: Int): Void
+351:5 -> ../functions.temper.md:60:36  total = (total + n) | 0; <- total += n; };
+354:1 -> ../functions.temper.md:61:5  console.log(`total ${total}` <- console.log("total ${total}"
+355:1 -> ../functions.temper.md:62:5  const button = new Button("h <- let button = new Button("hit
+356:1 -> ../functions.temper.md:63:5  button.press(); <- button.press();
+357:1 -> ../functions.temper.md:64:5  console.log(button.press()); <- console.log(button.press());
+358:1 -> ../functions.temper.md:65:5  /** @type {(() => number)[]} <- let makers = new ListBuilder
+359:1 -> ../functions.temper.md:65:5  const makers = []; <- let makers = new ListBuilder
+360:1 -> ../functions.temper.md:66:5  { <- for (var i = 0; i < 3; i +=
+361:3 -> ../functions.temper.md:66:10  let i = 0; <- var i = 0; i < 3; i += 1) {
+362:3 -> ../functions.temper.md:66:5  while (i < 3) { <- for (var i = 0; i < 3; i +=
+363:5 -> ../functions.temper.md:67:7  const k = Math.imul(i, 10); <- let k = i * 10;
+364:5 -> ../functions.temper.md:68:7  makers.push(() => k); <- makers.add(fn (): Int { k })
+365:5 -> ../functions.temper.md:66:28  i = (i + 1) | 0; <- i += 1) {
+368:1 -> ../functions.temper.md:70:5  console.log(listedJoin(maker <- console.log(makers.join(" ")
+370:1 -> ../functions.temper.md:75:14  /** <- { (): GeneratorResult<Empty>
+374:1 -> ../functions.temper.md:75:14  function* fn8(doAwait) { <- { (): GeneratorResult<Empty>
+375:3 -> ../functions.temper.md:76:7  /** @type {(() => number)[]} <- let fs = new ListBuilder<Cou
+376:3 -> ../functions.temper.md:76:7  const fs = []; <- let fs = new ListBuilder<Cou
+377:3 -> ../functions.temper.md:77:7  { <- for (var i = 0; i < 3; i +=
+378:5 -> ../functions.temper.md:77:12  let i = 0; <- var i = 0; i < 3; i += 1) {
+379:5 -> ../functions.temper.md:77:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
+380:7 -> ../functions.temper.md:78:9  const j = Math.imul(i, 10); <- let j = i * 10;
+381:7 -> ../functions.temper.md:79:9  fs.push(() => j); <- fs.add(fn (): Int { j });
+382:7 -> ../functions.temper.md:80:9  yield; <- yield();
+383:7 -> ../functions.temper.md:81:9  fs.push(() => (j + 1) | 0); <- fs.add(fn (): Int { j + 1 })
+384:7 -> ../functions.temper.md:77:30  i = (i + 1) | 0; <- i += 1) {
+387:3 -> ../functions.temper.md:83:7  console.log(listedJoin(fs, " <- console.log(fs.join(" ") { (
+388:3 -> ../functions.temper.md:84:7  yield; <- yield();
+391:1 -> ../functions.temper.md:75:5  drive(5, adaptAwaiter(fn8)); <- drive(5) { (): GeneratorResu
+392:1 -> ../functions.temper.md:103:5  console.log(`sum ${sumFrom(n <- console.log("sum ${sumFrom(n
+393:1 -> ../functions.temper.md:122:5  console.log(`climb ${climb(0 <- console.log("climb ${climb(0
+394:1 -> ../functions.temper.md:134:5  const gate = new Gate(); <- let gate = new Gate();
+395:1 -> ../functions.temper.md:135:5  console.log(`gate ${gate.all <- console.log("gate ${gate.all
+396:1 -> ../functions.temper.md:136:5  gate.check = (x) => (x - 1) <- gate.check = fn (x: Int): In
+397:1 -> ../functions.temper.md:137:5  console.log(`gate ${gate.all <- console.log("gate ${gate.all
+398:1 -> ../functions.temper.md:163:5  const none = gate.allows(0) <- let none: Int? = if (gate.al
+399:1 -> ../functions.temper.md:164:5  console.log(`${stringIsPalin <- console.log("${"step on no p
+400:1 -> ../functions.temper.md:165:5  console.log(`${intOrZero(non <- console.log("${none.orZero()
+401:1 -> ../functions.temper.md:166:5  console.log(`${stringPadded( <- console.log("${"ab".padded(2
+402:1 -> ../functions.temper.md:167:5  console.log(`${gate.passed(4 <- console.log("${gate.passed(4

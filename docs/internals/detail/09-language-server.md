@@ -4,7 +4,7 @@ Three parts give editors Temper: [`temper-analysis`](../../../crates/temper-anal
 answers questions about a settled library (diagnostics, hover, go to
 definition, completion, references, rename, outlines, and signature
 help); [`temper-lsp`](../../../crates/temper-lsp/src/lib.rs) serves
-those answers over the Language Server Protocol as `tempest lsp`; and
+those answers over the Language Server Protocol as `temper lsp`; and
 `editors/vscode/` is a VS Code extension that starts it, highlights
 Temper with TextMate grammars, and previews literate Temper. The
 playground uses the same analysis through wasm. This page is the long
@@ -36,7 +36,7 @@ functions, the tests that pin them, and what's weak or planned.
 - [The VS Code extension](#the-vs-code-extension)
   - [vscode-languageclient](#vscode-languageclient)
   - [Finding the server](#finding-the-server)
-  - [Packages per platform, with tempest bundled](#packages-per-platform-with-tempest-bundled)
+  - [Packages per platform, with `temper` bundled](#packages-per-platform-with-temper-bundled)
   - [A version per build](#a-version-per-build)
   - [TextMate grammars](#textmate-grammars)
   - [The Markdown preview](#the-markdown-preview)
@@ -251,7 +251,7 @@ from the last analysis while the next runs. `lsp-server` would have
 given the framing and the same model for free; framing is about 40
 lines, so it was written instead.
 
-**Status:** tempest's choice.
+**Status:** this compiler's choice.
 
 ### lsp-types and serde_json, framing by hand
 
@@ -261,7 +261,7 @@ lines, so it was written instead.
 and [`write_message`](../../../crates/temper-lsp/src/lib.rs).
 
 **Pros:** the protocol's types are checked by the compiler; only the
-native `tempest` carries these crates, not the wasm.
+native `temper` carries these crates, not the wasm.
 
 **Cons:** three dependencies (with serde's derive macros through
 `lsp-types`) in a project that had one;
@@ -289,7 +289,7 @@ document's text for each analysis.
 ### Units and staying current
 
 **Chosen:** a *unit* is what's settled together: the library around a
-file, found as `tempest build` finds libraries
+file, found as `temper build` finds libraries
 ([`work_root`](../../../crates/temper-frontend/src/project.rs),
 [`find_libraries`](../../../crates/temper-frontend/src/project.rs),
 [`library_of`](../../../crates/temper-frontend/src/project.rs)), or the
@@ -328,7 +328,7 @@ nothing until something open changes.
 ### The whole library settled again on each pause
 
 **Chosen:** no incrementality: each refresh settles the unit from
-scratch, as `tempest build` would.
+scratch, as `temper build` would.
 
 **Alternatives:** settle only what changed, reusing the rest; or the
 library cache, which would at least keep imported libraries settled
@@ -338,10 +338,10 @@ library cache, which would at least keep imported libraries settled
 since each settle's arena replaces the last.
 
 **Cons:** cost grows with the library and everything it imports, std's
-modules included, each time. Switch-over notes it as "fast enough for
-the libraries we have"; there's no recorded measurement of latency.
+modules included, each time. It's been fast enough for the libraries
+we have, but there's no recorded measurement of latency.
 
-**Status:** tempest's choice for now; incremental settling is
+**Status:** this compiler's choice for now; incremental settling is
 open.
 
 ### std written to a temporary directory
@@ -350,7 +350,7 @@ open.
 files an editor can open. A definition into std or core writes std's
 sources and core's ([`corelib::FILES`](../../../crates/temper-frontend/src/corelib.rs),
 under `core/`), once, read-only (0444 under the usual umask), to
-`tempest-std-HASH` in the system's temporary directory (an FNV hash of
+`temper-std-HASH` in the system's temporary directory (an FNV hash of
 every path and text, so each std and core version gets its own), and
 points there (`write_std`, `location_uri`). With `--std DIR`, std's
 point into `DIR`; core's still go to the temporary copy. VS Code
@@ -392,12 +392,12 @@ send them. Tests before claiming Windows support (audit D5).
 and each analysis ([`analyze`](../../../crates/temper-lsp/src/lib.rs):
 reading the library, settling it, and its diagnostics) runs under
 `catch_unwind`. A request that panics gets an error response (-32603,
-"internal error (a bug in tempest) in METHOD: MESSAGE"); an analysis
+"internal error (a bug in Temper) in METHOD: MESSAGE"); an analysis
 that panics publishes that as an error on the document at its start,
 drops the unit's analysis, which no longer fits the text, and returns
 nothing, so a question about the document answers null and the next
 one tries again. The panic hook's message, with where it happened, and
-a `tempest lsp:` line go to stderr, the server's log in an editor. The
+a `temper lsp:` line go to stderr, the server's log in an editor. The
 server goes on serving.
 
 This needs unwinding: the `small` profile, which the released binaries
@@ -441,8 +441,8 @@ connects out to a TCP port that the client listens on, rather than
 stdio. It offers incremental sync, hover, definition, completion on `.`,
 semantic tokens (full and delta, with `--tokens add|full|none`), and
 workspace folders; it keeps a build manager per work root, with a memory
-file system layered over the real one, the same idea as tempest's
-`Sources`, and waits 200 ms for changes to settle. Tempest adds
+file system layered over the real one, the same idea as this compiler's
+`Sources`, and waits 200 ms for changes to settle. This compiler adds
 references, rename, outlines, and signature help, and lacks semantic
 tokens and workspace-folder changes. Kotlin's server has been flaky,
 slow, and heavy on memory, the reason for a new one.
@@ -452,7 +452,7 @@ slow, and heavy on memory, the reason for a new one.
 ### vscode-languageclient
 
 **Chosen:** [`extension.ts`](../../../editors/vscode/src/extension.ts)
-starts `tempest lsp` with Microsoft's `vscode-languageclient`, for the
+starts `temper lsp` with Microsoft's `vscode-languageclient`, for the
 `temper` and `temper-markdown` languages, in the first workspace folder.
 The client does the syncing and maps VS Code's providers to requests.
 [`activate`](../../../editors/vscode/src/extension.ts) also registers
@@ -470,8 +470,8 @@ untitled buffer's search starts there.
 
 **Chosen:** [`search`](../../../editors/vscode/src/server.ts) looks, in
 order: `temper.server.path` alone if it's set (a path that must be a
-file, or a name looked up on `PATH`); then the `tempest` bundled in the
-package's `bin/`; then `tempest` on `PATH`, with Windows' `PATHEXT`
+file, or a name looked up on `PATH`); then the `temper` bundled in the
+package's `bin/`; then `temper` on `PATH`, with Windows' `PATHEXT`
 spellings and `Path`. Only a file that's there counts. None found, or
 one that doesn't start, is an error notification naming what was tried
 ([`notFound`](../../../editors/vscode/src/server.ts),
@@ -482,15 +482,15 @@ the setting.
 developer's build wins when set.
 
 **Cons:** no check that the server found matches the extension: the
-server reports no version, so a stale `tempest` on `PATH` just behaves
+server reports no version, so a stale `temper` on `PATH` just behaves
 differently.
 
-### Packages per platform, with tempest bundled
+### Packages per platform, with `temper` bundled
 
 **Chosen:** [`build.py`](../../../editors/vscode/build.py) type-checks,
 bundles with esbuild, runs the unit tests and the grammar check, and
 packages with `vsce` from a staging directory holding only what ships:
-a universal `temper-VERSION.vsix` without tempest, and one per platform
+a universal `temper-VERSION.vsix` without `temper`, and one per platform
 (linux, darwin, and win32, each x64 and arm64) with it in `bin/`. It
 then checks each package holds what it should, and that the bundled
 binary is executable. The Binaries workflow builds all six from its
@@ -511,7 +511,7 @@ one build, so a new `.vsix` always replaces an installed older one.
 
 **Pros:** "Install from VSIX" never keeps an old build by mistake.
 
-**Cons:** the version says nothing about the tempest inside; two builds
+**Cons:** the version says nothing about the `temper` inside; two builds
 in one minute share one; a Marketplace release will want real versions.
 
 ### TextMate grammars
@@ -639,7 +639,7 @@ line in view. The messages are typed in
 - **The extension**, in a real VS Code ([`suite.ts`](../../../editors/vscode/test/suite.ts),
   run by [`run.ts`](../../../editors/vscode/test/run.ts) with
   `@vscode/test-electron`, VS Code pinned, against the platform package
-  as built): it uses the bundled tempest; diagnostics for unsaved text
+  as built): it uses the bundled `temper`; diagnostics for unsaved text
   and an incremental edit; none for an untitled document, as only
   `file:` documents go to the server; hover; definition in the other file;
   definition of a builtin (`Int`), opening core's read-only file at its

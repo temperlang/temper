@@ -15,6 +15,13 @@
 //! module of the standard library, under
 //! [`Library::std_root`](crate::library::Library::std_root).
 //!
+//! A bare `import("./tests");` statement, as Kotlin allows, only makes the
+//! module part of the library, which
+//! [`Library::missing_imports`](crate::library::Library::missing_imports)
+//! already did, so it becomes an empty block. With no names to read, it
+//! doesn't order the modules: it often names a tests module that imports
+//! the one naming it, which would be a cycle.
+//!
 //! Not yet: checking that `export` is only on top-level declarations.
 
 use crate::builtins::{Builtin, Macro};
@@ -131,5 +138,26 @@ impl Settle {
             statements.push(self.make_let(target_name, ty, Some(value), 0, span, decl));
         }
         Ok(Some(statements))
+    }
+
+    /// Expands a bare `import(path)` call, giving whether `path` was a
+    /// string, and reporting a module that didn't load.
+    pub(crate) fn bare_import(&mut self, call: NodeId, path: NodeId) -> bool {
+        let Some(Value::String(path)) = self.lib.value(path) else {
+            return false;
+        };
+        let path = path.clone();
+        let span = self.lib.tree.span(call);
+        let from = self.lib.files[self.lib.locate(span.start).0.0 as usize].module;
+        let Some(dir) = self.lib.import_dir(from, &path) else {
+            self.error(call, Message::Unsupported(format!("importing {path}")));
+            return true;
+        };
+        if self.lib.module_at(&dir).is_none_or(|m| m == from) {
+            self.error(call, Message::ImportFailed(path));
+            return true;
+        }
+        self.rewrite(call, NodeKind::Block, 0, &[]);
+        true
     }
 }

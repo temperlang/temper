@@ -336,10 +336,13 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   from `Int32?` or `Int32`, and function types' parameters and results.
   A type parameter matched to two different types is left unknown,
   since Kotlin may find a common supertype (`pair(1, "a")` passes there),
-  and only fully known types bind: not null, `Never`, `Void`, a nullable
-  type for a bare `T`, or a function literal's type, which takes its
-  own from the solved call ("Function literals and target typing",
-  below). What doesn't bind is unknown.
+  unless one is the other made nullable, as `Dog` and `Dog?` bind `Dog?`.
+  Only fully known types bind: not null, `Never`, `Void`, or a function
+  literal's type, which takes its own from the solved call ("Function
+  literals and target typing", below). A nullable type binds a bare `T`,
+  as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
+  Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
+  while it fits an `AnyValue` bound. What doesn't bind is unknown.
 - **Folding:** Kotlin folds a call of constants (`may_fold`) to its
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:
@@ -370,8 +373,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   parameters named as written (Kotlin writes `T__0`): a binding outside
   its parameter's bound, "Type formal <T extends Animal> cannot bind to
   Int32 which does not fit upper bounds [Animal]", at the call, and
-  then nothing else for the call (not for a bound that names the function's
-  own type parameters, as `<T extends MapKey<T>>`, yet); the wrong
+  then nothing else for the call; a bound that names the function's own
+  type parameters, as `<T extends MapKey<T>>`, is checked with the
+  bindings put in, and a nullable type fits `AnyValue`, as in Kotlin's
+  check (`f<Int?>(null)` for `<T>`); the wrong
   number of arguments, "No callee matches inputs [Int32] among [<T
   extends AnyValue>(T, Int32) -> T]", at the call, where every
   argument's type is known; and arguments that don't fit the signature
@@ -407,9 +412,13 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   nothing binds takes what the type wanted binds ("Inference", below).
 - **Builtin types' constructors** are solved the same way, from core's
   `constructor`, as `<K, V>(K, V) -> Pair<K, V>`, with their type
-  parameters' bounds not read, so unchecked: `new Pair(1, "a")`, `new
-  Map(pairs)`, `new ListBuilder<Int>()`, and through an alias, as std's
-  `new TestResult(…)`.
+  parameters' bounds as core declares them, so `new Map<P, String>([])`
+  for a class `P` is "Type formal <K extends MapKey<K>> cannot bind to P
+  which does not fit upper bounds [MapKey<K>]", as in Kotlin; one core
+  doesn't declare, as `T` in `Deque<T>`, is unchecked: `new Pair(1,
+  "a")`, `new Map(pairs)`, `new ListBuilder<Int>()`, and through an
+  alias, as std's `new TestResult(…)`. Bounds aren't checked in type
+  expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.
 - **Not yet:** Kotlin's choice among two ways arguments bind a type
   parameter, as `ls.reduceFrom(0, addS)` for `addS(a: String, x: Int):
   String`, where Kotlin binds `O` to `String` and reports the `0`.
@@ -970,12 +979,24 @@ and `class_operator` in `interp.rs`):
   nullable second operand or `null` (`[C, C?]`) for `<=>` and the
   comparisons, but not for `==` and `!=`, which Kotlin expands to null
   checks first. Otherwise the builtin variants apply, which no class's
-  value fits, so `k == k` for a class without the method is "… (Int32,
-  Int32) -> Boolean expected [Int32, Int32], but got [K, K]", as is a
-  nullable first operand even of a class with one (`[H?, H]`).
+  value fits. Where Kotlin then reports `k == k` for a class without
+  the method as "… (Int32, Int32) -> Boolean expected [Int32, Int32],
+  but got [K, K]" (temperlang/temper#508), tempest says what's missing,
+  as temperlang/temper#515 proposes: "K does not support infix `==`;
+  give it a method marked `@operator("==")`" (`@operator("<=>")` for
+  `<=>` and the comparisons, naming the operator as written). A nullable
+  first operand, even of a class with the method, keeps Kotlin's
+  message (`[H?, H]`), as does a first operand of a builtin type.
 - **Interfaces** are checked as classes are, since `is` narrows a value
   to a class with the method where wanted: `i == j` for an interface
-  without the method is "… but got [I, I]".
+  without the method is "I does not support infix `==`; …".
+- **Generic classes** are checked as other classes are, with the
+  receiver's type arguments put in: `e == f` for an `Eq<Int>` and an
+  `Eq<String>` is "… (Eq<Int32>, Eq<Int32>) -> Boolean expected
+  [Eq<Int32>, Eq<Int32>], but got [Eq<Int32>, Eq<String>]", and `b == b`
+  for a `Box<Int>` without the method is "Box<Int32> does not support
+  infix `==`; …" (2026-11-16; before, `==` compared identities there,
+  even with the method, and `<` stopped translation).
 - **Not checked:** a first operand of a class or interface with a
   supertype typing doesn't know.
 
@@ -1249,6 +1270,20 @@ The Rust backend still wants each field set first by top-level
 statements; fields set in branches or loops, with this rule's
 guarantee, are a follow-up there.
 
+## Definite assignment
+
+As Kotlin Temper's `UseBeforeInit`: a local or top-level `let` or `var`
+read where some path to it doesn't assign it is "x is not initialized
+along branches" (`typing/definite.rs`). One pass in evaluation order,
+as for fields first, carries the declarations that may be unassigned,
+merging by union; a module's top levels are walked in the order they
+run. An `orelse`'s fallback starts with what held where its body may
+fail, so `(x = i) orelse …` assigns `x`. A function's own locals are
+checked, its enclosing function's aren't (as in Kotlin), but a `for …
+of` body's are, as tmpl loops over it
+([kotlin-differences.md](kotlin-differences.md)). Each read reported
+counts as assigning, so a path reports a local once.
+
 ## Run-time type checks
 
 What tempest reports for `x is T` and `x as T` (`typing/rtti.rs`), as
@@ -1418,7 +1453,11 @@ so tmpl's translation doesn't resolve again (notes/tmpl/nodes.md,
   equality it negates, and `<` and the like the `<=>` method they
   compare with zero.
 - **A null check:** `a == null` or `a != null`, either way round.
-- **A call of a function value,** as `f(1)` for a parameter `f`.
+- **A call of a function value,** as `f(1)` for a parameter `f`, or
+  for a local `let f = field` that holds one: another name resolves to
+  what it names only for a function (an import's), so a local holding a
+  value is called as the value it holds, narrowed by a null check if one
+  narrows it, not read again from where it came from.
 
 `==` with nothing to call but identity, as for a type parameter's value,
 `AnyValue`, a function, or a class or interface with no `==` typing can

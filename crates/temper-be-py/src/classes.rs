@@ -24,7 +24,7 @@
 use crate::translate::{R, Translator, present};
 use crate::tree::{Bin, Expr, Stmt};
 use std::collections::BTreeSet;
-use temper_tmpl::analysis::{ancestors, as_super, home, is_plain_to_string, nominal_decl};
+use temper_tmpl::analysis::{ancestors, as_super, is_plain_to_string, nominal_decl};
 use temper_tmpl::qname::{is_external, library_of};
 use temper_tmpl::{DeclId, DeclKind, Facts, Node, NodeId, TypeId};
 
@@ -36,6 +36,10 @@ fn not_yet<T>(what: impl Into<String>) -> R<T> {
 /// where tmpl allows it: a private static's initializer, or a static's
 /// initializer that calls a private static function.
 const PRIVATE_USAGE: &str = "pyright: ignore[reportPrivateUsage]";
+/// A static method that a supertype's of the same name doesn't fit, as
+/// `@json`'s `jsonAdapter()`, which Python's checkers take for an
+/// override; pyright also reads `type: ignore`.
+const STATIC_OVERRIDE: &str = "type: ignore[override]";
 
 impl Translator<'_> {
     /// Whether a declaration is a class's or interface's member.
@@ -128,8 +132,13 @@ impl Translator<'_> {
                 let Some((from, name)) = crate::translate::core_type(&q) else {
                     return not_yet(format!("a type test of {q}"));
                 };
-                let name = self.import_type(from, name);
-                Ok(Expr::name(name.split('[').next().unwrap_or(&name)))
+                // A builtin, bare, as `dict`, or reached through
+                // `builtins` where the function's own names hide it.
+                let bare = name.split('[').next().unwrap_or(name);
+                if from == "builtins" {
+                    return Ok(Expr::builtin(bare));
+                }
+                Ok(Expr::name(self.import(from, bare)))
             }
             Some(decl) => Ok(self.class_ref(decl)),
             None => not_yet(format!("a type test of {}", self.p.show_type(ty))),
@@ -284,7 +293,7 @@ impl Translator<'_> {
         if self.qname(method) == "core.type SafeGenerator.nextSafe()" {
             return Some(
                 self.expr(receiver)
-                    .map(|g| Stmt::Expr(Expr::name("next").call(vec![g, Expr::None]))),
+                    .map(|g| Stmt::Expr(Expr::builtin("next").call(vec![g, Expr::None]))),
             );
         }
         match self.connected_std(method)?.as_str() {
@@ -292,7 +301,7 @@ impl Translator<'_> {
                 let combined = test.attr("messages_combined").call(Vec::new());
                 Stmt::Assert(
                     Expr::Bool(false),
-                    Some(Expr::name("str").call(vec![combined])),
+                    Some(Expr::builtin("str").call(vec![combined])),
                 )
             })),
             _ => None,
@@ -314,11 +323,20 @@ impl Translator<'_> {
         if !done.insert(decl) {
             return Ok(());
         }
-        for &s in self.p.decls.supers(decl) {
-            let Some(up) = nominal_decl(self.p, s) else {
-                continue;
-            };
-            if home(self.p, up) != Some(self.here) {
+        // The supertypes, and the classes their type arguments name, as
+        // `JsonAdapter[Point]` for `@json`'s `PointJsonAdapter`, which
+        // Python reads when it makes the class.
+        let mut named = Vec::new();
+        let mut types: Vec<TypeId> = self.p.decls.supers(decl).to_vec();
+        let mut i = 0;
+        while i < types.len() && i < 64 {
+            let t = types[i];
+            i += 1;
+            named.extend(nominal_decl(self.p, t));
+            types.extend(self.p.types.args(t));
+        }
+        for up in named {
+            if !self.is_here(up) {
                 continue;
             }
             if let Some(&node) = self.class_nodes.get(&up) {
@@ -480,7 +498,12 @@ impl Translator<'_> {
                 },
                 Node::Function { decl: d, .. } => {
                     let name = self.member_name(d);
-                    body.push(self.function(m, name, vec!["staticmethod".into()])?);
+                    let def = self.function(m, name, vec!["staticmethod".into()])?;
+                    body.push(if self.static_clash(d) {
+                        Stmt::Commented(Box::new(def), STATIC_OVERRIDE.into())
+                    } else {
+                        def
+                    });
                 }
                 _ => {}
             }
@@ -556,7 +579,29 @@ impl Translator<'_> {
                     body: vec![Stmt::Return(Some(storage))],
                 });
             }
-            (None, None) => return not_yet(format!("a setter without a getter, {name}")),
+            // A getter that fails, as Kotlin's Python writes one, since a
+            // property's setter needs one; Temper code never reads it.
+            (None, None) => {
+                let setter_decl = match setter.map(|s| p.nodes.get(s)) {
+                    Some(Node::Method { decl, .. } | Node::AbstractMethod { decl, .. }) => decl,
+                    _ => return not_yet(format!("a property without a getter, {name}")),
+                };
+                let Some(&ty) = p.signature(setter_decl).and_then(|s| s.params.first()) else {
+                    return not_yet(format!("a setter without a parameter, {name}"));
+                };
+                let ann = self.ann(ty)?;
+                let message = Expr::Str(format!("{name} getter unavailable"));
+                out.push(Stmt::Def {
+                    decorators: vec!["property".into()],
+                    name: name.into(),
+                    params: vec![("self".into(), String::new())],
+                    positional: 1,
+                    result: ann,
+                    body: vec![Stmt::Raise(
+                        Expr::builtin("AttributeError").call(vec![message]),
+                    )],
+                });
+            }
         }
         match (setter, field) {
             (Some(s), _) => out.push(accessor(self, s, format!("{name}.setter"))?),
@@ -596,15 +641,24 @@ impl Translator<'_> {
     }
 
     /// `__eq__`, by an `@operator("==")` method: false for an object of
-    /// another type, as Python's protocol has it.
+    /// another type, as Python's protocol has it. A generic class's casts
+    /// what `isinstance` narrows to, `_Boxed[Unknown]` to pyright, to its
+    /// parameter's type, `cast('_Boxed[_T]', other)`.
     fn eq_hook(&mut self, method: DeclId, name: &str) -> R<Stmt> {
         let Some(param) = self.p.signature(method).map(|s| s.params[0]) else {
             return not_yet("an `==` method's parameter");
         };
         let class = self.type_ref(param)?;
         let other = Expr::name("other");
-        let test = Expr::name("isinstance").call(vec![other.clone(), class]);
-        let call = Expr::name("self").attr(name).call(vec![other]);
+        let test = Expr::builtin("isinstance").call(vec![other.clone(), class]);
+        let arg = if self.p.types.args(param).is_empty() {
+            other
+        } else {
+            let (ann, _) = self.ann_raw(param)?;
+            let cast = self.import("typing", "cast");
+            Expr::name(cast).call(vec![Expr::Str(ann), other])
+        };
+        let call = Expr::name("self").attr(name).call(vec![arg]);
         Ok(Stmt::Def {
             decorators: Vec::new(),
             name: "__eq__".into(),
@@ -670,6 +724,39 @@ impl Translator<'_> {
 
     /// Whether a type is an interface with an `@abstractmethod`, its own
     /// or one it inherits, which mypy takes as abstract.
+    /// Whether a static method has the name of a supertype's static
+    /// method whose signature it doesn't fit: other parameters, or a
+    /// result that isn't the same or a subclass of its, as
+    /// `JsonAdapter[Circle]` for `JsonAdapter[Shape]`, which Python's
+    /// generics don't let vary.
+    fn static_clash(&self, decl: DeclId) -> bool {
+        let p = self.p;
+        let me = p.decls.get(decl);
+        let Some(mine) = p.types.signature(me.ty) else {
+            return false;
+        };
+        ancestors(p, me.owner).into_iter().any(|up| {
+            (p.decls.ids()).any(|d| {
+                let theirs = p.decls.get(d);
+                if theirs.owner != up || theirs.kind != me.kind || theirs.name != me.name {
+                    return false;
+                }
+                let Some(sig) = p.types.signature(theirs.ty) else {
+                    return false;
+                };
+                let narrower = match (nominal_decl(p, mine.result), nominal_decl(p, sig.result)) {
+                    (Some(a), Some(b)) => {
+                        p.types.args(mine.result).is_empty()
+                            && p.types.args(sig.result).is_empty()
+                            && ancestors(p, a).contains(&b)
+                    }
+                    _ => false,
+                };
+                sig.params != mine.params || (sig.result != mine.result && !narrower)
+            })
+        })
+    }
+
     pub(crate) fn is_abstract(&self, ty: TypeId) -> bool {
         let p = self.p;
         let Some(class) = nominal_decl(p, ty) else {
@@ -677,6 +764,15 @@ impl Translator<'_> {
         };
         if p.decls.get(class).kind != DeclKind::Interface {
             return false;
+        }
+        // Another library's, as std's `JsonNumeric`, which lists only the
+        // methods used, without bodies: abstract if it has any, as an
+        // interface that isn't all default methods is.
+        if !self.class_nodes.contains_key(&class) && library_of(p, class) != "core" {
+            return (p.decls.ids()).any(|d| {
+                let d = p.decls.get(d);
+                d.owner == class && d.kind == DeclKind::Method
+            });
         }
         let mut ups = ancestors(p, class);
         ups.insert(0, class);
@@ -747,7 +843,7 @@ impl Translator<'_> {
                 for &a in &super_args {
                     texts.push(self.ann(a)?);
                 }
-                callee = Expr::name(format!("{n}[{}]", texts.join(", ")));
+                callee = Expr::Type(format!("{n}[{}]", texts.join(", ")));
             }
             let call = callee.attr(name).call(args);
             let (result_ann, body) = match p.signature(decl) {

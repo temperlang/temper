@@ -208,141 +208,147 @@
 316:21 -> ../content-tags.temper.md:42:5   extends type() { <- export interface Escaper {
 317:3 -> ../content-tags.temper.md:44:7  /** @type {(x: string) => st <- applyString(x: String): Stri
 318:3 -> ../content-tags.temper.md:44:7  applyString = /** @type {any <- applyString(x: String): Stri
-321:1 -> ../content-tags.temper.md:46:5  export class TextEscaper ext <- export class TextEscaper ext
-321:14 -> ../content-tags.temper.md:46:18 (TextEscaper)  TextEscaper extends type(Esc <- TextEscaper extends Escaper
-321:25 -> ../content-tags.temper.md:46:5   extends type(Escaper) { <- export class TextEscaper ext
-322:3 -> ../content-tags.temper.md:47:21  /** @type {TextEscaper} */ <- instance: TextEscaper = new
-323:3 -> ../content-tags.temper.md:47:21  static instance; <- instance: TextEscaper = new
-325:3 -> ../content-tags.temper.md:48:14  /** <- applyString(x: String): Stri
-329:3 -> ../content-tags.temper.md:48:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
-330:5 -> ../content-tags.temper.md:48:47  return `[${x}]`; <- "[${x}]" }
-334:1 -> ../content-tags.temper.md:50:5  export class QuoteEscaper ex <- export class QuoteEscaper ex
-334:14 -> ../content-tags.temper.md:50:18 (QuoteEscaper)  QuoteEscaper extends type(Es <- QuoteEscaper extends Escaper
-334:26 -> ../content-tags.temper.md:50:5   extends type(Escaper) { <- export class QuoteEscaper ex
-335:3 -> ../content-tags.temper.md:51:21  /** @type {QuoteEscaper} */ <- instance: QuoteEscaper = new
-336:3 -> ../content-tags.temper.md:51:21  static instance; <- instance: QuoteEscaper = new
-338:3 -> ../content-tags.temper.md:52:14  /** <- applyString(x: String): Stri
-342:3 -> ../content-tags.temper.md:52:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
-343:5 -> ../content-tags.temper.md:52:47  return `(${x})`; <- "(${x})" }
-347:1 -> ../content-tags.temper.md:55:5  export class Both extends ty <- export class Both(public fir
-347:14 -> ../content-tags.temper.md:55:18 (Both)  Both extends type(Escaper) { <- Both(public first: Escaper,
-347:18 -> ../content-tags.temper.md:55:5   extends type(Escaper) { <- export class Both(public fir
-348:3 -> ../content-tags.temper.md:55:30  /** @type {Escaper} */ <- first: Escaper, public secon
-349:3 -> ../content-tags.temper.md:55:30  #first; <- first: Escaper, public secon
-350:3 -> ../content-tags.temper.md:55:53  /** @type {Escaper} */ <- second: Escaper) extends Esc
-351:3 -> ../content-tags.temper.md:55:53  #second; <- second: Escaper) extends Esc
-361:3 -> ../content-tags.temper.md:55:5  /** <- export class Both(public fir
-365:3 -> ../content-tags.temper.md:55:5  constructor(first, second) { <- export class Both(public fir
-367:5 -> ../content-tags.temper.md:55:30  this.#first = first; <- first: Escaper, public secon
-368:5 -> ../content-tags.temper.md:55:53  this.#second = second; <- second: Escaper) extends Esc
-371:3 -> ../content-tags.temper.md:55:30  /** @returns {Escaper} */ <- first: Escaper, public secon
-372:3 -> ../content-tags.temper.md:55:30  get first() { <- first: Escaper, public secon
-372:7 -> ../content-tags.temper.md:55:30 (first)  first() { <- first: Escaper, public secon
-376:3 -> ../content-tags.temper.md:55:53  /** @returns {Escaper} */ <- second: Escaper) extends Esc
-377:3 -> ../content-tags.temper.md:55:53  get second() { <- second: Escaper) extends Esc
-377:7 -> ../content-tags.temper.md:55:53 (second)  second() { <- second: Escaper) extends Esc
-381:3 -> ../content-tags.temper.md:56:14  /** <- applyString(x: String): Stri
-385:3 -> ../content-tags.temper.md:56:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
-386:5 -> ../content-tags.temper.md:56:47  return this.#second.applyStr <- second.applyString(first.app
-390:1 -> ../content-tags.temper.md:58:5  export class Picker extends <- export class Picker(public s
-390:14 -> ../content-tags.temper.md:58:18 (Picker)  Picker extends type() { <- Picker(public strict: Boolea
-390:20 -> ../content-tags.temper.md:58:5   extends type() { <- export class Picker(public s
-391:3 -> ../content-tags.temper.md:58:32  /** @type {boolean} */ <- strict: Boolean) {
-392:3 -> ../content-tags.temper.md:58:32  #strict; <- strict: Boolean) {
-394:3 -> ../content-tags.temper.md:58:5  /** @param {boolean} strict <- export class Picker(public s
-395:3 -> ../content-tags.temper.md:58:5  constructor(strict) { <- export class Picker(public s
-397:5 -> ../content-tags.temper.md:58:32  this.#strict = strict; <- strict: Boolean) {
-400:3 -> ../content-tags.temper.md:58:32  /** @returns {boolean} */ <- strict: Boolean) {
-401:3 -> ../content-tags.temper.md:58:32  get strict() { <- strict: Boolean) {
-401:7 -> ../content-tags.temper.md:58:32 (strict)  strict() { <- strict: Boolean) {
-405:3 -> ../content-tags.temper.md:59:14  /** <- escaperFor(inQuote: Boolean,
-410:3 -> ../content-tags.temper.md:59:14 (escaperFor)  escaperFor(inQuote, callout) <- escaperFor(inQuote: Boolean,
-411:5 -> ../content-tags.temper.md:60:9  if (this.#strict && inQuote) <- if (strict && inQuote) { cal
-412:7 -> ../content-tags.temper.md:60:34  callout("a value in quotes", <- callout("a value in quotes",
-414:5 -> ../content-tags.temper.md:61:9  if (inQuote) { <- if (inQuote) { new Both(Text
-415:7 -> ../content-tags.temper.md:61:24  return new Both(TextEscaper. <- new Both(TextEscaper.instanc
-417:7 -> ../content-tags.temper.md:61:87  return TextEscaper.instance; <- TextEscaper.instance }
-422:1 -> ../content-tags.temper.md:70:5  export class ContextualAutoe <- export interface ContextualA
-422:14 -> ../content-tags.temper.md:70:22 (ContextualAutoescapingAccumulator)  ContextualAutoescapingAccumu <- ContextualAutoescapingAccumu
-422:47 -> ../content-tags.temper.md:70:5   extends type() { <- export interface ContextualA
-423:3 -> ../content-tags.temper.md:71:14  /** @type {string} */ <- get accumulated(): String;
-424:3 -> ../content-tags.temper.md:71:14  accumulated = /** @type {any <- get accumulated(): String;
-427:1 -> ../content-tags.temper.md:73:5  export class Quoting extends <- export class Quoting extends
-427:14 -> ../content-tags.temper.md:73:18 (Quoting)  Quoting extends type(Context <- Quoting extends ContextualAu
-427:21 -> ../content-tags.temper.md:73:5   extends type(ContextualAuto <- export class Quoting extends
-428:3 -> ../content-tags.temper.md:90:18  /** @type {boolean} */ <-  inQuote: Boolean = false;
-429:3 -> ../content-tags.temper.md:90:18  #inQuote; <-  inQuote: Boolean = false;
-430:3 -> ../content-tags.temper.md:91:15  /** @type {Buffer} */ <- collector: Buffer = new Buff
-431:3 -> ../content-tags.temper.md:91:15  #collector; <- collector: Buffer = new Buff
-433:3 -> ../content-tags.temper.md:73:5  constructor() { <- export class Quoting extends
-435:5 -> ../content-tags.temper.md:90:18  this.#inQuote = false; <-  inQuote: Boolean = false;
-436:5 -> ../content-tags.temper.md:91:15  this.#collector = new Buffer <- collector: Buffer = new Buff
-439:3 -> ../content-tags.temper.md:74:21  /** @returns {Buffer} */ <- newCollector(): Buffer { new
-440:3 -> ../content-tags.temper.md:74:21  static newCollector() { <- newCollector(): Buffer { new
-440:10 -> ../content-tags.temper.md:74:21 (newCollector)  newCollector() { <- newCollector(): Buffer { new
-441:5 -> ../content-tags.temper.md:74:46  return new Buffer(); <- new Buffer() }
-444:3 -> ../content-tags.temper.md:75:21  /** @returns {boolean} */ <- initialState(): Boolean { fa
-445:3 -> ../content-tags.temper.md:75:21  static initialState() { <- initialState(): Boolean { fa
-445:10 -> ../content-tags.temper.md:75:21 (initialState)  initialState() { <- initialState(): Boolean { fa
-446:5 -> ../content-tags.temper.md:75:47  return false; <- false }
-449:3 -> ../content-tags.temper.md:76:21  /** @returns {Propagator} */ <- propagator(): Propagator { n
-450:3 -> ../content-tags.temper.md:76:21  static propagator() { <- propagator(): Propagator { n
-450:10 -> ../content-tags.temper.md:76:21 (propagator)  propagator() { <- propagator(): Propagator { n
-451:5 -> ../content-tags.temper.md:76:48  return new Propagator("'"); <- new Propagator("'") }
-454:3 -> ../content-tags.temper.md:77:21  /** @returns {Picker} */ <- picker(): Picker { new Picke
-455:3 -> ../content-tags.temper.md:77:21  static picker() { <- picker(): Picker { new Picke
-455:10 -> ../content-tags.temper.md:77:21 (picker)  picker() { <- picker(): Picker { new Picke
-456:5 -> ../content-tags.temper.md:77:40  return new Picker(false); <- new Picker(false) }
-459:3 -> ../content-tags.temper.md:78:21  /** @returns {(arg0: boolean <- sameStatePredicate(): fn (Bo
-460:3 -> ../content-tags.temper.md:78:21  static sameStatePredicate() <- sameStatePredicate(): fn (Bo
-460:10 -> ../content-tags.temper.md:78:21 (sameStatePredicate)  sameStatePredicate() { <- sameStatePredicate(): fn (Bo
-461:5 -> ../content-tags.temper.md:79:9  return (a, b) => a === b; <- fn (a: Boolean, b: Boolean):
-464:3 -> ../content-tags.temper.md:81:21  /** <- mergeStates(a: Boolean, b: B
-470:3 -> ../content-tags.temper.md:81:21  static mergeStates(a, b, cal <- mergeStates(a: Boolean, b: B
-470:10 -> ../content-tags.temper.md:81:21 (mergeStates)  mergeStates(a, b, callout) { <- mergeStates(a: Boolean, b: B
-471:5 -> ../content-tags.temper.md:82:9  if (a !== b) { <- if (a != b) { callout("branc
-472:7 -> ../content-tags.temper.md:82:23  callout("branches end in dif <- callout("branches end in dif
-474:5 -> ../content-tags.temper.md:83:9  return a; <- a
-477:3 -> ../content-tags.temper.md:85:21  /** <- checkEndState(inQuote: Boole
-481:3 -> ../content-tags.temper.md:85:21  static checkEndState(inQuote <- checkEndState(inQuote: Boole
-481:10 -> ../content-tags.temper.md:85:21 (checkEndState)  checkEndState(inQuote, callo <- checkEndState(inQuote: Boole
-482:5 -> ../content-tags.temper.md:86:9  if (inQuote) { <- if (inQuote) { callout("ends
-483:7 -> ../content-tags.temper.md:86:24  callout("ends inside quotes" <- callout("ends inside quotes"
-487:3 -> ../content-tags.temper.md:88:21  /** <- fromCollector(c: Buffer): St
-491:3 -> ../content-tags.temper.md:88:21  static fromCollector(c) { <- fromCollector(c: Buffer): St
-491:10 -> ../content-tags.temper.md:88:21 (fromCollector)  fromCollector(c) { <- fromCollector(c: Buffer): St
-492:5 -> ../content-tags.temper.md:88:56  return c.toString(); <- c.toString() }
-495:3 -> ../content-tags.temper.md:89:21  /** <- enact(m: Mark, c: Buffer): V
-499:3 -> ../content-tags.temper.md:89:21  static enact(m, c) { <- enact(m: Mark, c: Buffer): V
-499:10 -> ../content-tags.temper.md:89:21 (enact)  enact(m, c) { <- enact(m: Mark, c: Buffer): V
-500:5 -> ../content-tags.temper.md:89:55  c.mark(m); <- c.mark(m) }
-503:3 -> ../content-tags.temper.md:92:14  /** @param {string} x */ <- appendSafe(x: String): Void
-504:3 -> ../content-tags.temper.md:92:14 (appendSafe)  appendSafe(x) { <- appendSafe(x: String): Void
-505:5 -> ../content-tags.temper.md:93:9  const after = propagateOver( <- let after = propagateOver(Qu
-506:5 -> ../content-tags.temper.md:94:9  this.#inQuote = after.stateA <- inQuote = after.stateAfter;
-507:5 -> ../content-tags.temper.md:95:9  { <- for (let e of after.effects)
-508:7 -> ../content-tags.temper.md:95:23  /** @type {readonly Effect[] <- after.effects) { e.enactOn(c
-509:7 -> ../content-tags.temper.md:95:23  const list = after.effects; <- after.effects) { e.enactOn(c
-510:7 -> ../content-tags.temper.md:95:9  const length = list.length; <- for (let e of after.effects)
-511:7 -> ../content-tags.temper.md:95:9  let i = 0; <- for (let e of after.effects)
-512:7 -> ../content-tags.temper.md:95:9  while (i < length) { <- for (let e of after.effects)
-513:9 -> ../content-tags.temper.md:95:9  const e = listedGet(/** @typ <- for (let e of after.effects)
-514:9 -> ../content-tags.temper.md:95:9  i = (i + 1) | 0; <- for (let e of after.effects)
-515:9 -> ../content-tags.temper.md:95:40  e.enactOn(this.#collector); <- e.enactOn(collector); }
-520:3 -> ../content-tags.temper.md:97:14  /** @param {string} x */ <- append(x: String): Void {
-521:3 -> ../content-tags.temper.md:97:14 (append)  append(x) { <- append(x: String): Void {
-522:5 -> ../content-tags.temper.md:98:9  const escaped = Quoting.pick <- let escaped = Quoting.picker
-523:5 -> ../content-tags.temper.md:99:9  this.#collector.append(escap <- collector.append(escaped);
-526:3 -> ../content-tags.temper.md:101:14  /** @returns {string} */ <- get accumulated(): String {
-527:3 -> ../content-tags.temper.md:101:14  get accumulated() { <- get accumulated(): String {
-527:7 -> ../content-tags.temper.md:101:18 (accumulated)  accumulated() { <- accumulated(): String { coll
-528:5 -> ../content-tags.temper.md:101:42  return this.#collector.toStr <- collector.toString() }
-532:1 -> ../content-tags.temper.md:47:21  TextEscaper.instance = new T <- instance: TextEscaper = new
-533:1 -> ../content-tags.temper.md:51:21  QuoteEscaper.instance = new <- instance: QuoteEscaper = new
-534:1 -> ../content-tags.temper.md:109:5  console.log(greet("Ann", "Bo <- console.log(greet("Ann", "Bo
-535:1 -> ../content-tags.temper.md:119:5  console.log(branch(true, "a" <- console.log(branch(true, "a"
-536:1 -> ../content-tags.temper.md:120:5  console.log(branch(false, "b <- console.log(branch(false, "b
-537:1 -> ../content-tags.temper.md:128:5  console.log(each(Object.free <- console.log(each(["c", "d"])
-538:1 -> ../content-tags.temper.md:140:5  console.log(counted(5, "e")) <- console.log(counted(5, "e"))
-539:1 -> ../content-tags.temper.md:148:5  console.log(`${attribute(fal <- console.log("${attribute(fal
-540:1 -> ../content-tags.temper.md:156:5  console.log(opened(Object.fr <- console.log(opened(["g", "h"
+321:1 -> ../content-tags.temper.md:47:21  /** @type {TextEscaper} */ <- instance: TextEscaper = new
+322:1 -> ../content-tags.temper.md:47:21  let TextEscaper$instance; <- instance: TextEscaper = new
+324:1 -> ../content-tags.temper.md:46:5  export class TextEscaper ext <- export class TextEscaper ext
+324:14 -> ../content-tags.temper.md:46:18 (TextEscaper)  TextEscaper extends type(Esc <- TextEscaper extends Escaper
+324:25 -> ../content-tags.temper.md:46:5   extends type(Escaper) { <- export class TextEscaper ext
+325:3 -> ../content-tags.temper.md:47:21  /** @returns {TextEscaper} * <- instance: TextEscaper = new
+326:3 -> ../content-tags.temper.md:47:21  static get instance() { <- instance: TextEscaper = new
+326:14 -> ../content-tags.temper.md:47:21 (instance)  instance() { <- instance: TextEscaper = new
+330:3 -> ../content-tags.temper.md:48:14  /** <- applyString(x: String): Stri
+334:3 -> ../content-tags.temper.md:48:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
+335:5 -> ../content-tags.temper.md:48:47  return `[${x}]`; <- "[${x}]" }
+339:1 -> ../content-tags.temper.md:51:21  /** @type {QuoteEscaper} */ <- instance: QuoteEscaper = new
+340:1 -> ../content-tags.temper.md:51:21  let QuoteEscaper$instance; <- instance: QuoteEscaper = new
+342:1 -> ../content-tags.temper.md:50:5  export class QuoteEscaper ex <- export class QuoteEscaper ex
+342:14 -> ../content-tags.temper.md:50:18 (QuoteEscaper)  QuoteEscaper extends type(Es <- QuoteEscaper extends Escaper
+342:26 -> ../content-tags.temper.md:50:5   extends type(Escaper) { <- export class QuoteEscaper ex
+343:3 -> ../content-tags.temper.md:51:21  /** @returns {QuoteEscaper} <- instance: QuoteEscaper = new
+344:3 -> ../content-tags.temper.md:51:21  static get instance() { <- instance: QuoteEscaper = new
+344:14 -> ../content-tags.temper.md:51:21 (instance)  instance() { <- instance: QuoteEscaper = new
+348:3 -> ../content-tags.temper.md:52:14  /** <- applyString(x: String): Stri
+352:3 -> ../content-tags.temper.md:52:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
+353:5 -> ../content-tags.temper.md:52:47  return `(${x})`; <- "(${x})" }
+357:1 -> ../content-tags.temper.md:55:5  export class Both extends ty <- export class Both(public fir
+357:14 -> ../content-tags.temper.md:55:18 (Both)  Both extends type(Escaper) { <- Both(public first: Escaper,
+357:18 -> ../content-tags.temper.md:55:5   extends type(Escaper) { <- export class Both(public fir
+358:3 -> ../content-tags.temper.md:55:30  /** @type {Escaper} */ <- first: Escaper, public secon
+359:3 -> ../content-tags.temper.md:55:30  #first; <- first: Escaper, public secon
+360:3 -> ../content-tags.temper.md:55:53  /** @type {Escaper} */ <- second: Escaper) extends Esc
+361:3 -> ../content-tags.temper.md:55:53  #second; <- second: Escaper) extends Esc
+371:3 -> ../content-tags.temper.md:55:5  /** <- export class Both(public fir
+375:3 -> ../content-tags.temper.md:55:5  constructor(first, second) { <- export class Both(public fir
+377:5 -> ../content-tags.temper.md:55:30  this.#first = first; <- first: Escaper, public secon
+378:5 -> ../content-tags.temper.md:55:53  this.#second = second; <- second: Escaper) extends Esc
+381:3 -> ../content-tags.temper.md:55:30  /** @returns {Escaper} */ <- first: Escaper, public secon
+382:3 -> ../content-tags.temper.md:55:30  get first() { <- first: Escaper, public secon
+382:7 -> ../content-tags.temper.md:55:30 (first)  first() { <- first: Escaper, public secon
+386:3 -> ../content-tags.temper.md:55:53  /** @returns {Escaper} */ <- second: Escaper) extends Esc
+387:3 -> ../content-tags.temper.md:55:53  get second() { <- second: Escaper) extends Esc
+387:7 -> ../content-tags.temper.md:55:53 (second)  second() { <- second: Escaper) extends Esc
+391:3 -> ../content-tags.temper.md:56:14  /** <- applyString(x: String): Stri
+395:3 -> ../content-tags.temper.md:56:14 (applyString)  applyString(x) { <- applyString(x: String): Stri
+396:5 -> ../content-tags.temper.md:56:47  return this.#second.applyStr <- second.applyString(first.app
+400:1 -> ../content-tags.temper.md:58:5  export class Picker extends <- export class Picker(public s
+400:14 -> ../content-tags.temper.md:58:18 (Picker)  Picker extends type() { <- Picker(public strict: Boolea
+400:20 -> ../content-tags.temper.md:58:5   extends type() { <- export class Picker(public s
+401:3 -> ../content-tags.temper.md:58:32  /** @type {boolean} */ <- strict: Boolean) {
+402:3 -> ../content-tags.temper.md:58:32  #strict; <- strict: Boolean) {
+404:3 -> ../content-tags.temper.md:58:5  /** @param {boolean} strict <- export class Picker(public s
+405:3 -> ../content-tags.temper.md:58:5  constructor(strict) { <- export class Picker(public s
+407:5 -> ../content-tags.temper.md:58:32  this.#strict = strict; <- strict: Boolean) {
+410:3 -> ../content-tags.temper.md:58:32  /** @returns {boolean} */ <- strict: Boolean) {
+411:3 -> ../content-tags.temper.md:58:32  get strict() { <- strict: Boolean) {
+411:7 -> ../content-tags.temper.md:58:32 (strict)  strict() { <- strict: Boolean) {
+415:3 -> ../content-tags.temper.md:59:14  /** <- escaperFor(inQuote: Boolean,
+420:3 -> ../content-tags.temper.md:59:14 (escaperFor)  escaperFor(inQuote, callout) <- escaperFor(inQuote: Boolean,
+421:5 -> ../content-tags.temper.md:60:9  if (this.#strict && inQuote) <- if (strict && inQuote) { cal
+422:7 -> ../content-tags.temper.md:60:34  callout("a value in quotes", <- callout("a value in quotes",
+424:5 -> ../content-tags.temper.md:61:9  if (inQuote) { <- if (inQuote) { new Both(Text
+425:7 -> ../content-tags.temper.md:61:24  return new Both(TextEscaper. <- new Both(TextEscaper.instanc
+427:7 -> ../content-tags.temper.md:61:87  return TextEscaper.instance; <- TextEscaper.instance }
+432:1 -> ../content-tags.temper.md:70:5  export class ContextualAutoe <- export interface ContextualA
+432:14 -> ../content-tags.temper.md:70:22 (ContextualAutoescapingAccumulator)  ContextualAutoescapingAccumu <- ContextualAutoescapingAccumu
+432:47 -> ../content-tags.temper.md:70:5   extends type() { <- export interface ContextualA
+433:3 -> ../content-tags.temper.md:71:14  /** @type {string} */ <- get accumulated(): String;
+434:3 -> ../content-tags.temper.md:71:14  accumulated = /** @type {any <- get accumulated(): String;
+437:1 -> ../content-tags.temper.md:73:5  export class Quoting extends <- export class Quoting extends
+437:14 -> ../content-tags.temper.md:73:18 (Quoting)  Quoting extends type(Context <- Quoting extends ContextualAu
+437:21 -> ../content-tags.temper.md:73:5   extends type(ContextualAuto <- export class Quoting extends
+438:3 -> ../content-tags.temper.md:90:18  /** @type {boolean} */ <-  inQuote: Boolean = false;
+439:3 -> ../content-tags.temper.md:90:18  #inQuote; <-  inQuote: Boolean = false;
+440:3 -> ../content-tags.temper.md:91:15  /** @type {Buffer} */ <- collector: Buffer = new Buff
+441:3 -> ../content-tags.temper.md:91:15  #collector; <- collector: Buffer = new Buff
+443:3 -> ../content-tags.temper.md:73:5  constructor() { <- export class Quoting extends
+445:5 -> ../content-tags.temper.md:90:18  this.#inQuote = false; <-  inQuote: Boolean = false;
+446:5 -> ../content-tags.temper.md:91:15  this.#collector = new Buffer <- collector: Buffer = new Buff
+449:3 -> ../content-tags.temper.md:74:21  /** @returns {Buffer} */ <- newCollector(): Buffer { new
+450:3 -> ../content-tags.temper.md:74:21  static newCollector() { <- newCollector(): Buffer { new
+450:10 -> ../content-tags.temper.md:74:21 (newCollector)  newCollector() { <- newCollector(): Buffer { new
+451:5 -> ../content-tags.temper.md:74:46  return new Buffer(); <- new Buffer() }
+454:3 -> ../content-tags.temper.md:75:21  /** @returns {boolean} */ <- initialState(): Boolean { fa
+455:3 -> ../content-tags.temper.md:75:21  static initialState() { <- initialState(): Boolean { fa
+455:10 -> ../content-tags.temper.md:75:21 (initialState)  initialState() { <- initialState(): Boolean { fa
+456:5 -> ../content-tags.temper.md:75:47  return false; <- false }
+459:3 -> ../content-tags.temper.md:76:21  /** @returns {Propagator} */ <- propagator(): Propagator { n
+460:3 -> ../content-tags.temper.md:76:21  static propagator() { <- propagator(): Propagator { n
+460:10 -> ../content-tags.temper.md:76:21 (propagator)  propagator() { <- propagator(): Propagator { n
+461:5 -> ../content-tags.temper.md:76:48  return new Propagator("'"); <- new Propagator("'") }
+464:3 -> ../content-tags.temper.md:77:21  /** @returns {Picker} */ <- picker(): Picker { new Picke
+465:3 -> ../content-tags.temper.md:77:21  static picker() { <- picker(): Picker { new Picke
+465:10 -> ../content-tags.temper.md:77:21 (picker)  picker() { <- picker(): Picker { new Picke
+466:5 -> ../content-tags.temper.md:77:40  return new Picker(false); <- new Picker(false) }
+469:3 -> ../content-tags.temper.md:78:21  /** @returns {(arg0: boolean <- sameStatePredicate(): fn (Bo
+470:3 -> ../content-tags.temper.md:78:21  static sameStatePredicate() <- sameStatePredicate(): fn (Bo
+470:10 -> ../content-tags.temper.md:78:21 (sameStatePredicate)  sameStatePredicate() { <- sameStatePredicate(): fn (Bo
+471:5 -> ../content-tags.temper.md:79:9  return (a, b) => a === b; <- fn (a: Boolean, b: Boolean):
+474:3 -> ../content-tags.temper.md:81:21  /** <- mergeStates(a: Boolean, b: B
+480:3 -> ../content-tags.temper.md:81:21  static mergeStates(a, b, cal <- mergeStates(a: Boolean, b: B
+480:10 -> ../content-tags.temper.md:81:21 (mergeStates)  mergeStates(a, b, callout) { <- mergeStates(a: Boolean, b: B
+481:5 -> ../content-tags.temper.md:82:9  if (a !== b) { <- if (a != b) { callout("branc
+482:7 -> ../content-tags.temper.md:82:23  callout("branches end in dif <- callout("branches end in dif
+484:5 -> ../content-tags.temper.md:83:9  return a; <- a
+487:3 -> ../content-tags.temper.md:85:21  /** <- checkEndState(inQuote: Boole
+491:3 -> ../content-tags.temper.md:85:21  static checkEndState(inQuote <- checkEndState(inQuote: Boole
+491:10 -> ../content-tags.temper.md:85:21 (checkEndState)  checkEndState(inQuote, callo <- checkEndState(inQuote: Boole
+492:5 -> ../content-tags.temper.md:86:9  if (inQuote) { <- if (inQuote) { callout("ends
+493:7 -> ../content-tags.temper.md:86:24  callout("ends inside quotes" <- callout("ends inside quotes"
+497:3 -> ../content-tags.temper.md:88:21  /** <- fromCollector(c: Buffer): St
+501:3 -> ../content-tags.temper.md:88:21  static fromCollector(c) { <- fromCollector(c: Buffer): St
+501:10 -> ../content-tags.temper.md:88:21 (fromCollector)  fromCollector(c) { <- fromCollector(c: Buffer): St
+502:5 -> ../content-tags.temper.md:88:56  return c.toString(); <- c.toString() }
+505:3 -> ../content-tags.temper.md:89:21  /** <- enact(m: Mark, c: Buffer): V
+509:3 -> ../content-tags.temper.md:89:21  static enact(m, c) { <- enact(m: Mark, c: Buffer): V
+509:10 -> ../content-tags.temper.md:89:21 (enact)  enact(m, c) { <- enact(m: Mark, c: Buffer): V
+510:5 -> ../content-tags.temper.md:89:55  c.mark(m); <- c.mark(m) }
+513:3 -> ../content-tags.temper.md:92:14  /** @param {string} x */ <- appendSafe(x: String): Void
+514:3 -> ../content-tags.temper.md:92:14 (appendSafe)  appendSafe(x) { <- appendSafe(x: String): Void
+515:5 -> ../content-tags.temper.md:93:9  const after = propagateOver( <- let after = propagateOver(Qu
+516:5 -> ../content-tags.temper.md:94:9  this.#inQuote = after.stateA <- inQuote = after.stateAfter;
+517:5 -> ../content-tags.temper.md:95:9  { <- for (let e of after.effects)
+518:7 -> ../content-tags.temper.md:95:23  /** @type {readonly Effect[] <- after.effects) { e.enactOn(c
+519:7 -> ../content-tags.temper.md:95:23  const list = after.effects; <- after.effects) { e.enactOn(c
+520:7 -> ../content-tags.temper.md:95:9  const length = list.length; <- for (let e of after.effects)
+521:7 -> ../content-tags.temper.md:95:9  let i = 0; <- for (let e of after.effects)
+522:7 -> ../content-tags.temper.md:95:9  while (i < length) { <- for (let e of after.effects)
+523:9 -> ../content-tags.temper.md:95:9  const e = listedGet(/** @typ <- for (let e of after.effects)
+524:9 -> ../content-tags.temper.md:95:9  i = (i + 1) | 0; <- for (let e of after.effects)
+525:9 -> ../content-tags.temper.md:95:40  e.enactOn(this.#collector); <- e.enactOn(collector); }
+530:3 -> ../content-tags.temper.md:97:14  /** @param {string} x */ <- append(x: String): Void {
+531:3 -> ../content-tags.temper.md:97:14 (append)  append(x) { <- append(x: String): Void {
+532:5 -> ../content-tags.temper.md:98:9  const escaped = Quoting.pick <- let escaped = Quoting.picker
+533:5 -> ../content-tags.temper.md:99:9  this.#collector.append(escap <- collector.append(escaped);
+536:3 -> ../content-tags.temper.md:101:14  /** @returns {string} */ <- get accumulated(): String {
+537:3 -> ../content-tags.temper.md:101:14  get accumulated() { <- get accumulated(): String {
+537:7 -> ../content-tags.temper.md:101:18 (accumulated)  accumulated() { <- accumulated(): String { coll
+538:5 -> ../content-tags.temper.md:101:42  return this.#collector.toStr <- collector.toString() }
+542:1 -> ../content-tags.temper.md:47:21  TextEscaper$instance = new T <- instance: TextEscaper = new
+543:1 -> ../content-tags.temper.md:51:21  QuoteEscaper$instance = new <- instance: QuoteEscaper = new
+544:1 -> ../content-tags.temper.md:109:5  console.log(greet("Ann", "Bo <- console.log(greet("Ann", "Bo
+545:1 -> ../content-tags.temper.md:119:5  console.log(branch(true, "a" <- console.log(branch(true, "a"
+546:1 -> ../content-tags.temper.md:120:5  console.log(branch(false, "b <- console.log(branch(false, "b
+547:1 -> ../content-tags.temper.md:128:5  console.log(each(Object.free <- console.log(each(["c", "d"])
+548:1 -> ../content-tags.temper.md:140:5  console.log(counted(5, "e")) <- console.log(counted(5, "e"))
+549:1 -> ../content-tags.temper.md:148:5  console.log(`${attribute(fal <- console.log("${attribute(fal
+550:1 -> ../content-tags.temper.md:156:5  console.log(opened(Object.fr <- console.log(opened(["g", "h"

@@ -1,15 +1,15 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Builds the VS Code extension with a fresh tempest and installs it.
+"""Builds the VS Code extension with a fresh temper and installs it.
 
     uv run editors/vscode/install.py [--no-build] [--profile release|small] [--deps DIR]
 
-1. Builds tempest (`cargo build --locked --release -p tempest`, or with
+1. Builds temper (`cargo build --locked --release -p tempest`, or with
    `--profile small`, the size-optimized build that releases use), unless
    `--no-build`, which reuses the binary already built.
-2. Builds this platform's package with that tempest bundled (build.py
-   `--tempest`), into out/temper-TARGET-VERSION.vsix; `--deps DIR` passes
+2. Builds this platform's package with that temper bundled (build.py
+   `--temper`), into out/temper-TARGET-VERSION.vsix; `--deps DIR` passes
    on where its npm packages go.
 3. Installs it with `code --install-extension PATH --force`. From a WSL
    terminal, `code` installs into the WSL-connected VS Code; in a dev
@@ -61,16 +61,16 @@ def by_hand(vsix: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--no-build", action="store_true", help="reuse the tempest already built")
-    parser.add_argument("--profile", choices=["release", "small"], default="release", help="tempest's cargo profile")
+    parser.add_argument("--no-build", action="store_true", help="reuse the temper already built")
+    parser.add_argument("--profile", choices=["release", "small"], default="release", help="temper's cargo profile")
     parser.add_argument("--deps", type=Path, help="where build.py installs the npm packages")
     args = parser.parse_args()
-    tempest = ROOT / "target" / args.profile / ("tempest.exe" if sys.platform == "win32" else "tempest")
+    temper = ROOT / "target" / args.profile / ("temper.exe" if sys.platform == "win32" else "temper")
     if not args.no_build:
         run("cargo", "build", "--locked", "--profile", args.profile, "-p", "tempest")
-    if not tempest.is_file():
-        sys.exit(f"install.py: no {tempest}; build it, or drop --no-build")
-    build = [sys.executable, HERE / "build.py", "--tempest", tempest]
+    if not temper.is_file():
+        sys.exit(f"install.py: no {temper}; build it, or drop --no-build")
+    build = [sys.executable, HERE / "build.py", "--temper", temper]
     if args.deps:
         build += ["--deps", args.deps.resolve()]
     run(*build)

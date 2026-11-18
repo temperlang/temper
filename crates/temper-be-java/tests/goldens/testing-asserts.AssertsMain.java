@@ -9,7 +9,6 @@ public final class AssertsMain {
         Core.initSimpleLogging();
         Core.beginTopLevel();
         try {
-            Class.forName("temper.std.testing.TestingGlobal");
             Class.forName("asserts.AssertsGlobal");
         } finally {
             Core.endTopLevel();

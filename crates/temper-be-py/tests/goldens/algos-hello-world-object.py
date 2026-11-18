@@ -20,8 +20,8 @@ class _C:
     def y(self, /) -> str:
         return self._y
 
-    def echo(self, input_: str, /) -> None:
-        _console.log(input_)
+    def echo(self, input: str, /) -> None:
+        _console.log(input)
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)

@@ -18,7 +18,7 @@ use crate::analysis::{module_imports, module_refs, test_imports, walk};
 use crate::decls::{DeclKind, Facts};
 use crate::ids::{DeclId, NodeId};
 use crate::qname::{QNames, is_external, library_of, qname_library};
-use crate::schema::Node;
+use crate::schema::{Family, Node};
 use crate::{Module, Program};
 use std::collections::{HashMap, HashSet};
 
@@ -44,6 +44,23 @@ pub struct NamingRules {
     /// Lists of keywords, and of names the translator prints (builtins,
     /// runtime helpers), which no declaration may take.
     pub reserved: &'static [&'static [&'static str]],
+    /// Lists of names a class's or interface's members may not take, in
+    /// place of [`reserved`](Self::reserved), since a member's name is
+    /// looked up on its object or class, not in the scopes the
+    /// translator's printed names are: keywords, and only those printed
+    /// names a member could hide or clash with, as Python's annotations
+    /// and decorators in class bodies (`int`, `property`). A builtin's
+    /// name is free, as Kotlin's members have it (JS `get`, Python `map`).
+    pub member_reserved: &'static [&'static [&'static str]],
+    /// Lists of names a function's parameters and source-named locals may
+    /// not take, in place of [`reserved`](Self::reserved), where the
+    /// translator reaches what such a name would hide another way: Python
+    /// keeps a parameter named `help` or `len`, and reaches a builtin a
+    /// function's own name hides through `builtins`, so a constructor's
+    /// parameters, which callers may pass by name, never depend on its
+    /// body. Compiler-made locals still avoid all of `reserved`, being
+    /// free to take another name. `None`: `reserved`.
+    pub local_reserved: Option<&'static [&'static [&'static str]]>,
     /// The case for a kind of declaration, exported or not.
     pub case: fn(DeclKind, bool) -> Case,
     /// Put before module-level names that aren't exported: `_` in Python.
@@ -67,11 +84,19 @@ pub struct NamingRules {
     pub block_scoped: bool,
     /// Whether two of a function's locals that share a name must have
     /// the same type, with or without null, as for Python's checkers,
-    /// which give a name one declared type in a function; and a local
+    /// which give a name one declared type in a function (though not a
+    /// parameter and a nullable local of its type, as the parameter's
+    /// annotation is the name's type); and a local
     /// declared inside another's initializer can't share its name, as a
     /// walrus would assign it before the other's annotation. Only for
     /// function-scoped targets.
     pub same_type_shares: bool,
+    /// Whether a block value's statements run before the statement
+    /// holding it, as Python's, which has no block expressions: then the
+    /// locals its value reads stay alive until that statement reads them,
+    /// after every block value in it has run, so `x++ + y++` keeps its
+    /// two temporaries apart. Only for function-scoped targets.
+    pub hoists_block_values: bool,
     /// Whether the module's init block is one function in the output,
     /// whose locals the function literals in it can't shadow, as Java's
     /// static initializer's lambdas can't, and C++'s `-Wshadow` reports:
@@ -98,12 +123,19 @@ pub struct NamingRules {
     /// `Digit` is named as its module `let` `Digit` is
     /// (`RegexGlobal.Digit`), as Kotlin's, and its support code names it.
     pub types_apart: bool,
+    /// Whether every module's module-level declarations share one
+    /// namespace, as C++'s share the library's: then a private one
+    /// avoids the names of other modules' declarations, so the private
+    /// `class Engine` of one doesn't redefine another's exported
+    /// `Engine`, and only exports can clash.
+    pub modules_share_names: bool,
 }
 
 /// Output names, by [`DeclId`].
 #[derive(Clone, Debug, Default)]
 pub struct NameMap {
     names: Vec<String>,
+    public: HashMap<DeclId, String>,
     suffixed: Vec<DeclId>,
     clashes: Vec<String>,
     missing: Vec<String>,
@@ -113,6 +145,17 @@ impl NameMap {
     /// A declaration's name; empty for one the pass doesn't name.
     pub fn get(&self, decl: DeclId) -> &str {
         self.names.get(decl.index()).map_or("", String::as_str)
+    }
+
+    /// An export's public name, as its module's table or namespace keys
+    /// it: its name escaped only by the rules' `member_reserved`, as a
+    /// member's is, where that differs from its own (Lua's `local
+    /// string_`, exported as `string`); else [`get`](Self::get)'s. Another
+    /// library's, from its [`Interface`].
+    pub fn public(&self, decl: DeclId) -> &str {
+        self.public
+            .get(&decl)
+            .map_or_else(|| self.get(decl), String::as_str)
     }
 
     /// Whether any declaration has this name: for a target that names
@@ -157,6 +200,8 @@ pub struct Interface {
     /// Names by qname, without a disambiguation index; `None` for a qname
     /// two declarations share, which a dependent can't tell apart.
     names: HashMap<String, Option<String>>,
+    /// Public names ([`NameMap::public`]) by qname, where they differ.
+    public: HashMap<String, String>,
 }
 
 impl Interface {
@@ -167,6 +212,7 @@ impl Interface {
         let mut out = Interface {
             library: qname_library(&p.library.name).to_string(),
             names: HashMap::new(),
+            public: HashMap::new(),
         };
         for d in p.decls.ids() {
             if !is_shared(p, d) || is_external(p, d) || names.get(d).is_empty() {
@@ -175,6 +221,9 @@ impl Interface {
             let Some(key) = qname_key(&qnames, d) else {
                 continue;
             };
+            if names.public(d) != names.get(d) {
+                out.public.insert(key.clone(), names.public(d).to_string());
+            }
             let name = names.get(d).to_string();
             out.names
                 .entry(key)
@@ -187,6 +236,12 @@ impl Interface {
     /// The name of the declaration with this qname (without its index).
     pub fn get(&self, qname: &str) -> Option<&str> {
         self.names.get(qname)?.as_deref()
+    }
+
+    /// The public name of the declaration with this qname, where it
+    /// differs from [`get`](Self::get)'s.
+    pub fn public(&self, qname: &str) -> Option<&str> {
+        self.public.get(qname).map(String::as_str)
     }
 
     /// Gives a declaration this name, as a library cache would read it
@@ -505,12 +560,13 @@ pub fn hints(p: &Program, expr: NodeId) -> Vec<String> {
         _ => {}
     }
     let ty = p.nodes.ty(expr);
-    let type_name = match p.types.get(p.types.non_null(ty)) {
+    let type_name = match p.types.get(p.types.fallback(p.types.non_null(ty))) {
         crate::TypeData::Scalar(s) => s.name().to_string(),
         crate::TypeData::Nominal { decl, .. } => p.name(decl).to_string(),
         crate::TypeData::TypeParam { .. }
         | crate::TypeData::Function { .. }
-        | crate::TypeData::Nullable(_) => String::new(),
+        | crate::TypeData::Nullable(_)
+        | crate::TypeData::Never(_) => String::new(),
     };
     push(lower_first(&type_name));
     push("value".into());
@@ -542,6 +598,15 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
         .iter()
         .flat_map(|l| l.iter().copied())
         .collect();
+    let member_reserved: HashSet<&str> = rules
+        .member_reserved
+        .iter()
+        .flat_map(|l| l.iter().copied())
+        .collect();
+    let local_reserved: HashSet<&str> = match rules.local_reserved {
+        Some(lists) => lists.iter().flat_map(|l| l.iter().copied()).collect(),
+        None => reserved.clone(),
+    };
     // Other libraries' declarations, but core's, which backends reach
     // through their runtimes: as their own library's naming named them,
     // from its interface, std's too.
@@ -558,6 +623,10 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
         let interface = p.interfaces.iter().find(|i| i.library == library);
         let key = qname_key(&qnames, d);
         let found = interface.zip(key.as_deref()).and_then(|(i, k)| i.get(k));
+        let public = interface.zip(key.as_deref()).and_then(|(i, k)| i.public(k));
+        if let Some(public) = public {
+            map.public.insert(d, public.to_string());
+        }
         map.names[d.index()] = match found {
             Some(name) => name.to_string(),
             None => {
@@ -571,10 +640,74 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
             }
         };
     }
-    for module in &p.modules {
-        name_module(p, rules, &reserved, module, &mut map);
+    // Where modules share names, each module's exports, which others'
+    // private declarations avoid, and those private declarations' names,
+    // as they're given.
+    let exports: Vec<HashSet<String>> = match rules.modules_share_names {
+        true => (p.modules.iter())
+            .map(|m| {
+                (module_level(p, m).into_iter())
+                    .filter(|&d| claims_first(p, d))
+                    .map(|d| escape(rules, &reserved, candidates(p, rules, d, true)[0].clone()))
+                    .collect()
+            })
+            .collect(),
+        false => Vec::new(),
+    };
+    let mut privates: HashSet<String> = HashSet::new();
+    for (i, module) in p.modules.iter().enumerate() {
+        let mut shared = HashSet::new();
+        if rules.modules_share_names {
+            shared.extend(privates.iter().cloned());
+            for (j, names) in exports.iter().enumerate() {
+                if j != i {
+                    shared.extend(names.iter().cloned());
+                }
+            }
+        }
+        name_module(
+            p,
+            rules,
+            [&reserved, &local_reserved],
+            &member_reserved,
+            module,
+            &shared,
+            &mut map,
+        );
+        if rules.modules_share_names {
+            for d in module_level(p, module) {
+                if !claims_first(p, d) {
+                    privates.insert(map.get(d).to_string());
+                }
+            }
+        }
     }
     map
+}
+
+/// A module's functions, `let`s, classes, and interfaces, its test
+/// items' too.
+fn module_level(p: &Program, module: &Module) -> Vec<DeclId> {
+    (module.all_items())
+        .filter_map(|item| match p.nodes.get(item) {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::ModuleLet { decl }
+            | Node::Class { decl, .. }
+            | Node::Interface { decl, .. } => Some(decl),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Whether a declaration's name is fixed, so it claims its name before
+/// others: exported, connected, or kept, for host code or its tests'.
+fn claims_first(p: &Program, d: DeclId) -> bool {
+    let facts = p.decls.get(d).facts;
+    facts.contains(Facts::EXPORTED)
+        || facts.contains(Facts::CONNECTED)
+        || facts.contains(Facts::KEEP)
+        || facts.contains(Facts::KEEP_TEST)
 }
 
 /// The module-level declarations a function refers to, as
@@ -669,35 +802,27 @@ fn choose(
 fn name_module(
     p: &Program,
     rules: &NamingRules,
-    reserved: &HashSet<&str>,
+    [reserved, local_reserved]: [&HashSet<&str>; 2],
+    member_reserved: &HashSet<&str>,
     module: &Module,
+    shared: &HashSet<String>,
     map: &mut NameMap,
 ) {
     // Module-level declarations: the items, then the init block's locals,
     // in the claiming order (exported, connected, and kept first, then
     // source names, then compiler-made ones).
-    let mut level: Vec<DeclId> = module
-        .items
-        .iter()
-        .filter_map(|&item| match p.nodes.get(item) {
-            Node::Function { decl, .. }
-            | Node::BodilessFunction { decl, .. }
-            | Node::ModuleLet { decl }
-            | Node::Class { decl, .. }
-            | Node::Interface { decl, .. } => Some(decl),
-            _ => None,
-        })
-        .collect();
+    let mut level = module_level(p, module);
     for &test in &module.tests {
         if let Node::Test { decl, .. } = p.nodes.get(test) {
             level.push(decl);
         }
     }
-    // The init block's locals, but those of the function literals in it,
-    // which are named as functions are.
+    // The init block's locals, and its test init's, which continues it,
+    // but those of the function literals in them, which are named as
+    // functions are.
     let mut literals = Vec::new();
     let mut init_locals = Vec::new();
-    let mut stack = vec![module.init];
+    let mut stack: Vec<NodeId> = module.test_init.into_iter().chain([module.init]).collect();
     while let Some(id) = stack.pop() {
         match p.nodes.get(id) {
             Node::Let { local, .. } => {
@@ -713,13 +838,9 @@ fn name_module(
         stack.extend(p.nodes.kids(id).iter().rev());
     }
     let rank = |d: DeclId| {
-        let facts = p.decls.get(d).facts;
-        if facts.contains(Facts::EXPORTED)
-            || facts.contains(Facts::CONNECTED)
-            || facts.contains(Facts::KEEP)
-        {
+        if claims_first(p, d) {
             0
-        } else if facts.contains(Facts::COMPILER_MADE) {
+        } else if p.decls.get(d).facts.contains(Facts::COMPILER_MADE) {
             2
         } else {
             1
@@ -742,13 +863,17 @@ fn name_module(
     // the others but types.
     let is_type = |d: DeclId| matches!(p.decls.get(d).kind, DeclKind::Class | DeclKind::Interface);
     let imported = taken.clone();
+    // Nor do its items take the names other modules' declarations share
+    // with them; its tests and the init's locals are its own.
+    let items: HashSet<DeclId> = module_level(p, module).into_iter().collect();
     let (mut types, mut values) = (HashSet::new(), HashSet::new());
     for d in level {
         let cands = candidates(p, rules, d, true);
         let own = if is_type(d) { &types } else { &values };
+        let elsewhere = |c: &str| items.contains(&d) && shared.contains(c);
         let free = |c: &str| match rules.types_apart {
-            true => !imported.contains(c) && !own.contains(c),
-            false => !taken.contains(c),
+            true => !imported.contains(c) && !own.contains(c) && !elsewhere(c),
+            false => !taken.contains(c) && !elsewhere(c),
         };
         let (name, suffixed) = choose(rules, reserved, &cands, free);
         if suffixed {
@@ -769,10 +894,35 @@ fn name_module(
         }
         map.names[d.index()] = name;
     }
+    // Exports keep their public names, as members do, where their own
+    // escape further; one that another's name or public name has clashes.
+    let level = module_level(p, module);
+    let mut keys: HashSet<String> = level.iter().map(|&d| map.get(d).to_string()).collect();
+    for &d in &level {
+        if !p.decls.get(d).facts.contains(Facts::EXPORTED) {
+            continue;
+        }
+        let own = candidates(p, rules, d, true)[0].clone();
+        let key = escape(rules, member_reserved, own);
+        if key == map.get(d) {
+            continue;
+        }
+        if keys.insert(key.clone()) {
+            map.public.insert(d, key);
+        } else {
+            map.clashes.push(format!(
+                "`{}` can't be exported as `{key}`, which another declaration has",
+                p.name(d)
+            ));
+        }
+    }
 
     // Where the init is one function, a literal in it avoids the names of
     // the module's `let`s and of the init's locals whose blocks hold it.
-    let scopes = Scopes::of(p, module.init);
+    let mut scopes = Scopes::of(p, module.init);
+    if let Some(test_init) = module.test_init {
+        scopes.continued(p, test_init, module.init);
+    }
     // Under block scoping without shadowing, a literal a target declares
     // as a local of the init (Java's and C#'s hoisted `fn`s) avoids the
     // names of those named before it whose blocks nest with its own; and
@@ -799,7 +949,7 @@ fn name_module(
             }
         }
         if rules.init_literals_avoid_module {
-            for &item in &module.items {
+            for item in module.all_items() {
                 if let Node::ModuleLet { decl } = p.nodes.get(item) {
                     around.insert(map.get(decl).to_string());
                 }
@@ -811,24 +961,26 @@ fn name_module(
                 }
             }
         }
-        name_function(p, rules, reserved, literal, &around, map);
+        name_function(p, rules, [reserved, local_reserved], literal, &around, map);
         if let Some(decl) = decl {
             before.push((decl, at));
         }
     }
-    for &item in module.items.iter().chain(&module.tests) {
+    for item in module.all_items().chain(module.tests.iter().copied()) {
         match p.nodes.get(item) {
             Node::Function { .. } | Node::BodilessFunction { .. } | Node::Test { .. } => {
+                let reserved = [reserved, local_reserved];
                 name_function(p, rules, reserved, item, &HashSet::new(), map)
             }
             Node::Class { members, .. } | Node::Interface { members, .. } => {
-                name_members(p, rules, reserved, p.nodes.list(members), map);
+                name_members(p, rules, member_reserved, p.nodes.list(members), map);
                 for &member in p.nodes.list(members) {
                     if let Node::Method { .. }
                     | Node::AbstractMethod { .. }
                     | Node::Function { .. }
                     | Node::BodilessFunction { .. } = p.nodes.get(member)
                     {
+                        let reserved = [reserved, local_reserved];
                         name_function(p, rules, reserved, member, &HashSet::new(), map);
                     }
                 }
@@ -841,7 +993,7 @@ fn name_module(
 /// Names a class's or interface's members, in their own namespace: each
 /// its source name, styled; a getter and setter of one property share it,
 /// and so may a field and the property it implements; anything else that
-/// would clash is suffixed.
+/// would clash is suffixed. `reserved` is the rules' `member_reserved`.
 fn name_members(
     p: &Program,
     rules: &NamingRules,
@@ -914,6 +1066,16 @@ struct Live {
     loops: Vec<(u32, u32)>,
     /// Where each `let`'s initializer is, for locals declared inside it.
     inits: HashMap<DeclId, (u32, u32)>,
+    /// Whether block values' statements run before the statement holding
+    /// them ([`NamingRules::hoists_block_values`]).
+    hoist: bool,
+    /// The locals that block values' values read, by statement being
+    /// walked, innermost last: read where that statement's expressions
+    /// are, once its block values' statements have all run.
+    held: Vec<Vec<DeclId>>,
+    /// How many block values' values deep the walk is, in the innermost
+    /// statement.
+    in_value: usize,
 }
 
 impl Live {
@@ -926,19 +1088,75 @@ impl Live {
         let end = self.end.entry(d).or_insert(self.pos);
         *end = (*end).max(self.pos);
         self.uses.entry(d).or_default().push(self.pos);
+        if self.in_value > 0 {
+            if let Some(held) = self.held.last_mut() {
+                held.push(d);
+            }
+        }
+    }
+
+    /// Reads the innermost statement's held locals here.
+    fn release(&mut self) {
+        let held = self.held.last_mut().map(std::mem::take).unwrap_or_default();
+        let in_value = std::mem::replace(&mut self.in_value, 0);
+        for d in held {
+            self.touch(d);
+        }
+        self.in_value = in_value;
+    }
+
+    /// Visits kids in order, releasing held locals before a nested
+    /// statement (an `if`'s blocks), which runs after the expressions
+    /// before it.
+    fn visit_kids(&mut self, p: &Program, id: NodeId) {
+        for &kid in p.nodes.kids(id) {
+            if p.nodes.kind(kid).family() == Family::Stmt {
+                self.release();
+            }
+            self.visit(p, kid);
+        }
     }
 
     fn visit(&mut self, p: &Program, id: NodeId) {
+        // Where block values' statements run before the statement holding
+        // them, as Python's, what their values read is read there, after
+        // every one of them: `x++ + y++` reads both temporaries after
+        // assigning both.
+        let stmt = self.hoist && p.nodes.kind(id).family() == Family::Stmt;
+        let in_value = if stmt {
+            self.held.push(Vec::new());
+            std::mem::replace(&mut self.in_value, 0)
+        } else {
+            0
+        };
+        self.visit_node(p, id);
+        if stmt {
+            self.release();
+            self.held.pop();
+            self.in_value = in_value;
+        }
+    }
+
+    fn visit_node(&mut self, p: &Program, id: NodeId) {
         self.pos += 1;
         match p.nodes.get(id) {
             Node::Let { local, init } => {
                 if let Some(init) = init {
                     let start = self.pos;
                     self.visit(p, init);
+                    self.release();
                     self.inits.insert(local, (start, self.pos));
                 }
                 self.pos += 1;
                 self.define(local);
+            }
+            Node::BlockValue { stmts, value } => {
+                for &s in p.nodes.list(stmts) {
+                    self.visit(p, s);
+                }
+                self.in_value += 1;
+                self.visit(p, value);
+                self.in_value -= 1;
             }
             Node::Param { decl } => {
                 self.define(decl);
@@ -952,22 +1170,18 @@ impl Live {
             Node::Local { local } => self.touch(local),
             Node::Assign { local, value } => {
                 self.visit(p, value);
+                self.release();
                 self.pos += 1;
                 self.touch(local);
             }
             Node::While { .. } | Node::DoWhile { .. } => {
                 let start = self.pos;
-                for &kid in p.nodes.kids(id) {
-                    self.visit(p, kid);
-                }
+                self.visit_kids(p, id);
+                self.release();
                 self.pos += 1;
                 self.loops.push((start, self.pos));
             }
-            _ => {
-                for &kid in p.nodes.kids(id) {
-                    self.visit(p, kid);
-                }
-            }
+            _ => self.visit_kids(p, id),
         }
     }
 
@@ -989,11 +1203,12 @@ impl Live {
 }
 
 /// Names a function's parameters and locals, none taking a name in
-/// `around`.
+/// `around`: compiler-made ones avoid `reserved`, and parameters and
+/// source-named locals `local_reserved` ([`NamingRules::local_reserved`]).
 fn name_function(
     p: &Program,
     rules: &NamingRules,
-    reserved: &HashSet<&str>,
+    [reserved, local_reserved]: [&HashSet<&str>; 2],
     function: NodeId,
     around: &HashSet<String>,
     map: &mut NameMap,
@@ -1005,7 +1220,10 @@ fn name_function(
         .map(|d| map.get(d).to_string())
         .collect();
     outer.extend(around.iter().cloned());
-    let mut live = Live::default();
+    let mut live = Live {
+        hoist: rules.hoists_block_values,
+        ..Live::default()
+    };
     live.visit(p, function);
     let mut ranges = live.ranges();
     let mut decls: Vec<DeclId> = Vec::new();
@@ -1041,6 +1259,7 @@ fn name_function(
         }
         let range = ranges.get(&d).copied().unwrap_or((0, u32::MAX));
         let cands = candidates(p, rules, d, false);
+        let reserved = if made(d) { reserved } else { local_reserved };
         let (name, suffixed) = choose(rules, reserved, &cands, |c| {
             !outer.contains(c)
                 && !named.iter().any(|(other, n)| {
@@ -1051,9 +1270,13 @@ fn name_function(
                     } else {
                         let (s, e) = ranges.get(other).copied().unwrap_or((0, u32::MAX));
                         // `T` and `T?` may share, as a parameter's
-                        // default's local and the parameter do.
+                        // default's local and the parameter do; but not a
+                        // parameter and a wider local, as its annotation
+                        // gives the name its type.
                         let (a, b) = (p.decls.get(d).ty, p.decls.get(*other).ty);
-                        let differ = p.types.non_null(a) != p.types.non_null(b);
+                        let wider =
+                            param(*other) && p.types.is_nullable(a) && !p.types.is_nullable(b);
+                        let differ = p.types.non_null(a) != p.types.non_null(b) || wider;
                         // Nor may a local declared inside another's
                         // initializer, which Python's walrus would
                         // assign before the other's annotation.
@@ -1087,37 +1310,45 @@ struct Scopes {
 
 impl Scopes {
     fn of(p: &Program, function: NodeId) -> Scopes {
-        fn visit(p: &Program, id: NodeId, scope: NodeId, scopes: &mut Scopes) {
-            let mut scope = scope;
-            match p.nodes.get(id) {
-                Node::Param { decl } => {
-                    scopes.of.insert(decl, scope);
-                }
-                Node::Let { local, .. } => {
-                    scopes.of.insert(local, scope);
-                }
-                Node::FunctionLiteral { decl, .. } => {
-                    scopes.of.insert(decl, scope);
-                }
-                // A block that's the root (an init block) has no parent.
-                Node::Block { .. } => {
-                    if id != scope {
-                        scopes.parent.insert(id, scope);
-                    }
-                    scope = id;
-                }
-                _ => {}
-            }
-            for &kid in p.nodes.kids(id) {
-                visit(p, kid, scope, scopes);
-            }
-        }
         let mut scopes = Scopes {
             of: HashMap::new(),
             parent: HashMap::new(),
         };
-        visit(p, function, function, &mut scopes);
+        scopes.visit(p, function, function);
         scopes
+    }
+
+    /// Adds a block that continues `outer` in its scope: a module's test
+    /// init, which continues its init block.
+    fn continued(&mut self, p: &Program, block: NodeId, outer: NodeId) {
+        self.parent.insert(block, outer);
+        self.visit(p, block, block);
+    }
+
+    fn visit(&mut self, p: &Program, id: NodeId, scope: NodeId) {
+        let mut scope = scope;
+        match p.nodes.get(id) {
+            Node::Param { decl } => {
+                self.of.insert(decl, scope);
+            }
+            Node::Let { local, .. } => {
+                self.of.insert(local, scope);
+            }
+            Node::FunctionLiteral { decl, .. } => {
+                self.of.insert(decl, scope);
+            }
+            // A block that's the root (an init block) has no parent.
+            Node::Block { .. } => {
+                if id != scope {
+                    self.parent.insert(id, scope);
+                }
+                scope = id;
+            }
+            _ => {}
+        }
+        for &kid in p.nodes.kids(id) {
+            self.visit(p, kid, scope);
+        }
     }
 
     /// Whether `inner` is `outer` or inside it.

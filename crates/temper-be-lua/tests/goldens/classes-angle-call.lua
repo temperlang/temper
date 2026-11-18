@@ -1,28 +1,5 @@
 local temper = require("temper-core")
 
----@class angle-call.Blah
-
----@class angle-call.Blah.type: temper.Type
----@operator call: angle-call.Blah
-local Blah = temper.type("angle-call.Blah")
-
----@param this angle-call.Blah
-function Blah.constructor(this)
-end
-
----@class angle-call.Hi
----@field thing angle-call.Blah
-
----@class angle-call.Hi.type: temper.Type
----@operator call: angle-call.Hi
-local Hi = temper.type("angle-call.Hi")
-
----@param this angle-call.Hi
----@param thing angle-call.Blah
-function Hi.constructor(this, thing)
-  this.thing = thing
-end
-
 ---@param n integer
 ---@return string
 local function whatever(n)

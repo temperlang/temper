@@ -6,8 +6,9 @@ a piece of code.  Especially useful is the *describe* REPL command
 which lets you view a snapshot of the compilation state at various
 processing stages.
 
-> **Note:** tempest's [REPL](../tools/repl.md) has no `describe` yet;
-> its [playground](../tools/playground.md) shows errors and every
+> **Note:** the [REPL](../tools/repl.md)'s `describe` takes the
+> compiler's own steps, such as `"parsed"` and `"settled"`, not the
+> stage names of Temper's earlier releases; the [playground](../tools/playground.md) shows errors and every
 > language's translation as you type
 > ([inconsistencies](../inconsistencies.md#i9-the-command-line)).
 

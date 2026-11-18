@@ -1,12 +1,12 @@
 //! The REPL in wasm, for the playground's REPL tab: one
-//! [`ReplSession`] kept in the instance, as `tempest repl` keeps one,
+//! [`ReplSession`] kept in the instance, as `temper repl` keeps one,
 //! fed an input at a time, with the same transcript text.
 //!
 //! - [`repl_start`] begins a session, with the editor's source as input
 //!   0 if it has any code;
 //! - [`repl_complete`] says whether the text typed so far is whole, as
 //!   Enter asks, and how it splits into inputs, as pasted lines split
-//!   in `tempest repl`;
+//!   in `temper repl`;
 //! - [`repl_input`] settles and runs one input;
 //! - [`repl_query`] answers completion, hover, and signature help for
 //!   the text being typed, against the session, without settling or
@@ -78,7 +78,7 @@ pub extern "C" fn repl_start(ptr: *const u8, len: usize, fuel: f64) {
 /// ```
 ///
 /// `events` are what the input reported, in order, each with its
-/// `text` as `tempest repl` prints it; their kinds are `diagnostic`,
+/// `text` as `temper repl` prints it; their kinds are `diagnostic`,
 /// `log`, `failure`, `output` (the REPL's functions'), `note`,
 /// `unresolved`, `interrupted`, `internal`, `truncated` (where logs
 /// past 64 KiB were cut, with how many), and `result`, last. `value`
@@ -94,7 +94,7 @@ pub extern "C" fn repl_input(ptr: *const u8, len: usize, fuel: f64) {
 }
 
 /// Whether the input buffer's text, as typed so far, is whole, so Enter
-/// runs it (1) rather than starting a new line (0), by `tempest repl`'s
+/// runs it (1) rather than starting a new line (0), by `temper repl`'s
 /// rule ([`Chunker`]): a bracket, a multi-quoted string, or a block
 /// comment left open, or only comments, waits. Keeps, as
 /// `{"complete": true, "inputs": ["let x = 1", "x"], "brackets": 0}`,

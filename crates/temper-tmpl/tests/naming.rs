@@ -61,6 +61,8 @@ fn identifier(c: char, first: bool) -> bool {
 
 const RULES: NamingRules = NamingRules {
     reserved: &[&["if", "str", "min"]],
+    member_reserved: &[&["if"]],
+    local_reserved: None,
     case,
     private_prefix: "_",
     escape_suffix: "_",
@@ -69,10 +71,12 @@ const RULES: NamingRules = NamingRules {
     identifier,
     block_scoped: false,
     same_type_shares: false,
+    hoists_block_values: false,
     init_literals_avoid_module: false,
     members_prefixed: false,
     fields_apart: false,
     types_apart: false,
+    modules_share_names: false,
 };
 
 const PROGRAM: &str = "tmpl 1 model 1 library t 0.0.0
@@ -131,6 +135,40 @@ fn shares_and_suffixes_only_on_conflict() {
     assert_eq!(name(9), "");
     assert_eq!(names.suffixed(), [DeclId(6), DeclId(10)]);
     assert!(names.clashes().is_empty());
+}
+
+/// Under `local_reserved`, parameters and source-named locals avoid only
+/// its names, as Python's keep a builtin's (`str`, `min`), while
+/// compiler-made locals and module-level names still avoid all of
+/// `reserved`.
+#[test]
+fn locals_reserved_apart() {
+    let rules = NamingRules {
+        local_reserved: Some(&[&["if"]]),
+        ..RULES
+    };
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+module t#0 {
+  fn str#1(min#2: Int32, if#3: Int32): Int32 {
+    let str#4: Int32 = %Int32.add(min#2, if#3);
+    let ~min#5: Int32 = str#4;
+    return ~min#5;
+  }
+
+  init {
+  }
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let names = assign(&p, &rules);
+    let name = |d: u32| names.get(DeclId(d));
+    assert_eq!(name(1), "_str");
+    assert_eq!((name(2), name(3), name(4)), ("min", "if_", "str"));
+    assert_eq!(name(5), "min_");
+    assert!(names.suffixed().is_empty());
 }
 
 #[test]
@@ -217,6 +255,42 @@ module t#0 {
     assert_eq!((name(4), name(5), name(6)), ("s", "s2", "s"));
 }
 
+#[test]
+fn hoisted_block_values_keep_their_values_apart() {
+    // `x++ + y++`: hoisted before the `let`, the first block's `t` is
+    // read after the second's is assigned.
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+module t#0 {
+  fn f#1(): Int32 {
+    var x#2: Int32 = 1;
+    var y#3: Int32 = 10;
+    let s#4: Int32 = %Int32.add((value { let t#5: Int32 = x#2; x#2 = %Int32.add(t#5, 1); t#5 }): Int32, (value { let t#6: Int32 = y#3; y#3 = %Int32.add(t#6, 1); t#6 }): Int32);
+    let t#7: Int32 = s#4;
+    return t#7;
+  }
+
+  init {
+  }
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let names = |hoists_block_values| {
+        let rules = NamingRules {
+            hoists_block_values,
+            ..RULES
+        };
+        let names = assign(&p, &rules);
+        [5, 6, 7].map(|d| names.get(DeclId(d)).to_string())
+    };
+    // Block expressions end each `t` in its block.
+    assert_eq!(names(false), ["t", "t", "t"]);
+    // Hoisted, both live until the `let` reads them, but no further.
+    assert_eq!(names(true), ["t", "t2", "t"]);
+}
+
 /// A library whose naming changes its exports' names: `if` is reserved,
 /// and `sumAll` is connected, which its host code defines by the name
 /// its naming gives it.
@@ -290,4 +364,101 @@ fn other_libraries_names_are_their_own_namings() {
             "dep.sumAll(), without dep's names"
         ]
     );
+}
+
+/// A library exporting `min`, which its rules reserve for names but not
+/// for members, and keeping `str` private.
+const PUBLIC_DEPENDENCY: &str = "tmpl 1 model 1 library dep 0.0.0
+
+module dep#0 {
+  export fn min#1(): Int32 {
+    return 1;
+  }
+
+  fn str#2(): Int32 {
+    return 2;
+  }
+
+  init {
+  }
+}
+";
+
+/// A library that uses `dep`'s `min`.
+const PUBLIC_DEPENDENT: &str = "tmpl 1 model 1 library app 0.0.0
+
+uses `dep`#1 0.0.0 {
+  module ``#2 {
+    fn min#3(): Int32;
+  }
+}
+
+module app#0 {
+  export fn one#4(): Int32 {
+    return min#3();
+  }
+
+  init {
+  }
+}
+";
+
+#[test]
+fn exports_keep_public_names() {
+    // An export's own name escapes as any name does, but its public
+    // name, as its module keys it, only as a member's does.
+    let dep = text::read(PUBLIC_DEPENDENCY).unwrap_or_else(|e| panic!("{e}"));
+    let dep_names = assign(&dep, &RULES);
+    assert_eq!(dep_names.get(DeclId(1)), "min_");
+    assert_eq!(dep_names.public(DeclId(1)), "min");
+    assert_eq!(dep_names.get(DeclId(2)), "_str");
+    assert_eq!(dep_names.public(DeclId(2)), "_str");
+    assert!(dep_names.clashes().is_empty());
+    // A dependent binds what the dependency's naming named it, and reads
+    // it by its public name.
+    let interface = Interface::of(&dep, &dep_names);
+    assert_eq!(interface.get("dep.min()"), Some("min_"));
+    assert_eq!(interface.public("dep.min()"), Some("min"));
+    let mut app = text::read(PUBLIC_DEPENDENT).unwrap_or_else(|e| panic!("{e}"));
+    app.interfaces = vec![interface];
+    let names = assign(&app, &RULES);
+    assert_eq!(names.get(DeclId(3)), "min_");
+    assert_eq!(names.public(DeclId(3)), "min");
+}
+
+/// A declaration marked `keep` or `keepTest` claims its name before
+/// others, as an export does: host code, the library's or its tests',
+/// calls it by that name.
+#[test]
+fn kept_names_are_claimed_first() {
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+module t#0 {
+  fn fooBar#1(): Int32 {
+    return 1;
+  }
+
+  keep fn foo_bar#2(): Int32 {
+    return 2;
+  }
+
+  fn bazQux#3(): Int32 {
+    return 3;
+  }
+
+  keepTest fn baz_qux#4(): Int32 {
+    return 4;
+  }
+
+  init {
+  }
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let names = assign(&p, &RULES);
+    let name = |d: u32| names.get(DeclId(d));
+    assert_eq!((name(2), name(1)), ("_foo_bar", "_foo_bar2"));
+    assert_eq!((name(4), name(3)), ("_baz_qux", "_baz_qux2"));
 }

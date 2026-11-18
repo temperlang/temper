@@ -29,7 +29,7 @@ export function formatPatch(patch) {
     while (i < n) {
       /** @type {Change<string>} */
       const change = listedGet(/** @type {Change<string>[]} */ (changes), i);
-      const changeType = change.type_;
+      const changeType = change.type;
       /** @type {readonly string[]} */
       const items = change.items;
       const prefix = changeType === ChangeTypeAddition ? "+" : changeType === ChangeTypeDeletion ? "-" : " ";
@@ -147,7 +147,7 @@ export function diff(left, right, eq) {
 /** @template T */
 export class Change extends type() {
   /** @type {string} */
-  #type_;
+  #type;
   /** @type {number} */
   #leftIndex;
   /** @type {number} */
@@ -172,15 +172,15 @@ export class Change extends type() {
    */
   constructor(type_, leftIndex, rightIndex, items) {
     super();
-    this.#type_ = type_;
+    this.#type = type_;
     this.#leftIndex = leftIndex;
     this.#rightIndex = rightIndex;
     this.#items = items;
   }
 
   /** @returns {string} */
-  get type_() {
-    return this.#type_;
+  get type() {
+    return this.#type;
   }
 
   /** @returns {number} */

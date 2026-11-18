@@ -548,14 +548,10 @@ pub fn lookup_type(qname: &str) -> Option<TypeConnection> {
 /// Kotlin's `ConsoleLog`.
 fn console_log(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [console, message] = args else {
-        return Err(NotYet {
-            what: "`Console.log` with other than a message".into(),
-        });
+        return Err(NotYet::new("`Console.log` with other than a message"));
     };
     if !t.is_erased(*console) {
-        return Err(NotYet {
-            what: "a console other than the module's".into(),
-        });
+        return Err(NotYet::new("a console other than the module's"));
     }
     let (format, rest) = t.format(*message)?;
     let mut margs = vec![Expr::Str(format)];
@@ -573,9 +569,7 @@ fn to_string(t: &mut Translator<'_>, args: &[NodeId], want: Want) -> Result<Expr
         [n, r] if matches!(t.node(*r), Node::Omitted {}) => (*n, None),
         [n, r] => (*n, Some(*r)),
         _ => {
-            return Err(NotYet {
-                what: "`toString` without its receiver".into(),
-            });
+            return Err(NotYet::new("`toString` without its receiver"));
         }
     };
     let helper = if t.p_ty(n) == temper_tmpl::TypeId::INT64 {
@@ -598,9 +592,7 @@ fn to_string(t: &mut Translator<'_>, args: &[NodeId], want: Want) -> Result<Expr
 fn itself(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     match args {
         [x] => t.expr(*x, Want::Owned),
-        _ => Err(NotYet {
-            what: "`toList` with arguments".into(),
-        }),
+        _ => Err(NotYet::new("`toList` with arguments")),
     }
 }
 
@@ -621,9 +613,7 @@ fn new_map(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, Not
             let e = t.expr(*entries, Want::Owned)?;
             Ok(Expr::path("temper_core::Map::new").call(vec![e]))
         }
-        _ => Err(NotYet {
-            what: "a `Map` from other than its entries".into(),
-        }),
+        _ => Err(NotYet::new("a `Map` from other than its entries")),
     }
 }
 
@@ -635,9 +625,7 @@ fn new_pair(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, No
             let v = t.expr(*v, Want::Owned)?;
             Ok(Expr::tuple(vec![k, v]))
         }
-        _ => Err(NotYet {
-            what: "a `Pair` of other than a key and a value".into(),
-        }),
+        _ => Err(NotYet::new("a `Pair` of other than a key and a value")),
     }
 }
 
@@ -646,9 +634,7 @@ fn new_pair(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, No
 /// as Kotlin's `TestBail`, so a test's failure carries its messages.
 fn test_bail(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [test] = args else {
-        return Err(NotYet {
-            what: "`Test.bail` without its receiver".into(),
-        });
+        return Err(NotYet::new("`Test.bail` without its receiver"));
     };
     let test = t.receiver(*test, true)?;
     let messages = test.method("messages_combined", Vec::new());
@@ -662,9 +648,7 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, N
 /// the library's runner, as Kotlin's `run_async`.
 fn run_async(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [f] = args else {
-        return Err(NotYet {
-            what: "async's arguments".into(),
-        });
+        return Err(NotYet::new("async's arguments"));
     };
     t.runs_async = true;
     let f = t.expr(*f, Want::Owned)?;
@@ -677,9 +661,7 @@ fn run_async(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, N
 /// interpreter and JS, where Kotlin's steps it inside that call.
 fn awake_upon(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [promise, generator] = args else {
-        return Err(NotYet {
-            what: "awakeUpon's arguments".into(),
-        });
+        return Err(NotYet::new("awakeUpon's arguments"));
     };
     let promise = t.expr(*promise, Want::Owned)?;
     let generator = t.expr(*generator, Want::Owned)?;
@@ -694,9 +676,7 @@ fn new_promise_builder(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<
 /// `Some(value)`: a generator's `ValueResult`, as Kotlin's.
 fn some(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [value] = args else {
-        return Err(NotYet {
-            what: "ValueResult's arguments".into(),
-        });
+        return Err(NotYet::new("ValueResult's arguments"));
     };
     let value = t.expr(*value, Want::Owned)?;
     Ok(Expr::path("Some").call(vec![value]))
@@ -758,9 +738,7 @@ fn string_index_compare_to(
     _: Want,
 ) -> Result<Expr, NotYet> {
     let [a, b] = args else {
-        return Err(NotYet {
-            what: "`compareTo` of other than two".into(),
-        });
+        return Err(NotYet::new("`compareTo` of other than two"));
     };
     let a = t.expr(*a, Want::Owned)?;
     let b = t.expr(*b, Want::Owned)?;
@@ -771,9 +749,7 @@ fn string_index_compare_to(
 /// `a == b`.
 fn string_index_eq(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [a, b] = args else {
-        return Err(NotYet {
-            what: "`eq` of other than two".into(),
-        });
+        return Err(NotYet::new("`eq` of other than two"));
     };
     let a = t.expr(*a, Want::Owned)?;
     let b = t.expr(*b, Want::Owned)?;

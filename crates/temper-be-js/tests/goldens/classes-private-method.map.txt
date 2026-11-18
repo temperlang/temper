@@ -91,17 +91,46 @@
 151:3 -> ../private-method.temper.md:79:14  /** <- noted(more: String): String
 155:3 -> ../private-method.temper.md:79:14 (noted)  noted(more) { <- noted(more: String): String
 156:5 -> ../private-method.temper.md:79:44  return new Note(this.text).t <- new Note(text).text(more).bo
-160:1 -> ../private-method.temper.md:11:5  const c = new C(); <- let c = new C();
-161:1 -> ../private-method.temper.md:13:5  console.log(`method1(10)=${c <- console.log("method1(10)=${
-162:1 -> ../private-method.temper.md:14:5  console.log(`method2(10)=${c <- console.log("method2(10)=${
-163:1 -> ../private-method.temper.md:47:5  const a = new Money(150); <- let a = new Money(150);
-164:1 -> ../private-method.temper.md:48:5  const b = new Money(175); <- let b = new Money(175);
-165:1 -> ../private-method.temper.md:49:5  console.log(`plus: ${a.plus( <- console.log("plus: ${a.plus(
-166:1 -> ../private-method.temper.md:50:5  console.log(`same whole: ${a <- console.log("same whole: ${a
-167:1 -> ../private-method.temper.md:51:5  console.log(`same rounded: $ <- console.log("same rounded: $
-168:1 -> ../private-method.temper.md:52:5  a.spendFrom(b); <- a.spendFrom(b);
-169:1 -> ../private-method.temper.md:53:5  a.spendFrom(b); <- a.spendFrom(b);
-170:1 -> ../private-method.temper.md:54:5  console.log(`b spent: ${b.ti <- console.log("b spent: ${b.ti
-171:1 -> ../private-method.temper.md:82:5  const label = new Label(1); <- let label = new Label(1);
-172:1 -> ../private-method.temper.md:83:5  console.log(`close: ${label. <- console.log("close: ${label.
-173:1 -> ../private-method.temper.md:84:5  console.log(`noted: ${label. <- console.log("noted: ${label.
+160:1 -> ../private-method.temper.md:97:5  class Tally extends type() { <- class Tally {
+160:7 -> ../private-method.temper.md:97:11 (Tally)  Tally extends type() { <- Tally {
+160:12 -> ../private-method.temper.md:97:5   extends type() { <- class Tally {
+161:3 -> ../private-method.temper.md:98:14  /** @type {number} */ <- depth: Int;
+162:3 -> ../private-method.temper.md:98:14  #depth; <- depth: Int;
+163:3 -> ../private-method.temper.md:99:15  /** @type {number} */ <- size: Int;
+164:3 -> ../private-method.temper.md:99:15  #size; <- size: Int;
+174:3 -> ../private-method.temper.md:100:14  /** <- constructor(size: Int, paren
+179:3 -> ../private-method.temper.md:100:14  constructor(size, parent, ch <- constructor(size: Int, paren
+181:5 -> ../private-method.temper.md:101:9  this.#depth = parent == null <- this.depth = if (parent == n
+182:5 -> ../private-method.temper.md:102:9  let sum = size; <- var sum = size;
+183:5 -> ../private-method.temper.md:103:9  { <- for (var i = 0; i < children
+184:7 -> ../private-method.temper.md:103:14  let i = 0; <- var i = 0; i < children.leng
+185:7 -> ../private-method.temper.md:103:9  while (i < children.length) <- for (var i = 0; i < children
+186:9 -> ../private-method.temper.md:103:53  sum = (sum + listedGet(/** @ <- sum += children[i].size; }
+187:9 -> ../private-method.temper.md:103:46  i = (i + 1) | 0; <- ++i) { sum += children[i].si
+190:5 -> ../private-method.temper.md:104:9  this.#size = (sum + this.#de <- this.size = sum + this.depth
+193:3 -> ../private-method.temper.md:98:14  /** @returns {number} */ <- depth: Int;
+194:3 -> ../private-method.temper.md:98:14  get depth() { <- depth: Int;
+194:7 -> ../private-method.temper.md:98:14 (depth)  depth() { <- depth: Int;
+198:3 -> ../private-method.temper.md:106:14  /** @returns {number} */ <- get total(): Int { size }
+199:3 -> ../private-method.temper.md:106:14  get total() { <- get total(): Int { size }
+199:7 -> ../private-method.temper.md:106:18 (total)  total() { <- total(): Int { size }
+200:5 -> ../private-method.temper.md:106:33  return this.#size; <- size }
+204:1 -> ../private-method.temper.md:11:5  const c = new C(); <- let c = new C();
+205:1 -> ../private-method.temper.md:13:5  console.log(`method1(10)=${c <- console.log("method1(10)=${
+206:1 -> ../private-method.temper.md:14:5  console.log(`method2(10)=${c <- console.log("method2(10)=${
+207:1 -> ../private-method.temper.md:47:5  const a = new Money(150); <- let a = new Money(150);
+208:1 -> ../private-method.temper.md:48:5  const b = new Money(175); <- let b = new Money(175);
+209:1 -> ../private-method.temper.md:49:5  console.log(`plus: ${a.plus( <- console.log("plus: ${a.plus(
+210:1 -> ../private-method.temper.md:50:5  console.log(`same whole: ${a <- console.log("same whole: ${a
+211:1 -> ../private-method.temper.md:51:5  console.log(`same rounded: $ <- console.log("same rounded: $
+212:1 -> ../private-method.temper.md:52:5  a.spendFrom(b); <- a.spendFrom(b);
+213:1 -> ../private-method.temper.md:53:5  a.spendFrom(b); <- a.spendFrom(b);
+214:1 -> ../private-method.temper.md:54:5  console.log(`b spent: ${b.ti <- console.log("b spent: ${b.ti
+215:1 -> ../private-method.temper.md:82:5  const label = new Label(1); <- let label = new Label(1);
+216:1 -> ../private-method.temper.md:83:5  console.log(`close: ${label. <- console.log("close: ${label.
+217:1 -> ../private-method.temper.md:84:5  console.log(`noted: ${label. <- console.log("noted: ${label.
+218:1 -> ../private-method.temper.md:109:5  const leaf = new Tally(2, nu <- let leaf = new Tally(2, null
+219:1 -> ../private-method.temper.md:110:5  const mid = new Tally(3, lea <- let mid = new Tally(3, leaf,
+220:1 -> ../private-method.temper.md:111:5  const top = new Tally(1, mid <- let top = new Tally(1, mid,
+221:1 -> ../private-method.temper.md:112:5  console.log(`depths: ${leaf. <- console.log("depths: ${leaf.
+222:1 -> ../private-method.temper.md:113:5  console.log(`totals: ${leaf. <- console.log("totals: ${leaf.

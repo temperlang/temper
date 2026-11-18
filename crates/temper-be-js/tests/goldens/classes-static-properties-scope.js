@@ -10,14 +10,24 @@ function readSimpleOther() {
   return Simple.other;
 }
 
+/** @type {string} */
+let Simple$value;
+/** @type {string} */
+let Simple$other;
+
 class Simple extends type() {
-  /** @type {string} */
-  static value;
-  /** @type {string} */
-  static other;
+  /** @returns {string} */
+  static get value() {
+    return Simple$value;
+  }
+
+  /** @returns {string} */
+  static get other() {
+    return Simple$other;
+  }
 }
 
-Simple.value = "foo";
-Simple.other = "bar";
+Simple$value = "foo";
+Simple$other = "bar";
 console.log(`Simple.value is ${readSimpleValue()}`);
 console.log(`Simple.other is ${readSimpleOther()}`);

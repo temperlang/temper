@@ -1,7 +1,7 @@
 # The interpreter, in detail
 
 The interpreter runs a settled library in-process, with no generated
-code and no other language's tools. It's what `tempest test` runs by
+code and no other language's tools. It's what `temper test` runs by
 default, what the playground's Run button shows, and how CI checks the
 frontend against Temper's 72 functional tests. It lives in
 `temper-frontend`, in [`interp.rs`](../../../crates/temper-frontend/src/interp.rs)
@@ -53,7 +53,7 @@ Three callers use it:
 
 - [`test_library`](../../../crates/temper-frontend/src/library_tests.rs)
   and [`test_dir`](../../../crates/temper-frontend/src/library_tests.rs),
-  for `tempest test` (and `-b interp`, as Kotlin's `temper test` takes it);
+  for `temper test` (and `-b interp`, as Kotlin's `temper test` takes it);
 - the playground's wasm ([`run`](../../../crates/temper-wasm/src/lib.rs)),
   with a step budget;
 - [`run-temper`](../../../crates/temper-frontend/src/bin/run-temper.rs),
@@ -62,8 +62,8 @@ Three callers use it:
 ## Decisions
 
 Each decision says what was chosen, what else was on the table, and
-whose call it was: *team-agreed* (with the Temper team), *tempest's*
-(the user's call for tempest), or *open*.
+whose call it was: *team-agreed* (with the Temper team), *this compiler's*
+(decided for this compiler), or *open*.
 
 ### Run the settled tree, not tmpl
 
@@ -96,7 +96,7 @@ catches most drift, but not all.
 both runs programs and partially evaluates them during compilation
 stages (`Interpreter.kt`, `InterpretiveDance.kt`).
 
-**Status:** tempest's, recorded in
+**Status:** this compiler's, recorded in
 [history/milestone-3.md](../../../notes/history/milestone-3.md)
 ("Interpreters and backend crates"). A small tmpl interpreter is
 planned there as an oracle for lowerings (run before and after a pass,
@@ -114,7 +114,7 @@ class's initializers are lowered the same way.
 
 **Alternatives:**
 
-- *A recursive tree walk*, which tempest had first, as Kotlin has.
+- *A recursive tree walk*, which this compiler had first, as Kotlin has.
 - *Lower everything up front*, or to a register machine, or
   closure-compile.
 
@@ -190,7 +190,7 @@ Temper means; most locals stay cheap slots.
 allocates per call.
 
 **Kotlin Temper:** its environments are chained maps. Its Python output
-shares one variable across loop passes (its issue #264); tempest's
+shares one variable across loop passes (its issue #264); this compiler's
 interpreter and backends keep one per pass, with tests
 ([kotlin-differences.md](../../../notes/kotlin-differences.md)).
 
@@ -263,7 +263,7 @@ call, 2026-11-06 ([kotlin-differences.md](../../../notes/kotlin-differences.md),
 **Chosen:**
 
 - **Fuel:** optional; each op costs one step. `None` means no limit,
-  as any language's own runner has none, and `tempest run` passes none.
+  as any language's own runner has none, and `temper run` passes none.
   With tests ([`run_tests`](../../../crates/temper-frontend/src/interp.rs)),
   the top-level code gets the budget, then each test gets it afresh: it
   runs alone, `runTestCases([test])`, and if it runs out, or ends
@@ -272,7 +272,7 @@ call, 2026-11-06 ([kotlin-differences.md](../../../notes/kotlin-differences.md),
   [`FUEL`](../../../crates/temper-frontend/src/interp.rs), 50 million,
   about a second, is the budget the playground passes;
   [`TEST_FUEL`](../../../crates/temper-frontend/src/interp.rs), 10
-  billion, `tempest test`'s default (`--fuel`), at least 10 times the
+  billion, `temper test`'s default (`--fuel`), at least 10 times the
   real libraries' slowest test so none comes near it: Kelpto's
   pathological GFM inputs take 626 million steps, then Ordable's 83
   million, Hrefine's 80 million, Wherewith's 51 million (just over
@@ -285,7 +285,7 @@ call, 2026-11-06 ([kotlin-differences.md](../../../notes/kotlin-differences.md),
   64 KiB, then only counted, with a note where it was cut
   (`[output truncated: N more lines past 65536 bytes]`); tests' reports
   don't count. [`run_streaming`](../../../crates/temper-frontend/src/interp.rs)
-  gives each line to a sink as it's logged instead, as `tempest run`
+  gives each line to a sink as it's logged instead, as `temper run`
   prints it. The real libraries' tests log at most 12 KB.
 - **Call depth:** [`MAX_DEPTH`](../../../crates/temper-frontend/src/interp.rs),
   2000 natively (calls take about 3 KB of stack in a release build, and
@@ -302,9 +302,9 @@ interpretation with a step counter (`ContinueCondition`).
 
 **Rejected:** one budget for the whole run, as before (a slow test
 starves the ones after it, and one runaway fails them all as not run);
-streaming tests' output (`tempest test` prints a library's output only
+streaming tests' output (`temper test` prints a library's output only
 when one of its tests fails, after its name, so it must be kept). Before
-this, `tempest test` passed no fuel and kept all output, and a test that
+this, `temper test` passed no fuel and kept all output, and a test that
 looped forever while logging grew until killed (the audit saw 1.2 GB in
 about 8 s); it now fails at its budget with memory flat (35 MB at 2
 billion steps, 40 s).
@@ -375,7 +375,7 @@ sequenceDiagram
 ```
 
 **Pros:** deterministic, single-threaded, and as Kotlin's interpreter
-orders it (`Promises.kt`, `AsyncFn.kt`). Tempest reports the first
+orders it (`Promises.kt`, `AsyncFn.kt`). This compiler reports the first
 failing block, where Kotlin's is silent
 ([kotlin-differences.md](../../../notes/kotlin-differences.md)).
 
@@ -394,7 +394,7 @@ splits it back out of the output lines at `<testsuites>` and reads it
 ([`parse_junit`](../../../crates/temper-frontend/src/library_tests.rs)).
 
 **Pros:** the same report as every backend's runner gives, from the
-same Temper code, so `tempest test` and `tempest test -b py` print
+same Temper code, so `temper test` and `temper test -b py` print
 alike.
 
 **Cons:** the report travels in the log. A program that logs a line
@@ -480,13 +480,13 @@ for the queue.
 | Settle cases, run | Every case in `tests/settle/*.cases` is settled and then run with 1,000,000 steps; the expected text has what it logs and how it failed. [`run.cases`](../../../crates/temper-frontend/tests/settle/run.cases) has 63 cases for the interpreter: wrapping arithmetic, closures per loop pass, jumps out of expressions, generators, async ordering, deep recursion, runaway loops | [`cases_settle_as_expected`](../../../crates/temper-frontend/tests/settle.rs) |
 | Mutation fuzz | Randomly edited cases settle and then run without a Rust panic | [`mutated_inputs_settle`](../../../crates/temper-frontend/tests/settle.rs) |
 | Functional tests | Temper's 72 functional tests log what their `interp` log blocks expect, or fail as expected; CI runs it | `compat/check_functional.py` |
-| Library tests | `tempest test`'s finding, running, and reporting, on small libraries | [`library_tests.rs`](../../../crates/temper-frontend/tests/library_tests.rs) |
+| Library tests | `temper test`'s finding, running, and reporting, on small libraries | [`library_tests.rs`](../../../crates/temper-frontend/tests/library_tests.rs) |
 | The interpreter as oracle | The shared programs log on the interpreter what their log blocks say, so each backend that runs them is checked against it; std `net`'s tests against a local server | [`programs_log_as_the_interpreter_does`](../../../crates/temper-be-testkit/tests/programs.rs), [`net_tests_on_the_interpreter`](../../../crates/temper-be-testkit/tests/programs.rs) |
 | Regexes | The dialect's parsing and the matcher's backtracking | [`regex.rs`](../../../crates/temper-frontend/src/regex.rs)'s unit tests |
 | Errors | Code with errors fails only where it runs, on the interpreter and Python | [`errors_fail_only_where_they_run`](../../../crates/tempest/tests/cli.rs) |
-| Real libraries | Chromarite and Ordable's tests on the interpreter, in CI; Hrefine, Kelpto, and Wherewith locally | CI's `tempest test` steps |
+| Real libraries | Chromarite and Ordable's tests on the interpreter, in CI; Hrefine, Kelpto, and Wherewith locally | CI's `temper test` steps |
 
-**Not covered:** `tempest test` with a runaway test (no budget there);
+**Not covered:** `temper test` with a runaway test (no budget there);
 regexes on long inputs; a printed form of lowered ops, so there are no
 goldens for lowering itself (only for what code logs); and the
 interpreter against lowered tmpl, which the planned tmpl interpreter

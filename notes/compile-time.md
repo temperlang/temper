@@ -228,8 +228,9 @@ run time, path by path, and is always safe:
     it, so no later append runs on that path, and its state reaches no
     escaper, while each append before it was walked with that path's
     own state. Kotlin's walk over paths doesn't join them either.
-    Anything else that might not complete, as a call typed `Never`, is
-    taken to complete, which can only add a state to a join, so only
+    A `panic()`, or a call of a function whose result is `Never<T>`,
+    ends a path as a jump does; anything else that might not complete
+    is taken to complete, which can only add a state to a join, so only
     makes folding less likely.
   - **Loops** (`while`, `for`, `do … while`, and `for … of` on a
     `List` or `String`, whose core `forEach` calls the body for each

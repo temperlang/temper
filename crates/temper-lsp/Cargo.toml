@@ -1,6 +1,6 @@
 [package]
 name = "temper-lsp"
-description = "Temper's language server, `tempest lsp`, over temper-analysis"
+description = "Temper's language server, `temper lsp`, over temper-analysis"
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true

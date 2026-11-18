@@ -1,6 +1,6 @@
 [package]
 name = "tempest"
-description = "The tempest command, Temper's CLI over the other crates: argument parsing and output"
+description = "The temper command, Temper's CLI over the other crates: argument parsing and output"
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true
@@ -10,8 +10,13 @@ license.workspace = true
 [lints]
 workspace = true
 
+# The crate keeps its name; the command it builds is `temper`.
+[[bin]]
+name = "temper"
+path = "src/main.rs"
+
 # Each backend is a feature, all on by default (temper-driver's), so a
-# smaller build can leave some out; `tempest build -b js` and such then
+# smaller build can leave some out; `temper build -b js` and such then
 # say it wasn't built in. `net` is temper-frontend's web client for std `net`.
 [features]
 default = ["net", "py", "rust", "js", "java", "csharp", "cpp", "lua"]
@@ -25,9 +30,9 @@ cpp = ["temper-driver/cpp"]
 lua = ["temper-driver/lua"]
 
 [dependencies]
-# Line editing for `tempest repl` on a terminal (history, multi-line
+# Line editing for `temper repl` on a terminal (history, multi-line
 # input, completion, highlighting).
-# History is kept in memory only; tempest reads and writes its file
+# History is kept in memory only; temper reads and writes its file
 # itself, through one checked descriptor (src/repl/history.rs).
 rustyline = { version = "17.0.2", default-features = false, features = ["custom-bindings"] }
 temper-analysis = { path = "../temper-analysis" }
@@ -46,7 +51,7 @@ temper-tmpl = { path = "../temper-tmpl" }
 libc = "0.2.191"
 
 [dev-dependencies]
-# Reads `cargo metadata`, to keep `tempest licenses` current
+# Reads `cargo metadata`, to keep `temper licenses` current
 # (tests/licenses.rs); already in the workspace, for temper-lsp.
 serde_json = "1"
 temper-be-testkit = { path = "../temper-be-testkit" }

@@ -24,6 +24,20 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!("{} {}", b.count(), b.0.twice);
             let q = temper_core::cast::<Person>(n.clone()).ok_or_else(temper_core::Error::new)?;
             println!("{}", q.0.title);
+            println!("{}", Duo::new(p.clone(), None, None::<Arc<String>>).names());
+            println!(
+                "{}",
+                Duo::new(
+                    p.clone(),
+                    Some(Person::new("Cy", "Mr")),
+                    None::<Arc<String>>,
+                )
+                .names()
+            );
+            println!(
+                "{}",
+                Duo::new(p.clone(), Some(q.clone()), Some(" + ")).names()
+            );
             Ok(())
         })
         .clone()
@@ -254,6 +268,55 @@ pub(crate) fn pick(x: Titled) -> Named {
     Named::new(x.clone())
 }
 
+struct DuoStruct<T: NamedTrait + Clone + Send + Sync + 'static> {
+    first: T,
+    second: Option<T>,
+    joiner: Arc<String>,
+}
+
+#[derive(Clone)]
+pub struct Duo<T: NamedTrait + Clone + Send + Sync + 'static>(Arc<DuoStruct<T>>);
+
+impl<T: NamedTrait + Clone + Send + Sync + 'static> Duo<T> {
+    pub fn new(first: T, second: Option<T>, joiner: Option<impl ToArcString>) -> Duo<T> {
+        let joiner = joiner.map(|x| x.to_arc_string());
+        let joiner = joiner.unwrap_or_else(|| Arc::new(" & ".to_string()));
+        Duo(Arc::new(DuoStruct {
+            first,
+            second,
+            joiner,
+        }))
+    }
+
+    pub fn names(&self) -> Arc<String> {
+        let s = self.0.second.clone();
+        if let Some(s) = &s {
+            Arc::new(format!(
+                "{}{}{}",
+                NamedTrait::name(&self.0.first),
+                self.0.joiner,
+                NamedTrait::name(s)
+            ))
+        } else {
+            NamedTrait::name(&self.0.first)
+        }
+    }
+
+    pub fn first(&self) -> T {
+        self.0.first.clone()
+    }
+
+    pub fn second(&self) -> Option<T> {
+        self.0.second.clone()
+    }
+
+    pub fn joiner(&self) -> Arc<String> {
+        self.0.joiner.clone()
+    }
+}
+
+temper_core::impl_any_value_trait!(Duo<T>, [] where T: NamedTrait);
+
 pub mod builders {
     use super::*;
 
@@ -266,6 +329,52 @@ pub mod builders {
     impl PersonBuilder {
         pub fn build(self) -> Person {
             Person::new(self.name, self.title)
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct DuoBuilder<T: NamedTrait + Clone + Send + Sync + 'static> {
+        pub first: T,
+    }
+
+    #[derive(Clone)]
+    pub struct DuoOptions<T: NamedTrait + Clone + Send + Sync + 'static> {
+        selfish: DuoBuilder<T>,
+        second: Option<T>,
+        joiner: Option<Arc<String>>,
+    }
+
+    impl<T: NamedTrait + Clone + Send + Sync + 'static> DuoOptions<T> {
+        pub fn new(selfish: DuoBuilder<T>) -> Self {
+            Self {
+                selfish,
+                second: None,
+                joiner: None,
+            }
+        }
+
+        pub fn second(mut self, second: T) -> Self {
+            self.second = Some(second);
+            self
+        }
+
+        pub fn joiner(mut self, joiner: Arc<String>) -> Self {
+            self.joiner = Some(joiner);
+            self
+        }
+
+        pub fn build(self) -> Duo<T> {
+            Duo::new(self.selfish.first, self.second, self.joiner)
+        }
+    }
+
+    impl<T: NamedTrait + Clone + Send + Sync + 'static> DuoBuilder<T> {
+        pub fn build(self) -> Duo<T> {
+            self.options().build()
+        }
+
+        pub fn options(self) -> DuoOptions<T> {
+            DuoOptions::new(self)
         }
     }
 }

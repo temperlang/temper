@@ -1,5 +1,5 @@
 //! Running libraries' tests on the interpreter, as Kotlin Temper's
-//! `temper test` does, for the `tempest test` command.
+//! `temper test` does, for the `temper test` command.
 //!
 //! [`test_dir`] finds the libraries under a directory's work root
 //! ([`crate::project`]), in its [`Sources`], settles each, and runs its
@@ -8,7 +8,7 @@
 //! summary, `Tests passed: 29 of 29`, unless asked for every test's
 //! result, and fails if a test failed or didn't run, or a library has
 //! errors. [`test_libraries`] does the same under a work root, with
-//! `tempest test`'s options ([`TestOptions`]): one library, an ignore
+//! `temper test`'s options ([`TestOptions`]): one library, an ignore
 //! file, and JSON records, leaving the summary to the caller, which may
 //! sum several backends' tallies.
 
@@ -50,7 +50,7 @@ pub fn test_dir(
     ok
 }
 
-/// How to test, as `tempest test`'s flags say.
+/// How to test, as `temper test`'s flags say.
 #[derive(Default)]
 pub struct TestOptions<'a> {
     /// Every test's result, and the libraries' output.

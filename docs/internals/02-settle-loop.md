@@ -3,7 +3,7 @@
 Many compilers run fixed stages: resolve names, then expand macros,
 then check types. Temper can't do that cleanly, because a macro may
 declare a name that another statement needs, and a macro may need a
-type before it knows what to produce. So instead of fixed stages, tempest
+type before it knows what to produce. So instead of fixed stages, this compiler
 has one scheduler of small work items, and each item says what it's
 waiting for. It runs in two rounds (names and macros, then typing),
 with a few whole-tree passes between and after them.

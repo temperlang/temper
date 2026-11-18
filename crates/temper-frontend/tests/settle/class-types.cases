@@ -442,22 +442,22 @@ console.log("${new K() == new K()} ${new P(1) == new P(1)}");
   #void)
 error 471..472: Actual arguments do not match signature: (H, H) -> Boolean expected [H, H], but got [H, G]
 error 504..507: Actual arguments do not match signature: (H, H) -> Boolean expected [H, H], but got [H, String]
-error 534..540: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
+error 534..540: K does not support infix `==`; give it a method marked `@operator("==")`
 error 580..581: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, H]
 error 682..683: Actual arguments do not match signature: (C, C) -> Int32 expected [C, C], but got [C, Int32]
 error 691..692: Actual arguments do not match signature: (C, C) -> Int32 expected [C, C], but got [C, C?]
 error 701..705: Actual arguments do not match signature: (C, C) -> Int32 expected [C, C], but got [C, C?]
 error 713..714: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, C]
-error 741..746: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [H, H]
+error 741..746: H does not support infix `<`; give it a method marked `@operator("<=>")`
 error 775..778: Actual arguments do not match signature: (C, C) -> Int32 expected [C, C], but got [C, String]
-error 841..847: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [I, I]
+error 841..847: I does not support infix `==`; give it a method marked `@operator("==")`
 error 881..882: Actual arguments do not match signature: (P, P) -> Boolean expected [P, P], but got [P, Int32]
-error 1031..1032: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
-error 1092..1093: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, Int32]
-error 1337..1355: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
+error 1031..1032: K does not support infix `==`; give it a method marked `@operator("==")`
+error 1092..1093: K does not support infix `==`; give it a method marked `@operator("==")`
+error 1337..1355: K does not support infix `==`; give it a method marked `@operator("==")`
 log true false false
 log true false 1
-Failed: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
+Failed: K does not support infix `==`; give it a method marked `@operator("==")`
 
 === class values as builtin operators' operands
 interface I {}
@@ -1619,3 +1619,189 @@ error 649..669: Unrelated types cannot be targeted with is or as runtime type ch
 error 1070..1086: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub2<T>]> from Sup<T>
 error 1183..1202: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Sup2<T, U>]> from Sup<U>
 error 1626..1639: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub4]> from Sup<T>
+
+=== a property narrower than what it overrides, as Kotlin's hide-override-property
+// Kotlin's TypeChecker words it otherwise than for methods. A field is a
+// getter, so a getter overriding one is checked too, and one a getter
+// overrides.
+interface I { public x: Int; public get y(): Int; public z: Int; }
+class C(protected x: Int) extends I {
+  private y: Int = 1;
+  protected get z(): Int { 1 }
+}
+interface J { protected w: Int; private v: Int; }
+// As wide or wider is fine, and private members aren't overridden.
+class D(public x: Int, @noProperty w: Int) extends I & J {
+  public y: Int = 2;
+  public get z(): Int { 3 }
+  private v: Int = 4;
+}
+console.log(new D(1, 2).z.toString());
+--- settled
+(Block
+  (Interface ^I:0 (Let ^x:5 Int) (Get ^y:6 (Signature Int)) (Let ^z:7 Int))
+  (Class
+    ^C:1
+    I:0
+    (Param ^x:9 Int)
+    (Let private ^y:10 Int 1)
+    (Get ^z:11 (Fn Int (Block 1))))
+  (Interface ^J:2 (Let ^w:13 Int) (Let private ^v:14 Int))
+  (Class
+    ^D:3
+    I:0
+    J:2
+    (Param ^x:16 Int)
+    (Param private ^w:17 Int)
+    (Let ^y:18 Int 2)
+    (Get ^z:19 (Fn Int (Block 3)))
+    (Let private ^v:20 Int 4))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call . (Call new D:3 1 2) \z) \toString)))
+  #void)
+error 244..250: Override has lower visibility than in I
+error 274..284: Override has lower visibility than in I
+error 298..316: Override has lower visibility than in I
+log 3
+
+=== sealed subtypes can't add type parameters, as Kotlin's sealed-subtypes-reject-new-type-params
+sealed interface Something<T> {}
+// Each of a sealed type's direct subtypes' type parameters must be one of
+// the type arguments it gives the sealed type.
+class Subversive<T, U> extends Something<T> {}
+// Renamed is fine.
+interface Simple<V> extends Something<V> {}
+// Further down, they're fine: nothing can be cast to them anyway.
+class Satisfying<T, U> extends Simple<T> {}
+sealed interface Two<A, B> {}
+class Swapped<B, A> extends Two<A, B> {}
+class Fixed<C> extends Two<C, Int> {}
+class Neither extends Two<String, Int> {}
+console.log("runs");
+--- settled
+(Block
+  (Interface ^Something:0 (TypeParam ^T:8))
+  (Class
+    ^Subversive:1
+    (TypeParam ^T:10)
+    (TypeParam ^U:11)
+    (Call <> Something:0 T:10))
+  (Interface ^Simple:2 (TypeParam ^V:13) (Call <> Something:0 V:13))
+  (Class
+    ^Satisfying:3
+    (TypeParam ^T:15)
+    (TypeParam ^U:16)
+    (Call <> Simple:2 T:15))
+  (Interface ^Two:4 (TypeParam ^A:18) (TypeParam ^B:19))
+  (Class
+    ^Swapped:5
+    (TypeParam ^B:21)
+    (TypeParam ^A:22)
+    (Call <> Two:4 A:22 B:21))
+  (Class ^Fixed:6 (TypeParam ^C:24) (Call <> Two:4 C:24 Int))
+  (Class ^Neither:7 (Call <> Two:4 String Int))
+  (Call (Call . console \log) "runs")
+  #void)
+error 176..177: Cannot introduce type parameters in sealed subtype Subversive
+log runs
+
+=== operators a class doesn't define name its type and the method to mark
+class K {}
+interface I {}
+let a1(k: K): Boolean { k != k }
+let a2(k: K): Boolean { k >= k }
+let a3(i: I, j: I): Int { i <=> j }
+let a4(k: K): String { when (k) { k -> "k"; else -> "no"; } }
+let a5(k: K?): Boolean { k == null }
+let a6(k: K): Boolean { 1 == k }
+class Box<T>(public t: T) {}
+class Eq<T>(public t: T) {
+  @operator("==")
+  public eq(other: Eq<T>): Boolean { true }
+}
+let a7(b: Box<Int>): Boolean { b == b }
+let a8(e: Eq<Int>, f: Eq<String>): Boolean { e == e && e.eq(e) && e == f }
+--- settled
+(Block
+  (Class ^K:0)
+  (Interface ^I:1)
+  (Let ^a1:2 (Fn (Let ^k:14 K:0) Boolean (Block (Call != k:14 k:14))))
+  (Let ^a2:3 (Fn (Let ^k:15 K:0) Boolean (Block (Call >= k:15 k:15))))
+  (Let
+    ^a3:4
+    (Fn (Let ^i:16 I:1) (Let ^j:17 I:1) Int (Block (Call <=> i:16 j:17))))
+  (Let
+    ^a4:5
+    (Fn
+      (Let ^k:18 K:0)
+      String
+      (Block (Block (If (Call == k:18 k:18) "k" "no")))))
+  (Let ^a5:6 (Fn (Let ^k:19 (Call ? K:0)) Boolean (Block (Call == k:19 null))))
+  (Let ^a6:7 (Fn (Let ^k:20 K:0) Boolean (Block (Call == 1 k:20))))
+  (Class ^Box:8 (TypeParam ^T:21) (Param ^t:23 T:21))
+  (Class
+    ^Eq:9
+    (TypeParam ^T:24)
+    (Param ^t:26 T:24)
+    (Method
+      ^eq:27
+      (Fn (Let ^other:28 (Call <> Eq:9 T:24)) Boolean (Block true))))
+  (Let
+    ^a7:10
+    (Fn (Let ^b:29 (Call <> Box:8 Int)) Boolean (Block (Call == b:29 b:29))))
+  (Let
+    ^a8:11
+    (Fn
+      (Let ^e:30 (Call <> Eq:9 Int))
+      (Let ^f:31 (Call <> Eq:9 String))
+      Boolean
+      (Block
+        (If
+          (Call == e:30 e:30)
+          (If (Call (Call . e:30 \eq) e:30) (Call == e:30 f:31) #false)
+          #false)))))
+error 50..56: K does not support infix `!=`; give it a method marked `@operator("==")`
+error 83..89: K does not support infix `>=`; give it a method marked `@operator("<=>")`
+error 118..125: I does not support infix `<=>`; give it a method marked `@operator("<=>")`
+error 162..163: K does not support infix `==`; give it a method marked `@operator("==")`
+error 256..257: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [Int32, K]
+error 411..417: Box<Int32> does not support infix `==`; give it a method marked `@operator("==")`
+error 491..492: Actual arguments do not match signature: (Eq<Int32>, Eq<Int32>) -> Boolean expected [Eq<Int32>, Eq<Int32>], but got [Eq<Int32>, Eq<String>]
+
+=== a class's or interface's values don't fit core's MapKey bound
+// Beyond types.cases's "a bound naming its own type parameter is checked
+// with it put in": a nullable interface as a builder's key, and a class
+// passed where a function of one's own wants a `MapKey`.
+class K(public n: Int) {
+  @operator("==")
+  public eq(other: K): Boolean { n == other.n }
+}
+interface I {}
+let b = new MapBuilder<I?, Int>();
+let keyed<T extends MapKey<T>>(x: T): MapBuilder<T, Int> { new MapBuilder<T, Int>() }
+keyed(new K(1));
+keyed(1);
+--- settled
+(Block
+  (Class
+    ^K:0
+    (Param ^n:5 Int)
+    (Method
+      ^eq:6
+      (Fn (Let ^other:7 K:0) Boolean (Block (Call == n:5 (Call . other:7 \n))))))
+  (Interface ^I:1)
+  (Let ^b:2 (Call new (Call <> MapBuilder (Call ? I:1) Int)))
+  (Let
+    ^keyed:3
+    (Fn
+      (TypeParam ^T:9 (Call <> MapKey T:9))
+      (Let ^x:10 T:9)
+      (Call <> MapBuilder T:9 Int)
+      (Block (Call new (Call <> MapBuilder T:9 Int)))))
+  (Call keyed:3 (Call new K:0 1))
+  (Call keyed:3 1)
+  #void)
+error 321..346: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]
+error 434..449: Type formal <T extends MapKey<T>> cannot bind to K which does not fit upper bounds [MapKey<T>]
+Failed: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]

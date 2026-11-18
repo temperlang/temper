@@ -4,10 +4,10 @@
 //! dev-dependency; it knows no backend.
 //!
 //! - **Programs:** Kotlin Temper's functional tests that tmpl's
-//!   translation covers ([`COVERED`]), from the vendored copy
-//!   ([`temper_funtests`]), and the shared programs in this crate's
-//!   `programs/` ([`PROGRAMS`]), which cover module state, operators,
-//!   jumps, and string order beyond those tests, each a [`Case`] with the
+//!   translation covers ([`COVERED`]), from [`temper_funtests`]'s
+//!   `cases/`, and the shared programs in this crate's `programs/`
+//!   ([`PROGRAMS`]), which cover module state, operators, jumps, and
+//!   string order beyond those tests, each a [`Case`] with the
 //!   log a backend expects ([`cases`]). A backend adds programs of its
 //!   own as more [`Case`]s.
 //! - **To tmpl:** [`program`] settles a case's library and translates it,
@@ -15,11 +15,14 @@
 //!   files and whether it runs under `--no-connected` ([`CONNECTED`]).
 //! - **Goldens:** [`Goldens`] compares output with the files in a
 //!   backend's `tests/goldens/`, and with `UPDATE_SNAPSHOTS=1` writes new
-//!   output there instead.
+//!   output there instead. Goldens show Temper's version as a sentinel,
+//!   `0.0.0-alpha.0.0` in each ecosystem's spelling, but std's and a
+//!   package file per backend ([`pins_version`]), so a release changes
+//!   few of them.
 //! - **Tools:** [`tool`] finds one named by an environment variable or on
 //!   `PATH` ([`temper_tmpl::tools`], which backends' own test runners
 //!   share, as they share its JUnit XML reading); a missing one skips its test with a message ([`missing`]),
-//!   unless `TEMPEST_REQUIRE_CHECKERS` is set, as in CI, when it fails.
+//!   unless `TEMPER_REQUIRE_CHECKERS` is set, as in CI, when it fails.
 //! - **Runtimes:** [`cached`] builds something once under
 //!   `CARGO_TARGET_TMPDIR`, keyed by a hash of its inputs, and keeps it
 //!   until they change.
@@ -28,11 +31,12 @@
 //!   tests ([`NET`]), whose `testServerPort` is its port, any free one,
 //!   as Kotlin's suite picks; goldens show it as [`TEST_SERVER_PORT`].
 //! - **Runs:** [`check_log`] compares what a program logged with what's
-//!   expected, and [`check_case`] also that a run expected to fail does,
-//!   and [`threads_expected`] is what `module-state` from 8
-//!   threads logs; for a test that runs as tests ([`TESTS`]),
-//!   [`check_tests`] compares its failures, as a backend's runner reports
-//!   them ([`junit_failures`] for JUnit XML), with its `expectedFailures`.
+//!   expected, its line ends as on Linux ([`printed`]), and
+//!   [`check_case`] also that a run expected to fail does, and
+//!   [`threads_expected`] is what `module-state` from 8 threads logs;
+//!   for a test that runs as tests ([`TESTS`]), [`check_tests`] compares
+//!   its failures, as a backend's runner reports them
+//!   ([`junit_failures`] for JUnit XML), with its `expectedFailures`.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -244,7 +248,7 @@ pub fn without_net(cases: &mut [Case]) {
 /// A program in a directory of its own (`NAME/NAME.temper.md`) is a
 /// library of several modules, its other modules in subdirectories, which
 /// its main file imports; such libraries may import each other by name.
-/// `modules` is three modules importing each other, and
+/// `modules` is modules importing each other, one of them the main one, and
 /// `imports-library` imports `modules`, and `renamed`, whose exports'
 /// names backends' namings change. `testing` has tests, which need
 /// std's `testing` to run, so backends check only their form for now.
@@ -267,8 +271,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// good parts run as written; `triple` the architecture docs' running
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
-/// and loops, and one left to run time.
-pub const PROGRAMS: [&str; 18] = [
+/// and loops, and one left to run time; `reach` what only tests reach,
+/// and what nothing does, which runs as tests ([`AS_TESTS`]).
+pub const PROGRAMS: [&str; 20] = [
     "classes",
     "nullables",
     "generics",
@@ -287,7 +292,80 @@ pub const PROGRAMS: [&str; 18] = [
     "errors",
     "triple",
     "content-tags",
+    "json-adapters",
+    "reach",
 ];
+
+/// The shared programs that run as tests, as a functional test with
+/// `runAsTest = true` does, none expected to fail: their tests check
+/// what a log can't, as the library's state their init set.
+pub const AS_TESTS: [&str; 1] = ["reach"];
+
+/// What only the shared `reach` program's tests reach, by their Temper
+/// names, each of which a backend spells its own way.
+pub const REACH_TESTS_ONLY: [&str; 6] = [
+    "forTests",
+    "testFactor",
+    "testCount",
+    "TestShape",
+    "TestSquare",
+    "addArea",
+];
+
+/// What nothing in the shared `reach` program reaches.
+pub const REACH_UNREACHED: [&str; 4] = [
+    "unreachedFunction",
+    "UnreachedClass",
+    "UnreachedInterface",
+    "unreachedValue",
+];
+
+/// Whether `line` mentions `name` as a whole name, not inside a longer
+/// one, though a private name's leading `_` may come before it.
+pub fn mentions(line: &str, name: &str) -> bool {
+    let word = |c: char| c == '_' || c.is_ascii_alphanumeric();
+    line.match_indices(name).any(|(at, _)| {
+        let before = line[..at].trim_end_matches('_').chars().next_back();
+        let after = line[at + name.len()..].chars().next();
+        !before.is_some_and(word) && !after.is_some_and(word)
+    })
+}
+
+/// Checks a backend's output of the shared `reach` program, each line
+/// with its file's path and whether only tests have it (a tests file's,
+/// or one a build without tests leaves out): that every name in
+/// `tests_only` (as [`REACH_TESTS_ONLY`], spelled as the backend names
+/// them) shows up, and only where tests are, and no name in `unreached`
+/// ([`REACH_UNREACHED`]'s) anywhere.
+pub fn check_test_parts_apart<'a>(
+    lines: impl IntoIterator<Item = (&'a str, bool, &'a str)>,
+    tests_only: &[&str],
+    unreached: &[&str],
+) {
+    let mut seen = Vec::new();
+    let mut misplaced = Vec::new();
+    for (path, tests, line) in lines {
+        for &name in tests_only {
+            if mentions(line, name) {
+                seen.push(name);
+                if !tests {
+                    misplaced.push(format!("{path}: {name}, only for tests: {line}"));
+                }
+            }
+        }
+        for &name in unreached {
+            if mentions(line, name) {
+                misplaced.push(format!("{path}: {name}, which nothing reaches: {line}"));
+            }
+        }
+    }
+    for &name in tests_only {
+        if !seen.contains(&name) {
+            misplaced.push(format!("{name}, only for tests, is missing"));
+        }
+    }
+    assert!(misplaced.is_empty(), "{}", misplaced.join("\n"));
+}
 
 /// The shared programs that are libraries of several modules, in
 /// directories of their own: what [`Case::libraries`] lists.
@@ -296,14 +374,6 @@ pub const LIBRARIES: [&str; 4] = ["modules", "imports-library", "defaults", "ren
 /// The shared programs' directory.
 pub fn programs_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("programs")
-}
-
-/// A directory of the vendored copy of Kotlin Temper's sources, as
-/// `be-py/temper-core`.
-pub fn vendored(path: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper")
-        .join(path)
 }
 
 /// A program to translate: its library's name, its sources and their
@@ -337,10 +407,29 @@ pub struct Case {
 
 impl Case {
     /// Whether it needs std's output beside it: it runs as tests, with
-    /// std's `testing`, or imports a std module.
+    /// std's `testing`, or imports a std module, or a shared library it
+    /// imports does.
     pub fn needs_std(&self) -> bool {
-        self.tests.is_some()
-            || (self.sources.iter()).any(|(_, text)| text.contains("import(\"std/"))
+        self.tests.is_some() || self.imports_std()
+    }
+
+    /// Whether any of its modules imports a std module: its source's, and
+    /// for a library of several, as `modules`, its other modules', and
+    /// those of the shared libraries it imports.
+    fn imports_std(&self) -> bool {
+        let std = |text: &str| text.contains("import(\"std/");
+        if self.sources.iter().any(|(_, text)| std(text)) {
+            return true;
+        }
+        // Only a library of several modules has shared libraries beside it.
+        if self.libraries.is_empty() {
+            return false;
+        }
+        let mut files = Vec::new();
+        files_with(&self.dir, "temper", &mut files);
+        files_with(&self.dir, "md", &mut files);
+        (files.iter()).any(|f| fs::read_to_string(f).is_ok_and(|t| std(&t)))
+            || libraries(self, "").iter().any(Case::imports_std)
     }
 
     /// A library of one source given as text, not a file, its name the
@@ -369,7 +458,7 @@ pub fn cases(backend: &str, programs: &[&str]) -> Vec<Case> {
 }
 
 /// The functional tests that backends' other runs read, besides
-/// [`COVERED`]'s, which `TEMPEST_CASES` keeps.
+/// [`COVERED`]'s, which `TEMPER_CASES` keeps.
 const READ_ELSEWHERE: [&str; 4] = [
     "classes/static-properties",
     "functions/connected",
@@ -380,11 +469,11 @@ const READ_ELSEWHERE: [&str; 4] = [
 /// [`cases`], with more functional tests: `tests`, as [`CLASSES`].
 pub fn cases_with(backend: &str, programs: &[&str], tests: &[&str]) -> Vec<Case> {
     let mut cases = functional_cases(backend, tests);
-    // `TEMPEST_CASES=casts-as-expr,locals` runs only the functional tests
+    // `TEMPER_CASES=casts-as-expr,locals` runs only the functional tests
     // whose keys contain one of these, to work on a few; the shared
     // programs stay, and [`COVERED`] and [`READ_ELSEWHERE`], as other runs
     // read them.
-    if let Ok(only) = env::var("TEMPEST_CASES") {
+    if let Ok(only) = env::var("TEMPER_CASES") {
         let only: Vec<&str> = only.split(',').filter(|s| !s.is_empty()).collect();
         let only = if only.is_empty() { vec![""] } else { only };
         let kept = |key: &str| {
@@ -397,7 +486,7 @@ pub fn cases_with(backend: &str, programs: &[&str], tests: &[&str]) -> Vec<Case>
     cases
 }
 
-/// [`cases_with`] whatever `TEMPEST_CASES` keeps: each case's key and
+/// [`cases_with`] whatever `TEMPER_CASES` keeps: each case's key and
 /// library, for what must not depend on which run, as names a backend
 /// gives libraries of one name (C++'s).
 pub fn all_libraries(programs: &[&str], tests: &[&str]) -> Vec<(String, String)> {
@@ -407,7 +496,7 @@ pub fn all_libraries(programs: &[&str], tests: &[&str]) -> Vec<(String, String)>
 }
 
 /// [`COVERED`]'s functional tests and `tests`, as [`cases_with`] gives
-/// them, before `TEMPEST_CASES` filters them.
+/// them, before `TEMPER_CASES` filters them.
 pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
     let mut cases = Vec::new();
     let suite = temper_funtests::suite_dir();
@@ -486,7 +575,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             },
             host_files: Vec::new(),
             no_connected: false,
-            tests: None,
+            tests: AS_TESTS.contains(&file).then(Vec::new),
             fails: false,
         });
     }
@@ -505,9 +594,19 @@ pub fn program(case: &Case) -> Program {
             return program;
         }
     }
-    let library = load(case);
-    let mut program =
-        to_tmpl(&settle(library), &case.library).unwrap_or_else(|e| panic!("{key}: {e}"));
+    let settled = settle(load(case));
+    // Shown only if the test fails: what the frontend loaded and said,
+    // for failures on a platform you can't run locally.
+    if !settled.library.diagnostics.is_empty() {
+        let dirs: Vec<&str> = (settled.library.modules.iter())
+            .map(|m| m.dir.as_str())
+            .collect();
+        eprintln!("{key}: modules {dirs:?}");
+        for d in settled.library.diagnostics.iter().take(5) {
+            eprintln!("{key}: {d:?}");
+        }
+    }
+    let mut program = to_tmpl(&settled, &case.library).unwrap_or_else(|e| panic!("{key}: {e}"));
     let problems = validate(&program, &Profile::full());
     assert!(problems.is_empty(), "{key}: {problems:#?}");
     program.host = Host {
@@ -600,17 +699,44 @@ pub fn interpret(case: &Case) -> (Option<String>, Vec<String>) {
 /// A case's library, with the modules it imports, and the other
 /// libraries it may import by name.
 fn load(case: &Case) -> Library {
+    use temper_frontend::project::slashed;
     let mut library = Library::new();
     library.libraries = (case.libraries.iter())
-        .map(|(name, root)| (name.clone(), root.to_string_lossy().into_owned()))
+        .map(|(name, root)| (name.clone(), slashed(&root.to_string_lossy())))
         .collect();
+    // Paths with `/` on Windows too, as the CLI gives the frontend them.
     for (path, text) in &case.sources {
-        library.add_file(path, text, source_kind(path));
+        let path = slashed(path);
+        library.add_file(&path, text, source_kind(&path));
     }
     if (case.sources.iter()).any(|(_, text)| text.contains("testServerPort")) {
         library.test_server_port = Some(test_server_port().into());
     }
     load_imports(&Sources::standard(), &mut library);
+    // A shared library ([`LIBRARIES`]) has every module in its directory,
+    // as the CLI loads it, those that nothing imports too, after the
+    // others.
+    if LIBRARIES.iter().any(|l| case.dir == programs_dir().join(l)) {
+        let mut dirs = vec![case.dir.clone()];
+        while let Some(dir) = dirs.pop() {
+            let mut entries: Vec<PathBuf> = (fs::read_dir(&dir).unwrap().flatten())
+                .map(|e| e.path())
+                .collect();
+            entries.sort();
+            let name = slashed(&dir.to_string_lossy());
+            let loaded = (library.modules.iter()).any(|m| m.dir == name);
+            for path in entries {
+                let file = slashed(&path.to_string_lossy());
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if !loaded && temper_frontend::project::is_source(&file) {
+                    let text = fs::read_to_string(&path).unwrap();
+                    library.add_file(&file, &text, source_kind(&file));
+                }
+            }
+        }
+        load_imports(&Sources::standard(), &mut library);
+    }
     library
 }
 
@@ -727,6 +853,28 @@ pub fn with_stack(test: impl FnOnce() + Send + 'static) {
         .unwrap();
 }
 
+/// The goldens, beside std's, that show Temper's version as it is rather
+/// than as the sentinel, so each backend's spellings of it in a package
+/// file stay pinned: the `modules` program's, which depends on core and
+/// std. C++'s and C#'s output names no version (it refers to the runtime
+/// by path); Python's is pinned by std's `std.pyproject.toml`.
+pub const VERSION_PINNED: [&str; 4] = [
+    "modules.Cargo.toml",
+    "modules.modules-dev-1.rockspec",
+    "modules.package.json",
+    "modules.pom.xml",
+];
+
+/// Whether a golden shows Temper's version as it is: std's (`std.…`),
+/// which change with each release anyway, and [`VERSION_PINNED`]; the
+/// rest show the sentinel version in its place
+/// ([`temper_tmpl::version::sentinel`]: `0.0.0-alpha.0.0`, Python's
+/// `0.0.0.dev0`, a rockspec's `0.0.0.alpha.0.0-1`), which each file's
+/// ecosystem takes, so goldens stay valid in their language.
+pub fn pins_version(name: &str) -> bool {
+    name.starts_with("std.") || VERSION_PINNED.contains(&name)
+}
+
 /// Goldens in a directory: output compared with them, or with
 /// `UPDATE_SNAPSHOTS=1`, written over them.
 pub struct Goldens {
@@ -753,13 +901,29 @@ impl Goldens {
     /// Compares output with the golden of this file name, or updates it.
     /// In the goldens of [`NET`]'s tests, the test server's port reads as
     /// [`TEST_SERVER_PORT`] ([`as_fixed_port`]); only there, so a number
-    /// elsewhere that happens to be the port stays.
+    /// elsewhere that happens to be the port stays. Temper's version
+    /// reads as the sentinel `0.0.0-alpha.0.0`, in each spelling
+    /// ([`temper_tmpl::version::current_as_sentinel`]),
+    /// but in the goldens that pin it ([`pins_version`]), so a release
+    /// doesn't change every golden; a golden named in
+    /// [`VERSION_PINNED`] must name it.
     pub fn check(&mut self, name: &str, actual: &str) {
         let net = NET.iter().any(|t| name.starts_with(&t.replace('/', "-")));
         let actual = match net {
             true => as_fixed_port(actual),
             false => actual.into(),
         };
+        let actual = match pins_version(name) {
+            true => actual.into_owned(),
+            false => temper_tmpl::version::current_as_sentinel(&actual),
+        };
+        if VERSION_PINNED.contains(&name) {
+            let version = temper_tmpl::version::current();
+            if temper_tmpl::version::as_sentinel(&actual, version) == actual {
+                self.differ
+                    .push(format!("{name} pins the version but names none:\n{actual}"));
+            }
+        }
         let actual = &*actual;
         let golden = self.path(name);
         let expected = fs::read_to_string(&golden).unwrap_or_default();
@@ -789,26 +953,26 @@ impl Goldens {
     }
 }
 
-/// Whether checkers are required (`TEMPEST_REQUIRE_CHECKERS`, as in CI),
+/// Whether checkers are required (`TEMPER_REQUIRE_CHECKERS`, as in CI),
 /// so a missing one fails rather than skips.
 pub fn required() -> bool {
-    env::var_os("TEMPEST_REQUIRE_CHECKERS").is_some()
+    env::var_os("TEMPER_REQUIRE_CHECKERS").is_some()
 }
 
 /// Something a test needs is missing: skipped, with a message, unless
 /// checkers are required, when it fails; but for what
-/// `TEMPEST_ALLOW_MISSING` names (comma-separated, each found in `what`,
+/// `TEMPER_ALLOW_MISSING` names (comma-separated, each found in `what`,
 /// as `LuaLS`), which CI sets where a tool can't be set up on a platform.
 pub fn missing(what: &str) {
-    let allowed = env::var("TEMPEST_ALLOW_MISSING").is_ok_and(|names| {
+    let allowed = env::var("TEMPER_ALLOW_MISSING").is_ok_and(|names| {
         (names.split(',').map(str::trim)).any(|name| !name.is_empty() && what.contains(name))
     });
     assert!(
         !required() || allowed,
-        "{what} (needed with TEMPEST_REQUIRE_CHECKERS)"
+        "{what} (needed with TEMPER_REQUIRE_CHECKERS)"
     );
     match allowed {
-        true => eprintln!("skipped: {what} (allowed by TEMPEST_ALLOW_MISSING)"),
+        true => eprintln!("skipped: {what} (allowed by TEMPER_ALLOW_MISSING)"),
         false => eprintln!("skipped: {what}"),
     }
 }
@@ -902,10 +1066,22 @@ pub fn cached(
     fs::write(stamp_path, stamp).unwrap();
 }
 
+/// What a program printed, as text: on Windows, with the `\r\n` that a
+/// text-mode stream (Lua's, Python's, Java's `println`) writes for `\n`
+/// as `\n`, so its lines compare as they do elsewhere; a `\r` it prints
+/// itself, but for one just before a newline, is kept.
+pub fn printed(bytes: &[u8]) -> String {
+    let text = String::from_utf8_lossy(bytes);
+    match cfg!(windows) {
+        true => text.replace("\r\n", "\n"),
+        false => text.into_owned(),
+    }
+}
+
 /// Compares what a program logged with what's expected, adding a failure
 /// if it differs or the program failed.
 pub fn check_log(failures: &mut Vec<String>, name: &str, out: &Output, expected: &[String]) {
-    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
     if !out.status.success() || actual != expected {
         failures.push(format!(
@@ -921,7 +1097,7 @@ pub fn check_case(failures: &mut Vec<String>, name: &str, out: &Output, case: &C
     if !case.fails {
         return check_log(failures, name, out, &case.expected);
     }
-    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
     if out.status.success() || actual != case.expected {
         failures.push(format!(
@@ -994,13 +1170,7 @@ pub fn check_tests(
 ) {
     let key = &case.key;
     let expected = case.tests.as_deref().unwrap_or_default();
-    let output = || {
-        format!(
-            "{}{}",
-            String::from_utf8_lossy(&out.stdout),
-            String::from_utf8_lossy(&out.stderr)
-        )
-    };
+    let output = || format!("{}{}", printed(&out.stdout), printed(&out.stderr));
     let Some(actual) = actual else {
         failures.push(format!("{key}: no test results\n{}", output()));
         return;

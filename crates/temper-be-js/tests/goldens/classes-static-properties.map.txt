@@ -1,42 +1,51 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../static-properties.temper.md:5:5  class Simple extends type() <- class Simple(
-3:7 -> ../static-properties.temper.md:5:11 (Simple)  Simple extends type() { <- Simple(
-3:13 -> ../static-properties.temper.md:5:5   extends type() { <- class Simple(
-4:3 -> ../static-properties.temper.md:6:14  /** @type {string} */ <- name: String,
-5:3 -> ../static-properties.temper.md:6:14  #name; <- name: String,
-6:3 -> ../static-properties.temper.md:12:21  /** @type {Simple} */ <- simon = new Simple("foo");
-7:3 -> ../static-properties.temper.md:12:21  static simon; <- simon = new Simple("foo");
-8:3 -> ../static-properties.temper.md:19:21  /** @type {string} */ <- value = Simple.simon.name;
-9:3 -> ../static-properties.temper.md:19:21  static value; <- value = Simple.simon.name;
-10:3 -> ../static-properties.temper.md:20:21  /** @type {number} */ <- other = 22;
-11:3 -> ../static-properties.temper.md:20:21  static other; <- other = 22;
-13:3 -> ../static-properties.temper.md:5:5  /** @param {string} name */ <- class Simple(
-14:3 -> ../static-properties.temper.md:5:5  constructor(name) { <- class Simple(
-16:5 -> ../static-properties.temper.md:6:14  this.#name = name; <- name: String,
-19:3 -> ../static-properties.temper.md:6:14  /** @returns {string} */ <- name: String,
-20:3 -> ../static-properties.temper.md:6:14  get name() { <- name: String,
-20:7 -> ../static-properties.temper.md:6:14 (name)  name() { <- name: String,
-25:1 -> ../static-properties.temper.md:44:5  class C extends type() { <- class C {
-25:7 -> ../static-properties.temper.md:44:11 (C)  C extends type() { <- C {
-25:8 -> ../static-properties.temper.md:44:5   extends type() { <- class C {
-26:3 -> ../static-properties.temper.md:45:21  static sayHi() { <- sayHi(): Void { console.log(
-26:10 -> ../static-properties.temper.md:45:21 (sayHi)  sayHi() { <- sayHi(): Void { console.log(
-27:5 -> ../static-properties.temper.md:45:37  console.log(C.compose("C", " <- console.log(C.compose("C", "
-30:3 -> ../static-properties.temper.md:51:22  /** <- compose(subject: String, mes
-35:3 -> ../static-properties.temper.md:51:22  static compose(subject, mess <- compose(subject: String, mes
-35:10 -> ../static-properties.temper.md:51:22 (compose)  compose(subject, message) { <- compose(subject: String, mes
-36:5 -> ../static-properties.temper.md:52:9  return `${subject} says ${me <- "${subject} says ${message}"
-40:1 -> ../static-properties.temper.md:58:5  class I extends type() { <- interface I {
-40:7 -> ../static-properties.temper.md:58:15 (I)  I extends type() { <- I {
-40:8 -> ../static-properties.temper.md:58:5   extends type() { <- interface I {
-41:3 -> ../static-properties.temper.md:59:21  static sayBye() { <- sayBye(): Void { console.log
-41:10 -> ../static-properties.temper.md:59:21 (sayBye)  sayBye() { <- sayBye(): Void { console.log
-42:5 -> ../static-properties.temper.md:59:38  console.log("I says 'bye.'") <- console.log("I says 'bye.'")
-46:1 -> ../static-properties.temper.md:12:21  Simple.simon = new Simple("f <- simon = new Simple("foo");
-47:1 -> ../static-properties.temper.md:19:21  Simple.value = Simple.simon. <- value = Simple.simon.name;
-48:1 -> ../static-properties.temper.md:20:21  Simple.other = 22; <- other = 22;
-49:1 -> ../static-properties.temper.md:25:5  console.log(`Simple.simon.na <- console.log("Simple.simon.na
-50:1 -> ../static-properties.temper.md:26:5  console.log(`Simple.value is <- console.log("Simple.value is
-51:1 -> ../static-properties.temper.md:27:5  console.log(`Simple.other is <- console.log("Simple.other is
-52:1 -> ../static-properties.temper.md:64:5  C.sayHi(); <- C.sayHi();
-53:1 -> ../static-properties.temper.md:65:5  I.sayBye(); <- I.sayBye();
+3:1 -> ../static-properties.temper.md:12:21  /** @type {Simple} */ <- simon = new Simple("foo");
+4:1 -> ../static-properties.temper.md:12:21  let Simple$simon; <- simon = new Simple("foo");
+5:1 -> ../static-properties.temper.md:19:21  /** @type {string} */ <- value = Simple.simon.name;
+6:1 -> ../static-properties.temper.md:19:21  let Simple$value; <- value = Simple.simon.name;
+7:1 -> ../static-properties.temper.md:20:21  /** @type {number} */ <- other = 22;
+8:1 -> ../static-properties.temper.md:20:21  let Simple$other; <- other = 22;
+10:1 -> ../static-properties.temper.md:5:5  class Simple extends type() <- class Simple(
+10:7 -> ../static-properties.temper.md:5:11 (Simple)  Simple extends type() { <- Simple(
+10:13 -> ../static-properties.temper.md:5:5   extends type() { <- class Simple(
+11:3 -> ../static-properties.temper.md:6:14  /** @type {string} */ <- name: String,
+12:3 -> ../static-properties.temper.md:6:14  #name; <- name: String,
+14:3 -> ../static-properties.temper.md:12:21  /** @returns {Simple} */ <- simon = new Simple("foo");
+15:3 -> ../static-properties.temper.md:12:21  static get simon() { <- simon = new Simple("foo");
+15:14 -> ../static-properties.temper.md:12:21 (simon)  simon() { <- simon = new Simple("foo");
+19:3 -> ../static-properties.temper.md:19:21  /** @returns {string} */ <- value = Simple.simon.name;
+20:3 -> ../static-properties.temper.md:19:21  static get value() { <- value = Simple.simon.name;
+20:14 -> ../static-properties.temper.md:19:21 (value)  value() { <- value = Simple.simon.name;
+24:3 -> ../static-properties.temper.md:20:21  /** @returns {number} */ <- other = 22;
+25:3 -> ../static-properties.temper.md:20:21  static get other() { <- other = 22;
+25:14 -> ../static-properties.temper.md:20:21 (other)  other() { <- other = 22;
+29:3 -> ../static-properties.temper.md:5:5  /** @param {string} name */ <- class Simple(
+30:3 -> ../static-properties.temper.md:5:5  constructor(name) { <- class Simple(
+32:5 -> ../static-properties.temper.md:6:14  this.#name = name; <- name: String,
+35:3 -> ../static-properties.temper.md:6:14  /** @returns {string} */ <- name: String,
+36:3 -> ../static-properties.temper.md:6:14  get name() { <- name: String,
+36:7 -> ../static-properties.temper.md:6:14 (name)  name() { <- name: String,
+41:1 -> ../static-properties.temper.md:44:5  class C extends type() { <- class C {
+41:7 -> ../static-properties.temper.md:44:11 (C)  C extends type() { <- C {
+41:8 -> ../static-properties.temper.md:44:5   extends type() { <- class C {
+42:3 -> ../static-properties.temper.md:45:21  static sayHi() { <- sayHi(): Void { console.log(
+42:10 -> ../static-properties.temper.md:45:21 (sayHi)  sayHi() { <- sayHi(): Void { console.log(
+43:5 -> ../static-properties.temper.md:45:37  console.log(C.compose("C", " <- console.log(C.compose("C", "
+46:3 -> ../static-properties.temper.md:51:22  /** <- compose(subject: String, mes
+51:3 -> ../static-properties.temper.md:51:22  static compose(subject, mess <- compose(subject: String, mes
+51:10 -> ../static-properties.temper.md:51:22 (compose)  compose(subject, message) { <- compose(subject: String, mes
+52:5 -> ../static-properties.temper.md:52:9  return `${subject} says ${me <- "${subject} says ${message}"
+56:1 -> ../static-properties.temper.md:58:5  class I extends type() { <- interface I {
+56:7 -> ../static-properties.temper.md:58:15 (I)  I extends type() { <- I {
+56:8 -> ../static-properties.temper.md:58:5   extends type() { <- interface I {
+57:3 -> ../static-properties.temper.md:59:21  static sayBye() { <- sayBye(): Void { console.log
+57:10 -> ../static-properties.temper.md:59:21 (sayBye)  sayBye() { <- sayBye(): Void { console.log
+58:5 -> ../static-properties.temper.md:59:38  console.log("I says 'bye.'") <- console.log("I says 'bye.'")
+62:1 -> ../static-properties.temper.md:12:21  Simple$simon = new Simple("f <- simon = new Simple("foo");
+63:1 -> ../static-properties.temper.md:19:21  Simple$value = Simple.simon. <- value = Simple.simon.name;
+64:1 -> ../static-properties.temper.md:20:21  Simple$other = 22; <- other = 22;
+65:1 -> ../static-properties.temper.md:25:5  console.log(`Simple.simon.na <- console.log("Simple.simon.na
+66:1 -> ../static-properties.temper.md:26:5  console.log(`Simple.value is <- console.log("Simple.value is
+67:1 -> ../static-properties.temper.md:27:5  console.log(`Simple.other is <- console.log("Simple.other is
+68:1 -> ../static-properties.temper.md:64:5  C.sayHi(); <- C.sayHi();
+69:1 -> ../static-properties.temper.md:65:5  I.sayBye(); <- I.sayBye();

@@ -71,8 +71,7 @@ class Pong extends type() {
   /** @param {Ping} a */
   pong(a) {
     {
-      const o = a;
-      o.n = (o.n + 1) | 0;
+      a.n = (a.n + 1) | 0;
     }
   }
 
@@ -83,8 +82,7 @@ class Pong extends type() {
    */
   bump(a, by) {
     {
-      const o = a;
-      o.n = (o.n + by) | 0;
+      a.n = (a.n + by) | 0;
     }
     return a.n;
   }

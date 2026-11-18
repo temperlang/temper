@@ -71,9 +71,9 @@ end
 local StringHolder = temper.type("defaulting.StringHolder")
 
 ---@param this defaulting.StringHolder
----@param string string
-function StringHolder.constructor(this, string)
-  this.string = string
+---@param string_ string
+function StringHolder.constructor(this, string_)
+  this.string = string_
 end
 
 ---@param a defaulting.StringHolder|temper.Null

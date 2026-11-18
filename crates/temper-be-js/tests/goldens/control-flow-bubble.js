@@ -2,6 +2,7 @@ import {
   bubble,
   divIntInt,
   modIntInt,
+  panic,
   requireNotNull,
   stringToInt32,
 } from "@temperlang/core";
@@ -171,6 +172,102 @@ function viaOrElse(n) {
   return `${t$1} ${t$2} ${t$3}`;
 }
 
+/** @returns {never} */
+function unreachableInt() {
+  panic();
+}
+
+/**
+ * @template T
+ * @param {T} fallback
+ * @returns {never}
+ */
+function failAs(fallback) {
+  bubble();
+}
+
+/** @returns {never} */
+function bail() {
+  bubble();
+}
+
+/** @returns {string | null} */
+function noName() {
+  return null;
+}
+
+/** @returns {never} */
+function stop() {
+  panic();
+}
+
+/**
+ * @param {number} n
+ * @returns {number}
+ */
+function half(n) {
+  if (modIntInt(n, 2) !== 0) {
+    bail();
+  }
+  if (n < 0) {
+    return failAs(n);
+  } else {
+    return (n / 2) | 0;
+  }
+}
+
+/**
+ * @param {boolean} b
+ * @returns {number}
+ */
+function pick(b) {
+  if (b) {
+    return 1;
+  } else {
+    return unreachableInt();
+  }
+}
+
+/**
+ * @param {boolean} b
+ * @returns {string | null}
+ */
+function named(b) {
+  if (b) {
+    return "named";
+  } else {
+    return noName();
+  }
+}
+
+/**
+ * @param {boolean} b
+ * @returns {number}
+ */
+function chosen(b) {
+  /** @type {number} */
+  let x;
+  if (b) {
+    x = 3;
+    console.log("chosen");
+  } else {
+    unreachableInt();
+  }
+  return x;
+}
+
+/**
+ * @param {string | null} s
+ * @returns {string}
+ */
+function shout(s) {
+  if (s == null) {
+    stop();
+  }
+  const t = s;
+  return `${t}!`;
+}
+
 /**
  * @param {number} a
  * @param {number} b
@@ -208,5 +305,29 @@ try {
 console.log(`${t$5} ${isNone(t$6)}`);
 console.log(viaOrElse(2));
 console.log(viaOrElse(12));
+console.log(`${pick(true)} ${named(true) ?? "-"} ${named(false) ?? "null"}`);
+/** @type {number} */
+let t$7;
+try {
+  t$7 = half(4);
+} catch {
+  t$7 = -1;
+}
+/** @type {number} */
+let t$8;
+try {
+  t$8 = half(3);
+} catch {
+  t$8 = -1;
+}
+/** @type {number} */
+let t$9;
+try {
+  t$9 = half(-2);
+} catch {
+  t$9 = -1;
+}
+console.log(`${t$7} ${t$8} ${t$9}`);
+console.log(`${chosen(true)} ${shout("hey")}`);
 branch(0, 2);
 branch(2, 0);

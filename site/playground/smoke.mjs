@@ -22,13 +22,14 @@
 // signature help, an `interactive#N` link putting that input in the
 // cell, and `runTests()` after a redefinition failing the editor's test.
 // Then the site's header (site/shared): its sections, with Playground
-// current; About, opened and closed from the keyboard; the theme toggle,
+// current; About, opened and closed from the keyboard, naming the
+// version; the theme toggle,
 // kept across a reload; and at 390 px, the sections behind Menu, with
 // the playground's controls in view and no sideways scrolling. With
 // SITE, a docs page's header is the same, and a theme picked there
 // carries to the playground and back.
 // Throughout, no console errors, page errors, or failed requests.
-// Chromium is PATH, else $TEMPEST_CHROMIUM, else Playwright's own
+// Chromium is PATH, else $TEMPER_CHROMIUM, else Playwright's own
 // (`npx playwright-core install --only-shell chromium` in
 // site/docs/mermaid). Exits with 1 if a check fails, 3 if there's no
 // Chromium.
@@ -47,7 +48,7 @@ const TIMEOUT = 60_000;
 
 const args = process.argv.slice(2);
 const at = args.indexOf("--chromium");
-const executablePath = (at >= 0 ? args.splice(at, 2)[1] : null) || process.env.TEMPEST_CHROMIUM || undefined;
+const executablePath = (at >= 0 ? args.splice(at, 2)[1] : null) || process.env.TEMPER_CHROMIUM || undefined;
 const siteAt = args.indexOf("--site");
 const site = siteAt >= 0 ? resolve(args.splice(siteAt, 2)[1]) : null;
 if (args.length > 1) {
@@ -202,7 +203,7 @@ try {
   step("permalink survives a reload", text.includes(mark) ? quiet() : ["the edit was lost", ...quiet()]);
 
   // The REPL tab: the editor's code is input 0; each input's answer
-  // ends in a result line, as `tempest repl` prints it.
+  // ends in a result line, as `temper repl` prints it.
   await page.click("#view-repl");
   const idle = () => page.waitForFunction(() => {
     const t = document.querySelector("#repl-transcript");
@@ -436,6 +437,7 @@ try {
   const about = await page.$eval("#about", (a) => (a.matches(":popover-open") ? a.textContent ?? "" : null));
   if (about === null) aboutProblems.push("Enter didn't open it");
   else for (const want of ["Apache-2.0 OR MIT", "on GitHub", "Built from", "MiB of wasm"]) if (!about.includes(want)) aboutProblems.push(`no ${JSON.stringify(want)}`);
+  if (about !== null && !/Temper \d+\.\d+\.\d+/.test(about)) aboutProblems.push("no version");
   await page.keyboard.press("Escape");
   if (await page.$eval("#about", (a) => a.matches(":popover-open"))) aboutProblems.push("Escape didn't close it");
   step("About", [...aboutProblems, ...quiet()]);

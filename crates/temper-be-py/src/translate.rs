@@ -3,7 +3,9 @@
 //! `let`s by `from MODULE import NAME`, and to its `var`s through the
 //! module (`import MODULE as ALIAS`, `ALIAS.NAME`), so a read is current
 //! and a write lands there. Tests go in a file of their own
-//! ([`Translator::tests`]), each a method of a `unittest.TestCase`.
+//! ([`Translator::tests`]), each a method of a `unittest.TestCase`, after
+//! what only tests reach, which only that file has, as tmpl's
+//! `reach::partition` splits it.
 //! Classes and interfaces, and their members' uses, are in
 //! [`crate::classes`].
 
@@ -12,7 +14,7 @@ use crate::connected::{self, Connection};
 use crate::ops::{self, Spelling};
 use crate::tree::{self, Bin, Expr, FPart, Stmt};
 use std::collections::{BTreeMap, BTreeSet};
-use temper_tmpl::analysis::{self, home, module_writes, nominal_decl};
+use temper_tmpl::analysis::{self, TestParts, home, module_writes, nominal_decl};
 use temper_tmpl::coroutines::pauses;
 use temper_tmpl::host::{HostFile, uses_host};
 use temper_tmpl::naming::NameMap;
@@ -43,6 +45,11 @@ pub struct Translator<'a> {
     modules: BTreeMap<String, String>,
     /// The module whose file this is; `NONE` for a tests file.
     pub(crate) here: DeclId,
+    /// For a tests file, the module tested, and what its test parts
+    /// define, which are the file's own, and use of it, which the file
+    /// imports.
+    tested: DeclId,
+    test_parts: TestParts,
     /// The class or interface whose member this is; `NONE` outside one.
     pub(crate) class: DeclId,
     /// This module's classes and interfaces defined so far, which
@@ -63,7 +70,7 @@ pub struct Translator<'a> {
     pre: Vec<Stmt>,
     /// Locals whose `let` a `??` became, to assign where first read, as
     /// `(subject := f())`.
-    walrus: BTreeMap<DeclId, Expr>,
+    walrus: BTreeMap<DeclId, (Expr, TypeId)>,
     /// Temporaries made so far, for their numbers.
     temps: usize,
     /// How many functions deep the translation is: 0 at module level.
@@ -90,11 +97,40 @@ pub struct Translator<'a> {
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
-    /// Locals annotated so far in the function being translated, by name,
-    /// with their annotations: one in a later block, which Python's scope
-    /// shares, is annotated again only where its type differs, since
-    /// mypy rejects another annotation of a name (`no-redef`).
-    annotated: BTreeMap<String, String>,
+    /// How the function being translated, or the module's init, binds
+    /// its locals' names ([`Bindings`]).
+    bindings: Bindings,
+}
+
+/// How a Python scope (a function's, or the module's init) binds its
+/// locals' names. Python gives a name one type in a scope, and mypy takes
+/// it from the name's first binding, its annotation or else its value's
+/// type, and rejects a later annotation (`no-redef`). So a name bound more
+/// than once, by several locals sharing it (as the naming pass lets those
+/// of one type, with or without null) or by a `var` assigned again, is
+/// annotated only where first bound, with its widest type, and only
+/// where its value's type may be narrower. A first binding of a narrower
+/// type (not null, where another is nullable) is declared on its own
+/// line before it, so its value narrows it, as is a walrus that binds it
+/// first, which can't annotate.
+struct Bindings {
+    /// The function or module whose locals these are.
+    owner: DeclId,
+    /// The names bound more than once, each with its widest type: its
+    /// locals' type, nullable where any of theirs is.
+    rebound: BTreeMap<String, TypeId>,
+    /// The names bound so far, parameters' first.
+    bound: BTreeSet<String>,
+}
+
+impl Default for Bindings {
+    fn default() -> Bindings {
+        Bindings {
+            owner: DeclId::NONE,
+            rebound: BTreeMap::new(),
+            bound: BTreeSet::new(),
+        }
+    }
 }
 
 /// Where a value goes, for [`Translator::value_into`].
@@ -110,7 +146,7 @@ impl<'a> Translator<'a> {
     pub fn new(p: &'a Program, names: &'a NameMap) -> Translator<'a> {
         let mut class_nodes = BTreeMap::new();
         for module in &p.modules {
-            for &item in &module.items {
+            for item in module.all_items() {
                 if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                     class_nodes.insert(decl, item);
                 }
@@ -125,6 +161,8 @@ impl<'a> Translator<'a> {
             own: BTreeSet::new(),
             modules: BTreeMap::new(),
             here: DeclId::NONE,
+            tested: DeclId::NONE,
+            test_parts: TestParts::default(),
             class: DeclId::NONE,
             defined: BTreeSet::new(),
             class_nodes,
@@ -141,17 +179,23 @@ impl<'a> Translator<'a> {
             loop_lets: BTreeSet::new(),
             widen: BTreeSet::new(),
             awaiters: Vec::new(),
-            annotated: BTreeMap::new(),
+            bindings: Bindings::default(),
             defaulted: BTreeSet::new(),
         }
     }
 
-    /// The names a module binds at its top level: its own declarations',
-    /// and those of other modules' and libraries' it uses, which it
-    /// imports, so imports of Python's or the runtime's names make way.
-    fn module_level_names(&self, module: &Module) -> BTreeSet<String> {
+    /// The names a file binds at its top level: its `items`'
+    /// declarations, and those of other modules' and libraries' that its
+    /// `roots` use, which it imports, so imports of Python's or the
+    /// runtime's names make way.
+    fn module_level_names(
+        &self,
+        module: &Module,
+        items: &[NodeId],
+        roots: &[NodeId],
+    ) -> BTreeSet<String> {
         let p = self.p;
-        let own = (module.items.iter()).filter_map(|&item| match p.nodes.get(item) {
+        let own = (items.iter()).filter_map(|&item| match p.nodes.get(item) {
             Node::Function { decl, .. }
             | Node::BodilessFunction { decl, .. }
             | Node::ModuleLet { decl }
@@ -159,11 +203,7 @@ impl<'a> Translator<'a> {
             | Node::Interface { decl, .. } => Some(decl),
             _ => None,
         });
-        let roots: Vec<NodeId> = (module.items.iter().copied())
-            .chain([module.init])
-            .chain(module.tests.iter().copied())
-            .collect();
-        let imports = temper_tmpl::analysis::imports(p, module.decl, &roots);
+        let imports = temper_tmpl::analysis::imports(p, module.decl, roots);
         let used = imports.into_iter().flat_map(|i| i.decls);
         (own.chain(used))
             .map(|d| self.name(d))
@@ -218,13 +258,13 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let d = p.decls.get(module);
         if d.kind == DeclKind::Library {
-            return crate::names::library_package(&library_name(p.name(module)));
+            return crate::names::library_package(&library_name(p, p.name(module)));
         }
         if !d.owner.is_none() {
-            let package = crate::names::library_package(&library_name(p.name(d.owner)));
+            let package = crate::names::library_package(&library_name(p, p.name(d.owner)));
             return dotted(&package, p.name(module));
         }
-        let package = crate::names::library_package(&library_name(&p.library.name));
+        let package = crate::names::library_package(&library_name(p, &p.library.name));
         let path = p.modules.iter().find(|m| m.decl == module);
         match path.map(|m| m.path.as_str()) {
             None | Some("") => format!("{package}.{package}"),
@@ -237,10 +277,10 @@ impl<'a> Translator<'a> {
     /// module's alias and its name.
     pub(crate) fn top(&mut self, decl: DeclId) -> Expr {
         let name = self.name(decl);
-        let from = home(self.p, decl).unwrap_or(DeclId::NONE);
-        if from == self.here {
+        if self.is_here(decl) {
             return Expr::name(name);
         }
+        let from = home(self.p, decl).unwrap_or(DeclId::NONE);
         let module = self.py_module(from);
         let d = self.p.decls.get(decl);
         if d.kind == DeclKind::ModuleLet && d.facts.contains(Facts::VAR) {
@@ -253,6 +293,15 @@ impl<'a> Translator<'a> {
             return Expr::name(name);
         }
         Expr::name(self.import(&module, &name))
+    }
+
+    /// Whether a module-level declaration is this file's own: its module's,
+    /// or in a tests file, its test parts'.
+    pub(crate) fn is_here(&self, decl: DeclId) -> bool {
+        match self.here.is_none() {
+            true => self.test_parts.own.contains(&decl),
+            false => home(self.p, decl) == Some(self.here),
+        }
     }
 
     /// The alias a module imported whole goes by: `_m_` and its dotted
@@ -362,7 +411,7 @@ impl<'a> Translator<'a> {
     }
 
     /// A type's annotation, unquoted, and whether it needs quotes.
-    fn ann_raw(&mut self, ty: TypeId) -> R<(String, bool)> {
+    pub(crate) fn ann_raw(&mut self, ty: TypeId) -> R<(String, bool)> {
         Ok(match self.p.types.get(ty) {
             TypeData::Scalar(s) => (
                 match s {
@@ -424,7 +473,7 @@ impl<'a> Translator<'a> {
                     _ => match self.top(decl) {
                         Expr::Name(name) => {
                             quote |= !is_external(self.p, decl)
-                                && home(self.p, decl) == Some(self.here)
+                                && self.is_here(decl)
                                 && !self.defined.contains(&decl);
                             name
                         }
@@ -438,6 +487,8 @@ impl<'a> Translator<'a> {
                 }
             }
             TypeData::Function { .. } => self.callable(ty)?,
+            // A result that never returns, kept by `temper_tmpl::nevers`.
+            TypeData::Never(_) => (self.import_type("typing", "NoReturn"), false),
             TypeData::Nullable(inner) => {
                 let (inner, quote) = self.ann_raw(inner)?;
                 (format!("{inner} | None"), quote)
@@ -482,14 +533,14 @@ impl<'a> Translator<'a> {
         ))
     }
 
-    /// The module's type parameters as `TypeVar`s, which Python declares
+    /// Items' type parameters as `TypeVar`s, which Python declares
     /// at the top level: one per name and bound, numbered past names in
     /// use, but a generic method's own apart from its class's.
-    fn type_vars(&mut self, module: &Module) -> R<Vec<Stmt>> {
+    fn type_vars(&mut self, items: &[NodeId]) -> R<Vec<Stmt>> {
         let p = self.p;
         self.type_vars.clear();
         let mut groups: Vec<(DeclId, Vec<DeclId>)> = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             match p.nodes.get(item) {
                 Node::Function { decl, .. } => groups.push((DeclId::NONE, vec![decl])),
                 Node::Class { decl, members } | Node::Interface { decl, members } => {
@@ -530,6 +581,17 @@ impl<'a> Translator<'a> {
                         [b] => Some(self.ann_raw(*b)?.0),
                         _ => return not_yet("a type parameter with more than one bound"),
                     };
+                    // A function's type parameter that its signature names
+                    // only as one parameter's type, as `x: T` with a
+                    // `NoReturn` result, binds nothing, so it's its bound,
+                    // as pyright's strict `reportInvalidTypeVarUse` wants.
+                    let own = p.decls.get(decl).kind != DeclKind::Class
+                        && p.decls.get(decl).kind != DeclKind::Interface;
+                    if own && only_as_a_parameter(p, decl, p.decls.get(tp).ty) {
+                        let plain = bound.clone().unwrap_or_else(|| "object".into());
+                        self.type_vars.insert(tp, plain);
+                        continue;
+                    }
                     let shared = made
                         .iter()
                         .find(|(n, s, b)| *s == source && *b == bound && !outer.contains(n));
@@ -572,12 +634,32 @@ impl<'a> Translator<'a> {
 
     pub fn module(&mut self, module: &Module) -> R<tree::Module> {
         self.here = module.decl;
+        self.tested = DeclId::NONE;
+        self.test_parts = TestParts::default();
         self.defined.clear();
-        self.own = self.module_level_names(module);
-        let mut body = self.type_vars(module)?;
+        let roots: Vec<NodeId> = (module.items.iter().copied())
+            .chain([module.init])
+            .collect();
+        self.own = self.module_level_names(module, &module.items, &roots);
+        let mut body = self.type_vars(&module.items)?;
+        self.items(module, &module.items, &mut body)?;
+        self.init_block(module.decl, module.init, &mut body)?;
+        self.qualify_builtins(&mut body);
+        tree::mark_unused(&mut body);
+        let exports = self.exports(module);
+        let mut tree = self.finish(body);
+        tree.host = host_file(self.p, module).map(|f| f.text.clone());
+        tree.exports = Some(exports);
+        Ok(tree)
+    }
+
+    /// A file's functions, classes, and interfaces, of `items`: a
+    /// module's, or its test items, in a tests file. Module `let`s are
+    /// declared where an init block initializes them.
+    fn items(&mut self, module: &Module, items: &[NodeId], body: &mut Vec<Stmt>) -> R<()> {
         let mut done = BTreeSet::new();
         let host = host_file(self.p, module);
-        for &item in &module.items {
+        for &item in items {
             match self.p.nodes.get(item) {
                 Node::Function { decl, params, .. } | Node::BodilessFunction { decl, params }
                     if uses_host(self.p, decl, NAMES) =>
@@ -587,6 +669,12 @@ impl<'a> Translator<'a> {
                             "{}'s host code, with no {}",
                             self.p.name(decl),
                             host_path(module)
+                        ));
+                    }
+                    if self.here.is_none() {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            self.p.name(decl)
                         ));
                     }
                     body.push(self.host_wrapper(item, decl, params)?);
@@ -610,6 +698,12 @@ impl<'a> Translator<'a> {
                             host_path(module)
                         ));
                     }
+                    if self.here.is_none() {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            self.p.name(decl)
+                        ));
+                    }
                     let host_name = self.p.name(decl).to_string();
                     body.push(Stmt::Assign {
                         target: Expr::Name(self.name(decl)),
@@ -630,19 +724,22 @@ impl<'a> Translator<'a> {
                     done.insert(decl);
                 }
                 Node::Class { .. } | Node::Interface { .. } => {
-                    self.class_after_supers(item, &mut done, &mut body)?;
+                    self.class_after_supers(item, &mut done, body)?;
                 }
                 // Declared where its init block initializes it.
                 _ => {}
             }
         }
-        self.block(module.init, &mut body)?;
-        tree::mark_unused(&mut body);
-        let exports = self.exports(module);
-        let mut module = self.finish(body);
-        module.host = host.map(|f| f.text.clone());
-        module.exports = Some(exports);
-        Ok(module)
+        Ok(())
+    }
+
+    /// An init block's statements, at a file's top level: a module's, or
+    /// its test init, in a tests file, which continues it.
+    fn init_block(&mut self, module: DeclId, init: NodeId, body: &mut Vec<Stmt>) -> R<()> {
+        self.bindings = self.bindings_of(module, init, &[]);
+        let done = self.block(init, body);
+        self.bindings = Bindings::default();
+        done
     }
 
     /// The names a module exports, for `__all__`, in order: its exported
@@ -711,6 +808,16 @@ impl<'a> Translator<'a> {
         Ok(def)
     }
 
+    /// The names of the file's own module `var`s that a function (or a
+    /// test) assigns, which it declares `global`; another module's it
+    /// assigns through that module.
+    fn globals(&self, function: NodeId) -> Vec<String> {
+        (module_writes(self.p, function).into_iter())
+            .filter(|&d| self.is_here(d))
+            .map(|d| self.name(d))
+            .collect()
+    }
+
     /// A function, named, its parameters' names and annotations first,
     /// with `self` first for a method or constructor (`params` itself not
     /// including it); its body declares any module `var` it assigns
@@ -762,16 +869,20 @@ impl<'a> Translator<'a> {
         let mut stmts = Vec::new();
         match body {
             Some(block) => {
-                let globals: Vec<String> = module_writes(self.p, item)
-                    .into_iter()
-                    .map(|d| self.name(d))
-                    .collect();
+                let globals = self.globals(item);
                 if !globals.is_empty() {
                     stmts.push(Stmt::Global(globals));
                 }
                 self.in_def += 1;
                 let temps = std::mem::take(&mut self.temps);
-                let annotated = std::mem::take(&mut self.annotated);
+                let param_decls: Vec<DeclId> = (self.p.nodes.list(params).iter())
+                    .filter_map(|&param| match self.p.nodes.get(param) {
+                        Node::Param { decl } => Some(decl),
+                        _ => None,
+                    })
+                    .collect();
+                let bindings = self.bindings_of(decl, block, &param_decls);
+                let bindings = std::mem::replace(&mut self.bindings, bindings);
                 // What the statement around a literal hoists stays there,
                 // out of the literal's body.
                 let pre = std::mem::take(&mut self.pre);
@@ -785,7 +896,7 @@ impl<'a> Translator<'a> {
                 let body = self.block(block, &mut stmts);
                 self.type_args = saved_args;
                 self.pre = pre;
-                self.annotated = annotated;
+                self.bindings = bindings;
                 self.temps = temps;
                 self.in_def -= 1;
                 body?;
@@ -800,6 +911,81 @@ impl<'a> Translator<'a> {
             result,
             body: stmts,
         })
+    }
+
+    /// The bindings of the locals of `owner`, a function or module, in
+    /// `root`, its body or init, after `params`, which are bound first.
+    fn bindings_of(&self, owner: DeclId, root: NodeId, params: &[DeclId]) -> Bindings {
+        let p = self.p;
+        let mut decls: Vec<DeclId> = params.to_vec();
+        let mut assigned = BTreeSet::new();
+        analysis::walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::Let { local, .. } if p.decls.get(local).owner == owner => decls.push(local),
+            Node::Assign { local, .. } if p.decls.get(local).owner == owner => {
+                assigned.insert(local);
+            }
+            _ => {}
+        });
+        let mut by_name: BTreeMap<String, Vec<DeclId>> = BTreeMap::new();
+        for d in decls {
+            by_name.entry(self.name(d)).or_default().push(d);
+        }
+        let rebound = (by_name.into_iter())
+            .filter(|(_, ds)| ds.len() > 1 || ds.iter().any(|d| assigned.contains(d)))
+            .map(|(name, ds)| {
+                let ty = |d: &DeclId| p.decls.get(*d).ty;
+                let wide = ds.iter().map(ty).find(|&t| p.types.is_nullable(t));
+                (name, wide.unwrap_or_else(|| ty(&ds[0])))
+            })
+            .collect();
+        let bound = params.iter().map(|&d| self.name(d)).collect();
+        Bindings {
+            owner,
+            rebound,
+            bound,
+        }
+    }
+
+    /// A local's name's widest type, if its scope binds the name more
+    /// than once.
+    fn rebound(&self, local: DeclId) -> Option<TypeId> {
+        if self.p.decls.get(local).owner != self.bindings.owner {
+            return None;
+        }
+        self.bindings.rebound.get(&self.name(local)).copied()
+    }
+
+    /// Whether a type is core's `ListBuilder`'s, `MapBuilder`'s, or
+    /// `Deque`'s, whose element types are invariant.
+    fn mutable_collection(&self, ty: TypeId) -> bool {
+        match self.p.types.get(ty) {
+            TypeData::Nominal { decl, .. } => matches!(
+                self.qname(decl).as_str(),
+                "core.type ListBuilder" | "core.type MapBuilder" | "core.type Deque"
+            ),
+            _ => false,
+        }
+    }
+
+    /// Whether checkers may infer a value of a type, unannotated, as a
+    /// narrower type than its annotation: a nullable one's as never null;
+    /// an interface's, or `AnyValue`'s, as the class of the value; a
+    /// generic one's, as a tuple, a list literal's, or a class's instance
+    /// with its arguments' types (`tuple[int, int]` for `Sequence[int]`,
+    /// `Pair[str, tuple[int]]`); or a function type's. Temper's classes
+    /// have no subclasses, so a value's type is its class.
+    fn may_infer_narrower(&self, ty: TypeId) -> bool {
+        let p = self.p;
+        match p.types.get(ty) {
+            TypeData::Nominal { decl, args } => {
+                !p.types.list(args).is_empty()
+                    || p.decls.get(decl).kind == DeclKind::Interface
+                    || p.decls.get(decl).facts.contains(Facts::FUN)
+            }
+            TypeData::Scalar(s) => s == Scalar::AnyValue,
+            TypeData::TypeParam { .. } => false,
+            _ => true,
+        }
     }
 
     /// A function's or method's own type parameters that appear in none
@@ -1115,6 +1301,27 @@ impl<'a> Translator<'a> {
         self.def(item, decl, params, Some(body), name, decorators)
     }
 
+    /// Reaches the builtins a function's own names hide through
+    /// `builtins` (`tree::qualify_builtins`), imported, where any is, as
+    /// `_builtins` (in a tests file, `builtins`), past any name in use.
+    fn qualify_builtins(&mut self, body: &mut [Stmt]) {
+        let mut alias = match self.here.is_none() {
+            true => "builtins".to_string(),
+            false => "_builtins".to_string(),
+        };
+        while self.own.contains(&alias)
+            || self.names.has_name(&alias)
+            || self.aliases.values().any(|a| *a == alias)
+            || self.modules.values().any(|a| *a == alias)
+            || self.type_vars.values().any(|a| *a == alias)
+        {
+            alias.push('_');
+        }
+        if tree::qualify_builtins(body, crate::names::BUILTINS, &alias) {
+            self.modules.insert("builtins".into(), alias);
+        }
+    }
+
     /// The file's imports, taken, with its body.
     fn finish(&mut self, body: Vec<Stmt>) -> tree::Module {
         let imports = std::mem::take(&mut self.imports);
@@ -1132,22 +1339,41 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A module's tests, as a `unittest` file: one `TestCase` class, named
-    /// for the module, with a method per test, as `test_adds` for "adds",
-    /// whose docstring is the test's name. Each makes std's `Test`, runs
-    /// the test's body, and then, even if the body raised, fails if the
-    /// `Test` has failures (`softFailToHard`), as Kotlin's do. `None` if
-    /// the module has no tests.
+    /// A module's tests, as a `unittest` file: what only tests reach (its
+    /// test items, and its test init, which continues the module's init
+    /// here), then one `TestCase` class, named for the module, with a
+    /// method per test, as `test_adds` for "adds", whose docstring is the
+    /// test's name. Each makes std's `Test`, runs the test's body, and
+    /// then, even if the body raised, fails if the `Test` has failures
+    /// (`softFailToHard`), as Kotlin's do. What they use of the module,
+    /// its private names too, is imported from it, as Kotlin's do. `None`
+    /// if the module has no tests.
     pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::Module>> {
         if module.tests.is_empty() {
             return Ok(None);
         }
         self.here = DeclId::NONE;
+        self.tested = module.decl;
+        self.test_parts = analysis::test_parts(self.p, module);
+        if self.test_parts.assign_init_locals(self.p) {
+            return not_yet("tests that assign a local of their module's init block");
+        }
+        self.defined.clear();
+        let roots: Vec<NodeId> = module.test_roots().collect();
+        self.own = self.module_level_names(module, &module.test_items, &roots);
+        let mut body = self.type_vars(&module.test_items)?;
+        self.items(module, &module.test_items, &mut body)?;
+        if let Some(init) = module.test_init {
+            self.init_block(module.decl, init, &mut body)?;
+        }
         let mut methods = Vec::new();
         let mut used = BTreeSet::new();
         for &test in &module.tests {
             let Node::Test {
-                name, params, body, ..
+                decl,
+                name,
+                params,
+                body,
             } = self.p.nodes.get(test)
             else {
                 continue;
@@ -1166,41 +1392,52 @@ impl<'a> Translator<'a> {
             let mut stmts = Vec::new();
             self.in_def += 1;
             let temps = std::mem::take(&mut self.temps);
+            self.bindings = self.bindings_of(decl, body, &[param]);
             let translated = self.block(body, &mut stmts);
+            self.bindings = Bindings::default();
             self.temps = temps;
             self.in_def -= 1;
             translated?;
             let test_var = self.name(param);
             let soft_fail = Expr::name(&test_var).attr("soft_fail_to_hard").call(vec![]);
             let method = test_method_name(&text, &mut used);
+            let mut method_body = vec![Stmt::Expr(Expr::Str(text))];
+            // The file's own `var`s it assigns, as what only tests reach.
+            let globals = self.globals(test);
+            if !globals.is_empty() {
+                method_body.push(Stmt::Global(globals));
+            }
+            method_body.push(Stmt::Assign {
+                target: Expr::name(test_var),
+                ann: Some(test_class.clone()),
+                value: Expr::name(test_class).call(vec![]),
+            });
+            method_body.push(Stmt::Try {
+                body: stmts,
+                except: None,
+                finally: vec![Stmt::Expr(soft_fail)],
+            });
             methods.push(Stmt::Def {
                 decorators: Vec::new(),
                 name: method,
                 params: vec![("self".into(), String::new())],
                 positional: 1,
                 result: "None".into(),
-                body: vec![
-                    Stmt::Expr(Expr::Str(text)),
-                    Stmt::Assign {
-                        target: Expr::name(test_var),
-                        ann: Some(test_class.clone()),
-                        value: Expr::name(test_class).call(vec![]),
-                    },
-                    Stmt::Try {
-                        body: stmts,
-                        except: None,
-                        finally: vec![Stmt::Expr(soft_fail)],
-                    },
-                ],
+                body: method_body,
             });
         }
         self.import("unittest", "TestCase");
-        let body = vec![Stmt::Class {
+        body.push(Stmt::Class {
             name: class.to_string(),
             bases: vec!["TestCase".into()],
             body: methods,
-        }];
-        Ok(Some(self.finish(body)))
+        });
+        self.qualify_builtins(&mut body);
+        tree::mark_unused(&mut body);
+        let tests = self.finish(body);
+        self.tested = DeclId::NONE;
+        self.test_parts = TestParts::default();
+        Ok(Some(tests))
     }
 
     pub(crate) fn block(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
@@ -1301,7 +1538,7 @@ impl<'a> Translator<'a> {
                 });
             }
             Node::Bubble { .. } | Node::Error { .. } => {
-                out.push(Stmt::Raise(Expr::name("RuntimeError").call(vec![])))
+                out.push(Stmt::Raise(Expr::builtin("RuntimeError").call(vec![])))
             }
             Node::Panic {} => out.push(panic()),
             _ => {
@@ -1408,6 +1645,7 @@ impl<'a> Translator<'a> {
                     unreachable!()
                 };
                 let name = self.name(local);
+                self.bindings.bound.insert(name.clone());
                 let def = self.literal_def(init, decl, params, body, name)?;
                 out.append(&mut self.pre);
                 out.push(def);
@@ -1443,9 +1681,13 @@ impl<'a> Translator<'a> {
                         // `{}`, `deque()`, or `new_unbound_promise()`,
                         // whose element types checkers can't infer, and
                         // casts, as `cast_by_type` gives its argument's type
-                        // where that's a supertype.
+                        // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
-                        let empty = match p.nodes.get(init) {
+                        let mut value = init;
+                        while let Node::OrElse { body, .. } = p.nodes.get(value) {
+                            value = body;
+                        }
+                        let empty = match p.nodes.get(value) {
                             Node::New { ctor, .. } => matches!(
                                 self.qname(ctor).as_str(),
                                 "core.type ListBuilder.constructor()"
@@ -1454,21 +1696,44 @@ impl<'a> Translator<'a> {
                                     | "core.type PromiseBuilder.constructor()"
                             ),
                             Node::As { .. } => true,
-                            _ => false,
-                        };
-                        // One that rebinds a local of its name (`let x = x`)
-                        // keeps its annotation, which widens what pyright
-                        // narrowed.
-                        let rebinds = matches!(p.nodes.get(init),
-                            Node::Local { local: l } if self.name(l) == target);
-                        let ann = if p.types.is_nullable(ty) || empty {
-                            let ann = self.ann(ty)?;
-                            match self.annotated.insert(target.clone(), ann.clone()) {
-                                Some(before) if before == ann && !rebinds => None,
-                                _ => Some(ann),
+                            // Or a builder made from a list literal, which
+                            // pyright may take for a list of its items'
+                            // literal types (`list[Literal[0]]`).
+                            _ => {
+                                self.mutable_collection(ty)
+                                    && (p.nodes.kids(value).iter())
+                                        .any(|&k| matches!(p.nodes.get(k), Node::ListLit { .. }))
                             }
-                        } else {
-                            None
+                        };
+                        let ann = match self.rebound(local) {
+                            // A name bound more than once: annotated only
+                            // where first bound, and there only where its
+                            // value may be narrower than its widest type,
+                            // as a tuple is than a `Sequence`, a class than
+                            // its interface, or a generic class's instance
+                            // than its declared type arguments. One whose
+                            // own type is narrower, never null, is declared
+                            // first, so its value narrows it.
+                            Some(wide) if self.bindings.bound.insert(target.clone()) => {
+                                let narrower = empty
+                                    || p.nodes.ty(init) != wide
+                                    || self.may_infer_narrower(wide);
+                                match narrower {
+                                    true if ty != wide => {
+                                        let ann = self.ann(wide)?;
+                                        out.push(Stmt::Declare {
+                                            target: target.clone(),
+                                            ann,
+                                        });
+                                        None
+                                    }
+                                    true => Some(self.ann(wide)?),
+                                    false => None,
+                                }
+                            }
+                            Some(_) => None,
+                            None if p.types.is_nullable(ty) || empty => Some(self.ann(ty)?),
+                            None => None,
                         };
                         self.value_into(init, Sink::Assign(Expr::name(target.clone()), ann), out)?;
                         // A local nothing reads, as `whatIAm` in
@@ -1487,9 +1752,13 @@ impl<'a> Translator<'a> {
                             }
                         }
                     }
+                    // Not again where bound already.
                     None => {
-                        let ann = self.ann(p.decls.get(local).ty)?;
-                        out.push(Stmt::Declare { target, ann });
+                        let rebound = self.rebound(local);
+                        if self.bindings.bound.insert(target.clone()) || rebound.is_none() {
+                            let ann = self.ann(rebound.unwrap_or(p.decls.get(local).ty))?;
+                            out.push(Stmt::Declare { target, ann });
+                        }
                     }
                 }
             }
@@ -1738,7 +2007,7 @@ impl<'a> Translator<'a> {
             Ok(out)
         };
         Ok(match connection {
-            Connection::Builtin(name) => Expr::name(name).call(present(args)?),
+            Connection::Builtin(name) => Expr::builtin(name).call(present(args)?),
             Connection::Method(name) => {
                 let mut args = present(args)?;
                 if args.is_empty() {
@@ -1794,8 +2063,8 @@ impl<'a> Translator<'a> {
             Node::VoidLit {} => Expr::None,
             // The class of the type's values: `type(None)` for `Void`.
             Node::TypeValue { of } => match p.types.get(of) {
-                TypeData::Scalar(Scalar::Void) => Expr::name("type").call(vec![Expr::None]),
-                TypeData::Scalar(s) => Expr::name(match s {
+                TypeData::Scalar(Scalar::Void) => Expr::builtin("type").call(vec![Expr::None]),
+                TypeData::Scalar(s) => Expr::builtin(match s {
                     Scalar::Boolean => "bool",
                     Scalar::Int32 | Scalar::Int64 => "int",
                     Scalar::Float64 => "float",
@@ -1805,7 +2074,31 @@ impl<'a> Translator<'a> {
                 _ => return not_yet("this type as a value"),
             },
             Node::Local { local: decl } => match self.walrus.remove(&decl) {
-                Some(value) => Expr::Walrus(self.name(decl), Box::new(value)),
+                // A walrus can't annotate, so one that binds a name bound
+                // again later is declared first where its value may be
+                // narrower.
+                Some((value, ty)) => {
+                    let name = self.name(decl);
+                    if let Some(wide) = self.rebound(decl) {
+                        let narrower =
+                            ty != wide || self.may_infer_narrower(self.p.types.non_null(wide));
+                        if self.bindings.bound.insert(name.clone()) && narrower {
+                            let ann = self.ann(wide)?;
+                            self.pre.push(Stmt::Declare {
+                                target: name.clone(),
+                                ann,
+                            });
+                        }
+                    }
+                    Expr::Walrus(name, Box::new(value))
+                }
+                // The module's init block's, in its tests file, imported.
+                None if self.test_parts.used.contains(&decl) => {
+                    let name = self.name(decl);
+                    let module = self.py_module(self.tested);
+                    self.imports.entry(module).or_default().insert(name.clone());
+                    Expr::name(name)
+                }
                 None => Expr::name(self.name(decl)),
             },
             Node::GetModuleLet { target: decl } => self.top(decl),
@@ -1962,13 +2255,17 @@ impl<'a> Translator<'a> {
                     ) = (p.nodes.get(*only), p.nodes.get(cond))
                     {
                         if matches!(p.nodes.get(read), Node::Local { local: l } if l == local) {
+                            let ty = p.nodes.ty(init);
                             let init = self.expr(init)?;
-                            self.walrus.insert(local, init);
+                            self.walrus.insert(local, (init, ty));
                             return self.expr(value);
                         }
                     }
                 }
-                let mut stmts = Vec::new();
+                // After what's hoisted already, which a statement's own
+                // hoisted statements would otherwise join after it:
+                // `p.n++ + q.n++` reads `p.n` first.
+                let mut stmts = std::mem::take(&mut self.pre);
                 for &s in list {
                     self.stmt(s, &mut stmts)?;
                 }
@@ -2113,7 +2410,7 @@ impl<'a> Translator<'a> {
                     return Ok(Expr::name(name).call(vec![value]));
                 }
                 let class = match p.types.get(p.nodes.ty(id)) {
-                    TypeData::Scalar(s) => Expr::name(match s {
+                    TypeData::Scalar(s) => Expr::builtin(match s {
                         Scalar::Boolean => "bool",
                         Scalar::Int32 | Scalar::Int64 => "int",
                         Scalar::Float64 => "float",
@@ -2139,7 +2436,9 @@ impl<'a> Translator<'a> {
                 // A step's result: a 1-tuple for a value, else `None`.
                 match nominal_decl(p, ty).map(|d| self.qname(d)).as_deref() {
                     Some("core.type ValueResult") => {
-                        return Ok(Expr::name("isinstance").call(vec![value, Expr::name("tuple")]));
+                        return Ok(
+                            Expr::builtin("isinstance").call(vec![value, Expr::builtin("tuple")])
+                        );
                     }
                     Some("core.type DoneResult") => {
                         return Ok(Expr::bin(Bin::Is, value, Expr::None));
@@ -2147,7 +2446,7 @@ impl<'a> Translator<'a> {
                     _ => {}
                 }
                 let class = self.type_ref(ty)?;
-                Expr::name("isinstance").call(vec![value, class])
+                Expr::builtin("isinstance").call(vec![value, class])
             }
             // A `tuple`, as Kotlin's.
             Node::ListLit { items } => Expr::Tuple(present(self.args(p.nodes.list(items))?)?),
@@ -2217,7 +2516,7 @@ impl<'a> Translator<'a> {
         }
         if lits == 0 {
             let terms = parts.into_iter().map(|p| match p {
-                FPart::Expr { expr, str: true } => Expr::name("str").call(vec![expr]),
+                FPart::Expr { expr, str: true } => Expr::builtin("str").call(vec![expr]),
                 FPart::Expr { expr, .. } => expr,
                 FPart::Lit(s) => Expr::Str(s),
             });
@@ -2286,11 +2585,17 @@ pub(crate) fn present(mut args: Vec<Option<Expr>>) -> R<Vec<Expr>> {
 }
 
 /// A library's name as its Python package is named: std's is
-/// `temper-std`, as Kotlin's.
-pub fn library_name(name: &str) -> String {
+/// `temper-std`, as Kotlin's, and another's is its config's `pyName`, or
+/// else its own.
+pub fn library_name(p: &Program, name: &str) -> String {
+    py_name(name, p.metadata_of(name))
+}
+
+/// [`library_name`], given what the library's config says.
+pub fn py_name(name: &str, metadata: &temper_tmpl::Metadata) -> String {
     match name {
         "std" => "temper-std".into(),
-        _ => name.into(),
+        _ => metadata.get("pyName").unwrap_or(name).into(),
     }
 }
 
@@ -2348,7 +2653,7 @@ fn not(e: Expr) -> Expr {
 /// Kotlin's raises `RuntimeError`, as `bubble()` does, so an `orelse`
 /// caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {
-    Stmt::Raise(Expr::name("BaseException").call(vec![Expr::Str("panic".into())]))
+    Stmt::Raise(Expr::builtin("BaseException").call(vec![Expr::Str("panic".into())]))
 }
 
 /// `t = value` after `stmts`, unless they end by raising.
@@ -2470,4 +2775,36 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type Promise" | "core.type PromiseBuilder" => ("temper_core", "TemperFuture"),
         _ => return None,
     })
+}
+
+/// Whether a function's signature names the type parameter whose type
+/// is `param` only once, as one parameter's whole type, `T` or `T?`.
+fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
+    fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
+        if ty == param {
+            return 1;
+        }
+        if !p.types.contains(ty) {
+            return 0;
+        }
+        match p.types.get(ty) {
+            TypeData::Nullable(t) => count(p, t, param),
+            // `NoReturn`, which names none.
+            TypeData::Never(_) => 0,
+            TypeData::Nominal { args, .. } => {
+                p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
+            }
+            TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
+                (sig.params.iter().chain([&sig.result]))
+                    .map(|&t| count(p, t, param))
+                    .sum()
+            }),
+            TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
+        }
+    }
+    let Some(sig) = p.signature(decl) else {
+        return false;
+    };
+    let bare = (sig.params.iter()).any(|&t| p.types.non_null(t) == param);
+    bare && count(p, p.decls.get(decl).ty, param) == 1
 }

@@ -4,8 +4,8 @@
 //! in turn (cargo's test binaries, `dotnet run`'s program) goes with it:
 //!
 //! - **A time limit.** A command that runs past its limit
-//!   ([`set_timeout`], `TEMPEST_TIMEOUT`, else [`DEFAULT_TIMEOUT`]) has
-//!   its group killed, and fails, "timed out after N s". `tempest run`'s
+//!   ([`set_timeout`], `TEMPER_TIMEOUT`, else [`DEFAULT_TIMEOUT`]) has
+//!   its group killed, and fails, "timed out after N s". `temper run`'s
 //!   program has no limit unless one is given, as it may be a server.
 //! - **Nothing left behind.** Once a command ends, or times out, what's
 //!   left of its group is killed, as are the groups still running if
@@ -15,7 +15,7 @@
 //!   (`PR_SET_PDEATHSIG`), even by SIGKILL, which no handler sees; what
 //!   *it* started outlives it then, as the parent-death signal isn't
 //!   inherited. Commands that ask ([`limit_memory`]) may write at most
-//!   `TEMPEST_MEMORY_LIMIT` MiB, 4096 by default (`RLIMIT_DATA`).
+//!   `TEMPER_MEMORY_LIMIT` MiB, 4096 by default (`RLIMIT_DATA`).
 //!
 //! On Windows, a command that times out is killed, but not what it
 //! started, and nothing dies with tempest yet (a Job Object would do
@@ -35,24 +35,24 @@ use std::time::{Duration, Instant};
 use temper_os::process::Group;
 
 /// Each tool command's time limit unless `--timeout` or
-/// `TEMPEST_TIMEOUT` says otherwise: ten minutes.
+/// `TEMPER_TIMEOUT` says otherwise: ten minutes.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 
 /// Memory a command that asks for a limit may write, in MiB, unless
-/// `TEMPEST_MEMORY_LIMIT` says otherwise.
+/// `TEMPER_MEMORY_LIMIT` says otherwise.
 pub const DEFAULT_MEMORY_LIMIT_MIB: u64 = 4096;
 
 /// The limit set by [`set_timeout`], if it was called.
 static TIMEOUT: OnceLock<Option<Duration>> = OnceLock::new();
 
 /// Sets the time limit for each command tools start, `None` for none, in
-/// place of `TEMPEST_TIMEOUT`'s, as `--timeout` does; the first call
+/// place of `TEMPER_TIMEOUT`'s, as `--timeout` does; the first call
 /// counts.
 pub fn set_timeout(limit: Option<Duration>) {
     let _ = TIMEOUT.set(limit);
 }
 
-/// A time limit as `--timeout` and `TEMPEST_TIMEOUT` give it: whole
+/// A time limit as `--timeout` and `TEMPER_TIMEOUT` give it: whole
 /// seconds above 0, or `none`; or what it should be.
 pub fn parse_seconds(text: &str) -> Result<Option<Duration>, String> {
     whole(text)
@@ -60,7 +60,7 @@ pub fn parse_seconds(text: &str) -> Result<Option<Duration>, String> {
         .ok_or_else(|| format!("whole seconds above 0, or none, not {text}"))
 }
 
-/// A memory limit as `TEMPEST_MEMORY_LIMIT` gives it: MiB above 0, or
+/// A memory limit as `TEMPER_MEMORY_LIMIT` gives it: MiB above 0, or
 /// `none`; or what it should be.
 pub fn parse_mib(text: &str) -> Result<Option<u64>, String> {
     whole(text).ok_or_else(|| format!("MiB above 0, or none, not {text}"))
@@ -77,13 +77,13 @@ fn whole(text: &str) -> Option<Option<u64>> {
     }
 }
 
-/// The time limit given, by [`set_timeout`] or else `TEMPEST_TIMEOUT`
+/// The time limit given, by [`set_timeout`] or else `TEMPER_TIMEOUT`
 /// (where it's valid), if any was.
 fn given_timeout() -> Option<Option<Duration>> {
     if let Some(limit) = TIMEOUT.get() {
         return Some(*limit);
     }
-    let text = std::env::var("TEMPEST_TIMEOUT").ok()?;
+    let text = std::env::var("TEMPER_TIMEOUT").ok()?;
     parse_seconds(&text).ok()
 }
 
@@ -98,7 +98,7 @@ fn program_timeout() -> Option<Duration> {
 }
 
 /// Limits how much memory a command may write, on Linux, to
-/// `TEMPEST_MEMORY_LIMIT` MiB (where it's valid), else
+/// `TEMPER_MEMORY_LIMIT` MiB (where it's valid), else
 /// [`DEFAULT_MEMORY_LIMIT_MIB`]; `none` lifts it. Only for commands whose
 /// writable memory is what they use: not the JVM's, .NET's, or Node's,
 /// which set aside more than they need, nor a compiler's.
@@ -110,7 +110,7 @@ fn program_timeout() -> Option<Duration> {
 pub fn limit_memory(command: &mut Command) -> &mut Command {
     #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
     {
-        let mib = match std::env::var("TEMPEST_MEMORY_LIMIT") {
+        let mib = match std::env::var("TEMPER_MEMORY_LIMIT") {
             Ok(text) => parse_mib(&text).unwrap_or(Some(DEFAULT_MEMORY_LIMIT_MIB)),
             Err(_) => Some(DEFAULT_MEMORY_LIMIT_MIB),
         };

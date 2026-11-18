@@ -49,7 +49,7 @@ pub fn lower(p: &Program, strategy: CoroutineStrategy) -> Result<Option<Program>
     }
     let mut literals = Vec::new();
     for m in &p.modules {
-        for &root in m.items.iter().chain([&m.init]).chain(&m.tests) {
+        for root in m.roots() {
             post_order(p, root, &mut |id| {
                 if let Node::FunctionLiteral { decl, .. } = p.nodes.get(id) {
                     if p.decls.get(decl).facts.contains(Facts::GENERATOR) {
@@ -71,7 +71,7 @@ pub fn lower(p: &Program, strategy: CoroutineStrategy) -> Result<Option<Program>
     let mut all = Vec::new();
     let p = b.program();
     for m in &p.modules {
-        for &root in m.items.iter().chain([&m.init]).chain(&m.tests) {
+        for root in m.roots() {
             walk(p, root, &mut |id| {
                 if let Node::FunctionLiteral { decl, .. } = p.nodes.get(id) {
                     all.push((id, decl));

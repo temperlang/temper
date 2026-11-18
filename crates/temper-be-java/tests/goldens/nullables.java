@@ -42,6 +42,14 @@ public final class NullablesGlobal {
         }
     }
 
+    static int halved(String s, int d) {
+        try {
+            return Core.divIntInt(Core.stringToInt(s), d);
+        } catch (RuntimeException ignored) {
+            return -1;
+        }
+    }
+
     static int positive(int n) {
         if (n < 0) {
             throw Core.bubble();
@@ -96,6 +104,7 @@ public final class NullablesGlobal {
         console.log(same(null, null) + " " + same("a", null) + " " + same(null, "a") + " " + same("a", "a"));
         console.log(sameInt(1, 2) + " " + sameInt(3, 3) + " " + sameInt(null, 3));
         console.log(parse("12") + " " + parse("x"));
+        console.log(halved("12", 2) + " " + halved("x", 2) + " " + halved("12", 0));
         console.log(Integer.toString(checked(7)));
         console.log(orZero(null) + " " + orZero(5));
         varying();

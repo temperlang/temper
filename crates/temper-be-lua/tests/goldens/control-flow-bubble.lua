@@ -29,14 +29,14 @@ local function report(x)
   local suffix
   if not temper.pcall(function()
     ---@type integer
-    local t
+    local t_1
     if not temper.pcall(function()
       temper.cast_to_string(x)
-      t = 1
+      t_1 = 1
     end) then
-      t = 0
+      t_1 = 0
     end
-    suffix = tostring(more(t))
+    suffix = tostring(more(t_1))
   end) then
     suffix = ""
   end
@@ -121,27 +121,112 @@ end
 ---@return string
 local function viaOrElse(n)
   ---@type integer
-  local t
-  if not temper.pcall(function()
-    t = firstOver(n)
-  end) then
-    t = -1
-  end
-  ---@type integer
   local t_1
   if not temper.pcall(function()
-    t_1 = sumSkipping(n)
+    t_1 = firstOver(n)
   end) then
     t_1 = -1
   end
   ---@type integer
   local t_2
   if not temper.pcall(function()
-    t_2 = tenTimes(n)
+    t_2 = sumSkipping(n)
   end) then
     t_2 = -1
   end
-  return t .. " " .. t_1 .. " " .. t_2
+  ---@type integer
+  local t_3
+  if not temper.pcall(function()
+    t_3 = tenTimes(n)
+  end) then
+    t_3 = -1
+  end
+  return t_1 .. " " .. t_2 .. " " .. t_3
+end
+
+---@return integer
+local function unreachableInt()
+  error("panic")
+end
+
+---@generic T
+---@param fallback T
+---@return T
+local function failAs(fallback)
+  return temper.bubble()
+end
+
+local function bail()
+  temper.bubble()
+end
+
+---@return string|temper.Null
+local function noName()
+  return temper.null
+end
+
+local function stop()
+  error("panic")
+end
+
+---@param n integer
+---@return integer
+local function half(n)
+  if temper.int32_mod(n, 2) ~= 0 then
+    bail()
+    error("panic")
+  end
+  if n < 0 then
+    return failAs(n)
+  else
+    return temper.int32_div(n, 2)
+  end
+end
+
+---@param b boolean
+---@return integer
+local function pick(b)
+  if b then
+    return 1
+  else
+    return unreachableInt()
+  end
+end
+
+---@param b boolean
+---@return string|temper.Null
+local function named(b)
+  if b then
+    return "named"
+  else
+    return noName()
+  end
+end
+
+---@param b boolean
+---@return integer
+local function chosen(b)
+  ---@type integer
+  local x
+  if b then
+    x = 3
+    print("chosen")
+  else
+    unreachableInt()
+    error("panic")
+  end
+  return x
+end
+
+---@param s string|temper.Null
+---@return string
+local function shout(s)
+  if temper.is_null(s) then
+    stop()
+    error("panic")
+  end
+  local t = s --[[@as string]]
+  return t .. "!"
 end
 
 ---@param a integer
@@ -155,30 +240,57 @@ report("hi")
 report(temper.null)
 print(tostring(calcRows(3, 6)))
 ---@type integer
-local t
-if not temper.pcall(function()
-  t = countBelow("abc")
-end) then
-  t = -1
-end
-print(tostring(t))
----@type integer
 local t_1
 if not temper.pcall(function()
-  t_1 = firstOver(1)
+  t_1 = countBelow("abc")
 end) then
   t_1 = -1
 end
----@type integer|temper.Null
+print(tostring(t_1))
+---@type integer
 local t_2
 if not temper.pcall(function()
   t_2 = firstOver(1)
 end) then
-  t_2 = temper.null
+  t_2 = -1
 end
-print(t_1 .. " " .. tostring(isNone(t_2)))
+---@type integer|temper.Null
+local t_3
+if not temper.pcall(function()
+  t_3 = firstOver(1)
+end) then
+  t_3 = temper.null
+end
+print(t_2 .. " " .. tostring(isNone(t_3)))
 print(viaOrElse(2))
 print(viaOrElse(12))
+local string_ = pick(true) .. " "
+local subject = named(true)
+local subject2 = named(false)
+print(string_ .. (temper.is_null(subject) and "-" or (subject --[[@as string]])) .. " " .. (temper.is_null(subject2) and "null" or (subject2 --[[@as string]])))
+---@type integer
+local t_4
+if not temper.pcall(function()
+  t_4 = half(4)
+end) then
+  t_4 = -1
+end
+---@type integer
+local t_5
+if not temper.pcall(function()
+  t_5 = half(3)
+end) then
+  t_5 = -1
+end
+---@type integer
+local t_6
+if not temper.pcall(function()
+  t_6 = half(-2)
+end) then
+  t_6 = -1
+end
+print(t_4 .. " " .. t_5 .. " " .. t_6)
+print(chosen(true) .. " " .. shout("hey"))
 branch(0, 2)
 branch(2, 0)
 

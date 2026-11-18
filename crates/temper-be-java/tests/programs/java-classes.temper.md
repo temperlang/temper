@@ -27,7 +27,7 @@ class forwards to.
       public set volume(v: Int): Void { level = v; }
       public static banner = "${greeting}!";
       public static count = 3;
-      public static twice = count * 2;
+      public static twice = Person.count * 2;
     }
 
     let p = new Person("Ann", true);

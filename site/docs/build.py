@@ -3,16 +3,16 @@
 # ///
 """Builds the docs site: README.md and docs/, rendered by Kelpto.
 
-    uv run site/docs/build.py [--out DIR] [--kelpto DIR] [--tempest BIN]
+    uv run site/docs/build.py [--out DIR] [--kelpto DIR] [--temper BIN]
                               [--chromium PATH | --no-diagrams]
                               [--commit REV]
 
 Kelpto, the Markdown and HTML library written in Temper, renders every
-page, built for Python by tempest itself: this copies Kelpto's four
+page, built for Python by temper itself: this copies Kelpto's four
 libraries (kelpto-core, kelpto-md, kelpto-html, and kelpto) from
 `--kelpto DIR` (default `../kelpto`, beside this repository; CI checks
 out the commit in `site/docs/kelpto-ref`) into `site/_out/kelpto/`,
-runs `tempest build -b py` there, and imports the result. Nothing else
+runs `temper build -b py` there, and imports the result. Nothing else
 in Python is needed but its standard library; diagrams need Node (below).
 
 Each page is parsed as GitHub Flavored Markdown, with raw HTML parsed as
@@ -31,7 +31,7 @@ Mermaid diagrams are drawn here, as inline SVG, light and dark, by
 site/docs/mermaid/render.mjs: mermaid in headless Chromium, through
 playwright-core, all in one browser run. It needs Node, the packages in
 site/docs/mermaid/package-lock.json (installed with `npm ci` when they
-change), and a Chromium: `--chromium PATH`, else `$TEMPEST_CHROMIUM`,
+change), and a Chromium: `--chromium PATH`, else `$TEMPER_CHROMIUM`,
 else Playwright's own. Drawings are cached in `site/_out/mermaid/` by
 mermaid's version, render.mjs, the theme, and the source, so only new
 diagrams are drawn. `--no-diagrams` shows their source instead.
@@ -144,9 +144,9 @@ def mark_inert(text: str) -> str:
 # Building Kelpto
 
 
-def build_kelpto(src: Path, tempest: Path) -> Path:
-    """Kelpto's libraries, built for Python by tempest, in WORK; rebuilt
-    only when they or tempest change."""
+def build_kelpto(src: Path, temper: Path) -> Path:
+    """Kelpto's libraries, built for Python by temper, in WORK; rebuilt
+    only when they or temper change."""
     missing = [lib for lib in KELPTO_LIBS if not (src / lib / "config.temper.md").is_file()]
     if missing:
         sys.exit(f"build.py: no Kelpto at {src} (missing {', '.join(missing)}); pass --kelpto DIR")
@@ -155,8 +155,8 @@ def build_kelpto(src: Path, tempest: Path) -> Path:
         for f in sorted((src / lib).rglob("*")):
             if f.is_file():
                 digest.update(f.relative_to(src).as_posix().encode() + b"\0" + f.read_bytes())
-    stat = tempest.stat()
-    digest.update(f"{tempest.resolve()} {stat.st_size} {stat.st_mtime_ns}".encode())
+    stat = temper.stat()
+    digest.update(f"{temper.resolve()} {stat.st_size} {stat.st_mtime_ns}".encode())
     stamp = WORK / "stamp"
     py = WORK / "temper.out" / "py"
     if stamp.is_file() and stamp.read_text() == digest.hexdigest() and py.is_dir():
@@ -165,9 +165,9 @@ def build_kelpto(src: Path, tempest: Path) -> Path:
     WORK.mkdir(parents=True)
     for lib in KELPTO_LIBS:
         shutil.copytree(src / lib, WORK / lib)
-    run = subprocess.run([str(tempest), "build", "-b", "py", "-w", str(WORK)], capture_output=True, text=True)
+    run = subprocess.run([str(temper), "build", "-b", "py", "-w", str(WORK)], capture_output=True, text=True)
     if run.returncode != 0 or not py.is_dir():
-        sys.exit(f"build.py: tempest build -b py failed for Kelpto:\n{run.stdout}{run.stderr}")
+        sys.exit(f"build.py: temper build -b py failed for Kelpto:\n{run.stdout}{run.stderr}")
     stamp.write_text(digest.hexdigest())
     return py
 
@@ -249,7 +249,7 @@ class Diagrams:
             if run.returncode == 3:
                 sys.exit(
                     f"build.py: no Chromium to draw Mermaid diagrams with:\n{run.stderr}"
-                    "Pass --chromium PATH or set TEMPEST_CHROMIUM; or install Playwright's, with\n"
+                    "Pass --chromium PATH or set TEMPER_CHROMIUM; or install Playwright's, with\n"
                     "    (cd site/docs/mermaid && npx playwright-core install --only-shell chromium)\n"
                     "or pass --no-diagrams to show their source instead."
                 )
@@ -832,21 +832,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--out", type=Path, default=OUT, help="the site's root (default site/_out/site)")
     parser.add_argument("--kelpto", type=Path, default=ROOT.parent / "kelpto", help="a Kelpto checkout")
-    parser.add_argument("--tempest", type=Path, help="tempest (default target/release/tempest, else target/small/tempest)")
-    parser.add_argument("--chromium", help="Chromium to draw diagrams with (default $TEMPEST_CHROMIUM, else Playwright's)")
+    parser.add_argument("--temper", type=Path, help="temper (default target/release/temper, else target/small/temper)")
+    parser.add_argument("--chromium", help="Chromium to draw diagrams with (default $TEMPER_CHROMIUM, else Playwright's)")
     parser.add_argument("--no-diagrams", action="store_true", help="show Mermaid diagrams' source, not drawn")
     parser.add_argument(
         "--commit", default=os.environ.get("GITHUB_SHA"), help="the commit repository links go to (default $GITHUB_SHA, else HEAD)"
     )
     args = parser.parse_args()
     started = time.monotonic()
-    tempest = args.tempest or next(
-        (p for p in (ROOT / "target/release/tempest", ROOT / "target/small/tempest") if p.is_file()), None
+    temper = args.temper or next(
+        (p for p in (ROOT / "target/release/temper", ROOT / "target/small/temper") if p.is_file()), None
     )
-    if tempest is None or not tempest.is_file():
-        sys.exit("build.py: no tempest; run `cargo build --release -p tempest`, or pass --tempest BIN")
+    if temper is None or not temper.is_file():
+        sys.exit("build.py: no temper; run `cargo build --release -p tempest`, or pass --temper BIN")
     sys.dont_write_bytecode = True
-    py = build_kelpto(args.kelpto.resolve(), tempest)
+    py = build_kelpto(args.kelpto.resolve(), temper)
     built = time.monotonic()
     diagrams = None if args.no_diagrams else Diagrams(args.chromium)
     repo = Repo(args.commit)

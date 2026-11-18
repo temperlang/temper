@@ -40,7 +40,7 @@ export interface RunOutput {
   tests: TestResult[];
   /** How many tests the library declares. */
   defined: number;
-  /** As `tempest test` prints it: `Tests passed: 2 of 2`. */
+  /** As `temper test` prints it: `Tests passed: 2 of 2`. */
   summary: string;
 }
 
@@ -66,7 +66,8 @@ export type ToCompiler =
 
 /** The compiler's worker to the page. */
 export type FromCompiler =
-  | { type: "ready"; backends: string[] }
+  /** `version` as `temper --version` says it: `0.7.0-alpha.0.123 (3f2b063)`. */
+  | { type: "ready"; backends: string[]; version: string }
   | { type: "diagnostics"; id: number; ms: number; diagnostics: Diagnostic[] }
   | { type: "result"; id: number; ms: number; result: CompileResult }
   | { type: "answer"; qid: number; value: unknown }
@@ -291,7 +292,7 @@ export function toCompileResult(value: Json): CompileResult {
 // The REPL: crates/temper-wasm's `repl_*` answers, and the messages
 // between the page and the REPL's worker.
 
-/** What an input reported, with its text as `tempest repl` prints it. */
+/** What an input reported, with its text as `temper repl` prints it. */
 export interface ReplEvent {
   /**
    * `diagnostic`, `log`, `failure`, `output` (the REPL's functions'),

@@ -62,10 +62,6 @@ pub(crate) fn unknown_type(x: temper_core::AnyValue) -> i32 {
     1
 }
 
-pub(crate) fn unclosed(x: i32) -> i32 {
-    x.wrapping_mul(2)
-}
-
 pub(crate) fn after_unclosed(x: i32) -> i32 {
     x.wrapping_mul(3)
 }
@@ -80,10 +76,6 @@ pub(crate) fn stored(x: i32) -> temper_core::Result<Arc<String>> {
 
 pub(crate) fn returned() -> temper_core::Result<i32> {
     Err(temper_core::Error::new())
-}
-
-pub(crate) fn passed_on(x: i32) -> temper_core::Result<i32> {
-    Ok(x)
 }
 
 struct BoxStruct {

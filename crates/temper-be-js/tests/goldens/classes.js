@@ -1,9 +1,23 @@
 import {
   cmpInt32,
+  listedGet,
   listedJoin,
+  panic,
   requireInstanceOf,
   type,
 } from "@temperlang/core";
+
+/**
+ * @param {number} n
+ * @returns {Loose | null}
+ */
+function maybeLoose(n) {
+  if (n === 0) {
+    return null;
+  } else {
+    return new Loose(n);
+  }
+}
 
 /**
  * @param {Shape} x
@@ -11,6 +25,35 @@ import {
  */
 function shape(x) {
   return x;
+}
+
+/**
+ * @param {(arg0: Loose | null, arg1: Loose | null) => boolean} eq
+ * @returns {string}
+ */
+function compared(eq) {
+  /** @type {readonly number[]} */
+  const ns = Object.freeze([0, 1, -1, 2]);
+  /** @type {string[]} */
+  const out = [];
+  {
+    const length = ns.length;
+    let i = 0;
+    while (i < length) {
+      const a = listedGet(/** @type {number[]} */ (ns), i);
+      i = (i + 1) | 0;
+      {
+        const length2 = ns.length;
+        let i2 = 0;
+        while (i2 < length2) {
+          const b = listedGet(/** @type {number[]} */ (ns), i2);
+          i2 = (i2 + 1) | 0;
+          out.push(eq(maybeLoose(a), maybeLoose(b)) ? "T" : "f");
+        }
+      }
+    }
+  }
+  return listedJoin(out, "", (s) => s);
 }
 
 /**
@@ -43,6 +86,21 @@ function same(t) {
   return t;
 }
 
+/**
+ * @template T
+ * @param {boolean} ok
+ * @param {T} x
+ * @param {Failing<T>} f
+ * @returns {T}
+ */
+function orFail(ok, x, f) {
+  if (ok) {
+    return x;
+  } else {
+    return f.fail();
+  }
+}
+
 export class Shape extends type() {
   /** @type {number} */
   area = /** @type {any} */ (undefined);
@@ -53,13 +111,19 @@ export class Shape extends type() {
   }
 }
 
+/** @type {Rect} */
+let Rect$unit;
+
 export class Rect extends type(Shape) {
   /** @type {number} */
   #w;
   /** @type {number} */
   #h;
-  /** @type {Rect} */
-  static unit;
+
+  /** @returns {Rect} */
+  static get unit() {
+    return Rect$unit;
+  }
 
   /**
    * @param {{ w: number, h: number }} props
@@ -161,6 +225,11 @@ class Counter extends type() {
     this.#count = (value - this.#count) | 0;
   }
 
+  /** @param {number} value */
+  set added(value) {
+    this.#count = (this.#count + value) | 0;
+  }
+
   /** @returns {Counter} */
   bump() {
     this.#count = (this.#count + 1) | 0;
@@ -253,6 +322,75 @@ class Loose extends type() {
       return true;
     } else {
       return this.#n === (-other.#n | 0);
+    }
+  }
+
+  /**
+   * @param {Loose} other
+   * @returns {boolean}
+   */
+  mirrors(other) {
+    if (other.eq(this)) {
+      return this.eq(other);
+    } else {
+      return false;
+    }
+  }
+}
+
+/** @template T */
+class Boxed extends type() {
+  /** @type {T} */
+  #value;
+  /** @type {number} */
+  #tag;
+
+  /**
+   * @template T
+   * @param {{ value: T, tag: number }} props
+   * @returns {Boxed<T>}
+   */
+  static new(props) {
+    return new Boxed(props.value, props.tag);
+  }
+
+  /**
+   * @param {T} value
+   * @param {number} tag
+   */
+  constructor(value, tag) {
+    super();
+    this.#value = value;
+    this.#tag = tag;
+  }
+
+  /** @returns {T} */
+  get value() {
+    return this.#value;
+  }
+
+  /** @returns {number} */
+  get tag() {
+    return this.#tag;
+  }
+
+  /**
+   * @param {Boxed<T>} other
+   * @returns {boolean}
+   */
+  eq(other) {
+    return this.#tag === other.#tag;
+  }
+
+  /**
+   * @param {Boxed<T>} other
+   * @returns {boolean}
+   */
+  sameAs(other) {
+    if (this.eq(other)) {
+      return other.eq(this);
+    } else {
+      return false;
     }
   }
 }
@@ -351,6 +489,60 @@ class Version extends type() {
   }
 }
 
+class Stock extends type() {
+  /** @type {number} */
+  #count;
+  /** @type {readonly number[]} */
+  #itemsVar;
+  /** @type {number} */
+  #size;
+
+  /**
+   * @param {{ items: readonly number[], count?: number | null }} props
+   * @returns {Stock}
+   */
+  static new(props) {
+    return new Stock(props.items, props.count);
+  }
+
+  /**
+   * @param {readonly number[]} items
+   * @param {number | null} [count]
+   */
+  constructor(items, count) {
+    super();
+    count ??= items.length;
+    this.#count = count;
+    this.#itemsVar = items;
+    this.#size = items.length;
+  }
+
+  /** @returns {number} */
+  get count() {
+    return this.#count;
+  }
+
+  /** @returns {number} */
+  get size() {
+    return this.#size;
+  }
+
+  /** @returns {readonly number[]} */
+  get items() {
+    return this.#itemsVar;
+  }
+
+  /** @param {readonly number[]} value */
+  set items(value) {
+    this.#itemsVar = value;
+  }
+
+  /** @returns {number} */
+  sizeNow() {
+    return this.items.length;
+  }
+}
+
 class Sql extends type() {
   /** @type {string[]} */
   #parts;
@@ -391,7 +583,68 @@ class Sql extends type() {
   }
 }
 
-Rect.unit = new Rect(1, 1);
+export class Limited extends type() {
+  /** @type {(n: number) => number} */
+  next = /** @type {any} */ (undefined);
+  /** @type {() => number} */
+  tooFar = /** @type {any} */ (undefined);
+}
+
+export class Stepper extends type(Limited) {
+  /** @type {number} */
+  #limit;
+
+  /** @param {number} limit */
+  constructor(limit) {
+    super();
+    this.#limit = limit;
+  }
+
+  /** @returns {number} */
+  get limit() {
+    return this.#limit;
+  }
+
+  /**
+   * @param {number} n
+   * @returns {number}
+   */
+  next(n) {
+    if (n < this.#limit) {
+      return (n + 1) | 0;
+    } else {
+      return this.tooFar();
+    }
+  }
+
+  /** @returns {number} */
+  tooFar() {
+    panic();
+  }
+}
+
+/** @template T */
+class Failing extends type() {
+  /** @type {() => T} */
+  fail = /** @type {any} */ (undefined);
+}
+
+class IntFailing extends type(Failing) {
+  /** @returns {number} */
+  fail() {
+    panic();
+  }
+}
+
+/** @template T */
+class AnyFailing extends type(Failing) {
+  /** @returns {T} */
+  fail() {
+    panic();
+  }
+}
+
+Rect$unit = new Rect(1, 1);
 const r = new Rect(2, 3);
 console.log(r.toString());
 console.log(r.area.toString());
@@ -408,8 +661,59 @@ console.log(c.count.toString());
 c.doubled = 10;
 console.log(c.doubled.toString());
 console.log(c.same(new Counter().bump().bump()).toString());
+c.added = 5;
+/** @type {number} */
+let t$0;
+{
+  /** @type {number} */
+  let t$1;
+  {
+    const t = 2;
+    c.added = t;
+    t$1 = t;
+  }
+  const t2 = t$1;
+  c.added = t2;
+  t$0 = t2;
+}
+const added = t$0;
+console.log(`${added} ${c.count}`);
 console.log(`${new Point(1, 2).eq(new Point(1, 2))} ${!new Point(1, 2).eq(new Point(2, 1))}`);
 console.log(new Holder(new Loose(3), "a").eq(new Holder(new Loose(-3), "a")).toString());
+const loose = new Loose(2);
+/** @type {boolean} */
+let t$2;
+{
+  const left = maybeLoose(-2);
+  t$2 = left == null ? false : left.eq(loose);
+}
+/** @type {boolean} */
+let t$3;
+{
+  const left2 = loose;
+  const right = maybeLoose(0);
+  t$3 = right == null ? false : left2.eq(right);
+}
+/** @type {boolean} */
+let t$4;
+{
+  const left3 = maybeLoose(0);
+  t$4 = left3 == null ? false : left3.eq(loose);
+}
+console.log(`${loose.mirrors(new Loose(-2))} ${t$2} ${t$3} ${!t$4}`);
+/** @type {string} */
+let t$5;
+{
+  const subject = maybeLoose(-2);
+  t$5 = (subject == null ? false : subject.eq(loose)) ? "loose" : "other";
+}
+const matched = t$5;
+console.log(matched);
+/** @type {Boxed<string>} */
+const b1 = new Boxed("x", 1);
+/** @type {Boxed<string>} */
+const b3 = new Boxed("z", 2);
+console.log(`${b1.value} ${b1.eq(new Boxed("y", 1))} ${!b1.eq(b3)} ${b1.sameAs(new Boxed("y", 1))} ${b3.sameAs(b1)}`);
 console.log(`${new Version(1, 2).compareTo(new Version(1, 3)) < 0} ${new Version(2, 0).compareTo(new Version(1, 9)) >= 0}`);
 console.log(`${q instanceof Square} ${s instanceof Square}`);
 const sq = requireInstanceOf(q, Square);
@@ -417,6 +721,29 @@ console.log(sq.area.toString());
 if (s instanceof Rect) {
   console.log(/** @type {Rect} */ (/** @type {unknown} */ (s)).w.toString());
 }
+const st = new Stock(Object.freeze([4, 5]));
+st.items = Object.freeze([1, 2, 3]);
+console.log(`${st.count} ${st.size} ${st.sizeNow()} ${st.items.length}`);
+console.log(compared((a, b) => a == null ? b == null : b == null ? false : a.eq(b)));
+console.log(compared((a, b) => !(a == null ? b == null : b == null ? false : a.eq(b))));
+console.log(compared((a, b) => b == null ? a == null : a == null ? false : b.eq(a)));
+
+/**
+ * @param {Loose | null} a
+ * @param {Loose | null} b
+ * @returns {boolean}
+ */
+function fn4(a, b) {
+  if (a == null) {
+    return false;
+  }
+  if (b == null) {
+    return false;
+  }
+  return a.mirrors(b);
+}
+
+console.log(compared(fn4));
 const favorite = same("bigint");
 let named = 0;
 {
@@ -437,7 +764,7 @@ sql.appendRect(new Rect(1, 2));
 console.log(sql.accumulated);
 const seven = 7;
 /** @type {string} */
-let t$0;
+let t$6;
 {
   const accumulator = new Sql();
   {
@@ -448,6 +775,9 @@ let t$0;
     accumulator.appendSafe(" FROM ");
     accumulator.appendRect(new Rect(2, 2));
   }
-  t$0 = accumulator.accumulated;
+  t$6 = accumulator.accumulated;
 }
-console.log(t$0);
+console.log(t$6);
+const stepper = new Stepper(3);
+console.log(`next ${stepper.next(1)}`);
+console.log(`${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing())}`);

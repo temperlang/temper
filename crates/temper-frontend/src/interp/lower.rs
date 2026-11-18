@@ -72,6 +72,9 @@ pub(super) enum Op {
     JumpIfFalse(u32),
     /// `obj.name`: pops `obj`.
     GetProp(NameId),
+    /// A `@noProperty` input's value, which an initializer reads: pops
+    /// `this`, and reads its field in this slot.
+    GetInput(u32),
     /// `obj.name = value`: pops both, pushes `value`.
     SetProp(NameId),
     /// Pops the arguments and the callee.
@@ -1150,6 +1153,13 @@ impl Lowering {
         }
         let method = tree.kind(callee) == NodeKind::Call
             && tree.children(callee).first().is_some_and(|&c| is_dot(s, c));
+        // A method with an error reported at it, as `c.secret()` outside
+        // `c`'s class, fails before its object or arguments run, as tmpl's
+        // `Error` for the whole call does.
+        if let Some(message) = method.then(|| self.error_at(s, callee)).flatten() {
+            self.fail(message);
+            return self.dead(base, keep);
+        }
         let method = if method {
             match self.member(s, callee) {
                 Some(name) => Some(name),
@@ -1265,6 +1275,10 @@ impl Lowering {
                 }
             },
             SymbolKind::TypeParam => _ = self.emit(Op::Const(Val::Type)),
+            SymbolKind::Member if sym.input => {
+                self.this(s, sym.owner);
+                self.emit(Op::GetInput(sym.slot));
+            }
             SymbolKind::Member => {
                 self.this(s, sym.owner);
                 self.emit(Op::GetProp(sym.name));

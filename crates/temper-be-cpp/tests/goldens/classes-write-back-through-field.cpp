@@ -95,15 +95,13 @@ std::shared_ptr<Pong> Pong::make() {
 
 void Pong::pong(std::shared_ptr<Ping> const & a) const {
   {
-    std::shared_ptr<Ping> o = a;
-    o->n = core::Int::add(o->n, 1);
+    a->n = core::Int::add(a->n, 1);
   }
 }
 
 int32_t Pong::bump(std::shared_ptr<Ping> const & a, int32_t by) const {
   {
-    std::shared_ptr<Ping> o = a;
-    o->n = core::Int::add(o->n, by);
+    a->n = core::Int::add(a->n, by);
   }
   return a->n;
 }

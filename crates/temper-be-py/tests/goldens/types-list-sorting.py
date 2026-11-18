@@ -19,24 +19,24 @@ __all__ = ()
 
 
 class _Entry:
-    __slots__ = ('_id_', '_group')
-    _id_: int
+    __slots__ = ('_id', '_group')
+    _id: int
     _group: int
 
-    def __init__(self, /, id_: int, group: int) -> None:
-        self._id_ = id_
+    def __init__(self, /, id: int, group: int) -> None:
+        self._id = id
         self._group = group
 
     @property
-    def id_(self, /) -> int:
-        return self._id_
+    def id(self, /) -> int:
+        return self._id
 
     @property
     def group(self, /) -> int:
         return self._group
 
     def to_string(self, /) -> str:
-        return f'{{ id: {self._id_}, group: {self._group} }}'
+        return f'{{ id: {self._id}, group: {self._group} }}'
 
     def __str__(self, /) -> str:
         return self.to_string()

@@ -1,13 +1,13 @@
-//! Tests of the `tempest` binary's command line. What `test` reports is
+//! Tests of the `temper` binary's command line. What `test` reports is
 //! tested in temper-frontend's `tests/library_tests.rs`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Runs `tempest`, giving its exit code, stdout and stderr.
+/// Runs `temper`, giving its exit code, stdout and stderr.
 fn tempest(args: &[&str]) -> (i32, String, String) {
-    let output = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let output = Command::new(env!("CARGO_BIN_EXE_temper"))
         .args(args)
         .output()
         .unwrap();
@@ -52,7 +52,7 @@ fn usage() {
     for backend in temper_driver::KNOWN {
         let (code, _, err) = tempest(&[backend, "a.temper"]);
         assert_eq!(code, 2);
-        let expected = format!("`tempest build -b {backend}`");
+        let expected = format!("`temper build -b {backend}`");
         assert!(err.contains(&expected), "{err}");
     }
 }
@@ -65,7 +65,7 @@ fn help() {
         let (code, out, _) = tempest(args);
         assert_eq!(code, 0);
         assert!(
-            out.starts_with("tempest, Temper's command line tool"),
+            out.starts_with("temper, Temper's command line tool"),
             "{out}"
         );
         for command in [
@@ -81,7 +81,7 @@ fn help() {
     let (code, out, _) = tempest(&["help", "build"]);
     assert_eq!(code, 0);
     assert!(
-        out.starts_with("usage: tempest build [OPTION]...\n"),
+        out.starts_with("usage: temper build [OPTION]...\n"),
         "{out}"
     );
     for flag in [
@@ -111,20 +111,30 @@ fn help() {
         let (code, out, _) = tempest(&["help", command]);
         assert_eq!(code, 0, "{command}");
         assert!(
-            out.starts_with(&format!("usage: tempest {command}")),
+            out.starts_with(&format!("usage: temper {command}")),
             "{out}"
         );
     }
 }
 
-/// `version` names the build's version, and the commit where git says.
+/// `version` names the build's version, and the commit where git says,
+/// marked where the tree had changes: `temper 0.7.0-alpha.0.123
+/// (3f2b063, modified)`.
 #[test]
 fn version() {
+    let expected = format!("temper {}\n", temper_driver::version::describe());
+    let workspace = temper_tmpl::version::workspace();
+    assert!(
+        temper_driver::version::built().base >= workspace,
+        "{expected}"
+    );
+    if let Some(commit) = temper_driver::version::commit() {
+        assert!(expected.contains(&format!(" ({commit}")), "{expected}");
+    }
     for flag in ["version", "--version"] {
         let (code, out, err) = tempest(&[flag]);
         assert_eq!((code, err.as_str()), (0, ""));
-        assert!(out.starts_with("tempest 0."), "{out}");
-        assert!(out.ends_with('\n') && out.lines().count() == 1, "{out}");
+        assert_eq!(out, expected);
     }
 }
 
@@ -157,17 +167,15 @@ fn license_and_licenses() {
     assert!(out.contains("\n--- serde_json "), "{out}");
 }
 
-/// What isn't in tempest yet says so, with a pointer, and exits with 3:
-/// Kotlin's `watch` and `doc`, `repl -b`, its backends `cppv`, `data`,
+/// What isn't available yet says so, with a pointer, and exits with 3:
+/// `watch` and `doc`, `repl -b`, its backends `cppv`, `data`,
 /// `java8`, and `mypyc`, and its language server's `--port`.
 #[test]
 fn not_yet() {
     for command in ["watch", "doc"] {
         let (code, out, err) = tempest(&[command, "-w", "."]);
         assert_eq!((code, out.as_str()), (3, ""), "{command}");
-        let expected = format!(
-            "tempest: {command} isn't in tempest yet. Kotlin Temper's `temper {command}` has it; "
-        );
+        let expected = format!("temper: {command} isn't available yet; ");
         assert!(err.starts_with(&expected), "{err}");
         assert!(err.ends_with(" (docs/tools/cli.md).\n"), "{err}");
         // Its help says the same.
@@ -178,7 +186,7 @@ fn not_yet() {
     for backend in temper_driver::NOT_YET {
         for args in [&["build", "-b", backend][..], &["test", "-b", backend]] {
             let (code, _, err) = tempest(args);
-            let expected = format!("tempest: the {backend} backend isn't in tempest yet; ");
+            let expected = format!("temper: the {backend} backend isn't available yet ");
             assert_eq!(code, 3, "{args:?}");
             assert!(err.starts_with(&expected), "{err}");
         }
@@ -186,7 +194,7 @@ fn not_yet() {
     let (code, _, err) = tempest(&["repl", "-b", "py"]);
     assert_eq!(code, 3);
     assert!(
-        err.starts_with("tempest repl: -b py isn't in tempest yet"),
+        err.starts_with("temper repl: -b py isn't available yet"),
         "{err}"
     );
     let (code, _, err) = tempest(&["serve", "--port", "4000"]);
@@ -197,7 +205,7 @@ fn not_yet() {
     );
 }
 
-/// Whether this build of `tempest` has a backend (a cargo feature).
+/// Whether this build of `temper` has a backend (a cargo feature).
 fn built_in(backend: &str) -> bool {
     temper_driver::Registry::built_in().get(backend).is_some()
 }
@@ -206,10 +214,37 @@ fn built_in(backend: &str) -> bool {
 fn backends_left_out() {
     for backend in temper_driver::KNOWN.into_iter().filter(|b| !built_in(b)) {
         let (code, _, err) = tempest(&["build", "-b", backend]);
-        let expected = format!("tempest: built without the {backend} backend\n");
+        let expected = format!("temper: built without the {backend} backend\n");
         assert_eq!((code, err.as_str()), (1, expected.as_str()));
     }
 }
+
+/// Tests of a class's `==`, its method marked `@operator("==")`, in
+/// `assert`: with a nullable side, either way round, and a failing one,
+/// whose message can't show the class's values, which have no
+/// `toString()`, so it's the plain one; and a nullable list's, which
+/// has none either.
+const CLASS_ASSERTS: (&str, &str) = (
+    "c.temper",
+    "class P(public n: Int) {\n\
+     \x20 @operator(\"==\")\n\
+     \x20 public eq(other: P): Boolean { n == other.n }\n\
+     }\n\
+     let maybeP(n: Int): P? { if (n > 0) { new P(n) } else { null } }\n\
+     let names(n: Int): List<String>? { if (n > 0) { [\"a\"] } else { null } }\n\
+     test(\"c\") {\n\
+     \x20 let p = new P(1);\n\
+     \x20 assert(p == new P(1));\n\
+     \x20 assert(maybeP(1) == p);\n\
+     \x20 assert(p == maybeP(1));\n\
+     \x20 assert(maybeP(0) == null);\n\
+     \x20 assert(names(0) == null);\n\
+     }\n\
+     test(\"d\") { assert(new P(1) == maybeP(2)) }\n",
+);
+
+/// What a failing test of [`CLASS_ASSERTS`] says, lowercased.
+const CLASS_ASSERT_FAILED: &str = "  failed  d - expected new p(1) == maybep(2)\n";
 
 /// A fresh directory for a test, with a library of these files beside its
 /// config file, removed when the test is done.
@@ -235,7 +270,7 @@ fn with_library(test: &str, files: &[(&str, &str)], f: impl FnOnce(&str)) {
 fn test_a_library() {
     let files = [("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n")];
     with_library("plain", &files, |dir| {
-        let std_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vendor/temper/std");
+        let std_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../lib/std");
         let std_dir = std_dir.to_string_lossy();
         // Only the summary, as `temper test` prints when all pass.
         let (code, out, err) = tempest(&["test", "--std", &std_dir, dir]);
@@ -252,7 +287,7 @@ fn test_a_library() {
         let (code, out, err) = tempest(&["test", "-b", "py", dir]);
         if !cfg!(feature = "py") {
             assert!(
-                err.contains("tempest: built without the py backend"),
+                err.contains("temper: built without the py backend"),
                 "{err}"
             );
             assert_eq!(code, 1);
@@ -266,16 +301,22 @@ fn test_a_library() {
             "test(\"b\") { assert(1 + 1 == 3) }\n",
         )
         .unwrap();
+        fs::write(Path::new(dir).join(CLASS_ASSERTS.0), CLASS_ASSERTS.1).unwrap();
+        let mut runs = vec![tempest(&["test", "--std", &std_dir, dir])];
         if cfg!(feature = "py") && Command::new("python3").arg("--version").output().is_ok() {
-            let (code, out, _) = tempest(&["test", "-b", "py", dir]);
+            runs.push(tempest(&["test", "-b", "py", dir]));
+        }
+        for (code, out, err) in runs {
             assert!(
                 out.contains("  failed  b - expected 1 + 1 == (3) not (2)"),
-                "{out}"
+                "{out}{err}"
             );
-            assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}");
+            assert!(out.to_lowercase().contains(CLASS_ASSERT_FAILED), "{out}");
+            assert!(out.ends_with("Tests passed: 2 of 4\n"), "{out}");
             assert_eq!(code, 1);
         }
         fs::remove_file(Path::new(dir).join("b.temper")).unwrap();
+        fs::remove_file(Path::new(dir).join(CLASS_ASSERTS.0)).unwrap();
         // Each with the steps it took on the interpreter.
         let (code, out, _) = tempest(&["test", "-v", "--std", &std_dir, dir]);
         assert!(out.contains("  ok      a ("), "{out}");
@@ -305,6 +346,55 @@ fn hints_only_with_verbose() {
     });
 }
 
+/// A function literal and a function reference where another library's
+/// `@fun` interface is wanted: `b`'s code gets the interface's `apply`,
+/// so both translate and run.
+#[test]
+fn another_librarys_fun_interface() {
+    if !built_in("py") {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fun", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    let files = [
+        ("a/config.temper.md", "export let name = \"a\";\n"),
+        (
+            "a/a.temper",
+            "export @fun interface Pred(x: Int): Boolean;\n\
+             export let countIf(xs: List<Int>, p: Pred): Int {\n\
+             var n = 0;\n\
+             for (let x of xs) { if (p(x)) { n += 1; } }\n\
+             n\n\
+             }\n",
+        ),
+        ("b/config.temper.md", "export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let { Pred, countIf } = import(\"a\");\n\
+             let isOdd(x: Int): Boolean { x % 2 != 0 }\n\
+             export let one(): Int { countIf([1, 2, 3], fn (x: Int): Boolean { x > 1 }) }\n\
+             export let two(): Int { let p: Pred = isOdd; countIf([1, 2, 3], p) }\n\
+             test(\"counts\") { assert(one() == 2); assert(two() == 2) }\n",
+        ),
+    ];
+    for (name, text) in files {
+        let path = dir.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    }
+    let root = dir.to_string_lossy().to_string();
+    let out = format!("{root}-out");
+    let (code, _, err) = tempest(&["build", "-w", &root, "-b", "py", "-o", &out]);
+    assert_eq!((code, err.as_str()), (0, ""));
+    let _ = fs::remove_dir_all(&out);
+    if Command::new("python3").arg("--version").output().is_ok() {
+        let (code, out, err) = tempest(&["test", "-w", &root, "-b", "py"]);
+        assert!(out.ends_with("Tests passed: 1 of 1\n"), "{out}{err}");
+        assert_eq!(code, 0, "{err}");
+    }
+    let _ = fs::remove_dir_all(&dir);
+}
+
 /// The audit's probe (scratch/deps): `b` imports `a`, which has an
 /// error. Each command reports it once, under `a`, the library it's in,
 /// though settling `b` finds it again; and still fails.
@@ -330,7 +420,9 @@ fn imported_errors_are_reported_once() {
         fs::write(path, text).unwrap();
     }
     let root = dir.to_string_lossy().to_string();
-    let error = format!("{root}/a/a.temper:2:19: error: Cannot assign to String from Int32\n");
+    // Diagnostics name files with `/`, on Windows too.
+    let shown = root.replace('\\', "/");
+    let error = format!("{shown}/a/a.temper:2:19: error: Cannot assign to String from Int32\n");
     let error = error.as_str();
     for args in [
         &["test", "-w", &root][..],
@@ -416,7 +508,7 @@ fn test_fuel() {
             assert_eq!(code, 2, "{fuel}");
             assert!(
                 err.starts_with(&format!(
-                    "tempest test: --fuel is a number of steps above 0, or none, not {fuel}\n"
+                    "temper test: --fuel is a number of steps above 0, or none, not {fuel}\n"
                 )),
                 "{err}"
             );
@@ -446,7 +538,7 @@ fn built_in_std() {
 /// Fibonacci, from Kotlin's functional tests, as a library of its name.
 fn with_fibonacci(test: &str, f: impl FnOnce(&str)) {
     let fib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper/functional-tests/algos/fibonacci/fibonacci.temper.md");
+        .join("../temper-funtests/cases/algos/fibonacci/fibonacci.temper.md");
     let fib = fs::read_to_string(fib).unwrap();
     let files = [
         ("config.temper.md", "    export let name = \"fibonacci\";\n"),
@@ -564,13 +656,13 @@ fn build_writes_each_backend_to_a_directory() {
     });
 }
 
-/// `tempest build` writes each library under `temper.out`, laid out as
+/// `temper build` writes each library under `temper.out`, laid out as
 /// Kotlin's, with the runtime beside it, and says what it can't build.
 #[test]
 #[cfg(all(feature = "py", feature = "lua", feature = "cpp"))]
 fn build_writes_temper_out() {
     let fib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper/functional-tests/algos/fibonacci/fibonacci.temper.md");
+        .join("../temper-funtests/cases/algos/fibonacci/fibonacci.temper.md");
     let files = [
         ("fib.temper.md", fs::read_to_string(fib).unwrap()),
         (
@@ -624,12 +716,16 @@ fn build_writes_temper_out() {
             "py/temper-core/temper_core/__init__.py",
             "lua/a/init.lua",
             "lua/other/other-1.2.0-1.rockspec",
-            "lua/temper-core/temper-core-0.6.0-1.rockspec",
             "cpp/a/CMakeLists.txt",
             "cpp/temper-core/core.hpp",
         ] {
             assert!(out_dir.join(file).is_file(), "{file}");
         }
+        // The runtime's rockspec, named for the build's version.
+        let rock = temper_driver::version::built().spell(temper_tmpl::version::Spelling::Rockspec);
+        let rockspec = out_dir.join(format!("lua/temper-core/temper-core-{rock}.rockspec"));
+        let text = fs::read_to_string(&rockspec).unwrap();
+        assert!(text.contains(&format!("version = \"{rock}\"")), "{text}");
         let pyproject = fs::read_to_string(out_dir.join("py/other/pyproject.toml")).unwrap();
         assert!(pyproject.contains("version = \"1.2.0\"\n"), "{pyproject}");
         let pyproject = fs::read_to_string(out_dir.join("py/a/pyproject.toml")).unwrap();
@@ -694,7 +790,7 @@ fn build_needs_libraries_with_names_of_their_own() {
 
 /// A C++ library's generated CMake project builds and runs, with g++,
 /// where CMake is installed (skipped, with a message, otherwise; required
-/// with `TEMPEST_REQUIRE_CHECKERS`).
+/// with `TEMPER_REQUIRE_CHECKERS`).
 #[test]
 #[cfg(feature = "cpp")]
 fn cmake_builds_a_library() {
@@ -704,14 +800,14 @@ fn cmake_builds_a_library() {
         .is_ok_and(|o| o.status.success());
     if !cmake_runs {
         assert!(
-            std::env::var_os("TEMPEST_REQUIRE_CHECKERS").is_none(),
-            "no cmake (needed with TEMPEST_REQUIRE_CHECKERS)"
+            std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+            "no cmake (needed with TEMPER_REQUIRE_CHECKERS)"
         );
         eprintln!("skipped: no cmake");
         return;
     }
     let fib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper/functional-tests/algos/fibonacci/fibonacci.temper.md");
+        .join("../temper-funtests/cases/algos/fibonacci/fibonacci.temper.md");
     let files = [("fib.temper.md", fs::read_to_string(fib).unwrap())];
     let files: Vec<(&str, &str)> = files.iter().map(|(p, t)| (*p, t.as_str())).collect();
     with_library("cmake", &files, |dir| {
@@ -749,9 +845,9 @@ fn cmake_builds_a_library() {
     });
 }
 
-/// `tempest test -b cpp` builds a library's tests with CMake and runs
+/// `temper test -b cpp` builds a library's tests with CMake and runs
 /// them, reading the JUnit XML they write, where CMake is installed
-/// (skipped otherwise; required with `TEMPEST_REQUIRE_CHECKERS`).
+/// (skipped otherwise; required with `TEMPER_REQUIRE_CHECKERS`).
 #[test]
 #[cfg(feature = "cpp")]
 fn test_a_library_in_cpp() {
@@ -761,8 +857,8 @@ fn test_a_library_in_cpp() {
         .is_ok_and(|o| o.status.success());
     if !cmake_runs {
         assert!(
-            std::env::var_os("TEMPEST_REQUIRE_CHECKERS").is_none(),
-            "no cmake (needed with TEMPEST_REQUIRE_CHECKERS)"
+            std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+            "no cmake (needed with TEMPER_REQUIRE_CHECKERS)"
         );
         eprintln!("skipped: no cmake");
         return;
@@ -770,11 +866,16 @@ fn test_a_library_in_cpp() {
     let files = [
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
     ];
     with_library("cpp-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "cpp", dir]);
         assert!(out.contains("  failed  b - expected"), "{out}{err}");
-        assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}{err}");
+        assert!(
+            out.to_lowercase().contains(CLASS_ASSERT_FAILED),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 2 of 4\n"), "{out}{err}");
         assert_eq!(code, 1);
         assert!(
             Path::new(dir)
@@ -784,17 +885,19 @@ fn test_a_library_in_cpp() {
     });
 }
 
-/// `tempest test -b BACKEND` on a small library, one test passing and
-/// one failing, on every backend whose tools run here: it builds, runs
+/// `temper test -b BACKEND` on a small library, two tests passing and
+/// two failing, one of them [`CLASS_ASSERTS`]'s, on every backend whose
+/// tools run here: it builds, runs
 /// the language's own test tools, and reads their results, so each
 /// backend's runner (its crate's `tools` module) is tested on every push without the
 /// real libraries, which run nightly. A backend whose tools are missing is
-/// skipped, with a message, unless `TEMPEST_REQUIRE_CHECKERS` is set.
+/// skipped, with a message, unless `TEMPER_REQUIRE_CHECKERS` is set.
 #[test]
 fn test_a_library_on_each_backend() {
     let files = [
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
     ];
     for backend in ["js", "lua", "rust", "java", "csharp"] {
         if !built_in(backend) {
@@ -804,8 +907,8 @@ fn test_a_library_on_each_backend() {
             let (code, out, err) = tempest(&["test", "-b", backend, dir]);
             if out.contains("couldn't run") || err.contains("couldn't run") {
                 assert!(
-                    std::env::var_os("TEMPEST_REQUIRE_CHECKERS").is_none(),
-                    "{backend}'s tools are missing (needed with TEMPEST_REQUIRE_CHECKERS):\n{out}{err}"
+                    std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+                    "{backend}'s tools are missing (needed with TEMPER_REQUIRE_CHECKERS):\n{out}{err}"
                 );
                 eprintln!("skipped {backend}: its tools are missing");
                 return;
@@ -813,8 +916,10 @@ fn test_a_library_on_each_backend() {
             // As each tool names it: `b`, or C#'s method `B`.
             let failed = out.to_lowercase().contains("  failed  b - expected");
             assert!(failed, "{backend}:\n{out}{err}");
+            let failed = out.to_lowercase().contains(CLASS_ASSERT_FAILED);
+            assert!(failed, "{backend}:\n{out}{err}");
             assert!(
-                out.ends_with("Tests passed: 1 of 2\n"),
+                out.ends_with("Tests passed: 2 of 4\n"),
                 "{backend}:\n{out}{err}"
             );
             assert_eq!(code, 1, "{backend}");
@@ -825,7 +930,7 @@ fn test_a_library_on_each_backend() {
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some
 /// real libraries are, on the interpreter and each backend whose tools
 /// run here (skipped where they're missing, unless
-/// `TEMPEST_REQUIRE_CHECKERS` is set): `run` loads every module, and
+/// `TEMPER_REQUIRE_CHECKERS` is set): `run` loads every module, and
 /// `test` runs every module's tests. A module that fails as it loads
 /// should be one failure by its name while the others' results still
 /// count; Python names its tests module, Lua its tests file, and Java the
@@ -852,7 +957,9 @@ fn library_without_root_module(backend: &str) {
             return;
         }
         // Java runs one module's `…Main`, for now.
+        // The program's own line ends: CRLF on Windows for some languages.
         if backend != "java" {
+            let out = out.replace("\r\n", "\n");
             assert_eq!((code, out.as_str()), (0, "x\ny\n"), "{backend}: {err}");
         }
         assert_eq!(code, 0, "{backend}: {err}");
@@ -913,6 +1020,36 @@ fn library_without_root_module(backend: &str) {
         let summary = format!("Tests passed: {summary}\n");
         assert!(out.ends_with(&summary), "{backend}:\n{out}{err}");
         assert_eq!(code, 1, "{backend}");
+    });
+}
+
+/// A library whose path has a space and non-ASCII letters, with modules
+/// that import each other: found, built, tested, and run, as anywhere.
+#[test]
+fn paths_with_spaces_and_unicode() {
+    let files = [
+        ("x/x.temper", "export let one = 1;\n"),
+        (
+            "y/y.temper",
+            "let { one } = import(\"../x\");\nconsole.log(\"y ${(one + 1).toString()}\");\n\
+             test(\"y\") { assert(one + 1 == 2) }\n",
+        ),
+    ];
+    with_library("Zoë's Lib", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", "interp", dir]);
+        assert_eq!((code, out.as_str()), (0, "Tests passed: 1 of 1\n"), "{err}");
+        let (code, out, err) = tempest(&["run", "-w", dir, "--library", "a", "-b", "interp"]);
+        assert_eq!(
+            (code, out.replace("\r\n", "\n").as_str()),
+            (0, "y 2\n"),
+            "{err}"
+        );
+        let (code, _, err) = tempest(&["build", "-w", dir]);
+        assert_eq!(code, 0, "{err}");
+        for backend in ["js", "py"].into_iter().filter(|b| built_in(b)) {
+            let out = Path::new(dir).join("temper.out").join(backend).join("a");
+            assert!(out.is_dir(), "{backend}");
+        }
     });
 }
 
@@ -1004,7 +1141,10 @@ fn missing_operator_is_one_error() {
             (1, "", 2),
             "{err}"
         );
-        for backend in ["csharp", "java", "js", "lua", "py", "rust"] {
+        for backend in ["csharp", "java", "js", "lua", "py", "rust"]
+            .into_iter()
+            .filter(|b| built_in(b))
+        {
             let written = Path::new(dir).join("temper.out").join(backend).join("a");
             assert!(written.is_dir(), "{backend}");
         }
@@ -1034,7 +1174,9 @@ fn errors_fail_only_where_they_run() {
          export let misspelled(s: String): Int { s.lenght }\n\
          export let typo(x: Nope): Int { 1 }\n\
          export let unclosed(x: Int: Int { x * 2 }\n\
-         export let after(x: Int): Int { x * 3 }\n",
+         export let after(x: Int): Int { x * 3 }\n\
+         export let shown(x: Gone): String { \"${x}\" + x.toString() }\n\
+         export let named(): String { missing.toString() }\n",
         ),
         (
             "tests.temper",
@@ -1050,15 +1192,20 @@ fn errors_fail_only_where_they_run() {
             "a.temper:3:41: error: No member lenght in String",
             "a.temper:4:20: error: Nope has not been declared",
             "a.temper:5:27: error: Expected `)` to close the `(` on line 5",
+            "a.temper:7:21: error: Gone has not been declared",
+            "a.temper:8:30: error: missing has not been declared",
         ];
         // Every backend's code, each error reported once, and 1.
         let (code, out, err) = tempest(&["build", "-w", dir]);
         for error in errors {
             assert_eq!(err.matches(error).count(), 1, "{error}:\n{err}");
         }
-        assert!(err.ends_with("a: 4 errors\n"), "{err}");
+        assert!(err.ends_with("a: 6 errors\n"), "{err}");
         assert_eq!((code, out.as_str()), (1, ""), "{err}");
-        for backend in ["csharp", "java", "js", "lua", "py", "rust"] {
+        for backend in ["csharp", "java", "js", "lua", "py", "rust"]
+            .into_iter()
+            .filter(|b| built_in(b))
+        {
             let written = Path::new(dir).join("temper.out").join(backend).join("a");
             assert!(written.is_dir(), "{backend}");
         }
@@ -1068,7 +1215,7 @@ fn errors_fail_only_where_they_run() {
         let (code, _, err) = tempest(&["build", "-w", dir, "-b", "py", "-o", &py]);
         let text = fs::read_to_string(format!("{py}/py/a/a/a.py")).unwrap();
         assert!(text.contains("def after(x: int, /) -> int:"), "{text}");
-        assert!(err.ends_with("a: 4 errors\n"), "{err}");
+        assert!(err.ends_with("a: 6 errors\n"), "{err}");
         assert_eq!(code, 1);
         let _ = fs::remove_dir_all(&py);
         // Tests run, on the interpreter and on a backend, those that
@@ -1100,9 +1247,11 @@ fn logformat_json() {
          test(\"t2\") { assert(f(2) == 7); }\n",
     )];
     with_library("json", &files, |dir| {
+        // Records name files with `/`, on Windows too, as JSON wants.
+        let shown = dir.replace('\\', "/");
         let undeclared = format!(
             "{{ \"level\": \"error\", \"template\": \"UndeclaredName\", \"pos\": {{ \"loc\": \
-             \"{dir}/a.temper\", \"left\": 51, \"right\": 57 }}, \"values\": [], \"message\": \
+             \"{shown}/a.temper\", \"left\": 51, \"right\": 57 }}, \"values\": [], \"message\": \
              \"tripel has not been declared\" }}"
         );
         // A build needs a backend; one built without js (as CI's
@@ -1225,7 +1374,7 @@ fn init_writes_kotlins_skeleton() {
 
 /// `run` builds the work root and runs a library's top level on the
 /// interpreter and each backend whose tools are here (skipped where
-/// they're missing, unless `TEMPEST_REQUIRE_CHECKERS` is set), what it
+/// they're missing, unless `TEMPER_REQUIRE_CHECKERS` is set), what it
 /// logs on stdout; a library that imports another runs with it.
 #[test]
 fn run_a_library() {
@@ -1248,8 +1397,8 @@ fn run_a_library() {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", "b", "-b", backend]);
             if err.contains("couldn't run") {
                 assert!(
-                    std::env::var_os("TEMPEST_REQUIRE_CHECKERS").is_none(),
-                    "{backend}'s tools are missing (needed with TEMPEST_REQUIRE_CHECKERS):\n{err}"
+                    std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+                    "{backend}'s tools are missing (needed with TEMPER_REQUIRE_CHECKERS):\n{err}"
                 );
                 eprintln!("skipped {backend}: its tools are missing");
                 continue;
@@ -1327,12 +1476,16 @@ fn test_flags() {
         fs::write(&list, "b/\n").unwrap();
         let (code, out, _) = tempest(&["test", "-w", dir, "-ign", &list]);
         assert_eq!((code, out.as_str()), (0, "Tests passed: 1 of 1\n"));
-        let (code, out, _) = tempest(&["test", "-w", dir, "--ignorefile", "/dev/null"]);
-        assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}");
+        // An empty one ignores nothing. (Not /dev/null, which Windows lacks.)
+        let empty = Path::new(dir).join("empty-ignore");
+        fs::write(&empty, "").unwrap();
+        let empty = empty.to_string_lossy();
+        let (code, out, err) = tempest(&["test", "-w", dir, "--ignorefile", &empty]);
+        assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}{err}");
         assert_eq!(code, 1);
         let (code, _, err) = tempest(&["test", "-w", dir, "-ign", &format!("{list}-not")]);
         assert_eq!(code, 1);
-        assert!(err.starts_with("tempest: --ignorefile "), "{err}");
+        assert!(err.starts_with("temper: --ignorefile "), "{err}");
         // A .temperignore is read as a .gitignore is, after it.
         fs::write(Path::new(dir).join(".temperignore"), "b/\n").unwrap();
         let (code, out, _) = tempest(&["test", "-w", dir]);
@@ -1424,14 +1577,14 @@ fn all_gone(ids: &[u32], secs: u64) -> bool {
 }
 
 /// Whether a backend's tools are missing, by what tempest said; which
-/// fails the test with `TEMPEST_REQUIRE_CHECKERS`.
+/// fails the test with `TEMPER_REQUIRE_CHECKERS`.
 fn tools_missing(backend: &str, err: &str) -> bool {
     if !err.contains("couldn't run") {
         return false;
     }
     assert!(
-        std::env::var_os("TEMPEST_REQUIRE_CHECKERS").is_none(),
-        "{backend}'s tools are missing (needed with TEMPEST_REQUIRE_CHECKERS):\n{err}"
+        std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+        "{backend}'s tools are missing (needed with TEMPER_REQUIRE_CHECKERS):\n{err}"
     );
     eprintln!("skipped {backend}: its tools are missing");
     true
@@ -1453,7 +1606,7 @@ fn watch_tempest(
         Path::new(dir).file_name().unwrap().to_string_lossy()
     ));
     let (out_log, err_log) = (logs.with_extension("out"), logs.with_extension("err"));
-    let mut tempest = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let mut tempest = Command::new(env!("CARGO_BIN_EXE_temper"))
         .args(args)
         .stdout(fs::File::create(&out_log).unwrap())
         .stderr(fs::File::create(&err_log).unwrap())
@@ -1485,7 +1638,7 @@ fn watch_tempest(
         }
         if watch.elapsed().as_secs() > 180 {
             let _ = tempest.kill();
-            panic!("{args:?}: tempest still running after 180 s");
+            panic!("{args:?}: temper still running after 180 s");
         }
         std::thread::sleep(std::time::Duration::from_millis(20));
     };
@@ -1527,23 +1680,23 @@ fn test_timeout() {
             }
             assert_eq!(status.code(), Some(1), "{out}{err}");
         }
-        // TEMPEST_TIMEOUT is the same; a wrong one is a usage error.
+        // TEMPER_TIMEOUT is the same; a wrong one is a usage error.
         let (code, _, err) = tempest(&["test", "--timeout", "0", dir]);
         assert_eq!(code, 2);
         assert!(
-            err.starts_with("tempest test: --timeout is whole seconds above 0, or none, not 0\n"),
+            err.starts_with("temper test: --timeout is whole seconds above 0, or none, not 0\n"),
             "{err}"
         );
-        let output = Command::new(env!("CARGO_BIN_EXE_tempest"))
+        let output = Command::new(env!("CARGO_BIN_EXE_temper"))
             .args(["run", "-w", dir, "--library", "a", "-b", "interp"])
-            .env("TEMPEST_TIMEOUT", "soon")
+            .env("TEMPER_TIMEOUT", "soon")
             .output()
             .unwrap();
         let err = String::from_utf8_lossy(&output.stderr);
         assert_eq!(output.status.code(), Some(2));
         assert!(
             err.starts_with(
-                "tempest run: TEMPEST_TIMEOUT is whole seconds above 0, or none, not soon\n"
+                "temper run: TEMPER_TIMEOUT is whole seconds above 0, or none, not soon\n"
             ),
             "{err}"
         );

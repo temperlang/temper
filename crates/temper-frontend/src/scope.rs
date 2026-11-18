@@ -93,6 +93,10 @@ pub struct Symbol {
     /// classes, only after their declaration; everything else, everywhere
     /// in its scope (0).
     pub visible_from: u32,
+    /// A class header's `@noProperty` input, which its class's
+    /// initializers read by name, ahead of a member of the same name, and
+    /// its methods don't see ([`Scopes::lookup`]).
+    pub input: bool,
 }
 
 /// The result of a lookup.
@@ -164,6 +168,7 @@ impl Scopes {
                 mutable,
                 exported,
                 visible_from: 0,
+                input: false,
             });
             scopes.hidden.insert(builtin, id);
         }
@@ -232,6 +237,7 @@ impl Scopes {
             mutable,
             exported,
             visible_from: 0,
+            input: false,
         });
         id
     }
@@ -249,8 +255,14 @@ impl Scopes {
             mutable: false,
             exported: false,
             visible_from: 0,
+            input: false,
         });
         id
+    }
+
+    /// Marks a member as a `@noProperty` input ([`Symbol::input`]).
+    pub fn mark_input(&mut self, id: SymbolId) {
+        self.symbols[id.0 as usize].input = true;
     }
 
     pub fn set_visible_from(&mut self, id: SymbolId, at: u32) {
@@ -278,6 +290,22 @@ impl Scopes {
         &self.symbols[id.0 as usize]
     }
 
+    /// Whether `from`, inside `class`'s scope, is in one of its methods,
+    /// getters, setters, or constructor: under a function's scope right
+    /// in the class's.
+    fn in_method(&self, from: ScopeId, class: ScopeId) -> bool {
+        let mut below = None;
+        let mut at = from;
+        while at != class {
+            below = Some(at);
+            match self.get(at).parent {
+                Some(parent) => at = parent,
+                None => return false,
+            }
+        }
+        below.is_some_and(|b| self.get(b).kind == ScopeKind::Fn)
+    }
+
     /// Looks a name used at source position `pos` up from a scope outward.
     /// With `so_far`, the starting scope counts as complete, for a
     /// statement's macro name.
@@ -288,7 +316,21 @@ impl Scopes {
             // Later declarations shadow earlier ones in the same scope.
             let visible =
                 |&&(n, b): &&(NameId, SymbolId)| n == name && self.symbol(b).visible_from <= pos;
-            if let Some(&(_, b)) = scope.names.iter().rev().find(visible) {
+            let mut named = scope.names.iter().rev().filter(visible).map(|&(_, b)| b);
+            let mut found = named.next();
+            // A `@noProperty` input is what initializers read, ahead of a
+            // getter of the same name, and methods don't see it.
+            let input = |b: SymbolId| self.symbol(b).input;
+            if scope.kind == ScopeKind::Class && found.is_some_and(|b| !input(b)) {
+                let shadowed = named.find(|&b| input(b));
+                if shadowed.is_some() && !self.in_method(from, id) {
+                    found = shadowed;
+                }
+            } else if scope.kind == ScopeKind::Class && found.is_some() && self.in_method(from, id)
+            {
+                found = named.find(|&b| !input(b));
+            }
+            if let Some(b) = found {
                 return Lookup::Found(b);
             }
             if !(scope.complete || so_far && id == from) {

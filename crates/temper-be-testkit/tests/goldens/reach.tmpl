@@ -1,0 +1,119 @@
+tmpl 1 model 1 library reach 0.0.0
+
+uses `temper-core`#24 0.0.0-alpha.0.0 {
+  interface Console#25 {
+    connected method log#26(message: String): Void;
+  }
+  class Int32#28 {
+    connected method toString#29(radix?: Int32): String;
+  }
+  connected fn getConsole#49(name?: String): Console#25;
+}
+
+uses std#30 0.0.0-alpha.0.0 {
+  module testing#31 {
+    class Test#32 {
+      connected method assert#38(success: Boolean, message: fn (): String): Void;
+    }
+  }
+}
+
+module reach#0 {
+  let ~console#27: Console#25;
+
+  var shownCount#10: Int32;
+
+  interface TestShape#1 {
+    abstract method area#5(): Int32;
+  }
+
+  class TestSquare#2 extends TestShape#1 {
+    let side#6: Int32;
+    constructor constructor#8(side#20: Int32): TestSquare#2 {
+      this.side#6 = side#20;
+    }
+    method area#7(): Int32 {
+      return %Int32.mul(this.side#6, this.side#6);
+    }
+  }
+
+  let base#11: Int32;
+
+  let testFactor#12: Int32;
+
+  fn forTests#13(n#21: Int32): Int32 {
+    return %Int32.mul(n#21, testFactor#12);
+  }
+
+  var testCount#14: Int32;
+
+  fn addArea#15(shape#22: TestShape#1): Void {
+    testCount#14 = %Int32.add(testCount#14, shape#22.area#5());
+  }
+
+  let checked#16: Int32;
+
+  export fn shown#17(n#23: Int32): Int32 {
+    shownCount#10 = %Int32.add(shownCount#10, 1);
+    return %Int32.add(n#23, base#11);
+  }
+
+  fn unreachedFunction#18(): Int32 {
+    return 3;
+  }
+
+  class UnreachedClass#3 {
+    constructor constructor#9(): UnreachedClass#3 {}
+  }
+
+  interface UnreachedInterface#4 {}
+
+  let unreachedValue#19: Int32;
+
+  init {
+    init ~console#27 = getConsole#49(omitted);
+    init shownCount#10 = 0;
+    init base#11 = 1;
+    init testFactor#12 = %Int32.mul(base#11, 2);
+    init testCount#14 = 0;
+    init checked#16 = shown#17(2);
+    init unreachedValue#19 = 4;
+    ~console#27.log#26(%String.cat("shown ", shown#17(1).toString#29(omitted)));
+  }
+
+  test "test parts" ~test#33(test#34: Test#32): Void throws Bubble {
+    let shape#35: TestShape#1 = (upcast(new constructor#8(forTests#13(2)))): TestShape#1;
+    addArea#15(shape#35);
+    testCount#14 = %Int32.add(testCount#14, shape#35.area#5());
+    {
+      let actual#36: Int32 = testCount#14;
+      let expected#37: Int32 = 32;
+      test#34.assert#38(%Int32.eq(actual#36, expected#37), (fn ~fn#39(): String [actual#36, expected#37] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected testCount == (", expected#37.toString#29(omitted)), ") not ("), actual#36.toString#29(omitted)), ")");
+      }): fn (): String);
+    }
+    {
+      let actual#40: Int32 = checked#16;
+      let expected#41: Int32 = 3;
+      test#34.assert#38(%Int32.eq(actual#40, expected#41), (fn ~fn#42(): String [actual#40, expected#41] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected checked == (", expected#41.toString#29(omitted)), ") not ("), actual#40.toString#29(omitted)), ")");
+      }): fn (): String);
+    }
+    {
+      let actual#43: Int32 = shownCount#10;
+      let expected#44: Int32 = 2;
+      test#34.assert#38(%Int32.eq(actual#43, expected#44), (fn ~fn#45(): String [actual#43, expected#44] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#44.toString#29(omitted)), ") not ("), actual#43.toString#29(omitted)), ")");
+      }): fn (): String);
+    }
+    shownCount#10 = 0;
+    shown#17(0);
+    {
+      let actual#46: Int32 = shownCount#10;
+      let expected#47: Int32 = 1;
+      test#34.assert#38(%Int32.eq(actual#46, expected#47), (fn ~fn#48(): String [actual#46, expected#47] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#47.toString#29(omitted)), ") not ("), actual#46.toString#29(omitted)), ")");
+      }): fn (): String);
+    }
+  }
+}

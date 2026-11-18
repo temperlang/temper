@@ -24,16 +24,27 @@ and Rust; C++ is built when asked for (`-b cpp`).
 | [Python](#python-py) | `py` | Python 3.11 and later | a `pyproject.toml` | `unittest` |
 | [Rust](#rust-rust) | `rust` | Rust 1.71.1 and later, edition 2021 | a crate | `cargo test` |
 
+Each library's package has the version its `config.temper.md` gives,
+and depends on Temper's runtime for its language, `temper-core`, and on
+`std` if it imports std, at exactly the compiler's version (`temper
+version`), in each ecosystem's spelling: `0.7.0-alpha.0.123` (a dev
+build, 123 commits after the last release) for npm, Cargo, NuGet, and
+Maven, `0.7.0.dev123` for Python, and `0.7.0.alpha.0.123-1` for
+LuaRocks. `temper build` writes both beside the library, in
+`temper.out/BACKEND/`. They aren't on package registries yet; each
+[release](https://github.com/temperlang/tempest/releases) carries
+them, packed as each registry takes them, for installing by hand.
+
 How each backend is built, and what it chooses for failure, null,
 naming, and order of evaluation, is in
-[how tempest works: backends](../internals/06-backends.md) and its
+[how the compiler works: backends](../internals/06-backends.md) and its
 [per-backend table](../internals/detail/06-backends.md#per-backend-choices).
 Getting started with each language is in the
 [getting started guide](../guide/getting-started.md).
 
-> **Note:** Temper's first compiler also has `java8`, `mypyc`, and
-> `data` backends, and an experimental `cppv`; tempest doesn't have
-> them yet ([inconsistencies](../inconsistencies.md#i4-backends-that-tempest-doesnt-have)).
+> **Note:** Temper's earlier releases also have `java8`, `mypyc`, and
+> `data` backends, and an experimental `cppv`; they aren't available
+> yet ([inconsistencies](../inconsistencies.md#i4-backends-not-available-yet)).
 
 ## C++ (`cpp`)
 
@@ -49,7 +60,7 @@ backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise.
 
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
-> out of this list; tempest's C++ backend passes every functional test
+> out of this list; the C++ backend passes every functional test
 > ([inconsistencies](../inconsistencies.md#i3-c-support)).
 
 ## C# (`csharp`)
@@ -207,6 +218,19 @@ suffer the [singly evaluated default expression pitfall][default-pitfall].
 
 Names translate to Python's conventions: `snake_case` for functions,
 methods, and properties, and a leading `_` for what isn't exported.
+A name that's a Python keyword gets a trailing `_` (`from_`). A
+parameter or local keeps its name even when a builtin has it, so a
+constructor's parameters, which Python code may pass by name, are
+`Option(help=…, type=…)`. Where a function's own names hide a builtin
+its code needs, it reaches the builtin through the `builtins` module
+(`_builtins.len(items)`). A module-level name that a builtin has gets
+a trailing `_` (`max_`), as does a member named for a builtin that a
+class body uses (`int_`, `property_`); other members keep theirs
+(`map`).
+
+On Windows, before Python 3.15, logging characters outside the
+system's code page (as `✅`) to a pipe or file needs Python's UTF-8
+mode (`PYTHONUTF8=1`), which `temper run` and `temper test` set.
 
 [python-3.11.0]: https://docs.python.org/release/3.11.0/
 [default-pitfall]: https://towardsdatascience.com/python-pitfall-mutable-default-arguments-9385e8265422

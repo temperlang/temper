@@ -17,7 +17,7 @@
 //! `HelpersGlobal.twice(n)`, with the class imported (or written in full
 //! where its simple name is taken); another library's the same, in its
 //! package. A module's tests are a JUnit 5 class of their own, in its
-//! package ([`Translator::tests`]).
+//! package, with what only they reach ([`Translator::tests`]).
 //!
 //! Nullable types are Kotlin's: `@Nullable` before the type, a scalar's
 //! box (`@Nullable Integer`). Java boxes and unboxes as it needs to, but
@@ -53,7 +53,7 @@ use crate::tree::{self, Bin, Expr, Stmt, Unary};
 use classes::is_type;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use temper_tmpl::analysis::{
-    self, home, module_refs, module_state, module_writes, reads_only_itself, walk,
+    self, TestParts, home, module_refs, module_state, module_writes, reads_only_itself, walk,
 };
 use temper_tmpl::host::uses_host;
 use temper_tmpl::naming::NameMap;
@@ -76,8 +76,19 @@ pub struct Translator<'a> {
     package: String,
     class: String,
     imports: BTreeSet<String>,
-    /// The module translated; `NONE` for a tests class.
+    /// The module translated, or whose test parts and tests are.
     here: DeclId,
+    /// What its test parts define and use of its library's
+    /// ([`analysis::test_parts`]), and the class they're in, its test
+    /// class.
+    test_parts: TestParts,
+    test_class: String,
+    /// Whether translating its test parts, in its test class or test
+    /// sources' types.
+    in_tests: bool,
+    /// How many functional interfaces the library's parts synthesized,
+    /// before its test parts' ([`Translator::synthesized`]).
+    library_sams: usize,
     /// Module `let`s and `var`s kept as static fields.
     statics: HashSet<DeclId>,
     /// Whether translating a function, not the static initializer.
@@ -164,6 +175,10 @@ impl<'a> Translator<'a> {
             class: class.to_string(),
             imports: BTreeSet::new(),
             here: DeclId::NONE,
+            test_parts: TestParts::default(),
+            test_class: String::new(),
+            in_tests: false,
+            library_sams: 0,
             statics: HashSet::new(),
             in_function: false,
             loops: Vec::new(),
@@ -244,6 +259,9 @@ impl<'a> Translator<'a> {
     /// A type as Java writes it, imported if it needs to be.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "boolean",
@@ -388,15 +406,18 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// Another module's or library's declaration, as the code reaches it:
-    /// through its module's class; so too this module's own, from a class
-    /// or interface. `None` for this module's own in its class.
+    /// A module-level declaration, as the code reaches it: through the
+    /// class of statics it's in, its module's, or for what only tests
+    /// reach, its test class; but by its name alone in that class.
     fn owner_class(&mut self, decl: DeclId) -> Option<String> {
         let from = home(self.p, decl)?;
-        if from == self.here && self.in_global {
+        let (package, class) = match self.test_parts.own.contains(&decl) {
+            true => (module_package(self.p, from), self.test_class.clone()),
+            false => global_class(self.p, from),
+        };
+        if self.in_global && package == self.package && class == self.class {
             return None;
         }
-        let (package, class) = global_class(self.p, from);
         Some(self.class_ref(&format!("{package}.{class}")))
     }
 
@@ -404,59 +425,84 @@ impl<'a> Translator<'a> {
         self.p.decls.get(decl).facts.contains(Facts::EXPORTED)
     }
 
-    /// Translates a module into its class.
+    /// Translates a module's library parts into its class, `NAMEGlobal`.
+    /// What only tests reach is its test class's ([`Translator::tests`]),
+    /// as tmpl's `reach::partition` splits the module.
     pub fn module(&mut self, module: &Module) -> R<tree::Class> {
         let p = self.p;
         self.here = module.decl;
-        let state = module_state(p, module);
-        let mut written = HashSet::new();
-        for &item in module.items.iter().chain(&module.tests) {
-            if let Node::Function { .. } | Node::Test { .. } = p.nodes.get(item) {
-                written.extend(module_writes(p, item));
-            }
-        }
-        // What the module's tests use is a static too, for their class.
-        let mut tested = HashSet::new();
-        for &test in &module.tests {
-            tested.extend(module_refs(p, test));
-        }
-        // And what classes and interfaces use, for their classes.
+        self.test_parts = analysis::test_parts(p, module);
+        self.test_class = format!("{}Test", module_names(p, module.decl).1);
+        self.in_tests = false;
+        // Classes' and interfaces' uses of module values, and the test
+        // parts', which are in other classes.
+        let mut outside: HashSet<DeclId> = self.test_parts.used.iter().copied().collect();
         for &item in &module.items {
             if let Node::Class { .. } | Node::Interface { .. } = p.nodes.get(item) {
-                tested.extend(module_refs(p, item));
-                written.extend(module_writes(p, item));
+                outside.extend(module_refs(p, item));
             }
         }
         self.plan_statics(module);
-        // Classes whose static fields this module's initializer assigns,
-        // whose static blocks call `initStatics()`.
-        self.init_statics = (module.items.iter()).any(|&item| match p.nodes.get(item) {
+        self.statics_class(module, &module.items, Some(module.init), &outside)
+    }
+
+    /// A class of statics, of a module's library parts or its test parts
+    /// (`items`, and `init`, its static initializer's): its functions,
+    /// as static methods, and its module values that functions, other
+    /// classes (those of `outside`), or exports use, as static fields; the
+    /// rest are its initializer's locals.
+    fn statics_class(
+        &mut self,
+        module: &Module,
+        items: &[NodeId],
+        init: Option<NodeId>,
+        outside: &HashSet<DeclId>,
+    ) -> R<tree::Class> {
+        let p = self.p;
+        let state = module_state(p, module);
+        let mut written = HashSet::new();
+        for item in module.roots() {
+            if let Node::Function { .. }
+            | Node::Test { .. }
+            | Node::Class { .. }
+            | Node::Interface { .. } = p.nodes.get(item)
+            {
+                written.extend(module_writes(p, item));
+            }
+        }
+        // Classes whose static fields this initializer assigns, whose
+        // static blocks call `initStatics()`; and a test class's
+        // initializer, which calls its module class's first.
+        self.init_statics = (items.iter()).any(|&item| match p.nodes.get(item) {
             Node::Class { decl, .. } => (classes::members(p, decl).into_iter()).any(|(f, n)| {
                 matches!(p.nodes.get(n), Node::StaticField { .. }) && !self.in_class(f)
             }),
             _ => false,
-        });
+        }) || (!self.in_tests && module.test_init.is_some());
         // A `let` whose initializer assigns it in a `try` and its `catch`
         // can't be `final`, by Java's rules.
         let mut retried = HashSet::new();
-        if let Node::Block { stmts } = p.nodes.get(module.init) {
-            for &s in p.nodes.list(stmts) {
-                if let Node::InitLet { target, value } = p.nodes.get(s) {
-                    if multi_assign(p, value) {
-                        retried.insert(target);
-                    }
+        let stmts = match init.map(|i| (i, p.nodes.get(i))) {
+            Some((_, Node::Block { stmts })) => p.nodes.list(stmts).to_vec(),
+            Some((i, _)) => vec![i],
+            None => Vec::new(),
+        };
+        for &s in &stmts {
+            if let Node::InitLet { target, value } = p.nodes.get(s) {
+                if multi_assign(p, value) {
+                    retried.insert(target);
                 }
             }
         }
         let mut fields = Vec::new();
         let mut init_locals = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
                 let d = p.decls.get(decl);
                 let var = d.facts.contains(Facts::VAR);
                 if self.exported(decl)
                     || state.used_by_functions.contains(&decl)
-                    || tested.contains(&decl)
+                    || outside.contains(&decl)
                 {
                     self.statics.insert(decl);
                     fields.push(tree::Field {
@@ -479,8 +525,8 @@ impl<'a> Translator<'a> {
                 }
             }
         }
-        // The helper takes a name none of the module's functions has.
-        let functions: HashSet<String> = (module.items.iter())
+        // The helper takes a name none of the class's functions has.
+        let functions: HashSet<String> = (items.iter())
             .filter_map(|&item| match p.nodes.get(item) {
                 Node::Function { decl, .. } | Node::BodilessFunction { decl, .. } => {
                     Some(self.name(decl))
@@ -488,6 +534,7 @@ impl<'a> Translator<'a> {
                 _ => None,
             })
             .collect();
+        self.compares_strings = false;
         self.compare_helper = (1..)
             .map(|n| match n {
                 1 => ops::COMPARE_CODE_POINTS.to_string(),
@@ -496,7 +543,7 @@ impl<'a> Translator<'a> {
             .find(|n| !functions.contains(n))
             .unwrap_or_default();
         let mut methods = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             match p.nodes.get(item) {
                 // std's, which the connection table has (`stdNetSend`).
                 Node::BodilessFunction { decl, .. }
@@ -515,22 +562,28 @@ impl<'a> Translator<'a> {
             }
         }
         self.in_function = false;
-        self.begin(module.init);
-        let mut init = init_locals;
-        match p.nodes.get(module.init) {
-            Node::Block { stmts } => {
-                for &s in p.nodes.list(stmts) {
-                    match p.nodes.get(s) {
-                        Node::InitLet { target, value } if !self.statics.contains(&target) => {
-                            let ty = self.ty(p.decls.get(target).ty)?;
-                            let into = Place::Declare(ty, self.name(target));
-                            self.into(&into, value, &mut init)?;
-                        }
-                        _ => self.stmt(s, &mut init)?,
+        let mut body = init_locals;
+        // A test class's initializer continues its module class's, so
+        // runs it first.
+        if self.in_tests && init.is_some() {
+            let (package, class) = global_class(p, module.decl);
+            let class = self.class_ref(&format!("{package}.{class}"));
+            body.push(Stmt::Expr(
+                Expr::name(class).method("initStatics", Vec::new()),
+            ));
+        }
+        if let Some(init) = init {
+            self.begin(init);
+            for &s in &stmts {
+                match p.nodes.get(s) {
+                    Node::InitLet { target, value } if !self.statics.contains(&target) => {
+                        let ty = self.ty(p.decls.get(target).ty)?;
+                        let into = Place::Declare(ty, self.name(target));
+                        self.into(&into, value, &mut body)?;
                     }
+                    _ => self.stmt(s, &mut body)?,
                 }
             }
-            _ => self.stmt(module.init, &mut init)?,
         }
         Ok(tree::Class {
             package: self.package.clone(),
@@ -543,14 +596,14 @@ impl<'a> Translator<'a> {
                 if self.compares_strings {
                     helpers.push(ops::compare_code_points(&self.compare_helper));
                 }
-                // Called by classes' static blocks, loading this class,
-                // whose static initializer runs first.
+                // Called by classes' static blocks, and the test class's,
+                // loading this class, whose static initializer runs first.
                 if self.init_statics {
                     helpers.push("    static void initStatics() {}\n".to_string());
                 }
                 helpers
             },
-            init: reachable(init),
+            init: reachable(body),
         })
     }
 
@@ -572,6 +625,12 @@ impl<'a> Translator<'a> {
             None => TypeId::VOID,
         };
         let result_ty = format!("{}{}", self.type_params(decl)?, self.ty(result)?);
+        if self.in_tests && uses_host(p, decl, NAMES) {
+            return not_yet(format!(
+                "host code for what only tests reach, {}",
+                p.name(decl)
+            ));
+        }
         self.in_function = true;
         self.begin(item);
         let mut stmts = match body {
@@ -1265,19 +1324,43 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A module's tests, as a JUnit 5 class in its package, `NAMETest`:
-    /// each test a method named for it in camel case (`twice10` for "twice
+    /// A module's test class, `NAMETest`, in its package, under
+    /// `src/test/java`: what only its tests reach, as statics
+    /// ([`Translator::statics_class`]) whose initializer runs the module
+    /// class's first, then continues it, and its tests, as JUnit 5 tests:
+    /// each a method named for it in camel case (`twice10` for "twice
     /// ${base}" made "twice 10"), which makes std's `Test`, runs the body,
     /// and then, even if the body threw, fails if the `Test` has failures
-    /// (`softFailToHard`), as Kotlin's do. `None` without tests.
-    pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::TestClass>> {
+    /// (`softFailToHard`), as Kotlin's do. Being in the module's package,
+    /// they see its classes and statics that aren't exported. `None`
+    /// without test parts or tests.
+    pub fn tests(&mut self, module: &Module) -> R<Option<tree::TestClass>> {
         let p = self.p;
-        if module.tests.is_empty() {
+        if module.tests.is_empty() && module.test_items.is_empty() {
             return Ok(None);
         }
-        self.here = DeclId::NONE;
+        if let Some(&local) =
+            (self.test_parts.used.iter()).find(|&&d| p.decls.get(d).kind == DeclKind::Local)
+        {
+            return not_yet(format!(
+                "tests that use {}, a local of their module's init block",
+                p.name(local)
+            ));
+        }
+        self.in_tests = true;
+        self.in_global = true;
+        self.this_class = DeclId::NONE;
         self.imports.clear();
-        self.class = class.to_string();
+        self.class = self.test_class.clone();
+        let mut outside = HashSet::new();
+        for item in module.test_items.iter().chain(&module.tests) {
+            if let Node::Class { .. } | Node::Interface { .. } | Node::Test { .. } =
+                p.nodes.get(*item)
+            {
+                outside.extend(module_refs(p, *item));
+            }
+        }
+        let statics = self.statics_class(module, &module.test_items, module.test_init, &outside)?;
         self.in_function = true;
         let mut used = BTreeSet::new();
         let mut methods = Vec::new();
@@ -1315,10 +1398,11 @@ impl<'a> Translator<'a> {
             ));
         }
         Ok(Some(tree::TestClass {
-            package: self.package.clone(),
-            imports: self.imports.iter().cloned().collect(),
-            name: class.to_string(),
-            methods,
+            statics: tree::Class {
+                imports: self.imports.iter().cloned().collect(),
+                ..statics
+            },
+            tests: methods,
         }))
     }
 
@@ -2111,12 +2195,18 @@ fn jumps(body: &[Stmt], label: Option<&str>, innermost: bool, brk: bool) -> bool
     })
 }
 
-/// A library's package: std's is `temper.std`, as Kotlin's; others are
-/// [`crate::names::package`]'s.
-pub fn library_package(library: &str) -> String {
-    match library {
-        "std" => "temper.std".into(),
-        _ => crate::names::package(library),
+/// A library's package: std's is `temper.std`, as Kotlin's; another's is
+/// its config's `javaPackage`, each part as [`crate::names::package`]
+/// gives it, or else its `javaName` or its own name, as that gives it.
+pub fn library_package(p: &Program, library: &str) -> String {
+    let meta = p.metadata_of(library);
+    match (library, meta.get("javaPackage")) {
+        ("std", _) => "temper.std".into(),
+        (_, Some(package)) => (package.split('.'))
+            .map(crate::names::package)
+            .collect::<Vec<_>>()
+            .join("."),
+        _ => crate::names::package(meta.get("javaName").unwrap_or(library)),
     }
 }
 
@@ -2124,13 +2214,13 @@ pub fn library_package(library: &str) -> String {
 pub fn module_package(p: &Program, module: DeclId) -> String {
     let d = p.decls.get(module);
     let (library, path) = match d.kind {
-        DeclKind::Library => (library_package(p.name(module)), ""),
-        _ if !d.owner.is_none() => (library_package(p.name(d.owner)), p.name(module)),
+        DeclKind::Library => (library_package(p, p.name(module)), ""),
+        _ if !d.owner.is_none() => (library_package(p, p.name(d.owner)), p.name(module)),
         _ => {
             let path = (p.modules.iter())
                 .find(|m| m.decl == module)
                 .map_or("", |m| m.path.as_str());
-            (library_package(&p.library.name), path)
+            (library_package(p, &p.library.name), path)
         }
     };
     let mut out = library;

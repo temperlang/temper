@@ -114,7 +114,8 @@ let a = b + 1;
 let b = a + 1;
 --- settled
 (Block (Let ^b:1 (Call + a:0 1)) (Let ^a:0 (Call + b:1 1)) #void)
-Failed: a has not been initialized
+error 23..24: a is not initialized along branches
+Failed: a is not initialized along branches
 
 === top-level assignments order what reads the variable
 var n = 5;
@@ -234,8 +235,8 @@ interface A { a(): String { "A" } }
 interface B extends A {}
 interface C extends A { a(): String { "C" } }
 class D extends B & C {
-  public static var count = 0;
-  public static make(): D { count += 1; new D(0) }
+  public static count = 1;
+  public static make(): D { new D(D.count - 1) }
   public var n: Int;
   public fixed: Int;
   public constructor(n: Int) { this.n = n; fixed = n; }
@@ -255,10 +256,10 @@ console.log("fixed is still ${d.fixed}");
     ^D:3
     B:1
     C:2
-    (Var static ^count:12 0)
+    (Let static ^count:12 1)
     (Method static
       ^make:13
-      (Fn D:3 (Block (Assign count:12 (Call + count:12 1)) (Call new D:3 0))))
+      (Fn D:3 (Block (Call new D:3 (Call - (Call . D:3 \count) 1)))))
     (Var ^n:14 Int)
     (Let ^fixed:15 Int)
     (Constructor
@@ -268,7 +269,7 @@ console.log("fixed is still ${d.fixed}");
         (Block (Assign (Call . this#11 \n) n:19) (Assign fixed:15 n:19) #void)))
     (Method ^bad:17 (Fn Void (Block 2 #void))))
   (Let ^d:4 (Call (Call . D:3 \make)))
-  (Block (Let ^o#20 d:4) (Assign (Call . o#20 \n) (Call + (Call . o#20 \n) 2)))
+  (Block (Assign (Call . d:4 \n) (Call + (Call . d:4 \n) 2)))
   (Call
     (Call . console \log)
     (Call
@@ -276,10 +277,9 @@ console.log("fixed is still ${d.fixed}");
       (Call (Call . d:4 \a))
       " "
       (Block
-        (Let ^o#21 d:4)
-        (Let ^t#22 (Call . o#21 \n))
-        (Assign (Call . o#21 \n) (Call + t#22 1))
-        t#22)
+        (Let ^t#20 (Call . d:4 \n))
+        (Assign (Call . d:4 \n) (Call + t#20 1))
+        t#20)
       " "
       (Call . d:4 \n)
       " "
@@ -287,7 +287,7 @@ console.log("fixed is still ${d.fixed}");
   (Call (Call . d:4 \bad))
   (Call (Call . console \log) (Call cat "fixed is still " (Call . d:4 \fixed)))
   #void)
-error 334..339: Member fixed defined in D incompatible with usage
+error 328..333: Member fixed defined in D incompatible with usage
 log C 2 3 1
 log fixed is still 0
 
@@ -1066,6 +1066,32 @@ log B 2 0
 log 3
 Failed: Multiple types have matching constructors: A, B
 
+=== object literals are ambiguous across nested scopes, as Kotlin's object-literal-multiple-matches-nested
+// A private property still names a constructor parameter.
+class Apple(private hi: Int) {}
+let nest(): Void {
+  class Banana(private hi: Int, public ha: Int = 0) {}
+  { hi: 5 };
+  console.log("unreached");
+}
+nest();
+--- settled
+(Block
+  (Class ^Apple:0 (Param private ^hi:3 Int))
+  (Let
+    ^nest:1
+    (Fn
+      Void
+      (Block
+        (Class ^Banana:4 (Param private ^hi:6 Int) (Param ^ha:7 Int 0))
+        (Error)
+        (Call (Call . console \log) "unreached")
+        #void)))
+  (Call nest:1)
+  #void)
+error 167..176: Multiple types have matching constructors: Apple, Banana
+Failed: Multiple types have matching constructors: Apple, Banana
+
 === object literal values run in the order written
 class P(public a: String = "a", public b: String = "b") {
   public toString(): String { "${a}${b}" }
@@ -1400,9 +1426,9 @@ console.log("${e == empty()} ${e is Empty}");
     (Call . console \log)
     (Call cat (Call == e:2 (Call empty)) " " (Call is e:2 Empty)))
   #void)
-error 155..175: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [R, R]
+error 155..175: R does not support infix `==`; give it a method marked `@operator("==")`
 hint 228..238: Unnecessary type check to Empty from expression with type Empty which is a subtype
-Failed: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [R, R]
+Failed: R does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality from a sealed supertype
 @auto("==")
@@ -1438,8 +1464,8 @@ console.log("${new L(1) == new L(1)} ${new L(1) == new L(2)} ${new M(1) == new M
       " "
       (Call == (Call new M:2 1) (Call new M:2 1))))
   #void)
-error 159..179: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [M, M]
-Failed: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [M, M]
+error 159..179: M does not support infix `==`; give it a method marked `@operator("==")`
+Failed: M does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality calls each field's own ==
 class Loose(public n: Int) {
@@ -1632,6 +1658,165 @@ do {
   (Block (Let ^stringEight:6 0) (Call (Call . String \eight)) #void))
 log 7 70 8
 Failed: No method eight for Type
+
+=== instance extensions, as Kotlin Temper's tests use them
+// A member that fits wins; else the extension that fits best. Its
+// first parameter takes the receiver: a builtin type's, a nullable,
+// a generic type's, an interface's, or one with more parameters.
+@extension("isZero") let isZero(x: Int): Boolean { x == 0 }
+class Zero { public isZero(): Boolean { true } }
+class C {
+  public foo(i: Int): Int { i }
+  public both(i: Int): String { "member" }
+  public twice(): String { "${this.foo("me")} ${this.foo(2)}" }
+}
+@extension("foo") let cFoo(c: C, s: String): String { s }
+@extension("both") let cBoth(c: C, i: Int): String { "extension" }
+@extension("orZero") let orZero(x: Int?): Int { x ?? 0 }
+@extension("half") let intHalf(x: Int): Int { x / 2 }
+@extension("firstOr")
+let firstOr<T>(ls: List<T>, d: T): T { if (ls.isEmpty) { d } else { ls[0] } }
+@extension("shout")
+let shout(s: String, n: Int, bang: String = "!"): String { "${s}${n}${bang}" }
+@extension("describe") let describeAny(x: AnyValue): String { "any" }
+@extension("describe") let describeInt(x: Int): String { "int" }
+interface I {}
+class D extends I {}
+@extension("f") let iF(i: I?): String { "Hello" }
+@staticExtension(I, "f") let staticIF(): Int { 42 }
+let c = new C();
+var n: Int? = null;
+n = n;
+var i: I? = null;
+i = i;
+console.log("${0.isZero() && new Zero().isZero()} ${c.foo(1234)} ${c.foo("hi")}");
+console.log("${c.both(1)} ${c.twice()} ${84.half()} ${n.orZero()} ${n?.half() ?? -1}");
+console.log("${[5, 6].firstOr(0)} ${"x".shout(3)} ${"x".shout(3, "?")}");
+console.log("${1.describe()} ${"s".describe()} ${i.f()} ${new D().f()} ${I.f()}");
+let local(): Int {
+  @extension("half") let intThird(x: Int): Int { x / 3 }
+  9.half()
+}
+console.log(local().toString());
+--- settled
+(Block
+  (Let ^isZero:0 (Fn (Let ^x:19 Int) Boolean (Block (Call == x:19 0))))
+  (Class ^Zero:1 (Method ^isZero:21 (Fn Boolean (Block true))))
+  (Let ^cFoo:3 (Fn (Let ^c:28 C:2) (Let ^s:29 String) String (Block s:29)))
+  (Class
+    ^C:2
+    (Method ^foo:23 (Fn (Let ^i:26 Int) Int (Block i:26)))
+    (Method ^both:24 (Fn (Let ^i:27 Int) String (Block "member")))
+    (Method
+      ^twice:25
+      (Fn
+        String
+        (Block
+          (Call
+            cat
+            (Call cFoo:3 this#22 "me")
+            " "
+            (Call (Call . this#22 \foo) 2))))))
+  (Let ^cBoth:4 (Fn (Let ^c:30 C:2) (Let ^i:31 Int) String (Block "extension")))
+  (Let
+    ^orZero:5
+    (Fn
+      (Let ^x:32 (Call ? Int))
+      Int
+      (Block (Block (If (Call == x:32 #null) 0 x:32)))))
+  (Let ^intHalf:6 (Fn (Let ^x:33 Int) Int (Block (Call / x:33 2))))
+  (Let
+    ^firstOr:7
+    (Fn
+      (TypeParam ^T:34)
+      (Let ^ls:35 (Call <> List T:34))
+      (Let ^d:36 T:34)
+      T:34
+      (Block
+        (If (Call . ls:35 \isEmpty) (Block d:36) (Block (Call [] ls:35 0))))))
+  (Let
+    ^shout:8
+    (Fn
+      (Let ^s:37 String)
+      (Let ^n:38 Int)
+      (Let ^bang:39 String "!")
+      String
+      (Block (Call cat s:37 n:38 bang:39))))
+  (Let ^describeAny:9 (Fn (Let ^x:40 AnyValue) String (Block "any")))
+  (Let ^describeInt:10 (Fn (Let ^x:41 Int) String (Block "int")))
+  (Interface ^I:11)
+  (Class ^D:12 I:11)
+  (Let ^iF:13 (Fn (Let ^i:44 (Call ? I:11)) String (Block "Hello")))
+  (Let ^staticIF:14 (Fn Int (Block 42)))
+  (Let ^c:15 (Call new C:2))
+  (Var ^n:16 (Call ? Int) null)
+  (Assign n:16 n:16)
+  (Var ^i:17 (Call ? I:11) null)
+  (Assign i:17 i:17)
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (If (Call isZero:0 0) (Call (Call . (Call new Zero:1) \isZero)) #false)
+      " "
+      (Call (Call . c:15 \foo) 1234)
+      " "
+      (Call cFoo:3 c:15 "hi")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call (Call . c:15 \both) 1)
+      " "
+      (Call (Call . c:15 \twice))
+      " "
+      (Call intHalf:6 84)
+      " "
+      (Call orZero:5 n:16)
+      " "
+      (Block
+        (Let
+          ^subject#45
+          (Block
+            (Let ^subject#46 n:16)
+            (If (Call == subject#46 #null) #null (Call intHalf:6 subject#46))))
+        (If (Call == subject#45 #null) (Call - 1) subject#45))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call firstOr:7 (Call list 5 6) 0)
+      " "
+      (Call shout:8 "x" 3)
+      " "
+      (Call shout:8 "x" 3 "?")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call describeInt:10 1)
+      " "
+      (Call describeAny:9 "s")
+      " "
+      (Call iF:13 i:17)
+      " "
+      (Call iF:13 (Call new D:12))
+      " "
+      (Call staticIF:14)))
+  (Let
+    ^local:18
+    (Fn
+      Int
+      (Block
+        (Let ^intThird:47 (Fn (Let ^x:48 Int) Int (Block (Call / x:48 3))))
+        (Call intThird:47 9))))
+  (Call (Call . console \log) (Call (Call . (Call local:18) \toString)))
+  #void)
+log true 1234 hi
+log member me 2 42 0 -1
+log 5 x3! x3?
+log int any Hello Hello 42
+log 3
 
 === raw strings, doPure and void
 let x = doPure { "pure" };
@@ -2266,6 +2451,7 @@ g.nextSafe();
       (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
   (Call (Call . g:1 \nextSafe))
   #void)
+error 266..311: Expected subtype of String, but got AnyValue
 log false true
 log bubbled
 log true true
@@ -2387,57 +2573,79 @@ log made
 Failed: Cannot bubble from a function without Bubble in its return type
 
 === next from within a running generator, and close
-var g: SafeGenerator<Int>? = null;
+// In a function: at top level, the temporary `g?.` holds `g` in moves
+// `let h` after `g = h` (a bug of its own).
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
-g = make { (): GeneratorResult<Int> extends GeneratorFn =>
-  console.log("inner ${g.nextSafe() is DoneResult<Int>}");
-  yield 1;
-  yield 2;
-};
-console.log("${g.nextSafe() is ValueResult<Int>} ${g.done}");
-g.close();
-console.log("${g.done} ${g.nextSafe() is DoneResult<Int>}");
+let run(): Void {
+  var g: SafeGenerator<Int>? = null;
+  let h = make { (): GeneratorResult<Int> extends GeneratorFn =>
+    console.log("inner ${g?.nextSafe() is DoneResult<Int>}");
+    yield 1;
+    yield 2;
+  };
+  g = h;
+  console.log("${h.nextSafe() is ValueResult<Int>} ${h.done}");
+  h.close();
+  console.log("${h.done} ${h.nextSafe() is DoneResult<Int>}");
+}
+run();
 --- settled
 (Block
-  (Var ^g:0 (Call ? (Call <> SafeGenerator Int)) null)
   (Let
-    ^make:1
+    ^make:0
     (Fn
       (Let ^body:2 (Call FnType (Call <> SafeGenerator Int)))
       (Call <> SafeGenerator Int)
       (Block (Call body:2))))
-  (Assign
-    g:0
-    (Call
-      make:1
-      (Fn
-        (Call <> GeneratorResult Int)
-        GeneratorFn
-        (Block
+  (Let
+    ^run:1
+    (Fn
+      Void
+      (Block
+        (Var ^g:3 (Call ? (Call <> SafeGenerator Int)) null)
+        (Let
+          ^h:4
           (Call
-            (Call . console \log)
-            (Call
-              cat
-              "inner "
-              (Call is (Call (Call . g:0 \nextSafe)) (Call <> DoneResult Int))))
-          (Yield @117 1)
-          (Yield @117 2)
-          #void))))
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call is (Call (Call . g:0 \nextSafe)) (Call <> ValueResult Int))
-      " "
-      (Call . g:0 \done)))
-  (Call (Call . g:0 \close))
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call . g:0 \done)
-      " "
-      (Call is (Call (Call . g:0 \nextSafe)) (Call <> DoneResult Int))))
+            make:0
+            (Fn
+              (Call <> GeneratorResult Int)
+              GeneratorFn
+              (Block
+                (Call
+                  (Call . console \log)
+                  (Call
+                    cat
+                    "inner "
+                    (Call
+                      is
+                      (Block
+                        (Let ^subject#5 g:3)
+                        (If
+                          (Call == subject#5 #null)
+                          #null
+                          (Call (Call . subject#5 \nextSafe))))
+                      (Call <> DoneResult Int))))
+                (Yield @259 1)
+                (Yield @259 2)
+                #void))))
+        (Assign g:3 h:4)
+        (Call
+          (Call . console \log)
+          (Call
+            cat
+            (Call is (Call (Call . h:4 \nextSafe)) (Call <> ValueResult Int))
+            " "
+            (Call . h:4 \done)))
+        (Call (Call . h:4 \close))
+        (Call
+          (Call . console \log)
+          (Call
+            cat
+            (Call . h:4 \done)
+            " "
+            (Call is (Call (Call . h:4 \nextSafe)) (Call <> DoneResult Int))))
+        #void)))
+  (Call run:1)
   #void)
 log inner true
 log true false

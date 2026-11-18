@@ -1,4 +1,4 @@
-import { type } from "@temperlang/core";
+import { listedGet, type } from "@temperlang/core";
 
 class C extends type() {
   /**
@@ -157,6 +157,50 @@ class Label extends type() {
   }
 }
 
+class Tally extends type() {
+  /** @type {number} */
+  #depth;
+  /** @type {number} */
+  #size;
+
+  /**
+   * @param {{ size: number, parent: Tally | null, children: readonly Tally[] }} props
+   * @returns {Tally}
+   */
+  static new(props) {
+    return new Tally(props.size, props.parent, props.children);
+  }
+
+  /**
+   * @param {number} size
+   * @param {Tally | null} parent
+   * @param {readonly Tally[]} children
+   */
+  constructor(size, parent, children) {
+    super();
+    this.#depth = parent == null ? 0 : (parent.#depth + 1) | 0;
+    let sum = size;
+    {
+      let i = 0;
+      while (i < children.length) {
+        sum = (sum + listedGet(/** @type {Tally[]} */ (children), i).#size) | 0;
+        i = (i + 1) | 0;
+      }
+    }
+    this.#size = (sum + this.#depth) | 0;
+  }
+
+  /** @returns {number} */
+  get depth() {
+    return this.#depth;
+  }
+
+  /** @returns {number} */
+  get total() {
+    return this.#size;
+  }
+}
+
 const c = new C();
 console.log(`method1(10)=${c.method1(10)}`);
 console.log(`method2(10)=${c.method2(10)}`);
@@ -171,3 +215,8 @@ console.log(`b spent: ${b.timesSpent}`);
 const label = new Label(1);
 console.log(`close: ${label.close(new TenSink())}`);
 console.log(`noted: ${label.noted("!")}`);
+const leaf = new Tally(2, null, Object.freeze([]));
+const mid = new Tally(3, leaf, Object.freeze([leaf, leaf]));
+const top = new Tally(1, mid, Object.freeze([mid, leaf]));
+console.log(`depths: ${leaf.depth} ${mid.depth} ${top.depth}`);
+console.log(`totals: ${leaf.total} ${mid.total} ${top.total}`);

@@ -692,7 +692,7 @@ before and 170–202 ms after, and the interpreter loops and whole runs
 were the same within noise.
 
 Std built in (temper-frontend's `stdlib`: `include_str!` of the six
-files under `vendor/temper/std`, 89,078 bytes, 24,016 gzipped), against
+files under `std/`, now `lib/std/`, 89,078 bytes, 24,016 gzipped), against
 `3187787` built the same way: the small `tempest` grew 88 KiB (2,423,304
 to 2,513,416 bytes; `run-temper` the same, 2351 to 2443 KiB), about the
 text itself, and wasm 93 KiB (872,164 to 967,719 bytes), 27 KiB gzipped

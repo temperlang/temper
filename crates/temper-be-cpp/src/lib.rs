@@ -24,14 +24,20 @@
 //! their accessors give copies, it keeps Temper's
 //! left-to-right order of evaluation where the order would show, and its
 //! shifts are defined for every count. It also declares only exports in
-//! the header, which Kotlin's fills with every function, and it keeps
+//! the header, and the private functions its templates call, where
+//! Kotlin's fills it with every function; it names a module's private
+//! declarations apart from other modules', which share the library's
+//! namespace (`Engine2`), where Kotlin's redefines one; and it keeps
 //! objects alive while they're used where Kotlin's can refer to one a
 //! call replaces ([`translate`]'s classes). It compiles
 //! without warnings under `-Wall -Wextra -Wpedantic` and more (its tests
 //! list them), and runs clean under AddressSanitizer,
 //! UndefinedBehaviorSanitizer, and ThreadSanitizer.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach apart, what
+//! nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with
 //! C++'s rules ([`names::RULES`]), then [`translate`] into C++'s output
 //! tree ([`tree`]), with operators spelled by [`ops`], core's connected
 //! declarations by [`connected`], and the order of evaluation kept by
@@ -77,6 +83,7 @@ use std::fmt;
 use temper_tmpl::analysis;
 use temper_tmpl::coroutines::CoroutineStrategy;
 use temper_tmpl::naming::{NameMap, NamingRules, assign, assign_checked};
+use temper_tmpl::version::Spelling;
 use temper_tmpl::{DeclId, Facts, Features, Node, Profile, Program};
 
 /// A named set of translation choices for C++.
@@ -149,6 +156,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     } else {
         runtime::FILES
     },
+    runtime_version: &runtime::VERSION,
     rules: &CPP.rules,
     translate: |p, _| translate(p, &CPP).map_err(|e| e.to_string()),
     default: false,
@@ -184,11 +192,12 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// = _connected::Counter;`), which host code defines. A module that
 /// takes either includes its `_connected.hpp` in its `.cpp`; the header
 /// also declares `@keep` functions, which host code calls (`work::sumOf3`),
-/// and host code reads unexported classes there too. Needed host code
+/// and, where `TEMPER_TESTS` is defined, `@keepTest` ones, which tests'
+/// host code calls; host code reads unexported classes there too. Needed host code
 /// that's missing is [`NotYet`], where Kotlin's fails in `g++`.
 ///
 /// Kotlin also copies the runtime beside the library, as `temper-core/`,
-/// which the files include from the directory above; `tempest build`
+/// which the files include from the directory above; `temper build`
 /// does too ([`runtime`]). Kotlin's `main.cpp` runs the tests where there
 /// are some, and its modules' `.cpp`s define them always, needing std;
 /// here they're defined only for `test.cpp`'s build ([`test_main`]).
@@ -197,6 +206,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered = temper_tmpl::coroutines::lower(p, variant.profile.coroutines)
         .map_err(|what| NotYet { what })?;
@@ -215,6 +228,11 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n))
     };
     let p = spilled.as_ref().unwrap_or(p);
+    // What only tests reach apart, under `TEMPER_TESTS`, and what
+    // nothing reaches left out (`temper_tmpl::reach`), as the lowerings
+    // left it: errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
     let namespace = names::namespace(library);
@@ -286,9 +304,9 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
 
 /// What C++ can't tell apart, which the naming pass doesn't see: two
 /// modules' init functions of one name (Kotlin names them by their
-/// paths' last parts), two modules exporting one name into the library's
-/// namespace, or a module's private name that a module it includes
-/// exports, which C++ would read as the same declaration.
+/// paths' last parts), or two modules exporting one name into the
+/// library's namespace. A private name avoids every other module's
+/// names ([`names::RULES`]' `modules_share_names`).
 fn check_modules(p: &Program, names: &NameMap) -> Result<(), NotYet> {
     use std::collections::HashMap;
     let mut inits: HashMap<String, &str> = HashMap::new();
@@ -311,28 +329,6 @@ fn check_modules(p: &Program, names: &NameMap) -> Result<(), NotYet> {
                         });
                     }
                 }
-            }
-        }
-    }
-    for module in &p.modules {
-        let included: Vec<DeclId> = (analysis::module_imports(p, module).iter())
-            .filter(|i| p.modules.iter().any(|m| m.decl == i.from))
-            .flat_map(|i| {
-                let m = p.modules.iter().find(|m| m.decl == i.from);
-                m.map(|m| module_level(p, m)).unwrap_or_default()
-            })
-            .collect();
-        for d in module_level(p, module) {
-            let clash = (included.iter()).any(|&o| {
-                names.get(o) == names.get(d) && p.decls.get(o).facts.contains(Facts::EXPORTED)
-            });
-            if clash && !p.decls.get(d).facts.contains(Facts::EXPORTED) {
-                return Err(NotYet {
-                    what: format!(
-                        "a private name that an imported module exports, {}",
-                        names.get(d)
-                    ),
-                });
             }
         }
     }
@@ -507,7 +503,7 @@ fn used_libraries(p: &Program, tests: bool) -> Vec<String> {
 /// Whether the library sends through the runtime's network client
 /// (`net.hpp`, as std `net` does, [`connected::BODILESS`]).
 fn uses_net_client(p: &Program) -> bool {
-    (p.modules.iter().flat_map(|m| &m.items)).any(|&item| match p.nodes.get(item) {
+    (p.modules.iter().flat_map(|m| m.all_items())).any(|item| match p.nodes.get(item) {
         Node::BodilessFunction { decl, .. } => temper_tmpl::qname::std_key(p, decl)
             .and_then(|key| connected::bodiless(&key))
             .is_some_and(|(_, header)| header == "<temper-core/net.hpp>"),
@@ -579,11 +575,26 @@ endif()
 "
         );
     }
+    // The config's description, which CMake 3.10's `project` takes;
+    // Kotlin's names none.
+    let description = match p.metadata().get("description") {
+        Some(text) => format!(" DESCRIPTION {}", cmake_string(text)),
+        None => String::new(),
+    };
+    // The library's version, where it sets one: its numbers in
+    // `project`, which takes only numbers, and the whole of it beside.
+    let (version, version_full) = match cmake_version(&p.library.version) {
+        Some((numbers, full)) => (
+            format!(" VERSION {numbers}"),
+            format!("set({library}_VERSION_FULL {})\n", cmake_string(&full)),
+        ),
+        None => (String::new(), String::new()),
+    };
     format!(
         "# Generated by Temper.
 cmake_minimum_required(VERSION 3.10)
-project({library} LANGUAGES CXX)
-
+project({library}{version}{description} LANGUAGES CXX)
+{version_full}
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -599,6 +610,25 @@ target_link_libraries({library}-main PRIVATE {library})
     )
 }
 
+/// A library's version for CMake, where it sets one: its numbers, as
+/// `project(VERSION)` takes them, and the whole version (a dev build's
+/// `0.7.0-alpha.0.123` is `0.7.0` and that); `None` for none (`0.0.0`)
+/// or one whose numbers CMake can't take.
+fn cmake_version(version: &str) -> Option<(String, String)> {
+    if matches!(version, "0.0.0" | "") {
+        return None;
+    }
+    let full = temper_tmpl::version::respell(version, Spelling::SemVer);
+    let numbers = match temper_tmpl::version::Version::parse(version) {
+        Some(v) => v.spell(Spelling::CMake),
+        None => version.split(['-', '+']).next().unwrap_or("").to_string(),
+    };
+    let parts: Vec<&str> = numbers.split('.').collect();
+    let numeric = (1..=4).contains(&parts.len())
+        && (parts.iter()).all(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
+    numeric.then_some((numbers, full))
+}
+
 /// The header: the runtime, then the module's exports and its init
 /// function, in its namespace.
 fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
@@ -606,7 +636,7 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
     for include in &t.header_includes {
         out.push_str(&format!("#include {include}\n"));
     }
-    if !t.test_prototypes.is_empty() && !t.test_includes.is_empty() {
+    if !t.test_includes.is_empty() {
         out.push_str("#ifdef TEMPER_TESTS\n");
         for include in &t.test_includes {
             out.push_str(&format!("#include {include}\n"));
@@ -658,10 +688,38 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
         out.push('\n');
     }
     out.push_str(&t.templates);
-    if !t.test_prototypes.is_empty() {
-        out.push_str("\n#ifdef TEMPER_TESTS\n// Tests, which `test.cpp` runs.\n");
-        for f in &t.test_prototypes {
+    // What only tests reach, and the tests.
+    let tests = &t.tests;
+    if !tests.is_empty() || !t.kept_for_tests.is_empty() || !t.test_prototypes.is_empty() {
+        out.push_str("\n#ifdef TEMPER_TESTS\n");
+        if !tests.classes.is_empty() {
+            out.push_str(&tests.classes);
+            out.push('\n');
+        }
+        if !tests.template_storage.is_empty() {
+            out.push_str("namespace temper_globals {\n");
+            for v in &tests.template_storage {
+                out.push_str(&format!("extern {v};\n"));
+            }
+            out.push_str("}  // namespace temper_globals\n\n");
+        }
+        for f in &tests.functions {
             out.push_str(&format!("{f};\n"));
+        }
+        if !tests.functions.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(&tests.templates);
+        for (comment, prototypes) in [
+            ("For tests' host code (`@keepTest`).", &t.kept_for_tests),
+            ("Tests, which `test.cpp` runs.", &t.test_prototypes),
+        ] {
+            if !prototypes.is_empty() {
+                out.push_str(&format!("// {comment}\n"));
+            }
+            for f in prototypes {
+                out.push_str(&format!("{f};\n"));
+            }
         }
         out.push_str("#endif\n");
     }
@@ -689,5 +747,19 @@ fn main(p: &Program, namespace: &str) -> String {
         ));
     }
     out.push_str("}\n");
+    out
+}
+
+/// Text as a quoted CMake argument: `\\`, `"`, and `$` escaped, so it's
+/// taken as it is.
+fn cmake_string(text: &str) -> String {
+    let mut out = String::from('"');
+    for c in text.chars() {
+        if matches!(c, '\\' | '"' | '$') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
     out
 }

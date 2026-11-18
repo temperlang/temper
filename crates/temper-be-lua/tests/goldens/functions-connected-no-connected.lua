@@ -54,16 +54,16 @@ local function sum(i, j, bonus)
   return temper.int32_add(sumOf3(i, j, bonus), 1000)
 end
 
----@param string? string|temper.Null
+---@param string_? string|temper.Null
 ---@return integer
-local function length(string)
-  if string == nil then
-    string = temper.null
+local function length(string_)
+  if string_ == nil then
+    string_ = temper.null
   end
-  if temper.is_null(string) then
+  if temper.is_null(string_) then
     return 999
   else
-    return temper.int32_add(temper.string_countbetween(string --[[@as string]], 1, temper.string_end(string --[[@as string]])), 1000)
+    return temper.int32_add(temper.string_countbetween(string_ --[[@as string]], 1, temper.string_end(string_ --[[@as string]])), 1000)
   end
 end
 
@@ -94,7 +94,6 @@ local function prod(hidden, j)
 end
 
 ---@class work.Hider
----@field i integer
 ---@field hidden work.Hidden
 ---@field plus fun(self: work.Hider, j: integer): integer
 ---@field times fun(self: work.Hider, j: integer): integer
@@ -106,8 +105,7 @@ local Hider = temper.type("work.Hider")
 ---@param this work.Hider
 ---@param i integer
 function Hider.constructor(this, i)
-  this.i = i
-  this.hidden = Hidden(this.i)
+  this.hidden = Hidden(i)
 end
 
 ---@param this work.Hider

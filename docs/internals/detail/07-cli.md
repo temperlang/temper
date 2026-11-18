@@ -1,13 +1,13 @@
-# The tempest command in detail
+# The `temper` command in detail
 
-The `tempest` command is what people run: `build`, `test`, `run`,
+The `temper` command is what people run: `build`, `test`, `run`,
 `init`, `serve` (or `lsp`), and the rest of Kotlin Temper's `temper`
 commands it has. It's a thin layer of argument parsing and
 output over library crates that do the work, chiefly `temper-driver`,
 which holds the registry of backends, the compile path from a settled
 library to each backend's files, `build`, and running tests with each
 language's tools. This page is the long companion to
-[7. The tempest command](../07-cli.md): the decisions behind each part,
+[7. The `temper` command](../07-cli.md): the decisions behind each part,
 with what they cost, the main types and functions, the tests that pin
 them, and what's weak or planned.
 
@@ -18,7 +18,7 @@ them, and what's weak or planned.
   - [A thin command over library crates](#a-thin-command-over-library-crates)
   - [Kotlin's commands and flags, parsed by hand](#kotlins-commands-and-flags-parsed-by-hand)
   - [Exit codes](#exit-codes)
-  - [Not in tempest yet, said plainly](#not-in-tempest-yet-said-plainly)
+  - [Not available yet, said plainly](#not-available-yet-said-plainly)
   - [One Sources value for every read](#one-sources-value-for-every-read)
   - [Finding libraries as Kotlin does, ignore files as git does](#finding-libraries-as-kotlin-does-ignore-files-as-git-does)
   - [Configs read, not run](#configs-read-not-run)
@@ -107,20 +107,21 @@ each), `tooling`'s `BuildHarness` and `Watcher` run builds, and each
 `be-*` module runs its tools through `be`'s `CliTool` and `Specifics`.
 Much the same layering, with more of it.
 
-**Status:** tempest's choice.
+**Status:** this compiler's choice.
 
 ### Kotlin's commands and flags, parsed by hand
 
 **Chosen:** Kotlin's command names, flags, short forms, and defaults
 (`-w`, `-ign`, `-b` repeated, `--library`, `--no-connected`, `-v`,
-`--logformat`, `-o`), so a script that runs `temper` runs `tempest`
+`--logformat`, `-o`), so a script written for earlier releases runs
+unchanged
 ([the command line](../../tools/cli.md)). One small parser
 ([`parse`](../../../crates/tempest/src/main.rs)) reads every command's
 arguments into a [`Flags`](../../../crates/tempest/src/main.rs), each
 command saying which options it takes; `--flag=value` works too. Help
 text is in [`help.rs`](../../../crates/tempest/src/help.rs).
 
-**Alternatives:** clap; or the loop per command that tempest had,
+**Alternatives:** clap; or the loop per command that this compiler had,
 which repeated `--std` and `-b` handling three times.
 
 **Pros:** no dependency, in line with the dependency policy
@@ -132,33 +133,33 @@ small binary stays small and builds fast. One table of options means
 `parse` takes (the `help` test checks each command's flags are named).
 Kotlin's `kotlinx-cli` also generates `--help` from the options.
 
-**Differences kept:** tempest's `test` takes a positional `DIR`, where
+**Differences kept:** this compiler's `test` takes a positional `DIR`, where
 the search for the work root starts, beside Kotlin's `-w`; `test`
 defaults to the interpreter; `build` and `run` take `-o DIR`, which
-Kotlin's `build` lacks; `--std DIR` is tempest's own; and `--version`
+Kotlin's `build` lacks; `--std DIR` is this compiler's own; and `--version`
 works, as Kotlin's doesn't. Each is in
 [the command line](../../tools/cli.md).
 
 **Status:** design.md asks for Kotlin's "flags and output formats, so
 scripts keep working"
 ([notes/design.md](../../../notes/design.md#11-cli-watch-and-language-server));
-met for the commands tempest has ([parity](#parity-with-kotlins-temper)).
+met for the commands this compiler has ([parity](#parity-with-kotlins-temper)).
 
 ### Exit codes
 
 **Chosen:** 0 for success, 1 for failure (errors in the code, a failed
 or unrun test, a library that didn't build), 2 for a usage error, and 3
-for what isn't in tempest yet ([below](#not-in-tempest-yet-said-plainly)).
+for what isn't available yet ([below](#not-available-yet-said-plainly)).
 A backend name that exists but wasn't built in is 1, with "built
 without the X backend"; an unknown one is 2
 ([`backend`](../../../crates/tempest/src/main.rs)).
 
 **Kotlin:** 0 or 1 (`GENERIC_ERROR_EXIT_CODE`), and 127 for a usage
 error, kotlinx-cli's, which shells otherwise use for "command not
-found"; tempest keeps 2, as most Unix tools do
+found"; this compiler keeps 2, as most Unix tools do
 ([notes/kotlin-differences.md](../../../notes/kotlin-differences.md)).
 
-A panic, a bug in tempest, is 101, as Rust's own panics exit:
+A panic, a bug in Temper, is 101, as Rust's own panics exit:
 [`main`](../../../crates/tempest/src/main.rs) runs the command on a
 thread with a 64 MiB stack, and a panicked thread, its message already
 printed by the panic hook, ends there with a line saying it's a bug to
@@ -168,16 +169,16 @@ does (since 2026-11-09; before, it aborted and the process died with
 SIGABRT). The wasm still aborts, built with a profile of its own,
 `small-wasm`, since wasm32-unknown-unknown can't unwind.
 
-**Status:** tempest's choice.
+**Status:** this compiler's choice.
 
-### Not in tempest yet, said plainly
+### Not available yet, said plainly
 
-**Chosen:** Kotlin's commands that tempest lacks (`watch` and `doc`,
+**Chosen:** Kotlin's commands that this compiler lacks (`watch` and `doc`,
 and `repl -b`), its backends (`cppv`, `data`, `java8`, and `mypyc`, listed as
 [`NOT_YET`](../../../crates/temper-driver/src/lib.rs)), and `serve
---port` each say they aren't in tempest yet, what to do meanwhile, and
+--port` each say they aren't available yet, what to do meanwhile, and
 where to read more, and exit with 3. The old one-backend commands
-(`tempest py FILE`) are gone, and their names say that `build -b py -o
+(`py FILE`) are gone, and their names say that `build -b py -o
 DIR` does their work.
 
 **Alternatives:** "no such command" (2), as for a typo; or `serve
@@ -187,7 +188,7 @@ socket waiting.
 **Pros:** a script can tell "not yet" from a failure or a typo, and a
 person learns what to do.
 
-**Status:** tempest's choice (2026-11-09).
+**Status:** this compiler's choice (2026-11-09).
 
 ### One Sources value for every read
 
@@ -221,7 +222,7 @@ means little for a memory layer.
 over a `RealFileSystem` in a `LayeredFileSystem`
 (`ServerBuildManager.kt`).
 
-**Status:** tempest's choice, from design.md §11.
+**Status:** this compiler's choice, from design.md §11.
 
 ### Finding libraries as Kotlin does, ignore files as git does
 
@@ -236,7 +237,7 @@ sources, and its other files host code for `@connected` declarations.
 It skips `temper.out`, `temper.keep`, dot-directories, and whatever
 `.gitignore` and `.temperignore` files list: the work root's, those
 below it, and those above it up to the git repository's root, read as
-git reads them by tempest's own matcher
+git reads them by this compiler's own matcher
 ([`IgnoreFile`](../../../crates/temper-frontend/src/ignore.rs),
 [`ignored`](../../../crates/temper-frontend/src/ignore.rs)), a
 directory's `.temperignore` after its `.gitignore`. An ignore file named
@@ -249,21 +250,21 @@ directory, as Kotlin's are
 names, or else the nearest `.gitignore` at or above the start; the
 `ignore` crate.
 
-**Pros:** what git ignores, tempest ignores, so a `node_modules` or a
+**Pros:** what git ignores, this compiler ignores, so a `node_modules` or a
 build directory anywhere in the tree is skipped. No dependency.
 
 **Cons:** it differs from Kotlin's on trees with nested ignore files,
 and outside a git repository, where Kotlin still reads the nearest
-`.gitignore` above. `--ignorefile` can't turn tempest's reading off;
+`.gitignore` above. `--ignorefile` can't turn this compiler's reading off;
 `/dev/null` adds nothing, where in Kotlin it means no ignore file. The scan
 reads every directory under the work root, every time; that's fine for
 one command, but the language server repeats it on every pause
 ([page 9's detail](09-language-server.md#units-and-staying-current)).
 Kotlin also builds files outside any library as one more library;
-tempest leaves them out.
+this compiler leaves them out.
 
 **Status:** the work-root rule and library names are Kotlin's
-(`libraryNameFor`); the ignore-file reading is tempest's choice.
+(`libraryNameFor`); the ignore-file reading is this compiler's choice.
 
 ### Configs read, not run
 
@@ -282,7 +283,7 @@ one name stop the command
 **Cons:** a config that computes a value, or spans lines, isn't
 understood; nothing warns. Every library we know of writes plain lines.
 
-**Status:** tempest's choice, a deliberate shortcut.
+**Status:** this compiler's choice, a deliberate shortcut.
 
 ### std built into the binary
 
@@ -290,7 +291,7 @@ understood; nothing warns. Every library we know of writes plain lines.
 ([`FILES`](../../../crates/temper-frontend/src/stdlib.rs)) under the
 path prefix [`DIR`](../../../crates/temper-frontend/src/stdlib.rs),
 `-std-`, which no library's files are likely to share. A test checks
-that `FILES` lists every vendored file. `--std DIR` reads another copy.
+that `FILES` lists every file in `lib/std/`. `--std DIR` reads another copy.
 For backends, std is also a library of its own
 ([`program`](../../../crates/temper-frontend/src/stdlib.rs)), settled
 from [`MODULES`](../../../crates/temper-frontend/src/stdlib.rs) once per
@@ -335,7 +336,7 @@ Gradle, with proprietary backends added from submodules), loaded
 reflectively, and changeable with the `TEMPER_PLUGINS` environment
 variable (`supported-backends/SupportedBackends.kt`).
 
-**Status:** tempest's choice; that backends are pluggable and the
+**Status:** this compiler's choice; that backends are pluggable and the
 frontend never lists them is in [notes/design.md](../../../notes/design.md).
 
 ### A backend is a struct of function pointers
@@ -358,7 +359,7 @@ naming rules are Rust data the driver applies itself
 ([`interface`](../../../crates/temper-driver/src/lib.rs)), which an
 outside backend couldn't provide.
 
-**Status:** tempest's choice (7aba29c, "Describe each backend once").
+**Status:** this compiler's choice (7aba29c, "Describe each backend once").
 
 ### One compile path
 
@@ -436,12 +437,13 @@ first, so no stale file survives a rename. C++ also gets a
 **Pros:** what's built can replace Kotlin's output, and tests compare
 them file by file ([Tests](#tests)).
 
-**Cons:** the runtime files say `0.6.0` but carry tempest's patches, so
-packages need runtime API that the published `0.6.0` lacks (the audit's
-A1). Emptying a directory is the one destructive step; it's limited to
-the library's own directory under `temper.out`.
+**Cons:** emptying a directory is the one destructive step; it's
+limited to the library's own directory under `temper.out`. The
+runtimes and std name the build's own version
+([Versions](06-backends.md#versions-one-version-spelled-for-each-ecosystem)),
+which isn't published yet.
 
-**Status:** Kotlin's layout is part of the public API tempest keeps
+**Status:** Kotlin's layout is part of the public API this compiler keeps
 ([notes/api-compat.md](../../../notes/api-compat.md), each backend's
 "Layout").
 
@@ -454,17 +456,17 @@ status is 1 whenever there were errors. What tmpl doesn't cover yet
 fails that library, with the first reason (`LIBRARY: BACKEND: why`), and
 with `--verbose` every gap ([`gaps`](../../../crates/temper-frontend/src/to_tmpl.rs)).
 
-**Kotlin:** the same for build and test (92f1d04 matched it); tempest
+**Kotlin:** the same for build and test (92f1d04 matched it); this compiler
 goes further in type errors, which run where the language allows
 (4272843).
 
 **Status:** Kotlin's behavior; see
 [notes/kotlin-differences.md](../../../notes/kotlin-differences.md) for
-where tempest keeps more local.
+where this compiler keeps more local.
 
 ### Tests on the interpreter by default
 
-**Chosen:** `tempest test` without `-b` runs tests on the interpreter,
+**Chosen:** `temper test` without `-b` runs tests on the interpreter,
 in process, writing no files; `-b interp` names it, as Kotlin's does.
 
 **Kotlin:** `temper test` requires `-b`.
@@ -476,7 +478,7 @@ build.
 not: each test gets a step budget, `--fuel N` (10 billion by default,
 [`TEST_FUEL`](../../../crates/temper-frontend/src/interp.rs); `none`
 for no limit), and fails alone when it runs out; what tests log is kept
-up to 64 KiB, then a note. Kotlin's `temper test` has neither; tempest
+up to 64 KiB, then a note. Kotlin's `temper test` has neither; this compiler
 adds them so a runaway test fails rather than filling memory
 ([page 4's detail](04-interpreter.md#limits-fuel-call-depth-and-nesting)).
 
@@ -519,7 +521,7 @@ crate, because every backend crate depends only on it; a small
 `temper-backend` crate would be tidier (audit B6). Kotlin's `be` mixes
 these too.
 
-**Status:** tempest's choice, from the test-speed proposal; the fast
+**Status:** this compiler's choice, from the test-speed proposal; the fast
 paths there (one process per backend, cached runtimes) aren't built.
 
 ### JSON records in Kotlin's shape
@@ -530,23 +532,23 @@ paths there (one process per backend, cached runtimes) aren't built.
 as Kotlin's JVM strings count), and `values`, a line each, all on
 stderr, ending with `{ "task": "Build", "ok": false }`. The tests'
 records (`TestFailed`, `TestSummaryAllRun`, …) are Kotlin's, with its
-values. tempest adds `message`, the text it would print.
+values. This compiler adds `message`, the text it would print.
 
-**Cons:** a diagnostic's `template` is tempest's
+**Cons:** a diagnostic's `template` is this compiler's
 [`Message`](../../../crates/temper-frontend/src/library.rs) variant
 (`UndeclaredName`, where Kotlin says `BecauseNameUndeclared`), and its
-`values` are empty, since tempest keeps a diagnostic's text, not its
+`values` are empty, since this compiler keeps a diagnostic's text, not its
 arguments. Tools that key on Kotlin's template names need a table.
 
 ### The crates' licenses, kept current by a test
 
-**Chosen:** `tempest licenses` prints
+**Chosen:** `temper licenses` prints
 [`licenses.txt`](../../../crates/tempest/src/licenses.txt), which
 [`licenses.rs`](../../../crates/tempest/tests/licenses.rs) makes
 from `cargo metadata`: every crate `tempest` reaches through normal
 dependencies on any platform, but not proc macros or build
 dependencies, each with its license and repository, and its copyright
-lines where it offers MIT or Apache-2.0 (whose texts `tempest license`
+lines where it offers MIT or Apache-2.0 (whose texts `temper license`
 prints), or its license files in full otherwise. The test fails when
 the file is stale; `UPDATE_SNAPSHOTS=1` rewrites it.
 
@@ -584,10 +586,10 @@ have); crates such as `nix` or `ctrlc` (more code than the dozen calls
 need); hand-written `extern` declarations, as before (types and
 constants by hand, unchecked per platform).
 
-**Exempt:** `vendor/temper/`'s Rust runtime, whose one unsafe read
-(`cast`, after a `TypeId` check) is Temper's own, synced unchanged and
-built apart from the workspace; it's in the inventory, so a sync that
-changes it shows. The other backends' runtimes aren't Rust.
+**Exempt:** the Rust backend's runtime
+(`crates/temper-be-rust/runtime/`), whose one unsafe read (`cast`, after
+a `TypeId` check) came from Kotlin Temper's and is built apart from the
+workspace; it's in the inventory, so a change to it shows. The other backends' runtimes aren't Rust.
 
 **Cons:** `temper-tmpl` now has a dependency, though none on wasm.
 
@@ -685,11 +687,11 @@ given; [page 9's detail](09-language-server.md) covers the rest.
 | [`Tools`](../../../crates/temper-tmpl/src/backend.rs), [`Prepare`](../../../crates/temper-tmpl/src/backend.rs), [`TestResults`](../../../crates/temper-tmpl/src/backend.rs) | tmpl | How a backend runs tests |
 | [`OutFile`](../../../crates/temper-tmpl/src/backend.rs) | tmpl | A generated file: path and text |
 | [`checked`](../../../crates/temper-driver/src/lib.rs), [`with_std`](../../../crates/temper-driver/src/lib.rs), [`translate`](../../../crates/temper-driver/src/lib.rs) | driver | The compile path |
-| [`build`](../../../crates/temper-driver/src/build.rs), [`Options`](../../../crates/temper-driver/src/build.rs), [`Built`](../../../crates/temper-driver/src/build.rs), [`error_count`](../../../crates/temper-driver/src/build.rs) | driver | `tempest build` |
+| [`build`](../../../crates/temper-driver/src/build.rs), [`Options`](../../../crates/temper-driver/src/build.rs), [`Built`](../../../crates/temper-driver/src/build.rs), [`error_count`](../../../crates/temper-driver/src/build.rs) | driver | `temper build` |
 | [`test_backend`](../../../crates/temper-driver/src/test_run.rs), [`run`](../../../crates/temper-driver/src/test_run.rs) | driver | Tests with a backend's tools |
-| [`run`](../../../crates/temper-driver/src/run.rs) | driver | `tempest run` |
-| [`init`](../../../crates/temper-driver/src/init.rs), [`library_name`](../../../crates/temper-driver/src/init.rs) | driver | `tempest init` |
-| [`NOT_YET`](../../../crates/temper-driver/src/lib.rs) | driver | Kotlin's backends tempest lacks |
+| [`run`](../../../crates/temper-driver/src/run.rs) | driver | `temper run` |
+| [`init`](../../../crates/temper-driver/src/init.rs), [`library_name`](../../../crates/temper-driver/src/init.rs) | driver | `temper init` |
+| [`NOT_YET`](../../../crates/temper-driver/src/lib.rs) | driver | Kotlin's backends this compiler lacks |
 | [`Flags`](../../../crates/tempest/src/main.rs), [`parse`](../../../crates/tempest/src/main.rs), [`COMMANDS`](../../../crates/tempest/src/help.rs) | tempest | Options, and the commands `help` lists |
 | [`LogFormat`](../../../crates/temper-frontend/src/log.rs), [`record`](../../../crates/temper-frontend/src/log.rs) | frontend | `--logformat` and JSON records |
 | [`tool`](../../../crates/temper-tmpl/src/tools.rs), [`output`](../../../crates/temper-tmpl/src/tools.rs), [`Case`](../../../crates/temper-tmpl/src/tools.rs) | tmpl | Finding and running tools, reading JUnit |
@@ -747,9 +749,9 @@ What has to change first, found while writing this:
 
 ## Parity with Kotlin's temper
 
-| Kotlin | tempest | Gap |
+| Kotlin | This compiler | Gap |
 |---|---|---|
-| `build` | `build` | Ignore files read differently ([above](#finding-libraries-as-kotlin-does-ignore-files-as-git-does)); JSON records' diagnostics name tempest's templates ([above](#json-records-in-kotlins-shape)); adds `-o DIR` |
+| `build` | `build` | Ignore files read differently ([above](#finding-libraries-as-kotlin-does-ignore-files-as-git-does)); JSON records' diagnostics name this compiler's templates ([above](#json-records-in-kotlins-shape)); adds `-o DIR` |
 | `test -b …` | `test [-b …]… [DIR]` | Defaults to the interpreter; adds `DIR`, where the work root's search starts; prints each backend's summary before Kotlin's total |
 | `run` | `run` | Streams the program's output to stdout, where Kotlin prints it afterwards on stderr (twice on the interpreter); adds `-ign` and `-o` |
 | `init` | `init` | None: the same files, byte for byte; its message on stdout |
@@ -779,7 +781,7 @@ What has to change first, found while writing this:
   `build_reads_host_code`, `build_needs_libraries_with_names_of_their_own`;
   `test_a_library` and `built_in_std`; tests through each backend's tools
   on a small library (`test_a_library_on_each_backend`, skipped where a
-  tool is missing unless `TEMPEST_REQUIRE_CHECKERS` is set);
+  tool is missing unless `TEMPER_REQUIRE_CHECKERS` is set);
   `tests_of_a_library_that_does_not_build_count`; and
   `errors_fail_only_where_they_run`.
 - **`licenses`' currency**, [`licenses.rs`](../../../crates/tempest/tests/licenses.rs):
@@ -794,7 +796,7 @@ What has to change first, found while writing this:
 - **The driver**, [`dependencies.rs`](../../../crates/temper-driver/tests/dependencies.rs):
   a dependency on another library in each backend's package files;
   [`runtimes.rs`](../../../crates/temper-driver/tests/runtimes.rs): each
-  built-in runtime is the vendored one.
+  built-in runtime is its crate's `runtime/temper-core`.
 - **The interpreter's tests**, [`library_tests.rs`](../../../crates/temper-frontend/tests/library_tests.rs):
   passing and failing tests, quiet output, the work root and skipped
   directories, `.gitignore` files, not-run tests and errors, std built
@@ -803,7 +805,9 @@ What has to change first, found while writing this:
   (`runaway_tests_fail_alone`, `runaway_top_level_is_cut_short`).
 - **JUnit reading**: unit tests in [`tools.rs`](../../../crates/temper-tmpl/src/tools.rs).
 - **Real libraries**, nightly: each library in
-  `.github/nightly-libraries.json` on the backends it passes on.
+  `.github/nightly-libraries.json` on the backends it passes on, and
+  its generated Python type-checked against a ratchet
+  (`.github/ci-tools/library-py-baseline.json`).
 
 Not covered: Windows paths (CI is Linux), a tool that hangs, a config
 that isn't plain lines, nested ignore files against Kotlin's reading,
@@ -828,8 +832,5 @@ and a panic's exit code (no input is known to panic).
 - **Parity:** `watch` and `doc`; the REPL's line editing, functions,
   and `-b`; Kotlin's `cppv`, `data`,
   `java8`, and `mypyc` backends; `serve --port`.
-- **Runtime version:** output names `temper-core` 0.6.0 but needs
-  tempest's patched runtimes; a distinct pre-release version is one
-  option.
 - **Dynamic backends:** naming, host files, and the descriptor first
   ([above](#dynamic-backends-planned)).

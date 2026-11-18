@@ -241,6 +241,9 @@ add these to the config to try them out. These include the following:
   [Semver](https://semver.org/).
 - `license`: The license of your library. Where possible, we recommend using a
   [SPDX identifier](https://spdx.org/licenses/).
+- `description`, `authors`, `homepage`, and `repository`: A line about your
+  library, who wrote it (such as `"Jo Doe <jo@example.com>"`), and links to its
+  home page and source, for the package files.
 - `csharpRootNamespace`: The root namespace and assembly name of the generated
   C\# library. The default comes from your Temper library name. Further
   configuration may be provided in the future.
@@ -303,11 +306,13 @@ library for C\#, Java, JS, Lua, Python, and Rust:
 
 ```sh
 temper build
-# Also try this out sometime: temper watch -t py
 ```
 
+(Temper's earlier releases also have `temper watch -t py`, which
+rebuilds and tests as files change; it isn't available yet.)
+
 After building, you should be able to see the effects of library configuration
-(library name, version, and license) in these files:
+(library name, version, license, and the rest) in these files:
 
 - temper.out/csharp/geometry/src/GeometryNet.csproj
 - temper.out/java/geometry/pom.xml

@@ -1,6 +1,6 @@
 //! The C# variant's tables: every operator spelled, every connection
 //! keyed by a connected declaration of core, every type connection by a
-//! type of core, and every runtime method called one that the vendored
+//! type of core, and every runtime method called one that
 //! `TemperLang.Core` has.
 
 use std::fs;
@@ -81,7 +81,7 @@ fn type_connections_name_core_types() {
 /// The text of a runtime class's file.
 fn runtime(file: &str) -> String {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper/be-csharp/temper-core")
+        .join("runtime/temper-core")
         .join(file);
     fs::read_to_string(path).unwrap()
 }

@@ -22,5 +22,10 @@ public static class PrivateMethodGlobal
         Label label = new Label(1);
         console.Log("close: " + label.Close(new TenSink()).ToString(CultureInfo.InvariantCulture));
         console.Log("noted: " + label.Noted("!"));
+        Tally leaf = new Tally(2, null, Listed.CreateReadOnlyList<Tally>());
+        Tally mid = new Tally(3, leaf, Listed.CreateReadOnlyList<Tally>(leaf, leaf));
+        Tally top = new Tally(1, mid, Listed.CreateReadOnlyList<Tally>(mid, leaf));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"depths: {leaf.Depth} {mid.Depth} {top.Depth}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"totals: {leaf.Total} {mid.Total} {top.Total}"));
     }
 }

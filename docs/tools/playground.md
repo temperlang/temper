@@ -14,14 +14,14 @@ Building it, and how it fits together, is in
 ## The REPL tab
 
 **REPL**, beside **Editor** in the top bar, swaps the editor for a
-REPL, as [`tempest repl`](repl.md) runs in a terminal: type an input,
+REPL, as [`temper repl`](repl.md) runs in a terminal: type an input,
 and see its result as `interactive#N: value`, with what it logged, its
 errors, and its warnings. The editor's code is input 0, so inputs can
 call what it declares; edit it, and the REPL starts again from it, with
 your inputs run again. The editor's tests run once, as input 0's, and
 the REPL shows their summary, `Tests passed: 3 of 3`, with any failures;
 `runTests()` runs them again against your newest definitions, as in
-[`tempest repl`](repl.md#running-input-0s-tests-again). Tests typed into
+[`temper repl`](repl.md#running-input-0s-tests-again). Tests typed into
 the REPL don't run.
 
 - **Enter** runs the input once it's whole, or else starts a new line,

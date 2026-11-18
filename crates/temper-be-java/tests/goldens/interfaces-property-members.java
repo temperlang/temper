@@ -48,8 +48,10 @@ public final class PropertyMembersGlobal {
         console.log("Genericallier, x is still " + dj.thing.getX() + ".");
         SI<C> si = new SSub<C>(a);
         console.log("Sealed thing is " + si.getThing().x + ".");
-        Labeled<String> labeled = new LabeledSub(a);
+        Labeled<String, C> labeled = new LabeledSub(a);
+        List<C> heldAnd = labeled.heldAnd(b);
         console.log("Labeled thing is " + labeled.label("first") + ".");
+        console.log("Held are " + labeled.getHeld().x + " and " + Core.listGet(heldAnd, 1).x + ".");
         High high1 = new Low1(11);
         High high1b = new Low1(12);
         High high1c = new Low1(12);

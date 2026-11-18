@@ -14,11 +14,11 @@ pub fn tool(var: &str, name: &str) -> String {
 }
 
 /// Whether compiler warnings on generated code fail a library's tests
-/// (`TEMPEST_STRICT_WARNINGS` set, as CI's runs of real libraries set
+/// (`TEMPER_STRICT_WARNINGS` set, as CI's runs of real libraries set
 /// it), as the backends' own tests fail on them; else they're hidden, as
 /// in Kotlin. The runtimes, Kotlin's, keep their own warnings quiet.
 pub fn strict_warnings() -> bool {
-    std::env::var_os("TEMPEST_STRICT_WARNINGS").is_some()
+    std::env::var_os("TEMPER_STRICT_WARNINGS").is_some()
 }
 
 pub use crate::children::{
@@ -109,7 +109,7 @@ pub struct Failed {
 }
 
 impl Case {
-    /// Why it failed, if it did, as `tempest test -b` says it: its
+    /// Why it failed, if it did, as `temper test -b` says it: its
     /// failure's (else its error's) message, or else its type, or else
     /// its text. LuaUnit's type says where it failed first
     /// (`a/tests/init-test.lua:19: expected …`), which is left out.

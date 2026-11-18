@@ -18,7 +18,7 @@ and for that, it will be easier to use an interactive console.
 Start up the Temper read-evaluate-print-loop (REPL) console like so:
 
 ```sh
-tempest repl
+temper repl
 # And wait for the `$` prompt.
 ```
 

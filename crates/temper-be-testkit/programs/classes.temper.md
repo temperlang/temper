@@ -1,11 +1,15 @@
 # Classes
 
 Classes and interfaces: fields, constructors (made from a class's header,
-or its own), methods, getters and setters, static fields and functions,
-private members read on another instance, interfaces with abstract and
-default members, `@auto("==")` and `@operator` methods, `toString`, `is`, `as`, and narrowing. Calls chain on
-objects that methods return, which C++ must keep alive. The log is what
-tempest's interpreter gives.
+or its own), methods, getters and setters, a setter with no getter
+(assigned as a value too), static fields and functions,
+private members read on another instance, a `@noProperty` input that
+initializers read, though a getter and setter share its name, interfaces
+with abstract and default members, `@auto("==")` and `@operator` methods
+(`==` with a nullable side, in a `when`, with `this`, and on a generic
+class), `toString`, `is`, `as`, and narrowing. Calls chain on objects
+that methods return, which C++ must keep alive. The log is what the
+interpreter gives.
 
     export interface Shape {
       public get area(): Int;
@@ -33,6 +37,7 @@ tempest's interpreter gives.
       private var hidden: Int = 0;
       public get doubled(): Int { count * 2 }
       public set doubled(value: Int) { count = value - count; }
+      public set added(value: Int) { count = count + value; }
       public bump(): Counter {
         count = count + 1;
         hidden = hidden + 1;
@@ -48,6 +53,15 @@ tempest's interpreter gives.
     class Loose(public n: Int) {
       @operator("==")
       public eq(other: Loose): Boolean { n == other.n || n == -other.n }
+      public mirrors(other: Loose): Boolean { other == this && this == other }
+    }
+
+    let maybeLoose(n: Int): Loose? { if (n == 0) { null } else { new Loose(n) } }
+
+    class Boxed<T>(public value: T, public tag: Int) {
+      @operator("==")
+      public eq(other: Boxed<T>): Boolean { tag == other.tag }
+      public sameAs(other: Boxed<T>): Boolean { this == other && other == this }
     }
 
     @auto("==")
@@ -58,6 +72,14 @@ tempest's interpreter gives.
       public compareTo(other: Version): Int {
         if (major != other.major) { major <=> other.major } else { minor <=> other.minor }
       }
+    }
+
+    class Stock(@noProperty items: List<Int>, public count: Int = items.length) {
+      private var itemsVar: List<Int> = items;
+      public get items(): List<Int> { itemsVar }
+      public set items(value: List<Int>) { itemsVar = value; }
+      public size: Int = items.length;
+      public sizeNow(): Int { items.length }
     }
 
     let shape(x: Shape): Shape { x }
@@ -78,8 +100,21 @@ tempest's interpreter gives.
     c.doubled = 10;
     console.log(c.doubled.toString());
     console.log(c.same(new Counter().bump().bump()).toString());
+    c.added = 5;
+    let added = c.added = c.added = 2;
+    console.log("${added} ${c.count}");
     console.log("${new Point(1, 2) == new Point(1, 2)} ${new Point(1, 2) != new Point(2, 1)}");
     console.log("${new Holder(new Loose(3), "a") == new Holder(new Loose(-3), "a")}");
+    let loose = new Loose(2);
+    console.log("${loose.mirrors(new Loose(-2))} ${maybeLoose(-2) == loose} ${loose == maybeLoose(0)} ${maybeLoose(0) != loose}");
+    let matched = when (maybeLoose(-2)) {
+      loose -> "loose";
+      else -> "other";
+    };
+    console.log(matched);
+    let b1 = new Boxed("x", 1);
+    let b3 = new Boxed("z", 2);
+    console.log("${b1.value} ${b1 == new Boxed("y", 1)} ${b1 != b3} ${b1.sameAs(new Boxed("y", 1))} ${b3.sameAs(b1)}");
     console.log("${new Version(1, 2) < new Version(1, 3)} ${new Version(2, 0) >= new Version(1, 9)}");
     console.log("${q is Square} ${s is Square}");
     let sq = q as Square;
@@ -87,6 +122,9 @@ tempest's interpreter gives.
     if (s is Rect) {
       console.log(s.w.toString());
     }
+    let st = new Stock([4, 5]);
+    st.items = [1, 2, 3];
+    console.log("${st.count} ${st.size} ${st.sizeNow()} ${st.items.length}");
 
 ```log
 Rect(2, 3)
@@ -99,12 +137,49 @@ Rect(5, 5)
 2
 16
 true
+2 17
 true true
 true
+true true false true
+loose
+x true true true false
 true true
 true false
 16
 2
+2 2 3 3
+```
+
+## Equality, every way round
+
+A table of `==` and `!=` on `Loose`, whose `@operator("==")` method
+counts `n` and `-n` the same, for each pair of `null`, 1, -1, and 2,
+through function literals: `T` where they're equal.
+
+    let compared(eq: fn (Loose?, Loose?): Boolean): String {
+      let ns = [0, 1, -1, 2];
+      let out = new ListBuilder<String>();
+      for (let a of ns) {
+        for (let b of ns) {
+          out.add(if (eq(maybeLoose(a), maybeLoose(b))) { "T" } else { "f" });
+        }
+      }
+      out.join("") { (s: String): String => s }
+    }
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => a == b });
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => a != b });
+    console.log(compared { (a: Loose?, b: Loose?): Boolean => b == a });
+    console.log(compared(fn (a: Loose?, b: Loose?): Boolean {
+      if (a == null) { return false; }
+      if (b == null) { return false; }
+      a.mirrors(b)
+    }));
+
+```log
+TffffTTffTTffffT
+fTTTTffTTffTTTTf
+TffffTTffTTffffT
+fffffTTffTTffffT
 ```
 
 ## Types as values
@@ -172,4 +247,40 @@ the method by its own name, as Kotlin's do.
 ```log
 'it'NULL3shape 4rect Rect(1, 2)
 SELECT 7, 'x' FROM rect Rect(2, 2)
+```
+
+## Methods that never return
+
+A method may declare `Never<T>` as its result, which never returns but
+stands for a `T` where it's called. An override declares the result it
+overrides exactly, `Never<T>` for `Never<T>`, as for any other type, so
+each backend's override has the signature its language requires: here
+through an interface, a generic interface given `Int`, and a generic
+class that passes its own type parameter on.
+
+    export interface Limited {
+      next(n: Int): Int;
+      tooFar(): Never<Int>;
+    }
+    export class Stepper(public limit: Int) extends Limited {
+      public next(n: Int): Int { if (n < limit) { n + 1 } else { tooFar() } }
+      public tooFar(): Never<Int> { panic() }
+    }
+    interface Failing<T> {
+      fail(): Never<T>;
+    }
+    class IntFailing extends Failing<Int> {
+      public fail(): Never<Int> { panic() }
+    }
+    class AnyFailing<T> extends Failing<T> {
+      public fail(): Never<T> { panic() }
+    }
+    let orFail<T>(ok: Boolean, x: T, f: Failing<T>): T { if (ok) { x } else { f.fail() } }
+    let stepper: Limited = new Stepper(3);
+    console.log("next ${stepper.next(1)}");
+    console.log("${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing<String>())}");
+
+```log
+next 2
+4 s
 ```

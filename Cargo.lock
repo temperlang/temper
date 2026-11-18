@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "temper-analysis"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-frontend",
  "temper-syntax",
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-cpp"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-csharp"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -396,7 +396,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-java"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -404,7 +404,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-js"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -412,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-lua"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -420,7 +420,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-py"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -428,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-rust"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-be-testkit",
  "temper-tmpl",
@@ -436,7 +436,7 @@ dependencies = [
 
 [[package]]
 name = "temper-be-testkit"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-frontend",
  "temper-funtests",
@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "temper-driver"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-analysis",
  "temper-be-cpp",
@@ -462,7 +462,7 @@ dependencies = [
 
 [[package]]
 name = "temper-frontend"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-funtests",
  "temper-os",
@@ -473,11 +473,11 @@ dependencies = [
 
 [[package]]
 name = "temper-funtests"
-version = "0.0.0"
+version = "0.7.0"
 
 [[package]]
 name = "temper-lsp"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "lsp-types",
  "serde",
@@ -489,7 +489,7 @@ dependencies = [
 
 [[package]]
 name = "temper-os"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "libc",
  "windows-sys 0.60.2",
@@ -497,18 +497,18 @@ dependencies = [
 
 [[package]]
 name = "temper-syntax"
-version = "0.0.0"
+version = "0.7.0"
 
 [[package]]
 name = "temper-tmpl"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "temper-os",
 ]
 
 [[package]]
 name = "temper-wasm"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "serde_json",
  "temper-analysis",
@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "tempest"
-version = "0.0.0"
+version = "0.7.0"
 dependencies = [
  "libc",
  "rustyline",

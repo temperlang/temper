@@ -1,0 +1,11 @@
+let { State, Engine, Parts, firstId } = import("../state");
+let { wheels } = import("../parts/regex");
+let { Dot, oneOrMore } = import("std/regex");
+
+export let describe(): String {
+  let state: State = new State(firstId);
+  let engine = new Engine(wheels());
+  let least = oneOrMore(Dot).min;
+  let parts = new Parts(engine.n + least);
+  "state ${state.id.toString()} engine ${engine.n.toString()} parts ${parts.count.toString()}"
+}

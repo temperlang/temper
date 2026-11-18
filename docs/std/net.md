@@ -32,4 +32,4 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
 Each backend connects these to its language's HTTP support; C++ needs
 libcurl, and Lua needs LuaSocket.
 
-Source: [net.temper.md](../../vendor/temper/std/net/net.temper.md).
+Source: [net.temper.md](../../lib/std/net/net.temper.md).

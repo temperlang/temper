@@ -1,0 +1,450 @@
+tmpl 1 model 1 library `json-adapters` 0.0.0
+
+uses std#19 0.0.0-alpha.0.0 {
+  module json#20 {
+    interface JsonAdapter#21<T#22> {
+      method encodeToJson#24(x: T#22, p: JsonProducer#23): Void;
+      method decodeFromJson#27(t: JsonSyntaxTree#25, ic: InterchangeContext#26): T#22 throws Bubble;
+    }
+    interface JsonProducer#23 {
+      method startObject#123(): Void;
+      method objectKey#124(key: String): Void;
+      method int32Value#125(x: Int32): Void;
+      method endObject#126(): Void;
+      method stringValue#145(x: String): Void;
+      method booleanValue#146(x: Boolean): Void;
+      method float64Value#147(x: Float64): Void;
+      method int64Value#148(x: Int64): Void;
+    }
+    interface JsonSyntaxTree#25 {}
+    interface InterchangeContext#26 {}
+    class JsonObject#129 extends JsonSyntaxTree#25 {
+      method propertyValueOrBubble#133(propertyKey: String): JsonSyntaxTree#25 throws Bubble;
+      method propertyValueOrNull#217(propertyKey: String): JsonSyntaxTree#25?;
+    }
+    interface JsonNumeric#131 extends JsonSyntaxTree#25 {
+      method asInt32#135(): Int32 throws Bubble;
+      method asFloat64#170(): Float64 throws Bubble;
+      method asInt64#173(): Int64 throws Bubble;
+    }
+    class OrNullJsonAdapter#149<T#150> extends JsonAdapter#21<T#150?> {
+      method encodeToJson#151(x: T#150?, p: JsonProducer#23): Void;
+      private let adapterForT#152: JsonAdapter#21<T#150>;
+      constructor constructor#153(adapterForT: JsonAdapter#21<T#150>): OrNullJsonAdapter#149<T#150>;
+      method decodeFromJson#175(t: JsonSyntaxTree#25, ic: InterchangeContext#26): T#150? throws Bubble;
+    }
+    fn stringJsonAdapter#154(): JsonAdapter#21<String>;
+    fn listJsonAdapter#155<T#156>(adapterForT: JsonAdapter#21<T#156>): JsonAdapter#21<List#46<T#156>>;
+    class JsonString#160 extends JsonSyntaxTree#25 {
+      let content#163: String;
+    }
+    class JsonBoolean#164 extends JsonSyntaxTree#25 {
+      let content#167: Boolean;
+    }
+    class JsonTextProducer#260 extends JsonProducer#23 {
+      constructor constructor#262(interchangeContext?: InterchangeContext#26?): JsonTextProducer#260;
+      method toJsonString#263(): String throws Bubble;
+    }
+    fn parseJson#266(sourceText: String): JsonSyntaxTree#25 throws Bubble;
+    class NullInterchangeContext#267 extends InterchangeContext#26 {
+      static let instance#268: NullInterchangeContext#267;
+    }
+  }
+}
+
+uses `temper-core`#45 0.0.0-alpha.0.0 {
+  class List#46<T#47> extends Listed#48<T#47> {
+    connected get length#282(): Int32;
+  }
+  interface Listed#48<T#49> {}
+  interface Console#274 {
+    connected method log#275(message: String): Void;
+  }
+  class Int32#277 {
+    connected method toString#278(radix?: Int32): String;
+  }
+  class Boolean#279 {
+    connected method toString#280(): String;
+  }
+  connected fn getConsole#283(name?: String): Console#274;
+}
+
+module `json-adapters`#0 {
+  let ~console#276: Console#274;
+
+  class PointJsonAdapter#1 extends JsonAdapter#21<Point#2> {
+    constructor constructor#30(): PointJsonAdapter#1 {}
+    method encodeToJson#28(x#118: Point#2, p#119: JsonProducer#23): Void {
+      x#118.encodeToJson#33(p#119);
+    }
+    method decodeFromJson#29(t#120: JsonSyntaxTree#25, ic#121: InterchangeContext#26): Point#2 throws Bubble {
+      return decodeFromJson#34(t#120, ic#121)^;
+    }
+  }
+
+  class Point#2 {
+    let x#31: Int32;
+    let y#32: Int32;
+    constructor constructor#36(x#138: Int32, y#139: Int32): Point#2 {
+      this.x#31 = x#138;
+      this.y#32 = y#139;
+    }
+    method encodeToJson#33(p#122: JsonProducer#23): Void {
+      p#122.startObject#123();
+      p#122.objectKey#124("x");
+      p#122.int32Value#125(this.x#31);
+      p#122.objectKey#124("y");
+      p#122.int32Value#125(this.y#32);
+      p#122.endObject#126();
+    }
+    static fn decodeFromJson#34(t#127: JsonSyntaxTree#25, ic#128: InterchangeContext#26): Point#2 throws Bubble {
+      let obj#130: JsonObject#129 = (as(t#127)^): JsonObject#129;
+      let xJson#132: JsonNumeric#131 = (as(obj#130.propertyValueOrBubble#133("x")^)^): JsonNumeric#131;
+      let x#134: Int32 = xJson#132.asInt32#135()^;
+      let yJson#136: JsonNumeric#131 = (as(obj#130.propertyValueOrBubble#133("y")^)^): JsonNumeric#131;
+      let y#137: Int32 = yJson#136.asInt32#135()^;
+      return new constructor#36(x#134, y#137);
+    }
+    static fn jsonAdapter#35(): JsonAdapter#21<Point#2> {
+      return (upcast(new constructor#30())): JsonAdapter#21<Point#2>;
+    }
+  }
+
+  class RecordJsonAdapter#3 extends JsonAdapter#21<Record#4> {
+    constructor constructor#39(): RecordJsonAdapter#3 {}
+    method encodeToJson#37(x#140: Record#4, p#141: JsonProducer#23): Void {
+      x#140.encodeToJson#51(p#141);
+    }
+    method decodeFromJson#38(t#142: JsonSyntaxTree#25, ic#143: InterchangeContext#26): Record#4 throws Bubble {
+      return decodeFromJson#52(t#142, ic#143)^;
+    }
+  }
+
+  class Record#4 {
+    let name#40: String;
+    let active#41: Boolean;
+    let score#42: Float64;
+    let big#43: Int64;
+    let nickname#44: String?;
+    let points#50: List#46<Point#2>;
+    constructor constructor#54(name#177: String, active#178: Boolean, score#179: Float64, big#180: Int64, nickname#181: String?, points#182: List#46<Point#2>): Record#4 {
+      this.name#40 = name#177;
+      this.active#41 = active#178;
+      this.score#42 = score#179;
+      this.big#43 = big#180;
+      this.nickname#44 = nickname#181;
+      this.points#50 = points#182;
+    }
+    method encodeToJson#51(p#144: JsonProducer#23): Void {
+      p#144.startObject#123();
+      p#144.objectKey#124("name");
+      p#144.stringValue#145(this.name#40);
+      p#144.objectKey#124("is-active");
+      p#144.booleanValue#146(this.active#41);
+      p#144.objectKey#124("score");
+      p#144.float64Value#147(this.score#42);
+      p#144.objectKey#124("big");
+      p#144.int64Value#148(this.big#43);
+      p#144.objectKey#124("nickname");
+      new constructor#153<String>(stringJsonAdapter#154()).encodeToJson#151(this.nickname#44, p#144);
+      p#144.objectKey#124("points");
+      listJsonAdapter#155<Point#2>(jsonAdapter#35()).encodeToJson#24(this.points#50, p#144);
+      p#144.endObject#126();
+    }
+    static fn decodeFromJson#52(t#157: JsonSyntaxTree#25, ic#158: InterchangeContext#26): Record#4 throws Bubble {
+      let obj#159: JsonObject#129 = (as(t#157)^): JsonObject#129;
+      let nameJson#161: JsonString#160 = (as(obj#159.propertyValueOrBubble#133("name")^)^): JsonString#160;
+      let name#162: String = nameJson#161.content#163;
+      let activeJson#165: JsonBoolean#164 = (as(obj#159.propertyValueOrBubble#133("is-active")^)^): JsonBoolean#164;
+      let active#166: Boolean = activeJson#165.content#167;
+      let scoreJson#168: JsonNumeric#131 = (as(obj#159.propertyValueOrBubble#133("score")^)^): JsonNumeric#131;
+      let score#169: Float64 = scoreJson#168.asFloat64#170()^;
+      let bigJson#171: JsonNumeric#131 = (as(obj#159.propertyValueOrBubble#133("big")^)^): JsonNumeric#131;
+      let big#172: Int64 = bigJson#171.asInt64#173()^;
+      let nickname#174: String? = new constructor#153<String>(stringJsonAdapter#154()).decodeFromJson#175(obj#159.propertyValueOrBubble#133("nickname")^, ic#158)^;
+      let points#176: List#46<Point#2> = listJsonAdapter#155<Point#2>(jsonAdapter#35()).decodeFromJson#27(obj#159.propertyValueOrBubble#133("points")^, ic#158)^;
+      return new constructor#54(name#162, active#166, score#169, big#172, nickname#174, points#176);
+    }
+    static fn jsonAdapter#53(): JsonAdapter#21<Record#4> {
+      return (upcast(new constructor#39())): JsonAdapter#21<Record#4>;
+    }
+  }
+
+  class CircleJsonAdapter#5 extends JsonAdapter#21<Circle#6> {
+    constructor constructor#57(): CircleJsonAdapter#5 {}
+    method encodeToJson#55(x#183: Circle#6, p#184: JsonProducer#23): Void {
+      x#183.encodeToJson#59(p#184);
+    }
+    method decodeFromJson#56(t#185: JsonSyntaxTree#25, ic#186: InterchangeContext#26): Circle#6 throws Bubble {
+      return decodeFromJson#60(t#185, ic#186)^;
+    }
+  }
+
+  class Circle#6 extends Shape#10 {
+    let radius#58: Int32;
+    constructor constructor#62(radius#193: Int32): Circle#6 {
+      this.radius#58 = radius#193;
+    }
+    method encodeToJson#59(p#187: JsonProducer#23): Void {
+      p#187.startObject#123();
+      p#187.objectKey#124("radius");
+      p#187.int32Value#125(this.radius#58);
+      p#187.endObject#126();
+    }
+    static fn decodeFromJson#60(t#188: JsonSyntaxTree#25, ic#189: InterchangeContext#26): Circle#6 throws Bubble {
+      let obj#190: JsonObject#129 = (as(t#188)^): JsonObject#129;
+      let radiusJson#191: JsonNumeric#131 = (as(obj#190.propertyValueOrBubble#133("radius")^)^): JsonNumeric#131;
+      let radius#192: Int32 = radiusJson#191.asInt32#135()^;
+      return new constructor#62(radius#192);
+    }
+    static fn jsonAdapter#61(): JsonAdapter#21<Circle#6> {
+      return (upcast(new constructor#57())): JsonAdapter#21<Circle#6>;
+    }
+  }
+
+  class RectJsonAdapter#7 extends JsonAdapter#21<Rect#8> {
+    constructor constructor#65(): RectJsonAdapter#7 {}
+    method encodeToJson#63(x#194: Rect#8, p#195: JsonProducer#23): Void {
+      x#194.encodeToJson#68(p#195);
+    }
+    method decodeFromJson#64(t#196: JsonSyntaxTree#25, ic#197: InterchangeContext#26): Rect#8 throws Bubble {
+      return decodeFromJson#69(t#196, ic#197)^;
+    }
+  }
+
+  class Rect#8 extends Shape#10 {
+    let width#66: Int32;
+    let height#67: Int32;
+    constructor constructor#71(width#206: Int32, height#207: Int32): Rect#8 {
+      this.width#66 = width#206;
+      this.height#67 = height#207;
+    }
+    method encodeToJson#68(p#198: JsonProducer#23): Void {
+      p#198.startObject#123();
+      p#198.objectKey#124("width");
+      p#198.int32Value#125(this.width#66);
+      p#198.objectKey#124("height");
+      p#198.int32Value#125(this.height#67);
+      p#198.endObject#126();
+    }
+    static fn decodeFromJson#69(t#199: JsonSyntaxTree#25, ic#200: InterchangeContext#26): Rect#8 throws Bubble {
+      let obj#201: JsonObject#129 = (as(t#199)^): JsonObject#129;
+      let widthJson#202: JsonNumeric#131 = (as(obj#201.propertyValueOrBubble#133("width")^)^): JsonNumeric#131;
+      let width#203: Int32 = widthJson#202.asInt32#135()^;
+      let heightJson#204: JsonNumeric#131 = (as(obj#201.propertyValueOrBubble#133("height")^)^): JsonNumeric#131;
+      let height#205: Int32 = heightJson#204.asInt32#135()^;
+      return new constructor#71(width#203, height#205);
+    }
+    static fn jsonAdapter#70(): JsonAdapter#21<Rect#8> {
+      return (upcast(new constructor#65())): JsonAdapter#21<Rect#8>;
+    }
+  }
+
+  class ShapeJsonAdapter#9 extends JsonAdapter#21<Shape#10> {
+    constructor constructor#74(): ShapeJsonAdapter#9 {}
+    method encodeToJson#72(x#208: Shape#10, p#209: JsonProducer#23): Void {
+      x#208.encodeToJson#75(p#209);
+    }
+    method decodeFromJson#73(t#210: JsonSyntaxTree#25, ic#211: InterchangeContext#26): Shape#10 throws Bubble {
+      return decodeFromJson#76(t#210, ic#211)^;
+    }
+  }
+
+  interface Shape#10 {
+    abstract method encodeToJson#75(p#212: JsonProducer#23): Void;
+    static fn decodeFromJson#76(t#213: JsonSyntaxTree#25, ic#214: InterchangeContext#26): Shape#10 throws Bubble {
+      {
+        let obj#215: JsonObject#129 = (as(t#213)^): JsonObject#129;
+        let valueForRadius#216: JsonSyntaxTree#25? = obj#215.propertyValueOrNull#217("radius");
+        {
+          if (%Boolean.not(isNull(valueForRadius#216))) {
+            return (upcast(jsonAdapter#61().decodeFromJson#27((upcast(obj#215)): JsonSyntaxTree#25, ic#214)^)): Shape#10;
+          }
+          if (isNull(valueForRadius#216)) {
+            return (upcast(jsonAdapter#70().decodeFromJson#27((upcast(obj#215)): JsonSyntaxTree#25, ic#214)^)): Shape#10;
+          }
+        }
+        (bubble()^): Void;
+      }
+    }
+    static fn jsonAdapter#77(): JsonAdapter#21<Shape#10> {
+      return (upcast(new constructor#74())): JsonAdapter#21<Shape#10>;
+    }
+  }
+
+  class HelloJsonAdapter#11 extends JsonAdapter#21<Hello#12> {
+    constructor constructor#80(): HelloJsonAdapter#11 {}
+    method encodeToJson#78(x#218: Hello#12, p#219: JsonProducer#23): Void {
+      x#218.encodeToJson#82(p#219);
+    }
+    method decodeFromJson#79(t#220: JsonSyntaxTree#25, ic#221: InterchangeContext#26): Hello#12 throws Bubble {
+      return decodeFromJson#83(t#220, ic#221)^;
+    }
+  }
+
+  class Hello#12 extends Message#16 {
+    let text#81: String;
+    constructor constructor#85(text#228: String): Hello#12 {
+      this.text#81 = text#228;
+    }
+    method encodeToJson#82(p#222: JsonProducer#23): Void {
+      p#222.startObject#123();
+      p#222.objectKey#124("text");
+      p#222.stringValue#145(this.text#81);
+      p#222.objectKey#124("kind");
+      p#222.stringValue#145("hello");
+      p#222.endObject#126();
+    }
+    static fn decodeFromJson#83(t#223: JsonSyntaxTree#25, ic#224: InterchangeContext#26): Hello#12 throws Bubble {
+      let obj#225: JsonObject#129 = (as(t#223)^): JsonObject#129;
+      let textJson#226: JsonString#160 = (as(obj#225.propertyValueOrBubble#133("text")^)^): JsonString#160;
+      let text#227: String = textJson#226.content#163;
+      return new constructor#85(text#227);
+    }
+    static fn jsonAdapter#84(): JsonAdapter#21<Hello#12> {
+      return (upcast(new constructor#80())): JsonAdapter#21<Hello#12>;
+    }
+  }
+
+  class ByeJsonAdapter#13 extends JsonAdapter#21<Bye#14> {
+    constructor constructor#88(): ByeJsonAdapter#13 {}
+    method encodeToJson#86(x#229: Bye#14, p#230: JsonProducer#23): Void {
+      x#229.encodeToJson#90(p#230);
+    }
+    method decodeFromJson#87(t#231: JsonSyntaxTree#25, ic#232: InterchangeContext#26): Bye#14 throws Bubble {
+      return decodeFromJson#91(t#231, ic#232)^;
+    }
+  }
+
+  class Bye#14 extends Message#16 {
+    let text#89: String;
+    constructor constructor#93(text#239: String): Bye#14 {
+      this.text#89 = text#239;
+    }
+    method encodeToJson#90(p#233: JsonProducer#23): Void {
+      p#233.startObject#123();
+      p#233.objectKey#124("text");
+      p#233.stringValue#145(this.text#89);
+      p#233.objectKey#124("kind");
+      p#233.stringValue#145("bye");
+      p#233.endObject#126();
+    }
+    static fn decodeFromJson#91(t#234: JsonSyntaxTree#25, ic#235: InterchangeContext#26): Bye#14 throws Bubble {
+      let obj#236: JsonObject#129 = (as(t#234)^): JsonObject#129;
+      let textJson#237: JsonString#160 = (as(obj#236.propertyValueOrBubble#133("text")^)^): JsonString#160;
+      let text#238: String = textJson#237.content#163;
+      return new constructor#93(text#238);
+    }
+    static fn jsonAdapter#92(): JsonAdapter#21<Bye#14> {
+      return (upcast(new constructor#88())): JsonAdapter#21<Bye#14>;
+    }
+  }
+
+  class MessageJsonAdapter#15 extends JsonAdapter#21<Message#16> {
+    constructor constructor#96(): MessageJsonAdapter#15 {}
+    method encodeToJson#94(x#240: Message#16, p#241: JsonProducer#23): Void {
+      x#240.encodeToJson#97(p#241);
+    }
+    method decodeFromJson#95(t#242: JsonSyntaxTree#25, ic#243: InterchangeContext#26): Message#16 throws Bubble {
+      return decodeFromJson#98(t#242, ic#243)^;
+    }
+  }
+
+  interface Message#16 {
+    abstract method encodeToJson#97(p#244: JsonProducer#23): Void;
+    static fn decodeFromJson#98(t#245: JsonSyntaxTree#25, ic#246: InterchangeContext#26): Message#16 throws Bubble {
+      {
+        let obj#247: JsonObject#129 = (as(t#245)^): JsonObject#129;
+        let valueForKind#248: JsonSyntaxTree#25? = obj#247.propertyValueOrNull#217("kind");
+        {
+          if (%Boolean.not(isNull(valueForKind#248)) && is((nonNull(valueForKind#248)): JsonSyntaxTree#25, JsonString#160)) {
+            let subject#249: String = ((downcast((nonNull(valueForKind#248)): JsonSyntaxTree#25)): JsonString#160).content#163;
+            if (%String.eq(subject#249, "hello")) {
+              return (upcast(jsonAdapter#84().decodeFromJson#27((upcast(obj#247)): JsonSyntaxTree#25, ic#246)^)): Message#16;
+            } else if (%String.eq(subject#249, "bye")) {
+              return (upcast(jsonAdapter#92().decodeFromJson#27((upcast(obj#247)): JsonSyntaxTree#25, ic#246)^)): Message#16;
+            }
+          }
+        }
+        (bubble()^): Void;
+      }
+    }
+    static fn jsonAdapter#99(): JsonAdapter#21<Message#16> {
+      return (upcast(new constructor#96())): JsonAdapter#21<Message#16>;
+    }
+  }
+
+  class CelsiusJsonAdapter#17 extends JsonAdapter#21<Celsius#18> {
+    constructor constructor#102(): CelsiusJsonAdapter#17 {}
+    method encodeToJson#100(x#250: Celsius#18, p#251: JsonProducer#23): Void {
+      x#250.encodeToJson#104(p#251);
+    }
+    method decodeFromJson#101(t#252: JsonSyntaxTree#25, ic#253: InterchangeContext#26): Celsius#18 throws Bubble {
+      return decodeFromJson#105(t#252, ic#253)^;
+    }
+  }
+
+  class Celsius#18 {
+    let degrees#103: Int32;
+    constructor constructor#107(degrees#257: Int32): Celsius#18 {
+      this.degrees#103 = degrees#257;
+    }
+    method encodeToJson#104(p#254: JsonProducer#23): Void {
+      p#254.int32Value#125(this.degrees#103);
+    }
+    static fn decodeFromJson#105(t#255: JsonSyntaxTree#25, ic#256: InterchangeContext#26): Celsius#18 throws Bubble {
+      return new constructor#107(((as(t#255)^): JsonNumeric#131).asInt32#135()^);
+    }
+    static fn jsonAdapter#106(): JsonAdapter#21<Celsius#18> {
+      return (upcast(new constructor#102())): JsonAdapter#21<Celsius#18>;
+    }
+  }
+
+  fn encode#108<T#109>(adapter#258: JsonAdapter#21<T#109>, value#259: T#109): String {
+    let p#261: JsonTextProducer#260 = new constructor#262(omitted);
+    adapter#258.encodeToJson#24(value#259, (upcast(p#261)): JsonProducer#23);
+    return (orelse(p#261.toJsonString#263()^, "bad JSON")): String;
+  }
+
+  fn decode#110<T#111>(adapter#264: JsonAdapter#21<T#111>, text#265: String): T#111 throws Bubble {
+    return adapter#264.decodeFromJson#27(parseJson#266(text#265)^, (upcast(instance#268)): InterchangeContext#26)^;
+  }
+
+  fn roundTrip#112<T#113>(adapter#269: JsonAdapter#21<T#113>, value#270: T#113): Void {
+    let text#271: String = encode#108<T#113>(adapter#269, value#270);
+    let back#272: T#113 = (orelse(decode#110<T#113>(adapter#269, text#271)^, (panic()): T#113)): T#113;
+    let again#273: String = encode#108<T#113>(adapter#269, back#272);
+    ~console#276.log#275((if (%String.eq(again#273, text#271)) text#271 else %String.cat(%String.cat(text#271, " became "), again#273)): String);
+  }
+
+  let shapes#114: List#46<Shape#10>;
+
+  let messages#115: List#46<Message#16>;
+
+  let shape#116: Shape#10;
+
+  let record#117: Record#4;
+
+  init {
+    init ~console#276 = getConsole#283(omitted);
+    roundTrip#112<Point#2>(jsonAdapter#35(), new constructor#36(1, %Int32.neg(2)));
+    roundTrip#112<Record#4>(jsonAdapter#53(), new constructor#54("Ada", true, 1.5, 123456789012i64, (null): String?, (list(new constructor#36(3, 4))): List#46<Point#2>));
+    init shapes#114 = (list((upcast(new constructor#62(2))): Shape#10, (upcast(new constructor#71(3, 4))): Shape#10)): List#46<Shape#10>;
+    roundTrip#112<List#46<Shape#10>>(listJsonAdapter#155<Shape#10>(jsonAdapter#77()), shapes#114);
+    init messages#115 = (list((upcast(new constructor#85("hi"))): Message#16, (upcast(new constructor#93("so long"))): Message#16)): List#46<Message#16>;
+    roundTrip#112<List#46<Message#16>>(listJsonAdapter#155<Message#16>(jsonAdapter#99()), messages#115);
+    roundTrip#112<Celsius#18>(jsonAdapter#106(), new constructor#107(21));
+    init shape#116 = (orelse(decode#110<Shape#10>(jsonAdapter#77(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "height"), "\""), ": 6, "), "\""), "width"), "\""), ": 5}"))^, (panic()): Shape#10)): Shape#10;
+    {
+      if (is(shape#116, Rect#8)) {
+        ~console#276.log#275(%String.cat(%String.cat(%String.cat("rect ", ((downcast(shape#116)): Rect#8).width#66.toString#278(omitted)), "x"), ((downcast(shape#116)): Rect#8).height#67.toString#278(omitted)));
+      } else {
+        ~console#276.log#275("not a rect");
+      }
+    }
+    init record#117 = (orelse(decode#110<Record#4>(jsonAdapter#53(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "name"), "\""), ": "), "\""), "Bo"), "\""), ", "), "\""), "is-active"), "\""), ": false, "), "\""), "score"), "\""), ": 2, "), "\""), "big"), "\""), ": 7, "), "\""), "nickname"), "\""), ": "), "\""), "B"), "\""), ", "), "\""), "points"), "\""), ": []}"))^, (panic()): Record#4)): Record#4;
+    ~console#276.log#275(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(record#117.name#40, " "), record#117.active#41.toString#280()), " "), (value { let subject#281: String? = record#117.nickname#44; (if (isNull(subject#281)) "none" else (nonNull(subject#281)): String): String }): String), " "), record#117.points#50.length#282().toString#278(omitted)));
+    ~console#276.log#275((orelse((value { decode#110<Point#2>(jsonAdapter#35(), %String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "x"), "\""), ": 1}"))^; "decoded" }): String, "no y")): String);
+    ~console#276.log#275((orelse((value { decode#110<Message#16>(jsonAdapter#99(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "kind"), "\""), ": "), "\""), "what"), "\""), ", "), "\""), "text"), "\""), ": "), "\""), "?"), "\""), "}"))^; "decoded" }): String, "no such kind")): String);
+  }
+}

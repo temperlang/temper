@@ -218,9 +218,23 @@ impl Settle {
                             Some((_, NodeKind::Fn)) if !symbol.mutable => {
                                 return Some(Resolved::Decl(decl));
                             }
-                            // Another name for it, as an import makes.
+                            // Another name for a function, as an import
+                            // makes. Another name for a value (`let f =
+                            // field`) is called as the value it holds,
+                            // as its own type here gives it: a null check
+                            // may have narrowed it, and what it was read
+                            // from may have changed since.
                             Some((other, NodeKind::RightName)) if !symbol.mutable && depth < 8 => {
-                                return self.resolve_callee_in(other, depth + 1);
+                                let found = self.resolve_callee_in(other, depth + 1);
+                                if let Some(Resolved::Decl(d)) = found {
+                                    let tree = &self.lib.tree;
+                                    let init = (tree.kind(d) == NodeKind::Let)
+                                        .then(|| core::let_parts(tree, d).2)
+                                        .flatten();
+                                    if init.is_some_and(|i| tree.kind(i) == NodeKind::Fn) {
+                                        return found;
+                                    }
+                                }
                             }
                             _ => {}
                         }

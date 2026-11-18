@@ -13,7 +13,7 @@ breaking change, and 🆕 a new feature.
 - [0.2.0](0.2.0.md)
 - [0.0.1](0.0.1.md)
 
-These are Temper's release notes, from its first compiler's repository,
+These are Temper's release notes, from its earlier releases' repository,
 where each release gathered the notes written since the last. Release
 notes keep the syntax of their time, so their examples aren't checked.
 

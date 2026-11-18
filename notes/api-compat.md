@@ -111,7 +111,8 @@ effects. File names keep Temper's directory names.
 - Interfaces: classes too; implementers use `extends type(I, J)`, which copies
   default methods; `instanceof` works.
 - Statics: `static g()`, static properties as private static field plus
-  `static get`.
+  `static get`, so assigning one throws. (Tempest stores the value in a
+  module `let`, `Class$name`, which the init block outside the class sets.)
 - Generics only in JSDoc; nullable is `T | null`; failure is `throw`;
   promises are native; async uses the runtime's adapter.
 
@@ -150,7 +151,9 @@ package `__init__.py` does `from .<root> import *` and imports every module.
 
 **Naming.** Values, functions, methods and properties are snake_case; types
 keep their case. Reserved words get `_` (`from_`; `to` stays `to`). Internal
-top levels get a leading `_`.
+top levels get a leading `_`. Tempest differs: parameters and locals named
+like builtins keep their names (`help=`, not Kotlin's `help_=`)
+([kotlin-differences.md](kotlin-differences.md)).
 
 **Keep:** module layout, names after snake_case conversion, constructor
 keyword names, properties, `Future`, exception types.
@@ -361,8 +364,7 @@ Ordered by value; each needs the team's sign-off.
    - **Async, as built (2026-11-05):** `temper_core::Promise<T>`
      implements `std::future::Future<Output = Result<T>>`, polled with
      only `std::task`: wakers kept beside the waiters and woken on
-     resolve (vendored patch `0003-rust-promise-future.patch`, to offer
-     upstream). It adds no bounds, so `Send` follows the contents, as an
+     resolve (runtime [change 0003](../docs/internals/detail/06-backends.md#changes-from-kotlin-tempers-runtimes)). It adds no bounds, so `Send` follows the contents, as an
      actor model would want ([actors.md](actors.md)): a `Promise<T>` is
      `Send + 'static` and `Unpin` when `T` is, which today's `Arc` output
      makes it, and a `Promise<Rc<i32>>` still awaits on one thread
@@ -469,3 +471,12 @@ getter, and C++'s single namespace if item 9 is declined.
    `rust-version`, so exact pins stop conflicting in users' dependency
    graphs. Raising the MSRV changes what users need, so it's a
    compatibility change to announce; Kotlin's be-rust would follow.
+12. **Python: parameters keep builtins' names** (done in tempest,
+   2026-11-17, the user's decision). Kotlin's give a parameter named
+   for a builtin a `_`, so a constructor's parameters, which callers
+   may pass by name, read `Option(help_=…)`. Tempest's keep the name
+   (`help=`), escaping only keywords, and reach a builtin a function's
+   own names hide through `builtins`, so the API never depends on a
+   body ([kotlin-differences.md](kotlin-differences.md), "Python
+   parameters named like builtins"). Callers using `help_=` must use
+   `help=`; Kotlin's be-py would follow.

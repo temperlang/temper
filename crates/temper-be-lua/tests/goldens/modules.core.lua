@@ -14,4 +14,39 @@ local function share(n, d)
   return t
 end
 
-return { share = share }
+---@class modules.core.Ratio
+---@field n integer
+---@field d integer
+---@field eq fun(self: modules.core.Ratio, other: modules.core.Ratio): boolean
+
+---@class modules.core.Ratio.type: temper.Type
+---@operator call: modules.core.Ratio
+local Ratio = temper.type("modules.core.Ratio")
+
+---@param this modules.core.Ratio
+---@param n integer
+---@param d integer
+function Ratio.constructor(this, n, d)
+  this.n = n
+  this.d = d
+end
+
+---@param this modules.core.Ratio
+---@param other modules.core.Ratio
+---@return boolean
+function Ratio.methods.eq(this, other)
+  return temper.int32_mul(this.n, other.d) == temper.int32_mul(other.n, this.d)
+end
+
+---@param n integer
+---@param d integer
+---@return modules.core.Ratio|temper.Null
+local function ratioOf(n, d)
+  if d == 0 then
+    return temper.null
+  else
+    return Ratio(n, d)
+  end
+end
+
+return { share = share, Ratio = Ratio, ratioOf = ratioOf }

@@ -318,9 +318,14 @@ export class Escaper extends type() {
   applyString = /** @type {any} */ (undefined);
 }
 
+/** @type {TextEscaper} */
+let TextEscaper$instance;
+
 export class TextEscaper extends type(Escaper) {
-  /** @type {TextEscaper} */
-  static instance;
+  /** @returns {TextEscaper} */
+  static get instance() {
+    return TextEscaper$instance;
+  }
 
   /**
    * @param {string} x
@@ -331,9 +336,14 @@ export class TextEscaper extends type(Escaper) {
   }
 }
 
+/** @type {QuoteEscaper} */
+let QuoteEscaper$instance;
+
 export class QuoteEscaper extends type(Escaper) {
-  /** @type {QuoteEscaper} */
-  static instance;
+  /** @returns {QuoteEscaper} */
+  static get instance() {
+    return QuoteEscaper$instance;
+  }
 
   /**
    * @param {string} x
@@ -529,8 +539,8 @@ export class Quoting extends type(ContextualAutoescapingAccumulator) {
   }
 }
 
-TextEscaper.instance = new TextEscaper();
-QuoteEscaper.instance = new QuoteEscaper();
+TextEscaper$instance = new TextEscaper();
+QuoteEscaper$instance = new QuoteEscaper();
 console.log(greet("Ann", "Bob"));
 console.log(branch(true, "a"));
 console.log(branch(false, "b"));

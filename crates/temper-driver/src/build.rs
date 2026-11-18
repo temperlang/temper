@@ -1,4 +1,4 @@
-//! `tempest build`: every library under a work root, translated by each
+//! `temper build`: every library under a work root, translated by each
 //! backend asked for, written to `temper.out` as Kotlin Temper's `temper
 //! build` lays it out.
 //!
@@ -35,7 +35,7 @@
 //!   reports each, then translates and writes the library anyway, each
 //!   error failing where it runs, as `bubble()` does (tmpl's `Error`), so
 //!   its good parts work in every language. [`Built::errors`] counts
-//!   them, and `tempest build` exits with 1 when there are any.
+//!   them, and `temper build` exits with 1 when there are any.
 //! - **What isn't covered yet** fails that library, with the first reason
 //!   on a line of its own (`LIBRARY: BACKEND: why`), and the build goes on
 //!   with the others. With `--verbose`, every gap in tmpl's translation
@@ -54,6 +54,7 @@ use temper_frontend::project::{LibrarySources, library_of, load_library};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::gaps;
+use temper_tmpl::Tested;
 use temper_tmpl::host::HostFile;
 use temper_tmpl::naming::Interface;
 use temper_tmpl::{Backend, Program};
@@ -98,6 +99,24 @@ pub struct Built {
     /// Each library with errors in its own files, and how many, whether
     /// or not it built.
     pub errors: Vec<(String, usize)>,
+    /// What each library's config says, by its name.
+    pub metadata: Vec<(String, temper_tmpl::Metadata)>,
+}
+
+impl Built {
+    /// A library that built, for a backend's tools, with what its config
+    /// says.
+    pub fn tested(&self, name: &str, tests: usize) -> Tested {
+        let metadata = (self.metadata.iter())
+            .find(|(n, _)| n == name)
+            .map(|(_, m)| m.clone())
+            .unwrap_or_default();
+        Tested {
+            name: name.to_string(),
+            tests,
+            metadata,
+        }
+    }
 }
 
 impl Built {
@@ -207,7 +226,7 @@ pub fn build(
     }
     for &backend in backends {
         let dir = temper_out.join(backend.name);
-        if let Err(why) = write_runtime(&dir, backend.runtime) {
+        if let Err(why) = write_runtime(&dir, backend) {
             results.push(("temper-core".into(), backend.name, Err(why)));
         }
     }
@@ -229,10 +248,17 @@ pub fn build(
             let _ = writeln!(err, "{library}: {}", error_count(*count));
         }
     }
+    let metadata = (libraries.iter())
+        .map(|l| {
+            let exports = l.config.exports.clone();
+            (l.config.name.clone(), temper_tmpl::Metadata { exports })
+        })
+        .collect();
     Some(Built {
         results,
         tests,
         errors,
+        metadata,
     })
 }
 
@@ -317,12 +343,23 @@ fn program(
     }
     // The libraries it uses take their configs' versions, for package
     // files' dependencies.
+    // Their configs' metadata, and its own, for package files and each
+    // backend's names for them.
+    let metadata = |config: &temper_frontend::project::Config| temper_tmpl::Metadata {
+        exports: config.exports.clone(),
+    };
+    program.metadata = vec![(library.config.name.clone(), metadata(&library.config))];
     for uses in &mut program.uses {
         let name = program.decls.get(uses.decl).name;
         let name = program.strings.get(name);
         let config = all.iter().find(|l| l.config.name == name);
         if let Some(version) = config.and_then(|l| l.config.get("version")) {
             uses.version = version.to_string();
+        }
+        if let Some(config) = config {
+            program
+                .metadata
+                .push((name.to_string(), metadata(&config.config)));
         }
     }
     // Its host code, by paths relative to its root.
@@ -358,14 +395,17 @@ fn write_library(dir: &Path, library: &str, files: &[(String, String)]) -> Resul
 }
 
 /// Writes a backend's runtime as `temper-core` in its directory, replacing
-/// what was there, as Kotlin does.
-fn write_runtime(dir: &Path, files: &[(&str, &str)]) -> Result<(), String> {
+/// what was there, as Kotlin does, naming the build's version.
+fn write_runtime(dir: &Path, backend: &temper_tmpl::Backend) -> Result<(), String> {
     let core = dir.join("temper-core");
     if core.exists() {
         std::fs::remove_dir_all(&core).map_err(|e| format!("{}: {e}", core.display()))?;
     }
-    let pairs: Vec<(String, String)> = (files.iter())
-        .map(|(p, t)| (format!("temper-core/{p}"), t.to_string()))
+    let version = temper_tmpl::version::current();
+    let files =
+        temper_tmpl::version::fill_runtime(backend.runtime, backend.runtime_version, version);
+    let pairs: Vec<(String, String)> = (files.into_iter())
+        .map(|(p, t)| (format!("temper-core/{p}"), t))
         .collect();
     write_library(dir, "temper-core", &pairs)
 }

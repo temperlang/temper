@@ -710,6 +710,7 @@ error 1484..1498: Cannot assign to String from Int32
 error 1526..1536: Cannot assign to Map<Int32, Int32> from Map<String, Int32>
 error 1604..1610: Cannot bubble from a function without Bubble in its return type
 error 1623..1633: Cannot bubble from a function without Bubble in its return type
+error 1702..1711: No member length in List<Int32>?
 
 === builtin generic methods' own type parameters are solved per call
 // `map<O>`, `reduceFrom<O>`, `reduceFromIndex<O>` and `Mapped`'s
@@ -821,9 +822,7 @@ error 1608..1642: Cannot assign to Int32 from List<String>
 
 === what may bubble: methods of builtin types, arity, misfits and operators
 // Kotlin also says "Cannot bubble" for c9, whose constant argument fails
-// when it folds the call, and "Cannot assign to String from StringIndex"
-// for d4, a core class tempest doesn't type yet; and counts `this` in
-// d2's arity.
+// when it folds the call, and counts `this` in d2's arity.
 let c1(x: Int64): Int { x.toInt32Unsafe() + x.toFloat64() }
 let c2(x: Int64): Float64 { x.toFloat64() }
 let c3(x: Int64): Int { 1 + x.toInt32() }
@@ -923,35 +922,85 @@ let e8(s: String): Boolean { !(s.toInt32()) }
       (Let ^s:41 String)
       Boolean
       (Block (Call ! (Call (Call . s:41 \toInt32)))))))
-error 278..291: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
-error 322..335: Cannot bubble from a function without Bubble in its return type
-error 366..377: Cannot bubble from a function without Bubble in its return type
-error 410..421: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 404..421: Cannot assign to Int32 from Float64
-error 479..482: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 473..482: Cannot assign to Int32 from Float64
-error 514..519: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 507..520: Cannot assign to Int32 from Float64
-error 552..563: Cannot bubble from a function without Bubble in its return type
-error 582..604: Cannot bubble from a function without Bubble in its return type
-error 684..707: Cannot bubble from a function without Bubble in its return type
-error 735..752: Wrong number of arguments.  Expected 1
-error 745..748: Expected subtype of Int32?, but got Float64
-error 915..922: Wrong number of arguments.  Expected 1
-error 949..952: Expected subtype of Int32, but got String
-error 947..953: Cannot bubble from a function without Bubble in its return type
-error 984..988: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 978..988: Cannot assign to Int32 from Float64
-error 1017..1021: Cannot bubble from a function without Bubble in its return type
-error 1054..1058: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 1046..1059: Cannot assign to Int32 from Float64
-error 1092..1096: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 1086..1096: Expected subtype of Int32, but got Float64
-error 1084..1097: Cannot bubble from a function without Bubble in its return type
-error 1141..1152: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 1135..1152: Expected subtype of Int32?, but got Float64
-error 1125..1153: Cannot bubble from a function without Bubble in its return type
-error 1187..1198: Expected subtype of Boolean, but got Int32
+error 178..191: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
+error 222..235: Cannot bubble from a function without Bubble in its return type
+error 266..277: Cannot bubble from a function without Bubble in its return type
+error 310..321: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 304..321: Cannot assign to Int32 from Float64
+error 379..382: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 373..382: Cannot assign to Int32 from Float64
+error 414..419: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 407..420: Cannot assign to Int32 from Float64
+error 452..463: Cannot bubble from a function without Bubble in its return type
+error 482..504: Cannot bubble from a function without Bubble in its return type
+error 584..607: Cannot bubble from a function without Bubble in its return type
+error 635..652: Wrong number of arguments.  Expected 1
+error 645..648: Expected subtype of Int32?, but got Float64
+error 746..751: Cannot assign to String from StringIndex
+error 815..822: Wrong number of arguments.  Expected 1
+error 849..852: Expected subtype of Int32, but got String
+error 847..853: Cannot bubble from a function without Bubble in its return type
+error 884..888: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 878..888: Cannot assign to Int32 from Float64
+error 917..921: Cannot bubble from a function without Bubble in its return type
+error 954..958: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 946..959: Cannot assign to Int32 from Float64
+error 992..996: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 986..996: Expected subtype of Int32, but got Float64
+error 984..997: Cannot bubble from a function without Bubble in its return type
+error 1041..1052: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 1035..1052: Expected subtype of Int32?, but got Float64
+error 1025..1053: Cannot bubble from a function without Bubble in its return type
+error 1087..1098: Expected subtype of Boolean, but got Int32
+
+=== what may bubble: constructors that say so
+// Kotlin doesn't fold a constructor's call, so reports one with constant
+// arguments too; not one with the wrong number of arguments.
+class C {
+  private var q: Int = 0;
+  public constructor(a: Int): Void throws Bubble {
+    if (a < 0) { bubble() }
+    q = a;
+  }
+}
+class D(public y: Int) {}
+let n1(): C { new C(1) }
+let n2(a: Int): C { new C(a) }
+let n3(a: Int): C? { do { new C(a) } orelse null }
+let n4(a: Int): C throws Bubble { new C(a) }
+let n5(): D { new D(1) }
+let n6(): C { new C(1, 2) }
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Var private ^q:9 Int 0)
+    (Constructor
+      ^constructor:10
+      (Fn
+        (Let ^a:11 Int)
+        (Call throws Void Bubble)
+        (Block
+          (If (Call < a:11 0) (Block (Fail)) (Block))
+          (Assign q:9 a:11)
+          #void))))
+  (Class ^D:1 (Param ^y:13 Int))
+  (Let ^n1:2 (Fn C:0 (Block (Call new C:0 1))))
+  (Let ^n2:3 (Fn (Let ^a:14 Int) C:0 (Block (Call new C:0 a:14))))
+  (Let
+    ^n3:4
+    (Fn
+      (Let ^a:15 Int)
+      (Call ? C:0)
+      (Block (Orelse (Block (Call new C:0 a:15)) null))))
+  (Let
+    ^n4:5
+    (Fn (Let ^a:16 Int) (Call throws C:0 Bubble) (Block (Call new C:0 a:16))))
+  (Let ^n5:6 (Fn D:1 (Block (Call new D:1 1))))
+  (Let ^n6:7 (Fn C:0 (Block (Call new C:0 1 2)))))
+error 308..316: Cannot bubble from a function without Bubble in its return type
+error 339..347: Cannot bubble from a function without Bubble in its return type
+error 485..496: Wrong number of arguments.  Expected 1
 
 === what may bubble in operators' arguments
 // Kotlin doesn't look into an operator's arguments that don't fit the
@@ -1041,9 +1090,9 @@ let b4(n: Int): Float64 { mi(n) ** mf(n) }
 error 507..510: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, Int32]
 error 513..518: Cannot bubble from a function without Bubble in its return type
 error 554..559: Actual arguments do not match signature: (String, String) -> Boolean expected [String, String], but got [String, Int32]
-error 594..595: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, Int32]
+error 594..595: K does not support infix `==`; give it a method marked `@operator("==")`
 error 599..604: Cannot bubble from a function without Bubble in its return type
-error 639..649: Actual arguments do not match signature: (Int32, Int32) -> Boolean expected [Int32, Int32], but got [K, K]
+error 639..649: K does not support infix `==`; give it a method marked `@operator("==")`
 error 639..644: Cannot bubble from a function without Bubble in its return type
 error 682..685: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, String]
 error 674..679: Cannot bubble from a function without Bubble in its return type

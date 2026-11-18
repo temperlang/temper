@@ -1,6 +1,8 @@
 # Kotlin Temper's temper.out for the functional tests tempest translates,
 # from compat/kotlin_out.py: library, backend, then a file or a
-# package file's field.
+# package file's field. Recorded at Kotlin Temper 69f1a5b0, its
+# last sync; once tempest replaces Kotlin Temper, there's no Kotlin
+# output to re-record this from.
 basics py file basics/basics/__init__.py
 basics py file basics/basics/__init__.py.map
 basics py file basics/basics/basics.py
@@ -782,6 +784,8 @@ private-method java file private-method/src/main/java/private_method/PrivateMeth
 private-method java file private-method/src/main/java/private_method/PrivateMethodMain.java.map
 private-method java file private-method/src/main/java/private_method/Sink.java
 private-method java file private-method/src/main/java/private_method/Sink.java.map
+private-method java file private-method/src/main/java/private_method/Tally.java
+private-method java file private-method/src/main/java/private_method/Tally.java.map
 private-method java file private-method/src/main/java/private_method/TenSink.java
 private-method java file private-method/src/main/java/private_method/TenSink.java.map
 private-method java meta group private_method
@@ -1075,6 +1079,8 @@ private-method csharp file private-method/src/Note.cs.map
 private-method csharp file private-method/src/PrivateMethod.csproj
 private-method csharp file private-method/src/PrivateMethodGlobal.cs
 private-method csharp file private-method/src/PrivateMethodGlobal.cs.map
+private-method csharp file private-method/src/Tally.cs
+private-method csharp file private-method/src/Tally.cs.map
 private-method csharp file private-method/src/TenSink.cs
 private-method csharp file private-method/src/TenSink.cs.map
 private-method csharp meta name PrivateMethod

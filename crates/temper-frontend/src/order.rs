@@ -35,6 +35,29 @@ pub fn sort_top_levels(
     module: ScopeId,
     roots: &[NodeId],
 ) -> Vec<NodeId> {
+    let order = top_level_order(tree, scopes, module, roots);
+    // Each file keeps its own statements, in the new order.
+    let mut file_of = HashMap::new();
+    for (f, &root) in roots.iter().enumerate() {
+        for &c in tree.children(root) {
+            file_of.insert(c, f);
+        }
+    }
+    for (f, &root) in roots.iter().enumerate() {
+        let mine: Vec<NodeId> = order.iter().copied().filter(|n| file_of[n] == f).collect();
+        tree.set_children(root, &mine);
+    }
+    order
+}
+
+/// The module's top-level statements, from every file root in turn, in
+/// the order they should run, leaving the tree as it is.
+pub(crate) fn top_level_order(
+    tree: &Tree,
+    scopes: &Scopes,
+    module: ScopeId,
+    roots: &[NodeId],
+) -> Vec<NodeId> {
     let statements: Vec<NodeId> = roots
         .iter()
         .flat_map(|&r| tree.children(r).iter().copied())
@@ -134,16 +157,5 @@ pub fn sort_top_levels(
         }
     }
 
-    // Each file keeps its own statements, in the new order.
-    let mut file_of = HashMap::new();
-    for (f, &root) in roots.iter().enumerate() {
-        for &c in tree.children(root) {
-            file_of.insert(c, f);
-        }
-    }
-    for (f, &root) in roots.iter().enumerate() {
-        let mine: Vec<NodeId> = order.iter().copied().filter(|n| file_of[n] == f).collect();
-        tree.set_children(root, &mine);
-    }
     order
 }

@@ -166,9 +166,6 @@ public final class ReadGlobal {
         int after1 = reportFound("found 1", hay, needle);
         int after2 = reportFound("found 2", hay, needle, after1);
         reportFound("found 3", hay, needle, after2);
-        String hay2 = "time comes for us all";
-        String hay3 = "in the nick of time";
-        String hay4 = "tim";
         reportFound("hay 2", "time comes for us all", needle);
         reportFound("hay 3", "in the nick of time", needle);
         reportFound("hay 4", "my name is tim", needle);

@@ -89,8 +89,16 @@ class _SSub(SI[_T], _Generic[_T]):
 class _Holder(_Generic[_T_2], metaclass=_ABCMeta):
     __slots__ = ()
 
+    @property
+    @_abstractmethod
+    def held(self, /) -> _T_2:
+        ...
 
-class _Labeled(_Holder[_C], _Generic[_L]):
+    def held_and(self, other: _T_2, /) -> _Sequence[_T_2]:
+        return (self.held, other)
+
+
+class _Labeled(_Holder[_T_2], _Generic[_L, _T_2]):
     __slots__ = ()
 
     @_abstractmethod
@@ -98,23 +106,19 @@ class _Labeled(_Holder[_C], _Generic[_L]):
         ...
 
 
-class _LabeledSub(_Labeled[str]):
-    __slots__ = ('_thing',)
-    _thing: _C
+class _LabeledSub(_Labeled[str, _C]):
+    __slots__ = ('_held',)
+    _held: _C
 
-    def __init__(self, /, thing: _C) -> None:
-        self._thing = thing
+    def __init__(self, /, held: _C) -> None:
+        self._held = held
 
     @property
-    def thing(self, /) -> _C:
-        return self._thing
+    def held(self, /) -> _C:
+        return self._held
 
     def label(self, l: str, /) -> str:
-        return f'{l}: {self._thing.x}'
-
-
-class _AllAlone(I):  # pyright: ignore[reportUnusedClass]
-    __slots__ = ()
+        return f'{l}: {self._held.x}'
 
 
 class _High(metaclass=_ABCMeta):
@@ -215,8 +219,10 @@ _console.log(f'Generically, x is {_di.thing.x}.')
 _console.log(f'Genericallier, x is still {_dj.thing.x}.')
 _si: SI[_C] = _SSub(_a)
 _console.log(f'Sealed thing is {_si.thing.x}.')
-_labeled: _Labeled[str] = _LabeledSub(_a)
+_labeled: _Labeled[str, _C] = _LabeledSub(_a)
+_held_and: _Sequence[_C] = _labeled.held_and(_b)
 _console.log(f"Labeled thing is {_labeled.label('first')}.")
+_console.log(f'Held are {_labeled.held.x} and {_list_get(_held_and, 1).x}.')
 _high1: _High = _Low1(11)
 _high1_b: _High = _Low1(12)
 _high1_c: _High = _Low1(12)

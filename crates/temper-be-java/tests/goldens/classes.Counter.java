@@ -17,6 +17,10 @@ final class Counter {
         this.count = value - this.count;
     }
 
+    public void setAdded(int value) {
+        this.count = this.count + value;
+    }
+
     public Counter bump() {
         this.count = this.count + 1;
         this.hidden = this.hidden + 1;

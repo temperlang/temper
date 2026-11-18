@@ -1,5 +1,5 @@
 // Makes editors of std's and core's sources read-only. The language
-// server writes them, without write permission, to `tempest-std-HASH`
+// server writes them, without write permission, to `temper-std-HASH`
 // in the system's temporary directory for go to definition, but VS Code
 // ignores file permissions unless `files.readonlyFromPermissions` is
 // set, and `files.readonlyInclude` globs only match inside a workspace.
@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 
 /** Whether a document is one of the server's copies of std or core. */
 export function isStdCopy(uri: vscode.Uri): boolean {
-  return uri.scheme === "file" && /[\\/]tempest-std-[0-9a-f]{16}[\\/]/.test(uri.fsPath);
+  return uri.scheme === "file" && /[\\/]temper-std-[0-9a-f]{16}[\\/]/.test(uri.fsPath);
 }
 
 export function registerReadonly(context: vscode.ExtensionContext): void {

@@ -279,7 +279,9 @@ New with that round, all Proposed:
     where only tests build or load them (Rust statics under
     `#[cfg(test)]`, test modules elsewhere), keeping init order for
     everything production runs. Proposed (2026-11-03; the user agreed
-    tempest should).
+    tempest should). Built as tmpl's `reach::partition` (test items
+    and a test init that continues the init), which C++ and Rust use
+    (2026-11-18); Python, JS, and Lua next.
 50. **Sanitizers in `tempest test`:** on by default, as a
     backend-neutral test option (`--no-sanitize` turns it off; a
     library's config may too) that each backend interprets as it sees
@@ -303,17 +305,11 @@ New with that round, all Proposed:
     else `clang++`, else `g++`. **Decided (2026-11-04, by the
     user);** built with the Windows and MSVC testing chunk
     ([testing.md](testing.md), "Every backend on every platform").
-51. **Fixes to vendored Kotlin files:** tempest may fix bugs in its
-    copies of Kotlin's runtimes and std when the fix keeps behavior
-    (first: the JS runtime's wrong JSDoc types, so generated code needs
-    no casts). To keep such fixes across re-syncs, each is a patch in
-    `vendor/temper-patches/`, listed in `vendor/temper/SOURCE.md` with
-    its upstream status; `compat/sync_temper.py` applies them after
-    copying, and reports any already upstream (it applies in reverse)
-    so it can be dropped, or any that no longer applies, for a look.
-    Also log each in Kotlin's fix list. **Decided (2026-11-04, by the
-    user);** built (2026-11-04): `sync_temper.py` applies them to a
-    staged copy, so a failure leaves `vendor/temper/` be, and
-    `--check` (in CI) checks the tree has every patch, all listed, and,
-    with a Temper checkout, equals the pinned commit plus the patches,
-    file for file. First patch: `0001-js-runtime-jsdoc-types.patch`.
+51. **Fixes to Kotlin's runtimes and std:** tempest may fix bugs in the
+    runtimes and std it began with from Kotlin Temper when the fix keeps
+    behavior (first: the JS runtime's wrong JSDoc types, so generated
+    code needs no casts). **Decided (2026-11-04, by the user);** kept
+    as patches re-applied on each sync until 2026-11-12, when the
+    copies became tempest's own and syncing ended; the 22 changes are
+    listed in
+    [06-backends.md](../../docs/internals/detail/06-backends.md#changes-from-kotlin-tempers-runtimes).

@@ -46,3 +46,54 @@ impl Checked {
 }
 
 temper_core::impl_any_value_trait!(Checked, []);
+
+struct BuiltinsStruct {
+    hash: i32,
+}
+
+#[derive(Clone)]
+pub struct Builtins(Arc<BuiltinsStruct>);
+
+impl Builtins {
+    pub fn new(hash: i32) -> Builtins {
+        Builtins(Arc::new(BuiltinsStruct { hash }))
+    }
+
+    pub fn get(&self, i: i32) -> i32 {
+        self.0.hash.wrapping_add(i)
+    }
+
+    pub fn set(&self, i: i32) -> i32 {
+        i.wrapping_mul(2)
+    }
+
+    pub fn map(&self, i: i32) -> i32 {
+        i.wrapping_add(1)
+    }
+
+    pub fn format(&self) -> Arc<String> {
+        Arc::new(format!("#{}", self.0.hash))
+    }
+
+    pub fn int(&self) -> i32 {
+        self.0.hash.wrapping_mul(10)
+    }
+
+    pub fn later(&self) -> i32 {
+        self.int().wrapping_add(1)
+    }
+
+    pub fn init(&self) -> i32 {
+        self.0.hash.wrapping_add(3)
+    }
+
+    pub fn print(&self) -> Arc<String> {
+        Arc::new(format!("print {}", self.init()))
+    }
+
+    pub fn hash(&self) -> i32 {
+        self.0.hash
+    }
+}
+
+temper_core::impl_any_value_trait!(Builtins, []);

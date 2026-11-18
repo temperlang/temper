@@ -1,10 +1,10 @@
-//! How C++ runs built libraries' tests, for `tempest test -b cpp`: CMake
+//! How C++ runs built libraries' tests, for `temper test -b cpp`: CMake
 //! (`CMAKE`) on each library's `CMakeLists.txt`, which tempest writes,
 //! in `temper.out/cpp/LIBRARY/build`, building its `LIBRARY-test`
 //! target, its tests with std and the libraries it imports, by `g++` or
 //! whatever CMake finds (`CXX`), two jobs at once, then that program run
 //! in the library's directory, which writes `test-results.xml`, as
-//! Kotlin's `RunCpp` runs its `g++` build. `tempest run -b cpp` builds
+//! Kotlin's `RunCpp` runs its `g++` build. `temper run -b cpp` builds
 //! the `LIBRARY-main` target the same way, quietly, and runs it.
 
 use std::path::Path;

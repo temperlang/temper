@@ -388,7 +388,9 @@ words get a trailing `_` (`from_`); and internal top levels get a
 leading `_`. Its reserved list is Python's keywords plus the builtins
 and runtime names its translator prints. Kotlin compatibility covers
 the public surface only: parameters are positional-only, so their
-names, like locals', are free to be pretty.
+names, like locals', are free to be pretty; but a constructor's may be
+passed by name, and those keep builtins' names, where Kotlin's take a
+`_` (2026-11-17, "Parameters and locals" below).
 
 **Example,** Python:
 
@@ -421,10 +423,18 @@ the Python backend's first variant:
   Liveness is computed inside the pass, not yet a shared analysis.
   Python's checkers give a name one declared type in a function, so
   there two may share only if they have the same type, with or without
-  null (a parameter's default's local, `T`, and the parameter, `T?`),
-  and a local declared inside another's initializer may not share its
-  name, since a walrus assigns it before the other's annotation
-  (`NamingRules::same_type_shares`, 2026-11-02).
+  null (a parameter's default's local, `T`, and the parameter, `T?`,
+  but not a parameter `T` and a later local `T?`, since the parameter's
+  annotation is the name's type, 2026-11-17), and a local declared
+  inside another's initializer may not share its name, since a walrus
+  assigns it before the other's annotation
+  (`NamingRules::same_type_shares`, 2026-11-02). Python's translator
+  then annotates a name bound more than once only where first bound,
+  with its widest type (`Bindings` in temper-be-py). Python also hoists a
+  block value's statements before the statement holding it, so what
+  the value reads stays live until that statement, past every block
+  value in it: `x++ + y++` gets `t` and `t2`, not one `t` read twice
+  (`NamingRules::hoists_block_values`, 2026-11-13).
 - **Module level:** the items, then the init block's locals, which live
   in the module's namespace in Python (so `_x`, private, not Kotlin's
   public `x_1`), claimed exported, connected, and `@keep` first, then
@@ -487,11 +497,53 @@ the Python backend's first variant:
   `_3cc_3bd_3bf_3bc_3b1`, where Kotlin's, after NFKD, is
   `x3bfx301x3bdx3bfx3bcx3b1__2`). Its reserved lists are Lua 5.4's
   keywords (`goto` too, which Kotlin's list leaves out), `_ENV` and
-  `_G`, and what the translator prints (`temper`, `print`, `tostring`,
-  `math`, `require`, `exports`, and `module`), each taking `_`. Its
+  `_G`, Lua's standard globals, 5.1's and LuaJIT's too (`string`,
+  `type`, `error`, `unpack`, `bit`; 2026-11-17, since a module's host
+  code is inlined in it and may reach any of them), and what else the
+  translator prints (`temper`, `exports`, and `with_tostring`), each
+  taking `_`; an export keeps its name as its module's table's key
+  (`NameMap::public`, below). Its
   labels are `goto` targets, as C#'s: `continue` ending the body of a
   loop that a `continue` of its own needs, and `continue_NAME` and
   `break_NAME` for jumps from inner loops, from the same source names.
+- **Members** (2026-11-12, `NamingRules::member_reserved`): a class's
+  or interface's members are escaped against their own lists, not the
+  whole `reserved` set, since a member's name is looked up on its object
+  or class, where the names the translator prints aren't. So a builtin's
+  name stays public API, as Kotlin's (JS `get` and `set`, Python `map`,
+  `hash`, and `format`). Each backend keeps its keywords, plus what a
+  member would really hide or clash with: Python's names printed in a
+  class body (`property`, `staticmethod`, and the builtins its
+  annotations name, as `int` and `str`, which a method defined earlier
+  in the body would hide), JS's `constructor`, Rust's `new`, `clone`,
+  and `clone_boxed`, and, unchanged, Java's (a field obscures a type of
+  its name) and C++'s (a member hides a name in its member functions).
+  Lua's and C#'s are their keywords alone.
+- **Parameters and locals** (2026-11-17, `NamingRules::local_reserved`):
+  where a backend reaches what a function's own names would hide some
+  other way, its parameters and source-named locals are escaped against
+  that list instead of `reserved`; compiler-made locals still avoid all
+  of `reserved`, being free to take another name, and module-level
+  names and members keep theirs. Python's is its keywords (not soft
+  keywords), dunder names, and `self`, so a constructor's parameters,
+  which Python callers may pass by name, keep builtins' names (`help`,
+  `min`, `type`) whatever the body does, and so do locals (`sum`,
+  `next`), which keeps a parameter's default in place (`if max is None:
+  max = 10`). Its translator marks every builtin it prints, in code and
+  in annotations, and where a function or one around it binds the name,
+  prints it through the `builtins` module, imported once under a name
+  nothing else in the module has (`_builtins.len(items)`); elsewhere
+  builtins stay bare. Its imports already make way for any
+  declaration's name, so a parameter named for a runtime helper keeps
+  its name too. Other backends set none.
+- **Exports' public names** (2026-11-17, `NameMap::public`): an
+  export's name as its module's table or namespace keys it, escaped
+  only by `member_reserved`, as a member's is, where its own name
+  escapes further; dependents read it from the `Interface` beside the
+  name they bind. Lua's module tables use it (`return { string =
+  string_ }`), since a field hides nothing; where the binding is the
+  key (Python's module attributes) it goes unused. Two exports whose
+  public names collide clash.
 - **Not named:** labels (Python prints none), and core's declarations
   (the connection table's names).
 - **With modules** (2026-10-30): other libraries' declarations (std's

@@ -3,7 +3,7 @@
 //! generic types' (`Listed`, `List`, `ListBuilder`, `Pair`, `Mapped`,
 //! `Map`, and `MapBuilder`), those that take functions, and the string
 //! indices', `StringBuilder`'s, `Empty`'s, `Deque`'s, and
-//! `DenseBitVector`'s, checked against the vendored `core.temper`: each
+//! `DenseBitVector`'s, checked against `core.temper`: each
 //! member's name, kind, parameters (names, types, and which are optional),
 //! result, bubbling, and `@connected` mark. Like the frontend's
 //! `builtin_supertypes_are_cores`, it reads `core.temper` as text, so this
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use temper_tmpl::{DeclKind, Facts, Profile, Program, text, validate};
 
 const FIXTURE: &str = include_str!("fixtures/core.tmpl");
-const CORE: &str = include_str!("../../../vendor/temper/core/core.temper");
+const CORE: &str = include_str!("../../../lib/core/core.temper");
 
 /// A member as `core.temper` declares it.
 #[derive(Debug, PartialEq)]

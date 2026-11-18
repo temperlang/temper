@@ -130,6 +130,75 @@ public final class BubbleGlobal {
         return t4 + t5;
     }
 
+    static int unreachableInt() {
+        throw new AssertionError("panic");
+    }
+
+    static <T> T failAs(T fallback) {
+        throw Core.bubble();
+    }
+
+    static void bail() {
+        throw Core.bubble();
+    }
+
+    static @Nullable String noName() {
+        return null;
+    }
+
+    static void stop() {
+        throw new AssertionError("panic");
+    }
+
+    static int half(int n) {
+        if (n % 2 != 0) {
+            bail();
+            throw new AssertionError("panic");
+        }
+        if (n < 0) {
+            return failAs(n);
+        } else {
+            return n / 2;
+        }
+    }
+
+    static int pick(boolean b) {
+        if (b) {
+            return 1;
+        } else {
+            return unreachableInt();
+        }
+    }
+
+    static @Nullable String named(boolean b) {
+        if (b) {
+            return "named";
+        } else {
+            return noName();
+        }
+    }
+
+    static int chosen(boolean b) {
+        int x;
+        if (b) {
+            x = 3;
+            console.log("chosen");
+        } else {
+            unreachableInt();
+            throw new AssertionError("panic");
+        }
+        return x;
+    }
+
+    static String shout(@Nullable String s) {
+        if (s == null) {
+            stop();
+            throw new AssertionError("panic");
+        }
+        String t = s;
+        return t + "!";
+    }
+
     static void branch(int a, int b) {
         String c = a == 0 ? (b == 0 ? "00" : b == 1 ? "01" : b == 2 ? "02" : "0x") : a == 1 ? "1x" : a == 2 ? "2x" : a == 3 ? "3x" : "xx";
         console.log("branch(" + a + ", " + b + ") -> " + c);
@@ -163,6 +232,33 @@ public final class BubbleGlobal {
         console.log(t3 + isNone(t4));
         console.log(viaOrElse(2));
         console.log(viaOrElse(12));
+        String t5 = pick(true) + " ";
+        @Nullable String subject = named(true);
+        String t6 = t5 + (subject == null ? "-" : subject) + " ";
+        @Nullable String subject2 = named(false);
+        console.log(t6 + (subject2 == null ? "null" : subject2));
+        int t7;
+        try {
+            t7 = half(4);
+        } catch (RuntimeException ignored4) {
+            t7 = -1;
+        }
+        String t8 = t7 + " ";
+        int t9;
+        try {
+            t9 = half(3);
+        } catch (RuntimeException ignored5) {
+            t9 = -1;
+        }
+        String t10 = t8 + t9 + " ";
+        int t11;
+        try {
+            t11 = half(-2);
+        } catch (RuntimeException ignored6) {
+            t11 = -1;
+        }
+        console.log(t10 + t11);
+        console.log(chosen(true) + " " + shout("hey"));
         branch(0, 2);
         branch(2, 0);
     }

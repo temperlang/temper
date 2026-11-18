@@ -14,6 +14,11 @@ public static class HelpersGlobal
         return x * 2;
     }
 
+    public static int IntDoubled(int x)
+    {
+        return Twice(x);
+    }
+
     public static int Bump()
     {
         lock (moduleLock)

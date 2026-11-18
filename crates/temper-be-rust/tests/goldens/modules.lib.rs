@@ -1,6 +1,10 @@
+pub mod client;
 pub mod core;
 pub mod helpers;
+pub mod machine;
 mod r#mod;
+pub mod parts;
+pub mod state;
 mod support;
 
 pub use r#mod::*;
@@ -10,10 +14,15 @@ pub use r#mod::*;
 pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {
     support::CONFIG.get_or_init(|| config.unwrap_or_default());
     support::initializing(|| -> temper_core::Result<()> {
+        temper_std::init(Some(support::config().clone()))?;
         helpers::deep::init()?;
         helpers::init()?;
         core::init()?;
+        state::init()?;
+        parts::regex::init()?;
+        machine::init()?;
         r#mod::init()?;
+        client::init()?;
         Ok(())
     })?;
     Ok(support::config().runner().clone())

@@ -136,6 +136,24 @@ pub enum Message {
     /// An override narrower than what it overrides: the class, the member,
     /// its visibility, and the type declaring the overridden one.
     IncompatibleVisibility(String, String, String, String),
+    /// A property, or a getter overriding one, narrower than what it
+    /// overrides: the type declaring that.
+    OverrideLowersVisibility(String),
+    /// A type parameter of a sealed interface's direct subtype that isn't
+    /// one of the type arguments it gives the interface: the subtype.
+    SealedSubtypeTypeParam(String),
+    /// `static get p` or `static set p`: `get` or `set`, and the name.
+    StaticAccessor(String, String),
+    /// A class's constructor after its first, as a class has one.
+    SeveralConstructors,
+    /// A header parameter, `class C(x: Int)`, beside an explicit
+    /// constructor: the parameter.
+    InputWithConstructor(String),
+    /// `@connected(x)` with `x` not a list of backend names: its text.
+    ConnectedBackendsNotNames(String),
+    /// A function that lists backends in `@connected([…])` without a
+    /// Temper body for the others.
+    ConnectedBackendsNeedBody,
     /// An override whose signature differs from what it overrides: the
     /// class, the member as [`Message::IncompatibleVisibility`] names it,
     /// its signature, the one it should have, and the supertype.
@@ -152,6 +170,13 @@ pub enum Message {
     /// with no constructor, that has no initializer, as Kotlin reports
     /// the latter.
     PropertyNotInitializedInConstructor(String),
+    /// A local read where some path to it doesn't assign it, as Kotlin
+    /// Temper's `UseBeforeInitialization`, without its paths.
+    UseBeforeInitialization(String),
+    /// An exported declaration whose public signature names a type of its
+    /// module that isn't exported, as Kotlin Temper's
+    /// `ExportNeedsNonExported`.
+    ExportNeedsNonExported(String),
     /// Assigning a member that isn't a `var`: the member, its class.
     IncompatibleUsage(String, String),
     /// A value of the wrong type stored: the target's type, the value's.
@@ -164,17 +189,38 @@ pub enum Message {
     ExpectedValueOfType(String, String),
     /// A `Void` value stored or passed. Kotlin's `ExpectedNonVoid`.
     VoidAsValue,
+    /// `Never` without the type it stands for, which Kotlin Temper
+    /// rejects only where it's used, with odd messages ("Cannot translate
+    /// Never").
+    BareNever,
     /// A call with too few or too many arguments: how many parameters.
     ArityMismatch(usize),
     /// `object.key` where `object`'s type has no member `key`: the key
     /// and the type. Kotlin's `BecauseNoSuchMember`.
     NoMember(String, String),
+    /// A private member used outside its class: the member and the class.
+    /// Kotlin's `MemberNotPubliclyAccessible`.
+    NotPubliclyAccessible(String, String),
+    /// A static member named bare, not as `C.name`. Kotlin's
+    /// `StaticMemberNeedsQualified`.
+    StaticNeedsTypeName,
+    /// An assignment to a static member, even a `var`, which tmpl has no
+    /// form for: the member and its class. Kotlin's
+    /// `CannotAssignStaticMember`.
+    CannotAssignStatic(String, String),
     /// A function without a return type where nothing gives it one.
     MissingReturnType,
     /// Arguments that don't fit the variant of a builtin that a call
     /// picks: the variant, the types it wants, and the arguments'. Kotlin's
     /// `SignatureInputMismatch`.
     SignatureMismatch(String, String, String),
+    /// An operator with no meaning for its first operand's class or
+    /// interface, which has no method marked `@operator` for it: the
+    /// type, the operator as written, and the one to mark, `==` or
+    /// `<=>`. Kotlin Temper reports "Actual arguments do not match
+    /// signature" against `Int32`'s variant; this is the wording of
+    /// temperlang/temper#515.
+    NoSuchOperator(String, String, &'static str),
     /// A method a class inherits from more than one supertype, none
     /// overriding the others: the inputs, `this` first, and each one's
     /// signature. Kotlin's `NoCalleeMatching`.
@@ -216,6 +262,9 @@ pub enum Message {
     UserConnectedClassBackendsNeedBodies(String),
     /// Ours: a regex literal that doesn't parse, and why.
     InvalidRegex(String),
+    /// A problem generating `@json` members ([`crate::json`]), as Kotlin's
+    /// `JsonInteropMessage` words it.
+    JsonInterop(String),
     /// A problem a content tag's library reported while working out its
     /// contexts at compile time ([`crate::autoescape`]). Kotlin's
     /// `ContextAutoescCalloutMessage`.
@@ -281,10 +330,13 @@ impl Message {
         matches!(
             self,
             Message::CannotAssign(..)
+                | Message::BareNever
+                | Message::ExportNeedsNonExported(..)
                 | Message::ExpectedSubType(..)
                 | Message::ExpectedValueOfType(..)
                 | Message::IncompatibleSignature(..)
                 | Message::IncompatibleVisibility(..)
+                | Message::OverrideLowersVisibility(..)
         )
     }
 
@@ -350,6 +402,27 @@ impl Message {
                 "Type {class} has method {member} but its visibility is {visibility} which is \
                  narrower than the method it overrides in {from}"
             ),
+            Message::OverrideLowersVisibility(from) => {
+                format!("Override has lower visibility than in {from}")
+            }
+            Message::SealedSubtypeTypeParam(sub) => {
+                format!("Cannot introduce type parameters in sealed subtype {sub}")
+            }
+            Message::StaticAccessor(kind, name) => {
+                format!("`static {kind} {name}` is not supported; use a static method instead")
+            }
+            Message::SeveralConstructors => "A class can have only one constructor; \
+                for other ways to make instances, use a static method or an object literal"
+                .to_string(),
+            Message::InputWithConstructor(name) => {
+                format!("Constructor input {name} specified but there is already a constructor")
+            }
+            Message::ConnectedBackendsNotNames(text) => format!(
+                "@connected expects a list of backend names, like [\"cpp\", \"rust\"], not {text}"
+            ),
+            Message::ConnectedBackendsNeedBody => "A @connected function that lists backends \
+                                                   needs a Temper body for the backends not listed"
+                .into(),
             Message::IncompatibleSignature(class, member, sig, wanted, from) => format!(
                 "Type {class} has method {member} with signature {sig}, but it should be \
                  {wanted} to correctly override from {from}"
@@ -374,6 +447,12 @@ impl Message {
             Message::PropertyNotInitializedInConstructor(name) => {
                 format!("Property {name} not initialized in constructor")
             }
+            Message::UseBeforeInitialization(name) => {
+                format!("{name} is not initialized along branches")
+            }
+            Message::ExportNeedsNonExported(name) => {
+                format!("Export depends publicly on non-exported symbol {name}")
+            }
             Message::IncompatibleUsage(member, class) => {
                 format!("Member {member} defined in {class} incompatible with usage")
             }
@@ -385,11 +464,24 @@ impl Message {
                 format!("Expected value of type {expected} not {got}")
             }
             Message::VoidAsValue => "Void expressions cannot be used as values".into(),
+            Message::BareNever => {
+                "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
+            }
             Message::ArityMismatch(n) => format!("Wrong number of arguments.  Expected {n}"),
             Message::NoMember(key, t) => format!("No member {key} in {t}"),
+            Message::NotPubliclyAccessible(key, class) => {
+                format!("Member {key} defined in {class} not publicly accessible")
+            }
+            Message::StaticNeedsTypeName => "Type name required for accessing static member".into(),
+            Message::CannotAssignStatic(member, class) => format!(
+                "Cannot assign to static member {member} of {class}; static members are only initialized at their declaration"
+            ),
             Message::MissingReturnType => "Explicit return type required".into(),
             Message::SignatureMismatch(sig, expected, got) => format!(
                 "Actual arguments do not match signature: {sig} expected {expected}, but got {got}"
+            ),
+            Message::NoSuchOperator(ty, op, method) => format!(
+                "{ty} does not support infix `{op}`; give it a method marked `@operator(\"{method}\")`"
             ),
             Message::TypeFormalBound(formal, actual, bound) => format!(
                 "Type formal <{formal}> cannot bind to {actual} which does not fit upper bounds [{bound}]"
@@ -457,9 +549,10 @@ impl Message {
                  for the backends not listed"
             ),
             Message::InvalidRegex(why) => format!("Invalid regex: {why}"),
+            Message::JsonInterop(text) => text.clone(),
             Message::ContentTag(problem) => format!("content tag reported:{problem}"),
             Message::TestsInRepl => "Tests don't run in the REPL: write them in a library's \
-                                     files, and run tempest test"
+                                     files, and run temper test"
                 .into(),
             Message::Unsupported(what) => format!("Not supported yet: {what}"),
             Message::NeverSettled(chain) => format!("Never settled, waiting on {chain}"),
@@ -517,6 +610,11 @@ pub struct Library {
     pub connected: std::collections::HashMap<NodeId, Connected>,
     /// Declarations marked `@keep`, which host code may use.
     pub kept: std::collections::HashSet<NodeId>,
+    /// Declarations marked `@keepTest`, which tests' host code may use.
+    pub kept_for_tests: std::collections::HashSet<NodeId>,
+    /// Whether every top-level declaration is kept, as if marked
+    /// `@keep`: the REPL's, since any later input may use one.
+    pub keep_all: bool,
     /// Regex literals without interpolations, as the calls that compile
     /// them, which the interpreter compiles once and keeps
     /// ([`crate::interp`]): a compiled `Regex` can't change, so each run
@@ -640,8 +738,39 @@ impl Library {
         FileId(self.files.len() as u32 - 1)
     }
 
+    /// Parses Temper source that the compiler generated, as `@json`'s
+    /// members ([`crate::json`]), and adds its tree, every node spanned at
+    /// `span` with `like`'s origin, returning its root block. `subst` may
+    /// stand a node in for a name node or a symbol, given its kind
+    /// (`Value` for a symbol) and text: a resolved name, a value, or a
+    /// copy of the user's type. `Err` has the parse's messages, a bug in
+    /// what generated the source.
+    pub(crate) fn add_fragment(
+        &mut self,
+        source: &str,
+        span: Span,
+        like: NodeId,
+        subst: &mut dyn FnMut(&mut Library, NodeKind, &str) -> Option<NodeId>,
+    ) -> Result<NodeId, String> {
+        let parsed = parse(source, SourceKind::Standalone);
+        let ast = build_module(&parsed, Genre::Library);
+        if !ast.diagnostics().is_empty() {
+            let texts: Vec<String> = ast.diagnostics().iter().map(|d| d.message.text()).collect();
+            return Err(texts.join("; "));
+        }
+        let mut temporaries = std::collections::HashMap::new();
+        let mut adopt = Adopt {
+            ast: &ast,
+            span,
+            like,
+            subst,
+            temporaries: &mut temporaries,
+        };
+        Ok(adopt.node(self, ast.root()))
+    }
+
     /// The directory an import path names from a module: a relative one,
-    /// as `./b/` or `../c`, one in the standard library, as
+    /// as `./b/`, `../c`, `.`, or `..`, one in the standard library, as
     /// `std/temporal`, under [`Library::std_root`], or one in a library
     /// of [`Library::libraries`], as `other-lib/sub` or `other-lib`, under
     /// its root. `None` for others.
@@ -649,7 +778,9 @@ impl Library {
         if let Some(rest) = path.strip_prefix("std/") {
             return Some(normalize(&format!("{}/{rest}", self.std_root())));
         }
-        if !(path.starts_with("./") || path.starts_with("../")) {
+        let relative =
+            matches!(path, "." | "..") || path.starts_with("./") || path.starts_with("../");
+        if !relative {
             let (first, rest) = path.split_once('/').unwrap_or((path, ""));
             let (_, root) = self.libraries.iter().find(|(name, _)| name == first)?;
             return Some(normalize(&format!("{root}/{rest}")));
@@ -687,8 +818,9 @@ impl Library {
 
     /// The directories that `import("…")` calls name ([`Library::import_dir`])
     /// and that aren't loaded yet, for a driver to load before settling.
-    /// A file with a `test(name, body)` call imports `std/testing`, and one
-    /// with a regex literal, `std/regex`.
+    /// A file with a `test(name, body)` call imports `std/testing`, one
+    /// with a regex literal, `std/regex`, and one with `@json`,
+    /// `std/json`, as Kotlin's.
     pub fn missing_imports(&self) -> Vec<String> {
         let mut missing = Vec::new();
         for i in 0..self.tree.len() as u32 {
@@ -720,6 +852,14 @@ impl Library {
                         .is_some_and(|n| self.names.get(n) == "rgx") =>
                 {
                     "std/regex"
+                }
+                [callee, decorator, _]
+                    if self.name(callee).is_some_and(|n| self.names.get(n) == "@")
+                        && self
+                            .name(decorator)
+                            .is_some_and(|n| self.names.get(n) == "json") =>
+                {
+                    "std/json"
                 }
                 _ => continue,
             };
@@ -846,6 +986,65 @@ impl Library {
             Some(d) => d.message.text(),
             None => "Malformed code".to_string(),
         }
+    }
+}
+
+/// Copying a generated fragment's tree into a library's
+/// ([`Library::add_fragment`]).
+struct Adopt<'a> {
+    ast: &'a ast::Ast,
+    span: Span,
+    like: NodeId,
+    subst: &'a mut dyn FnMut(&mut Library, NodeKind, &str) -> Option<NodeId>,
+    /// The fragment's temporaries, each one of the library's.
+    temporaries: &'a mut std::collections::HashMap<NameId, NameId>,
+}
+
+impl Adopt<'_> {
+    fn name(&mut self, lib: &mut Library, id: NameId) -> NameId {
+        let text = self.ast.names().get(id);
+        if self.ast.names().is_temporary(id) {
+            *self
+                .temporaries
+                .entry(id)
+                .or_insert_with(|| lib.names.temporary(text))
+        } else {
+            lib.names.intern(text)
+        }
+    }
+
+    fn node(&mut self, lib: &mut Library, id: NodeId) -> NodeId {
+        let tree = self.ast.tree();
+        let kind = tree.kind(id);
+        let (span, like) = (self.span, self.like);
+        match kind {
+            NodeKind::LeftName | NodeKind::RightName | NodeKind::BuiltinName => {
+                let name = NameId(tree.data(id));
+                let text = self.ast.names().get(name);
+                if let Some(node) = (self.subst)(lib, kind, text) {
+                    return node;
+                }
+                let name = self.name(lib, name);
+                return lib.add_name(kind, name, span, like);
+            }
+            NodeKind::Value => {
+                let value = match self.ast.value(id).unwrap() {
+                    Value::Symbol(name) => {
+                        let text = self.ast.names().get(*name);
+                        if let Some(node) = (self.subst)(lib, kind, text) {
+                            return node;
+                        }
+                        Value::Symbol(self.name(lib, *name))
+                    }
+                    value => value.clone(),
+                };
+                return lib.add_value(value, span, like);
+            }
+            _ => {}
+        }
+        let kids = tree.children(id).to_vec();
+        let children: Vec<NodeId> = kids.into_iter().map(|c| self.node(lib, c)).collect();
+        lib.add(kind, span, tree.data(id), &children, like)
     }
 }
 

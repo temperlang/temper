@@ -1,6 +1,7 @@
 import {
   listBuilderAdd,
   listBuilderRemoveLast,
+  listBuilderSet,
   listBuilderToList,
   listedGet,
   listedGetOr,
@@ -44,13 +45,21 @@ function relayed(x) {
 }
 
 /**
+ * @param {number} length
+ * @returns {boolean}
+ */
+function noneIn(length) {
+  return length === 0;
+}
+
+/**
  * @template T
  * @param {readonly T[]} items
  * @param {T} fallback
  * @returns {T}
  */
 export function first(items, fallback) {
-  if (!items.length) {
+  if (noneIn(items.length)) {
     return fallback;
   } else {
     return listedGet(/** @type {T[]} */ (items), 0);
@@ -80,6 +89,171 @@ function total(ns) {
     }
   }
   return sum;
+}
+
+function indexed() {
+  /** @type {number[]} */
+  const counts = [];
+  counts.push(1);
+  counts.push(10);
+  let at = 0;
+  {
+    const k = at;
+    listBuilderSet(counts, k, (listedGet(counts, k) + 4) | 0);
+  }
+  {
+    listBuilderSet(counts, 1, Math.imul(listedGet(counts, 1), 3));
+  }
+  /** @type {number} */
+  let t$0;
+  {
+    /** @type {number} */
+    let t$1;
+    {
+      const t = at;
+      at = (t + 1) | 0;
+      t$1 = t;
+    }
+    const k2 = t$1;
+    const t2 = listedGet(counts, k2);
+    listBuilderSet(counts, k2, (t2 + 1) | 0);
+    t$0 = t2;
+  }
+  const was = t$0;
+  /** @type {number} */
+  let t$2;
+  {
+    const k3 = at;
+    const t3 = (listedGet(counts, k3) + 1) | 0;
+    listBuilderSet(counts, k3, t3);
+    t$2 = t3;
+  }
+  const pre = t$2;
+  /** @type {number} */
+  let t$3;
+  {
+    const t4 = listedGet(counts, 0);
+    listBuilderSet(counts, 0, (t4 - 1) | 0);
+    t$3 = t4;
+  }
+  const post = t$3;
+  /** @type {number} */
+  let t$4;
+  {
+    const t5 = (listedGet(counts, 0) - 1) | 0;
+    listBuilderSet(counts, 0, t5);
+    t$4 = t5;
+  }
+  const down = t$4;
+  console.log(`${was} ${pre} ${post} ${down} ${at}`);
+}
+
+function both() {
+  let x = 1;
+  let y = 10;
+  /** @type {number} */
+  let t$5;
+  {
+    const t = x;
+    x = (t + 1) | 0;
+    t$5 = t;
+  }
+  const t$7 = t$5;
+  /** @type {number} */
+  let t$6;
+  {
+    const t2 = y;
+    y = (t2 + 1) | 0;
+    t$6 = t2;
+  }
+  const locals = (t$7 + t$6) | 0;
+  const p = new Counter(100);
+  const q = new Counter(1000);
+  /** @type {number} */
+  let t$8;
+  {
+    const t3 = p.n;
+    p.n = (t3 + 1) | 0;
+    t$8 = t3;
+  }
+  const t$10 = t$8;
+  /** @type {number} */
+  let t$9;
+  {
+    const t4 = q.n;
+    q.n = (t4 + 1) | 0;
+    t$9 = t4;
+  }
+  const fields = (t$10 + t$9) | 0;
+  /** @type {number} */
+  let t$11;
+  {
+    const t5 = p.n;
+    p.n = (t5 + 1) | 0;
+    t$11 = t5;
+  }
+  const t$13 = t$11;
+  /** @type {number} */
+  let t$12;
+  {
+    const t6 = p.n;
+    p.n = (t6 + 1) | 0;
+    t$12 = t6;
+  }
+  const same = (t$13 + t$12) | 0;
+  /** @type {number[]} */
+  const a = [];
+  a.push(3);
+  /** @type {number[]} */
+  const b = [];
+  b.push(30);
+  const i = 0;
+  /** @type {number} */
+  let t$14;
+  {
+    const k = i;
+    const t7 = listedGet(a, k);
+    listBuilderSet(a, k, (t7 + 1) | 0);
+    t$14 = t7;
+  }
+  const t$16 = t$14;
+  /** @type {number} */
+  let t$15;
+  {
+    const k2 = i;
+    const t8 = listedGet(b, k2);
+    listBuilderSet(b, k2, (t8 + 1) | 0);
+    t$15 = t8;
+  }
+  const items = (t$16 + t$15) | 0;
+  console.log(`${locals} ${x} ${y} ${fields} ${same} ${p.n} ${q.n} ${items} ${listedGet(a, 0)} ${listedGet(b, 0)}`);
+}
+
+/**
+ * @param {string} key
+ * @returns {number}
+ */
+function bump(key) {
+  {
+    tally.set(key, (mappedGet(tally, key) - 1) | 0);
+  }
+  /** @type {number} */
+  let t$17;
+  {
+    const t = mappedGet(tally, key);
+    tally.set(key, (t + 1) | 0);
+    t$17 = t;
+  }
+  const before = t$17;
+  /** @type {number} */
+  let t$18;
+  {
+    const t2 = (mappedGet(tally, key) + 1) | 0;
+    tally.set(key, t2);
+    t$18 = t2;
+  }
+  const after = t$18;
+  return (before + after) | 0;
 }
 
 /**
@@ -140,6 +314,27 @@ export class Named extends type() {
   /** @returns {string} */
   get name() {
     return this.#name;
+  }
+}
+
+export class Counter extends type() {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
+  }
+
+  /** @param {number} value */
+  set n(value) {
+    this.#n = value;
   }
 }
 
@@ -216,27 +411,27 @@ console.log(`${built.length} ${listedGetOr(/** @type {string[]} */ (built), 5, "
 /** @type {Map<string, number>} */
 const m = mapConstructor(/** @type {any} */ (Object.freeze([pairConstructor("a", 1), pairConstructor("b", 2)])));
 /** @type {number} */
-let t$0;
+let t$19;
 try {
-  t$0 = mappedGet(m, "b");
+  t$19 = mappedGet(m, "b");
 } catch {
-  t$0 = -1;
+  t$19 = -1;
 }
 /** @type {number} */
-let t$1;
+let t$20;
 try {
-  t$1 = mappedGet(m, "c");
+  t$20 = mappedGet(m, "c");
 } catch {
-  t$1 = -1;
+  t$20 = -1;
 }
-console.log(`${t$0} ${t$1} ${m.has("a")} ${m.size}`);
+console.log(`${t$19} ${t$20} ${m.has("a")} ${m.size}`);
 /** @type {Map<string, number | null>} */
 const mb = new Map();
 mb.set("q", 5);
 mb.set("n", null);
 console.log(`${(mb.has("q") ? /** @type {number | null} */ (mb.get("q")) : 0) ?? -2} ${(mb.has("n") ? /** @type {number | null} */ (mb.get("n")) : 0) ?? -2} ${mb.has("n")}`);
 /** @type {string | null} */
-let t$2;
+let t$21;
 {
   /** @type {number | null} */
   let subject6;
@@ -245,8 +440,35 @@ let t$2;
   } catch {
     subject6 = 0;
   }
-  t$2 = subject6 == null ? null : subject6.toString();
+  t$21 = subject6 == null ? null : subject6.toString();
 }
-console.log(t$2 ?? "null");
+console.log(t$21 ?? "null");
 console.log(Object.freeze(Array.from(mb.keys())).length.toString());
+indexed();
+both();
+/** @type {Map<string, number>} */
+const tally = new Map();
+tally.set("k", 2);
+/** @type {number} */
+let t$22;
+try {
+  t$22 = bump("k");
+} catch {
+  t$22 = -1;
+}
+/** @type {number} */
+let t$23;
+try {
+  t$23 = bump("z");
+} catch {
+  t$23 = -1;
+}
+/** @type {number} */
+let t$24;
+try {
+  t$24 = mappedGet(tally, "k");
+} catch {
+  t$24 = -1;
+}
+console.log(`${t$22} ${t$23} ${t$24}`);
 console.log(`${firstSame(Object.freeze([1000]), Object.freeze([1000]))} ${firstSame(Object.freeze([1000]), Object.freeze([7]))}`);

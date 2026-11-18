@@ -86,27 +86,45 @@ class SSub extends type(SI) {
 }
 
 /** @template T */
-class Holder extends type() {}
+class Holder extends type() {
+  /** @type {T} */
+  held = /** @type {any} */ (undefined);
 
-/** @template L */
+  /**
+   * @param {T} other
+   * @returns {readonly T[]}
+   */
+  heldAnd(other) {
+    return Object.freeze([this.held, other]);
+  }
+}
+
+/**
+ * @template L
+ * @template T
+ */
 class Labeled extends type(Holder) {
   /** @type {(l: L) => string} */
   label = /** @type {any} */ (undefined);
+  /** @type {T} */
+  held = /** @type {any} */ (undefined);
+  /** @type {(other: T) => readonly T[]} */
+  heldAnd = /** @type {any} */ (undefined);
 }
 
 class LabeledSub extends type(Labeled) {
   /** @type {C} */
-  #thing;
+  #held;
 
-  /** @param {C} thing */
-  constructor(thing) {
+  /** @param {C} held */
+  constructor(held) {
     super();
-    this.#thing = thing;
+    this.#held = held;
   }
 
   /** @returns {C} */
-  get thing() {
-    return this.#thing;
+  get held() {
+    return this.#held;
   }
 
   /**
@@ -114,13 +132,8 @@ class LabeledSub extends type(Labeled) {
    * @returns {string}
    */
   label(l) {
-    return `${l}: ${this.#thing.x}`;
+    return `${l}: ${this.#held.x}`;
   }
-}
-
-class AllAlone extends type(I) {
-  /** @type {string} */
-  x = /** @type {any} */ (undefined);
 }
 
 class High extends type() {
@@ -232,9 +245,12 @@ console.log(`Genericallier, x is still ${dj.thing.x}.`);
 /** @type {SI<C>} */
 const si = new SSub(a);
 console.log(`Sealed thing is ${si.thing.x}.`);
-/** @type {Labeled<string>} */
-const labeled = new LabeledSub(a);
+/** @type {Labeled<string, C>} */
+const labeled = /** @type {Labeled<string, C>} */ (/** @type {unknown} */ (new LabeledSub(a)));
+/** @type {readonly C[]} */
+const heldAnd = labeled.heldAnd(b);
 console.log(`Labeled thing is ${labeled.label("first")}.`);
+console.log(`Held are ${labeled.held.x} and ${listedGet(/** @type {C[]} */ (heldAnd), 1).x}.`);
 const high1 = new Low1(11);
 const high1b = new Low1(12);
 const high1c = new Low1(12);

@@ -416,7 +416,7 @@ public final class LibrariesGlobal {
         @Nullable Integer part4 = new Dot(1).getGrown();
         String t6 = t5 + (part4 == null ? "null" : Integer.toString(part4)) + " ";
         @Nullable Integer part5 = new Dot(3).getGrown();
-        console.log(t6 + (part5 == null ? "null" : Integer.toString(part5)) + " " + Casing.last.toString());
+        console.log(t6 + (part5 == null ? "null" : Integer.toString(part5)) + " " + Casing.last.toString() + " " + Casing.first.getMarked());
         Carry carry = new Carry(3);
         String t7 = carry.carrying + " " + carry.state + " " + new Carry(0).carrying + " ";
         @Nullable String part6 = tagged().label;

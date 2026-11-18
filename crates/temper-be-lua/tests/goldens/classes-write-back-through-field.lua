@@ -65,10 +65,7 @@ end
 ---@param this write-back-through-field.Pong
 ---@param a write-back-through-field.Ping
 function Pong.methods.pong(this, a)
-  do
-    local o = a
-    o.n = temper.int32_add(o.n, 1)
-  end
+  a.n = temper.int32_add(a.n, 1)
 end
 
 ---@param this write-back-through-field.Pong
@@ -76,10 +73,7 @@ end
 ---@param by integer
 ---@return integer
 function Pong.methods.bump(this, a, by)
-  do
-    local o = a
-    o.n = temper.int32_add(o.n, by)
-  end
+  a.n = temper.int32_add(a.n, by)
   return a.n
 end
 

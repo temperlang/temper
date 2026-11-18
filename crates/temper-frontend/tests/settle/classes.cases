@@ -221,7 +221,6 @@ error 107..121: Type M has method g but its visibility is protected which is nar
 === class members need a visibility, but interface members don't
 interface I { f(): Int; }
 class Q(x: Int, @noProperty y: Int, public z: Int) {
-  public constructor(x: Int, y: Int, z: Int) {}
   get g(): Int { 1 }
   set g(v: Int): Void {}
   static s = 1;
@@ -239,17 +238,14 @@ class Q(x: Int, @noProperty y: Int, public z: Int) {
     (Param ^x:5 Int)
     (Param private ^y:6 Int)
     (Param ^z:7 Int)
-    (Constructor
-      ^constructor:8
-      (Fn (Let ^x:17 Int) (Let ^y:18 Int) (Let ^z:19 Int) (Block)))
-    (Get ^g:9 (Fn Int (Block 1)))
-    (Set ^g:10 (Fn (Let ^v:20 Int) Void (Block)))
-    (Let static ^s:11 1)
-    (Method static ^t:12 (Fn Int (Block 1)))
-    (Let private ^p:13 1)
-    (Let ^y:14 Int 2)
-    (Let ^w:15 Int 3)
-    (Method ^f:16 (Fn Int (Block 1)))))
+    (Get ^g:8 (Fn Int (Block 1)))
+    (Set ^g:9 (Fn (Let ^v:16 Int) Void (Block)))
+    (Let static ^s:10 1)
+    (Method static ^t:11 (Fn Int (Block 1)))
+    (Let private ^p:12 1)
+    (Let ^y:13 Int 2)
+    (Let ^w:14 Int 3)
+    (Method ^f:15 (Fn Int (Block 1)))))
 error 34..40: Members of class Q require explicit visibility: [.x, .w, get.g(...), set.g(...), .f(...), static.s, static.t(...)]
 
 === assigning a member that isn't a var
@@ -329,9 +325,10 @@ console.log(C.secret.toString());
     (Call (Call . (Call (Call . a:1 \plus) b:2) \toString)))
   (Call (Call . console \log) (Call (Call . (Call . C:0 \secret) \toString)))
   #void)
+error 321..329: Member secret defined in C not publicly accessible
 log 14
 log 38
-Panicked: Member secret defined in C not publicly accessible
+Failed: Member secret defined in C not publicly accessible
 
 === private members aren't usable outside their class
 class C(private x: Int) { private twice(): Int { x * 2 } }
@@ -353,7 +350,164 @@ console.log(new D().peek(new C(3)).toString());
     (Call
       (Call . (Call (Call . (Call new D:2) \peek) (Call new C:0 3)) \toString)))
   #void)
-Panicked: Member twice defined in C not publicly accessible
+error 98..105: Member twice defined in C not publicly accessible
+Failed: Member twice defined in C not publicly accessible
+
+=== private and static members outside their class are errors, as Kotlin's typer reports them
+class Private(private b: Int) {
+  public sharing(other: Private): Int { b + other.b }
+  private static hidden: Int = 1;
+  public static shown: Int = Private.hidden + 1;
+}
+let aPrivate = new Private(9);
+console.log(aPrivate.sharing(aPrivate).toString());
+console.log(Private.shown.toString());
+class Outsider {
+  public burgle(victim: Private): Int { victim.b }
+  public static peek(): Int { Private.hidden }
+}
+console.log(Private.nope.toString());
+console.log(aPrivate.b.toString());
+--- settled
+(Block
+  (Class
+    ^Private:0
+    (Param private ^b:4 Int)
+    (Method
+      ^sharing:5
+      (Fn (Let ^other:8 Private:0) Int (Block (Call + b:4 (Call . other:8 \b)))))
+    (Let private static ^hidden:6 Int 1)
+    (Let static ^shown:7 Int (Call + (Call . Private:0 \hidden) 1)))
+  (Let ^aPrivate:1 (Call new Private:0 9))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call (Call . aPrivate:1 \sharing) aPrivate:1) \toString)))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call . Private:0 \shown) \toString)))
+  (Class
+    ^Outsider:2
+    (Method
+      ^burgle:10
+      (Fn (Let ^victim:12 Private:0) Int (Block (Call . victim:12 \b))))
+    (Method static ^peek:11 (Fn Int (Block (Call . Private:0 \hidden)))))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call . Private:0 \nope) \toString)))
+  (Call (Call . console \log) (Call (Call . (Call . aPrivate:1 \b) \toString)))
+  #void)
+error 350..358: Member b defined in Private not publicly accessible
+error 391..405: Member hidden defined in Private not publicly accessible
+error 422..434: No member nope in Private
+error 460..470: Member b defined in Private not publicly accessible
+log 18
+log 2
+Failed: No member nope in Private
+
+=== a method that isn't there on a private property, as Kotlin's noMatchingMemberUsage
+class Something(private b: Int) {}
+let something = new Something(9);
+something.b();
+--- settled
+(Block
+  (Class ^Something:0 (Param private ^b:3 Int))
+  (Let ^something:1 (Call new Something:0 9))
+  (Call (Call . something:1 \b))
+  #void)
+error 69..80: Member b defined in Something incompatible with usage
+Failed: Member b defined in Something incompatible with usage
+
+=== static members need their type's name, as Kotlin's static-access-good-and-bad
+class C {
+  private static ap: Int = 1;
+  public static a: Int = ap + C.ap;
+  public static f(i: Int): Int { i + a + C.a }
+  public h(i: Int): Int { 2 * f(i) * C.f(i) }
+}
+console.log("${C.f(1)} ${new C().h(1)} ${C.a}");
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Let private static ^ap:2 Int 1)
+    (Let static ^a:3 Int (Call + ap:2 (Call . C:0 \ap)))
+    (Method static
+      ^f:4
+      (Fn (Let ^i:6 Int) Int (Block (Call + (Call + i:6 a:3) (Call . C:0 \a)))))
+    (Method
+      ^h:5
+      (Fn
+        (Let ^i:7 Int)
+        Int
+        (Block (Call * (Call * 2 (Call f:4 i:7)) (Call (Call . C:0 \f) i:7))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call (Call . C:0 \f) 1)
+      " "
+      (Call (Call . (Call new C:0) \h) 1)
+      " "
+      (Call . C:0 \a)))
+  #void)
+error 65..67: Type name required for accessing static member
+error 113..114: Type name required for accessing static member
+error 153..154: Type name required for accessing static member
+Failed: Type name required for accessing static member
+
+=== static members can't be assigned, even a `var`, as Kotlin reports
+class C {
+  public static var count: Int = 0;
+  public bump(): Void { C.count += 1; C.count++; }
+  public static reset(): Void { C.count = 0; count = 1; }
+}
+let set(): Void { C.count = 2; C.count--; }
+console.log("before ${C.count}");
+new C().bump();
+console.log("after ${C.count}");
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Var static ^count:3 Int 0)
+    (Method
+      ^bump:4
+      (Fn
+        Void
+        (Block
+          (Block (Assign (Call . C:0 \count) (Call + (Call . C:0 \count) 1)))
+          (Block
+            (Let ^t#6 (Call . C:0 \count))
+            (Assign (Call . C:0 \count) (Call + t#6 1))
+            t#6)
+          #void)))
+    (Method static
+      ^reset:5
+      (Fn Void (Block (Assign (Call . C:0 \count) 0) (Assign count:3 1) #void))))
+  (Let
+    ^set:1
+    (Fn
+      Void
+      (Block
+        (Assign (Call . C:0 \count) 2)
+        (Block
+          (Let ^t#7 (Call . C:0 \count))
+          (Assign (Call . C:0 \count) (Call - t#7 1))
+          t#7)
+        #void)))
+  (Call (Call . console \log) (Call cat "before " (Call . C:0 \count)))
+  (Call (Call . (Call new C:0) \bump))
+  (Call (Call . console \log) (Call cat "after " (Call . C:0 \count)))
+  #void)
+error 70..82: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 84..93: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 129..140: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 142..151: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 175..186: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 188..197: Cannot assign to static member count of C; static members are only initialized at their declaration
+error 142..147: Type name required for accessing static member
+log before 0
+Failed: Cannot assign to static member count of C; static members are only initialized at their declaration
 
 === this outside a class
 let f(): Int { this.x }
@@ -473,3 +627,398 @@ export class Builder {
     ^Builder:0
     (Get connected ^size:2 (Fn Int (Block 0)))
     (Method connected ^complete:3 (Signature Void))))
+
+=== a setter without a getter is assigned, also as a value, as Kotlin's nested-setter-invocations-in-result-position
+class C {
+  public set p(newValue: Int) {
+    console.log("Assigned ${newValue.toString(10)}");
+  }
+}
+let c = new C();
+c.p = c.p = 123;
+c.p = 5;
+// Not read, nor assigned what it doesn't take.
+let wrong(): Void {
+  c.p = "x";
+  console.log(c.p.toString());
+}
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Set
+      ^p:4
+      (Fn
+        (Let ^newValue:5 Int)
+        (Block
+          (Call
+            (Call . console \log)
+            (Call cat "Assigned " (Call (Call . newValue:5 \toString) 10)))
+          #void))))
+  (Let ^c:1 (Call new C:0))
+  (Assign (Call . c:1 \p) (Assign (Call . c:1 \p) 123))
+  (Assign (Call . c:1 \p) 5)
+  (Let
+    ^wrong:2
+    (Fn
+      Void
+      (Block
+        (Assign (Call . c:1 \p) "x")
+        (Call (Call . console \log) (Call (Call . (Call . c:1 \p) \toString)))
+        #void))))
+error 221..224: Expected subtype of Int32, but got String
+error 240..243: No member p in C
+log Assigned 123
+log Assigned 123
+log Assigned 5
+
+=== exports that expose what isn't exported, as Kotlin Temper's ExportChecker reports them
+interface Hidden {}
+export class Exported<HI extends Hidden>(public hi: Hidden) extends Hidden {
+  public attempt(): Hidden { hi }
+  public attempt2<H extends Hidden>(hmm: H): H { hmm }
+  public static subvert(): Map<String, Hidden> { more }
+  // This one should be fine, unlike all the others.
+  private ha: Hidden = hi;
+}
+export let consider(hu: Hidden): Hidden? { hu }
+export let sneak<H extends Hidden>(he: H): H { he }
+export let more = new Map<String, Hidden>([]);
+class Fine {}
+export let callback(f: fn (Fine): Void): Void {}
+// A private header property is the implied constructor's parameter.
+export class Holder(private held: Fine) {}
+export class Made {
+  public constructor(other: Hidden) {}
+}
+// Not exports, nor private members, nor another module's types.
+let local(h: Hidden): Hidden { h }
+export class Open {
+  private hidden(h: Hidden): Hidden { h }
+  private constructor(f: Fine) {}
+  public map(): Map<String, Int> { new Map<String, Int>([]) }
+}
+console.log("runs");
+--- settled
+(Block
+  (Interface ^Hidden:0)
+  (Let ^more:4 (Call new (Call <> Map String Hidden:0) (Call list)))
+  (Class
+    ^Exported:1
+    (TypeParam ^HI:12 Hidden:0)
+    Hidden:0
+    (Param ^hi:14 Hidden:0)
+    (Method ^attempt:15 (Fn Hidden:0 (Block hi:14)))
+    (Method
+      ^attempt2:16
+      (Fn (TypeParam ^H:19 Hidden:0) (Let ^hmm:20 H:19) H:19 (Block hmm:20)))
+    (Method static
+      ^subvert:17
+      (Fn (Call <> Map String Hidden:0) (Block more:4)))
+    (Let private ^ha:18 Hidden:0 hi:14))
+  (Let ^consider:2 (Fn (Let ^hu:21 Hidden:0) (Call ? Hidden:0) (Block hu:21)))
+  (Let
+    ^sneak:3
+    (Fn (TypeParam ^H:22 Hidden:0) (Let ^he:23 H:22) H:22 (Block he:23)))
+  (Class ^Fine:5)
+  (Let ^callback:6 (Fn (Let ^f:25 (Call FnType Fine:5 Void)) Void (Block)))
+  (Class ^Holder:7 (Param private ^held:27 Fine:5))
+  (Class
+    ^Made:8
+    (Constructor ^constructor:29 (Fn (Let ^other:30 Hidden:0) (Block))))
+  (Let ^local:9 (Fn (Let ^h:31 Hidden:0) Hidden:0 (Block h:31)))
+  (Class
+    ^Open:10
+    (Method private ^hidden:33 (Fn (Let ^h:36 Hidden:0) Hidden:0 (Block h:36)))
+    (Constructor private ^constructor:34 (Fn (Let ^f:37 Fine:5) (Block)))
+    (Method
+      ^map:35
+      (Fn
+        (Call <> Map String Int)
+        (Block (Call new (Call <> Map String Int) (Call list))))))
+  (Call (Call . console \log) "runs")
+  #void)
+error 53..59: Export depends publicly on non-exported symbol Hidden
+error 72..78: Export depends publicly on non-exported symbol Hidden
+error 88..94: Export depends publicly on non-exported symbol Hidden
+error 117..123: Export depends publicly on non-exported symbol Hidden
+error 159..165: Export depends publicly on non-exported symbol Hidden
+error 225..231: Export depends publicly on non-exported symbol Hidden
+error 348..354: Export depends publicly on non-exported symbol Hidden
+error 357..363: Export depends publicly on non-exported symbol Hidden
+error 399..405: Export depends publicly on non-exported symbol Hidden
+error 435..439: Export depends publicly on non-exported symbol Hidden
+error 512..516: Export depends publicly on non-exported symbol Fine
+error 637..641: Export depends publicly on non-exported symbol Fine
+error 694..700: Export depends publicly on non-exported symbol Hidden
+log runs
+
+=== static getters and setters are rejected, as Kotlin's static-getters-and-setters-rejected
+// Nothing would read `C.answer` with them, so they're dropped.
+class C {
+  public static get answer(): Int { 42 }
+  public static set count(v: Int): Void {}
+  public get age(): Int { 1 }
+  public static twice(x: Int): Int { x * 2 }
+}
+console.log("${C.twice(2)} ${new C().age}");
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Get ^age:2 (Fn Int (Block 1)))
+    (Method static ^twice:3 (Fn (Let ^x:4 Int) Int (Block (Call * x:4 2)))))
+  (Call
+    (Call . console \log)
+    (Call cat (Call (Call . C:0 \twice) 2) " " (Call . (Call new C:0) \age)))
+  #void)
+error 76..114: `static get answer` is not supported; use a static method instead
+error 117..157: `static set count` is not supported; use a static method instead
+log 4 1
+
+=== constructors beside header parameters or initializers, as Kotlin's constructors-and-property-initialization
+// OK: the implied constructor sets k.
+class NeedsConstructor(
+  @noProperty i: Int32,
+  public j: Int32 = 1,
+) {
+  public k: Int32 = i + 1;
+}
+// OK: one constructor runs the initializer.
+class HasConstructorAndInitializedProperty {
+  private var b: Boolean = false;
+  private let i: Int32;
+  public constructor(i: Int32) {
+    this.i = i;
+  }
+  public f(): Int32 {
+    b = !b;
+    i + (if (b) { 1 } else { 0 })
+  }
+}
+// A second constructor is an error, initializer or not; the first is used.
+class HasTooManyConstructors {
+  private var b: Boolean = false;
+  public static s: Int = 1;
+  public constructor() {}
+  public constructor(c: Boolean) {
+    if (c) { this.b = !this.b; }
+  }
+}
+// Header parameters don't fold into an explicit constructor.
+class HasConstructorAndParenthesizedArguments(
+  public s: String,
+  @noProperty t: String,
+) {
+  public constructor() {}
+}
+console.log("${new NeedsConstructor(1).k} ${new HasConstructorAndInitializedProperty(2).f()}");
+--- settled
+(Block
+  (Class
+    ^NeedsConstructor:0
+    (Param private ^i:5 Int32)
+    (Param ^j:6 Int32 1)
+    (Let ^k:7 Int32 (Call + i:5 1)))
+  (Class
+    ^HasConstructorAndInitializedProperty:1
+    (Var private ^b:9 Boolean false)
+    (Let private ^i:10 Int32)
+    (Constructor
+      ^constructor:11
+      (Fn (Let ^i:13 Int32) (Block (Assign (Call . this#8 \i) i:13) #void)))
+    (Method
+      ^f:12
+      (Fn
+        Int32
+        (Block
+          (Assign b:9 (Call ! b:9))
+          (Call + i:10 (If b:9 (Block 1) (Block 0)))))))
+  (Class
+    ^HasTooManyConstructors:2
+    (Var private ^b:15 Boolean false)
+    (Let static ^s:16 Int 1)
+    (Constructor ^constructor:17 (Fn (Block)))
+    (Constructor
+      ^constructor:18
+      (Fn
+        (Let ^c:19 Boolean)
+        (Block
+          (If
+            c:19
+            (Block
+              (Assign (Call . this#14 \b) (Call ! (Call . this#14 \b)))
+              #void)
+            (Block))))))
+  (Class
+    ^HasConstructorAndParenthesizedArguments:3
+    (Param ^s:21 String)
+    (Param private ^t:22 String)
+    (Constructor ^constructor:23 (Fn (Block))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . (Call new NeedsConstructor:0 1) \k)
+      " "
+      (Call (Call . (Call new HasConstructorAndInitializedProperty:1 2) \f))))
+  #void)
+error 622..633: A class can have only one constructor; for other ways to make instances, use a static method or an object literal
+error 805..814: Constructor input s specified but there is already a constructor
+error 830..839: Constructor input t specified but there is already a constructor
+log 2 3
+
+=== a class has one constructor, by a team decision; Kotlin accepts several
+// OK: one constructor.
+class One {
+  public n: Int;
+  public constructor(n: Int) { this.n = n; }
+}
+// OK: header parameters only.
+class Header(public n: Int) {}
+// Each constructor after the first is an error; the first is used.
+class TwoBare {
+  public n: Int = 1;
+  public constructor() {}
+  public constructor() {}
+}
+class TwoWithParams {
+  public n: Int;
+  public constructor(hi: Int) { n = hi; }
+  public constructor(lo: Int) { n = lo + 1; }
+}
+class Three {
+  public n: Int = 3;
+  public constructor() {}
+  public constructor(a: Int) {}
+  public constructor(a: Int, b: Int) {}
+}
+let literal: TwoWithParams = { hi: 5 };
+console.log("${new One(1).n} ${new Header(2).n} ${new TwoBare().n} ${new TwoWithParams(4).n} ${literal.n} ${new Three().n}");
+--- settled
+(Block
+  (Class
+    ^One:0
+    (Let ^n:7 Int)
+    (Constructor
+      ^constructor:8
+      (Fn (Let ^n:9 Int) (Block (Assign (Call . this#6 \n) n:9) #void))))
+  (Class ^Header:1 (Param ^n:11 Int))
+  (Class
+    ^TwoBare:2
+    (Let ^n:13 Int 1)
+    (Constructor ^constructor:14 (Fn (Block)))
+    (Constructor ^constructor:15 (Fn (Block))))
+  (Class
+    ^TwoWithParams:3
+    (Let ^n:17 Int)
+    (Constructor
+      ^constructor:18
+      (Fn (Let ^hi:20 Int) (Block (Assign n:17 hi:20) #void)))
+    (Constructor
+      ^constructor:19
+      (Fn (Let ^lo:21 Int) (Block (Assign n:17 (Call + lo:21 1)) #void))))
+  (Class
+    ^Three:4
+    (Let ^n:23 Int 3)
+    (Constructor ^constructor:24 (Fn (Block)))
+    (Constructor ^constructor:25 (Fn (Let ^a:27 Int) (Block)))
+    (Constructor ^constructor:26 (Fn (Let ^a:28 Int) (Let ^b:29 Int) (Block))))
+  (Let ^literal:5 TwoWithParams:3 (Call new TwoWithParams:3 5))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . (Call new One:0 1) \n)
+      " "
+      (Call . (Call new Header:1 2) \n)
+      " "
+      (Call . (Call new TwoBare:2) \n)
+      " "
+      (Call . (Call new TwoWithParams:3 4) \n)
+      " "
+      (Call . literal:5 \n)
+      " "
+      (Call . (Call new Three:4) \n)))
+  #void)
+error 302..313: A class can have only one constructor; for other ways to make instances, use a static method or an object literal
+error 411..422: A class can have only one constructor; for other ways to make instances, use a static method or an object literal
+error 520..531: A class can have only one constructor; for other ways to make instances, use a static method or an object literal
+error 552..563: A class can have only one constructor; for other ways to make instances, use a static method or an object literal
+log 1 2 1 4 5 3
+
+=== connected functions that list backends need a body, as Kotlin's connected-backends
+// Fine: backends not listed use the body.
+@connected(["cpp", "rust"])
+export let withBody(i: Int): Int { i + 1 }
+// Fine: no list means every backend has connected code.
+@connected
+export let everywhere(i: Int): Int;
+// Fine: an empty list names none, so all use the body.
+@connected([])
+export let nowhere(i: Int): Int { i + 3 }
+// Backends not listed would have no body to use.
+@connected(["cpp"])
+export let noBody(i: Int): Int;
+// Not a list of backend names: connected as if without a list.
+@connected("cpp")
+export let notAList(i: Int): Int { i + 2 }
+@connected(["cpp", 1])
+export let notNames(i: Int): Int { i + 4 }
+console.log("${withBody(1)} ${nowhere(1)} ${notAList(1)}");
+--- settled
+(Block
+  (Let ^withBody:0 (Fn (Let ^i:6 Int) Int (Block (Call + i:6 1))))
+  (Let connected ^everywhere:1 (Call FnType Int Int))
+  (Let ^nowhere:2 (Fn (Let ^i:7 Int) Int (Block (Call + i:7 3))))
+  (Let connected ^noBody:3 (Call FnType Int Int))
+  (Let ^notAList:4 (Fn (Let ^i:8 Int) Int (Block (Call + i:8 2))))
+  (Let ^notNames:5 (Fn (Let ^i:9 Int) Int (Block (Call + i:9 4))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call withBody:0 1)
+      " "
+      (Call nowhere:2 1)
+      " "
+      (Call notAList:4 1)))
+  #void)
+error 412..418: A @connected function that lists backends needs a Temper body for the backends not listed
+error 508..513: @connected expects a list of backend names, like ["cpp", "rust"], not "cpp"
+error 569..579: @connected expects a list of backend names, like ["cpp", "rust"], not ["cpp", 1]
+log 2 4 3
+
+=== a bare member's ?? is held, as checking it for null doesn't narrow it
+// A getter's call, as this.problem is.
+class Q(public problem: String?) {
+  public k(): String { problem ?? "ok" }
+  public k2(): String { this.problem ?? "ok" }
+}
+let q = new Q(null);
+console.log(q.k());
+--- settled
+(Block
+  (Class
+    ^Q:0
+    (Param ^problem:3 (Call ? String))
+    (Method
+      ^k:4
+      (Fn
+        String
+        (Block
+          (Block
+            (Let ^subject#6 problem:3)
+            (If (Call == subject#6 #null) "ok" subject#6)))))
+    (Method
+      ^k2:5
+      (Fn
+        String
+        (Block
+          (Block
+            (Let ^subject#7 (Call . this#2 \problem))
+            (If (Call == subject#7 #null) "ok" subject#7))))))
+  (Let ^q:1 (Call new Q:0 null))
+  (Call (Call . console \log) (Call (Call . q:1 \k)))
+  #void)
+log ok

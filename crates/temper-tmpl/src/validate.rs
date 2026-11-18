@@ -18,7 +18,11 @@
 //!   many as its callee has type parameters (a constructor's class's),
 //!   each within its type parameter's bounds (but a builtin type's),
 //!   with each argument's and the result's type put in;
-//!   **T5** types well formed. `Error` nodes are exempt from T2 and T3.
+//!   **T5** types well formed, `Never<T>` only as a result or a value's
+//!   type, and only where the profile has
+//!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
+//!   exempt from T2 and T3, and a `Never<T>` child fits where its `T`
+//!   does (T3), as it never completes (F1, R5).
 //! - **R1** ids exist; **R2** references name the right kind of
 //!   declaration (`CallMethod` a method or getter); **R3** locals read and assigned in scope, within their
 //!   function, a run of function `let`s' in all of their literals
@@ -26,7 +30,8 @@
 //!   **R6** only a `var` assigned twice, a parameter only if `var`, and a
 //!   module `let` initialized once.
 //! - **F1** no falling off the end of a function with a result (nothing
-//!   after a `return`, jump, `bubble()`, or `panic()` runs); **F2**
+//!   after a `return`, jump, `bubble()`, `panic()`, or a `Never<T>`
+//!   value runs); **F2**
 //!   `return` has a value exactly when the result isn't `Void`; **F3**
 //!   `MAY_BUBBLE` exactly on calls that may bubble; **F4** a call that may
 //!   bubble only in a function that may (or in an init block, where it
@@ -86,6 +91,7 @@
 //! - **P1** in a program with spans, every node and declaration has one,
 //!   apart from other libraries' declarations.
 
+use crate::analysis::{named, top_level, walk};
 use crate::decls::{DeclKind, Facts};
 use crate::ids::{DeclId, NodeId, Span, StrId, TypeId};
 use crate::nodes::{Flags, Kids};
@@ -96,6 +102,7 @@ use crate::schema::{Family, Kind, Node, Place, Slot, TypeRule};
 use crate::text::writing_order;
 use crate::types::{Signature, TypeData};
 use crate::{Module, Program};
+use std::collections::HashSet;
 use std::fmt;
 
 /// A validator rule, by its code.
@@ -132,6 +139,7 @@ pub enum Rule {
     Q4,
     M1,
     M2,
+    M3,
     C1,
     C2,
     C3,
@@ -195,6 +203,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
         v.structure_module(p, module, profile);
     }
     if v.problems.is_empty() {
+        v.bottom_types(p, profile);
         v.declarations(p);
         for (i, module) in p.modules.iter().enumerate() {
             v.module = (module.decl, i);
@@ -379,7 +388,7 @@ impl Validator {
     // Structure.
 
     fn structure_module(&mut self, p: &Program, module: &Module, profile: &Profile) {
-        for &item in &module.items {
+        for item in module.all_items() {
             if self.structure(p, item, NodeId::NONE, None, profile, false) {
                 let kind = p.nodes.kind(item);
                 if !matches!(
@@ -404,11 +413,16 @@ impl Validator {
                 self.node_problem(Rule::S3, test, message);
             }
         }
-        if self.structure(p, module.init, NodeId::NONE, None, profile, true)
-            && p.nodes.kind(module.init) != Kind::Block
+        for (init, which) in [(module.init, "init")]
+            .into_iter()
+            .chain(module.test_init.map(|t| (t, "test init")))
         {
-            let message = format!("module #{}'s init isn't a Block", module.decl.0);
-            self.node_problem(Rule::S3, module.init, message);
+            if self.structure(p, init, NodeId::NONE, None, profile, true)
+                && p.nodes.kind(init) != Kind::Block
+            {
+                let message = format!("module #{}'s {which} isn't a Block", module.decl.0);
+                self.node_problem(Rule::S3, init, message);
+            }
         }
     }
 
@@ -644,6 +658,10 @@ impl Validator {
                         self.decl_problem(Rule::T5, decl, message)
                     }
                 }
+                (_, Some(TypeData::Never(_))) => {
+                    let message = format!("a {} isn't typed Never, only a result", d.kind.name());
+                    self.decl_problem(Rule::T5, decl, message)
+                }
                 (_, Some(TypeData::Nullable(inner))) => {
                     if inner == TypeId::VOID {
                         let message = "Void isn't nullable".into();
@@ -691,6 +709,31 @@ impl Validator {
         self.qnames(p);
     }
 
+    /// T5: `Never<T>` only where the profile keeps a bottom type
+    /// ([`Features::NEVER`](crate::Features::NEVER)), which
+    /// [`crate::nevers::lower`] leaves only there.
+    fn bottom_types(&mut self, p: &Program, profile: &Profile) {
+        if profile.native.contains(crate::Features::NEVER) {
+            return;
+        }
+        let never = |ty: TypeId| {
+            let sig = p.types.signature(ty);
+            p.types.is_never(ty) || sig.is_some_and(|s| p.types.is_never(s.result))
+        };
+        for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
+            if never(p.decls.get(decl).ty) {
+                let message = "a result is Never<T>, but the profile has no bottom type".into();
+                self.decl_problem(Rule::T5, decl, message);
+            }
+        }
+        for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
+            if p.types.is_never(p.nodes.ty(id)) {
+                let message = "a value is Never<T>, but the profile has no bottom type".into();
+                self.node_problem(Rule::T5, id, message);
+            }
+        }
+    }
+
     /// Q1 and Q2: every declaration that should have a qname has one, and
     /// no two share one.
     fn qnames(&mut self, p: &Program) {
@@ -727,7 +770,7 @@ impl Validator {
     // Bodies: types, references, and flow.
 
     fn module(&mut self, p: &Program, module: &Module) {
-        for &item in &module.items {
+        for item in module.all_items() {
             match p.nodes.get(item) {
                 Node::Function { decl, params, body } => {
                     self.function(p, item, decl, params, Some(body))
@@ -772,20 +815,81 @@ impl Validator {
                 }
             }
         }
-        // The init block tracks this module's `let`s, for F5 and R6.
-        let lets: Vec<DeclId> = module
-            .items
-            .iter()
-            .filter_map(|&item| match p.nodes.get(item) {
+        // The init block tracks this module's `let`s, for F5 and R6, and
+        // its test init continues it, in its scope, as if it followed.
+        let mut lets: Vec<DeclId> = (module.all_items())
+            .filter_map(|item| match p.nodes.get(item) {
                 Node::ModuleLet { decl } if p.decls.contains(decl) => Some(decl),
                 _ => None,
             })
             .collect();
+        if let Some(test_init) = module.test_init {
+            body_lets(p, test_init, &mut lets);
+        }
         self.start_body(p, module.decl, TypeId::NONE, true, module.init, &lets);
         self.body.in_init = true;
         let mut flow = Flow::new(self.body.tracked.len());
-        self.stmt(p, module.init, &mut flow);
+        let mark = self.body.in_scope.len();
+        for block in [module.init].into_iter().chain(module.test_init) {
+            match p.nodes.get(block) {
+                Node::Block { stmts } => {
+                    self.enter_function_lets(p, p.nodes.list(stmts));
+                    for &stmt in p.nodes.list(stmts) {
+                        self.stmt(p, stmt, &mut flow);
+                    }
+                }
+                _ => self.stmt(p, block, &mut flow),
+            }
+        }
+        self.leave_scopes(mark);
         self.end_body();
+        self.library_parts(p, module);
+    }
+
+    /// M3: the library's parts, its items and init block, use nothing of
+    /// its test parts, its test items and test init, which a build
+    /// without tests leaves out.
+    fn library_parts(&mut self, p: &Program, module: &Module) {
+        let mut tests = HashSet::new();
+        for root in module.test_items.iter().chain(&module.test_init) {
+            match p.nodes.get(*root) {
+                Node::Block { stmts } => {
+                    for &stmt in p.nodes.list(stmts) {
+                        tests.extend(defined_decl(p, stmt));
+                    }
+                }
+                _ => tests.extend(defined_decl(p, *root)),
+            }
+        }
+        if tests.is_empty() {
+            return;
+        }
+        let init = match p.nodes.get(module.init) {
+            Node::Block { stmts } => p.nodes.list(stmts),
+            _ => &[],
+        };
+        for &root in module.items.iter().chain(init) {
+            let mut found = None;
+            let mut check = |d: DeclId| {
+                if found.is_none() && top_level(p, d).is_some_and(|t| tests.contains(&t)) {
+                    found = Some(d);
+                }
+            };
+            named(p, root, &mut check);
+            walk(p, root, &mut |id| match p.nodes.get(id) {
+                Node::Local { local: d }
+                | Node::Assign { local: d, .. }
+                | Node::InitLet { target: d, .. }
+                | Node::CallMethod { method: d, .. }
+                | Node::GetField { field: d, .. }
+                | Node::SetField { field: d, .. } => check(d),
+                _ => {}
+            });
+            if let Some(d) = found {
+                let message = format!("it uses {}, which only tests have", show(p, d));
+                self.node_problem(Rule::M3, root, message);
+            }
+        }
     }
 
     /// M2: a test's signature, `fn (Test): Void throws Bubble`, with
@@ -1049,20 +1153,12 @@ impl Validator {
         extra: &[DeclId],
     ) {
         let mut tracked = extra.to_vec();
-        let mut stack: Vec<NodeId> = [body].into_iter().filter(|b| !b.is_none()).collect();
-        while let Some(id) = stack.pop() {
-            match p.nodes.get(id) {
-                Node::Let { local, .. } => {
-                    if p.decls.contains(local) && self.slot[local.index()] == u32::MAX {
-                        tracked.push(local);
-                    }
-                }
-                // A literal's body is checked as its own.
-                Node::FunctionLiteral { .. } => continue,
-                _ => {}
-            }
-            stack.extend(p.nodes.kids(id));
-        }
+        let mut lets = Vec::new();
+        body_lets(p, body, &mut lets);
+        tracked.extend(
+            lets.into_iter()
+                .filter(|d| self.slot[d.index()] == u32::MAX),
+        );
         for (slot, &decl) in tracked.iter().enumerate() {
             self.slot[decl.index()] = slot as u32;
         }
@@ -1199,10 +1295,12 @@ impl Validator {
         }
     }
 
-    /// Checks that a child's type is exactly what its role wants.
+    /// Checks that a child's type is exactly what its role wants, or
+    /// `Never<T>` for a `T` that is, which never completes.
     fn fits(&mut self, p: &Program, child: NodeId, want: TypeId, role: &str) {
         let have = p.nodes.ty(child);
-        if have != want && p.nodes.kind(child) != Kind::Error && !have.is_none() {
+        let fits = have == want || p.types.fallback(have) == want;
+        if !fits && p.nodes.kind(child) != Kind::Error && !have.is_none() {
             let message = format!(
                 "{role} is {}, but should be {}",
                 p.show_type(have),
@@ -1741,7 +1839,8 @@ impl Validator {
             }
             Node::NonNull { value } | Node::AsNullable { value } => {
                 self.expr(p, value, flow);
-                let have = p.nodes.ty(value);
+                // A `Never<T>` converts as the `T` it stands for.
+                let have = p.types.fallback(p.nodes.ty(value));
                 let (nullable, plain) = if p.nodes.kind(id) == Kind::NonNull {
                     (have, ty)
                 } else {
@@ -1934,7 +2033,7 @@ impl Validator {
             }
             Node::Upcast { value } | Node::Downcast { value } => {
                 self.expr(p, value, flow);
-                let have = p.nodes.ty(value);
+                let have = p.types.fallback(p.nodes.ty(value));
                 let (sub, sup) = if p.nodes.kind(id) == Kind::Upcast {
                     (have, ty)
                 } else {
@@ -2043,6 +2142,11 @@ impl Validator {
                 }
             }
             _ => {}
+        }
+        // A `Never<T>`, as a call of a function declaring it, never
+        // completes: nothing after it runs.
+        if p.types.is_never(ty) {
+            flow.live = false;
         }
     }
 
@@ -2381,6 +2485,20 @@ impl Validator {
     }
 }
 
+/// The locals a body's `let`s declare, but those in its function
+/// literals, whose bodies are checked as their own.
+fn body_lets(p: &Program, body: NodeId, out: &mut Vec<DeclId>) {
+    let mut stack: Vec<NodeId> = [body].into_iter().filter(|b| !b.is_none()).collect();
+    while let Some(id) = stack.pop() {
+        match p.nodes.get(id) {
+            Node::Let { local, .. } if p.decls.contains(local) => out.push(local),
+            Node::FunctionLiteral { .. } => continue,
+            _ => {}
+        }
+        stack.extend(p.nodes.kids(id));
+    }
+}
+
 /// `name#id`, for messages.
 fn show(p: &Program, decl: DeclId) -> String {
     let made = p.decls.get(decl).facts.contains(Facts::COMPILER_MADE);
@@ -2389,7 +2507,7 @@ fn show(p: &Program, decl: DeclId) -> String {
 }
 
 /// The declaration a node defines, if it defines one.
-fn defined_decl(p: &Program, id: NodeId) -> Option<DeclId> {
+pub(crate) fn defined_decl(p: &Program, id: NodeId) -> Option<DeclId> {
     match p.nodes.get(id) {
         Node::Function { decl, .. }
         | Node::BodilessFunction { decl, .. }

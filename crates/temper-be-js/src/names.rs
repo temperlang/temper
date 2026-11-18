@@ -201,6 +201,8 @@ fn identifier(c: char, first: bool) -> bool {
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, SPECIAL, PRINTED],
+    member_reserved: &[KEYWORDS, &["constructor"]],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",
@@ -209,10 +211,12 @@ pub const RULES: NamingRules = NamingRules {
     identifier,
     block_scoped: true,
     same_type_shares: false,
+    hoists_block_values: false,
     init_literals_avoid_module: false,
     members_prefixed: false,
     fields_apart: false,
     types_apart: false,
+    modules_share_names: false,
 };
 
 /// A module's file name, without `.js`: the library's name with `_` for

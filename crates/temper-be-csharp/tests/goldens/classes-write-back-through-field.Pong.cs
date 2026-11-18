@@ -9,16 +9,14 @@ internal class Pong
     public void Pong_(Ping a)
     {
         {
-            Ping o = a;
-            o.N = o.N + 1;
+            a.N = a.N + 1;
         }
     }
 
     public int Bump(Ping a, int by)
     {
         {
-            Ping o = a;
-            o.N = o.N + by;
+            a.N = a.N + by;
         }
         return a.N;
     }

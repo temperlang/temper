@@ -1,4 +1,8 @@
 local temper = require("temper-core")
+local int64_2147483647 = temper.int64_constructor(2147483647)
+local int64_neg2147483648 = temper.int64_constructor(-2147483648)
+local int64_9007199254740992 = temper.int64_constructor(2097152, 0)
+local int64_1 = temper.int64_constructor(1)
 
 ---@param a number
 ---@param b number
@@ -35,28 +39,28 @@ local function add(a, b)
   return a + b
 end
 
----@param string string
-local function checkParse(string)
+---@param string_ string
+local function checkParse(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = temper.float64_tostring(temper.string_tofloat64(string))
+    converted = temper.float64_tostring(temper.string_tofloat64(string_))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
----@param string string
-local function checkTiny(string)
+---@param string_ string
+local function checkTiny(string_)
   ---@type string
   local positive
   if not temper.pcall(function()
-    positive = tostring(temper.float_cmp(temper.string_tofloat64(string), 0.0) > 0)
+    positive = tostring(temper.float_cmp(temper.string_tofloat64(string_), 0.0) > 0)
   end) then
     positive = "failed"
   end
-  print("Parse " .. string .. " > 0 -> " .. positive)
+  print("Parse " .. string_ .. " > 0 -> " .. positive)
 end
 
 local negativeZero = -0.0
@@ -134,6 +138,9 @@ local big = 99999999999999.0 * 999999999999.0
 print(temper.float64_tostring(big))
 local bigger = big * big * big * big * big * big * big * big
 print(temper.float64_tostring(bigger))
+local middling = -1500.0 * one
+print(temper.float64_tostring(middling) .. " " .. temper.float64_tostring(1000000.0 * one) .. " " .. temper.float64_tostring(9999999.0 * one) .. " " .. temper.float64_tostring(0.001 * one))
+print(temper.float64_tostring(1e21 * one) .. " " .. temper.float64_tostring(1.5e-10 * one) .. " " .. temper.float64_tostring(2e23 * one))
 local biggest = bigger * bigger * bigger * bigger * bigger * bigger
 print("biggest " .. temper.float64_tostring(biggest))
 local tiniest = one / biggest
@@ -171,12 +178,12 @@ end) then
 end
 print("NaN to int: " .. t_1)
 local oneInt64 = temper.float64_toint64unsafe(one)
-local notSoBig = 2147483647 * oneInt64
-local notSoSmall = -2147483648 * oneInt64
+local notSoBig = int64_2147483647 * oneInt64
+local notSoSmall = int64_neg2147483648 * oneInt64
 local slightlyBigger = temper.float64_toint64unsafe(temper.int64_tofloat64unsafe(notSoBig) + 1.5)
 local slightlySmaller = temper.float64_toint64unsafe(temper.int64_tofloat64unsafe(notSoSmall) - 1.5)
-local tooBigForFloat64 = 9007199254740992 * temper.float64_toint64(one)
-local okToConvert64 = temper.int64_tofloat64unsafe(tooBigForFloat64 - 1)
+local tooBigForFloat64 = int64_9007199254740992 * temper.float64_toint64(one)
+local okToConvert64 = temper.int64_tofloat64unsafe(tooBigForFloat64 - int64_1)
 local sneakyBig = okToConvert64 + 1.0
 print("Bigger to Int64: " .. temper.int64_tostring(slightlyBigger))
 print("Smaller to Int64: " .. temper.int64_tostring(slightlySmaller))

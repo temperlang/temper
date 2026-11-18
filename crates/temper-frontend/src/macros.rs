@@ -126,7 +126,13 @@ impl Settle {
             Macro::Coalesce => match *args {
                 [a, b] => {
                     let span = self.lib.tree.span(call);
-                    let (mut statements, name) = self.subject(a, "subject", call);
+                    // A member named bare, a getter's call, is held, as
+                    // checking it for null doesn't narrow the next read.
+                    let (mut statements, name) = if self.is_bare_member(a, scope) {
+                        self.held(a, "subject", call)
+                    } else {
+                        self.subject(a, "subject", call)
+                    };
                     let null_check = self.null_check(name, span, call);
                     let reread = self.lib.add_name(NodeKind::RightName, name, span, a);
                     statements.push(self.lib.add(
@@ -143,8 +149,12 @@ impl Settle {
             },
             // Expanded by `expand_chain_null`, as its callee isn't a name.
             Macro::ChainNull => false,
-            // Only in `let { … } = import(…)`, which `Settle::import` reads.
-            Macro::Import => false,
+            // `let { … } = import(…)` is `Settle::import`'s; this is a
+            // bare `import("…")` statement.
+            Macro::Import => match *args {
+                [path] => self.bare_import(call, path),
+                _ => false,
+            },
             Macro::Test => self.expand_test(call, scope, &args),
             Macro::Assert => self.expand_assert(call, scope, &args),
             Macro::Orelse => match *args {
@@ -164,12 +174,12 @@ impl Settle {
     }
 
     /// Expands a call to a builtin the grammar step refers to directly.
-    pub(crate) fn expand_syntax(&mut self, call: NodeId, builtin: SyntaxBuiltin) {
+    pub(crate) fn expand_syntax(&mut self, call: NodeId, scope: ScopeId, builtin: SyntaxBuiltin) {
         let children = self.lib.tree.children(call).to_vec();
         let span = self.lib.tree.span(call);
         match (builtin, &children[1..]) {
             (SyntaxBuiltin::DesugarOperation, [op, operands @ ..]) => {
-                self.desugar_operation(call, *op, operands)
+                self.desugar_operation(call, scope, *op, operands)
             }
             (SyntaxBuiltin::StringExpr, [tag, tagged, parts @ ..]) => {
                 let plain = self.lib.value(*tag) == Some(&Value::Null)
@@ -552,7 +562,7 @@ impl Settle {
 
     /// `a + b` is `desugarOperation(+, a, b)`: a call of the operator's
     /// name, or for `+=`, `++` and the like, an assignment.
-    fn desugar_operation(&mut self, call: NodeId, op: NodeId, operands: &[NodeId]) {
+    fn desugar_operation(&mut self, call: NodeId, scope: ScopeId, op: NodeId, operands: &[NodeId]) {
         let Some(name) = self.lib.name(op) else {
             return self.error(call, Message::MalformedSpecial("desugarOperation".into()));
         };
@@ -577,6 +587,17 @@ impl Settle {
         if self.is_dot_call(target) {
             return self.desugar_member_operation(
                 call,
+                scope,
+                &text,
+                simple,
+                target,
+                operands.get(1).copied(),
+            );
+        }
+        if self.is_index_call(target) {
+            return self.desugar_index_operation(
+                call,
+                scope,
                 &text,
                 simple,
                 target,
@@ -640,10 +661,12 @@ impl Settle {
 
     /// `obj.name += v`, `obj.name++` and the like, reading `obj` once:
     /// `do { let o = obj; o.name = o.name + v }`, or for `obj.name++`,
-    /// `do { let o = obj; let t = o.name; o.name = t + 1; t }`.
+    /// `do { let o = obj; let t = o.name; o.name = t + 1; t }`. `obj`
+    /// isn't held if it's a stable name ([`Settle::stable_name`]).
     fn desugar_member_operation(
         &mut self,
         call: NodeId,
+        scope: ScopeId,
         text: &str,
         simple: &str,
         target: NodeId,
@@ -665,16 +688,15 @@ impl Settle {
         let Some(key_value) = key_value else {
             return self.error(call, Message::MalformedSpecial(".".into()));
         };
-        let o = self.lib.names.temporary("o");
-        let o_left = self.lib.add_name(NodeKind::LeftName, o, span, call);
-        let mut statements =
-            vec![
-                self.lib
-                    .add(NodeKind::Let, span, LET_INIT, &[o_left, object], call),
-            ];
+        let (mut statements, o) = self.held_receiver(object, scope, "o", call);
+        // A name read again where it's written, for the editor.
+        let o_span = match statements.is_empty() {
+            true => self.lib.tree.span(object),
+            false => span,
+        };
         let member = |s: &mut Self| {
             let callee = s.lib.add_name(NodeKind::BuiltinName, dot_name, span, dot);
-            let o_use = s.lib.add_name(NodeKind::RightName, o, span, call);
+            let o_use = s.lib.add_name(NodeKind::RightName, o, o_span, call);
             let key = s.lib.add_value(key_value.clone(), span, key);
             s.lib
                 .add(NodeKind::Call, span, 0, &[callee, o_use, key], target)
@@ -708,6 +730,174 @@ impl Settle {
             statements.push(self.lib.add_name(NodeKind::RightName, t, span, call));
         }
         self.rewrite(call, NodeKind::Block, 0, &statements);
+    }
+
+    /// `ls[i] += v`, `ls[i]++`, `++ls[i]` and the like, evaluating `ls`
+    /// and `i` once, as Kotlin Temper does: `do { let o = ls; let k = i;
+    /// o.set(k, o[k] + v) }`, whose value is `set`'s, as for `ls[i] = v`.
+    /// `ls[i]++` is `do { ...; let t = o[k]; o.set(k, t + 1); t }`, and
+    /// `++ls[i]` is `do { ...; let t = o[k] + 1; o.set(k, t); t }`. A
+    /// literal index isn't held, nor a list or an index that's a stable
+    /// name ([`Settle::stable_name`]).
+    fn desugar_index_operation(
+        &mut self,
+        call: NodeId,
+        scope: ScopeId,
+        text: &str,
+        simple: &str,
+        target: NodeId,
+        value: Option<NodeId>,
+    ) {
+        let span = self.lib.tree.span(call);
+        let Some(function) = self
+            .lib
+            .names
+            .find(simple)
+            .and_then(|n| self.scopes.builtin(n))
+        else {
+            return self.error(call, Message::Unsupported(format!("operator {text}")));
+        };
+        let [index, object, key] = *self.lib.tree.children(target) else {
+            unreachable!()
+        };
+        let index_name = self.lib.name(index).unwrap();
+        let (mut statements, o) = self.held_receiver(object, scope, "o", call);
+        // A name read again where it's written, for the editor.
+        let name_span = |s: &Self, node: NodeId, held: bool| match held {
+            true => span,
+            false => s.lib.tree.span(node),
+        };
+        let o_span = name_span(self, object, !statements.is_empty());
+        let key_value = match self.lib.tree.kind(key) {
+            NodeKind::Value => self.lib.value(key).cloned(),
+            _ => None,
+        };
+        let k = match key_value {
+            Some(_) => None,
+            None => {
+                let (lets, k) = self.held_receiver(key, scope, "k", call);
+                let k_span = name_span(self, key, !lets.is_empty());
+                statements.extend(lets);
+                Some((k, k_span))
+            }
+        };
+        let key_use = |s: &mut Self| match (k, &key_value) {
+            (Some((k, k_span)), _) => s.lib.add_name(NodeKind::RightName, k, k_span, call),
+            (None, Some(v)) => s.lib.add_value(v.clone(), span, key),
+            (None, None) => unreachable!(),
+        };
+        let o_use = |s: &mut Self| s.lib.add_name(NodeKind::RightName, o, o_span, call);
+        let read = {
+            let callee = self
+                .lib
+                .add_name(NodeKind::BuiltinName, index_name, span, index);
+            let (o, k) = (o_use(self), key_use(self));
+            self.lib
+                .add(NodeKind::Call, span, 0, &[callee, o, k], target)
+        };
+        let amount = match value {
+            Some(v) => v,
+            None => self.lib.add_value(Value::Int32(1), span, call),
+        };
+        let operator = self.builtin_name(function, span, call);
+        let compound = value.is_some();
+        let postfix = text.starts_with('_');
+        let mut held_result = None;
+        let mut temp = |s: &mut Self, init: NodeId, statements: &mut Vec<NodeId>| {
+            let t = s.lib.names.temporary("t");
+            let t_left = s.lib.add_name(NodeKind::LeftName, t, span, call);
+            statements.push(
+                s.lib
+                    .add(NodeKind::Let, span, LET_INIT, &[t_left, init], call),
+            );
+            held_result = Some(t);
+            s.lib.add_name(NodeKind::RightName, t, span, call)
+        };
+        let old = match postfix {
+            true => temp(self, read, &mut statements),
+            false => read,
+        };
+        let mut new = self
+            .lib
+            .add(NodeKind::Call, span, 0, &[operator, old, amount], call);
+        if !compound && !postfix {
+            new = temp(self, new, &mut statements);
+        }
+        let set = {
+            let dot = self.lib.names.intern(".");
+            let dot = self.lib.add_name(NodeKind::BuiltinName, dot, span, index);
+            let key = Value::Symbol(self.lib.names.intern("set"));
+            let key = self.lib.add_value(key, span, index);
+            let o = o_use(self);
+            let member = self
+                .lib
+                .add(NodeKind::Call, span, 0, &[dot, o, key], target);
+            let k = key_use(self);
+            self.lib
+                .add(NodeKind::Call, span, 0, &[member, k, new], call)
+        };
+        statements.push(set);
+        if let Some(t) = held_result {
+            statements.push(self.lib.add_name(NodeKind::RightName, t, span, call));
+        }
+        self.rewrite(call, NodeKind::Block, 0, &statements);
+    }
+
+    /// The receiver of `obj.name += v` or `obj[i] += v`, or the index,
+    /// held in a temporary, unless it's a name that reads the same each
+    /// time ([`Settle::stable_name`]).
+    fn held_receiver(
+        &mut self,
+        object: NodeId,
+        scope: ScopeId,
+        hint: &str,
+        like: NodeId,
+    ) -> (Vec<NodeId>, NameId) {
+        match self.stable_name(object, scope) {
+            Some(name) => (Vec::new(), name),
+            None => self.held(object, hint, like),
+        }
+    }
+
+    /// A name that reads the same however often it's read: a type's, as
+    /// `C` in `C.count += 1`, which Kotlin Temper doesn't hold either
+    /// (`isKnownStable`), and which a static member's read and assignment
+    /// need as written; or a `let`'s or a parameter's, which nothing can
+    /// assign meanwhile. Not a `var`, which the value may assign, nor a
+    /// member named bare, a getter's call.
+    fn stable_name(&self, node: NodeId, scope: ScopeId) -> Option<NameId> {
+        let name = self.lib.name(node)?;
+        if self.lib.tree.kind(node) != NodeKind::RightName {
+            return None;
+        }
+        let at = self.lib.tree.span(node).start;
+        let Lookup::Found(s) = self.scopes.lookup(scope, name, false, at) else {
+            return None;
+        };
+        let symbol = self.scopes.symbol(s);
+        let stable = self.type_decl(s).is_some()
+            || (!symbol.mutable
+                && matches!(
+                    symbol.kind,
+                    SymbolKind::Local | SymbolKind::Parameter | SymbolKind::TopLevel
+                ));
+        stable.then_some(name)
+    }
+
+    /// Whether `node` names a member bare, as `problem` for
+    /// `this.problem` in its class.
+    fn is_bare_member(&self, node: NodeId, scope: ScopeId) -> bool {
+        let Some(name) = self.lib.name(node) else {
+            return false;
+        };
+        if self.lib.tree.kind(node) != NodeKind::RightName {
+            return false;
+        }
+        let at = self.lib.tree.span(node).start;
+        match self.scopes.lookup(scope, name, false, at) {
+            Lookup::Found(s) => self.scopes.symbol(s).kind == SymbolKind::Member,
+            _ => false,
+        }
     }
 
     /// A temporary holding `value`, unless it's a name already: the
@@ -746,29 +936,16 @@ impl Settle {
     /// `a?.name`, or as `dot` in a call, `a?.name(args)`: `do { let t = a;
     /// if (t == null) { null } else { t.name(args) } }`, as Kotlin Temper
     /// lowers it. A later `.` isn't skipped: `a?.b.c` fails if `a` is null.
-    /// `a` is held in a temporary unless it's a local's name: a bare
-    /// member's name in a class, `this`'s getter, isn't, as checking it
-    /// for null doesn't narrow the next read.
+    /// `a` is held in a temporary unless it's a name that reads the same
+    /// each time ([`Settle::stable_name`]), which the null check narrows:
+    /// a `var`'s or a bare member's name (`this`'s getter) is held, as
+    /// checking it for null doesn't narrow the next read.
     pub(crate) fn expand_chain_null(&mut self, call: NodeId, dot: NodeId, scope: ScopeId) {
         let span = self.lib.tree.span(call);
         let [op, object, key] = *self.lib.tree.children(dot) else {
             unreachable!()
         };
-        let member = self.lib.tree.kind(object) == NodeKind::RightName
-            && self.lib.name(object).is_some_and(|n| {
-                match self
-                    .scopes
-                    .lookup(scope, n, false, self.lib.tree.span(object).start)
-                {
-                    Lookup::Found(s) => self.scopes.symbol(s).kind == SymbolKind::Member,
-                    Lookup::Wait(_) => true,
-                    Lookup::Missing => false,
-                }
-            });
-        let (mut statements, name) = match member {
-            true => self.held(object, "subject", call),
-            false => self.subject(object, "subject", call),
-        };
+        let (mut statements, name) = self.held_receiver(object, scope, "subject", call);
         let null_check = self.null_check(name, span, call);
         let null = self.lib.add_value(Value::Null, span, call);
         let dot_name = self.lib.names.intern(".");
@@ -945,6 +1122,18 @@ impl Settle {
         true
     }
 
+    /// Whether a node is a list literal of string literals, as
+    /// `["cpp", "rust"]`.
+    fn is_string_list(&self, node: NodeId) -> bool {
+        let tree = &self.lib.tree;
+        let Some((&callee, items)) = tree.children(node).split_first() else {
+            return false;
+        };
+        tree.kind(node) == NodeKind::Call
+            && self.lib.value(callee) == Some(&Value::Builtin(SyntaxBuiltin::List))
+            && (items.iter()).all(|&i| matches!(self.lib.value(i), Some(Value::String(_))))
+    }
+
     /// The string values in a tree, in order, as the backends a
     /// `@connected(["cpp", "rust"])` lists.
     fn strings_in(&self, node: NodeId) -> Vec<String> {
@@ -984,6 +1173,17 @@ impl Settle {
         }
         let Some(body) = sig.body.and_then(|b| self.block_of(b)) else {
             if connected && sig.body.is_none() {
+                // Backends not listed would have no body to use.
+                if self
+                    .lib
+                    .connected
+                    .get(&call)
+                    .is_some_and(|c| c.backends.is_some())
+                {
+                    let span = self.lib.tree.span(*name);
+                    let message = Message::ConnectedBackendsNeedBody;
+                    self.lib.report(Level::Error, message, span);
+                }
                 // Implemented outside Temper: its type, `fn (A): B`.
                 let lowered = self.lower_params(&sig.params);
                 // Its parameters' names, for backends' wrappers of host code.
@@ -1646,15 +1846,22 @@ impl Settle {
         if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "sealed") {
             self.sealed.insert(call);
         }
-        // `@keep`, which keeps a declaration that only host code uses; the
-        // `Let` it becomes keeps this node's id.
-        if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "keep") {
-            self.lib.kept.insert(call);
+        // `@keep`, which keeps a declaration that only host code uses, and
+        // `@keepTest`, only tests' host code; the `Let` or `Class` it
+        // becomes keeps this node's id.
+        match (self.lib.name(decorator)).map(|n| self.lib.names.get(n)) {
+            Some("keep") => _ = self.lib.kept.insert(call),
+            Some("keepTest") => _ = self.lib.kept_for_tests.insert(call),
+            _ => {}
         }
         if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "json") {
             self.json_decorated.insert(call);
+            // Where generated members are spanned, as `@auto`'s.
+            let at = self.lib.tree.span(call).start;
+            self.json.at.entry(call).or_insert(at);
         }
-        // `@connected` or `@connected("key")`.
+        self.json_extra(call, decorator);
+        // `@connected` or `@connected(["cpp", "rust"])`.
         let callee = match self.lib.tree.kind(decorator) {
             NodeKind::Call => self.lib.tree.children(decorator).first().copied(),
             _ => Some(decorator),
@@ -1664,16 +1871,23 @@ impl Settle {
             .is_some_and(|n| self.lib.names.get(n) == "connected")
         {
             self.connected.insert(call);
-            // A list of backends, as `["cpp", "rust"]`, rather than core's
-            // and std's key, as `@connected("String::length")`.
+            // A list of backends, as `["cpp", "rust"]`; anything else,
+            // as a key, `@connected("X")`, is an error.
             let args = match self.lib.tree.kind(decorator) {
                 NodeKind::Call => &self.lib.tree.children(decorator)[1..],
                 _ => &[],
             };
             if let [arg] = *args {
-                if !matches!(self.lib.value(arg), Some(Value::String(_))) {
+                if self.is_string_list(arg) {
                     let listed = self.strings_in(arg);
                     self.connected_lists.insert(call, listed);
+                } else {
+                    // Reported, and connected as if without a list, as
+                    // Kotlin's `ConnectedDecorator` does.
+                    let span = self.lib.tree.span(arg);
+                    let text = self.lib.source_text(span).to_string();
+                    let message = Message::ConnectedBackendsNotNames(text);
+                    self.lib.report(Level::Error, message, span);
                 }
             }
         }

@@ -78,10 +78,12 @@ end
 ---@field name string
 ---@field eq fun(self: libraries.Casing, other: libraries.Casing): boolean
 ---@field toString fun(self: libraries.Casing): string
+---@field marked string
 
 ---@class libraries.Casing.type: temper.Type
 ---@field first libraries.Casing
 ---@field last libraries.Casing
+---@field mark string
 ---@operator call: libraries.Casing
 local Casing = temper.type("libraries.Casing")
 
@@ -108,6 +110,12 @@ end
 ---@return libraries.Casing
 function Casing.named(name)
   return Casing(name)
+end
+
+---@param this libraries.Casing
+---@return string
+function Casing.get.marked(this)
+  return Casing.mark .. this.name
 end
 
 with_tostring(Casing)
@@ -593,10 +601,10 @@ local Held = temper.type("libraries.Held")
 
 ---@param this libraries.Held
 ---@param item any
----@param next libraries.Held|temper.Null
-function Held.constructor(this, item, next)
+---@param next_ libraries.Held|temper.Null
+function Held.constructor(this, item, next_)
   this.item = item
-  this.next = next
+  this.next = next_
 end
 
 ---@param this libraries.Held
@@ -908,6 +916,7 @@ end
 
 Casing.first = Casing("first")
 Casing.last = Casing.named("last")
+Casing.mark = "#"
 ticks = 0
 extras = { 1 }
 local grid = Grid(2, { 1.0, 2.0, 3.0, 4.0 })
@@ -938,10 +947,10 @@ print(tostring(named == word(3) and named .. "!" ~= named))
 local digits = { 1, 2, 4, 3 }
 print(byteAt(digits, true, 1) .. " " .. byteAt(digits, false, 0) .. " " .. tostring(ascending(digits)) .. " " .. firstDrop(digits) .. " " .. sizeWith(digits))
 print(tickIf(true) .. " " .. tickIf(false) .. " " .. tostring(ticked()) .. " " .. tickWhile())
-local string = shapeName(shapeOf(1)) .. " " .. shapeName(shapeOf(2)) .. " " .. temper.list_length(sizes(shapeOf(1))) .. " " .. temper.list_length(sizes(shapeOf(2))) .. " "
+local string_ = shapeName(shapeOf(1)) .. " " .. shapeName(shapeOf(2)) .. " " .. temper.list_length(sizes(shapeOf(1))) .. " " .. temper.list_length(sizes(shapeOf(2))) .. " "
 local part4 = Dot(1).grown
 local part5 = Dot(3).grown
-print(string .. (temper.is_null(part4) and "null" or tostring(part4 --[[@as integer]])) .. " " .. (temper.is_null(part5) and "null" or tostring(part5 --[[@as integer]])) .. " " .. Casing.last:toString())
+print(string_ .. (temper.is_null(part4) and "null" or tostring(part4 --[[@as integer]])) .. " " .. (temper.is_null(part5) and "null" or tostring(part5 --[[@as integer]])) .. " " .. Casing.last:toString() .. " " .. Casing.first.marked)
 local carry = Carry(3)
 local value = tostring(carry.carrying) .. " " .. carry.state .. " " .. tostring(Carry(0).carrying) .. " "
 local part6 = tagged().label
@@ -961,10 +970,10 @@ print(joiner.out)
 local held = Held(Tag("a"), temper.null)
 local other = Held(Tag("b"), held)
 local nobody = temper.null
-local string2 = held:toString() .. " "
+local string_2 = held:toString() .. " "
 local subject3 = other.next
 local subject2 = temper.is_null(subject3) and temper.null or (subject3 --[[@as libraries.Held]]).item
-print(string2 .. (temper.is_null(subject2) and Tag("none") or (subject2 --[[@as libraries.Tag]])):toString() .. " " .. tostring(sameHeld(held, held)) .. " " .. tostring(sameHeld(held, other)) .. " " .. tostring(sameHeld(nobody, nobody)) .. " " .. tostring(sameHeld(nobody, held)))
+print(string_2 .. (temper.is_null(subject2) and Tag("none") or (subject2 --[[@as libraries.Tag]])):toString() .. " " .. tostring(sameHeld(held, held)) .. " " .. tostring(sameHeld(held, other)) .. " " .. tostring(sameHeld(nobody, nobody)) .. " " .. tostring(sameHeld(nobody, held)))
 print(effectsOf("ab", 1, 2) .. " " .. Bundle({}, "2").first .. " " .. temper.list_length(flags))
 local counter = Ticks()
 local stepper = counter

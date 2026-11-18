@@ -1,3 +1,4 @@
+import builtins as _builtins
 from collections.abc import (
     Callable as _Callable,
     MutableSequence as _MutableSequence,
@@ -32,14 +33,14 @@ __all__ = ()
 _T = _TypeVar('_T')
 
 
-def _report_length(list_: _Sequence[_T], /) -> None:
-    _console.log(f'Length: {len(list_)}')
+def _report_length(list: _Sequence[_T], /) -> None:
+    _console.log(f'Length: {len(list)}')
 
 
 def _report_split(string: str, sep: str, /) -> None:
     strings = _string_split(string, sep)
-    len_ = str(len(strings))
-    _console.log(f"Split {_list_join(strings, ', ', lambda x: x)} - {len_}")
+    len = str(_builtins.len(strings))
+    _console.log(f"Split {_list_join(strings, ', ', lambda x: x)} - {len}")
 
 
 def _something(callback: _Callable[[_Sequence[str]], None], /) -> None:
@@ -79,9 +80,9 @@ _report_split('🌍', '')
 _t_0 = ((), ('bar',), ('bar', 'baz'), ('bar', 'baz', 'boo'), ('bar', 'baz', 'boo', 'far'), ('bar', 'baz', 'boo', 'far', 'faz'), ('far', 'faz', 'foo', 'bar', 'baz', 'boo'))
 
 
-def _fn11(list_: _Sequence[str], /) -> _MutableSequence[str]:
-    builder = list(list_)
-    _list_builder_sort(_cast('list[_Any]', builder), lambda a, b: (a > b) - (a < b))
+def _fn11(list: _Sequence[str], /) -> _MutableSequence[str]:
+    builder = _builtins.list(list)
+    _list_builder_sort(_cast('_builtins.list[_Any]', builder), lambda a, b: (a > b) - (a < b))
     return builder
 
 
@@ -109,7 +110,6 @@ _list_builder_add_all(_copy_that, _message_builder)
 _console.log(_list_join(_message_builder, ' ', lambda x: x))
 _console.log(_list_join(_listed_sorted(_copy_that, lambda a, b: (b > a) - (b < a)), ' ', lambda x: x))
 _console.log(_list_join(_copy_that, ' ', lambda x: x))
-_typed: _MutableSequence[str] = _message_builder
 _old_last: str = _copy_that.pop()
 _console.log(f"Removed {_old_last} so {_list_join(_copy_that, ' ', lambda x: x)}")
 _next_last: _Sequence[str] = _list_builder_splice(_copy_that, _int_sub(len(_copy_that), 1), 1)

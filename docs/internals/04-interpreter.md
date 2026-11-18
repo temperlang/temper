@@ -1,7 +1,7 @@
 # 4. The interpreter
 
 A settled library can run straight away, without generating any code.
-That's what `tempest test` does by default, what the playground's Run
+That's what `temper test` does by default, what the playground's Run
 button shows, and how the functional tests check the frontend. The
 interpreter is small, and it's built to run code with errors in it too:
 an error node fails when it runs, with its message, as generated code
@@ -38,7 +38,7 @@ flowchart LR
   `async` block is a generator too, run from a queue, which also pauses
   at an `await` of a promise that isn't resolved yet.
 - **Bounded.** Optional fuel stops a run after a number of steps (the
-  playground sets it, and `tempest test` gives each test its own, so a
+  playground sets it, and `temper test` gives each test its own, so a
   runaway test fails alone), output kept for tests is capped at 64 KiB,
   and calls nest at most 2000 deep (500 in the browser), so runaway code
   can't hang a test run, fill memory, or crash a tab
@@ -78,7 +78,7 @@ triple(14) = 42
 [`run_tests`](../../crates/temper-frontend/src/interp.rs) runs a
 library's top level, then each module's tests, and reports them as
 JUnit XML, the same report std's test runner gives in every language.
-`tempest test` reads those results into one summary
+`temper test` reads those results into one summary
 ([the CLI page](07-cli.md) says more). What tests pin the interpreter
 itself: [its tests, in detail](detail/04-interpreter.md#tests).
 

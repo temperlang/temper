@@ -294,7 +294,7 @@ Unlike in C, digits are required after a decimal point.
 // ❌ Operator Dot expects at least 2 operands but got 1!
 ```
 
-> **Note:** tempest accepts `1.`, as a number followed by a dot ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper accepts `1.`, as a number followed by a dot ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 Which allows Temper to more flexibly combine numbers with class-use syntax.
 
@@ -1816,7 +1816,7 @@ The keyword `fn` is used to denote function values and types.
 | `fn<T> (T): List<T>` | Type for a generic function with a type parameter `<T>` |
 | `fn (...Int): Boolean` | Type for a function that takes any number of integers |
 
-Source: [*Types.kt*](https://github.com/temperlang/temper/blob/main/fundamentals/src/commonMain/kotlin/lang/temper/type/Types.kt), in Temper's first compiler.
+Source: [*Types.kt*](https://github.com/temperlang/temper/blob/main/fundamentals/src/commonMain/kotlin/lang/temper/type/Types.kt), in Temper's previous compiler.
 
 ## *interface Function*
 

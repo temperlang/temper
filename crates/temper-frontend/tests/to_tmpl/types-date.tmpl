@@ -1,6 +1,6 @@
 tmpl 1 model 1 library date 0.0.0
 
-uses std#1 0.6.0 {
+uses std#1 0.0.0-alpha.0.0 {
   module temporal#2 {
     connected class Date#3 {
       connected constructor constructor#10(year: Int32, month: Int32, day: Int32): Date#3 throws Bubble;
@@ -16,7 +16,7 @@ uses std#1 0.6.0 {
   }
 }
 
-uses `temper-core`#11 0.1.0 {
+uses `temper-core`#11 0.0.0-alpha.0.0 {
   interface Console#12 {
     connected method log#13(message: String): Void;
   }

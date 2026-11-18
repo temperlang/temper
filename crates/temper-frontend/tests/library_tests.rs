@@ -460,6 +460,53 @@ fn libraries_import_each_other() {
     assert!(passed);
 }
 
+/// `import("..")` and `import(".")` are relative, as `../` and `./`
+/// are, and a bare `import("…")` statement makes a module part of the
+/// library without ordering it, so it may name a module that imports the
+/// one naming it, as Kotlin allows.
+#[test]
+fn parent_and_bare_imports() {
+    let tree = write_tree(
+        "parent-imports",
+        &[
+            ("config.temper.md", CONFIG),
+            ("top.temper", "export let top = 1;\nimport(\"./checks\");\n"),
+            (
+                "checks/checks.temper",
+                "let { top } = import(\"..\");\nlet { inner } = import(\"./inner\");\n\
+                 test(\"parent and child\") { assert(top + inner == 3) }\n",
+            ),
+            ("checks/inner/inner.temper", "export let inner = 2;\n"),
+        ],
+    );
+    let root = &tree.root;
+    let (passed, out, err) = test(root);
+    assert_eq!(err, "", "{out}");
+    assert!(
+        out.ends_with("  ok      parent and child\nTests passed: 1 of 1\n"),
+        "{out}"
+    );
+    assert!(passed);
+    // A module importing itself, or one that isn't there, fails.
+    let tree = write_tree(
+        "bare-import-errors",
+        &[
+            ("config.temper.md", CONFIG),
+            ("a.temper", "import(\".\");\nimport(\"./missing\");\n"),
+        ],
+    );
+    let root = &tree.root;
+    let (passed, _, err) = test(root);
+    assert_eq!(
+        err,
+        format!(
+            "{root}/a.temper:1:1: error: Import of . failed\n\
+             {root}/a.temper:2:1: error: Import of ./missing failed\n"
+        )
+    );
+    assert!(!passed);
+}
+
 /// Two libraries of one name are an error, as in Kotlin.
 #[test]
 fn duplicate_names() {

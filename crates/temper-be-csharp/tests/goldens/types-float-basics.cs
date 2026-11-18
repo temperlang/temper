@@ -193,6 +193,9 @@ public static class BasicsGlobal
         console.Log(FormatFloat64(big));
         double bigger = big * big * big * big * big * big * big * big;
         console.Log(FormatFloat64(bigger));
+        double middling = -1500.0 * one;
+        console.Log(FormatFloat64(middling) + " " + FormatFloat64(1000000.0 * one) + " " + FormatFloat64(9999999.0 * one) + " " + FormatFloat64(0.001 * one));
+        console.Log(FormatFloat64(1e21 * one) + " " + FormatFloat64(1.5e-10 * one) + " " + FormatFloat64(2e23 * one));
         double biggest = bigger * bigger * bigger * bigger * bigger * bigger;
         console.Log("biggest " + FormatFloat64(biggest));
         double tiniest = one / biggest;

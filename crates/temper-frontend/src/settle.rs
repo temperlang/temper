@@ -164,6 +164,7 @@ impl Settle {
             fun_interfaces: HashSet::new(),
             sealed: HashSet::new(),
             json_decorated: HashSet::new(),
+            json: crate::json::JsonState::default(),
             static_extension_marks: HashMap::new(),
             static_extensions: Vec::new(),
             extension_marks: HashMap::new(),
@@ -172,6 +173,7 @@ impl Settle {
             overloads: HashMap::new(),
             tests: Vec::new(),
             test_runners: Vec::new(),
+            assert_messages: Vec::new(),
             passed: Vec::new(),
             removed: HashSet::new(),
             object_literals: BTreeMap::new(),
@@ -231,6 +233,7 @@ impl Settle {
             self.queue_typing();
             if self.run() {
                 self.check_types();
+                self.settle_assert_messages();
                 typed = true;
             }
         }
@@ -314,18 +317,19 @@ pub(crate) struct Settle {
     pub(crate) fun_interfaces: HashSet<NodeId>,
     /// Declarations marked `sealed`, until they're interfaces.
     pub(crate) sealed: HashSet<NodeId>,
-    /// Declarations marked `@json`, until they're classes: only to
-    /// report one on a `@fun` interface, as `@json` would add members.
+    /// Declarations marked `@json`, until they're classes, which get
+    /// members to encode and decode JSON ([`crate::json`]).
     pub(crate) json_decorated: HashSet<NodeId>,
+    /// What `@json` generates, and keeps between steps.
+    pub(crate) json: crate::json::JsonState,
     /// Declarations marked `@staticExtension(T, "name")`, until they're
     /// declared: `T` and the name.
     pub(crate) static_extension_marks: HashMap<NodeId, (NodeId, NameId)>,
     pub(crate) static_extensions: Vec<StaticExtension>,
     /// Declarations marked `@extension("name")`, until they're declared,
     /// with the name; then each such function or a name for it, such as
-    /// an import's, with the name. Instance extensions aren't supported
-    /// yet; these only keep "No member" from being reported where one may
-    /// apply ([`Settle::extension_visible`]).
+    /// an import's, with the name, for typing to call where visible
+    /// (`typing::instance_extensions`).
     pub(crate) extension_marks: HashMap<NodeId, NameId>,
     pub(crate) extensions: Vec<(SymbolId, NameId)>,
     /// Methods marked `@overload("name")`, with each such name: a call
@@ -338,6 +342,10 @@ pub(crate) struct Settle {
     /// `runTestCases` is imported as (`testing`).
     pub(crate) tests: Vec<(ModuleId, NodeId)>,
     pub(crate) test_runners: Vec<(ModuleId, NodeId)>,
+    /// Each `assert(a == b)`'s message showing both values, with its
+    /// plain one, `"expected a == b"`, to use where a value can't be
+    /// shown ([`Settle::settle_assert_messages`]).
+    pub(crate) assert_messages: Vec<(NodeId, NodeId)>,
     /// Lookups that resolved past a scope that wasn't complete yet, as a
     /// statement's macro name or when forced: the scope, name and use.
     passed: Vec<(ScopeId, NameId, Span)>,
@@ -516,6 +524,13 @@ impl Settle {
             }
             forced = false;
             next += 1;
+            // A `@json` type's adapter class, declared after it.
+            if let Some(siblings) = self.json.siblings.remove(&statement) {
+                let mut children = self.lib.tree.children(node).to_vec();
+                let at = next as usize;
+                children.splice(at..at, siblings);
+                self.set_children(node, &children);
+            }
         }
         let children = self.lib.tree.children(node);
         if children.iter().any(|c| self.removed.contains(c)) {
@@ -580,7 +595,7 @@ impl Settle {
                                 return Ok(());
                             }
                             Some(Value::Builtin(SyntaxBuiltin::DocComment)) => {
-                                self.expand_syntax(statement, SyntaxBuiltin::DocComment);
+                                self.expand_syntax(statement, scope, SyntaxBuiltin::DocComment);
                                 continue;
                             }
                             _ => {}
@@ -622,6 +637,12 @@ impl Settle {
         let b = self
             .scopes
             .declare(scope, name, kind, Some(let_node), mutable);
+        if kind == SymbolKind::Member
+            && is_let
+            && self.lib.tree.data(let_node) & core::MEMBER_NO_PROPERTY != 0
+        {
+            self.scopes.mark_input(b);
+        }
         self.note_extension(let_node, b, scope);
         // As in Kotlin Temper, a block's local is visible only after its
         // declaration, so `var x = x` reads an outer `x`; functions and
@@ -897,6 +918,9 @@ impl Settle {
         if self.lib.tree.kind(node) != NodeKind::RightName || self.scopes.resolved(node).is_some() {
             return Ok(());
         }
+        if let Some(&path) = self.json.std_refs.get(&node) {
+            return self.resolve_std_ref(node, path, forced);
+        }
         let name = self.lib.name(node).unwrap();
         match self.lookup(scope, name, node, false, forced) {
             Lookup::Found(b) => self.scopes.resolve(node, b),
@@ -917,6 +941,10 @@ impl Settle {
             self.error(node, Message::Unsupported("a call without a callee".into()));
             return Ok(false);
         };
+        // A sealed `@json` interface's decoder, once its module is read.
+        if self.json_sealed_body(node, forced)? {
+            return Ok(true);
+        }
         // `T.name()` may become `f()`, rewriting the callee in place.
         self.static_extension_call(node, scope, forced)?;
         if self.is_chain_null(callee) {
@@ -969,7 +997,7 @@ impl Settle {
                     if b == SyntaxBuiltin::This {
                         self.expand_this(node, scope);
                     } else {
-                        self.expand_syntax(node, b);
+                        self.expand_syntax(node, scope, b);
                     }
                     return Ok(true);
                 }

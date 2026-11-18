@@ -179,6 +179,10 @@ fn identifier(c: char, first: bool) -> bool {
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
     reserved: &[KEYWORDS, PRINTED, MACROS],
+    // A member hides a name in its member functions (`int32_t`), and
+    // every struct has `make` and `shared_from_this`.
+    member_reserved: &[KEYWORDS, PRINTED, MACROS],
+    local_reserved: None,
     case,
     private_prefix: "",
     escape_suffix: "_",
@@ -187,10 +191,13 @@ pub const RULES: NamingRules = NamingRules {
     identifier,
     block_scoped: true,
     same_type_shares: false,
+    hoists_block_values: false,
     init_literals_avoid_module: true,
     members_prefixed: false,
     fields_apart: false,
     types_apart: false,
+    // Every module's declarations are the library namespace's.
+    modules_share_names: true,
 };
 
 /// Whether C++ reserves a name for its implementation: one with `__`, or

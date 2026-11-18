@@ -506,11 +506,56 @@ pub fn source_kind(path: &str) -> SourceKind {
     }
 }
 
-/// A path with `/` between its parts, on Windows too.
+/// A Windows path's drive letter in upper case: `c:/x` is `C:/x`.
+pub fn upper_drive(path: &str) -> String {
+    match path.as_bytes() {
+        [d, b':', ..] if d.is_ascii_lowercase() => {
+            format!("{}{}", d.to_ascii_uppercase() as char, &path[1..])
+        }
+        _ => path.to_string(),
+    }
+}
+
+/// A path with `/` between its parts, on Windows too, where a verbatim
+/// prefix (`\\?\C:\…`, as `fs::canonicalize` gives) is dropped
+/// (`\\?\UNC\server\…` is `//server/…`), and a drive letter is upper
+/// case (`c:\x` is `C:/x`), as editors' URIs may give it lower.
 pub fn slashed(path: &str) -> String {
     if cfg!(windows) {
-        path.replace('\\', "/")
+        let path = match (path.strip_prefix(r"\\?\UNC\"), path.strip_prefix(r"\\?\")) {
+            (Some(unc), _) => format!(r"\\{unc}"),
+            (None, Some(local)) => local.to_string(),
+            (None, None) => path.to_string(),
+        };
+        upper_drive(&path.replace('\\', "/"))
     } else {
         path.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drives_upper_case() {
+        assert_eq!(upper_drive("c:/x"), "C:/x");
+        assert_eq!(upper_drive("C:/x"), "C:/x");
+        assert_eq!(upper_drive("/c:/x"), "/c:/x");
+        assert_eq!(upper_drive("ab"), "ab");
+    }
+
+    /// Windows' path forms, as `/`-joined paths the frontend keeps.
+    #[test]
+    #[cfg(windows)]
+    fn windows_paths_slashed() {
+        assert_eq!(
+            slashed(r"C:\Users\Zoë\My Projects"),
+            "C:/Users/Zoë/My Projects"
+        );
+        assert_eq!(slashed(r"c:\x\y"), "C:/x/y");
+        assert_eq!(slashed(r"\\?\C:\x\y"), "C:/x/y");
+        assert_eq!(slashed(r"\\?\UNC\server\share\x"), "//server/share/x");
+        assert_eq!(slashed(r"\\server\share\x"), "//server/share/x");
     }
 }

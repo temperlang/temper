@@ -1,14 +1,30 @@
 import { type } from "@temperlang/core";
 
+/** @type {Simple} */
+let Simple$simon;
+/** @type {string} */
+let Simple$value;
+/** @type {number} */
+let Simple$other;
+
 class Simple extends type() {
   /** @type {string} */
   #name;
-  /** @type {Simple} */
-  static simon;
-  /** @type {string} */
-  static value;
-  /** @type {number} */
-  static other;
+
+  /** @returns {Simple} */
+  static get simon() {
+    return Simple$simon;
+  }
+
+  /** @returns {string} */
+  static get value() {
+    return Simple$value;
+  }
+
+  /** @returns {number} */
+  static get other() {
+    return Simple$other;
+  }
 
   /** @param {string} name */
   constructor(name) {
@@ -43,9 +59,9 @@ class I extends type() {
   }
 }
 
-Simple.simon = new Simple("foo");
-Simple.value = Simple.simon.name;
-Simple.other = 22;
+Simple$simon = new Simple("foo");
+Simple$value = Simple.simon.name;
+Simple$other = 22;
 console.log(`Simple.simon.name is ${Simple.simon.name}`);
 console.log(`Simple.value is ${Simple.value}`);
 console.log(`Simple.other is ${Simple.other}`);

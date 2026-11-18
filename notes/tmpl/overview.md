@@ -53,7 +53,7 @@ temper-syntax ─► temper-frontend ──(to_tmpl)──► temper-tmpl ◄─
   variant. Backends depend on `temper-tmpl` and the printing crate
   only. Decided (2026-10-30): a backend works from tmpl alone, so it
   depends on the frontend at most as a test dependency (to translate
-  the vendored functional tests into tmpl for its tests and goldens).
+  the functional tests into tmpl for its tests and goldens).
 - **In the `tempest` crate,** the command-line program: for now, it
   pulls in the frontend and every backend and wires them together.
   Later, maybe, backends become pluggable at run time, as dynamic

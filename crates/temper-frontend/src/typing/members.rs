@@ -20,7 +20,7 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeKind, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, ClassInfo, NEVER, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
+    ANY_VALUE, ClassInfo, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
 };
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
@@ -579,9 +579,10 @@ impl Settle {
     /// as `new Pair(1, "a")` or `new ListBuilder<Int>()`, maybe through
     /// an alias, as a generic
     /// function of the type's own type parameters, `<K, V>(K, V) ->
-    /// Pair<K, V>`, with the call's type arguments. Their bounds aren't
-    /// read, so they're unknown and unchecked: `T` in `Deque<T>` may be
-    /// nullable, as in `new Deque<D?>()`.
+    /// Pair<K, V>`, with the call's type arguments. Their bounds are as
+    /// core declares them, as `MapKey<K>` for `Map`'s `K`, so a call is
+    /// checked against them, and unknown where it declares none: `T` in
+    /// `Deque<T>` may be nullable, as in `new Deque<D?>()`.
     pub(super) fn core_generic_new(
         &mut self,
         args: &[NodeId],
@@ -633,11 +634,17 @@ impl Settle {
                 let formals: Vec<SymbolId> = (class.type_param_names.iter())
                     .map(|p| {
                         let name = self.lib.names.intern(p);
-                        let symbol = self.scopes.unnamed_type_param(name);
-                        self.typing.types.set_bound(symbol, UNKNOWN);
-                        symbol
+                        self.scopes.unnamed_type_param(name)
                     })
                     .collect();
+                // A bound may name the type's own type parameters, as
+                // `MapKey<K>` does.
+                let types = &mut self.typing.types;
+                let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
+                for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
+                    let bound = core_type(types, bound, &own, &[]);
+                    types.set_bound(formal, bound);
+                }
                 self.typing.core_formals.insert(key, formals.clone());
                 formals
             }
@@ -785,7 +792,11 @@ impl Settle {
         let symbol = *self.scopes.symbol(symbol);
         let class = self.scopes.get(symbol.owner).node;
         let is_static = self.lib.tree.data(symbol.decl?) & MEMBER_STATIC != 0;
-        let m = self.member_named(class, symbol.name, is_static, callee)?;
+        // A `@noProperty` input is itself, not a member by its name.
+        let m = match symbol.input {
+            true => symbol.decl?,
+            false => self.member_named(class, symbol.name, is_static, callee)?,
+        };
         let receiver = self.own_receiver(class, is_static);
         let this = (!is_static).then(|| self.class_or_own_type(class));
         Some((m, receiver, this))
@@ -1073,8 +1084,63 @@ impl Settle {
         }
     }
 
+    /// Whether a string template can show a value of type `t`, not null:
+    /// one of a builtin type or class with a `toString()` method, its own
+    /// or inherited; a type parameter's by its bound. True where typing
+    /// doesn't know, so only a known lack is reported.
+    pub(crate) fn has_to_string(&mut self, t: TypeId) -> bool {
+        let mut t = t;
+        for _ in 0..8 {
+            match *self.typing.types.get(t) {
+                TypeData::Nullable(inner) => t = inner,
+                TypeData::Param(_) => t = self.typing.types.upper(t),
+                _ => break,
+            }
+        }
+        let types = &self.typing.types;
+        match *types.get(types.base(t)) {
+            TypeData::Builtin(i) => {
+                let mut name = match TYPES[i as usize] {
+                    "Int" => "Int32",
+                    other => other,
+                };
+                if matches!(name, "String" | "Boolean" | "Int32" | "Int64" | "Float64") {
+                    return true;
+                }
+                loop {
+                    let shown = (core_class(name).members.iter()).any(|m| {
+                        m.name == "toString"
+                            && !m.is_static
+                            && matches!(m.kind, CoreMemberKind::Method { .. })
+                    });
+                    if shown {
+                        return true;
+                    }
+                    match builtin_supertype(name) {
+                        Some(sup) => name = sup,
+                        None => return false,
+                    }
+                }
+            }
+            TypeData::Class(symbol) => {
+                let Some(class) = self.scopes.symbol(symbol).decl else {
+                    return true;
+                };
+                let Some(name) = self.lib.names.find("toString") else {
+                    return false;
+                };
+                let tree = &self.lib.tree;
+                (self.members_named(class, name, false).iter())
+                    .any(|&m| tree.data(m) & ROLE_MASK == ROLE_METHOD)
+            }
+            TypeData::Fn { .. } => false,
+            _ => true,
+        }
+    }
+
     /// A class's members named `name`: its instances' own and inherited
-    /// ones, or if `statics`, its own static ones. Not constructors.
+    /// ones, or if `statics`, its own static ones. Not constructors, nor
+    /// `@noProperty` inputs, which only initializers read, by name.
     pub(super) fn members_named(&self, class: NodeId, name: NameId, statics: bool) -> Vec<NodeId> {
         let Some(scope) = self.scopes.of_node(class) else {
             return Vec::new();
@@ -1087,6 +1153,7 @@ impl Settle {
                 tree.kind(m) == NodeKind::Let
                     && (tree.data(m) & MEMBER_STATIC != 0) == statics
                     && tree.data(m) & ROLE_MASK != ROLE_CONSTRUCTOR
+                    && tree.data(m) & core::MEMBER_NO_PROPERTY == 0
             })
             .collect()
     }
@@ -1206,8 +1273,7 @@ fn core_signature(
 
 /// A type in a builtin type's member's signature, with `args` put in for
 /// the type's own type parameters and `own` for a method's, unknown where
-/// `own` has none. A generic type that typing doesn't take arguments for,
-/// as `Never<T>`, is unknown.
+/// `own` has none.
 fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -> TypeId {
     match t {
         CoreType::Unknown => UNKNOWN,
@@ -1216,11 +1282,8 @@ fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -
         CoreType::Own(i) => own.get(*i as usize).copied().unwrap_or(UNKNOWN),
         CoreType::Applied(base, xs) => {
             let base = types.builtin(*base);
-            if base == NEVER || base == ANY_VALUE || types.is_final(base) {
-                return UNKNOWN;
-            }
             let args = xs.iter().map(|x| core_type(types, x, args, own)).collect();
-            types.intern(TypeData::Applied { base, args })
+            types.apply_builtin(base, args)
         }
         CoreType::Nullable(inner) => {
             let inner = core_type(types, inner, args, own);

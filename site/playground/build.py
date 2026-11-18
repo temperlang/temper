@@ -13,8 +13,8 @@
    directory, linked from there, to keep them outside the work tree.
 3. Type-checks the TypeScript with tsc, the page and the workers apart.
 4. Bundles and minifies it with esbuild, with the examples as text and
-   the JavaScript backend's runtime from vendor/temper/be-js, and writes
-   the bundled packages' licenses beside it.
+   the JavaScript backend's runtime from crates/temper-be-js/runtime/,
+   and writes the bundled packages' licenses beside it.
 5. Copies in index.html, with the site's header and the About popover
    (site/shared/header.py, as on the docs pages, with the playground
    marked current), site/shared/header.js (the theme and the phone
@@ -27,7 +27,7 @@
    bundles import nothing else, so no other URLs need it.
 
 7. With `--smoke`, runs smoke.mjs on the output: each example in
-   headless Chromium (`--chromium PATH`, else $TEMPEST_CHROMIUM, else
+   headless Chromium (`--chromium PATH`, else $TEMPER_CHROMIUM, else
    Playwright's), with site/docs/mermaid's playwright-core.
 
 Serve the output with `python3 -m http.server -d site/_out/playground`.
@@ -51,7 +51,7 @@ sys.path.insert(0, str(HERE.parent / "shared"))
 import header as shared  # noqa: E402  (site/shared/header.py: the site's header and About)
 
 WASM = ROOT / "target/wasm32-unknown-unknown/small-wasm/temper_wasm.wasm"
-CORE = ROOT / "vendor/temper/be-js/temper-core/index.js"
+CORE = ROOT / "crates/temper-be-js/runtime/temper-core/index.js"
 MERMAID = ROOT / "site/docs/mermaid"
 ENTRIES = ["src/main.ts", "src/compiler-worker.ts", "src/repl-worker.ts", "src/js-worker.ts", "src/main.css"]
 
@@ -163,7 +163,7 @@ def main() -> int:
     parser.add_argument("--skip-wasm", action="store_true", help="use the wasm already built")
     parser.add_argument("--out", type=Path, default=ROOT / "site/_out/playground")
     parser.add_argument("--smoke", action="store_true", help="then run smoke.mjs on it in headless Chromium")
-    parser.add_argument("--chromium", help="Chromium for --smoke (default $TEMPEST_CHROMIUM, else Playwright's)")
+    parser.add_argument("--chromium", help="Chromium for --smoke (default $TEMPER_CHROMIUM, else Playwright's)")
     args = parser.parse_args()
 
     if not args.skip_wasm:

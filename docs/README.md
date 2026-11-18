@@ -2,7 +2,7 @@
 
 Temper is a programming language for writing libraries once and using
 them from every other language. These docs cover the language, its
-standard library, its tools, and how this compiler, tempest, works.
+standard library, its tools, and how its compiler works.
 New here? Start with the [quick tour](guide/tour.md).
 
 ## Learn
@@ -34,12 +34,12 @@ New here? Start with the [quick tour](guide/tour.md).
 
 - [Contributing](contributing/README.md): building, testing, and
   sending changes, and [writing these docs](contributing/docs.md).
-- [How tempest works](internals/README.md): the compiler, stage by
+- [How the compiler works](internals/README.md): the compiler, stage by
   stage, with diagrams and links into the code.
 - [Design notes](../notes/README.md): the plan, and the decisions
   behind it.
 - [Inconsistencies](inconsistencies.md): where these docs, Temper's
-  first compiler, and tempest still disagree, to be resolved.
+  previous compiler, and this one still disagree, to be resolved.
 
 ## Where these docs come from
 

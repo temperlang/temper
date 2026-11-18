@@ -1,4 +1,5 @@
 //! Host code using the generated `async-turns` crate the standard way,
+//! and `class-edges`' builder for a generic class,
 //! for `functional.rs`'s `runs_and_lints`: it prints a line per check,
 //! which the test compares with what it expects. Clippy lints it with the
 //! generated crates.
@@ -94,4 +95,16 @@ fn main() {
         steps.push(n.to_string());
     }
     println!("collatz {}", steps.join(","));
+
+    // A generic class's builder, without its options and with them.
+    use class_edges::builders::DuoBuilder;
+    let ann = class_edges::Person::new("Ann", "Dr");
+    let duo = DuoBuilder { first: ann.clone() }.build();
+    println!("builder {}", duo.names());
+    let duo = DuoBuilder { first: ann }
+        .options()
+        .second(class_edges::Person::new("Cy", "Mr"))
+        .joiner(Arc::new(" + ".to_string()))
+        .build();
+    println!("options {}", duo.names());
 }

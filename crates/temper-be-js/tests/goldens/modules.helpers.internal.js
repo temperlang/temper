@@ -8,6 +8,14 @@ export function twice(x) {
   return Math.imul(x, 2);
 }
 
+/**
+ * @param {number} x
+ * @returns {number}
+ */
+export function intDoubled(x) {
+  return twice(x);
+}
+
 /** @returns {number} */
 export function bump() {
   calls = (calls + 1) | 0;

@@ -83,14 +83,14 @@ open questions it ended with are at the end, with their answers.
   log, Stop with replay and numbering, "Keep going", and `translate`.
 - **Left for chunk 3:** done there, but `translate` in panes, which
   waits.
-- **Tests in input 0** (t361, 2026-11-11): they run once, after it,
+- **Tests in input 0** (2026-11-11): they run once, after it,
   reporting each failure and `tempest test`'s summary; the tab shows
   input 0's block when it says more than logs, once per editor code.
-  The session keeps their source for `runTests()` (t362, chunk 3).
-  Tests in later inputs are still refused (t363). The smoke test checks
+  The session keeps their source for `runTests()` (chunk 3).
+  Tests in later inputs are still refused. The smoke test checks
   that the first example's tests pass as input 0.
 
-**Chunk 3, done for now** (2026-11-11; the last round for a while):
+**Chunk 3, done for now** (2026-11-11):
 
 - **`repl_query(kind, at, ptr, len)`**: completion, hover, and
   signature help for the cell's text against the session, from
@@ -104,7 +104,7 @@ open questions it ended with are at the end, with their answers.
   Cmd+I for hover from the keyboard, and signature help on `(` and
   `,`, with the editor's tooltip builders. While an input runs, the
   cell has no help, rather than queuing behind it.
-- **`runTests()`** (t362), a REPL function in the CLI and the page:
+- **`runTests()`**, a REPL function in the CLI and the page:
   input 0's tests settled again as a hidden round after the latest
   input, once the calling input ends, so names mean the newest
   declarations; same failure lines and summary. A changed signature

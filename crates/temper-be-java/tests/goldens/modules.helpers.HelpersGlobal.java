@@ -15,6 +15,10 @@ public final class HelpersGlobal {
         return x * 2;
     }
 
+    public static int intDoubled(int x) {
+        return twice(x);
+    }
+
     public static int bump() {
         synchronized (HelpersGlobal.class) {
             calls = calls + 1;

@@ -13,8 +13,8 @@ unchanged, make the [docs site](https://temperlang.github.io/tempest/)
 | [std/](../std/README.md) | The standard library, a page per module |
 | [backends/](../backends/README.md) | What each target language gets |
 | [tools/](../tools/README.md) | The command line, editors, and the playground |
-| [contributing/](README.md) | Working on tempest, and these docs |
-| [internals/](../internals/README.md) | How tempest works, stage by stage |
+| [contributing/](README.md) | Working on the compiler, and these docs |
+| [internals/](../internals/README.md) | How the compiler works, stage by stage |
 | [release-notes/](../release-notes/README.md) | What changed, release by release |
 | [`../notes/`](../../notes/README.md) | Design notes and plans, kept apart from the docs |
 
@@ -52,14 +52,15 @@ styles:
   which the site highlights, tints, and labels "inert".
 - Links are relative, to files in this repository, and never carry line
   numbers; link a file, and name what's in it.
-- Write "Temper" for the language and its tools, and "tempest" only for
-  this compiler or its `tempest` binary.
+- Write "Temper" for the language, its compiler, and its tools, and
+  `temper` for the command. "tempest" is only the CLI crate's name,
+  for contributors.
 
 ### Examples that are checked
 
 `compat/check_doc_examples.py` runs every ```` ```temper ```` block in
 the docs (all but `internals/` and `release-notes/`), each as its own
-one-file library, with `tempest test -v`, on the interpreter. The
+one-file library, with `temper test -v`, on the interpreter. The
 marker on a block's last line says what should happen:
 
 | Marker | Means | Checked |
@@ -75,18 +76,18 @@ after `❌` aren't compared yet.
 
     uv run compat/check_doc_examples.py [--verbose] [PATH...]
 
-It uses `target/release/tempest`, else `target/small/tempest`, or
-`--tempest BIN`, and runs in CI. `--verbose` also lists the unmarked
+It uses `target/release/temper`, else `target/small/temper`, or
+`--temper BIN`, and runs in CI. `--verbose` also lists the unmarked
 blocks that don't run alone, mostly tutorial steps that build on the
 ones before.
 
-A marked example known to disagree with tempest gets an HTML comment,
+A marked example known to disagree with the compiler gets an HTML comment,
 hidden on GitHub, on the line right before its fence, naming its
 [inconsistencies](../inconsistencies.md) entries, such as
 `<!-- known: I10 I20 -->`. It's then counted as known, not fatal, and
 the checker lists the known examples by entry. Once one agrees, the
 checker fails until you remove the comment and update the entry. Today, 14 are known
-([I10](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+([I10](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 ## Where they came from
 
@@ -138,7 +139,7 @@ as its home page and every page of docs/ at the same path, as
 them.
 
 [Kelpto](https://github.com/temperlang/kelpto), the lossless Markdown
-and HTML library written in Temper, renders it: tempest builds Kelpto
+and HTML library written in Temper, renders it: `temper` builds Kelpto
 for Python, and site/docs' [`build.py`](../../site/docs/build.py), with
 nothing but Python's standard library, parses each page as GitHub
 Flavored Markdown with raw HTML and renders it with Kelpto's
@@ -187,14 +188,14 @@ runs `npm ci` there when they change. Drawings are cached in
 diagrams shrink to fit only so far, then scroll sideways.
 
 To preview it, with Kelpto checked out beside this repository
-(`../kelpto`, or `--kelpto DIR`) and tempest built:
+(`../kelpto`, or `--kelpto DIR`) and `temper` built:
 
     uv run site/playground/build.py --out site/_out/site/playground   # optional
     uv run site/docs/build.py [--chromium PATH | --no-diagrams]
     python3 -m http.server -d site/_out/site
 
 Diagrams need Node and a Chromium: `--chromium PATH`, else
-`$TEMPEST_CHROMIUM`, else Playwright's own, which
+`$TEMPER_CHROMIUM`, else Playwright's own, which
 `npx playwright-core install --only-shell chromium` in site/docs/mermaid
 installs. Without one, the build stops and says so; `--no-diagrams`
 shows their source instead. The pages take about ten seconds, and
@@ -214,17 +215,17 @@ The options were:
 |---|---|---|
 | **mkdocs** (Material), as before | Proven, search, navigation, and themes built in; the old site's look | A Python toolchain beside Rust; needs plugins or rewriting for GitHub alerts and `<details>`; its own Markdown dialect differs from GitHub's in places |
 | **A small custom renderer** (a Rust binary, `pulldown-cmark` or `comrak`) | Fast, one toolchain; could run examples and draw grammar while rendering | We'd write and keep navigation, search, and themes; a new dependency |
-| **Kelpto**, the lossless Markdown and HTML library written in Temper | Dogfooding: Temper's docs rendered by a Temper library, through tempest, in any of seven languages; GFM conformant, with HTML sanitizing and link checks; lossless edits could keep the docs tidy (rewrite links, number the inconsistencies) | Young; navigation, search, and highlighting are ours to add; its build depends on tempest building it |
+| **Kelpto**, the lossless Markdown and HTML library written in Temper | Dogfooding: Temper's docs rendered by a Temper library, through `temper`, in any of seven languages; GFM conformant, with HTML sanitizing and link checks; lossless edits could keep the docs tidy (rewrite links, number the inconsistencies) | Young; navigation, search, and highlighting are ours to add; its build depends on `temper` building it |
 
 Kelpto shows off exactly what Temper is for, and what the site adds
 (heading anchors, alerts, highlighting) would help Kelpto's users too.
 Still to come: search, running
 `check_doc_examples.py` first, and, someday, each example's
-translations, made by tempest at build time, in place of the old tabs.
+translations, made by `temper` at build time, in place of the old tabs.
 
 ## To do
 
-- Make the known examples zero, by fixing tempest or the docs.
+- Make the known examples zero, by fixing the compiler or the docs.
 - Compare the values after `✅` and the errors after `❌`, as Temper's
   first doc generator did.
 - Make tutorial steps checkable: mark fragments `⏸️`, or run a page's

@@ -7,7 +7,7 @@
 // JOBS.json is a list of {"id", "theme", "source", "out"}: the SVG's id
 // (unique on its page), "light" or "dark", the diagram's Mermaid source,
 // and the file to write the SVG to. Chromium is PATH, else
-// $TEMPEST_CHROMIUM, else Playwright's own (`npx playwright-core
+// $TEMPER_CHROMIUM, else Playwright's own (`npx playwright-core
 // install --only-shell chromium` here). Exits with 1 if any diagram
 // fails, after drawing the rest, and with 3 if there's no Chromium.
 
@@ -53,7 +53,7 @@ const THEMES = {
 
 const args = process.argv.slice(2);
 const at = args.indexOf("--chromium");
-const executablePath = (at >= 0 ? args.splice(at, 2)[1] : null) || process.env.TEMPEST_CHROMIUM || undefined;
+const executablePath = (at >= 0 ? args.splice(at, 2)[1] : null) || process.env.TEMPER_CHROMIUM || undefined;
 if (args.length !== 1) {
   console.error("usage: node render.mjs JOBS.json [--chromium PATH]");
   process.exit(2);

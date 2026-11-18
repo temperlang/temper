@@ -1,6 +1,6 @@
-tmpl 1 model 1 library std 0.6.0
+tmpl 1 model 1 library std 0.7.0-alpha.0.0
 
-uses `temper-core`#66 0.1.0 {
+uses `temper-core`#66 0.7.0-alpha.0.0 {
   class List#67<T#68> extends Listed#69<T#68> {
     connected method toListBuilder#415(): ListBuilder#77<T#68>;
     connected get length#441(): Int32;
@@ -113,7 +113,7 @@ module testing#0 in "testing" {
         this.bail#64()^;
       }
     }
-    connected private method bail#64(): Void throws Bubble {
+    connected private method bail#64(): Never<Void> throws Bubble {
       (bubble()^): Void;
     }
     connected get passing#65(): Boolean {

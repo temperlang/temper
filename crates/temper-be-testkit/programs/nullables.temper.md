@@ -5,7 +5,7 @@ be null, and `orelse` with `bubble()` and `panic()`: nullable
 parameters, results, locals, and fields, a nullable class type, and a
 failure caught where it's a value and where it stands alone, and a
 fallback with `??` as a function's last value. The log is what
-tempest's interpreter gives.
+the interpreter gives.
 
     export class Node(public value: Int, public next: Node?) {
       public last(): Int {
@@ -27,6 +27,10 @@ tempest's interpreter gives.
     let sameInt(a: Int?, b: Int?): Boolean { a == b }
 
     let parse(s: String): Int { s.toInt32() orelse -1 }
+
+    // The division may bubble, and so may the call in it, which the
+    // `orelse` catches too.
+    let halved(s: String, d: Int): Int { s.toInt32() / d orelse -1 }
 
     let positive(n: Int): Int throws Bubble {
       if (n < 0) { bubble() }
@@ -59,6 +63,7 @@ tempest's interpreter gives.
     console.log("${same(null, null)} ${same("a", null)} ${same(null, "a")} ${same("a", "a")}");
     console.log("${sameInt(1, 2)} ${sameInt(3, 3)} ${sameInt(null, 3)}");
     console.log("${parse("12")} ${parse("x")}");
+    console.log("${halved("12", 2)} ${halved("x", 2)} ${halved("12", 0)}");
     console.log(checked(7).toString());
     console.log("${orZero(null)} ${orZero(5)}");
     varying();
@@ -81,6 +86,7 @@ nothing
 true false false true
 false true false
 12 -1
+6 -1 -1
 7
 0 5
 true

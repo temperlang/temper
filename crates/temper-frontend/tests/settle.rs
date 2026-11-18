@@ -8,6 +8,9 @@
 //!
 //! - `cases_settle_as_expected` checks each case. To accept new or
 //!   changed output, run with `UPDATE_SNAPSHOTS=1` and review the diff.
+//! - `cases_with_std_settle_as_expected` checks the cases in
+//!   `tests/settle-std/`, with std loaded, by their diagnostics and runs
+//!   only.
 //! - `mutated_inputs_settle` settles randomly edited copies of these cases
 //!   and of temper-syntax's grammar cases, and checks that settling never
 //!   panics (nor fails the debug check that no step read a node rewritten
@@ -72,6 +75,37 @@ fn cases_settle_as_expected() {
     });
 }
 
+/// The diagnostics and run of a source with std loaded, as `@json` needs
+/// `std/json`: not the settled trees, which would show all of std's,
+/// numbered as std's declarations are.
+fn settled_with_std(input: &str, kind: SourceKind) -> String {
+    let mut library = Library::new();
+    library.add_file("test.temper", input, kind);
+    load_imports(&Sources::standard(), &mut library);
+    let settled = settle(library);
+    let mut text = String::new();
+    temper_frontend::print::write_diagnostics(&settled, &mut text);
+    let run = run(&settled, Some(1_000_000));
+    for line in run.output {
+        text.push_str(&format!("log {line}\n"));
+    }
+    if let Some(failure) = run.failure {
+        text.push_str(&format!("{failure}\n"));
+    }
+    text
+}
+
+/// The cases in `tests/settle-std/*.cases`, as [`settled_with_std`]
+/// gives them.
+#[test]
+fn cases_with_std_settle_as_expected() {
+    with_stack(|| {
+        check_cases("tests/settle-std", "settled", |case| {
+            settled_with_std(&case.input, case.kind)
+        })
+    });
+}
+
 /// Imports between modules, which the cases' single files can't show.
 #[test]
 fn imports_across_modules() {
@@ -111,20 +145,29 @@ fn imports_across_modules() {
     });
 }
 
-/// An `@extension("isPal")` imported from another module keeps
-/// `s.isPal()` from being "No member" there; a module that doesn't import
-/// it gets the error (the audit's probe: once, any file's text mentioning
-/// `@extension` turned the check off for the whole library).
+/// An `@extension("isPal")` imported from another module, under its own
+/// name or another, answers to `s.isPal()` there, which becomes a call of
+/// the import; a module that doesn't import it gets "No member" (the
+/// audit's probe: once, any file's text mentioning `@extension` turned
+/// the check off for the whole library).
 #[test]
-fn imported_extensions_hide_no_member() {
+fn imported_extensions_called_where_imported() {
     with_stack(|| {
         let mut library = Library::new();
         let lib =
             "@extension(\"isPal\")\nexport let stringIsPal(s: String): Boolean { s == \"aba\" }";
         library.add_file("app/lib/lib.temper", lib, SourceKind::Standalone);
-        let main =
-            "let { stringIsPal } = import(\"./lib/\");\nlet f(s: String): Boolean { s.isPal() }";
+        let main = "let { stringIsPal } = import(\"./lib/\");\n\
+                    let f(s: String): Boolean { s.isPal() }\n\
+                    console.log(f(\"aba\").toString());";
         library.add_file("app/main.temper", main, SourceKind::Standalone);
+        let renamed = "let { stringIsPal as pal } = import(\"../lib/\");\n\
+                       export let h(s: String): Boolean { s.isPal() }";
+        library.add_file(
+            "app/renamed/renamed.temper",
+            renamed,
+            SourceKind::Standalone,
+        );
         let other = "let g(s: String): Boolean { s.isPal() }";
         library.add_file("app/other/other.temper", other, SourceKind::Standalone);
         let settled = settle(library);
@@ -143,6 +186,12 @@ fn imported_extensions_hide_no_member() {
                 "No member isPal in String".to_string()
             )]
         );
+        let mut text = String::new();
+        write_settled(&settled, 80, &mut text);
+        assert!(text.contains("(Call stringIsPal:"), "{text}");
+        assert!(text.contains("(Call pal:"), "{text}");
+        let run = run(&settled, Some(1_000_000));
+        assert!(run.output.contains(&"true".to_string()), "{:?}", run.output);
     });
 }
 
@@ -262,7 +311,7 @@ fn regex_literals() {
                        public toString(): String { \"rep(${item}, ${min}, ${max ?? -1}, ${reluctant})\" }\n}\n\
                      export class Capture(public name: String, public item: RegexNode) extends RegexNode {\n\
                        public toString(): String { \"cap(${name}, ${item})\" }\n}\n\
-                     class B extends RegexNode { public toString(): String { \"^\" } }\nexport let Begin = new B();";
+                     class B extends RegexNode { public toString(): String { \"^\" } }\nexport let Begin: RegexNode = new B();";
         library.add_file("-std-/regex/regex.temper", regex, SourceKind::Standalone);
         let settled = settle(library);
         let messages: Vec<String> = settled

@@ -9,14 +9,17 @@
 //! run under a lock ([`calls_nothing`]); and what evaluating an
 //! expression may do that the order of evaluation would show, for
 //! targets that don't evaluate operands left to right ([`Effects`]).
-//! And what a module imports: the declarations of other modules, the
-//! program's own or other libraries', that its nodes and declared types
-//! name ([`imports`]). And function values: the signature a value of a
-//! type has ([`fun_signature`]), what a function literal captures
-//! ([`captures`]), and which captured locals are assigned, which some
-//! targets keep in cells ([`assigned_captures`]), and the groups of local
-//! functions that use each other or themselves ([`function_groups`]). And
-//! the defaults a function's body starts with ([`defaults`]).
+//! And what a subtree names ([`named`]), and what a module imports: the
+//! declarations of other modules, the program's own or other libraries',
+//! that its nodes and declared types name ([`imports`]), and what a
+//! module's test parts define and use of its library, for backends that
+//! write them apart ([`test_parts`]). And function
+//! values: the signature a value of a type has ([`fun_signature`]), what
+//! a function literal captures ([`captures`]), and which captured locals
+//! are assigned, which some targets keep in cells ([`assigned_captures`]),
+//! and the groups of local functions that use each other or themselves
+//! ([`function_groups`]). And the defaults a function's body starts with
+//! ([`defaults`]).
 
 use crate::decls::{DeclKind, Facts};
 use crate::ids::TypeId;
@@ -33,6 +36,22 @@ pub fn walk(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
     visit(id);
     for &kid in p.nodes.kids(id) {
         walk(p, kid, visit);
+    }
+}
+
+/// [`walk`], but past the subtrees whose roots `skip` takes.
+pub(crate) fn walk_but(
+    p: &Program,
+    id: NodeId,
+    skip: &impl Fn(NodeId) -> bool,
+    visit: &mut impl FnMut(NodeId),
+) {
+    if skip(id) {
+        return;
+    }
+    visit(id);
+    for &kid in p.nodes.kids(id) {
+        walk_but(p, kid, skip, visit);
     }
 }
 
@@ -108,84 +127,12 @@ pub struct Import {
 /// through its runtime, aren't included.
 pub fn imports(p: &Program, module: DeclId, roots: &[NodeId]) -> Vec<Import> {
     let mut found: Vec<DeclId> = Vec::new();
-    let add = |d: DeclId, found: &mut Vec<DeclId>| {
-        let top = top_level(p, d);
-        if let Some(top) = top {
-            if !found.contains(&top) {
-                found.push(top);
-            }
-        }
-    };
     for &root in roots {
-        walk(p, root, &mut |id| {
-            let node = p.nodes.get(id);
-            match node {
-                Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
-                    add(callee, &mut found)
+        named(p, root, &mut |d| {
+            if let Some(top) = top_level(p, d) {
+                if !found.contains(&top) {
+                    found.push(top);
                 }
-                Node::GetModuleLet { target } | Node::SetModuleLet { target, .. } => {
-                    add(target, &mut found)
-                }
-                // Classes, through what's used of them.
-                Node::New { ctor: d, .. }
-                | Node::GetStatic { target: d }
-                | Node::InitStatic { target: d, .. } => add(d, &mut found),
-                Node::Is { ty, .. } | Node::TypeValue { of: ty } => {
-                    let mut types = Vec::new();
-                    nominals(p, ty, &mut types);
-                    for t in types {
-                        add(t, &mut found);
-                    }
-                }
-                _ => {}
-            }
-            let ty = p.nodes.ty(id);
-            let written = matches!(
-                node,
-                Node::Upcast { .. }
-                    | Node::Downcast { .. }
-                    | Node::Null {}
-                    | Node::NonNull { .. }
-                    | Node::FunctionLiteral { .. }
-                    | Node::FunctionRef { .. }
-                    | Node::ToFun { .. }
-                    | Node::FromFun { .. }
-            );
-            if written && !ty.is_none() {
-                let mut types = Vec::new();
-                nominals(p, ty, &mut types);
-                for t in types {
-                    add(t, &mut found);
-                }
-            }
-            let defined = match node {
-                Node::Function { decl, .. }
-                | Node::BodilessFunction { decl, .. }
-                | Node::Test { decl, .. }
-                | Node::Param { decl }
-                | Node::ModuleLet { decl }
-                | Node::Field { decl }
-                | Node::StaticField { decl }
-                | Node::Method { decl, .. }
-                | Node::AbstractMethod { decl, .. }
-                | Node::FunctionLiteral { decl, .. } => decl,
-                Node::Class { decl, .. } | Node::Interface { decl, .. } => {
-                    for &s in p.decls.supers(decl) {
-                        let mut types = Vec::new();
-                        nominals(p, s, &mut types);
-                        for t in types {
-                            add(t, &mut found);
-                        }
-                    }
-                    return;
-                }
-                Node::Let { local, .. } => local,
-                _ => return,
-            };
-            let mut types = Vec::new();
-            nominals(p, p.decls.get(defined).ty, &mut types);
-            for t in types {
-                add(t, &mut found);
             }
         });
     }
@@ -214,7 +161,98 @@ pub fn imports(p: &Program, module: DeclId, roots: &[NodeId]) -> Vec<Import> {
     groups
 }
 
-/// What a module's items and init block import ([`imports`]).
+/// The declarations a subtree names: the functions it calls or refers
+/// to, the module `let`s it reads or writes, the constructors and static
+/// fields it uses, and the classes and interfaces in the types it checks
+/// (`is`, type values), writes (casts, `null`, function values), and
+/// declares (of functions, parameters, locals, module `let`s, and
+/// fields), and the supertypes of a class or interface it defines. A
+/// member found stands for its class ([`imports`] takes each one's top
+/// level). Each may come more than once.
+pub fn named(p: &Program, root: NodeId, found: &mut impl FnMut(DeclId)) {
+    named_but(p, root, &|_| false, found)
+}
+
+/// [`named`], but past the subtrees whose roots `skip` takes.
+pub(crate) fn named_but(
+    p: &Program,
+    root: NodeId,
+    skip: &impl Fn(NodeId) -> bool,
+    found: &mut impl FnMut(DeclId),
+) {
+    walk_but(p, root, skip, &mut |id| {
+        let node = p.nodes.get(id);
+        match node {
+            Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
+                found(callee)
+            }
+            Node::GetModuleLet { target } | Node::SetModuleLet { target, .. } => found(target),
+            // Classes, through what's used of them.
+            Node::New { ctor: d, .. }
+            | Node::GetStatic { target: d }
+            | Node::InitStatic { target: d, .. } => found(d),
+            Node::Is { ty, .. } | Node::TypeValue { of: ty } => {
+                let mut types = Vec::new();
+                nominals(p, ty, &mut types);
+                for t in types {
+                    found(t);
+                }
+            }
+            _ => {}
+        }
+        let ty = p.nodes.ty(id);
+        let written = matches!(
+            node,
+            Node::Upcast { .. }
+                | Node::Downcast { .. }
+                | Node::Null {}
+                | Node::NonNull { .. }
+                | Node::FunctionLiteral { .. }
+                | Node::FunctionRef { .. }
+                | Node::ToFun { .. }
+                | Node::FromFun { .. }
+        );
+        if written && !ty.is_none() {
+            let mut types = Vec::new();
+            nominals(p, ty, &mut types);
+            for t in types {
+                found(t);
+            }
+        }
+        let defined = match node {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::Test { decl, .. }
+            | Node::Param { decl }
+            | Node::ModuleLet { decl }
+            | Node::Field { decl }
+            | Node::StaticField { decl }
+            | Node::Method { decl, .. }
+            | Node::AbstractMethod { decl, .. }
+            | Node::FunctionLiteral { decl, .. } => decl,
+            Node::Class { decl, .. } | Node::Interface { decl, .. } => {
+                for &s in p.decls.supers(decl) {
+                    let mut types = Vec::new();
+                    nominals(p, s, &mut types);
+                    for t in types {
+                        found(t);
+                    }
+                }
+                return;
+            }
+            Node::Let { local, .. } => local,
+            _ => return,
+        };
+        let mut types = Vec::new();
+        nominals(p, p.decls.get(defined).ty, &mut types);
+        for t in types {
+            found(t);
+        }
+    });
+}
+
+/// What a module's items and init block, the library's parts, import
+/// ([`imports`]).
 pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
     let roots: Vec<NodeId> = (module.items.iter().copied())
         .chain([module.init])
@@ -222,15 +260,131 @@ pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
     imports(p, module.decl, &roots)
 }
 
-/// What a module's tests import ([`imports`]), std's `Test` among them.
+/// What a module's tests and its test items and init import beyond the
+/// library ([`imports`]), std's `Test` among them.
 pub fn test_imports(p: &Program, module: &Module) -> Vec<Import> {
-    imports(p, module.decl, &module.tests)
+    let roots: Vec<NodeId> = module.test_roots().collect();
+    imports(p, module.decl, &roots)
+}
+
+/// The libraries a program's modules use but core, by their names in
+/// its `uses` sections, in first use: in their library's parts
+/// ([`module_imports`]), or with `tests`, in their test parts and tests
+/// ([`test_imports`]).
+pub fn libraries_used(p: &Program, tests: bool) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    for module in &p.modules {
+        let imports = match tests {
+            true => test_imports(p, module),
+            false => module_imports(p, module),
+        };
+        for d in imports.into_iter().flat_map(|i| i.decls) {
+            if !is_external(p, d) || crate::qname::library_of(p, d) == "core" {
+                continue;
+            }
+            let mut library = d;
+            while p.decls.contains(library) && p.decls.get(library).kind != DeclKind::Library {
+                library = p.decls.get(library).owner;
+            }
+            let name = p.name(library);
+            if !found.iter().any(|f| f == name) {
+                found.push(name.to_string());
+            }
+        }
+    }
+    found
+}
+
+/// The libraries only a program's tests use ([`libraries_used`]), which a
+/// package depends on for its tests alone (as Maven's `test` scope, a
+/// tests' project, or npm's `devDependencies`).
+pub fn test_only_libraries(p: &Program) -> Vec<String> {
+    let code = libraries_used(p, false);
+    (libraries_used(p, true).into_iter())
+        .filter(|l| !code.contains(l))
+        .collect()
+}
+
+/// What a partitioned module's test parts (its test items and init, and
+/// its tests) define, and what they use of its library's parts, for a
+/// backend that writes them in a file of their own, which imports or is
+/// given what they use (notes/tmpl/modules.md, "Test parts").
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TestParts {
+    /// What they define at their top level: the test items' declarations,
+    /// and the test init's locals.
+    pub own: HashSet<DeclId>,
+    /// What they use of the library's parts, in `DeclId` order: the
+    /// module's top-level declarations they name ([`named`], a member
+    /// standing for its class), and its init block's locals they read.
+    pub used: Vec<DeclId>,
+    /// Of those, the module `var`s and locals they assign, in `DeclId`
+    /// order.
+    pub assigned: Vec<DeclId>,
+}
+
+impl TestParts {
+    /// Whether they assign a local of the module's init block, which a
+    /// file of their own can't.
+    pub fn assign_init_locals(&self, p: &Program) -> bool {
+        (self.assigned.iter()).any(|&d| p.decls.get(d).kind == DeclKind::Local)
+    }
+}
+
+/// A module's [`TestParts`].
+pub fn test_parts(p: &Program, module: &Module) -> TestParts {
+    let mut own: HashSet<DeclId> = (module.test_items.iter())
+        .filter_map(|&item| match p.nodes.get(item) {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::ModuleLet { decl }
+            | Node::Class { decl, .. }
+            | Node::Interface { decl, .. } => Some(decl),
+            _ => None,
+        })
+        .collect();
+    if let Some(Node::Block { stmts }) = module.test_init.map(|t| p.nodes.get(t)) {
+        for &s in p.nodes.list(stmts) {
+            if let Node::Let { local, .. } = p.nodes.get(s) {
+                own.insert(local);
+            }
+        }
+    }
+    let (mut used, mut assigned) = (Vec::new(), Vec::new());
+    let library = |d: DeclId| !own.contains(&d) && home(p, d) == Some(module.decl);
+    let init_local =
+        |d: DeclId| p.decls.get(d).kind == DeclKind::Local && p.decls.get(d).owner == module.decl;
+    for root in module.test_roots() {
+        named(p, root, &mut |d| {
+            if let Some(top) = top_level(p, d).filter(|&t| library(t)) {
+                used.push(top);
+            }
+        });
+        walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::SetModuleLet { target, .. } if library(target) => assigned.push(target),
+            Node::Local { local } if init_local(local) && library(local) => used.push(local),
+            Node::Assign { local, .. } if init_local(local) && library(local) => {
+                used.push(local);
+                assigned.push(local);
+            }
+            _ => {}
+        });
+    }
+    for list in [&mut used, &mut assigned] {
+        list.sort();
+        list.dedup();
+    }
+    TestParts {
+        own,
+        used,
+        assigned,
+    }
 }
 
 /// The top-level declaration a declaration is or is a member of: itself
 /// for a function, module `let`, class, or interface owned by a module or
 /// a `uses` library, else its owner's.
-fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
+pub(crate) fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
     let mut d = decl;
     for _ in 0..p.decls.len() {
         if !p.decls.contains(d) {
@@ -252,7 +406,7 @@ fn top_level(p: &Program, decl: DeclId) -> Option<DeclId> {
 }
 
 /// The classes and interfaces a type names, through function types.
-fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
+pub(crate) fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
     if !p.types.contains(ty) {
         return;
     }
@@ -271,7 +425,9 @@ fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId>) {
                 }
             }
         }
-        crate::types::TypeData::Nullable(t) => nominals(p, t, out),
+        crate::types::TypeData::Nullable(t) | crate::types::TypeData::Never(t) => {
+            nominals(p, t, out)
+        }
         crate::types::TypeData::Scalar(_) => {}
     }
 }
@@ -289,10 +445,10 @@ pub struct ModuleState {
     pub initialized_at_top: HashSet<DeclId>,
 }
 
-/// The module state of `module`.
+/// The module state of `module`, its test parts' included.
 pub fn module_state(p: &Program, module: &Module) -> ModuleState {
     let mut state = ModuleState::default();
-    for &item in &module.items {
+    for item in module.all_items() {
         if let Node::Function { .. } = p.nodes.get(item) {
             for d in module_refs(p, item) {
                 if p.decls.get(d).kind == DeclKind::ModuleLet {
@@ -301,20 +457,22 @@ pub fn module_state(p: &Program, module: &Module) -> ModuleState {
             }
         }
     }
-    // A function literal in the init block may run after it.
-    walk(p, module.init, &mut |id| {
-        if let Node::FunctionLiteral { .. } = p.nodes.get(id) {
-            for d in module_refs(p, id) {
-                if p.decls.get(d).kind == DeclKind::ModuleLet {
-                    state.used_by_functions.insert(d);
+    for block in [module.init].into_iter().chain(module.test_init) {
+        // A function literal in the init block may run after it.
+        walk(p, block, &mut |id| {
+            if let Node::FunctionLiteral { .. } = p.nodes.get(id) {
+                for d in module_refs(p, id) {
+                    if p.decls.get(d).kind == DeclKind::ModuleLet {
+                        state.used_by_functions.insert(d);
+                    }
                 }
             }
-        }
-    });
-    if let Node::Block { stmts } = p.nodes.get(module.init) {
-        for &s in p.nodes.list(stmts) {
-            if let Node::InitLet { target, .. } = p.nodes.get(s) {
-                state.initialized_at_top.insert(target);
+        });
+        if let Node::Block { stmts } = p.nodes.get(block) {
+            for &s in p.nodes.list(stmts) {
+                if let Node::InitLet { target, .. } = p.nodes.get(s) {
+                    state.initialized_at_top.insert(target);
+                }
             }
         }
     }
@@ -386,6 +544,19 @@ pub const PURE_CORE: &[&str] = &[
     "core.type String.get isEmpty()",
 ];
 
+/// The declarations of core's that [`PURE_CORE`] names.
+pub(crate) fn pure_core(p: &Program) -> HashSet<DeclId> {
+    let qnames = QNames::derive(p);
+    (p.decls.ids())
+        .filter(|&d| p.decls.contains(d) && is_external(p, d))
+        .filter(|&d| {
+            qnames
+                .get(d)
+                .is_some_and(|q| PURE_CORE.binary_search(&q.to_string().as_str()).is_ok())
+        })
+        .collect()
+}
+
 /// What evaluating an expression may do that the order of evaluation
 /// would show (notes/tmpl/analyses.md, "Order-sensitive operands").
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -439,25 +610,14 @@ pub struct Effects {
 }
 
 impl Effects {
-    /// The effects of `module`'s functions.
+    /// The effects of `module`'s functions, its test items' included.
     pub fn of(p: &Program, module: &Module) -> Effects {
-        let qnames = QNames::derive(p);
-        let pure = p
-            .decls
-            .ids()
-            .filter(|&d| p.decls.contains(d) && is_external(p, d))
-            .filter(|&d| {
-                qnames
-                    .get(d)
-                    .is_some_and(|q| PURE_CORE.binary_search(&q.to_string().as_str()).is_ok())
-            })
-            .collect();
         let mut effects = Effects {
-            pure,
+            pure: pure_core(p),
             ..Effects::default()
         };
         let mut functions = Vec::new();
-        for &item in &module.items {
+        for item in module.all_items() {
             if let Node::Function { decl, .. } = p.nodes.get(item) {
                 effects.mutable.extend(module_writes(p, item));
                 functions.push((decl, item));
@@ -837,10 +997,7 @@ pub fn captures(p: &Program, literal: NodeId) -> Vec<DeclId> {
 pub fn assigned_captures(p: &Program) -> HashSet<DeclId> {
     let mut captured: HashSet<DeclId> = HashSet::new();
     let mut assigned: HashSet<DeclId> = HashSet::new();
-    let roots = p
-        .modules
-        .iter()
-        .flat_map(|m| m.items.iter().chain([&m.init]).chain(&m.tests).copied());
+    let roots = p.modules.iter().flat_map(|m| m.roots());
     for root in roots {
         walk(p, root, &mut |id| match p.nodes.get(id) {
             Node::FunctionLiteral { decl, .. } => {

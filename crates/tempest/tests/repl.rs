@@ -1,4 +1,4 @@
-//! Tests of `tempest repl` as a command: piped transcripts, its flags,
+//! Tests of `temper repl` as a command: piped transcripts, its flags,
 //! the work root's libraries, and Ctrl-C. What a session prints for
 //! each input is tested in temper-frontend's `tests/repl.rs`; the
 //! tutorial's transcripts, in `tests/repl_docs.rs`.
@@ -8,10 +8,10 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-/// Runs `tempest repl` with `args`, in `dir` if given, piping `input` in;
+/// Runs `temper repl` with `args`, in `dir` if given, piping `input` in;
 /// gives its exit code, stdout and stderr.
 fn repl(args: &[&str], dir: Option<&Path>, input: &str) -> (i32, String, String) {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_tempest"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_temper"));
     command.arg("repl").args(args);
     if let Some(dir) = dir {
         command.current_dir(dir);
@@ -136,7 +136,7 @@ fn utf8_input() {
                  café.length\n\
                  名前\n\
                  let x = 名前 + nope\n";
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
         .arg("repl")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -243,7 +243,7 @@ fn relative_imports_from_the_current_directory() {
 fn ctrl_c_stops_the_input_not_the_session() {
     use std::time::{Duration, Instant};
     // `-e` runs once Ctrl-C is handled; until then, SIGINT would end it.
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
         .args(["repl", "-e", "console.log(\"ready\")"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -316,7 +316,7 @@ fn ctrl_break_stops_the_input_not_the_session() {
     use std::os::windows::process::CommandExt;
     use std::time::{Duration, Instant};
     const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
         .args(["repl", "-e", "console.log(\"ready\")"])
         .creation_flags(CREATE_NEW_PROCESS_GROUP)
         .stdin(Stdio::piped())
@@ -393,7 +393,7 @@ fn color() {
         let (code, out, _) = repl(args, None, "1\n1 / 0\n");
         assert_eq!((code, out.as_str()), (0, expected), "{args:?}");
     }
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tempest"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
         .args(["repl", "--color", "always"])
         .env("NO_COLOR", "1")
         .stdin(Stdio::piped())
@@ -412,10 +412,12 @@ fn color() {
 }
 
 /// The REPL's own functions, through the command: `help()` says what
-/// input isn't from a terminal means, and `translate` shows code.
+/// input isn't from a terminal means, and `translate` shows code, of
+/// declarations nothing else uses too, as later inputs may.
 #[test]
 fn own_functions() {
-    let (code, out, _) = repl(&[], None, "help()\nlet x = 1\ntranslate(1, \"py\")\n");
+    let input = "help()\nlet x = 1\ntranslate(1, \"py\")\nlet sq(n: Int): Int { n * n }\ntranslate(3, \"py\")\n";
+    let (code, out, _) = repl(&[], None, input);
     assert_eq!(code, 0);
     assert!(
         out.contains("Input isn't from a terminal, so lines aren't edited."),
@@ -428,6 +430,7 @@ fn own_functions() {
             "{out}"
         );
         assert!(out.contains("_x: int = 1\ninteractive#2: void\n"), "{out}");
+        assert!(out.contains("def _sq(n: int, /) -> int:"), "{out}");
     }
 }
 
@@ -441,7 +444,7 @@ fn control_characters_are_escaped() {
     assert!(!out.contains(['\x1b', '\u{9b}', '\u{202e}']), "{out:?}");
     assert!(out.contains("\"\\u{1b}[2J\\u{9b,202e}\""), "{out}");
     assert!(out.contains("let a = \"\\u{1b}[31m\" + nope"), "{out}");
-    // What's logged is written as is when piped, as `tempest run` does;
+    // What's logged is written as is when piped, as `temper run` does;
     // on a terminal it's escaped (`edits_lines_on_a_terminal`).
     let (_, out, _) = repl(&[], None, "console.log(\"\\u{1b}[1mbold\")\n");
     assert_eq!(out, "\x1b[1mbold\ninteractive#0: void\n");
@@ -498,7 +501,7 @@ fn edits_lines_on_a_terminal() {
         return;
     }
     with_dir("terminal", |dir| {
-        let command = format!("{} repl --color never", env!("CARGO_BIN_EXE_tempest"));
+        let command = format!("{} repl --color never", env!("CARGO_BIN_EXE_temper"));
         let mut child = Command::new("script")
             .args(["-qfec", &command, "/dev/null"])
             .env("XDG_DATA_HOME", dir)
@@ -594,7 +597,7 @@ fn edits_lines_on_a_terminal() {
         let status = child.wait().unwrap();
         reader.join().unwrap();
         assert!(status.success());
-        let history = dir.join("tempest").join("repl-history.txt");
+        let history = dir.join("temper").join("repl-history.txt");
         let mode = fs::metadata(&history).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o600);
         let kept = fs::read_to_string(&history).unwrap();

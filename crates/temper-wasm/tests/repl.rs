@@ -1,7 +1,7 @@
 //! The REPL's transcripts, `tests/repl/*.cases` in temper-frontend (the
 //! REPL alone) and in temper-driver (with its functions' tools), through
 //! the wasm's REPL API as the playground uses it, so the browser and
-//! `tempest repl` can't drift: the lines go into an input cell one at a
+//! `temper repl` can't drift: the lines go into an input cell one at a
 //! time, as typed, and each time `repl_complete` says the cell is whole,
 //! its inputs go to `repl_input` in turn; at the end, what's left runs,
 //! as Ctrl+Enter runs it. The transcript is each event's text, in

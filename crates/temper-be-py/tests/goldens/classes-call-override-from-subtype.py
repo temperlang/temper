@@ -34,10 +34,6 @@ class _Slippy(_Slappy):
         return 4
 
 
-def _check_from_outside(slipster: _Slippy, /) -> bool:  # pyright: ignore[reportUnusedFunction]
-    return slipster.thingums == 5
-
-
 class _A(metaclass=_ABCMeta):
     __slots__ = ()
 
@@ -115,10 +111,6 @@ class _B1Deep(_ADeep):
 
 
 class _B2Deep(_B1Deep):
-    __slots__ = ()
-
-
-class _B3Deep(_B2Deep):  # pyright: ignore[reportUnusedClass]
     __slots__ = ()
 
 

@@ -5,4 +5,4 @@ edition = "2021"
 rust-version = "1.71.1"
 
 [dependencies]
-temper-core = { path = "../temper-core", version = "=0.6.0" }
+temper-core = { path = "../temper-core", version = "=0.0.0-alpha.0.0" }

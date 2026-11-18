@@ -218,6 +218,7 @@ impl Translator<'_> {
     fn mentions_type_param(&self, ty: TypeId) -> bool {
         let p = self.p;
         match p.types.get(ty) {
+            TypeData::Never(t) => self.mentions_type_param(t),
             TypeData::TypeParam { .. } => true,
             TypeData::Nullable(t) => self.mentions_type_param(t),
             TypeData::Nominal { args, .. } => {
@@ -235,6 +236,7 @@ impl Translator<'_> {
     fn simple_name(&self, ty: TypeId) -> String {
         let p = self.p;
         match p.types.get(p.types.non_null(ty)) {
+            TypeData::Never(t) => self.simple_name(t),
             TypeData::Scalar(Scalar::AnyValue) => "Any".into(),
             TypeData::Scalar(s) => s.name().into(),
             TypeData::Function { .. } => "Function".into(),
@@ -249,9 +251,12 @@ impl Translator<'_> {
     }
 
     /// The functional interfaces the module synthesized, as files: each
-    /// its path from the module's package's directory, and its text.
-    pub fn synthesized(&self) -> Vec<(String, String)> {
-        (self.sams.iter())
+    /// its path from the module's package's directory, and its text; those
+    /// of its library's parts, or with `tests`, those its test parts
+    /// added, which are test sources.
+    pub fn synthesized(&self, tests: bool) -> Vec<(String, String)> {
+        let (library, tests_only) = self.sams.split_at(self.library_sams.min(self.sams.len()));
+        (if tests { tests_only } else { library }.iter())
             .map(|(_, name, text)| (format!("function/{name}.java"), text.clone()))
             .collect()
     }

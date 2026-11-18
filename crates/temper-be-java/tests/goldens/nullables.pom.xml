@@ -13,7 +13,7 @@
     <dependency>
       <groupId>dev.temperlang</groupId>
       <artifactId>temper-core</artifactId>
-      <version>0.6.0</version>
+      <version>0.0.0-alpha.0.0</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>

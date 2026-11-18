@@ -1,15 +1,19 @@
 [project]
 name = "temper-std"
-version = "0.6.0"
-description = ""
+version = "0.7.0.dev0"
+description = "Optional support library provided with Temper"
 readme = {text = "n/a", content-type = "text/plain"}
 requires-python = ">=3.11"
-license = { text = "LicenseRef-Proprietary" }
-authors = [  ]
+license = { text = "Apache-2.0 OR MIT" }
+authors = [ { name = "Temper Contributors" } ]
 
 dependencies = [
-    "temper-core==0.6.0"
+    "temper-core==0.7.0.dev0"
 ]
+
+[project.urls]
+Homepage = "https://temperlang.dev/"
+Repository = "https://github.com/temperlang/temper"
 
 [build-system]
 requires = ["hatchling"]

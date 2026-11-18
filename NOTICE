@@ -1,23 +1,23 @@
-Tempest
+Temper
 
 Copyright (c) The Temper Project Contributors. Licensed under Apache 2.0
 or MIT, at your option; see COPYRIGHT.
 
-vendor/temper/ holds a copy of Kotlin Temper's functional tests, std, and core,
-also The Temper Project's, under the same licenses (see
-vendor/temper/SOURCE.md for the commit it came from).
+lib/core/, lib/std/, crates/temper-funtests/cases/, and each backend
+crate's runtime/ are core libraries that support translations and are
+under the same licenses, except LuaUnit
+(crates/temper-be-lua/runtime/luaunit/) which is under the BSD license
+in its LICENSE.txt.
 
-Documentation. Much of docs/ (the guide, the language reference, the
-target language notes, the release notes, docs/internals/kotlin/, and
-docs/contributing/signing-commits.md) is adapted from the Temper
-Language Documentation: the temperlang.dev site's sources and generated
-pages, release notes, and READMEs in the temperlang/temper repository
-(commit 30b05fe6f7faaf0d80e4d1df573edf065554e205, 2026-11-06),
-Copyright The Temper Project Contributors, licensed under CC BY-SA 4.0
-(LICENSE-CC-BY-SA-4.0). Changes: converted from mkdocs to GitHub
-Markdown, reorganized, edited, and annotated where Temper's compilers
-disagree; docs/README.md says where each part came from. The adapted
-documentation stays under CC BY-SA 4.0.
+Documentation. The language documentation under docs/ (the guide, the
+language reference, the target language notes, the release notes, and
+process documents like CONTRIBUTING) are Copyright The Temper Project
+Contributors, licensed under the Creative Commons CC BY-SA 4.0
+license.  Documentation may be embedded in source code comments and
+extracted by automated processes, but any fragment of source code that
+is notated as being documentation using a convention that allows for
+automatic extraction is also licensed under that same Creative Commons
+license.
 
 Language logos. docs/images/lang-icons/ holds other projects' logos,
 used under their projects' terms, as docs/images/lang-icons/README.md

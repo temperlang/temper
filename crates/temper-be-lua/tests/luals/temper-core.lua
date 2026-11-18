@@ -219,6 +219,30 @@ function temper.float64_sign(x) end
 ---@return number
 function temper.int32_tofloat64(n) end
 
+---An `Int64`, from its value, or from its high (signed) and low 32 bits.
+---@param hi integer
+---@param lo? integer
+---@return integer
+function temper.int64_constructor(hi, lo) end
+
+---@param n integer
+---@return integer
+function temper.int32_toint64(n) end
+
+---@param n integer
+---@return integer
+function temper.int64_toint32(n) end
+
+---@param a integer
+---@param b integer
+---@return integer
+function temper.int64_max(a, b) end
+
+---@param a integer
+---@param b integer
+---@return integer
+function temper.int64_min(a, b) end
+
 ---@param n integer
 ---@return number
 function temper.int64_tofloat64(n) end

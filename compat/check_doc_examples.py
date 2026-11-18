@@ -3,10 +3,10 @@
 # ///
 """Checks that the docs' Temper examples build, or fail, as they say.
 
-    uv run compat/check_doc_examples.py [--tempest BIN] [--verbose] [PATH...]
+    uv run compat/check_doc_examples.py [--temper BIN] [--verbose] [PATH...]
 
 Each ```temper block in the docs is run on its own, as a one-file
-library, by `tempest test -v` on the interpreter, which settles it (names,
+library, by `temper test -v` on the interpreter, which settles it (names,
 macros, and types) and runs its top level. It's judged by the marker on
 its last line, the convention Temper's docs have always used:
 
@@ -33,7 +33,7 @@ Exits with 1 if a marked block disagrees with its marker, a known block
 agrees, or a known comment is unattached or names a missing entry.
 PATH, files or folders, defaults to docs/, without docs/internals/ and
 docs/release-notes/ (which keep old syntax, as it was).
-BIN defaults to target/release/tempest, then target/small/tempest.
+BIN defaults to target/release/temper, then target/small/temper.
 """
 
 import argparse
@@ -46,7 +46,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FENCE = re.compile(r"^(\s*)```temper\s*$\n(.*?)^\1```\s*$", re.M | re.S)
-# A diagnostic line, `path:line:column: level: message`, at tempest's levels.
+# A diagnostic line, `path:line:column: level: message`, at temper's levels.
 DIAGNOSTIC = re.compile(r":\d+:\d+: (error|warn|hint): ")
 KNOWN = re.compile(r"^\s*<!-- known:((?:\s+I\d+)+) -->\s*$", re.M)
 
@@ -84,11 +84,11 @@ def expected_logs(body: str) -> list[str]:
     return found
 
 
-def build(tempest: Path, body: str) -> tuple[bool, str]:
+def build(temper: Path, body: str) -> tuple[bool, str]:
     with tempfile.TemporaryDirectory() as tmp:
         (Path(tmp) / "config.temper.md").write_text('# Example\n\n    export let name = "example";\n')
         (Path(tmp) / "example.temper").write_text(body + "\n")
-        r = subprocess.run([str(tempest), "test", "-v", tmp], capture_output=True, text=True, timeout=60)
+        r = subprocess.run([str(temper), "test", "-v", tmp], capture_output=True, text=True, timeout=60)
         out = (r.stdout + r.stderr).strip()
         return r.returncode == 0 and " error" not in out, out
 
@@ -110,13 +110,13 @@ def short(wheres: list[str]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", nargs="*", type=Path)
-    parser.add_argument("--tempest", type=Path)
+    parser.add_argument("--temper", type=Path)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
-    tempest = args.tempest or next(
-        (p for p in (ROOT / "target/release/tempest", ROOT / "target/small/tempest") if p.exists()), None)
-    if tempest is None:
-        print("No tempest binary; build one (cargo build --release -p tempest) or pass --tempest.")
+    temper = args.temper or next(
+        (p for p in (ROOT / "target/release/temper", ROOT / "target/small/temper") if p.exists()), None)
+    if temper is None:
+        print("No temper binary; build one (cargo build --release -p tempest) or pass --temper.")
         return 2
     pages = []
     for path in args.paths or [ROOT / "docs"]:
@@ -141,7 +141,7 @@ def main() -> int:
             if marker == "skip":
                 counts["skipped"] = counts.get("skipped", 0) + 1
                 continue
-            ok, out = build(tempest, body)
+            ok, out = build(temper, body)
             want_ok = marker != "error"
             agrees = ok == want_ok
             want_logs = expected_logs(body)

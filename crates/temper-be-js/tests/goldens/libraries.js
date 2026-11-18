@@ -168,7 +168,7 @@ function cube(x) {
  */
 function corner(grid) {
   try {
-    return grid.get_(1, 1);
+    return grid.get(1, 1);
   } catch {
     return -1.0;
   }
@@ -565,7 +565,7 @@ export class Grid extends type() {
    * @param {number} j
    * @returns {number}
    */
-  get_(i, j) {
+  get(i, j) {
     return listedGet(/** @type {number[]} */ (this.#values), (Math.imul(i, this.#ncols) + j) | 0);
   }
 
@@ -582,13 +582,26 @@ export class Grid extends type() {
   }
 }
 
+/** @type {Casing} */
+let Casing$first;
+/** @type {Casing} */
+let Casing$last;
+/** @type {string} */
+let Casing$mark;
+
 export class Casing extends type() {
   /** @type {string} */
   #name;
-  /** @type {Casing} */
-  static first;
-  /** @type {Casing} */
-  static last;
+
+  /** @returns {Casing} */
+  static get first() {
+    return Casing$first;
+  }
+
+  /** @returns {Casing} */
+  static get last() {
+    return Casing$last;
+  }
 
   /** @param {string} name */
   constructor(name) {
@@ -620,6 +633,11 @@ export class Casing extends type() {
    */
   static named(name) {
     return new Casing(name);
+  }
+
+  /** @returns {string} */
+  get marked() {
+    return Casing$mark + this.#name;
   }
 }
 
@@ -1019,8 +1037,9 @@ export class Quoting extends type(Escapes) {
   }
 }
 
-Casing.first = new Casing("first");
-Casing.last = Casing.named("last");
+Casing$first = new Casing("first");
+Casing$last = Casing.named("last");
+Casing$mark = "#";
 let ticks = 0;
 /** @type {readonly number[]} */
 const extras = Object.freeze([1]);
@@ -1094,7 +1113,7 @@ let t$10;
   const part5 = new Dot(3).grown;
   t$10 = part5 == null ? "null" : part5.toString();
 }
-console.log(`${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${t$9} ${t$10} ${Casing.last.toString()}`);
+console.log(`${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${t$9} ${t$10} ${Casing.last.toString()} ${Casing.first.marked}`);
 const carry = new Carry(3);
 console.log(`${carry.carrying} ${carry.state} ${new Carry(0).carrying} ${tagged().label ?? "null"} ${tagged("x").label ?? "null"} ${weight(42)} ${weight(60)}`);
 /** @type {readonly boolean[]} */

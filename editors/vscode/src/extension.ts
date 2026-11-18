@@ -1,4 +1,4 @@
-// The Temper extension: starts `tempest lsp` and connects VS Code to it
+// The Temper extension: starts `temper lsp` and connects VS Code to it
 // with vscode-languageclient, which syncs documents (incrementally, as
 // the server asks), shows its diagnostics, and maps VS Code's providers
 // to LSP's requests; the preview of literate Temper (preview.ts); the
@@ -18,7 +18,7 @@ let lastError: string | undefined;
 
 /** What the extension gives other extensions, and its tests. */
 export interface Api {
-  /** The `tempest` running the server, if one was found. */
+  /** The `temper` running the server, if one was found. */
   server(): Found | undefined;
   /** The running client, once started. */
   client(): LanguageClient | undefined;

@@ -4,9 +4,11 @@
 //! `instanceof` checks. A field is stored privately, as `#name`, with a
 //! getter, and a setter if it's a `var`, unless it's private; private
 //! methods, getters, and setters are `#name` too. A class's constructor
-//! calls `super()` first. Static fields and functions are plain, since
-//! the module's init block assigns and calls them, and so is everything
-//! of an interface's, since
+//! calls `super()` first. A static field is a module `let` before the
+//! class, since the module's init block sets it, with a `static get` if
+//! it's public, as Kotlin's private static field and getter; static
+//! functions are plain, since the init block may call them, and so is
+//! everything of an interface's, since
 //! the mixin copies its methods to classes where its `#` names don't
 //! reach.
 //!
@@ -18,7 +20,10 @@
 //! For TypeScript's checker, an interface declares its abstract members
 //! as fields with their types, initialized to an `undefined` cast to
 //! `any`, which nothing stores: nothing makes an interface's instance,
-//! and the mixin copies only its prototype. (TypeScript 7 no longer reads
+//! and the mixin copies only its prototype. It declares the methods it
+//! inherits from interfaces above it again, abstract or not, with the
+//! type arguments it supplies them (`Labeled<L, T> extends Holder<T>`
+//! declares `Holder`'s `held` as a `T`, its own). (TypeScript 7 no longer reads
 //! a declaration without a value, `/** @type {number} */ this.area;`.)
 //! TypeScript doesn't see what the mixin copies, so an upcast or downcast
 //! to a type with members the value's type doesn't declare is cast
@@ -64,16 +69,16 @@ impl Translator<'_> {
         if temper_tmpl::host::uses_host(p, decl, super::NAMES) {
             body.push(self.host_class(item, decl)?);
         } else {
-            body.push(self.class(item)?);
+            let class = self.class(item);
+            body.append(&mut self.static_lets);
+            body.push(class?);
         }
         Ok(())
     }
 
     fn home_is_here(&self, node: NodeId) -> bool {
         match self.p.nodes.get(node) {
-            Node::Class { decl, .. } | Node::Interface { decl, .. } => {
-                home(self.p, decl) == Some(self.here)
-            }
+            Node::Class { decl, .. } | Node::Interface { decl, .. } => self.is_here(decl),
             _ => false,
         }
     }
@@ -110,6 +115,32 @@ impl Translator<'_> {
         (d.facts.contains(Facts::PRIVATE) || d.facts.contains(Facts::PROTECTED))
             && !matches!(d.kind, DeclKind::StaticField | DeclKind::Function)
             && p.decls.get(d.owner).kind == DeclKind::Class
+    }
+
+    /// Where a static field of a class or interface written here is
+    /// stored, as Kotlin's private static field `#name` is: a module
+    /// `let`, `Class$name`, since the module's init block, outside the
+    /// class, sets it. `$` is in no Temper name, so it's a fresh one. A
+    /// public static field is a `static get` of it, so assigning one
+    /// throws, as Kotlin's; a private one has none. `None` for a host
+    /// class's.
+    pub(super) fn static_storage(&self, field: DeclId) -> Option<String> {
+        let owner = self.p.decls.get(field).owner;
+        if temper_tmpl::host::uses_host(self.p, owner, super::NAMES) {
+            return None;
+        }
+        Some(format!("{}${}", self.name(owner), self.name(field)))
+    }
+
+    /// A static field's value: its `let`, in its class if private, as
+    /// nothing else may read it, and elsewhere its getter.
+    pub(super) fn static_read(&mut self, field: DeclId) -> Expr {
+        let d = self.p.decls.get(field);
+        let private = d.facts.contains(Facts::PRIVATE) || d.facts.contains(Facts::PROTECTED);
+        match self.static_storage(field) {
+            Some(storage) if private => Expr::name(storage),
+            _ => self.class_ref(d.owner).member(self.name(field)),
+        }
     }
 
     /// A member's name as its uses write it: `#name` if it's hidden.
@@ -273,8 +304,10 @@ impl Translator<'_> {
         if p.decls.get(decl).kind == DeclKind::Class {
             names.extend(self.forwarded(decl).into_iter().map(|m| self.name(m)));
         } else {
-            for (m, _) in self.inherited_abstract(decl, members) {
-                if let Node::AbstractMethod { decl, .. } = p.nodes.get(m) {
+            for (m, _) in self.inherited_members(decl, members) {
+                if let Node::AbstractMethod { decl, .. } | Node::Method { decl, .. } =
+                    p.nodes.get(m)
+                {
                     names.insert(self.name(decl));
                 }
             }
@@ -327,11 +360,16 @@ impl Translator<'_> {
             .collect()
     }
 
-    /// The abstract members an interface inherits from the program's own
-    /// interfaces above it that aren't generic, and doesn't declare: which
-    /// it declares again for TypeScript, which sees nothing through the
-    /// runtime's `type(I)`, so `J extends I` has `I`'s properties.
-    fn inherited_abstract(&self, iface: DeclId, members: temper_tmpl::Kids) -> Vec<(NodeId, bool)> {
+    /// The methods, abstract or with default bodies, an interface
+    /// inherits from the program's own interfaces above it, and doesn't
+    /// declare, each with the interface it's from: which it declares
+    /// again for TypeScript, which sees nothing through the runtime's
+    /// `type(I)`, so `J extends I` has `I`'s properties and methods.
+    fn inherited_members(
+        &self,
+        iface: DeclId,
+        members: temper_tmpl::Kids,
+    ) -> Vec<(NodeId, DeclId)> {
         let p = self.p;
         let decl_of = |m: NodeId| match p.nodes.get(m) {
             Node::Field { decl }
@@ -345,7 +383,7 @@ impl Translator<'_> {
             .collect();
         let mut out = Vec::new();
         for up in ancestors(p, iface) {
-            if up == iface || !p.decls.type_params(up).is_empty() {
+            if up == iface {
                 continue;
             }
             let Some(&node) = self.class_nodes.get(&up) else {
@@ -357,7 +395,9 @@ impl Translator<'_> {
             let mut adds = Vec::new();
             for &m in p.nodes.list(members) {
                 match p.nodes.get(m) {
-                    Node::AbstractMethod { decl, .. } if !names.contains(&self.name(decl)) => {
+                    Node::AbstractMethod { decl, .. } | Node::Method { decl, .. }
+                        if !names.contains(&self.name(decl)) && !self.hidden(decl) =>
+                    {
                         adds.push((m, self.name(decl)));
                     }
                     _ => {}
@@ -365,11 +405,56 @@ impl Translator<'_> {
             }
             // A getter and its setter share a name: both, then the name.
             for (m, name) in adds {
-                out.push((m, true));
+                out.push((m, up));
                 names.insert(name);
             }
         }
         out
+    }
+
+    /// For each generic interface above `iface`, its type parameters'
+    /// types as `iface` supplies them, written out: `T` for `Holder`'s
+    /// `T` where `Labeled<L, T> extends Holder<T>`. The nearest path
+    /// (breadth-first) supplies them, as [`ancestors`] finds each.
+    fn supplied_type_args(&mut self, iface: DeclId) -> R<HashMap<DeclId, HashMap<DeclId, String>>> {
+        let p = self.p;
+        let mut out: HashMap<DeclId, HashMap<DeclId, String>> = HashMap::new();
+        out.insert(iface, HashMap::new());
+        let mut queue = vec![iface];
+        let mut next = 0;
+        let outer = std::mem::take(&mut self.type_args);
+        let mut result = Ok(());
+        'walk: while next < queue.len() {
+            let d = queue[next];
+            next += 1;
+            if !p.decls.contains(d) {
+                continue;
+            }
+            self.type_args = out[&d].clone();
+            for &s in p.decls.supers(d) {
+                let TypeData::Nominal { decl: up, args } = p.types.get(s) else {
+                    continue;
+                };
+                if out.contains_key(&up) {
+                    continue;
+                }
+                let mut supplied = HashMap::new();
+                let args = p.types.list(args).to_vec();
+                for (&param, &arg) in p.decls.type_params(up).iter().zip(&args) {
+                    match self.ty(arg) {
+                        Ok(text) => supplied.insert(param, text),
+                        Err(e) => {
+                            result = Err(e);
+                            break 'walk;
+                        }
+                    };
+                }
+                out.insert(up, supplied);
+                queue.push(up);
+            }
+        }
+        self.type_args = outer;
+        result.map(|()| out)
     }
 
     /// A class or interface.
@@ -382,6 +467,7 @@ impl Translator<'_> {
         let outer = std::mem::replace(&mut self.class, decl);
         let body = self.class_body(decl, members);
         self.class = outer;
+        self.type_args.clear();
         let members = body?;
         self.imports.insert("type");
         let supers: Vec<Expr> = (p.decls.supers(decl).iter())
@@ -409,12 +495,21 @@ impl Translator<'_> {
         // An interface's abstract properties, declared once for a getter
         // and its setter.
         let mut declared = HashSet::new();
-        let mut all: Vec<(NodeId, bool)> =
-            p.nodes.list(members).iter().map(|&m| (m, false)).collect();
+        let mut all: Vec<(NodeId, Option<DeclId>)> =
+            p.nodes.list(members).iter().map(|&m| (m, None)).collect();
+        let mut supplied = HashMap::new();
         if interface {
-            all.extend(self.inherited_abstract(class, members));
+            let inherited = self.inherited_members(class, members);
+            if !inherited.is_empty() {
+                supplied = self.supplied_type_args(class)?;
+            }
+            all.extend(inherited.into_iter().map(|(m, up)| (m, Some(up))));
         }
-        for (m, inherited) in all {
+        for (m, from) in all {
+            let inherited = from.is_some();
+            // An inherited member's types, in terms of this interface's
+            // type parameters.
+            self.type_args = (from.and_then(|up| supplied.get(&up).cloned())).unwrap_or_default();
             // A std member this backend connects, as `Test.bail()` or
             // `Regex.compiledFound()`, isn't declared, as Kotlin's.
             if temper_tmpl::qname::connected_member_node(p, m, crate::connected::connects_std) {
@@ -470,14 +565,41 @@ impl Translator<'_> {
                         });
                     }
                 }
-                Node::StaticField { decl } => fields.push(Member::Field {
-                    span,
-                    is_static: true,
-                    name: self.name(decl),
-                    ty: self.ty(p.decls.get(decl).ty)?,
-                    value: None,
-                }),
-                Node::AbstractMethod { decl, params } => {
+                Node::StaticField { decl } => {
+                    let d = p.decls.get(decl);
+                    let ty = self.ty(d.ty)?;
+                    let Some(storage) = self.static_storage(decl) else {
+                        return not_yet("a host class's static field");
+                    };
+                    self.static_lets.push(
+                        Stmt::Decl {
+                            export: false,
+                            keyword: Keyword::Let,
+                            name: storage.clone(),
+                            ty: Some(ty.clone()),
+                            value: None,
+                        }
+                        .spanned(span),
+                    );
+                    if d.facts.contains(Facts::PRIVATE) || d.facts.contains(Facts::PROTECTED) {
+                        continue;
+                    }
+                    fields.push(Member::Method {
+                        span,
+                        is_static: true,
+                        kind: MethodKind::Getter,
+                        name: self.name(decl),
+                        name_span: d.name_span,
+                        source_name: p.name(decl).to_string(),
+                        params: Vec::new(),
+                        result: Some(ty),
+                        body: vec![Stmt::Return(Some(Expr::name(storage)))],
+                    });
+                }
+                // An inherited default body too, which the mixin copies.
+                Node::AbstractMethod { decl, params } | Node::Method { decl, params, .. }
+                    if inherited || matches!(p.nodes.get(m), Node::AbstractMethod { .. }) =>
+                {
                     let name = self.name(decl);
                     if !interface || !declared.insert(name.clone()) {
                         continue;
@@ -575,6 +697,7 @@ impl Translator<'_> {
                 other => return not_yet(format!("a {} member", other.kind().name())),
             }
         }
+        self.type_args.clear();
         if !interface {
             for winner in self.forwarded(class) {
                 methods.push(self.forwarder(winner)?);

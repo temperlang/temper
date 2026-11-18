@@ -31,6 +31,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 must(Some("ok")).unwrap_or_else(|_| Arc::new("bad".to_string()))
             );
             println!("{} {}", tried("7"), tried("x"));
+            println!(
+                "{} {}",
+                first_code(Part::new(Code::new("a"))).unwrap_or(-1),
+                first_code(Part::new(NoCode::new())).unwrap_or(-1)
+            );
             Ok(())
         })
         .clone()
@@ -99,4 +104,97 @@ pub(crate) fn tried(s: impl ToArcString) -> i32 {
         temper_core::string::to_int(&s, None)
     }
     .unwrap_or(-1)
+}
+
+pub(crate) trait PartTrait:
+    temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync
+{
+    #[allow(dead_code)]
+    fn clone_boxed(&self) -> Part;
+}
+
+#[derive(Clone)]
+pub(crate) struct Part(Arc<dyn PartTrait>);
+
+impl Part {
+    pub fn new(selfish: impl PartTrait + 'static) -> Part {
+        Part(Arc::new(selfish))
+    }
+}
+
+impl PartTrait for Part {
+    fn clone_boxed(&self) -> Part {
+        PartTrait::clone_boxed(&*self.0)
+    }
+}
+
+temper_core::impl_any_value_trait_for_interface!(Part);
+
+impl std::ops::Deref for Part {
+    type Target = dyn PartTrait;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+struct CodeStruct {
+    text: Arc<String>,
+}
+
+#[derive(Clone)]
+pub(crate) struct Code(Arc<CodeStruct>);
+
+impl Code {
+    pub fn new(text: impl ToArcString) -> Code {
+        let text = text.to_arc_string();
+        Code(Arc::new(CodeStruct { text }))
+    }
+}
+
+impl PartTrait for Code {
+    fn clone_boxed(&self) -> Part {
+        Part::new(self.clone())
+    }
+}
+
+temper_core::impl_any_value_trait!(Code, [Part]);
+
+struct NoCodeStruct {}
+
+#[derive(Clone)]
+pub(crate) struct NoCode(Arc<NoCodeStruct>);
+
+impl NoCode {
+    pub fn new() -> NoCode {
+        NoCode(Arc::new(NoCodeStruct {}))
+    }
+}
+
+impl PartTrait for NoCode {
+    fn clone_boxed(&self) -> Part {
+        Part::new(self.clone())
+    }
+}
+
+temper_core::impl_any_value_trait!(NoCode, [Part]);
+
+pub(crate) fn first_code(attempt: Part) -> temper_core::Result<i32> {
+    Ok({
+        let attempt2 = (|| {
+            Ok::<_, temper_core::Error>(temper_core::string::get(
+                &temper_core::cast::<Code>(attempt.clone())
+                    .ok_or_else(temper_core::Error::new)?
+                    .0
+                    .text,
+                0usize,
+            ))
+        })();
+        if let Ok(v) = attempt2 {
+            v
+        } else {
+            println!("no code");
+            return Err(temper_core::Error::new());
+        }
+    })
 }

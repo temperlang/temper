@@ -38,4 +38,4 @@ console.log(Date.yearsBetween(d, later).toString()); //!outputs "2"
 `Date` is `@json`, written as its ISO string. The module is a first step;
 times, durations, and time zones aren't in it yet.
 
-Source: [temporal.temper.md](../../vendor/temper/std/temporal/temporal.temper.md).
+Source: [temporal.temper.md](../../lib/std/temporal/temporal.temper.md).

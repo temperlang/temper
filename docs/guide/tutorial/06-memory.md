@@ -55,7 +55,7 @@ parent.addKid(new Node("kid"));
 ```
 
 Viewing `parent` in the REPL shows the cycle, marked `↻` where the kid
-refers back to its parent (Kotlin Temper's REPL overflowed its stack here):
+refers back to its parent (earlier Temper releases' REPL overflowed its stack here):
 
 ```console
 $ parent

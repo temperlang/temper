@@ -1,7 +1,7 @@
 # Backends, in detail
 
 A backend takes a tmpl program and writes one language's source and
-package files. Tempest has seven, one crate each: `temper-be-cpp`,
+package files. This compiler has seven, one crate each: `temper-be-cpp`,
 `-csharp`, `-java`, `-js`, `-lua`, `-py`, and `-rust`, from about 5,600
 to 9,800 lines each. Each depends only on
 [`temper-tmpl`](../../../crates/temper-tmpl/src/lib.rs).
@@ -19,7 +19,8 @@ where they differ, why, and how they're tested.
   - [Profiles pick the shared lowerings](#profiles-pick-the-shared-lowerings)
   - [One naming pass, rules as data](#one-naming-pass-rules-as-data)
   - [Operators and connected declarations as tables](#operators-and-connected-declarations-as-tables)
-  - [Kotlin's runtimes, vendored, with patches](#kotlins-runtimes-vendored-with-patches)
+  - [The runtimes, from Kotlin Temper's](#the-runtimes-from-kotlin-tempers)
+  - [Changes from Kotlin Temper's runtimes](#changes-from-kotlin-tempers-runtimes)
   - [Pluggable: a description per backend](#pluggable-a-description-per-backend)
   - [Each language runs its own tests](#each-language-runs-its-own-tests)
 - [The pipeline each backend runs](#the-pipeline-each-backend-runs)
@@ -49,7 +50,7 @@ flowchart LR
 ## Shared decisions
 
 Each says what was chosen, the alternatives, pros and cons, how Kotlin
-Temper does it, and whose call it was: *team-agreed*, *tempest's* (the
+Temper does it, and whose call it was: *team-agreed*, *this compiler's* (the
 user's call), or *open*.
 
 ### Compatible API, prettier bodies
@@ -58,7 +59,7 @@ user's call), or *open*.
 public names and signatures, the runtime it calls) matches what Kotlin
 Temper writes for that language. Function bodies are free to read
 better: source names, real loops, no needless temporaries or labels.
-Where Kotlin's output is unsafe or wrong, tempest's differs on purpose,
+Where Kotlin's output is unsafe or wrong, this compiler's differs on purpose,
 and each crate's `lib.rs` doc comment says where.
 
 **Alternatives:** a fresh API per language, or byte-for-byte Kotlin
@@ -67,11 +68,11 @@ output.
 **Pros:** existing users of Temper-built libraries can't tell the
 difference; reviewers can read the generated code.
 
-**Cons:** inherits Kotlin's API choices, including ones tempest would
+**Cons:** inherits Kotlin's API choices, including ones this compiler would
 change ([notes/api-compat.md](../../../notes/api-compat.md),
 "Proposed changes", lists eleven).
 
-**Status:** tempest's goal from the start; the API rules per language
+**Status:** this compiler's goal from the start; the API rules per language
 are in api-compat.md. Changing a public API needs the Temper team.
 
 ### A small tree and printer per language
@@ -94,7 +95,7 @@ more, string concatenation parts in six, host wrappers in six. The
 "shared document builder" in the size plan
 ([size-and-speed.md](../../../notes/size-and-speed.md)) wasn't built.
 
-**Status:** tempest's ([design.md](../../../notes/design.md),
+**Status:** this compiler's ([design.md](../../../notes/design.md),
 section 9).
 
 ### Profiles pick the shared lowerings
@@ -154,34 +155,154 @@ be shared or diffed across backends as data.
 **Kotlin Temper** keeps the same in each backend's `SupportNetwork` and
 helper files.
 
-### Kotlin's runtimes, vendored, with patches
+### The runtimes, from Kotlin Temper's
 
-**Chosen:** each language's `temper-core` (and parts of std's host
-code) is copied from Kotlin Temper into `vendor/temper/` by
-`compat/sync_temper.py`, with tempest's fixes kept as patches in
-`vendor/temper-patches/` (23 so far) that each sync re-applies. Each
-backend's `runtime.rs` embeds its runtime's files for `tempest build`
-to write beside the output. CI checks the copy is current
-(`sync_temper.py --check`).
+**Chosen:** each backend crate holds its language's runtime in
+`runtime/temper-core/`, with that backend's std host code in
+`runtime/std/` (Rust's, Java's, and C#'s), LuaUnit in Lua's
+`runtime/luaunit/`, and C#'s library template in
+`runtime/library-template/`. Each backend's `runtime.rs` embeds its
+runtime's files for `temper build` to write beside the output. These,
+with `lib/std/`, `lib/core/`, and `temper-funtests`'s `cases/`, began
+as Kotlin Temper's at commit 69f1a5b0, with the changes below, and are
+this compiler's own now. Rust's runtime and std are also published as crates
+of their own, `temper-core` and `temper-std` on crates.io, rather than
+packaged inside `temper-be-rust`.
 
 **Pros:** generated code calls the same runtime APIs as Kotlin's, so
-both compilers' output can mix; fixes are visible as patches and meant
-for upstream.
+both compilers' output can mix; each runtime sits in the crate that
+calls it, so a change to both is one change.
 
-**Cons:** the copy follows Kotlin's `main` only as often as someone
-syncs it ([`vendor/temper/SOURCE.md`](../../../vendor/temper/SOURCE.md)
-names the commit), and a runtime change there, such as C++'s strings
-becoming a shared `Str` (#654), needs the backend to follow it in the
-same change. And some patches add API (a top-level turn and `awakeUpon` for Java,
-`awake_upon` for Rust, async for Lua), while six backends' package
-files still name `temper-core` 0.6.0, the version Kotlin publishes
-without them. A tempest-built package built against the published
-runtime may not compile (the audit's A1). C++ declares no runtime
-version at all. See [weaknesses](#known-weaknesses-and-plans).
+**Cons:** some changes add API (a top-level turn and `awakeUpon` for
+Java, `awake_upon` for Rust, async for Lua), which Kotlin's published
+0.6.0 runtimes lack, so output needs the runtime of its own build;
+it names that build's version
+([Versions](#versions-one-version-spelled-for-each-ecosystem)), which
+isn't published yet.
 
-**Status:** vendoring is tempest's; each patch says whether it's
-upstream, in an open Kotlin PR (#532 for one turn at a time), or still
-to offer.
+### Changes from Kotlin Temper's runtimes
+
+What this compiler changed in the runtimes it began with, numbered as the
+patches that made them (other docs cite these numbers):
+
+| Runtime | No. | Change |
+| --- | --- | --- |
+| C++ | 0005 | Drain the async queue when code outside any async block settles a promise; let C++20 coroutines `co_await` Temper promises |
+| C++ | 0012 | Let a range-for step generators (C++14); a failed step leaves a generator done |
+| C++ | 0019 | std/net through a pluggable client (`temper::core::net::set_client`), by default libcurl's multi interface on a `temper-io` thread where the build defines `TEMPER_NET_CURL`; other threads post work back to the async queue, which waits while any hold is out |
+| C++ | 0021 | `to_base`, an upcast of a never-null `shared_ptr`, so g++'s `-Wnull-dereference` has no null path to follow |
+| C++ | 0022 | Skip `List::make`'s `reserve` for Booleans, so g++'s false `-Warray-bounds` at -O3 in `vector<bool>` doesn't fail `-Werror` builds |
+| C++ | 0023 | `DenseBitVector`, as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
+| C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
+| C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
+| Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |
+| Java | 0016 | Connect and send std/net requests on the common pool, never in the async step that calls `stdNetSend` |
+| JS | 0001 | Fix the JSDoc types of eight helpers, so strict `tsc` takes generated calls without casts |
+| JS | 0002 | Fix `listBuilderSplice`'s JSDoc types, likewise |
+| JS | 0004 | Make `breakPromise`'s reason optional in its JSDoc |
+| JS | 0015 | Type `sendRequest`'s method as any string in its JSDoc, for std/net's generated call |
+| Lua | 0006 | Add promises and async blocks, which Kotlin's Lua calls but its runtime lacks |
+| Lua | 0011 | Queue promise waiters behind one drain loop; make generators callable tables that `for`-`in` steps and a failed step leaves done |
+| Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
+| Lua | 0020 | Let generators yield values and take their factory's arguments |
+| Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
+| Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
+| Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
+| Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
+| Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
+| Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
+
+### Versions: one version, spelled for each ecosystem
+
+**Chosen:** Temper's version is written once, as the root `Cargo.toml`'s
+`[workspace.package] version` (0.7.0), and every runtime, std, core,
+generated package, and `temper --version` names it. `temper-tmpl`'s
+[`version.rs`](../../../crates/temper-tmpl/src/version.rs) has the
+rules: a `Version` is that base, a stage (dev, `alpha.K`, `beta.K`,
+`rc.K`, or release), and the commits since the stage's tag, spelled
+for each ecosystem so that every one sorts dev builds, pre-releases,
+and releases in the same order:
+
+| Stage | SemVer: npm, Cargo, NuGet, Maven, vcpkg, Conan | Python (PEP 440) | LuaRocks |
+| --- | --- | --- | --- |
+| dev build | `0.7.0-alpha.0.123` | `0.7.0.dev123` | `0.7.0.alpha.0.123-1` |
+| alpha 1 | `0.7.0-alpha.1` | `0.7.0a1` | `0.7.0.alpha.1-1` |
+| alpha 1 plus 5 commits | `0.7.0-alpha.1.5` | `0.7.0a2.dev5` | `0.7.0.alpha.1.5-1` |
+| beta 1, rc 1 | `0.7.0-beta.1`, `0.7.0-rc.1` | `0.7.0b1`, `0.7.0rc1` | `0.7.0.beta.1-1`, `0.7.0.rc.1-1` |
+| release | `0.7.0` | `0.7.0` | `0.7.0-1` |
+| dev build after it | `0.7.1-alpha.0.5` | `0.7.1.dev5` | `0.7.1.alpha.0.5-1` |
+
+Go would add `v`; CMake's `project(VERSION)` takes the numbers alone,
+so generated `CMakeLists.txt` also sets `LIBRARY_VERSION_FULL`, and the
+C++ runtime defines `TEMPER_CORE_VERSION`. `dev` appears nowhere, as
+SemVer, Maven, and LuaRocks sort it above alphas or even releases; and
+no spelling relies on build metadata (`+…`), which registries ignore or
+reject. `temper-tmpl`'s
+[`version_order`](../../../crates/temper-tmpl/tests/version_order.rs)
+test sorts each spelling with its ecosystem's own comparator where one
+is installed (pip's `packaging`, node-semver, Maven's
+`ComparableVersion`, `NuGet.Versioning`, and LuaRocks' `vers`), all
+required in CI (`TEMPER_REQUIRE_COMPARATORS`).
+
+Where the version comes from:
+
+- `temper-driver`'s `build.rs` reads git: the last `v` tag
+  (`v0.7.0-beta.1`) and the commits since it, or since the first commit
+  before any tag. After a release tag, dev builds are of the next
+  patch; a workspace version ahead of the tag wins. `TEMPER_VERSION`
+  (`0.7.0-rc.1`) overrides git; without git, outside this repository,
+  or in a shallow clone without tags, the version is a dev build with
+  no commits counted, `0.7.0-alpha.0.0`. It reruns only when HEAD or the
+  tags move, so `--version`'s "modified" mark is as of then.
+- `temper` sets that as the process's version first thing
+  (`temper_driver::version::init`); the backends and the frontend read
+  `temper_tmpl::version::current()`, which is otherwise the version
+  with no commits counted. Tests, the playground, and other library
+  users therefore get the same output at every commit, and a commit
+  rebuilds only `temper-driver` and what uses it.
+- Runtimes' package files say `0.0.0`, a version every ecosystem
+  takes, so they build and test where they are; each backend's
+  `runtime::VERSION` lists those spots, which `temper build` fills in
+  `temper.out` (Lua's rockspec is renamed for it). std's
+  `config.temper.md` says none, and std and core take Temper's in tmpl.
+- Nothing is published by accident. The workspace's crates all say
+  `publish = false` (`temper-driver`'s `version_guard` test checks).
+  Runtimes' package files refuse publishing as they stand, and
+  `temper build` drops that only for a release (no pre-release part),
+  so a dev build's runtimes can't be published either
+  (`runtime::VERSION`'s `unpublished`): Cargo's `publish = false`,
+  npm's `"private": true`, a `Private :: Do Not Upload` classifier,
+  which PyPI rejects, C#'s `IsPackable` false, and Maven's
+  `skipPublishing` and `maven.deploy.skip`. LuaRocks has no such marker,
+  and C++'s runtime no package file.
+- Goldens of functional tests and shared programs show the version as a
+  sentinel, a dev build of 0.0.0 (`0.0.0-alpha.0.0`, `0.0.0.dev0`,
+  `0.0.0.alpha.0.0-1`), valid in each file, so a release changes only
+  std's goldens and the version's own tests; std's, and one package file
+  per backend (the `modules` program's), keep the real spellings
+  (`temper-be-testkit`'s `Goldens`).
+- `temper --version` prints `temper 0.7.0-alpha.0.123 (3f2b063,
+  modified)`.
+
+**Pros:** one place to change; packages built together name each
+other's exact versions; every ecosystem orders builds the same way; a
+version names the runtime API the output needs.
+
+**Cons:** local tools that cache by version (Maven's `~/.m2`, NuGet's
+global packages, pip) can mix two builds with the same version, as
+uncommitted changes since a commit; output refers to runtimes by path
+where the ecosystem allows. Commit counts can repeat across branches,
+which is fine while only tagged releases are published.
+
+Releases are tag-driven: a release comes only from a `v` tag whose
+version is the workspace's (`v0.7.0`, or a pre-release of it as
+`v0.7.0-beta.1`, for `version = "0.7.0"`), which
+[release.yml](../../../.github/workflows/release.yml) checks
+([release.py](../../../.github/ci-tools/release.py)'s `check`) before
+it builds anything, and only tagged builds are released
+([releasing](../../contributing/releasing.md)). The playground's About
+names the build's version (temper-wasm's `version`); its generated code,
+like tests', names the version with no commits counted.
 
 ### Pluggable: a description per backend
 
@@ -202,15 +323,15 @@ build leaves out runtimes and tools.
 and version fields that differ by backend) and a `VARIANTS` list that
 nothing reads.
 
-**Status:** tempest's ("Pluggable backends": frontend and tmpl never
+**Status:** this compiler's ("Pluggable backends": frontend and tmpl never
 list or count backends).
 
 ### Each language runs its own tests
 
 **Chosen:** each crate's `tools.rs` says how its language runs a built
-library's tests for `tempest test -b`, through
+library's tests for `temper test -b`, through
 [`Tools`](../../../crates/temper-tmpl/src/backend.rs)'s `test` (and an
-optional `prepare`), and its top level for `tempest run -b`, through
+optional `prepare`), and its top level for `temper run -b`, through
 its `run`, with shared helpers in tmpl's
 [`tools`](../../../crates/temper-tmpl/src/tools.rs). Most
 read JUnit XML; Rust reads what `cargo test` prints, and Java a
@@ -224,7 +345,7 @@ command's own output, so what it prints streams.
 
 | Backend | How its tests run |
 |---|---|
-| C++ | CMake on the `CMakeLists.txt` tempest writes, its test target, then the program, which writes JUnit XML |
+| C++ | CMake on the `CMakeLists.txt` this compiler writes, its test target, then the program, which writes JUnit XML |
 | C# | `dotnet test --logger:junit` in the `tests` project, then `dotnet build-server shutdown` |
 | Java | `javac` on runtime, std, and libraries, then JUnit 5's launcher from Maven's local repository (Kotlin runs Maven, which needs the network) |
 | JavaScript | Mocha with its xunit reporter, packages linked under `temper.out/js/node_modules` |
@@ -234,7 +355,7 @@ command's own output, so what it prints streams.
 
 **Cons:** the backends' own CI tests (`tests/functional.rs`, about
 6,500 lines over seven crates) mostly run tools with their own
-commands rather than through `tools.rs`, so `tempest test -b` for
+commands rather than through `tools.rs`, so `temper test -b` for
 Python, Lua, C++, and JS is checked only by the real-library runs in
 CI and locally.
 
@@ -355,24 +476,24 @@ tests: [`temper-be-testkit`](../../../crates/temper-be-testkit/src/lib.rs).
 | Test | What it pins | Where |
 |---|---|---|
 | Goldens | Each covered functional test's and shared program's output, file by file, in `tests/goldens/` (93 for C++ to 404 for C#); `UPDATE_SNAPSHOTS=1` rewrites them for review | each crate's `tests/functional.rs` |
-| Runs | The output runs with the language's own tools against the vendored runtime and logs what Kotlin's backend is expected to log; tests run as tests compare their failures with `expectedFailures` | each crate's `tests/functional.rs` |
+| Runs | The output runs with the language's own tools against its runtime and logs what Kotlin's backend is expected to log; tests run as tests compare their failures with `expectedFailures` | each crate's `tests/functional.rs` |
 | Strict checkers | The checkers in [the table above](#per-backend-choices), on every case; ill-typed programs' output is skipped, as Kotlin's | each crate's `tests/functional.rs` |
 | Strict at `-O2` | C++'s every generated file compiled at `-O2` with `STRICT` by g++ 12 and 14 (14 at `-O3` too), and in CI by clang++ too ([policy](#cs-warning-policy)) | `temper-be-cpp`'s `tests/functional.rs`, `strict` |
 | Sanitizers | C++ under ASan, UBSan, and TSan; `module-state` from 8 threads on every backend that has threads | `temper-be-cpp`'s `tests/functional.rs`; testkit's `threads_expected` |
 | Tables | Every operator spelled; every connection keyed by a real connected declaration | each crate's `tests/tables.rs` |
 | Host code | A library's own connected functions and classes, with host files, as is and under `--no-connected` | each crate's `tests/host/` and `CONNECTED` cases |
 | Against the interpreter | The shared programs log on the interpreter what each backend must log | [`programs_log_as_the_interpreter_does`](../../../crates/temper-be-testkit/tests/programs.rs) |
-| Kotlin's layout | `tempest build`'s `temper.out` matches Kotlin's: every path, each runtime's files, package names and versions, with differences listed and justified | [`temper_out_is_kotlins`](../../../crates/tempest/tests/kotlin_layout.rs) |
-| Real libraries | Hrefine, Chromarite, Ordable, Kelpto, and Wherewith pass their tests on all seven locally; in CI, Chromarite and Ordable on C#, Java, JS, Lua, and Python | CI's `tempest test -b` steps |
+| Kotlin's layout | `temper build`'s `temper.out` matches Kotlin's: every path, each runtime's files, package names and versions, with differences listed and justified | [`temper_out_is_kotlins`](../../../crates/tempest/tests/kotlin_layout.rs) |
+| Real libraries | Hrefine, Chromarite, Ordable, Kelpto, and Wherewith pass their tests on all seven locally; in CI, Chromarite and Ordable on C#, Java, JS, Lua, and Python | CI's `temper test -b` steps |
 
 A missing tool skips its test with a message, unless
-`TEMPEST_REQUIRE_CHECKERS` is set, as in CI, where it fails, except
-what `TEMPEST_ALLOW_MISSING` names (comma-separated words in the
+`TEMPER_REQUIRE_CHECKERS` is set, as in CI, where it fails, except
+what `TEMPER_ALLOW_MISSING` names (comma-separated words in the
 message, as `LuaLS`), which the weekly `platforms` job sets where a
 platform can't have a tool ([ci.md](../../contributing/ci.md)).
 
-`tempest test -b csharp` and `-b java` hide the compilers' warnings,
-as Kotlin's do, unless `TEMPEST_STRICT_WARNINGS` is set, as in CI's
+`temper test -b csharp` and `-b java` hide the compilers' warnings,
+as Kotlin's do, unless `TEMPER_STRICT_WARNINGS` is set, as in CI's
 runs of the real libraries: then a warning in std, a library, or its
 tests fails them, as in the backends' own tests (the C# runtime's
 nullable warnings, Kotlin's, aside). All five libraries compile
@@ -381,25 +502,23 @@ without one (2026-11-10).
 Every command a backend's tools start goes through `temper_tmpl::tools`'s
 `output` and `program` ([`children.rs`](../../../crates/temper-tmpl/src/children.rs)):
 each runs in a process group of its own, killed when it ends, times
-out (600 seconds by default), or tempest is interrupted, and on Linux
-dies with tempest; tools that want a memory limit ask for it with
+out (600 seconds by default), or `temper` is interrupted, and on Linux
+dies with `temper`; tools that want a memory limit ask for it with
 `limit_memory` ([the CLI's page](../../tools/cli.md#what-tools-start)).
 The OS calls for this are `temper-os`'s
 ([OS calls in one crate](07-cli.md#os-calls-in-one-crate-the-only-unsafe-code)).
 
 **Not covered:** the declared MSRV (generated crates say 1.71.1; CI
 builds them with 1.85.0); PUC Lua 5.1 (LuaJIT runs the Lua tests);
-C#'s `net48` side, and Java 8; output built against the published
-0.6.0 runtimes rather than the patched copies; and `tempest test -b`
+C#'s `net48` side, and Java 8; output built against published
+runtimes rather than those beside it; and `temper test -b`
 through each `tools.rs` in the backends' own test suites.
 
 ## Known weaknesses and plans
 
-- **Runtime version against patches.** Package files name `temper-core`
-  0.6.0 while the output needs patched API. Options: a distinct
-  pre-release runtime version until the patches land upstream, or
-  saying plainly that output targets the patched runtimes. C++ should
-  name its runtime version too.
+- **Unpublished runtimes.** Output names its own build's runtime
+  version ([Versions](#versions-one-version-spelled-for-each-ecosystem)),
+  which no registry has until the first tagged release publishes them.
 - **Untested MSRV and older targets.** One CI job on Rust 1.71.1, or a
   newer MSRV (api-compat.md, proposed change 11); C#'s `net48` and .NET
   8 are a to-do in [roadmap.md](../../../notes/tmpl/roadmap.md)

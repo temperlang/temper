@@ -1,6 +1,6 @@
 // Temper highlighting as a CodeMirror stream language: keywords,
 // strings with `${…}` interpolation, comments, numbers, and types by
-// capitalization. The IDE chunk can swap it for tempest's own tokens.
+// capitalization. The IDE chunk can swap it for temper's own tokens.
 
 import { StreamLanguage, type StreamParser, type StringStream } from "@codemirror/language";
 

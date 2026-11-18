@@ -1,6 +1,6 @@
 # The REPL
 
-`tempest repl` reads Temper a line at a time and runs each complete
+`temper repl` reads Temper a line at a time and runs each complete
 input on the interpreter, against what earlier inputs declared,
 printing each result as `interactive#N: value`. It's `temper repl`'s
 counterpart; the [tutorial](../guide/tutorial/01-classes-and-functions.md)
@@ -25,7 +25,7 @@ completion, and color ([below](#on-a-terminal)). Piped input works the
 same, without prompts or editing:
 
 ```sh
-printf '1 + 2\nconsole.log("hi")\n' | tempest repl
+printf '1 + 2\nconsole.log("hi")\n' | temper repl
 ```
 
 ## Inputs
@@ -127,9 +127,9 @@ interactive#3: fail
 
 ## Tests
 
-The first input's tests run once, after it, as `tempest test` runs a
+The first input's tests run once, after it, as `temper test` runs a
 library's: each failure, then the summary. What it declares works
-either way. So `tempest repl --separator eof < file.temper`, or `-e`,
+either way. So `temper repl --separator eof < file.temper`, or `-e`,
 runs a file's tests, then goes on with what it declares:
 
 <!-- repl: restart -->
@@ -176,7 +176,7 @@ no other name to reach them by then.
   steps, the keys, and where the history is. **`help("name")`** shows a
   declaration's signature and doc comment, as hovering in an editor
   does; a function or type also works as itself, `help(greet)`.
-- **`describe(n, step)`** shows input `n` at one of tempest's steps:
+- **`describe(n, step)`** shows input `n` at one of the compiler's steps:
   `"parsed"`, the parser's tree; `"settled"` (the default), the tree
   with macros expanded and names resolved, a local as `x:3`;
   `"types"`, each declaration's type, and the result's; `"module"`,
@@ -248,7 +248,7 @@ stops any input.
 ### Running input 0's tests again
 
 Tests declared in input 0, as `test("name") { … }`, run once, after
-it, printing each failure and `tempest test`'s summary. `runTests()`
+it, printing each failure and `temper test`'s summary. `runTests()`
 runs them again: their source is settled afresh as a hidden input
 after the latest one, so the names they use mean the newest
 declarations, and they print the same lines.
@@ -323,9 +323,9 @@ it has:
 
 | Platform | File |
 |---|---|
-| Linux and other Unix | `$XDG_DATA_HOME/tempest/repl-history.txt`, or `~/.local/share/tempest/repl-history.txt` |
-| macOS | `~/Library/Application Support/tempest/repl-history.txt` |
-| Windows | `%APPDATA%\tempest\repl-history.txt` |
+| Linux and other Unix | `$XDG_DATA_HOME/temper/repl-history.txt`, or `~/.local/share/temper/repl-history.txt` |
+| macOS | `~/Library/Application Support/temper/repl-history.txt` |
+| Windows | `%APPDATA%\temper\repl-history.txt` |
 
 What's typed may be private, a token pasted into a string say, so the
 file is opened once, checked, and only read and written through what
@@ -360,12 +360,12 @@ says which file the session uses. The file is in rustyline's format:
   hide text. A zero-width joiner or non-joiner between two visible
   characters stays, so an emoji sequence such as 👩🏽‍💻 prints whole, as
   do tag characters in an emoji flag's tag sequence. Strings print
-  quoted, every control and format character escaped, as Kotlin's do.
+  quoted, every control and format character escaped, as earlier releases' do.
 - What an input logs, with `console.log`, is escaped the same way when
   standard output is a terminal, so a log can't rewrite the screen or
   set the clipboard either; piped or redirected, it's written as
-  logged, as `tempest run` writes it.
-- Importing runs the imported code's top level, as `tempest run` does,
+  logged, as `temper run` writes it.
+- Importing runs the imported code's top level, as `temper run` does,
   with the interpreter's access to the network through std `net`: one
   of the work root's libraries, or a directory relative to the current
   one ([below](#imports)). The work root is the one around the current
@@ -393,7 +393,7 @@ first imports it runs.
 
 Ctrl-C stops the input running, and the session goes on. At the
 prompt, it drops the input begun so far: at once on a terminal, or for
-piped input, once the line is entered. If tempest itself is ever stuck,
+piped input, once the line is entered. If `temper` itself is ever stuck,
 pressing Ctrl-C again ends it. On Windows, Ctrl-Break does as Ctrl-C
 does.
 
@@ -414,23 +414,23 @@ does.
 | `--std DIR` | Read std from DIR instead of the copy built in |
 
 `temper repl -b BACKEND`, which opens a backend language's own REPL
-with the work root's libraries loaded, isn't in tempest yet, and says
+with the work root's libraries loaded, isn't available yet, and says
 so (exit code 3).
 
-## Compared with `temper repl`
+## Compared with earlier releases
 
-The same inputs, results, and `interactive#N:` lines, with these
-differences:
+The REPL of Temper's earlier releases takes the same inputs, and gives
+the same results and `interactive#N:` lines, with these differences:
 
 - **Names:** classes print as `Point`, not `Point__0`, and a top-level
   `var` carries over to later inputs.
-- **Errors:** reported as tempest reports them, `interactive#N:line:column:`,
+- **Errors:** reported as the command line reports them, `interactive#N:line:column:`,
   and a call of a function whose body has an error says why it failed.
 - **Robustness:** a cyclic value prints, Ctrl-C stops only the input
-  running, and a crash in tempest is reported without ending the
+  running, and a crash in Temper is reported without ending the
   session.
 - **Piped input** gets no prompt, and nothing echoed.
-- **`describe`** takes tempest's steps, not Kotlin's stage names, and
+- **`describe`** takes the compiler's steps, not the earlier stage names, and
   **`translate`** prints the code, of input `n` after the inputs it
   uses, rather than writing files; `help`'s topics, as
   `help("available-imports")`, aren't there.

@@ -4,7 +4,7 @@ Subset A's operators and control flow, beyond what the functional tests
 that translate so far use: `Int32` wrapping, shifts, bitwise and
 three-way comparisons, functions that bubble, string comparisons,
 `Boolean`s' equality and order (which Kotlin's Lua, JS, and C++ don't
-translate), and `do … while`. The log is what tempest's interpreter gives.
+translate), and `do … while`. The log is what the interpreter gives.
 
     let one = 1;
     let big = 0x7fff_ffff * one;

@@ -1,14 +1,14 @@
-//! `tempest licenses` prints `src/licenses.txt`: the third-party crates
-//! built into tempest, with their licenses. This test makes that text from
+//! `temper licenses` prints `src/licenses.txt`: the third-party crates
+//! built into temper, with their licenses. This test makes that text from
 //! Cargo's metadata (`cargo metadata`, offline where it has to be) and
 //! fails if the file differs, so it can't fall behind `Cargo.lock`; run
 //! it with `UPDATE_SNAPSHOTS=1` to write the file, and review the diff.
 //!
-//! The crates are those `tempest`'s default features reach through normal
+//! The crates are those `temper`'s default features reach through normal
 //! dependencies, on any platform, but not proc macros or build
 //! dependencies, which run while building and aren't in the binary. For
 //! each: its version, license, and repository. A crate that may be used
-//! under MIT or Apache-2.0, whose texts `tempest license` prints, gets
+//! under MIT or Apache-2.0, whose texts `temper license` prints, gets
 //! the copyright lines of its license files; any other gets its license
 //! files in full.
 
@@ -52,7 +52,7 @@ fn metadata(workspace: &Path) -> Value {
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
-/// The text `tempest licenses` prints.
+/// The text `temper licenses` prints.
 fn licenses(workspace: &Path) -> String {
     let meta = metadata(workspace);
     let packages: BTreeMap<&str, &Value> = (meta["packages"].as_array().unwrap().iter())
@@ -100,10 +100,10 @@ fn licenses(workspace: &Path) -> String {
         .collect();
     crates.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
     let mut out = String::from(
-        "Third-party crates built into tempest, made from Cargo's metadata\n\
+        "Third-party crates built into temper, made from Cargo's metadata\n\
          (crates/tempest/tests/licenses.rs; do not edit). Each may be used under\n\
          the license named. Where that offers MIT or Apache-2.0, whose texts\n\
-         `tempest license` prints, its copyright lines follow; otherwise, its\n\
+         `temper license` prints, its copyright lines follow; otherwise, its\n\
          license files in full. \"Some platforms only\" marks crates that only\n\
          some platforms' builds have.\n",
     );

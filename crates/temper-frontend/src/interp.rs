@@ -317,7 +317,7 @@ pub(crate) const INTERRUPTED: &str = "interrupted";
 /// playground and tests' own runs of small programs; compile-time
 /// evaluation will need one too. About a second in a release build.
 pub const FUEL: u64 = 50_000_000;
-/// `tempest test`'s default budget for each test, and for the top-level
+/// `temper test`'s default budget for each test, and for the top-level
 /// code before them (`--fuel` sets it). Wide on purpose: at least 10
 /// times the real libraries' slowest test, so none comes near it, as it
 /// only has to end true runaways (memory, the real hazard, is bounded by
@@ -1727,6 +1727,11 @@ impl Interp<'_> {
             let own = 1 + core::class_parts(tree, class.node).2.len();
             for &(n, b) in s.scopes.get(scope).names.iter().take(own) {
                 let symbol = s.scopes.symbol(b);
+                // A `@noProperty` input is no member by name
+                // (`lower::Op::GetInput`).
+                if symbol.input {
+                    continue;
+                }
                 if let (true, Some(decl)) = (n == name, symbol.decl) {
                     if wanted(tree.data(decl)) {
                         let found = (class.clone(), decl, symbol.slot as usize);

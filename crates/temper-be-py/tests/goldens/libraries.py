@@ -98,6 +98,7 @@ class Casing:
     _name: str
     first: _ClassVar['Casing']
     last: _ClassVar['Casing']
+    _mark: _ClassVar[str]
 
     def __init__(self, /, name: str) -> None:
         self._name = name
@@ -121,6 +122,10 @@ class Casing:
     @staticmethod
     def _named(name: str, /) -> 'Casing':
         return Casing(name)
+
+    @property
+    def marked(self, /) -> str:
+        return Casing._mark + self._name
 
 
 class Shape(metaclass=_ABCMeta):
@@ -270,16 +275,16 @@ def _each(values: _Sequence[float], f: _Callable[[float], None], /) -> None:
 
 
 def _total(values: _Sequence[float], /) -> float:
-    sum_ = 0.0
+    sum = 0.0
     def fn(x: float, /) -> None:
-        nonlocal sum_
+        nonlocal sum
         try:
             part = x / 2.0
-            sum_ = sum_ + part
+            sum = sum + part
         except Exception:
             raise BaseException('panic')
     _each(values, fn)
-    return sum_
+    return sum
 
 
 def _half(x: float, /) -> float:
@@ -478,21 +483,21 @@ class Tag(Shown):
 
 
 class Held(_Generic[_T_2]):
-    __slots__ = ('_item', '_next_')
+    __slots__ = ('_item', '_next')
     _item: _T_2
-    _next_: 'Held[_T_2] | None'
+    _next: 'Held[_T_2] | None'
 
-    def __init__(self, /, item: _T_2, next_: 'Held[_T_2] | None') -> None:
+    def __init__(self, /, item: _T_2, next: 'Held[_T_2] | None') -> None:
         self._item = item
-        self._next_ = next_
+        self._next = next
 
     @property
     def item(self, /) -> _T_2:
         return self._item
 
     @property
-    def next_(self, /) -> 'Held[_T_2] | None':
-        return self._next_
+    def next(self, /) -> 'Held[_T_2] | None':
+        return self._next
 
     def to_string(self, /) -> str:
         return f'Held({self._item.to_string()})'
@@ -751,6 +756,7 @@ def _backwards(xs: _Sequence[int], /) -> int:
 _console: _LoggingConsole = _LoggingConsole(__name__)
 Casing.first = Casing('first')
 Casing.last = Casing._named('last')  # pyright: ignore[reportPrivateUsage]
+Casing._mark = '#'  # pyright: ignore[reportPrivateUsage]
 _ticks: int = 0
 _extras: _Sequence[int] = (1,)
 _grid: Grid = Grid(2, (1.0, 2.0, 3.0, 4.0))
@@ -785,7 +791,7 @@ _console.log(_boolean_to_string(_named == _word(3) and f'{_named}!' != _named))
 _digits: _Sequence[int] = (1, 2, 4, 3)
 _console.log(f'{_byte_at(_digits, True, 1)} {_byte_at(_digits, False, 0)} {_boolean_to_string(_ascending(_digits))} {_first_drop(_digits)} {size_with(_digits)}')
 _console.log(f'{_tick_if(True)} {_tick_if(False)} {_boolean_to_string(_ticked())} {_tick_while()}')
-_console.log(f"{_shape_name(_shape_of(1))} {_shape_name(_shape_of(2))} {len(_sizes(_shape_of(1)))} {len(_sizes(_shape_of(2)))} {'null' if (_part4 := Dot(1).grown) is None else str(_part4)} {'null' if (_part5 := Dot(3).grown) is None else str(_part5)} {Casing.last.to_string()}")
+_console.log(f"{_shape_name(_shape_of(1))} {_shape_name(_shape_of(2))} {len(_sizes(_shape_of(1)))} {len(_sizes(_shape_of(2)))} {'null' if (_part4 := Dot(1).grown) is None else str(_part4)} {'null' if (_part5 := Dot(3).grown) is None else str(_part5)} {Casing.last.to_string()} {Casing.first.marked}")
 _carry: Carry = Carry(3)
 _console.log(f"{_boolean_to_string(_carry.carrying)} {_carry.state} {_boolean_to_string(Carry(0).carrying)} {'null' if (_part6 := _tagged().label) is None else _part6} {'null' if (_part7 := _tagged('x').label) is None else _part7} {_weight(42)} {_weight(60)}")
 _b: _MutableSequence[bool] = []
@@ -802,7 +808,7 @@ _console.log(_joiner.out)
 _held: Held[Tag] = Held(Tag('a'), None)
 _other: Held[Tag] = Held(Tag('b'), _held)
 _nobody: Held[Tag] | None = None
-_console.log(f"{_held.to_string()} {(Tag('none') if (_subject2 := None if (_subject3 := _other.next_) is None else _subject3.item) is None else _subject2).to_string()} {_boolean_to_string(same_held(_held, _held))} {_boolean_to_string(same_held(_held, _other))} {_boolean_to_string(same_held(_nobody, _nobody))} {_boolean_to_string(same_held(_nobody, _held))}")
+_console.log(f"{_held.to_string()} {(Tag('none') if (_subject2 := None if (_subject3 := _other.next) is None else _subject3.item) is None else _subject2).to_string()} {_boolean_to_string(same_held(_held, _held))} {_boolean_to_string(same_held(_held, _other))} {_boolean_to_string(same_held(_nobody, _nobody))} {_boolean_to_string(same_held(_nobody, _held))}")
 _console.log(f"{effects_of('ab', 1, 2)} {Bundle((), '2').first} {len(_flags)}")
 _counter: Ticks = Ticks()
 _stepper: Counting[str] = _counter

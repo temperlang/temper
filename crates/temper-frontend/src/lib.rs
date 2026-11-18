@@ -6,8 +6,9 @@
 //! - [`settle`]: the settle loop's steps: reading blocks, resolving names in
 //!   [`scope`]s and expanding [`macros`] into [`core`] constructs.
 //! - `imports`: `let { a } = import("./dir")` across modules.
+//! - `json`: `@json`'s generated members and adapter classes.
 //! - `extensions`: `@staticExtension`, so `Int.jsonAdapter()` calls a
-//!   function.
+//!   function, and the record of `@extension`s, which typing calls.
 //! - [`regex`]: std's regex model as data, Temper's regex dialect, a
 //!   matcher, and regex literals.
 //! - `testing`: `test` and `assert`, and running a module's tests.
@@ -24,7 +25,7 @@
 //!   memory, in layers.
 //! - [`project`]: libraries on disk, found as `temper test` finds them.
 //! - [`repl`]: a REPL session, settling and running one input at a time.
-//! - [`library_tests`]: running libraries' tests, for `tempest test`.
+//! - [`library_tests`]: running libraries' tests, for `temper test`.
 //! - [`log`]: commands' reports as text or JSON records
 //!   (`--logformat`).
 //! - [`stdlib`]: Temper's std library, built in.
@@ -43,6 +44,7 @@ mod flow;
 pub mod ignore;
 mod imports;
 pub mod interp;
+mod json;
 pub mod library;
 pub mod library_tests;
 pub mod log;

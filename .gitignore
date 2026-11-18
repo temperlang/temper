@@ -21,3 +21,9 @@ javac.*.args
 /editors/vscode/out/
 /editors/vscode/node_modules
 /editors/vscode/.vscode-test/
+
+# Checkers' and tests' leftovers in the backends' runtimes
+/crates/temper-be-*/runtime/**/.mypy_cache/
+/crates/temper-be-*/runtime/**/__pycache__/
+/crates/temper-be-*/runtime/**/node_modules/
+/crates/temper-be-*/runtime/**/target/

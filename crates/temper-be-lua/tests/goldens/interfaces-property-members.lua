@@ -90,9 +90,18 @@ function SSub.constructor(this, thing)
 end
 
 ---@class property-members.Holder
+---@field held any
+---@field heldAnd fun(self: property-members.Holder, other: any): any[]
 
 ---@class property-members.Holder.type: temper.Type
 local Holder = temper.type("property-members.Holder")
+
+---@param this property-members.Holder
+---@param other any
+---@return any[]
+function Holder.methods.heldAnd(this, other)
+  return { this.held, other }
+end
 
 ---@class property-members.Labeled: property-members.Holder
 ---@field label fun(self: property-members.Labeled, l: any): string
@@ -101,7 +110,7 @@ local Holder = temper.type("property-members.Holder")
 local Labeled = temper.type("property-members.Labeled", Holder)
 
 ---@class property-members.LabeledSub: property-members.Labeled
----@field thing property-members.C
+---@field held property-members.C
 ---@field label fun(self: property-members.LabeledSub, l: string): string
 
 ---@class property-members.LabeledSub.type: temper.Type
@@ -109,22 +118,17 @@ local Labeled = temper.type("property-members.Labeled", Holder)
 local LabeledSub = temper.type("property-members.LabeledSub", Labeled)
 
 ---@param this property-members.LabeledSub
----@param thing property-members.C
-function LabeledSub.constructor(this, thing)
-  this.thing = thing
+---@param held property-members.C
+function LabeledSub.constructor(this, held)
+  this.held = held
 end
 
 ---@param this property-members.LabeledSub
 ---@param l string
 ---@return string
 function LabeledSub.methods.label(this, l)
-  return l .. ": " .. this.thing.x
+  return l .. ": " .. this.held.x
 end
-
----@class property-members.AllAlone: property-members.I
-
----@class property-members.AllAlone.type: temper.Type
-local AllAlone = temper.type("property-members.AllAlone", I)
 
 ---@class property-members.High
 ---@field toString fun(self: property-members.High): string
@@ -245,7 +249,9 @@ print("Genericallier, x is still " .. dj.thing.x .. ".")
 local si = SSub(a)
 print("Sealed thing is " .. si.thing.x .. ".")
 local labeled = LabeledSub(a)
+local heldAnd = labeled:heldAnd(b)
 print("Labeled thing is " .. labeled:label("first") .. ".")
+print("Held are " .. labeled.held.x .. " and " .. temper.list_get(heldAnd, 1).x .. ".")
 local high1 = Low1(11)
 local high1b = Low1(12)
 local high1c = Low1(12)
@@ -254,12 +260,12 @@ local high2b = Low2("to be")
 local high2c = Low2("to be")
 local high3 = Low3()
 local high3b = Low3()
-local pairs = { temper.pair_constructor(high1, high1b), temper.pair_constructor(high1b, high1c), temper.pair_constructor(high1, high2), temper.pair_constructor(high2, high2b), temper.pair_constructor(high2b, high2c), temper.pair_constructor(high1, high3), temper.pair_constructor(high3, high3b) }
+local pairs_ = { temper.pair_constructor(high1, high1b), temper.pair_constructor(high1b, high1c), temper.pair_constructor(high1, high2), temper.pair_constructor(high2, high2b), temper.pair_constructor(high2b, high2c), temper.pair_constructor(high1, high3), temper.pair_constructor(high3, high3b) }
 do
-  local length = temper.list_length(pairs)
+  local length = temper.list_length(pairs_)
   local i2 = 0
   while i2 < length do
-    local pair = temper.list_get(pairs, i2)
+    local pair = temper.list_get(pairs_, i2)
     i2 = temper.int32_add(i2, 1)
     print(pair.key:toString() .. " == " .. pair.value:toString() .. ": " .. tostring(pair.key:eq(pair.value)))
   end

@@ -34,6 +34,7 @@ namespace testing {
 
 namespace core = temper::core;
 
+#ifdef TEMPER_TESTS
 namespace temper_globals {
 
 static core::GlobalSlot<int32_t> runs;
@@ -49,6 +50,7 @@ static T load(T const &variable) {
   std::lock_guard<std::mutex> lock(moduleMutex);
   return variable;
 }
+#endif  // TEMPER_TESTS
 
 int32_t twice(int32_t n) {
   global_init_init();
@@ -57,12 +59,14 @@ int32_t twice(int32_t n) {
 
 void global_init_init() {
   core::init_once([] {
+    std::shared_ptr<core::Console::Type> console = core::Console::get_console();
+    core::Console::log(console, "init " + std::to_string(twice(1)));
+#ifdef TEMPER_TESTS
     temper_globals::runs.construct();
     temper_globals::base.construct();
-    std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     temper_globals::runs.value = 0;
     temper_globals::base.value = 10;
-    core::Console::log(console, "init " + std::to_string(twice(1)));
+#endif  // TEMPER_TESTS
   });
 }
 

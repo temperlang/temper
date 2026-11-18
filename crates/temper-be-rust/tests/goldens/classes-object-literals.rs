@@ -107,43 +107,6 @@ impl crate::extra_class::StringableTrait for Person {
 
 temper_core::impl_any_value_trait!(Person, [crate::extra_class::Stringable]);
 
-struct NamedStruct {
-    name: Arc<String>,
-}
-
-#[derive(Clone)]
-pub(crate) struct Named(Arc<NamedStruct>);
-
-impl Named {
-    #[allow(dead_code)]
-    pub fn new(name: impl ToArcString) -> Named {
-        let name = name.to_arc_string();
-        Named(Arc::new(NamedStruct { name }))
-    }
-
-    pub fn to_string(&self) -> Arc<String> {
-        Arc::new(format!("Named {}", self.0.name))
-    }
-}
-
-impl std::fmt::Display for Named {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.to_string())
-    }
-}
-
-impl crate::extra_class::StringableTrait for Named {
-    fn clone_boxed(&self) -> crate::extra_class::Stringable {
-        crate::extra_class::Stringable::new(self.clone())
-    }
-
-    fn to_string(&self) -> Arc<String> {
-        self.to_string()
-    }
-}
-
-temper_core::impl_any_value_trait!(Named, [crate::extra_class::Stringable]);
-
 struct WhateverStruct {
     blah: Arc<String>,
 }

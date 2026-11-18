@@ -35,6 +35,14 @@ internal class Counter
         }
     }
 
+    public int Added
+    {
+        set
+        {
+            this.count = this.count + value;
+        }
+    }
+
     public Counter Bump()
     {
         this.count = this.count + 1;

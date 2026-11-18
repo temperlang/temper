@@ -1,4 +1,4 @@
-//! `tempest repl`: reads Temper a line at a time and runs each complete
+//! `temper repl`: reads Temper a line at a time and runs each complete
 //! input in one [`ReplSession`], printing what it reports.
 //!
 //! On a terminal, lines are edited with rustyline ([`line`]): an input
@@ -42,7 +42,7 @@ use temper_frontend::sources::Sources;
 /// The most history entries kept.
 const HISTORY_SIZE: usize = 1000;
 
-/// `tempest repl`.
+/// `temper repl`.
 pub fn repl_command(args: &[String]) -> u8 {
     let allowed = [
         "std",
@@ -64,7 +64,7 @@ pub fn repl_command(args: &[String]) -> u8 {
     };
     if let Some(backend) = flags.backends.first() {
         eprintln!(
-            "tempest repl: -b {backend} isn't in tempest yet (Kotlin's opens the backend \
+            "temper repl: -b {backend} isn't available yet (it would open the backend \
              language's own REPL with the work root's libraries loaded); the REPL runs \
              Temper on its interpreter."
         );
@@ -75,7 +75,7 @@ pub fn repl_command(args: &[String]) -> u8 {
         Some(Some(separator)) => separator,
         Some(None) => {
             let value = flags.separator.as_deref().unwrap_or_default();
-            eprintln!("tempest repl: --separator is newline, semisemi, or eof, not {value}");
+            eprintln!("temper repl: --separator is newline, semisemi, or eof, not {value}");
             return USAGE;
         }
     };
@@ -85,7 +85,7 @@ pub fn repl_command(args: &[String]) -> u8 {
         Some("normal") => true,
         Some("hide") => false,
         Some(other) => {
-            eprintln!("tempest repl: --prompt is normal or hide, not {other}");
+            eprintln!("temper repl: --prompt is normal or hide, not {other}");
             return USAGE;
         }
     };
@@ -94,7 +94,7 @@ pub fn repl_command(args: &[String]) -> u8 {
         Some(Some(choice)) => choice,
         Some(None) => {
             let value = flags.color.as_deref().unwrap_or_default();
-            eprintln!("tempest repl: --color is auto, always, or never, not {value}");
+            eprintln!("temper repl: --color is auto, always, or never, not {value}");
             return USAGE;
         }
     };
@@ -103,7 +103,7 @@ pub fn repl_command(args: &[String]) -> u8 {
         Some(Ok(fuel)) => fuel,
         Some(Err(())) => {
             let value = flags.fuel.as_deref().unwrap_or_default();
-            eprintln!("tempest repl: --fuel is a number of steps above 0, or none, not {value}");
+            eprintln!("temper repl: --fuel is a number of steps above 0, or none, not {value}");
             return USAGE;
         }
     };
@@ -139,7 +139,7 @@ pub fn repl_command(args: &[String]) -> u8 {
         help_footer: help_footer(editing, history.as_deref()),
     };
     // What an input logs is printed as is when piped or redirected, as
-    // `tempest run` prints it; on a terminal, escaped as the REPL's own
+    // `temper run` prints it; on a terminal, escaped as the REPL's own
     // output is, so a log can't rewrite the screen, set the clipboard,
     // or hide text.
     let print = move |event: &ReplEvent| {
@@ -167,7 +167,7 @@ pub fn repl_command(args: &[String]) -> u8 {
             history,
         };
         if let Err(why) = editor.run(&interrupt) {
-            eprintln!("tempest repl: {why}");
+            eprintln!("temper repl: {why}");
             return crate::FAILED;
         }
         return 0;
@@ -193,7 +193,7 @@ fn help_footer(editing: bool, history: Option<&std::path::Path>) -> String {
         None => "History: none\n".into(),
     });
     out.push_str(
-        "Options, as --color never, --no-history, and -w DIR: tempest help repl\n\
+        "Options, as --color never, --no-history, and -w DIR: temper help repl\n\
          More: docs/tools/repl.md",
     );
     out
@@ -254,12 +254,12 @@ impl Editing {
                     Some(history)
                 }
                 Err(why) => {
-                    eprintln!("tempest repl: history not read: {why}");
+                    eprintln!("temper repl: history not read: {why}");
                     None
                 }
             },
             Some(Err(why)) => {
-                eprintln!("tempest repl: {why}");
+                eprintln!("temper repl: {why}");
                 None
             }
             None => None,
@@ -273,7 +273,7 @@ impl Editing {
                     let added = editor.add_history_entry(buffer.as_str());
                     if let (Some(file), Ok(true)) = (&mut history, added) {
                         if let Err(why) = file.append(&buffer) {
-                            eprintln!("tempest repl: history no longer kept: {why}");
+                            eprintln!("temper repl: history no longer kept: {why}");
                             history = None;
                         }
                     }
@@ -308,7 +308,7 @@ impl Editing {
 fn libraries(flags: &Flags, sources: &Sources) -> Result<Vec<(String, String)>, u8> {
     if flags.no_workroot {
         if flags.workroot.is_some() || flags.ignorefile.is_some() {
-            eprintln!("tempest repl: --no-workroot leaves no work root for -w or -ign");
+            eprintln!("temper repl: --no-workroot leaves no work root for -w or -ign");
             return Err(USAGE);
         }
         return Ok(Vec::new());

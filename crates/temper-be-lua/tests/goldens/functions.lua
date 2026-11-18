@@ -135,6 +135,145 @@ local function doubles(s)
   return n
 end
 
+---@param x integer
+---@return integer
+local function climb(x)
+  ---@type integer
+  local d
+  if x == 0 then
+    ---@param n integer
+    ---@return integer
+    local function down(n)
+      if n <= x then
+        return 0
+      else
+        return temper.int32_add(down(temper.int32_sub(n, 1)), 1)
+      end
+    end
+    d = down(3)
+  else
+    return -1
+  end
+  d = temper.int32_add(d, 1)
+  if d == 4 then
+    local top = temper.int32_add(d, 1)
+    ---@param n integer
+    ---@return integer
+    local function up(n)
+      if n >= top then
+        return n
+      else
+        return up(temper.int32_add(n, 1))
+      end
+    end
+    return up(d)
+  else
+    return d
+  end
+end
+
+---@class functions.Gate
+---@field check (fun(arg0: integer): integer)|temper.Null
+---@field allows fun(self: functions.Gate, n: integer): boolean
+---@field passed fun(self: functions.Gate, n: integer): integer
+
+---@class functions.Gate.type: temper.Type
+---@operator call: functions.Gate
+local Gate = temper.type("functions.Gate")
+
+---@param this functions.Gate
+function Gate.constructor(this)
+  this.check = temper.null
+end
+
+---@param this functions.Gate
+---@param n integer
+---@return boolean
+function Gate.methods.allows(this, n)
+  local c = this.check
+  if temper.is_null(c) then
+    return true
+  else
+    return (c --[[@as fun(arg0: integer): integer]])(n) > 0
+  end
+end
+
+---@param this functions.Gate
+---@param n integer
+---@return integer
+function Gate.methods.passed(this, n)
+  local c = this.check
+  if not temper.is_null(c) then
+    return (c --[[@as fun(arg0: integer): integer]])(n)
+  else
+    return n
+  end
+end
+
+---@param s string
+---@return boolean
+local function stringIsPalindrome(s)
+  local i = 1
+  local j = temper.string_end(s)
+  while i - j < 0 do
+    j = temper.string_prev(s, j)
+    if temper.string_get(s, i) ~= temper.string_get(s, j) then
+      return false
+    end
+    i = temper.string_next(s, i)
+  end
+  return true
+end
+
+---@param n integer|temper.Null
+---@return integer
+local function intOrZero(n)
+  if temper.is_null(n) then
+    return 0
+  else
+    return n --[[@as integer]]
+  end
+end
+
+---@generic T
+---@param ls T[]
+---@param d T
+---@return T
+local function listFirstOr(ls, d)
+  if temper.listed_isempty(ls) then
+    return d
+  else
+    return temper.list_get(ls, 0)
+  end
+end
+
+---@param s string
+---@param n integer
+---@param fill? string|temper.Null
+---@return string
+local function stringPadded(s, n, fill)
+  if temper.is_null(fill) then
+    fill = "."
+  end
+  ---@cast fill string
+  local out = s
+  do
+    local i = 0
+    while i < n do
+      out = out .. fill
+      i = temper.int32_add(i, 1)
+    end
+  end
+  return out
+end
+
+---@param g functions.Gate
+---@param s string
+---@return string
+local function gatePassed(g, s)
+  return s .. " " .. tostring(g:allows(1))
+end
+
 local counter = makeCounter(10)
 counter()
 print("count " .. counter())
@@ -192,5 +331,15 @@ end
 
 drive(5, temper.adapt_generator_fn(fn8))
 print("sum " .. sumFrom(ns, 4) .. " doubles " .. doubles("bookkeeper"))
+print("climb " .. climb(0) .. " " .. climb(1))
+local gate = Gate()
+print("gate " .. tostring(gate:allows(0)) .. " " .. gate:passed(4))
+gate.check = function(x) return temper.int32_sub(x, 1) end
+print("gate " .. tostring(gate:allows(1)) .. " " .. tostring(gate:allows(2)) .. " " .. gate:passed(4))
+local none = gate:allows(0) and 3 or temper.null
+print(tostring(stringIsPalindrome("step on no pets")) .. " " .. tostring(stringIsPalindrome("steps")))
+print(intOrZero(none) .. " " .. listFirstOr({ 4, 5 }, 0) .. " " .. listFirstOr({ "x" }, "-"))
+print(stringPadded("ab", 2) .. " " .. stringPadded("ab", 1, "*"))
+print(gate:passed(4) .. " " .. gatePassed(gate, "gate"))
 
 return {}

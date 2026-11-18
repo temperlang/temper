@@ -3,12 +3,21 @@ package testing;
 import temper.std.testing.Test;
 
 public final class TestingTest {
+    static volatile int runs;
+    static final int base;
+
+    static {
+        TestingGlobal.initStatics();
+        runs = 0;
+        base = 10;
+    }
+
     @org.junit.jupiter.api.Test
     public void twiceWorks() {
         Test test = new Test();
         try {
             int x = TestingGlobal.twice(2);
-            TestingGlobal.runs = TestingGlobal.runs + x + TestingGlobal.base;
+            runs = runs + x + base;
         } finally {
             test.softFailToHard();
         }
@@ -18,7 +27,7 @@ public final class TestingTest {
     public void namesPunctuationQuotesAndÜnïcode() {
         Test t = new Test();
         try {
-            TestingGlobal.twice(TestingGlobal.runs);
+            TestingGlobal.twice(runs);
         } finally {
             t.softFailToHard();
         }
@@ -36,7 +45,7 @@ public final class TestingTest {
                     i = i + 1;
                 }
             }
-            TestingGlobal.runs = n;
+            runs = n;
         } finally {
             test.softFailToHard();
         }

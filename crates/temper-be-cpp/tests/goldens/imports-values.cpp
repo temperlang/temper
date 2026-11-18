@@ -85,8 +85,8 @@ void global_init_init() {
   core::init_once([] {
     global_init_exporter();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
-    int32_t a = 1;
-    int32_t c = timesMagic(a);
+    int32_t a2 = 1;
+    int32_t c = timesMagic(a2);
     core::Console::log(console, "number = " + std::to_string(c));
   });
 }

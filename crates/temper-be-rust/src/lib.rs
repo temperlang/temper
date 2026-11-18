@@ -11,8 +11,11 @@
 //! inside format strings, only the `use`s needed, and laid out as
 //! rustfmt lays it out.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! Rust's rules ([`names::RULES`]), then [`translate`] into Rust's output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach apart,
+//! under `#[cfg(test)]`, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with Rust's rules
+//! ([`names::RULES`]), then [`translate`] into Rust's output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's
 //! connected declarations by [`connected`], then the printer. Module
 //! state is safe across threads ([`translate`]'s documentation says how).
@@ -55,8 +58,6 @@ pub struct Variant {
     /// What it handles natively, which lowering and validation read.
     pub profile: Profile,
     pub rules: NamingRules,
-    /// The `temper-core` version its output depends on.
-    pub runtime_version: &'static str,
     /// The `rust-version` its crates declare, as Kotlin's.
     pub rust_version: &'static str,
 }
@@ -71,7 +72,6 @@ pub static RUST: Variant = Variant {
         coroutines: CoroutineStrategy::TranslateToRegularFunction,
     },
     rules: names::RULES,
-    runtime_version: "0.6.0",
     rust_version: "1.71.1",
 };
 
@@ -82,11 +82,27 @@ pub const VARIANTS: &[&Variant] = &[&RUST];
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NotYet {
     pub what: String,
+    /// Where, as `path:line:column` ([`Program::location`]), if the
+    /// innermost node translated with a span gives it.
+    pub at: Option<String>,
+}
+
+impl NotYet {
+    pub fn new(what: impl Into<String>) -> NotYet {
+        NotYet {
+            what: what.into(),
+            at: None,
+        }
+    }
 }
 
 impl fmt::Display for NotYet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "not yet in the Rust backend: {}", self.what)
+        write!(f, "not yet in the Rust backend: {}", self.what)?;
+        match &self.at {
+            Some(at) => write!(f, " at {at}"),
+            None => Ok(()),
+        }
     }
 }
 
@@ -100,7 +116,7 @@ impl std::error::Error for NotYet {}
 /// needs, and the cargo feature named for the module, which a crate
 /// importing the module asks for (`features = ["regex"]`): implied by the
 /// dependency's name for `regex`, and declared for `net` and `temporal`.
-/// `regex`'s support is vendored from Kotlin's; `temporal`'s and `net`'s
+/// `regex`'s support began as Kotlin's; `temporal`'s and `net`'s
 /// are tempest's own: `today()` from Rust's std where Kotlin's uses the
 /// `time` crate, and `send_request` on a thread of its own, with `ureq`
 /// but no gzip, where Kotlin's blocks a turn
@@ -108,7 +124,7 @@ impl std::error::Error for NotYet {}
 pub const STD_SUPPORT: &[StdSupport] = &[
     StdSupport {
         module: "regex",
-        text: include_str!("../../../vendor/temper/be-rust/std/regex/support.rs"),
+        text: include_str!("../runtime/std/regex/support.rs"),
         optional: "regex = { version = \"=1.12.2\", optional = true }\n",
         feature: "",
         public: false,
@@ -154,6 +170,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     } else {
         runtime::FILES
     },
+    runtime_version: &runtime::VERSION,
     rules: &RUST.rules,
     translate: |p, _| translate(p, &RUST).map_err(|e| e.to_string()),
     default: true,
@@ -196,7 +213,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// The package takes the library's name; its crate, the name with `_`
 /// for `-` (`hello-world` gives `hello_world`); its binary too, but for
 /// the names cargo forbids a binary ([`bin_name`]). Kotlin also copies
-/// `temper-core` beside the package; `tempest build` does too ([`runtime`]).
+/// `temper-core` beside the package; `temper build` does too ([`runtime`]).
 /// The name of a library's binary, which runs its `init`: the package's
 /// own, unless cargo forbids that for a binary (`build`, `deps`,
 /// `examples`, and `incremental`, its target directory's names), then
@@ -210,6 +227,24 @@ pub fn bin_name(package: &str) -> String {
 }
 
 const FORBIDDEN_BINS: [&str; 4] = ["build", "deps", "examples", "incremental"];
+
+/// The config's metadata, as `[package]` fields in Kotlin's order, a line
+/// each: `license`, `description`, `homepage`, `repository`, and its
+/// `authors` as the one author.
+fn package_metadata(p: &Program) -> String {
+    let meta = p.metadata();
+    let quoted = temper_tmpl::json_string;
+    let mut out = String::new();
+    for key in ["license", "description", "homepage", "repository"] {
+        if let Some(value) = meta.get(key) {
+            out.push_str(&format!("{key} = {}\n", quoted(value)));
+        }
+    }
+    if let Some(authors) = meta.get("authors") {
+        out.push_str(&format!("authors = [{}]\n", quoted(authors)));
+    }
+    out
+}
 
 /// A `[[bin]]` section naming the binary, where its package's name won't
 /// do ([`bin_name`]).
@@ -228,21 +263,27 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
-    let lowered = temper_tmpl::coroutines::lower(p, variant.profile.coroutines)
-        .map_err(|what| NotYet { what })?;
+    let lowered =
+        temper_tmpl::coroutines::lower(p, variant.profile.coroutines).map_err(NotYet::new)?;
     let p = lowered.as_ref().unwrap_or(p);
     // A captured `var` parameter as a local, which may be a cell.
     let copied = temper_tmpl::cells::copy_captured_params(p);
     let p = copied.as_ref().unwrap_or(p);
-    let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
+    // What only tests reach apart, under `cfg(test)`, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
+    let names = assign_checked(p, &variant.rules).map_err(NotYet::new)?;
     let package = &p.library.name;
-    // std's crate is `temper-std`, as Kotlin's, in `std/`.
-    let cargo_name = if package == "std" {
-        "temper-std"
-    } else {
-        package
-    };
+    // std's package is `temper-std`, as Kotlin's, in `std/`; a config's
+    // `rustName` names another's, in the library's directory still.
+    let cargo_name = &translate::rust_name(package, p.metadata());
     let krate = names::crate_name(cargo_name);
     let mut translator = translate::Translator::new(p, &names);
     // Each module's file, by its path; parents without a module of their
@@ -357,10 +398,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     }
     std_features.sort();
     let dependency = |name: &str, version: &str| {
-        let (package, path) = match name {
-            "std" => ("temper-std", "std"),
-            name => (name, name),
-        };
+        let package = translate::rust_name(name, p.metadata_of(name));
+        let path = name;
         let version = temper_tmpl::version_or_default(version);
         let features = match name {
             "std" if !std_features.is_empty() => {
@@ -398,17 +437,18 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         r#"[package]
 name = "{name}"
 version = "{version}"
-edition = "2021"
+{metadata}edition = "2021"
 rust-version = "{rust}"
 
 [dependencies]
 temper-core = {{ path = "../temper-core", version = "={runtime}" }}
 {dependencies}{dev_dependencies}{bin}"#,
-        bin = bin_section(package),
+        bin = bin_section(cargo_name),
         name = cargo_name,
         version = p.version_or_default(),
+        metadata = package_metadata(p),
         rust = variant.rust_version,
-        runtime = variant.runtime_version,
+        runtime = temper_tmpl::version::current(),
     );
     // The root module's host code, at the crate root, as Kotlin's, so
     // `super::` there names the root module's declarations, through its
@@ -423,15 +463,28 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
         true => format!("{}\nmod _connected;\n", tree::HOST_ALLOW),
         false => String::new(),
     };
-    let mods: String = (children("").iter())
-        .map(|m| match m {
-            tree::Item::Mod(name) => format!("pub mod {name};\n"),
-            _ => String::new(),
+    let mut mods: Vec<(String, String)> = (children("").iter())
+        .filter_map(|m| match m {
+            tree::Item::Mod(name) => Some((name.clone(), format!("pub mod {name};\n"))),
+            _ => None,
         })
         .collect();
+    // The private modules, which rustfmt sorts by name among the public
+    // ones (`r#mod` as `mod`), unless host code's, with its attribute,
+    // comes between.
+    let private = "mod r#mod;\nmod support;\n";
+    let mods = match root_host {
+        true => (mods.into_iter().map(|(_, m)| m).collect::<String>()) + &host_mod + private,
+        false => {
+            mods.push(("mod".into(), "mod r#mod;\n".into()));
+            mods.push(("support".into(), "mod support;\n".into()));
+            mods.sort_by_key(|(name, _)| name.trim_start_matches("r#").to_string());
+            mods.into_iter().map(|(_, m)| m).collect()
+        }
+    };
     let mut inits = String::new();
     for name in &used {
-        let krate = translate::library_crate(name);
+        let krate = translate::library_crate(p, name);
         inits.push_str(&format!(
             "        {krate}::init(Some(support::config().clone()))?;\n"
         ));
@@ -475,10 +528,11 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
 "
         ),
     };
-    // std declares what its own code never uses (`Codes.highControlMin`,
-    // `RegexRefs`'s fields), and its connected members' Temper bodies
-    // ignore parameters their support code reads, so rustc's warnings of
-    // them are allowed there, where Kotlin allows every warning in every
+    // std declares members its own code never uses
+    // (`Codes.highControlMin`, `RegexRefs`'s fields), which reach doesn't
+    // prune yet, and methods that ignore parameters (`getHeader`'s
+    // `headerName`, its JSON adapters' `ic`), so rustc's warnings of them
+    // are allowed there, where Kotlin allows every warning in every
     // crate. clippy's style lints that std's json source trips
     // (`48 <= c && c <= 57`, `if x.is_none() { return None; }`, an
     // `orelse panic()` alone in an `if`) are allowed there too.
@@ -491,9 +545,7 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
         _ => "",
     };
     let lib = format!(
-        r#"{allow}{mods}{host_mod}mod r#mod;
-mod support;
-{reexport}
+        r#"{allow}{mods}{reexport}
 /// Initializes the library, once, with `config` or the default
 /// configuration, and gives the runner of its async tasks.
 pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {{

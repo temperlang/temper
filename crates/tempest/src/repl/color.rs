@@ -1,4 +1,4 @@
-//! Color for `tempest repl`, as plain ANSI escape codes (SGR), no crate:
+//! Color for `temper repl`, as plain ANSI escape codes (SGR), no crate:
 //! whether to color ([`decide`]), and how each part looks: the prompt,
 //! results, diagnostics ([`paint`]), and input as it's typed
 //! ([`super::line`]).
@@ -80,7 +80,7 @@ pub fn sgr(on: bool, style: &str, text: &str) -> String {
     }
 }
 
-/// An event as `tempest repl` prints it, colored if `on`.
+/// An event as `temper repl` prints it, colored if `on`.
 pub fn paint(event: &ReplEvent, on: bool) -> Cow<'static, str> {
     let text = event.text();
     if !on {

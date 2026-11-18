@@ -9,9 +9,9 @@
 #       with:
 #         backends: py js
 #
-# The tests run with TEMPEST_REQUIRE_CHECKERS, so a tool this leaves
+# The tests run with TEMPER_REQUIRE_CHECKERS, so a tool this leaves
 # out fails them, unless the job lets it be missing
-# (TEMPEST_ALLOW_MISSING); docs/contributing/ci.md lists what each
+# (TEMPER_ALLOW_MISSING); docs/contributing/ci.md lists what each
 # platform has.
 name: Toolchains for generated code
 description: Sets up the named backends' toolchains and checkers for their tests.
@@ -122,7 +122,7 @@ runs:
         echo 'LUAC=C:\msys64\ucrt64\bin\luac.exe' >> "$GITHUB_ENV"
         /c/msys64/ucrt64/bin/lua.exe -v
 
-    # The Java backend's tests compile the vendored temper-core and
+    # The Java backend's tests compile the runtime, temper-core, and
     # generated Java with javac (the runtime for Java 8, generated code
     # for Java 17, as Kotlin's packages have them) and run it, without
     # Maven; tests that run as tests use JUnit 5.9.2's jars, as
@@ -139,10 +139,10 @@ runs:
         mvn -q dependency:get -Dartifact=org.junit.jupiter:junit-jupiter-engine:5.9.2
         mvn -q dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.9.2
 
-    # The C# backend's tests compile the vendored TemperLang.Core and
+    # The C# backend's tests compile the runtime, TemperLang.Core, and
     # generated C# with Roslyn's csc from the .NET 6 SDK, as Kotlin's
     # projects target .NET 6, and run it, without MSBuild. The restore,
-    # of a copy of the runtime's project (so vendor/ stays clean), puts
+    # of a copy of the runtime's project (so the repository stays clean), puts
     # its one dependency, Microsoft.Extensions.Logging 8.0.0, in NuGet's
     # cache, where the tests read it, with MSTest.TestFramework 3.1.1,
     # which std's `testing` and generated tests use, as Kotlin's.
@@ -158,12 +158,12 @@ runs:
       run: |
         # Forward slashes, which both Git Bash and dotnet take on Windows.
         temp="${RUNNER_TEMP//\\//}"
-        cp -r vendor/temper/be-csharp/temper-core "$temp/temper-core"
+        cp -r crates/temper-be-csharp/runtime/temper-core "$temp/temper-core"
         dotnet add "$temp/temper-core/TemperLang.Core.csproj" package MSTest.TestFramework --version 3.1.1 --no-restore
         dotnet restore "$temp/temper-core/TemperLang.Core.csproj"
 
-    # C++ on Windows: MSVC, through CMake, for `tempest test -b cpp` and
-    # `tempest build`'s CMake projects (.github/ci-tools/msvc_env.py).
+    # C++ on Windows: MSVC, through CMake, for `temper test -b cpp` and
+    # `temper build`'s CMake projects (.github/ci-tools/msvc_env.py).
     # The C++ backend's own tests build with g++'s options, sanitizers
     # included, so run on Linux only. macOS uses Apple's clang and the
     # image's CMake as they are.
@@ -173,7 +173,7 @@ runs:
       run: uv run .github/ci-tools/msvc_env.py
 
     # The Rust backend's tests build generated crates offline against
-    # the vendored temper-core; this puts its one dependency, indexmap,
+    # the runtime, temper-core; this puts its one dependency, indexmap,
     # at the versions its Cargo.lock pins, in cargo's cache, and the
     # crates generated std depends on (regex), listed in
     # compat/rust-std-deps.
@@ -185,5 +185,5 @@ runs:
       # in the cache, and which only builds with `net` would fetch.
       run: |
         cargo fetch --locked
-        cargo fetch --locked --manifest-path vendor/temper/be-rust/temper-core/Cargo.toml
+        cargo fetch --locked --manifest-path crates/temper-be-rust/runtime/temper-core/Cargo.toml
         cargo fetch --locked --manifest-path compat/rust-std-deps/Cargo.toml

@@ -1,7 +1,7 @@
 {
   "name": "temper",
   "displayName": "Temper",
-  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and tempest's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, and signature help",
+  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and Temper's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, and signature help",
   "version": "0.0.1",
   "publisher": "temperlang",
   "license": "Apache-2.0 OR MIT",
@@ -85,7 +85,7 @@
         "temper.server.path": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The `tempest` that runs the language server (`tempest lsp`): a name on `PATH` or a full path. Empty uses the `tempest` bundled with this extension, if it has one, and else `tempest` on `PATH`."
+          "markdownDescription": "The `temper` that runs the language server (`temper lsp`): a name on `PATH` or a full path. Empty uses the `temper` bundled with this extension, if it has one, and else `temper` on `PATH`."
         },
         "temper.server.args": {
           "type": "array",
@@ -93,7 +93,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "More arguments after `tempest lsp`, as `[\"--std\", \"/path/to/std\"]`."
+          "markdownDescription": "More arguments after `temper lsp`, as `[\"--std\", \"/path/to/std\"]`."
         }
       }
     },

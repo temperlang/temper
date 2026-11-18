@@ -1,25 +1,61 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../renamed.temper.md:9:5  /** <- export let lambda(n: Int): I
-7:1 -> ../renamed.temper.md:9:5  export function lambda(n) { <- export let lambda(n: Int): I
-7:17 -> ../renamed.temper.md:9:16 (lambda)  lambda(n) { <- lambda(n: Int): Int { n + 1
-7:23 -> ../renamed.temper.md:9:5  (n) { <- export let lambda(n: Int): I
-8:3 -> ../renamed.temper.md:9:38  return (n + 1) | 0; <- n + 1 }
-11:1 -> ../renamed.temper.md:12:5  export class Checked extends <- export class Checked(public
-11:14 -> ../renamed.temper.md:12:18 (Checked)  Checked extends type() { <- Checked(public end: Int) {
-11:21 -> ../renamed.temper.md:12:5   extends type() { <- export class Checked(public
-12:3 -> ../renamed.temper.md:12:33  /** @type {number} */ <- end: Int) {
-13:3 -> ../renamed.temper.md:12:33  #end; <- end: Int) {
-15:3 -> ../renamed.temper.md:12:5  /** @param {number} end */ <- export class Checked(public
-16:3 -> ../renamed.temper.md:12:5  constructor(end) { <- export class Checked(public
-18:5 -> ../renamed.temper.md:12:33  this.#end = end; <- end: Int) {
-21:3 -> ../renamed.temper.md:12:33  /** @returns {number} */ <- end: Int) {
-22:3 -> ../renamed.temper.md:12:33  get end() { <- end: Int) {
-22:7 -> ../renamed.temper.md:12:33 (end)  end() { <- end: Int) {
-26:3 -> ../renamed.temper.md:13:14  /** @returns {number} */ <- delete(): Int { end * 2 }
-27:3 -> ../renamed.temper.md:13:14 (delete)  delete_() { <- delete(): Int { end * 2 }
-28:5 -> ../renamed.temper.md:13:30  return Math.imul(this.#end, <- end * 2 }
-31:3 -> ../renamed.temper.md:14:14  /** @returns {number} */ <- get local(): Int { end + nat
-32:3 -> ../renamed.temper.md:14:14  get local() { <- get local(): Int { end + nat
-32:7 -> ../renamed.temper.md:14:18 (local)  local() { <- local(): Int { end + native
-33:5 -> ../renamed.temper.md:14:33  return (this.#end + native) <- end + native }
-37:1 -> ../renamed.temper.md:10:5  export const native = 2; <- export let native = 2;
+3:1 -> ../renamed.temper.md:13:5  /** <- export let lambda(n: Int): I
+7:1 -> ../renamed.temper.md:13:5  export function lambda(n) { <- export let lambda(n: Int): I
+7:17 -> ../renamed.temper.md:13:16 (lambda)  lambda(n) { <- lambda(n: Int): Int { n + 1
+7:23 -> ../renamed.temper.md:13:5  (n) { <- export let lambda(n: Int): I
+8:3 -> ../renamed.temper.md:13:38  return (n + 1) | 0; <- n + 1 }
+11:1 -> ../renamed.temper.md:16:5  export class Checked extends <- export class Checked(public
+11:14 -> ../renamed.temper.md:16:18 (Checked)  Checked extends type() { <- Checked(public end: Int) {
+11:21 -> ../renamed.temper.md:16:5   extends type() { <- export class Checked(public
+12:3 -> ../renamed.temper.md:16:33  /** @type {number} */ <- end: Int) {
+13:3 -> ../renamed.temper.md:16:33  #end; <- end: Int) {
+15:3 -> ../renamed.temper.md:16:5  /** @param {number} end */ <- export class Checked(public
+16:3 -> ../renamed.temper.md:16:5  constructor(end) { <- export class Checked(public
+18:5 -> ../renamed.temper.md:16:33  this.#end = end; <- end: Int) {
+21:3 -> ../renamed.temper.md:16:33  /** @returns {number} */ <- end: Int) {
+22:3 -> ../renamed.temper.md:16:33  get end() { <- end: Int) {
+22:7 -> ../renamed.temper.md:16:33 (end)  end() { <- end: Int) {
+26:3 -> ../renamed.temper.md:17:14  /** @returns {number} */ <- delete(): Int { end * 2 }
+27:3 -> ../renamed.temper.md:17:14 (delete)  delete_() { <- delete(): Int { end * 2 }
+28:5 -> ../renamed.temper.md:17:30  return Math.imul(this.#end, <- end * 2 }
+31:3 -> ../renamed.temper.md:18:14  /** @returns {number} */ <- get local(): Int { end + nat
+32:3 -> ../renamed.temper.md:18:14  get local() { <- get local(): Int { end + nat
+32:7 -> ../renamed.temper.md:18:18 (local)  local() { <- local(): Int { end + native
+33:5 -> ../renamed.temper.md:18:33  return (this.#end + native) <- end + native }
+37:1 -> ../renamed.temper.md:21:5  export class Builtins extend <- export class Builtins(public
+37:14 -> ../renamed.temper.md:21:18 (Builtins)  Builtins extends type() { <- Builtins(public hash: Int) {
+37:22 -> ../renamed.temper.md:21:5   extends type() { <- export class Builtins(public
+38:3 -> ../renamed.temper.md:21:34  /** @type {number} */ <- hash: Int) {
+39:3 -> ../renamed.temper.md:21:34  #hash; <- hash: Int) {
+41:3 -> ../renamed.temper.md:21:5  /** @param {number} hash */ <- export class Builtins(public
+42:3 -> ../renamed.temper.md:21:5  constructor(hash) { <- export class Builtins(public
+44:5 -> ../renamed.temper.md:21:34  this.#hash = hash; <- hash: Int) {
+47:3 -> ../renamed.temper.md:21:34  /** @returns {number} */ <- hash: Int) {
+48:3 -> ../renamed.temper.md:21:34  get hash() { <- hash: Int) {
+48:7 -> ../renamed.temper.md:21:34 (hash)  hash() { <- hash: Int) {
+52:3 -> ../renamed.temper.md:22:14  /** <- get(i: Int): Int { hash + i
+56:3 -> ../renamed.temper.md:22:14 (get)  get(i) { <- get(i: Int): Int { hash + i
+57:5 -> ../renamed.temper.md:22:33  return (this.#hash + i) | 0; <- hash + i }
+60:3 -> ../renamed.temper.md:23:14  /** <- set(i: Int): Int { i * 2 }
+64:3 -> ../renamed.temper.md:23:14 (set)  set(i) { <- set(i: Int): Int { i * 2 }
+65:5 -> ../renamed.temper.md:23:33  return Math.imul(i, 2); <- i * 2 }
+68:3 -> ../renamed.temper.md:24:14  /** <- map(i: Int): Int { i + 1 }
+72:3 -> ../renamed.temper.md:24:14 (map)  map(i) { <- map(i: Int): Int { i + 1 }
+73:5 -> ../renamed.temper.md:24:33  return (i + 1) | 0; <- i + 1 }
+76:3 -> ../renamed.temper.md:25:14  /** @returns {string} */ <- format(): String { "#${hash.
+77:3 -> ../renamed.temper.md:25:14 (format)  format() { <- format(): String { "#${hash.
+78:5 -> ../renamed.temper.md:25:33  return `#${this.#hash}`; <- "#${hash.toString()}" }
+81:3 -> ../renamed.temper.md:26:14  /** @returns {number} */ <- get int(): Int { hash * 10 }
+82:3 -> ../renamed.temper.md:26:14  get int() { <- get int(): Int { hash * 10 }
+82:7 -> ../renamed.temper.md:26:18 (int)  int() { <- int(): Int { hash * 10 }
+83:5 -> ../renamed.temper.md:26:31  return Math.imul(this.#hash, <- hash * 10 }
+86:3 -> ../renamed.temper.md:27:14  /** @returns {number} */ <- later(): Int { int + 1 }
+87:3 -> ../renamed.temper.md:27:14 (later)  later() { <- later(): Int { int + 1 }
+88:5 -> ../renamed.temper.md:27:29  return (this.int + 1) | 0; <- int + 1 }
+91:3 -> ../renamed.temper.md:28:14  /** @returns {number} */ <- init(): Int { hash + 3 }
+92:3 -> ../renamed.temper.md:28:14 (init)  init() { <- init(): Int { hash + 3 }
+93:5 -> ../renamed.temper.md:28:28  return (this.#hash + 3) | 0; <- hash + 3 }
+96:3 -> ../renamed.temper.md:29:14  /** @returns {string} */ <- print(): String { "print ${i
+97:3 -> ../renamed.temper.md:29:14 (print)  print() { <- print(): String { "print ${i
+98:5 -> ../renamed.temper.md:29:32  return `print ${this.init()} <- "print ${init().toString()}"
+102:1 -> ../renamed.temper.md:14:5  export const native = 2; <- export let native = 2;

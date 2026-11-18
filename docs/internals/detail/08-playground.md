@@ -67,7 +67,7 @@ flowchart LR
   jw -->|"log, tests, done"| tabs
 ```
 
-The wasm sits on the same crates as `tempest`: it settles with the
+The wasm sits on the same crates as `temper`: it settles with the
 frontend, answers queries with [`temper-analysis`](../../../crates/temper-analysis/src/lib.rs),
 and compiles through `temper-driver`'s
 [compile path](07-cli.md#one-compile-path), with the same
@@ -124,7 +124,7 @@ and also what `compat/measure_size.py` loads.
 by hand ([`api.ts`](../../../site/playground/src/api.ts)); one output
 buffer means one call at a time, which a worker gives anyway.
 
-**Status:** tempest's choice, from the dependency policy
+**Status:** this compiler's choice, from the dependency policy
 ([notes/code-style.md](../../../notes/code-style.md#dependencies)).
 
 ### JSON written by hand
@@ -234,7 +234,7 @@ supported here". Backends are cargo features here too.
 
 **Pros:** the runtimes' sources and the HTTP stack would add megabytes
 for nothing the page uses; the JavaScript runtime the page needs is
-bundled by esbuild from `vendor/temper/be-js/` instead.
+bundled by esbuild from `crates/temper-be-js/runtime/` instead.
 
 ### A worker for the compiler, one per JavaScript run
 
@@ -257,7 +257,7 @@ against a backend on every keystroke.
 
 **Cons:** the JavaScript run uses its own small test runner, not Mocha,
 so it's a third way tests run besides the interpreter and
-`tempest test -b js`.
+`temper test -b js`.
 
 ### CodeMirror 6, with a stream language
 
@@ -273,7 +273,7 @@ whose language is swapped per file.
 
 **Alternatives:** Monaco, VS Code's editor, would bring its LSP-shaped
 APIs but is several times larger; the notes don't record weighing it. A
-Lezer grammar, or tempest's own tokens from the wasm, would highlight
+Lezer grammar, or this compiler's own tokens from the wasm, would highlight
 more exactly than a stream language.
 
 **Pros:** small and modular; every feature is an extension added in one
@@ -314,7 +314,7 @@ clears it. Share copies the link.
 host, so shared code stays between the people sharing it.
 
 **Cons:** long URLs for long programs; a link names no compiler
-version, so an old link compiles with today's tempest, which may
+version, so an old link compiles with today's compiler, which may
 differ.
 
 ### One build script, published by Pages
@@ -328,8 +328,7 @@ licenses, and stamps every URL the page loads with `?v=` and a hash of
 the built files, so a normal reload picks up a new build. CI runs it
 with `--skip-wasm` after its own wasm build. The Pages workflow builds
 and publishes it on each push to `main` that touches the site, the
-crates, vendored Temper, or the README, at `playground/` beside the
-docs site.
+crates, `lib/`, or the README, at `playground/` beside the docs site.
 
 **Pros:** one script locally and in CI; caches never serve a mix of
 builds.
@@ -345,6 +344,7 @@ builds.
 | [`hover`](../../../crates/temper-wasm/src/lib.rs), [`definition`](../../../crates/temper-wasm/src/lib.rs), [`completions`](../../../crates/temper-wasm/src/lib.rs), [`references`](../../../crates/temper-wasm/src/lib.rs), [`signature_help`](../../../crates/temper-wasm/src/lib.rs) | a UTF-16 offset | the answer, or `null` |
 | [`rename`](../../../crates/temper-wasm/src/lib.rs) | an offset, the new name (empty to check) | edits, or `{"error": ...}` |
 | [`backends`](../../../crates/temper-wasm/src/lib.rs) | | the built-in backends' names, in mask order |
+| [`version`](../../../crates/temper-wasm/src/lib.rs) | | the build's version and commit, as `temper --version` says them, which About shows; generated code still names the version with no commits counted |
 | [`std_library`](../../../crates/temper-wasm/src/lib.rs) | a backend's place in `backends` | std's files for it, kept |
 | [`parse`](../../../crates/temper-wasm/src/lib.rs), [`run`](../../../crates/temper-wasm/src/lib.rs), [`generate`](../../../crates/temper-wasm/src/lib.rs) | source (and a backend for `generate`) | the older single-purpose calls |
 | [`output_ptr`](../../../crates/temper-wasm/src/lib.rs), [`output_len`](../../../crates/temper-wasm/src/lib.rs) | | where the last result is |
@@ -372,7 +372,7 @@ REPL's transcript text:
 | `repl_reset()` | | drops the session |
 
 An input's answer lists what it reported, in order, each with the
-text `tempest repl` prints, then its value (`null` if it failed):
+text `temper repl` prints, then its value (`null` if it failed):
 
 ```json
 {"input": 2,
@@ -396,7 +396,7 @@ line's indent.
 `repl_query` reads the cell's text as if it were the next input, with
 temper-analysis's
 [`pending_*` queries](../../../crates/temper-analysis/src/pending.rs),
-as `tempest repl`'s Tab and hint do: no tree for the text, just its
+as `temper repl`'s Tab and hint do: no tree for the text, just its
 tokens (the brackets open, the name before `(` or `.`), with names
 looked up from the latest input's scope, through members' declared
 types. Nothing is settled or run, so it's quick on every keystroke

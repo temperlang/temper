@@ -1,8 +1,8 @@
-//! How Lua runs built libraries' tests, for `tempest test -b lua`: each
+//! How Lua runs built libraries' tests, for `temper test -b lua`: each
 //! library's `tests/*-test.lua`, one module's tests each (the root
 //! module's `init-test.lua`), in turn under `lua` (or `LUA`), with LuaUnit
 //! beside the libraries, as Kotlin copies it, and `LUA_PATH` of
-//! `?.lua;?/init.lua`, writing JUnit XML. `tempest run -b lua` runs the
+//! `?.lua;?/init.lua`, writing JUnit XML. `temper run -b lua` runs the
 //! library's `init.lua` the same way, as Kotlin's `Lua51Specifics` does.
 //! Each file runs with a time and a memory limit (`limit_memory`), so a
 //! runaway file fails alone.

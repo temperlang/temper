@@ -19,6 +19,19 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let label = Label::new(1);
             println!("close: {}", label.close(Sink::new(TenSink::new())));
             println!("noted: {}", label.noted("!"));
+            let leaf = Tally::new(2, None, Arc::new(vec![]));
+            let mid = Tally::new(
+                3,
+                Some(leaf.clone()),
+                Arc::new(vec![leaf.clone(), leaf.clone()]),
+            );
+            let top = Tally::new(
+                1,
+                Some(mid.clone()),
+                Arc::new(vec![mid.clone(), leaf.clone()]),
+            );
+            println!("depths: {} {} {}", leaf.0.depth, mid.0.depth, top.0.depth);
+            println!("totals: {} {} {}", leaf.total(), mid.total(), top.total());
             Ok(())
         })
         .clone()
@@ -223,3 +236,44 @@ impl Label {
 }
 
 temper_core::impl_any_value_trait!(Label, []);
+
+struct TallyStruct {
+    depth: i32,
+    size: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct Tally(Arc<TallyStruct>);
+
+impl Tally {
+    pub fn new(
+        size: i32,
+        parent: Option<Tally>,
+        children: impl temper_core::ToList<Tally>,
+    ) -> Tally {
+        let children = children.to_list();
+        let depth = if let Some(parent) = &parent {
+            parent.0.depth.wrapping_add(1)
+        } else {
+            0
+        };
+        let mut sum = size;
+        {
+            let mut i: i32 = 0;
+            while i < temper_core::ListedTrait::len(&children) {
+                sum = sum.wrapping_add(temper_core::ListedTrait::get(&children, i).0.size);
+                i = i.wrapping_add(1);
+            }
+        }
+        Tally(Arc::new(TallyStruct {
+            depth,
+            size: sum.wrapping_add(depth),
+        }))
+    }
+
+    pub fn total(&self) -> i32 {
+        self.0.size
+    }
+}
+
+temper_core::impl_any_value_trait!(Tally, []);

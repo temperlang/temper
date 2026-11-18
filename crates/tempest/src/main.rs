@@ -1,21 +1,21 @@
-//! The `tempest` command, a thin layer over the other crates, which do
+//! The `temper` command, a thin layer over the other crates, which do
 //! the work as libraries: argument parsing and output. Its commands and
 //! flags are Kotlin Temper's `temper`'s, where tempest has them
 //! (docs/tools/cli.md):
 //!
-//!     tempest build [-w DIR] [-ign FILE] [-o DIR] [-b BACKEND]... [--no-connected]
+//!     temper build [-w DIR] [-ign FILE] [-o DIR] [-b BACKEND]... [--no-connected]
 //!                   [-v] [--logformat text|json] [--std DIR]
-//!     tempest test [-w DIR | DIR] [-ign FILE] [--library NAME] [-b interp|BACKEND]...
+//!     temper test [-w DIR | DIR] [-ign FILE] [--library NAME] [-b interp|BACKEND]...
 //!                  [--fuel N|none] [--timeout S|none] [--no-connected] [-v]
 //!                  [--logformat text|json] [--std DIR]
-//!     tempest run --library NAME -b interp|BACKEND [-w DIR] [-ign FILE] [-o DIR]
+//!     temper run --library NAME -b interp|BACKEND [-w DIR] [-ign FILE] [-o DIR]
 //!                 [--timeout S|none] [--no-connected] [-v] [--logformat text|json]
 //!                 [--std DIR]
-//!     tempest repl [-w DIR] [-ign FILE] [-e CODE]... [--separator newline|semisemi|eof]
+//!     temper repl [-w DIR] [-ign FILE] [-e CODE]... [--separator newline|semisemi|eof]
 //!                  [--prompt normal|hide] [--fuel N|none] [-v] [--std DIR]
-//!     tempest init [-o DIR]
-//!     tempest serve|lsp [--std DIR]
-//!     tempest version | license | licenses | help [COMMAND]
+//!     temper init [-o DIR]
+//!     temper serve|lsp [--std DIR]
+//!     temper version | license | licenses | help [COMMAND]
 //!
 //! - `build` translates every library under the work root for each
 //!   backend `-b` names, or Kotlin's defaults that tempest has (`csharp`,
@@ -32,7 +32,7 @@
 //!   may take `--fuel` steps, [`temper_frontend::interp::TEST_FUEL`] by
 //!   default, so a runaway test fails alone ("ran out of steps"). On a
 //!   backend, each command its tools start may take `--timeout` seconds
-//!   (or `TEMPEST_TIMEOUT`'s), 600 by default, and dies with tempest
+//!   (or `TEMPER_TIMEOUT`'s), 600 by default, and dies with tempest
 //!   ([`temper_tmpl::tools::output`]).
 //! - `run` builds the work root for one backend, then runs a library's
 //!   top level with that language's tools, or on the interpreter
@@ -90,6 +90,8 @@ const NOT_YET_CODE: u8 = 3;
 const PANICKED: u8 = 101;
 
 fn main() -> ExitCode {
+    // Runtimes, std, and core name this build's version, from git.
+    temper_driver::version::init();
     // Calls and lowering recurse; give them room (see `interp`).
     let thread = std::thread::Builder::new().stack_size(64 << 20).spawn(|| {
         let args: Vec<String> = std::env::args().skip(1).collect();
@@ -102,13 +104,13 @@ fn main() -> ExitCode {
         Ok(Ok(code)) => code,
         Ok(Err(_)) => {
             eprintln!(
-                "tempest: internal error (a bug in tempest, not in your code): the panic \
+                "temper: internal error (a bug in Temper, not in your code): the panic \
                  above stopped the command; please report it with what you ran."
             );
             ExitCode::from(PANICKED)
         }
         Err(why) => {
-            eprintln!("tempest: couldn't start: {why}");
+            eprintln!("temper: couldn't start: {why}");
             ExitCode::FAILURE
         }
     }
@@ -144,13 +146,13 @@ fn run_command(args: &[String]) -> u8 {
         }
         _ if temper_driver::KNOWN.contains(&name.as_str()) => {
             eprintln!(
-                "tempest: no command {name}; `tempest build -b {name}` writes {name}'s code, \
+                "temper: no command {name}; `temper build -b {name}` writes {name}'s code, \
                  and `-o DIR` puts it in DIR"
             );
             USAGE
         }
         _ => {
-            eprintln!("tempest: no command {name}");
+            eprintln!("temper: no command {name}");
             eprint!("{}", help::overview());
             USAGE
         }
@@ -161,13 +163,10 @@ fn run_command(args: &[String]) -> u8 {
 /// meanwhile.
 pub fn not_yet_command(name: &str) -> String {
     let meanwhile = match name {
-        "watch" => "meanwhile, run `tempest build` or `tempest test` after each change",
+        "watch" => "meanwhile, run `temper build` or `temper test` after each change",
         _ => "meanwhile, a library's .temper.md files are its documentation",
     };
-    format!(
-        "tempest: {name} isn't in tempest yet. Kotlin Temper's `temper {name}` has it; \
-         {meanwhile} (docs/tools/cli.md)."
-    )
+    format!("temper: {name} isn't available yet; {meanwhile} (docs/tools/cli.md).")
 }
 
 /// A command's options, as parsed: Kotlin's names, short forms, and the
@@ -228,8 +227,8 @@ fn parse(command: &str, args: &[String], allowed: &[&str], positional: usize) ->
     let mut flags = Flags::default();
     let mut args = args.iter();
     let wrong = |what: String| {
-        eprintln!("tempest {command}: {what}");
-        eprintln!("`tempest help {command}` shows its options.");
+        eprintln!("temper {command}: {what}");
+        eprintln!("`temper help {command}` shows its options.");
         USAGE
     };
     while let Some(arg) = args.next() {
@@ -322,7 +321,7 @@ impl Flags {
             return Ok(None);
         };
         ignore_file(sources, root, path).map(Some).map_err(|why| {
-            eprintln!("tempest: --ignorefile {why}");
+            eprintln!("temper: --ignorefile {why}");
             FAILED
         })
     }
@@ -343,21 +342,18 @@ fn backend(name: &str, interp: bool) -> Result<Option<&'static Backend>, u8> {
         Some(backend) => Ok(Some(backend)),
         None if interp && name == "interp" => Ok(None),
         None if registry().lacks(name) => {
-            eprintln!("tempest: built without the {name} backend");
+            eprintln!("temper: built without the {name} backend");
             Err(FAILED)
         }
         None if NOT_YET.contains(&name) => {
-            eprintln!(
-                "tempest: the {name} backend isn't in tempest yet; Kotlin Temper's `temper` \
-                 has it (docs/tools/cli.md)."
-            );
+            eprintln!("temper: the {name} backend isn't available yet (docs/tools/cli.md).");
             Err(NOT_YET_CODE)
         }
         None => {
             let names: Vec<&str> = temper_driver::KNOWN.to_vec();
             let interp = if interp { ", or interp" } else { "" };
             eprintln!(
-                "tempest: no backend {name}; backends are {}{interp}",
+                "temper: no backend {name}; backends are {}{interp}",
                 names.join(", ")
             );
             Err(USAGE)
@@ -378,7 +374,7 @@ fn finish(log: LogFormat, label: &str, ok: bool) -> u8 {
     if ok { 0 } else { FAILED }
 }
 
-/// `tempest build`.
+/// `temper build`.
 fn build_command(args: &[String]) -> u8 {
     let allowed = [
         "std",
@@ -429,7 +425,7 @@ fn build_command(args: &[String]) -> u8 {
     finish(flags.log, "Build", built.is_some_and(|b| b.ok()))
 }
 
-/// `tempest test`: each backend in turn, or the interpreter.
+/// `temper test`: each backend in turn, or the interpreter.
 fn test_command(args: &[String]) -> u8 {
     let allowed = [
         "std",
@@ -455,12 +451,12 @@ fn test_command(args: &[String]) -> u8 {
         Some(Ok(fuel)) => fuel,
         Some(Err(())) => {
             let value = flags.fuel.as_deref().unwrap_or_default();
-            eprintln!("tempest test: --fuel is a number of steps above 0, or none, not {value}");
+            eprintln!("temper test: --fuel is a number of steps above 0, or none, not {value}");
             return USAGE;
         }
     };
     if flags.workroot.is_some() && !flags.positional.is_empty() {
-        eprintln!("tempest test: give -w or DIR, not both");
+        eprintln!("temper test: give -w or DIR, not both");
         return USAGE;
     }
     let chosen = match backends(&flags.backends, true) {
@@ -552,11 +548,11 @@ fn parse_fuel(value: &str) -> Result<Option<u64>, ()> {
 }
 
 /// Sets the time limit of what backends' tools start, `--timeout`'s,
-/// else `TEMPEST_TIMEOUT`'s, and checks `TEMPEST_MEMORY_LIMIT`; or says
+/// else `TEMPER_TIMEOUT`'s, and checks `TEMPER_MEMORY_LIMIT`; or says
 /// what's wrong and gives the usage error's exit code.
 fn set_limits(command: &str, flags: &Flags) -> Result<(), u8> {
     let wrong = |what: &str, why: String| {
-        eprintln!("tempest {command}: {what} is {why}");
+        eprintln!("temper {command}: {what} is {why}");
         USAGE
     };
     match flags.timeout.as_deref() {
@@ -565,18 +561,18 @@ fn set_limits(command: &str, flags: &Flags) -> Result<(), u8> {
             tools::set_timeout(limit);
         }
         None => {
-            if let Ok(value) = std::env::var("TEMPEST_TIMEOUT") {
-                tools::parse_seconds(&value).map_err(|why| wrong("TEMPEST_TIMEOUT", why))?;
+            if let Ok(value) = std::env::var("TEMPER_TIMEOUT") {
+                tools::parse_seconds(&value).map_err(|why| wrong("TEMPER_TIMEOUT", why))?;
             }
         }
     }
-    if let Ok(value) = std::env::var("TEMPEST_MEMORY_LIMIT") {
-        tools::parse_mib(&value).map_err(|why| wrong("TEMPEST_MEMORY_LIMIT", why))?;
+    if let Ok(value) = std::env::var("TEMPER_MEMORY_LIMIT") {
+        tools::parse_mib(&value).map_err(|why| wrong("TEMPER_MEMORY_LIMIT", why))?;
     }
     Ok(())
 }
 
-/// `tempest run --library NAME -b BACKEND`.
+/// `temper run --library NAME -b BACKEND`.
 fn run_library(args: &[String]) -> u8 {
     let allowed = [
         "std",
@@ -598,7 +594,7 @@ fn run_library(args: &[String]) -> u8 {
         return code;
     }
     let Some(library) = flags.library.as_deref() else {
-        eprintln!("tempest run: --library NAME is required");
+        eprintln!("temper run: --library NAME is required");
         return USAGE;
     };
     let backend = match flags.backends.as_slice() {
@@ -607,11 +603,11 @@ fn run_library(args: &[String]) -> u8 {
             Err(code) => return code,
         },
         [] => {
-            eprintln!("tempest run: -b BACKEND is required (interp for the interpreter)");
+            eprintln!("temper run: -b BACKEND is required (interp for the interpreter)");
             return USAGE;
         }
         _ => {
-            eprintln!("tempest run: one -b BACKEND only");
+            eprintln!("temper run: one -b BACKEND only");
             return USAGE;
         }
     };
@@ -642,7 +638,7 @@ fn run_library(args: &[String]) -> u8 {
     finish(flags.log, "Run", ok)
 }
 
-/// `tempest init [-o DIR]`.
+/// `temper init [-o DIR]`.
 fn init_command(args: &[String]) -> u8 {
     let flags = match parse("init", args, &["output-directory"], 0) {
         Ok(flags) => flags,
@@ -666,7 +662,7 @@ fn init_command(args: &[String]) -> u8 {
     }
 }
 
-/// `tempest serve` or `tempest lsp`: a language server on stdin and
+/// `temper serve` or `temper lsp`: a language server on stdin and
 /// stdout.
 fn serve(name: &str, args: &[String]) -> u8 {
     let flags = match parse(name, args, &["std", "port", "tokens"], 0) {
@@ -675,14 +671,14 @@ fn serve(name: &str, args: &[String]) -> u8 {
     };
     if let Some(tokens) = &flags.tokens {
         if !["add", "full", "none"].contains(&tokens.as_str()) {
-            eprintln!("tempest {name}: --tokens is add, full, or none, not {tokens}");
+            eprintln!("temper {name}: --tokens is add, full, or none, not {tokens}");
             return USAGE;
         }
     }
     if let Some(port) = &flags.port {
         eprintln!(
-            "tempest {name}: tempest serves the language server over standard input and \
-             output, not a TCP port; run `tempest {name}` without --port {port}, with the \
+            "temper {name}: temper serves the language server over standard input and \
+             output, not a TCP port; run `temper {name}` without --port {port}, with the \
              client talking over stdio."
         );
         return NOT_YET_CODE;
@@ -690,19 +686,18 @@ fn serve(name: &str, args: &[String]) -> u8 {
     temper_lsp::serve(io::stdin(), io::stdout().lock(), flags.std_dir)
 }
 
-/// `tempest version`: its version and the commit it was built from.
+/// `temper version`: its version and the commit it was built from, with
+/// a mark where the tree had changes: `temper 0.7.0-alpha.0.123
+/// (3f2b063, modified)`.
 fn version(args: &[String]) -> u8 {
     if let Err(code) = parse("version", args, &[], 0) {
         return code;
     }
-    match option_env!("TEMPEST_COMMIT") {
-        Some(commit) => println!("tempest {} ({commit})", env!("CARGO_PKG_VERSION")),
-        None => println!("tempest {}", env!("CARGO_PKG_VERSION")),
-    }
+    println!("temper {}", temper_driver::version::describe());
     0
 }
 
-/// `tempest license` and `licenses`, which print a text.
+/// `temper license` and `licenses`, which print a text.
 fn about(name: &str, args: &[String], text: &str) -> u8 {
     if let Err(code) = parse(name, args, &[], 0) {
         return code;
@@ -711,7 +706,7 @@ fn about(name: &str, args: &[String], text: &str) -> u8 {
     0
 }
 
-/// `tempest help [COMMAND]`.
+/// `temper help [COMMAND]`.
 fn help_command(args: &[String]) -> u8 {
     match args {
         [] => {
@@ -724,13 +719,13 @@ fn help_command(args: &[String]) -> u8 {
                 0
             }
             None => {
-                eprintln!("tempest help: no command {name}");
+                eprintln!("temper help: no command {name}");
                 eprint!("{}", help::overview());
                 USAGE
             }
         },
         _ => {
-            eprintln!("tempest help: one command at a time");
+            eprintln!("temper help: one command at a time");
             USAGE
         }
     }

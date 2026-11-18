@@ -25,7 +25,7 @@ pub enum Connection {
     /// receiver first, and leaving out trailing ones left out:
     /// `temper.string_toint32(s)`.
     Helper(&'static str),
-    /// The receiver itself, as `Int32.toInt64()`, both Lua integers.
+    /// The receiver itself, as `String.toString()`.
     Same,
     /// Custom output.
     Translate(Hook),
@@ -154,13 +154,16 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Int32.toFloat64()",
         Connection::Helper("int32_tofloat64"),
     ),
-    ("core.type Int32.toInt64()", Connection::Same),
+    (
+        "core.type Int32.toInt64()",
+        Connection::Helper("int32_toint64"),
+    ),
     (
         "core.type Int32.toString()",
         Connection::Translate(int_to_string),
     ),
-    ("core.type Int64.max()", Connection::Math("max")),
-    ("core.type Int64.min()", Connection::Math("min")),
+    ("core.type Int64.max()", Connection::Helper("int64_max")),
+    ("core.type Int64.min()", Connection::Helper("int64_min")),
     (
         "core.type Int64.toFloat64()",
         Connection::Helper("int64_tofloat64"),
@@ -171,7 +174,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Int64.toInt32()",
-        Connection::Helper("float64_toint32"),
+        Connection::Helper("int64_toint32"),
     ),
     (
         "core.type Int64.toInt32Unsafe()",

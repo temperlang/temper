@@ -34,7 +34,7 @@ the slower run and backends:
 2. if asked, a run on the [interpreter](04-interpreter.md), with its
    tests;
 3. tmpl, translated by each backend the page asks for, through the
-   same [compile path](07-cli.md#one-compile-path) as `tempest build`.
+   same [compile path](07-cli.md#one-compile-path) as `temper build`.
 
 std is settled the first time it's needed and kept, since it never
 changes and settling it takes most of a translation's time.
@@ -56,7 +56,7 @@ and [its decisions](detail/08-playground.md#a-plain-c-abi-not-wasm-bindgen).
 A REPL session lives there too, for the page's REPL tab:
 [`repl_start`, `repl_input`, `repl_complete`, and `repl_reset`](detail/08-playground.md#the-repls-api)
 settle and run one input at a time against what earlier ones declared,
-with `tempest repl`'s transcript text.
+with `temper repl`'s transcript text.
 
 Run shows the interpreter's results beside the generated JavaScript's,
 run in a worker of its own. So the playground is also a quick check that
@@ -75,7 +75,7 @@ two very different ways of running a program agree.
   tab, with its own wasm instance holding the session; Stop replaces
   that worker and replays the inputs before.
 - [`js-worker.ts`](../../site/playground/src/js-worker.ts): runs the
-  generated JavaScript, with the runtime from `vendor/temper/be-js/`.
+  generated JavaScript, with the runtime from `crates/temper-be-js/runtime/`.
 - [`build.py`](../../site/playground/build.py): builds the wasm and bundles
   the page. GitHub Pages publishes it from `main`.
 - [`smoke.mjs`](../../site/playground/smoke.mjs): CI's smoke test of the
@@ -146,7 +146,7 @@ costs: [temper-analysis, in detail](detail/09-language-server.md#temper-analysis
 
 ## `watch` and a language server
 
-The language server, `tempest lsp`, exists ([page 9](09-language-server.md));
+The language server, `temper lsp`, exists ([page 9](09-language-server.md));
 `watch` doesn't yet. Both reuse what's here rather than add a second
 compiler:
 

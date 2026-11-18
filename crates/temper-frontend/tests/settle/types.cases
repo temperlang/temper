@@ -86,7 +86,8 @@ let f: String = d;
   (Let ^f:5 String d:3)
   #void)
 error 16..17: Cannot assign to String from Int32
-Failed: d has not been initialized
+error 64..65: d is not initialized along branches
+Failed: d is not initialized along branches
 
 === locals typed from their initializers
 var a;
@@ -116,7 +117,8 @@ c = c + 1;
 error 14..23: Cannot assign to Int32 from String
 error 41..42: Cannot assign to String from Int32
 error 108..109: Cannot assign to Int32 from String?
-Failed: c has not been initialized
+error 122..123: c is not initialized along branches
+Failed: c is not initialized along branches
 
 === null where a type isn't nullable
 let a: String = null;
@@ -215,6 +217,163 @@ error 264..274: Cannot assign to Int32 from String
 error 298..304: Cannot assign to Int32 from Void
 error 345..346: Cannot assign to String from Int32
 error 421..424: Cannot assign to Int32 from String
+
+=== if and orelse values whose branches have no common type
+// Each branch is assigned on its own, as Kotlin Temper does (Kotlin: at
+// an empty position at the branch's end); an argument or a condition
+// that doesn't fit is an AnyValue, as in Kotlin. `orelse` binds looser
+// than `==`, so `p("7") orelse 0i64 == x` is `p("7") orelse (0i64 ==
+// x)`, which can't be a Boolean.
+let p(text: String): Int64 throws Bubble { text.toInt64() }
+let takesB(b: Boolean): Void {}
+class C(public b: Boolean) {}
+var z: Boolean = true;
+let y: Boolean = p("1") orelse false;
+z = p("2") orelse false;
+takesB(p("3") orelse false);
+let r1(): Boolean { return p("4") orelse false; }
+let r2(): Boolean { p("5") orelse false }
+let y2: Int64 = p("6") orelse false;
+let x = 1i64;
+let a1: Boolean = p("7") orelse 0i64 == x;
+takesB(p("8") orelse 0i64 == x);
+if (p("9") orelse 0i64 == x) { console.log("y"); }
+let w: Boolean = if (z) { 1i64 } else { false };
+let n1: Boolean = (p("1") orelse p("2")) orelse false;
+let n2: Boolean = p("1") orelse (if (z) { false } else { p("2") });
+let c = new C(p("1") orelse false);
+--- settled
+(Block
+  (Let
+    ^p:0
+    (Fn
+      (Let ^text:14 String)
+      (Call throws Int64 Bubble)
+      (Block (Call (Call . text:14 \toInt64)))))
+  (Let ^takesB:1 (Fn (Let ^b:15 Boolean) Void (Block)))
+  (Class ^C:2 (Param ^b:17 Boolean))
+  (Var ^z:3 Boolean true)
+  (Let ^y:4 Boolean (Orelse (Call p:0 "1") false))
+  (Assign z:3 (Orelse (Call p:0 "2") false))
+  (Call takesB:1 (Orelse (Call p:0 "3") false))
+  (Let
+    ^r1:5
+    (Fn Boolean (Block (Return @556 (Orelse (Call p:0 "4") false)) #void)))
+  (Let ^r2:6 (Fn Boolean (Block (Orelse (Call p:0 "5") false))))
+  (Let ^y2:7 Int64 (Orelse (Call p:0 "6") false))
+  (Let ^x:8 1i64)
+  (Let ^a1:9 Boolean (Orelse (Call p:0 "7") (Call == 0i64 x:8)))
+  (Call takesB:1 (Orelse (Call p:0 "8") (Call == 0i64 x:8)))
+  (If
+    (Orelse (Call p:0 "9") (Call == 0i64 x:8))
+    (Block (Call (Call . console \log) "y") #void)
+    (Block))
+  (Let ^w:10 Boolean (If z:3 (Block 1i64) (Block false)))
+  (Let ^n1:11 Boolean (Orelse (Orelse (Call p:0 "1") (Call p:0 "2")) false))
+  (Let
+    ^n2:12
+    Boolean
+    (Orelse (Call p:0 "1") (If z:3 (Block false) (Block (Call p:0 "2")))))
+  (Let ^c:13 (Call new C:2 (Orelse (Call p:0 "1") false)))
+  #void)
+error 481..487: Cannot assign to Boolean from Int64
+error 506..512: Cannot assign to Boolean from Int64
+error 534..553: Expected subtype of Boolean, but got AnyValue
+error 583..589: Cannot assign to Boolean from Int64
+error 626..632: Cannot assign to Boolean from Int64
+error 678..683: Cannot assign to Int64 from Boolean
+error 717..723: Cannot assign to Boolean from Int64
+error 749..772: Expected subtype of Boolean, but got AnyValue
+error 779..802: Expected value of type Boolean not AnyValue
+error 850..858: Cannot assign to Boolean from Int64
+error 894..900: Cannot assign to Boolean from Int64
+error 908..914: Cannot assign to Boolean from Int64
+error 948..954: Cannot assign to Boolean from Int64
+error 985..995: Cannot assign to Boolean from Int64
+error 1012..1031: Expected subtype of Boolean, but got AnyValue
+Failed: Expected a Boolean, not Int64
+
+=== if and orelse values whose branches fit where they're used
+// Valid: a fallback that fits, panic() and a jump (Never), null for
+// a nullable, nested orelse, and branches whose classes have two common
+// interfaces, so no one common type, but fit either.
+interface I {}
+interface J {}
+class A extends I, J {}
+class B extends I, J {}
+let p(text: String): Int64 throws Bubble { text.toInt64() }
+let takesI(i: I): String { "i" }
+let ok1: Int64 = p("x") orelse 0i64;
+let ok2: Int64 = p("2") orelse panic();
+let ok3: Int64? = p("x") orelse null;
+let ok4: Int64 = (p("x") orelse p("4")) orelse 0i64;
+let ok5: Int64 = p("x") orelse (p("y") orelse 5i64);
+let ok6(s: String): Int64 { let n = p(s) orelse do { return -6i64; }; n }
+let ok7: AnyValue = p("x") orelse false;
+let ok8: Boolean = (p("x") orelse 0i64) == 0i64;
+let ok9: I = if (ok8) { new A() } else { new B() };
+var v: Int64 = 0i64;
+v = p("x") orelse 11i64;
+console.log("${ok1} ${ok2} ${ok3} ${ok4} ${ok5} ${ok6("x")} ${ok8} ${v}");
+console.log(takesI(if (ok8) { new A() } else { new B() }));
+--- settled
+(Block
+  (Interface ^I:0)
+  (Interface ^J:1)
+  (Class ^A:2 I:0 J:1)
+  (Class ^B:3 I:0 J:1)
+  (Let
+    ^p:4
+    (Fn
+      (Let ^text:20 String)
+      (Call throws Int64 Bubble)
+      (Block (Call (Call . text:20 \toInt64)))))
+  (Let ^takesI:5 (Fn (Let ^i:21 I:0) String (Block "i")))
+  (Let ^ok1:6 Int64 (Orelse (Call p:4 "x") 0i64))
+  (Let ^ok2:7 Int64 (Orelse (Call p:4 "2") (Call panic)))
+  (Let ^ok3:8 (Call ? Int64) (Orelse (Call p:4 "x") null))
+  (Let ^ok4:9 Int64 (Orelse (Orelse (Call p:4 "x") (Call p:4 "4")) 0i64))
+  (Let ^ok5:10 Int64 (Orelse (Call p:4 "x") (Orelse (Call p:4 "y") 5i64)))
+  (Let
+    ^ok6:11
+    (Fn
+      (Let ^s:22 String)
+      Int64
+      (Block
+        (Let
+          ^n:23
+          (Orelse (Call p:4 s:22) (Block (Return @588 (Call - 6i64)) #void)))
+        n:23)))
+  (Let ^ok7:12 AnyValue (Orelse (Call p:4 "x") false))
+  (Let ^ok8:13 Boolean (Call == (Orelse (Call p:4 "x") 0i64) 0i64))
+  (Let ^ok9:14 I:0 (If ok8:13 (Block (Call new A:2)) (Block (Call new B:3))))
+  (Var ^v:15 Int64 0i64)
+  (Assign v:15 (Orelse (Call p:4 "x") 11i64))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      ok1:6
+      " "
+      ok2:7
+      " "
+      ok3:8
+      " "
+      ok4:9
+      " "
+      ok5:10
+      " "
+      (Call ok6:11 "x")
+      " "
+      ok8:13
+      " "
+      v:15))
+  (Call
+    (Call . console \log)
+    (Call takesI:5 (If ok8:13 (Block (Call new A:2)) (Block (Call new B:3)))))
+  #void)
+log 0 2 null 4 5 -6 true 11
+log i
 
 === calls of known functions
 let f(a: Int, b: String = "b"): Void {}
@@ -1379,6 +1538,216 @@ let f(n: Int?): Void {
 error 279..280: Actual arguments do not match signature: <T extends AnyValue>(fn (T): T) -> Int32 expected [fn (AnyValue): AnyValue], but got [Int32]
 error 292..293: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32, Int32]
 error 302..306: Actual arguments do not match signature: <T extends AnyValue>(Int32, fn (T): T) -> Int32 expected [Int32, fn (AnyValue): AnyValue], but got [Int32?, Int32]
+
+=== a bound naming its own type parameter is checked with it put in
+// As Kotlin Temper reports them, apart from names: `T extends Ord<T>` and
+// core's `K extends MapKey<K>` are checked as `Ord<P>` and `MapKey<P>`,
+// where a `K extends MapKey<K>` of the caller's own fits. A nullable type
+// fits `AnyValue`, as in Kotlin's check.
+interface Ord<T> { cmp(o: T): Int; }
+class N(public n: Int) extends Ord<N> { public cmp(o: N): Int { n - o.n } }
+class P(public x: Int) {}
+class Holder<T extends Ord<T>>(public t: T) {}
+let least<T extends Ord<T>>(a: T, b: T): T { if (a.cmp(b) <= 0) { a } else { b } }
+let keyed<K extends MapKey<K>, V>(k: K, v: V): Map<K, V> {
+  let b = new MapBuilder<K, V>();
+  b[k] = v;
+  new Map<K, V>([new Pair(k, v)])
+}
+let same<T>(x: T): T { x }
+let f(): Void {
+  let a = new Holder<N>(new N(1));
+  let b = new Holder<P>(new P(1));
+  let c = new Holder(new P(2));
+  let d = least(new N(1), new N(2));
+  let e = least(new P(1), new P(2));
+  let g = new Map<P, String>([]);
+  let h = new MapBuilder<P, String>();
+  let i = new Map<String, Int>([]);
+  let j = new Map([new Pair(new P(1), "a")]);
+  let k = new MapBuilder<Int64, String>();
+  let l = keyed(1, "a");
+  let m = new PromiseBuilder<String?>();
+  let n = same<Int?>(null);
+}
+// A nullable argument binds a bare type parameter to its nullable type,
+// as Kotlin binds it, so it fits only an `AnyValue` bound: `pick(d)` and
+// `new Pen(d)` are reported as Kotlin reports them, as are `fwdn`'s
+// `pick(x)` for an `x: T?` and `pick<Dog?>(d)`, while `pick<Dog>(d)`
+// misfits its argument (Kotlin then adds "Expected subtype of Dog, but
+// got Invalid"). `Dog` and `Dog?` bind `T` as `Dog?`. The rest pass, in
+// Kotlin too.
+interface Animal {}
+class Dog extends Animal {}
+class Pen<T extends Animal>(public t: T) {}
+let pick<T extends Animal>(x: T): T { x }
+let opt<T extends Animal>(x: T?): T? { x }
+let fwd<T extends Animal>(x: T): T { pick(x) }
+let fwdn<T extends Animal>(x: T?): T? { pick(x) }
+let both<T>(a: T, b: T): T { a }
+let pickBoth<T extends Animal>(a: T, b: T): T { a }
+let nb(d: Dog?, e: Dog): Void {
+  let a = pick(d);
+  let b = new Pen(d);
+  let c = pick<Dog>(d);
+  let g = new Pen<Dog>(d);
+  let h = pick<Dog?>(d);
+  let i: Animal? = pick(d);
+  pick(d);
+  let j = pick(e);
+  let k = same(d);
+  let l = new Pen(e);
+  let m = opt(d);
+  let n = opt(null);
+  let o: Dog? = same(d);
+  let q = [d, e];
+  let r: List<Dog?> = q;
+  let s = both(e, d);
+  let t: Int = both(d, e);
+  let u = pickBoth(e, d);
+}
+--- settled
+(Block
+  (Interface
+    ^Ord:0
+    (TypeParam ^T:18)
+    (Method ^cmp:20 (Signature (Let ^o:21 T:18) Int)))
+  (Class
+    ^N:1
+    (Call <> Ord:0 N:1)
+    (Param ^n:23 Int)
+    (Method
+      ^cmp:24
+      (Fn (Let ^o:25 N:1) Int (Block (Call - n:23 (Call . o:25 \n))))))
+  (Class ^P:2 (Param ^x:27 Int))
+  (Class ^Holder:3 (TypeParam ^T:28 (Call <> Ord:0 T:28)) (Param ^t:30 T:28))
+  (Let
+    ^least:4
+    (Fn
+      (TypeParam ^T:31 (Call <> Ord:0 T:31))
+      (Let ^a:32 T:31)
+      (Let ^b:33 T:31)
+      T:31
+      (Block
+        (If
+          (Call <= (Call (Call . a:32 \cmp) b:33) 0)
+          (Block a:32)
+          (Block b:33)))))
+  (Let
+    ^keyed:5
+    (Fn
+      (TypeParam ^K:34 (Call <> MapKey K:34))
+      (TypeParam ^V:35)
+      (Let ^k:36 K:34)
+      (Let ^v:37 V:35)
+      (Call <> Map K:34 V:35)
+      (Block
+        (Let ^b:38 (Call new (Call <> MapBuilder K:34 V:35)))
+        (Call (Call . b:38 \set) k:36 v:37)
+        (Call new (Call <> Map K:34 V:35) (Call list (Call new Pair k:36 v:37))))))
+  (Let ^same:6 (Fn (TypeParam ^T:39) (Let ^x:40 T:39) T:39 (Block x:40)))
+  (Let
+    ^f:7
+    (Fn
+      Void
+      (Block
+        (Let ^a:41 (Call new (Call <> Holder:3 N:1) (Call new N:1 1)))
+        (Let ^b:42 (Call new (Call <> Holder:3 P:2) (Call new P:2 1)))
+        (Let ^c:43 (Call new Holder:3 (Call new P:2 2)))
+        (Let ^d:44 (Call least:4 (Call new N:1 1) (Call new N:1 2)))
+        (Let ^e:45 (Call least:4 (Call new P:2 1) (Call new P:2 2)))
+        (Let ^g:46 (Call new (Call <> Map P:2 String) (Call list)))
+        (Let ^h:47 (Call new (Call <> MapBuilder P:2 String)))
+        (Let ^i:48 (Call new (Call <> Map String Int) (Call list)))
+        (Let
+          ^j:49
+          (Call new Map (Call list (Call new Pair (Call new P:2 1) "a"))))
+        (Let ^k:50 (Call new (Call <> MapBuilder Int64 String)))
+        (Let ^l:51 (Call keyed:5 1 "a"))
+        (Let ^m:52 (Call new (Call <> PromiseBuilder (Call ? String))))
+        (Let ^n:53 (Call same:6 \typeArg (Call ? Int) null))
+        #void)))
+  (Interface ^Animal:8)
+  (Class ^Dog:9 Animal:8)
+  (Class ^Pen:10 (TypeParam ^T:56 Animal:8) (Param ^t:58 T:56))
+  (Let
+    ^pick:11
+    (Fn (TypeParam ^T:59 Animal:8) (Let ^x:60 T:59) T:59 (Block x:60)))
+  (Let
+    ^opt:12
+    (Fn
+      (TypeParam ^T:61 Animal:8)
+      (Let ^x:62 (Call ? T:61))
+      (Call ? T:61)
+      (Block x:62)))
+  (Let
+    ^fwd:13
+    (Fn
+      (TypeParam ^T:63 Animal:8)
+      (Let ^x:64 T:63)
+      T:63
+      (Block (Call pick:11 x:64))))
+  (Let
+    ^fwdn:14
+    (Fn
+      (TypeParam ^T:65 Animal:8)
+      (Let ^x:66 (Call ? T:65))
+      (Call ? T:65)
+      (Block (Call pick:11 x:66))))
+  (Let
+    ^both:15
+    (Fn (TypeParam ^T:67) (Let ^a:68 T:67) (Let ^b:69 T:67) T:67 (Block a:68)))
+  (Let
+    ^pickBoth:16
+    (Fn
+      (TypeParam ^T:70 Animal:8)
+      (Let ^a:71 T:70)
+      (Let ^b:72 T:70)
+      T:70
+      (Block a:71)))
+  (Let
+    ^nb:17
+    (Fn
+      (Let ^d:73 (Call ? Dog:9))
+      (Let ^e:74 Dog:9)
+      Void
+      (Block
+        (Let ^a:75 (Call pick:11 d:73))
+        (Let ^b:76 (Call new Pen:10 d:73))
+        (Let ^c:77 (Call pick:11 \typeArg Dog:9 d:73))
+        (Let ^g:78 (Call new (Call <> Pen:10 Dog:9) d:73))
+        (Let ^h:79 (Call pick:11 \typeArg (Call ? Dog:9) d:73))
+        (Let ^i:80 (Call ? Animal:8) (Call pick:11 d:73))
+        (Call pick:11 d:73)
+        (Let ^j:81 (Call pick:11 e:74))
+        (Let ^k:82 (Call same:6 d:73))
+        (Let ^l:83 (Call new Pen:10 e:74))
+        (Let ^m:84 (Call opt:12 d:73))
+        (Let ^n:85 (Call opt:12 null))
+        (Let ^o:86 (Call ? Dog:9) (Call same:6 d:73))
+        (Let ^q:87 (Call list d:73 e:74))
+        (Let ^r:88 (Call <> List (Call ? Dog:9)) q:87)
+        (Let ^s:89 (Call both:15 e:74 d:73))
+        (Let ^t:90 Int (Call both:15 d:73 e:74))
+        (Let ^u:91 (Call pickBoth:16 e:74 d:73))
+        #void))))
+error 763..786: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 798..818: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 867..892: Type formal <T extends Ord<T>> cannot bind to P which does not fit upper bounds [Ord<T>]
+error 904..926: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 938..965: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1013..1047: Type formal <K extends MapKey<K>> cannot bind to P which does not fit upper bounds [MapKey<K>]
+error 1059..1090: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 1898..1905: Type formal <T extends Animal> cannot bind to T? which does not fit upper bounds [Animal]
+error 2035..2042: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2054..2064: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2086..2087: Actual arguments do not match signature: <T extends Animal>(T) -> T expected [Dog], but got [Dog?]
+error 2113..2114: Actual arguments do not match signature: <T extends Animal>(T) -> Pen<T> expected [Dog], but got [Dog?]
+error 2127..2140: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2161..2168: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2172..2179: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
+error 2385..2395: Cannot assign to Int32 from Dog?
+error 2407..2421: Type formal <T extends Animal> cannot bind to Dog? which does not fit upper bounds [Animal]
 
 === list literals' types, as Kotlin Temper reports them
 // A list literal is a `List` of its elements' common type. The input was
@@ -2569,7 +2938,110 @@ error 440..443: No member m in P
 error 449..456: No member size in List<Int32>
 error 483..492: No member lengthy in String
 log -1
-Failed: No method lengthy for String
+Failed: No member lengthy in String
+
+=== a member of a nullable value is an error that fails where it runs
+// As Kotlin's "No member n in AnyValue", with no null check that narrows
+// the value (flow.cases has the accepted forms): a property's read or
+// assignment, a method's call, a chained member, a builtin type's member,
+// a `var` (never narrowed), and `orelse`, which doesn't catch null. Only
+// the first of a chain is reported. A value Kotlin might work out while
+// compiling isn't reported, as `take(c)` for `let c: String? = "q"` isn't.
+class Counter(public var n: Int) {
+  public inc(): Void { n += 1; }
+  public get next(): Counter? { null }
+}
+let r1(c: Counter?): Int { c.n }
+let r2(c: Counter?): Void { c.inc() }
+let r3(c: Counter?): Void { c.n = 2; }
+let r4(c: Counter): Int { c.next.n }
+let r5(c: Counter?): Int { c.next.n }
+let r6(s: String?): Boolean { s.isEmpty }
+let r7(ls: List<Int>?): Int { ls.length }
+let r8(var x: Int?): String? { if (x != null) { x.toString() } else { null } }
+let r9(c: Counter?): Int { var d = c; if (d != null) { d.n } else { 0 } }
+let r10(c: Counter?): Int { c.n orelse 0 }
+let r11(): Boolean { let s: String? = "q"; s.isEmpty }
+console.log(r11().toString());
+console.log(r1(new Counter(1)).toString());
+console.log(r1(null).toString());
+--- settled
+(Block
+  (Class
+    ^Counter:0
+    (Param var ^n:13 Int)
+    (Method ^inc:14 (Fn Void (Block (Assign n:13 (Call + n:13 1)) #void)))
+    (Get ^next:15 (Fn (Call ? Counter:0) (Block null))))
+  (Let ^r1:1 (Fn (Let ^c:16 (Call ? Counter:0)) Int (Block (Call . c:16 \n))))
+  (Let
+    ^r2:2
+    (Fn (Let ^c:17 (Call ? Counter:0)) Void (Block (Call (Call . c:17 \inc)))))
+  (Let
+    ^r3:3
+    (Fn
+      (Let ^c:18 (Call ? Counter:0))
+      Void
+      (Block (Assign (Call . c:18 \n) 2) #void)))
+  (Let
+    ^r4:4
+    (Fn (Let ^c:19 Counter:0) Int (Block (Call . (Call . c:19 \next) \n))))
+  (Let
+    ^r5:5
+    (Fn
+      (Let ^c:20 (Call ? Counter:0))
+      Int
+      (Block (Call . (Call . c:20 \next) \n))))
+  (Let
+    ^r6:6
+    (Fn (Let ^s:21 (Call ? String)) Boolean (Block (Call . s:21 \isEmpty))))
+  (Let
+    ^r7:7
+    (Fn
+      (Let ^ls:22 (Call ? (Call <> List Int)))
+      Int
+      (Block (Call . ls:22 \length))))
+  (Let
+    ^r8:8
+    (Fn
+      (Var ^x:23 (Call ? Int))
+      (Call ? String)
+      (Block
+        (If
+          (Call != x:23 null)
+          (Block (Call (Call . x:23 \toString)))
+          (Block null)))))
+  (Let
+    ^r9:9
+    (Fn
+      (Let ^c:24 (Call ? Counter:0))
+      Int
+      (Block
+        (Var ^d:25 c:24)
+        (If (Call != d:25 null) (Block (Call . d:25 \n)) (Block 0)))))
+  (Let
+    ^r10:10
+    (Fn (Let ^c:26 (Call ? Counter:0)) Int (Block (Orelse (Call . c:26 \n) 0))))
+  (Let
+    ^r11:11
+    (Fn Boolean (Block (Let ^s:27 (Call ? String) "q") (Call . s:27 \isEmpty))))
+  (Call (Call . console \log) (Call (Call . (Call r11:11) \toString)))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call r1:1 (Call new Counter:0 1)) \toString)))
+  (Call (Call . console \log) (Call (Call . (Call r1:1 null) \toString)))
+  #void)
+error 579..582: No member n in Counter?
+error 613..618: No member inc in Counter?
+error 651..654: No member n in Counter?
+error 688..696: No member n in Counter?
+error 726..732: No member next in Counter?
+error 767..776: No member isEmpty in String?
+error 809..818: No member length in List<Int32>?
+error 869..879: No member toString in Int32?
+error 955..958: No member n in Counter?
+error 1002..1005: No member n in Counter?
+log false
+Failed: No member n in Counter?
 
 === a comment mentioning @extension doesn't hide a missing member
 // Only an `@extension("y")` visible where `p.y` is read would.
@@ -2586,10 +3058,10 @@ console.log(p.y.toString());
 error 143..146: No member y in P
 Failed: No member y in P
 
-=== a visible @extension keeps its name from being a missing member
-// Instance extensions aren't supported yet, but `s.isPal()` isn't "No
-// member" where `@extension("isPal")` is visible; `s.isPalindrome()`
-// still is, as is `isOdd` where the extension, local to `f`, isn't.
+=== a visible @extension answers to its name, where it's visible
+// `s.isPal()` calls `stringIsPal(s)` where `@extension("isPal")` is
+// visible; `s.isPalindrome()` is still "No member", as is `isOdd`
+// where the extension, local to `f`, isn't visible.
 @extension("isPal")
 let stringIsPal(s: String): Boolean { s == "aba" }
 let f(s: String): Boolean {
@@ -2610,12 +3082,400 @@ let g(s: String): Boolean { s.isOdd() }
       (Block
         (Let ^stringIsOdd:5 (Fn (Let ^t:6 String) Boolean (Block true)))
         (If
-          (Call (Call . s:4 \isOdd))
-          (If
-            (Call (Call . s:4 \isPal))
-            (Call (Call . s:4 \isPalindrome))
-            #false)
+          (Call stringIsOdd:5 s:4)
+          (If (Call stringIsPal:0 s:4) (Call (Call . s:4 \isPalindrome)) #false)
           #false))))
   (Let ^g:2 (Fn (Let ^s:7 String) Boolean (Block (Call (Call . s:7 \isOdd))))))
-error 404..418: No member isPalindrome in String
-error 451..458: No member isOdd in String
+error 383..397: No member isPalindrome in String
+error 430..437: No member isOdd in String
+
+=== instance extensions' errors, as Kotlin Temper reports them
+// A lone extension that doesn't take the receiver is called anyway, so
+// the argument's error shows; among several, none fitting, or two
+// fitting as well, is "No callee matches" (Kotlin calls the first of
+// equals). An extension isn't a property, nor a static member.
+@extension("half") let intHalf(x: Int): Int { x / 2 }
+@extension("d") let d1(x: Int): String { "1" }
+@extension("d") let d2(x: Int): String { "2" }
+@extension("k") let k1(x: Int): String { "1" }
+@extension("k") let k2(x: String): String { "2" }
+interface I {}
+@extension("f") let iF(i: I): Int { 1 }
+let a = "x".half();
+let b = 1.d();
+let c = true.k();
+let e = 84.half;
+let f = I.f();
+let g = 84.half("extra");
+--- settled
+(Block
+  (Let ^intHalf:0 (Fn (Let ^x:13 Int) Int (Block (Call / x:13 2))))
+  (Let ^d1:1 (Fn (Let ^x:14 Int) String (Block "1")))
+  (Let ^d2:2 (Fn (Let ^x:15 Int) String (Block "2")))
+  (Let ^k1:3 (Fn (Let ^x:16 Int) String (Block "1")))
+  (Let ^k2:4 (Fn (Let ^x:17 String) String (Block "2")))
+  (Interface ^I:5)
+  (Let ^iF:6 (Fn (Let ^i:19 I:5) Int (Block 1)))
+  (Let ^a:7 (Call intHalf:0 "x"))
+  (Let ^b:8 (Call (Call . 1 \d)))
+  (Let ^c:9 (Call (Call . true \k)))
+  (Let ^e:10 (Call . 84 \half))
+  (Let ^f:11 (Call (Call . I:5 \f)))
+  (Let ^g:12 (Call intHalf:0 84 "extra"))
+  #void)
+error 581..584: Expected subtype of Int32, but got String
+error 601..606: No callee matches inputs [Int32] among [fn (Int32): String, fn (Int32): String]
+error 616..624: No callee matches inputs [Boolean] among [fn (Int32): String, fn (String): String]
+error 666..682: Wrong number of arguments.  Expected 1
+error 634..641: No member half in Int32
+error 651..654: No member f in I
+Failed: Can't apply / to these arguments
+
+=== core's non-generic classes as declared types, as Kotlin Temper reports them
+let a: StringBuilder = 5;
+let b: StringBuilder = null;
+let i: StringIndex = "x";
+let d: DenseBitVector = 1;
+let e: StringIndexOption = "x";
+let g: NoStringIndex = String.begin;
+let f(n: Int): String {
+  var sbOrNull: StringBuilder = null;
+  if (n % 2 == 0) {
+    let sb = sbOrNull ?? new StringBuilder();
+    sb.append("${n}");
+    sbOrNull = sb;
+  }
+  let finalSb = sbOrNull;
+  if (finalSb == null) { "" } else { finalSb.toString() }
+}
+// Still fine: a subtype, a nullable, and narrowing.
+let s = "ab";
+let o: StringIndexOption = s.next(String.begin);
+let n: StringIndexOption? = null;
+let j: StringIndex = if (o is StringIndex) { o } else { String.begin };
+let k: AnyValue = new StringBuilder();
+console.log(f(4));
+--- settled
+(Block
+  (Let ^a:0 StringBuilder 5)
+  (Let ^b:1 StringBuilder null)
+  (Let ^i:2 StringIndex "x")
+  (Let ^d:3 DenseBitVector 1)
+  (Let ^e:4 StringIndexOption "x")
+  (Let ^g:5 NoStringIndex (Call . String \begin))
+  (Let
+    ^f:6
+    (Fn
+      (Let ^n:12 Int)
+      String
+      (Block
+        (Var ^sbOrNull:13 StringBuilder null)
+        (If
+          (Call == (Call % n:12 2) 0)
+          (Block
+            (Let
+              ^sb:15
+              (Block
+                (If
+                  (Call == sbOrNull:13 #null)
+                  (Call new StringBuilder)
+                  sbOrNull:13)))
+            (Call (Call . sb:15 \append) (Call cat n:12))
+            (Assign sbOrNull:13 sb:15)
+            #void)
+          (Block))
+        (Let ^finalSb:14 sbOrNull:13)
+        (If
+          (Call == finalSb:14 null)
+          (Block "")
+          (Block (Call (Call . finalSb:14 \toString)))))))
+  (Let ^s:7 "ab")
+  (Let ^o:8 StringIndexOption (Call (Call . s:7 \next) (Call . String \begin)))
+  (Let ^n:9 (Call ? StringIndexOption) null)
+  (Let
+    ^j:10
+    StringIndex
+    (If (Call is o:8 StringIndex) (Block o:8) (Block (Call . String \begin))))
+  (Let ^k:11 AnyValue (Call new StringBuilder))
+  (Call (Call . console \log) (Call f:6 4))
+  #void)
+error 23..24: Cannot assign to StringBuilder from Int32
+error 49..53: Expected subtype of StringBuilder, but got StringBuilder?
+error 76..79: Cannot assign to StringIndex from String
+error 105..106: Cannot assign to DenseBitVector from Int32
+error 135..138: Cannot assign to StringIndexOption from String
+error 163..175: Cannot assign to NoStringIndex from StringIndex
+error 233..237: Expected subtype of StringBuilder, but got StringBuilder?
+log 4
+
+=== calling a function value that may be null, as Kotlin Temper reports it
+export let hi(i: Int, act: (fn (Int): Void)?): Void {
+  if (i == 0 || act != null) {
+    // `||` means act could be null here.
+    act(i);
+  }
+  if (act != null) {
+    act(i);
+  }
+}
+@fun interface Act(i: Int): Void;
+let ho(act: Act?): Void {
+  act(1);
+  act?.apply(1);
+}
+hi(1, fn (i: Int): Void { console.log("hi ${i}"); });
+hi(0, null);
+--- settled
+(Block
+  (Let
+    ^hi:0
+    (Fn
+      (Let ^i:3 Int)
+      (Let ^act:4 (Call ? (Call FnType Int Void)))
+      Void
+      (Block
+        (If
+          (If (Call == i:3 0) #true (Call != act:4 null))
+          (Block (Call act:4 i:3) #void)
+          (Block))
+        (If (Call != act:4 null) (Block (Call act:4 i:3) #void) (Block)))))
+  (Interface ^Act:1 (Method ^apply:6 (Signature (Let ^i:7 Int) Void)))
+  (Let
+    ^ho:2
+    (Fn
+      (Let ^act:8 (Call ? Act:1))
+      Void
+      (Block
+        (Call act:8 1)
+        (Block (If (Call == act:8 #null) #null (Call (Call . act:8 \apply) 1)))
+        #void)))
+  (Call
+    hi:0
+    1
+    (Fn
+      (Let ^i:9 Int)
+      Void
+      (Block (Call (Call . console \log) (Call cat "hi " i:9)) #void)))
+  (Call hi:0 0 null)
+  #void)
+error 131..134: Expected subtype of fn (Int32): Void, but got (fn (Int32): Void)?
+error 244..247: Expected subtype of Act, but got Act?
+log hi 1
+log hi 1
+Failed: Null is not a function
+
+=== Never<T> stands for its T
+// Valid: a Never<T> where its T fits, as a function, a generic one, a
+// method, a nullable Never<String?>?, which admits null, and std's bail
+// pattern, a Never<Void> that bubbles, in a statement. Errors: a
+// Never<T> isn't a subtype of every type, and a Never<Void> value is
+// shown as the Void it stands for, as Kotlin Temper shows it; nor is a
+// value that completes a Never<T>.
+let stopInt(): Never<Int> { panic() }
+let stop(): Never<Void> { panic() }
+let fail<T>(x: T): Never<T> { panic() }
+let noName(): Never<String?>? { null }
+let bail(): Never<Void> throws Bubble { bubble() }
+let stillStops(): Never<Void> { stop() }
+let wider(): Never<AnyValue> { stopInt() }
+class C {
+  public get(b: Boolean): Int { if (b) { 1 } else { stopC() } }
+  private stopC(): Never<Int> { panic() }
+}
+let f(b: Boolean): Int { if (b) { 1 } else { stopInt() } }
+let k(b: Boolean): String { if (b) { "k" } else { fail("z") } }
+let m(b: Boolean): String? { if (b) { "m" } else { noName() } }
+let n(b: Boolean): Int throws Bubble { if (b) { bail() } 2 }
+let l(b: Boolean): List<Int> { if (b) { [1] } else { [stopInt(), 2] } }
+let g(b: Boolean): String { if (b) { "x" } else { stopInt() } }
+let h(b: Boolean): String { if (b) { "x" } else { stop() } }
+let i(): String? { stopInt() }
+let j(): Void { let x = stop(); }
+let completes(): Never<Int> { 5 }
+let otherNever(): Never<Int> { fail("s") }
+console.log("${f(true)} ${k(true)} ${m(false) ?? "null"} ${new C().get(true)} ${n(true) orelse -1} ${l(true)[0]}");
+--- settled
+(Block
+  (Let ^stopInt:0 (Fn (Call <> Never Int) (Block (Call panic))))
+  (Let ^stop:1 (Fn (Call <> Never Void) (Block (Call panic))))
+  (Let
+    ^fail:2
+    (Fn
+      (TypeParam ^T:19)
+      (Let ^x:20 T:19)
+      (Call <> Never T:19)
+      (Block (Call panic))))
+  (Let ^noName:3 (Fn (Call ? (Call <> Never (Call ? String))) (Block null)))
+  (Let ^bail:4 (Fn (Call throws (Call <> Never Void) Bubble) (Block (Fail))))
+  (Let ^stillStops:5 (Fn (Call <> Never Void) (Block (Call stop:1))))
+  (Let ^wider:6 (Fn (Call <> Never AnyValue) (Block (Call stopInt:0))))
+  (Class
+    ^C:7
+    (Method
+      ^get:22
+      (Fn
+        (Let ^b:24 Boolean)
+        Int
+        (Block (If b:24 (Block 1) (Block (Call stopC:23))))))
+    (Method private ^stopC:23 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Let
+    ^f:8
+    (Fn
+      (Let ^b:25 Boolean)
+      Int
+      (Block (If b:25 (Block 1) (Block (Call stopInt:0))))))
+  (Let
+    ^k:9
+    (Fn
+      (Let ^b:26 Boolean)
+      String
+      (Block (If b:26 (Block "k") (Block (Call fail:2 "z"))))))
+  (Let
+    ^m:10
+    (Fn
+      (Let ^b:27 Boolean)
+      (Call ? String)
+      (Block (If b:27 (Block "m") (Block (Call noName:3))))))
+  (Let
+    ^n:11
+    (Fn
+      (Let ^b:28 Boolean)
+      (Call throws Int Bubble)
+      (Block (If b:28 (Block (Call bail:4)) (Block)) 2)))
+  (Let
+    ^l:12
+    (Fn
+      (Let ^b:29 Boolean)
+      (Call <> List Int)
+      (Block
+        (If b:29 (Block (Call list 1)) (Block (Call list (Call stopInt:0) 2))))))
+  (Let
+    ^g:13
+    (Fn
+      (Let ^b:30 Boolean)
+      String
+      (Block (If b:30 (Block "x") (Block (Call stopInt:0))))))
+  (Let
+    ^h:14
+    (Fn
+      (Let ^b:31 Boolean)
+      String
+      (Block (If b:31 (Block "x") (Block (Call stop:1))))))
+  (Let ^i:15 (Fn (Call ? String) (Block (Call stopInt:0))))
+  (Let ^j:16 (Fn Void (Block (Let ^x:32 (Call stop:1)) #void)))
+  (Let ^completes:17 (Fn (Call <> Never Int) (Block 5)))
+  (Let ^otherNever:18 (Fn (Call <> Never Int) (Block (Call fail:2 "s"))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call f:8 true)
+      " "
+      (Call k:9 true)
+      " "
+      (Block
+        (Let ^subject#33 (Call m:10 false))
+        (If (Call == subject#33 #null) "null" subject#33))
+      " "
+      (Call (Call . (Call new C:7) \get) true)
+      " "
+      (Orelse (Call n:11 true) (Call - 1))
+      " "
+      (Call [] (Call l:12 true) 0)))
+  #void)
+error 1164..1173: Cannot assign to String from Never<Int32>
+error 1228..1234: Cannot assign to String from Void
+error 1258..1267: Cannot assign to String? from Never<Int32>
+error 1294..1300: Void expressions cannot be used as values
+error 1334..1335: Cannot assign to Never<Int32> from Int32
+error 1374..1377: Actual arguments do not match signature: <T extends AnyValue>(T) -> Never<T> expected [Int32], but got [String]
+log 1 k null 1 -1 1
+
+=== Never<T> results in overrides, and Never alone
+// As Kotlin Temper's, an override declares the result it overrides
+// exactly, Never<T> for Never<T>, also as a generic supertype sees it,
+// but neither a Never<Int> for an Int nor the reverse, whose signatures
+// would differ on backends without covariant results. Never alone,
+// which Kotlin rejects where used, is an error, its type unknown.
+interface I {
+  value(): Int;
+  stop(): Never<Int>;
+}
+class Fits extends I {
+  public value(): Int { 1 }
+  public stop(): Never<Int> { panic() }
+}
+class Stops extends I {
+  public value(): Never<Int> { panic() }
+  public stop(): Never<Int> { panic() }
+}
+class Returns extends I {
+  public value(): Int { 1 }
+  public stop(): Int { 2 }
+}
+interface G<T> {
+  fail(): Never<T>;
+}
+class GInt extends G<Int> {
+  public fail(): Never<Int> { panic() }
+}
+class GAny<T> extends G<T> {
+  public fail(): Never<T> { panic() }
+}
+class GPlain<T> extends G<T> {
+  public fail(): T { panic() }
+}
+let bare(): Never { panic() }
+let bareParam(x: Never): Int { 1 }
+console.log("${new Fits().value()}");
+--- settled
+(Block
+  (Interface
+    ^I:0
+    (Method ^value:11 (Signature Int))
+    (Method ^stop:12 (Signature (Call <> Never Int))))
+  (Class
+    ^Fits:1
+    I:0
+    (Method ^value:14 (Fn Int (Block 1)))
+    (Method ^stop:15 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^Stops:2
+    I:0
+    (Method ^value:17 (Fn (Call <> Never Int) (Block (Call panic))))
+    (Method ^stop:18 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^Returns:3
+    I:0
+    (Method ^value:20 (Fn Int (Block 1)))
+    (Method ^stop:21 (Fn Int (Block 2))))
+  (Interface
+    ^G:4
+    (TypeParam ^T:22)
+    (Method ^fail:24 (Signature (Call <> Never T:22))))
+  (Class
+    ^GInt:5
+    (Call <> G:4 Int)
+    (Method ^fail:26 (Fn (Call <> Never Int) (Block (Call panic)))))
+  (Class
+    ^GAny:6
+    (TypeParam ^T:27)
+    (Call <> G:4 T:27)
+    (Method ^fail:29 (Fn (Call <> Never T:27) (Block (Call panic)))))
+  (Class
+    ^GPlain:7
+    (TypeParam ^T:30)
+    (Call <> G:4 T:30)
+    (Method ^fail:32 (Fn T:30 (Block (Call panic)))))
+  (Let ^bare:8 (Fn Never (Block (Call panic))))
+  (Let ^bareParam:9 (Fn (Let ^x:33 Never) Int (Block 1)))
+  (Call
+    (Call . console \log)
+    (Call cat (Call (Call . (Call new Fits:1) \value))))
+  #void)
+error 528..559: Type Stops has method value with signature value(): Never<Int32>, but it should be value(): Int32 to correctly override from I
+error 665..682: Type Returns has method stop with signature stop(): Int32, but it should be stop(): Never<Int32> to correctly override from I
+error 903..924: Type GPlain has method fail with signature fail(): T, but it should be fail(): Never<T> to correctly override from G
+error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
+error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
+log 1

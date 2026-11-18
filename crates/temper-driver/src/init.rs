@@ -1,4 +1,4 @@
-//! `tempest init [-o DIR]`: a new project's skeleton, as Kotlin Temper's
+//! `temper init [-o DIR]`: a new project's skeleton, as Kotlin Temper's
 //! `temper init` writes it, file for file:
 //!
 //! - `DIR/src/config.temper.md`, which names the library, and

@@ -1,0 +1,205 @@
+# `@json`'s generated adapters, with std loaded: input, then
+# diagnostics and what running it logs. Kotlin Temper's stage tests
+# json-adapter-works, json-adapter-encodes-sealed-types,
+# json-adapter-decodes-sealed-types,
+# json-interop-forwards-type-info-for-nullable-props, nullable-json-field
+# and define/json-interop-mixed-in, then the doc examples' strategies,
+# and errors.
+=== an empty class's adapter, without importing std/json
+@json class C {}
+let adapter = C.jsonAdapter();
+console.log("made");
+--- settled
+log made
+
+=== sealed types encode through their subtypes
+let { JsonTextProducer, listJsonAdapter } = import("std/json");
+@json sealed interface Animal {}
+@json class Cat(public meowCount: Int) extends Animal {}
+@json class Dog(public hydrantsSniffed: Int) extends Animal {}
+let ls: List<Animal> = [new Cat(11), new Dog(111)];
+let p = new JsonTextProducer();
+List.jsonAdapter(Animal.jsonAdapter()).encodeToJson(ls, p);
+console.log(p.toJsonString() orelse "bad");
+--- settled
+log [{"meowCount":11},{"hydrantsSniffed":111}]
+
+=== sealed types decode by their properties
+let { listJsonAdapter, parseJson, NullInterchangeContext } = import("std/json");
+@json sealed interface Animal {}
+@json class Cat(public meowCount: Int) extends Animal {}
+@json class Dog(public hydrantsSniffed: Int) extends Animal {}
+let t = parseJson("[{ \"meowCount\": 137 }, { \"hydrantsSniffed\": 1337 }]") orelse panic();
+let animals = List.jsonAdapter(Animal.jsonAdapter()).decodeFromJson(t, NullInterchangeContext.instance) orelse panic();
+for (let a of animals) {
+  when (a) {
+    is Cat -> console.log("cat ${a.meowCount}");
+    is Dog -> console.log("dog ${a.hydrantsSniffed}");
+  }
+}
+--- settled
+log cat 137
+log dog 1337
+
+=== nullable fields decode null and values
+let { NullInterchangeContext, parseJson, JsonTextProducer } = import("std/json");
+@json class C(public i: Int?) {}
+let decode(s: String): C throws Bubble {
+  C.jsonAdapter().decodeFromJson(parseJson(s), NullInterchangeContext.instance)
+}
+let encode(c: C): String {
+  let p = new JsonTextProducer();
+  C.jsonAdapter().encodeToJson(c, p);
+  p.toJsonString() orelse "bad"
+}
+console.log(encode(decode("{\"i\": null}") orelse panic()));
+console.log(encode(decode("{\"i\": 5}") orelse panic()));
+console.log(do { decode("{}"); "decoded" } orelse "missing i bubbles");
+--- settled
+log {"i":null}
+log {"i":5}
+log missing i bubbles
+
+=== a list of nullable values
+let { NullInterchangeContext, OrNullJsonAdapter, booleanJsonAdapter, listJsonAdapter, parseJson } = import("std/json");
+let a = List.jsonAdapter(new OrNullJsonAdapter(Boolean.jsonAdapter()));
+let ls = a.decodeFromJson(parseJson("[null, false, true]") orelse panic(), NullInterchangeContext.instance) orelse panic();
+console.log(ls.join(" ") { (b): String => if (b == null) { "null" } else { b.toString() } });
+--- settled
+log null false true
+
+=== a class with other members gets encodeToJson, decodeFromJson and jsonAdapter
+let { JsonTextProducer, parseJson, NullInterchangeContext } = import("std/json");
+@json class Point(
+  public let x: Int,
+  public let y: Int,
+) {
+  public toString(): String { "(${x}, ${y})" }
+}
+let p = new JsonTextProducer();
+new Point(1, 2).encodeToJson(p);
+console.log(p.toJsonString() orelse "bad");
+let back = Point.decodeFromJson(parseJson("{\"y\": 5, \"x\": 4}") orelse panic(), NullInterchangeContext.instance) orelse panic();
+console.log(back.toString());
+--- settled
+log {"x":1,"y":2}
+log (4, 5)
+
+=== a class that encodes itself gets only jsonAdapter
+let { InterchangeContext, JsonNumeric, JsonProducer, JsonSyntaxTree, JsonTextProducer } = import("std/json");
+@json class IntWrapper(public i: Int) {
+  public encodeToJson(p: JsonProducer): Void { p.int32Value(i); }
+  public static decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): IntWrapper throws Bubble {
+    new IntWrapper((t as JsonNumeric).asInt32())
+  }
+}
+let p = new JsonTextProducer();
+IntWrapper.jsonAdapter().encodeToJson(new IntWrapper(123), p);
+console.log(p.toJsonString() orelse "bad");
+--- settled
+log 123
+
+=== jsonName renames a property, jsonExtra adds known ones
+let { JsonTextProducer, NullInterchangeContext, parseJson } = import("std/json");
+@json sealed interface Req {}
+@json @jsonExtra("v", 2.0) class ReqV2(@jsonName("the-name") public name: String) extends Req {}
+@json @jsonExtra("v", 1.0) @jsonExtra("old", true) class ReqV1(public name: String) extends Req {}
+@json @jsonExtra("v", null) class ReqV0(public name: String) extends Req {}
+let encode(r: Req): String {
+  let p = new JsonTextProducer();
+  Req.jsonAdapter().encodeToJson(r, p);
+  p.toJsonString() orelse "bad"
+}
+let kind(s: String): String {
+  let r = Req.jsonAdapter().decodeFromJson(parseJson(s) orelse panic(), NullInterchangeContext.instance) orelse null;
+  when (r) {
+    is ReqV2 -> "v2 ${r.name}";
+    is ReqV1 -> "v1 ${r.name}";
+    is ReqV0 -> "v0 ${r.name}";
+    else -> "bubbled";
+  }
+}
+console.log(encode(new ReqV2("a")));
+console.log(encode(new ReqV1("b")));
+console.log(encode(new ReqV0("c")));
+console.log(kind("{\"v\": 2.0, \"the-name\": \"a\"}"));
+console.log(kind("{\"v\": 1.0, \"name\": \"b\", \"old\": true}"));
+console.log(kind("{\"v\": null, \"name\": \"c\"}"));
+console.log(kind("{\"v\": 3.0, \"name\": \"d\"}"));
+--- settled
+log {"the-name":"a","v":2.0}
+log {"name":"b","v":1.0,"old":true}
+log {"name":"c","v":null}
+log v2 a
+log v1 b
+log v0 c
+log bubbled
+
+=== sealed interfaces nest, and the decision tree looks through them
+let { JsonTextProducer, NullInterchangeContext, parseJson, listJsonAdapter } = import("std/json");
+@json sealed interface S {}
+@json class A(public x: Int, public y: Int) extends S {}
+sealed interface T extends S {}
+@json class B(public x: Int, public z: Int) extends T {}
+@json class C(public y: Int, public z: Int) extends T {}
+let ls = List.jsonAdapter(S.jsonAdapter()).decodeFromJson(
+  parseJson("[{\"x\": 1, \"y\": 2}, {\"x\": 3, \"z\": 4}, {\"y\": 5, \"z\": 6}]") orelse panic(),
+  NullInterchangeContext.instance,
+) orelse panic();
+let p = new JsonTextProducer();
+List.jsonAdapter(S.jsonAdapter()).encodeToJson(ls, p);
+console.log(p.toJsonString() orelse "bad");
+--- settled
+log [{"x":1,"y":2},{"x":3,"z":4},{"y":5,"z":6}]
+
+=== generated names don't clash with the class's or the module's
+let { JsonTextProducer, NullInterchangeContext, parseJson } = import("std/json");
+class JsonObject {}
+let JsonProducer = 1;
+@json class C(public t: Int, public ic: String, public obj: Boolean, public tJson: Int, private p: Int) {
+  public get sum(): Int { t + tJson + p }
+}
+let p = new JsonTextProducer();
+C.jsonAdapter().encodeToJson(new C(1, "a", true, 2, 3), p);
+let text = p.toJsonString() orelse "bad";
+console.log(text);
+let c = C.jsonAdapter().decodeFromJson(parseJson(text) orelse panic(), NullInterchangeContext.instance) orelse panic();
+console.log("${c.sum} ${c.ic} ${c.obj}");
+--- settled
+log {"t":1,"ic":"a","obj":true,"tJson":2,"p":3}
+log 6 a true
+
+=== std's connected Date has no adapter yet
+let { Date } = import("std/temporal");
+Date.jsonAdapter();
+--- settled
+error 39..55: No member jsonAdapter in Date
+Failed: No member jsonAdapter in Date
+
+=== what @json can't derive
+@json interface I {}
+@json class G<T>(public x: T) {}
+@json class D(public x = 1) {}
+@json class M(public m: Map<String, Int>) {}
+@json class E(public x: Int) {
+  public encodeToJson(p: JsonProducer): Void {}
+}
+let { JsonProducer } = import("std/json");
+@json sealed interface S {}
+@json class A(public x: Int) extends S {}
+@json class B(public x: Int) extends S {}
+class N(public y: Int) extends S {}
+@json @jsonExtra("k") class X {}
+@json class Q(@jsonName(1) public q: Int) {}
+--- settled
+error 16..17: Cannot auto-derive JSON adapter for un-sealed interface I
+error 33..34: Temper doesn't yet derive JSON adapters for generic type G
+error 66..67: Missing type info for JSON adapter for property D.x
+error 97..98: No JsonAdapter for property m with type Map<String, Int>
+error 142..143: E declared encodeToJson but has no corresponding decodeFromJson
+error 409..423: @jsonExtra takes a property name and a literal value
+error 450..461: @jsonName takes a string
+error 277..278: No @json decoration on [N] which is a sub-type of @json type S
+error 277..278: Ambiguous @json: decoder for sealed type S cannot distinguish [A, B]
+error 372..398: Type N must implement encodeToJson from S.  Maybe add `public encodeToJson(other: JsonProducer): Boolean`
+error 130..130: No member decodeFromJson in E

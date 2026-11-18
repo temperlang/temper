@@ -13,7 +13,14 @@
     <dependency>
       <groupId>dev.temperlang</groupId>
       <artifactId>temper-core</artifactId>
-      <version>0.6.0</version>
+      <version>0.7.0-alpha.0.0</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>dev.temperlang</groupId>
+      <artifactId>temper-std</artifactId>
+      <version>0.7.0-alpha.0.0</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -168,6 +175,66 @@
             </configuration>
           </execution>
           <execution>
+            <id>modules.state.StateMain</id>
+            <goals>
+              <!-- Run in the Maven VM via `mvn compile exec:java@modules.state.StateMain` -->
+              <goal>java</goal>
+              <!-- Run in a forked JVM via `mvn compile exec:exec@modules.state.StateMain` -->
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <!-- Used by exec:java -->
+              <mainClass>modules.state.StateMain</mainClass>
+              <!-- Used by exec:exec -->
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>modules.state.StateMain</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>modules.parts.regex.RegexMain</id>
+            <goals>
+              <!-- Run in the Maven VM via `mvn compile exec:java@modules.parts.regex.RegexMain` -->
+              <goal>java</goal>
+              <!-- Run in a forked JVM via `mvn compile exec:exec@modules.parts.regex.RegexMain` -->
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <!-- Used by exec:java -->
+              <mainClass>modules.parts.regex.RegexMain</mainClass>
+              <!-- Used by exec:exec -->
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>modules.parts.regex.RegexMain</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>modules.machine.MachineMain</id>
+            <goals>
+              <!-- Run in the Maven VM via `mvn compile exec:java@modules.machine.MachineMain` -->
+              <goal>java</goal>
+              <!-- Run in a forked JVM via `mvn compile exec:exec@modules.machine.MachineMain` -->
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <!-- Used by exec:java -->
+              <mainClass>modules.machine.MachineMain</mainClass>
+              <!-- Used by exec:exec -->
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>modules.machine.MachineMain</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>modules.ModulesMain</id>
             <goals>
               <!-- Run in the Maven VM via `mvn compile exec:java@modules.ModulesMain` -->
@@ -184,6 +251,26 @@
                 <argument>-classpath</argument>
                 <argument>${project.build.outputDirectory}</argument>
                 <argument>modules.ModulesMain</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>modules.client.ClientMain</id>
+            <goals>
+              <!-- Run in the Maven VM via `mvn compile exec:java@modules.client.ClientMain` -->
+              <goal>java</goal>
+              <!-- Run in a forked JVM via `mvn compile exec:exec@modules.client.ClientMain` -->
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <!-- Used by exec:java -->
+              <mainClass>modules.client.ClientMain</mainClass>
+              <!-- Used by exec:exec -->
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <argument>${project.build.outputDirectory}</argument>
+                <argument>modules.client.ClientMain</argument>
               </arguments>
             </configuration>
           </execution>

@@ -39,8 +39,8 @@ class Change(_Generic[_T]):
     _right_index: int
     _items: _Sequence[_T]
 
-    def __init__(self, /, type_: str, left_index: int, right_index: int, items: _Sequence[_T]) -> None:
-        self._type_ = type_
+    def __init__(self, /, type: str, left_index: int, right_index: int, items: _Sequence[_T]) -> None:
+        self._type_ = type
         self._left_index = left_index
         self._right_index = right_index
         self._items = items

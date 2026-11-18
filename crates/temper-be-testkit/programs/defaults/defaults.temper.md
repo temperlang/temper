@@ -5,7 +5,7 @@ default that reads an earlier parameter, a default that runs only when
 it's needed, a nullable parameter with a default, defaults on methods,
 static methods, and constructors (a class's header and its own
 constructor), and calls of another module's function and class. The log
-is what tempest's interpreter gives.
+is what the interpreter gives.
 
     let { wrap, Pad } = import("./helpers");
 

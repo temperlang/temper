@@ -1,20 +1,20 @@
 tmpl 1 model 1 library `write-back-through-field` 0.0.0
 
-uses `temper-core`#21 0.1.0 {
-  interface Console#22 {
-    connected method log#23(message: String): Void;
+uses `temper-core`#19 0.0.0-alpha.0.0 {
+  interface Console#20 {
+    connected method log#21(message: String): Void;
   }
-  class Int32#25 {
-    connected method toString#26(radix?: Int32): String;
+  class Int32#23 {
+    connected method toString#24(radix?: Int32): String;
   }
-  class Boolean#27 {
-    connected method toString#28(): String;
+  class Boolean#25 {
+    connected method toString#26(): String;
   }
-  connected fn getConsole#29(name?: String): Console#22;
+  connected fn getConsole#27(name?: String): Console#20;
 }
 
 module `write-back-through-field`#0 {
-  let ~console#24: Console#22;
+  let ~console#22: Console#20;
 
   class Ping#1 {
     let peer#3: Pong#2;
@@ -48,27 +48,25 @@ module `write-back-through-field`#0 {
     constructor constructor#13(): Pong#2 {}
     method pong#11(a#16: Ping#1): Void {
       {
-        let o#17: Ping#1 = a#16;
-        o#17.n#4 = %Int32.add(o#17.n#4, 1);
+        a#16.n#4 = %Int32.add(a#16.n#4, 1);
       }
     }
-    method bump#12(a#18: Ping#1, by#19: Int32): Int32 {
+    method bump#12(a#17: Ping#1, by#18: Int32): Int32 {
       {
-        let o#20: Ping#1 = a#18;
-        o#20.n#4 = %Int32.add(o#20.n#4, by#19);
+        a#17.n#4 = %Int32.add(a#17.n#4, by#18);
       }
-      return a#18.n#4;
+      return a#17.n#4;
     }
   }
 
   let p#14: Ping#1;
 
   init {
-    init ~console#24 = getConsole#29(omitted);
+    init ~console#22 = getConsole#27(omitted);
     init p#14 = new constructor#10(new constructor#13());
-    ~console#24.log#23(%String.cat("ping=", p#14.ping#6().toString#26(omitted)));
-    ~console#24.log#23(%String.cat("pass=", p#14.pass#7().toString#26(omitted)));
-    ~console#24.log#23(%String.cat(%String.cat(%String.cat("record=", p#14.record#8().toString#28()), " most="), p#14.most#5.toString#26(omitted)));
-    ~console#24.log#23(%String.cat(%String.cat(%String.cat("around=", p#14.around#9().toString#26(omitted)), " n="), p#14.n#4.toString#26(omitted)));
+    ~console#22.log#21(%String.cat("ping=", p#14.ping#6().toString#24(omitted)));
+    ~console#22.log#21(%String.cat("pass=", p#14.pass#7().toString#24(omitted)));
+    ~console#22.log#21(%String.cat(%String.cat(%String.cat("record=", p#14.record#8().toString#26()), " most="), p#14.most#5.toString#24(omitted)));
+    ~console#22.log#21(%String.cat(%String.cat(%String.cat("around=", p#14.around#9().toString#24(omitted)), " n="), p#14.n#4.toString#24(omitted)));
   }
 }

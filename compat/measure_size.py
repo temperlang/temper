@@ -49,6 +49,9 @@ import size_speed_charts
 BINARIES = ["lex-tokens", "parse-tree", "ast-tree", "run-temper", "tempest"]
 # Binaries built with temper-frontend's default features, which include `net`.
 NET = {"run-temper", "tempest"}
+# The `tempest` crate's binary is `temper`; its rows keep the crate's
+# name, as the earlier rows have it.
+FILES = {"tempest": "temper"}
 CSV = ROOT / "notes/size-and-speed.csv"
 BACKENDS = ["py", "rust", "js", "java", "csharp", "cpp", "lua"]
 WASM = ROOT / "target/wasm32-unknown-unknown/small-wasm/temper_wasm.wasm"
@@ -73,8 +76,8 @@ def main() -> int:
         check=True,
     )
     for name in BINARIES:
-        small = (ROOT / "target/small" / name).stat().st_size
-        release = (ROOT / "target/release" / name).stat().st_size
+        small = (ROOT / "target/small" / FILES.get(name, name)).stat().st_size
+        release = (ROOT / "target/release" / FILES.get(name, name)).stat().st_size
         print(f"{name}: {kib(small)} small, {kib(release)} release")
         features = "features=net" if name in NET else ""
         rows += [(f"{name}-small", str(small), "bytes", features), (f"{name}-release", str(release), "bytes", features)]
@@ -134,7 +137,7 @@ def small_sizes(features: list[str]) -> tuple[int, int, int]:
         cwd=ROOT,
         check=True,
     )
-    native = (ROOT / "target/small/tempest").stat().st_size
+    native = (ROOT / "target/small/temper").stat().st_size
     command = ["cargo", "build", "-q", "--profile", "small-wasm", "--target", "wasm32-unknown-unknown",
                "-p", "temper-wasm", "--no-default-features"]
     if features:

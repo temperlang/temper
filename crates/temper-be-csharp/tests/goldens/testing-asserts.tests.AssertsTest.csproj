@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../src/Asserts.csproj"/>
+    <ProjectReference Include="../../std/src/TemperLang.Std.csproj"/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="JunitXml.TestLogger" Version="3.0.134"/>

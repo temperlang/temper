@@ -3,5 +3,6 @@
   {"name": "chromarite", "repository": "temperlang/chromarite", "ref": "main", "backends": "interp cpp csharp java js lua py rust"},
   {"name": "ordable", "repository": "temperlang/ordable", "ref": "main", "backends": "interp cpp csharp java js lua py rust"},
   {"name": "kelpto", "repository": "temperlang/kelpto", "ref": "main", "backends": "interp cpp csharp java js lua py rust"},
-  {"name": "wherewith", "repository": "temperlang/wherewith", "ref": "main", "backends": "interp cpp csharp java js lua py rust"}
+  {"name": "wherewith", "repository": "temperlang/wherewith", "ref": "main", "backends": "interp cpp csharp java js lua py rust"},
+  {"name": "argmas", "repository": "temperlang/argmas", "ref": "main", "backends": "interp cpp csharp java js lua py rust"}
 ]

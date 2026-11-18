@@ -1,26 +1,63 @@
 tmpl 1 model 1 library renamed 0.0.0
 
+uses `temper-core`#24 0.0.0-alpha.0.0 {
+  class Int32#25 {
+    connected method toString#26(radix?: Int32): String;
+  }
+}
+
 module renamed#0 {
-  export fn lambda#6(n#8: Int32): Int32 {
-    return %Int32.add(n#8, 1);
+  export fn lambda#17(n#19: Int32): Int32 {
+    return %Int32.add(n#19, 1);
   }
 
-  export let native#7: Int32;
+  export let native#18: Int32;
 
   export class Checked#1 {
-    let end#2: Int32;
-    constructor constructor#5(end#9: Int32): Checked#1 {
-      this.end#2 = end#9;
+    let end#3: Int32;
+    constructor constructor#6(end#20: Int32): Checked#1 {
+      this.end#3 = end#20;
     }
-    method delete#3(): Int32 {
-      return %Int32.mul(this.end#2, 2);
+    method delete#4(): Int32 {
+      return %Int32.mul(this.end#3, 2);
     }
-    get local#4(): Int32 {
-      return %Int32.add(this.end#2, native#7);
+    get local#5(): Int32 {
+      return %Int32.add(this.end#3, native#18);
+    }
+  }
+
+  export class Builtins#2 {
+    let hash#7: Int32;
+    constructor constructor#16(hash#27: Int32): Builtins#2 {
+      this.hash#7 = hash#27;
+    }
+    method get#8(i#21: Int32): Int32 {
+      return %Int32.add(this.hash#7, i#21);
+    }
+    method set#9(i#22: Int32): Int32 {
+      return %Int32.mul(i#22, 2);
+    }
+    method map#10(i#23: Int32): Int32 {
+      return %Int32.add(i#23, 1);
+    }
+    method format#11(): String {
+      return %String.cat("#", this.hash#7.toString#26(omitted));
+    }
+    get int#12(): Int32 {
+      return %Int32.mul(this.hash#7, 10);
+    }
+    method later#13(): Int32 {
+      return %Int32.add(this.int#12(), 1);
+    }
+    method init#14(): Int32 {
+      return %Int32.add(this.hash#7, 3);
+    }
+    method print#15(): String {
+      return %String.cat("print ", this.init#14().toString#26(omitted));
     }
   }
 
   init {
-    init native#7 = 2;
+    init native#18 = 2;
   }
 }

@@ -11,10 +11,10 @@ local Node = temper.type("nullables.Node")
 
 ---@param this nullables.Node
 ---@param value integer
----@param next nullables.Node|temper.Null
-function Node.constructor(this, value, next)
+---@param next_ nullables.Node|temper.Null
+function Node.constructor(this, value, next_)
   this.value = value
-  this.next = next
+  this.next = next_
 end
 
 ---@param this nullables.Node
@@ -68,6 +68,20 @@ local function parse(s)
   local t
   if not temper.pcall(function()
     t = temper.string_toint32(s)
+  end) then
+    t = -1
+  end
+  return t
+end
+
+---@param s string
+---@param d integer
+---@return integer
+local function halved(s, d)
+  ---@type integer
+  local t
+  if not temper.pcall(function()
+    t = temper.int32_div(temper.string_toint32(s), d)
   end) then
     t = -1
   end
@@ -144,6 +158,7 @@ print(temper.is_null(subject2) and "nothing" or (subject2 --[[@as string]]))
 print(tostring(same(temper.null, temper.null)) .. " " .. tostring(same("a", temper.null)) .. " " .. tostring(same(temper.null, "a")) .. " " .. tostring(same("a", "a")))
 print(tostring(sameInt(1, 2)) .. " " .. tostring(sameInt(3, 3)) .. " " .. tostring(sameInt(temper.null, 3)))
 print(parse("12") .. " " .. parse("x"))
+print(halved("12", 2) .. " " .. halved("x", 2) .. " " .. halved("12", 0))
 print(tostring(checked(7)))
 print(orZero(temper.null) .. " " .. orZero(5))
 varying()

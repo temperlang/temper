@@ -1,8 +1,8 @@
-//! Where `tempest repl` keeps its history, worked out by hand, as each
-//! platform keeps an application's data: `$XDG_DATA_HOME/tempest`, or
-//! `~/.local/share/tempest`, on Linux and other Unix systems;
-//! `~/Library/Application Support/tempest` on macOS; and
-//! `%APPDATA%\tempest` on Windows. The file is `repl-history.txt`, in
+//! Where `temper repl` keeps its history, worked out by hand, as each
+//! platform keeps an application's data: `$XDG_DATA_HOME/temper`, or
+//! `~/.local/share/temper`, on Linux and other Unix systems;
+//! `~/Library/Application Support/temper` on macOS; and
+//! `%APPDATA%\temper` on Windows. The file is `repl-history.txt`, in
 //! rustyline's format (`#V2`, then an entry a line, its line breaks and
 //! backslashes escaped).
 //!
@@ -53,7 +53,7 @@ pub fn path(env: &dyn Fn(&str) -> Option<String>) -> Option<PathBuf> {
             None => set("HOME")?.join(".local").join("share"),
         }
     };
-    Some(dir.join("tempest").join(FILE))
+    Some(dir.join("temper").join(FILE))
 }
 
 /// The history file, open, and checked ([module docs](self)).
@@ -305,21 +305,21 @@ mod tests {
         assert_eq!(path(&none), None);
         if cfg!(windows) {
             let found = path(&env(&[("APPDATA", r"C:\Users\a\AppData\Roaming")]));
-            assert!(found.unwrap().ends_with(r"tempest\repl-history.txt"));
+            assert!(found.unwrap().ends_with(r"temper\repl-history.txt"));
         } else if cfg!(target_os = "macos") {
             let found = path(&env(&[("HOME", "/Users/a")]));
-            let expected = "/Users/a/Library/Application Support/tempest/repl-history.txt";
+            let expected = "/Users/a/Library/Application Support/temper/repl-history.txt";
             assert_eq!(found, Some(PathBuf::from(expected)));
         } else {
             let home = env(&[("HOME", "/home/a")]);
-            let expected = "/home/a/.local/share/tempest/repl-history.txt";
+            let expected = "/home/a/.local/share/temper/repl-history.txt";
             assert_eq!(path(&home), Some(PathBuf::from(expected)));
             let xdg = env(&[("HOME", "/home/a"), ("XDG_DATA_HOME", "/data")]);
-            let expected = "/data/tempest/repl-history.txt";
+            let expected = "/data/temper/repl-history.txt";
             assert_eq!(path(&xdg), Some(PathBuf::from(expected)));
             // A relative XDG_DATA_HOME is ignored, as the spec says.
             let relative = env(&[("HOME", "/home/a"), ("XDG_DATA_HOME", "data")]);
-            let expected = "/home/a/.local/share/tempest/repl-history.txt";
+            let expected = "/home/a/.local/share/temper/repl-history.txt";
             assert_eq!(path(&relative), Some(PathBuf::from(expected)));
         }
     }
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn keeps_entries_in_rustylines_format() {
         with_dir("format", |dir| {
-            let path = dir.join("tempest").join(FILE);
+            let path = dir.join("temper").join(FILE);
             let mut history = History::open(&path).unwrap();
             assert_eq!(history.read(10).unwrap(), Vec::<String>::new());
             history.append("f(1,\n  2)").unwrap();
@@ -362,7 +362,7 @@ mod tests {
     fn makes_the_file_owner_only() {
         use std::os::unix::fs::PermissionsExt;
         with_dir("modes", |dir| {
-            let path = dir.join("tempest").join(FILE);
+            let path = dir.join("temper").join(FILE);
             History::open(&path).unwrap();
             let mode = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
             assert_eq!(mode(&path), 0o600);

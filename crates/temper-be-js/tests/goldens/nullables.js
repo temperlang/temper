@@ -1,4 +1,10 @@
-import { bubble, panic, stringToInt32, type } from "@temperlang/core";
+import {
+  bubble,
+  divIntInt,
+  panic,
+  stringToInt32,
+  type,
+} from "@temperlang/core";
 
 /**
  * @param {number | null} x
@@ -48,6 +54,19 @@ function sameInt(a, b) {
 function parse(s) {
   try {
     return stringToInt32(s, null);
+  } catch {
+    return -1;
+  }
+}
+
+/**
+ * @param {string} s
+ * @param {number} d
+ * @returns {number}
+ */
+function halved(s, d) {
+  try {
+    return divIntInt(stringToInt32(s, null), d);
   } catch {
     return -1;
   }
@@ -175,6 +194,7 @@ console.log(firstWord("") ?? "nothing");
 console.log(`${same(null, null)} ${same("a", null)} ${same(null, "a")} ${same("a", "a")}`);
 console.log(`${sameInt(1, 2)} ${sameInt(3, 3)} ${sameInt(null, 3)}`);
 console.log(`${parse("12")} ${parse("x")}`);
+console.log(`${halved("12", 2)} ${halved("x", 2)} ${halved("12", 0)}`);
 console.log(checked(7).toString());
 console.log(`${orZero(null)} ${orZero(5)}`);
 varying();

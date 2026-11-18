@@ -1,15 +1,18 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-# Vendored runtimes (Rust's `temper-core`) build only with generated code.
-# `library` is where the nightly workflow checks out a Temper library, so
-# its generated crates build on their own.
-exclude = ["vendor", "library"]
+# The Rust backend's runtime (`temper-core`, with its own Cargo.lock)
+# builds on its own, as generated crates use it. `library` is where the
+# nightly workflow checks out a Temper library, so its generated crates
+# build on their own.
+exclude = ["crates/temper-be-rust/runtime", "library"]
 
 [workspace.package]
 edition = "2024"
 rust-version = "1.85"
-version = "0.0.0"
+# The next release's version; builds between releases are 0.7.0-alpha.0.N,
+# N commits since the last `v` tag (docs/internals/detail/06-backends.md).
+version = "0.7.0"
 publish = false
 license = "Apache-2.0 OR MIT"
 
@@ -21,12 +24,12 @@ license = "Apache-2.0 OR MIT"
 unsafe_code = "forbid"
 
 # For tracking binary size (compat/measure_size.py) and for what's released
-# (tempest and the VS Code packages): optimize for size, link everything
+# (temper and the VS Code packages): optimize for size, link everything
 # together, and strip. Benchmarks use the plain release profile.
 #
 # Panics unwind, as in release, so the language server and the CLI can
 # catch one (catch_unwind) and go on or report it, rather than the process
-# aborting; that adds about 12% to tempest.
+# aborting; that adds about 12% to temper.
 [profile.small]
 inherits = "release"
 opt-level = "s"

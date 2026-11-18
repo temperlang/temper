@@ -570,7 +570,7 @@ fn boolean_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
 fn int_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
     let n = arg(&mut args, 0).unwrap_or(Expr::None);
     match arg(&mut args, 1) {
-        None => Expr::name("str").call(vec![n]),
+        None => Expr::builtin("str").call(vec![n]),
         Some(radix) => Expr::name(im("int_to_string")).call(vec![n, radix]),
     }
 }
@@ -586,8 +586,8 @@ fn next_safe(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
         vec!["v".into()],
         Box::new(Expr::Tuple(vec![Expr::name("v")])),
     );
-    let wrapped = Expr::name("map").call(vec![one, g]);
-    Expr::name("next").call(vec![wrapped, Expr::None])
+    let wrapped = Expr::builtin("map").call(vec![one, g]);
+    Expr::builtin("next").call(vec![wrapped, Expr::None])
 }
 
 /// `not s`, as Kotlin's `GenericIsEmpty`.
@@ -617,7 +617,8 @@ fn list_builder_sort(args: Vec<Option<Expr>>, im: Import) -> Translated {
         args.next().unwrap_or(Expr::None),
     );
     let any = im("typing.Any");
-    let b = Expr::name(im("typing.cast")).call(vec![Expr::Str(format!("list[{any}]")), b]);
+    let ty = Expr::Type(crate::tree::string_literal(&format!("list[{any}]")));
+    let b = Expr::name(im("typing.cast")).call(vec![ty, b]);
     Expr::name(im("list_builder_sort")).call(vec![b, compare])
 }
 
@@ -642,13 +643,13 @@ fn subscript(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
 /// `list(m.keys())`, as Kotlin's.
 fn mapped_keys(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
     let m = arg(&mut args, 0).unwrap_or(Expr::None);
-    Expr::name("list").call(vec![m.attr("keys").call(Vec::new())])
+    Expr::builtin("list").call(vec![m.attr("keys").call(Vec::new())])
 }
 
 /// `list(m.values())`, as Kotlin's.
 fn mapped_values(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
     let m = arg(&mut args, 0).unwrap_or(Expr::None);
-    Expr::name("list").call(vec![m.attr("values").call(Vec::new())])
+    Expr::builtin("list").call(vec![m.attr("values").call(Vec::new())])
 }
 
 /// `()`, core's `Empty`, as Kotlin's.
@@ -690,7 +691,7 @@ fn string_index_none(_: Vec<Option<Expr>>, _: Import) -> Translated {
 fn string_has_index(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
     let s = arg(&mut args, 0).unwrap_or(Expr::None);
     let i = arg(&mut args, 1).unwrap_or(Expr::None);
-    Expr::bin(Bin::Gt, Expr::name("len").call(vec![s]), i)
+    Expr::bin(Bin::Gt, Expr::builtin("len").call(vec![s]), i)
 }
 
 /// `s[begin : end]`.

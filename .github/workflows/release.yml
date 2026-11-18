@@ -1,0 +1,242 @@
+# A GitHub release for each `v` tag (`v0.7.0-rc.1`, `v0.7.0`), made
+# automatically, so push one only on purpose
+# (docs/contributing/releasing.md):
+#
+# - `check`: the tag must name the workspace's version (the root
+#   Cargo.toml's), or a pre-release of it (`-alpha.K`, `-beta.K`,
+#   `-rc.K`), or nothing else runs;
+# - `binaries`: binaries.yml's jobs, called: `temper` for every platform,
+#   temper-wasm, and the VS Code extension's packages;
+# - `packages`: the runtimes (temper-core) and std, built by the Linux
+#   x64 `temper` just built and packed as each registry takes them:
+#   crates, npm tarballs, wheels and sdists, NuGet packages, a Maven
+#   Central bundle, and LuaRocks rockspecs and source rocks;
+# - `release`: the GitHub release, with all of them, the binaries named
+#   by version (`temper-0.7.0-x86_64-unknown-linux-gnu.tar.gz`), and
+#   SHA256SUMS; marked a pre-release for an alpha, beta, or rc.
+#
+# Nothing goes to a package registry yet: the commented `publish` job
+# at the end says what each would need.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Read-only by default; `release` writes the release, and `binaries`
+# passes binaries.yml the write its `nightly` job asks for, which a
+# called workflow can't have unless granted, though that job never runs
+# for a tag (binaries.yml's other jobs are read-only).
+permissions:
+  contents: read
+
+# One run per tag; a re-pushed tag waits for the run before it.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # The whole history, to see whether main has the tagged commit.
+        with:
+          fetch-depth: 0
+      - id: tag
+        name: The tag names the workspace's version
+        run: |
+          python3 .github/ci-tools/release.py self-test
+          python3 .github/ci-tools/release.py check "$GITHUB_REF_NAME" | tee -a "$GITHUB_OUTPUT"
+      # Releases are tagged on main; a release candidate tagged on a
+      # branch, as a dry run before merging, only warns.
+      - name: The tagged commit is on main
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::warning::$GITHUB_REF_NAME ($GITHUB_SHA) isn't on main"
+          fi
+
+  binaries:
+    needs: check
+    uses: ./.github/workflows/binaries.yml
+    permissions:
+      contents: write
+
+  packages:
+    needs: [check, binaries]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # Not the workspace's 1.85.0: only cargo 1.90 and later packs
+      # temper-std against the unpublished temper-core beside it
+      # (`cargo package --workspace`). It builds nothing of the compiler.
+      - uses: dtolnay/rust-toolchain@ff7f6a3374ce205788da40198ec918bd5d67aea7 # 1.99.0 branch
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        # As in ci.yml.
+        with:
+          version: "0.13.5"
+          checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # Java 21 as the backends' tests use it, and 8, which temper-core's
+      # pom asks for as a Maven toolchain (`<version>8</version>`, named
+      # so here); Maven is the image's. .NET as the tests use it:
+      # temper-core's net48 target needs .NET Framework's reference
+      # assemblies, which the SDK restores from NuGet.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+      - name: Java 8 as Maven's toolchain
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/toolchains.xml <<EOF
+          <toolchains>
+            <toolchain>
+              <type>jdk</type>
+              <provides><version>8</version></provides>
+              <configuration><jdkHome>$JAVA_HOME_8_X64</jdkHome></configuration>
+            </toolchain>
+          </toolchains>
+          EOF
+          test -x "$JAVA_HOME_8_X64/bin/javac"
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 6.0.x
+      # LuaRocks from Ubuntu's archive, as the backends' Lua, for
+      # `luarocks pack`.
+      - name: LuaRocks
+        run: |
+          bash .github/ci-tools/apt-install.sh luarocks zip unzip
+          luarocks --version
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: binary-x86_64-unknown-linux-gnu
+          path: bin
+      - name: Packages
+        run: |
+          tar xzf bin/temper-x86_64-unknown-linux-gnu.tar.gz -C bin
+          uv run .github/ci-tools/release.py packages \
+            --temper bin/temper-x86_64-unknown-linux-gnu/temper \
+            --version "$VERSION" --out packages
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: temper-packages
+          path: packages/*
+          if-no-files-found: error
+
+  release:
+    needs: [check, binaries, packages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      PRERELEASE: ${{ needs.check.outputs.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+      # binaries.yml names files by platform alone, as the nightly
+      # prerelease keeps them; a release's names say the version too.
+      # The .vsix files have the extension's own version.
+      - name: Name the files by version
+        working-directory: dist
+        run: |
+          # The binaries, by their targets' architectures, as the .vsix
+          # files and temper-wasm start with `temper-` too.
+          for f in temper-x86_64-* temper-aarch64-*; do mv "$f" "temper-$VERSION-${f#temper-}"; done
+          mv temper-wasm.tar.gz "temper-wasm-$VERSION.tar.gz"
+          sha256sum * > SHA256SUMS
+          ls -l
+      - name: GitHub release
+        working-directory: dist
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<EOF
+          Temper $VERSION, built from $GITHUB_SHA ([the run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)).
+
+          - \`temper-$VERSION-TARGET\`: the compiler, for each platform
+          - \`temper-wasm-$VERSION.tar.gz\`: the compiler as wasm, as the playground runs it
+          - \`.vsix\`: the VS Code extension, with \`temper\` for each platform, and without
+          - the runtimes (temper-core) and std as each registry would take them, not yet published to any: crates, npm tarballs, wheels and sdists, NuGet packages (releases only), a Maven Central bundle (unsigned), and LuaRocks rockspecs and source rocks
+          - \`SHA256SUMS\`: \`sha256sum -c SHA256SUMS\`
+          EOF
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" * --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "Temper $VERSION" --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
+
+  # Publishing to package registries, not wired up yet. When it is: a
+  # job for releases only, in a protected environment whose secrets only
+  # it can read and which a maintainer approves each time; `release`
+  # then needs it, so binaries appear only once the runtimes they name
+  # can be installed. Order: temper-core in each registry, then std,
+  # which names temper-core's exact version; then the release. Each
+  # registry refuses a version twice, so a failure part way is finished
+  # by hand, not rerun (docs/contributing/releasing.md). Every command
+  # below has its dry run first.
+  #
+  # publish:
+  #   needs: [check, packages]
+  #   if: needs.check.outputs.prerelease == 'false'
+  #   runs-on: ubuntu-24.04
+  #   environment: registries
+  #   permissions:
+  #     contents: read
+  #     id-token: write  # PyPI's and npm's trusted publishing
+  #   steps:
+  #     - uses: actions/download-artifact@...  # temper-packages, into packages/
+  #
+  #     # crates.io: secret CARGO_REGISTRY_TOKEN, scoped to temper-core
+  #     # and temper-std (temper-core 0.6.0 there is Kotlin Temper's, so
+  #     # the token's owner must own the crate). From the .crate files'
+  #     # sources, as `cargo publish` takes no .crate: rebuild with
+  #     # release.py into a workspace and, with cargo 1.90 or later,
+  #     #   cargo publish --workspace --dry-run, then without --dry-run.
+  #
+  #     # npm: trusted publishing (OIDC) or secret NPM_TOKEN; the
+  #     # @temperlang scope's owner.
+  #     #   npm publish packages/temperlang-core-$VERSION.tgz --access public --provenance --dry-run
+  #     #   npm publish packages/temperlang-std-$VERSION.tgz --access public --provenance --dry-run
+  #     # then without --dry-run (a pre-release would need --tag next).
+  #
+  #     # PyPI: trusted publishing (OIDC), or secret PYPI_TOKEN as
+  #     # UV_PUBLISH_TOKEN. Dry run on TestPyPI first:
+  #     #   uv publish --publish-url https://test.pypi.org/legacy/ packages/temper_core-*
+  #     #   uv publish packages/temper_core-*   then packages/temper_std-*
+  #
+  #     # NuGet: secret NUGET_API_KEY, scoped to TemperLang.*. No dry
+  #     # run; pushing to a local folder (--source ./feed) checks them:
+  #     #   dotnet nuget push "packages/TemperLang.Core.$VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
+  #     #   dotnet nuget push "packages/TemperLang.Std.$VERSION.nupkg"  (same)
+  #
+  #     # Maven Central: secrets MAVEN_CENTRAL_USERNAME and
+  #     # MAVEN_CENTRAL_PASSWORD (a Central Portal user token, for the
+  #     # dev.temperlang namespace), MAVEN_GPG_PRIVATE_KEY and
+  #     # MAVEN_GPG_PASSPHRASE. Sign every file of the bundle
+  #     # (gpg --armor --detach-sign, beside each as .asc), zip it again,
+  #     # and upload; USER_MANAGED is the dry run (validated, then waits
+  #     # for Publish on the Portal), AUTOMATIC publishes:
+  #     #   curl -u "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
+  #     #     -F "bundle=@temper-maven-$VERSION-signed.zip" \
+  #     #     "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED"
+  #
+  #     # LuaRocks: secret LUAROCKS_API_KEY. A rockspec's source.url must
+  #     # be a download: point it at a zip on this GitHub release, then
+  #     #   luarocks lint temper-core-$LUA_VERSION.rockspec  (the dry run)
+  #     #   luarocks upload temper-core-$LUA_VERSION.rockspec --api-key "$LUAROCKS_API_KEY"
+  #     #   luarocks upload std-$LUA_VERSION.rockspec ...  (check the name
+  #     #   `std` is free on luarocks.org first)

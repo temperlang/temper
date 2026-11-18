@@ -18,7 +18,9 @@
 //! the fallback with `unwrap_or` (a literal or a name) or
 //! `unwrap_or_else`; standing alone, `if body.is_err() { fallback }`.
 //! Kotlin writes labeled blocks with a result local for each. A fallback
-//! that bubbles or returns isn't yet, since it would run in a closure.
+//! that bubbles or jumps, which can't run in a closure, follows `if let
+//! Ok(v) = attempt { v } else`, the attempt held in a local first where
+//! it takes lines.
 
 use super::{R, Translator, Want, not_yet};
 use crate::ops::{self, Spelling};
@@ -383,9 +385,14 @@ impl Translator<'_> {
         // `Ok(e?)` is `e`, after statements too (clippy's
         // `needless_question_mark`); `e`'s type gives the closure's. With
         // no other `?`, a block will do (clippy's `redundant_closure_call`).
+        // A `?` inside `e` itself, as `div(to_int(x)? as f64, 100.0)`,
+        // needs the closure too, or it would be the function's.
+        let inner_bubble = self.bubbles_below(value);
         let tail = match v {
-            Expr::Try(e) if stmts.is_empty() => return Ok(*e),
-            Expr::Try(e) if !stmts_bubble => return Ok(Expr::Block(Block::new(stmts, Some(*e)))),
+            Expr::Try(e) if stmts.is_empty() && !inner_bubble => return Ok(*e),
+            Expr::Try(e) if !stmts_bubble && !inner_bubble => {
+                return Ok(Expr::Block(Block::new(stmts, Some(*e))));
+            }
             Expr::Try(e) => *e,
             v => Expr::path("Ok::<_, temper_core::Error>").call(vec![v]),
         };
@@ -410,10 +417,32 @@ impl Translator<'_> {
             // `if let Ok(v) = attempt { v } else { fallback }`, where the
             // fallback's `?` or jump is the function's, not a closure's
             // (std's `JsonNumericToken.asInt32`).
-            return match crate::tree::if_ok(&attempt, Block::of(f)) {
-                Some(made) => Ok(made),
-                None => not_yet("an orelse whose fallback bubbles or jumps, on lines"),
+            let mut els = match f {
+                Expr::Block(b) => b,
+                f => Block::of(f),
             };
+            // A `return` ending it is a statement, as rustfmt writes it.
+            if let Some(Expr::Return(v)) = els.tail.as_deref() {
+                els.stmts.push(Stmt::Return(v.as_deref().cloned()));
+                els.tail = None;
+            }
+            if let Some(made) = crate::tree::if_ok(&attempt, els.clone()) {
+                return Ok(made);
+            }
+            // An attempt on lines, which the `let` can't take, is held
+            // first, under a name no declaration has: `{ let attempt = …;
+            // if let Ok(v) = attempt { v } else { fallback } }`.
+            let held = self.free_name("attempt");
+            let Some(made) = crate::tree::if_ok(&Expr::path(held.as_str()), els) else {
+                return not_yet("an orelse whose fallback bubbles or jumps, held");
+            };
+            let stmts = vec![Stmt::Let {
+                name: held,
+                mutable: false,
+                ty: None,
+                value: Some(attempt),
+            }];
+            return Ok(Expr::Block(Block::new(stmts, Some(made))));
         }
         Ok(if simple(&f) {
             attempt.method("unwrap_or", vec![f])

@@ -8,7 +8,7 @@ conventions Kotlin's pass expects of a
 escapers it picks directly, in branches, loops, and with jumps out
 of the string, and one whose loop changes the context, which
 propagates its contexts at run time as written. All log what the
-tag's own methods would. The log is what tempest's interpreter
+tag's own methods would. The log is what the interpreter
 gives.
 
     // A toy content tag, following Kotlin's pass's conventions: a value

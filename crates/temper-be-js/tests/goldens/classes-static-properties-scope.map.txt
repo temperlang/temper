@@ -9,14 +9,20 @@
 9:10 -> ../static-properties-scope.temper.md:16:9 (readSimpleOther)  readSimpleOther() { <- readSimpleOther(): String {
 9:25 -> ../static-properties-scope.temper.md:16:5  () { <- let readSimpleOther(): Strin
 10:3 -> ../static-properties-scope.temper.md:17:7  return Simple.other; <- return Simple.other;
-13:1 -> ../static-properties-scope.temper.md:5:5  class Simple extends type() <- public class Simple {
-13:7 -> ../static-properties-scope.temper.md:5:18 (Simple)  Simple extends type() { <- Simple {
-13:13 -> ../static-properties-scope.temper.md:5:5   extends type() { <- public class Simple {
-14:3 -> ../static-properties-scope.temper.md:6:21  /** @type {string} */ <- value = "foo";
-15:3 -> ../static-properties-scope.temper.md:6:21  static value; <- value = "foo";
-16:3 -> ../static-properties-scope.temper.md:7:21  /** @type {string} */ <- other = "bar";
-17:3 -> ../static-properties-scope.temper.md:7:21  static other; <- other = "bar";
-20:1 -> ../static-properties-scope.temper.md:6:21  Simple.value = "foo"; <- value = "foo";
-21:1 -> ../static-properties-scope.temper.md:7:21  Simple.other = "bar"; <- other = "bar";
-22:1 -> ../static-properties-scope.temper.md:22:5  console.log(`Simple.value is <- console.log("Simple.value is
-23:1 -> ../static-properties-scope.temper.md:23:5  console.log(`Simple.other is <- console.log("Simple.other is
+13:1 -> ../static-properties-scope.temper.md:6:21  /** @type {string} */ <- value = "foo";
+14:1 -> ../static-properties-scope.temper.md:6:21  let Simple$value; <- value = "foo";
+15:1 -> ../static-properties-scope.temper.md:7:21  /** @type {string} */ <- other = "bar";
+16:1 -> ../static-properties-scope.temper.md:7:21  let Simple$other; <- other = "bar";
+18:1 -> ../static-properties-scope.temper.md:5:5  class Simple extends type() <- public class Simple {
+18:7 -> ../static-properties-scope.temper.md:5:18 (Simple)  Simple extends type() { <- Simple {
+18:13 -> ../static-properties-scope.temper.md:5:5   extends type() { <- public class Simple {
+19:3 -> ../static-properties-scope.temper.md:6:21  /** @returns {string} */ <- value = "foo";
+20:3 -> ../static-properties-scope.temper.md:6:21  static get value() { <- value = "foo";
+20:14 -> ../static-properties-scope.temper.md:6:21 (value)  value() { <- value = "foo";
+24:3 -> ../static-properties-scope.temper.md:7:21  /** @returns {string} */ <- other = "bar";
+25:3 -> ../static-properties-scope.temper.md:7:21  static get other() { <- other = "bar";
+25:14 -> ../static-properties-scope.temper.md:7:21 (other)  other() { <- other = "bar";
+30:1 -> ../static-properties-scope.temper.md:6:21  Simple$value = "foo"; <- value = "foo";
+31:1 -> ../static-properties-scope.temper.md:7:21  Simple$other = "bar"; <- other = "bar";
+32:1 -> ../static-properties-scope.temper.md:22:5  console.log(`Simple.value is <- console.log("Simple.value is
+33:1 -> ../static-properties-scope.temper.md:23:5  console.log(`Simple.other is <- console.log("Simple.other is

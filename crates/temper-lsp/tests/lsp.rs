@@ -1,4 +1,4 @@
-//! The language server, driven as an editor drives `tempest lsp`: a
+//! The language server, driven as an editor drives `temper lsp`: a
 //! scripted JSON-RPC session over a stream, on a library folder with a
 //! `config.temper.md` and two files.
 
@@ -20,7 +20,7 @@ struct Client {
 }
 
 impl Client {
-    /// The server on a thread, with as much stack as `tempest` gives
+    /// The server on a thread, with as much stack as `temper` gives
     /// it, over a loopback socket, as an editor's pipes.
     fn start() -> Client {
         Client::start_with_hook(None)
@@ -394,7 +394,7 @@ fn panics_become_internal_errors() {
     assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
     let message = str_at(&diagnostics[0], &["message"]);
     assert!(
-        message.starts_with("internal error (a bug in tempest) analyzing "),
+        message.starts_with("internal error (a bug in Temper) analyzing "),
         "{message}"
     );
     assert!(
@@ -408,7 +408,7 @@ fn panics_become_internal_errors() {
     let message = str_at(&error, &["message"]);
     assert_eq!(
         message,
-        "internal error (a bug in tempest) in tempest/testPanic: test hook: tempest/testPanic"
+        "internal error (a bug in Temper) in tempest/testPanic: test hook: tempest/testPanic"
     );
     // And the server goes on: the text fixed, a hover answers.
     change(&mut client, &shapes, 3, SHAPES);
@@ -443,7 +443,7 @@ fn definition_into_std() {
     let def = client.request("textDocument/definition", at(&file, 1, 8));
     let target = str_at(&def, &["uri"]);
     assert!(
-        target.contains("tempest-std-") && target.ends_with("regex.temper.md"),
+        target.contains("temper-std-") && target.ends_with("regex.temper.md"),
         "{def}"
     );
     let path = temper_lsp::uri_to_path(target);
@@ -477,7 +477,7 @@ fn definition_and_hover_into_core() {
     let mut core_line = |line: u32, character: u32| {
         let def = client.request("textDocument/definition", at(&file, line, character));
         let target = str_at(&def, &["uri"]).to_string();
-        assert!(target.contains("tempest-std-"), "{def}");
+        assert!(target.contains("temper-std-"), "{def}");
         assert!(target.ends_with("/core/core.temper"), "{def}");
         let path = temper_lsp::uri_to_path(&target);
         let readonly = std::fs::metadata(&path).unwrap().permissions().readonly();

@@ -2,7 +2,7 @@
 
 > **Note:** these terms are for the playground that Temper Systems ran
 > at `playground.temper.systems`, as the old documentation site
-> published them; tempest's own [playground](../tools/playground.md) is
+> published them; the current [playground](../tools/playground.md) is
 > a static page with no server, so they may not apply to it
 > ([inconsistencies](../inconsistencies.md#i11-playground-addresses)).
 

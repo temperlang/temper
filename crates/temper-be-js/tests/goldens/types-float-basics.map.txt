@@ -24,22 +24,22 @@
 56:10 -> ../basics.temper.md:29:9 (add)  add(a, b) { <- add(a: Float64, b: Float64):
 56:13 -> ../basics.temper.md:29:5  (a, b) { <- let add(a: Float64, b: Float
 57:3 -> ../basics.temper.md:30:7  return a + b; <- return a + b;
-60:1 -> ../basics.temper.md:273:5  /** @param {string} string * <- let checkParse(string: Strin
-61:1 -> ../basics.temper.md:273:5  function checkParse(string) <- let checkParse(string: Strin
-61:10 -> ../basics.temper.md:273:9 (checkParse)  checkParse(string) { <- checkParse(string: String):
-61:20 -> ../basics.temper.md:273:5  (string) { <- let checkParse(string: Strin
-62:3 -> ../basics.temper.md:274:7  /** @type {string} */ <- let converted = string.toFlo
-63:3 -> ../basics.temper.md:274:7  let converted; <- let converted = string.toFlo
-64:3 -> ../basics.temper.md:274:7  try { <- let converted = string.toFlo
-69:3 -> ../basics.temper.md:275:7  console.log(`Parse ${string} <- console.log("Parse ${string}
-72:1 -> ../basics.temper.md:290:5  /** @param {string} string * <- let checkTiny(string: String
-73:1 -> ../basics.temper.md:290:5  function checkTiny(string) { <- let checkTiny(string: String
-73:10 -> ../basics.temper.md:290:9 (checkTiny)  checkTiny(string) { <- checkTiny(string: String): V
-73:19 -> ../basics.temper.md:290:5  (string) { <- let checkTiny(string: String
-74:3 -> ../basics.temper.md:291:7  /** @type {string} */ <- let positive = (string.toFlo
-75:3 -> ../basics.temper.md:291:7  let positive; <- let positive = (string.toFlo
-76:3 -> ../basics.temper.md:291:7  try { <- let positive = (string.toFlo
-81:3 -> ../basics.temper.md:292:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+60:1 -> ../basics.temper.md:286:5  /** @param {string} string * <- let checkParse(string: Strin
+61:1 -> ../basics.temper.md:286:5  function checkParse(string) <- let checkParse(string: Strin
+61:10 -> ../basics.temper.md:286:9 (checkParse)  checkParse(string) { <- checkParse(string: String):
+61:20 -> ../basics.temper.md:286:5  (string) { <- let checkParse(string: Strin
+62:3 -> ../basics.temper.md:287:7  /** @type {string} */ <- let converted = string.toFlo
+63:3 -> ../basics.temper.md:287:7  let converted; <- let converted = string.toFlo
+64:3 -> ../basics.temper.md:287:7  try { <- let converted = string.toFlo
+69:3 -> ../basics.temper.md:288:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+72:1 -> ../basics.temper.md:303:5  /** @param {string} string * <- let checkTiny(string: String
+73:1 -> ../basics.temper.md:303:5  function checkTiny(string) { <- let checkTiny(string: String
+73:10 -> ../basics.temper.md:303:9 (checkTiny)  checkTiny(string) { <- checkTiny(string: String): V
+73:19 -> ../basics.temper.md:303:5  (string) { <- let checkTiny(string: String
+74:3 -> ../basics.temper.md:304:7  /** @type {string} */ <- let positive = (string.toFlo
+75:3 -> ../basics.temper.md:304:7  let positive; <- let positive = (string.toFlo
+76:3 -> ../basics.temper.md:304:7  try { <- let positive = (string.toFlo
+81:3 -> ../basics.temper.md:305:7  console.log(`Parse ${string} <- console.log("Parse ${string}
 84:1 -> ../basics.temper.md:7:5  const negativeZero = -0.0; <- let negativeZero = -0.0;
 85:1 -> ../basics.temper.md:8:5  let zero = 0.0; <- var zero = 0.0;
 86:1 -> ../basics.temper.md:9:5  zero = zero; <- zero = zero;
@@ -106,78 +106,81 @@
 165:1 -> ../basics.temper.md:140:5  let bigger = big * big * big <- var bigger = big * big * big
 166:1 -> ../basics.temper.md:141:5  bigger = bigger; <- bigger = bigger;
 167:1 -> ../basics.temper.md:142:5  console.log(float64ToString( <- console.log("${bigger}");
-168:1 -> ../basics.temper.md:161:5  let biggest = bigger * bigge <- var biggest = bigger * bigge
-169:1 -> ../basics.temper.md:162:5  biggest = biggest; <- biggest = biggest;
-170:1 -> ../basics.temper.md:163:5  console.log(`biggest ${float <- console.log("biggest ${bigge
-171:1 -> ../basics.temper.md:164:5  let tiniest = one / biggest; <- var tiniest = one / biggest;
-172:1 -> ../basics.temper.md:165:5  tiniest = tiniest; <- tiniest = tiniest;
-173:1 -> ../basics.temper.md:166:5  console.log(`tiniest ${float <- console.log("tiniest ${tinie
-174:1 -> ../basics.temper.md:167:5  let negativeInfinity = bigge <- var negativeInfinity = bigge
-175:1 -> ../basics.temper.md:168:5  negativeInfinity = negativeI <- negativeInfinity = negativeI
-176:1 -> ../basics.temper.md:169:5  console.log(`negative infini <- console.log("negative infini
-177:1 -> ../basics.temper.md:181:5  let infinity = Infinity; <- var infinity = 1E999;
-178:1 -> ../basics.temper.md:182:5  infinity = infinity; <- infinity = infinity;
-179:1 -> ../basics.temper.md:183:5  console.log(float64ToString( <- console.log("${infinity}");
-180:1 -> ../basics.temper.md:184:5  console.log("processed an in <- console.log("processed an in
-181:1 -> ../basics.temper.md:193:5  let nan = NaN; <- var nan = NaN;
-182:1 -> ../basics.temper.md:194:5  nan = nan; <- nan = nan;
-183:1 -> ../basics.temper.md:195:5  console.log(float64ToString( <- console.log("${nan}");
-184:1 -> ../basics.temper.md:196:5  if (cmpFloat64(nan, infinity <- if (nan > infinity) {
-185:3 -> ../basics.temper.md:197:7  console.log("NaN is biggest" <- console.log("NaN is biggest"
-187:3 -> ../basics.temper.md:199:7  console.log("Infinity is big <- console.log("Infinity is big
-189:1 -> ../basics.temper.md:207:5  console.log(`NaN == NaN? ${e <- console.log("NaN == NaN? ${n
-190:1 -> ../basics.temper.md:218:5  console.log(`Int to float: $ <- console.log("Int to float: $
-191:1 -> ../basics.temper.md:219:5  console.log(`Positive to int <- console.log("Positive to int
-192:1 -> ../basics.temper.md:220:5  console.log(`Negative to int <- console.log("Negative to int
-193:1 -> ../basics.temper.md:221:5  /** @type {string} */ <- console.log(
-194:1 -> ../basics.temper.md:221:5  let t$0; <- console.log(
-195:1 -> ../basics.temper.md:221:5  try { <- console.log(
-200:1 -> ../basics.temper.md:221:5  console.log(`Infinity to int <- console.log(
-201:1 -> ../basics.temper.md:224:5  /** @type {string} */ <- console.log("NaN to int: ${N
-202:1 -> ../basics.temper.md:224:5  let t$1; <- console.log("NaN to int: ${N
-203:1 -> ../basics.temper.md:224:5  try { <- console.log("NaN to int: ${N
-208:1 -> ../basics.temper.md:224:5  console.log(`NaN to int: ${t <- console.log("NaN to int: ${N
-209:1 -> ../basics.temper.md:238:5  const oneInt64 = float64ToIn <- let oneInt64 = one.toInt64Un
-210:1 -> ../basics.temper.md:239:5  const notSoBig = clampInt64( <- let notSoBig = 0x7fff_ffffi6
-211:1 -> ../basics.temper.md:240:5  const notSoSmall = clampInt6 <- let notSoSmall = -0x8000_000
-212:1 -> ../basics.temper.md:241:5  const slightlyBigger = float <- let slightlyBigger = (notSoB
-213:1 -> ../basics.temper.md:242:5  const slightlySmaller = floa <- let slightlySmaller = (notSo
-214:1 -> ../basics.temper.md:243:5  const tooBigForFloat64 = cla <- let tooBigForFloat64 = 0x20_
-215:1 -> ../basics.temper.md:244:5  const okToConvert64 = int64T <- let okToConvert64 = (tooBigF
-216:1 -> ../basics.temper.md:245:5  const sneakyBig = okToConver <- let sneakyBig = okToConvert6
-217:1 -> ../basics.temper.md:247:5  console.log(`Bigger to Int64 <- console.log("Bigger to Int64
-218:1 -> ../basics.temper.md:248:5  console.log(`Smaller to Int6 <- console.log("Smaller to Int6
-219:1 -> ../basics.temper.md:249:5  console.log(`Barely ok to In <- console.log("Barely ok to In
-220:1 -> ../basics.temper.md:250:5  /** @type {string} */ <- console.log("Sneaky big to I
-221:1 -> ../basics.temper.md:250:5  let t$2; <- console.log("Sneaky big to I
-222:1 -> ../basics.temper.md:250:5  try { <- console.log("Sneaky big to I
-227:1 -> ../basics.temper.md:250:5  console.log(`Sneaky big to I <- console.log("Sneaky big to I
-228:1 -> ../basics.temper.md:253:5  /** @type {string} */ <- console.log("Too big Int64 t
-229:1 -> ../basics.temper.md:253:5  let t$3; <- console.log("Too big Int64 t
-230:1 -> ../basics.temper.md:253:5  try { <- console.log("Too big Int64 t
-235:1 -> ../basics.temper.md:253:5  console.log(`Too big Int64 t <- console.log("Too big Int64 t
-236:1 -> ../basics.temper.md:256:5  /** @type {string} */ <- console.log(
-237:1 -> ../basics.temper.md:256:5  let t$4; <- console.log(
-238:1 -> ../basics.temper.md:256:5  try { <- console.log(
-243:1 -> ../basics.temper.md:256:5  console.log(`Infinity to Int <- console.log(
-244:1 -> ../basics.temper.md:259:5  /** @type {string} */ <- console.log("NaN to Int64: $
-245:1 -> ../basics.temper.md:259:5  let t$5; <- console.log("NaN to Int64: $
-246:1 -> ../basics.temper.md:259:5  try { <- console.log("NaN to Int64: $
-251:1 -> ../basics.temper.md:259:5  console.log(`NaN to Int64: $ <- console.log("NaN to Int64: $
-252:1 -> ../basics.temper.md:277:5  checkParse("-1.5"); <- checkParse("-1.5");
-253:1 -> ../basics.temper.md:278:5  checkParse("-0"); <- checkParse("-0");
-254:1 -> ../basics.temper.md:279:5  checkParse("2.0"); <- checkParse("2.0");
-255:1 -> ../basics.temper.md:280:5  checkParse("2"); <- checkParse("2");
-256:1 -> ../basics.temper.md:281:5  checkParse(" 2 "); <- checkParse(" 2 ");
-257:1 -> ../basics.temper.md:282:5  checkParse("5e-1"); <- checkParse("5e-1");
-258:1 -> ../basics.temper.md:283:5  checkParse("NaN"); <- checkParse("NaN");
-259:1 -> ../basics.temper.md:284:5  checkParse("-Infinity"); <- checkParse("-Infinity");
-260:1 -> ../basics.temper.md:294:5  checkTiny("2.225e-308"); <- checkTiny("2.225e-308");
-261:1 -> ../basics.temper.md:295:5  checkTiny("5e-324"); <- checkTiny("5e-324");
-262:1 -> ../basics.temper.md:296:5  checkParse("1e-400"); <- checkParse("1e-400");
-263:1 -> ../basics.temper.md:297:5  checkParse("-1e-400"); <- checkParse("-1e-400");
-264:1 -> ../basics.temper.md:303:5  checkParse("2."); <- checkParse("2.");
-265:1 -> ../basics.temper.md:304:5  checkParse(".2"); <- checkParse(".2");
-266:1 -> ../basics.temper.md:305:5  checkParse("2.0.0"); <- checkParse("2.0.0");
-267:1 -> ../basics.temper.md:306:5  checkParse("-inf"); <- checkParse("-inf");
-268:1 -> ../basics.temper.md:307:5  checkParse("totally"); <- checkParse("totally");
+168:1 -> ../basics.temper.md:159:5  const middling = -1500.0 * o <- let middling = -1500.0 * one
+169:1 -> ../basics.temper.md:160:5  console.log(`${float64ToStri <- console.log("${middling} ${1
+170:1 -> ../basics.temper.md:161:5  console.log(`${float64ToStri <- console.log("${1e21 * one} $
+171:1 -> ../basics.temper.md:174:5  let biggest = bigger * bigge <- var biggest = bigger * bigge
+172:1 -> ../basics.temper.md:175:5  biggest = biggest; <- biggest = biggest;
+173:1 -> ../basics.temper.md:176:5  console.log(`biggest ${float <- console.log("biggest ${bigge
+174:1 -> ../basics.temper.md:177:5  let tiniest = one / biggest; <- var tiniest = one / biggest;
+175:1 -> ../basics.temper.md:178:5  tiniest = tiniest; <- tiniest = tiniest;
+176:1 -> ../basics.temper.md:179:5  console.log(`tiniest ${float <- console.log("tiniest ${tinie
+177:1 -> ../basics.temper.md:180:5  let negativeInfinity = bigge <- var negativeInfinity = bigge
+178:1 -> ../basics.temper.md:181:5  negativeInfinity = negativeI <- negativeInfinity = negativeI
+179:1 -> ../basics.temper.md:182:5  console.log(`negative infini <- console.log("negative infini
+180:1 -> ../basics.temper.md:194:5  let infinity = Infinity; <- var infinity = 1E999;
+181:1 -> ../basics.temper.md:195:5  infinity = infinity; <- infinity = infinity;
+182:1 -> ../basics.temper.md:196:5  console.log(float64ToString( <- console.log("${infinity}");
+183:1 -> ../basics.temper.md:197:5  console.log("processed an in <- console.log("processed an in
+184:1 -> ../basics.temper.md:206:5  let nan = NaN; <- var nan = NaN;
+185:1 -> ../basics.temper.md:207:5  nan = nan; <- nan = nan;
+186:1 -> ../basics.temper.md:208:5  console.log(float64ToString( <- console.log("${nan}");
+187:1 -> ../basics.temper.md:209:5  if (cmpFloat64(nan, infinity <- if (nan > infinity) {
+188:3 -> ../basics.temper.md:210:7  console.log("NaN is biggest" <- console.log("NaN is biggest"
+190:3 -> ../basics.temper.md:212:7  console.log("Infinity is big <- console.log("Infinity is big
+192:1 -> ../basics.temper.md:220:5  console.log(`NaN == NaN? ${e <- console.log("NaN == NaN? ${n
+193:1 -> ../basics.temper.md:231:5  console.log(`Int to float: $ <- console.log("Int to float: $
+194:1 -> ../basics.temper.md:232:5  console.log(`Positive to int <- console.log("Positive to int
+195:1 -> ../basics.temper.md:233:5  console.log(`Negative to int <- console.log("Negative to int
+196:1 -> ../basics.temper.md:234:5  /** @type {string} */ <- console.log(
+197:1 -> ../basics.temper.md:234:5  let t$0; <- console.log(
+198:1 -> ../basics.temper.md:234:5  try { <- console.log(
+203:1 -> ../basics.temper.md:234:5  console.log(`Infinity to int <- console.log(
+204:1 -> ../basics.temper.md:237:5  /** @type {string} */ <- console.log("NaN to int: ${N
+205:1 -> ../basics.temper.md:237:5  let t$1; <- console.log("NaN to int: ${N
+206:1 -> ../basics.temper.md:237:5  try { <- console.log("NaN to int: ${N
+211:1 -> ../basics.temper.md:237:5  console.log(`NaN to int: ${t <- console.log("NaN to int: ${N
+212:1 -> ../basics.temper.md:251:5  const oneInt64 = float64ToIn <- let oneInt64 = one.toInt64Un
+213:1 -> ../basics.temper.md:252:5  const notSoBig = clampInt64( <- let notSoBig = 0x7fff_ffffi6
+214:1 -> ../basics.temper.md:253:5  const notSoSmall = clampInt6 <- let notSoSmall = -0x8000_000
+215:1 -> ../basics.temper.md:254:5  const slightlyBigger = float <- let slightlyBigger = (notSoB
+216:1 -> ../basics.temper.md:255:5  const slightlySmaller = floa <- let slightlySmaller = (notSo
+217:1 -> ../basics.temper.md:256:5  const tooBigForFloat64 = cla <- let tooBigForFloat64 = 0x20_
+218:1 -> ../basics.temper.md:257:5  const okToConvert64 = int64T <- let okToConvert64 = (tooBigF
+219:1 -> ../basics.temper.md:258:5  const sneakyBig = okToConver <- let sneakyBig = okToConvert6
+220:1 -> ../basics.temper.md:260:5  console.log(`Bigger to Int64 <- console.log("Bigger to Int64
+221:1 -> ../basics.temper.md:261:5  console.log(`Smaller to Int6 <- console.log("Smaller to Int6
+222:1 -> ../basics.temper.md:262:5  console.log(`Barely ok to In <- console.log("Barely ok to In
+223:1 -> ../basics.temper.md:263:5  /** @type {string} */ <- console.log("Sneaky big to I
+224:1 -> ../basics.temper.md:263:5  let t$2; <- console.log("Sneaky big to I
+225:1 -> ../basics.temper.md:263:5  try { <- console.log("Sneaky big to I
+230:1 -> ../basics.temper.md:263:5  console.log(`Sneaky big to I <- console.log("Sneaky big to I
+231:1 -> ../basics.temper.md:266:5  /** @type {string} */ <- console.log("Too big Int64 t
+232:1 -> ../basics.temper.md:266:5  let t$3; <- console.log("Too big Int64 t
+233:1 -> ../basics.temper.md:266:5  try { <- console.log("Too big Int64 t
+238:1 -> ../basics.temper.md:266:5  console.log(`Too big Int64 t <- console.log("Too big Int64 t
+239:1 -> ../basics.temper.md:269:5  /** @type {string} */ <- console.log(
+240:1 -> ../basics.temper.md:269:5  let t$4; <- console.log(
+241:1 -> ../basics.temper.md:269:5  try { <- console.log(
+246:1 -> ../basics.temper.md:269:5  console.log(`Infinity to Int <- console.log(
+247:1 -> ../basics.temper.md:272:5  /** @type {string} */ <- console.log("NaN to Int64: $
+248:1 -> ../basics.temper.md:272:5  let t$5; <- console.log("NaN to Int64: $
+249:1 -> ../basics.temper.md:272:5  try { <- console.log("NaN to Int64: $
+254:1 -> ../basics.temper.md:272:5  console.log(`NaN to Int64: $ <- console.log("NaN to Int64: $
+255:1 -> ../basics.temper.md:290:5  checkParse("-1.5"); <- checkParse("-1.5");
+256:1 -> ../basics.temper.md:291:5  checkParse("-0"); <- checkParse("-0");
+257:1 -> ../basics.temper.md:292:5  checkParse("2.0"); <- checkParse("2.0");
+258:1 -> ../basics.temper.md:293:5  checkParse("2"); <- checkParse("2");
+259:1 -> ../basics.temper.md:294:5  checkParse(" 2 "); <- checkParse(" 2 ");
+260:1 -> ../basics.temper.md:295:5  checkParse("5e-1"); <- checkParse("5e-1");
+261:1 -> ../basics.temper.md:296:5  checkParse("NaN"); <- checkParse("NaN");
+262:1 -> ../basics.temper.md:297:5  checkParse("-Infinity"); <- checkParse("-Infinity");
+263:1 -> ../basics.temper.md:307:5  checkTiny("2.225e-308"); <- checkTiny("2.225e-308");
+264:1 -> ../basics.temper.md:308:5  checkTiny("5e-324"); <- checkTiny("5e-324");
+265:1 -> ../basics.temper.md:309:5  checkParse("1e-400"); <- checkParse("1e-400");
+266:1 -> ../basics.temper.md:310:5  checkParse("-1e-400"); <- checkParse("-1e-400");
+267:1 -> ../basics.temper.md:316:5  checkParse("2."); <- checkParse("2.");
+268:1 -> ../basics.temper.md:317:5  checkParse(".2"); <- checkParse(".2");
+269:1 -> ../basics.temper.md:318:5  checkParse("2.0.0"); <- checkParse("2.0.0");
+270:1 -> ../basics.temper.md:319:5  checkParse("-inf"); <- checkParse("-inf");
+271:1 -> ../basics.temper.md:320:5  checkParse("totally"); <- checkParse("totally");

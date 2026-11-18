@@ -103,7 +103,7 @@
 148:14 -> ../myers-diff-lib.temper.md:23:18 (Change)  Change extends type() { <- Change<T /* -| Change<T> | L
 148:20 -> ../myers-diff-lib.temper.md:23:5   extends type() { <- export class Change<T /* -|
 149:3 -> ../myers-diff-lib.temper.md:24:14  /** @type {string} */ <- type: ChangeType,
-150:3 -> ../myers-diff-lib.temper.md:24:14  #type_; <- type: ChangeType,
+150:3 -> ../myers-diff-lib.temper.md:24:14  #type; <- type: ChangeType,
 151:3 -> ../myers-diff-lib.temper.md:26:14  /** @type {number} */ <- leftIndex: Int,
 152:3 -> ../myers-diff-lib.temper.md:26:14  #leftIndex; <- leftIndex: Int,
 153:3 -> ../myers-diff-lib.temper.md:28:14  /** @type {number} */ <- rightIndex: Int,
@@ -112,13 +112,13 @@
 156:3 -> ../myers-diff-lib.temper.md:29:14  #items; <- items: List<T>,
 167:3 -> ../myers-diff-lib.temper.md:23:5  /** <- export class Change<T /* -|
 173:3 -> ../myers-diff-lib.temper.md:23:5  constructor(type_, leftIndex <- export class Change<T /* -|
-175:5 -> ../myers-diff-lib.temper.md:24:14  this.#type_ = type_; <- type: ChangeType,
+175:5 -> ../myers-diff-lib.temper.md:24:14  this.#type = type_; <- type: ChangeType,
 176:5 -> ../myers-diff-lib.temper.md:26:14  this.#leftIndex = leftIndex; <- leftIndex: Int,
 177:5 -> ../myers-diff-lib.temper.md:28:14  this.#rightIndex = rightInde <- rightIndex: Int,
 178:5 -> ../myers-diff-lib.temper.md:29:14  this.#items = items; <- items: List<T>,
 181:3 -> ../myers-diff-lib.temper.md:24:14  /** @returns {string} */ <- type: ChangeType,
-182:3 -> ../myers-diff-lib.temper.md:24:14  get type_() { <- type: ChangeType,
-182:7 -> ../myers-diff-lib.temper.md:24:14 (type)  type_() { <- type: ChangeType,
+182:3 -> ../myers-diff-lib.temper.md:24:14  get type() { <- type: ChangeType,
+182:7 -> ../myers-diff-lib.temper.md:24:14 (type)  type() { <- type: ChangeType,
 186:3 -> ../myers-diff-lib.temper.md:26:14  /** @returns {number} */ <- leftIndex: Int,
 187:3 -> ../myers-diff-lib.temper.md:26:14  get leftIndex() { <- leftIndex: Int,
 187:7 -> ../myers-diff-lib.temper.md:26:14 (leftIndex)  leftIndex() { <- leftIndex: Int,

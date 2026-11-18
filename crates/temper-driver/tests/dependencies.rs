@@ -5,6 +5,8 @@
 //! root module, as the frontend's imports make it.
 
 use temper_tmpl::naming::{self, Interface, NamingRules};
+#[allow(unused_imports)] // Unless every backend is left out.
+use temper_tmpl::version::{Spelling, current};
 use temper_tmpl::{Profile, Program, text, validate};
 
 /// A library, `app`, that uses `util`, with a version, and `plain`,
@@ -107,7 +109,10 @@ fn python() {
             .collect();
     let text = file(&files, "app/pyproject.toml");
     assert!(
-        text.contains("dependencies = [\n    \"plain\",\n    \"temper-core==0.6.0\",\n    \"util==1.2.0\"\n]\n"),
+        text.contains(&format!(
+            "dependencies = [\n    \"plain\",\n    \"temper-core=={}\",\n    \"util==1.2.0\"\n]\n",
+            current().spell(Spelling::Python)
+        )),
         "{text}"
     );
 }
@@ -125,12 +130,13 @@ fn rust() {
     .collect();
     let text = file(&files, "app/Cargo.toml");
     assert!(
-        text.ends_with(
+        text.ends_with(&format!(
             "[dependencies]\n\
-             temper-core = { path = \"../temper-core\", version = \"=0.6.0\" }\n\
-             plain = { path = \"../plain\", version = \"0.0.1\" }\n\
-             util = { path = \"../util\", version = \"1.2.0\" }\n"
-        ),
+             temper-core = {{ path = \"../temper-core\", version = \"={}\" }}\n\
+             plain = {{ path = \"../plain\", version = \"0.0.1\" }}\n\
+             util = {{ path = \"../util\", version = \"1.2.0\" }}\n",
+            current()
+        )),
         "{text}"
     );
 }
@@ -146,10 +152,11 @@ fn js() {
             .collect();
     let text = file(&files, "app/package.json");
     assert!(
-        text.contains(
-            "    \"dependencies\": {\n        \"@temperlang/core\": \"0.6.0\",\n        \
-             \"plain\": \"*\",\n        \"util\": \"1.2.0\"\n    }\n"
-        ),
+        text.contains(&format!(
+            "    \"dependencies\": {{\n        \"@temperlang/core\": \"{}\",\n        \
+             \"plain\": \"*\",\n        \"util\": \"1.2.0\"\n    }}\n",
+            current()
+        )),
         "{text}"
     );
 }
@@ -208,7 +215,10 @@ fn lua() {
             .collect();
     let text = file(&files, "app/app-dev-1.rockspec");
     assert!(
-        text.contains("    'temper-core == 0.6.0',\n    'plain',\n    'util == 1.2.0',\n}\n"),
+        text.contains(&format!(
+            "    'temper-core == {}',\n    'plain',\n    'util == 1.2.0',\n}}\n",
+            current().spell(Spelling::LuaRocks)
+        )),
         "{text}"
     );
 }

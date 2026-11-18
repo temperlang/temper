@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../temper-core/TemperLang.Core.csproj"/>
+    <ProjectReference Include="../../std/src/TemperLang.Std.csproj"/>
   </ItemGroup>
 </Project>

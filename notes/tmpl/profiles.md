@@ -64,6 +64,7 @@ kept; otherwise lowered):
 | Assigned captures | native (`nonlocal`) | no: cells | C#, JS, Lua native; C++, Java cells |
 | Properties | native (`@property`) | no: methods | C#, JS native; C++, Java, Lua methods |
 | `Void` as a value | no | native (`()`) | JS, Lua native |
+| Bottom type, `Never<T>` as a result (`NEVER`, built 2026-11-17; `nevers::lower`, [types.md](types.md#never)) | native (`NoReturn`) | no: `T` | JS native (`never`); others `T` |
 | Left-to-right arguments | native | native | all but C++ |
 | Null-safe `EqNullable` | native | native (`Option`) | JS for builtin types; others expanded |
 
@@ -595,8 +596,18 @@ bits and wrap to 32, `int32_div` and `int32_mod` truncate toward zero
 (Lua's `//` and `%` floor), and shifts mask their count; the `operators`
 program, whose log is the interpreter's, checks wrapping, shifts, and
 signed division and remainder. Being integers, they print without `.0`,
-so `"n=" .. n` and `tostring(n)` write them as Temper does. `Int64` is
-Lua's own integer arithmetic, which wraps at 64 bits.
+so `"n=" .. n` and `tostring(n)` write them as Temper does. `Int64`
+values are whatever the runtime's `int64_constructor` makes, as
+Kotlin's: Lua integers on 5.3 and later, whose own arithmetic wraps at
+64 bits, and on 5.1 and LuaJIT tables of two 32-bit halves, whose
+metatable gives them `+`, `-`, `*`, `==`, `<`, and `<=`. So every
+distinct `Int64` constant is made once, by a call at the chunk's top
+after `temper` (`local int64_5 = temper.int64_constructor(5)`, or its
+high and low halves past 32 bits; past 32 constants, fields of one
+`int64s` table, to spare locals and upvalues), which its literals name,
+so a loop doesn't call the runtime for them; nothing changes an
+`Int64` in place, so sharing one is safe. `Int32.toInt64()` is a call,
+and the operators are Lua's own or the runtime's (`int64_div`, `shl64`).
 
 **Versions** (Proposed, 2026-10-30): as Kotlin's, the rockspec accepts
 **Lua 5.1 and later**, and generated code calls the runtime for integer
@@ -604,13 +615,18 @@ and bitwise work, never Lua 5.3's operators, so the runtime's
 `intold.lua` can stand in on 5.1 and LuaJIT. In practice: generated code
 needs **Lua 5.2 or LuaJIT** where it has `goto` (a `continue`, or a jump
 out of an inner loop; Kotlin's needs it for every early return too), and
-**Lua 5.3 or later** for exact `Int32` and `Int64` arithmetic (on 5.1
-and LuaJIT, numbers are doubles, so `Int64` is exact only to 2^53, and
-`int32_mul` of large operands isn't exact); Kotlin's CI runs Lua 5.4.
+nothing more for integers: on 5.1 and LuaJIT, where numbers are doubles,
+`int32_mul` splits its operands to stay exact, and `Int64`s are the
+runtime's tables of halves; Kotlin's CI runs Lua 5.4.
 The tests use Lua 5.4.6, locally and in CI (Ubuntu 24.04's `lua5.4`,
 the runner pinned for it), and LuaLS 3.19.2. CI also runs the generated Lua
 under LuaJIT 2.1, built from a pinned commit, and it passes; 5.1 isn't
-tested.
+tested. LuaJIT's b310887b (2026-10-29) let x64 table stores of
+constants and GC values reuse the register holding the store's own
+address under register pressure, crashing (a SQL library's tests did in
+about 2 runs in 5; Kotlin's output for it didn't, by luck of
+allocation); upstream fixed it the next day in 3a658cac, so the pin must
+not fall between those two commits. It's 63c8f1a9, which has the fix.
 A later variant could require 5.3 and print its operators (`a & b`,
 `a // b`) where they're right.
 

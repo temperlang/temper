@@ -15,6 +15,14 @@ final class Loose {
         }
     }
 
+    public boolean mirrors(Loose other) {
+        if (other.eq(this)) {
+            return this.eq(other);
+        } else {
+            return false;
+        }
+    }
+
     public int getN() {
         return this.n;
     }

@@ -12,8 +12,11 @@
 //! sorted imports, and labels only where a jump needs one. `javac
 //! -Xlint:all -Werror` passes on the output.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! Java's rules ([`names::RULES`]), then [`translate`] into Java's output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the test
+//! sources, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with Java's rules
+//! ([`names::RULES`]), then [`translate`] into Java's output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer.
 //!
@@ -55,8 +58,6 @@ pub struct Variant {
     /// What it handles natively, which lowering and validation read.
     pub profile: Profile,
     pub rules: NamingRules,
-    /// The `temper-core` version its output depends on.
-    pub runtime_version: &'static str,
     /// The Java release its output targets, as `javac --release` and
     /// Maven's compiler plugin take it.
     pub java_release: &'static str,
@@ -73,7 +74,6 @@ pub static JAVA: Variant = Variant {
         coroutines: CoroutineStrategy::TranslateToRegularFunction,
     },
     rules: names::RULES,
-    runtime_version: "0.6.0",
     java_release: "17",
 };
 
@@ -105,6 +105,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     } else {
         runtime::FILES
     },
+    runtime_version: &runtime::VERSION,
     rules: &JAVA.rules,
     translate: |p, _| translate(p, &JAVA).map_err(|e| e.to_string()),
     default: true,
@@ -125,8 +126,14 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// mods/src/main/java/mods/helpers/HelpersGlobal.java  module `helpers`
 /// mods/src/main/java/mods/helpers/HelpersMain.java    its entry point
 /// mods/src/test/java/mods/ModsTest.java           the root module's tests
+/// mods/src/test/java/mods/TestShape.java          what only they reach
 /// mods/src/main/java/mods/ModsConnected.java      host code, copied
 /// ```
+///
+/// A module's test class has what only its tests reach, as statics, and
+/// the classes and interfaces only they reach are test sources too, in
+/// its package, so they see its package-private statics; a library only
+/// the tests use is a `test`-scoped dependency.
 ///
 /// A library's own `.java` files, its host code, go into their modules'
 /// packages as they are, as Kotlin copies them: a module's connected
@@ -142,17 +149,17 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// The package takes the library's name, with `_` for `-`
 /// ([`names::package`]), and a module's path after it; the classes take
 /// the package's last part in Pascal case. Kotlin also copies
-/// `temper-core` beside the package; `tempest build` does too
+/// `temper-core` beside the package; `temper build` does too
 /// ([`runtime`]).
 /// std's modules with support code, as Kotlin's Java backend writes it
 /// into std's output: each module's path, and its support class's file
-/// (vendored from Kotlin's), in the module's package, whose static
+/// (begun as Kotlin's, in `runtime/std/`), in the module's package, whose static
 /// methods its connected members call
 /// ([`connected::Connection::StdStatic`]).
 pub const STD_SUPPORT: &[(&str, &str, &str)] = &[(
     "regex",
     "Core.java",
-    include_str!("../../../vendor/temper/be-java/temper-std/regex/Core.java"),
+    include_str!("../runtime/std/regex/Core.java"),
 )];
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
@@ -160,6 +167,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered = temper_tmpl::coroutines::lower(p, variant.profile.coroutines)
         .map_err(|what| NotYet { what })?;
@@ -173,6 +184,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         p.nodes.ty(scrutinee) == temper_tmpl::TypeId::INT64
     });
     let p = switched.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the test sources, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
     let mut sources = Vec::new();
@@ -186,33 +201,41 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let mut translator = translate::Translator::new(p, &names, &package, &global);
         let class = translator.module(module)?;
         let dir = package.replace('.', "/");
+        let main_dir = format!("{library}/src/main/java/{dir}");
+        let test_dir = format!("{library}/src/test/java/{dir}");
         sources.push(OutFile {
-            path: format!("{library}/src/main/java/{dir}/{global}.java"),
+            path: format!("{main_dir}/{global}.java"),
             text: tree::class(&class),
         });
-        for t in translator.types(module)? {
-            sources.push(OutFile {
-                path: format!("{library}/src/main/java/{dir}/{}.java", t.name),
-                text: tree::type_decl(&t),
-            });
+        for (tests, dir) in [(false, &main_dir), (true, &test_dir)] {
+            for t in translator.types(module, tests)? {
+                sources.push(OutFile {
+                    path: format!("{dir}/{}.java", t.name),
+                    text: tree::type_decl(&t),
+                });
+            }
         }
         sources.push(OutFile {
-            path: format!("{library}/src/main/java/{dir}/{main}.java"),
+            path: format!("{main_dir}/{main}.java"),
             text: main_class(&package, &main, &loads(p, module)),
         });
-        if let Some(class) = translator.tests(module, &format!("{base}Test"))? {
-            tests.push(format!("{package}.{base}Test"));
+        if let Some(class) = translator.tests(module)? {
+            if !class.tests.is_empty() {
+                tests.push(format!("{package}.{}", class.statics.name));
+            }
             sources.push(OutFile {
-                path: format!("{library}/src/test/java/{dir}/{base}Test.java"),
+                path: format!("{test_dir}/{}.java", class.statics.name),
                 text: tree::test_class(&class),
             });
         }
         // The functional interfaces it synthesized, as Kotlin's.
-        for (path, text) in translator.synthesized() {
-            sources.push(OutFile {
-                path: format!("{library}/src/main/java/{dir}/{path}"),
-                text,
-            });
+        for (tests, dir) in [(false, &main_dir), (true, &test_dir)] {
+            for (path, text) in translator.synthesized(tests) {
+                sources.push(OutFile {
+                    path: format!("{dir}/{path}"),
+                    text,
+                });
+            }
         }
         // std's support code for the module, in its package, as Kotlin's.
         let support = STD_SUPPORT
@@ -241,7 +264,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let package = match p.modules.iter().find(|m| m.path == dir) {
             Some(m) => translate::module_package(p, m.decl),
             None => (dir.split('/').filter(|s| !s.is_empty()))
-                .fold(translate::library_package(library), |out, part| {
+                .fold(translate::library_package(p, library), |out, part| {
                     format!("{out}.{}", names::package(part))
                 }),
         };
@@ -329,15 +352,53 @@ public final class {main} {{
     )
 }
 
-/// A library's Maven group and artifact: its name as Java names a
-/// package, and its name, as Kotlin's default configuration has them, but
-/// for std's, which its Java configuration sets (`dev.temperlang` and
-/// `temper-std`).
-fn coordinates(library: &str) -> (String, &str) {
+/// A library's Maven group and artifact, as Kotlin's configuration has
+/// them: its config's `javaGroup`, or else its `javaPackage`, or else its
+/// Java name (its `javaName`, or else its own) as Java names a package;
+/// and its `javaArtifact`, or else its Java name. std's Java
+/// configuration sets them (`dev.temperlang` and `temper-std`).
+fn coordinates(p: &Program, library: &str) -> (String, String) {
+    let meta = p.metadata_of(library);
+    let name = meta.get("javaName").unwrap_or(library);
     match library {
-        "std" => ("dev.temperlang".to_string(), "temper-std"),
-        _ => (names::package(library), library),
+        "std" => ("dev.temperlang".to_string(), "temper-std".to_string()),
+        _ => (
+            (meta.get("javaGroup").or(meta.get("javaPackage")))
+                .map_or_else(|| names::package(name), temper_tmpl::xml_text),
+            temper_tmpl::xml_text(meta.get("javaArtifact").unwrap_or(name)),
+        ),
     }
+}
+
+/// The config's metadata, as Kotlin's `pomXml` writes it after the name:
+/// the description, which Maven Central requires, so the library's name
+/// where there's none; then the authors as the developer, the homepage
+/// (or else the repository) as the URL, the license, and the repository
+/// as the source's URL, for those set.
+fn pom_metadata(p: &Program, library: &str) -> String {
+    let meta = p.metadata();
+    let xml = temper_tmpl::xml_text;
+    let description = meta.get("description").unwrap_or(library);
+    let mut out = format!("  <description>{}</description>\n", xml(description));
+    if let Some(authors) = meta.get("authors") {
+        out.push_str(&format!(
+            "  <developers>\n    <developer>\n      <name>{}</name>\n    </developer>\n  </developers>\n",
+            xml(authors)
+        ));
+    }
+    if let Some(url) = meta.get("homepage").or(meta.get("repository")) {
+        out.push_str(&format!("  <url>{}</url>\n", xml(url)));
+    }
+    if let Some(license) = meta.get("license") {
+        out.push_str(&format!(
+            "  <licenses>\n    <license>\n      <name>{}</name>\n    </license>\n  </licenses>\n",
+            xml(license)
+        ));
+    }
+    if let Some(url) = meta.get("repository") {
+        out.push_str(&format!("  <scm>\n    <url>{}</url>\n  </scm>\n", xml(url)));
+    }
+    out
 }
 
 /// The package description, as Kotlin's `pomXml` writes it for a library
@@ -352,17 +413,16 @@ fn pom(
     variant: &Variant,
 ) -> String {
     let version = p.version_or_default();
-    let (group, artifact) = coordinates(library);
+    let (group, artifact) = coordinates(p, library);
     // Each library used, by its coordinates; for the tests alone, in
     // their scope.
-    let in_code = libraries_in_code(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let mut dependencies = (p.dependencies().iter())
         .map(|&(name, version)| {
-            let (group, artifact) = coordinates(name);
-            let scope = if in_code.iter().any(|l| l == name) {
-                "compile"
-            } else {
-                "test"
+            let (group, artifact) = coordinates(p, name);
+            let scope = match tests_only.iter().any(|l| l == name) {
+                true => "test",
+                false => "compile",
             };
             format!(
                 r#"
@@ -447,8 +507,9 @@ fn pom(
       </plugin>"#
         )
     };
-    let runtime = variant.runtime_version;
+    let runtime = temper_tmpl::version::current();
     let release = variant.java_release;
+    let metadata = pom_metadata(p, library);
     format!(
         r#"<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -456,8 +517,7 @@ fn pom(
   <artifactId>{artifact}</artifactId>
   <version>{version}</version>
   <name>{library}</name>
-  <description>{library}</description>
-  <properties>
+{metadata}  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -566,51 +626,4 @@ fn pom(
 </project>
 "#
     )
-}
-
-/// The libraries the library's own code needs, by name: all it uses,
-/// but those only its tests use.
-fn libraries_in_code(p: &Program) -> Vec<String> {
-    let code = libraries_used(p, false);
-    let tests = libraries_used(p, true);
-    (p.dependencies().into_iter())
-        .map(|(name, _)| name.to_string())
-        .filter(|name| code.contains(name) || !tests.contains(name))
-        .collect()
-}
-
-/// The libraries the library's own code uses, or with `tests`, its
-/// tests, by name.
-fn libraries_used(p: &Program, tests: bool) -> Vec<String> {
-    use temper_tmpl::analysis::module_imports;
-    use temper_tmpl::qname::library_of;
-    let mut found = Vec::new();
-    for module in &p.modules {
-        let imports = if tests {
-            temper_tmpl::analysis::test_imports(p, module)
-        } else {
-            module_imports(p, module)
-        };
-        for import in imports {
-            for d in import.decls {
-                if !temper_tmpl::qname::is_external(p, d) || library_of(p, d) == "core" {
-                    continue;
-                }
-                let name = p.name(library_decl(p, d)).to_string();
-                if !found.contains(&name) {
-                    found.push(name);
-                }
-            }
-        }
-    }
-    found
-}
-
-/// The `uses` library that owns an external declaration.
-fn library_decl(p: &Program, decl: temper_tmpl::DeclId) -> temper_tmpl::DeclId {
-    let mut d = decl;
-    while p.decls.contains(d) && p.decls.get(d).kind != temper_tmpl::DeclKind::Library {
-        d = p.decls.get(d).owner;
-    }
-    d
 }

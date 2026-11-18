@@ -28,4 +28,16 @@ internal class Loose
             return this.n == -other.n;
         }
     }
+
+    public bool Mirrors(Loose other)
+    {
+        if (other.Eq(this))
+        {
+            return this.Eq(other);
+        }
+        else
+        {
+            return false;
+        }
+    }
 }

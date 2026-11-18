@@ -1,27 +1,31 @@
 local temper = require("temper-core")
+local int64_1 = temper.int64_constructor(1)
+local int64_9223372036854775807 = temper.int64_constructor(2147483647, 4294967295)
+local int64_neg9223372036854775808 = temper.int64_constructor(-2147483648, 0)
+local int64_neg1 = temper.int64_constructor(-1)
 
----@param string string
-local function checkParse32(string)
+---@param string_ string
+local function checkParse32(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = tostring(temper.string_toint32(string, 16))
+    converted = tostring(temper.string_toint32(string_, 16))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
----@param string string
-local function checkParse64(string)
+---@param string_ string
+local function checkParse64(string_)
   ---@type string
   local converted
   if not temper.pcall(function()
-    converted = temper.int64_tostring(temper.string_toint64(string, 16))
+    converted = temper.int64_tostring(temper.string_toint64(string_, 16))
   end) then
     converted = "failed"
   end
-  print("Parse " .. string .. " -> " .. converted)
+  print("Parse " .. string_ .. " -> " .. converted)
 end
 
 print("Int32")
@@ -48,19 +52,19 @@ print(five .. " % -" .. three .. " == " .. temper.int32_mod(five, temper.int32_u
 print("-" .. five .. " % " .. three .. " == " .. temper.int32_mod(temper.int32_unm(five), three))
 print("-" .. five .. " % -" .. three .. " == " .. temper.int32_mod(temper.int32_unm(five), temper.int32_unm(three)))
 print("Int64")
-local notSoBig = big
-local notSoSmall = small
-print(temper.int64_tostring(notSoBig) .. " + 1 == " .. temper.int64_tostring(notSoBig + 1))
-print(temper.int64_tostring(notSoSmall) .. " - 1 == " .. temper.int64_tostring(notSoSmall - 1))
-local big64 = 9223372036854775807 * one
-local small64 = (-9223372036854775807 - 1) * one
-print(temper.int64_tostring(big64) .. " + 1 == " .. temper.int64_tostring(big64 + 1))
-print(temper.int64_tostring(small64) .. " - 1 == " .. temper.int64_tostring(small64 - 1))
-print(temper.int64_tostring(small64) .. " / -1 == " .. temper.int64_tostring(temper.int64_div(small64, -1)))
-print(temper.int64_tostring(small64) .. " % -1 == " .. temper.int64_tostring(temper.int64_mod(small64, -1)))
+local notSoBig = temper.int32_toint64(big)
+local notSoSmall = temper.int32_toint64(small)
+print(temper.int64_tostring(notSoBig) .. " + 1 == " .. temper.int64_tostring(notSoBig + int64_1))
+print(temper.int64_tostring(notSoSmall) .. " - 1 == " .. temper.int64_tostring(notSoSmall - int64_1))
+local big64 = int64_9223372036854775807 * temper.int32_toint64(one)
+local small64 = int64_neg9223372036854775808 * temper.int32_toint64(one)
+print(temper.int64_tostring(big64) .. " + 1 == " .. temper.int64_tostring(big64 + int64_1))
+print(temper.int64_tostring(small64) .. " - 1 == " .. temper.int64_tostring(small64 - int64_1))
+print(temper.int64_tostring(small64) .. " / -1 == " .. temper.int64_tostring(temper.int64_div(small64, int64_neg1)))
+print(temper.int64_tostring(small64) .. " % -1 == " .. temper.int64_tostring(temper.int64_mod(small64, int64_neg1)))
 print("-(" .. temper.int64_tostring(small64) .. ") == " .. temper.int64_tostring(temper.int64_unm(small64)))
-local three64 = three
-local five64 = five
+local three64 = temper.int32_toint64(three)
+local five64 = temper.int32_toint64(five)
 print(temper.int64_tostring(five64) .. " / " .. temper.int64_tostring(three64) .. " == " .. temper.int64_tostring(temper.int64_div(five64, three64)))
 print(temper.int64_tostring(five64) .. " / -" .. temper.int64_tostring(three64) .. " == " .. temper.int64_tostring(temper.int64_div(five64, temper.int64_unm(three64))))
 print("-" .. temper.int64_tostring(five64) .. " / " .. temper.int64_tostring(three64) .. " == " .. temper.int64_tostring(temper.int64_div(temper.int64_unm(five64), three64)))
@@ -77,7 +81,7 @@ print("Not so big: " .. temper.int64_toint32unsafe(notSoBig))
 ---@type string
 local t
 if not temper.pcall(function()
-  t = tostring(temper.float64_toint32(big64))
+  t = tostring(temper.int64_toint32(big64))
 end) then
   t = "no"
 end
@@ -86,6 +90,6 @@ checkParse64("7FFFFFFFFFFFFFFF")
 checkParse64("-8000000000000000")
 checkParse64("8000000000000000")
 checkParse64("-8000000000000001")
-print(temper.int64_tostring(math.min(small64, big64)) .. " < " .. temper.int64_tostring(math.max(small64, big64)))
+print(temper.int64_tostring(temper.int64_min(small64, big64)) .. " < " .. temper.int64_tostring(temper.int64_max(small64, big64)))
 
 return {}

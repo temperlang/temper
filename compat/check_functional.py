@@ -15,10 +15,10 @@ metadata says `expectRunFailure = true`, fails. A test whose metadata says
 `runAsTest = true` instead runs its `test` cases, and passes if the ones
 that fail are those its `expectedFailures` names, each failure's message
 containing the expected text, as Kotlin's `assertTestingTestFromJunit`
-checks. Doesn't run Kotlin Temper. The tests and `std` come from the copy
-in vendor/temper/ (see compat/sync_temper.py), or, with --temper, from a
-Temper checkout. A local web server answers as Kotlin's `TestWebServer`
-does, at the port each test gets as `testServerPort`.
+checks. Doesn't run Kotlin Temper. The tests and `std` come from this
+repository's crates/temper-funtests/cases/ and lib/std/, or, with --temper,
+from a Kotlin Temper checkout. A local web server answers as Kotlin's
+`TestWebServer` does, at the port each test gets as `testServerPort`.
 
     uv run compat/check_functional.py [--verbose] [--temper DIR] [TEST ...]
 
@@ -39,9 +39,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# The vendored copy by default; --temper points both at a checkout instead.
-SUITE = ROOT / "vendor/temper/functional-tests"
-STD = ROOT / "vendor/temper/std"
+# This repository's by default; --temper points both at a checkout instead.
+SUITE = ROOT / "crates" / "temper-funtests" / "cases"
+STD = ROOT / "lib" / "std"
 # A log block may name the runs it applies to, ```log interp, or exclude
 # them, ```log ~interp; ours is Kotlin's `interp` run.
 # Tests we don't pass yet, and why: each is also skipped for Kotlin's

@@ -263,7 +263,7 @@ impl Settle {
     }
 
     /// Whether a call may bubble, other than through its arguments.
-    fn call_bubbles(&mut self, call: NodeId) -> bool {
+    pub(super) fn call_bubbles(&mut self, call: NodeId) -> bool {
         let children = self.lib.tree.children(call).to_vec();
         let Some((&callee, args)) = children.split_first() else {
             return false;
@@ -273,6 +273,7 @@ impl Settle {
                 self.division_bubbles(call, f, args)
             }
             Some(Builtin::Function(Function::As)) => self.cast_bubbles(args),
+            Some(Builtin::Function(Function::New)) => self.new_bubbles(args),
             // `a[i]` calls `a.get(i)`.
             Some(Builtin::Function(Function::Index)) if !args.is_empty() => {
                 let t = self.known_index_callee_type(args[0]);
@@ -308,6 +309,47 @@ impl Settle {
             self.is_mismatch(t, param.ty)
         });
         misfit || !self.may_fold(call, 0)
+    }
+
+    /// Whether `new C(…)` may bubble: `C`'s constructor says `throws
+    /// Bubble`, and takes that many arguments. Kotlin reports it whatever
+    /// the arguments are, constants too.
+    fn new_bubbles(&mut self, args: &[NodeId]) -> bool {
+        let tree = &self.lib.tree;
+        let Some((&made, args)) = args.split_first() else {
+            return false;
+        };
+        // `new C<T>(…)` names `C` inside the angle brackets.
+        let base = match (tree.kind(made), tree.children(made)) {
+            (NodeKind::Call, [angle, base, ..])
+                if self.scopes.resolved_builtin(*angle)
+                    == Some(Builtin::Function(Function::Angle)) =>
+            {
+                *base
+            }
+            _ => made,
+        };
+        let Some(class) = (self.scopes.resolved(base)).and_then(|b| self.type_decl(b)) else {
+            return false;
+        };
+        let (_, _, members) = core::class_parts(tree, class);
+        let constructor = members.iter().find(|&&m| {
+            tree.data(m) & core::ROLE_MASK == core::ROLE_CONSTRUCTOR
+                && tree.data(m) & core::MEMBER_STATIC == 0
+        });
+        let Some(f) = constructor.and_then(|&c| core::let_parts(tree, c).2) else {
+            return false;
+        };
+        if tree.kind(f) != NodeKind::Fn {
+            return false;
+        }
+        let (params, out_type, _) = core::fn_parts(tree, f);
+        if !out_type.is_some_and(|t| self.is_throws(t)) {
+            return false;
+        }
+        let optional = |p: NodeId| core::let_parts(tree, p).2.is_some();
+        let required = params.iter().filter(|&&p| !optional(p)).count();
+        (required..=params.len()).contains(&args.len())
     }
 
     /// The arguments of a call of a builtin operator that don't fit the

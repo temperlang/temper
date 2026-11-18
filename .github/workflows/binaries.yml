@@ -1,26 +1,30 @@
-# Builds `tempest` for Linux (x64, and Arm64 for 64-bit Raspberry Pi
+# Builds `temper` for Linux (x64, and Arm64 for 64-bit Raspberry Pi
 # OS), macOS (Apple silicon), and Windows (x64 and Arm64), with
 # Temper's std built in, `temper-wasm`, and the VS Code extension's
-# packages (one per platform with its tempest, and a universal one
-# without), and uploads each as a workflow artifact. Pushing a tag
-# like `v0.1.0` also attaches them to a GitHub release for that tag. Every
-# night, if `main` has changed, and whenever it's run by hand from the
-# Actions tab, they replace those of the `nightly` prerelease, whose tag
-# moves to the commit built. Linux builds run on Ubuntu 22.04,
+# packages (one per platform with its `temper`, and a universal one
+# without), and uploads each as a workflow artifact. Every night, if
+# `main` has changed, and whenever it's run by hand from the Actions
+# tab, they replace those of the `nightly` prerelease, whose tag moves
+# to the commit built. release.yml calls it for a `v` tag, and makes
+# the release from its artifacts. Linux builds run on Ubuntu 22.04,
 # so they need only glibc 2.35, which Debian 12 (and the Raspberry Pi OS
 # based on it) has. `run-temper` and the other tools that the compat
 # checks use are built from source, so they aren't released.
+#
+# The builds check out the whole history and its tags, so `temper` names
+# its version from git: `0.7.0-alpha.0.123` nightly, the tag's for a
+# release (docs/internals/detail/06-backends.md, "Versions").
 name: Binaries
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "17 3 * * *"
-  push:
-    tags: ["v*"]
+  workflow_call:
 
-# Read-only by default; only the jobs that publish (release, nightly)
-# may write, to make releases and move the nightly tag.
+# Read-only by default; only `nightly` may write, to move the nightly
+# tag and replace its prerelease (and so release.yml, which calls this,
+# grants that).
 permissions:
   contents: read
 
@@ -51,24 +55,27 @@ jobs:
         include:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            exe: tempest
+            exe: temper
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
-            exe: tempest
+            exe: temper
           - os: macos-latest
             target: aarch64-apple-darwin
-            exe: tempest
+            exe: temper
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            exe: tempest.exe
+            exe: temper.exe
           # Windows on Arm, cross-compiled on x64; ring (std `net`'s TLS)
           # needs clang for it, which the image has.
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            exe: tempest.exe
+            exe: temper.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # The whole history and the tags, for the version.
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         with:
           targets: ${{ matrix.target }}
@@ -84,7 +91,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          name="tempest-${{ matrix.target }}"
+          name="temper-${{ matrix.target }}"
           mkdir "$name"
           cp "target/${{ matrix.target }}/small/${{ matrix.exe }}" COPYRIGHT LICENSE-APACHE LICENSE-MIT NOTICE "$name/"
           if [ "${{ runner.os }}" = "Windows" ]; then
@@ -92,10 +99,12 @@ jobs:
           else
             tar czf "$name.tar.gz" "$name"
           fi
+      # The artifact is `binary-TARGET`, so `binary-*` picks out just
+      # these from the run's artifacts, not `temper-wasm` and the others.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: tempest-${{ matrix.target }}
-          path: tempest-${{ matrix.target }}.*
+          name: binary-${{ matrix.target }}
+          path: temper-${{ matrix.target }}.*
 
   wasm:
     needs: changed
@@ -103,6 +112,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # The whole history and the tags, for the version.
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         with:
           targets: wasm32-unknown-unknown
@@ -122,9 +134,9 @@ jobs:
           name: temper-wasm
           path: temper-wasm.tar.gz
 
-  # The VS Code extension: a package per platform, each with the tempest
+  # The VS Code extension: a package per platform, each with the `temper`
   # just built for it in bin/, and a universal one without (which finds
-  # tempest on PATH), all by `vsce package`; the Linux x64 package's tests
+  # `temper` on PATH), all by `vsce package`; the Linux x64 package's tests
   # run in a real VS Code, under xvfb.
   vscode:
     needs: build
@@ -142,7 +154,7 @@ jobs:
           node-version: 24
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: tempest-*
+          pattern: binary-*
           path: dist
           merge-multiple: true
       - name: Unpack the binaries
@@ -157,26 +169,54 @@ jobs:
           name: temper-vscode
           path: editors/vscode/out/*.vsix
 
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, wasm, vscode]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  # Each platform's archive, as users download it, on that platform:
+  # its contents, `temper version`, `init`, `test` and `run` on the
+  # interpreter, and the REPL, piped and (off Windows) on a terminal
+  # (.github/ci-tools/smoke.py). No language toolchains. Windows Arm64's
+  # is built on x64, so this is the first time it runs.
+  smoke:
+    needs: build
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        # As in the toolchains action: the checksum for Linux x64; on
+        # the other platforms, setup-uv checks against the list it carries.
+        with:
+          version: "0.13.5"
+          checksum: ${{ (runner.os == 'Linux' && runner.arch == 'X64') && 'f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f' || '' }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          merge-multiple: true
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          files: |
-            tempest-*
-            temper-wasm.tar.gz
-            temper-*.vsix
+          name: binary-${{ matrix.target }}
+          path: dist
+      - name: Smoke test
+        shell: bash
+        run: uv run .github/ci-tools/smoke.py "dist/temper-${{ matrix.target }}.${{ matrix.archive }}"
 
+  # Not for a tag: called by release.yml, the event is its `push`.
   nightly:
     if: github.event_name != 'push' && github.ref == 'refs/heads/main'
-    needs: [build, wasm, vscode]
+    needs: [build, smoke, wasm, vscode]
     runs-on: ubuntu-latest
     permissions:
       contents: write

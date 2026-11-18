@@ -1,6 +1,6 @@
 //! The Lua backend on Kotlin Temper's functional tests that tmpl's
-//! translation covers so far, from the vendored copy
-//! (`temper-funtests`), its class tests among them (`kit::CLASSES`),
+//! translation covers so far, in `temper-funtests`'s
+//! `cases/`, its class tests among them (`kit::CLASSES`),
 //! those with nullable types and `orelse` (`kit::NULLABLES`), those
 //! with generics (`kit::GENERICS`), those with core's other types
 //! and members (`kit::CORE_TYPES`), and those with a library's own
@@ -13,8 +13,8 @@
 //! as coroutines (`kit::ASYNC`), the tests run as tests (`kit::TESTS`),
 //! and those importing std's `regex`, `json`, and `temporal`
 //! (`kit::WITH_STD`, each beside std's output, under `timeout`;
-//! `regex/zero-advance` gives what Kotlin's issue 166 expects, and only
-//! `types/date` runs on LuaJIT, which lacks `utf8` and 64-bit integers),
+//! `regex/zero-advance` gives what Kotlin's issue 166 expects, and
+//! `regex`'s don't run on LuaJIT, which lacks `utf8`),
 //! std `net`'s (`kit::NET`), through LuaSocket under a Lua that loads it
 //! by LuaRocks' paths or its own (the `LUA` that runs the rest, or else
 //! `lua`),
@@ -34,8 +34,8 @@
 //! - `programs_log_as_the_interpreter_does`: Lua's own Temper programs
 //!   log, on tempest's interpreter, what the test expects of them.
 //! - `runs`: with `lua` (or `LUA`), from the directory holding the
-//!   generated libraries and the vendored runtime
-//!   (`vendor/temper/be-lua/temper-core`), with Kotlin's `LUA_PATH`
+//!   generated libraries and the runtime
+//!   (`crates/temper-be-lua/runtime/temper-core`), with Kotlin's `LUA_PATH`
 //!   (`?.lua;?/init.lua`), one process requires every library in turn,
 //!   and each logs what the test expects of Kotlin's `lua` backend (a
 //!   library named as one before it, as both `basics`, in a directory
@@ -52,13 +52,14 @@
 //!   its `Warning` level, but for a library with host code, which isn't
 //!   typed for LuaLS, run in a directory of its own. Skipped, with a
 //!   message, without `lua`, and the check without LuaLS; with
-//!   `TEMPEST_REQUIRE_CHECKERS` set, as in CI, either missing fails it
+//!   `TEMPER_REQUIRE_CHECKERS` set, as in CI, either missing fails it
 //!   instead. A missing `luac` only skips.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
-use temper_be_lua::{LUA, OutFile, translate};
+use temper_be_lua::translate::INT64_LOCALS;
+use temper_be_lua::{LUA, OutFile, names, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// A library of names that Lua reserves or the translator prints (Lua's
@@ -99,6 +100,86 @@ const HIDING_LOG: [&str; 5] = [
     "\"it's\" \\ a\u{0}1 \u{202E}x",
     "2 -4 7",
 ];
+
+/// Lua's standard globals as a module's values and functions, and as
+/// parameters, locals, and temporaries, each taking `_`
+/// ([`names::GLOBALS`]), so none hides what the output reaches
+/// (`math.huge` for `1E999`, `error("panic")`, `tostring`) or host code
+/// might, while exports keep their names as their module's keys
+/// (`string = string_`, and `exports.pairs` for a `var` that functions
+/// write); `no_lua_global_is_declared` checks the output declares none.
+const GLOBALS: &str = r#"# Globals
+
+    let table = [1, 2, 3];
+    export var string = "s";
+    export var pairs = 0;
+    export let type(next: Int, math: Int): Int { pairs += 1; next * math }
+    let half(error: Int): Int throws Bubble {
+      if (error % 2 != 0) { bubble(); }
+      error / 2
+    }
+    let select(error: Int, table: List<Int>): Int {
+      let string = half(error) orelse panic();
+      var select = 0;
+      for (let next of table) { select += next; }
+      select + string
+    }
+    let huge(math: Float64): Float64 { math * 1E999 }
+    string = "${type(2, 3).toString()} ${select(4, table).toString()}";
+    console.log("${string} ${huge(2.0).toString()} ${type(1, 1) == select(2, [])} ${pairs}");
+    for (let string of ["ab", "c"]) { console.log("${string}!"); }
+"#;
+
+/// What [`GLOBALS`] logs.
+const GLOBALS_LOG: [&str; 3] = ["6 8 Infinity true 2", "ab!", "c!"];
+
+/// The names a Lua chunk declares: its locals, functions, parameters, and
+/// loop variables.
+fn declared(lua: &str) -> Vec<&str> {
+    fn names(list: &str) -> impl Iterator<Item = &str> {
+        list.split(',').map(str::trim).filter(|n| !n.is_empty())
+    }
+    let mut out = Vec::new();
+    for line in lua.lines().map(str::trim_start) {
+        if line.starts_with("--") {
+            continue;
+        }
+        let rest = line.strip_prefix("local ").unwrap_or(line);
+        if let Some(f) = rest.strip_prefix("function ") {
+            let (name, params) = f.split_once('(').unwrap_or((f, ""));
+            out.push(name.trim());
+            out.extend(names(params.split(')').next().unwrap_or("")));
+        } else if line.starts_with("local ") {
+            out.extend(names(rest.split('=').next().unwrap_or(rest)));
+        } else if let Some(f) = line.strip_prefix("for ") {
+            out.extend(names(f.split([' ', '=']).next().unwrap_or("")));
+            if let Some((vars, _)) = f.split_once(" in ") {
+                out.extend(names(vars));
+            }
+        }
+        if let Some((_, f)) = line.split_once("function(") {
+            out.extend(names(f.split(')').next().unwrap_or("")));
+        }
+    }
+    out
+}
+
+/// [`GLOBALS`]'s output declares none of Lua's globals.
+#[test]
+fn no_lua_global_is_declared() {
+    let case = Case::inline("globals", "globals.temper.md", GLOBALS, vec![]);
+    let files = generate(&case);
+    let declared = declared(&files[0].text);
+    assert!(declared.contains(&"string_"), "{declared:?}");
+    let text = &files[0].text;
+    for key in ["string = string_", "type = type_", "exports.pairs ="] {
+        assert!(text.contains(key), "no `{key}` in\n{text}");
+    }
+    let hiding: Vec<_> = (declared.iter())
+        .filter(|n| names::GLOBALS.contains(n) || names::SPECIAL.contains(n))
+        .collect();
+    assert!(hiding.is_empty(), "declared {hiding:?}\n{}", files[0].text);
+}
 
 /// What Lua can't write inline, hoisted before its statement: an `if`
 /// value of `Boolean`s whose condition does something, `orelse` on the
@@ -293,8 +374,9 @@ const MEMBERS_LOG: [&str; 3] = ["2 4 1", "false 2 7", "rex"];
 const MANY: usize = 220;
 
 /// A library with more module-level declarations than Lua allows a chunk
-/// locals, so those past the first 100 are fields of a table, and a
-/// function that uses the first and the last.
+/// locals, so those past the first 100 are fields of a table, a
+/// function that uses the first and the last, and one with more `Int64`
+/// constants than a chunk declares as locals.
 fn locals() -> (String, Vec<String>) {
     let mut text = String::from("# Locals\n\n");
     for i in 0..MANY / 2 {
@@ -306,7 +388,16 @@ fn locals() -> (String, Vec<String>) {
         "    export let sum(): Int {{ f0(1) + f{last}(v{last}) }}\n"
     ));
     text.push_str("    console.log(sum().toString());\n");
-    (text, vec![format!("{}", 1 + 2 * last)])
+    // More `Int64` constants than a chunk declares as locals, so they're
+    // a table's, one of them twice, one negated, and one of two halves.
+    let terms: Vec<String> = (0..=INT64_LOCALS).map(|i| format!("{i}i64")).collect();
+    text.push_str(&format!(
+        "    let sum64(): Int64 {{ {} - 1i64 + -2i64 + 0x1_0000_0000_i64 }}\n",
+        terms.join(" + ")
+    ));
+    text.push_str("    console.log(sum64().toString());\n");
+    let sum64 = INT64_LOCALS * (INT64_LOCALS + 1) / 2 - 3 + (1 << 32);
+    (text, vec![format!("{}", 1 + 2 * last), sum64.to_string()])
 }
 
 fn cases() -> Vec<Case> {
@@ -345,6 +436,13 @@ fn cases() -> Vec<Case> {
         "hiding.temper.md",
         HIDING,
         hiding_log,
+    ));
+    let globals_log = GLOBALS_LOG.iter().map(|s| s.to_string()).collect();
+    cases.push(Case::inline(
+        "globals",
+        "globals.temper.md",
+        GLOBALS,
+        globals_log,
     ));
     cases.push(Case::inline(
         "repeats",
@@ -392,12 +490,13 @@ build = {{
 }}
 dependencies = {{
     'lua >= 5.1',
-    'temper-core == 0.6.0',
+    'temper-core == {core}',
 }}
 source = {{
     url = 'file://{library}.zip',
 }}
-"
+",
+        core = temper_tmpl::version::current().spell(temper_tmpl::version::Spelling::LuaRocks),
     )
 }
 
@@ -430,6 +529,22 @@ fn goldens() {
     });
 }
 
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".lua"))).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
+    });
+}
+
 #[test]
 fn programs_log_as_the_interpreter_does() {
     kit::with_stack(|| {
@@ -454,7 +569,7 @@ fn tool(var: &str, name: &str, arg: &str) -> Option<String> {
 }
 
 fn runtime() -> PathBuf {
-    kit::vendored("be-lua/temper-core")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/temper-core")
 }
 
 /// Kotlin's `LUA_PATH`, for running from the directory that holds the
@@ -488,7 +603,6 @@ const TESTS: &str = r#"package.preload["luaunit"] = function()
 end
 arg = {}
 dofile(...)
-print(require("testing")["$test"].runs__get())
 "#;
 
 /// Reads `module-state`'s exports after its functions write them.
@@ -537,28 +651,12 @@ fn luarc(libraries: &[&Path]) -> String {
     )
 }
 
-/// Tests whose `Int64`s need Lua 5.3's 64-bit integers, which LuaJIT
-/// lacks: this backend writes `Int64`s as Lua integers, where Kotlin's
-/// makes them with the runtime's `int64_constructor`, which LuaJIT's
-/// half of the runtime (`intold.lua`) keeps as tables. `types/int/limits`
-/// also finds LuaJIT's `int32_mod` giving `-0` for `-2147483648 % -1`,
-/// and `types/int/shifty`, which counts with `countBetween` too (below).
-/// std's json reads numbers into `Int64`s (`types/json-syntax-tree`).
-const NEEDS_INTEGERS: [&str; 4] = [
-    "types-float-basics",
-    "types-int-limits",
-    "types-int-shifty",
-    "types-json-syntax-tree",
-];
-
 /// Tests that the runtime gets wrong on LuaJIT (and Lua 5.1), Kotlin's
-/// bugs, which these run on Lua 5.4 to show: without Lua 5.3's `utf8`,
-/// its stand-in `len` ignores the range, so `countBetween` and
-/// `hasAtLeast` count the whole string (`types/string/read`); LuaJIT's
-/// `tonumber(s, 10)` takes `"2.0"` and `"0x10"` (`String.toInt32()`,
-/// also `types/string/read`); and `float64_max` and `float64_min` check
-/// only their second argument for NaN, where LuaJIT's `math.max(nan, 2)`
-/// gives 2 (`types/float/ops`).
+/// bugs, which these run on Lua 5.4 to show: LuaJIT's `tonumber(s, 10)`
+/// takes `"2.0"` and `"0x10"` (`String.toInt32()`, `types/string/read`);
+/// and `float64_max` and `float64_min` check only their second argument
+/// for NaN, where LuaJIT's `math.max(nan, 2)` gives 2
+/// (`types/float/ops`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
 /// and `regex/zero-advance`).
 const NEEDS_LUA53: [&str; 4] = [
@@ -619,9 +717,7 @@ fn runs() {
             kit::without_net(&mut cases);
         }
         if jit {
-            cases.retain(|c| {
-                !NEEDS_INTEGERS.contains(&c.key.as_str()) && !NEEDS_LUA53.contains(&c.key.as_str())
-            });
+            cases.retain(|c| !NEEDS_LUA53.contains(&c.key.as_str()));
         }
         let mut generated = Vec::new();
         // A library named as one before it (`types/int/basics` and
@@ -645,6 +741,14 @@ fn runs() {
             } else {
                 let own = out.join(format!("lua-{}", case.key));
                 kit::copy_dir(&runtime(), &own.join("temper-core"), &[]);
+                // The shared libraries it imports, beside it there too
+                // (checked where they're generated on their own).
+                for library in kit::libraries(case, "lua") {
+                    kit::write_files(
+                        &own,
+                        (generate(&library).iter()).map(|f| (f.path.as_str(), f.text.as_str())),
+                    );
+                }
                 apart.push((case, own.clone()));
                 own
             };
@@ -694,7 +798,11 @@ fn runs() {
         // Runs as tests, as Kotlin's `Lua51Specifics`: each tests file with
         // LuaUnit, `-o junit`, its failures compared with what's expected.
         for (case, here) in apart.iter().filter(|(c, _)| c.tests.is_some()) {
-            kit::copy_dir(&kit::vendored("be-lua/luaunit"), &here.join("luaunit"), &[]);
+            kit::copy_dir(
+                &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime/luaunit"),
+                &here.join("luaunit"),
+                &[],
+            );
             let mut files = Vec::new();
             kit::files_with(&here.join(&case.library).join("tests"), "lua", &mut files);
             for file in files {
@@ -738,7 +846,7 @@ fn runs() {
                 .current_dir(here)
                 .output()
                 .unwrap();
-            let stdout = String::from_utf8_lossy(&run.stdout);
+            let stdout = kit::printed(&run.stdout);
             let mut log: Vec<&str> = stdout.lines().skip(1).collect();
             // A run expected to fail (`semantics/broken`) ends with the
             // runner's line for the error.
@@ -765,14 +873,13 @@ fn runs() {
             .env("LUA_PATH", LUA_PATH)
             .output()
             .unwrap();
-        let stdout = String::from_utf8_lossy(&run.stdout);
-        // In LuaUnit's order, by name: `runs` is 0 + 2 + 4, then that
-        // plus `twice(2)` and 10.
+        let stdout = kit::printed(&run.stdout);
+        // In LuaUnit's order, by name. (The shared `reach` program, which
+        // runs as tests, checks the state tests share with their module.)
         let expected = "init 2\n\
             ok test_locals_a_test_assigns\n\
             ok test_names_punctuation_quotes_and_n_code\n\
-            ok test_twice_works\n\
-            20\n";
+            ok test_twice_works\n";
         if !run.status.success() || stdout != expected {
             failures.push(format!(
                 "testing's tests: expected {expected:?}, got {stdout:?}\n{}",
@@ -786,7 +893,7 @@ fn runs() {
             .env("LUA_PATH", LUA_PATH)
             .output()
             .unwrap();
-        let stdout = String::from_utf8_lossy(&run.stdout);
+        let stdout = kit::printed(&run.stdout);
         let mut logs: Vec<(String, Vec<String>)> = Vec::new();
         for line in stdout.split('\n') {
             match line.strip_prefix("==> ") {
@@ -826,7 +933,7 @@ fn runs() {
             .output()
             .unwrap();
         let expected = &cases[0].expected;
-        let stdout = String::from_utf8_lossy(&alone.stdout);
+        let stdout = kit::printed(&alone.stdout);
         if !alone.status.success() || stdout.lines().collect::<Vec<_>>() != *expected {
             failures.push(format!(
                 "lua fibonacci/init.lua: expected {expected:?}, got:\n{stdout}{}",
@@ -842,7 +949,7 @@ fn runs() {
             .env("LUA_PATH", LUA_PATH)
             .output()
             .unwrap();
-        let stdout = String::from_utf8_lossy(&read.stdout);
+        let stdout = kit::printed(&read.stdout);
         let expected = "hi 1 of 3 11\nhi 2 of 3 13\nlocal 4\n2\t13\thi\tnil\n";
         if !read.status.success() || stdout != expected {
             failures.push(format!(
@@ -859,7 +966,7 @@ fn runs() {
             .env("LUA_PATH", LUA_PATH)
             .output()
             .unwrap();
-        let stdout = String::from_utf8_lossy(&read.stdout);
+        let stdout = kit::printed(&read.stdout);
         let expected = "2 4 1\nfalse 2 7\nrex\n2\t7\tx\tBox(5)\n3\n";
         if !read.status.success() || stdout != expected {
             failures.push(format!(

@@ -91,7 +91,7 @@ Part of the [rewrite plan](README.md).
   take 14–22 s in a release build, almost all in its property tests
   (tens of thousands of natural comparisons on the interpreter), worth
   profiling with the interpreter's other costs. Std is built in
-  (temper-frontend's `stdlib`, from `vendor/temper/std`), for the wasm
+  (temper-frontend's `stdlib`, from `lib/std/`), for the wasm
   build too; `--std DIR` mounts its directory at std's root instead
   (`Sources::with_std_dir`). `run-temper` stays in
   temper-frontend for the compat scripts, sharing import loading
@@ -102,7 +102,7 @@ Part of the [rewrite plan](README.md).
   every library under the work root, with the package files, and each
   backend's runtime beside them, as `temper-core`, as Kotlin copies it
   (built into the backend crates' `runtime::FILES`, checked against the
-  vendored copies), and a `CMakeLists.txt` per C++ library, which a test
+  crates' `runtime/temper-core`), and a `CMakeLists.txt` per C++ library, which a test
   builds with CMake and runs. `crates/tempest/tests/kotlin_layout.rs`
   compares the tree (every path, and the package files' names and
   versions) with Kotlin's for the functional tests tmpl translated after

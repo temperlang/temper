@@ -41,27 +41,24 @@
 71:1 -> ../connected.temper.md:149:5  export class Hider extends t <- export class Hider(
 71:14 -> ../connected.temper.md:149:18 (Hider)  Hider extends type() { <- Hider(
 71:19 -> ../connected.temper.md:149:5   extends type() { <- export class Hider(
-72:3 -> ../connected.temper.md:150:19  /** @type {number} */ <- i: Int,
-73:3 -> ../connected.temper.md:150:19  #i; <- i: Int,
-74:3 -> ../connected.temper.md:152:15  /** @type {Hidden} */ <- hidden: Hidden = new Hidden(
-75:3 -> ../connected.temper.md:152:15  #hidden; <- hidden: Hidden = new Hidden(
-77:3 -> ../connected.temper.md:149:5  /** @param {number} i */ <- export class Hider(
-78:3 -> ../connected.temper.md:149:5  constructor(i) { <- export class Hider(
-80:5 -> ../connected.temper.md:150:19  this.#i = i; <- i: Int,
-81:5 -> ../connected.temper.md:152:15  this.#hidden = new Hidden(th <- hidden: Hidden = new Hidden(
-84:3 -> ../connected.temper.md:153:14  /** <- plus(j: Int): Int { sum(hidd
-88:3 -> ../connected.temper.md:153:14 (plus)  plus(j) { <- plus(j: Int): Int { sum(hidd
-89:5 -> ../connected.temper.md:153:34  return sum(this.#hidden.i, j <- sum(hidden.i, j) }
-92:3 -> ../connected.temper.md:154:14  /** <- times(j: Int): Int { prod(hi
-96:3 -> ../connected.temper.md:154:14 (times)  times(j) { <- times(j: Int): Int { prod(hi
-97:5 -> ../connected.temper.md:154:35  return prod(this.#hidden, j) <- prod(hidden, j) }
-101:1 -> ../connected.temper.md:73:5  console.log(`sum(1, 2): ${su <- console.log("sum(1, 2): ${su
-102:1 -> ../connected.temper.md:83:5  console.log(`length "" vs nu <- console.log("""
-103:1 -> ../connected.temper.md:105:5  console.log(`twice(5): ${twi <- console.log("twice(5): ${twi
-104:1 -> ../connected.temper.md:132:5  export const isConnected = s <- let isConnected = sum(1, 2)
-105:1 -> ../connected.temper.md:133:5  if (isConnected) { <- if (isConnected) {
-106:3 -> ../connected.temper.md:134:7  console.log(`prod(new Hidden <- console.log("prod(new Hidden
-108:1 -> ../connected.temper.md:159:5  export const hider = new Hid <- let hider = new Hider(3);
-109:1 -> ../connected.temper.md:160:5  console.log(`new Hider(3).pl <- console.log("new Hider(3).pl
-110:1 -> ../connected.temper.md:170:5  if (isConnected) { <- if (isConnected) {
-111:3 -> ../connected.temper.md:171:7  console.log(`new Hider(3).ti <- console.log("new Hider(3).ti
+72:3 -> ../connected.temper.md:152:15  /** @type {Hidden} */ <- hidden: Hidden = new Hidden(
+73:3 -> ../connected.temper.md:152:15  #hidden; <- hidden: Hidden = new Hidden(
+75:3 -> ../connected.temper.md:149:5  /** @param {number} i */ <- export class Hider(
+76:3 -> ../connected.temper.md:149:5  constructor(i) { <- export class Hider(
+78:5 -> ../connected.temper.md:152:15  this.#hidden = new Hidden(i) <- hidden: Hidden = new Hidden(
+81:3 -> ../connected.temper.md:153:14  /** <- plus(j: Int): Int { sum(hidd
+85:3 -> ../connected.temper.md:153:14 (plus)  plus(j) { <- plus(j: Int): Int { sum(hidd
+86:5 -> ../connected.temper.md:153:34  return sum(this.#hidden.i, j <- sum(hidden.i, j) }
+89:3 -> ../connected.temper.md:154:14  /** <- times(j: Int): Int { prod(hi
+93:3 -> ../connected.temper.md:154:14 (times)  times(j) { <- times(j: Int): Int { prod(hi
+94:5 -> ../connected.temper.md:154:35  return prod(this.#hidden, j) <- prod(hidden, j) }
+98:1 -> ../connected.temper.md:73:5  console.log(`sum(1, 2): ${su <- console.log("sum(1, 2): ${su
+99:1 -> ../connected.temper.md:83:5  console.log(`length "" vs nu <- console.log("""
+100:1 -> ../connected.temper.md:105:5  console.log(`twice(5): ${twi <- console.log("twice(5): ${twi
+101:1 -> ../connected.temper.md:132:5  export const isConnected = s <- let isConnected = sum(1, 2)
+102:1 -> ../connected.temper.md:133:5  if (isConnected) { <- if (isConnected) {
+103:3 -> ../connected.temper.md:134:7  console.log(`prod(new Hidden <- console.log("prod(new Hidden
+105:1 -> ../connected.temper.md:159:5  export const hider = new Hid <- let hider = new Hider(3);
+106:1 -> ../connected.temper.md:160:5  console.log(`new Hider(3).pl <- console.log("new Hider(3).pl
+107:1 -> ../connected.temper.md:170:5  if (isConnected) { <- if (isConnected) {
+108:3 -> ../connected.temper.md:171:7  console.log(`new Hider(3).ti <- console.log("new Hider(3).ti

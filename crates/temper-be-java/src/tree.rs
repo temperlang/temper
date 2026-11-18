@@ -869,32 +869,27 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
     }
 }
 
-/// A module's tests, as a JUnit 5 class: each test a public method,
-/// annotated with JUnit's `@Test` by its full name, since std's `Test`
-/// takes the short one.
+/// A module's test class: what only its tests reach, as statics, and
+/// its tests.
+#[derive(Clone, Debug, PartialEq)]
 pub struct TestClass {
-    pub package: String,
-    pub imports: Vec<String>,
-    pub name: String,
+    /// Its package, imports, name, and statics.
+    pub statics: Class,
     /// Each test's method name and body.
-    pub methods: Vec<(String, Vec<Stmt>)>,
+    pub tests: Vec<(String, Vec<Stmt>)>,
 }
 
-/// Prints a test class's file.
+/// Prints a test class's file: as a class of statics, but that JUnit
+/// makes one for each test, which runs as a method.
 pub fn test_class(c: &TestClass) -> String {
-    let mut out = String::new();
-    let _ = writeln!(out, "package {};", c.package);
-    if !c.imports.is_empty() {
-        out.push('\n');
-        for import in &c.imports {
-            let _ = writeln!(out, "import {import};");
-        }
-    }
-    let _ = writeln!(out, "\npublic final class {} {{", c.name);
-    for (i, (name, body)) in c.methods.iter().enumerate() {
-        if i > 0 {
+    let mut out = header(&c.statics);
+    let _ = writeln!(out, "public final class {} {{", c.statics.name);
+    let mut first = statics(&mut out, &c.statics, true);
+    for (name, body) in &c.tests {
+        if !first {
             out.push('\n');
         }
+        first = false;
         let _ = write!(
             out,
             "    @org.junit.jupiter.api.Test\n    public void {name}() "
@@ -906,8 +901,8 @@ pub fn test_class(c: &TestClass) -> String {
     out
 }
 
-/// Prints a class's file.
-pub fn class(c: &Class) -> String {
+/// A file's package and imports, then a blank line.
+fn header(c: &Class) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "package {};", c.package);
     if !c.imports.is_empty() {
@@ -916,10 +911,25 @@ pub fn class(c: &Class) -> String {
             let _ = writeln!(out, "import {import};");
         }
     }
+    out.push('\n');
+    out
+}
+
+/// Prints a class's file.
+pub fn class(c: &Class) -> String {
+    let mut out = header(c);
     let name = &c.name;
-    let _ = writeln!(out, "\npublic final class {name} {{");
+    let _ = writeln!(out, "public final class {name} {{");
     let _ = writeln!(out, "    private {name}() {{}}");
-    if !c.fields.is_empty() {
+    statics(&mut out, c, false);
+    out.push_str("}\n");
+    out
+}
+
+/// A class's statics, as members, each after a blank line but where
+/// nothing comes before it (`first`); whether still nothing has.
+fn statics(out: &mut String, c: &Class, mut first: bool) -> bool {
+    if !c.fields.is_empty() && !first {
         out.push('\n');
     }
     for f in &c.fields {
@@ -935,9 +945,13 @@ pub fn class(c: &Class) -> String {
             out.push_str("volatile ");
         }
         let _ = writeln!(out, "{} {};", f.ty, f.name);
+        first = false;
     }
     for m in &c.methods {
-        out.push_str("\n    ");
+        if !first {
+            out.push('\n');
+        }
+        out.push_str("    ");
         if m.public {
             out.push_str("public ");
         }
@@ -952,20 +966,27 @@ pub fn class(c: &Class) -> String {
         if !m.throws.is_empty() {
             let _ = write!(out, "throws {} ", m.throws.join(", "));
         }
-        block(&mut out, &m.body, 1);
+        block(out, &m.body, 1);
         out.push('\n');
+        first = false;
     }
     for h in &c.helpers {
-        out.push('\n');
+        if !first {
+            out.push('\n');
+        }
         out.push_str(h);
+        first = false;
     }
     if !c.init.is_empty() {
-        out.push_str("\n    static ");
-        block(&mut out, &c.init, 1);
+        if !first {
+            out.push('\n');
+        }
+        out.push_str("    static ");
+        block(out, &c.init, 1);
         out.push('\n');
+        first = false;
     }
-    out.push_str("}\n");
-    out
+    first
 }
 
 #[cfg(test)]

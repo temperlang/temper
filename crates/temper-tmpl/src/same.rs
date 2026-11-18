@@ -32,14 +32,18 @@ fn programs(a: &Program, b: &Program) -> Same {
         !spans(a, b) || a.files.iter().map(file).eq(b.files.iter().map(file)),
         || "files differ".into(),
     )?;
-    check(a.decls.len() == b.decls.len(), || {
-        format!(
-            "declaration counts differ: {} and {}",
-            a.decls.len(),
-            b.decls.len()
-        )
+    // Removed declarations at the end aren't in text, so they don't
+    // count.
+    let count = |p: &Program| {
+        (0..p.decls.len())
+            .rev()
+            .find(|&i| p.decls.contains(DeclId(i as u32)))
+            .map_or(0, |i| i + 1)
+    };
+    check(count(a) == count(b), || {
+        format!("declaration counts differ: {} and {}", count(a), count(b))
     })?;
-    for id in a.decls.ids() {
+    for id in a.decls.ids().take(count(a)) {
         decl(a, b, id)?;
     }
     check(a.uses == b.uses, || "used libraries differ".into())?;
@@ -57,6 +61,17 @@ fn programs(a: &Program, b: &Program) -> Same {
             node(a, b, x, y)?;
         }
         node(a, b, m.init, n.init)?;
+        check(m.test_items.len() == n.test_items.len(), || {
+            format!("module #{}'s test item counts differ", m.decl.0)
+        })?;
+        for (&x, &y) in m.test_items.iter().zip(&n.test_items) {
+            node(a, b, x, y)?;
+        }
+        match (m.test_init, n.test_init) {
+            (Some(x), Some(y)) => node(a, b, x, y)?,
+            (None, None) => {}
+            _ => return Err(format!("only one module #{} has a test init", m.decl.0)),
+        }
         check(m.tests.len() == n.tests.len(), || {
             format!("module #{}'s test counts differ", m.decl.0)
         })?;

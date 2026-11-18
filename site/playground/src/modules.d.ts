@@ -6,7 +6,7 @@ declare module "*.temper" {
   export default source;
 }
 
-/** The JavaScript backend's runtime, from vendor/temper/be-js. */
+/** The JavaScript backend's runtime, from crates/temper-be-js/runtime. */
 declare module "@temperlang/core" {
   const exports: Record<string, unknown>;
   export = exports;

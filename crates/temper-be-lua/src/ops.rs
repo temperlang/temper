@@ -15,12 +15,18 @@
 //!   `//` and `%` do, and fail on a zero divisor (Lua's integer `//`
 //!   raises an error, which bubbles). Comparisons are Lua's own;
 //!   `int_cmp` gives -1, 0, or 1.
-//! - `Int64`: Lua's own `+`, `-`, and `*`, which wrap at 64 bits in Lua
-//!   5.3 and later, as Kotlin's; `int64_div`, `int64_mod`, `int64_unm`,
-//!   and `int64_cmp` from the runtime.
+//! - `Int64`: whatever the runtime's `int64_constructor` makes, as
+//!   Kotlin's: a Lua integer on Lua 5.3 and later, and on 5.1 and LuaJIT
+//!   a table of two 32-bit halves, whose metatable gives it `+`, `-`,
+//!   `*`, `==`, `<`, and `<=`. So literals are its calls (the translator
+//!   writes them), conversions from `Int32` too (`int32_toint64`), and
+//!   operators are Lua's own `+`, `-`, `*`, and comparisons, which wrap
+//!   at 64 bits in Lua 5.3 and later, and `int64_div`, `int64_mod`,
+//!   `int64_unm`, and `int64_cmp` from the runtime. Both operands are
+//!   always `Int64`s, so the metatable's always there to compare them.
 //! - Bitwise operators and shifts: the runtime's `band`, `bor`, `bxor`,
-//!   `bnot`, and `shl32` and the rest, which mask the count as Temper
-//!   does.
+//!   `bnot` (for both widths), and `shl32`, `shl64`, and the rest, which
+//!   mask the count as Temper does.
 //! - `Float64`: Lua's own `+`, `-`, `*`, `/`, `^`, and negation, as
 //!   Kotlin's (so division by zero gives an infinity or NaN, as Kotlin's
 //!   JS and Lua do, where tmpl's operators bubble); `fmod`, `float_eq`,

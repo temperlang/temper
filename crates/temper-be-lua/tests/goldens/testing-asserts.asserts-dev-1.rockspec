@@ -10,8 +10,10 @@ build = {
 }
 dependencies = {
     'lua >= 5.1',
-    'temper-core == 0.6.0',
-    'std == 0.6.0',
+    'temper-core == 0.0.0.alpha.0.0',
+}
+test_dependencies = {
+    'std == 0.0.0.alpha.0.0',
 }
 source = {
     url = 'file://asserts.zip',

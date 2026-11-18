@@ -1,6 +1,6 @@
 namespace PropertyMembers;
 
-internal interface ILabeled<L> : IHolder<C>
+internal interface ILabeled<L, T> : IHolder<T>
 {
     string Label(L l);
 }

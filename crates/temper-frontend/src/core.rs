@@ -101,6 +101,11 @@ pub const MEMBER_OPERATOR_EQ: u32 = 1 << 16;
 /// A method marked `@operator("<=>")`, which `a <=> b`, and so `a < b`
 /// and the like, call when `a` is of its class.
 pub const MEMBER_OPERATOR_CMP: u32 = 1 << 17;
+/// A class header's `@noProperty` input: a constructor parameter that
+/// only the class's initializers read, by name, ahead of a member of the
+/// same name, such as a getter. It's no member to anything else, and no
+/// field in tmpl; the interpreter keeps it in a private one.
+pub const MEMBER_NO_PROPERTY: u32 = 1 << 19;
 
 /// A type parameter marked `@out` or `@in`, which Kotlin Temper honors
 /// and tempest ignores (notes/typing.md, "Type parameters are

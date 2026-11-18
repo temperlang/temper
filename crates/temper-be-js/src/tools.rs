@@ -1,9 +1,9 @@
-//! How JavaScript runs built libraries' tests, for `tempest test -b js`:
+//! How JavaScript runs built libraries' tests, for `temper test -b js`:
 //! Mocha (`mocha`, or `MOCHA`) in each library's package, `mocha test
 //! --recursive` with its xunit reporter, Node finding `@temperlang/core`,
 //! `@temperlang/std`, and the libraries in `temper.out/js/node_modules`,
 //! linked to their directories, as npm's workspace that Kotlin makes
-//! links them. `tempest run -b js` imports the library's package under
+//! links them. `temper run -b js` imports the library's package under
 //! Node (`node`, or `NODE`), as Kotlin's `index.js` does.
 
 use std::path::Path;
@@ -18,8 +18,9 @@ pub const TOOLS: Tools = Tools {
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
-    // Library names are dashed identifiers, which need no escaping.
-    let name = &library.name;
+    // Package names have no quotes or backslashes, which configs can't
+    // give, so they need no escaping.
+    let name = crate::translate::js_name(&library.name, &library.metadata);
     program(
         Command::new(tool("NODE", "node"))
             .args(["--input-type=module", "-e"])
@@ -37,7 +38,12 @@ fn link(dir: &Path, all: &[Tested]) -> Result<(), String> {
         ("@temperlang/core".to_string(), dir.join("temper-core")),
         ("@temperlang/std".to_string(), dir.join("std")),
     ];
-    links.extend(all.iter().map(|l| (l.name.clone(), dir.join(&l.name))));
+    links.extend((all.iter()).map(|l| {
+        (
+            crate::translate::js_name(&l.name, &l.metadata),
+            dir.join(&l.name),
+        )
+    }));
     for (name, target) in links {
         let link = modules.join(&name);
         if let Some(parent) = link.parent() {

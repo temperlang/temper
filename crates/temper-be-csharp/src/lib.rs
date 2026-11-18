@@ -24,8 +24,11 @@
 //! where languages have named arguments"), which a Roslyn analyzer in the
 //! generated NuGet package is to say; it isn't built yet.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! C#'s rules ([`names::RULES`]), then [`translate`] into C#'s output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the tests'
+//! project, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with C#'s rules ([`names::RULES`]),
+//! then [`translate`] into C#'s output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer.
 //!
@@ -63,10 +66,6 @@ pub struct Variant {
     /// What it handles natively, which lowering and validation read.
     pub profile: Profile,
     pub rules: NamingRules,
-    /// The `TemperLang.Core` version its output depends on, as a project
-    /// beside the library's (`../../temper-core/TemperLang.Core.csproj`),
-    /// as Kotlin's.
-    pub runtime_version: &'static str,
     /// The .NET target framework, `<TargetFramework>` in each `.csproj`.
     pub target_framework: &'static str,
 }
@@ -82,7 +81,6 @@ pub static CSHARP: Variant = Variant {
         coroutines: CoroutineStrategy::TranslateToGenerator,
     },
     rules: names::RULES,
-    runtime_version: "0.6.0",
     target_framework: "net6.0",
 };
 
@@ -114,6 +112,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     } else {
         runtime::FILES
     },
+    runtime_version: &runtime::VERSION,
     rules: &CSHARP.rules,
     translate: |p, _| translate(p, &CSHARP).map_err(|e| e.to_string()),
     default: true,
@@ -135,8 +134,14 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// hello-world/tests/HelloWorldTest.csproj         the tests' project, on MSTest
 /// hello-world/tests/HelloWorldTests.cs            the root module's tests
 /// hello-world/tests/Helpers/HelpersTests.cs       another module's
+/// hello-world/tests/TestShape.cs                  what only tests reach
 /// hello-world/src/HelloWorldConnected.cs          host code, copied
 /// ```
+///
+/// A module's test class has what only its tests reach, as statics, and
+/// the classes and interfaces only they reach are in the tests' project
+/// too, which sees the library's `internal` members; a library only the
+/// tests use is only the tests' project's reference.
 ///
 /// The root namespace takes the library's name in Pascal case
 /// ([`names::root_namespace`]), and a module's namespace its path's
@@ -145,28 +150,28 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// build` does too ([`runtime`]).
 /// std's modules with support code, as Kotlin's C# backend writes it
 /// into std's output: each module's path, and its support files
-/// (vendored from Kotlin's) beside its own, whose static methods its
+/// (begun as Kotlin's, in `runtime/std/`) beside its own, whose static methods its
 /// connected members call (`RegexSupport.CompiledFind(this, …)`).
 pub const STD_SUPPORT: &[(&str, &str, &str)] = &[
     (
         "regex",
         "IntRangeSet.cs",
-        include_str!("../../../vendor/temper/be-csharp/std/Regex/IntRangeSet.cs"),
+        include_str!("../runtime/std/Regex/IntRangeSet.cs"),
     ),
     (
         "regex",
         "RegexSupport.cs",
-        include_str!("../../../vendor/temper/be-csharp/std/Regex/RegexSupport.cs"),
+        include_str!("../runtime/std/Regex/RegexSupport.cs"),
     ),
     (
         "net",
         "NetSupport.cs",
-        include_str!("../../../vendor/temper/be-csharp/std/Net/NetSupport.cs"),
+        include_str!("../runtime/std/Net/NetSupport.cs"),
     ),
     (
         "temporal",
         "TemporalSupport.cs",
-        include_str!("../../../vendor/temper/be-csharp/std/Temporal/TemporalSupport.cs"),
+        include_str!("../runtime/std/Temporal/TemporalSupport.cs"),
     ),
 ];
 
@@ -175,6 +180,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // `Never<T>` as `T`, but where the profile keeps it
+    // (`temper_tmpl::nevers`).
+    let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
+    let p = nevered.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))
         .then(|| temper_tmpl::switches::to_if_chains(p))
@@ -187,9 +196,13 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let panics = |n| matches!(p.nodes.get(n), temper_tmpl::Node::Panic {});
     let spilled = temper_tmpl::spill::spill_with(p, &panics);
     let p = spilled.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests' project, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
-    let root = translate::library_namespace(library);
+    let root = translate::library_namespace(p, library);
     let mut sources = Vec::new();
     let mut tests = Vec::new();
     let mut program_loads = Vec::new();
@@ -214,11 +227,19 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
                 text: tree::type_decl(&t),
             });
         }
-        if let Some(class) = translator.tests(module, &format!("{base}Tests"))? {
+        if let Some(class) = translator.tests(module)? {
             tests.push(OutFile {
-                path: format!("{library}/tests/{dir}{base}Tests.cs"),
+                path: format!("{library}/tests/{dir}{}.cs", class.statics.name),
                 text: tree::test_class(&class),
             });
+            // What only tests reach, each class and interface a file of
+            // its own there.
+            for t in translator.take_types() {
+                tests.push(OutFile {
+                    path: format!("{library}/tests/{dir}{}.cs", t.name),
+                    text: tree::type_decl(&t),
+                });
+            }
         }
         // std's support code for the module, beside it, as Kotlin's.
         let support = STD_SUPPORT
@@ -235,7 +256,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         }
     }
     // A library without a root module loads every module, as Lua's
-    // `init.lua` requires each, so `tempest run` runs them all.
+    // `init.lua` requires each, so `temper run` runs them all.
     if !p.modules.iter().any(|m| m.path.is_empty()) {
         for module in &p.modules {
             for class in loads(p, module) {
@@ -309,52 +330,10 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
-/// The libraries the library's own code needs, by name: all it uses,
-/// but those only its tests use.
-fn libraries_in_code(p: &Program) -> Vec<String> {
-    let code = libraries_used(p, false);
-    let tests = libraries_used(p, true);
-    (p.dependencies().into_iter())
-        .map(|(name, _)| name.to_string())
-        .filter(|name| code.contains(name) || !tests.contains(name))
-        .collect()
-}
-
-/// The libraries the library's own code uses, or with `tests`, its
-/// tests, by name.
-fn libraries_used(p: &Program, tests: bool) -> Vec<String> {
-    use temper_tmpl::analysis::module_imports;
-    use temper_tmpl::qname::{is_external, library_of};
-    let mut found = Vec::new();
-    for module in &p.modules {
-        let imports = if tests {
-            temper_tmpl::analysis::test_imports(p, module)
-        } else {
-            module_imports(p, module)
-        };
-        for import in imports {
-            for d in import.decls {
-                if !is_external(p, d) || library_of(p, d) == "core" {
-                    continue;
-                }
-                let mut l = d;
-                while p.decls.get(l).kind != temper_tmpl::DeclKind::Library {
-                    l = p.decls.get(l).owner;
-                }
-                let name = p.name(l).to_string();
-                if !found.contains(&name) {
-                    found.push(name);
-                }
-            }
-        }
-    }
-    found
-}
-
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
-fn project_reference(name: &str) -> String {
-    let project = translate::library_namespace(name);
+fn project_reference(p: &Program, name: &str) -> String {
+    let project = translate::library_namespace(p, name);
     format!("\n    <ProjectReference Include=\"../../{name}/src/{project}.csproj\"/>")
 }
 
@@ -363,10 +342,10 @@ fn project_reference(name: &str) -> String {
 fn test_project(p: &Program, root: &str, variant: &Variant) -> String {
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
-    let in_code = libraries_in_code(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let dependencies: String = (p.dependencies().iter())
-        .filter(|(name, _)| !in_code.iter().any(|l| l == name))
-        .map(|(name, _)| project_reference(name))
+        .filter(|(name, _)| tests_only.iter().any(|l| l == name))
+        .map(|(name, _)| project_reference(p, name))
         .collect();
     format!(
         r#"<Project Sdk="Microsoft.NET.Sdk">
@@ -400,6 +379,28 @@ fn version_line(version: &str) -> String {
     }
 }
 
+/// The config's metadata, as Kotlin's `CsProj` writes it, a property a
+/// line: the authors and description before `IsPackable`, then the
+/// license and the project's URL after it. The URL is the homepage, or
+/// else the repository, which also goes in `RepositoryUrl`, where Kotlin
+/// gives only the repository, as the project's URL.
+fn package_metadata(p: &Program) -> (String, String) {
+    let meta = p.metadata();
+    let line = |tag: &str, value: Option<&str>| match value {
+        Some(value) => format!("    <{tag}>{}</{tag}>\n", temper_tmpl::xml_text(value)),
+        None => String::new(),
+    };
+    let about =
+        line("Authors", meta.get("authors")) + &line("Description", meta.get("description"));
+    let links = line("PackageLicenseExpression", meta.get("license"))
+        + &line(
+            "PackageProjectUrl",
+            meta.get("homepage").or(meta.get("repository")),
+        )
+        + &line("RepositoryUrl", meta.get("repository"));
+    (about, links)
+}
+
 /// The library's project, as Kotlin's `CsProj` writes it for a library
 /// without tests, and with a reference to each library it uses: its
 /// tests' project may see its
@@ -408,12 +409,13 @@ fn version_line(version: &str) -> String {
 fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
+    let (about, links) = package_metadata(p);
     // Each library its code uses, by its project beside this one's
     // library; what only its tests use, their project refers to.
-    let in_code = libraries_in_code(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let dependencies: String = (p.dependencies().iter())
-        .filter(|(name, _)| in_code.iter().any(|l| l == name))
-        .map(|(name, _)| project_reference(name))
+        .filter(|(name, _)| !tests_only.iter().any(|l| l == name))
+        .map(|(name, _)| project_reference(p, name))
         .collect();
     // std's `testing` throws MSTest's `AssertFailedException`, so std has
     // the packages its C# configuration lists.
@@ -432,8 +434,8 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
   <PropertyGroup>
     <TargetFramework>{framework}</TargetFramework>
     <RootNamespace>{root}</RootNamespace>
-{version}    <IsPackable>true</IsPackable>
-    <Nullable>enable</Nullable>
+{version}{about}    <IsPackable>true</IsPackable>
+{links}    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="{root}Test"/>

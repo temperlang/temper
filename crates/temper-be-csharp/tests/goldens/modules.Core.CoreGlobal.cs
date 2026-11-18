@@ -13,4 +13,16 @@ public static class CoreGlobal
             return 0;
         }
     }
+
+    public static Ratio? RatioOf(int n, int d)
+    {
+        if (d == 0)
+        {
+            return null;
+        }
+        else
+        {
+            return new Ratio(n, d);
+        }
+    }
 }

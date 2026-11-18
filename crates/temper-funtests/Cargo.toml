@@ -1,6 +1,6 @@
 [package]
 name = "temper-funtests"
-description = "Kotlin Temper's functional tests, from the vendored copy: sources, std imports, and expected output"
+description = "Temper's functional tests: sources, std imports, and expected output"
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true

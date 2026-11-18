@@ -1,6 +1,6 @@
-# 7. The tempest command
+# 7. The `temper` command
 
-The `tempest` command is a thin layer, argument parsing and output, over
+The `temper` command is a thin layer, argument parsing and output, over
 the `temper-driver` crate, which holds the registry of backends, the one
 way from a settled library to each backend's files, and running tests
 with each language's tools; the playground's wasm uses it too.
@@ -10,12 +10,12 @@ and `build`, which writes every library in every language to
 binary, so it needs nothing beside it.
 
 ```text
-tempest test [-b interp|BACKEND]... [--library NAME] [-v] [-w DIR | DIR]
-tempest build [-w DIR] [-b BACKEND]... [-o DIR] [-v]
-tempest run --library NAME -b interp|BACKEND [-w DIR]
-tempest init [-o DIR]
-tempest serve | lsp
-tempest version | license | licenses | help [COMMAND]
+temper test [-b interp|BACKEND]... [--library NAME] [-v] [-w DIR | DIR]
+temper build [-w DIR] [-b BACKEND]... [-o DIR] [-v]
+temper run --library NAME -b interp|BACKEND [-w DIR]
+temper init [-o DIR]
+temper serve | lsp
+temper version | license | licenses | help [COMMAND]
 ```
 
 Its commands and flags are Kotlin Temper's `temper`'s, by the same
@@ -27,7 +27,7 @@ writes a JSON record per line, as Kotlin's does
 work root, then runs a library's top level with the backend's tools,
 or on the interpreter; `init` writes Kotlin's project skeleton
 ([`init`](../../crates/temper-driver/src/init.rs)). `watch`, `repl`,
-and `doc` say they aren't in tempest yet, and exit with 3.
+and `doc` say they aren't available yet, and exit with 3.
 
 `serve`, or `lsp`, is a language server for editors, over stdin and
 stdout, on the same library finding and `Sources` as `test` and
@@ -142,16 +142,16 @@ test("triple of 14") {
 ```
 
 ```text
-$ tempest test -v .
+$ temper test -v .
 Testing triple
   ok      triple of 14
 Tests passed: 1 of 1
 
-$ tempest test -b py .
+$ temper test -b py .
 Tests passed: 1 of 1
 ```
 
-`tempest build -b py` writes the library, std, and the runtime under
+`temper build -b py` writes the library, std, and the runtime under
 `temper.out/py/`. The test becomes a `unittest` case, with the
 `assert` macro's message built in:
 
@@ -172,7 +172,7 @@ Add a second test that misspells `triple` as `tripel`, and only that
 test fails, on the interpreter and in Python alike:
 
 ```text
-$ tempest test -b py .
+$ temper test -b py .
 triple/triple.temper:8:10: error: tripel has not been declared
 triple: 1 error
 Testing triple on py
@@ -187,7 +187,7 @@ Tests passed: 1 of 2
 - [`serve`](../../crates/temper-lsp/src/lib.rs): the language server.
 - [`build`](../../crates/temper-driver/src/build.rs): every library, each backend, in dependency order.
 - [`test_backend`](../../crates/temper-driver/src/test_run.rs) and [`run`](../../crates/temper-driver/src/test_run.rs) in `test_run`: any backend's test tools, as each backend crate's `tools` module gives them ([`Tools`](../../crates/temper-tmpl/src/backend.rs)), with JUnit XML and tool lookup shared in [`tools`](../../crates/temper-tmpl/src/tools.rs).
-- [`run`](../../crates/temper-driver/src/run.rs) in `run`: `tempest run`, through each backend's `Tools::run`, or on the interpreter; [`init`](../../crates/temper-driver/src/init.rs): `tempest init`.
+- [`run`](../../crates/temper-driver/src/run.rs) in `run`: `temper run`, through each backend's `Tools::run`, or on the interpreter; [`init`](../../crates/temper-driver/src/init.rs): `temper init`.
 - Tests: `crates/temper-driver/tests/` (dependencies between libraries, and the built-in runtimes).
 - [`test_libraries`](../../crates/temper-frontend/src/library_tests.rs), [`test_library`](../../crates/temper-frontend/src/library_tests.rs), and [`Tally`](../../crates/temper-frontend/src/library_tests.rs): tests on the interpreter, and the summary; [`log`](../../crates/temper-frontend/src/log.rs): JSON records.
 - [`work_root`](../../crates/temper-frontend/src/project.rs), [`find_libraries_ignoring`](../../crates/temper-frontend/src/project.rs), [`ignore_file`](../../crates/temper-frontend/src/project.rs), and [`load_library`](../../crates/temper-frontend/src/project.rs): finding and loading libraries.
@@ -210,6 +210,6 @@ fixed list of built-in backends. What has to change first:
 [the next page](08-playground.md) says how `watch` will reuse all this,
 and [page 9](09-language-server.md) how `lsp` does.
 
-**In detail:** [The tempest command in detail](detail/07-cli.md): each
+**In detail:** [The `temper` command in detail](detail/07-cli.md): each
 decision with its alternatives and Kotlin Temper's way, the main types,
 the tests, and known weaknesses.

@@ -65,16 +65,13 @@ export class Hidden extends type() {
 }
 
 export class Hider extends type() {
-  /** @type {number} */
-  #i;
   /** @type {Hidden} */
   #hidden;
 
   /** @param {number} i */
   constructor(i) {
     super();
-    this.#i = i;
-    this.#hidden = new Hidden(this.#i);
+    this.#hidden = new Hidden(i);
   }
 
   /**

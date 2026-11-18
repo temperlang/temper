@@ -1,6 +1,9 @@
 let { greet } = import("./deep");
 
 export let twice(x: Int): Int { x * 2 }
+
+@extension("doubled")
+export let intDoubled(x: Int): Int { twice(x) }
 export let base = 10;
 export var calls = 0;
 

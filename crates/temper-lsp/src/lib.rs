@@ -1,4 +1,4 @@
-//! Temper's language server, which `tempest lsp` runs over stdio,
+//! Temper's language server, which `temper lsp` runs over stdio,
 //! answering an editor's questions from [`temper_analysis`], as the
 //! playground does.
 //!
@@ -10,7 +10,7 @@
 //!   memory layer of [`Sources`] in front of it, so analysis sees unsaved
 //!   text.
 //! - **Units:** a document belongs to the library around it, found as
-//!   `tempest build` finds libraries (the nearest `config.temper.md`
+//!   `temper build` finds libraries (the nearest `config.temper.md`
 //!   above it, under its work root), or else stands alone. Each unit is
 //!   settled as one [`Analysis`], which answers for all its files.
 //! - **Staying current:** a change marks the document stale. Stale units
@@ -210,7 +210,7 @@ fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
 
 /// What an editor is told about a panic, a bug in tempest.
 fn internal_error(what: &str, message: &str) -> String {
-    format!("internal error (a bug in tempest) {what}: {message}")
+    format!("internal error (a bug in Temper) {what}: {message}")
 }
 
 /// A request's failure: a JSON-RPC error code and message.
@@ -258,7 +258,7 @@ impl<W: Write> Server<W> {
                 let request = catch_unwind(AssertUnwindSafe(|| self.request(method, params)));
                 request.unwrap_or_else(|payload| {
                     let why = internal_error(&format!("in {method}"), &panic_message(&*payload));
-                    eprintln!("tempest lsp: {why}");
+                    eprintln!("temper lsp: {why}");
                     Err((-32603, why))
                 })
             }
@@ -407,13 +407,13 @@ impl<W: Write> Server<W> {
                 // The unit's analysis, if any, no longer fits the text;
                 // the next question about it analyzes it again.
                 let why = internal_error(&format!("analyzing {key}"), &panic_message(&*payload));
-                eprintln!("tempest lsp: {why}");
+                eprintln!("temper lsp: {why}");
                 self.units
                     .retain(|u| !u.files.iter().any(|f| files.contains(f)));
                 let diagnostic = lsp::Diagnostic {
                     range: lsp::Range::default(),
                     severity: Some(lsp::DiagnosticSeverity::ERROR),
-                    source: Some("tempest".to_string()),
+                    source: Some("temper".to_string()),
                     message: why,
                     ..Default::default()
                 };
@@ -693,7 +693,7 @@ fn diagnostics_by_file(
                 Level::Warn => lsp::DiagnosticSeverity::WARNING,
                 Level::Hint => lsp::DiagnosticSeverity::HINT,
             }),
-            source: Some("tempest".to_string()),
+            source: Some("temper".to_string()),
             message: problem.message,
             ..Default::default()
         });
@@ -745,7 +745,7 @@ fn write_std() -> PathBuf {
             hash = (hash ^ b as u64).wrapping_mul(0x100000001b3);
         }
     }
-    let dir = std::env::temp_dir().join(format!("tempest-std-{hash:016x}"));
+    let dir = std::env::temp_dir().join(format!("temper-std-{hash:016x}"));
     for (path, text) in &files {
         let file = dir.join(path);
         if file.exists() {
@@ -836,7 +836,7 @@ fn initialize_result() -> lsp::InitializeResult {
             ..Default::default()
         },
         server_info: Some(lsp::ServerInfo {
-            name: "tempest".to_string(),
+            name: "temper".to_string(),
             version: None,
         }),
     }
@@ -946,9 +946,14 @@ pub fn uri_to_path(uri: &str) -> String {
         }
     }
     let path = String::from_utf8_lossy(&bytes).into_owned();
-    // `/c:/x` on Windows is `c:/x`.
+    // `/c:/x` on Windows is `C:/x`: the drive in upper case, as the
+    // frontend keeps paths (VS Code sends it lower).
     let windows = path.len() > 2 && path.as_bytes()[2] == b':';
-    let path = if windows { path[1..].to_string() } else { path };
+    let path = if windows {
+        temper_frontend::project::upper_drive(&path[1..])
+    } else {
+        path
+    };
     normalized(&path)
 }
 
@@ -1024,7 +1029,8 @@ mod tests {
             uri_to_path("file:///home/a%20b/x.temper"),
             "/home/a b/x.temper"
         );
-        assert_eq!(uri_to_path("file:///c%3A/x/../y.temper"), "c:/y.temper");
+        assert_eq!(uri_to_path("file:///c%3A/x/../y.temper"), "C:/y.temper");
+        assert_eq!(uri_to_path("file:///C:/y.temper"), "C:/y.temper");
         assert_eq!(
             path_to_uri("/home/a b/x.temper"),
             "file:///home/a%20b/x.temper"

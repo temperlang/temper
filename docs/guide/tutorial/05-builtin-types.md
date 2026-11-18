@@ -11,7 +11,7 @@ We also diverge here from our example geometric shapes library, though it
 served us well for context to get started.
 
 For the types below, some of them can be found as class or interface definitions
-in the file [*core.temper*](../../../vendor/temper/core/core.temper) in the Temper source code. The
+in the file [*core.temper*](../../../lib/core/core.temper) in the Temper source code. The
 interpreter uses much of the code here, but classes here are also separately
 redefined for each backend.
 
@@ -35,9 +35,11 @@ some of these types:
   functions that might fail, usually `Bubble` is a better choice than making
   the type nullable with `?`.
   And for functions whose result should be ignored, use `Void`.
-- `Never` - The subtype of all other types, representing computations that never
-  complete, such as infinite loops. Computations that exit abnormally use
-  `Bubble`, not `Never`.
+- `Never<T>` - The type of computations that never complete, such as infinite
+  loops or a function that always panics. It stands for `T`, and is a subtype
+  only of `T` and what `T` is, so a `Never<Int>` call fits where an `Int` is
+  wanted, and translates to `T` in languages without a bottom type.
+  Computations that exit abnormally use `Bubble`, not `Never`.
 - `Invalid` - A type for when a type can't be computed.
 
 As suggested above, sometimes we can distinguish types at runtime, but this
@@ -294,7 +296,6 @@ $ nums.add(40);
 interactive#3:1:1: error: No member add in List<Int32>
     nums.add(40);
     ^^^^^^^^
-Failed: No method add for List
 interactive#3: fail
 $ let nums2 = do {
     let builder = new ListBuilder<Int>();
@@ -363,7 +364,7 @@ user-defined key types in the future (see [issue#29](https://github.com/temperla
 ## Other types
 
 Temper has additional built-in types, but above discussion highlights some of the
-most important ones. Also, some types currently in [*core.temper*](../../../vendor/temper/core/core.temper),
+most important ones. Also, some types currently in [*core.temper*](../../../lib/core/core.temper),
 such as `Deque<T>` and `DenseBitVector` might move to support libraries in the
 future (see [issue#30](https://github.com/temperlang/temper/issues/30)).
 

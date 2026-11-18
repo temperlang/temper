@@ -1,5 +1,8 @@
 local temper = require("temper-core")
 
+---@type table<string, integer>
+local tally
+
 ---@class generics.Holder
 ---@field held any
 
@@ -45,6 +48,19 @@ local Named = temper.type("generics.Named")
 ---@param name string
 function Named.constructor(this, name)
   this.name = name
+end
+
+---@class generics.Counter
+---@field n integer
+
+---@class generics.Counter.type: temper.Type
+---@operator call: generics.Counter
+local Counter = temper.type("generics.Counter")
+
+---@param this generics.Counter
+---@param n integer
+function Counter.constructor(this, n)
+  this.n = n
 end
 
 ---@class generics.Shelf
@@ -118,12 +134,18 @@ local function relayed(x)
   return tagged(x)
 end
 
+---@param length integer
+---@return boolean
+local function noneIn(length)
+  return length == 0
+end
+
 ---@generic T
 ---@param items T[]
 ---@param fallback T
 ---@return T
 local function first(items, fallback)
-  if temper.listed_isempty(items) then
+  if noneIn(temper.listed_length(items)) then
     return fallback
   else
     return temper.listed_get(items, 0)
@@ -149,6 +171,83 @@ local function total(ns)
     end
   end
   return sum
+end
+
+local function indexed()
+  local counts = temper.listbuilder_constructor()
+  temper.listbuilder_add(counts, 1)
+  temper.listbuilder_add(counts, 10)
+  local at = 0
+  do
+    local k = at
+    temper.listbuilder_set(counts, k, temper.int32_add(temper.listed_get(counts, k), 4))
+  end
+  temper.listbuilder_set(counts, 1, temper.int32_mul(temper.listed_get(counts, 1), 3))
+  local t = at
+  at = temper.int32_add(t, 1)
+  local k2 = t
+  local t2 = temper.listed_get(counts, k2)
+  temper.listbuilder_set(counts, k2, temper.int32_add(t2, 1))
+  local was = t2
+  local k3 = at
+  local t3 = temper.int32_add(temper.listed_get(counts, k3), 1)
+  temper.listbuilder_set(counts, k3, t3)
+  local pre = t3
+  local t4 = temper.listed_get(counts, 0)
+  temper.listbuilder_set(counts, 0, temper.int32_sub(t4, 1))
+  local post = t4
+  local t5 = temper.int32_sub(temper.listed_get(counts, 0), 1)
+  temper.listbuilder_set(counts, 0, t5)
+  local down = t5
+  print(was .. " " .. pre .. " " .. post .. " " .. down .. " " .. at)
+end
+
+local function both()
+  local x = 1
+  local y = 10
+  local t = x
+  x = temper.int32_add(t, 1)
+  local t2 = y
+  y = temper.int32_add(t2, 1)
+  local locals = temper.int32_add(t, t2)
+  local p = Counter(100)
+  local q = Counter(1000)
+  local t3 = p.n
+  p.n = temper.int32_add(t3, 1)
+  local t4 = q.n
+  q.n = temper.int32_add(t4, 1)
+  local fields = temper.int32_add(t3, t4)
+  local t5 = p.n
+  p.n = temper.int32_add(t5, 1)
+  local t6 = p.n
+  p.n = temper.int32_add(t6, 1)
+  local same = temper.int32_add(t5, t6)
+  local a = temper.listbuilder_constructor()
+  temper.listbuilder_add(a, 3)
+  local b = temper.listbuilder_constructor()
+  temper.listbuilder_add(b, 30)
+  local i = 0
+  local k = i
+  local t7 = temper.listed_get(a, k)
+  temper.listbuilder_set(a, k, temper.int32_add(t7, 1))
+  local k2 = i
+  local t8 = temper.listed_get(b, k2)
+  temper.listbuilder_set(b, k2, temper.int32_add(t8, 1))
+  local items = temper.int32_add(t7, t8)
+  print(locals .. " " .. x .. " " .. y .. " " .. fields .. " " .. same .. " " .. p.n .. " " .. q.n .. " " .. items .. " " .. temper.listed_get(a, 0) .. " " .. temper.listed_get(b, 0))
+end
+
+---@param key string
+---@return integer
+local function bump(key)
+  temper.mapbuilder_set(tally, key, temper.int32_sub(temper.mapped_get(tally, key), 1))
+  local t = temper.mapped_get(tally, key)
+  temper.mapbuilder_set(tally, key, temper.int32_add(t, 1))
+  local before = t
+  local t2 = temper.int32_add(temper.mapped_get(tally, key), 1)
+  temper.mapbuilder_set(tally, key, t2)
+  local after = t2
+  return temper.int32_add(before, after)
 end
 
 ---@param a integer[]
@@ -184,20 +283,20 @@ local built = temper.listbuilder_tolist(builder)
 print(temper.list_length(built) .. " " .. temper.listed_getor(built, 5, "?") .. " " .. temper.list_get(temper.listed_slice(built, 1, 2), 0))
 local m = temper.map_constructor({ temper.pair_constructor("a", 1), temper.pair_constructor("b", 2) })
 ---@type integer
-local t
-if not temper.pcall(function()
-  t = temper.mapped_get(m, "b")
-end) then
-  t = -1
-end
----@type integer
 local t_1
 if not temper.pcall(function()
-  t_1 = temper.mapped_get(m, "c")
+  t_1 = temper.mapped_get(m, "b")
 end) then
   t_1 = -1
 end
-print(t .. " " .. t_1 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. temper.mapped_length(m))
+---@type integer
+local t_2
+if not temper.pcall(function()
+  t_2 = temper.mapped_get(m, "c")
+end) then
+  t_2 = -1
+end
+print(t_1 .. " " .. t_2 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. temper.mapped_length(m))
 local mb = temper.mapbuilder_constructor()
 temper.mapbuilder_set(mb, "q", 5)
 temper.mapbuilder_set(mb, "n", temper.null)
@@ -214,12 +313,39 @@ end
 local subject5 = temper.is_null(subject6) and temper.null or tostring(subject6 --[[@as integer]])
 print(temper.is_null(subject5) and "null" or (subject5 --[[@as string]]))
 print(tostring(temper.listed_length(temper.mapped_keys(mb))))
+indexed()
+both()
+tally = temper.mapbuilder_constructor()
+temper.mapbuilder_set(tally, "k", 2)
+---@type integer
+local t_3
+if not temper.pcall(function()
+  t_3 = bump("k")
+end) then
+  t_3 = -1
+end
+---@type integer
+local t_4
+if not temper.pcall(function()
+  t_4 = bump("z")
+end) then
+  t_4 = -1
+end
+---@type integer
+local t_5
+if not temper.pcall(function()
+  t_5 = temper.mapped_get(tally, "k")
+end) then
+  t_5 = -1
+end
+print(t_3 .. " " .. t_4 .. " " .. t_5)
 print(tostring(firstSame({ 1000 }, { 1000 })) .. " " .. tostring(firstSame({ 1000 }, { 7 })))
 
 return {
   Holder = Holder,
   Box = Box,
   Named = Named,
+  Counter = Counter,
   Shelf = Shelf,
   Scene = Scene,
   Stage = Stage,

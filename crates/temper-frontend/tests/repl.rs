@@ -3,9 +3,9 @@
 //! The cases have the format described in temper-syntax's
 //! `tests/common/mod.rs`, with a `--- transcript` line before the
 //! expected output. A case's input is what's typed, or piped, into
-//! `tempest repl`, a line at a time: [`Chunker`] splits it into inputs,
+//! `temper repl`, a line at a time: [`Chunker`] splits it into inputs,
 //! each fed to one [`ReplSession`], and the output is each event's text,
-//! as `tempest repl` prints it. To accept new or changed output, run
+//! as `temper repl` prints it. To accept new or changed output, run
 //! with `UPDATE_SNAPSHOTS=1` and review the diff.
 
 #[path = "../../temper-syntax/tests/common/mod.rs"]

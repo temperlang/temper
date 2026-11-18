@@ -28,6 +28,12 @@ pub enum TypeData {
     /// The type of what never completes, as `panic()` or `return`; a
     /// subtype of every type.
     Never,
+    /// `Never<T>`, as a function that never returns declares its result:
+    /// it never completes either, but stands for a `T`, so it's a subtype
+    /// only of what `T` is a subtype of, and of `Never<U>` for each such
+    /// `U` (core's docs), and translates to `T`. Made by
+    /// [`Types::never_of`], so `T` is neither nullable nor a `Never`.
+    NeverOf(TypeId),
     /// The type of `null`.
     Null,
     /// A builtin type, by its index in [`TYPES`]. `Int` is `Int32`.
@@ -127,6 +133,18 @@ pub fn builtin_supertype(name: &str) -> Option<&'static str> {
         .find(|&&(sub, _)| sub == name && !WELL_KNOWN.contains(&sub))
         .map(|&(_, sup)| sup)
 }
+
+/// Core's non-generic classes and interface beyond the final types:
+/// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
+/// and nothing else extends any of them, so each is a subtype of only
+/// itself and what core says it extends ([`Types::is_subtype`]).
+const CORE_NOMINAL: [&str; 5] = [
+    "DenseBitVector",
+    "NoStringIndex",
+    "StringBuilder",
+    "StringIndex",
+    "StringIndexOption",
+];
 
 /// Builtin generic types that core declares as classes, which no class
 /// extends; core marks the first four `@mayDowncastTo(false)`.
@@ -282,6 +300,10 @@ impl Types {
                 let inner = self.substitute(inner, formals, actuals);
                 self.nullable(inner)
             }
+            TypeData::NeverOf(inner) => {
+                let inner = self.substitute(inner, formals, actuals);
+                self.never_of(inner)
+            }
             TypeData::Applied { base, args } => {
                 let args = (args.iter())
                     .map(|&a| self.substitute(a, formals, actuals))
@@ -314,7 +336,7 @@ impl Types {
     pub fn mentions(&self, t: TypeId, formals: &[SymbolId]) -> bool {
         match self.get(t) {
             TypeData::Param(symbol) => formals.contains(symbol),
-            TypeData::Nullable(inner) => self.mentions(*inner, formals),
+            TypeData::Nullable(inner) | TypeData::NeverOf(inner) => self.mentions(*inner, formals),
             TypeData::Applied { args, .. } => args.iter().any(|&a| self.mentions(a, formals)),
             TypeData::Fn { params, ret, .. } => {
                 params.iter().any(|p| self.mentions(p.ty, formals)) || self.mentions(*ret, formals)
@@ -331,10 +353,13 @@ impl Types {
     /// wanted, `T?` from `Int32?` or `Int32`, and function types'
     /// parameters and results, with a `@fun` interface's type as the
     /// function type it stands for, unless both are of one interface.
-    /// Each solution goes into `actuals` at the formal's index; one solved
-    /// two different ways goes into `conflicts` too. Only fully known types are solutions, and not null, `Never`,
-    /// `Void` or a nullable type for a bare `T`, whose bound is never
-    /// nullable.
+    /// Each solution goes into `actuals` at the formal's index, `Dog` and
+    /// `Dog?` joined; one solved two different ways goes into `conflicts`
+    /// too. Only fully known types are solutions, and not null, `Never`,
+    /// or `Void`; a nullable type is one for a bare `T`, as for Kotlin
+    /// Temper, whose bound check takes it as fitting only `AnyValue`. A
+    /// `Never<A>` passed where no `Never` is wanted solves as its `A`, as
+    /// Kotlin's reconciliation unpacks it.
     pub fn unify(
         &mut self,
         pattern: TypeId,
@@ -345,11 +370,13 @@ impl Types {
     ) {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
+            (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
+            (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
             (Param(symbol), _) => {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null | Nullable(_))
+                if matches!(self.get(actual), Never | Null)
                     || actual == VOID
                     || !self.is_known(actual)
                 {
@@ -357,8 +384,11 @@ impl Types {
                 }
                 match actuals[i] {
                     UNKNOWN => actuals[i] = actual,
-                    solved if solved != actual => conflicts[i] = true,
-                    _ => {}
+                    // `Dog` and `Dog?` solve it as `Dog?`, as in Kotlin.
+                    solved if self.nullable(solved) == self.nullable(actual) => {
+                        actuals[i] = self.join(solved, actual);
+                    }
+                    _ => conflicts[i] = true,
                 }
             }
             (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, conflicts),
@@ -454,7 +484,7 @@ impl Types {
     pub fn is_generic(&self, t: TypeId) -> bool {
         match self.get(t) {
             TypeData::Param(_) | TypeData::Applied { .. } => true,
-            TypeData::Nullable(t) => self.is_generic(*t),
+            TypeData::Nullable(t) | TypeData::NeverOf(t) => self.is_generic(*t),
             TypeData::Fn { params, ret, .. } => {
                 params.iter().any(|p| self.is_generic(p.ty)) || self.is_generic(*ret)
             }
@@ -530,6 +560,38 @@ impl Types {
         })
     }
 
+    /// `Never<t>` ([`TypeData::NeverOf`]), as Kotlin Temper normalizes
+    /// it: `Never<T?>` is `Never<T>?`, `Never<Never<T>>` is `Never<T>`,
+    /// and `Never<…>` of what never completes, that.
+    pub fn never_of(&mut self, t: TypeId) -> TypeId {
+        match *self.get(t) {
+            TypeData::Never | TypeData::NeverOf(_) => t,
+            TypeData::Nullable(inner) => {
+                let never = self.never_of(inner);
+                self.nullable(never)
+            }
+            _ => self.intern(TypeData::NeverOf(t)),
+        }
+    }
+
+    /// Builtin type `base` given `args`, as `List<Int32>`, or `Never<T>`
+    /// ([`Types::never_of`]); unknown for one that takes no arguments, as
+    /// `AnyValue` or a final type, or for `Never` given more than one.
+    pub fn apply_builtin(&mut self, base: TypeId, args: Vec<TypeId>) -> TypeId {
+        match (base, &args[..]) {
+            (NEVER, &[t]) => self.never_of(t),
+            (NEVER | ANY_VALUE, _) => UNKNOWN,
+            _ if self.is_final(base) => UNKNOWN,
+            _ => self.intern(TypeData::Applied { base, args }),
+        }
+    }
+
+    /// Whether a value of type `t` is used as Kotlin Temper uses `Void`'s:
+    /// `Void`, or `Never<Void>`, which stands for it.
+    pub fn is_void_like(&self, t: TypeId) -> bool {
+        t == VOID || *self.get(t) == TypeData::NeverOf(VOID)
+    }
+
     /// `t?`.
     pub fn nullable(&mut self, t: TypeId) -> TypeId {
         match self.get(t) {
@@ -550,6 +612,14 @@ impl Types {
             (TypeData::Unknown, _) | (_, TypeData::Unknown) => UNKNOWN,
             (TypeData::Never, _) => b,
             (_, TypeData::Never) => a,
+            // As Kotlin's least upper bound unpacks a `Never<T>` beside
+            // another type: `Int32` for an `Int32` and a `Never<Int32>`.
+            (TypeData::NeverOf(x), TypeData::NeverOf(y)) => match self.join(x, y) {
+                UNKNOWN => UNKNOWN,
+                t => self.never_of(t),
+            },
+            (TypeData::NeverOf(x), _) => self.join(x, b),
+            (_, TypeData::NeverOf(y)) => self.join(a, y),
             (TypeData::Null, _) => self.nullable(b),
             (_, TypeData::Null) => self.nullable(a),
             (TypeData::Nullable(x), _) if x == b => a,
@@ -622,7 +692,7 @@ impl Types {
     pub fn is_known(&self, t: TypeId) -> bool {
         match self.get(t) {
             TypeData::Unknown => false,
-            TypeData::Nullable(t) => self.is_known(*t),
+            TypeData::Nullable(t) | TypeData::NeverOf(t) => self.is_known(*t),
             TypeData::Applied { base, args } => {
                 self.is_known(*base) && args.iter().all(|&a| self.is_known(a))
             }
@@ -665,15 +735,23 @@ impl Types {
             (Null, Nullable(_)) => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
+            // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a
+            // `B`, `@out` as core declares it; nothing else is a `Never<B>`
+            // but what never completes.
+            (NeverOf(a), NeverOf(b)) => self.subtype(a, b, depth),
+            (NeverOf(a), _) => self.subtype(a, t, depth),
+            (_, NeverOf(_)) => Some(false),
             // Unless its bound is nullable, `T` isn't.
             (Null | Nullable(_), Param(_))
                 if self.subtype(NULL, self.upper(t), depth) != Some(false) =>
             {
                 None
             }
-            (Null | Nullable(_), _) => {
-                (self.is_definite(t) || self.is_class_like(t) || t == ANY_VALUE).then_some(false)
-            }
+            (Null | Nullable(_), _) => (self.is_definite(t)
+                || self.is_class_like(t)
+                || self.is_core_nominal(t)
+                || t == ANY_VALUE)
+                .then_some(false),
             // A type parameter is a subtype of its bound only, and nothing
             // but itself and `Never` is a subtype of it.
             (Param(_), _) => {
@@ -689,6 +767,11 @@ impl Types {
                 (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
             }
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
+            // Core's non-generic classes, as `StringBuilder`, are only what
+            // core says they extend, and no other type is one of them.
+            _ if self.is_core_nominal(s) || self.is_core_nominal(t) => {
+                Some(self.builtin_extends(s, t))
+            }
             (Applied { .. }, _) | (_, Applied { .. }) => self.generic_subtype(s, t, depth),
             (Class(a), Class(b)) => Some(self.classes.get(&a)?.ancestors.contains(&b)),
             (Class(_), _) if self.is_final(t) => Some(false),
@@ -892,6 +975,13 @@ impl Types {
         self.is_final(x) || matches!(self.get(x), TypeData::Fn { .. })
     }
 
+    /// Whether `x` is one of core's non-generic classes or interfaces
+    /// beyond the final types ([`CORE_NOMINAL`]).
+    fn is_core_nominal(&self, x: TypeId) -> bool {
+        self.builtin_name(x)
+            .is_some_and(|n| CORE_NOMINAL.contains(&n))
+    }
+
     /// Whether `x` is a class's or interface's type, a type parameter, or
     /// a generic type given arguments.
     fn is_class_like(&self, x: TypeId) -> bool {
@@ -921,6 +1011,7 @@ impl Types {
         match self.get(t) {
             TypeData::Unknown => "?".into(),
             TypeData::Never => "Never".into(),
+            TypeData::NeverOf(t) => format!("Never<{}>", self.display(*t, class_name)),
             TypeData::Null => "Null".into(),
             TypeData::Builtin(i) => TYPES[*i as usize].into(),
             TypeData::Class(symbol) | TypeData::Param(symbol) => class_name(*symbol),
@@ -1090,7 +1181,7 @@ mod tests {
 
     #[test]
     fn builtin_supertypes_are_cores() {
-        let core = include_str!("../../../vendor/temper/core/core.temper");
+        let core = include_str!("../../../lib/core/core.temper");
         for (sub, sup) in BUILTIN_SUPERTYPES {
             let declared = core.lines().any(|line| {
                 let line = line.trim_start_matches("export ");
@@ -1106,7 +1197,7 @@ mod tests {
 
     #[test]
     fn builtin_generics_are_cores() {
-        let core = include_str!("../../../vendor/temper/core/core.temper");
+        let core = include_str!("../../../lib/core/core.temper");
         let mut classes = Vec::new();
         let mut no_downcast = Vec::new();
         let mut variant = Vec::new();

@@ -1,6 +1,6 @@
 # 3. Typing
 
-Once the macros are done, every node is a core construct, and tempest
+Once the macros are done, every node is a core construct, and this compiler
 works out types. It does that in the same settle loop, as a second
 round, and then in a few passes over the settled tree. This page is
 about where that happens; the rules themselves are in

@@ -106,6 +106,7 @@ end
 ---@field count integer
 ---@field hidden integer
 ---@field doubled integer
+---@field added integer
 ---@field bump fun(self: classes.Counter): classes.Counter
 ---@field same fun(self: classes.Counter, other: classes.Counter): boolean
 
@@ -129,6 +130,12 @@ end
 ---@param value integer
 function Counter.set.doubled(this, value)
   this.count = temper.int32_sub(value, this.count)
+end
+
+---@param this classes.Counter
+---@param value integer
+function Counter.set.added(this, value)
+  this.count = temper.int32_add(this.count, value)
 end
 
 ---@param this classes.Counter
@@ -182,6 +189,7 @@ end
 ---@class classes.Loose
 ---@field n integer
 ---@field eq fun(self: classes.Loose, other: classes.Loose): boolean
+---@field mirrors fun(self: classes.Loose, other: classes.Loose): boolean
 
 ---@class classes.Loose.type: temper.Type
 ---@operator call: classes.Loose
@@ -201,6 +209,63 @@ function Loose.methods.eq(this, other)
     return true
   else
     return this.n == temper.int32_unm(other.n)
+  end
+end
+
+---@param this classes.Loose
+---@param other classes.Loose
+---@return boolean
+function Loose.methods.mirrors(this, other)
+  if other:eq(this) then
+    return this:eq(other)
+  else
+    return false
+  end
+end
+
+---@param n integer
+---@return classes.Loose|temper.Null
+local function maybeLoose(n)
+  if n == 0 then
+    return temper.null
+  else
+    return Loose(n)
+  end
+end
+
+---@class classes.Boxed
+---@field value any
+---@field tag integer
+---@field eq fun(self: classes.Boxed, other: classes.Boxed): boolean
+---@field sameAs fun(self: classes.Boxed, other: classes.Boxed): boolean
+
+---@class classes.Boxed.type: temper.Type
+---@operator call: classes.Boxed
+local Boxed = temper.type("classes.Boxed")
+
+---@param this classes.Boxed
+---@param value any
+---@param tag integer
+function Boxed.constructor(this, value, tag)
+  this.value = value
+  this.tag = tag
+end
+
+---@param this classes.Boxed
+---@param other classes.Boxed
+---@return boolean
+function Boxed.methods.eq(this, other)
+  return this.tag == other.tag
+end
+
+---@param this classes.Boxed
+---@param other classes.Boxed
+---@return boolean
+function Boxed.methods.sameAs(this, other)
+  if this:eq(other) then
+    return other:eq(this)
+  else
+    return false
   end
 end
 
@@ -260,10 +325,77 @@ function Version.methods.compareTo(this, other)
   end
 end
 
+---@class classes.Stock
+---@field count integer
+---@field itemsVar integer[]
+---@field items integer[]
+---@field size integer
+---@field sizeNow fun(self: classes.Stock): integer
+
+---@class classes.Stock.type: temper.Type
+---@operator call: classes.Stock
+local Stock = temper.type("classes.Stock")
+
+---@param this classes.Stock
+---@return integer[]
+function Stock.get.items(this)
+  return this.itemsVar
+end
+
+---@param this classes.Stock
+---@param value integer[]
+function Stock.set.items(this, value)
+  this.itemsVar = value
+end
+
+---@param this classes.Stock
+---@param items integer[]
+---@param count? integer|temper.Null
+function Stock.constructor(this, items, count)
+  if temper.is_null(count) then
+    count = temper.list_length(items)
+  end
+  ---@cast count integer
+  this.count = count
+  this.itemsVar = items
+  this.size = temper.list_length(items)
+end
+
+---@param this classes.Stock
+---@return integer
+function Stock.methods.sizeNow(this)
+  return temper.list_length(this.items)
+end
+
 ---@param x classes.Shape
 ---@return classes.Shape
 local function shape(x)
   return x
+end
+
+---@param eq fun(arg0: classes.Loose|temper.Null, arg1: classes.Loose|temper.Null): boolean
+---@return string
+local function compared(eq)
+  local ns = { 0, 1, -1, 2 }
+  local out = temper.listbuilder_constructor()
+  do
+    local length = temper.list_length(ns)
+    local i = 0
+    while i < length do
+      local a = temper.list_get(ns, i)
+      i = temper.int32_add(i, 1)
+      do
+        local length2 = temper.list_length(ns)
+        local i2 = 0
+        while i2 < length2 do
+          local b = temper.list_get(ns, i2)
+          i2 = temper.int32_add(i2, 1)
+          temper.listbuilder_add(out, eq(maybeLoose(a), maybeLoose(b)) and "T" or "f")
+        end
+      end
+    end
+  end
+  return temper.listed_join(out, "", function(s) return s end)
 end
 
 ---@param n integer
@@ -344,6 +476,98 @@ function Sql.get.accumulated(this)
   return temper.listed_join(this.parts, "", function(p) return p end)
 end
 
+---@class classes.Limited
+---@field next fun(self: classes.Limited, n: integer): integer
+---@field tooFar fun(self: classes.Limited): integer
+
+---@class classes.Limited.type: temper.Type
+local Limited = temper.type("classes.Limited")
+
+---@class classes.Stepper: classes.Limited
+---@field limit integer
+---@field next fun(self: classes.Stepper, n: integer): integer
+---@field tooFar fun(self: classes.Stepper): integer
+
+---@class classes.Stepper.type: temper.Type
+---@operator call: classes.Stepper
+local Stepper = temper.type("classes.Stepper", Limited)
+
+---@param this classes.Stepper
+---@param limit integer
+function Stepper.constructor(this, limit)
+  this.limit = limit
+end
+
+---@param this classes.Stepper
+---@param n integer
+---@return integer
+function Stepper.methods.next(this, n)
+  if n < this.limit then
+    return temper.int32_add(n, 1)
+  else
+    return this:tooFar()
+  end
+end
+
+---@param this classes.Stepper
+---@return integer
+function Stepper.methods.tooFar(this)
+  error("panic")
+end
+
+---@class classes.Failing
+---@field fail fun(self: classes.Failing): any
+
+---@class classes.Failing.type: temper.Type
+local Failing = temper.type("classes.Failing")
+
+---@class classes.IntFailing: classes.Failing
+---@field fail fun(self: classes.IntFailing): integer
+
+---@class classes.IntFailing.type: temper.Type
+---@operator call: classes.IntFailing
+local IntFailing = temper.type("classes.IntFailing", Failing)
+
+---@param this classes.IntFailing
+function IntFailing.constructor(this)
+end
+
+---@param this classes.IntFailing
+---@return integer
+function IntFailing.methods.fail(this)
+  error("panic")
+end
+
+---@class classes.AnyFailing: classes.Failing
+---@field fail fun(self: classes.AnyFailing): any
+
+---@class classes.AnyFailing.type: temper.Type
+---@operator call: classes.AnyFailing
+local AnyFailing = temper.type("classes.AnyFailing", Failing)
+
+---@param this classes.AnyFailing
+function AnyFailing.constructor(this)
+end
+
+---@param this classes.AnyFailing
+---@return any
+function AnyFailing.methods.fail(this)
+  error("panic")
+end
+
+---@generic T
+---@param ok boolean
+---@param x T
+---@param f classes.Failing
+---@return T
+local function orFail(ok, x, f)
+  if ok then
+    return x
+  else
+    return f:fail()
+  end
+end
+
 Rect.unit = Rect(1, 1)
 local r = Rect(2, 3)
 print(r:toString())
@@ -361,8 +585,28 @@ print(tostring(c.count))
 c.doubled = 10
 print(tostring(c.doubled))
 print(tostring(c:same(Counter():bump():bump())))
+c.added = 5
+local t = 2
+c.added = t
+local t2 = t
+c.added = t2
+local added = t2
+print(added .. " " .. c.count)
 print(tostring(Point(1, 2):eq(Point(1, 2))) .. " " .. tostring(not Point(1, 2):eq(Point(2, 1))))
 print(tostring(Holder(Loose(3), "a"):eq(Holder(Loose(-3), "a"))))
+local loose = Loose(2)
+local string_ = tostring(loose:mirrors(Loose(-2))) .. " "
+local left = maybeLoose(-2)
+local left2 = loose
+local right = maybeLoose(0)
+local left3 = maybeLoose(0)
+print(string_ .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
+local subject = maybeLoose(-2)
+local matched = not temper.is_null(subject) and (subject --[[@as classes.Loose]]):eq(loose) and "loose" or "other"
+print(matched)
+local b1 = Boxed("x", 1)
+local b3 = Boxed("z", 2)
+print(b1.value .. " " .. tostring(b1:eq(Boxed("y", 1))) .. " " .. tostring(not b1:eq(b3)) .. " " .. tostring(b1:sameAs(Boxed("y", 1))) .. " " .. tostring(b3:sameAs(b1)))
 print(tostring(Version(1, 2):compareTo(Version(1, 3)) < 0) .. " " .. tostring(Version(2, 0):compareTo(Version(1, 9)) >= 0))
 print(tostring(temper.instance_of(q, Square)) .. " " .. tostring(temper.instance_of(s, Square)))
 local sq = temper.cast_to(q, Square)
@@ -370,6 +614,27 @@ print(tostring(sq.area))
 if temper.instance_of(s, Rect) then
   print(tostring((s --[[@as classes.Rect]]).w))
 end
+local st = Stock({ 4, 5 })
+st.items = { 1, 2, 3 }
+print(st.count .. " " .. st.size .. " " .. st:sizeNow() .. " " .. temper.list_length(st.items))
+print(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
+print(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
+print(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))
+
+---@param a classes.Loose|temper.Null
+---@param b classes.Loose|temper.Null
+---@return boolean
+local function fn4(a, b)
+  if temper.is_null(a) then
+    return false
+  end
+  if temper.is_null(b) then
+    return false
+  end
+  return (a --[[@as classes.Loose]]):mirrors(b --[[@as classes.Loose]])
+end
+
+print(compared(fn4))
 local favorite = same("number")
 local named = 0
 do
@@ -397,5 +662,14 @@ accumulator:appendString("x")
 accumulator:appendSafe(" FROM ")
 accumulator:appendRect(Rect(2, 2))
 print(accumulator.accumulated)
+local stepper = Stepper(3)
+print("next " .. stepper:next(1))
+print(orFail(true, 4, IntFailing()) .. " " .. orFail(true, "s", AnyFailing()))
 
-return { Shape = Shape, Rect = Rect, Square = Square }
+return {
+  Shape = Shape,
+  Rect = Rect,
+  Square = Square,
+  Limited = Limited,
+  Stepper = Stepper,
+}

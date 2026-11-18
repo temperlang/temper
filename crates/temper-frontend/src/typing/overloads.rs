@@ -113,7 +113,12 @@ impl Settle {
     /// or overriding one so marked, as an escaper's `applyString` does
     /// its interface's in the `content-tags` program: an override
     /// answers to the name too, as in Kotlin Temper.
-    fn overloads_named(&self, class: NodeId, name: NameId, statics: bool) -> Vec<NodeId> {
+    pub(super) fn overloads_named(
+        &self,
+        class: NodeId,
+        name: NameId,
+        statics: bool,
+    ) -> Vec<NodeId> {
         let Some(scope) = self.scopes.of_node(class) else {
             return Vec::new();
         };
@@ -149,7 +154,7 @@ impl Settle {
     /// argument of `a`'s can't be `p`'s, as a `List<String?>` can't be a
     /// `List<String>`, where Kotlin Temper's `@out` on `List` decides
     /// ([`Settle::narrower`]).
-    fn may_fit(&mut self, a: TypeId, p: TypeId) -> bool {
+    pub(super) fn may_fit(&mut self, a: TypeId, p: TypeId) -> bool {
         let types = &mut self.typing.types;
         if types.is_subtype(a, p) == Some(false) {
             return false;
@@ -165,7 +170,7 @@ impl Settle {
     /// Whether parameters `a` are at least as specific as `b` for `n`
     /// arguments: each of the first `n` a subtype of the other's
     /// ([`Settle::narrower`]).
-    fn more_specific(&mut self, a: &[Param], b: &[Param], n: usize) -> bool {
+    pub(super) fn more_specific(&mut self, a: &[Param], b: &[Param], n: usize) -> bool {
         (a.iter().zip(b).take(n)).all(|(x, y)| self.narrower(x.ty, y.ty))
     }
 

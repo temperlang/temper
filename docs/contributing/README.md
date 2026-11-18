@@ -10,16 +10,18 @@ interaction with other contributors and community members; the
 
 ## What's here
 
-This repository is tempest, Temper's compiler in Rust. Start with:
+This repository is Temper's compiler, written in Rust. Start with:
 
-- [How tempest works](../internals/README.md): each stage, with
+- [How the compiler works](../internals/README.md): each stage, with
   diagrams and links into the code.
 - [Design notes](../../notes/README.md): the plan, the decisions behind
-  it, and [where tempest differs from Temper's first
+  it, and [where it differs from Temper's first
   compiler](../../notes/kotlin-differences.md).
 - [Writing these docs](docs.md): their conventions, how their examples
   are checked, and the plan for rendering them.
 - [CI and supply chain](ci.md): what CI pins, and how to bump it.
+- [Releasing](releasing.md): tagging a release, release candidates
+  first, reviewing what the release workflow makes, and undoing a bad tag.
 
 ### Principles
 
@@ -45,18 +47,19 @@ This repository is tempest, Temper's compiler in Rust. Start with:
 | `temper-tmpl` | tmpl, the backend IR ([notes/tmpl/](../../notes/tmpl/README.md)), with shared lowerings such as coroutines |
 | `temper-be-*` | One crate per backend, tmpl in and source out, and how its language runs tests, each depending only on `temper-tmpl` |
 | `temper-be-testkit` | What the backends' tests share: programs, goldens, and tool discovery |
-| `temper-funtests` | Temper's functional tests, from `vendor/temper/` |
+| `temper-funtests` | Temper's functional tests, in its `cases/` |
 | `temper-driver` | The registry of backends, the one compile path, `build`, and running tests with each backend's tools |
-| `temper-lsp` | The language server, `tempest lsp` |
-| `tempest` | The command-line tool: argument parsing and output |
+| `temper-lsp` | The language server, `temper lsp` |
+| `tempest` | The command-line tool, `temper`: argument parsing and output |
 | `temper-wasm` | The compiler for the browser, the base of the playground |
 | `temper-os` | The OS calls std lacks, behind safe functions: the only crate with unsafe code |
 
-Also: `docs/` (these docs), `compat/` (scripts comparing with Temper's
-first compiler, fuzzing, timing, and checking the docs), `vendor/temper/`
-(Temper's runtimes, std, and functional tests, synced with patches in
-`vendor/temper-patches/`), `editors/` (the VS Code extension), `site/`
-(the playground), and `notes/`.
+Also: `lib/std/` and `lib/core/` (Temper's std library and core, in
+Temper, which the frontend builds in), `docs/` (these docs), `compat/`
+(scripts comparing with Temper's first compiler, fuzzing, timing, and
+checking the docs), `editors/` (the VS Code extension), `site/` (the
+playground), and `notes/`. Each backend crate keeps its
+language's runtime in `runtime/`.
 
 ## Building
 
@@ -67,19 +70,19 @@ later.
 
     cargo build --release -p tempest
 
-Each backend is a cargo feature, all on by default. While tempest
-grows toward Temper's command line, each backend's name is also a
-development command that translates files and prints, or writes, the
-result:
+That writes the command, `target/release/temper`; the `tempest` crate
+builds it. Each backend is a cargo feature, all on by default. To see
+one language's code for a library:
 
-    cargo run --release -p tempest -- py|rust|js|java|csharp|cpp|lua [--out DIR] FILE...
+    target/release/temper build -w DIR -b py|rust|js|java|csharp|cpp|lua -o OUT
 
 ## Testing
 
     cargo test
 
-runs every crate's tests, needing no other checkout. Backends' tests
-compare goldens of generated code (`UPDATE_SNAPSHOTS=1` accepts
+runs every crate's tests, needing no other checkout.
+[Where tests go](../internals/10-tests.md) says where to add one, and
+how to run a few. Backends' tests compare goldens of generated code (`UPDATE_SNAPSHOTS=1` accepts
 changes) and run the generated code with each language's own tools,
 skipping with a message when a tool is missing;
 [test speed](../../notes/test-speed.md) has the details. To run those
@@ -87,12 +90,11 @@ too, install the languages' tools: a C++ compiler and CMake, the .NET 6
 SDK or later, a JDK 17 or later with Maven, Node.js with npm, Lua 5.4
 or LuaJIT with LuaRocks, Python 3.11 or later, and Rust.
 
-Comparing with Temper's first compiler, using the copy in
-`vendor/temper/` (or `--temper DIR` for a checkout):
+On the functional tests in `crates/temper-funtests/cases/` (or, with
+`--temper DIR`, a Kotlin Temper checkout's):
 
     uv run compat/check_functional.py   # the functional tests, in-process
     uv run compat/count_tmpl.py         # which tests translate, and why not
-    uv run compat/sync_temper.py        # refresh vendor/temper/ (--check in CI)
 
 and `compat/check_*.py`, `fuzz_*.py`, and `bench_*.py` for each stage.
 For the docs:
@@ -101,11 +103,13 @@ For the docs:
     uv run compat/check_doc_examples.py   # examples run as marked
 
 CI runs formatting, clippy, the link check, every crate's tests with
-each language's toolchain (`tempest test -b` on small fixture libraries
+each language's toolchain (`temper test -b` on small fixture libraries
 for every backend among them), the wasm build, and the functional
 tests, all on Rust 1.85.0. A nightly job tests C++ on more compilers
 and under sanitizers, and runs real libraries' tests on every backend,
-from a list (`.github/nightly-libraries.json`;
+and type-checks their generated Python against a ratchet of allowed
+errors ([CI](ci.md), "Real libraries' Python types, nightly"), from a
+list (`.github/nightly-libraries.json`;
 [test speed](../../notes/test-speed.md), "Real libraries, nightly").
 [CI and supply chain](ci.md) says what CI pins (actions, crates, and
 the checkers of generated code), why, and how to bump a pin.
@@ -138,6 +142,24 @@ things:
 A change users would notice gets a note in
 [the release notes](../release-notes/README.md#writing-a-release-note).
 Docs changes keep the links working (`compat/check_anchors.py`).
+
+## Versions and releases
+
+Temper's version is written once, as the root `Cargo.toml`'s
+`[workspace.package] version`; the compiler, runtimes, std, and
+generated packages all take it, each in its ecosystem's spelling
+([Versions](../internals/detail/06-backends.md#versions-one-version-spelled-for-each-ecosystem)).
+Between releases, builds are dev builds named by the commits since the
+last release tag (`0.7.0-alpha.0.123`), which `temper --version` shows
+with the commit.
+
+Releases are tag-driven: a signed `v` tag on `main` (`v0.7.0-rc.1`,
+`v0.7.0`) names the release, and pushing one makes a GitHub release
+automatically, with the binaries, the runtimes and std packaged for
+each registry, and checksums ([Releasing](releasing.md)). Nothing is
+published to package registries yet. CI's builds that say their
+version check out the whole history and the tags (`fetch-depth: 0`),
+to name dev builds.
 
 ## Questions?
 

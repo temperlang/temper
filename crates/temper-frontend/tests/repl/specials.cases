@@ -1,7 +1,7 @@
 # REPL sessions: the REPL's own functions, without the tools that
 # hover's text, tmpl, and the backends need (temper-driver's tests
 # cover those).
-=== describe shows an input at tempest's steps
+=== describe shows an input at the compiler's steps
 let x = 1
 let twice(n: Int): Int { n * 2 }
 twice(x) + 1
@@ -121,6 +121,15 @@ Tests passed: 1 of 3
 interactive#0: void
 interactive#1: 42
 
+=== a failing assert(a == b) shows the values it can, else says the plain message
+class P(public n: Int) { @operator("==") public eq(other: P): Boolean { n == other.n } }; let none: List<Int>? = [1]; test("p") { assert(new P(1) == new P(2)) }; test("list") { assert(none == null) }; test("ints") { assert(1 + 1 == 3) }
+--- transcript
+Test failed: p - expected new P(1) == new P(2)
+Test failed: list - expected none == null
+Test failed: ints - expected 1 + 1 == (3) not (2)
+Tests passed: 0 of 3
+interactive#0: void
+
 === input 0's tests and declarations, used afterwards; later tests refuse
 class Point(public x: Int, public y: Int) {}; let origin = new Point(0, 0); test("origin") { console.log("in a test"); assert(origin.x == 0) }
 new Point(origin.x + 1, 2)
@@ -131,7 +140,7 @@ in a test
 Tests passed: 1 of 1
 interactive#0: void
 interactive#1: {class: Point, x: 1, y: 2}
-interactive#2:1:1: error: Tests don't run in the REPL: write them in a library's files, and run tempest test
+interactive#2:1:1: error: Tests don't run in the REPL: write them in a library's files, and run temper test
     test("t") { assert(true) }
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
 interactive#2: fail
@@ -142,7 +151,7 @@ interactive#3: 0
 test("t") { assert(true) }
 --- transcript
 interactive#0: 1
-interactive#1:1:1: error: Tests don't run in the REPL: write them in a library's files, and run tempest test
+interactive#1:1:1: error: Tests don't run in the REPL: write them in a library's files, and run temper test
     test("t") { assert(true) }
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
 interactive#1: fail
@@ -249,7 +258,7 @@ interactive#9: void
 let { Date } = import("std/temporal")
 let d1 = new Date(2020, 1, 2)
 let { Date } = import("std/temporal")
-let d2(): Date { new Date(2021, 3, 4) }
+let d2(): Date { new Date(2021, 3, 4) orelse panic() }
 "${d2().toString()} ${d1.toString()}"
 describe(4, "module")
 let { CodePoints } = import("std/regex")
@@ -273,7 +282,7 @@ let { Date } = import("std/temporal");
 let d1 = new Date(2020, 1, 2);
 // interactive#2
 // interactive#3
-let d2(): Date { new Date(2021, 3, 4) };
+let d2(): Date { new Date(2021, 3, 4) orelse panic() };
 // interactive#4
 "${d2().toString()} ${d1.toString()}";
 interactive#5: void

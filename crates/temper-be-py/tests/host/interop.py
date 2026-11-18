@@ -1,7 +1,9 @@
 """Host code using the generated `async_turns` package the standard way,
 for `functional.rs`'s `runs`: it prints a line per check, which the test
 compares with what it expects. mypy and pyright check it, strict, so a
-bare `await` of a generated promise type-checks."""
+bare `await` of a generated promise type-checks. It also passes
+`py_builtin_params`'s constructor its parameters by name, which keep
+their names though they're builtins' (`help=`, not `help_=`)."""
 
 import asyncio
 import threading
@@ -86,3 +88,9 @@ for n in fibonacci():
     fib.append(n)
 print("fibonacci", fib)
 print("collatz", list(collatz(7)))
+
+# Parameters named like builtins keep their names, passed by name.
+from py_builtin_params import Option  # noqa: E402
+
+option = Option(help="how", min=1, max=9, type="flag")
+print("by name", option.describe(), option.clamp(12))

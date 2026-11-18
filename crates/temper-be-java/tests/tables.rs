@@ -1,6 +1,6 @@
 //! The Java variant's tables: every operator spelled, every connection
 //! keyed by a connected declaration of core, every type connection by a
-//! type of core, and every `Core` method called one that the vendored
+//! type of core, and every `Core` method called one that
 //! `temper-core` has.
 
 use std::fs;
@@ -81,7 +81,7 @@ fn type_connections_name_core_types() {
 #[test]
 fn runtime_helpers_are_the_runtimes() {
     let core = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../vendor/temper/be-java/temper-core/src/main/java/temper/core/Core.java");
+        .join("runtime/temper-core/src/main/java/temper/core/Core.java");
     let core = fs::read_to_string(core).unwrap();
     for i in 0..temper_tmpl::ops::OPS.len() as u32 {
         if let Some(ops::Spelling::Static("Core", method)) = ops::spelling(temper_tmpl::ops::Op(i))

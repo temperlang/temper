@@ -44,12 +44,6 @@ function Slippy.get.thingumses(this)
   return 4
 end
 
----@param slipster call-override-from-subtype.Slippy
----@return boolean
-local function checkFromOutside(slipster)
-  return slipster.thingums == 5
-end
-
 ---@class call-override-from-subtype.A
 ---@field a fun(self: call-override-from-subtype.A): string
 ---@field thing string
@@ -175,11 +169,6 @@ end
 
 ---@class call-override-from-subtype.B2Deep.type: temper.Type
 local B2Deep = temper.type("call-override-from-subtype.B2Deep", B1Deep)
-
----@class call-override-from-subtype.B3Deep: call-override-from-subtype.B2Deep
-
----@class call-override-from-subtype.B3Deep.type: temper.Type
-local B3Deep = temper.type("call-override-from-subtype.B3Deep", B2Deep)
 
 ---@class call-override-from-subtype.CDeep: call-override-from-subtype.ADeep
 

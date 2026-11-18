@@ -21,10 +21,9 @@ template <class T>
 struct SSub;
 template <class T>
 struct Holder;
-template <class L>
+template <class L, class T>
 struct Labeled;
 struct LabeledSub;
-struct AllAlone;
 struct High;
 struct Low1;
 struct Mid;
@@ -63,21 +62,22 @@ struct SSub : public virtual SI<T> {
 };
 
 template <class T>
-struct Holder : public virtual temper::core::AnyValueBase {};
+struct Holder : public virtual temper::core::AnyValueBase {
+  virtual T get_held() const = 0;
+  virtual std::shared_ptr<std::vector<T>> heldAnd(T other) const;
+};
 
-template <class L>
-struct Labeled : public virtual Holder<std::shared_ptr<C>> {
+template <class L, class T>
+struct Labeled : public virtual Holder<T> {
   virtual temper::core::Str label(L l) const = 0;
 };
 
-struct LabeledSub : public virtual Labeled<temper::core::Str> {
-  std::shared_ptr<C> thing;
-  static std::shared_ptr<LabeledSub> make(std::shared_ptr<C> const & thing);
+struct LabeledSub : public virtual Labeled<temper::core::Str, std::shared_ptr<C>> {
+  std::shared_ptr<C> held;
+  static std::shared_ptr<LabeledSub> make(std::shared_ptr<C> const & held);
   temper::core::Str label(temper::core::Str l) const override;
-  std::shared_ptr<C> get_thing() const;
+  std::shared_ptr<C> get_held() const override;
 };
-
-struct AllAlone : public virtual I {};
 
 struct High : public virtual temper::core::AnyValueBase {
   virtual temper::core::Str toString() const = 0;
@@ -132,6 +132,12 @@ T SSub<T>::get_thing() const {
   return this->thing;
 }
 
+template <class T>
+std::shared_ptr<std::vector<T>> Holder<T>::heldAnd(T other) const {
+  std::shared_ptr<Holder<T> const> self = std::shared_ptr<Holder<T> const>(this->shared_from_this(), this);
+  return temper::core::List::make<T>(self->get_held(), other);
+}
+
 }  // namespace property_members
 
 // init.cpp
@@ -160,18 +166,18 @@ core::Str C::get_x() {
   return this->x;
 }
 
-std::shared_ptr<LabeledSub> LabeledSub::make(std::shared_ptr<C> const & thing) {
+std::shared_ptr<LabeledSub> LabeledSub::make(std::shared_ptr<C> const & held) {
   std::shared_ptr<LabeledSub> self = std::make_shared<LabeledSub>();
-  self->thing = thing;
+  self->held = held;
   return self;
 }
 
 core::Str LabeledSub::label(core::Str l) const {
-  return l + ": " + this->thing->x;
+  return l + ": " + this->held->x;
 }
 
-std::shared_ptr<C> LabeledSub::get_thing() const {
-  return this->thing;
+std::shared_ptr<C> LabeledSub::get_held() const {
+  return this->held;
 }
 
 std::shared_ptr<Low1> Low1::make(int32_t i) {
@@ -245,8 +251,10 @@ void global_init_init() {
     core::Console::log(console, "Genericallier, x is still " + core::to_base<I>(dj->thing)->get_x() + ".");
     std::shared_ptr<SI<std::shared_ptr<C>>> si = core::to_base<SI<std::shared_ptr<C>>>(SSub<std::shared_ptr<C>>::make(a));
     core::Console::log(console, "Sealed thing is " + si->get_thing()->x + ".");
-    std::shared_ptr<Labeled<core::Str>> labeled = core::to_base<Labeled<core::Str>>(LabeledSub::make(a));
+    std::shared_ptr<Labeled<core::Str, std::shared_ptr<C>>> labeled = core::to_base<Labeled<core::Str, std::shared_ptr<C>>>(LabeledSub::make(a));
+    std::shared_ptr<std::vector<std::shared_ptr<C>>> heldAnd = labeled->heldAnd(b);
     core::Console::log(console, "Labeled thing is " + labeled->label(TEMPER_STR("first")) + ".");
+    core::Console::log(console, "Held are " + labeled->get_held()->x + " and " + core::List::get<std::shared_ptr<C>>(heldAnd, 1)->x + ".");
     std::shared_ptr<High> high1 = core::to_base<High>(Low1::make(11));
     std::shared_ptr<High> high1b = core::to_base<High>(Low1::make(12));
     std::shared_ptr<High> high1c = core::to_base<High>(Low1::make(12));

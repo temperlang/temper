@@ -5,7 +5,7 @@ Now we actually get into programming logic. And we'll still use the Temper REPL
 for now:
 
 ```sh
-tempest repl
+temper repl
 ```
 
 We can also start with a variation of our types from before. You can paste this
@@ -72,8 +72,8 @@ interactive#6: ["Rectangle of size 1.5 x 0.5","Circle of radius 2.0"]
 
 And top-level `let` function definitions are also shorthand for `fn` assignment:
 
-> **Note:** tempest wants a declared type for the second form
-> ([inconsistencies](../../inconsistencies.md#i24-tutorial-examples-tempest-doesnt-run)).
+> **Note:** Temper now wants a declared type for the second form
+> ([inconsistencies](../../inconsistencies.md#i24-tutorial-examples-that-dont-run)).
 
 <!-- repl: skip -->
 ```temper
@@ -180,8 +180,8 @@ loop behavior. Temper also has `do ... while` loops. But to be more surprising
 maybe, let's rewrite the above using explicit `fn` function blocks as described
 earlier:
 
-> **Note:** tempest reports this `do(fn () { … })` as malformed
-> ([inconsistencies](../../inconsistencies.md#i24-tutorial-examples-tempest-doesnt-run)).
+> **Note:** Temper now reports this `do(fn () { … })` as malformed
+> ([inconsistencies](../../inconsistencies.md#i24-tutorial-examples-that-dont-run)).
 
 <!-- repl: skip -->
 ```temper
@@ -200,11 +200,10 @@ into Temper's built-in `while` macro, one is just syntactic sugar for the other.
 Both translate to a `while` loop in Java, JS, or Python. In most cases, trailing
 blocks are clearer to read and write.
 
-To look closer at Temper's handling of various syntax forms, in Kotlin
-Temper's REPL, try using the `describe` REPL function mentioned earlier but
-with `"frontend.disAmbiguateStage.after"` to see an earlier stage of
-processing. Or try the `translate` function, or enter `help()` for more info.
-(These aren't in tempest's REPL yet.)
+To look closer at Temper's handling of various syntax forms, try using the
+`describe` REPL function mentioned earlier but with `"parsed"` to see an
+earlier step of processing, the parser's tree. Or try the `translate`
+function, or enter `help()` for more info.
 
 ## Branches
 

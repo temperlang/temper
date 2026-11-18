@@ -1,5 +1,5 @@
 //! A REPL session: Temper inputs settled and run one at a time against
-//! what earlier inputs declared, for `tempest repl`, and later the
+//! what earlier inputs declared, for `temper repl`, and later the
 //! playground's console and the language server.
 //!
 //! - **One growing library.** Each input is a file of one module, with a
@@ -22,7 +22,7 @@
 //!
 //! Each input reports, in order, its diagnostics, what it logs as it
 //! runs, why it failed if no diagnostic says, and its result, as
-//! [`ReplEvent`]s; [`ReplEvent::text`] gives each as `tempest repl`
+//! [`ReplEvent`]s; [`ReplEvent::text`] gives each as `temper repl`
 //! prints it, the result in Kotlin's form, `interactive#N: value`.
 //! [`Chunker`] splits typed or piped lines into inputs.
 //!
@@ -82,7 +82,7 @@ pub struct ReplOptions {
     /// directory, as [`crate::project::find_libraries`] finds them under
     /// a work root.
     pub libraries: Vec<(String, String)>,
-    /// Steps each input may take; `None` for no limit, as `tempest run`.
+    /// Steps each input may take; `None` for no limit, as `temper run`.
     pub fuel: Option<u64>,
     /// Stops the input running once set, as by Ctrl-C; whoever sets it
     /// clears it.
@@ -154,7 +154,7 @@ pub struct ReplDiagnostic {
 }
 
 impl ReplEvent {
-    /// The event as `tempest repl` prints it, a line or more, without a
+    /// The event as `temper repl` prints it, a line or more, without a
     /// final newline.
     ///
     /// All but logs have control characters escaped
@@ -180,7 +180,7 @@ impl ReplEvent {
             ReplEvent::Interrupted => "Interrupted".into(),
             ReplEvent::Unresolved => "1 promise is unresolved.".into(),
             ReplEvent::InternalError(why) => format!(
-                "tempest: internal error (a bug in tempest, not in your code): {}",
+                "temper: internal error (a bug in Temper, not in your code): {}",
                 escape_controls(why)
             ),
             ReplEvent::Result { input, value } => {
@@ -581,7 +581,7 @@ impl ReplSession {
 
     /// Runs tests, `run` in `scope` ([`crate::settle::SettledModule::tests`]), `defined`
     /// of them, if `ran`, as their input ran to its end, and reports each
-    /// failure and then `tempest test`'s summary, as `Tests passed: 2 of
+    /// failure and then `temper test`'s summary, as `Tests passed: 2 of
     /// 3`; if not, that none ran.
     fn run_tests(&mut self, scope: ScopeId, run: NodeId, defined: usize, ran: bool) {
         let runner = &mut self.runner;
@@ -1309,7 +1309,7 @@ mod tests {
             events.take(),
             [
                 "interactive#0: void",
-                "tempest: internal error (a bug in tempest, not in your code): as a test asked",
+                "temper: internal error (a bug in Temper, not in your code): as a test asked",
                 "interactive#1: fail",
                 "interactive#2: 3",
             ]
@@ -1347,13 +1347,13 @@ mod tests {
             events.take(),
             [
                 "interactive#0: void",
-                "tempest: internal error (a bug in tempest, not in your code): as a test asked, \
+                "temper: internal error (a bug in Temper, not in your code): as a test asked, \
                  while settling",
                 "interactive#1: fail",
                 "interactive#2: 3",
                 "// interactive#0\nlet x = 1;\n// interactive#2\nx + 2;",
                 "interactive#3: void",
-                "Failed: input 1 failed as it was settled, a bug in tempest, so it has nothing \
+                "Failed: input 1 failed as it was settled, a bug in Temper, so it has nothing \
                  to show",
                 "interactive#4: fail",
                 "interactive#5:1:1: error: y has not been declared\n    y\n    ^",

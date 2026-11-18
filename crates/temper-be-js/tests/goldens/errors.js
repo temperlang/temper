@@ -55,14 +55,6 @@ function unknownType(x) {
  * @param {number} x
  * @returns {number}
  */
-function unclosed(x) {
-  return Math.imul(x, 2);
-}
-
-/**
- * @param {number} x
- * @returns {number}
- */
 function afterUnclosed(x) {
   return Math.imul(x, 3);
 }
@@ -113,7 +105,7 @@ class Box extends type() {
   }
 
   /** @returns {number} */
-  get_() {
+  get() {
     return this.#value;
   }
 
@@ -167,7 +159,7 @@ try {
   f = "caught";
 }
 console.log(`${good(1)} ${a} ${b} ${c} ${d} ${e}`);
-console.log(`${unknownType(1)} ${afterUnclosed(2)} ${box.get_()} ${f}`);
+console.log(`${unknownType(1)} ${afterUnclosed(2)} ${box.get()} ${f}`);
 /** @type {string} */
 let g;
 try {

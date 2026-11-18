@@ -24,4 +24,4 @@ and `temper test` runs them on any backend or on the interpreter
 | `Test.passing`, `messages()` | Whether it passes so far, and its failure messages |
 | `runTest(f)`, `runTestCases(cases)`, `processTestCases(cases)`, `reportTestResults(…)` | How backends and the interpreter run a module's tests |
 
-Source: [testing.temper.md](../../vendor/temper/std/testing/testing.temper.md).
+Source: [testing.temper.md](../../lib/std/testing/testing.temper.md).

@@ -11,8 +11,8 @@ validator problems), not yet (it uses something tmpl's translation doesn't
 cover yet, or has errors), or invalid (translated, but the validator found
 problems: a bug to fix). Lists the ok tests, the invalid ones with their
 problems, and the most common reasons for not yet. The tests and std come
-from vendor/temper/ (see compat/sync_temper.py), or, with --temper, from a
-Temper checkout.
+from this repository's crates/temper-funtests/cases/ and lib/std/, or, with
+--temper, from a Kotlin Temper checkout.
 
     uv run compat/count_tmpl.py [--verbose] [--temper DIR]
 
@@ -27,8 +27,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SUITE = ROOT / "vendor/temper/functional-tests"
-STD = ROOT / "vendor/temper/std"
+SUITE = ROOT / "crates" / "temper-funtests" / "cases"
+STD = ROOT / "lib" / "std"
 NOT_YET = re.compile(r"^tmpl: not yet in tmpl: (.*?)(?: at (\S+))?$")
 
 

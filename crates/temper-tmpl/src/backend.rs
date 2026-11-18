@@ -17,6 +17,11 @@ pub struct Backend {
     /// libraries, by paths in its `temper-core` directory; none in wasm,
     /// which writes no runtime, so the playground's download stays small.
     pub runtime: &'static [(&'static str, &'static str)],
+    /// Where its runtime's files name the runtime's version, which
+    /// `temper build` fills with the build's, and what keeps the runtime
+    /// from being published but in a release
+    /// ([`crate::version::fill_runtime`]).
+    pub runtime_version: &'static crate::version::RuntimeVersion,
     /// Its naming rules, which also name what other libraries use of a
     /// library ([`crate::naming::Interface`]).
     pub rules: &'static NamingRules,
@@ -25,7 +30,7 @@ pub struct Backend {
     /// backend that writes source maps (JS) writes them, naming the
     /// sources by their paths after it.
     pub translate: fn(&Program, Option<&str>) -> Result<Vec<OutFile>, String>,
-    /// Whether `tempest build` builds for it without `-b`, as Kotlin's
+    /// Whether `temper build` builds for it without `-b`, as Kotlin's
     /// defaults: all but C++.
     pub default: bool,
     /// How its language's own tools run built libraries' tests; `None`
@@ -42,7 +47,7 @@ pub struct Tools {
     pub prepare: Option<Prepare>,
     /// Runs a library's tests.
     pub test: fn(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults,
-    /// Runs a library's top level, as `tempest run` does: building what
+    /// Runs a library's top level, as `temper run` does: building what
     /// needs building quietly, then the program with the command's own
     /// standard output and error, so what it prints streams. Whether the
     /// program succeeded, or why it couldn't run.
@@ -57,10 +62,12 @@ pub type Run = fn(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, 
 /// there.
 pub type Prepare = fn(dir: &Path, all: &[Tested]) -> Result<(), String>;
 
-/// A library that built, with how many tests it has (none, for `run`).
+/// A library that built, with how many tests it has (none, for `run`),
+/// and what its config says, for the names each backend gives it.
 pub struct Tested {
     pub name: String,
     pub tests: usize,
+    pub metadata: crate::Metadata,
 }
 
 /// Each test's name and its failure, if it failed; or why there are no

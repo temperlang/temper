@@ -173,6 +173,16 @@ impl Interp<'_> {
                     self.get_property(s, object, *name, Some(&code.classes))
                         .map(|value| frame.push(value))
                 }
+                Op::GetInput(slot) => match &frame.pop() {
+                    Val::Object(object) => match object.fields.borrow()[*slot as usize].clone() {
+                        Val::Uninit => Err(fail("An input has not been initialized")),
+                        value => {
+                            frame.push(value);
+                            Ok(())
+                        }
+                    },
+                    _ => Err(fail("No this here")),
+                },
                 Op::SetProp(name) => {
                     let value = frame.pop();
                     let object = frame.pop();

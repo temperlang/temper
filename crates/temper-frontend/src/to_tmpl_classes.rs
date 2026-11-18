@@ -70,6 +70,7 @@ impl Translator<'_> {
             if self.data(node) & crate::core::CLASS_FUN != 0 {
                 self.b.add_facts(decl, Facts::FUN);
             }
+            self.keep_facts(decl, node);
             self.decl_spans(decl, node);
             self.classes.insert(node, decl);
             self.class_order.push(node);
@@ -187,6 +188,11 @@ impl Translator<'_> {
                     explicit = Some(m);
                     continue;
                 }
+                // A `@noProperty` input is only the constructor's.
+                (ROLE_PARAM, false) if data & core::MEMBER_NO_PROPERTY != 0 => {
+                    ctor_params.push(m);
+                    continue;
+                }
                 (ROLE_PARAM, false) => ctor_params.push(m),
                 _ => {}
             }
@@ -287,10 +293,9 @@ impl Translator<'_> {
             }
             (0, true) => {
                 let ty = self.member_ty(m)?;
+                // A `static var` is a static `let`, as in Kotlin Temper: no
+                // static may be assigned after its initializer.
                 let d = self.b.declare(DeclKind::StaticField, &name, decl, ty);
-                if data & LET_VAR != 0 {
-                    facts = facts | Facts::VAR;
-                }
                 self.b.add_facts(d, facts);
                 self.decl_spans(d, m);
                 Member::Field(d)
@@ -655,7 +660,8 @@ impl Translator<'_> {
             if self.param_default(p).is_some() {
                 locals[i] = self.decls[&p];
             }
-            if explicit.is_none() {
+            // A `@noProperty` input stays the parameter, for initializers.
+            if explicit.is_none() && self.data(p) & core::MEMBER_NO_PROPERTY == 0 {
                 self.decls.remove(&p);
             }
         }
@@ -693,6 +699,12 @@ impl Translator<'_> {
                 self.stmts(body, &mut stmts)?;
             }
         }
+        // The inputs, done with.
+        if explicit.is_none() {
+            for p in &params {
+                self.decls.remove(p);
+            }
+        }
         let at = explicit.unwrap_or(class);
         let block = self.b.block(&stmts);
         let block = self.made(block, at);
@@ -708,7 +720,13 @@ impl Translator<'_> {
     /// it's a subtype, or downcast if it's a supertype that typing found
     /// narrowed.
     pub(super) fn fit(&mut self, value: NodeId, want: TypeId) -> NodeId {
-        let have = self.b.program().nodes.ty(value);
+        // A `Never<T>`, as a call of a function that never returns, fits
+        // as the `T` it stands for.
+        let as_is = self.b.program().nodes.ty(value);
+        let have = self.b.program().types.fallback(as_is);
+        if as_is == want {
+            return value;
+        }
         if have.is_none() && !want.is_none() {
             // `null`, `bubble()`, or `panic()`, typed by its place.
             self.b.retype(value, want);
@@ -730,7 +748,8 @@ impl Translator<'_> {
             let types = &self.b.program().types;
             let inner = types.non_null(want);
             let value = self.fit(value, inner);
-            if self.b.program().nodes.ty(value) != inner {
+            let types = &self.b.program().types;
+            if types.fallback(self.b.program().nodes.ty(value)) != inner {
                 return value;
             }
             let made = self.b.as_nullable(value);
@@ -966,7 +985,9 @@ impl Translator<'_> {
             match data & ROLE_MASK {
                 ROLE_CONSTRUCTOR => explicit = Some(m),
                 ROLE_PARAM => {
-                    self.member(m, at)?;
+                    if data & core::MEMBER_NO_PROPERTY == 0 {
+                        self.member(m, at)?;
+                    }
                     params.push(m);
                 }
                 _ => {}
@@ -997,6 +1018,8 @@ impl Translator<'_> {
     fn accessor(&self, m: FNode, write: bool) -> FNode {
         let role = |n: FNode| self.data(n) & ROLE_MASK;
         let fits = |n: FNode| match role(n) {
+            // A `@noProperty` input is read only as itself.
+            ROLE_PARAM if n != m && self.data(n) & core::MEMBER_NO_PROPERTY != 0 => false,
             0 | ROLE_PARAM => true,
             ROLE_GETTER => !write,
             ROLE_SETTER => write,
@@ -1125,7 +1148,7 @@ impl Translator<'_> {
         &mut self,
         m: FNode,
         object: Option<FNode>,
-        value: FNode,
+        value: Assigned,
         at: FNode,
     ) -> Tx<NodeId> {
         let m = self.accessor(m, true);
@@ -1137,15 +1160,13 @@ impl Translator<'_> {
                 let have = Some(self.b.program().nodes.ty(object));
                 let (from, to) = temper_tmpl::analysis::bindings(self.b.program(), d, have, &[]);
                 let ty = self.b.program_mut().types.substitute(ty, &from, &to);
-                let value = self.expr(value)?;
-                let value = self.type_error_around(at, value);
+                let value = self.assigned_value(value, at)?;
                 let value = self.fit(value, ty);
                 Ok(self.b.set_field(d, object, value))
             }
             Member::Method(d) if self.b.program().decls.get(d).kind == DeclKind::Setter => {
                 let object = self.receiver(object, d, at)?;
-                let value = self.expr(value)?;
-                let value = self.type_error_around(at, value);
+                let value = self.assigned_value(value, at)?;
                 let value = self.fit_args_with(d, Some(object), &[], vec![value]);
                 let call = self.b.call_method(d, object, &value);
                 let call = self.own(call, at);
@@ -1153,14 +1174,29 @@ impl Translator<'_> {
             }
             Member::Property(_, Some(set)) => {
                 let object = self.receiver(object, set, at)?;
-                let value = self.expr(value)?;
-                let value = self.type_error_around(at, value);
+                let value = self.assigned_value(value, at)?;
                 let value = self.fit_args_with(set, Some(object), &[], vec![value]);
                 let call = self.b.call_method(set, object, &value);
                 let call = self.own(call, at);
                 Ok(self.b.expr_statement(call))
             }
             _ => self.not_yet(at, "an assignment to a static field"),
+        }
+    }
+
+    /// The value an assignment stores: its expression, in a type-only
+    /// `Error` where one is reported at the assignment, or a local holding
+    /// it already.
+    fn assigned_value(&mut self, value: Assigned, at: FNode) -> Tx<NodeId> {
+        match value {
+            Assigned::Expr(value) => {
+                let value = self.expr(value)?;
+                Ok(self.type_error_around(at, value))
+            }
+            Assigned::Held(local) => {
+                let read = self.b.local(local);
+                Ok(self.made(read, at))
+            }
         }
     }
 
@@ -1654,12 +1690,22 @@ impl Translator<'_> {
             _ => self.class_node(self.s.scopes.resolved(object)?)?,
         };
         let scope = self.s.scopes.of_node(class)?;
+        // Not a `@noProperty` input, which is no member by its name.
         let found = (self.s.scopes.get(scope).names.iter())
-            .filter(|&&(n, _)| n == name)
+            .filter(|&&(n, b)| n == name && !self.s.scopes.symbol(b).input)
             .filter_map(|&(_, b)| self.s.scopes.symbol(b).decl)
             .find(|&m| self.kind(m) == NodeKind::Let)?;
         Some((object, found))
     }
+}
+
+/// What [`Translator::assign_member`] stores.
+pub(super) enum Assigned {
+    /// An expression, translated there.
+    Expr(FNode),
+    /// A local that holds the value already, as for an assignment used
+    /// as a value.
+    Held(DeclId),
 }
 
 /// A side of [`Translator::nullable_eq`]: a local, read as often as

@@ -2,13 +2,11 @@ namespace Work;
 
 public class Hider
 {
-    private readonly int i;
     private readonly Hidden hidden;
 
     public Hider(int i)
     {
-        this.i = i;
-        this.hidden = new Hidden(this.i);
+        this.hidden = new Hidden(i);
     }
 
     public int Plus(int j)

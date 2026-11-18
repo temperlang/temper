@@ -1,12 +1,12 @@
 # Inconsistencies
 
 Where Temper's documentation disagrees with itself, with temperlang.dev,
-with Temper's first compiler (written in Kotlin), or with tempest, found
+with Temper's previous compiler (written in Kotlin), or with this one, found
 while gathering the docs here (2026-11-07). Each is flagged in place
 with a `> **Note:**` that links here. Resolve one by fixing the docs,
 the compiler, or both; then remove its note and its entry.
 
-Where tempest differs from the Kotlin compiler on purpose, or works
+Where this compiler differs from the previous one on purpose, or works
 around its bugs, is in
 [notes/kotlin-differences.md](../notes/kotlin-differences.md); this
 page doesn't repeat those.
@@ -16,15 +16,14 @@ page doesn't repeat those.
 | [I1](#i1-the-documentations-license) | site, COPYRIGHT | Docs license: BY-NC-SA or BY-SA | Fix the site's footer |
 | [I2](#i2-discord-invites) | READMEs, tour, site | Three Discord invites | Pick one permanent invite |
 | [I3](#i3-c-support) | README, target languages | C++ "coming soon" | Say C++ is supported |
-| [I4](#i4-backends-that-tempest-doesnt-have) | target languages, builtins, CLI | `java8`, `mypyc`, `data`, `cppv` | Decide which tempest needs |
+| [I4](#i4-backends-not-available-yet) | target languages, builtins, CLI | `java8`, `mypyc`, `data`, `cppv` | Decide which are needed |
 | [I5](#i5-node-and-javascript-versions) | getting started, release notes, target languages | Node 14 or 18; ES2018 | State one supported range |
 | [I6](#i6-the-temperout-layout) | getting started | Old output paths | Done here; check the site |
-| [I7](#i7-rust-warnings) | getting started | Rust output warns | Drop the advice once tempest ships |
 | [I8](#i8-numbered-names-in-output-samples) | home page | `x__4` in samples | Done here |
-| [I9](#i9-the-command-line) | guide, tools | `temper` commands tempest lacks | CLI parity, then one name |
-| [I10](#i10-examples-tempest-doesnt-run-as-marked) | builtins, types, std | 14 examples | Fix tempest, one by one |
-| [I11](#i11-playground-addresses) | terms, Kotlin README | Old playground addresses | Links done here; terms left |
-| [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Failures tempest doesn't have | Regenerate, or retire |
+| [I9](#i9-the-command-line) | guide, tools | `temper` commands not available yet | CLI parity |
+| [I10](#i10-examples-that-dont-run-as-marked) | builtins, types | 9 examples | Fix the compiler, one by one |
+| [I11](#i11-playground-addresses) | terms, previous README | Old playground addresses | Links done here; terms left |
+| [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Failures this compiler doesn't have | Regenerate, or retire |
 | [I13](#i13-lua-versions) | target languages | "Lua 5.1" | State what's tested |
 | [I14](#i14-python-named-arguments) | target languages | Named arguments | Done here |
 | [I15](#i15-contributor-toolchains) | CONTRIBUTING | Toolchain versions | Keep one list per repository |
@@ -36,7 +35,7 @@ page doesn't repeat those.
 | [I21](#i21-dateyearsbetween-with-the-later-date-first) | std/temporal | Negative, off by one | Fix std, or document |
 | [I22](#i22-named-groups-in-regular-expressions) | std/regex | `(?<name>…)` | Pick one syntax, or both |
 | [I23](#i23-integer-literals-too-big-for-int32) | builtins | Four bit examples wrap | Decide literal typing, then fix |
-| [I24](#i24-tutorial-examples-tempest-doesnt-run) | tutorial 3 | `fn` without a declared type; `do(fn …)` | Fix the examples, or tempest |
+| [I24](#i24-tutorial-examples-that-dont-run) | tutorial 3 | `fn` without a declared type; `do(fn …)` | Fix the examples, or the compiler |
 
 ## Licensing and community
 
@@ -51,7 +50,7 @@ page doesn't repeat those.
 
 ### I2: Discord invites
 
-- **Docs:** the Kotlin repository's README and CONTRIBUTING link
+- **Docs:** the previous compiler's README and CONTRIBUTING link
   `discord.gg/QQKgZMukVB`, the site's footer `discord.gg/TY3Be6fzwu`,
   and the tour `discord.com/invite/6Jb83cq5FH`.
 - **Here:** every page uses the site's, `TY3Be6fzwu`.
@@ -61,37 +60,37 @@ page doesn't repeat those.
 ### I11: Playground addresses
 
 - **Here:** every link to try Temper (the README, the guide, and
-  [tools](tools/playground.md)) goes to tempest's playground, published
+  [tools](tools/playground.md)) goes to this compiler's playground, published
   on GitHub Pages with the docs site. `play.temperlang.dev` is left
   only where it's history: the internals' comparison with Temper's
   first playground.
 - **Left:** the [playground terms](legal/playground-terms.md) still
   name `playground.temper.systems`, the old site's playground, and the
-  Kotlin README still links `play.temperlang.dev`.
-- **tempest:** a static page, compiling in the browser, with no server
+  previous compiler's README still links `play.temperlang.dev`.
+- **This compiler:** a static page, compiling in the browser, with no server
   and no accounts; sharing puts the code in the URL.
 - **Suggested:** terms that fit what it does (a static page may need few
-  or none), the Kotlin README's link updated, and one lasting address.
+  or none), the previous README's link updated, and one lasting address.
 
 ## Languages and versions
 
 ### I3: C++ support
 
-- **Docs:** the Kotlin README lists C++ under "Coming soon"; the target
+- **Docs:** the previous README lists C++ under "Coming soon"; the target
   language list leaves it out; the tour lists six languages.
-- **tempest:** C++ passes every functional test, and real libraries'
-  tests, under sanitizers.
-- **Kotlin:** has a `cpp` backend (not built by default), failing some
+- **This compiler:** C++ passes every functional test, and real
+  libraries' tests, under sanitizers.
+- **The previous compiler:** has a `cpp` backend (not built by default), failing some
   functional tests.
 - **Suggested:** list C++ as supported, built with `-b cpp`; done in
   [target languages](backends/README.md) and the tour.
 
-### I4: Backends that tempest doesn't have
+### I4: Backends not available yet
 
 - **Docs:** the target language list documents `java8`, `mypyc`, and
   `data`; builtins document `dataFile`, which writes through `data`;
   `temper build` builds `data` by default; the test matrix has `cppv`.
-- **tempest:** none of these; `dataFile` isn't declared.
+- **This compiler:** none of these; `dataFile` isn't declared.
 - **Suggested:** decide which matter. Java 8 has users in older JVMs;
   `mypyc` and `cppv` are experiments; `data` needs `dataFile`.
 
@@ -100,7 +99,7 @@ page doesn't repeat those.
 - **Docs:** getting started says Node 14 or later; the 0.x release note
   "Require Node 18 and Python 3.11" says 18; the target language list
   says ES2018.
-- **tempest:** CI runs generated JavaScript on Node 24, and checks it
+- **This compiler:** CI runs generated JavaScript on Node 24, and checks it
   with the latest TypeScript.
 - **Suggested:** state one tested range, such as Node 18 and later, and
   test the oldest in CI.
@@ -108,7 +107,7 @@ page doesn't repeat those.
 ### I13: Lua versions
 
 - **Docs:** "Supported version: Lua 5.1".
-- **tempest:** rockspecs declare `lua >= 5.1`; tests run on Lua 5.4 and
+- **This compiler:** rockspecs declare `lua >= 5.1`; tests run on Lua 5.4 and
   LuaJIT, not PUC Lua 5.1; a few functional tests need 5.3 or later.
 - **Suggested:** say "5.1 and later, tested on 5.4 and LuaJIT", and
   list what needs 5.3.
@@ -118,17 +117,17 @@ page doesn't repeat those.
 - **Docs:** the Python notes said named arguments translate to Python's,
   but with numeric suffixes still to remove.
 - **Both compilers:** named arguments were removed from Temper (see the
-  release notes); tempest writes no numbered names.
+  release notes); this compiler writes no numbered names.
 - **Here:** the note is replaced by how names translate.
 
 ### I15: Contributor toolchains
 
-- **Docs:** the Kotlin CONTRIBUTING asks for JDK 21, Java 8 and 17,
+- **Docs:** the previous CONTRIBUTING asks for JDK 21, Java 8 and 17,
   Maven, Lua 5.1 or 5.4, .NET 6, Node 18, Python 3.11, and Rust 1.71.1.
-- **tempest:** Rust 1.85.0, uv, and each language's tools to run every
+- **This compiler:** Rust 1.85.0, uv, and each language's tools to run every
   backend's tests ([contributing](contributing/README.md#testing)).
 - **Suggested:** each repository keeps its own list; no change needed
-  until the Kotlin repository retires.
+  until the previous compiler's repository retires.
 
 ## Output and tools
 
@@ -137,25 +136,16 @@ page doesn't repeat those.
 - **Docs:** getting started listed `csharp/hello/src/Hello/HelloGlobal.cs`,
   `java/hello/src/main/java/hello/hello/HelloGlobal.java`, and
   `lua/hello/hello.lua`.
-- **tempest:** `src/HelloGlobal.cs`, `src/main/java/hello/HelloGlobal.java`,
-  and `init.lua`; its layout is tested against the Kotlin compiler's
-  current one.
-- **Here:** the list shows tempest's paths.
-
-### I7: Rust warnings
-
-- **Docs:** generated Rust "still causes a number of compiler
-  warnings", silenced with `--cap-lints=allow`.
-- **tempest:** its Rust passes `cargo build` and clippy without
-  warnings.
-- **Suggested:** drop the advice once tempest's output is what users
-  get.
+- **This compiler:** `src/HelloGlobal.cs`,
+  `src/main/java/hello/HelloGlobal.java`, and `init.lua`; its layout is
+  tested against the previous compiler's current one.
+- **Here:** the list shows this compiler's paths.
 
 ### I8: Numbered names in output samples
 
-- **Docs:** the home page's translations, made by the Kotlin compiler,
+- **Docs:** the home page's translations, made by the previous compiler,
   had names like `x__4` and `this__0`.
-- **Here:** the [introduction](guide/introduction.md) shows tempest's
+- **Here:** the [introduction](guide/introduction.md) shows this compiler's
   translations, regenerated, with the source's names.
 
 ### I9: The command line
@@ -163,49 +153,45 @@ page doesn't repeat those.
 - **Docs:** the guide uses `temper init`, `build`, `test`, `watch`,
   `repl` (and its `describe`), `version`, and `help`; the language
   server is `temper serve --port N`.
-- **tempest:** `temper`'s commands and flags, as `tempest build`,
-  `test`, `run`, `repl`, `init`, `version`, `license`, `licenses`,
-  `help`, and `serve` (or `lsp`, on standard input and output only); no
-  `watch`, `doc`, or `repl -b` yet, which say so, and the REPL has no
-  `describe`, `translate`, or `help` functions yet
-  ([the command line](tools/cli.md), [the REPL](tools/repl.md)).
-- **Suggested:** finish CLI parity, then decide whether the binary is
-  called `temper`.
+- **This compiler:** `temper`, with the same commands and flags, as
+  `temper build`, `test`, `run`, `repl`, `init`, `version`, `license`,
+  `licenses`, `help`, and `serve` (or `lsp`, on standard input and
+  output only); no `watch`, `doc`, or `repl -b` yet, which say so; the
+  REPL's `describe` takes this compiler's steps, not the previous stage
+  names ([the command line](tools/cli.md), [the REPL](tools/repl.md)).
+- **Suggested:** finish CLI parity.
 
 ### I12: The functional test matrix
 
-- **Docs:** the Kotlin repository's `functional-test-matrix.md`,
+- **Docs:** the previous compiler's `functional-test-matrix.md`,
   generated, shows failures on `cpp`, `cppv`, `lua`, and others.
-- **tempest:** all 72 functional tests pass on the interpreter and on
+- **This compiler:** all 72 functional tests pass on the interpreter and on
   every backend.
 - **Suggested:** not imported here; regenerate it there, or retire it
-  when tempest takes over.
+  when this compiler takes over.
 
 ## Language and examples
 
-### I10: Examples tempest doesn't run as marked
+### I10: Examples that don't run as marked
 
-The reference's examples carry the result the Kotlin compiler gave when
-its docs were generated, and `compat/check_doc_examples.py` runs them
-with tempest ([writing these docs](contributing/docs.md#examples-that-are-checked)).
-These 14 disagree; each was checked on the Kotlin compiler, which runs
+The reference's examples carry the result the previous compiler gave
+when its docs were generated, and `compat/check_doc_examples.py` runs
+them with this one ([writing these docs](contributing/docs.md#examples-that-are-checked)).
+These 9 disagree; each was checked on the previous compiler, which runs
 them as marked. Each has a `<!-- known: I10 -->` comment before its
 fence, so the checker, which runs in CI, counts it as known.
 
-| Where | Example | tempest |
+| Where | Example | This compiler |
 |---|---|---|
 | [builtins](language/builtins.md#cat) | `cat("foo", "bar")` | "cat has not been declared" |
-| [builtins](language/builtins.md#assignment--builtin) | Assigning a property with only a setter | "No member p in C" |
-| [builtins](language/builtins.md#macro-datafile) | `dataFile(…)` | "dataFile has not been declared" (see [I4](#i4-backends-that-tempest-doesnt-have)) |
+| [builtins](language/builtins.md#macro-datafile) | `dataFile(…)` | "dataFile has not been declared" (see [I4](#i4-backends-not-available-yet)) |
 | [builtins](language/builtins.md#defining-functions) | A named function expression, `fn f(): String { … }` | "Use of builtin fn is malformed" |
 | [builtins](language/builtins.md#inlineunrealizedgoal-decorator) | `return` from a block lambda passed to `forEach`, inlined | "Expected subtype of Void, but got Boolean" |
-| [builtins](language/builtins.md#json-decorator) (two), [std/json](std/json.md) | `@json` classes' `jsonAdapter()` on the interpreter | "No member jsonAdapter" when run; the backends translate it |
-| [builtins](language/builtins.md#private-visibility) | Reading a private member from outside its class | An error when run, not when compiled |
 | [builtins](language/builtins.md#builtins-keyword) | Subclassing `Console`; `builtins.console` | "Console has not been declared" |
 | [types](language/types.md#float64-syntax-examples) | `1.` is an error | Accepted, as `1` and a dot |
 | [builtins](language/builtins.md#assignment--builtin), [`++`](language/builtins.md#-operator-increment), and [`--`](language/builtins.md#---operator-decrement) | Logging a top-level `var` around assignments | See [I20](#i20-top-level-statements-run-out-of-order); both compilers agree |
 
-**Suggested:** fix tempest for each, or record a deliberate difference
+**Suggested:** fix the compiler for each, or record a deliberate difference
 in [notes/kotlin-differences.md](../notes/kotlin-differences.md), and
 remove its `known` comment and its row here.
 
@@ -242,7 +228,7 @@ remove its `known` comment and its row here.
   *preface*, module *parameters*, and up to two `;;;` tokens: preface,
   body, then JSON metadata.
 - **Both compilers:** one `;;;` separates code from JSON metadata
-  after it (tempest follows the Kotlin compiler's
+  after it (this compiler follows the previous one's
   `splitCodeFromMetadata`); there are no prefaces or parameters
   ([issue 10](https://github.com/temperlang/temper/issues/10)).
 - **Suggested:** document `;;;` as it works, and keep prefaces as a plan.
@@ -274,10 +260,10 @@ remove its `known` comment and its row here.
 
 - **Docs:** std's regex docs write a capture as `/(?<name>...)/` and,
   a few lines later, `/(?name = ...)/`; the tutorial uses `(?name=…)`.
-- **Kotlin:** accepts both.
-- **tempest:** accepts only `(?name=…)`: `lookaround and (?<name>...)
+- **The previous compiler:** accepts both.
+- **This compiler:** accepts only `(?name=…)`: `lookaround and (?<name>...)
   aren't supported; use (?name=pattern)`.
-- **Suggested:** accept `(?<name>…)` in tempest too, since JavaScript,
+- **Suggested:** accept `(?<name>…)` here too, since JavaScript,
   Java, C#, and Python 3.11's `re` (as `(?P<name>…)`) users expect it.
 
 ### I23: Integer literals too big for Int32
@@ -294,12 +280,12 @@ remove its `known` comment and its row here.
   context; then add `i64`, or write the 32-bit ones in hex, as the
   answer needs.
 
-### I24: Tutorial examples tempest doesn't run
+### I24: Tutorial examples that don't run
 
 The tutorial's REPL transcripts run as a test
 (`crates/temper-frontend/tests/repl_docs.rs`); two of
 [control flow](guide/tutorial/03-control-flow.md)'s examples are left
-out of it, as tempest rejects them:
+out of it, as this compiler rejects them:
 
 - `let areaPerPerimeter = fn (shape: Shape): Float64 { … }`: "needs a
   declared type, such as a @fun interface, since a function literal
@@ -308,5 +294,5 @@ out of it, as tempest rejects them:
 - `do(fn () { … while(i < n, fn { … }); })`: "Use of builtin do is
   malformed".
 
-**Suggested:** decide whether tempest should accept them, or show
+**Suggested:** decide whether the compiler should accept them, or show
 what it accepts in the tutorial.

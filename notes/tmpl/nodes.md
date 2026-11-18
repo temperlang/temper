@@ -41,8 +41,9 @@ and labels are declared by the statements below.
 **Statements:**
 
 - Binding: `Let` (local, maybe `var`, maybe without an initializer).
-- Writes: `Assign` to a local, `SetField`, `SetStatic`, and
-  `SetModuleVar` ([modules.md](modules.md): module `var`s have their own read and write).
+- Writes: `Assign` to a local, `SetField`, and `SetModuleLet`
+  ([modules.md](modules.md): module `var`s have their own read and write).
+  Statics are only initialized, by `InitStatic`; Temper never assigns one.
 - Control: `Block`, `If`, `While`, `DoWhile`, `ForOf` (Decided
   2026-10-29: a real loop, so `yield` and `await` in its body can work
   later; backends may map it to native loops or `forEach`),
@@ -763,7 +764,9 @@ many times. Golden tests list problems as `RULE @node: message`.
   exported top-level declarations, of a module before it in
   `Program::modules`, and assigns or initializes only its own module
   `let`s. M2: a test's signature is `fn (Test): Void throws Bubble`, with
-  std's `testing` module's `Test`.
+  std's `testing` module's `Test`. M3 (2026-11-18): a module's library
+  parts, its items and init block, use nothing of its test parts, its
+  test items and test init.
 
 `Error` nodes are exempt from T2 and T3.
 

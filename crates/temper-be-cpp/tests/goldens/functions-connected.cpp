@@ -20,7 +20,6 @@ struct Hidden : public std::enable_shared_from_this<Hidden> {
 };
 
 struct Hider : public std::enable_shared_from_this<Hider> {
-  int32_t i;
   std::shared_ptr<Hidden> hidden;
   static std::shared_ptr<Hider> make(int32_t i);
   int32_t plus(int32_t j) const;
@@ -90,8 +89,7 @@ static int32_t prod(std::shared_ptr<Hidden> const & hidden, int32_t j) {
 std::shared_ptr<Hider> Hider::make(int32_t i) {
   global_init_init();
   std::shared_ptr<Hider> self = std::make_shared<Hider>();
-  self->i = i;
-  self->hidden = Hidden::make(self->i);
+  self->hidden = Hidden::make(i);
   return self;
 }
 

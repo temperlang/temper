@@ -27,8 +27,8 @@ _console: _LoggingConsole = _LoggingConsole(__name__)
 _vals: _Sequence[int] = (2, 3, 4)
 
 
-def _fn(sum_: int, n: int, /) -> int:
-    return _int_add(sum_, n)
+def _fn(sum: int, n: int, /) -> int:
+    return _int_add(sum, n)
 
 
 _sum: int = _listed_reduce(_vals, _fn)

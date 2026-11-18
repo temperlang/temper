@@ -10,6 +10,7 @@ public static class LibrariesGlobal
 {
     internal static readonly global::Libraries.Casing casingFirst;
     internal static readonly global::Libraries.Casing casingLast;
+    internal static readonly string casingMark;
     internal static volatile int ticks;
     internal static readonly IReadOnlyList<int> extras;
     private static readonly object moduleLock = new();
@@ -569,6 +570,7 @@ public static class LibrariesGlobal
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("Libraries");
         casingFirst = new global::Libraries.Casing("first");
         casingLast = global::Libraries.Casing.Named("last");
+        casingMark = "#";
         ticks = 0;
         extras = Listed.CreateReadOnlyList<int>(1);
         Grid grid = new Grid(2, Listed.CreateReadOnlyList<double>(1.0, 2.0, 3.0, 4.0));
@@ -603,7 +605,7 @@ public static class LibrariesGlobal
         string @string1 = string.Create(CultureInfo.InvariantCulture, $"{ShapeName(ShapeOf(1))} {ShapeName(ShapeOf(2))} {Sizes(ShapeOf(1)).Count} {Sizes(ShapeOf(2)).Count} ");
         int? part4 = new Dot(1).Grown;
         int? part5 = new Dot(3).Grown;
-        console.Log(@string1 + (part4 == null ? "null" : part4.Value.ToString(CultureInfo.InvariantCulture)) + " " + (part5 == null ? "null" : part5.Value.ToString(CultureInfo.InvariantCulture)) + " " + casingLast.ToString());
+        console.Log(@string1 + (part4 == null ? "null" : part4.Value.ToString(CultureInfo.InvariantCulture)) + " " + (part5 == null ? "null" : part5.Value.ToString(CultureInfo.InvariantCulture)) + " " + casingLast.ToString() + " " + casingFirst.Marked);
         Carry carry = new Carry(3);
         string value1 = (carry.Carrying ? "true" : "false") + " " + carry.State.ToString(CultureInfo.InvariantCulture) + " " + (new Carry(0).Carrying ? "true" : "false") + " ";
         string? part6 = Tagged().Label;

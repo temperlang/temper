@@ -1,4 +1,4 @@
-//! `tempest test -b BACKEND` ([`test_backend`]): running built libraries' tests with each
+//! `temper test -b BACKEND` ([`test_backend`]): running built libraries' tests with each
 //! language's own tools, as Kotlin Temper's `temper test -b` does, on
 //! what `build` wrote to `temper.out/BACKEND`, and reading their results
 //! into the interpreter's summary ([`Tally`](temper_frontend::library_tests::Tally)),
@@ -19,7 +19,7 @@ use temper_frontend::sources::Sources;
 use temper_tmpl::Backend;
 pub use temper_tmpl::Tested;
 
-/// `tempest test -b BACKEND`: builds the libraries under a work root for
+/// `temper test -b BACKEND`: builds the libraries under a work root for
 /// the backend, as `build` does, saying what each needs that isn't
 /// covered yet, then runs the tests of those that built (or only
 /// `options.library`'s) with the language's own tools ([`run`]),
@@ -63,10 +63,7 @@ pub fn test_backend(
         .collect();
     let all: Vec<Tested> = (built.tests.iter())
         .filter(|(name, _)| !failed.contains(&name.as_str()))
-        .map(|(name, tests)| Tested {
-            name: name.clone(),
-            tests: if wanted(name) { *tests } else { 0 },
-        })
+        .map(|(name, tests)| built.tested(name, if wanted(name) { *tests } else { 0 }))
         .collect();
     let dir = build_options.out(root).join(backend.name);
     let mut ok = failed.iter().all(|l| !wanted(l)) && built.errors.is_empty();

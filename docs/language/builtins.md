@@ -91,7 +91,7 @@ Short for "con**cat**enate", combines multiple strings into one string.
 // ✅
 ```
 
-> **Note:** tempest doesn't declare `cat` yet ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper doesn't declare `cat` yet ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 [`+`](#-2) does not concatenate strings; it's reserved for math.
 
@@ -200,7 +200,6 @@ a == 42
 
 Assignment to a property with a setter is really a method call, under the hood.
 
-<!-- known: I10 -->
 ```temper
 class C {
   public set p(newValue: String) {
@@ -210,8 +209,6 @@ class C {
 (new C()).p = "a value" //!outputs "Assigned a value."
 // ✅ "a value"
 ```
-
-> **Note:** tempest says "No member p in C" for a property with only a setter ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
 
 ## Functions
 
@@ -957,6 +954,16 @@ console.log("c == null -> ${c == null}"); //!outputs "c == null -> false"
 // ✅
 ```
 
+A class without such a method has no `==`, so comparing its values is
+an error, and likewise `<` and the other comparisons without an
+[`@operator("<=>")`](#operator-decorator) method.
+
+```temper
+class P(public x: Int) {}
+new P(1) == new P(1)
+// ❌ P does not support infix `==`; give it a method marked `@operator("==")`!
+```
+
 ### `>`
 `a > b` is [*true*](#true) when *a* orders after *b*, and is a compile-time
 error if the two are not mutually comparable.
@@ -1163,6 +1170,10 @@ test("something important") {
 // ⏸️
 ```
 
+Without a message, `assert(c)` says `expected c` if it fails, and
+`assert(a == b)` shows both values, as `expected a == (2) not (3)`,
+where it can: where a side has no `toString()`, it's `expected a == b`.
+
 ### `break` statement
 `break` jumps to the end of a block.
 
@@ -1258,7 +1269,7 @@ console.log((m is Minimal).toString()); //!outputs "true"
 // ✅
 ```
 
-Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's first compiler.
+Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
 
 Re parenthetical declarations, see also: [`@noProperty` decorator](#noproperty-decorator)
 
@@ -1330,7 +1341,7 @@ dataFile(
 // ✅ null
 ```
 
-> **Note:** tempest doesn't declare `dataFile`, and has no `data` backend ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper doesn't declare `dataFile` yet, and has no `data` backend ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 If the path starts with a `/` then the rest of the path will be resolved
 relative to the library's root directory.
@@ -1752,8 +1763,14 @@ console.log("Hello, ${ world }!"); //!outputs "Hello, Earth!"
 ```
 
 As shown above, when importing from files under the same *work root*,
-use a relative file path starting with one of `"./"` or `"../"`.
+use a relative file path: `"."`, `".."`, or one starting with `"./"` or
+`"../"`.
 This allows multiple co-compiled libraries to link to one another.
+
+A bare `import("./tests");` statement, with nothing destructured, only
+makes that module part of the library, as for a module of tests that
+nothing else imports. It brings in no names, so the module it names may
+import the one naming it.
 
 Import specifiers always use the URL file separator (`/`), regardless
 of whether compilation happens on an operating-system like Linux which
@@ -1786,7 +1803,7 @@ subtype.
 
 See also [`class`](#class) for details and examples of type declaration syntax.
 
-Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's first compiler.
+Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
 
 #### *SubType* `extends` *SuperType*
 
@@ -1926,7 +1943,7 @@ console.log(f()); //!outputs "function-declaration"
 // ✅
 ```
 
-> **Note:** tempest doesn't support named function expressions yet ("Use of builtin fn is malformed") ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper doesn't support named function expressions yet ("Use of builtin fn is malformed") ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 ### `orelse`
 The `orelse` infix operator allows recovering from
@@ -2307,11 +2324,10 @@ Note that the extension function must have at least one required, positional
 parameter and that parameter is the *this* argument, the subject when
 called via `subject.methodName(other, args)` syntax.
 
-When translated to target languages that allow for extensions,
-these functions are presented as extensions using the member name.
-
-In other target languages, they translate as if the *\@extension*
-decorator were ignored.
+Backends translate these as if the *\@extension* decorator were
+ignored: an ordinary function, under its regular name, and a
+method-style call as a call of it, even in target languages that have
+extensions of their own, such as C#.
 
 ### `@fun` decorator
 Marks an interface declaration as a [Functional interface](types.md#functional-interface).
@@ -2361,7 +2377,7 @@ f([2]) //!outputs "Found 2!"
 // ✅
 ```
 
-> **Note:** tempest doesn't inline block lambdas to let them `return` from the enclosing function, so reports "Expected subtype of Void, but got Boolean" ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper doesn't inline block lambdas to let them `return` from the enclosing function, so reports "Expected subtype of Void, but got Boolean" ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 After inlining, that code is equivalent to this where the `.forEach` call has been
 turned into a `while` loop (as specified by `List.forEach`) and the block lambda is now in
@@ -2415,6 +2431,9 @@ to make it easy to encode instances of the type to and from JSON.
 There are a number of strategies used to generate encoders and
 decoders outlined below.
 
+> **Note:** Temper doesn't generate adapters for generic `@json`
+> types, nor for std's `Date`, yet.
+
 #### The concrete class strategy
 
 A class type's default encoded form is just a JSON object with
@@ -2422,7 +2441,6 @@ a JSON property per backed field.
 *IntPoint* below encode to JSON like `{"x":1,"y":2}` because its
 *x* and *y* properties' values encode to JSON numbers.
 
-<!-- known: I10 -->
 ```temper
 let {
   InterchangeContext,
@@ -2456,8 +2474,6 @@ console.log("x is ${p.x.toString()}, y is ${p.y.toString()}");
 //!outputs "x is 3, y is 4"
 // ✅
 ```
-
-> **Note:** tempest's interpreter doesn't run `@json` adapters yet ("No member jsonAdapter"); its backends translate them ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
 
 #### The custom JSON adapter strategy
 
@@ -2619,7 +2635,6 @@ Without the `@jsonName` decoration below, the JSON form would be
 `{"messageText":"Hello, World!"}` but as seen below, the JSON
 output has dash case.
 
-<!-- known: I10 -->
 ```temper
 @json
 class Message(
@@ -2636,8 +2651,6 @@ Message.jsonAdapter()
 console.log(jsonOut.toJsonString());
 // ✅
 ```
-
-> **Note:** tempest's interpreter doesn't run `@json` adapters yet ("No member jsonAdapter"); its backends translate them ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
 
 ### `@keep` decorator
 Mark a non-exported item for being treated as reachable so it's kept in
@@ -2789,8 +2802,8 @@ Private members entail no backwards compatibility commitments.
 `@private` is a [legacy decorator](#legacy-decorators) so
 the `@` is optional.
 
-A private member may be used from within its class definition
-via `this.`.
+A private member may be used from within its class definition,
+via `this.` or on another instance of the same class.
 
 ```temper
 class C {
@@ -2804,7 +2817,6 @@ new C().say() //!outputs "Hello, World!"
 
 But a private member may not be read from outside the class.
 
-<!-- known: I10 -->
 ```temper
 class C {
   private s: String = "Hello, World!";
@@ -2812,8 +2824,6 @@ class C {
 console.log(new C().s); // ERROR
 // ❌ Member s defined in C not publicly accessible!
 ```
-
-> **Note:** tempest reports this when it runs, not when it compiles ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
 
 See also [`public` visibility](#public-visibility).
 
@@ -3025,7 +3035,7 @@ console.log("console");                   //!outputs "[ console ]"
 // ✅
 ```
 
-> **Note:** tempest doesn't declare the `Console` type, or `builtins.console`, yet ([inconsistencies](../inconsistencies.md#i10-examples-tempest-doesnt-run-as-marked)).
+> **Note:** Temper doesn't declare the `Console` type, or `builtins.console`, yet ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 `builtins` must be followed by a `.`.  Unlike `globalThis` in JavaScript, `builtins` is not
 an object; it's a special syntactic form.

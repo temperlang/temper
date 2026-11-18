@@ -7,6 +7,7 @@ from concurrent.futures import Future as _Future
 from temper_core import (
     LoggingConsole as _LoggingConsole,
     adapt_generator_factory as _adapt_generator_factory,
+    boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     int_mul as _int_mul,
     int_sub as _int_sub,
@@ -17,10 +18,13 @@ from temper_core import (
     listed_sorted as _listed_sorted,
     string_get as _string_get,
     string_next as _string_next,
+    string_prev as _string_prev,
 )
-from typing import Any as _Any, Generator as _Generator
+from typing import Any as _Any, Generator as _Generator, TypeVar as _TypeVar
 
 __all__ = ()
+
+_T = _TypeVar('_T')
 
 
 def _make_counter(start: int, /) -> _Callable[[], int]:
@@ -82,7 +86,7 @@ def _drive(steps: int, body: _Callable[[], _Generator[_Any, _Any, None]], /) -> 
 
 
 def _sum_from(xs: _Sequence[int], least: int, /) -> int:
-    sum_ = 0
+    sum = 0
     length = len(xs)
     i = 0
     while i < length:
@@ -90,8 +94,8 @@ def _sum_from(xs: _Sequence[int], least: int, /) -> int:
         i = _int_add(i, 1)
         if x < least:
             continue
-        sum_ = _int_add(sum_, x)
-    return sum_
+        sum = _int_add(sum, x)
+    return sum
 
 
 def _doubles(s: str, /) -> int:
@@ -105,6 +109,100 @@ def _doubles(s: str, /) -> int:
         prev = i
         i = _string_next(s, i)
     return n
+
+
+def _climb(x: int, /) -> int:
+    d: int
+    if x == 0:
+        def down(n: int, /) -> int:
+            if n <= x:
+                return 0
+            else:
+                return _int_add(down(_int_sub(n, 1)), 1)
+        d = down(3)
+    else:
+        return -1
+    d = _int_add(d, 1)
+    if d == 4:
+        top = _int_add(d, 1)
+        def up(n: int, /) -> int:
+            if n >= top:
+                return n
+            else:
+                return up(_int_add(n, 1))
+        return up(d)
+    else:
+        return d
+
+
+class _Gate:
+    __slots__ = ('_check',)
+    _check: _Callable[[int], int] | None
+
+    def __init__(self, /) -> None:
+        self._check = None
+
+    @property
+    def check(self, /) -> _Callable[[int], int] | None:
+        return self._check
+
+    @check.setter
+    def check(self, value: _Callable[[int], int] | None, /) -> None:
+        self._check = value
+
+    def allows(self, n: int, /) -> bool:
+        c: _Callable[[int], int] | None = self._check
+        if c is None:
+            return True
+        else:
+            return c(n) > 0
+
+    def passed(self, n: int, /) -> int:
+        c: _Callable[[int], int] | None = self._check
+        if c is not None:
+            return c(n)
+        else:
+            return n
+
+
+def _string_is_palindrome(s: str, /) -> bool:
+    i = 0
+    j = len(s)
+    while i - j < 0:
+        j = _string_prev(s, j)
+        if _string_get(s, i) != _string_get(s, j):
+            return False
+        i = _string_next(s, i)
+    return True
+
+
+def _int_or_zero(n: int | None, /) -> int:
+    if n is None:
+        return 0
+    else:
+        return n
+
+
+def _list_first_or(ls: _Sequence[_T], d: _T, /) -> _T:
+    if not ls:
+        return d
+    else:
+        return _list_get(ls, 0)
+
+
+def _string_padded(s: str, n: int, fill: str | None = None, /) -> str:
+    if fill is None:
+        fill = '.'
+    out = s
+    i = 0
+    while i < n:
+        out = out + fill
+        i = _int_add(i, 1)
+    return out
+
+
+def _gate_passed(g: _Gate, s: str, /) -> str:
+    return f'{s} {_boolean_to_string(g.allows(1))}'
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
@@ -164,3 +262,13 @@ def _fn8(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any
 
 _drive(5, _fn8)
 _console.log(f"sum {_sum_from(_ns, 4)} doubles {_doubles('bookkeeper')}")
+_console.log(f'climb {_climb(0)} {_climb(1)}')
+_gate: _Gate = _Gate()
+_console.log(f'gate {_boolean_to_string(_gate.allows(0))} {_gate.passed(4)}')
+_gate.check = lambda x: _int_sub(x, 1)
+_console.log(f'gate {_boolean_to_string(_gate.allows(1))} {_boolean_to_string(_gate.allows(2))} {_gate.passed(4)}')
+_none: int | None = 3 if _gate.allows(0) else None
+_console.log(f"{_boolean_to_string(_string_is_palindrome('step on no pets'))} {_boolean_to_string(_string_is_palindrome('steps'))}")
+_console.log(f"{_int_or_zero(_none)} {_list_first_or((4, 5), 0)} {_list_first_or(('x',), '-')}")
+_console.log(f"{_string_padded('ab', 2)} {_string_padded('ab', 1, '*')}")
+_console.log(f"{_gate.passed(4)} {_gate_passed(_gate, 'gate')}")

@@ -3,10 +3,10 @@
 //! `orelse` in `translate/nullables.rs`.
 //!
 //! Module state, as Kotlin's Rust backend keeps it, and safe across
-//! threads: a module `let` or `var` that a function reads or writes, or
-//! that's exported, is a `static` with a getter function of its name, as
-//! Kotlin's "toppers" are: a `let` a [`OnceLock`](std::sync::OnceLock)
-//! set once by the module's init, a `var` an
+//! threads: a module `let` or `var` that a function or test reads or
+//! writes, or that's exported, is a `static` with a getter function of
+//! its name, as Kotlin's "toppers" are: a `let` a
+//! [`OnceLock`](std::sync::OnceLock) set once by the module's init, a `var` an
 //! [`RwLock`](std::sync::RwLock) of an `Option`, `None` until init sets
 //! it. Every other module `let` and `var` is a local of the init, which
 //! runs once (`INIT_ONCE`). A getter reads its static through
@@ -19,6 +19,18 @@
 //! other module state and calls nothing, which could take another lock
 //! or this one again; other assignments evaluate their value first, then
 //! take the lock just to store it, as Kotlin's do.
+//!
+//! What only tests reach (`temper_tmpl::reach`, which the program is
+//! partitioned by) is `#[cfg(test)]`: functions, classes and interfaces
+//! (all their items), and module values, statics and getters, with the
+//! test init, which sets them, in a `#[cfg(test)]` block at the end of
+//! the init, in its scope; the `use`s only they need too. A library
+//! value that only tests read has its getter only for tests, and one
+//! nothing reads has none. What's kept for host code (`@keep`, and
+//! `@keepTest` for its tests') but not exported is `#[allow(dead_code)]`,
+//! since no Temper code may use it. So a crate builds without tests
+//! with no dead code of what tests use, where Kotlin's writes everything
+//! for the library, warnings hidden by `#![allow(warnings)]`.
 //!
 //! Modules: each of the library's modules is a Rust module of its own
 //! (the root, `r#mod`), and another module's declarations, or another
@@ -50,8 +62,11 @@ use temper_tmpl::{
 
 type R<T> = Result<T, NotYet>;
 
+/// What only tests build.
+const CFG_TEST: &str = "#[cfg(test)]";
+
 fn not_yet<T>(what: impl Into<String>) -> R<T> {
-    Err(NotYet { what: what.into() })
+    Err(NotYet::new(what))
 }
 
 /// What a place wants of the value written there.
@@ -102,9 +117,17 @@ pub struct Translator<'a> {
     /// literals' parameters, are named with a leading `_`, as Rust's
     /// `unused_variables` wants.
     read: HashSet<DeclId>,
-    /// Those only tests read, whose getters are only for tests, since
-    /// they'd be dead code outside them.
-    test_only: HashSet<DeclId>,
+    /// The module `let`s that the library's parts read, and those that
+    /// the tests' parts read (`temper_tmpl::reach`): a static's getter is
+    /// only for tests where only they read it, since it'd be dead code
+    /// outside them, and isn't written where nothing reads it.
+    reads: HashSet<DeclId>,
+    test_reads: HashSet<DeclId>,
+    /// Whether translating what only tests build: a test, or what only
+    /// tests reach ([`Translator::for_tests`]), and the `use`s that
+    /// needs.
+    for_tests: bool,
+    test_uses: BTreeSet<&'static str>,
     /// Module `let`s of an erased type, which aren't declared.
     erased: HashSet<DeclId>,
     /// `use`d names, as paths.
@@ -184,7 +207,10 @@ impl<'a> Translator<'a> {
                     _ => None,
                 })
                 .collect(),
-            test_only: HashSet::new(),
+            reads: module_reads(p, p.modules.iter().flat_map(library_roots)),
+            test_reads: module_reads(p, p.modules.iter().flat_map(Module::test_roots)),
+            for_tests: false,
+            test_uses: BTreeSet::new(),
             erased: HashSet::new(),
             uses: BTreeSet::new(),
             first_use: false,
@@ -223,7 +249,7 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let d = p.decls.get(module);
         if d.kind == DeclKind::Library {
-            return (library_of(p, module) != "core").then(|| library_crate(p.name(module)));
+            return (library_of(p, module) != "core").then(|| library_crate(p, p.name(module)));
         }
         let (start, path) = if d.owner.is_none() {
             let path = p.modules.iter().find(|m| m.decl == module)?.path.as_str();
@@ -232,7 +258,7 @@ impl<'a> Translator<'a> {
             }
             ("crate".to_string(), path)
         } else {
-            (library_crate(p.name(d.owner)), p.name(module))
+            (library_crate(p, p.name(d.owner)), p.name(module))
         };
         let mut out = start;
         for part in path.split('/').filter(|s| !s.is_empty()) {
@@ -390,6 +416,9 @@ impl<'a> Translator<'a> {
     /// A type as Rust writes it.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "()",
                 Scalar::Boolean => "bool",
@@ -585,8 +614,10 @@ impl<'a> Translator<'a> {
         let p = self.p;
         self.here = module.decl;
         self.uses.clear();
+        self.test_uses.clear();
         // Which module `let`s are erased, and which are statics: those
-        // tests use too.
+        // that functions and tests use, and the library's that the test
+        // init reads, whose init locals would be unused without tests.
         let mut state = module_state(p, module);
         for d in Translator::class_refs(p, module) {
             if p.decls.get(d).kind == DeclKind::ModuleLet {
@@ -602,19 +633,14 @@ impl<'a> Translator<'a> {
         self.plan_accessors(module);
         for &test in &module.tests {
             for d in module_refs(p, test) {
-                let d_ = p.decls.get(d);
-                if d_.kind == DeclKind::ModuleLet && d_.owner == module.decl {
-                    if !state.used_by_functions.contains(&d) && !d_.facts.contains(Facts::EXPORTED)
-                    {
-                        self.test_only.insert(d);
-                    }
+                if p.decls.get(d).kind == DeclKind::ModuleLet {
                     state.used_by_functions.insert(d);
                 }
             }
         }
         // Those this backend takes from host code.
         let mut host = HashSet::new();
-        for &item in &module.items {
+        for item in module.all_items() {
             match p.nodes.get(item) {
                 Node::ModuleLet { decl } => {
                     if self.type_connection(p.decls.get(decl).ty) == Some(TypeConnection::Erased) {
@@ -622,6 +648,7 @@ impl<'a> Translator<'a> {
                     } else if state.used_by_functions.contains(&decl)
                         || p.decls.get(decl).facts.contains(Facts::EXPORTED)
                         || !state.initialized_at_top.contains(&decl)
+                        || (self.test_reads.contains(&decl) && module.items.contains(&item))
                     {
                         self.statics.insert(decl);
                     }
@@ -647,28 +674,16 @@ impl<'a> Translator<'a> {
             }
         }
 
-        let init = self.init(module.init)?;
+        let init = self.init(module.init, module.test_init)?;
         let mut items = vec![init];
-        for &item in &module.items {
-            match p.nodes.get(item) {
-                Node::Function { decl, params, .. } | Node::BodilessFunction { decl, params }
-                    if host.contains(&decl) =>
-                {
-                    items.push(self.host_wrapper(module, item, decl, params)?);
-                }
-                Node::Class { decl, .. } if host.contains(&decl) => {
-                    items.push(self.host_class(module, decl));
-                }
-                Node::Function { .. } => items.push(self.function(item)?),
-                Node::ModuleLet { decl } if self.statics.contains(&decl) => {
-                    items.extend(self.static_items(decl)?);
-                }
-                Node::Class { .. } => items.extend(self.class(item)?),
-                // A `@fun` interface is only its function type.
-                Node::Interface { decl, .. } if p.decls.get(decl).facts.contains(Facts::FUN) => {}
-                Node::Interface { .. } => items.extend(self.interface(item)?),
-                _ => {}
-            }
+        for item in module.all_items() {
+            let tests = module.test_items.contains(&item);
+            let made = match tests {
+                true => self.for_tests(|t| t.item(module, item, &host))?,
+                false => self.item(module, item, &host)?,
+            };
+            let attrs = self.item_attrs(item, tests);
+            items.extend(made.into_iter().map(|made| attributed(&attrs, made)));
         }
         if !self.builders.is_empty() {
             let mut inner = vec![Item::Use("super::*".into())];
@@ -679,26 +694,75 @@ impl<'a> Translator<'a> {
                 items: inner,
             });
         }
-        let mut uses = Vec::new();
-        let std_sync: Vec<&str> = self
-            .uses
-            .iter()
-            .filter_map(|u| u.strip_prefix("std::sync::"))
-            .collect();
-        match std_sync[..] {
-            [] => {}
-            [one] => uses.push(Item::Use(format!("std::sync::{one}"))),
-            _ => uses.push(Item::Use(format!("std::sync::{{{}}}", std_sync.join(", ")))),
-        }
-        for u in &self.uses {
-            if !u.starts_with("std::sync::") {
-                uses.push(Item::Use(u.to_string()));
-            }
-        }
+        // The `use`s, and those only tests build use.
+        let mut uses = use_items(&self.uses);
+        let test_uses = use_items(&self.test_uses.difference(&self.uses).copied().collect());
+        uses.extend(test_uses.into_iter().map(|u| attributed(&[CFG_TEST], u)));
         uses.extend(items);
         let tests = self.tests(module)?;
         uses.extend(tests);
         Ok(uses)
+    }
+
+    /// What a module's item is written as.
+    fn item(&mut self, module: &Module, item: NodeId, host: &HashSet<DeclId>) -> R<Vec<Item>> {
+        Ok(match self.p.nodes.get(item) {
+            Node::Function { decl, params, .. } | Node::BodilessFunction { decl, params }
+                if host.contains(&decl) =>
+            {
+                vec![self.host_wrapper(module, item, decl, params)?]
+            }
+            Node::Class { decl, .. } if host.contains(&decl) => {
+                vec![self.host_class(module, decl)]
+            }
+            Node::Function { .. } => vec![self.function(item)?],
+            Node::ModuleLet { decl } if self.statics.contains(&decl) => self.static_items(decl)?,
+            // A `@fun` interface is only its function type.
+            Node::Interface { decl, .. } if self.p.decls.get(decl).facts.contains(Facts::FUN) => {
+                Vec::new()
+            }
+            Node::Class { .. } => self.class(item)?,
+            Node::Interface { .. } => self.interface(item)?,
+            _ => Vec::new(),
+        })
+    }
+
+    /// `f`'s result, translating what only tests build, whose `use`s
+    /// are only for tests too where nothing else needs them.
+    fn for_tests<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        let outer = std::mem::take(&mut self.uses);
+        self.for_tests = true;
+        let made = f(self);
+        self.for_tests = false;
+        let inner = std::mem::replace(&mut self.uses, outer);
+        self.test_uses.extend(inner);
+        made
+    }
+
+    /// The attributes of what an item is written as: `#[cfg(test)]` for
+    /// what only tests reach (`temper_tmpl::reach`), and
+    /// `#[allow(dead_code)]` for what's kept for host code (`@keep`, and
+    /// `@keepTest` for the tests'), which Temper code may not use, unless
+    /// it's exported.
+    fn item_attrs(&self, item: NodeId, tests: bool) -> Vec<&'static str> {
+        let decl = match self.p.nodes.get(item) {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::ModuleLet { decl }
+            | Node::Class { decl, .. }
+            | Node::Interface { decl, .. } => decl,
+            _ => return Vec::new(),
+        };
+        let facts = self.p.decls.get(decl).facts;
+        let mut attrs = Vec::new();
+        if tests {
+            attrs.push(CFG_TEST);
+        }
+        let kept = facts.contains(Facts::KEEP) || facts.contains(Facts::KEEP_TEST);
+        if kept && !facts.contains(Facts::EXPORTED) {
+            attrs.push("#[allow(dead_code)]");
+        }
+        attrs
     }
 
     /// A module's tests, as Kotlin's: each a `#[test]` function that
@@ -795,17 +859,43 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A module `let`'s static and its getter.
+    /// A module `let`'s static and its getter: only for tests where only
+    /// they read it, and none where nothing reads it, as when only
+    /// functions write it.
     fn static_items(&mut self, decl: DeclId) -> R<Vec<Item>> {
         let d = self.p.decls.get(decl);
         let ty = self.ty(d.ty)?;
         let name = self.name(decl);
         let stat = static_name(&name);
-        let copy = self.is_copy(d.ty);
         let var = d.facts.contains(Facts::VAR);
-        let test = self.test_only.contains(&decl);
-        let (static_ty, value, read) = if var {
+        let (static_ty, value) = if var {
             self.uses.insert("std::sync::RwLock");
+            (
+                format!("RwLock<Option<{ty}>>"),
+                Expr::path("RwLock::new").call(vec![Expr::path("None")]),
+            )
+        } else {
+            self.uses.insert("std::sync::OnceLock");
+            (
+                format!("OnceLock<{ty}>"),
+                Expr::path("OnceLock::new").call(Vec::new()),
+            )
+        };
+        let mut items = vec![Item::Static {
+            vis: "",
+            name: stat.clone(),
+            ty: static_ty,
+            value,
+        }];
+        let tests_only = if d.facts.contains(Facts::EXPORTED) || self.reads.contains(&decl) {
+            false
+        } else if self.test_reads.contains(&decl) {
+            true
+        } else {
+            return Ok(items);
+        };
+        let copy = self.is_copy(d.ty);
+        let read = if var {
             let read = Expr::path(&stat)
                 .method("read", Vec::new())
                 .method("unwrap", Vec::new());
@@ -814,47 +904,31 @@ impl<'a> Translator<'a> {
             } else {
                 read.method("clone", Vec::new())
             };
-            (
-                format!("RwLock<Option<{ty}>>"),
-                Expr::path("RwLock::new").call(vec![Expr::path("None")]),
-                self.initialized(Block::of(read), test),
-            )
+            self.initialized(Block::of(read), tests_only)
         } else {
-            self.uses.insert("std::sync::OnceLock");
-            let get =
-                self.initialized(Block::of(Expr::path(&stat).method("get", Vec::new())), test);
-            let read = if copy {
+            let get = self.initialized(
+                Block::of(Expr::path(&stat).method("get", Vec::new())),
+                tests_only,
+            );
+            if copy {
                 Expr::unary(Unary::Deref, get)
             } else {
                 get.method("clone", Vec::new())
-            };
-            (
-                format!("OnceLock<{ty}>"),
-                Expr::path("OnceLock::new").call(Vec::new()),
-                read,
-            )
+            }
         };
-        let stat = Item::Static {
-            vis: "",
-            name: stat,
-            ty: static_ty,
-            value,
+        let getter = Item::Fn {
+            vis: self.vis(decl),
+            name,
+            params: Vec::new(),
+            result: Some(ty),
+            body: Block::of(read),
         };
-        let vis = if self.test_only.contains(&decl) {
-            "#[cfg(test)]\npub(crate)"
-        } else {
-            self.vis(decl)
-        };
-        Ok(vec![
-            stat,
-            Item::Fn {
-                vis,
-                name,
-                params: Vec::new(),
-                result: Some(ty),
-                body: Block::of(read),
-            },
-        ])
+        // What only tests reach is all for tests already.
+        items.push(match tests_only && !self.for_tests {
+            true => attributed(&[CFG_TEST], getter),
+            false => getter,
+        });
+        Ok(items)
     }
 
     /// `crate::support::initialized(|| read)`: the value `read` gives, an
@@ -866,19 +940,26 @@ impl<'a> Translator<'a> {
     /// crate's `initialized` waits for the library's whole init on other
     /// threads (`lib.rs`, `SUPPORT_FIRST`). `test` if only tests read it.
     pub(crate) fn initialized(&mut self, read: Block, test: bool) -> Expr {
-        match test || self.in_tests {
+        match test || self.in_tests || self.for_tests {
             true => self.first_use_in_tests = true,
             false => self.first_use = true,
         }
         Expr::path("crate::support::initialized").call(vec![Expr::Closure(Vec::new(), read)])
     }
 
-    /// `init`, which runs the init block once, as Kotlin's.
-    fn init(&mut self, block: NodeId) -> R<Item> {
+    /// `init`, which runs the init block once, as Kotlin's, and then,
+    /// in a block only tests build, the test init, which continues it in
+    /// its scope (`temper_tmpl::reach`), unless the init never finishes.
+    fn init(&mut self, block: NodeId, test_init: Option<NodeId>) -> R<Item> {
         self.uses.insert("std::sync::OnceLock");
         self.begin(block, true);
         let mut stmts = Vec::new();
         self.block_into(block, &mut stmts)?;
+        if let Some(test_init) = test_init.filter(|_| !crate::tree::diverges(&stmts)) {
+            let mut tests = Vec::new();
+            self.for_tests(|t| t.block_into(test_init, &mut tests))?;
+            stmts.push(Stmt::TestsOnly(Block::new(tests, None)));
+        }
         let result = "temper_core::Result<()>".to_string();
         // No `Ok(())` after an init that fails on every path (rustc's
         // `unreachable_code`), as `semantics/broken`'s.
@@ -1258,6 +1339,12 @@ impl<'a> Translator<'a> {
                         continue;
                     }
                     self.stmt(stmts[i], out)?;
+                    // What follows a `return` or `panic!()`, as a
+                    // connected call may be written, can't run, and rustc
+                    // warns of it (`unreachable_code`).
+                    if crate::tree::diverges(out) {
+                        break;
+                    }
                     i += 1;
                 }
                 Ok(())
@@ -1360,7 +1447,23 @@ impl<'a> Translator<'a> {
             && matches!(p.nodes.get(right), Node::Null {})
     }
 
+    /// A not-yet error from translating `id`, given `id`'s place unless
+    /// a node inside it gave its own.
+    fn placed<T>(&self, id: NodeId, made: R<T>) -> R<T> {
+        made.map_err(|mut e| {
+            if e.at.is_none() {
+                e.at = self.p.location(self.p.nodes.span(id));
+            }
+            e
+        })
+    }
+
     fn stmt(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
+        let made = self.stmt_of(id, out);
+        self.placed(id, made)
+    }
+
+    fn stmt_of(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
         let p = self.p;
         match p.nodes.get(id) {
             Node::Block { .. } => {
@@ -1906,6 +2009,11 @@ impl<'a> Translator<'a> {
     }
 
     pub(crate) fn expr(&mut self, id: NodeId, want: Want) -> R<Expr> {
+        let made = self.expr_of(id, want);
+        self.placed(id, made)
+    }
+
+    fn expr_of(&mut self, id: NodeId, want: Want) -> R<Expr> {
         let p = self.p;
         let ty = p.nodes.ty(id);
         let e = match p.nodes.get(id) {
@@ -2502,13 +2610,84 @@ fn continues(p: &Program, id: NodeId, label: DeclId) -> bool {
     found
 }
 
-/// A library's crate: std's is `temper_std`, as Kotlin's; others' their
-/// package's name with `_` for `-`.
-pub fn library_crate(name: &str) -> String {
+/// A library's crate: its package's name ([`rust_name`]) with `_` for
+/// `-`, as cargo names it (std's `temper_std`).
+pub fn library_crate(p: &Program, name: &str) -> String {
+    crate::names::crate_name(&rust_name(name, p.metadata_of(name)))
+}
+
+/// A library's package name: std's is `temper-std`, as Kotlin's, and
+/// another's is its config's `rustName`, or else its own name.
+pub fn rust_name(name: &str, metadata: &temper_tmpl::Metadata) -> String {
     match name {
-        "std" => "temper_std".into(),
-        _ => crate::names::crate_name(name),
+        "std" => "temper-std".into(),
+        _ => metadata.get("rustName").unwrap_or(name).into(),
     }
+}
+
+/// `item` after `attrs`, but a macro's after `#[cfg(test)]` alone: its
+/// expansion isn't linted as dead code.
+fn attributed(attrs: &[&'static str], item: Item) -> Item {
+    let attrs: Vec<&'static str> = match item {
+        Item::Macro(_) => attrs.iter().copied().filter(|&a| a == CFG_TEST).collect(),
+        _ => attrs.to_vec(),
+    };
+    match attrs.is_empty() {
+        true => item,
+        false => Item::Attributed {
+            attrs,
+            item: Box::new(item),
+        },
+    }
+}
+
+/// `use`s of `paths`, `std::sync`'s together.
+fn use_items(paths: &BTreeSet<&str>) -> Vec<Item> {
+    let mut uses = Vec::new();
+    let std_sync: Vec<&str> = (paths.iter())
+        .filter_map(|u| u.strip_prefix("std::sync::"))
+        .collect();
+    match std_sync[..] {
+        [] => {}
+        [one] => uses.push(Item::Use(format!("std::sync::{one}"))),
+        _ => uses.push(Item::Use(format!("std::sync::{{{}}}", std_sync.join(", ")))),
+    }
+    for u in paths {
+        if !u.starts_with("std::sync::") {
+            uses.push(Item::Use(u.to_string()));
+        }
+    }
+    uses
+}
+
+/// A module's library parts: its items and init block.
+fn library_roots(module: &Module) -> impl Iterator<Item = NodeId> + '_ {
+    module.items.iter().chain([&module.init]).copied()
+}
+
+/// The module `let`s that nodes under `roots` read through their
+/// getters: not a `var`'s own read in an update that reads only it,
+/// which reads it under the write lock ([`Translator::write_var`]).
+fn module_reads(p: &Program, roots: impl IntoIterator<Item = NodeId>) -> HashSet<DeclId> {
+    let mut out = HashSet::new();
+    let mut under_lock = HashSet::new();
+    for root in roots {
+        walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::SetModuleLet { target, value } if reads_only_itself(p, target, value) => {
+                walk(p, value, &mut |read| {
+                    if matches!(p.nodes.get(read), Node::GetModuleLet { target: t } if t == target)
+                    {
+                        under_lock.insert(read);
+                    }
+                });
+            }
+            Node::GetModuleLet { target } if !under_lock.contains(&id) => {
+                out.insert(target);
+            }
+            _ => {}
+        });
+    }
+    out
 }
 
 /// A module's name in Rust, for a part of its path: `_` for `-`, and a

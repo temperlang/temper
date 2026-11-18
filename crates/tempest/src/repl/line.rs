@@ -1,4 +1,4 @@
-//! Line editing for `tempest repl` on a terminal, through rustyline's
+//! Line editing for `temper repl` on a terminal, through rustyline's
 //! helper traits, each answering from tempest's own lexer and from
 //! `temper-analysis` over the session as it stands:
 //!

@@ -43,12 +43,6 @@ end
 
 ---@param x integer
 ---@return integer
-local function unclosed(x)
-  return temper.int32_mul(x, 2)
-end
-
----@param x integer
----@return integer
 local function afterUnclosed(x)
   return temper.int32_mul(x, 3)
 end

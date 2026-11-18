@@ -443,7 +443,7 @@ impl Person {
 
 </details>
 
-These are tempest's translations, trimmed of package files; try your
+These are Temper's translations, trimmed of package files; try your
 own in the
 [playground](https://temperlang.github.io/tempest/playground/).
 

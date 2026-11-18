@@ -56,6 +56,7 @@ struct Casing : public std::enable_shared_from_this<Casing> {
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<Casing>> first;
     static temper::core::GlobalSlot<std::shared_ptr<Casing>> last;
+    static temper::core::GlobalSlot<temper::core::Str> mark;
   };
   temper::core::Str name;
   static std::shared_ptr<Casing> const & first();
@@ -64,6 +65,7 @@ struct Casing : public std::enable_shared_from_this<Casing> {
   static std::shared_ptr<Casing> make(temper::core::Str const & name);
   temper::core::Str toString() const;
   static std::shared_ptr<Casing> named(temper::core::Str const & name);
+  temper::core::Str get_marked() const;
   temper::core::Str get_name() const;
 };
 
@@ -420,6 +422,8 @@ std::shared_ptr<Casing> const & Casing::last() {
   return Casing::temper_statics::last.value;
 }
 
+core::GlobalSlot<core::Str> Casing::temper_statics::mark;
+
 bool Casing::eq(std::shared_ptr<Casing> const & other) const {
   return this->name == other->name;
 }
@@ -436,6 +440,10 @@ core::Str Casing::toString() const {
 
 std::shared_ptr<Casing> Casing::named(core::Str const & name) {
   return Casing::make(name);
+}
+
+core::Str Casing::get_marked() const {
+  return Casing::temper_statics::mark.value + this->name;
 }
 
 core::Str Casing::get_name() const {
@@ -915,9 +923,11 @@ void global_init_init() {
     temper_globals::extras.construct();
     Casing::temper_statics::first.construct();
     Casing::temper_statics::last.construct();
+    Casing::temper_statics::mark.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     Casing::temper_statics::first.value = Casing::make(TEMPER_STR("first"));
     Casing::temper_statics::last.value = Casing::named(TEMPER_STR("last"));
+    Casing::temper_statics::mark.value = TEMPER_STR("#");
     temper_globals::ticks.value = 0;
     temper_globals::extras.value = core::List::make<int32_t>(1);
     std::shared_ptr<Grid> grid = Grid::make(2, core::List::make<double>(1.0, 2.0, 3.0, 4.0));
@@ -958,7 +968,7 @@ void global_init_init() {
     core::Str string = value7 + " " + value8 + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(1)))) + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(2)))) + " ";
     core::NullableParam<int32_t> part4 = Dot::make(1)->get_grown();
     core::NullableParam<int32_t> part5 = Dot::make(3)->get_grown();
-    core::Console::log(console, string + (part4 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part4.value))) + " " + (part5 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part5.value))) + " " + Casing::temper_statics::last.value->toString());
+    core::Console::log(console, string + (part4 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part4.value))) + " " + (part5 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part5.value))) + " " + Casing::temper_statics::last.value->toString() + " " + Casing::temper_statics::first.value->get_marked());
     std::shared_ptr<Carry> carry = Carry::make(3);
     core::Str value = core::Boolean::toString(carry->carrying) + " " + std::to_string(carry->state) + " " + core::Boolean::toString(Carry::make(0)->carrying) + " ";
     core::NullableParam<core::Str> part6 = libraries::tagged()->label;

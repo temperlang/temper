@@ -95,6 +95,14 @@ pub enum TypeData {
     },
     /// `T?`: a value of `T` or null; `T` is never nullable itself.
     Nullable(TypeId),
+    /// `Never<T>`: what never completes normally, as a call of a function
+    /// declaring it its result, standing for a `T`, which is neither
+    /// nullable nor a `Never` itself; only a signature's result, and an
+    /// expression's type. A `Never<T>` value fits where a `T`
+    /// is wanted, and control doesn't go on past it (notes/tmpl/types.md,
+    /// "Never"). Targets without a bottom type lower it to `T`
+    /// ([`crate::nevers`]).
+    Never(TypeId),
     // Subset C: Result.
 }
 
@@ -120,6 +128,7 @@ pub struct TypeTable {
     nominals: HashMap<(DeclId, Vec<TypeId>), TypeId>,
     params: HashMap<DeclId, TypeId>,
     nullables: HashMap<TypeId, TypeId>,
+    nevers: HashMap<TypeId, TypeId>,
     /// Calls' type arguments, by [`TypeArgs`]; the first is none.
     arg_lists: Vec<TypeList>,
     arg_ids: HashMap<Vec<TypeId>, TypeArgs>,
@@ -144,6 +153,7 @@ impl Default for TypeTable {
             nominals: HashMap::new(),
             params: HashMap::new(),
             nullables: HashMap::new(),
+            nevers: HashMap::new(),
             arg_lists: vec![TypeList { start: 0, len: 0 }],
             arg_ids: HashMap::new(),
         }
@@ -298,6 +308,10 @@ impl TypeTable {
                 let inner = self.substitute(inner, from, to);
                 self.nullable(inner)
             }
+            TypeData::Never(inner) => {
+                let inner = self.substitute(inner, from, to);
+                self.never(inner)
+            }
             TypeData::Nominal { decl, args } => {
                 let args: Vec<TypeId> = self.list(args).to_vec();
                 let args: Vec<TypeId> =
@@ -335,6 +349,13 @@ impl TypeTable {
                 let inner = self.substituted(inner, from, to)?;
                 self.nullable_of(inner)
             }
+            TypeData::Never(inner) => {
+                let inner = self.substituted(inner, from, to)?;
+                match self.get(inner) {
+                    TypeData::Never(_) => Some(inner),
+                    _ => self.nevers.get(&inner).copied(),
+                }
+            }
             TypeData::Nominal { decl, args } => {
                 let args: Option<Vec<TypeId>> = (self.list(args).iter())
                     .map(|&a| self.substituted(a, from, to))
@@ -367,7 +388,7 @@ impl TypeTable {
         match self.get(ty) {
             TypeData::TypeParam { .. } => true,
             TypeData::Scalar(_) => false,
-            TypeData::Nullable(inner) => self.is_generic(inner),
+            TypeData::Nullable(inner) | TypeData::Never(inner) => self.is_generic(inner),
             TypeData::Nominal { args, .. } => self.list(args).iter().any(|&a| self.is_generic(a)),
             TypeData::Function { .. } => self.signature(ty).is_some_and(|sig| {
                 sig.params.iter().any(|&p| self.is_generic(p)) || self.is_generic(sig.result)
@@ -385,7 +406,7 @@ impl TypeTable {
         }
         match self.get(ty) {
             TypeData::TypeParam { .. } | TypeData::Scalar(_) => false,
-            TypeData::Nullable(inner) => self.mentions(inner, param),
+            TypeData::Nullable(inner) | TypeData::Never(inner) => self.mentions(inner, param),
             TypeData::Nominal { args, .. } => {
                 self.list(args).iter().any(|&a| self.mentions(a, param))
             }
@@ -404,11 +425,13 @@ impl TypeTable {
         }
     }
 
-    /// Interns `T?`; `T?` itself if `ty` is already nullable.
+    /// Interns `T?`; `T?` itself if `ty` is already nullable, and for
+    /// `Never<T>`, `T?`, as only null comes from a `Never<T>?`.
     pub fn nullable(&mut self, ty: TypeId) -> TypeId {
         if self.is_nullable(ty) || ty.is_none() {
             return ty;
         }
+        let ty = self.fallback(ty);
         if let Some(&id) = self.nullables.get(&ty) {
             return id;
         }
@@ -416,6 +439,37 @@ impl TypeTable {
         self.data.push(TypeData::Nullable(ty));
         self.nullables.insert(ty, id);
         id
+    }
+
+    /// Interns `Never<T>`; `ty` itself if it's a `Never` or nullable, as
+    /// a `Never<T>?` is a `T?` that's only ever null.
+    pub fn never(&mut self, ty: TypeId) -> TypeId {
+        if matches!(
+            self.data.get(ty.index()),
+            None | Some(TypeData::Never(_) | TypeData::Nullable(_))
+        ) {
+            return ty;
+        }
+        if let Some(&id) = self.nevers.get(&ty) {
+            return id;
+        }
+        let id = TypeId(self.data.len() as u32);
+        self.data.push(TypeData::Never(ty));
+        self.nevers.insert(ty, id);
+        id
+    }
+
+    /// `T` for `Never<T>`, the type it stands for, else the type itself.
+    pub fn fallback(&self, ty: TypeId) -> TypeId {
+        match self.data.get(ty.index()) {
+            Some(&TypeData::Never(t)) => t,
+            _ => ty,
+        }
+    }
+
+    /// Whether `ty` is `Never<T>` for some `T`: what never completes.
+    pub fn is_never(&self, ty: TypeId) -> bool {
+        matches!(self.data.get(ty.index()), Some(TypeData::Never(_)))
     }
 
     /// `T?` for `T`, if it's interned, without interning it.
@@ -457,7 +511,8 @@ impl TypeTable {
             TypeData::Scalar(_)
             | TypeData::Nominal { .. }
             | TypeData::TypeParam { .. }
-            | TypeData::Nullable(_) => None,
+            | TypeData::Nullable(_)
+            | TypeData::Never(_) => None,
         }
     }
 
@@ -475,7 +530,8 @@ impl TypeTable {
                     && x.iter().zip(y).all(|(&a, &b)| self.same(a, others, b))
             }
             (TypeData::TypeParam { decl: a }, TypeData::TypeParam { decl: b }) => a == b,
-            (TypeData::Nullable(a), TypeData::Nullable(b)) => self.same(a, others, b),
+            (TypeData::Nullable(a), TypeData::Nullable(b))
+            | (TypeData::Never(a), TypeData::Never(b)) => self.same(a, others, b),
             (TypeData::Function { .. }, TypeData::Function { .. }) => {
                 let (Some(x), Some(y)) = (self.signature(id), others.signature(other)) else {
                     return false;
@@ -512,6 +568,7 @@ impl TypeTable {
                 }
             }
             Some(&TypeData::TypeParam { decl: d }) => decl(d),
+            Some(&TypeData::Never(t)) => format!("Never<{}>", self.show_with(t, decl)),
             Some(&TypeData::Nullable(t)) => {
                 let inner = self.show_with(t, decl);
                 if matches!(self.data.get(t.index()), Some(TypeData::Function { .. })) {

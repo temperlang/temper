@@ -24,7 +24,8 @@
 //! `HelpersGlobal.Twice(n)`, with a `using` of its namespace (or named
 //! from `global::` where a name would hide it); another library's the
 //! same, in its namespace. A module's tests are an MSTest class of their
-//! own, in its namespace ([`Translator::tests`]).
+//! own, in its namespace, with what only they reach
+//! ([`Translator::tests`]).
 //!
 //! Classes and interfaces are each a file of their own in the module's
 //! namespace, as Kotlin's: `public` if exported, else `internal`, an
@@ -78,8 +79,8 @@ use crate::ops::{self, Spelling};
 use crate::tree::{self, Access, Bin, Expr, Hole, Labels, Stmt, Unary};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use temper_tmpl::analysis::{
-    ancestors, as_super, home, is_plain_to_string, members, module_refs, module_state,
-    module_writes, nominal_decl, reads_only_itself,
+    self, TestParts, ancestors, as_super, home, is_plain_to_string, members, module_refs,
+    module_state, module_writes, nominal_decl, reads_only_itself,
 };
 use temper_tmpl::host::uses_host;
 use temper_tmpl::naming::NameMap;
@@ -123,6 +124,7 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("Math", "System"),
     ("BitArray", "System.Collections"),
     ("Queue", "System.Collections.Generic"),
+    ("RuntimeHelpers", "System.Runtime.CompilerServices"),
     ("StringBuilder", "System.Text"),
     ("StringUtil", "TemperLang.Core"),
     ("Task", "System.Threading.Tasks"),
@@ -147,14 +149,26 @@ pub struct Translator<'a> {
     namespace: String,
     class: String,
     usings: BTreeSet<String>,
-    /// The module translated; `NONE` for a tests class.
+    /// The module translated, or whose test parts and tests are.
     here: DeclId,
+    /// What its test parts define and use of its library's
+    /// ([`analysis::test_parts`]), and the class they're in, its test
+    /// class.
+    test_parts: TestParts,
+    test_class: String,
+    /// Whether translating its test parts, in its test class or the
+    /// tests' project's types.
+    in_tests: bool,
     /// Classes of other modules named, by simple name, with their
     /// namespaces.
     classes: HashMap<String, String>,
     /// Every name the program's declarations take, and the root
     /// namespace, which would hide a class of the same name.
     taken: HashSet<String>,
+    /// The namespaces of the modules the program has or uses, each
+    /// once, which hide a class named as one of them or as a namespace
+    /// above one, and whose module classes may share a name.
+    module_namespaces: Vec<String>,
     /// Module `let`s and `var`s kept as static fields.
     statics: HashSet<DeclId>,
     /// The module's lock, if a function takes it.
@@ -246,7 +260,7 @@ impl<'a> Translator<'a> {
         taken.insert(namespace.split('.').next().unwrap_or_default().to_string());
         let mut type_nodes = HashMap::new();
         for module in &p.modules {
-            for &item in &module.items {
+            for item in module.all_items() {
                 if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                     type_nodes.insert(decl, item);
                     if p.decls.get(decl).kind == DeclKind::Interface {
@@ -259,6 +273,13 @@ impl<'a> Translator<'a> {
         for name in renamed.values() {
             taken.insert(name.clone());
         }
+        let mut module_namespaces: Vec<String> = (p.decls.ids())
+            .filter(|&d| p.decls.contains(d))
+            .filter(|&d| matches!(p.decls.get(d).kind, DeclKind::Module | DeclKind::Library))
+            .map(|d| module_namespace(p, d))
+            .collect();
+        module_namespaces.sort();
+        module_namespaces.dedup();
         Translator {
             p,
             names,
@@ -267,8 +288,12 @@ impl<'a> Translator<'a> {
             class: class.to_string(),
             usings: BTreeSet::new(),
             here: DeclId::NONE,
+            test_parts: TestParts::default(),
+            test_class: String::new(),
+            in_tests: false,
             classes: HashMap::new(),
             taken,
+            module_namespaces,
             statics: HashSet::new(),
             lock: None,
             in_function: false,
@@ -323,20 +348,27 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// Whether a namespace beside one this code is in hides a class's
-    /// simple name: in std's `TemperLang.Std.Testing`, `Core` is the
-    /// namespace `TemperLang.Core`, not its class `Core`; and in a
-    /// library's `Lib.Url`, its module `core`'s `Lib.Core`.
+    /// Whether a namespace in or beside one this code is in hides a
+    /// class's simple name, since C# looks a name up in each enclosing
+    /// namespace before `using`s: in std's `TemperLang.Std.Testing`,
+    /// `Core` is the namespace `TemperLang.Core`, not its class `Core`; in
+    /// a library's `Lib.Url`, its module `core`'s `Lib.Core`; in
+    /// `Lib.Nfa`, module `nfa/engine`'s `Lib.Nfa.Engine`; and anywhere in
+    /// `Lib`, `Lib.Dfa`, which holds module `dfa/dfa`'s `Lib.Dfa.Dfa`.
     fn namespace_hides(&self, name: &str) -> bool {
-        let mut outer = self.namespace.as_str();
-        while let Some((parent, _)) = outer.rsplit_once('.') {
-            let beside = format!("{parent}.{name}");
-            if NAMESPACES.iter().any(|(_, ns)| *ns == beside)
-                || (self.p.modules.iter()).any(|m| module_namespace(self.p, m.decl) == beside)
+        let mut outer = Some(self.namespace.as_str());
+        while let Some(ns) = outer {
+            let within = format!("{ns}.{name}");
+            let under = |n: &str| {
+                n.strip_prefix(within.as_str())
+                    .is_some_and(|r| r.is_empty() || r.starts_with('.'))
+            };
+            if NAMESPACES.iter().any(|(_, n)| under(n))
+                || self.module_namespaces.iter().any(|n| under(n))
             {
                 return true;
             }
-            outer = parent;
+            outer = ns.rsplit_once('.').map(|(parent, _)| parent);
         }
         false
     }
@@ -378,13 +410,29 @@ impl<'a> Translator<'a> {
         let hidden = match decl {
             Some(decl) => (p.decls.ids())
                 .any(|d| d != decl && p.decls.contains(d) && self.names.get(d) == name),
-            None => self.taken.contains(name),
+            // Another module's class of this name, as `regex`'s
+            // `RegexGlobal` and std's, whose `using`s would make the name
+            // ambiguous; but a namespace this code is in is searched
+            // before `using`s.
+            None => {
+                let encloses = (self.namespace.strip_prefix(namespace))
+                    .is_some_and(|r| r.is_empty() || r.starts_with('.'));
+                let shares = |n: &String| {
+                    let base = n.rsplit('.').next().unwrap_or_default();
+                    n != namespace && name.strip_suffix("Global") == Some(base)
+                };
+                self.taken.contains(name)
+                    || (!encloses && self.module_namespaces.iter().any(shares))
+            }
         };
         // A namespace this code is in hides it too: a library `match`'s
-        // namespace `Match`, std's regex class `Match`.
+        // namespace `Match`, std's regex class `Match`; and so does one
+        // in or beside it: module `state`'s `Lib.State`, in `Lib.User`,
+        // its class `State`.
         let clash = hidden
             || name == self.class
             || self.namespace.split('.').any(|part| part == name)
+            || self.namespace_hides(name)
             || self.classes.get(name).is_some_and(|ns| ns != namespace);
         if clash {
             return format!("global::{namespace}.{name}");
@@ -396,15 +444,43 @@ impl<'a> Translator<'a> {
         name.to_string()
     }
 
-    /// Another module's or library's declaration, as the code reaches it:
-    /// through its module's class. `None` for this module's own.
+    /// A module-level declaration, as the code reaches it: through the
+    /// class of statics it's in, its module's, or for what only tests
+    /// reach, its test class ([`Self::holds_tests`]); but by its name
+    /// alone in that class.
     fn owner_class(&mut self, decl: DeclId) -> Option<String> {
         let from = home(self.p, decl)?;
-        if from == self.here {
+        if from != self.here {
+            let (namespace, class) = global_class(self.p, from);
+            return Some(self.other_class(&namespace, &class));
+        }
+        let tests = self.holds_tests(decl);
+        if self.in_type.is_none() && tests == self.in_tests {
             return None;
         }
-        let (namespace, class) = global_class(self.p, from);
-        Some(self.other_class(&namespace, &class))
+        Some(self.part_class(tests))
+    }
+
+    /// Whether this module's declaration, or a static field's storage, is
+    /// in its test class: what only tests reach.
+    fn holds_tests(&self, decl: DeclId) -> bool {
+        let p = self.p;
+        let top = match p.decls.get(decl).kind {
+            DeclKind::StaticField => p.decls.get(decl).owner,
+            _ => decl,
+        };
+        self.test_parts.own.contains(&top)
+    }
+
+    /// The module's class, or with `tests`, its test class, as the code
+    /// names it.
+    fn part_class(&mut self, tests: bool) -> String {
+        let namespace = self.namespace.clone();
+        let class = match tests {
+            true => self.test_class.clone(),
+            false => self.global.clone(),
+        };
+        self.other_class(&namespace, &class)
     }
 
     /// A module `let`'s name where it's read or assigned, through its
@@ -416,7 +492,6 @@ impl<'a> Translator<'a> {
         }
         match self.owner_class(decl) {
             Some(class) => Expr::name(class).member(name),
-            None if self.in_type.is_some() => self.global_ref().member(name),
             None => Expr::name(name),
         }
     }
@@ -463,13 +538,14 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// Whether the module's class has a member of this name.
+    /// Whether the module's class, or its test class, has a member of this
+    /// name.
     fn global_name_taken(&mut self, name: &str) -> bool {
         if self.global_names.is_none() {
             let p = self.p;
             let names = (p.modules.iter())
-                .flat_map(|m| m.items.iter())
-                .filter_map(|&item| match p.nodes.get(item) {
+                .flat_map(|m| m.all_items())
+                .filter_map(|item| match p.nodes.get(item) {
                     Node::Function { decl, .. } | Node::ModuleLet { decl } => Some(decl),
                     _ => None,
                 })
@@ -502,13 +578,13 @@ impl<'a> Translator<'a> {
         self.safe_member(field, name)
     }
 
-    /// The module's class, from a class or interface of the module.
-    /// A helper of the module's class, by name, which it then has: from
-    /// the module's class itself, or through it.
+    /// A helper of the class of statics translated (the module's, or its
+    /// test class), by name, which it then has: from that class itself,
+    /// or through it.
     pub(crate) fn helper(&mut self, name: &'static str) -> Expr {
         self.helpers.insert(name);
-        if self.in_type.is_some() || self.here.is_none() {
-            self.global_ref().member(name)
+        if self.in_type.is_some() {
+            Expr::name(self.part_class(self.in_tests)).member(name)
         } else {
             Expr::name(name)
         }
@@ -536,12 +612,6 @@ impl<'a> Translator<'a> {
         methods
     }
 
-    fn global_ref(&mut self) -> Expr {
-        let namespace = self.namespace.clone();
-        let global = self.global.clone();
-        Expr::name(self.other_class(&namespace, &global))
-    }
-
     fn qname(&self, decl: DeclId) -> String {
         self.qnames
             .get(decl)
@@ -552,6 +622,9 @@ impl<'a> Translator<'a> {
     /// A type as C# writes it, its namespace imported if it needs to be.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
+            // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
+            // for, as this profile has no bottom type.
+            TypeData::Never(t) => return self.ty(t),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "bool",
@@ -726,15 +799,40 @@ impl<'a> Translator<'a> {
         self.p.decls.get(decl).facts.contains(Facts::EXPORTED)
     }
 
-    /// Translates a module into its class.
+    /// Translates a module's library parts into its class, `NAMEGlobal`,
+    /// and its classes and interfaces ([`Self::take_types`]). What only
+    /// tests reach is its test class's ([`Translator::tests`]), as tmpl's
+    /// `reach::partition` splits the module.
     pub fn module(&mut self, module: &Module) -> R<tree::Class> {
         let p = self.p;
         self.here = module.decl;
-        let state = module_state(p, module);
+        self.test_parts = analysis::test_parts(p, module);
+        self.test_class = format!("{}Tests", module_names(p, module.decl).1);
+        self.in_tests = false;
+        // What the test parts use is a static too, for their class.
+        let outside: HashSet<DeclId> = self.test_parts.used.iter().copied().collect();
+        self.statics_class(module, &module.items, Some(module.init), &outside)
+    }
+
+    /// A class of statics, of a module's library parts or its test parts
+    /// (`items`, and `init`, its static constructor's), with their
+    /// classes and interfaces, each a file ([`Self::take_types`]): its
+    /// functions, as static methods, its module values that functions,
+    /// classes, other classes of statics (those `outside` lists), or
+    /// exports use, as static fields, the rest its constructor's locals,
+    /// and its classes' and interfaces' static fields' storage.
+    fn statics_class(
+        &mut self,
+        module: &Module,
+        items: &[NodeId],
+        init: Option<NodeId>,
+        outside: &HashSet<DeclId>,
+    ) -> R<tree::Class> {
+        let p = self.p;
+        let mut state = module_state(p, module);
         let mut written = HashSet::new();
         // What the module's classes and interfaces use is a static too.
-        let mut state = state;
-        for &item in module.items.iter().chain(&module.tests) {
+        for item in module.roots() {
             match p.nodes.get(item) {
                 Node::Function { .. } | Node::Test { .. } => written.extend(module_writes(p, item)),
                 Node::Class { .. } | Node::Interface { .. } => {
@@ -748,23 +846,21 @@ impl<'a> Translator<'a> {
                 _ => {}
             }
         }
-        // What the module's tests use is a static too, for their class.
-        let mut tested = HashSet::new();
-        for &test in &module.tests {
-            tested.extend(module_refs(p, test));
-        }
+        let stmts = match init.map(|i| (i, p.nodes.get(i))) {
+            Some((_, Node::Block { stmts })) => p.nodes.list(stmts).to_vec(),
+            Some((i, _)) => vec![i],
+            None => Vec::new(),
+        };
         let mut fields = Vec::new();
         let mut init_locals = Vec::new();
         // Static fields initialized directly in the init block.
         let mut statics_at_top = HashSet::new();
-        if let Node::Block { stmts } = p.nodes.get(module.init) {
-            for &s in p.nodes.list(stmts) {
-                if let Node::InitStatic { target, .. } = p.nodes.get(s) {
-                    statics_at_top.insert(target);
-                }
+        for &s in &stmts {
+            if let Node::InitStatic { target, .. } = p.nodes.get(s) {
+                statics_at_top.insert(target);
             }
         }
-        for &item in &module.items {
+        for &item in items {
             if let Node::Class {
                 decl: class,
                 members,
@@ -800,7 +896,7 @@ impl<'a> Translator<'a> {
                 let var = d.facts.contains(Facts::VAR);
                 if self.exported(decl)
                     || state.used_by_functions.contains(&decl)
-                    || tested.contains(&decl)
+                    || outside.contains(&decl)
                 {
                     self.statics.insert(decl);
                     let ty = self.ty(d.ty)?;
@@ -833,12 +929,20 @@ impl<'a> Translator<'a> {
             return not_yet(format!("a member named for its class, {}", self.class));
         }
         let mut methods = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             match p.nodes.get(item) {
                 Node::Function { decl, .. } | Node::BodilessFunction { decl, .. }
                     if self.name(decl) == self.class =>
                 {
                     return not_yet(format!("a member named for its class, {}", self.class));
+                }
+                Node::Function { decl, .. } | Node::BodilessFunction { decl, .. }
+                    if self.in_tests && uses_host(p, decl, NAMES) =>
+                {
+                    return not_yet(format!(
+                        "host code for what only tests reach, {}",
+                        p.name(decl)
+                    ));
                 }
                 Node::Function { decl, params, body } if uses_host(p, decl, NAMES) => {
                     methods.push(self.host_wrapper(module, item, decl, params, Some(body))?);
@@ -858,7 +962,7 @@ impl<'a> Translator<'a> {
                 _ => {}
             }
         }
-        for &item in &module.items {
+        for &item in items {
             if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                 // A `@fun` interface is only its function type's delegate.
                 if p.decls.get(decl).facts.contains(Facts::FUN) {
@@ -872,6 +976,12 @@ impl<'a> Translator<'a> {
                 // A connected class that host code defines, with the
                 // names and members Temper would give it, as Kotlin's.
                 if host::is_host_class(p, decl) {
+                    if self.in_tests {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            p.name(decl)
+                        ));
+                    }
                     let class = self.simple_type_name(decl);
                     self.need_host(module, decl, &class)?;
                     continue;
@@ -882,50 +992,67 @@ impl<'a> Translator<'a> {
         }
         self.in_function = false;
         self.result = None;
-        self.begin(module.init);
-        let mut init = init_locals;
-        match p.nodes.get(module.init) {
-            Node::Block { stmts } => {
-                for &s in p.nodes.list(stmts) {
-                    match p.nodes.get(s) {
-                        // A module `let` that's never read, holding a
-                        // literal, as the functional tests' unused
-                        // examples: C# rejects it as a local (CS0219),
-                        // and Kotlin's leaves it out too.
-                        Node::InitLet { target, value }
-                            if !self.statics.contains(&target)
-                                && is_literal(p, value)
-                                && !self.is_read(target) => {}
-                        Node::InitLet { target, value } if !self.statics.contains(&target) => {
-                            let ty = self.ty(p.decls.get(target).ty)?;
-                            let name = self.name(target);
-                            if self.needs_statements(value) {
-                                init.push(Stmt::Local {
-                                    ty,
-                                    name: name.clone(),
-                                    value: None,
-                                });
-                                self.sink(value, &Sink::Assign(Expr::name(name)), &mut init)?;
-                                continue;
-                            }
-                            let hoist = self.hoists(s);
-                            let saved = std::mem::replace(&mut self.hoist, hoist);
-                            let value = self.expr(value);
-                            self.hoist = saved;
-                            init.append(&mut self.pre);
-                            init.push(Stmt::Local {
-                                ty,
-                                name,
-                                value: Some(value?),
-                            });
-                        }
-                        _ => self.stmt(s, &mut init)?,
-                    }
-                }
-            }
-            _ => self.stmt(module.init, &mut init)?,
+        let mut body = init_locals;
+        // A test class's constructor continues its module class's, so runs
+        // it first.
+        if self.in_tests && init.is_some() {
+            let global = self.part_class(false);
+            let handle = Expr::name(format!("typeof({global})")).member("TypeHandle");
+            let run = (self.class("RuntimeHelpers")).method("RunClassConstructor", vec![handle]);
+            body.push(Stmt::Expr(run));
         }
-        if let Some(lock) = &self.lock {
+        if let Some(init) = init {
+            self.begin(init);
+        }
+        for &s in &stmts {
+            match p.nodes.get(s) {
+                // A module `let` that's never read, holding a
+                // literal, as the functional tests' unused
+                // examples: C# rejects it as a local (CS0219),
+                // and Kotlin's leaves it out too.
+                Node::InitLet { target, value }
+                    if !self.statics.contains(&target)
+                        && is_literal(p, value)
+                        && !self.is_read(target) => {}
+                Node::InitLet { target, value } if !self.statics.contains(&target) => {
+                    let ty = self.ty(p.decls.get(target).ty)?;
+                    let name = self.name(target);
+                    if self.needs_statements(value) {
+                        body.push(Stmt::Local {
+                            ty,
+                            name: name.clone(),
+                            value: None,
+                        });
+                        self.sink(value, &Sink::Assign(Expr::name(name)), &mut body)?;
+                        continue;
+                    }
+                    let hoist = self.hoists(s);
+                    let saved = std::mem::replace(&mut self.hoist, hoist);
+                    let value = self.expr(value);
+                    self.hoist = saved;
+                    body.append(&mut self.pre);
+                    body.push(Stmt::Local {
+                        ty,
+                        name,
+                        value: Some(value?),
+                    });
+                }
+                _ => self.stmt(s, &mut body)?,
+            }
+        }
+        // A test class's lock and helpers wait for its tests, which may
+        // use them too ([`Self::tests`]).
+        if self.in_tests {
+            return Ok(tree::Class {
+                usings: Vec::new(),
+                namespace: self.namespace.clone(),
+                name: self.class.clone(),
+                fields,
+                methods,
+                init: reachable(body),
+            });
+        }
+        if let Some(lock) = self.lock.take() {
             fields.push(tree::Field {
                 access: if self.lock_shared {
                     Access::Internal
@@ -935,10 +1062,11 @@ impl<'a> Translator<'a> {
                 readonly: true,
                 volatile: false,
                 ty: "object".into(),
-                name: lock.clone(),
+                name: lock,
                 value: Some(Expr::name("new").call(Vec::new())),
             });
         }
+        self.lock_shared = false;
         methods.extend(self.helper_methods());
         Ok(tree::Class {
             usings: self.usings.iter().cloned().collect(),
@@ -946,7 +1074,7 @@ impl<'a> Translator<'a> {
             name: self.class.clone(),
             fields,
             methods,
-            init: reachable(init),
+            init: reachable(body),
         })
     }
 
@@ -1203,7 +1331,7 @@ impl<'a> Translator<'a> {
                     let Some(storage) = self.static_storage.get(&f).cloned() else {
                         return not_yet("a static field outside its module");
                     };
-                    let value = self.global_ref().member(storage);
+                    let value = Expr::name(self.part_class(self.in_tests)).member(storage);
                     out.push(Member::Property {
                         access: self.member_access(f, false),
                         modifiers: "static ",
@@ -1677,22 +1805,40 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// A module's tests, as an MSTest class in its namespace, `NAMETests`:
-    /// each test a method named for it in Pascal case (`Twice10` for
-    /// "twice 10"), which makes std's `Test`, runs the body, and then,
-    /// even if the body threw, fails if the `Test` has failures
-    /// (`SoftFailToHard`), as Kotlin's do. A test's update of a module
-    /// `var` doesn't take the module's lock, which is private to its
-    /// class. `None` without tests.
-    pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::TestClass>> {
+    /// A module's test class, `NAMETests`, an MSTest class in its
+    /// namespace, in the tests' project: what only its tests reach, as
+    /// statics ([`Self::statics_class`]) whose static constructor runs
+    /// the module class's first, then continues it, with its classes and
+    /// interfaces ([`Self::take_types`]), and its tests: each a method
+    /// named for it in Pascal case (`Twice10` for "twice 10"), which makes
+    /// std's `Test`, runs the body, and then, even if the body threw,
+    /// fails if the `Test` has failures (`SoftFailToHard`), as Kotlin's
+    /// do. They see the library's `internal` members (`InternalsVisibleTo`
+    /// in its project). A test's update of the library's module `var`
+    /// doesn't take its lock, which is private to its class. `None`
+    /// without test parts or tests.
+    pub fn tests(&mut self, module: &Module) -> R<Option<tree::TestClass>> {
         let p = self.p;
-        if module.tests.is_empty() {
+        if module.tests.is_empty() && module.test_items.is_empty() {
             return Ok(None);
         }
-        self.here = DeclId::NONE;
+        if let Some(&local) =
+            (self.test_parts.used.iter()).find(|&&d| p.decls.get(d).kind == DeclKind::Local)
+        {
+            return not_yet(format!(
+                "tests that use {}, a local of their module's init block",
+                p.name(local)
+            ));
+        }
+        self.in_tests = true;
         self.usings.clear();
         self.classes.clear();
-        self.class = class.to_string();
+        self.class = self.test_class.clone();
+        let mut outside = HashSet::new();
+        for &test in &module.tests {
+            outside.extend(module_refs(p, test));
+        }
+        let statics = self.statics_class(module, &module.test_items, module.test_init, &outside)?;
         self.in_function = true;
         self.result = None;
         let mut used = BTreeSet::new();
@@ -1730,13 +1876,29 @@ impl<'a> Translator<'a> {
                 ],
             ));
         }
+        let mut statics = statics;
+        // The helpers and lock of the test parts and tests.
+        statics.methods.extend(self.helper_methods());
+        if let Some(lock) = self.lock.take() {
+            statics.fields.push(tree::Field {
+                access: if std::mem::take(&mut self.lock_shared) {
+                    Access::Internal
+                } else {
+                    Access::Private
+                },
+                readonly: true,
+                volatile: false,
+                ty: "object".into(),
+                name: lock,
+                value: Some(Expr::name("new").call(Vec::new())),
+            });
+        }
         self.usings
             .insert("Microsoft.VisualStudio.TestTools.UnitTesting".into());
+        statics.usings = self.usings.iter().cloned().collect();
         Ok(Some(tree::TestClass {
-            usings: self.usings.iter().cloned().collect(),
-            namespace: self.namespace.clone(),
-            name: class.to_string(),
-            methods,
+            statics,
+            tests: methods,
         }))
     }
 
@@ -2286,16 +2448,19 @@ impl<'a> Translator<'a> {
                     value,
                 });
             }
+            // Its class's lock, from that class or its part's types; tests
+            // updating the library's don't take its lock.
             Node::SetModuleLet { target, value }
                 if self.in_function
-                    && !self.here.is_none()
+                    && home(p, target) == Some(self.here)
+                    && self.holds_tests(target) == self.in_tests
                     && reads_only_itself(p, target, value) =>
             {
                 let value = self.expr(value)?;
                 let lock = self.lock();
                 let lock = if self.in_type.is_some() {
                     self.lock_shared = true;
-                    self.global_ref().member(lock)
+                    Expr::name(self.part_class(self.in_tests)).member(lock)
                 } else {
                     Expr::name(lock)
                 };
@@ -2753,7 +2918,6 @@ impl<'a> Translator<'a> {
                     let name = format!("{}{spelled}", self.name(callee));
                     match self.owner_class(callee) {
                         Some(class) => Expr::name(class).method(name, args),
-                        None if self.in_type.is_some() => self.global_ref().method(name, args),
                         None => Expr::name(name).call(args),
                     }
                 };
@@ -2855,7 +3019,9 @@ impl<'a> Translator<'a> {
             Node::GetStatic { target } => {
                 let owner = p.decls.get(target).owner;
                 match self.static_storage.get(&target) {
-                    Some(storage) if self.in_type.is_none() && !self.here.is_none() => {
+                    Some(storage)
+                        if self.in_type.is_none() && self.holds_tests(target) == self.in_tests =>
+                    {
                         Expr::name(storage.clone())
                     }
                     _ => {
@@ -3390,7 +3556,8 @@ fn completes(s: &Stmt) -> bool {
         | Stmt::Return(_)
         | Stmt::YieldBreak
         | Stmt::Bubble(_)
-        | Stmt::Throw(_) => false,
+        | Stmt::Throw(_)
+        | Stmt::Expr(Expr::Throw(_)) => false,
         Stmt::TryCatch { body, catch } => body.iter().all(completes) || catch.iter().all(completes),
         // A label is reached by a `goto` from before it.
         Stmt::Block(body) if body.iter().any(|s| matches!(s, Stmt::Label(_))) => true,
@@ -3479,10 +3646,12 @@ fn jumps(body: &[Stmt], brk: bool) -> bool {
 }
 
 /// A library's root namespace: std's is `TemperLang.Std`, as Kotlin's;
-/// others are [`crate::names::root_namespace`]'s.
-pub fn library_namespace(library: &str) -> String {
-    match library {
-        "std" => "TemperLang.Std".into(),
+/// another's is its config's `csharpRootNamespace`, or else
+/// [`crate::names::root_namespace`]'s.
+pub fn library_namespace(p: &Program, library: &str) -> String {
+    match (library, p.metadata_of(library).get("csharpRootNamespace")) {
+        ("std", _) => "TemperLang.Std".into(),
+        (_, Some(namespace)) => namespace.into(),
         _ => crate::names::root_namespace(library),
     }
 }
@@ -3492,13 +3661,13 @@ pub fn library_namespace(library: &str) -> String {
 pub fn module_namespace(p: &Program, module: DeclId) -> String {
     let d = p.decls.get(module);
     let (root, path) = match d.kind {
-        DeclKind::Library => (library_namespace(p.name(module)), ""),
-        _ if !d.owner.is_none() => (library_namespace(p.name(d.owner)), p.name(module)),
+        DeclKind::Library => (library_namespace(p, p.name(module)), ""),
+        _ if !d.owner.is_none() => (library_namespace(p, p.name(d.owner)), p.name(module)),
         _ => {
             let path = (p.modules.iter())
                 .find(|m| m.decl == module)
                 .map_or("", |m| m.path.as_str());
-            (library_namespace(&p.library.name), path)
+            (library_namespace(p, &p.library.name), path)
         }
     };
     let mut out = root;

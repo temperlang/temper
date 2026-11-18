@@ -4,10 +4,9 @@
 //! (std's `Int.jsonAdapter()` is `int32JsonAdapter()`). A call
 //! `T.name(…)`, where `T` names a type, becomes a call of the visible
 //! extension, unless `T` is a class with a static member of that name.
-//! Instance extensions, `@extension("name")`, aren't supported yet;
-//! they're only recorded, declared or imported like static ones, so that
-//! `x.name` isn't reported as "No member" where one named `name` is
-//! visible ([`Settle::extension_visible`]).
+//! Instance extensions, `@extension("name")`, are recorded here,
+//! declared or imported like static ones; typing makes a call `x.name()`
+//! a call of one, as it needs `x`'s type (`typing::instance_extensions`).
 
 use crate::builtins::Builtin;
 use crate::core::{self, MEMBER_STATIC};

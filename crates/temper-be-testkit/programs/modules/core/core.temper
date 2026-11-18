@@ -1,1 +1,8 @@
 export let share(n: Int, d: Int): Int { n / d orelse 0 }
+
+export class Ratio(public n: Int, public d: Int) {
+  @operator("==")
+  public eq(other: Ratio): Boolean { n * other.d == other.n * d }
+}
+
+export let ratioOf(n: Int, d: Int): Ratio? { if (d == 0) { null } else { new Ratio(n, d) } }

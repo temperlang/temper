@@ -50,16 +50,14 @@
 71:3 -> ../write-back-through-field.temper.md:8:14  /** @param {Ping} a */ <- pong(a: Ping): Void { a.n +=
 72:3 -> ../write-back-through-field.temper.md:8:14 (pong)  pong(a) { <- pong(a: Ping): Void { a.n +=
 73:5 -> ../write-back-through-field.temper.md:8:36  { <- a.n += 1; }
-74:7 -> ../write-back-through-field.temper.md:8:36  const o = a; <- a.n += 1; }
-75:7 -> ../write-back-through-field.temper.md:8:36  o.n = (o.n + 1) | 0; <- a.n += 1; }
-79:3 -> ../write-back-through-field.temper.md:9:14  /** <- bump(a: Ping, by: Int): Int
-84:3 -> ../write-back-through-field.temper.md:9:14 (bump)  bump(a, by) { <- bump(a: Ping, by: Int): Int
-85:5 -> ../write-back-through-field.temper.md:9:44  { <- a.n += by; a.n }
-86:7 -> ../write-back-through-field.temper.md:9:44  const o = a; <- a.n += by; a.n }
-87:7 -> ../write-back-through-field.temper.md:9:44  o.n = (o.n + by) | 0; <- a.n += by; a.n }
-89:5 -> ../write-back-through-field.temper.md:9:55  return a.n; <- a.n }
-93:1 -> ../write-back-through-field.temper.md:28:5  const p = new Ping(new Pong( <- let p = new Ping(new Pong())
-94:1 -> ../write-back-through-field.temper.md:29:5  console.log(`ping=${p.ping() <- console.log("ping=${ p.ping(
-95:1 -> ../write-back-through-field.temper.md:30:5  console.log(`pass=${p.pass() <- console.log("pass=${ p.pass(
-96:1 -> ../write-back-through-field.temper.md:31:5  console.log(`record=${p.reco <- console.log("record=${ p.rec
-97:1 -> ../write-back-through-field.temper.md:32:5  console.log(`around=${p.arou <- console.log("around=${ p.aro
+74:7 -> ../write-back-through-field.temper.md:8:36  a.n = (a.n + 1) | 0; <- a.n += 1; }
+78:3 -> ../write-back-through-field.temper.md:9:14  /** <- bump(a: Ping, by: Int): Int
+83:3 -> ../write-back-through-field.temper.md:9:14 (bump)  bump(a, by) { <- bump(a: Ping, by: Int): Int
+84:5 -> ../write-back-through-field.temper.md:9:44  { <- a.n += by; a.n }
+85:7 -> ../write-back-through-field.temper.md:9:44  a.n = (a.n + by) | 0; <- a.n += by; a.n }
+87:5 -> ../write-back-through-field.temper.md:9:55  return a.n; <- a.n }
+91:1 -> ../write-back-through-field.temper.md:28:5  const p = new Ping(new Pong( <- let p = new Ping(new Pong())
+92:1 -> ../write-back-through-field.temper.md:29:5  console.log(`ping=${p.ping() <- console.log("ping=${ p.ping(
+93:1 -> ../write-back-through-field.temper.md:30:5  console.log(`pass=${p.pass() <- console.log("pass=${ p.pass(
+94:1 -> ../write-back-through-field.temper.md:31:5  console.log(`record=${p.reco <- console.log("record=${ p.rec
+95:1 -> ../write-back-through-field.temper.md:32:5  console.log(`around=${p.arou <- console.log("around=${ p.aro

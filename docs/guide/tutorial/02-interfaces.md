@@ -5,7 +5,7 @@ fun. Now let's learn about interfaces, which help us organize related classes.
 As before, let's get into the Temper REPL:
 
 ```sh
-tempest repl
+temper repl
 # And wait for the `$` prompt.
 ```
 
@@ -72,7 +72,7 @@ Sweet. Now what if we want a list of different kinds of shapes?
 let shapes = [{ width: 1.5, height: 0.5 }, { radius: 2.0 }];
 ```
 
-If we use Kotlin Temper's `describe` on that, we'll see that the inferred type is
+If we use an earlier Temper release's `describe` on that, we'll see that the inferred type is
 `List<Rectangle__0 | Circle__0>`. But that's misleading. Many popular
 programming languages that Temper does or could target don't have support for
 ad hoc union types. So we can't rely on this, and we plan to restrict outward
