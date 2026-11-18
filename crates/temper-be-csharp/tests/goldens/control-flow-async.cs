@@ -39,8 +39,7 @@ public static class AsyncGlobal
                 goto OK1;
                 CATCH1: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK1: ;
             }
@@ -110,8 +109,7 @@ public static class AsyncGlobal
                 goto OK3;
                 CATCH3: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK3: ;
             }
@@ -151,8 +149,7 @@ public static class AsyncGlobal
                 goto OK4;
                 CATCH4: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK4: ;
             }
@@ -183,8 +180,7 @@ public static class AsyncGlobal
                         goto OK5;
                         CATCH5: ;
                         {
-                            Environment.FailFast("panic");
-                            throw new InvalidOperationException();
+                            throw Core.Panic("panic");
                         }
                         OK5: ;
                     }
@@ -230,8 +226,7 @@ public static class AsyncGlobal
                 goto OK6;
                 CATCH6: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK6: ;
             }

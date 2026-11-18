@@ -818,7 +818,7 @@ fn runs() {
                     .env("LUA_PATH", LUA_PATH)
                     .output()
                     .unwrap();
-                let actual = kit::junit_file_failures(&results);
+                let actual = kit::junit_file_results(&results);
                 // Kotlin's pattern, `Test_\.test_(.*?)(?:__\d+)?`.
                 let name = |n: &str| {
                     let n = n.strip_prefix("Test_.test_").unwrap_or(n);

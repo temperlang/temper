@@ -809,7 +809,7 @@ fn run_tests(failures: &mut Vec<String>, case: &Case, package: &Path, mocha: Opt
         .current_dir(package)
         .output()
         .unwrap();
-    let actual = kit::junit_file_failures(&results);
+    let actual = kit::junit_file_results(&results);
     kit::check_tests(failures, case, actual, &run, |n| n.to_string());
 }
 

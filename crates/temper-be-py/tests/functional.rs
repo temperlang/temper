@@ -61,7 +61,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 18] = [
+const PROGRAMS: [&str; 19] = [
     "classes",
     "nullables",
     "generics",
@@ -80,6 +80,7 @@ const PROGRAMS: [&str; 18] = [
     "reach",
     "panics",
     "host-errors",
+    "test-panics",
 ];
 
 fn cases() -> Vec<Case> {
@@ -854,7 +855,7 @@ fn runs() {
                     .current_dir(&project)
                     .output()
                     .unwrap();
-                let actual = kit::junit_file_failures(&project.join("result.xml"));
+                let actual = kit::junit_file_results(&project.join("result.xml"));
                 kit::check_tests(&mut failures, &case, actual, &run, |n| n.to_string());
             } else if bulk && !case.fails {
                 batch.push(Logged {

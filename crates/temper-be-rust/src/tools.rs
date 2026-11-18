@@ -45,7 +45,16 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
             .current_dir(dir.join(&library.name)),
         "cargo",
     )?;
-    let stdout = String::from_utf8_lossy(&run.stdout);
+    let results = results(&String::from_utf8_lossy(&run.stdout));
+    if results.is_empty() {
+        return Err(format!("no test results\n{}", tool_output(&run)));
+    }
+    Ok(results)
+}
+
+/// Each test's name (its path's last part) and failure, if it failed
+/// ([`failure`]), as `cargo test` prints them.
+pub fn results(stdout: &str) -> Vec<(String, Option<String>)> {
     let mut results = Vec::new();
     for line in stdout.lines() {
         // `test tests::name ... ok`, or `... FAILED`.
@@ -58,14 +67,11 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
         let short = name.rsplit("::").next().unwrap_or(name).to_string();
         match result {
             "ok" => results.push((short, None)),
-            "FAILED" => results.push((short, Some(failure(&stdout, name)))),
+            "FAILED" => results.push((short, Some(failure(stdout, name)))),
             _ => {}
         }
     }
-    if results.is_empty() {
-        return Err(format!("no test results\n{}", tool_output(&run)));
-    }
-    Ok(results)
+    results
 }
 
 /// Why a Rust test failed, from its captured output: the message of the

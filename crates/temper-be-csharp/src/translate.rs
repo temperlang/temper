@@ -58,9 +58,9 @@
 //! to the same place ([`Translator::sink`]); inside an expression, it
 //! runs first, into a fresh local, where nothing before it in its
 //! statement has an effect, as does a block's value (`??`'s), whose
-//! statements go first. `panic()` ends the process
-//! (`Environment.FailFast`), so no `catch` stops it; Kotlin's throws, as
-//! a bubble does, which an `orelse` catches.
+//! statements go first. `panic()` throws the runtime's `Panic`, which
+//! no `orelse` catches, though a test framework does, test by test;
+//! Kotlin's throws what an `orelse` catches.
 //!
 //! A static field is a static property (`Rect.Unit`), Kotlin's a field:
 //! its value is in a `readonly` field of the module's class, which the
@@ -115,8 +115,6 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("ILoggingConsole", "TemperLang.Core"),
     ("IReadOnlyDictionary", "System.Collections.Generic"),
     ("IReadOnlyList", "System.Collections.Generic"),
-    ("Environment", "System"),
-    ("InvalidOperationException", "System"),
     ("KeyValuePair", "System.Collections.Generic"),
     ("List", "System.Collections.Generic"),
     ("Listed", "TemperLang.Core"),
@@ -2318,14 +2316,13 @@ impl<'a> Translator<'a> {
         Ok(())
     }
 
-    /// `panic()`: the process ends at once, as no `catch` can stop it;
-    /// Kotlin's throws, which an `orelse` catches. The `throw` after it
-    /// tells C# that nothing after it runs.
+    /// `panic()`: throws the runtime's `Panic`, which no `orelse` catches,
+    /// as it's no `Bubble`; Kotlin's throws what an `orelse` catches.
     fn panic(&mut self) -> Vec<Stmt> {
-        let env = self.class("Environment");
-        let fail = env.method("FailFast", vec![Expr::Str("panic".into())]);
-        let unreachable = self.construct("InvalidOperationException", Vec::new());
-        vec![Stmt::Expr(fail), Stmt::Throw(unreachable)]
+        let message = Expr::Str("panic".into());
+        vec![Stmt::Throw(
+            self.class("Core").method("Panic", vec![message]),
+        )]
     }
 
     /// A fresh local's name, for a value hoisted out of an expression.

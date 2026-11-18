@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -80,15 +79,13 @@ public static class NullablesGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
     }
 
     public static int Stops()
     {
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
+        throw Core.Panic("panic");
     }
 
     internal static int OrZero(int? x)

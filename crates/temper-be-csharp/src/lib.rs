@@ -35,8 +35,8 @@
 //! It covers libraries of several modules, classes and interfaces (each in a file of its own, as
 //! Kotlin's: see [`translate`]), and nullable types (`T?`, `x.Value` or
 //! C#'s own narrowing), `orelse` (a `try` and `catch
-//! (global::TemperLang.Core.Bubble)`), `bubble()`, and `panic()`, which,
-//! unlike Kotlin's, no `orelse` catches. Unlike Kotlin's catch-all, a
+//! (global::TemperLang.Core.Bubble)`), `bubble()`, and `panic()` (the
+//! runtime's `Panic`), which, unlike Kotlin's, no `orelse` catches. Unlike Kotlin's catch-all, a
 //! handler catches only the runtime's `Bubble` (an `Exception`), which
 //! `as` (`Core.Cast<T>`) and every builtin that bubbles throw, the
 //! runtime turning host failures (`FormatException`,

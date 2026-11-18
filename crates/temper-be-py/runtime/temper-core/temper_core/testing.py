@@ -38,8 +38,13 @@ class SuiteResult(ut.TestResult):
     def addError(self, test, err):
         super().addError(test, err)
         self.error_count += 1
-        # Potentially large message that's redundant with full text.
-        self.message = ""
+        # What the exception says, after its type but for a panic's (a
+        # plain BaseException): "index 5 out of bounds for length 2". The
+        # text has the traceback.
+        said = str(err[1])
+        if err[0] is not BaseException:
+            said = f"{err[0].__name__}: {said}" if said else err[0].__name__
+        self.message = said
 
     def addFailure(self, test, err):
         super().addFailure(test, err)

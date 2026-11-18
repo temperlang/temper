@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
@@ -39,8 +38,7 @@ public static class JsonAdaptersGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         string again = Encode(adapter, back);
         console.Log(again == text ? text : text + " became " + again);
@@ -63,8 +61,7 @@ public static class JsonAdaptersGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         {
             if (shape is Rect)
@@ -83,8 +80,7 @@ public static class JsonAdaptersGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         string @string = record.Name + " " + (record.Active ? "true" : "false") + " ";
         string? subject1 = record.Nickname;

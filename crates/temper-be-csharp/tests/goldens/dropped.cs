@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -49,8 +48,7 @@ public static class DroppedGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         console.Log(l.N.ToString(CultureInfo.InvariantCulture));
         int t1;

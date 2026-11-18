@@ -1,4 +1,4 @@
-using System;
+using TemperLang.Core;
 
 namespace Classes;
 
@@ -10,7 +10,6 @@ internal class AnyFailing<T> : IFailing<T>
 
     public T Fail()
     {
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
+        throw Core.Panic("panic");
     }
 }

@@ -213,13 +213,13 @@ namespace TemperLang.Core
             {
                 return task.GetAwaiter().GetResult();
             }
-            catch (Bubble)
+            catch (Exception e) when (e is Bubble || e is Panic)
             {
                 throw;
             }
             catch (Exception e)
             {
-                // A broken promise bubbles, whatever broke it.
+                // A broken promise bubbles, whatever broke it but a panic.
                 throw new Bubble(e.Message, e);
             }
         }
@@ -300,8 +300,9 @@ namespace TemperLang.Core
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!(ex is Panic))
             {
+                // A panic passes, ending the process, as it does elsewhere.
                 Console.WriteLine(ex.ToString());
                 Console.WriteLine(new System.Diagnostics.StackTrace().ToString());
             }

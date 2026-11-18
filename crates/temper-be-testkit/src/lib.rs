@@ -36,7 +36,8 @@
 //!   [`threads_expected`] is what `module-state` from 8 threads logs;
 //!   for a test that runs as tests ([`TESTS`]), [`check_tests`] compares
 //!   its failures, as a backend's runner reports them
-//!   ([`junit_failures`] for JUnit XML), with its `expectedFailures`.
+//!   ([`junit_results`] for JUnit XML), with its `expectedFailures`, and
+//!   that every test ran.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -272,12 +273,13 @@ pub fn without_net(cases: &mut [Case]) {
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
-/// and what nothing does, which runs as tests ([`AS_TESTS`]); `panics`
+/// and what nothing does, which runs as tests ([`AS_TESTS`]), as does
+/// `test-panics`, whose tests that panic fail alone; `panics`
 /// `orelse` handling bubbles from everywhere but never a panic, whose
 /// run fails ([`FAILING`]); and `host-errors` builtins whose docs say
 /// they panic (index errors) panicking on every backend, past `orelse`,
 /// one run per section, each saying why on stderr.
-pub const PROGRAMS: [&str; 22] = [
+pub const PROGRAMS: [&str; 23] = [
     "classes",
     "nullables",
     "generics",
@@ -300,6 +302,7 @@ pub const PROGRAMS: [&str; 22] = [
     "reach",
     "panics",
     "host-errors",
+    "test-panics",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
@@ -309,9 +312,11 @@ pub const PROGRAMS: [&str; 22] = [
 pub const FAILING: [&str; 2] = ["panics", "host-errors"];
 
 /// The shared programs that run as tests, as a functional test with
-/// `runAsTest = true` does, none expected to fail: their tests check
-/// what a log can't, as the library's state their init set.
-pub const AS_TESTS: [&str; 1] = ["reach"];
+/// `runAsTest = true` does: their tests check what a log can't, as the
+/// library's state their init set, or how a runner reports tests that
+/// fail. Those expected to fail are in `failures` blocks, a line each,
+/// a test's name and text its failure's cause contains, after `: `.
+pub const AS_TESTS: [&str; 2] = ["reach", "test-panics"];
 
 /// What only the shared `reach` program's tests reach, by their Temper
 /// names, each of which a backend spells its own way.
@@ -582,6 +587,12 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 temper_funtests::expected_log(&text, backend)
             };
             let key = format!("{name}{suffix}");
+            let tests = AS_TESTS.contains(&file).then(|| {
+                (temper_funtests::fenced_lines(&text, "failures", &[backend]).iter())
+                    .filter_map(|l| l.trim().split_once(": "))
+                    .map(|(name, cause)| (name.to_string(), cause.to_string()))
+                    .collect()
+            });
             cases.push(Case {
                 key: key.clone(),
                 library: key,
@@ -599,7 +610,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 },
                 host_files: Vec::new(),
                 no_connected: false,
-                tests: AS_TESTS.contains(&file).then(Vec::new),
+                tests,
                 fails: FAILING.contains(&file),
             });
         }
@@ -750,6 +761,14 @@ pub fn interpret(case: &Case) -> (Option<String>, Vec<String>) {
     let library = load(case);
     let run = interp::run(&settle(library), Some(interp::FUEL));
     (run.failure, run.output)
+}
+
+/// What a case's tests do on tempest's interpreter, as `temper test`
+/// runs them, each alone: the run's failure, if any, and its tests.
+pub fn interpret_tests(case: &Case) -> (Option<String>, TestRun) {
+    let run = interp::run_tests(&settle(load(case)), Some(interp::FUEL));
+    let tests = temper_frontend::library_tests::parse_junit(&run.output);
+    (run.failure, tests)
 }
 
 /// A case's library, with the modules it imports, and the other
@@ -1175,47 +1194,58 @@ pub fn unsaid<'a>(case: &'a Case, said: &str) -> Option<&'a str> {
         .find(|s| !said.contains(s))
 }
 
-/// A test's failure in a run as tests: its name, as its runner's JUnit
-/// XML gives it, and its cause, as Kotlin's `parseJunitResults` takes it:
-/// an `<error>`'s text, or a `<failure>`'s `message`, else its `type`,
-/// else its text (Mocha's built-in `xunit` reporter's).
-#[derive(Clone, Debug, PartialEq)]
-pub struct TestFailure {
-    pub name: String,
-    pub cause: String,
+/// A run as tests: each test that ran, its name as its runner gives it,
+/// and its failure's cause, if it failed, as Kotlin's
+/// `parseJunitResults` takes it: an `<error>`'s text (after its message
+/// and type, which Kotlin leaves out), or a `<failure>`'s
+/// `message`, else its `type`, else its text (Mocha's built-in `xunit`
+/// reporter's).
+pub type TestRun = Vec<(String, Option<String>)>;
+
+/// The tests a small runner of this repo's ran, where a backend's tests
+/// run without a build tool (C#'s MSTest methods by reflection), as Java's
+/// JUnit launcher prints them too: a line per test, `ok` and its name, or
+/// `failed`, its name, and its message, tab separated, with newlines in
+/// the message as `\n`. `None` if no test ran.
+pub fn runner_results(stdout: &str) -> Option<TestRun> {
+    let run: TestRun = (stdout.lines())
+        .filter_map(|line| {
+            let mut parts = line.splitn(3, '\t');
+            match (parts.next(), parts.next(), parts.next()) {
+                (Some("ok"), Some(name), _) => Some((name.to_string(), None)),
+                (Some("failed"), Some(name), cause) => {
+                    let cause = cause.unwrap_or_default().replace("\\n", "\n");
+                    Some((name.to_string(), Some(cause)))
+                }
+                _ => None,
+            }
+        })
+        .collect();
+    (!run.is_empty()).then_some(run)
 }
 
-/// The failures a small runner of this repo's prints, where a backend's
-/// tests run without a build tool (Java's JUnit launcher, C#'s MSTest
-/// methods by reflection): a line `ran N` once the tests ran, and each
-/// failure as a line of its test's name and its message, tab separated,
-/// with newlines in the message as `\n`. `None` without the `ran` line.
-pub fn runner_failures(stdout: &str) -> Option<Vec<TestFailure>> {
-    stdout.lines().any(|l| l.starts_with("ran ")).then(|| {
-        (stdout.lines())
-            .filter_map(|l| l.split_once('\t'))
-            .map(|(name, cause)| TestFailure {
-                name: name.to_string(),
-                cause: cause.replace("\\n", "\n"),
-            })
-            .collect()
-    })
-}
-
-/// The failures in JUnit XML ([`tools::junit`]), as Kotlin's
+/// The tests in JUnit XML ([`tools::junit`]), as Kotlin's
 /// `parseJunitResults` reads them.
-pub fn junit_failures(xml: &str) -> Vec<TestFailure> {
+pub fn junit_results(xml: &str) -> TestRun {
     (tools::junit(xml).into_iter())
-        .filter_map(|case| {
+        .map(|case| {
             let cause = match (case.error, case.failure) {
-                (Some(error), _) => error.text,
-                (None, Some(failure)) => (failure.message).or(failure.kind).unwrap_or(failure.text),
-                (None, None) => return None,
+                // Its message or type too, where a runner puts what a
+                // panic says (LuaUnit's type), not in the text.
+                (Some(error), _) => Some(
+                    [error.message, error.kind, Some(error.text)]
+                        .into_iter()
+                        .flatten()
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                ),
+                (None, Some(failure)) => {
+                    Some((failure.message).or(failure.kind).unwrap_or(failure.text))
+                }
+                (None, None) => None,
             };
-            Some(TestFailure {
-                name: case.name,
-                cause,
-            })
+            (case.name, cause)
         })
         .collect()
 }
@@ -1224,13 +1254,15 @@ pub fn junit_failures(xml: &str) -> Vec<TestFailure> {
 /// `assertTestingTestFromJunit`: the failing tests' names, through
 /// `name` (which undoes a backend's naming of tests) and lowercased,
 /// match the expected failures' names, and each expected cause is in
-/// some failure's cause. `actual` is the run's failures, from its JUnit
-/// XML ([`junit_failures`]) or its runner's output, or `None` if there
-/// are no results, which fails.
+/// some failure's cause. Every test ran, too: as many as its sources
+/// declare (a line starting `test("`), so a test that ends the run, as
+/// a panic once did, shows. `actual` is the run, from its JUnit XML
+/// ([`junit_results`]) or its runner's output, or `None` if there are
+/// no results, which fails.
 pub fn check_tests(
     failures: &mut Vec<String>,
     case: &Case,
-    actual: Option<Vec<TestFailure>>,
+    actual: Option<TestRun>,
     out: &Output,
     name: impl Fn(&str) -> String,
 ) {
@@ -1241,26 +1273,30 @@ pub fn check_tests(
         failures.push(format!("{key}: no test results\n{}", output()));
         return;
     };
-    let mut names: Vec<String> = actual
-        .iter()
-        .map(|f| name(&f.name).to_lowercase())
+    let failed: Vec<(&str, &str)> = (actual.iter())
+        .filter_map(|(n, cause)| Some((n.as_str(), cause.as_deref()?)))
         .collect();
+    let mut names: Vec<String> = failed.iter().map(|(n, _)| name(n).to_lowercase()).collect();
     names.sort();
     let mut want: Vec<String> = expected.iter().map(|(n, _)| n.to_lowercase()).collect();
     want.sort();
-    let causes_found = (expected.iter()).all(|(_, c)| actual.iter().any(|f| f.cause.contains(c)));
-    if names != want || !causes_found {
+    let causes_found = (expected.iter()).all(|(_, c)| failed.iter().any(|(_, f)| f.contains(c)));
+    let declared = (case.sources.iter())
+        .flat_map(|(_, text)| text.lines())
+        .filter(|l| l.trim_start().starts_with("test(\""))
+        .count();
+    if names != want || !causes_found || actual.len() != declared {
         failures.push(format!(
-            "{key}: expected failures {expected:?}, got {actual:?}\n{}",
+            "{key}: expected failures {expected:?} of {declared} tests, got {actual:?}\n{}",
             output()
         ));
     }
 }
 
-/// The failures in JUnit XML text, if there's any.
-pub fn junit_file_failures(path: &Path) -> Option<Vec<TestFailure>> {
+/// The tests in a JUnit XML file, if there are any.
+pub fn junit_file_results(path: &Path) -> Option<TestRun> {
     let xml = fs::read_to_string(path).ok()?;
-    (!xml.trim().is_empty()).then(|| junit_failures(&xml))
+    (!xml.trim().is_empty()).then(|| junit_results(&xml))
 }
 
 /// Kotlin's `assertTestingTest` naming undone, for backends whose tests'

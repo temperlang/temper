@@ -52,8 +52,7 @@ public static class LibrariesGlobal
             }
             else
             {
-                Environment.FailFast("panic");
-                throw new InvalidOperationException();
+                throw Core.Panic("panic");
             }
             @string = value;
         }
@@ -81,8 +80,7 @@ public static class LibrariesGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
     }
 
@@ -104,8 +102,7 @@ public static class LibrariesGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
     }
 
@@ -133,8 +130,7 @@ public static class LibrariesGlobal
             }
             catch (global::TemperLang.Core.Bubble)
             {
-                Environment.FailFast("panic");
-                throw new InvalidOperationException();
+                throw Core.Panic("panic");
             }
         }
         Each(values, fn);
@@ -149,8 +145,7 @@ public static class LibrariesGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
     }
 
@@ -192,8 +187,7 @@ public static class LibrariesGlobal
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         double fn(double x)
         {
@@ -407,8 +401,7 @@ public static class LibrariesGlobal
         }
         else
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         p = @string;
         return p;
@@ -438,8 +431,7 @@ public static class LibrariesGlobal
                 }
                 else
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 value = @string2;
             }

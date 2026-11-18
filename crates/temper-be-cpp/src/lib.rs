@@ -398,7 +398,9 @@ fn test_names(p: &Program, names: &NameMap) -> HashMap<DeclId, String> {
 /// The program that runs the tests, `test.cpp`, if there are any: every
 /// module's init, then each test with a fresh std `Test`, as Kotlin's
 /// `main.cpp` does when there are tests, through the runtime's
-/// `run_tests`, which writes JUnit's XML. Built with `TEMPER_TESTS`
+/// `run_tests`, which writes JUnit's XML. It sets the runtime's panic
+/// hook to throw, so a test that panics fails alone, saying why, where
+/// a panic elsewhere ends the process. Built with `TEMPER_TESTS`
 /// defined, which the modules' tests need.
 pub fn test_main(p: &Program, namespace: &str, names: &HashMap<DeclId, String>) -> Option<String> {
     let mut entries = String::new();

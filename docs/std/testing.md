@@ -11,7 +11,10 @@ test("addition") {
 ```
 
 Assertions are *soft*: a failed `assert` records its message and the
-test goes on, so one run reports every failure. Each backend runs tests
+test goes on, so one run reports every failure. A test that panics (a
+list read past the end, `panic()`) fails alone, with the panic's
+message, and the other tests still run: the runner catches it, test by
+test, though no `orelse` does, nor `runTest` and `processTestCases`. Each backend runs tests
 with its own framework (see [target languages](../backends/README.md)),
 and `temper test` runs them on any backend or on the interpreter
 ([the command line](../tools/cli.md)).

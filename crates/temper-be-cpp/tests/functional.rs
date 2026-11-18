@@ -1335,7 +1335,7 @@ fn runs() {
                 link(&gxx, &TESTS, &objects, &exe);
                 let dir = exe.parent().unwrap();
                 let run = Command::new(&exe).current_dir(dir).output().unwrap();
-                let actual = kit::junit_file_failures(&dir.join("test-results.xml"))
+                let actual = kit::junit_file_results(&dir.join("test-results.xml"))
                     .filter(|_| run.status.success());
                 kit::check_tests(&mut failures, case, actual, &run, kit::test_name_words);
             }

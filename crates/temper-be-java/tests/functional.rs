@@ -380,16 +380,7 @@ fn run_tests(
         .output()
         .unwrap();
     let results = tools::results(&String::from_utf8_lossy(&run.stdout));
-    let actual = (!results.is_empty()).then(|| {
-        (results.into_iter())
-            .filter_map(|(name, cause)| {
-                Some(kit::TestFailure {
-                    name,
-                    cause: cause?,
-                })
-            })
-            .collect()
-    });
+    let actual = (!results.is_empty()).then_some(results);
     kit::check_tests(failures, case, actual, &run, kit::test_name_words);
 }
 

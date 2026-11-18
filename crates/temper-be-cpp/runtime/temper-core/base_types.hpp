@@ -123,11 +123,25 @@ namespace temper {
             throw TemperBubble();
         }
 
+        // What a panic does before the process ends, if anything: none
+        // but in a test build, whose runner (`run_tests`) sets one that
+        // throws a `TemperPanic`, which it catches test by test. One for
+        // the whole program, however many libraries it links.
+        using PanicHook = void (*)(const std::string& message);
+
+        inline PanicHook& panic_hook() {
+            static PanicHook hook = nullptr;
+            return hook;
+        }
+
         template<class T = void>
         [[noreturn]] T panic(std::string message) {
             // Keep what was logged before, and surface the panic message
             // before aborting; otherwise both are lost.
             std::cout.flush();
+            if (PanicHook hook = panic_hook()) {
+                hook(message);
+            }
             std::cerr << message << std::endl;
             std::terminate();
         }

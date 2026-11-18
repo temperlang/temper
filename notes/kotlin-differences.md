@@ -2290,7 +2290,7 @@ copied Kotlin's:
     `bubble()`, so `let p(): Int throws Bubble { panic() }` and `let
     g(): Int { p() orelse 2 }` give 2, silently, where Temper's docs
     call a panic unrecoverable. Tempest's Python raises
-    `BaseException`, Java an `AssertionError`, C# `Environment.FailFast`,
+    `BaseException`, Java an `AssertionError`, C# `Core.Panic`,
     C++ the runtime's `panic()`, and Rust `panic!()`, none of which
     `orelse` catches. JS and Lua, whose `orelse` catches anything,
     mark a bubble instead (2026-11-18): JS throws the runtime's
@@ -2383,7 +2383,7 @@ copied Kotlin's:
     on an empty ListBuilder`, `removeFirst on an empty Deque`): Java an
     `AssertionError` (`Core.listGet`, and new `Core.listSet`,
     `Core.stringGet`, and `Core.listAdd` at a place, which also keeps
-    Temper's argument order), C# `Environment.FailFast` (`Listed.Get`,
+    Temper's argument order), C# `Core.Panic` (`Listed.Get`,
     `Set`, `Reduce`, and `RemoveFirst`, where Kotlin's indexes, calls
     `Enumerable.Aggregate`, or `Dequeue`), Python a `BaseException`
     (`list_builder_remove_last` where Kotlin's calls `pop`), JS an
@@ -2395,6 +2395,29 @@ copied Kotlin's:
     Test: programs/host-errors.temper.md, one run per case, each
     checking its message on stderr, on every backend; funtest
     types/list/operations for `splice`.
+  - **A test that panics fails alone, saying why** (2026-11-18):
+    Kotlin's C++ reports each such test ("uncaught exception: bubble")
+    only because its `panic()` throws what `orelse` catches; tempest's
+    terminated the whole run ("no test results", every test not run),
+    and C#'s `Environment.FailFast` ended the test process, in Kotlin
+    too. Now C++'s `panic()` calls a hook first, `panic_hook()`, which
+    a test build's `run_tests` sets to throw `TemperPanic` (no
+    `TemperBubble`, so no `orelse` catches it) and catches test by
+    test, reporting `Panicked: MESSAGE`; outside tests it still prints
+    its message and terminates. C#'s `panic()` and the runtime's index
+    errors always throw `TemperLang.Core.Panic` (no `Bubble`), as Java,
+    JS, and Python throw theirs: MSTest reports it as the test's
+    failure, host code may catch it as it may elsewhere, and uncaught
+    it still ends the process with its message (an async step's too,
+    which the runner no longer prints and swallows, nor does an await
+    turn into a bubble). Python's test runner reports an error's
+    message (a panic's `index 5 out of bounds for length 2`), where
+    Kotlin's left it empty, so `temper test` showed only `Traceback
+    (most recent call last):`. The other backends' runners already
+    caught panics per test.
+    Test: programs/test-panics.temper.md on every backend and the
+    interpreter (each test's failure and that all five ran);
+    repl/specials.cases, "a test that panics fails alone".
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

@@ -86,7 +86,25 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
             ));
         }
     }
-    junit_file(&results, &run, str::to_string)
+    let results = junit_file(&results, &run, str::to_string)?;
+    Ok((results.into_iter())
+        .map(|(name, cause)| (name, cause.map(|c| said(&c))))
+        .collect())
+}
+
+/// What a failure says, without MSTest's `Test method T.M threw
+/// exception:` line before an exception's, nor a panic's type, so a
+/// test that panics says what the panic does (`index 5 out of bounds for
+/// length 2`), as on the other backends; another exception keeps its
+/// type.
+fn said(cause: &str) -> String {
+    let thrown = (cause.strip_prefix("Test method "))
+        .and_then(|rest| rest.split_once(" threw exception:"))
+        .map_or(cause, |(_, rest)| rest.trim_start());
+    let thrown = thrown
+        .strip_prefix("TemperLang.Core.Panic: ")
+        .unwrap_or(thrown);
+    thrown.to_string()
 }
 
 /// The compiler's warnings in a build's output, `FILE(LINE,COL): warning
@@ -110,8 +128,22 @@ pub fn warnings(output: &str, runtime: &Path) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::warnings;
+    use super::{said, warnings};
     use std::path::Path;
+
+    #[test]
+    fn says_what_a_panic_says() {
+        let panic = "Test method A.ATests.B threw exception: \r\n\
+                     TemperLang.Core.Panic: index 5 out of bounds for length 2";
+        assert_eq!(said(panic), "index 5 out of bounds for length 2");
+        let other = "Test method A.ATests.B threw exception: \r\n\
+                     System.TypeInitializationException: The type initializer threw";
+        assert_eq!(
+            said(other),
+            "System.TypeInitializationException: The type initializer threw"
+        );
+        assert_eq!(said("wrong on purpose"), "wrong on purpose");
+    }
 
     #[test]
     fn warnings_but_the_runtimes() {

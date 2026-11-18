@@ -44,9 +44,10 @@
 //!   never uses ([`UNUSED`]). The workspace has std's crate,
 //!   `temper-std`, as std builds as a library; `testing`'s tests build
 //!   and run against it, and a test that runs as tests
-//!   (`testing/asserts`, and the shared `reach`) runs by `cargo test`, its failures
-//!   compared with its `expectedFailures`, as Kotlin's `RunRust` reads
-//!   them ([`cargo_test_failures`]). Skipped, with a message, without cargo
+//!   (`testing/asserts`, and the shared `reach` and `test-panics`) runs
+//!   by `cargo test`, its failures compared with its `expectedFailures`,
+//!   read as `temper test` reads them
+//!   ([`temper_be_rust::tools::results`]). Skipped, with a message, without cargo
 //!   or clippy, or if `temper-core`'s one dependency, `indexmap`, isn't
 //!   in cargo's cache (`cargo fetch` in `temper-core` puts
 //!   it there); with `TEMPER_REQUIRE_CHECKERS` set, as in CI, any of
@@ -114,14 +115,18 @@ const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-c
 /// header past its width differently, and a generic type past it, as
 /// `functions`' generator has; and `json-adapters`' nested calls, whose `?`
 /// call rustfmt doesn't overflow there, and a `let` of a chain whose
-/// first line is just 100 wide, which rustfmt breaks inside the call.
-const LAYOUT_GAPS: [&str; 6] = [
+/// first line is just 100 wide, which rustfmt breaks inside the call;
+/// and `test-panics`' assertion message closure, a call's last argument
+/// left on one line that's 100 wide before the `,` after the call, which
+/// the printer doesn't count there.
+const LAYOUT_GAPS: [&str; 7] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
     "control-flow-async",
     "control-flow-async-waiters",
     "json-adapters",
+    "test-panics",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
@@ -496,56 +501,6 @@ fn first_use_expected(cases: &[Case]) -> Vec<String> {
     out
 }
 
-/// A run of `cargo test`'s failures, as Kotlin's `cargoTestToJunitXml`
-/// reads them: each failing test's name (its path's last part) and the
-/// `Error: …` lines of its output, a `MessageError("…")` as its text;
-/// `None` if no test binary ran.
-fn cargo_test_failures(stdout: &str) -> Option<Vec<kit::TestFailure>> {
-    let mut ran = false;
-    let mut found: Vec<kit::TestFailure> = Vec::new();
-    let mut current: Option<usize> = None;
-    for line in stdout.lines() {
-        if let Some(i) = current {
-            if line.trim().is_empty() {
-                current = None;
-            } else if let Some(entry) = line.strip_prefix("Error: ") {
-                let text = match entry.find("MessageError(\"") {
-                    Some(at) => {
-                        let raw = &entry[at + "MessageError(".len()..];
-                        let raw = raw.trim_end_matches(')');
-                        raw.strip_prefix('"')
-                            .and_then(|r| r.strip_suffix('"'))
-                            .unwrap_or(raw)
-                            .replace("\\\"", "\"")
-                            .replace("\\'", "'")
-                            .replace("\\\\", "\\")
-                    }
-                    None => entry.to_string(),
-                };
-                let cause = &mut found[i].cause;
-                if !cause.is_empty() {
-                    cause.push('\n');
-                }
-                cause.push_str(&text);
-            }
-            continue;
-        }
-        if line.starts_with("running ") && (line.ends_with(" test") || line.ends_with(" tests")) {
-            ran = true;
-        } else if let Some(name) =
-            (line.strip_prefix("---- ")).and_then(|l| l.strip_suffix(" stdout ----"))
-        {
-            let name = name.rsplit("::").next().unwrap_or(name).to_string();
-            found.push(kit::TestFailure {
-                name,
-                cause: String::new(),
-            });
-            current = Some(found.len() - 1);
-        }
-    }
-    ran.then_some(found)
-}
-
 /// Cargo, in the workspace, offline, with its own target directory.
 fn cargo(root: &Path, args: &[&str]) -> Output {
     let (command, rest) = args.split_first().unwrap();
@@ -710,7 +665,8 @@ fn runs_and_lints() {
         // compared with what's expected.
         for case in cases.iter().filter(|c| c.tests.is_some()) {
             let out = cargo(&root, &["test", "-p", &case.library]);
-            let actual = cargo_test_failures(&String::from_utf8_lossy(&out.stdout));
+            let results = temper_be_rust::tools::results(&String::from_utf8_lossy(&out.stdout));
+            let actual = (!results.is_empty()).then_some(results);
             kit::check_tests(&mut failures, case, actual, &out, kit::test_name_words);
         }
         if runs("cargo", &["clippy"]) {

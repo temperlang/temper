@@ -121,6 +121,14 @@ Tests passed: 1 of 3
 interactive#0: void
 interactive#1: 42
 
+=== a test that panics fails alone, saying why, and the others still run
+let at(ls: List<Int>, i: Int): Int { ls[i] }; test("before") { assert(at([1], 0) == 1) }; test("index") { assert(at([1, 2], 5) == 0) }; test("panic") { panic() }; test("after") { assert(true) }
+--- transcript
+Test failed: index - Panicked: index 5 out of bounds for length 2
+Test failed: panic - Panicked: panic()
+Tests passed: 2 of 4
+interactive#0: void
+
 === a failing assert(a == b) shows the values it can, else says the plain message
 class P(public n: Int) { @operator("==") public eq(other: P): Boolean { n == other.n } }; let none: List<Int>? = [1]; test("p") { assert(new P(1) == new P(2)) }; test("list") { assert(none == null) }; test("ints") { assert(1 + 1 == 3) }
 --- transcript

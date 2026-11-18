@@ -933,8 +933,8 @@ fn test_a_library_on_each_backend() {
 /// `TEMPER_REQUIRE_CHECKERS` is set): `run` loads every module, and
 /// `test` runs every module's tests. A module that fails as it loads
 /// should be one failure by its name while the others' results still
-/// count; Python names its tests module, Lua its tests file, and Java the
-/// test, but the rest don't yet, nor does Java's `run` load every
+/// count; Python names its tests module, Lua its tests file, and Java and
+/// C# the test, but the rest don't yet, nor does Java's `run` load every
 /// module, so those check what they do now.
 fn library_without_root_module(backend: &str) {
     let files = [
@@ -1009,6 +1009,10 @@ fn library_without_root_module(backend: &str) {
                 "1 of 2",
             ),
             "java" => (Some("  failed  y - panic"), "1 of 2"),
+            "csharp" => (
+                Some("  failed  Y - System.TypeInitializationException: "),
+                "1 of 2",
+            ),
             // Every test fails, for now.
             "rust" => (None, "0 of 2"),
             // No results at all, for now.

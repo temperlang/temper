@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "base_types.hpp"
 
 // Test harness for the generated `main`. The generated entry point stays thin: it
 // initializes modules and hands a list of named test closures to `run_tests`, which
@@ -21,7 +22,7 @@ namespace temper {
         };
 
         // A named test. `run` executes it and returns its outcome; any uncaught
-        // exception it throws is turned into a failure carrying the exception text.
+        // exception it throws, or panic, is turned into a failure carrying its text.
         struct TestEntry {
             std::string name;
             std::function<TestOutcome()> run;
@@ -41,9 +42,15 @@ namespace temper {
             return out;
         }
 
-        // Runs each test, capturing uncaught exceptions, writes a JUnit XML report to
-        // `test-results.xml`, and returns 0.
+        // A panic in a test fails that test alone, saying why (`run_tests`).
+        [[noreturn]] inline void throw_panic(const std::string& message) {
+            throw TemperPanic(message);
+        }
+
+        // Runs each test, capturing uncaught exceptions and panics, writes a JUnit
+        // XML report to `test-results.xml`, and returns 0.
         inline int run_tests(const std::vector<TestEntry>& tests) {
+            panic_hook() = throw_panic;
             struct Result {
                 std::string name;
                 bool passed;
@@ -60,12 +67,15 @@ namespace temper {
                 // as whatever the outcome happened to be.
                 try {
                     outcome = test.run();
+                } catch (const TemperPanic& e) {
+                    threw = true;
+                    thrown = std::string("Panicked: ") + e.what();
                 } catch (const std::exception& e) {
                     threw = true;
-                    thrown = e.what();
+                    thrown = std::string("uncaught exception: ") + e.what();
                 } catch (...) {
                     threw = true;
-                    thrown = "unknown C++ exception";
+                    thrown = "uncaught exception: unknown C++ exception";
                 }
                 bool passed = !threw && outcome.passed;
                 std::string messages = outcome.messages;
@@ -73,7 +83,7 @@ namespace temper {
                     if (!messages.empty()) {
                         messages += "\n";
                     }
-                    messages += "uncaught exception: " + thrown;
+                    messages += thrown;
                 }
                 results.push_back({test.name, passed, messages});
             }

@@ -1047,9 +1047,9 @@ fn mstest(dotnet: &Dotnet) -> Option<PathBuf> {
 }
 
 /// Runs a library's MSTest methods by reflection, printing what
-/// `kit::runner_failures` reads: each `[TestClass]`'s `[TestMethod]`s, in
-/// order, a failure being the exception a method throws, as MSTest
-/// reports it (Kotlin's `RunCSharp` reads `dotnet test`'s JUnit logger).
+/// `kit::runner_results` reads: each `[TestClass]`'s `[TestMethod]`s, in
+/// order, a failure being the exception a method throws, a panic's too,
+/// as MSTest reports it (Kotlin's `RunCSharp` reads `dotnet test`'s JUnit logger).
 const RUN_TESTS: &str = r#"using System;
 using System.Linq;
 using System.Reflection;
@@ -1060,7 +1060,6 @@ static class RunTests
     static void Main(string[] args)
     {
         Assembly assembly = Assembly.LoadFrom(args[0]);
-        int ran = 0;
         foreach (Type type in assembly.GetTypes()
             .Where(t => t.GetCustomAttribute<TestClassAttribute>() != null)
             .OrderBy(t => t.FullName, StringComparer.Ordinal))
@@ -1069,19 +1068,18 @@ static class RunTests
                 .Where(m => m.GetCustomAttribute<TestMethodAttribute>() != null)
                 .OrderBy(m => m.MetadataToken))
             {
-                ran++;
                 try
                 {
                     method.Invoke(Activator.CreateInstance(type), null);
+                    Console.WriteLine("ok\t" + method.Name);
                 }
                 catch (TargetInvocationException e)
                 {
                     string message = e.InnerException?.Message ?? "";
-                    Console.WriteLine(method.Name + "\t" + message.Replace("\n", "\\n"));
+                    Console.WriteLine("failed\t" + method.Name + "\t" + message.Replace("\n", "\\n"));
                 }
             }
         }
-        Console.WriteLine("ran " + ran);
     }
 }
 "#;
@@ -1207,6 +1205,6 @@ fn run_tests(
         .arg(&tests)
         .output()
         .unwrap();
-    let actual = kit::runner_failures(&String::from_utf8_lossy(&run.stdout));
+    let actual = kit::runner_results(&String::from_utf8_lossy(&run.stdout));
     kit::check_tests(failures, case, actual, &run, kit::test_name_words);
 }

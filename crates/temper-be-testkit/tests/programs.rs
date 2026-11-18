@@ -6,6 +6,9 @@
 //!   it is checked against the interpreter.
 //! - `programs_translate_to_tmpl`: each Temper program translates to
 //!   valid tmpl, as its golden shows.
+//! - `tests_on_the_interpreter`: the programs that run as tests, and the
+//!   functional tests that do, fail on the interpreter just the tests
+//!   they expect to, saying why, and the others pass.
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
 //!   (`NET`) log what they expect on the interpreter, against the shared
 //!   test server.
@@ -39,6 +42,27 @@ fn programs_log_as_the_interpreter_does() {
             let expected = temper_funtests::expected_log(text, "interp");
             assert_eq!(output, expected, "{}", case.key);
         }
+    });
+}
+
+#[test]
+fn tests_on_the_interpreter() {
+    kit::with_stack(|| {
+        let mut failures = Vec::new();
+        for case in kit::cases_with("interp", &kit::AS_TESTS, &kit::TESTS) {
+            if case.tests.is_none() {
+                continue;
+            }
+            let (failure, tests) = kit::interpret_tests(&case);
+            assert_eq!(failure, None, "{}", case.key);
+            let out = std::process::Output {
+                status: Default::default(),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            };
+            kit::check_tests(&mut failures, &case, Some(tests), &out, str::to_string);
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
     });
 }
 

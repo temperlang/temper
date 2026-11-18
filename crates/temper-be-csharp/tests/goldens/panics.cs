@@ -56,8 +56,7 @@ public static class PanicsGlobal
     {
         if (n > 0)
         {
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         return Core.Bubble<int>();
     }

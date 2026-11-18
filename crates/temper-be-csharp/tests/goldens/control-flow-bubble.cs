@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -170,8 +169,7 @@ public static class BubbleGlobal
 
     internal static int UnreachableInt()
     {
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
+        throw Core.Panic("panic");
     }
 
     internal static T FailAs<T>(T fallback)
@@ -191,8 +189,7 @@ public static class BubbleGlobal
 
     internal static void Stop()
     {
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
+        throw Core.Panic("panic");
     }
 
     internal static int Half(int n)
@@ -200,8 +197,7 @@ public static class BubbleGlobal
         if (Core.ModSafe(n, 2) != 0)
         {
             Bail();
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         if (n < 0)
         {
@@ -248,8 +244,7 @@ public static class BubbleGlobal
         else
         {
             UnreachableInt();
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         return x;
     }
@@ -259,8 +254,7 @@ public static class BubbleGlobal
         if (s == null)
         {
             Stop();
-            Environment.FailFast("panic");
-            throw new InvalidOperationException();
+            throw Core.Panic("panic");
         }
         string t = s;
         return t + "!";

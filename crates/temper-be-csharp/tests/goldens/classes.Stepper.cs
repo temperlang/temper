@@ -1,4 +1,4 @@
-using System;
+using TemperLang.Core;
 
 namespace Classes;
 
@@ -33,7 +33,6 @@ public class Stepper : ILimited
 
     public int TooFar()
     {
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
+        throw Core.Panic("panic");
     }
 }

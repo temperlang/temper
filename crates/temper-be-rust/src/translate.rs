@@ -768,7 +768,8 @@ impl<'a> Translator<'a> {
     /// A module's tests, as Kotlin's: each a `#[test]` function that
     /// initializes the library and std, makes std's `Test`, runs the
     /// test's body, which may bubble, and ends with `soft_fail_to_hard`,
-    /// which fails it if the `Test` has failures. Named for the test, in
+    /// which fails it if the `Test` has failures, unless the body never
+    /// finishes. Named for the test, in
     /// snake case, ASCII letters, digits, and `_` only.
     fn tests(&mut self, module: &Module) -> R<Option<Item>> {
         if module.tests.is_empty() {
@@ -810,17 +811,26 @@ impl<'a> Translator<'a> {
                         .try_(),
                 ),
             ];
-            let var = self.name(param);
+            let mut run = Vec::new();
+            self.block_into(body, &mut run)?;
+            // No `soft_fail_to_hard` after a body that never finishes, as
+            // one ending in `panic()` (rustc's `unreachable_code`), so
+            // the `Test` may go unread (`unused_variables`).
+            let finishes = !crate::tree::diverges(&run);
+            let var = match finishes || self.read.contains(&param) {
+                true => self.name(param),
+                false => format!("_{}", self.name(param)),
+            };
             stmts.push(Stmt::Let {
                 name: var.clone(),
                 mutable: false,
                 ty: None,
                 value: Some(Expr::path(format!("{class}::new")).call(Vec::new())),
             });
-            self.block_into(body, &mut stmts)?;
-            let tail = Expr::path(var).method("soft_fail_to_hard", Vec::new());
+            stmts.extend(run);
+            let tail = finishes.then(|| Expr::path(var).method("soft_fail_to_hard", Vec::new()));
             let name = test_name(p.strings.get(name), &mut used);
-            tests.push((name, Block::new(stmts, Some(tail))));
+            tests.push((name, Block::new(stmts, tail)));
         }
         self.in_tests = false;
         let inner = std::mem::replace(&mut self.uses, outer);

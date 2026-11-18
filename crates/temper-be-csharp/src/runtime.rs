@@ -42,6 +42,7 @@ pub const FILES: &[(&str, &str)] = &[
         "OrderedDictionary.cs",
         include_str!("../runtime/temper-core/OrderedDictionary.cs"),
     ),
+    ("Panic.cs", include_str!("../runtime/temper-core/Panic.cs")),
     (
         "StringUtil.cs",
         include_str!("../runtime/temper-core/StringUtil.cs"),

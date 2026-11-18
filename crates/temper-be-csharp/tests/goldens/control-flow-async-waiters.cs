@@ -139,8 +139,7 @@ public static class AsyncWaitersGlobal
                 goto OK3;
                 CATCH3: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK3: ;
             }
@@ -268,8 +267,7 @@ public static class AsyncWaitersGlobal
                 goto OK6;
                 CATCH6: ;
                 {
-                    Environment.FailFast("panic");
-                    throw new InvalidOperationException();
+                    throw Core.Panic("panic");
                 }
                 OK6: ;
             }
