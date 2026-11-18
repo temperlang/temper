@@ -1,17 +1,20 @@
-import testing.testing as _m_testing_testing
 from temper_core import int_add
 from temper_std.testing import Test
-from testing.testing import _base, twice
+from testing.testing import twice
 from unittest import TestCase
+
+_runs: int = 0
+_base: int = 10
 
 
 class TestTesting(TestCase):
     def test_twice_works(self, /) -> None:
         'twice works'
+        global _runs
         test: Test = Test()
         try:
             x = twice(2)
-            _m_testing_testing._runs = int_add(int_add(_m_testing_testing._runs, x), _base)
+            _runs = int_add(int_add(_runs, x), _base)
         finally:
             test.soft_fail_to_hard()
 
@@ -19,12 +22,13 @@ class TestTesting(TestCase):
         "names: punctuation, 'quotes', and ünïcode"
         t: Test = Test()
         try:
-            twice(_m_testing_testing._runs)
+            twice(_runs)
         finally:
             t.soft_fail_to_hard()
 
     def test_locals_a_test_assigns(self, /) -> None:
         'locals a test assigns'
+        global _runs
         test: Test = Test()
         try:
             n = 0
@@ -32,6 +36,6 @@ class TestTesting(TestCase):
             while i < 3:
                 n = int_add(n, twice(i))
                 i = int_add(i, 1)
-            _m_testing_testing._runs = n
+            _runs = n
         finally:
             test.soft_fail_to_hard()

@@ -77,76 +77,62 @@
 62:5 -> ../object-literals.temper.md:13:6  if (this.#name === other.#na <- auto("==")
 63:7 -> ../object-literals.temper.md:13:6  return this.#age === other.# <- auto("==")
 65:7 -> ../object-literals.temper.md:13:6  return false; <- auto("==")
-70:1 -> ../object-literals.temper.md:32:5  class Named extends type(Str <- class Named(
-70:7 -> ../object-literals.temper.md:32:11 (Named)  Named extends type(Stringabl <- Named(
-70:12 -> ../object-literals.temper.md:32:5   extends type(Stringable) { <- class Named(
-71:3 -> ../object-literals.temper.md:33:14  /** @type {string} */ <- name: String,
-72:3 -> ../object-literals.temper.md:33:14  #name; <- name: String,
-74:3 -> ../object-literals.temper.md:32:5  /** @param {string} name */ <- class Named(
-75:3 -> ../object-literals.temper.md:32:5  constructor(name) { <- class Named(
-77:5 -> ../object-literals.temper.md:33:14  this.#name = name; <- name: String,
-80:3 -> ../object-literals.temper.md:33:14  /** @returns {string} */ <- name: String,
-81:3 -> ../object-literals.temper.md:33:14  get name() { <- name: String,
-81:7 -> ../object-literals.temper.md:33:14 (name)  name() { <- name: String,
-85:3 -> ../object-literals.temper.md:35:14  /** @returns {string} */ <- toString(): String {
-86:3 -> ../object-literals.temper.md:35:14 (toString)  toString() { <- toString(): String {
-87:5 -> ../object-literals.temper.md:36:9  return `Named ${this.#name}` <- "Named ${name}"
-91:1 -> ../object-literals.temper.md:73:5  class Whatever extends type( <- class Whatever {
-91:7 -> ../object-literals.temper.md:73:11 (Whatever)  Whatever extends type() { <- Whatever {
-91:15 -> ../object-literals.temper.md:73:5   extends type() { <- class Whatever {
-92:3 -> ../object-literals.temper.md:74:14  /** @type {string} */ <- blah: String;
-93:3 -> ../object-literals.temper.md:74:14  #blah; <- blah: String;
-95:3 -> ../object-literals.temper.md:84:14  /** @param {number} blech */ <- constructor(blech: Int) {
-96:3 -> ../object-literals.temper.md:84:14  constructor(blech) { <- constructor(blech: Int) {
-98:5 -> ../object-literals.temper.md:85:9  this.#blah = blech.toString( <- blah = blech.toString();
-101:3 -> ../object-literals.temper.md:74:14  /** @returns {string} */ <- blah: String;
-102:3 -> ../object-literals.temper.md:74:14  get blah() { <- blah: String;
-102:7 -> ../object-literals.temper.md:74:14 (blah)  blah() { <- blah: String;
-107:1 -> ../object-literals.temper.md:114:7  class Moreover extends type( <- class Moreover(
-107:7 -> ../object-literals.temper.md:114:13 (Moreover)  Moreover extends type() { <- Moreover(
-107:15 -> ../object-literals.temper.md:114:7   extends type() { <- class Moreover(
-108:3 -> ../object-literals.temper.md:115:16  /** @type {number} */ <- blech: Int = 0,
-109:3 -> ../object-literals.temper.md:115:16  #blech; <- blech: Int = 0,
-110:3 -> ../object-literals.temper.md:116:16  /** @type {number} */ <- bling: Int = 0,
-111:3 -> ../object-literals.temper.md:116:16  #bling; <- bling: Int = 0,
-121:3 -> ../object-literals.temper.md:114:7  /** <- class Moreover(
-125:3 -> ../object-literals.temper.md:114:7  constructor(blech, bling) { <- class Moreover(
-127:5 -> ../object-literals.temper.md:115:16  blech ??= 0; <- blech: Int = 0,
-128:5 -> ../object-literals.temper.md:116:16  bling ??= 0; <- bling: Int = 0,
-129:5 -> ../object-literals.temper.md:115:16  this.#blech = blech; <- blech: Int = 0,
-130:5 -> ../object-literals.temper.md:116:16  this.#bling = bling; <- bling: Int = 0,
-133:3 -> ../object-literals.temper.md:115:16  /** @returns {number} */ <- blech: Int = 0,
-134:3 -> ../object-literals.temper.md:115:16  get blech() { <- blech: Int = 0,
-134:7 -> ../object-literals.temper.md:115:16 (blech)  blech() { <- blech: Int = 0,
-138:3 -> ../object-literals.temper.md:116:16  /** @returns {number} */ <- bling: Int = 0,
-139:3 -> ../object-literals.temper.md:116:16  get bling() { <- bling: Int = 0,
-139:7 -> ../object-literals.temper.md:116:16 (bling)  bling() { <- bling: Int = 0,
-143:3 -> ../object-literals.temper.md:118:16  /** @returns {string} */ <- toString(): String { "${blec
-144:3 -> ../object-literals.temper.md:118:16 (toString)  toString() { <- toString(): String { "${blec
-145:5 -> ../object-literals.temper.md:118:37  return `${this.#blech} ${thi <- "${blech} ${bling}" }
-149:1 -> ../object-literals.temper.md:44:5  const person1 = new Person(" <- let person1 = new Person("Al
-150:1 -> ../object-literals.temper.md:45:5  const person2 = new Person(" <- let person2 = { name: "Bob",
-151:1 -> ../object-literals.temper.md:46:5  const circle1 = new Circle(2 <- let circle1 = new Circle(2);
-152:1 -> ../object-literals.temper.md:47:5  const circle2 = new Circle(1 <- let circle2 = { radius: 1 };
-153:1 -> ../object-literals.temper.md:49:5  /** @type {readonly Stringab <- let things: List<Stringable>
-154:1 -> ../object-literals.temper.md:49:5  const things = Object.freeze <- let things: List<Stringable>
-156:1 -> ../object-literals.temper.md:50:16  /** <- { (thing): Int =>
-160:1 -> ../object-literals.temper.md:50:16  function fn(thing) { <- { (thing): Int =>
-161:3 -> ../object-literals.temper.md:51:7  console.log(thing.toString() <- console.log("${thing}");
-162:3 -> ../object-literals.temper.md:52:7  return 0; <- 0
-165:1 -> ../object-literals.temper.md:50:5  listedMap(/** @type {Stringa <- things.map { (thing): Int =>
-166:1 -> ../object-literals.temper.md:94:5  new Whatever(456); <- new Whatever(456);
-167:1 -> ../object-literals.temper.md:95:5  new Whatever(321); <- { blech: 321 };
-168:1 -> ../object-literals.temper.md:102:5  new Rectangle(7, 8); <- { width: 7, height: 8 };
-169:1 -> ../object-literals.temper.md:153:5  bother(); <- bother();
-170:1 -> ../object-literals.temper.md:159:5  const whatever = new Whateve <- let whatever = { blech: 6 };
-171:1 -> ../object-literals.temper.md:160:5  console.log(`Whatever again: <- console.log("Whatever again:
-172:1 -> ../object-literals.temper.md:177:5  const personAgain = new Pers <- let personAgain = { name: "C
-173:1 -> ../object-literals.temper.md:178:5  const name = personAgain.nam <- let { name, age as someAge i
-174:1 -> ../object-literals.temper.md:178:5  const someAge = personAgain. <- let { name, age as someAge i
-175:1 -> ../object-literals.temper.md:179:5  console.log(`name is ${name} <- console.log("name is ${name}
-176:1 -> ../object-literals.temper.md:180:5  const personMore = new Perso <- let personMore = { name, age
-177:1 -> ../object-literals.temper.md:181:5  console.log(personMore.toStr <- console.log(personMore.toStr
-178:1 -> ../object-literals.temper.md:194:5  const twin = new Person(pers <- let twin = { name: person1.n
-179:1 -> ../object-literals.temper.md:195:5  console.log(`Some are twins: <- console.log("Some are twins:
-180:1 -> ../object-literals.temper.md:196:5  console.log(`All are twins: <- console.log("All are twins:
+70:1 -> ../object-literals.temper.md:73:5  class Whatever extends type( <- class Whatever {
+70:7 -> ../object-literals.temper.md:73:11 (Whatever)  Whatever extends type() { <- Whatever {
+70:15 -> ../object-literals.temper.md:73:5   extends type() { <- class Whatever {
+71:3 -> ../object-literals.temper.md:74:14  /** @type {string} */ <- blah: String;
+72:3 -> ../object-literals.temper.md:74:14  #blah; <- blah: String;
+74:3 -> ../object-literals.temper.md:84:14  /** @param {number} blech */ <- constructor(blech: Int) {
+75:3 -> ../object-literals.temper.md:84:14  constructor(blech) { <- constructor(blech: Int) {
+77:5 -> ../object-literals.temper.md:85:9  this.#blah = blech.toString( <- blah = blech.toString();
+80:3 -> ../object-literals.temper.md:74:14  /** @returns {string} */ <- blah: String;
+81:3 -> ../object-literals.temper.md:74:14  get blah() { <- blah: String;
+81:7 -> ../object-literals.temper.md:74:14 (blah)  blah() { <- blah: String;
+86:1 -> ../object-literals.temper.md:114:7  class Moreover extends type( <- class Moreover(
+86:7 -> ../object-literals.temper.md:114:13 (Moreover)  Moreover extends type() { <- Moreover(
+86:15 -> ../object-literals.temper.md:114:7   extends type() { <- class Moreover(
+87:3 -> ../object-literals.temper.md:115:16  /** @type {number} */ <- blech: Int = 0,
+88:3 -> ../object-literals.temper.md:115:16  #blech; <- blech: Int = 0,
+89:3 -> ../object-literals.temper.md:116:16  /** @type {number} */ <- bling: Int = 0,
+90:3 -> ../object-literals.temper.md:116:16  #bling; <- bling: Int = 0,
+100:3 -> ../object-literals.temper.md:114:7  /** <- class Moreover(
+104:3 -> ../object-literals.temper.md:114:7  constructor(blech, bling) { <- class Moreover(
+106:5 -> ../object-literals.temper.md:115:16  blech ??= 0; <- blech: Int = 0,
+107:5 -> ../object-literals.temper.md:116:16  bling ??= 0; <- bling: Int = 0,
+108:5 -> ../object-literals.temper.md:115:16  this.#blech = blech; <- blech: Int = 0,
+109:5 -> ../object-literals.temper.md:116:16  this.#bling = bling; <- bling: Int = 0,
+112:3 -> ../object-literals.temper.md:115:16  /** @returns {number} */ <- blech: Int = 0,
+113:3 -> ../object-literals.temper.md:115:16  get blech() { <- blech: Int = 0,
+113:7 -> ../object-literals.temper.md:115:16 (blech)  blech() { <- blech: Int = 0,
+117:3 -> ../object-literals.temper.md:116:16  /** @returns {number} */ <- bling: Int = 0,
+118:3 -> ../object-literals.temper.md:116:16  get bling() { <- bling: Int = 0,
+118:7 -> ../object-literals.temper.md:116:16 (bling)  bling() { <- bling: Int = 0,
+122:3 -> ../object-literals.temper.md:118:16  /** @returns {string} */ <- toString(): String { "${blec
+123:3 -> ../object-literals.temper.md:118:16 (toString)  toString() { <- toString(): String { "${blec
+124:5 -> ../object-literals.temper.md:118:37  return `${this.#blech} ${thi <- "${blech} ${bling}" }
+128:1 -> ../object-literals.temper.md:44:5  const person1 = new Person(" <- let person1 = new Person("Al
+129:1 -> ../object-literals.temper.md:45:5  const person2 = new Person(" <- let person2 = { name: "Bob",
+130:1 -> ../object-literals.temper.md:46:5  const circle1 = new Circle(2 <- let circle1 = new Circle(2);
+131:1 -> ../object-literals.temper.md:47:5  const circle2 = new Circle(1 <- let circle2 = { radius: 1 };
+132:1 -> ../object-literals.temper.md:49:5  /** @type {readonly Stringab <- let things: List<Stringable>
+133:1 -> ../object-literals.temper.md:49:5  const things = Object.freeze <- let things: List<Stringable>
+135:1 -> ../object-literals.temper.md:50:16  /** <- { (thing): Int =>
+139:1 -> ../object-literals.temper.md:50:16  function fn(thing) { <- { (thing): Int =>
+140:3 -> ../object-literals.temper.md:51:7  console.log(thing.toString() <- console.log("${thing}");
+141:3 -> ../object-literals.temper.md:52:7  return 0; <- 0
+144:1 -> ../object-literals.temper.md:50:5  listedMap(/** @type {Stringa <- things.map { (thing): Int =>
+145:1 -> ../object-literals.temper.md:94:5  new Whatever(456); <- new Whatever(456);
+146:1 -> ../object-literals.temper.md:95:5  new Whatever(321); <- { blech: 321 };
+147:1 -> ../object-literals.temper.md:102:5  new Rectangle(7, 8); <- { width: 7, height: 8 };
+148:1 -> ../object-literals.temper.md:153:5  bother(); <- bother();
+149:1 -> ../object-literals.temper.md:159:5  const whatever = new Whateve <- let whatever = { blech: 6 };
+150:1 -> ../object-literals.temper.md:160:5  console.log(`Whatever again: <- console.log("Whatever again:
+151:1 -> ../object-literals.temper.md:177:5  const personAgain = new Pers <- let personAgain = { name: "C
+152:1 -> ../object-literals.temper.md:178:5  const name = personAgain.nam <- let { name, age as someAge i
+153:1 -> ../object-literals.temper.md:178:5  const someAge = personAgain. <- let { name, age as someAge i
+154:1 -> ../object-literals.temper.md:179:5  console.log(`name is ${name} <- console.log("name is ${name}
+155:1 -> ../object-literals.temper.md:180:5  const personMore = new Perso <- let personMore = { name, age
+156:1 -> ../object-literals.temper.md:181:5  console.log(personMore.toStr <- console.log(personMore.toStr
+157:1 -> ../object-literals.temper.md:194:5  const twin = new Person(pers <- let twin = { name: person1.n
+158:1 -> ../object-literals.temper.md:195:5  console.log(`Some are twins: <- console.log("Some are twins:
+159:1 -> ../object-literals.temper.md:196:5  console.log(`All are twins: <- console.log("All are twins:

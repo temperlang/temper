@@ -271,8 +271,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// good parts run as written; `triple` the architecture docs' running
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
-/// and loops, and one left to run time.
-pub const PROGRAMS: [&str; 19] = [
+/// and loops, and one left to run time; `reach` what only tests reach,
+/// and what nothing does, which runs as tests ([`AS_TESTS`]).
+pub const PROGRAMS: [&str; 20] = [
     "classes",
     "nullables",
     "generics",
@@ -292,7 +293,79 @@ pub const PROGRAMS: [&str; 19] = [
     "triple",
     "content-tags",
     "json-adapters",
+    "reach",
 ];
+
+/// The shared programs that run as tests, as a functional test with
+/// `runAsTest = true` does, none expected to fail: their tests check
+/// what a log can't, as the library's state their init set.
+pub const AS_TESTS: [&str; 1] = ["reach"];
+
+/// What only the shared `reach` program's tests reach, by their Temper
+/// names, each of which a backend spells its own way.
+pub const REACH_TESTS_ONLY: [&str; 6] = [
+    "forTests",
+    "testFactor",
+    "testCount",
+    "TestShape",
+    "TestSquare",
+    "addArea",
+];
+
+/// What nothing in the shared `reach` program reaches.
+pub const REACH_UNREACHED: [&str; 4] = [
+    "unreachedFunction",
+    "UnreachedClass",
+    "UnreachedInterface",
+    "unreachedValue",
+];
+
+/// Whether `line` mentions `name` as a whole name, not inside a longer
+/// one, though a private name's leading `_` may come before it.
+pub fn mentions(line: &str, name: &str) -> bool {
+    let word = |c: char| c == '_' || c.is_ascii_alphanumeric();
+    line.match_indices(name).any(|(at, _)| {
+        let before = line[..at].trim_end_matches('_').chars().next_back();
+        let after = line[at + name.len()..].chars().next();
+        !before.is_some_and(word) && !after.is_some_and(word)
+    })
+}
+
+/// Checks a backend's output of the shared `reach` program, each line
+/// with its file's path and whether only tests have it (a tests file's,
+/// or one a build without tests leaves out): that every name in
+/// `tests_only` (as [`REACH_TESTS_ONLY`], spelled as the backend names
+/// them) shows up, and only where tests are, and no name in `unreached`
+/// ([`REACH_UNREACHED`]'s) anywhere.
+pub fn check_test_parts_apart<'a>(
+    lines: impl IntoIterator<Item = (&'a str, bool, &'a str)>,
+    tests_only: &[&str],
+    unreached: &[&str],
+) {
+    let mut seen = Vec::new();
+    let mut misplaced = Vec::new();
+    for (path, tests, line) in lines {
+        for &name in tests_only {
+            if mentions(line, name) {
+                seen.push(name);
+                if !tests {
+                    misplaced.push(format!("{path}: {name}, only for tests: {line}"));
+                }
+            }
+        }
+        for &name in unreached {
+            if mentions(line, name) {
+                misplaced.push(format!("{path}: {name}, which nothing reaches: {line}"));
+            }
+        }
+    }
+    for &name in tests_only {
+        if !seen.contains(&name) {
+            misplaced.push(format!("{name}, only for tests, is missing"));
+        }
+    }
+    assert!(misplaced.is_empty(), "{}", misplaced.join("\n"));
+}
 
 /// The shared programs that are libraries of several modules, in
 /// directories of their own: what [`Case::libraries`] lists.
@@ -502,7 +575,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             },
             host_files: Vec::new(),
             no_connected: false,
-            tests: None,
+            tests: AS_TESTS.contains(&file).then(Vec::new),
             fails: false,
         });
     }

@@ -529,6 +529,22 @@ fn goldens() {
     });
 }
 
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".lua"))).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
+    });
+}
+
 #[test]
 fn programs_log_as_the_interpreter_does() {
     kit::with_stack(|| {
@@ -587,7 +603,6 @@ const TESTS: &str = r#"package.preload["luaunit"] = function()
 end
 arg = {}
 dofile(...)
-print(require("testing")["$test"].runs__get())
 "#;
 
 /// Reads `module-state`'s exports after its functions write them.
@@ -859,13 +874,12 @@ fn runs() {
             .output()
             .unwrap();
         let stdout = kit::printed(&run.stdout);
-        // In LuaUnit's order, by name: `runs` is 0 + 2 + 4, then that
-        // plus `twice(2)` and 10.
+        // In LuaUnit's order, by name. (The shared `reach` program, which
+        // runs as tests, checks the state tests share with their module.)
         let expected = "init 2\n\
             ok test_locals_a_test_assigns\n\
             ok test_names_punctuation_quotes_and_n_code\n\
-            ok test_twice_works\n\
-            20\n";
+            ok test_twice_works\n";
         if !run.status.success() || stdout != expected {
             failures.push(format!(
                 "testing's tests: expected {expected:?}, got {stdout:?}\n{}",

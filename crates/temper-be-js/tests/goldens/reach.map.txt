@@ -1,0 +1,11 @@
+# generated line:column -> source:line:column, and the text at each
+1:1 -> ../reach.temper.md:17:5  /** <- export let shown(n: Int): In
+5:1 -> ../reach.temper.md:17:5  export function shown(n) { <- export let shown(n: Int): In
+5:17 -> ../reach.temper.md:17:16 (shown)  shown(n) { <- shown(n: Int): Int {
+5:22 -> ../reach.temper.md:17:5  (n) { <- export let shown(n: Int): In
+6:3 -> ../reach.temper.md:18:7  shownCount = (shownCount + 1 <- shownCount += 1;
+7:3 -> ../reach.temper.md:19:7  return (n + base) | 0; <- n + base
+10:1 -> ../reach.temper.md:22:5  export let shownCount = 0; <- var shownCount = 0;
+11:1 -> ../reach.temper.md:21:5  export const base = 1; <- let base = 1;
+12:1 -> ../reach.temper.md:34:5  export const checked = shown <- let checked = shown(2);
+13:1 -> ../reach.temper.md:41:5  console.log(`shown ${shown(1 <- console.log("shown ${shown(1

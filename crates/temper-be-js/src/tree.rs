@@ -345,6 +345,20 @@ pub enum Stmt {
 }
 
 impl Stmt {
+    /// Exports the statement, if it declares `name`.
+    pub fn export_named(&mut self, name: &str) {
+        match self {
+            Stmt::Spanned(_, s) => s.export_named(name),
+            Stmt::Decl {
+                export, name: n, ..
+            }
+            | Stmt::Function {
+                export, name: n, ..
+            } if n == name => *export = true,
+            _ => {}
+        }
+    }
+
     /// The statement with its span, if it isn't unknown.
     pub fn spanned(self, span: Span) -> Stmt {
         match self {

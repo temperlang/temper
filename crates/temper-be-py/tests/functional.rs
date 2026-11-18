@@ -61,7 +61,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 15] = [
+const PROGRAMS: [&str; 16] = [
     "classes",
     "nullables",
     "generics",
@@ -77,6 +77,7 @@ const PROGRAMS: [&str; 15] = [
     "triple",
     "content-tags",
     "json-adapters",
+    "reach",
 ];
 
 fn cases() -> Vec<Case> {
@@ -183,6 +184,36 @@ fn goldens() {
             }
         }
         goldens.finish();
+    });
+}
+
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter()).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        let tests_only = [
+            "for_tests",
+            "test_factor",
+            "test_count",
+            "TestShape",
+            "TestSquare",
+            "add_area",
+        ];
+        let unreached = [
+            "unreached_function",
+            "UnreachedClass",
+            "UnreachedInterface",
+            "unreached_value",
+        ];
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
     });
 }
 

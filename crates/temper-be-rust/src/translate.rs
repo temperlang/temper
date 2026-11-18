@@ -2665,14 +2665,26 @@ fn library_roots(module: &Module) -> impl Iterator<Item = NodeId> + '_ {
     module.items.iter().chain([&module.init]).copied()
 }
 
-/// The module `let`s that nodes under `roots` read.
+/// The module `let`s that nodes under `roots` read through their
+/// getters: not a `var`'s own read in an update that reads only it,
+/// which reads it under the write lock ([`Translator::write_var`]).
 fn module_reads(p: &Program, roots: impl IntoIterator<Item = NodeId>) -> HashSet<DeclId> {
     let mut out = HashSet::new();
+    let mut under_lock = HashSet::new();
     for root in roots {
-        walk(p, root, &mut |id| {
-            if let Node::GetModuleLet { target } = p.nodes.get(id) {
+        walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::SetModuleLet { target, value } if reads_only_itself(p, target, value) => {
+                walk(p, value, &mut |read| {
+                    if matches!(p.nodes.get(read), Node::GetModuleLet { target: t } if t == target)
+                    {
+                        under_lock.insert(read);
+                    }
+                });
+            }
+            Node::GetModuleLet { target } if !under_lock.contains(&id) => {
                 out.insert(target);
             }
+            _ => {}
         });
     }
     out

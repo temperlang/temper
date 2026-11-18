@@ -55,14 +55,6 @@ function unknownType(x) {
  * @param {number} x
  * @returns {number}
  */
-function unclosed(x) {
-  return Math.imul(x, 2);
-}
-
-/**
- * @param {number} x
- * @returns {number}
- */
 function afterUnclosed(x) {
   return Math.imul(x, 3);
 }

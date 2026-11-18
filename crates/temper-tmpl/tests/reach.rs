@@ -7,7 +7,7 @@
 //! partition every functional test.
 
 use std::collections::BTreeMap;
-use temper_tmpl::analysis::{Import, module_imports, test_imports};
+use temper_tmpl::analysis::{Import, module_imports, test_imports, test_parts};
 use temper_tmpl::reach::{Reach, Split, partition, reach};
 use temper_tmpl::{Node, NodeId, Profile, Program, Rule, difference, text, validate};
 
@@ -811,4 +811,55 @@ module temporal#0 in \"temporal\" {
         written.contains("connected abstract method label#3(): Int32;"),
         "{written}"
     );
+}
+
+/// What a partitioned module's test parts define, and use of its
+/// library's parts, for a backend that writes them in a file of their
+/// own: a function and the module `let` it reads, and of the library's,
+/// a `var` that the test-only function assigns and a local of the init
+/// block that the test init reads. The test's call of its own function
+/// uses nothing of the library's.
+#[test]
+fn test_parts_define_and_use() {
+    let p = read(&format!(
+        "tmpl 1 model 1 library uses 0.1.0
+
+{USES}
+module uses#0 {{
+  export fn exported#1(): Int32 {{
+    return count#2;
+  }}
+
+  var count#2: Int32;
+
+  fn bump#3(): Void {{
+    count#2 = %Int32.add(count#2, testValue#5);
+  }}
+
+  let testValue#5: Int32;
+
+  init {{
+    init count#2 = 0;
+    let base#4: Int32 = 2;
+    count#2 = base#4;
+    init testValue#5 = base#4;
+  }}
+
+  test \"t\" ~test#6(~test#7: Test#98): Void throws Bubble {{
+    bump#3();
+  }}
+}}
+"
+    ));
+    let parted = partition(&p, none);
+    let parts = test_parts(&parted, &parted.modules[0]);
+    let names = |decls: &mut dyn Iterator<Item = &temper_tmpl::DeclId>| {
+        let mut names: Vec<&str> = decls.map(|&d| parted.name(d)).collect();
+        names.sort();
+        names
+    };
+    assert_eq!(names(&mut parts.own.iter()), ["bump", "testValue"]);
+    assert_eq!(names(&mut parts.used.iter()), ["base", "count"]);
+    assert_eq!(names(&mut parts.assigned.iter()), ["count"]);
+    assert!(!parts.assign_init_locals(&parted));
 }

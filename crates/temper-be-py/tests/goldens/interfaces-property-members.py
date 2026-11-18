@@ -121,10 +121,6 @@ class _LabeledSub(_Labeled[str, _C]):
         return f'{l}: {self._held.x}'
 
 
-class _AllAlone(I):  # pyright: ignore[reportUnusedClass]
-    __slots__ = ()
-
-
 class _High(metaclass=_ABCMeta):
     __slots__ = ()
 

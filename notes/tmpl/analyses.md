@@ -86,8 +86,19 @@ program it came from; stored facts are rechecked by recomputing them.
     block at the end of the init, in its scope, and what nothing
     reaches isn't written; this replaced its scan for module `let`s
     only tests read, which now gives a library value's getter only to
-    tests where only they read it. Python, JS, and Lua don't partition
-    yet, so their output is as it was.
+    tests where only they read it. Python, JS, and Lua do
+    (2026-11-18): what only tests reach, and the test init, go in each
+    module's tests file, before the tests, which import what they use of
+    the module (`analysis::test_parts`): Python by name, its private
+    names too; JS from the module's `.internal.js`, which exports them,
+    with a `NAME$set` setter for each `var` they assign; and Lua through
+    the table the module adds to its exports for its tests, with getters
+    and setters for `var`s. What nothing reaches isn't written. So a
+    library that only its tests check doesn't import std's `testing`
+    (and JS's no Node `assert`, which a browser bundle can't load).
+    Java and C# don't partition yet. The shared `reach` program
+    (temper-be-testkit's `programs/`), which every backend runs as
+    tests, checks each one's split.
   - **Not yet:** per-member pruning, and finer rules for which
     initializers may do something (a constructor without effects).
 - **Type queries:** subtyping, substitution, member lookup, operator

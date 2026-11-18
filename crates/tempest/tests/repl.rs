@@ -412,10 +412,12 @@ fn color() {
 }
 
 /// The REPL's own functions, through the command: `help()` says what
-/// input isn't from a terminal means, and `translate` shows code.
+/// input isn't from a terminal means, and `translate` shows code, of
+/// what's reached (an export).
 #[test]
 fn own_functions() {
-    let (code, out, _) = repl(&[], None, "help()\nlet x = 1\ntranslate(1, \"py\")\n");
+    let input = "help()\nexport let x = 1\ntranslate(1, \"py\")\n";
+    let (code, out, _) = repl(&[], None, input);
     assert_eq!(code, 0);
     assert!(
         out.contains("Input isn't from a terminal, so lines aren't edited."),
@@ -427,7 +429,7 @@ fn own_functions() {
             out.contains("# interactive/interactive/interactive.py\n"),
             "{out}"
         );
-        assert!(out.contains("_x: int = 1\ninteractive#2: void\n"), "{out}");
+        assert!(out.contains("\nx: int = 1\ninteractive#2: void\n"), "{out}");
     }
 }
 

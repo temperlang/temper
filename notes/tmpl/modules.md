@@ -158,7 +158,10 @@ pub struct Module {
   parts and tests. `Module::roots` lists every root in writing order,
   and `Module::all_items` both parts' items. **Rule M3:** the library's
   parts use nothing of the tests', which a build without tests leaves
-  out.
+  out. A backend that writes the test parts in a file of their own
+  (Python's, JS's, and Lua's tests files) asks `analysis::test_parts`
+  what they define, the file's own, and what they use of the library's
+  parts, which it imports or exposes to them.
 - **Tests:** each a `Test` node, a function (a compiler-made
   `Function` declaration owned by the module) taking std's `Test` and
   returning `Void`, which may bubble (rule M2), named in reports by its

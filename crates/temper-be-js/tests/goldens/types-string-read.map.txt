@@ -130,18 +130,15 @@
 186:1 -> ../read.temper.md:277:5  const after1 = reportFound(" <- let after1 = reportFound("fo
 187:1 -> ../read.temper.md:278:5  const after2 = reportFound(" <- let after2 = reportFound("fo
 188:1 -> ../read.temper.md:279:5  reportFound("found 3", hay, <- reportFound("found 3", hay,
-189:1 -> ../read.temper.md:289:5  const hay2 = "time comes for <- let hay2 = "time comes for u
-190:1 -> ../read.temper.md:290:5  const hay3 = "in the nick of <- let hay3 = "in the nick of t
-191:1 -> ../read.temper.md:291:5  const hay4 = "tim"; <- let hay4 = "tim";
-192:1 -> ../read.temper.md:293:5  reportFound("hay 2", "time c <- reportFound("hay 2", "time c
-193:1 -> ../read.temper.md:294:5  reportFound("hay 3", "in the <- reportFound("hay 3", "in the
-194:1 -> ../read.temper.md:295:5  reportFound("hay 4", "my nam <- reportFound("hay 4", "my nam
-195:1 -> ../read.temper.md:296:5  reportFound("hay 5", "tim", <- reportFound("hay 5", "tim",
-196:1 -> ../read.temper.md:321:5  const nulHay = "ab\x00#\x00" <- let nulHay = "ab\u{0}#\u{0}"
-197:1 -> ../read.temper.md:322:5  console.log(`nul: ${foundAt( <- console.log("nul: ${foundAt(
-198:1 -> ../read.temper.md:323:5  const afterNul = stringNext( <- let afterNul = nulHay.next(n
-199:1 -> ../read.temper.md:324:5  console.log(`nul again: ${fo <- console.log("nul again: ${fo
-200:1 -> ../read.temper.md:325:5  console.log(`soft hyphen: ${ <- console.log("soft hyphen: ${
-201:1 -> ../read.temper.md:326:5  console.log(`past soft hyphe <- console.log("past soft hyphe
-202:1 -> ../read.temper.md:327:5  console.log(`zwj: ${foundAt( <- console.log("zwj: ${foundAt(
-203:1 -> ../read.temper.md:328:5  console.log(`composed: ${fou <- console.log("composed: ${fou
+189:1 -> ../read.temper.md:293:5  reportFound("hay 2", "time c <- reportFound("hay 2", "time c
+190:1 -> ../read.temper.md:294:5  reportFound("hay 3", "in the <- reportFound("hay 3", "in the
+191:1 -> ../read.temper.md:295:5  reportFound("hay 4", "my nam <- reportFound("hay 4", "my nam
+192:1 -> ../read.temper.md:296:5  reportFound("hay 5", "tim", <- reportFound("hay 5", "tim",
+193:1 -> ../read.temper.md:321:5  const nulHay = "ab\x00#\x00" <- let nulHay = "ab\u{0}#\u{0}"
+194:1 -> ../read.temper.md:322:5  console.log(`nul: ${foundAt( <- console.log("nul: ${foundAt(
+195:1 -> ../read.temper.md:323:5  const afterNul = stringNext( <- let afterNul = nulHay.next(n
+196:1 -> ../read.temper.md:324:5  console.log(`nul again: ${fo <- console.log("nul again: ${fo
+197:1 -> ../read.temper.md:325:5  console.log(`soft hyphen: ${ <- console.log("soft hyphen: ${
+198:1 -> ../read.temper.md:326:5  console.log(`past soft hyphe <- console.log("past soft hyphe
+199:1 -> ../read.temper.md:327:5  console.log(`zwj: ${foundAt( <- console.log("zwj: ${foundAt(
+200:1 -> ../read.temper.md:328:5  console.log(`composed: ${fou <- console.log("composed: ${fou

@@ -110,7 +110,6 @@ _list_builder_add_all(_copy_that, _message_builder)
 _console.log(_list_join(_message_builder, ' ', lambda x: x))
 _console.log(_list_join(_listed_sorted(_copy_that, lambda a, b: (b > a) - (b < a)), ' ', lambda x: x))
 _console.log(_list_join(_copy_that, ' ', lambda x: x))
-_typed: _MutableSequence[str] = _message_builder
 _old_last: str = _copy_that.pop()
 _console.log(f"Removed {_old_last} so {_list_join(_copy_that, ' ', lambda x: x)}")
 _next_last: _Sequence[str] = _list_builder_splice(_copy_that, _int_sub(len(_copy_that), 1), 1)

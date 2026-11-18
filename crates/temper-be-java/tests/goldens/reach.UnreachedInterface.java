@@ -1,0 +1,4 @@
+package reach;
+
+interface UnreachedInterface {
+}

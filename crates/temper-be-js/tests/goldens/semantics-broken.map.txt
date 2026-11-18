@@ -1,15 +1,2 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../broken.temper.md:34:5  /** @returns {number} */ <- let undefinedPlusArgInside()
-4:1 -> ../broken.temper.md:34:5  function undefinedPlusArgIns <- let undefinedPlusArgInside()
-4:10 -> ../broken.temper.md:34:9 (undefinedPlusArgInside)  undefinedPlusArgInside() { <- undefinedPlusArgInside(): In
-4:32 -> ../broken.temper.md:34:5  () { <- let undefinedPlusArgInside()
-5:3 -> ../broken.temper.md:34:41  return bubble(); <- missing + 1 }
-8:1 -> ../broken.temper.md:40:5  /** <- let padLeft(string: String,
-14:1 -> ../broken.temper.md:40:5  function padLeft(string, min <- let padLeft(string: String,
-14:10 -> ../broken.temper.md:40:9 (padLeft)  padLeft(string, minSize, pad <- padLeft(string: String, minS
-14:17 -> ../broken.temper.md:40:5  (string, minSize, pad) { <- let padLeft(string: String,
-15:3 -> ../broken.temper.md:41:7  const needed = (minSize - st <- let needed = minSize - strin
-16:3 -> ../broken.temper.md:42:7  if (needed <= 0) { <- if (needed <= 0) {
-17:5 -> ../broken.temper.md:43:9  return string; <- return string;
-19:3 -> ../broken.temper.md:40:68  bubble(); <- {
-22:1 -> ../broken.temper.md:53:5  bubble(); <- export something() {}
+3:1 -> ../broken.temper.md:53:5  bubble(); <- export something() {}

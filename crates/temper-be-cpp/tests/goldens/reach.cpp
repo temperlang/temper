@@ -48,7 +48,9 @@ namespace core = temper::core;
 
 namespace temper_globals {
 
+static core::GlobalSlot<int32_t> shownCount;
 static core::GlobalSlot<int32_t> base;
+static core::GlobalSlot<int32_t> checked;
 
 }  // namespace temper_globals
 
@@ -59,9 +61,11 @@ static core::GlobalSlot<int32_t> testFactor;
 static core::GlobalSlot<int32_t> testCount;
 
 }  // namespace temper_globals
+#endif  // TEMPER_TESTS
 
 static std::mutex moduleMutex;
 
+#ifdef TEMPER_TESTS
 // Reads a variable that functions write, under the module's lock.
 template <class T>
 static T load(T const &variable) {
@@ -79,14 +83,12 @@ static void store(T &variable, V &&value) {
 
 int32_t shown(int32_t n) {
   global_init_init();
+  std::lock_guard<std::mutex> lock(moduleMutex);
+  temper_globals::shownCount.value = core::Int::add(temper_globals::shownCount.value, 1);
   return core::Int::add(n, temper_globals::base.value);
 }
 
 #ifdef TEMPER_TESTS
-static int32_t forTests(int32_t n) {
-  return core::Int::mul(n, temper_globals::testFactor.value);
-}
-
 std::shared_ptr<TestSquare> TestSquare::make(int32_t side) {
   std::shared_ptr<TestSquare> self = std::make_shared<TestSquare>();
   self->side = side;
@@ -100,13 +102,25 @@ int32_t TestSquare::area() const {
 int32_t TestSquare::get_side() const {
   return this->side;
 }
+
+static int32_t forTests(int32_t n) {
+  return core::Int::mul(n, temper_globals::testFactor.value);
+}
+
+static void addArea(std::shared_ptr<TestShape> const & shape) {
+  store(temper_globals::testCount.value, core::Int::add(load(temper_globals::testCount.value), shape->area()));
+}
 #endif  // TEMPER_TESTS
 
 void global_init_init() {
   core::init_once([] {
+    temper_globals::shownCount.construct();
     temper_globals::base.construct();
+    temper_globals::checked.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
+    temper_globals::shownCount.value = 0;
     temper_globals::base.value = 1;
+    temper_globals::checked.value = shown(2);
     core::Console::log(console, "shown " + std::to_string(shown(1)));
 #ifdef TEMPER_TESTS
     temper_globals::testFactor.construct();
@@ -125,11 +139,32 @@ namespace reach {
 
 void testParts(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<TestShape> shape = core::to_base<TestShape>(TestSquare::make(forTests(2)));
+  reach::addArea(shape);
   store(temper_globals::testCount.value, core::Int::add(load(temper_globals::testCount.value), shape->area()));
   {
     int32_t actual = load(temper_globals::testCount.value);
-    int32_t expected = 16;
+    int32_t expected = 32;
     test->assert_(actual == expected, [=]() -> core::Str { return "expected testCount == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
+  }
+  {
+    int32_t actual = temper_globals::checked.value;
+    int32_t expected = 3;
+    test->assert_(actual == expected, [=]() -> core::Str { return "expected checked == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
+  }
+  {
+    int32_t actual = load(temper_globals::shownCount.value);
+    int32_t expected = 2;
+    test->assert_(actual == expected, [=]() -> core::Str { return "expected shownCount == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
+  }
+  {
+    std::lock_guard<std::mutex> lock(moduleMutex);
+    temper_globals::shownCount.value = 0;
+  }
+  shown(0);
+  {
+    int32_t actual = load(temper_globals::shownCount.value);
+    int32_t expected = 1;
+    test->assert_(actual == expected, [=]() -> core::Str { return "expected shownCount == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
   }
 }
 

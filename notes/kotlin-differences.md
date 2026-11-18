@@ -1077,8 +1077,9 @@ Other differences we won't copy:
 - **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
   library needs, what only tests do, and what nothing does, as Kotlin's
   `ReachabilityTracer` does in its frontend
-  ([analyses.md](tmpl/analyses.md), "Reachability"); C++ and Rust
-  partition by it (below), Python, JS, and Lua not yet. Differences:
+  ([analyses.md](tmpl/analyses.md), "Reachability"); C++, Rust,
+  Python, JS, and Lua partition by it (below), Java and C# not yet.
+  Differences:
   - An initializer is a root only if it may do something: a list literal
     of simple values, an operator that can't bubble, and core's pure
     calls (`getConsole()`) aren't. Kotlin's is a root unless it's a
@@ -1120,14 +1121,39 @@ Other differences we won't copy:
   interfaces, module values' statics and getters, and the `use`s only
   they need) is `#[cfg(test)]`, its init a `#[cfg(test)]` block at the
   end of the module's init, in its scope; a library value that only
-  tests read has its getter only for tests; and what nothing reaches
+  tests read has its getter only for tests (a `var`'s update that
+  reads only itself reads it under its lock, not through the getter);
+  and what nothing reaches
   isn't written. What's kept for host code (`@keep`, `@keepTest`) but
   not exported is `#[allow(dead_code)]`, as no Temper code may use it.
   So each crate builds without tests, at clippy's `-D warnings`, with
   no dead code of test helpers, and doesn't initialize test data.
-  Test: temper-be-rust/tests/functional.rs, `test_parts_apart` (its
-  `reach` program), `runs_and_lints` (clippy with and without
+  Test: temper-be-rust/tests/functional.rs, `test_parts_apart` (the
+  shared `reach` program), `runs_and_lints` (clippy with and without
   `cfg(test)`, and `reach`'s test run), and the goldens.
+- **Python, JS, and Lua by reach** (2026-11-18): as Kotlin's, what only
+  tests reach goes in each module's tests file and what nothing reaches
+  isn't written, but by tmpl's `reach` (above), and laid out
+  differently. The tests file has the module's test items, in source
+  order, then its test init, which continues the module's init there,
+  then the tests, where Kotlin's keeps its test top-levels in source
+  order, tests among them. What they use of the module, they import:
+  Python by name, private names too (Kotlin's alike); JS from the
+  module's `.internal.js`, which exports what they use, with a
+  `NAME$set` setter for each `var` they assign (Kotlin's imports from
+  the module); Lua through the table the module adds to its exports
+  for its tests, `$test`, with `NAME__get` and `NAME__set` for each
+  `var`, so they see its current value (Kotlin's exports what they use
+  from an `-internal` module, a `var`'s value as it was when the module
+  ended). A test-only `var` is the tests file's own: Python's tests
+  declare it `global` where they assign it. So a library that only its
+  tests check doesn't import std's `testing` (its JS no Node `assert`,
+  which a browser bundle can't load, and its Python no `temper_std`),
+  as with Kotlin's. Not yet: host code for what only tests reach
+  (`NotYet`, where Kotlin's Lua has none either), and tests that
+  assign a local of their module's init block. Test: each backend's
+  tests/functional.rs, `test_parts_apart` (the shared `reach` program,
+  run as tests), and the goldens.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where

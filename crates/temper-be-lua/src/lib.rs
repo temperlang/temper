@@ -45,8 +45,11 @@
 //! module's `Point` for another's, a static can't replace the runtime's
 //! keys of its type, and a plain `toString()` is also `__tostring`.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! Lua's rules ([`names::RULES`]), then [`translate`] into Lua's output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the
+//! tests files, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with Lua's rules
+//! ([`names::RULES`]), then [`translate`] into Lua's output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer.
 //!
@@ -153,6 +156,10 @@ pub fn rock_version(p: &Program) -> String {
 /// fibonacci/fibonacci-dev-1.rockspec  depending on temper-core 0.6.0
 /// ```
 ///
+/// A tests file has what only its module's tests reach, before them, and
+/// reaches what they use of the module through the table the module adds
+/// to its exports for them (`translate::TEST_KEY`).
+///
 /// A library with no root module (only `src/a/…` and `src/b/…`) gets an
 /// `init.lua` that requires each module, as Kotlin's, and has no
 /// `init-test.lua`: each module's tests are in their own file, which
@@ -180,6 +187,11 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let p = chained.as_ref().unwrap_or(p);
     let spilled = temper_tmpl::spill::spill(p);
     let p = spilled.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests files, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
     let mut files = Vec::new();

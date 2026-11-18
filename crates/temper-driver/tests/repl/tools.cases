@@ -151,15 +151,11 @@ public final class InteractiveGlobal {
     }
 }
 // interactive/interactive.internal.js
-const answer = 42;
--- interactive/init.lua
-local answer = 42
 
+-- interactive/init.lua
 return {}
 # interactive/interactive/interactive.py
 __all__ = ()
-
-_answer: int = 42
 // interactive/src/mod.rs
 use std::sync::OnceLock;
 

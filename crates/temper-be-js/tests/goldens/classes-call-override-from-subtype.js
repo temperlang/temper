@@ -1,13 +1,5 @@
 import { type } from "@temperlang/core";
 
-/**
- * @param {Slippy} slipster
- * @returns {boolean}
- */
-function checkFromOutside(slipster) {
-  return slipster.thingums === 5;
-}
-
 class Slappy extends type() {
   /** @type {number} */
   thingums = /** @type {any} */ (undefined);
@@ -119,11 +111,6 @@ class B1Deep extends type(ADeep) {
 }
 
 class B2Deep extends type(B1Deep) {
-  /** @type {() => string} */
-  a = /** @type {any} */ (undefined);
-}
-
-class B3Deep extends type(B2Deep) {
   /** @type {() => string} */
   a = /** @type {any} */ (undefined);
 }

@@ -11,7 +11,9 @@
 //! targets that don't evaluate operands left to right ([`Effects`]).
 //! And what a subtree names ([`named`]), and what a module imports: the
 //! declarations of other modules, the program's own or other libraries',
-//! that its nodes and declared types name ([`imports`]). And function
+//! that its nodes and declared types name ([`imports`]), and what a
+//! module's test parts define and use of its library, for backends that
+//! write them apart ([`test_parts`]). And function
 //! values: the signature a value of a type has ([`fun_signature`]), what
 //! a function literal captures ([`captures`]), and which captured locals
 //! are assigned, which some targets keep in cells ([`assigned_captures`]),
@@ -263,6 +265,82 @@ pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
 pub fn test_imports(p: &Program, module: &Module) -> Vec<Import> {
     let roots: Vec<NodeId> = module.test_roots().collect();
     imports(p, module.decl, &roots)
+}
+
+/// What a partitioned module's test parts (its test items and init, and
+/// its tests) define, and what they use of its library's parts, for a
+/// backend that writes them in a file of their own, which imports or is
+/// given what they use (notes/tmpl/modules.md, "Test parts").
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TestParts {
+    /// What they define at their top level: the test items' declarations,
+    /// and the test init's locals.
+    pub own: HashSet<DeclId>,
+    /// What they use of the library's parts, in `DeclId` order: the
+    /// module's top-level declarations they name ([`named`], a member
+    /// standing for its class), and its init block's locals they read.
+    pub used: Vec<DeclId>,
+    /// Of those, the module `var`s and locals they assign, in `DeclId`
+    /// order.
+    pub assigned: Vec<DeclId>,
+}
+
+impl TestParts {
+    /// Whether they assign a local of the module's init block, which a
+    /// file of their own can't.
+    pub fn assign_init_locals(&self, p: &Program) -> bool {
+        (self.assigned.iter()).any(|&d| p.decls.get(d).kind == DeclKind::Local)
+    }
+}
+
+/// A module's [`TestParts`].
+pub fn test_parts(p: &Program, module: &Module) -> TestParts {
+    let mut own: HashSet<DeclId> = (module.test_items.iter())
+        .filter_map(|&item| match p.nodes.get(item) {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::ModuleLet { decl }
+            | Node::Class { decl, .. }
+            | Node::Interface { decl, .. } => Some(decl),
+            _ => None,
+        })
+        .collect();
+    if let Some(Node::Block { stmts }) = module.test_init.map(|t| p.nodes.get(t)) {
+        for &s in p.nodes.list(stmts) {
+            if let Node::Let { local, .. } = p.nodes.get(s) {
+                own.insert(local);
+            }
+        }
+    }
+    let (mut used, mut assigned) = (Vec::new(), Vec::new());
+    let library = |d: DeclId| !own.contains(&d) && home(p, d) == Some(module.decl);
+    let init_local =
+        |d: DeclId| p.decls.get(d).kind == DeclKind::Local && p.decls.get(d).owner == module.decl;
+    for root in module.test_roots() {
+        named(p, root, &mut |d| {
+            if let Some(top) = top_level(p, d).filter(|&t| library(t)) {
+                used.push(top);
+            }
+        });
+        walk(p, root, &mut |id| match p.nodes.get(id) {
+            Node::SetModuleLet { target, .. } if library(target) => assigned.push(target),
+            Node::Local { local } if init_local(local) && library(local) => used.push(local),
+            Node::Assign { local, .. } if init_local(local) && library(local) => {
+                used.push(local);
+                assigned.push(local);
+            }
+            _ => {}
+        });
+    }
+    for list in [&mut used, &mut assigned] {
+        list.sort();
+        list.dedup();
+    }
+    TestParts {
+        own,
+        used,
+        assigned,
+    }
 }
 
 /// The top-level declaration a declaration is or is a member of: itself

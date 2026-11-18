@@ -195,6 +195,22 @@ fn goldens() {
     });
 }
 
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".js"))).flat_map(|f| {
+            let tests = f.path.contains("/test/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
+    });
+}
+
 /// Host code that's needed but missing fails, naming the file it'd be in.
 #[test]
 fn missing_host_code() {

@@ -1,5 +1,4 @@
-import { float64ToString, listedGet, type } from "@temperlang/core";
-import { Test } from "@temperlang/std/testing";
+import { float64ToString, type } from "@temperlang/core";
 
 /**
  * @param {Vec2} vec
@@ -7,53 +6,6 @@ import { Test } from "@temperlang/std/testing";
  */
 export function normSquared(vec) {
   return vec.x * vec.x + vec.y * vec.y;
-}
-
-/**
- * @param {Test} t
- * @param {TestHelper} helper
- * @param {readonly (readonly string[])[]} strings
- */
-export function assertMoreThings(t, helper, strings) {
-  {
-    let i = 0;
-    while (i < strings.length) {
-      {
-        let j = 0;
-        while (j < listedGet(/** @type {(readonly string[])[]} */ (strings), i).length) {
-          {
-            const actual = helper.i;
-            const expected = helper.j;
-            t.assert(actual === expected, () => `expected helper.i == (${expected}) not (${actual})`);
-          }
-          const s = listedGet(/** @type {string[]} */ (listedGet(/** @type {(readonly string[])[]} */ (strings), i)), j);
-          {
-            const actual = s;
-            const expected = "hi";
-            t.assert(actual === expected, () => `expected s == (${expected}) not (${actual})`);
-          }
-          j = (j + 1) | 0;
-        }
-      }
-      i = (i + 1) | 0;
-    }
-  }
-}
-
-/**
- * @param {TestHelper} helper
- * @returns {number}
- */
-function sumOf(helper) {
-  return (helper.i + helper.j) | 0;
-}
-
-/**
- * @param {TestHelper} helper
- * @returns {number}
- */
-function keptForTests(helper) {
-  return sumOf(helper);
 }
 
 export class Vec2 extends type() {
@@ -96,41 +48,6 @@ export class Vec2 extends type() {
   }
 }
 
-export class TestHelper extends type() {
-  /** @type {number} */
-  #i;
-  /** @type {number} */
-  #j;
-
-  /**
-   * @param {{ i: number, j: number }} props
-   * @returns {TestHelper}
-   */
-  static new(props) {
-    return new TestHelper(props.i, props.j);
-  }
-
-  /**
-   * @param {number} i
-   * @param {number} j
-   */
-  constructor(i, j) {
-    super();
-    this.#i = i;
-    this.#j = j;
-  }
-
-  /** @returns {number} */
-  get i() {
-    return this.#i;
-  }
-
-  /** @returns {number} */
-  get j() {
-    return this.#j;
-  }
-}
-
 class KeptForHost extends type() {
   /** @type {number} */
   #n;
@@ -147,6 +64,5 @@ class KeptForHost extends type() {
   }
 }
 
-const name = "case";
 /** @type {readonly Vec2[]} */
 export const unitVecs = Object.freeze([new Vec2(1.0, 0.0), new Vec2(0.0, 1.0)]);

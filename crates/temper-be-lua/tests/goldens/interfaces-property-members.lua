@@ -130,11 +130,6 @@ function LabeledSub.methods.label(this, l)
   return l .. ": " .. this.held.x
 end
 
----@class property-members.AllAlone: property-members.I
-
----@class property-members.AllAlone.type: temper.Type
-local AllAlone = temper.type("property-members.AllAlone", I)
-
 ---@class property-members.High
 ---@field toString fun(self: property-members.High): string
 ---@field eq fun(self: property-members.High, other: property-members.High): boolean

@@ -136,11 +136,6 @@ class LabeledSub extends type(Labeled) {
   }
 }
 
-class AllAlone extends type(I) {
-  /** @type {string} */
-  x = /** @type {any} */ (undefined);
-}
-
 class High extends type() {
   /** @type {() => string} */
   toString = /** @type {any} */ (undefined);

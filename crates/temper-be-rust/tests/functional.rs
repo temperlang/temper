@@ -42,9 +42,9 @@
 //!   from lints that fire on what the tests do on purpose
 //!   ([`ALLOWED_LINTS`]), and dead code in a test that declares what it
 //!   never uses ([`UNUSED`]). The workspace has std's crate,
-//!   `temper-std`, as std builds as a library; `testing`'s and `reach`'s
-//!   tests build and run against it, and a test that runs as
-//!   tests (`testing/asserts`) runs by `cargo test`, its failures
+//!   `temper-std`, as std builds as a library; `testing`'s tests build
+//!   and run against it, and a test that runs as tests
+//!   (`testing/asserts`, and the shared `reach`) runs by `cargo test`, its failures
 //!   compared with its `expectedFailures`, as Kotlin's `RunRust` reads
 //!   them ([`cargo_test_failures`]). Skipped, with a message, without cargo
 //!   or clippy, or if `temper-core`'s one dependency, `indexmap`, isn't
@@ -125,9 +125,8 @@ const LAYOUT_GAPS: [&str; 6] = [
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
-/// particular to Rust, and what only tests reach, or nothing does
-/// (`reach`, [`test_parts_apart`]).
-const OWN: [&str; 3] = ["class-edges", "nullable-edges", "reach"];
+/// particular to Rust.
+const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -328,23 +327,17 @@ fn missing_host_code() {
     });
 }
 
-/// The `reach` program's test parts only in `#[cfg(test)]` items and
-/// statements, and what nothing reaches nowhere, as tmpl's
+/// The shared `reach` program's test parts only in `#[cfg(test)]` items
+/// and statements, and what nothing reaches nowhere, as tmpl's
 /// `reach::partition` splits the program; `runs_and_lints` builds and
 /// lints it with and without `cfg(test)`, and runs its test.
 #[test]
 fn test_parts_apart() {
     let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
     kit::with_stack(move || {
-        let text = &generate(&case)[3].text;
-        let mentions = |line: &str, name: &str| {
-            let word = |c: char| c == '_' || c.is_ascii_alphanumeric();
-            line.match_indices(name).any(|(at, _)| {
-                let before = line[..at].chars().next_back();
-                let after = line[at + name.len()..].chars().next();
-                !before.is_some_and(word) && !after.is_some_and(word)
-            })
-        };
+        let file = &generate(&case)[3];
+        let lines = (under_cfg_test(&file.text).into_iter())
+            .map(|(tests, line)| (file.path.as_str(), tests, line));
         let tests_only = [
             "for_tests",
             "test_factor",
@@ -353,6 +346,7 @@ fn test_parts_apart() {
             "TEST_COUNT",
             "TestShape",
             "TestSquare",
+            "add_area",
         ];
         let unreached = [
             "unreached_function",
@@ -361,28 +355,15 @@ fn test_parts_apart() {
             "unreached_value",
             "UNREACHED_VALUE",
         ];
-        let mut seen = Vec::new();
-        for (tests, line) in under_cfg_test(text) {
-            for name in tests_only {
-                if mentions(line, name) {
-                    assert!(tests, "{line}\n{text}");
-                    seen.push(name);
-                }
-            }
-            for name in unreached {
-                assert!(!mentions(line, name), "{line}\n{text}");
-            }
-        }
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
         // `checked`'s static is the library's, set by its init, and its
         // getter only for tests.
+        let text = &file.text;
         let getter = (text.lines()).position(|l| l.starts_with("pub(crate) fn checked("));
         assert!(
             getter.is_some_and(|at| text.lines().nth(at - 1) == Some("#[cfg(test)]")),
             "{text}"
         );
-        for name in tests_only {
-            assert!(seen.contains(&name), "{name} is missing\n{text}");
-        }
     });
 }
 
@@ -713,17 +694,14 @@ fn runs_and_lints() {
                 .collect();
             run("host-interop", &expected);
         }
-        // The test form builds and runs, against std's crate, with what
-        // only tests reach set first (`reach`).
-        for package in ["testing", "reach"] {
-            let tests = cargo(&root, &["test", "--quiet", "-p", package]);
-            if !tests.status.success() {
-                failures.push(format!(
-                    "cargo test -p {package}:\n{}{}",
-                    String::from_utf8_lossy(&tests.stdout),
-                    String::from_utf8_lossy(&tests.stderr)
-                ));
-            }
+        // The test form builds and runs, against std's crate.
+        let tests = cargo(&root, &["test", "--quiet", "-p", "testing"]);
+        if !tests.status.success() {
+            failures.push(format!(
+                "cargo test -p testing:\n{}{}",
+                String::from_utf8_lossy(&tests.stdout),
+                String::from_utf8_lossy(&tests.stderr)
+            ));
         }
         // Runs as tests, as Kotlin's `RunRust`: `cargo test`, its failures
         // compared with what's expected.

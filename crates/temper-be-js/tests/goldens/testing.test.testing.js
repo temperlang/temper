@@ -1,11 +1,14 @@
-import { base, runs, runs$set, twice } from "../testing.internal.js";
+import { twice } from "../testing.internal.js";
 import { Test } from "@temperlang/std/testing";
+
+let runs = 0;
+const base = 10;
 
 it("twice works", function () {
   const test = new Test();
   try {
     const x = twice(2);
-    runs$set((((runs + x) | 0) + base) | 0);
+    runs = (((runs + x) | 0) + base) | 0;
   } finally {
     test.softFailToHard();
   }
@@ -31,7 +34,7 @@ it("locals a test assigns", function () {
         i = (i + 1) | 0;
       }
     }
-    runs$set(n);
+    runs = n;
   } finally {
     test.softFailToHard();
   }
