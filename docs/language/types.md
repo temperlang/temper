@@ -1816,7 +1816,7 @@ The keyword `fn` is used to denote function values and types.
 | `fn<T> (T): List<T>` | Type for a generic function with a type parameter `<T>` |
 | `fn (...Int): Boolean` | Type for a function that takes any number of integers |
 
-Source: [*Types.kt*](https://github.com/temperlang/temper/blob/main/fundamentals/src/commonMain/kotlin/lang/temper/type/Types.kt), in Temper's previous compiler.
+Source: [*Types.kt*](https://github.com/temperlang/temper/blob/kotlin-final/fundamentals/src/commonMain/kotlin/lang/temper/type/Types.kt), in Temper's previous compiler.
 
 ## *interface Function*
 

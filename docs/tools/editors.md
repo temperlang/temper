@@ -24,7 +24,7 @@ are highlighted too, tinted and labeled "inert" in the editor, the
 preview, and on this site; the language server leaves them alone.
 
 Each platform's package bundles the compiler; get it from a
-[release](https://github.com/temperlang/tempest/releases), beside the
+[release](https://github.com/temperlang/temper/releases), beside the
 compiler, as `temper-PLATFORM-VERSION.vsix`. It isn't in the VS Code
 Marketplace yet. How to install it, and its settings, are in
 [editors/vscode](../../editors/vscode/README.md).

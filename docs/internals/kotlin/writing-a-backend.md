@@ -146,7 +146,7 @@ contain a JSON-formatted list of strings given class names of backend factories.
 *NewLang*, that your backend ID is "newlang" and will use names like
 *NewLangSomeSuffix* for Kotlin classes you might use.
 
-The abstract [Kotlin class *Backend*](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be/src/commonMain/kotlin/lang/temper/be/Backend.kt#L4)
+The abstract [Kotlin class *Backend*](https://github.com/temperlang/temper/blob/kotlin-final/be/src/commonMain/kotlin/lang/temper/be/Backend.kt#L87)
 is what plugs into the translation toolchain.
 
 As noted above, the easiest way to get started is to use an existing backend as
@@ -195,7 +195,7 @@ public class NewLangBackend private constructor(
 }
 ```
 
-The [*JSBackend* class](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be-js/src/commonMain/kotlin/lang/temper/be/js/JsBackend.kt)
+The [*JSBackend* class](https://github.com/temperlang/temper/blob/kotlin-final/be-js/src/commonMain/kotlin/lang/temper/be/js/JsBackend.kt)
 is instructive as an example.
 
 It starts with a big comment that:
@@ -224,7 +224,7 @@ simplifying a number of translation problems:
   sources but also debug metadata that relates positions in the translation to
   positions in the Temper source.
 
-For example, the [JavaScript out-grammar file](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be-js/src/commonMain/kotlin/lang/temper/be/js/js.out-grammar#L4)
+For example, the [JavaScript out-grammar file](https://github.com/temperlang/temper/blob/kotlin-final/be-js/src/commonMain/kotlin/lang/temper/be/js/js.out-grammar)
 defines *ConditionalExpression* thus:
 
 ```temper inert
@@ -247,7 +247,7 @@ Later declarations in that same file control when parentheses are inserted
 around sub-expressions.
 
 Then Kotlin code can use the generated Kotlin classes to produce trees.  The
-below comes from a [formatting test](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be-js/src/commonTest/kotlin/lang/temper/be/js/JsTreeRenderTest.kt#L441)
+below comes from a [formatting test](https://github.com/temperlang/temper/blob/kotlin-final/be-js/src/commonTest/kotlin/lang/temper/be/js/JsTreeRenderTest.kt#L444)
 that builds a conditional expression using code generated from that out-grammar
 declaration and others.
 
@@ -338,12 +338,12 @@ StringLiteral.renderTo =
 Out grammar files include a mix of definitions and declarative instructions for
 formatting.
 
-The [TmpL out-grammar](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/be/src/commonMain/kotlin/lang/temper/be/tmpl/tmpL.out-grammar#L4)
+The [TmpL out-grammar](https://github.com/temperlang/temper/blob/kotlin-final/be/src/commonMain/kotlin/lang/temper/be/tmpl/tmpL.out-grammar)
 is a good reference.  It defines the intermediate language trees, layered Temper
 (TmpL) trees, which are what most backends process to produce their target
 language's output trees.
 
-[Out grammar file format by example](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/kcodegen/src/commonMain/kotlin/lang/temper/kcodegen/outgrammar/README.md#output-grammar-file-format-by-example)
+[Out grammar file format by example](https://github.com/temperlang/temper/blob/kotlin-final/kcodegen/src/commonMain/kotlin/lang/temper/kcodegen/outgrammar/README.md#output-grammar-file-format-by-example)
 explains the ins and outs of the file format.
 
 In brief, alternation definitions like the below correspond to a Kotlin
@@ -419,17 +419,17 @@ test cases on the earlier ones.
 
 ## Add a row to the functional-test-matrix
 
-The [functional test matrix](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/functional-test-matrix.md)
+The [functional test matrix](https://github.com/temperlang/temper/blob/kotlin-final/functional-test-matrix.md)
 is a grid with backends along the top, and tests written in Temper along the
 bottom.
 
 You're going to need to insert a row into that table, and initially indicate
 that you expect all tests to fail.
 
-The [testedBackends list](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/functional-test-suite/src/commonMain/kotlin/lang/temper/tests/QuickTests.kt#L116-L117)
+The [list of backend IDs](https://github.com/temperlang/temper/blob/kotlin-final/functional-test-suite/src/commonMain/kotlin/lang/temper/tests/QuickTests.kt#L98-L121)
 controls the columns in that table.
 
-Add an *onlyPasses* entry to the [functional test status expectations](https://github.com/temperlang/temper-prepublic/blob/e39be5d6268a9727b528d89d7094431739632170/functional-test-suite/src/commonMain/kotlin/lang/temper/tests/FunctionalTestStatus.kt#L8-L38).
+Add an *onlyPasses* entry to the [functional test status expectations](https://github.com/temperlang/temper/blob/kotlin-final/functional-test-suite/src/commonMain/kotlin/lang/temper/tests/FunctionalTestStatus.kt#L14-L52).
 
 That provides the column values.  Since getting functional tests passing is an
 involved process, we don't reject builds of the compiler because some backends

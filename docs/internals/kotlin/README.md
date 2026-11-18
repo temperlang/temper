@@ -1,7 +1,7 @@
 # Temper's first compiler
 
 These pages describe Temper's first compiler, written in Kotlin
-([temperlang/temper](https://github.com/temperlang/temper)), as its
+([kotlin-final](https://github.com/temperlang/temper/tree/kotlin-final)), as its
 documentation site published them. They're kept for reference while
 both compilers live; this compiler works differently, as the rest of
 [internals](../README.md) shows.

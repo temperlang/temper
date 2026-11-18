@@ -1,0 +1,4 @@
+[submodule "blog"]
+	path = blog
+	url = https://github.com/temperlang/temperlang-blog.git
+	branch = main

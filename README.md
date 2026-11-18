@@ -12,7 +12,7 @@
   <a href="docs/guide/tour.md">Quick tour</a> ·
   <a href="docs/guide/getting-started.md">Tutorial</a> ·
   <a href="docs/language/README.md">Reference</a> ·
-  <a href="https://temperlang.github.io/tempest/playground/"><b>Playground</b></a>
+  <a href="https://temperlang.dev/playground/"><b>Playground</b></a>
 </p>
 
 ---
@@ -72,11 +72,11 @@ This repo contains the source for:
 ## Try it
 
 - **In your browser:** the
-  [playground](https://temperlang.github.io/tempest/playground/)
+  [playground](https://temperlang.dev/playground/)
   runs the whole compiler as wasm: type Temper and see every
   language's output, errors, and test results as you type.
 - **Download** `temper` for Linux, macOS (Apple silicon), or Windows
-  from the [releases](https://github.com/temperlang/tempest/releases)
+  from the [releases](https://github.com/temperlang/temper/releases)
   (the `nightly` prerelease follows `main`), with the VS Code
   extension's `.vsix` files beside it
   ([getting started](docs/guide/getting-started.md#set-up-temper-tools-and-vs-code-support)).
@@ -94,7 +94,7 @@ This repo contains the source for:
 ## Documentation
 
 Everything lives under [docs/](docs/README.md), and on the
-[docs site](https://temperlang.github.io/tempest/), beside the
+[docs site](https://temperlang.dev/), beside the
 playground:
 
 - [Guide](docs/guide/README.md): why Temper, a quick tour, getting

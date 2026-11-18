@@ -1269,7 +1269,7 @@ console.log((m is Minimal).toString()); //!outputs "true"
 // ✅
 ```
 
-Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
+Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/kotlin-final/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
 
 Re parenthetical declarations, see also: [`@noProperty` decorator](#noproperty-decorator)
 
@@ -1803,7 +1803,7 @@ subtype.
 
 See also [`class`](#class) for details and examples of type declaration syntax.
 
-Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/main/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
+Source: [*TypeDefinitionMacro.kt*](https://github.com/temperlang/temper/blob/kotlin-final/frontend/src/commonMain/kotlin/lang/temper/frontend/TypeDefinitionMacro.kt), in Temper's previous compiler.
 
 #### *SubType* `extends` *SuperType*
 

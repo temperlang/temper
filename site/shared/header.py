@@ -3,7 +3,7 @@ say, shared by the docs (site/docs/build.py) and the playground
 (site/playground/build.py), so the two can't drift.
 
 The header is the logo (the Temper link, to the site's home), the
-sections and the playground, the About button (where a page has no
+sections, the blog, and the playground, the About button (where a page has no
 footer), and the theme toggle. header.css styles it, imported by both
 sites' stylesheets; header.js, loaded in each page's head, applies the
 theme before the page shows and wires up the toggle and the phone menu.
@@ -19,7 +19,7 @@ ROOT = HERE.parents[1]
 LOGO = ROOT / "docs/images/temper-logo-text-auto.svg"
 CSS = HERE / "header.css"
 JS = HERE / "header.js"
-REPO_URL = "https://github.com/temperlang/tempest"
+REPO_URL = "https://github.com/temperlang/temper"
 # The header's sections: docs/ folders and their names.
 SECTIONS = [
     ("guide", "Guide"),
@@ -32,6 +32,8 @@ SECTIONS = [
     ("release-notes", "Release notes"),
 ]
 PLAYGROUND = "playground"
+# The blog, at blog/ (a submodule; site/docs/build.py renders it).
+BLOG = "blog"
 
 # The toggle's three icons: system (half filled), light, and dark.
 ICONS = (
@@ -77,8 +79,8 @@ def header(page: str, current: str | None, about: bool = False) -> str:
     `current` (a section, or PLAYGROUND) marked; with an About button
     for the popover that about() makes, on a page without a footer."""
     links = []
-    for s, name in SECTIONS + [(PLAYGROUND, "Playground")]:
-        target = "playground/index.html" if s == PLAYGROUND else f"docs/{s}/index.html"
+    for s, name in SECTIONS + [(BLOG, "Blog"), (PLAYGROUND, "Playground")]:
+        target = f"{s}/index.html" if s in (BLOG, PLAYGROUND) else f"docs/{s}/index.html"
         mark = ""
         if s == current:
             mark = ' aria-current="page"' if s == PLAYGROUND else ' aria-current="true"'
@@ -114,7 +116,7 @@ def facts(page: str, commit: str, extra: tuple[str, ...] = ()) -> list[str]:
     return [
         f'Code <a href="{text("LICENSE-APACHE")}">Apache-2.0</a> OR <a href="{text("LICENSE-MIT")}">MIT</a>; '
         f'docs <a href="{text("LICENSE-CC-BY-SA-4.0")}">CC BY-SA 4.0</a> (<a href="{text("COPYRIGHT")}">details</a>)',
-        f'<a href="{REPO_URL}">temperlang/tempest on GitHub</a>',
+        f'<a href="{REPO_URL}">temperlang/temper on GitHub</a>',
         built,
         *extra,
     ]
