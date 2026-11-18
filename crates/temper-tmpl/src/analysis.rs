@@ -267,6 +267,44 @@ pub fn test_imports(p: &Program, module: &Module) -> Vec<Import> {
     imports(p, module.decl, &roots)
 }
 
+/// The libraries a program's modules use but core, by their names in
+/// its `uses` sections, in first use: in their library's parts
+/// ([`module_imports`]), or with `tests`, in their test parts and tests
+/// ([`test_imports`]).
+pub fn libraries_used(p: &Program, tests: bool) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    for module in &p.modules {
+        let imports = match tests {
+            true => test_imports(p, module),
+            false => module_imports(p, module),
+        };
+        for d in imports.into_iter().flat_map(|i| i.decls) {
+            if !is_external(p, d) || crate::qname::library_of(p, d) == "core" {
+                continue;
+            }
+            let mut library = d;
+            while p.decls.contains(library) && p.decls.get(library).kind != DeclKind::Library {
+                library = p.decls.get(library).owner;
+            }
+            let name = p.name(library);
+            if !found.iter().any(|f| f == name) {
+                found.push(name.to_string());
+            }
+        }
+    }
+    found
+}
+
+/// The libraries only a program's tests use ([`libraries_used`]), which a
+/// package depends on for its tests alone (as Maven's `test` scope, a
+/// tests' project, or npm's `devDependencies`).
+pub fn test_only_libraries(p: &Program) -> Vec<String> {
+    let code = libraries_used(p, false);
+    (libraries_used(p, true).into_iter())
+        .filter(|l| !code.contains(l))
+        .collect()
+}
+
 /// What a partitioned module's test parts (its test items and init, and
 /// its tests) define, and what they use of its library's parts, for a
 /// backend that writes them in a file of their own, which imports or is

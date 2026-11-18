@@ -96,7 +96,16 @@ program it came from; stored facts are rechecked by recomputing them.
     and setters for `var`s. What nothing reaches isn't written. So a
     library that only its tests check doesn't import std's `testing`
     (and JS's no Node `assert`, which a browser bundle can't load).
-    Java and C# don't partition yet. The shared `reach` program
+    Java and C# do (2026-11-18): what only tests reach goes in each
+    module's test class (Java's `NAMETest` under `src/test/java`, C#'s
+    `NAMETests` in the tests' project), as statics whose initializer
+    runs the module class's first and then the test init, its classes
+    and interfaces beside it there; the tests reach the library's
+    package-private (Java) or `internal` (C#, through
+    `InternalsVisibleTo`) statics. `analysis::test_only_libraries`
+    says which libraries only tests use, which Java's `pom.xml` scopes
+    `test`, C#'s tests' project alone refers to, and JS's
+    `package.json` lists as `devDependencies`. The shared `reach` program
     (temper-be-testkit's `programs/`), which every backend runs as
     tests, checks each one's split.
   - **Not yet:** per-member pruning, and finer rules for which

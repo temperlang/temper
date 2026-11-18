@@ -5,11 +5,6 @@ namespace CallOverrideFromSubtype;
 
 public static class CallOverrideFromSubtypeGlobal
 {
-    internal static bool CheckFromOutside(Slippy slipster)
-    {
-        return slipster.Thingums == 5;
-    }
-
     static CallOverrideFromSubtypeGlobal()
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("CallOverrideFromSubtype");

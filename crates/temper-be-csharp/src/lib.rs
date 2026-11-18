@@ -24,8 +24,11 @@
 //! where languages have named arguments"), which a Roslyn analyzer in the
 //! generated NuGet package is to say; it isn't built yet.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! C#'s rules ([`names::RULES`]), then [`translate`] into C#'s output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the tests'
+//! project, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with C#'s rules ([`names::RULES`]),
+//! then [`translate`] into C#'s output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer.
 //!
@@ -131,8 +134,14 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// hello-world/tests/HelloWorldTest.csproj         the tests' project, on MSTest
 /// hello-world/tests/HelloWorldTests.cs            the root module's tests
 /// hello-world/tests/Helpers/HelpersTests.cs       another module's
+/// hello-world/tests/TestShape.cs                  what only tests reach
 /// hello-world/src/HelloWorldConnected.cs          host code, copied
 /// ```
+///
+/// A module's test class has what only its tests reach, as statics, and
+/// the classes and interfaces only they reach are in the tests' project
+/// too, which sees the library's `internal` members; a library only the
+/// tests use is only the tests' project's reference.
 ///
 /// The root namespace takes the library's name in Pascal case
 /// ([`names::root_namespace`]), and a module's namespace its path's
@@ -187,6 +196,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let panics = |n| matches!(p.nodes.get(n), temper_tmpl::Node::Panic {});
     let spilled = temper_tmpl::spill::spill_with(p, &panics);
     let p = spilled.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests' project, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
     let root = translate::library_namespace(p, library);
@@ -214,11 +227,19 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
                 text: tree::type_decl(&t),
             });
         }
-        if let Some(class) = translator.tests(module, &format!("{base}Tests"))? {
+        if let Some(class) = translator.tests(module)? {
             tests.push(OutFile {
-                path: format!("{library}/tests/{dir}{base}Tests.cs"),
+                path: format!("{library}/tests/{dir}{}.cs", class.statics.name),
                 text: tree::test_class(&class),
             });
+            // What only tests reach, each class and interface a file of
+            // its own there.
+            for t in translator.take_types() {
+                tests.push(OutFile {
+                    path: format!("{library}/tests/{dir}{}.cs", t.name),
+                    text: tree::type_decl(&t),
+                });
+            }
         }
         // std's support code for the module, beside it, as Kotlin's.
         let support = STD_SUPPORT
@@ -309,48 +330,6 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
-/// The libraries the library's own code needs, by name: all it uses,
-/// but those only its tests use.
-fn libraries_in_code(p: &Program) -> Vec<String> {
-    let code = libraries_used(p, false);
-    let tests = libraries_used(p, true);
-    (p.dependencies().into_iter())
-        .map(|(name, _)| name.to_string())
-        .filter(|name| code.contains(name) || !tests.contains(name))
-        .collect()
-}
-
-/// The libraries the library's own code uses, or with `tests`, its
-/// tests, by name.
-fn libraries_used(p: &Program, tests: bool) -> Vec<String> {
-    use temper_tmpl::analysis::module_imports;
-    use temper_tmpl::qname::{is_external, library_of};
-    let mut found = Vec::new();
-    for module in &p.modules {
-        let imports = if tests {
-            temper_tmpl::analysis::test_imports(p, module)
-        } else {
-            module_imports(p, module)
-        };
-        for import in imports {
-            for d in import.decls {
-                if !is_external(p, d) || library_of(p, d) == "core" {
-                    continue;
-                }
-                let mut l = d;
-                while p.decls.get(l).kind != temper_tmpl::DeclKind::Library {
-                    l = p.decls.get(l).owner;
-                }
-                let name = p.name(l).to_string();
-                if !found.contains(&name) {
-                    found.push(name);
-                }
-            }
-        }
-    }
-    found
-}
-
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
 fn project_reference(p: &Program, name: &str) -> String {
@@ -363,9 +342,9 @@ fn project_reference(p: &Program, name: &str) -> String {
 fn test_project(p: &Program, root: &str, variant: &Variant) -> String {
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
-    let in_code = libraries_in_code(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let dependencies: String = (p.dependencies().iter())
-        .filter(|(name, _)| !in_code.iter().any(|l| l == name))
+        .filter(|(name, _)| tests_only.iter().any(|l| l == name))
         .map(|(name, _)| project_reference(p, name))
         .collect();
     format!(
@@ -433,9 +412,9 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
     let (about, links) = package_metadata(p);
     // Each library its code uses, by its project beside this one's
     // library; what only its tests use, their project refers to.
-    let in_code = libraries_in_code(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let dependencies: String = (p.dependencies().iter())
-        .filter(|(name, _)| in_code.iter().any(|l| l == name))
+        .filter(|(name, _)| !tests_only.iter().any(|l| l == name))
         .map(|(name, _)| project_reference(p, name))
         .collect();
     // std's `testing` throws MSTest's `AssertFailedException`, so std has

@@ -298,14 +298,40 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     } else {
         ""
     };
-    let dev = if tested {
-        r#",
-    "devDependencies": {
-        "mocha": "^10.0.0",
-        "mocha-junit-reporter": "^2.0.2"
-    }"#
-    } else {
-        ""
+    // Sorted, as Kotlin's: `@temperlang/core` first. A library only the
+    // tests use is a dev dependency.
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
+    let (mut dependencies, mut dev) = (
+        vec![format!(
+            "        \"@temperlang/core\": \"{}\"",
+            version::current().spell(Spelling::SemVer)
+        )],
+        Vec::new(),
+    );
+    for (name, version) in p.dependencies() {
+        let line = format!(
+            "        \"{}\": \"{}\"",
+            translate::package_of(p, name),
+            match version {
+                "0.0.0" => "*".to_string(),
+                v => version::respell(v, Spelling::SemVer),
+            }
+        );
+        match tests_only.iter().any(|l| l == name) {
+            true => dev.push(line),
+            false => dependencies.push(line),
+        }
+    }
+    if tested {
+        dev.push("        \"mocha\": \"^10.0.0\"".into());
+        dev.push("        \"mocha-junit-reporter\": \"^2.0.2\"".into());
+    }
+    let dev = match dev.is_empty() {
+        true => String::new(),
+        false => format!(
+            ",\n    \"devDependencies\": {{\n{}\n    }}",
+            dev.join(",\n")
+        ),
     };
     let package_json = format!(
         r#"{{
@@ -324,22 +350,7 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         name = translate::package_of(p, package),
         metadata = package_metadata(p),
         entries = entries.join("\n"),
-        dependencies = {
-            // Sorted, as Kotlin's: `@temperlang/core` first.
-            let mut lines = vec![format!(
-                "        \"@temperlang/core\": \"{}\"",
-                version::current().spell(Spelling::SemVer)
-            )];
-            for (name, version) in p.dependencies() {
-                let name = translate::package_of(p, name);
-                let version = match version {
-                    "0.0.0" => "*".to_string(),
-                    v => version::respell(v, Spelling::SemVer),
-                };
-                lines.push(format!("        \"{name}\": \"{version}\""));
-            }
-            lines.join(",\n")
-        },
+        dependencies = dependencies.join(",\n"),
     );
     files.insert(
         0,

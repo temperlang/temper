@@ -35,10 +35,6 @@ public final class ErrorsGlobal {
         return 1;
     }
 
-    static int unclosed(int x) {
-        return x * 2;
-    }
-
     static int afterUnclosed(int x) {
         return x * 3;
     }
@@ -53,10 +49,6 @@ public final class ErrorsGlobal {
 
     static int returned() {
         throw Core.bubble();
-    }
-
-    static int passedOn(int x) {
-        return x;
     }
 
     static {

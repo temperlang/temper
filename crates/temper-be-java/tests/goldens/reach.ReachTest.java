@@ -3,15 +3,32 @@ package reach;
 import temper.std.testing.Test;
 
 public final class ReachTest {
+    static final int testFactor;
+    static volatile int testCount;
+
+    static int forTests(int n) {
+        return n * testFactor;
+    }
+
+    static void addArea(TestShape shape) {
+        testCount = testCount + shape.area();
+    }
+
+    static {
+        ReachGlobal.initStatics();
+        testFactor = ReachGlobal.base * 2;
+        testCount = 0;
+    }
+
     @org.junit.jupiter.api.Test
     public void testParts() {
         Test test = new Test();
         try {
-            TestShape shape = new TestSquare(ReachGlobal.forTests(2));
-            ReachGlobal.addArea(shape);
-            ReachGlobal.testCount = ReachGlobal.testCount + shape.area();
+            TestShape shape = new TestSquare(forTests(2));
+            addArea(shape);
+            testCount = testCount + shape.area();
             {
-                int actual = ReachGlobal.testCount;
+                int actual = testCount;
                 int expected = 32;
                 test.assert_(actual == expected, () -> "expected testCount == (" + expected + ") not (" + actual + ")");
             }

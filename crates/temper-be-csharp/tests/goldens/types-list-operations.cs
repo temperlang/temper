@@ -100,7 +100,6 @@ public static class OperationsGlobal
         console.Log(Listed.Join(messageBuilder, " ", (string x) => x));
         console.Log(Listed.Join(Listed.Sorted(copyThat, (string a, string b) => StringUtil.CompareStringsByCodePoint(b, a)), " ", (string x) => x));
         console.Log(Listed.Join(copyThat, " ", (string x) => x));
-        IList<string> typed = messageBuilder;
         string oldLast = Listed.RemoveLast(copyThat);
         console.Log("Removed " + oldLast + " so " + Listed.Join(copyThat, " ", (string x) => x));
         IReadOnlyList<string> nextLast = Listed.Splice(copyThat, copyThat.Count - 1, 1);

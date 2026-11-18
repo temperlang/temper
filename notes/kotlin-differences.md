@@ -1077,8 +1077,8 @@ Other differences we won't copy:
 - **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
   library needs, what only tests do, and what nothing does, as Kotlin's
   `ReachabilityTracer` does in its frontend
-  ([analyses.md](tmpl/analyses.md), "Reachability"); C++, Rust,
-  Python, JS, and Lua partition by it (below), Java and C# not yet.
+  ([analyses.md](tmpl/analyses.md), "Reachability"); every backend
+  partitions by it (below).
   Differences:
   - An initializer is a root only if it may do something: a list literal
     of simple values, an operator that can't bubble, and core's pure
@@ -1154,6 +1154,29 @@ Other differences we won't copy:
   assign a local of their module's init block. Test: each backend's
   tests/functional.rs, `test_parts_apart` (the shared `reach` program,
   run as tests), and the goldens.
+- **Java and C# by reach** (2026-11-18): as Kotlin's, what only tests
+  reach goes in each module's test class (Java's `NAMETest`, in its
+  package under `src/test/java`; C#'s `NAMETests`, in the tests'
+  project), as statics, and its classes and interfaces in files of their
+  own beside it, and what nothing reaches isn't written; but by tmpl's
+  `reach` (above), and with its init: the test class's static
+  initializer runs the module class's first (Java's `NAMEGlobal.
+  initStatics()`, C#'s `RuntimeHelpers.RunClassConstructor`), then the
+  test init, where Kotlin's Java collects the test init and never writes
+  it, and Kotlin's C# writes it into the module class's static
+  constructor, which can't see the test class's fields. The tests see
+  the library's package-private (Java) or `internal` (C#) statics, as
+  with Kotlin's. A library only its tests use (std, for its `testing`)
+  is Maven's `test` scope and only the tests' project's reference, as
+  with Kotlin's, now by reach, so a library that only its tests check no
+  longer needs std at run time, and JS's `package.json` lists it under
+  `devDependencies`, where Kotlin's lists every library under
+  `dependencies`. Not yet: host code for what only tests reach
+  (`NotYet`), and tests that use a local of their module's init block.
+  Test: each backend's tests/functional.rs, `test_parts_apart` (the
+  shared `reach` program), and `runs`, which builds the library first
+  and then its tests against it (C#'s with `InternalsVisibleTo`), as
+  Maven and MSBuild do, and the goldens.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where

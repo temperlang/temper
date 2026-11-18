@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Globalization;
 using TemperLang.Core;
-using TemperLang.Std.Testing;
 
 namespace Asserts;
 
@@ -12,45 +10,6 @@ public static class AssertsGlobal
     internal static double NormSquared(Vec2 vec)
     {
         return vec.X * vec.X + vec.Y * vec.Y;
-    }
-
-    internal static void AssertMoreThings(Test t, TestHelper helper, IReadOnlyList<IReadOnlyList<string>> strings)
-    {
-        {
-            int i = 0;
-            while (i < strings.Count)
-            {
-                {
-                    int j = 0;
-                    while (j < strings[i].Count)
-                    {
-                        {
-                            int actual = helper.I;
-                            int expected = helper.J;
-                            t.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected helper.i == ({expected}) not ({actual})"));
-                        }
-                        string s = strings[i][j];
-                        {
-                            string actual = s;
-                            string expected = "hi";
-                            t.Assert(actual == expected, () => "expected s == (" + expected + ") not (" + actual + ")");
-                        }
-                        j = j + 1;
-                    }
-                }
-                i = i + 1;
-            }
-        }
-    }
-
-    internal static int SumOf(TestHelper helper)
-    {
-        return helper.I + helper.J;
-    }
-
-    internal static int KeptForTests(TestHelper helper)
-    {
-        return SumOf(helper);
     }
 
     internal static string FormatFloat64(double d)

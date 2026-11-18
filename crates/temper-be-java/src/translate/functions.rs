@@ -251,9 +251,12 @@ impl Translator<'_> {
     }
 
     /// The functional interfaces the module synthesized, as files: each
-    /// its path from the module's package's directory, and its text.
-    pub fn synthesized(&self) -> Vec<(String, String)> {
-        (self.sams.iter())
+    /// its path from the module's package's directory, and its text; those
+    /// of its library's parts, or with `tests`, those its test parts
+    /// added, which are test sources.
+    pub fn synthesized(&self, tests: bool) -> Vec<(String, String)> {
+        let (library, tests_only) = self.sams.split_at(self.library_sams.min(self.sams.len()));
+        (if tests { tests_only } else { library }.iter())
             .map(|(_, name, text)| (format!("function/{name}.java"), text.clone()))
             .collect()
     }

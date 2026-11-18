@@ -145,10 +145,6 @@ package interactive;
 
 public final class InteractiveGlobal {
     private InteractiveGlobal() {}
-
-    static {
-        int answer = 42;
-    }
 }
 // interactive/interactive.internal.js
 

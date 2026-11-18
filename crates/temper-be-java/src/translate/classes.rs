@@ -123,9 +123,10 @@ pub(super) fn members(p: &Program, decl: DeclId) -> Vec<(DeclId, NodeId)> {
         .collect()
 }
 
-/// A class's or interface's node, from its module's items.
+/// A class's or interface's node, from its module's items, its test
+/// items' too.
 fn type_node(p: &Program, decl: DeclId) -> Option<NodeId> {
-    p.modules.iter().flat_map(|m| &m.items).copied().find(|&i| {
+    p.modules.iter().flat_map(|m| m.all_items()).find(|&i| {
         matches!(p.nodes.get(i), Node::Class { decl: d, .. } | Node::Interface { decl: d, .. } if d == decl)
     })
 }
@@ -303,17 +304,19 @@ impl Translator<'_> {
     /// init, then changes nothing anyone can see.
     pub(super) fn plan_statics(&mut self, module: &Module) {
         let p = self.p;
-        for &item in &module.items {
+        for item in module.all_items() {
             if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                 for (d, n) in members(p, decl) {
                     self.member_nodes.insert(d, n);
                 }
             }
         }
-        let Node::Block { stmts } = p.nodes.get(module.init) else {
-            return;
-        };
-        for &s in p.nodes.list(stmts) {
+        let inits = [module.init].into_iter().chain(module.test_init);
+        let stmts = inits.flat_map(|init| match p.nodes.get(init) {
+            Node::Block { stmts } => p.nodes.list(stmts).to_vec(),
+            _ => Vec::new(),
+        });
+        for s in stmts {
             let Node::InitStatic { target, value } = p.nodes.get(s) else {
                 continue;
             };
@@ -458,11 +461,24 @@ impl Translator<'_> {
         Ok(stmts)
     }
 
-    /// A module's classes and interfaces, each with its file's name.
-    pub fn types(&mut self, module: &Module) -> R<Vec<tree::TypeDecl>> {
+    /// A module's classes and interfaces, each with its file's name: its
+    /// library's, or with `tests`, those only its tests reach, which are
+    /// test sources.
+    pub fn types(&mut self, module: &Module, tests: bool) -> R<Vec<tree::TypeDecl>> {
         let p = self.p;
         let mut out = Vec::new();
-        for &item in &module.items {
+        self.in_tests = tests;
+        // Those the library's parts synthesized are its; the rest, its
+        // tests'.
+        if tests {
+            self.library_sams = self.sams.len();
+        }
+        let items = if tests {
+            &module.test_items
+        } else {
+            &module.items
+        };
+        for &item in items {
             if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                 // A `@fun` interface is only its function type's interface.
                 if p.decls.get(decl).facts.contains(Facts::FUN) {
@@ -476,6 +492,12 @@ impl Translator<'_> {
                 // A user's connected class that host code defines is the
                 // library's own file of its name, as Kotlin's.
                 if uses_host(p, decl, super::NAMES) {
+                    if tests {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            p.name(decl)
+                        ));
+                    }
                     let path = super::host_path(p, module.decl, p.name(decl));
                     if !p.host.files.iter().any(|f| f.path == path) {
                         return not_yet(format!("{}'s host code, with no {path}", p.name(decl)));
@@ -719,7 +741,10 @@ impl Translator<'_> {
                 matches!(p.nodes.get(node), Node::StaticField { .. }) && !self.in_class(f)
             });
         if deferred {
-            let (_, global) = super::global_class(p, self.here);
+            let global = match self.in_tests {
+                true => self.test_class.clone(),
+                false => super::global_class(p, self.here).1,
+            };
             helpers.push(format!(
                 "    static {{\n        {global}.initStatics();\n    }}\n"
             ));

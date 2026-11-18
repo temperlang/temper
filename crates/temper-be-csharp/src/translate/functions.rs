@@ -215,7 +215,6 @@ impl Translator<'_> {
         }
         Ok(match self.owner_class(target) {
             Some(class) => Expr::name(class).member(self.name(target)),
-            None if self.in_type.is_some() => self.global_ref().member(self.name(target)),
             None => Expr::name(self.name(target)),
         })
     }

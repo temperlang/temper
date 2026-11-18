@@ -7,10 +7,6 @@ import temper.core.Core.Console;
 public final class CallOverrideFromSubtypeGlobal {
     private CallOverrideFromSubtypeGlobal() {}
 
-    static boolean checkFromOutside(Slippy slipster) {
-        return slipster.getThingums() == 5;
-    }
-
     static {
         Console console = Core.getConsole(Logger.getLogger("call_override_from_subtype"));
         Slippy slippy = new Slippy();
