@@ -21,7 +21,7 @@
 every programming language community. It's a language designed for one
 purpose: to translate well to all the others. You write a library in
 Temper, and get idiomatic, semantically equivalent libraries in each
-language, with their tests.
+language, with their tests, that pass each language's strict checkers.
 
 ```temper
 export let half(x: Int): Int {
@@ -57,27 +57,17 @@ and likewise in each of these[\*](#not-endorsed-or-affiliated):
 
 ## This repository
 
-This is Temper's compiler, written from scratch in Rust (edition
-2024): the same language, behavior, and generated APIs as Temper's
-earlier compiler, from a much smaller, simpler, and faster
-code base. It's one small binary, `temper`, and it also runs in the
-browser.
+This repo contains the source for:
 
-- **The whole pipeline works:** parsing, the settle loop (names,
-  macros, and types), an interpreter, tmpl (the backend IR), and seven
-  backends.
-- **Temper's functional tests** all pass on the interpreter and on
-  every backend, and the generated code passes each language's strict
-  checkers (clippy, `tsc --strict`, pyright and mypy, LuaLS, and
-  compilers with warnings as errors).
-- **Real libraries** (Hrefine, Chromarite, Ordable, Kelpto, Wherewith,
-  and Argmas) pass all their tests in all seven languages.
-- **Editors:** a language server, `temper lsp`, and a VS Code
-  extension ([editors/vscode](editors/vscode/README.md)).
-- **The command line**, `temper`, has `build`, `test`, `run`,
-  `repl`, `init`, `serve`, `version`, `license`, `licenses`, and
-  `help`; `watch` and `doc` are coming
-  ([docs/tools/cli.md](docs/tools/cli.md)).
+- Temper's compiler and core tooling, built as one binary, `temper`, for
+  building and testing Temper libraries from
+  [the command line](docs/tools/cli.md), and as WebAssembly for use
+  in web browsers.
+- Temper's core and standard libraries, and each language's runtime
+  support.
+- Editor support: a language server, `temper lsp`, for any editor, and
+  a VS Code extension ([editors/vscode](editors/vscode/README.md)).
+- Documentation and website content for Temper.
 
 ## Try it
 
