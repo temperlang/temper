@@ -1,12 +1,18 @@
-use std::sync::{OnceLock, RwLock};
+use std::sync::OnceLock;
+
+#[cfg(test)]
+use std::sync::RwLock;
 
 pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
     INIT_ONCE
         .get_or_init(|| {
-            *RUNS.write().unwrap() = Some(0);
-            BASE.set(10).unwrap_or_else(|_| panic!());
             println!("init {}", twice(1));
+            #[cfg(test)]
+            {
+                *RUNS.write().unwrap() = Some(0);
+                BASE.set(10).unwrap_or_else(|_| panic!());
+            }
             Ok(())
         })
         .clone()
@@ -16,6 +22,7 @@ pub fn twice(n: i32) -> i32 {
     n.wrapping_mul(2)
 }
 
+#[cfg(test)]
 static RUNS: RwLock<Option<i32>> = RwLock::new(None);
 
 #[cfg(test)]
@@ -23,6 +30,7 @@ pub(crate) fn runs() -> i32 {
     crate::support::initialized(|| *RUNS.read().unwrap())
 }
 
+#[cfg(test)]
 static BASE: OnceLock<i32> = OnceLock::new();
 
 #[cfg(test)]

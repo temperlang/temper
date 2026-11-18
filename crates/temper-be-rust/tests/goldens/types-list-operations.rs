@@ -213,7 +213,6 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     &(|x: Arc<String>| x.clone()),
                 )
             );
-            let _typed: temper_core::ListBuilder<Arc<String>> = message_builder.clone();
             let old_last = temper_core::listed::remove_last(&copy_that);
             println!(
                 "Removed {old_last} so {}",

@@ -81,9 +81,13 @@ program it came from; stored facts are rechecked by recomputing them.
     classes and storage declared, only where `TEMPER_TESTS` is, the
     test init at the end of the init function there, and what nothing
     reaches isn't written; this replaced its own liveness, which
-    covered only private functions. The others don't partition yet,
-    so their output is as it was; each will in its own step (Rust's
-    test-only `let`s next).
+    covered only private functions. Rust does (2026-11-18): what only
+    tests reach is `#[cfg(test)]`, the test init a `#[cfg(test)]`
+    block at the end of the init, in its scope, and what nothing
+    reaches isn't written; this replaced its scan for module `let`s
+    only tests read, which now gives a library value's getter only to
+    tests where only they read it. Python, JS, and Lua don't partition
+    yet, so their output is as it was.
   - **Not yet:** per-member pruning, and finer rules for which
     initializers may do something (a constructor without effects).
 - **Type queries:** subtyping, substitution, member lookup, operator

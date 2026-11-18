@@ -4,7 +4,6 @@ pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
     INIT_ONCE
         .get_or_init(|| {
-            let _name = Arc::new("case".to_string());
             UNIT_VECS
                 .set(Arc::new(vec![Vec2::new(1.0, 0.0), Vec2::new(0.0, 1.0)]))
                 .unwrap_or_else(|_| panic!());
@@ -56,22 +55,53 @@ pub(crate) fn norm_squared(vec: Vec2) -> f64 {
     vec.0.x * vec.0.x + vec.0.y * vec.0.y
 }
 
+static UNIT_VECS: OnceLock<temper_core::List<Vec2>> = OnceLock::new();
+
+#[cfg(test)]
+pub(crate) fn unit_vecs() -> temper_core::List<Vec2> {
+    crate::support::initialized(|| UNIT_VECS.get()).clone()
+}
+
+#[allow(dead_code)]
+struct KeptForHostStruct {
+    n: i32,
+}
+
+#[allow(dead_code)]
+#[derive(Clone)]
+pub(crate) struct KeptForHost(Arc<KeptForHostStruct>);
+
+#[allow(dead_code)]
+impl KeptForHost {
+    #[allow(dead_code)]
+    pub fn new(n: i32) -> KeptForHost {
+        KeptForHost(Arc::new(KeptForHostStruct { n }))
+    }
+}
+
+temper_core::impl_any_value_trait!(KeptForHost, []);
+
+#[cfg(test)]
 struct TestHelperStruct {
     i: i32,
     j: i32,
 }
 
+#[cfg(test)]
 #[derive(Clone)]
 pub(crate) struct TestHelper(Arc<TestHelperStruct>);
 
+#[cfg(test)]
 impl TestHelper {
     pub fn new(i: i32, j: i32) -> TestHelper {
         TestHelper(Arc::new(TestHelperStruct { i, j }))
     }
 }
 
+#[cfg(test)]
 temper_core::impl_any_value_trait!(TestHelper, []);
 
+#[cfg(test)]
 pub(crate) fn assert_more_things(
     t: temper_std::testing::Test,
     helper: TestHelper,
@@ -114,33 +144,13 @@ pub(crate) fn assert_more_things(
     Ok(())
 }
 
-static UNIT_VECS: OnceLock<temper_core::List<Vec2>> = OnceLock::new();
-
 #[cfg(test)]
-pub(crate) fn unit_vecs() -> temper_core::List<Vec2> {
-    crate::support::initialized(|| UNIT_VECS.get()).clone()
-}
-
-struct KeptForHostStruct {
-    n: i32,
-}
-
-#[derive(Clone)]
-pub(crate) struct KeptForHost(Arc<KeptForHostStruct>);
-
-impl KeptForHost {
-    #[allow(dead_code)]
-    pub fn new(n: i32) -> KeptForHost {
-        KeptForHost(Arc::new(KeptForHostStruct { n }))
-    }
-}
-
-temper_core::impl_any_value_trait!(KeptForHost, []);
-
 pub(crate) fn sum_of(helper: TestHelper) -> i32 {
     helper.0.i.wrapping_add(helper.0.j)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn kept_for_tests(helper: TestHelper) -> i32 {
     sum_of(helper.clone())
 }

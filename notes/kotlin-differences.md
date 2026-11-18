@@ -1077,8 +1077,8 @@ Other differences we won't copy:
 - **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
   library needs, what only tests do, and what nothing does, as Kotlin's
   `ReachabilityTracer` does in its frontend
-  ([analyses.md](tmpl/analyses.md), "Reachability"); C++ partitions by
-  it (below), the other backends not yet. Differences:
+  ([analyses.md](tmpl/analyses.md), "Reachability"); C++ and Rust
+  partition by it (below), Python, JS, and Lua not yet. Differences:
   - An initializer is a root only if it may do something: a list literal
     of simple values, an operator that can't bubble, and core's pure
     calls (`getConsole()`) aren't. Kotlin's is a root unless it's a
@@ -1112,6 +1112,22 @@ Other differences we won't copy:
   write them. Test: temper-be-cpp/tests/functional.rs,
   `test_parts_apart` (its `reach` program), `runs` and `strict` (built
   with and without `TEMPER_TESTS`), and the goldens.
+- **Rust by reach** (2026-11-18): Kotlin's Rust ignores reach, writing
+  everything into the library, test helpers and test data too, and
+  hides the dead code and unused imports that leaves with
+  `#![allow(warnings)]` in every crate. Tempest's partitions the program
+  by tmpl's `reach`: what only tests reach (functions, classes and
+  interfaces, module values' statics and getters, and the `use`s only
+  they need) is `#[cfg(test)]`, its init a `#[cfg(test)]` block at the
+  end of the module's init, in its scope; a library value that only
+  tests read has its getter only for tests; and what nothing reaches
+  isn't written. What's kept for host code (`@keep`, `@keepTest`) but
+  not exported is `#[allow(dead_code)]`, as no Temper code may use it.
+  So each crate builds without tests, at clippy's `-D warnings`, with
+  no dead code of test helpers, and doesn't initialize test data.
+  Test: temper-be-rust/tests/functional.rs, `test_parts_apart` (its
+  `reach` program), `runs_and_lints` (clippy with and without
+  `cfg(test)`, and `reach`'s test run), and the goldens.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where

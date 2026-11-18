@@ -131,12 +131,7 @@ namespace interactive {
 
 namespace core = temper::core;
 
-void global_init_init() {
-  core::init_once([] {
-    int32_t answer = 42;
-    static_cast<void>(answer);
-  });
-}
+void global_init_init() {}
 
 }  // namespace interactive
 // interactive/src/InteractiveGlobal.cs
@@ -170,12 +165,7 @@ use std::sync::OnceLock;
 
 pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
-    INIT_ONCE
-        .get_or_init(|| {
-            let _answer: i32 = 42;
-            Ok(())
-        })
-        .clone()
+    INIT_ONCE.get_or_init(|| Ok(())).clone()
 }
 interactive#1: void
 

@@ -419,49 +419,6 @@ impl HolderTrait<C> for LabeledSub {
 
 temper_core::impl_any_value_trait!(LabeledSub, [Labeled<Arc<String>, C>, Holder<C>]);
 
-pub(crate) trait AllAloneTrait:
-    temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync + ITrait
-{
-    #[allow(dead_code)]
-    fn clone_boxed(&self) -> AllAlone;
-}
-
-#[derive(Clone)]
-pub(crate) struct AllAlone(Arc<dyn AllAloneTrait>);
-
-impl AllAlone {
-    #[allow(dead_code)]
-    pub fn new(selfish: impl AllAloneTrait + 'static) -> AllAlone {
-        AllAlone(Arc::new(selfish))
-    }
-}
-
-impl AllAloneTrait for AllAlone {
-    fn clone_boxed(&self) -> AllAlone {
-        AllAloneTrait::clone_boxed(&*self.0)
-    }
-}
-
-impl ITrait for AllAlone {
-    fn clone_boxed(&self) -> I {
-        ITrait::clone_boxed(&*self.0)
-    }
-
-    fn x(&self) -> Arc<String> {
-        ITrait::x(&*self.0)
-    }
-}
-
-temper_core::impl_any_value_trait_for_interface!(AllAlone);
-
-impl std::ops::Deref for AllAlone {
-    type Target = dyn AllAloneTrait;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
-}
-
 pub(crate) trait HighTrait:
     temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync
 {

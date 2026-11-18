@@ -279,7 +279,9 @@ New with that round, all Proposed:
     where only tests build or load them (Rust statics under
     `#[cfg(test)]`, test modules elsewhere), keeping init order for
     everything production runs. Proposed (2026-11-03; the user agreed
-    tempest should).
+    tempest should). Built as tmpl's `reach::partition` (test items
+    and a test init that continues the init), which C++ and Rust use
+    (2026-11-18); Python, JS, and Lua next.
 50. **Sanitizers in `tempest test`:** on by default, as a
     backend-neutral test option (`--no-sanitize` turns it off; a
     library's config may too) that each backend interprets as it sees
