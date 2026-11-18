@@ -243,7 +243,20 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             }),
     );
     let version = rock_version(p);
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
     let quoted = |s: &str| format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"));
+    let dependency_lines = |tests: bool| {
+        (p.dependencies().iter())
+            .filter(|(name, _)| tests_only.iter().any(|t| t == name) == tests)
+            .map(|(name, version)| match *version {
+                "0.0.0" | "" => format!("    {},\n", quoted(name)),
+                v => {
+                    let v = version::respell(v, Spelling::LuaRocks);
+                    format!("    {},\n", quoted(&format!("{name} == {v}")))
+                }
+            })
+            .collect::<String>()
+    };
     let rockspec = format!(
         "package = {package}
 version = {version_q}
@@ -259,7 +272,7 @@ dependencies = {{
     'lua >= {lua}',
     'temper-core == {runtime}',
 {dependencies}}}
-source = {{
+{test_dependencies}source = {{
     url = {url},
 }}
 ",
@@ -284,17 +297,12 @@ source = {{
         lua = variant.lua_version,
         runtime = version::current().spell(Spelling::LuaRocks),
         // Each library used, as Kotlin writes them, with its version where
-        // it sets one.
-        dependencies = (p.dependencies().iter())
-            .map(|(name, version)| match *version {
-                "0.0.0" | "" => format!("    {},\n", quoted(name)),
-                v => {
-                    let v = version::respell(v, Spelling::LuaRocks);
-                    format!("    {},\n", quoted(&format!("{name} == {v}")))
-                }
-            })
-            .collect::<Vec<_>>()
-            .concat(),
+        // it sets one; those only the tests use in `test_dependencies`.
+        dependencies = dependency_lines(false),
+        test_dependencies = match dependency_lines(true) {
+            lines if lines.is_empty() => String::new(),
+            lines => format!("test_dependencies = {{\n{lines}}}\n"),
+        },
         url = quoted(&format!("file://{library}.zip")),
     );
     files.push(OutFile {
