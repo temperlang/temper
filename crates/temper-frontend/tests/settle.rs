@@ -560,7 +560,7 @@ fn every_expression_is_typed() {
 
 /// std `net`'s `sendRequest`, over a small stand-in for std's `net`,
 /// against a local server that answers one request, echoing it. Without
-/// the `net` feature, the promise breaks, saying why.
+/// the `net` feature, the promise breaks, which the `orelse` catches.
 #[test]
 fn net_requests() {
     with_stack(|| {
@@ -572,9 +572,11 @@ fn net_requests() {
                     let p = send(\"http://127.0.0.1:${testServerPort}/echo\");\n\
                     console.log(\"sent\");\n\
                     async { (): GeneratorResult<Empty> extends GeneratorFn =>\n\
-                      let r = await p;\n\
-                      let body = (await r.bodyContent) ?? \"none\";\n\
-                      console.log(\"${r.status} ${r.contentType ?? \"none\"} ${r is NetResponse}: ${body}\");\n\
+                      do {\n\
+                        let r = await p;\n\
+                        let body = (await r.bodyContent) ?? \"none\";\n\
+                        console.log(\"${r.status} ${r.contentType ?? \"none\"} ${r is NetResponse}: ${body}\");\n\
+                      } orelse console.log(\"broken\");\n\
                     }";
         library.add_file("main.temper", main, SourceKind::Standalone);
         let net = "@connected\n\
@@ -605,7 +607,7 @@ fn net_requests() {
             let echo = "201 text/plain true: POST /echo HTTP/1.1, application/json, []";
             (vec!["sent", echo], None)
         } else {
-            (vec!["sent"], Some("Failed: web client not supported here"))
+            (vec!["sent", "broken"], None)
         };
         let output: Vec<String> = output.into_iter().map(String::from).collect();
         assert_eq!((run.output, run.failure.as_deref()), (output, failure));

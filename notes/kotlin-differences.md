@@ -796,6 +796,19 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   tests/nevers.rs; the funtest control-flow/bubble ("Helpers that never
   return") and programs/classes ("Methods that never return"), on every
   backend.
+- **An `await` that may bubble where it can't** (2026-11-18), as in an
+  `async` block without `orelse`, is "Cannot bubble from a function
+  without Bubble in its return type" at the `await` in both, and so is
+  `bubble()` or any other call that may bubble in a generator that
+  doesn't say `throws Bubble`. Kotlin then runs the code as written (JS:
+  an unhandled rejection; Python: `RuntimeError`); tempest's `await`
+  fails with the message where it's reached, on the interpreter and
+  every backend, as other code that may bubble where it can't does, even
+  when the promise is kept. Tempest also checks named generator
+  functions, which Kotlin lacks.
+  Test: settle/run.cases, "a bubbling await that nothing handles, as
+  Kotlin Temper reports it" and "a bubbling await that something
+  handles"; to_tmpl.rs, `unhandled_awaits_fail_where_reached`.
 
 ### Interpreter, core and std
 

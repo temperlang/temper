@@ -2767,8 +2767,8 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
   console.log("first block");
   b.complete("done");
   b.complete("ignored");
-  console.log(await b.promise);
-  console.log(await b.promise);
+  console.log(await b.promise orelse "broken");
+  console.log(await b.promise orelse "broken");
 }
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
   console.log("second block");
@@ -2786,8 +2786,12 @@ console.log("top level");
         (Call (Call . console \log) "first block")
         (Call (Call . b:0 \complete) "done")
         (Call (Call . b:0 \complete) "ignored")
-        (Call (Call . console \log) (Await @44 (Call . b:0 \promise)))
-        (Call (Call . console \log) (Await @44 (Call . b:0 \promise)))
+        (Call
+          (Call . console \log)
+          (Orelse (Await @44 (Call . b:0 \promise)) "broken"))
+        (Call
+          (Call . console \log)
+          (Orelse (Await @44 (Call . b:0 \promise)) "broken"))
         #void)))
   (Call
     async
@@ -3009,7 +3013,7 @@ let g(): Void {
 }
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
 let gen = make { (): GeneratorResult<Int> extends GeneratorFn =>
-  await new PromiseBuilder<Int>().promise;
+  await new PromiseBuilder<Int>().promise orelse 0;
 };
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
   console.log((await 1).toString()) orelse console.log("not a promise");
@@ -3052,7 +3056,10 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
         (Call <> GeneratorResult Int)
         GeneratorFn
         (Block
-          (Await @334 (Call . (Call new (Call <> PromiseBuilder Int)) \promise))
+          (Orelse
+            (Await @334
+              (Call . (Call new (Call <> PromiseBuilder Int)) \promise))
+            0)
           #void))))
   (Call
     async
@@ -3061,7 +3068,7 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       GeneratorFn
       (Block
         (Orelse
-          (Call (Call . console \log) (Call (Call . (Await @436 1) \toString)))
+          (Call (Call . console \log) (Call (Call . (Await @445 1) \toString)))
           (Call (Call . console \log) "not a promise"))
         (Orelse
           (Call f:0 (Call . (Call new (Call <> PromiseBuilder Int)) \promise))
@@ -3071,9 +3078,143 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
         #void))))
 error 13..52: await outside generator function body
 error 197..236: Not supported yet: await in a for … of body
+error 86..93: Cannot bubble from a function without Bubble in its return type
 log not a promise
 log f failed
 Panicked: await of an unresolved promise outside an async block
+
+=== a bubbling await that nothing handles, as Kotlin Temper reports it
+// Each async block and generator function is a function of its own, so
+// a `throws Bubble` around one doesn't let it bubble. The await fails
+// where it's reached, as other code that may bubble where it can't does.
+let b = new PromiseBuilder<String>();
+b.complete("done");
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  console.log(await b.promise);
+}
+let work(): GeneratorResult<Empty> extends GeneratorFn {
+  console.log(await b.promise);
+}
+async(work);
+let launch(): Void throws Bubble {
+  async { (): GeneratorResult<Empty> extends GeneratorFn =>
+    console.log(await b.promise);
+  }
+}
+launch() orelse void;
+let fails(): GeneratorResult<Empty> extends GeneratorFn { bubble(); }
+console.log("top level");
+--- settled
+(Block
+  (Let ^b:0 (Call new (Call <> PromiseBuilder String)))
+  (Call (Call . b:0 \complete) "done")
+  (Call
+    async
+    (Fn
+      (Call <> GeneratorResult Empty)
+      GeneratorFn
+      (Block
+        (Call (Call . console \log) (Await @281 (Call . b:0 \promise)))
+        #void)))
+  (Let
+    ^work:1
+    (Fn
+      (Call <> GeneratorResult Empty)
+      GeneratorFn
+      (Block
+        (Call (Call . console \log) (Await @367 (Call . b:0 \promise)))
+        #void)))
+  (Call async work:1)
+  (Let
+    ^launch:2
+    (Fn
+      (Call throws Void Bubble)
+      (Block
+        (Call
+          async
+          (Fn
+            (Call <> GeneratorResult Empty)
+            GeneratorFn
+            (Block
+              (Call (Call . console \log) (Await @514 (Call . b:0 \promise)))
+              #void))))))
+  (Orelse (Call launch:2) void)
+  (Let
+    ^fails:3
+    (Fn (Call <> GeneratorResult Empty) GeneratorFn (Block (Fail) #void)))
+  (Call (Call . console \log) "top level")
+  #void)
+error 347..362: Cannot bubble from a function without Bubble in its return type
+error 438..453: Cannot bubble from a function without Bubble in its return type
+error 582..597: Cannot bubble from a function without Bubble in its return type
+error 686..694: Cannot bubble from a function without Bubble in its return type
+log top level
+Failed: Cannot bubble from a function without Bubble in its return type
+
+=== a bubbling await that something handles
+// An `orelse` around it, or a generator that says it may bubble.
+let b = new PromiseBuilder<String>();
+b.breakPromise();
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  console.log(await b.promise orelse "broken");
+  do { console.log(await b.promise); } orelse console.log("caught");
+}
+let work(): GeneratorResult<Empty> extends GeneratorFn {
+  console.log(await b.promise orelse "named");
+}
+async(work);
+let make(body: fn (): Generator<String>): Generator<String> { body() }
+let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
+  yield await b.promise;
+};
+--- settled
+(Block
+  (Let ^b:0 (Call new (Call <> PromiseBuilder String)))
+  (Call (Call . b:0 \breakPromise))
+  (Call
+    async
+    (Fn
+      (Call <> GeneratorResult Empty)
+      GeneratorFn
+      (Block
+        (Call
+          (Call . console \log)
+          (Orelse (Await @128 (Call . b:0 \promise)) "broken"))
+        (Orelse
+          (Block
+            (Call (Call . console \log) (Await @128 (Call . b:0 \promise)))
+            #void)
+          (Call (Call . console \log) "caught"))
+        #void)))
+  (Let
+    ^work:1
+    (Fn
+      (Call <> GeneratorResult Empty)
+      GeneratorFn
+      (Block
+        (Call
+          (Call . console \log)
+          (Orelse (Await @299 (Call . b:0 \promise)) "named"))
+        #void)))
+  (Call async work:1)
+  (Let
+    ^make:2
+    (Fn
+      (Let ^body:4 (Call FnType (Call <> Generator String)))
+      (Call <> Generator String)
+      (Block (Call body:4))))
+  (Let
+    ^g:3
+    (Call
+      make:2
+      (Fn
+        (Call throws (Call <> GeneratorResult String) Bubble)
+        GeneratorFn
+        (Block (Yield @502 (Await @502 (Call . b:0 \promise))) #void))))
+  #void)
+log broken
+log caught
+log named
 
 === a function type's parameter names only document
 let apply(f: fn (x: Int, y: Int): Int): Int { f(1, 2) }

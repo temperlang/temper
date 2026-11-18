@@ -754,14 +754,15 @@ impl Lowering {
         self.b.max = self.b.max.max(self.b.depth);
     }
 
-    /// The message of an error reported at a value, a name, or a call
-    /// (a member that isn't there, the wrong number of arguments), if
-    /// there is one that isn't type-only.
+    /// The message of an error reported at a value, a name, a call (a
+    /// member that isn't there, the wrong number of arguments), or an
+    /// `await` that may bubble where it can't, if there is one that isn't
+    /// type-only.
     fn error_at(&mut self, s: &Settled, node: NodeId) -> Option<Rc<str>> {
         let lib = &s.library;
         if !matches!(
             lib.tree.kind(node),
-            NodeKind::Call | NodeKind::RightName | NodeKind::Value
+            NodeKind::Call | NodeKind::RightName | NodeKind::Value | NodeKind::Await
         ) {
             return None;
         }

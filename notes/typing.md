@@ -1057,6 +1057,8 @@ and parameters' defaults, each of these is "Cannot bubble from a
 function without Bubble in its return type", at the call:
 
 - `bubble()`.
+- `await p`, as a broken promise bubbles, at the `await`; it fails
+  there when run, on every target, even for a promise that's kept.
 - A call of a function value whose type `throws Bubble`: a parameter,
   local, function, or method, including a builtin type's (`s.toInt32()`).
   A call Kotlin might fold, as `g(1)` or `String.fromCodePoint(65)`, isn't
@@ -1084,7 +1086,8 @@ where all are; an `orelse`'s body (its fallback is), functions
 inside (each is checked on its own), and the branches of an `if` whose condition Kotlin might fold, except
 the one a literal `true` or `false` leaves. A `for … of` body is part of
 the function around it. Functions checked: those that declare a return
-type, apart from generators; constructors and setters, which return
+type, generators (as `async` blocks) too, unless it's `GeneratorResult<Y>
+throws Bubble`; constructors and setters, which return
 `Void`; and function literals without a return type whose place wants a
 function type that doesn't `throw Bubble` ("Function literals and target
 typing", above). Module-level code and `test` bodies may bubble.

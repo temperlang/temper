@@ -20,7 +20,7 @@ interactive#1: "b"
 === async blocks wait across inputs for a later input's promise
 let b = new PromiseBuilder<Int>();
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
-  let n = await b.promise;
+  let n = await b.promise orelse -1;
   console.log("got ${n}");
 }
 1

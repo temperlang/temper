@@ -408,6 +408,10 @@ writes them, or from a release's packages
   that can't bubble is reported as "Cannot bubble from a function
   without Bubble in its return type", as Temper 0.6.0 reports it,
   instead of stopping translation.
+- An `await` that may bubble in an `async` block or other generator
+  that can't, with no `orelse`, is reported the same way, as Temper
+  0.6.0 reports it, instead of stopping translation; so is `bubble()`
+  in such a generator.
 - `x ?? d`, where `x` is a nullable member named bare in its class, is
   a non-null value, as `this.x ?? d` is; it was an error.
 - A function literal or function reference where another library's

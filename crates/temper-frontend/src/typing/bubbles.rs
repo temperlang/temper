@@ -6,14 +6,14 @@
 //! own, if they declare a return type, or, for a function literal without
 //! one, if its place wants a function type, which gives it its own.
 //!
-//! What may bubble: `bubble()`; a call of a function whose type `throws
-//! Bubble`; `x as T` that checks something ([`Settle::cast_bubbles`]);
-//! and `/` and `%`, unless the divisor is an integer constant that
-//! can't make them fail (not zero, and for `%`, positive), as
-//! [`fold_int`] works it out, which `to_tmpl` uses too. Kotlin folds
-//! constants first, so as for the other type errors, a call it might work
-//! out while compiling isn't reported (`may_fold`), nor is a branch of an
-//! `if` whose condition it might.
+//! What may bubble: `bubble()`; `await`, of a promise that may be broken;
+//! a call of a function whose type `throws Bubble`; `x as T` that checks
+//! something ([`Settle::cast_bubbles`]); and `/` and `%`, unless the
+//! divisor is an integer constant that can't make them fail (not zero,
+//! and for `%`, positive), as [`fold_int`] works it out, which
+//! `to_tmpl` uses too. Kotlin folds constants first, so as for the other
+//! type errors, a call it might work out while compiling isn't reported
+//! (`may_fold`), nor is a branch of an `if` whose condition it might.
 
 use super::signatures;
 use crate::builtins::{Builtin, Constant, Function};
@@ -186,10 +186,12 @@ impl Settle {
     /// [`Settle::check_bubbles`] applies: its declared one, unless it
     /// `throws Bubble`, or for a function literal without one, the
     /// function type its place wants, unless that may bubble, as Kotlin
-    /// Temper types the literal. Not a generator, nor a `for … of` body.
+    /// Temper types the literal. A generator, as an `async` block, too,
+    /// as `GeneratorResult<Y>` doesn't say `throws Bubble`; not a `for …
+    /// of` body.
     pub(super) fn may_not_bubble(&mut self, f: NodeId) -> bool {
         let tree = &self.lib.tree;
-        if !core::fn_supers(tree, f).is_empty() || tree.data(f) & core::FN_LOOP_BODY != 0 {
+        if tree.data(f) & core::FN_LOOP_BODY != 0 {
             return false;
         }
         match core::fn_parts(tree, f).1 {
@@ -237,6 +239,12 @@ impl Settle {
                 }
             }
             (NodeKind::Fail, _) => self.report_bubble(node),
+            (NodeKind::Await, _) => {
+                for child in children {
+                    self.find_bubbles(child);
+                }
+                self.report_bubble(node);
+            }
             (NodeKind::Call, _) if self.call_bubbles(node) => self.report_bubble(node),
             // Kotlin doesn't look into the arguments of an operator that
             // don't fit it.

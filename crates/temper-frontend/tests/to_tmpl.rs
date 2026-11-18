@@ -523,6 +523,35 @@ fn constant_divisors_fold_as_typing_does() {
     });
 }
 
+/// An `await` that may bubble where nothing handles it is the frontend's
+/// "Cannot bubble" error, and the rest translates and validates: the
+/// `await` becomes an `Error` that fails where it's reached, as other code
+/// that may bubble where it can't does, and one in an `orelse` stays.
+#[test]
+fn unhandled_awaits_fail_where_reached() {
+    with_stack(|| {
+        let source = "
+    let b = new PromiseBuilder<String>();
+    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+      console.log(await b.promise);
+    }
+    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+      console.log(await b.promise orelse \"broken\");
+    }
+    b.breakPromise();
+";
+        let (program, errors) = translate_with_errors("awaits", source);
+        assert_eq!(
+            errors,
+            ["Cannot bubble from a function without Bubble in its return type"]
+        );
+        let written = text::write(&program);
+        let failing = "(error(\"Cannot bubble from a function";
+        assert_eq!(written.matches(failing).count(), 1, "{written}");
+        assert_eq!(written.matches("(await(").count(), 1, "{written}");
+    });
+}
+
 /// `gaps` finds every gap, not only the first, going on past each
 /// statement it can't translate, and none where `to_tmpl` succeeds.
 #[test]
