@@ -1,0 +1,1760 @@
+date,commit,what,value,value_max,unit,conditions,notes
+2026-10-22,1ef64d8,lex-ms,28,30,ms,run=rust,
+2026-10-22,1ef64d8,lex-ms,43,49,ms,run=kotlin-warm,
+2026-10-22,1ef64d8,lex-kotlin-over-rust,1.5,1.7,ratio,,
+2026-10-22,1ef64d8,lex-ms,21,30,ms,run=rust;tree=dirty,ASCII fast path
+2026-10-22,1ef64d8,lex-ms,39,80,ms,run=kotlin-warm;tree=dirty,ASCII fast path
+2026-10-22,1ef64d8,lex-kotlin-over-rust,2,,ratio,tree=dirty,ASCII fast path; approximate
+2026-10-22,1ef64d8,lex-ms,8.2,12,ms,run=rust;tree=dirty,"tokens as kind and span, no String each"
+2026-10-22,1ef64d8,lex-ms,37,52,ms,run=kotlin-warm;tree=dirty,"tokens as kind and span, no String each"
+2026-10-22,1ef64d8,lex-kotlin-over-rust,3.7,4.7,ratio,tree=dirty,"tokens as kind and span, no String each"
+2026-10-22,bf5ebfb,lex-parse-ms,56,61,ms,run=rust;tree=dirty,operator lookup by table
+2026-10-22,bf5ebfb,lex-parse-ms,158,174,ms,run=kotlin-warm;tree=dirty,operator lookup by table
+2026-10-22,bf5ebfb,lex-parse-kotlin-over-rust,2.6,2.9,ratio,tree=dirty,operator lookup by table
+2026-10-22,cd8a59b,lex-parse-grammar-ms,96,128,ms,run=rust;tree=dirty,
+2026-10-22,cd8a59b,lex-parse-grammar-ms,541,621,ms,run=kotlin-warm;tree=dirty,
+2026-10-22,cd8a59b,lex-parse-grammar-kotlin-over-rust,4.5,6.0,ratio,tree=dirty,
+2026-10-22,cd8a59b,lex-parse-module-ms,103,144,ms,run=rust;tree=dirty,plus the rest of ParseStage (--module)
+2026-10-22,cd8a59b,lex-parse-module-ms,630,802,ms,run=kotlin-warm;tree=dirty,plus the rest of ParseStage (--module)
+2026-10-22,cd8a59b,lex-parse-module-kotlin-over-rust,4.6,6.1,ratio,tree=dirty,plus the rest of ParseStage (--module)
+2026-10-22,cd8a59b,lex-parse-module-settle-ms,126,136,ms,run=rust;tree=dirty,plus settling each file as a library
+2026-10-22,,interp-loop-us,0.63,0.87,us,run=rust,per iteration: count += 1; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-loop-us,6.2,9.4,us,run=kotlin-warm,per iteration: count += 1; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-loop-kotlin-over-rust,7,15,ratio,,per iteration: count += 1; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-calls-us,0.98,1.5,us,run=rust,per iteration: one call of a small function; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-calls-us,10,22,us,run=kotlin-warm,per iteration: one call of a small function; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-calls-kotlin-over-rust,7.5,15,ratio,,per iteration: one call of a small function; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-closures-us,1.2,1.5,us,run=rust,per iteration: one call of a closure updating a captured var; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-closures-us,11,16,us,run=kotlin-warm,per iteration: one call of a closure updating a captured var; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-closures-kotlin-over-rust,8,13,ratio,,per iteration: one call of a closure updating a captured var; after list builders and for … of; two invocations of 3 runs
+2026-10-22,,interp-fib-us,380,440,us,run=rust,"per iteration: fib(12), about 465 calls; after list builders and for … of; two invocations of 3 runs"
+2026-10-22,,interp-fib-us,2900,4000,us,run=kotlin-warm,"per iteration: fib(12), about 465 calls; after list builders and for … of; two invocations of 3 runs"
+2026-10-22,,interp-fib-kotlin-over-rust,7,10,ratio,,"per iteration: fib(12), about 465 calls; after list builders and for … of; two invocations of 3 runs"
+2026-10-22,bf5ebfb,parse-tree-small,482,,KiB,tree=dirty,lexer and parser
+2026-10-22,bf5ebfb,peak-memory-parse-all,14.0,,MiB,run=rust;tree=dirty,lexer and parser
+2026-10-22,bf5ebfb,peak-memory-parse-all,198,,MiB,run=kotlin-jvm;tree=dirty,lexer and parser
+2026-10-22,cd8a59b,ast-tree-small,638,,KiB,tree=dirty,"lexer, parser and grammar step"
+2026-10-22,cd8a59b,peak-memory-ast-all,14.8,,MiB,run=rust;tree=dirty,"lexer, parser and grammar step"
+2026-10-22,cd8a59b,peak-memory-ast-all,236,,MiB,run=kotlin-jvm;tree=dirty,"lexer, parser and grammar step"
+2026-10-22,cd8a59b,ast-tree-small,646,,KiB,args=--module;tree=dirty,the same with the module step
+2026-10-22,cd8a59b,peak-memory-ast-all,15.0,,MiB,run=rust;args=--module;tree=dirty,the same with the module step
+2026-10-22,cd8a59b,peak-memory-ast-all,242,,MiB,run=kotlin-jvm;args=--module;tree=dirty,the same with the module step
+2026-10-22,cd8a59b,run-temper-small,734,,KiB,tree=dirty,and the settle loop and interpreter
+2026-10-22,cd8a59b,peak-memory-settle-all,15.0,,MiB,run=rust;tree=dirty,and the settle loop and interpreter
+2026-10-22,8945bcb,run-temper-small,818,,KiB,tree=dirty,"classes, type parameters, lists, for … of, NFKC"
+2026-10-22,8945bcb,peak-memory-settle-all,14.9,,MiB,run=rust;tree=dirty,"classes, type parameters, lists, for … of, NFKC"
+2026-10-23,85b5cbb,run-temper-small,838,,KiB,tree=dirty,"when, ?., ??, Float64 math and formatting"
+2026-10-23,85b5cbb,peak-memory-settle-all,15.0,,MiB,run=rust;tree=dirty,"when, ?., ??, Float64 math and formatting"
+2026-10-23,04789c6,run-temper-small,854,,KiB,tree=dirty,"string indices, String methods, StringBuilder, tags, destructuring let"
+2026-10-23,04789c6,peak-memory-settle-all,14.9,,MiB,run=rust;tree=dirty,"string indices, String methods, StringBuilder, tags, destructuring let"
+2026-10-23,704dca9,run-temper-small,862,,KiB,tree=dirty,"top-level dependency order, ~, >>>"
+2026-10-23,704dca9,peak-memory-settle-all,14.9,,MiB,run=rust;tree=dirty,"top-level dependency order, ~, >>>"
+2026-10-24,f735e3d,run-temper-small,890,,KiB,tree=dirty,"modules, export and import"
+2026-10-24,f735e3d,peak-memory-settle-all,15.1,,MiB,run=rust;tree=dirty,"modules, export and import"
+2026-10-24,0827f8a,run-temper-small,894,,KiB,tree=dirty,"Deque, DenseBitVector, several declarations in one"
+2026-10-24,0827f8a,peak-memory-settle-all,15.0,,MiB,run=rust;tree=dirty,"Deque, DenseBitVector, several declarations in one"
+2026-10-24,6a4f4dc,run-temper-small,894,,KiB,tree=dirty,"@fun interface, typed field initializers, locals visible after declaration"
+2026-10-24,6a4f4dc,peak-memory-settle-all,15.1,,MiB,run=rust;tree=dirty,"@fun interface, typed field initializers, locals visible after declaration"
+2026-10-24,3f2c331,run-temper-small,918,,KiB,tree=dirty,"object literals, trailing blocks, @auto(""==""), Empty"
+2026-10-24,3f2c331,peak-memory-settle-all,15.1,,MiB,run=rust;tree=dirty,"object literals, trailing blocks, @auto(""==""), Empty"
+2026-10-24,5ab2a49,run-temper-small,942,,KiB,tree=dirty,"std imports, ..., Map, MapBuilder, Pair, static extensions"
+2026-10-24,5ab2a49,peak-memory-settle-all,15.0,,MiB,run=rust;tree=dirty,"std imports, ..., Map, MapBuilder, Pair, static extensions"
+2026-10-24,f3beacc,run-temper-small,998,,KiB,tree=dirty,"test, assert, regex literals and matcher"
+2026-10-24,f3beacc,peak-memory-settle-all,15.5,,MiB,run=rust;tree=dirty,"test, assert, regex literals and matcher"
+2026-10-25,561b4d9,run-temper-small,1046,,KiB,tree=dirty,flat frames instead of the tree walk
+2026-10-25,561b4d9,peak-memory-settle-all,13.3,,MiB,run=rust;tree=dirty,flat frames instead of the tree walk
+2026-10-25,25e32ca,run-temper-small,1054,,KiB,tree=dirty,generators
+2026-10-25,25e32ca,peak-memory-settle-all,13.3,,MiB,run=rust;tree=dirty,generators
+2026-10-26,13f4889,run-temper-small,1062,,KiB,tree=dirty,"async, await, promises"
+2026-10-26,13f4889,peak-memory-settle-all,13.4,,MiB,run=rust;files=822;tree=dirty,"async, await, promises"
+2026-10-26,684e37c,run-temper-small,1087,,KiB,tree=dirty,"inherited members, class checks, private members on any instance"
+2026-10-26,684e37c,peak-memory-settle-all,14.9,15.4,MiB,run=rust;files=824;tree=dirty,"inherited members, class checks, private members on any instance"
+2026-10-26,3fdf7e7,run-temper-small,1090,,KiB,features=no-net;tree=dirty,"std net, connected functions"
+2026-10-26,3fdf7e7,peak-memory-settle-all,15.0,15.3,MiB,run=rust;tree=dirty,"std net, connected functions; the same for the net build"
+2026-10-26,3fdf7e7,run-temper-small,2307,,KiB,features=net;tree=dirty,"the same with net, the default: ureq, rustls"
+2026-10-26,d225dee,run-temper-small,1098,,KiB,features=no-net;tree=dirty,"do … while, statements in strings, decorated destructuring, case patterns (errored)"
+2026-10-26,d225dee,peak-memory-settle-all,15.2,15.3,MiB,run=rust;tree=dirty,"do … while, statements in strings, decorated destructuring, case patterns (errored); the same for the net build"
+2026-10-26,d225dee,run-temper-small,2314,,KiB,features=net;tree=dirty,"the same with net, the default"
+2026-10-27,b0db559,run-temper-small,1118,,KiB,features=no-net;tree=dirty,"declared and inferred types, first type errors"
+2026-10-27,b0db559,peak-memory-settle-all,15.1,15.2,MiB,run=rust;tree=dirty,"declared and inferred types, first type errors; the same for the net build"
+2026-10-27,b0db559,run-temper-small,2339,,KiB,features=net;tree=dirty,"the same with net, the default"
+2026-10-27,9f65728,run-temper-small,1127,,KiB,features=no-net;tree=dirty,flow facts: null checks narrow locals
+2026-10-27,9f65728,peak-memory-settle-all,15.2,15.4,MiB,run=rust;tree=dirty,flow facts: null checks narrow locals; the same for the net build
+2026-10-27,9f65728,run-temper-small,2343,,KiB,features=net;tree=dirty,"the same with net, the default"
+2026-10-27,e128e4c,run-temper-small,1139,,KiB,features=no-net;tree=dirty,"builtin operators' and console.log's signatures, what may bubble"
+2026-10-27,e128e4c,peak-memory-settle-all,15.0,15.5,MiB,run=rust;tree=dirty,"builtin operators' and console.log's signatures, what may bubble; the same for the net build"
+2026-10-27,e128e4c,run-temper-small,2351,,KiB,features=net;tree=dirty,"the same with net, the default"
+2026-10-27,c2dbf09,tempest-small,2367,,KiB,features=net;tree=dirty,"tempest, the released command, tempest test"
+2026-10-27,3187787,tempest-small,2455,,KiB,features=net;tree=dirty,tempest with std built in
+2026-10-22,bf5ebfb,wasm-small,148,,KiB,tree=dirty,parse and print the tree
+2026-10-22,bf5ebfb,wasm-small-gzip,61,,KiB,tree=dirty,parse and print the tree
+2026-10-22,cd8a59b,wasm-small,337,,KiB,tree=dirty,also the grammar step and its tree
+2026-10-22,cd8a59b,wasm-small-gzip,132,,KiB,tree=dirty,also the grammar step and its tree
+2026-10-22,cd8a59b,wasm-small,434,,KiB,tree=dirty,"also the module step, and run (settle and interpret)"
+2026-10-22,cd8a59b,wasm-small-gzip,164,,KiB,tree=dirty,"also the module step, and run (settle and interpret)"
+2026-10-22,8945bcb,wasm-small,518,,KiB,tree=dirty,"also classes, type parameters, lists, for … of, NFKC"
+2026-10-22,8945bcb,wasm-small-gzip,194,,KiB,tree=dirty,"also classes, type parameters, lists, for … of, NFKC"
+2026-10-23,85b5cbb,wasm-small,557,,KiB,tree=dirty,"also when, ?., ??, Float64 math and formatting"
+2026-10-23,85b5cbb,wasm-small-gzip,208,,KiB,tree=dirty,"also when, ?., ??, Float64 math and formatting"
+2026-10-23,04789c6,wasm-small,574,,KiB,tree=dirty,"also strings, StringBuilder, tags, destructuring let"
+2026-10-23,04789c6,wasm-small-gzip,215,,KiB,tree=dirty,"also strings, StringBuilder, tags, destructuring let"
+2026-10-23,704dca9,wasm-small,586,,KiB,tree=dirty,"also top-level dependency order, ~, >>>"
+2026-10-23,704dca9,wasm-small-gzip,218,,KiB,tree=dirty,"also top-level dependency order, ~, >>>"
+2026-10-24,f735e3d,wasm-small,597,,KiB,tree=dirty,"also modules, export and import"
+2026-10-24,f735e3d,wasm-small-gzip,222,,KiB,tree=dirty,"also modules, export and import"
+2026-10-24,0827f8a,wasm-small,601,,KiB,tree=dirty,"also Deque, DenseBitVector, several declarations in one"
+2026-10-24,0827f8a,wasm-small-gzip,223,,KiB,tree=dirty,"also Deque, DenseBitVector, several declarations in one"
+2026-10-24,6a4f4dc,wasm-small,603,,KiB,tree=dirty,"also @fun interface, typed field initializers, positional locals"
+2026-10-24,6a4f4dc,wasm-small-gzip,223,,KiB,tree=dirty,"also @fun interface, typed field initializers, positional locals"
+2026-10-24,3f2c331,wasm-small,621,,KiB,tree=dirty,"also object literals, trailing blocks, @auto(""==""), Empty"
+2026-10-24,3f2c331,wasm-small-gzip,229,,KiB,tree=dirty,"also object literals, trailing blocks, @auto(""==""), Empty"
+2026-10-24,5ab2a49,wasm-small,647,,KiB,tree=dirty,"also std imports, ..., Map, Pair, static extensions"
+2026-10-24,5ab2a49,wasm-small-gzip,238,,KiB,tree=dirty,"also std imports, ..., Map, Pair, static extensions"
+2026-10-24,f3beacc,wasm-small,702,,KiB,tree=dirty,"also test, assert, regex literals and matcher"
+2026-10-24,f3beacc,wasm-small-gzip,256,,KiB,tree=dirty,"also test, assert, regex literals and matcher"
+2026-10-25,561b4d9,wasm-small,758,,KiB,tree=dirty,also flat frames instead of the tree walk
+2026-10-25,561b4d9,wasm-small-gzip,273,,KiB,tree=dirty,also flat frames instead of the tree walk
+2026-10-25,25e32ca,wasm-small,766,,KiB,tree=dirty,also generators
+2026-10-25,25e32ca,wasm-small-gzip,276,,KiB,tree=dirty,also generators
+2026-10-26,13f4889,wasm-small,773,,KiB,tree=dirty,"also async, await, promises"
+2026-10-26,13f4889,wasm-small-gzip,278,,KiB,tree=dirty,"also async, await, promises"
+2026-10-26,684e37c,wasm-small,795,,KiB,tree=dirty,also inherited members and class checks
+2026-10-26,684e37c,wasm-small-gzip,285,,KiB,tree=dirty,also inherited members and class checks
+2026-10-26,3fdf7e7,wasm-small,804,,KiB,tree=dirty,"also std net and connected functions, without a web client"
+2026-10-26,3fdf7e7,wasm-small-gzip,289,,KiB,tree=dirty,"also std net and connected functions, without a web client"
+2026-10-26,d225dee,wasm-small,811,,KiB,tree=dirty,"also do … while, statements in strings, decorated destructuring"
+2026-10-26,d225dee,wasm-small-gzip,291,,KiB,tree=dirty,"also do … while, statements in strings, decorated destructuring"
+2026-10-27,b0db559,wasm-small,833,,KiB,tree=dirty,"also declared and inferred types, first type errors"
+2026-10-27,b0db559,wasm-small-gzip,299,,KiB,tree=dirty,"also declared and inferred types, first type errors"
+2026-10-27,9f65728,wasm-small,841,,KiB,tree=dirty,"also flow facts, null checks narrowing locals"
+2026-10-27,9f65728,wasm-small-gzip,301,,KiB,tree=dirty,"also flow facts, null checks narrowing locals"
+2026-10-27,e128e4c,wasm-small,851,,KiB,tree=dirty,"also builtin operators' signatures, what may bubble"
+2026-10-27,e128e4c,wasm-small-gzip,304,,KiB,tree=dirty,"also builtin operators' signatures, what may bubble"
+2026-10-27,3187787,wasm-small,945,,KiB,tree=dirty,"also std built in, and run loading the std modules it imports"
+2026-10-27,3187787,wasm-small-gzip,331,,KiB,tree=dirty,"also std built in, and run loading the std modules it imports"
+2026-10-27,c2dbf09,chromarite-tests,0.44,0.56,s,runner=tempest;tree=dirty,"56 tests; two runs, release and small builds alike"
+2026-10-27,c2dbf09,peak-memory-chromarite-tests,12.2,12.5,MiB,runner=tempest;tree=dirty,"two runs, release and small builds alike"
+2026-10-27,c2dbf09,ordable-tests,21,22,s,runner=tempest;tree=dirty,"29 tests; two runs, release and small builds alike"
+2026-10-27,c2dbf09,peak-memory-ordable-tests,11.4,,MiB,runner=tempest;tree=dirty,"two runs, release and small builds alike"
+2026-10-27,c2dbf09,ordable-tests,14,22,s,runner=tempest;build=release;tree=dirty;load=quieter,"29 tests; from the previous chunk's report, c2dbf09-era, exact commit not recorded"
+2026-10-27,3187787,ordable-tests,23.0,,s,runner=tempest;build=release;tree=dirty;load=busy,"29 tests; tempest test, std embedding uncommitted; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,27.4,,s,runner=tempest;build=release;tree=dirty;load=busy,"29 tests; tempest test, std embedding uncommitted; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,29.8,,s,runner=tempest;build=release;tree=dirty;load=busy,"29 tests; tempest test, std embedding uncommitted; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,18.9,,s,runner=py;tree=dirty;load=busy,"29 tests; Kotlin Temper py backend output from ~03:43, python3 -m unittest, no JVM startup; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,16.5,,s,runner=py;tree=dirty;load=busy,"29 tests; Kotlin Temper py backend output from ~03:43, python3 -m unittest, no JVM startup; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,16.5,,s,runner=py;tree=dirty;load=busy,"29 tests; Kotlin Temper py backend output from ~03:43, python3 -m unittest, no JVM startup; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-import,0.07,,s,runner=py;tree=dirty;load=busy,"import only; Kotlin Temper py backend output from ~03:43, python3 -m unittest, no JVM startup; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,12.2,,s,runner=lua;tree=dirty;load=busy,"29 tests; Temper-built Lua, lua ordable/tests/init-test.lua, Lua 5.4; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,9.9,,s,runner=lua;tree=dirty;load=busy,"29 tests; Temper-built Lua, lua ordable/tests/init-test.lua, Lua 5.4; busy: another job compiling, load ~2"
+2026-10-27,3187787,ordable-tests,10.5,,s,runner=lua;tree=dirty;load=busy,"29 tests; Temper-built Lua, lua ordable/tests/init-test.lua, Lua 5.4; busy: another job compiling, load ~2"
+2026-10-27,12d4576,wasm-small,967775,,bytes,,"before the sources layer; built from a clean export of the commit"
+2026-10-27,12d4576,wasm-small-gzip,338711,,bytes,,"before the sources layer; built from a clean export of the commit"
+2026-10-27,12d4576,wasm-small,977995,,bytes,tree=dirty,"also Sources, reading files through layers (disk, std built in, memory)"
+2026-10-27,12d4576,wasm-small-gzip,341691,,bytes,tree=dirty,"also Sources, reading files through layers (disk, std built in, memory)"
+2026-10-27,518fd73,wasm-small,978051,,bytes,,"before classes' types; built from a clean export of the commit"
+2026-10-27,518fd73,wasm-small-gzip,341737,,bytes,,"before classes' types; built from a clean export of the commit"
+2026-10-27,aa2d723,wasm-small,1008572,,bytes,,"classes' types: this, new, members, subtyping, ties (typing/members.rs)"
+2026-10-27,aa2d723,wasm-small-gzip,351004,,bytes,,"classes' types: this, new, members, subtyping, ties (typing/members.rs)"
+2026-10-27,518fd73,run-temper-small,1264120,,bytes,features=no-net,"before classes' types; built from a clean export of the commit"
+2026-10-27,aa2d723,run-temper-small,1288696,,bytes,features=no-net,"classes' types"
+2026-10-27,518fd73,peak-memory-settle-all,14.2,14.3,MiB,run=rust;files=828;features=no-net,"before classes' types; small build, three --bench 1 runs"
+2026-10-27,aa2d723,peak-memory-settle-all,14.3,14.4,MiB,run=rust;files=828;features=no-net,"classes' types; small build, three --bench 1 runs"
+2026-10-27,518fd73,lex-parse-module-settle-ms,233.8,288.1,ms,run=rust;files=828;features=no-net,"before classes' types; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-27,aa2d723,lex-parse-module-settle-ms,244.8,270.8,ms,run=rust;files=828;features=no-net,"classes' types; no change beyond noise"
+2026-10-27,518fd73,ordable-tests,64.2,69.5,s,runner=tempest;build=release,"33 tests, on Ordable's working tree with its uncommitted new tests; the rise from 21-30 s is there at this commit too, not from classes' types; before them, alternating with the next row"
+2026-10-27,aa2d723,ordable-tests,62.9,71.9,s,runner=tempest;build=release,"33 tests; classes' types; no change beyond noise"
+2026-10-27,aa2d723,chromarite-tests,0.38,0.47,s,runner=tempest;build=release,"56 tests; classes' types"
+2026-10-28,b19d7ac,lex-tokens-small,448928,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,lex-tokens-release,631096,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,parse-tree-small,518560,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,parse-tree-release,752984,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,ast-tree-small,690592,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,ast-tree-release,1044816,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,run-temper-small,2599432,,bytes,features=net;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,run-temper-release,4844408,,bytes,features=net;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,tempest-small,2599432,,bytes,features=net;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,tempest-release,4863152,,bytes,features=net;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,wasm-small,1072081,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,wasm-small-gzip,368890,,bytes,tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,peak-memory-parse-all,16.2,,MiB,run=rust;files=828;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,peak-memory-parse-all,195.9,,MiB,run=kotlin-jvm;files=828;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,peak-memory-ast-all,16.3,,MiB,run=rust;files=828;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,peak-memory-ast-all,253.6,,MiB,run=kotlin-jvm;files=828;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,peak-memory-settle-all,16.3,,MiB,run=rust;files=828;tree=dirty,"builtin types' members read from core (typing/core_members.rs), all five types at once; measure_size.py"
+2026-10-28,b19d7ac,run-temper-small,1288696,,bytes,features=no-net,"before builtin types' members; built from a clean export of the commit"
+2026-10-28,b19d7ac,run-temper-small,1350136,,bytes,features=no-net;tree=dirty,"builtin types' members read from core, each type lazily; ~51 KiB of it is core.temper's embedded text"
+2026-10-28,b19d7ac,wasm-small,1008628,,bytes,,"before builtin types' members; built from a clean export of the commit"
+2026-10-28,b19d7ac,wasm-small-gzip,351034,,bytes,,"before builtin types' members; built from a clean export of the commit"
+2026-10-28,b19d7ac,wasm-small,1068561,,bytes,tree=dirty,"builtin types' members read from core, each type lazily"
+2026-10-28,b19d7ac,wasm-small-gzip,367575,,bytes,tree=dirty,"builtin types' members read from core, each type lazily"
+2026-10-28,b19d7ac,lex-parse-module-settle-ms,232.9,261.6,ms,run=rust;files=828;features=no-net,"before builtin types' members; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,b19d7ac,lex-parse-module-settle-ms,232.2,260.1,ms,run=rust;files=828;features=no-net;tree=dirty,"builtin types' members read from core; no change beyond noise"
+2026-10-28,b19d7ac,peak-memory-settle-all,14.3,14.4,MiB,run=rust;files=828;features=no-net,"before builtin types' members; small build, three --bench 1 runs"
+2026-10-28,b19d7ac,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=828;features=no-net;tree=dirty,"builtin types' members read from core; small build, three --bench 1 runs"
+2026-10-28,0faea27,wasm-small,1068617,,bytes,,"before @operator methods; built from a clean export of the commit"
+2026-10-28,0faea27,wasm-small-gzip,367624,,bytes,,"before @operator methods; built from a clean export of the commit"
+2026-10-28,0faea27,wasm-small,1077441,,bytes,tree=dirty,"@operator methods typed and run, class operands of builtin operators checked"
+2026-10-28,0faea27,wasm-small-gzip,370610,,bytes,tree=dirty,"@operator methods typed and run, class operands of builtin operators checked"
+2026-10-28,0faea27,run-temper-small,1350136,,bytes,features=no-net,"before @operator methods; built from a clean export of the commit"
+2026-10-28,0faea27,run-temper-small,1358328,,bytes,features=no-net;tree=dirty,"@operator methods typed and run"
+2026-10-28,0faea27,lex-parse-module-settle-ms,196.8,211.2,ms,run=rust;files=828;features=no-net,"before @operator methods; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,0faea27,lex-parse-module-settle-ms,201.5,208.8,ms,run=rust;files=828;features=no-net;tree=dirty,"@operator methods; no change beyond noise"
+2026-10-28,0faea27,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=828;features=no-net,"before @operator methods; small build, three --bench 1 runs"
+2026-10-28,0faea27,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=828;features=no-net;tree=dirty,"@operator methods; small build, three --bench 1 runs"
+2026-10-28,360f944,ordable-tests,52.0,76.1,s,runner=tempest;build=release,"33 tests at Ordable 88f537d; quiet machine (load ~1.1-1.8), alternating with the py and lua rows, three rounds; first round slowest"
+2026-10-28,360f944,ordable-tests,56.9,60.1,s,runner=py,"33 tests at Ordable 88f537d; Kotlin Temper py backend (0.6.1-dev+505), python3 -m unittest, no JVM startup; alternating, three rounds"
+2026-10-28,360f944,ordable-tests,24.9,27.2,s,runner=lua,"33 tests at Ordable 88f537d; Kotlin Temper lua backend (0.6.1-dev+505), Lua 5.4.6; alternating, three rounds"
+2026-10-28,a52d64b,run-temper-small,1358328,,bytes,features=no-net,"before abstract members' signatures and override checks; built from a clean export of the commit"
+2026-10-28,a52d64b,run-temper-small,1366520,,bytes,features=no-net;tree=dirty,"abstract members' parameters kept, their calls typed, and overrides' signatures checked"
+2026-10-28,a52d64b,lex-parse-module-settle-ms,240.6,250.4,ms,run=rust;files=812;features=no-net,"before abstract members' signatures; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,a52d64b,lex-parse-module-settle-ms,243.3,256.3,ms,run=rust;files=812;features=no-net;tree=dirty,"abstract members' signatures and override checks; no change beyond noise"
+2026-10-28,a52d64b,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=812;features=no-net,"before abstract members' signatures; small build, three --bench 1 runs"
+2026-10-28,a52d64b,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=812;features=no-net;tree=dirty,"abstract members' signatures and override checks; small build, three --bench 1 runs"
+2026-10-28,e550a2d,run-temper-small,1366520,,bytes,features=no-net;tree=dirty,"bubbling written as `T throws Bubble` in messages, and `is` narrowing to types; same size as before"
+2026-10-28,e550a2d,lex-parse-module-settle-ms,193.5,213.0,ms,run=rust;files=824;features=no-net,"before `is` narrowing to types; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,e550a2d,lex-parse-module-settle-ms,198.0,215.3,ms,run=rust;files=824;features=no-net;tree=dirty,"`is` narrowing to types, and bubbling written as in Temper; no change beyond noise"
+2026-10-28,e550a2d,peak-memory-settle-all,14.2,14.2,MiB,run=rust;files=824;features=no-net,"before `is` narrowing to types; small build, three --bench 1 runs"
+2026-10-28,e550a2d,peak-memory-settle-all,14.2,14.2,MiB,run=rust;files=824;features=no-net;tree=dirty,"`is` narrowing to types, and bubbling written as in Temper; small build, three --bench 1 runs"
+2026-10-28,3e29f54,tempest-small,2615816,,bytes,features=net,"before is and as checks' errors; built from a clean export of the commit"
+2026-10-28,3e29f54,tempest-small,2619912,,bytes,features=net;tree=dirty,"Kotlin's errors for is and as checks, and as checks' bubbling"
+2026-10-28,3e29f54,run-temper-small,1366520,,bytes,features=no-net,"before is and as checks' errors; built from a clean export of the commit"
+2026-10-28,3e29f54,run-temper-small,1370616,,bytes,features=no-net;tree=dirty,"Kotlin's errors for is and as checks, and as checks' bubbling"
+2026-10-28,3e29f54,wasm-small,1088506,,bytes,,"before is and as checks' errors; built from a clean export of the commit"
+2026-10-28,3e29f54,wasm-small-gzip,373838,,bytes,,"before is and as checks' errors; built from a clean export of the commit"
+2026-10-28,3e29f54,wasm-small,1092970,,bytes,tree=dirty,"Kotlin's errors for is and as checks, and as checks' bubbling"
+2026-10-28,3e29f54,wasm-small-gzip,375204,,bytes,tree=dirty,"Kotlin's errors for is and as checks, and as checks' bubbling"
+2026-10-28,3e29f54,lex-parse-module-settle-ms,194.5,208.4,ms,run=rust;files=824;features=no-net,"before is and as checks' errors; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,3e29f54,lex-parse-module-settle-ms,198.7,210.2,ms,run=rust;files=824;features=no-net;tree=dirty,"is and as checks' errors; no change beyond noise"
+2026-10-28,3e29f54,peak-memory-settle-all,14.2,14.3,MiB,run=rust;files=824;features=no-net,"before is and as checks' errors; small build, three --bench 1 runs"
+2026-10-28,3e29f54,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=824;features=no-net;tree=dirty,"is and as checks' errors; small build, three --bench 1 runs"
+2026-10-28,09fbc5f,tempest-small,2619912,,bytes,features=net,"before nullable targets and Void as a value; built from a clean export of the commit"
+2026-10-28,09fbc5f,tempest-small,2619912,,bytes,features=net;tree=dirty,"nullable targets (x is T? passes null) and Void as a value"
+2026-10-28,09fbc5f,run-temper-small,1370616,,bytes,features=no-net,"before nullable targets and Void as a value; built from a clean export of the commit"
+2026-10-28,09fbc5f,run-temper-small,1370616,,bytes,features=no-net;tree=dirty,"nullable targets (x is T? passes null) and Void as a value"
+2026-10-28,09fbc5f,wasm-small,1093002,,bytes,,"before nullable targets and Void as a value; built from a clean export of the commit"
+2026-10-28,09fbc5f,wasm-small-gzip,375192,,bytes,,"before nullable targets and Void as a value; built from a clean export of the commit"
+2026-10-28,09fbc5f,wasm-small,1090963,,bytes,tree=dirty,"nullable targets (x is T? passes null) and Void as a value"
+2026-10-28,09fbc5f,wasm-small-gzip,374930,,bytes,tree=dirty,"nullable targets (x is T? passes null) and Void as a value"
+2026-10-28,09fbc5f,lex-parse-module-settle-ms,196.6,208.8,ms,run=rust;files=824;features=no-net,"before nullable targets and Void as a value; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,09fbc5f,lex-parse-module-settle-ms,196.8,206.8,ms,run=rust;files=824;features=no-net;tree=dirty,"nullable targets and Void as a value; no change beyond noise"
+2026-10-28,09fbc5f,peak-memory-settle-all,14.4,14.5,MiB,run=rust;files=824;features=no-net,"before nullable targets and Void as a value; small build, three --bench 1 runs"
+2026-10-28,09fbc5f,peak-memory-settle-all,14.5,14.5,MiB,run=rust;files=824;features=no-net;tree=dirty,"nullable targets and Void as a value; small build, three --bench 1 runs"
+2026-10-28,96267ff,tempest-small,2619912,,bytes,features=net,"before generic types; built from a clean export of the commit"
+2026-10-28,96267ff,tempest-small,2624008,,bytes,features=net;tree=dirty,"generic types written out and type parameters as types"
+2026-10-28,96267ff,run-temper-small,1370616,,bytes,features=no-net,"before generic types; built from a clean export of the commit"
+2026-10-28,96267ff,run-temper-small,1378808,,bytes,features=no-net;tree=dirty,"generic types written out and type parameters as types"
+2026-10-28,96267ff,wasm-small,1090971,,bytes,,"before generic types; built from a clean export of the commit"
+2026-10-28,96267ff,wasm-small-gzip,374935,,bytes,,"before generic types; built from a clean export of the commit"
+2026-10-28,96267ff,wasm-small,1100858,,bytes,tree=dirty,"generic types written out and type parameters as types"
+2026-10-28,96267ff,wasm-small-gzip,377630,,bytes,tree=dirty,"generic types written out and type parameters as types"
+2026-10-28,96267ff,lex-parse-module-settle-ms,196.5,263.8,ms,run=rust;files=824;features=no-net;load=busy,"before generic types; small build's run-temper --bench, medians of 5 runs of 10 rounds, alternating with the next row"
+2026-10-28,96267ff,lex-parse-module-settle-ms,193.3,274.7,ms,run=rust;files=824;features=no-net;load=busy;tree=dirty,"generic types, without builtin supertypes; no change beyond noise (a second pair: 197.0-260.9 before, 195.6-282.3 after)"
+2026-10-28,96267ff,lex-parse-module-settle-ms,221.6,225.1,ms,run=rust;files=824;features=no-net;load=busy,"before generic types; a later pair, alternating with the next row"
+2026-10-28,96267ff,lex-parse-module-settle-ms,220.7,266.5,ms,run=rust;files=824;features=no-net;load=busy;tree=dirty,"generic types; no change beyond noise"
+2026-10-28,96267ff,peak-memory-settle-all,14.2,14.4,MiB,run=rust;files=824;features=no-net,"before generic types; small build, three --bench 1 runs, three rounds"
+2026-10-28,96267ff,peak-memory-settle-all,14.2,14.5,MiB,run=rust;files=824;features=no-net;tree=dirty,"generic types; small build, three --bench 1 runs, three rounds"
+2026-10-28,c74b270,tempest-small,2624008,,bytes,features=net,"before generic run-time checks; built from a clean export of the commit"
+2026-10-28,c74b270,tempest-small,2628104,,bytes,features=net;tree=dirty,"run-time checks of generic types (export plus that change alone)"
+2026-10-28,c74b270,tempest-small,2640392,,bytes,features=net;tree=dirty,"then generic calls solved per call"
+2026-10-28,c74b270,run-temper-small,1378808,,bytes,features=no-net,"before generic run-time checks; built from a clean export of the commit"
+2026-10-28,c74b270,run-temper-small,1382904,,bytes,features=no-net;tree=dirty,"run-time checks of generic types (export plus that change alone)"
+2026-10-28,c74b270,run-temper-small,1395192,,bytes,features=no-net;tree=dirty,"then generic calls solved per call"
+2026-10-28,c74b270,wasm-small,1100922,,bytes,,"before generic run-time checks; built from a clean export of the commit"
+2026-10-28,c74b270,wasm-small-gzip,377726,,bytes,,"before generic run-time checks; built from a clean export of the commit"
+2026-10-28,c74b270,wasm-small,1102846,,bytes,tree=dirty,"run-time checks of generic types (export plus that change alone)"
+2026-10-28,c74b270,wasm-small-gzip,378482,,bytes,tree=dirty,"run-time checks of generic types (export plus that change alone)"
+2026-10-28,c74b270,wasm-small,1113834,,bytes,tree=dirty,"then generic calls solved per call"
+2026-10-28,c74b270,wasm-small-gzip,382546,,bytes,tree=dirty,"then generic calls solved per call"
+2026-10-28,c74b270,lex-parse-module-settle-ms,212.3,221.3,ms,run=rust;files=824;features=no-net,"before generic run-time checks; alternating with the next row"
+2026-10-28,c74b270,lex-parse-module-settle-ms,207.2,220.5,ms,run=rust;files=824;features=no-net;tree=dirty,"run-time checks of generic types; no change beyond noise"
+2026-10-28,c74b270,lex-parse-module-settle-ms,207.5,215.6,ms,run=rust;files=824;features=no-net;tree=dirty,"then generic calls solved per call; alternating with the run-time checks build (212.2-220.8), no change beyond noise"
+2026-10-28,c74b270,peak-memory-settle-all,14.3,14.4,MiB,run=rust;files=824;features=no-net,"before generic run-time checks; small build, three --bench 1 runs"
+2026-10-28,c74b270,peak-memory-settle-all,14.2,14.4,MiB,run=rust;files=824;features=no-net;tree=dirty,"run-time checks of generic types; small build, three --bench 1 runs, two rounds"
+2026-10-28,c74b270,peak-memory-settle-all,14.3,14.3,MiB,run=rust;files=824;features=no-net;tree=dirty,"then generic calls solved per call; small build, three --bench 1 runs"
+2026-10-28,fddb24a,tempest-small,2648584,,bytes,features=net;tree=dirty,"generic classes' constructors and members, generic methods, and generic calls solved from the type wanted"
+2026-10-28,fddb24a,run-temper-small,1403384,,bytes,features=no-net;tree=dirty,"generic classes' constructors and members, generic methods, and generic calls solved from the type wanted"
+2026-10-28,fddb24a,wasm-small,1123868,,bytes,tree=dirty,"generic classes' constructors and members, generic methods, and generic calls solved from the type wanted"
+2026-10-28,fddb24a,wasm-small-gzip,385867,,bytes,tree=dirty,"generic classes' constructors and members, generic methods, and generic calls solved from the type wanted"
+2026-10-28,fddb24a,lex-parse-module-settle-ms,219.1,290.7,ms,run=rust;files=825;features=no-net;tree=dirty,"generic classes and methods, and solving from the type wanted; alternating with fddb24a (211.3-335.7), no change beyond noise"
+2026-10-28,fddb24a,peak-memory-settle-all,14.2,14.2,MiB,run=rust;files=825;features=no-net;tree=dirty,"generic classes and methods, and solving from the type wanted; small build, three --bench 1 runs, the same as fddb24a"
+2026-10-28,2e17cb0,tempest-small,2652680,,bytes,features=net;tree=dirty,"builtin generic types' members read from core, and a[i] typed as a.get(i)"
+2026-10-28,2e17cb0,run-temper-small,1411576,,bytes,features=no-net;tree=dirty,"builtin generic types' members read from core, and a[i] typed as a.get(i)"
+2026-10-28,2e17cb0,wasm-small,1130840,,bytes,tree=dirty,"builtin generic types' members read from core, and a[i] typed as a.get(i)"
+2026-10-28,2e17cb0,wasm-small-gzip,388352,,bytes,tree=dirty,"builtin generic types' members read from core, and a[i] typed as a.get(i)"
+2026-10-28,2e17cb0,lex-parse-module-settle-ms,281.4,354.3,ms,run=rust;files=825;features=no-net;tree=dirty,"builtin generic types' members; alternating with 2e17cb0 (256.5-526.0), no change beyond noise"
+2026-10-28,2e17cb0,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"builtin generic types' members; small build, three --bench 1 runs, 2e17cb0 14.3-14.4"
+2026-10-29,cdec4c9,tempest-small,2656776,,bytes,features=net;tree=dirty,"users' generic supertypes typed"
+2026-10-29,cdec4c9,run-temper-small,1415672,,bytes,features=no-net;tree=dirty,"users' generic supertypes typed"
+2026-10-29,cdec4c9,wasm-small,1135904,,bytes,tree=dirty,"users' generic supertypes typed"
+2026-10-29,cdec4c9,wasm-small-gzip,390021,,bytes,tree=dirty,"users' generic supertypes typed"
+2026-10-29,cdec4c9,lex-parse-module-settle-ms,214.1,229.3,ms,run=rust;files=825;features=no-net;tree=dirty,"users' generic supertypes; alternating with cdec4c9 (212.6-228.9), no change beyond noise"
+2026-10-29,cdec4c9,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"users' generic supertypes; small build, three --bench 1 runs, cdec4c9 14.4-14.4"
+2026-10-29,51acb11,tempest-small,2660872,,bytes,features=net;tree=dirty,"overrides of generic supertypes checked"
+2026-10-29,51acb11,run-temper-small,1419768,,bytes,features=no-net;tree=dirty,"overrides of generic supertypes checked"
+2026-10-29,51acb11,wasm-small,1139274,,bytes,tree=dirty,"overrides of generic supertypes checked"
+2026-10-29,51acb11,wasm-small-gzip,391176,,bytes,tree=dirty,"overrides of generic supertypes checked"
+2026-10-29,51acb11,lex-parse-module-settle-ms,212.9,221.7,ms,run=rust;files=825;features=no-net;tree=dirty,"overrides of generic supertypes; alternating with 51acb11 (212.0-223.5), no change beyond noise"
+2026-10-29,51acb11,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"overrides of generic supertypes; small build, three --bench 1 runs, 51acb11 14.4-14.4"
+2026-10-29,ed9faa9,tempest-small,2660872,,bytes,features=net;tree=dirty,"function types compared part by part"
+2026-10-29,ed9faa9,run-temper-small,1419768,,bytes,features=no-net;tree=dirty,"function types compared part by part"
+2026-10-29,ed9faa9,wasm-small,1140950,,bytes,tree=dirty,"function types compared part by part"
+2026-10-29,ed9faa9,wasm-small-gzip,391792,,bytes,tree=dirty,"function types compared part by part"
+2026-10-29,ed9faa9,lex-parse-module-settle-ms,216.3,227.6,ms,run=rust;files=825;features=no-net;tree=dirty,"function types part by part; alternating with ed9faa9 (209.6-223.1), no change beyond noise"
+2026-10-29,ed9faa9,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"function types part by part; small build, three --bench 1 runs, ed9faa9 14.2-14.4"
+2026-10-29,273ee31,tempest-small,2673160,,bytes,features=net;tree=dirty,"builtin generic methods solved per call"
+2026-10-29,273ee31,run-temper-small,1427960,,bytes,features=no-net;tree=dirty,"builtin generic methods solved per call"
+2026-10-29,273ee31,wasm-small,1151264,,bytes,tree=dirty,"builtin generic methods solved per call"
+2026-10-29,273ee31,wasm-small-gzip,394049,,bytes,tree=dirty,"builtin generic methods solved per call"
+2026-10-29,273ee31,lex-parse-module-settle-ms,207.1,222.5,ms,run=rust;files=825;features=no-net;tree=dirty,"builtin generic methods; alternating with 273ee31 (206.3-217.8), no change beyond noise"
+2026-10-29,273ee31,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"builtin generic methods; small build, three --bench 1 runs, 273ee31 14.3-14.4"
+2026-10-29,86bc92c,tempest-small,2677256,,bytes,features=net;tree=dirty,"list literals typed from the type wanted"
+2026-10-29,86bc92c,run-temper-small,1432056,,bytes,features=no-net;tree=dirty,"list literals typed from the type wanted"
+2026-10-29,86bc92c,wasm-small,1156263,,bytes,tree=dirty,"list literals typed from the type wanted"
+2026-10-29,86bc92c,wasm-small-gzip,395809,,bytes,tree=dirty,"list literals typed from the type wanted"
+2026-10-29,86bc92c,lex-parse-module-settle-ms,199.8,214.4,ms,run=rust;files=825;features=no-net;tree=dirty,"list literals and target typing; alternating with 86bc92c (202.3-214.2), no change beyond noise"
+2026-10-29,86bc92c,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"list literals and target typing; small build, three --bench 1 runs, 86bc92c 14.2-14.4"
+2026-10-29,17af4d6,tempest-small,2681352,,bytes,features=net;tree=dirty,"function literals typed from the type wanted"
+2026-10-29,17af4d6,run-temper-small,1440248,,bytes,features=no-net;tree=dirty,"function literals typed from the type wanted"
+2026-10-29,17af4d6,wasm-small,1162768,,bytes,tree=dirty,"function literals typed from the type wanted"
+2026-10-29,17af4d6,wasm-small-gzip,397840,,bytes,tree=dirty,"function literals typed from the type wanted"
+2026-10-29,17af4d6,lex-parse-module-settle-ms,209.0,226.8,ms,run=rust;files=825;features=no-net;tree=dirty,"function literals and target typing; alternating with 17af4d6 (205.9-221.0), two runs, about 2% slower: calls with trailing blocks and literals' bodies are now checked"
+2026-10-29,17af4d6,peak-memory-settle-all,14.4,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"function literals and target typing; small build, three --bench 1 runs, 17af4d6 14.3-14.4"
+2026-10-29,218c44e,tempest-small,2681352,,bytes,features=net;tree=dirty,"trailing blocks placed by typing at run time"
+2026-10-29,218c44e,run-temper-small,1440248,,bytes,features=no-net;tree=dirty,"trailing blocks placed by typing at run time"
+2026-10-29,218c44e,wasm-small,1162828,,bytes,tree=dirty,"trailing blocks placed by typing at run time"
+2026-10-29,218c44e,wasm-small-gzip,398262,,bytes,tree=dirty,"trailing blocks placed by typing at run time"
+2026-10-29,218c44e,lex-parse-module-settle-ms,212.6,223.8,ms,run=rust;files=825;features=no-net;tree=dirty,"trailing blocks placed by typing at run time; alternating with 218c44e (211.5-221.5), two runs, no change beyond noise"
+2026-10-29,218c44e,peak-memory-settle-all,14.2,14.3,MiB,run=rust;files=825;features=no-net;tree=dirty,"trailing blocks placed by typing at run time; small build, three --bench 1 runs per run, 218c44e 14.2-14.3"
+2026-10-29,2fc1955,tempest-small,2685448,,bytes,features=net;tree=dirty,"returns and bubbling in function literals"
+2026-10-29,2fc1955,run-temper-small,1440248,,bytes,features=no-net;tree=dirty,"returns and bubbling in function literals"
+2026-10-29,2fc1955,wasm-small,1163361,,bytes,tree=dirty,"returns and bubbling in function literals"
+2026-10-29,2fc1955,wasm-small-gzip,397885,,bytes,tree=dirty,"returns and bubbling in function literals"
+2026-10-29,2fc1955,lex-parse-module-settle-ms,209.2,224.1,ms,run=rust;files=825;features=no-net;tree=dirty,"returns and bubbling in function literals; alternating with 2fc1955 (203.9-224.1), two runs, no change beyond noise"
+2026-10-29,2fc1955,peak-memory-settle-all,14.3,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"returns and bubbling in function literals; small build, three --bench 1 runs per run, 2fc1955 14.3-14.4"
+2026-10-29,173262a,tempest-small,2685448,,bytes,features=net;tree=dirty,"@fun interfaces as function types"
+2026-10-29,173262a,run-temper-small,1444344,,bytes,features=no-net;tree=dirty,"@fun interfaces as function types"
+2026-10-29,173262a,wasm-small,1166005,,bytes,tree=dirty,"@fun interfaces as function types"
+2026-10-29,173262a,wasm-small-gzip,398817,,bytes,tree=dirty,"@fun interfaces as function types"
+2026-10-29,173262a,lex-parse-module-settle-ms,223.6,233.2,ms,run=rust;files=825;features=no-net;tree=dirty,"@fun interfaces as function types; alternating with 173262a (220.4-235.2), two runs, no change beyond noise"
+2026-10-29,173262a,peak-memory-settle-all,14.2,14.6,MiB,run=rust;files=825;features=no-net;tree=dirty,"@fun interfaces as function types; small build, three --bench 1 runs per run, 173262a 14.2-14.6"
+2026-10-29,0e7260f,run-temper-small,1456632,,bytes,features=no-net;tree=dirty,"object literals' class from the type wanted; 0e7260f 1444344"
+2026-10-29,0e7260f,lex-parse-module-settle-ms,228.8,239.8,ms,run=rust;files=825;features=no-net;tree=dirty,"object literals' class from the type wanted; alternating with 0e7260f (226.8-237.5), two runs, no change beyond noise"
+2026-10-29,0e7260f,peak-memory-settle-all,14.3,14.4,MiB,run=rust;files=825;features=no-net;tree=dirty,"object literals' class from the type wanted; small build, three --bench 1 runs per run, 0e7260f 14.3-14.4"
+2026-10-29,d106e3b,run-temper-small,1509880,,bytes,features=no-net;tree=dirty,"every expression typed, calls resolved; d106e3b 1468920"
+2026-10-29,d106e3b,lex-parse-module-settle-ms,275.3,320.5,ms,run=rust;files=827;features=no-net;tree=dirty,"every expression typed, calls resolved; medians of 40 passes, two runs alternating with d106e3b (262.4-314.5); minimums 249.1-254.0 against 231.2-253.1, so about 2-8% slower"
+2026-10-29,d106e3b,peak-memory-settle-all,13.3,13.3,MiB,run=rust;files=827;features=no-net;tree=dirty,"every expression typed, calls resolved; small build, three --bench 1 runs, d106e3b 13.2-13.3"
+2026-10-30,06a7e0a,tempest-small,3291656,,bytes,features=net,"tmpl, its translation from settled libraries, and the py, rust and js backends for subset A"
+2026-10-30,06a7e0a,run-temper-small,1751544,,bytes,features=no-net,"tmpl and its translation from settled libraries (run-temper --tmpl)"
+2026-10-30,06a7e0a,wasm-small,1226527,,bytes,,"tmpl and its translation from settled libraries"
+2026-10-30,06a7e0a,wasm-small-gzip,420870,,bytes,,"tmpl and its translation from settled libraries"
+2026-10-30,06a7e0a,lex-parse-module-settle-ms,219.9,226.4,ms,run=rust;files=830;features=no-net,"release build; medians of 40 passes, three runs"
+2026-10-30,06a7e0a,peak-memory-settle-all,13.2,13.3,MiB,run=rust;files=830;features=no-net,"small build, three --bench 1 runs"
+2026-10-30,06a7e0a,tempest-small,3303944,,bytes,features=net;tree=dirty,"JS source maps, and backends as cargo features (all on); 06a7e0a 3291656"
+2026-10-30,06a7e0a,tempest-small-no-backends,2746888,,bytes,features=net;tree=dirty,"tempest without its backend features"
+2026-10-30,06a7e0a,backend-py-small,69632,,bytes,features=net;tree=dirty,"small tempest with all three backends less without py"
+2026-10-30,06a7e0a,backend-rust-small,122880,,bytes,features=net;tree=dirty,"small tempest with all three backends less without rust"
+2026-10-30,06a7e0a,backend-js-small,77824,,bytes,features=net;tree=dirty,"small tempest with all three backends less without js; with source maps (69632 before them)"
+2026-10-30,06a7e0a,backends-shared-small,278528,,bytes,features=net;tree=dirty,"what any one backend brings beyond its own share: tmpl, to_tmpl, and the code they use"
+2026-10-30,06a7e0a,wasm-small,1783742,,bytes,tree=dirty,"generate, with the py, rust and js backends; 06a7e0a 1226527"
+2026-10-30,06a7e0a,wasm-small-gzip,603636,,bytes,tree=dirty,"generate, with the py, rust and js backends; 06a7e0a 420870"
+2026-10-30,06a7e0a,wasm-small-no-backends,1230244,,bytes,tree=dirty,"temper-wasm without its backend features; 422195 gzipped"
+2026-10-30,06a7e0a,backend-py-wasm,71208,,bytes,tree=dirty,"wasm with all three backends less without py; 22815 gzipped"
+2026-10-30,06a7e0a,backend-rust-wasm,126796,,bytes,tree=dirty,"wasm with all three backends less without rust; 41383 gzipped"
+2026-10-30,06a7e0a,backend-js-wasm,87019,,bytes,tree=dirty,"wasm with all three backends less without js; 30165 gzipped"
+2026-10-30,06a7e0a,backends-shared-wasm,265687,,bytes,tree=dirty,"what py brings to wasm beyond its own share (rust 268505, js 268430): tmpl, to_tmpl, and the code they use; 86520 gzipped"
+2026-10-30,a4cf8a0,tempest-small,3480072,,bytes,features=net;tree=dirty,"py, rust, js, java, and csharp backends for subset A; string order by code point"
+2026-10-30,a4cf8a0,tempest-small-no-backends,2746888,,bytes,features=net;tree=dirty,"tempest without its backend features"
+2026-10-30,a4cf8a0,backend-java-small,77824,,bytes,features=net;tree=dirty,"small tempest with all five backends less without java"
+2026-10-30,a4cf8a0,backend-csharp-small,94208,,bytes,features=net;tree=dirty,"small tempest with all five backends less without csharp"
+2026-10-30,a4cf8a0,wasm-small,1969978,,bytes,tree=dirty,"generate, with the py, rust, js, java, and csharp backends"
+2026-10-30,a4cf8a0,wasm-small-gzip,664384,,bytes,tree=dirty,"generate, with the py, rust, js, java, and csharp backends"
+2026-10-30,a4cf8a0,wasm-small-no-backends,1230276,,bytes,tree=dirty,"temper-wasm without its backend features; 422181 gzipped"
+2026-10-30,a4cf8a0,backend-java-wasm,84035,,bytes,tree=dirty,"wasm with all five backends less without java; 26851 gzipped"
+2026-10-30,a4cf8a0,backend-csharp-wasm,98715,,bytes,tree=dirty,"wasm with all five backends less without csharp; 32486 gzipped"
+2026-10-30,0387dfa,tempest-small,3643912,,bytes,features=net;tree=dirty,"py, rust, js, java, csharp, cpp, and lua backends for subset A"
+2026-10-30,0387dfa,tempest-small-no-backends,2746888,,bytes,features=net;tree=dirty,"tempest without its backend features"
+2026-10-30,0387dfa,backend-cpp-small,81920,,bytes,features=net;tree=dirty,"small tempest with all seven backends less without cpp"
+2026-10-30,0387dfa,backend-lua-small,69632,,bytes,features=net;tree=dirty,"small tempest with all seven backends less without lua"
+2026-10-30,0387dfa,wasm-small,2151500,,bytes,tree=dirty,"generate, with all seven backends"
+2026-10-30,0387dfa,wasm-small-gzip,724576,,bytes,tree=dirty,"generate, with all seven backends"
+2026-10-30,0387dfa,wasm-small-no-backends,1230299,,bytes,tree=dirty,"temper-wasm without its backend features; 422128 gzipped"
+2026-10-30,0387dfa,backend-cpp-wasm,91647,,bytes,tree=dirty,"wasm with all seven backends less without cpp; 31313 gzipped"
+2026-10-30,0387dfa,backend-lua-wasm,85154,,bytes,tree=dirty,"wasm with all seven backends less without lua; 27228 gzipped"
+2026-11-03,2324f34,lex-tokens-small,448928,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,lex-tokens-release,631096,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,parse-tree-small,518560,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,parse-tree-release,752984,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,ast-tree-small,690592,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,ast-tree-release,1044816,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,run-temper-small,3267080,,bytes,features=net;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,run-temper-release,6171808,,bytes,features=net;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,tempest-small,5790216,,bytes,features=net;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,tempest-release,10990632,,bytes,features=net;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,wasm-small,3693303,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,wasm-small-gzip,1197175,,bytes,tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,peak-memory-parse-all,197.6,,MiB,run=kotlin-jvm;files=842;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,2324f34,peak-memory-ast-all,249.7,,MiB,run=kotlin-jvm;files=842;tree=dirty,"measure_size.py; other libraries' class members and their names"
+2026-11-03,3d88eec,backend-py-small,276,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-py-wasm,241,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-rust-small,408,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-rust-wasm,363,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-js-small,264,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-js-wasm,236,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-java-small,328,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-java-wasm,257,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-csharp-small,308,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-csharp-wasm,250,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-cpp-small,408,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-cpp-wasm,276,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-lua-small,332,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backend-lua-wasm,215,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,backends-shared-small,120,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,backends-shared-wasm,534,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,tempest-small-no-backends,3267080,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,wasm-small-no-backends,1280868,,bytes,tree=dirty,measure_size.py
+2026-11-03,3d88eec,tempest-small,5667,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,run-temper-small,3191,,KiB,features=net;tree=dirty,measure_size.py
+2026-11-03,3d88eec,wasm-small,3631,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,wasm-small-gzip,1175,,KiB,tree=dirty,measure_size.py
+2026-11-03,3d88eec,peak-memory-parse-all,6.3,,MiB,run=rust;files=845;tree=dirty,measure_size.py
+2026-11-03,3d88eec,peak-memory-parse-all,197.7,,MiB,run=kotlin-jvm;files=845;tree=dirty,measure_size.py
+2026-11-03,3d88eec,peak-memory-ast-all,9.5,,MiB,run=rust;files=845;tree=dirty,measure_size.py
+2026-11-03,3d88eec,peak-memory-ast-all,253.5,,MiB,run=kotlin-jvm;files=845;tree=dirty,measure_size.py
+2026-11-03,3d88eec,peak-memory-settle-all,11.8,,MiB,run=rust;files=845;tree=dirty,measure_size.py
+2026-11-03,42092b8,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,run-temper-small,3275272,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,42092b8,run-temper-release,6180680,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,42092b8,tempest-small,5831176,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,42092b8,tempest-release,11077240,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,42092b8,wasm-small,3747000,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,wasm-small-gzip,1211823,,bytes,tree=dirty,measure_size.py
+2026-11-03,42092b8,peak-memory-parse-all,6.3,,MiB,run=rust;files=844;tree=dirty,measure_size.py
+2026-11-03,42092b8,peak-memory-parse-all,194.2,,MiB,run=kotlin-jvm;files=844;tree=dirty,measure_size.py
+2026-11-03,42092b8,peak-memory-ast-all,9.9,,MiB,run=rust;files=844;tree=dirty,measure_size.py
+2026-11-03,42092b8,peak-memory-ast-all,247.5,,MiB,run=kotlin-jvm;files=844;tree=dirty,measure_size.py
+2026-11-03,42092b8,peak-memory-settle-all,12.1,,MiB,run=rust;files=844;tree=dirty,measure_size.py
+2026-11-03,21ca58d,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,run-temper-small,3275272,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,21ca58d,run-temper-release,6180576,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,21ca58d,tempest-small,5884424,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,21ca58d,tempest-release,11142480,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-03,21ca58d,wasm-small,3793311,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,wasm-small-gzip,1226781,,bytes,tree=dirty,measure_size.py
+2026-11-03,21ca58d,peak-memory-parse-all,6.5,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-03,21ca58d,peak-memory-parse-all,214.3,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-03,21ca58d,peak-memory-ast-all,9.2,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-03,21ca58d,peak-memory-ast-all,247.2,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-03,21ca58d,peak-memory-settle-all,11.7,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,807c5be,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,run-temper-small,3279368,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,807c5be,run-temper-release,6180800,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,807c5be,tempest-small,5892616,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,807c5be,tempest-release,11170216,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,807c5be,wasm-small,3806545,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,wasm-small-gzip,1231171,,bytes,tree=dirty,measure_size.py
+2026-11-04,807c5be,peak-memory-parse-all,6.5,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,807c5be,peak-memory-parse-all,191.3,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,807c5be,peak-memory-ast-all,9.3,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,807c5be,peak-memory-ast-all,254.5,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,807c5be,peak-memory-settle-all,11.6,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,8417090,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,run-temper-small,3279368,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,8417090,run-temper-release,6180808,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,8417090,tempest-small,5929480,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,8417090,tempest-release,11224864,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,8417090,wasm-small,3838298,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,wasm-small-gzip,1241114,,bytes,tree=dirty,measure_size.py
+2026-11-04,8417090,peak-memory-parse-all,6.2,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,8417090,peak-memory-parse-all,186.1,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,8417090,peak-memory-ast-all,9.3,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,8417090,peak-memory-ast-all,244.2,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,8417090,peak-memory-settle-all,11.9,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,6615672,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,run-temper-small,3283464,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,6615672,run-temper-release,6185064,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,6615672,tempest-small,5929480,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,6615672,tempest-release,11229640,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-04,6615672,wasm-small,3839876,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,wasm-small-gzip,1241948,,bytes,tree=dirty,measure_size.py
+2026-11-04,6615672,peak-memory-parse-all,6.5,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,6615672,peak-memory-parse-all,185.4,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,6615672,peak-memory-ast-all,9.3,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,6615672,peak-memory-ast-all,224.5,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-04,6615672,peak-memory-settle-all,12.2,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-04,7649668,build-tempest-release-s,117.3,,s,load=2-agents;tree=dirty,record_times.py --time
+2026-11-04,7649668,build-tempest-release-cpu-s,461.0,,s,load=2-agents;tree=dirty,record_times.py --time
+2026-11-05,7649668,build-tempest-incremental-s,26.3,,s,load=2-agents;tree=dirty,record_times.py --time
+2026-11-05,7649668,build-tempest-incremental-cpu-s,87.1,,s,load=2-agents;tree=dirty,record_times.py --time
+2026-11-05,7649668,clippy-s,13.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,clippy-cpu-s,43.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-syntax-s,22.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-syntax-cpu-s,22.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-tmpl-s,3.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-tmpl-cpu-s,3.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-frontend-s,72.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-frontend-cpu-s,111.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-funtests-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-funtests-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-be-testkit-s,5.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-be-testkit-cpu-s,6.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-py-s,431.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-py-cpu-s,500.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-rust-s,16.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-rust-cpu-s,28.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-js-s,22.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-js-cpu-s,45.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-lua-s,11.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-lua-cpu-s,19.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-cpp-s,265.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-cpp-cpu-s,636.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-java-s,31.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-java-cpu-s,73.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-csharp-s,63.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,funtest-csharp-cpu-s,107.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-wasm-s,19.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,test-temper-wasm-cpu-s,38.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,build-wasm-small-s,29.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,7649668,build-wasm-small-cpu-s,37.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-py-runs-checked-s,235.9,,s,load=1-agent,record_times.py --time; per-case checks (main binary)
+2026-11-05,d13d4d7,funtest-py-runs-checked-cpu-s,258.5,,s,load=1-agent,record_times.py --time; per-case checks (main binary)
+2026-11-05,d13d4d7,funtest-py-runs-checked-s,11.7,,s,load=1-agent;tree=dirty,record_times.py --time; batched checks and bulk; cold mypy cache
+2026-11-05,d13d4d7,funtest-py-runs-checked-cpu-s,13.4,,s,load=1-agent;tree=dirty,record_times.py --time; batched checks and bulk; cold mypy cache
+2026-11-05,d13d4d7,clippy-s,0.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,clippy-cpu-s,1.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-syntax-s,7.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-syntax-cpu-s,7.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-tmpl-s,1.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-tmpl-cpu-s,1.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-frontend-s,20.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-frontend-cpu-s,22.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-be-testkit-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-be-testkit-cpu-s,0.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-py-s,8.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-py-cpu-s,13.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-rust-s,8.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-rust-cpu-s,12.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-js-s,10.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-js-cpu-s,18.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-lua-s,6.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-lua-cpu-s,9.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-cpp-s,162.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-cpp-cpu-s,377.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-java-s,15.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-java-cpu-s,35.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-csharp-s,23.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,funtest-csharp-cpu-s,41.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-tempest-s,2.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-tempest-cpu-s,4.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-wasm-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,test-temper-wasm-cpu-s,0.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,build-wasm-small-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,d13d4d7,build-wasm-small-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-syntax-s,7.5,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-syntax-cpu-s,7.5,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-tmpl-s,1.4,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-tmpl-cpu-s,1.3,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-frontend-s,21.7,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-frontend-cpu-s,24.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-funtests-s,0.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-funtests-cpu-s,0.0,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-be-testkit-s,0.2,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-be-testkit-cpu-s,0.3,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-py-s,8.6,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-py-cpu-s,13.2,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-rust-s,8.7,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-rust-cpu-s,13.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-js-s,12.3,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-js-cpu-s,23.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-lua-s,7.5,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-lua-cpu-s,11.3,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-cpp-s,104.3,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-cpp-cpu-s,314.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-java-s,16.6,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-java-cpu-s,37.4,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-csharp-s,24.2,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,funtest-csharp-cpu-s,44.2,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-tempest-s,3.2,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-tempest-cpu-s,4.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-wasm-s,0.5,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,test-temper-wasm-cpu-s,0.5,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,build-wasm-small-s,0.1,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,77ff5b5,build-wasm-small-cpu-s,0.0,,s,load=other-agents;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,clippy-s,0.3,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,clippy-cpu-s,0.3,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-syntax-s,8.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-syntax-cpu-s,8.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-tmpl-s,3.4,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-tmpl-cpu-s,7.1,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-frontend-s,43.5,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-frontend-cpu-s,62.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-funtests-s,0.1,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-funtests-cpu-s,0.1,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-be-testkit-s,3.0,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-be-testkit-cpu-s,4.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-py-s,16.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-py-cpu-s,27.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-rust-s,16.0,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-rust-cpu-s,30.4,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-js-s,17.9,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-js-cpu-s,37.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-lua-s,9.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-lua-cpu-s,17.9,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-cpp-s,102.6,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-cpp-cpu-s,329.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-java-s,32.6,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-java-cpu-s,78.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-csharp-s,34.1,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,funtest-csharp-cpu-s,67.6,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-tempest-s,9.0,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-tempest-cpu-s,18.7,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-wasm-s,3.5,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,test-temper-wasm-cpu-s,6.9,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,build-wasm-small-s,30.2,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,ca9bcbf,build-wasm-small-cpu-s,98.8,,s,load=agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,clippy-s,0.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,clippy-cpu-s,1.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-syntax-s,7.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-syntax-cpu-s,7.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-tmpl-s,1.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-tmpl-cpu-s,1.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-frontend-s,21.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-frontend-cpu-s,23.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-be-testkit-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-be-testkit-cpu-s,0.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-py-s,8.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-py-cpu-s,13.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-rust-s,8.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-rust-cpu-s,13.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-lua-s,7.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-lua-cpu-s,10.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-cpp-s,81.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-cpp-cpu-s,247.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-java-s,17.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-java-cpu-s,39.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-csharp-s,25.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,funtest-csharp-cpu-s,46.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-tempest-s,6.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-tempest-cpu-s,12.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-wasm-s,2.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,test-temper-wasm-cpu-s,5.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,build-wasm-small-s,8.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,47bb65c,build-wasm-small-cpu-s,22.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,clippy-s,6.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,clippy-cpu-s,20.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-syntax-s,8.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-syntax-cpu-s,8.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-tmpl-s,3.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-tmpl-cpu-s,6.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-funtests-cpu-s,0.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-be-testkit-s,1.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-be-testkit-cpu-s,2.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-py-s,12.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-py-cpu-s,21.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-rust-s,11.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-rust-cpu-s,17.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-js-s,13.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-js-cpu-s,24.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-lua-s,8.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-lua-cpu-s,13.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-cpp-s,87.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-cpp-cpu-s,267.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-java-s,19.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-java-cpu-s,42.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-csharp-s,26.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-csharp-cpu-s,48.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-tempest-s,10.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-tempest-cpu-s,21.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-wasm-s,3.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-wasm-cpu-s,5.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,build-wasm-small-s,28.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,build-wasm-small-cpu-s,67.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,clippy-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-syntax-s,8.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-syntax-cpu-s,8.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-tmpl-s,1.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-tmpl-cpu-s,1.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-frontend-s,23.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-frontend-cpu-s,26.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-be-testkit-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-be-testkit-cpu-s,0.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-py-s,9.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-py-cpu-s,14.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-rust-s,9.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-rust-cpu-s,13.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-js-s,11.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-js-cpu-s,21.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-lua-s,6.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-lua-cpu-s,10.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-cpp-s,87.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-cpp-cpu-s,268.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-java-s,17.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-java-cpu-s,40.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-csharp-s,25.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,funtest-csharp-cpu-s,46.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-tempest-s,2.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-tempest-cpu-s,4.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-wasm-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,test-temper-wasm-cpu-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,build-wasm-small-s,0.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5ee1eff,build-wasm-small-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,clippy-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-syntax-s,10.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-syntax-cpu-s,11.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-tmpl-s,5.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-tmpl-cpu-s,11.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-frontend-s,38.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-frontend-cpu-s,54.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-be-testkit-s,3.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-be-testkit-cpu-s,5.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-py-s,18.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-py-cpu-s,29.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-rust-s,27.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-rust-cpu-s,98.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-js-s,28.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-js-cpu-s,57.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-lua-s,16.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-lua-cpu-s,30.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-cpp-s,158.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-cpp-cpu-s,497.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-java-s,39.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-java-cpu-s,90.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-csharp-s,48.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,funtest-csharp-cpu-s,93.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-tempest-s,18.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-tempest-cpu-s,39.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-wasm-s,4.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,test-temper-wasm-cpu-s,8.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,build-wasm-small-s,37.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,69c7642,build-wasm-small-cpu-s,95.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fa729b8,clippy-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,clippy-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-syntax-s,10.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-syntax-cpu-s,10.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-tmpl-s,2.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-tmpl-cpu-s,1.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-frontend-s,39.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-frontend-cpu-s,65.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-funtests-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-funtests-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-be-testkit-s,1.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-be-testkit-cpu-s,2.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-py-s,15.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-py-cpu-s,25.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-rust-s,11.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-rust-cpu-s,18.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-js-s,17.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-js-cpu-s,34.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-lua-s,11.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-lua-cpu-s,19.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-java-s,25.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-java-cpu-s,60.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-csharp-s,29.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-csharp-cpu-s,55.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-wasm-s,4.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-wasm-cpu-s,8.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,build-wasm-small-s,39.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,build-wasm-small-cpu-s,103.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,clippy-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,clippy-cpu-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-syntax-s,10.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-syntax-cpu-s,10.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-tmpl-s,1.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-tmpl-cpu-s,1.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-frontend-s,33.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-frontend-cpu-s,38.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-funtests-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-funtests-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-be-testkit-s,0.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-be-testkit-cpu-s,0.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-py-s,19.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-py-cpu-s,33.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-rust-s,17.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-rust-cpu-s,28.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-js-s,19.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-js-cpu-s,39.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-lua-s,8.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-lua-cpu-s,13.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-cpp-s,127.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-cpp-cpu-s,413.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-java-s,28.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-java-cpu-s,67.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-csharp-s,30.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,funtest-csharp-cpu-s,56.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-tempest-s,3.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-tempest-cpu-s,4.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-wasm-s,0.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,test-temper-wasm-cpu-s,0.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,build-wasm-small-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fa729b8,build-wasm-small-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,fea0fa1,clippy-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-syntax-s,7.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-syntax-cpu-s,7.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-tmpl-s,1.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-tmpl-cpu-s,1.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-frontend-s,22.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-frontend-cpu-s,24.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-be-testkit-s,0.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-be-testkit-cpu-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-py-s,12.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-py-cpu-s,18.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-rust-s,9.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-rust-cpu-s,14.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-js-s,14.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-js-cpu-s,26.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-lua-s,8.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-lua-cpu-s,12.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-cpp-s,135.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-cpp-cpu-s,461.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-java-s,29.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-java-cpu-s,66.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-csharp-s,40.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,funtest-csharp-cpu-s,85.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-tempest-s,13.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-tempest-cpu-s,29.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-wasm-s,4.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-wasm-cpu-s,7.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-core-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,build-wasm-small-s,6.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,fea0fa1,build-wasm-small-cpu-s,10.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,clippy-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-syntax-s,16.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-syntax-cpu-s,16.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-tmpl-s,3.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-tmpl-cpu-s,3.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-frontend-s,42.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-frontend-cpu-s,47.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-be-testkit-s,0.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-be-testkit-cpu-s,0.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-py-s,28.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-py-cpu-s,40.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-rust-s,16.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-rust-cpu-s,25.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-lua-s,9.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-lua-cpu-s,13.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-cpp-s,131.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-cpp-cpu-s,448.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-java-s,33.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-java-cpu-s,75.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-csharp-s,32.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-csharp-cpu-s,55.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-tempest-s,7.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-tempest-cpu-s,13.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-wasm-s,3.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-wasm-cpu-s,6.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-core-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,build-wasm-small-s,23.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,build-wasm-small-cpu-s,66.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,clippy-s,1.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,clippy-cpu-s,2.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-syntax-s,10.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-syntax-cpu-s,10.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-tmpl-s,1.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-tmpl-cpu-s,1.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-frontend-s,28.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-frontend-cpu-s,31.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-be-testkit-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-be-testkit-cpu-s,0.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-py-s,18.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-py-cpu-s,22.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-rust-s,11.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-rust-cpu-s,16.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-js-s,16.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-js-cpu-s,27.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-lua-s,9.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-lua-cpu-s,13.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-cpp-s,108.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-cpp-cpu-s,352.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-java-s,38.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-java-cpu-s,85.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-csharp-s,32.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,funtest-csharp-cpu-s,56.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-tempest-s,3.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-tempest-cpu-s,4.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-wasm-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-wasm-cpu-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-core-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,build-wasm-small-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,5910a01,build-wasm-small-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-s,1.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-cpu-s,3.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-s,9.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-cpu-s,9.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-s,1.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-cpu-s,1.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-s,29.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-cpu-s,33.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-s,3.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-cpu-s,4.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-s,26.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-cpu-s,41.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-s,25.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-cpu-s,49.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-s,26.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-cpu-s,53.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-s,16.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-cpu-s,26.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-s,179.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-cpu-s,699.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-s,45.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-cpu-s,104.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-s,37.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-cpu-s,69.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-s,3.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-cpu-s,6.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-s,5.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-cpu-s,9.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-s,0.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-cpu-s,2.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-s,10.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-cpu-s,10.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-s,2.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-cpu-s,2.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-s,30.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-cpu-s,34.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-cpu-s,0.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-s,20.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-cpu-s,31.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-s,22.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-cpu-s,45.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-s,20.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-cpu-s,39.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-s,10.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-cpu-s,16.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-s,176.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-cpu-s,679.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-s,30.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-cpu-s,69.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-s,29.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-cpu-s,54.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-s,3.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-cpu-s,5.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-s,4.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-cpu-s,4.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,clippy-cpu-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-s,11.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-syntax-cpu-s,11.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-s,2.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-tmpl-cpu-s,2.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-s,33.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-frontend-cpu-s,38.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-s,0.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-be-testkit-cpu-s,1.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-s,22.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-py-cpu-s,35.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-s,15.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-rust-cpu-s,30.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-s,17.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-js-cpu-s,34.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-s,11.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-lua-cpu-s,17.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-s,152.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-cpp-cpu-s,602.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-s,27.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-java-cpu-s,64.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-s,31.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,funtest-csharp-cpu-s,57.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-tempest-s,3.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-tempest-cpu-s,4.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-wasm-cpu-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-s,0.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,9daba5c,build-wasm-small-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-05,a348abb,clippy-s,9.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,clippy-cpu-s,28.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-syntax-s,10.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-syntax-cpu-s,10.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-tmpl-s,4.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-tmpl-cpu-s,10.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-frontend-s,36.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-frontend-cpu-s,55.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-funtests-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-funtests-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-be-testkit-s,7.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-be-testkit-cpu-s,12.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-py-s,20.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-py-cpu-s,31.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-rust-s,29.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-rust-cpu-s,93.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-js-s,23.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-js-cpu-s,46.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-lua-s,15.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-lua-cpu-s,24.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-cpp-s,162.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-cpp-cpu-s,630.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-java-s,35.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-java-cpu-s,80.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-csharp-s,43.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,funtest-csharp-cpu-s,78.7,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-tempest-s,15.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-tempest-cpu-s,29.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-wasm-s,5.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-wasm-cpu-s,9.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-core-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,test-temper-core-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,build-wasm-small-s,18.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,a348abb,build-wasm-small-cpu-s,18.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,clippy-s,9.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,clippy-cpu-s,32.7,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-syntax-s,8.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-syntax-cpu-s,8.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-tmpl-s,3.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-tmpl-cpu-s,6.3,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-funtests-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-funtests-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-py-s,18.9,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-py-cpu-s,28.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-rust-s,18.4,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-rust-cpu-s,55.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-js-s,15.7,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-js-cpu-s,29.0,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-lua-s,9.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-lua-cpu-s,13.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-cpp-s,169.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-cpp-cpu-s,570.3,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-java-s,30.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-java-cpu-s,75.3,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-csharp-s,35.7,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-csharp-cpu-s,69.6,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-tempest-s,10.0,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-tempest-cpu-s,20.9,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-wasm-s,5.4,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-wasm-cpu-s,10.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-core-s,0.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-core-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,build-wasm-small-s,41.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,build-wasm-small-cpu-s,110.0,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,clippy-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,clippy-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-syntax-s,9.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-syntax-cpu-s,9.4,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-tmpl-s,1.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-tmpl-cpu-s,1.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-frontend-s,25.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-frontend-cpu-s,28.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-funtests-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-funtests-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-be-testkit-s,0.4,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-be-testkit-cpu-s,0.6,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-py-s,19.7,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-py-cpu-s,30.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-rust-s,21.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-rust-cpu-s,43.4,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-js-s,23.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-js-cpu-s,43.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-lua-s,11.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-lua-cpu-s,17.9,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-cpp-s,211.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-cpp-cpu-s,803.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-java-s,30.6,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-java-cpu-s,72.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-csharp-s,42.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,funtest-csharp-cpu-s,80.5,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-tempest-s,5.6,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-tempest-cpu-s,7.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-wasm-s,0.7,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-wasm-cpu-s,0.8,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-core-s,0.2,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,test-temper-core-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,build-wasm-small-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-05,9076ee7,build-wasm-small-cpu-s,0.1,,s,load=3-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,run-temper-small,3299848,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,3d91b41,run-temper-release,6233256,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,3d91b41,tempest-small,6240776,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,3d91b41,tempest-release,11816136,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,3d91b41,wasm-small,4095420,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,wasm-small-gzip,1324775,,bytes,tree=dirty,measure_size.py
+2026-11-06,3d91b41,peak-memory-parse-all,6.4,,MiB,run=rust;files=846;tree=dirty,measure_size.py
+2026-11-06,3d91b41,peak-memory-parse-all,191.6,,MiB,run=kotlin-jvm;files=846;tree=dirty,measure_size.py
+2026-11-06,3d91b41,peak-memory-ast-all,9.2,,MiB,run=rust;files=846;tree=dirty,measure_size.py
+2026-11-06,3d91b41,peak-memory-ast-all,253.0,,MiB,run=kotlin-jvm;files=846;tree=dirty,measure_size.py
+2026-11-06,3d91b41,peak-memory-settle-all,11.9,,MiB,run=rust;files=846;tree=dirty,measure_size.py
+2026-11-06,3d91b41,clippy-s,5.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,clippy-cpu-s,18.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-syntax-s,16.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-syntax-cpu-s,16.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-tmpl-s,4.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-tmpl-cpu-s,4.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-frontend-s,48.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-frontend-cpu-s,79.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-funtests-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-funtests-cpu-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-be-testkit-s,11.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-be-testkit-cpu-s,16.6,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-py-s,25.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-py-cpu-s,39.5,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-rust-s,20.9,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-rust-cpu-s,41.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-js-s,25.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-js-cpu-s,50.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-lua-s,17.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-lua-cpu-s,28.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-cpp-s,256.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-cpp-cpu-s,976.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-java-s,43.0,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-java-cpu-s,100.3,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-csharp-s,38.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,funtest-csharp-cpu-s,74.8,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-tempest-s,7.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-tempest-cpu-s,14.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-wasm-s,3.4,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-wasm-cpu-s,7.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-core-s,0.2,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,test-temper-core-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,build-wasm-small-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,3d91b41,build-wasm-small-cpu-s,0.1,,s,load=2-agents;tree=dirty,record_times.py
+2026-11-06,7fc2086,clippy-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-syntax-s,7.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-syntax-cpu-s,7.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-tmpl-s,3.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-tmpl-cpu-s,6.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-frontend-s,26.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-frontend-cpu-s,36.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-funtests-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-rust-s,12.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-rust-cpu-s,22.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-lua-s,10.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-lua-cpu-s,15.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-cpp-s,110.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-cpp-cpu-s,391.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-java-s,19.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-java-cpu-s,43.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-csharp-s,29.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-csharp-cpu-s,51.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-wasm-s,3.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-wasm-cpu-s,6.8,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-core-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,build-wasm-small-s,28.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,build-wasm-small-cpu-s,68.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,clippy-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,clippy-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-syntax-s,8.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-syntax-cpu-s,8.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-tmpl-s,1.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-tmpl-cpu-s,1.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-frontend-s,23.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-frontend-cpu-s,26.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-funtests-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-funtests-cpu-s,0.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-be-testkit-s,0.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-be-testkit-cpu-s,0.6,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-py-s,12.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-py-cpu-s,19.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-rust-s,9.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-rust-cpu-s,18.7,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-js-s,13.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-js-cpu-s,24.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-lua-s,8.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-lua-cpu-s,12.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-cpp-s,110.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-cpp-cpu-s,393.2,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-java-s,18.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-java-cpu-s,41.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-csharp-s,27.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,funtest-csharp-cpu-s,47.4,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-tempest-s,2.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-tempest-cpu-s,3.9,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-wasm-s,0.5,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-wasm-cpu-s,1.3,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-core-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,test-temper-core-cpu-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,build-wasm-small-s,0.1,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,7fc2086,build-wasm-small-cpu-s,0.0,,s,load=1-agent;tree=dirty,record_times.py
+2026-11-06,68151d3,clippy-s,8.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,clippy-cpu-s,27.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-syntax-s,7.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-syntax-cpu-s,7.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-tmpl-s,3.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-tmpl-cpu-s,7.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-frontend-s,29.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-frontend-cpu-s,43.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-be-testkit-s,3.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-be-testkit-cpu-s,4.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-py-s,18.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-py-cpu-s,28.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-rust-s,13.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-rust-cpu-s,24.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-js-s,16.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-js-cpu-s,30.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-lua-s,10.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-lua-cpu-s,17.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-cpp-s,160.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-cpp-cpu-s,616.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-java-s,21.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-java-cpu-s,48.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-csharp-s,31.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,funtest-csharp-cpu-s,58.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-tempest-s,8.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-tempest-cpu-s,20.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-wasm-s,4.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-wasm-cpu-s,9.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,build-wasm-small-s,32.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,68151d3,build-wasm-small-cpu-s,108.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,clippy-s,10.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,clippy-cpu-s,34.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-s,10.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-cpu-s,10.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-s,4.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-cpu-s,8.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-s,34.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-cpu-s,47.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-s,24.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-cpu-s,35.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-s,31.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-cpu-s,86.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-s,27.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-cpu-s,54.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-s,15.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-cpu-s,24.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-s,214.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-cpu-s,801.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-s,31.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-cpu-s,73.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-s,41.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-cpu-s,78.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-s,4.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-cpu-s,10.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-s,42.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-cpu-s,108.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-s,10.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-cpu-s,10.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-s,5.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-cpu-s,13.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-s,39.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-cpu-s,65.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-be-testkit-s,5.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-be-testkit-cpu-s,9.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-s,22.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-cpu-s,34.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-s,16.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-cpu-s,31.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-s,22.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-cpu-s,42.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-s,12.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-cpu-s,18.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-s,185.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-cpu-s,674.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-s,39.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-cpu-s,98.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-s,46.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-cpu-s,87.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-tempest-s,59.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-tempest-cpu-s,178.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-s,6.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-cpu-s,15.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-s,0.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-cpu-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-s,46.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-cpu-s,144.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,clippy-s,1.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,clippy-cpu-s,3.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-s,11.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-syntax-cpu-s,11.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-s,2.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-tmpl-cpu-s,2.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-s,48.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-frontend-cpu-s,58.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-be-testkit-s,0.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-be-testkit-cpu-s,1.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-s,29.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-py-cpu-s,47.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-s,25.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-rust-cpu-s,51.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-s,17.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-js-cpu-s,33.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-s,8.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-lua-cpu-s,13.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-s,160.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-cpp-cpu-s,564.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-s,23.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-java-cpu-s,53.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-s,28.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,funtest-csharp-cpu-s,50.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-tempest-s,27.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-tempest-cpu-s,74.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-s,3.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-wasm-cpu-s,8.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-s,7.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,12ecca9,build-wasm-small-cpu-s,12.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,clippy-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,clippy-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-syntax-s,8.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-syntax-cpu-s,8.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-tmpl-s,8.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-tmpl-cpu-s,22.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-frontend-s,54.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-frontend-cpu-s,83.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-be-testkit-s,11.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-be-testkit-cpu-s,22.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-py-s,35.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-py-cpu-s,68.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-rust-s,30.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-rust-cpu-s,62.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-js-s,20.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-js-cpu-s,41.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-lua-s,11.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-lua-cpu-s,20.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-cpp-s,188.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-cpp-cpu-s,668.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-java-s,28.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-java-cpu-s,66.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-csharp-s,42.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,funtest-csharp-cpu-s,81.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-tempest-s,26.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-tempest-cpu-s,73.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-wasm-s,3.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-wasm-cpu-s,7.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,build-wasm-small-s,42.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,481be5a,build-wasm-small-cpu-s,137.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,clippy-s,10.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,clippy-cpu-s,29.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-syntax-s,10.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-syntax-cpu-s,10.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-tmpl-s,1.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-tmpl-cpu-s,1.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-frontend-s,31.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-frontend-cpu-s,46.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-be-testkit-s,5.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-be-testkit-cpu-s,6.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-py-s,21.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-py-cpu-s,31.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-rust-s,21.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-rust-cpu-s,41.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-js-s,25.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-js-cpu-s,51.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-lua-s,14.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-lua-cpu-s,22.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-cpp-s,164.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-cpp-cpu-s,602.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-java-s,27.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-java-cpu-s,61.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-csharp-s,30.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,funtest-csharp-cpu-s,55.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-tempest-s,32.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-tempest-cpu-s,90.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-wasm-s,5.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-wasm-cpu-s,11.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,build-wasm-small-s,20.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,build-wasm-small-cpu-s,29.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,75e0d51,lex-tokens-small,448928,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,lex-tokens-release,631096,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,parse-tree-small,518560,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,parse-tree-release,752984,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,ast-tree-small,690592,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,ast-tree-release,1044816,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,run-temper-small,3344904,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,75e0d51,run-temper-release,6309928,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,75e0d51,tempest-small,6601224,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,75e0d51,tempest-release,12434672,,bytes,features=net;tree=dirty,measure_size.py
+2026-11-06,75e0d51,wasm-small,4214709,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,wasm-small-gzip,1363094,,bytes,tree=dirty,measure_size.py
+2026-11-06,75e0d51,peak-memory-parse-all,6.4,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-06,75e0d51,peak-memory-parse-all,180.2,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-06,75e0d51,peak-memory-ast-all,9.1,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-06,75e0d51,peak-memory-ast-all,246.1,,MiB,run=kotlin-jvm;files=842;tree=dirty,measure_size.py
+2026-11-06,75e0d51,peak-memory-settle-all,12.3,,MiB,run=rust;files=842;tree=dirty,measure_size.py
+2026-11-06,0e2638d,clippy-s,4.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,clippy-cpu-s,13.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-syntax-s,12.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-syntax-cpu-s,12.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-tmpl-s,2.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-tmpl-cpu-s,2.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-frontend-s,43.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-frontend-cpu-s,68.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-be-testkit-s,13.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-be-testkit-cpu-s,23.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-py-s,45.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-py-cpu-s,73.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-rust-s,24.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-rust-cpu-s,47.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-js-s,25.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-js-cpu-s,48.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-lua-s,19.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-lua-cpu-s,31.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-cpp-s,183.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-cpp-cpu-s,678.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-java-s,31.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-java-cpu-s,70.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-csharp-s,41.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,funtest-csharp-cpu-s,80.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-tempest-s,44.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-tempest-cpu-s,128.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-wasm-s,5.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-wasm-cpu-s,10.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,build-wasm-small-s,25.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,0e2638d,build-wasm-small-cpu-s,31.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-syntax-s,10.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-syntax-cpu-s,14.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-tmpl-s,1.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-tmpl-cpu-s,1.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-be-testkit-s,0.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-be-testkit-cpu-s,0.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-py-s,15.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-py-cpu-s,22.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-rust-s,12.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-rust-cpu-s,23.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-js-s,14.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-js-cpu-s,27.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-lua-s,9.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-lua-cpu-s,14.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-cpp-s,140.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-cpp-cpu-s,491.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-java-s,26.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-java-cpu-s,63.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-csharp-s,38.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,funtest-csharp-cpu-s,69.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-tempest-s,31.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-tempest-cpu-s,83.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-wasm-s,4.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-wasm-cpu-s,10.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,build-wasm-small-s,24.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,8ab9d9c,build-wasm-small-cpu-s,60.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,clippy-s,5.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,clippy-cpu-s,15.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-syntax-s,7.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-syntax-cpu-s,7.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-tmpl-s,1.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-tmpl-cpu-s,1.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-frontend-s,30.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-frontend-cpu-s,42.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-be-testkit-s,3.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-be-testkit-cpu-s,4.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-py-s,17.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-py-cpu-s,26.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-rust-s,17.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-rust-cpu-s,52.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-js-s,16.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-js-cpu-s,31.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-lua-s,11.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-lua-cpu-s,16.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-cpp-s,69.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-cpp-cpu-s,243.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-java-s,21.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-java-cpu-s,47.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-csharp-s,30.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,funtest-csharp-cpu-s,56.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-tempest-s,26.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-tempest-cpu-s,79.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-wasm-s,3.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-wasm-cpu-s,8.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-core-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,build-wasm-small-s,16.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,a8bd9f5,build-wasm-small-cpu-s,16.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-syntax-s,11.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-syntax-cpu-s,11.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-tmpl-s,10.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-tmpl-cpu-s,29.0,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-funtests-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-funtests-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-be-testkit-s,8.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-be-testkit-cpu-s,11.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-py-s,54.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-py-cpu-s,83.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-rust-s,35.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-rust-cpu-s,113.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-js-s,26.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-js-cpu-s,55.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-lua-s,18.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-lua-cpu-s,32.4,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-cpp-s,107.7,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-cpp-cpu-s,403.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-java-s,34.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-java-cpu-s,81.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-csharp-s,39.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,funtest-csharp-cpu-s,75.3,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-tempest-s,40.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-tempest-cpu-s,127.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-wasm-s,5.8,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-wasm-cpu-s,13.6,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-core-s,0.2,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,test-temper-core-cpu-s,0.1,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,build-wasm-small-s,45.5,,s,load=unknown;tree=dirty,record_times.py
+2026-11-06,92f1d04,build-wasm-small-cpu-s,126.9,,s,load=unknown;tree=dirty,record_times.py
+2026-11-07,849ccbd,clippy-s,14.8,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,clippy-cpu-s,53.3,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-syntax-s,8.3,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-syntax-cpu-s,8.4,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-tmpl-s,1.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-tmpl-cpu-s,1.4,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-frontend-s,26.4,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-frontend-cpu-s,30.0,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-analysis-s,7.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-analysis-cpu-s,12.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-funtests-s,0.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-funtests-cpu-s,0.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-be-testkit-s,8.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-be-testkit-cpu-s,14.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-py-s,22.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-py-cpu-s,34.1,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-rust-s,51.8,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-rust-cpu-s,179.7,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-js-s,18.0,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-js-cpu-s,34.8,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-lua-s,12.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-lua-cpu-s,20.8,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-cpp-s,131.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-cpp-cpu-s,417.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-java-s,23.0,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-java-cpu-s,53.5,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-csharp-s,29.9,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,funtest-csharp-cpu-s,57.4,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-tempest-s,25.8,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-tempest-cpu-s,74.4,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-wasm-s,4.0,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-wasm-cpu-s,8.7,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-core-s,1.9,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,test-temper-core-cpu-s,2.9,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,build-wasm-small-s,25.6,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,build-wasm-small-cpu-s,88.2,,s,load=1-agent,record_times.py
+2026-11-07,849ccbd,tempest-small-no-backends,3602952,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,wasm-small-no-backends,1977113,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-py-small,335872,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-py-wasm,293078,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-rust-small,540672,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-rust-wasm,476859,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-js-small,282624,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-js-wasm,251552,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-java-small,397312,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-java-wasm,312866,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-csharp-small,385024,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-csharp-wasm,310628,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-cpp-small,512000,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-cpp-wasm,337558,,bytes,,measure_size.py
+2026-11-07,849ccbd,backend-lua-small,507904,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backend-lua-wasm,246062,,bytes,,measure_size.py
+2026-11-07,849ccbd,backends-shared-small,32768,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,backends-shared-wasm,32773,,bytes,,measure_size.py
+2026-11-07,849ccbd,lex-tokens-small,448928,,bytes,,measure_size.py
+2026-11-07,849ccbd,lex-tokens-release,631568,,bytes,,measure_size.py
+2026-11-07,849ccbd,parse-tree-small,539040,,bytes,,measure_size.py
+2026-11-07,849ccbd,parse-tree-release,777248,,bytes,,measure_size.py
+2026-11-07,849ccbd,ast-tree-small,711072,,bytes,,measure_size.py
+2026-11-07,849ccbd,ast-tree-release,1077144,,bytes,,measure_size.py
+2026-11-07,849ccbd,run-temper-small,3389960,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,run-temper-release,6382336,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,tempest-small,6687240,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,tempest-release,12573112,,bytes,features=net,measure_size.py
+2026-11-07,849ccbd,wasm-small,4299816,,bytes,,measure_size.py
+2026-11-07,849ccbd,wasm-small-gzip,1392057,,bytes,,measure_size.py
+2026-11-07,849ccbd,peak-memory-parse-all,6.6,,MiB,run=rust;files=854,measure_size.py
+2026-11-07,849ccbd,peak-memory-parse-all,192.9,,MiB,run=kotlin-jvm;files=854,measure_size.py
+2026-11-07,849ccbd,peak-memory-ast-all,9.8,,MiB,run=rust;files=854,measure_size.py
+2026-11-07,849ccbd,peak-memory-ast-all,224.1,,MiB,run=kotlin-jvm;files=854,measure_size.py
+2026-11-07,849ccbd,peak-memory-settle-all,12.7,,MiB,run=rust;files=854,measure_size.py
+2026-11-08,f104ea0,clippy-s,19.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,clippy-cpu-s,71.1,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-syntax-s,11.0,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-syntax-cpu-s,11.1,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-tmpl-s,1.9,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-tmpl-cpu-s,1.9,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-frontend-s,33.7,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-frontend-cpu-s,37.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-analysis-s,8.6,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-analysis-cpu-s,14.5,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-funtests-s,0.2,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-funtests-cpu-s,0.1,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-be-testkit-s,10.2,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-be-testkit-cpu-s,17.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-py-s,22.2,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-py-cpu-s,35.4,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-rust-s,14.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-rust-cpu-s,28.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-js-s,64.6,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-js-cpu-s,38.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-lua-s,14.6,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-lua-cpu-s,23.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-cpp-s,58.0,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-cpp-cpu-s,146.5,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-java-s,28.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-java-cpu-s,60.9,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-csharp-s,43.1,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,funtest-csharp-cpu-s,78.8,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-driver-s,2.7,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-driver-cpu-s,5.2,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-lsp-s,6.0,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-lsp-cpu-s,8.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-tempest-s,50.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-tempest-cpu-s,147.9,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-wasm-s,5.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-wasm-cpu-s,11.7,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-core-s,0.2,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,test-temper-core-cpu-s,0.1,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,build-wasm-small-s,35.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,build-wasm-small-cpu-s,114.3,,s,load=1-agent,record_times.py
+2026-11-08,f104ea0,tempest-small-no-backends,3873304,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,wasm-small-no-backends,2040830,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-py-small,339968,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-py-wasm,292738,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-rust-small,548864,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-rust-wasm,474937,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-js-small,290816,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-js-wasm,251208,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-java-small,417792,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-java-wasm,312526,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-csharp-small,385024,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-csharp-wasm,310304,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-cpp-small,512000,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-cpp-wasm,337218,,bytes,,measure_size.py
+2026-11-08,f104ea0,backend-lua-small,507904,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backend-lua-wasm,245738,,bytes,,measure_size.py
+2026-11-08,f104ea0,backends-shared-small,94208,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,backends-shared-wasm,31808,,bytes,,measure_size.py
+2026-11-08,f104ea0,lex-tokens-small,448928,,bytes,,measure_size.py
+2026-11-08,f104ea0,lex-tokens-release,631568,,bytes,,measure_size.py
+2026-11-08,f104ea0,parse-tree-small,539040,,bytes,,measure_size.py
+2026-11-08,f104ea0,parse-tree-release,777248,,bytes,,measure_size.py
+2026-11-08,f104ea0,ast-tree-small,711072,,bytes,,measure_size.py
+2026-11-08,f104ea0,ast-tree-release,1077144,,bytes,,measure_size.py
+2026-11-08,f104ea0,run-temper-small,3389960,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,run-temper-release,6374328,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,tempest-small,7055896,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,tempest-release,13710824,,bytes,features=net,measure_size.py
+2026-11-08,f104ea0,wasm-small,4358509,,bytes,,measure_size.py
+2026-11-08,f104ea0,wasm-small-gzip,1413303,,bytes,,measure_size.py
+2026-11-08,f104ea0,peak-memory-parse-all,6.5,,MiB,run=rust;files=854,measure_size.py
+2026-11-08,f104ea0,peak-memory-parse-all,193.3,,MiB,run=kotlin-jvm;files=854,measure_size.py
+2026-11-08,f104ea0,peak-memory-ast-all,9.8,,MiB,run=rust;files=854,measure_size.py
+2026-11-08,f104ea0,peak-memory-ast-all,249.3,,MiB,run=kotlin-jvm;files=854,measure_size.py
+2026-11-08,f104ea0,peak-memory-settle-all,12.1,,MiB,run=rust;files=854,measure_size.py
+2026-11-13,252861e,clippy-s,20.4,,s,load=quieter,record_times.py
+2026-11-13,252861e,clippy-cpu-s,73.4,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-syntax-s,9.5,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-syntax-cpu-s,9.6,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-tmpl-s,9.5,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-tmpl-cpu-s,21.0,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-frontend-s,63.4,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-frontend-cpu-s,119.4,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-analysis-s,10.0,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-analysis-cpu-s,18.6,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-funtests-s,0.1,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-funtests-cpu-s,0.1,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-be-testkit-s,10.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-be-testkit-cpu-s,19.0,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-py-s,22.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-py-cpu-s,37.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-rust-s,21.6,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-rust-cpu-s,65.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-js-s,20.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-js-cpu-s,39.6,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-lua-s,16.1,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-lua-cpu-s,24.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-cpp-s,357.0,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-cpp-cpu-s,666.5,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-java-s,24.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-java-cpu-s,55.4,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-csharp-s,33.3,,s,load=quieter,record_times.py
+2026-11-13,252861e,funtest-csharp-cpu-s,63.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-driver-s,4.0,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-driver-cpu-s,8.3,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-lsp-s,8.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-lsp-cpu-s,12.9,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-tempest-s,93.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-tempest-cpu-s,497.2,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-wasm-s,11.8,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-wasm-cpu-s,25.7,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-core-s,0.5,,s,load=quieter,record_times.py
+2026-11-13,252861e,test-temper-core-cpu-s,0.5,,s,load=quieter,record_times.py
+2026-11-13,252861e,build-wasm-small-s,1.1,,s,load=quieter,record_times.py
+2026-11-13,252861e,build-wasm-small-cpu-s,1.1,,s,load=quieter,record_times.py

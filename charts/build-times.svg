@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" width="720" height="296" role="img" aria-labelledby="t d">
+<title id="t">Build and lint times (s)</title>
+<desc id="d">No runs recorded yet.</desc>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #e4e3df;
+        --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+        --s5: #e87ba4; --s6: #008300; --s7: #6250d6; }
+  @media (prefers-color-scheme: dark) {
+    svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #34342f;
+          --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+          --s5: #d55181; --s6: #008300; --s7: #9085e9; }
+  }
+  text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink-2); }
+  .title { font-size: 14px; font-weight: 600; fill: var(--ink); }
+  .label { fill: var(--ink); }
+</style>
+<rect width="720" height="296" rx="8" fill="var(--surface)"/>
+<text class="title" x="56" y="24">Build and lint times</text>
+<text x="56" y="42">s, by run; line: rolling median of 5 runs, band: the spread around it</text>
+<text x="56" y="58">GitHub's shared runners, nightly: a trend, not a benchmark</text>
+<text x="293.0" y="164.0" text-anchor="middle">No runs recorded yet</text>
+</svg>
