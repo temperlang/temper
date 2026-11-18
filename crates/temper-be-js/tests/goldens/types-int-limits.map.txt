@@ -1,77 +1,77 @@
 # generated line:column -> source:line:column, and the text at each
-13:1 -> ../limits.temper.md:151:5  /** @param {string} string * <- let checkParse32(string: Str
-14:1 -> ../limits.temper.md:151:5  function checkParse32(string <- let checkParse32(string: Str
-14:10 -> ../limits.temper.md:151:9 (checkParse32)  checkParse32(string) { <- checkParse32(string: String)
-14:22 -> ../limits.temper.md:151:5  (string) { <- let checkParse32(string: Str
-15:3 -> ../limits.temper.md:152:7  /** @type {string} */ <- let converted = string.toInt
-16:3 -> ../limits.temper.md:152:7  let converted; <- let converted = string.toInt
-17:3 -> ../limits.temper.md:152:7  try { <- let converted = string.toInt
-22:3 -> ../limits.temper.md:153:7  console.log(`Parse ${string} <- console.log("Parse ${string}
-25:1 -> ../limits.temper.md:178:5  /** @param {string} string * <- let checkParse64(string: Str
-26:1 -> ../limits.temper.md:178:5  function checkParse64(string <- let checkParse64(string: Str
-26:10 -> ../limits.temper.md:178:9 (checkParse64)  checkParse64(string) { <- checkParse64(string: String)
-26:22 -> ../limits.temper.md:178:5  (string) { <- let checkParse64(string: Str
-27:3 -> ../limits.temper.md:179:7  /** @type {string} */ <- let converted = string.toInt
-28:3 -> ../limits.temper.md:179:7  let converted; <- let converted = string.toInt
-29:3 -> ../limits.temper.md:179:7  try { <- let converted = string.toInt
-34:3 -> ../limits.temper.md:180:7  console.log(`Parse ${string} <- console.log("Parse ${string}
-37:1 -> ../limits.temper.md:14:5  console.log("Int32"); <- console.log("Int32")
-38:1 -> ../limits.temper.md:209:5  let one = 1; <- var one = 1;
-39:1 -> ../limits.temper.md:210:5  one = one; <- one = one;
-40:1 -> ../limits.temper.md:15:5  const big = Math.imul(214748 <- let big = 0x7fff_ffff * one;
-41:1 -> ../limits.temper.md:16:5  const small = Math.imul(-214 <- let small = -0x8000_0000 * o
-42:1 -> ../limits.temper.md:21:5  console.log(`${big} + 1 == $ <- console.log("${big} + 1 == $
-43:1 -> ../limits.temper.md:22:5  console.log(`${small} - 1 == <- console.log("${small} - 1 ==
-44:1 -> ../limits.temper.md:32:5  console.log(`${big} * 4 == $ <- console.log("${big} * 4 == $
-45:1 -> ../limits.temper.md:33:5  console.log(`${small} * 4 == <- console.log("${small} * 4 ==
-46:1 -> ../limits.temper.md:34:5  console.log(`${(small + 1) | <- console.log("${small + 1} *
-47:1 -> ../limits.temper.md:35:5  console.log(`${(small + 1) | <- console.log("${small + 1} *
-48:1 -> ../limits.temper.md:47:5  console.log(`${small} / -1 = <- console.log("${small} / -1 =
-49:1 -> ../limits.temper.md:48:5  console.log(`${small} % -1 = <- console.log("${small} % -1 =
-50:1 -> ../limits.temper.md:49:5  console.log(`-(${small}) == <- console.log("-(${small}) ==
-51:1 -> ../limits.temper.md:59:5  const three = Math.imul(3, o <- let three = 3 * one;
-52:1 -> ../limits.temper.md:60:5  const five = Math.imul(5, on <- let five = 5 * one;
-53:1 -> ../limits.temper.md:61:5  console.log(`${five} / ${thr <- console.log("${five} / ${thr
-54:1 -> ../limits.temper.md:62:5  console.log(`${five} / -${th <- console.log("${five} / -${th
-55:1 -> ../limits.temper.md:63:5  console.log(`-${five} / ${th <- console.log("-${five} / ${th
-56:1 -> ../limits.temper.md:64:5  console.log(`-${five} / -${t <- console.log("-${five} / -${t
-57:1 -> ../limits.temper.md:65:5  console.log(`${five} % ${thr <- console.log("${five} % ${thr
-58:1 -> ../limits.temper.md:66:5  console.log(`${five} % -${th <- console.log("${five} % -${th
-59:1 -> ../limits.temper.md:67:5  console.log(`-${five} % ${th <- console.log("-${five} % ${th
-60:1 -> ../limits.temper.md:68:5  console.log(`-${five} % -${t <- console.log("-${five} % -${t
-61:1 -> ../limits.temper.md:85:5  console.log("Int64"); <- console.log("Int64")
-62:1 -> ../limits.temper.md:86:5  const notSoBig = BigInt(big) <- let notSoBig = big.toInt64()
-63:1 -> ../limits.temper.md:87:5  const notSoSmall = BigInt(sm <- let notSoSmall = small.toInt
-64:1 -> ../limits.temper.md:91:5  console.log(`${notSoBig.toSt <- console.log("${notSoBig} + 1
-65:1 -> ../limits.temper.md:92:5  console.log(`${notSoSmall.to <- console.log("${notSoSmall} -
-66:1 -> ../limits.temper.md:102:5  const big64 = clampInt64(922 <- let big64 = 0x7fff_ffff_ffff
-67:1 -> ../limits.temper.md:103:5  const small64 = clampInt64(- <- let small64 = -0x8000_0000_0
-68:1 -> ../limits.temper.md:105:5  console.log(`${big64.toStrin <- console.log("${big64} + 1 ==
-69:1 -> ../limits.temper.md:106:5  console.log(`${small64.toStr <- console.log("${small64} - 1
-70:1 -> ../limits.temper.md:115:5  console.log(`${small64.toStr <- console.log("${small64} / -1
-71:1 -> ../limits.temper.md:116:5  console.log(`${small64.toStr <- console.log("${small64} % -1
-72:1 -> ../limits.temper.md:117:5  console.log(`-(${small64.toS <- console.log("-(${small64}) =
-73:1 -> ../limits.temper.md:127:5  const three64 = BigInt(three <- let three64 = three.toInt64(
-74:1 -> ../limits.temper.md:128:5  const five64 = BigInt(five); <- let five64 = five.toInt64();
-75:1 -> ../limits.temper.md:129:5  console.log(`${five64.toStri <- console.log("${five64} / ${t
-76:1 -> ../limits.temper.md:130:5  console.log(`${five64.toStri <- console.log("${five64} / -${
-77:1 -> ../limits.temper.md:131:5  console.log(`-${five64.toStr <- console.log("-${five64} / ${
-78:1 -> ../limits.temper.md:132:5  console.log(`-${five64.toStr <- console.log("-${five64} / -$
-79:1 -> ../limits.temper.md:133:5  console.log(`${five64.toStri <- console.log("${five64} % ${t
-80:1 -> ../limits.temper.md:134:5  console.log(`${five64.toStri <- console.log("${five64} % -${
-81:1 -> ../limits.temper.md:135:5  console.log(`-${five64.toStr <- console.log("-${five64} % ${
-82:1 -> ../limits.temper.md:136:5  console.log(`-${five64.toStr <- console.log("-${five64} % -$
-83:1 -> ../limits.temper.md:156:5  checkParse32("7FFFFFFF"); <- checkParse32("7FFF${}FFFF");
-84:1 -> ../limits.temper.md:157:5  checkParse32("-80000000"); <- checkParse32("-8000${}0000")
-85:1 -> ../limits.temper.md:158:5  checkParse32("80000000"); <- checkParse32("8000${}0000");
-86:1 -> ../limits.temper.md:159:5  checkParse32("-80000001"); <- checkParse32("-8000${}0001")
-87:1 -> ../limits.temper.md:173:5  console.log(`Not so big: ${i <- console.log("Not so big: ${n
-88:1 -> ../limits.temper.md:174:5  /** @type {string} */ <- console.log("Actually big: $
-89:1 -> ../limits.temper.md:174:5  let t$0; <- console.log("Actually big: $
-90:1 -> ../limits.temper.md:174:5  try { <- console.log("Actually big: $
-95:1 -> ../limits.temper.md:174:5  console.log(`Actually big: $ <- console.log("Actually big: $
-96:1 -> ../limits.temper.md:183:5  checkParse64("7FFFFFFFFFFFFF <- checkParse64("7FFF${}FFFF${}
-97:1 -> ../limits.temper.md:184:5  checkParse64("-8000000000000 <- checkParse64("-8000${}0000${
-98:1 -> ../limits.temper.md:185:5  checkParse64("80000000000000 <- checkParse64("8000${}0000${}
-99:1 -> ../limits.temper.md:186:5  checkParse64("-8000000000000 <- checkParse64("-8000${}0000${
-100:1 -> ../limits.temper.md:199:5  console.log(`${int64Min(smal <- console.log("${small64.min(b
+16:1 -> ../limits.temper.md:151:5  /** @param {string} string * <- let checkParse32(string: Str
+17:1 -> ../limits.temper.md:151:5  function checkParse32(string <- let checkParse32(string: Str
+17:10 -> ../limits.temper.md:151:9 (checkParse32)  checkParse32(string) { <- checkParse32(string: String)
+17:22 -> ../limits.temper.md:151:5  (string) { <- let checkParse32(string: Str
+18:3 -> ../limits.temper.md:152:7  /** @type {string} */ <- let converted = string.toInt
+19:3 -> ../limits.temper.md:152:7  let converted; <- let converted = string.toInt
+20:3 -> ../limits.temper.md:152:7  try { <- let converted = string.toInt
+26:3 -> ../limits.temper.md:153:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+29:1 -> ../limits.temper.md:178:5  /** @param {string} string * <- let checkParse64(string: Str
+30:1 -> ../limits.temper.md:178:5  function checkParse64(string <- let checkParse64(string: Str
+30:10 -> ../limits.temper.md:178:9 (checkParse64)  checkParse64(string) { <- checkParse64(string: String)
+30:22 -> ../limits.temper.md:178:5  (string) { <- let checkParse64(string: Str
+31:3 -> ../limits.temper.md:179:7  /** @type {string} */ <- let converted = string.toInt
+32:3 -> ../limits.temper.md:179:7  let converted; <- let converted = string.toInt
+33:3 -> ../limits.temper.md:179:7  try { <- let converted = string.toInt
+39:3 -> ../limits.temper.md:180:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+42:1 -> ../limits.temper.md:14:5  console.log("Int32"); <- console.log("Int32")
+43:1 -> ../limits.temper.md:209:5  let one = 1; <- var one = 1;
+44:1 -> ../limits.temper.md:210:5  one = one; <- one = one;
+45:1 -> ../limits.temper.md:15:5  const big = Math.imul(214748 <- let big = 0x7fff_ffff * one;
+46:1 -> ../limits.temper.md:16:5  const small = Math.imul(-214 <- let small = -0x8000_0000 * o
+47:1 -> ../limits.temper.md:21:5  console.log(`${big} + 1 == $ <- console.log("${big} + 1 == $
+48:1 -> ../limits.temper.md:22:5  console.log(`${small} - 1 == <- console.log("${small} - 1 ==
+49:1 -> ../limits.temper.md:32:5  console.log(`${big} * 4 == $ <- console.log("${big} * 4 == $
+50:1 -> ../limits.temper.md:33:5  console.log(`${small} * 4 == <- console.log("${small} * 4 ==
+51:1 -> ../limits.temper.md:34:5  console.log(`${(small + 1) | <- console.log("${small + 1} *
+52:1 -> ../limits.temper.md:35:5  console.log(`${(small + 1) | <- console.log("${small + 1} *
+53:1 -> ../limits.temper.md:47:5  console.log(`${small} / -1 = <- console.log("${small} / -1 =
+54:1 -> ../limits.temper.md:48:5  console.log(`${small} % -1 = <- console.log("${small} % -1 =
+55:1 -> ../limits.temper.md:49:5  console.log(`-(${small}) == <- console.log("-(${small}) ==
+56:1 -> ../limits.temper.md:59:5  const three = Math.imul(3, o <- let three = 3 * one;
+57:1 -> ../limits.temper.md:60:5  const five = Math.imul(5, on <- let five = 5 * one;
+58:1 -> ../limits.temper.md:61:5  console.log(`${five} / ${thr <- console.log("${five} / ${thr
+59:1 -> ../limits.temper.md:62:5  console.log(`${five} / -${th <- console.log("${five} / -${th
+60:1 -> ../limits.temper.md:63:5  console.log(`-${five} / ${th <- console.log("-${five} / ${th
+61:1 -> ../limits.temper.md:64:5  console.log(`-${five} / -${t <- console.log("-${five} / -${t
+62:1 -> ../limits.temper.md:65:5  console.log(`${five} % ${thr <- console.log("${five} % ${thr
+63:1 -> ../limits.temper.md:66:5  console.log(`${five} % -${th <- console.log("${five} % -${th
+64:1 -> ../limits.temper.md:67:5  console.log(`-${five} % ${th <- console.log("-${five} % ${th
+65:1 -> ../limits.temper.md:68:5  console.log(`-${five} % -${t <- console.log("-${five} % -${t
+66:1 -> ../limits.temper.md:85:5  console.log("Int64"); <- console.log("Int64")
+67:1 -> ../limits.temper.md:86:5  const notSoBig = BigInt(big) <- let notSoBig = big.toInt64()
+68:1 -> ../limits.temper.md:87:5  const notSoSmall = BigInt(sm <- let notSoSmall = small.toInt
+69:1 -> ../limits.temper.md:91:5  console.log(`${notSoBig.toSt <- console.log("${notSoBig} + 1
+70:1 -> ../limits.temper.md:92:5  console.log(`${notSoSmall.to <- console.log("${notSoSmall} -
+71:1 -> ../limits.temper.md:102:5  const big64 = clampInt64(922 <- let big64 = 0x7fff_ffff_ffff
+72:1 -> ../limits.temper.md:103:5  const small64 = clampInt64(- <- let small64 = -0x8000_0000_0
+73:1 -> ../limits.temper.md:105:5  console.log(`${big64.toStrin <- console.log("${big64} + 1 ==
+74:1 -> ../limits.temper.md:106:5  console.log(`${small64.toStr <- console.log("${small64} - 1
+75:1 -> ../limits.temper.md:115:5  console.log(`${small64.toStr <- console.log("${small64} / -1
+76:1 -> ../limits.temper.md:116:5  console.log(`${small64.toStr <- console.log("${small64} % -1
+77:1 -> ../limits.temper.md:117:5  console.log(`-(${small64.toS <- console.log("-(${small64}) =
+78:1 -> ../limits.temper.md:127:5  const three64 = BigInt(three <- let three64 = three.toInt64(
+79:1 -> ../limits.temper.md:128:5  const five64 = BigInt(five); <- let five64 = five.toInt64();
+80:1 -> ../limits.temper.md:129:5  console.log(`${five64.toStri <- console.log("${five64} / ${t
+81:1 -> ../limits.temper.md:130:5  console.log(`${five64.toStri <- console.log("${five64} / -${
+82:1 -> ../limits.temper.md:131:5  console.log(`-${five64.toStr <- console.log("-${five64} / ${
+83:1 -> ../limits.temper.md:132:5  console.log(`-${five64.toStr <- console.log("-${five64} / -$
+84:1 -> ../limits.temper.md:133:5  console.log(`${five64.toStri <- console.log("${five64} % ${t
+85:1 -> ../limits.temper.md:134:5  console.log(`${five64.toStri <- console.log("${five64} % -${
+86:1 -> ../limits.temper.md:135:5  console.log(`-${five64.toStr <- console.log("-${five64} % ${
+87:1 -> ../limits.temper.md:136:5  console.log(`-${five64.toStr <- console.log("-${five64} % -$
+88:1 -> ../limits.temper.md:156:5  checkParse32("7FFFFFFF"); <- checkParse32("7FFF${}FFFF");
+89:1 -> ../limits.temper.md:157:5  checkParse32("-80000000"); <- checkParse32("-8000${}0000")
+90:1 -> ../limits.temper.md:158:5  checkParse32("80000000"); <- checkParse32("8000${}0000");
+91:1 -> ../limits.temper.md:159:5  checkParse32("-80000001"); <- checkParse32("-8000${}0001")
+92:1 -> ../limits.temper.md:173:5  console.log(`Not so big: ${i <- console.log("Not so big: ${n
+93:1 -> ../limits.temper.md:174:5  /** @type {string} */ <- console.log("Actually big: $
+94:1 -> ../limits.temper.md:174:5  let t$0; <- console.log("Actually big: $
+95:1 -> ../limits.temper.md:174:5  try { <- console.log("Actually big: $
+101:1 -> ../limits.temper.md:174:5  console.log(`Actually big: $ <- console.log("Actually big: $
+102:1 -> ../limits.temper.md:183:5  checkParse64("7FFFFFFFFFFFFF <- checkParse64("7FFF${}FFFF${}
+103:1 -> ../limits.temper.md:184:5  checkParse64("-8000000000000 <- checkParse64("-8000${}0000${
+104:1 -> ../limits.temper.md:185:5  checkParse64("80000000000000 <- checkParse64("8000${}0000${}
+105:1 -> ../limits.temper.md:186:5  checkParse64("-8000000000000 <- checkParse64("-8000${}0000${
+106:1 -> ../limits.temper.md:199:5  console.log(`${int64Min(smal <- console.log("${small64.min(b

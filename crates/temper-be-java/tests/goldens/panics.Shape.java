@@ -1,0 +1,4 @@
+package panics;
+
+interface Shape {
+}

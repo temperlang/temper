@@ -1,441 +1,441 @@
 # generated line:column -> source:line:column, and the text at each
-19:1 -> ../json-adapters.temper.md:57:5  /** <- let encode<T>(adapter: JsonA
-25:1 -> ../json-adapters.temper.md:57:5  function encode(adapter, val <- let encode<T>(adapter: JsonA
-25:10 -> ../json-adapters.temper.md:57:9 (encode)  encode(adapter, value) { <- encode<T>(adapter: JsonAdapt
-25:16 -> ../json-adapters.temper.md:57:5  (adapter, value) { <- let encode<T>(adapter: JsonA
-26:3 -> ../json-adapters.temper.md:58:7  const p = new JsonTextProduc <- let p = new JsonTextProducer
-27:3 -> ../json-adapters.temper.md:59:7  adapter.encodeToJson(value, <- adapter.encodeToJson(value,
-28:3 -> ../json-adapters.temper.md:60:7  try { <- p.toJsonString() orelse "bad
-35:1 -> ../json-adapters.temper.md:63:5  /** <- let decode<T>(adapter: JsonA
-41:1 -> ../json-adapters.temper.md:63:5  function decode(adapter, tex <- let decode<T>(adapter: JsonA
-41:10 -> ../json-adapters.temper.md:63:9 (decode)  decode(adapter, text) { <- decode<T>(adapter: JsonAdapt
-41:16 -> ../json-adapters.temper.md:63:5  (adapter, text) { <- let decode<T>(adapter: JsonA
-42:3 -> ../json-adapters.temper.md:64:7  return adapter.decodeFromJso <- adapter.decodeFromJson(parse
-45:1 -> ../json-adapters.temper.md:67:5  /** <- let roundTrip<T>(adapter: Js
-50:1 -> ../json-adapters.temper.md:67:5  function roundTrip(adapter, <- let roundTrip<T>(adapter: Js
-50:10 -> ../json-adapters.temper.md:67:9 (roundTrip)  roundTrip(adapter, value) { <- roundTrip<T>(adapter: JsonAd
-50:19 -> ../json-adapters.temper.md:67:5  (adapter, value) { <- let roundTrip<T>(adapter: Js
-51:3 -> ../json-adapters.temper.md:68:7  const text = encode(adapter, <- let text = encode(adapter, v
-52:3 -> ../json-adapters.temper.md:69:7  /** @type {T} */ <- let back = decode(adapter, t
-53:3 -> ../json-adapters.temper.md:69:7  let back; <- let back = decode(adapter, t
-54:3 -> ../json-adapters.temper.md:69:7  try { <- let back = decode(adapter, t
-59:3 -> ../json-adapters.temper.md:70:7  const again = encode(adapter <- let again = encode(adapter,
-60:3 -> ../json-adapters.temper.md:71:7  console.log(again === text ? <- console.log(if (again == tex
-63:1 -> ../json-adapters.temper.md:23:5  class PointJsonAdapter exten <- @json class Point(public x:
-63:7 -> ../json-adapters.temper.md:23:5 (PointJsonAdapter)  PointJsonAdapter extends typ <- @json class Point(public x:
-63:23 -> ../json-adapters.temper.md:23:5   extends type(JsonAdapter) { <- @json class Point(public x:
-64:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
-68:3 -> ../json-adapters.temper.md:23:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Point(public x:
-69:5 -> ../json-adapters.temper.md:23:5  x.encodeToJson(p); <- @json class Point(public x:
-72:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
-77:3 -> ../json-adapters.temper.md:23:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Point(public x:
-78:5 -> ../json-adapters.temper.md:23:5  return Point.decodeFromJson( <- @json class Point(public x:
-82:1 -> ../json-adapters.temper.md:23:5  class Point extends type() { <- @json class Point(public x:
-82:7 -> ../json-adapters.temper.md:23:17 (Point)  Point extends type() { <- Point(public x: Int, public
-82:12 -> ../json-adapters.temper.md:23:5   extends type() { <- @json class Point(public x:
-83:3 -> ../json-adapters.temper.md:23:30  /** @type {number} */ <- x: Int, public y: Int) {}
-84:3 -> ../json-adapters.temper.md:23:30  #x; <- x: Int, public y: Int) {}
-85:3 -> ../json-adapters.temper.md:23:45  /** @type {number} */ <- y: Int) {}
-86:3 -> ../json-adapters.temper.md:23:45  #y; <- y: Int) {}
-96:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
-100:3 -> ../json-adapters.temper.md:23:5  constructor(x, y) { <- @json class Point(public x:
-102:5 -> ../json-adapters.temper.md:23:30  this.#x = x; <- x: Int, public y: Int) {}
-103:5 -> ../json-adapters.temper.md:23:45  this.#y = y; <- y: Int) {}
-106:3 -> ../json-adapters.temper.md:23:30  /** @returns {number} */ <- x: Int, public y: Int) {}
-107:3 -> ../json-adapters.temper.md:23:30  get x() { <- x: Int, public y: Int) {}
-107:7 -> ../json-adapters.temper.md:23:30 (x)  x() { <- x: Int, public y: Int) {}
-111:3 -> ../json-adapters.temper.md:23:45  /** @returns {number} */ <- y: Int) {}
-112:3 -> ../json-adapters.temper.md:23:45  get y() { <- y: Int) {}
-112:7 -> ../json-adapters.temper.md:23:45 (y)  y() { <- y: Int) {}
-116:3 -> ../json-adapters.temper.md:23:5  /** @param {JsonProducer} p <- @json class Point(public x:
-117:3 -> ../json-adapters.temper.md:23:5 (encodeToJson)  encodeToJson(p) { <- @json class Point(public x:
-118:5 -> ../json-adapters.temper.md:23:5  p.startObject(); <- @json class Point(public x:
-119:5 -> ../json-adapters.temper.md:23:5  p.objectKey("x"); <- @json class Point(public x:
-120:5 -> ../json-adapters.temper.md:23:5  p.int32Value(this.#x); <- @json class Point(public x:
-121:5 -> ../json-adapters.temper.md:23:5  p.objectKey("y"); <- @json class Point(public x:
-122:5 -> ../json-adapters.temper.md:23:5  p.int32Value(this.#y); <- @json class Point(public x:
-123:5 -> ../json-adapters.temper.md:23:5  p.endObject(); <- @json class Point(public x:
-126:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
-131:3 -> ../json-adapters.temper.md:23:5  static decodeFromJson(t, ic) <- @json class Point(public x:
-131:10 -> ../json-adapters.temper.md:23:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Point(public x:
-132:5 -> ../json-adapters.temper.md:23:5  const obj = requireInstanceO <- @json class Point(public x:
-133:5 -> ../json-adapters.temper.md:23:5  const xJson = requireInstanc <- @json class Point(public x:
-134:5 -> ../json-adapters.temper.md:23:5  const x = xJson.asInt32(); <- @json class Point(public x:
-135:5 -> ../json-adapters.temper.md:23:5  const yJson = requireInstanc <- @json class Point(public x:
-136:5 -> ../json-adapters.temper.md:23:5  const y = yJson.asInt32(); <- @json class Point(public x:
-137:5 -> ../json-adapters.temper.md:23:5  return new Point(x, y); <- @json class Point(public x:
-140:3 -> ../json-adapters.temper.md:23:5  /** @returns {JsonAdapter<Po <- @json class Point(public x:
-141:3 -> ../json-adapters.temper.md:23:5  static jsonAdapter() { <- @json class Point(public x:
-141:10 -> ../json-adapters.temper.md:23:5 (jsonAdapter)  jsonAdapter() { <- @json class Point(public x:
-142:5 -> ../json-adapters.temper.md:23:5  return /** @type {JsonAdapte <- @json class Point(public x:
-146:1 -> ../json-adapters.temper.md:25:5  class RecordJsonAdapter exte <- @json class Record(
-146:7 -> ../json-adapters.temper.md:25:5 (RecordJsonAdapter)  RecordJsonAdapter extends ty <- @json class Record(
-146:24 -> ../json-adapters.temper.md:25:5   extends type(JsonAdapter) { <- @json class Record(
-147:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
-151:3 -> ../json-adapters.temper.md:25:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Record(
-152:5 -> ../json-adapters.temper.md:25:5  x.encodeToJson(p); <- @json class Record(
-155:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
-160:3 -> ../json-adapters.temper.md:25:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Record(
-161:5 -> ../json-adapters.temper.md:25:5  return Record.decodeFromJson <- @json class Record(
-165:1 -> ../json-adapters.temper.md:25:5  class Record extends type() <- @json class Record(
-165:7 -> ../json-adapters.temper.md:25:17 (Record)  Record extends type() { <- Record(
-165:13 -> ../json-adapters.temper.md:25:5   extends type() { <- @json class Record(
-166:3 -> ../json-adapters.temper.md:26:14  /** @type {string} */ <- name: String,
-167:3 -> ../json-adapters.temper.md:26:14  #name; <- name: String,
-168:3 -> ../json-adapters.temper.md:27:37  /** @type {boolean} */ <- active: Boolean,
-169:3 -> ../json-adapters.temper.md:27:37  #active; <- active: Boolean,
-170:3 -> ../json-adapters.temper.md:28:14  /** @type {number} */ <- score: Float64,
-171:3 -> ../json-adapters.temper.md:28:14  #score; <- score: Float64,
-172:3 -> ../json-adapters.temper.md:29:14  /** @type {bigint} */ <- big: Int64,
-173:3 -> ../json-adapters.temper.md:29:14  #big; <- big: Int64,
-174:3 -> ../json-adapters.temper.md:30:14  /** @type {string | null} */ <- nickname: String?,
-175:3 -> ../json-adapters.temper.md:30:14  #nickname; <- nickname: String?,
-176:3 -> ../json-adapters.temper.md:31:14  /** @type {readonly Point[]} <- points: List<Point>,
-177:3 -> ../json-adapters.temper.md:31:14  #points; <- points: List<Point>,
-187:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
-195:3 -> ../json-adapters.temper.md:25:5  constructor(name, active, sc <- @json class Record(
-197:5 -> ../json-adapters.temper.md:26:14  this.#name = name; <- name: String,
-198:5 -> ../json-adapters.temper.md:27:37  this.#active = active; <- active: Boolean,
-199:5 -> ../json-adapters.temper.md:28:14  this.#score = score; <- score: Float64,
-200:5 -> ../json-adapters.temper.md:29:14  this.#big = big; <- big: Int64,
-201:5 -> ../json-adapters.temper.md:30:14  this.#nickname = nickname; <- nickname: String?,
-202:5 -> ../json-adapters.temper.md:31:14  this.#points = points; <- points: List<Point>,
-205:3 -> ../json-adapters.temper.md:26:14  /** @returns {string} */ <- name: String,
-206:3 -> ../json-adapters.temper.md:26:14  get name() { <- name: String,
-206:7 -> ../json-adapters.temper.md:26:14 (name)  name() { <- name: String,
-210:3 -> ../json-adapters.temper.md:27:37  /** @returns {boolean} */ <- active: Boolean,
-211:3 -> ../json-adapters.temper.md:27:37  get active() { <- active: Boolean,
-211:7 -> ../json-adapters.temper.md:27:37 (active)  active() { <- active: Boolean,
-215:3 -> ../json-adapters.temper.md:28:14  /** @returns {number} */ <- score: Float64,
-216:3 -> ../json-adapters.temper.md:28:14  get score() { <- score: Float64,
-216:7 -> ../json-adapters.temper.md:28:14 (score)  score() { <- score: Float64,
-220:3 -> ../json-adapters.temper.md:29:14  /** @returns {bigint} */ <- big: Int64,
-221:3 -> ../json-adapters.temper.md:29:14  get big() { <- big: Int64,
-221:7 -> ../json-adapters.temper.md:29:14 (big)  big() { <- big: Int64,
-225:3 -> ../json-adapters.temper.md:30:14  /** @returns {string | null} <- nickname: String?,
-226:3 -> ../json-adapters.temper.md:30:14  get nickname() { <- nickname: String?,
-226:7 -> ../json-adapters.temper.md:30:14 (nickname)  nickname() { <- nickname: String?,
-230:3 -> ../json-adapters.temper.md:31:14  /** @returns {readonly Point <- points: List<Point>,
-231:3 -> ../json-adapters.temper.md:31:14  get points() { <- points: List<Point>,
-231:7 -> ../json-adapters.temper.md:31:14 (points)  points() { <- points: List<Point>,
-235:3 -> ../json-adapters.temper.md:25:5  /** @param {JsonProducer} p <- @json class Record(
-236:3 -> ../json-adapters.temper.md:25:5 (encodeToJson)  encodeToJson(p) { <- @json class Record(
-237:5 -> ../json-adapters.temper.md:25:5  p.startObject(); <- @json class Record(
-238:5 -> ../json-adapters.temper.md:25:5  p.objectKey("name"); <- @json class Record(
-239:5 -> ../json-adapters.temper.md:25:5  p.stringValue(this.#name); <- @json class Record(
-240:5 -> ../json-adapters.temper.md:25:5  p.objectKey("is-active"); <- @json class Record(
-241:5 -> ../json-adapters.temper.md:25:5  p.booleanValue(this.#active) <- @json class Record(
-242:5 -> ../json-adapters.temper.md:25:5  p.objectKey("score"); <- @json class Record(
-243:5 -> ../json-adapters.temper.md:25:5  p.float64Value(this.#score); <- @json class Record(
-244:5 -> ../json-adapters.temper.md:25:5  p.objectKey("big"); <- @json class Record(
-245:5 -> ../json-adapters.temper.md:25:5  p.int64Value(this.#big); <- @json class Record(
-246:5 -> ../json-adapters.temper.md:25:5  p.objectKey("nickname"); <- @json class Record(
-247:5 -> ../json-adapters.temper.md:25:5  new OrNullJsonAdapter(string <- @json class Record(
-248:5 -> ../json-adapters.temper.md:25:5  p.objectKey("points"); <- @json class Record(
-249:5 -> ../json-adapters.temper.md:25:5  listJsonAdapter(Point.jsonAd <- @json class Record(
-250:5 -> ../json-adapters.temper.md:25:5  p.endObject(); <- @json class Record(
-253:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
-258:3 -> ../json-adapters.temper.md:25:5  static decodeFromJson(t, ic) <- @json class Record(
-258:10 -> ../json-adapters.temper.md:25:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Record(
-259:5 -> ../json-adapters.temper.md:25:5  const obj = requireInstanceO <- @json class Record(
-260:5 -> ../json-adapters.temper.md:25:5  const nameJson = requireInst <- @json class Record(
-261:5 -> ../json-adapters.temper.md:25:5  const name = nameJson.conten <- @json class Record(
-262:5 -> ../json-adapters.temper.md:25:5  const activeJson = requireIn <- @json class Record(
-263:5 -> ../json-adapters.temper.md:25:5  const active = activeJson.co <- @json class Record(
-264:5 -> ../json-adapters.temper.md:25:5  const scoreJson = requireIns <- @json class Record(
-265:5 -> ../json-adapters.temper.md:25:5  const score = scoreJson.asFl <- @json class Record(
-266:5 -> ../json-adapters.temper.md:25:5  const bigJson = requireInsta <- @json class Record(
-267:5 -> ../json-adapters.temper.md:25:5  const big = bigJson.asInt64( <- @json class Record(
-268:5 -> ../json-adapters.temper.md:25:5  const nickname = new OrNullJ <- @json class Record(
-269:5 -> ../json-adapters.temper.md:25:5  /** @type {readonly Point[]} <- @json class Record(
-270:5 -> ../json-adapters.temper.md:25:5  const points = listJsonAdapt <- @json class Record(
-271:5 -> ../json-adapters.temper.md:25:5  return new Record(name, acti <- @json class Record(
-274:3 -> ../json-adapters.temper.md:25:5  /** @returns {JsonAdapter<Re <- @json class Record(
-275:3 -> ../json-adapters.temper.md:25:5  static jsonAdapter() { <- @json class Record(
-275:10 -> ../json-adapters.temper.md:25:5 (jsonAdapter)  jsonAdapter() { <- @json class Record(
-276:5 -> ../json-adapters.temper.md:25:5  return /** @type {JsonAdapte <- @json class Record(
-280:1 -> ../json-adapters.temper.md:35:5  class CircleJsonAdapter exte <- @json class Circle(public ra
-280:7 -> ../json-adapters.temper.md:35:5 (CircleJsonAdapter)  CircleJsonAdapter extends ty <- @json class Circle(public ra
-280:24 -> ../json-adapters.temper.md:35:5   extends type(JsonAdapter) { <- @json class Circle(public ra
-281:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
-285:3 -> ../json-adapters.temper.md:35:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Circle(public ra
-286:5 -> ../json-adapters.temper.md:35:5  x.encodeToJson(p); <- @json class Circle(public ra
-289:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
-294:3 -> ../json-adapters.temper.md:35:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Circle(public ra
-295:5 -> ../json-adapters.temper.md:35:5  return Circle.decodeFromJson <- @json class Circle(public ra
-299:1 -> ../json-adapters.temper.md:34:5  class Shape extends type() { <- @json sealed interface Shape
-299:7 -> ../json-adapters.temper.md:34:28 (Shape)  Shape extends type() { <- Shape {}
-299:12 -> ../json-adapters.temper.md:34:5   extends type() { <- @json sealed interface Shape
-300:3 -> ../json-adapters.temper.md:34:5  /** @type {(p: JsonProducer) <- @json sealed interface Shape
-301:3 -> ../json-adapters.temper.md:34:5  encodeToJson = /** @type {an <- @json sealed interface Shape
-303:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
-308:3 -> ../json-adapters.temper.md:34:5  static decodeFromJson(t, ic) <- @json sealed interface Shape
-308:10 -> ../json-adapters.temper.md:34:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Shape
-309:5 -> ../json-adapters.temper.md:34:5  { <- @json sealed interface Shape
-310:7 -> ../json-adapters.temper.md:34:5  const obj = requireInstanceO <- @json sealed interface Shape
-311:7 -> ../json-adapters.temper.md:34:5  const valueForRadius = obj.p <- @json sealed interface Shape
-312:7 -> ../json-adapters.temper.md:34:5  { <- @json sealed interface Shape
-313:9 -> ../json-adapters.temper.md:34:5  if (valueForRadius != null) <- @json sealed interface Shape
-314:11 -> ../json-adapters.temper.md:34:5  return Circle.jsonAdapter(). <- @json sealed interface Shape
-316:9 -> ../json-adapters.temper.md:34:5  if (valueForRadius == null) <- @json sealed interface Shape
-317:11 -> ../json-adapters.temper.md:34:5  return Rect.jsonAdapter().de <- @json sealed interface Shape
-320:7 -> ../json-adapters.temper.md:34:5  bubble(); <- @json sealed interface Shape
-324:3 -> ../json-adapters.temper.md:34:5  /** @returns {JsonAdapter<Sh <- @json sealed interface Shape
-325:3 -> ../json-adapters.temper.md:34:5  static jsonAdapter() { <- @json sealed interface Shape
-325:10 -> ../json-adapters.temper.md:34:5 (jsonAdapter)  jsonAdapter() { <- @json sealed interface Shape
-326:5 -> ../json-adapters.temper.md:34:5  return /** @type {JsonAdapte <- @json sealed interface Shape
-330:1 -> ../json-adapters.temper.md:35:5  class Circle extends type(Sh <- @json class Circle(public ra
-330:7 -> ../json-adapters.temper.md:35:17 (Circle)  Circle extends type(Shape) { <- Circle(public radius: Int) e
-330:13 -> ../json-adapters.temper.md:35:5   extends type(Shape) { <- @json class Circle(public ra
-331:3 -> ../json-adapters.temper.md:35:31  /** @type {number} */ <- radius: Int) extends Shape {
-332:3 -> ../json-adapters.temper.md:35:31  #radius; <- radius: Int) extends Shape {
-334:3 -> ../json-adapters.temper.md:35:5  /** @param {number} radius * <- @json class Circle(public ra
-335:3 -> ../json-adapters.temper.md:35:5  constructor(radius) { <- @json class Circle(public ra
-337:5 -> ../json-adapters.temper.md:35:31  this.#radius = radius; <- radius: Int) extends Shape {
-340:3 -> ../json-adapters.temper.md:35:31  /** @returns {number} */ <- radius: Int) extends Shape {
-341:3 -> ../json-adapters.temper.md:35:31  get radius() { <- radius: Int) extends Shape {
-341:7 -> ../json-adapters.temper.md:35:31 (radius)  radius() { <- radius: Int) extends Shape {
-345:3 -> ../json-adapters.temper.md:35:5  /** @param {JsonProducer} p <- @json class Circle(public ra
-346:3 -> ../json-adapters.temper.md:35:5 (encodeToJson)  encodeToJson(p) { <- @json class Circle(public ra
-347:5 -> ../json-adapters.temper.md:35:5  p.startObject(); <- @json class Circle(public ra
-348:5 -> ../json-adapters.temper.md:35:5  p.objectKey("radius"); <- @json class Circle(public ra
-349:5 -> ../json-adapters.temper.md:35:5  p.int32Value(this.#radius); <- @json class Circle(public ra
-350:5 -> ../json-adapters.temper.md:35:5  p.endObject(); <- @json class Circle(public ra
-353:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
-358:3 -> ../json-adapters.temper.md:35:5  static decodeFromJson(t, ic) <- @json class Circle(public ra
-358:10 -> ../json-adapters.temper.md:35:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Circle(public ra
-359:5 -> ../json-adapters.temper.md:35:5  const obj = requireInstanceO <- @json class Circle(public ra
-360:5 -> ../json-adapters.temper.md:35:5  const radiusJson = requireIn <- @json class Circle(public ra
-361:5 -> ../json-adapters.temper.md:35:5  const radius = radiusJson.as <- @json class Circle(public ra
-362:5 -> ../json-adapters.temper.md:35:5  return new Circle(radius); <- @json class Circle(public ra
-365:3 -> ../json-adapters.temper.md:35:5  /** @returns {JsonAdapter<Ci <- @json class Circle(public ra
-366:3 -> ../json-adapters.temper.md:35:5  static jsonAdapter() { <- @json class Circle(public ra
-366:10 -> ../json-adapters.temper.md:35:5 (jsonAdapter)  jsonAdapter() { <- @json class Circle(public ra
-367:5 -> ../json-adapters.temper.md:35:5  return /** @type {JsonAdapte <- @json class Circle(public ra
-371:1 -> ../json-adapters.temper.md:36:5  class RectJsonAdapter extend <- @json class Rect(public widt
-371:7 -> ../json-adapters.temper.md:36:5 (RectJsonAdapter)  RectJsonAdapter extends type <- @json class Rect(public widt
-371:22 -> ../json-adapters.temper.md:36:5   extends type(JsonAdapter) { <- @json class Rect(public widt
-372:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
-376:3 -> ../json-adapters.temper.md:36:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Rect(public widt
-377:5 -> ../json-adapters.temper.md:36:5  x.encodeToJson(p); <- @json class Rect(public widt
-380:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
-385:3 -> ../json-adapters.temper.md:36:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Rect(public widt
-386:5 -> ../json-adapters.temper.md:36:5  return Rect.decodeFromJson(t <- @json class Rect(public widt
-390:1 -> ../json-adapters.temper.md:36:5  class Rect extends type(Shap <- @json class Rect(public widt
-390:7 -> ../json-adapters.temper.md:36:17 (Rect)  Rect extends type(Shape) { <- Rect(public width: Int, publ
-390:11 -> ../json-adapters.temper.md:36:5   extends type(Shape) { <- @json class Rect(public widt
-391:3 -> ../json-adapters.temper.md:36:29  /** @type {number} */ <- width: Int, public height: I
-392:3 -> ../json-adapters.temper.md:36:29  #width; <- width: Int, public height: I
-393:3 -> ../json-adapters.temper.md:36:48  /** @type {number} */ <- height: Int) extends Shape {
-394:3 -> ../json-adapters.temper.md:36:48  #height; <- height: Int) extends Shape {
-404:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
-408:3 -> ../json-adapters.temper.md:36:5  constructor(width, height) { <- @json class Rect(public widt
-410:5 -> ../json-adapters.temper.md:36:29  this.#width = width; <- width: Int, public height: I
-411:5 -> ../json-adapters.temper.md:36:48  this.#height = height; <- height: Int) extends Shape {
-414:3 -> ../json-adapters.temper.md:36:29  /** @returns {number} */ <- width: Int, public height: I
-415:3 -> ../json-adapters.temper.md:36:29  get width() { <- width: Int, public height: I
-415:7 -> ../json-adapters.temper.md:36:29 (width)  width() { <- width: Int, public height: I
-419:3 -> ../json-adapters.temper.md:36:48  /** @returns {number} */ <- height: Int) extends Shape {
-420:3 -> ../json-adapters.temper.md:36:48  get height() { <- height: Int) extends Shape {
-420:7 -> ../json-adapters.temper.md:36:48 (height)  height() { <- height: Int) extends Shape {
-424:3 -> ../json-adapters.temper.md:36:5  /** @param {JsonProducer} p <- @json class Rect(public widt
-425:3 -> ../json-adapters.temper.md:36:5 (encodeToJson)  encodeToJson(p) { <- @json class Rect(public widt
-426:5 -> ../json-adapters.temper.md:36:5  p.startObject(); <- @json class Rect(public widt
-427:5 -> ../json-adapters.temper.md:36:5  p.objectKey("width"); <- @json class Rect(public widt
-428:5 -> ../json-adapters.temper.md:36:5  p.int32Value(this.#width); <- @json class Rect(public widt
-429:5 -> ../json-adapters.temper.md:36:5  p.objectKey("height"); <- @json class Rect(public widt
-430:5 -> ../json-adapters.temper.md:36:5  p.int32Value(this.#height); <- @json class Rect(public widt
-431:5 -> ../json-adapters.temper.md:36:5  p.endObject(); <- @json class Rect(public widt
-434:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
-439:3 -> ../json-adapters.temper.md:36:5  static decodeFromJson(t, ic) <- @json class Rect(public widt
-439:10 -> ../json-adapters.temper.md:36:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Rect(public widt
-440:5 -> ../json-adapters.temper.md:36:5  const obj = requireInstanceO <- @json class Rect(public widt
-441:5 -> ../json-adapters.temper.md:36:5  const widthJson = requireIns <- @json class Rect(public widt
-442:5 -> ../json-adapters.temper.md:36:5  const width = widthJson.asIn <- @json class Rect(public widt
-443:5 -> ../json-adapters.temper.md:36:5  const heightJson = requireIn <- @json class Rect(public widt
-444:5 -> ../json-adapters.temper.md:36:5  const height = heightJson.as <- @json class Rect(public widt
-445:5 -> ../json-adapters.temper.md:36:5  return new Rect(width, heigh <- @json class Rect(public widt
-448:3 -> ../json-adapters.temper.md:36:5  /** @returns {JsonAdapter<Re <- @json class Rect(public widt
-449:3 -> ../json-adapters.temper.md:36:5  static jsonAdapter() { <- @json class Rect(public widt
-449:10 -> ../json-adapters.temper.md:36:5 (jsonAdapter)  jsonAdapter() { <- @json class Rect(public widt
-450:5 -> ../json-adapters.temper.md:36:5  return /** @type {JsonAdapte <- @json class Rect(public widt
-454:1 -> ../json-adapters.temper.md:34:5  class ShapeJsonAdapter exten <- @json sealed interface Shape
-454:7 -> ../json-adapters.temper.md:34:5 (ShapeJsonAdapter)  ShapeJsonAdapter extends typ <- @json sealed interface Shape
-454:23 -> ../json-adapters.temper.md:34:5   extends type(JsonAdapter) { <- @json sealed interface Shape
-455:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
-459:3 -> ../json-adapters.temper.md:34:5 (encodeToJson)  encodeToJson(x, p) { <- @json sealed interface Shape
-460:5 -> ../json-adapters.temper.md:34:5  x.encodeToJson(p); <- @json sealed interface Shape
-463:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
-468:3 -> ../json-adapters.temper.md:34:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Shape
-469:5 -> ../json-adapters.temper.md:34:5  return Shape.decodeFromJson( <- @json sealed interface Shape
-473:1 -> ../json-adapters.temper.md:39:5  class HelloJsonAdapter exten <- @json @jsonExtra("kind", "he
-473:7 -> ../json-adapters.temper.md:39:5 (HelloJsonAdapter)  HelloJsonAdapter extends typ <- @json @jsonExtra("kind", "he
-473:23 -> ../json-adapters.temper.md:39:5   extends type(JsonAdapter) { <- @json @jsonExtra("kind", "he
-474:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
-478:3 -> ../json-adapters.temper.md:39:5 (encodeToJson)  encodeToJson(x, p) { <- @json @jsonExtra("kind", "he
-479:5 -> ../json-adapters.temper.md:39:5  x.encodeToJson(p); <- @json @jsonExtra("kind", "he
-482:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
-487:3 -> ../json-adapters.temper.md:39:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "he
-488:5 -> ../json-adapters.temper.md:39:5  return Hello.decodeFromJson( <- @json @jsonExtra("kind", "he
-492:1 -> ../json-adapters.temper.md:38:5  class Message extends type() <- @json sealed interface Messa
-492:7 -> ../json-adapters.temper.md:38:28 (Message)  Message extends type() { <- Message {}
-492:14 -> ../json-adapters.temper.md:38:5   extends type() { <- @json sealed interface Messa
-493:3 -> ../json-adapters.temper.md:38:5  /** @type {(p: JsonProducer) <- @json sealed interface Messa
-494:3 -> ../json-adapters.temper.md:38:5  encodeToJson = /** @type {an <- @json sealed interface Messa
-496:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
-501:3 -> ../json-adapters.temper.md:38:5  static decodeFromJson(t, ic) <- @json sealed interface Messa
-501:10 -> ../json-adapters.temper.md:38:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Messa
-502:5 -> ../json-adapters.temper.md:38:5  { <- @json sealed interface Messa
-503:7 -> ../json-adapters.temper.md:38:5  const obj = requireInstanceO <- @json sealed interface Messa
-504:7 -> ../json-adapters.temper.md:38:5  const valueForKind = obj.pro <- @json sealed interface Messa
-505:7 -> ../json-adapters.temper.md:38:5  { <- @json sealed interface Messa
-506:9 -> ../json-adapters.temper.md:38:5  if (valueForKind != null && <- @json sealed interface Messa
-507:11 -> ../json-adapters.temper.md:38:5  const subject = /** @type {J <- @json sealed interface Messa
-508:11 -> ../json-adapters.temper.md:38:5  if (subject === "hello") { <- @json sealed interface Messa
-509:13 -> ../json-adapters.temper.md:38:5  return Hello.jsonAdapter().d <- @json sealed interface Messa
-510:18 -> ../json-adapters.temper.md:38:5  if (subject === "bye") { <- @json sealed interface Messa
-511:13 -> ../json-adapters.temper.md:38:5  return Bye.jsonAdapter().dec <- @json sealed interface Messa
-515:7 -> ../json-adapters.temper.md:38:5  bubble(); <- @json sealed interface Messa
-519:3 -> ../json-adapters.temper.md:38:5  /** @returns {JsonAdapter<Me <- @json sealed interface Messa
-520:3 -> ../json-adapters.temper.md:38:5  static jsonAdapter() { <- @json sealed interface Messa
-520:10 -> ../json-adapters.temper.md:38:5 (jsonAdapter)  jsonAdapter() { <- @json sealed interface Messa
-521:5 -> ../json-adapters.temper.md:38:5  return /** @type {JsonAdapte <- @json sealed interface Messa
-525:1 -> ../json-adapters.temper.md:39:5  class Hello extends type(Mes <- @json @jsonExtra("kind", "he
-525:7 -> ../json-adapters.temper.md:40:11 (Hello)  Hello extends type(Message) <- Hello(public text: String) e
-525:12 -> ../json-adapters.temper.md:39:5   extends type(Message) { <- @json @jsonExtra("kind", "he
-526:3 -> ../json-adapters.temper.md:40:24  /** @type {string} */ <- text: String) extends Messag
-527:3 -> ../json-adapters.temper.md:40:24  #text; <- text: String) extends Messag
-529:3 -> ../json-adapters.temper.md:39:5  /** @param {string} text */ <- @json @jsonExtra("kind", "he
-530:3 -> ../json-adapters.temper.md:39:5  constructor(text) { <- @json @jsonExtra("kind", "he
-532:5 -> ../json-adapters.temper.md:40:24  this.#text = text; <- text: String) extends Messag
-535:3 -> ../json-adapters.temper.md:40:24  /** @returns {string} */ <- text: String) extends Messag
-536:3 -> ../json-adapters.temper.md:40:24  get text() { <- text: String) extends Messag
-536:7 -> ../json-adapters.temper.md:40:24 (text)  text() { <- text: String) extends Messag
-540:3 -> ../json-adapters.temper.md:39:5  /** @param {JsonProducer} p <- @json @jsonExtra("kind", "he
-541:3 -> ../json-adapters.temper.md:39:5 (encodeToJson)  encodeToJson(p) { <- @json @jsonExtra("kind", "he
-542:5 -> ../json-adapters.temper.md:39:5  p.startObject(); <- @json @jsonExtra("kind", "he
-543:5 -> ../json-adapters.temper.md:39:5  p.objectKey("text"); <- @json @jsonExtra("kind", "he
-544:5 -> ../json-adapters.temper.md:39:5  p.stringValue(this.#text); <- @json @jsonExtra("kind", "he
-545:5 -> ../json-adapters.temper.md:39:5  p.objectKey("kind"); <- @json @jsonExtra("kind", "he
-546:5 -> ../json-adapters.temper.md:39:5  p.stringValue("hello"); <- @json @jsonExtra("kind", "he
-547:5 -> ../json-adapters.temper.md:39:5  p.endObject(); <- @json @jsonExtra("kind", "he
-550:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
-555:3 -> ../json-adapters.temper.md:39:5  static decodeFromJson(t, ic) <- @json @jsonExtra("kind", "he
-555:10 -> ../json-adapters.temper.md:39:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "he
-556:5 -> ../json-adapters.temper.md:39:5  const obj = requireInstanceO <- @json @jsonExtra("kind", "he
-557:5 -> ../json-adapters.temper.md:39:5  const textJson = requireInst <- @json @jsonExtra("kind", "he
-558:5 -> ../json-adapters.temper.md:39:5  const text = textJson.conten <- @json @jsonExtra("kind", "he
-559:5 -> ../json-adapters.temper.md:39:5  return new Hello(text); <- @json @jsonExtra("kind", "he
-562:3 -> ../json-adapters.temper.md:39:5  /** @returns {JsonAdapter<He <- @json @jsonExtra("kind", "he
-563:3 -> ../json-adapters.temper.md:39:5  static jsonAdapter() { <- @json @jsonExtra("kind", "he
-563:10 -> ../json-adapters.temper.md:39:5 (jsonAdapter)  jsonAdapter() { <- @json @jsonExtra("kind", "he
-564:5 -> ../json-adapters.temper.md:39:5  return /** @type {JsonAdapte <- @json @jsonExtra("kind", "he
-568:1 -> ../json-adapters.temper.md:41:5  class ByeJsonAdapter extends <- @json @jsonExtra("kind", "by
-568:7 -> ../json-adapters.temper.md:41:5 (ByeJsonAdapter)  ByeJsonAdapter extends type( <- @json @jsonExtra("kind", "by
-568:21 -> ../json-adapters.temper.md:41:5   extends type(JsonAdapter) { <- @json @jsonExtra("kind", "by
-569:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
-573:3 -> ../json-adapters.temper.md:41:5 (encodeToJson)  encodeToJson(x, p) { <- @json @jsonExtra("kind", "by
-574:5 -> ../json-adapters.temper.md:41:5  x.encodeToJson(p); <- @json @jsonExtra("kind", "by
-577:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
-582:3 -> ../json-adapters.temper.md:41:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "by
-583:5 -> ../json-adapters.temper.md:41:5  return Bye.decodeFromJson(t, <- @json @jsonExtra("kind", "by
-587:1 -> ../json-adapters.temper.md:41:5  class Bye extends type(Messa <- @json @jsonExtra("kind", "by
-587:7 -> ../json-adapters.temper.md:42:11 (Bye)  Bye extends type(Message) { <- Bye(public text: String) ext
-587:10 -> ../json-adapters.temper.md:41:5   extends type(Message) { <- @json @jsonExtra("kind", "by
-588:3 -> ../json-adapters.temper.md:42:22  /** @type {string} */ <- text: String) extends Messag
-589:3 -> ../json-adapters.temper.md:42:22  #text; <- text: String) extends Messag
-591:3 -> ../json-adapters.temper.md:41:5  /** @param {string} text */ <- @json @jsonExtra("kind", "by
-592:3 -> ../json-adapters.temper.md:41:5  constructor(text) { <- @json @jsonExtra("kind", "by
-594:5 -> ../json-adapters.temper.md:42:22  this.#text = text; <- text: String) extends Messag
-597:3 -> ../json-adapters.temper.md:42:22  /** @returns {string} */ <- text: String) extends Messag
-598:3 -> ../json-adapters.temper.md:42:22  get text() { <- text: String) extends Messag
-598:7 -> ../json-adapters.temper.md:42:22 (text)  text() { <- text: String) extends Messag
-602:3 -> ../json-adapters.temper.md:41:5  /** @param {JsonProducer} p <- @json @jsonExtra("kind", "by
-603:3 -> ../json-adapters.temper.md:41:5 (encodeToJson)  encodeToJson(p) { <- @json @jsonExtra("kind", "by
-604:5 -> ../json-adapters.temper.md:41:5  p.startObject(); <- @json @jsonExtra("kind", "by
-605:5 -> ../json-adapters.temper.md:41:5  p.objectKey("text"); <- @json @jsonExtra("kind", "by
-606:5 -> ../json-adapters.temper.md:41:5  p.stringValue(this.#text); <- @json @jsonExtra("kind", "by
-607:5 -> ../json-adapters.temper.md:41:5  p.objectKey("kind"); <- @json @jsonExtra("kind", "by
-608:5 -> ../json-adapters.temper.md:41:5  p.stringValue("bye"); <- @json @jsonExtra("kind", "by
-609:5 -> ../json-adapters.temper.md:41:5  p.endObject(); <- @json @jsonExtra("kind", "by
-612:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
-617:3 -> ../json-adapters.temper.md:41:5  static decodeFromJson(t, ic) <- @json @jsonExtra("kind", "by
-617:10 -> ../json-adapters.temper.md:41:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "by
-618:5 -> ../json-adapters.temper.md:41:5  const obj = requireInstanceO <- @json @jsonExtra("kind", "by
-619:5 -> ../json-adapters.temper.md:41:5  const textJson = requireInst <- @json @jsonExtra("kind", "by
-620:5 -> ../json-adapters.temper.md:41:5  const text = textJson.conten <- @json @jsonExtra("kind", "by
-621:5 -> ../json-adapters.temper.md:41:5  return new Bye(text); <- @json @jsonExtra("kind", "by
-624:3 -> ../json-adapters.temper.md:41:5  /** @returns {JsonAdapter<By <- @json @jsonExtra("kind", "by
-625:3 -> ../json-adapters.temper.md:41:5  static jsonAdapter() { <- @json @jsonExtra("kind", "by
-625:10 -> ../json-adapters.temper.md:41:5 (jsonAdapter)  jsonAdapter() { <- @json @jsonExtra("kind", "by
-626:5 -> ../json-adapters.temper.md:41:5  return /** @type {JsonAdapte <- @json @jsonExtra("kind", "by
-630:1 -> ../json-adapters.temper.md:38:5  class MessageJsonAdapter ext <- @json sealed interface Messa
-630:7 -> ../json-adapters.temper.md:38:5 (MessageJsonAdapter)  MessageJsonAdapter extends t <- @json sealed interface Messa
-630:25 -> ../json-adapters.temper.md:38:5   extends type(JsonAdapter) { <- @json sealed interface Messa
-631:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
-635:3 -> ../json-adapters.temper.md:38:5 (encodeToJson)  encodeToJson(x, p) { <- @json sealed interface Messa
-636:5 -> ../json-adapters.temper.md:38:5  x.encodeToJson(p); <- @json sealed interface Messa
-639:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
-644:3 -> ../json-adapters.temper.md:38:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Messa
-645:5 -> ../json-adapters.temper.md:38:5  return Message.decodeFromJso <- @json sealed interface Messa
-649:1 -> ../json-adapters.temper.md:44:5  class CelsiusJsonAdapter ext <- @json class Celsius(public d
-649:7 -> ../json-adapters.temper.md:44:5 (CelsiusJsonAdapter)  CelsiusJsonAdapter extends t <- @json class Celsius(public d
-649:25 -> ../json-adapters.temper.md:44:5   extends type(JsonAdapter) { <- @json class Celsius(public d
-650:3 -> ../json-adapters.temper.md:44:5  /** <- @json class Celsius(public d
-654:3 -> ../json-adapters.temper.md:44:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Celsius(public d
-655:5 -> ../json-adapters.temper.md:44:5  x.encodeToJson(p); <- @json class Celsius(public d
-658:3 -> ../json-adapters.temper.md:44:5  /** <- @json class Celsius(public d
-663:3 -> ../json-adapters.temper.md:44:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Celsius(public d
-664:5 -> ../json-adapters.temper.md:44:5  return Celsius.decodeFromJso <- @json class Celsius(public d
-668:1 -> ../json-adapters.temper.md:44:5  class Celsius extends type() <- @json class Celsius(public d
-668:7 -> ../json-adapters.temper.md:44:17 (Celsius)  Celsius extends type() { <- Celsius(public degrees: Int)
-668:14 -> ../json-adapters.temper.md:44:5   extends type() { <- @json class Celsius(public d
-669:3 -> ../json-adapters.temper.md:44:32  /** @type {number} */ <- degrees: Int) {
-670:3 -> ../json-adapters.temper.md:44:32  #degrees; <- degrees: Int) {
-672:3 -> ../json-adapters.temper.md:44:5  /** @param {number} degrees <- @json class Celsius(public d
-673:3 -> ../json-adapters.temper.md:44:5  constructor(degrees) { <- @json class Celsius(public d
-675:5 -> ../json-adapters.temper.md:44:32  this.#degrees = degrees; <- degrees: Int) {
-678:3 -> ../json-adapters.temper.md:44:32  /** @returns {number} */ <- degrees: Int) {
-679:3 -> ../json-adapters.temper.md:44:32  get degrees() { <- degrees: Int) {
-679:7 -> ../json-adapters.temper.md:44:32 (degrees)  degrees() { <- degrees: Int) {
-683:3 -> ../json-adapters.temper.md:45:14  /** @param {JsonProducer} p <- encodeToJson(p: JsonProducer
-684:3 -> ../json-adapters.temper.md:45:14 (encodeToJson)  encodeToJson(p) { <- encodeToJson(p: JsonProducer
-685:5 -> ../json-adapters.temper.md:46:9  p.int32Value(this.#degrees); <- p.int32Value(degrees);
-688:3 -> ../json-adapters.temper.md:49:21  /** <- decodeFromJson(
-693:3 -> ../json-adapters.temper.md:49:21  static decodeFromJson(t, ic) <- decodeFromJson(
-693:10 -> ../json-adapters.temper.md:49:21 (decodeFromJson)  decodeFromJson(t, ic) { <- decodeFromJson(
-694:5 -> ../json-adapters.temper.md:53:9  return new Celsius(requireIn <- new Celsius((t as JsonNumeri
-697:3 -> ../json-adapters.temper.md:44:5  /** @returns {JsonAdapter<Ce <- @json class Celsius(public d
-698:3 -> ../json-adapters.temper.md:44:5  static jsonAdapter() { <- @json class Celsius(public d
-698:10 -> ../json-adapters.temper.md:44:5 (jsonAdapter)  jsonAdapter() { <- @json class Celsius(public d
-699:5 -> ../json-adapters.temper.md:44:5  return /** @type {JsonAdapte <- @json class Celsius(public d
-703:1 -> ../json-adapters.temper.md:74:5  roundTrip(Point.jsonAdapter( <- roundTrip(Point.jsonAdapter(
-704:1 -> ../json-adapters.temper.md:75:5  roundTrip(Record.jsonAdapter <- roundTrip(
-705:1 -> ../json-adapters.temper.md:79:5  /** @type {readonly Shape[]} <- let shapes: List<Shape> = [n
-706:1 -> ../json-adapters.temper.md:79:5  const shapes = Object.freeze <- let shapes: List<Shape> = [n
-707:1 -> ../json-adapters.temper.md:80:5  roundTrip(listJsonAdapter(Sh <- roundTrip(List.jsonAdapter(S
-708:1 -> ../json-adapters.temper.md:81:5  /** @type {readonly Message[ <- let messages: List<Message>
-709:1 -> ../json-adapters.temper.md:81:5  const messages = Object.free <- let messages: List<Message>
-710:1 -> ../json-adapters.temper.md:82:5  roundTrip(listJsonAdapter(Me <- roundTrip(List.jsonAdapter(M
-711:1 -> ../json-adapters.temper.md:83:5  roundTrip(Celsius.jsonAdapte <- roundTrip(Celsius.jsonAdapte
-712:1 -> ../json-adapters.temper.md:85:5  /** @type {Shape} */ <- let shape = decode(Shape.jso
-713:1 -> ../json-adapters.temper.md:85:5  let shape; <- let shape = decode(Shape.jso
-714:1 -> ../json-adapters.temper.md:85:5  try { <- let shape = decode(Shape.jso
-719:1 -> ../json-adapters.temper.md:86:5  { <- when (shape) {
-720:3 -> ../json-adapters.temper.md:87:18  if (shape instanceof Rect) { <- console.log("rect ${shape.wi
-721:5 -> ../json-adapters.temper.md:87:18  console.log(`rect ${/** @typ <- console.log("rect ${shape.wi
-723:5 -> ../json-adapters.temper.md:88:15  console.log("not a rect"); <- console.log("not a rect");
-726:1 -> ../json-adapters.temper.md:90:5  /** @type {Record} */ <- let record = decode(
-727:1 -> ../json-adapters.temper.md:90:5  let record; <- let record = decode(
-728:1 -> ../json-adapters.temper.md:90:5  try { <- let record = decode(
-733:1 -> ../json-adapters.temper.md:94:5  console.log(`${record.name} <- console.log("${record.name}
-734:1 -> ../json-adapters.temper.md:95:5  /** @type {string} */ <- console.log(do { decode(Poin
-735:1 -> ../json-adapters.temper.md:95:5  let t$0; <- console.log(do { decode(Poin
-736:1 -> ../json-adapters.temper.md:95:5  try { <- console.log(do { decode(Poin
-737:3 -> ../json-adapters.temper.md:95:22  decode(Point.jsonAdapter(), <- decode(Point.jsonAdapter(),
-742:1 -> ../json-adapters.temper.md:95:5  console.log(t$0); <- console.log(do { decode(Poin
-743:1 -> ../json-adapters.temper.md:96:5  /** @type {string} */ <- console.log(
-744:1 -> ../json-adapters.temper.md:96:5  let t$1; <- console.log(
-745:1 -> ../json-adapters.temper.md:96:5  try { <- console.log(
-746:3 -> ../json-adapters.temper.md:97:12  decode(Message.jsonAdapter() <- decode(Message.jsonAdapter()
-751:1 -> ../json-adapters.temper.md:96:5  console.log(t$1); <- console.log(
+25:1 -> ../json-adapters.temper.md:57:5  /** <- let encode<T>(adapter: JsonA
+31:1 -> ../json-adapters.temper.md:57:5  function encode(adapter, val <- let encode<T>(adapter: JsonA
+31:10 -> ../json-adapters.temper.md:57:9 (encode)  encode(adapter, value) { <- encode<T>(adapter: JsonAdapt
+31:16 -> ../json-adapters.temper.md:57:5  (adapter, value) { <- let encode<T>(adapter: JsonA
+32:3 -> ../json-adapters.temper.md:58:7  const p = new JsonTextProduc <- let p = new JsonTextProducer
+33:3 -> ../json-adapters.temper.md:59:7  adapter.encodeToJson(value, <- adapter.encodeToJson(value,
+34:3 -> ../json-adapters.temper.md:60:7  try { <- p.toJsonString() orelse "bad
+42:1 -> ../json-adapters.temper.md:63:5  /** <- let decode<T>(adapter: JsonA
+48:1 -> ../json-adapters.temper.md:63:5  function decode(adapter, tex <- let decode<T>(adapter: JsonA
+48:10 -> ../json-adapters.temper.md:63:9 (decode)  decode(adapter, text) { <- decode<T>(adapter: JsonAdapt
+48:16 -> ../json-adapters.temper.md:63:5  (adapter, text) { <- let decode<T>(adapter: JsonA
+49:3 -> ../json-adapters.temper.md:64:7  return adapter.decodeFromJso <- adapter.decodeFromJson(parse
+52:1 -> ../json-adapters.temper.md:67:5  /** <- let roundTrip<T>(adapter: Js
+57:1 -> ../json-adapters.temper.md:67:5  function roundTrip(adapter, <- let roundTrip<T>(adapter: Js
+57:10 -> ../json-adapters.temper.md:67:9 (roundTrip)  roundTrip(adapter, value) { <- roundTrip<T>(adapter: JsonAd
+57:19 -> ../json-adapters.temper.md:67:5  (adapter, value) { <- let roundTrip<T>(adapter: Js
+58:3 -> ../json-adapters.temper.md:68:7  const text = encode(adapter, <- let text = encode(adapter, v
+59:3 -> ../json-adapters.temper.md:69:7  /** @type {T} */ <- let back = decode(adapter, t
+60:3 -> ../json-adapters.temper.md:69:7  let back; <- let back = decode(adapter, t
+61:3 -> ../json-adapters.temper.md:69:7  try { <- let back = decode(adapter, t
+66:3 -> ../json-adapters.temper.md:70:7  const again = encode(adapter <- let again = encode(adapter,
+67:3 -> ../json-adapters.temper.md:71:7  console.log(again === text ? <- console.log(if (again == tex
+70:1 -> ../json-adapters.temper.md:23:5  class PointJsonAdapter exten <- @json class Point(public x:
+70:7 -> ../json-adapters.temper.md:23:5 (PointJsonAdapter)  PointJsonAdapter extends typ <- @json class Point(public x:
+70:23 -> ../json-adapters.temper.md:23:5   extends type(JsonAdapter) { <- @json class Point(public x:
+71:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
+75:3 -> ../json-adapters.temper.md:23:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Point(public x:
+76:5 -> ../json-adapters.temper.md:23:5  x.encodeToJson(p); <- @json class Point(public x:
+79:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
+84:3 -> ../json-adapters.temper.md:23:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Point(public x:
+85:5 -> ../json-adapters.temper.md:23:5  return Point.decodeFromJson( <- @json class Point(public x:
+89:1 -> ../json-adapters.temper.md:23:5  class Point extends type() { <- @json class Point(public x:
+89:7 -> ../json-adapters.temper.md:23:17 (Point)  Point extends type() { <- Point(public x: Int, public
+89:12 -> ../json-adapters.temper.md:23:5   extends type() { <- @json class Point(public x:
+90:3 -> ../json-adapters.temper.md:23:30  /** @type {number} */ <- x: Int, public y: Int) {}
+91:3 -> ../json-adapters.temper.md:23:30  #x; <- x: Int, public y: Int) {}
+92:3 -> ../json-adapters.temper.md:23:45  /** @type {number} */ <- y: Int) {}
+93:3 -> ../json-adapters.temper.md:23:45  #y; <- y: Int) {}
+103:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
+107:3 -> ../json-adapters.temper.md:23:5  constructor(x, y) { <- @json class Point(public x:
+109:5 -> ../json-adapters.temper.md:23:30  this.#x = x; <- x: Int, public y: Int) {}
+110:5 -> ../json-adapters.temper.md:23:45  this.#y = y; <- y: Int) {}
+113:3 -> ../json-adapters.temper.md:23:30  /** @returns {number} */ <- x: Int, public y: Int) {}
+114:3 -> ../json-adapters.temper.md:23:30  get x() { <- x: Int, public y: Int) {}
+114:7 -> ../json-adapters.temper.md:23:30 (x)  x() { <- x: Int, public y: Int) {}
+118:3 -> ../json-adapters.temper.md:23:45  /** @returns {number} */ <- y: Int) {}
+119:3 -> ../json-adapters.temper.md:23:45  get y() { <- y: Int) {}
+119:7 -> ../json-adapters.temper.md:23:45 (y)  y() { <- y: Int) {}
+123:3 -> ../json-adapters.temper.md:23:5  /** @param {JsonProducer} p <- @json class Point(public x:
+124:3 -> ../json-adapters.temper.md:23:5 (encodeToJson)  encodeToJson(p) { <- @json class Point(public x:
+125:5 -> ../json-adapters.temper.md:23:5  p.startObject(); <- @json class Point(public x:
+126:5 -> ../json-adapters.temper.md:23:5  p.objectKey("x"); <- @json class Point(public x:
+127:5 -> ../json-adapters.temper.md:23:5  p.int32Value(this.#x); <- @json class Point(public x:
+128:5 -> ../json-adapters.temper.md:23:5  p.objectKey("y"); <- @json class Point(public x:
+129:5 -> ../json-adapters.temper.md:23:5  p.int32Value(this.#y); <- @json class Point(public x:
+130:5 -> ../json-adapters.temper.md:23:5  p.endObject(); <- @json class Point(public x:
+133:3 -> ../json-adapters.temper.md:23:5  /** <- @json class Point(public x:
+138:3 -> ../json-adapters.temper.md:23:5  static decodeFromJson(t, ic) <- @json class Point(public x:
+138:10 -> ../json-adapters.temper.md:23:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Point(public x:
+139:5 -> ../json-adapters.temper.md:23:5  const obj = requireInstanceO <- @json class Point(public x:
+140:5 -> ../json-adapters.temper.md:23:5  const xJson = requireInstanc <- @json class Point(public x:
+141:5 -> ../json-adapters.temper.md:23:5  const x = xJson.asInt32(); <- @json class Point(public x:
+142:5 -> ../json-adapters.temper.md:23:5  const yJson = requireInstanc <- @json class Point(public x:
+143:5 -> ../json-adapters.temper.md:23:5  const y = yJson.asInt32(); <- @json class Point(public x:
+144:5 -> ../json-adapters.temper.md:23:5  return new Point(x, y); <- @json class Point(public x:
+147:3 -> ../json-adapters.temper.md:23:5  /** @returns {JsonAdapter<Po <- @json class Point(public x:
+148:3 -> ../json-adapters.temper.md:23:5  static jsonAdapter() { <- @json class Point(public x:
+148:10 -> ../json-adapters.temper.md:23:5 (jsonAdapter)  jsonAdapter() { <- @json class Point(public x:
+149:5 -> ../json-adapters.temper.md:23:5  return /** @type {JsonAdapte <- @json class Point(public x:
+153:1 -> ../json-adapters.temper.md:25:5  class RecordJsonAdapter exte <- @json class Record(
+153:7 -> ../json-adapters.temper.md:25:5 (RecordJsonAdapter)  RecordJsonAdapter extends ty <- @json class Record(
+153:24 -> ../json-adapters.temper.md:25:5   extends type(JsonAdapter) { <- @json class Record(
+154:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
+158:3 -> ../json-adapters.temper.md:25:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Record(
+159:5 -> ../json-adapters.temper.md:25:5  x.encodeToJson(p); <- @json class Record(
+162:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
+167:3 -> ../json-adapters.temper.md:25:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Record(
+168:5 -> ../json-adapters.temper.md:25:5  return Record.decodeFromJson <- @json class Record(
+172:1 -> ../json-adapters.temper.md:25:5  class Record extends type() <- @json class Record(
+172:7 -> ../json-adapters.temper.md:25:17 (Record)  Record extends type() { <- Record(
+172:13 -> ../json-adapters.temper.md:25:5   extends type() { <- @json class Record(
+173:3 -> ../json-adapters.temper.md:26:14  /** @type {string} */ <- name: String,
+174:3 -> ../json-adapters.temper.md:26:14  #name; <- name: String,
+175:3 -> ../json-adapters.temper.md:27:37  /** @type {boolean} */ <- active: Boolean,
+176:3 -> ../json-adapters.temper.md:27:37  #active; <- active: Boolean,
+177:3 -> ../json-adapters.temper.md:28:14  /** @type {number} */ <- score: Float64,
+178:3 -> ../json-adapters.temper.md:28:14  #score; <- score: Float64,
+179:3 -> ../json-adapters.temper.md:29:14  /** @type {bigint} */ <- big: Int64,
+180:3 -> ../json-adapters.temper.md:29:14  #big; <- big: Int64,
+181:3 -> ../json-adapters.temper.md:30:14  /** @type {string | null} */ <- nickname: String?,
+182:3 -> ../json-adapters.temper.md:30:14  #nickname; <- nickname: String?,
+183:3 -> ../json-adapters.temper.md:31:14  /** @type {readonly Point[]} <- points: List<Point>,
+184:3 -> ../json-adapters.temper.md:31:14  #points; <- points: List<Point>,
+194:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
+202:3 -> ../json-adapters.temper.md:25:5  constructor(name, active, sc <- @json class Record(
+204:5 -> ../json-adapters.temper.md:26:14  this.#name = name; <- name: String,
+205:5 -> ../json-adapters.temper.md:27:37  this.#active = active; <- active: Boolean,
+206:5 -> ../json-adapters.temper.md:28:14  this.#score = score; <- score: Float64,
+207:5 -> ../json-adapters.temper.md:29:14  this.#big = big; <- big: Int64,
+208:5 -> ../json-adapters.temper.md:30:14  this.#nickname = nickname; <- nickname: String?,
+209:5 -> ../json-adapters.temper.md:31:14  this.#points = points; <- points: List<Point>,
+212:3 -> ../json-adapters.temper.md:26:14  /** @returns {string} */ <- name: String,
+213:3 -> ../json-adapters.temper.md:26:14  get name() { <- name: String,
+213:7 -> ../json-adapters.temper.md:26:14 (name)  name() { <- name: String,
+217:3 -> ../json-adapters.temper.md:27:37  /** @returns {boolean} */ <- active: Boolean,
+218:3 -> ../json-adapters.temper.md:27:37  get active() { <- active: Boolean,
+218:7 -> ../json-adapters.temper.md:27:37 (active)  active() { <- active: Boolean,
+222:3 -> ../json-adapters.temper.md:28:14  /** @returns {number} */ <- score: Float64,
+223:3 -> ../json-adapters.temper.md:28:14  get score() { <- score: Float64,
+223:7 -> ../json-adapters.temper.md:28:14 (score)  score() { <- score: Float64,
+227:3 -> ../json-adapters.temper.md:29:14  /** @returns {bigint} */ <- big: Int64,
+228:3 -> ../json-adapters.temper.md:29:14  get big() { <- big: Int64,
+228:7 -> ../json-adapters.temper.md:29:14 (big)  big() { <- big: Int64,
+232:3 -> ../json-adapters.temper.md:30:14  /** @returns {string | null} <- nickname: String?,
+233:3 -> ../json-adapters.temper.md:30:14  get nickname() { <- nickname: String?,
+233:7 -> ../json-adapters.temper.md:30:14 (nickname)  nickname() { <- nickname: String?,
+237:3 -> ../json-adapters.temper.md:31:14  /** @returns {readonly Point <- points: List<Point>,
+238:3 -> ../json-adapters.temper.md:31:14  get points() { <- points: List<Point>,
+238:7 -> ../json-adapters.temper.md:31:14 (points)  points() { <- points: List<Point>,
+242:3 -> ../json-adapters.temper.md:25:5  /** @param {JsonProducer} p <- @json class Record(
+243:3 -> ../json-adapters.temper.md:25:5 (encodeToJson)  encodeToJson(p) { <- @json class Record(
+244:5 -> ../json-adapters.temper.md:25:5  p.startObject(); <- @json class Record(
+245:5 -> ../json-adapters.temper.md:25:5  p.objectKey("name"); <- @json class Record(
+246:5 -> ../json-adapters.temper.md:25:5  p.stringValue(this.#name); <- @json class Record(
+247:5 -> ../json-adapters.temper.md:25:5  p.objectKey("is-active"); <- @json class Record(
+248:5 -> ../json-adapters.temper.md:25:5  p.booleanValue(this.#active) <- @json class Record(
+249:5 -> ../json-adapters.temper.md:25:5  p.objectKey("score"); <- @json class Record(
+250:5 -> ../json-adapters.temper.md:25:5  p.float64Value(this.#score); <- @json class Record(
+251:5 -> ../json-adapters.temper.md:25:5  p.objectKey("big"); <- @json class Record(
+252:5 -> ../json-adapters.temper.md:25:5  p.int64Value(this.#big); <- @json class Record(
+253:5 -> ../json-adapters.temper.md:25:5  p.objectKey("nickname"); <- @json class Record(
+254:5 -> ../json-adapters.temper.md:25:5  new OrNullJsonAdapter(string <- @json class Record(
+255:5 -> ../json-adapters.temper.md:25:5  p.objectKey("points"); <- @json class Record(
+256:5 -> ../json-adapters.temper.md:25:5  listJsonAdapter(Point.jsonAd <- @json class Record(
+257:5 -> ../json-adapters.temper.md:25:5  p.endObject(); <- @json class Record(
+260:3 -> ../json-adapters.temper.md:25:5  /** <- @json class Record(
+265:3 -> ../json-adapters.temper.md:25:5  static decodeFromJson(t, ic) <- @json class Record(
+265:10 -> ../json-adapters.temper.md:25:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Record(
+266:5 -> ../json-adapters.temper.md:25:5  const obj = requireInstanceO <- @json class Record(
+267:5 -> ../json-adapters.temper.md:25:5  const nameJson = requireInst <- @json class Record(
+268:5 -> ../json-adapters.temper.md:25:5  const name = nameJson.conten <- @json class Record(
+269:5 -> ../json-adapters.temper.md:25:5  const activeJson = requireIn <- @json class Record(
+270:5 -> ../json-adapters.temper.md:25:5  const active = activeJson.co <- @json class Record(
+271:5 -> ../json-adapters.temper.md:25:5  const scoreJson = requireIns <- @json class Record(
+272:5 -> ../json-adapters.temper.md:25:5  const score = scoreJson.asFl <- @json class Record(
+273:5 -> ../json-adapters.temper.md:25:5  const bigJson = requireInsta <- @json class Record(
+274:5 -> ../json-adapters.temper.md:25:5  const big = bigJson.asInt64( <- @json class Record(
+275:5 -> ../json-adapters.temper.md:25:5  const nickname = new OrNullJ <- @json class Record(
+276:5 -> ../json-adapters.temper.md:25:5  /** @type {readonly Point[]} <- @json class Record(
+277:5 -> ../json-adapters.temper.md:25:5  const points = listJsonAdapt <- @json class Record(
+278:5 -> ../json-adapters.temper.md:25:5  return new Record(name, acti <- @json class Record(
+281:3 -> ../json-adapters.temper.md:25:5  /** @returns {JsonAdapter<Re <- @json class Record(
+282:3 -> ../json-adapters.temper.md:25:5  static jsonAdapter() { <- @json class Record(
+282:10 -> ../json-adapters.temper.md:25:5 (jsonAdapter)  jsonAdapter() { <- @json class Record(
+283:5 -> ../json-adapters.temper.md:25:5  return /** @type {JsonAdapte <- @json class Record(
+287:1 -> ../json-adapters.temper.md:35:5  class CircleJsonAdapter exte <- @json class Circle(public ra
+287:7 -> ../json-adapters.temper.md:35:5 (CircleJsonAdapter)  CircleJsonAdapter extends ty <- @json class Circle(public ra
+287:24 -> ../json-adapters.temper.md:35:5   extends type(JsonAdapter) { <- @json class Circle(public ra
+288:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
+292:3 -> ../json-adapters.temper.md:35:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Circle(public ra
+293:5 -> ../json-adapters.temper.md:35:5  x.encodeToJson(p); <- @json class Circle(public ra
+296:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
+301:3 -> ../json-adapters.temper.md:35:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Circle(public ra
+302:5 -> ../json-adapters.temper.md:35:5  return Circle.decodeFromJson <- @json class Circle(public ra
+306:1 -> ../json-adapters.temper.md:34:5  class Shape extends type() { <- @json sealed interface Shape
+306:7 -> ../json-adapters.temper.md:34:28 (Shape)  Shape extends type() { <- Shape {}
+306:12 -> ../json-adapters.temper.md:34:5   extends type() { <- @json sealed interface Shape
+307:3 -> ../json-adapters.temper.md:34:5  /** @type {(p: JsonProducer) <- @json sealed interface Shape
+308:3 -> ../json-adapters.temper.md:34:5  encodeToJson = /** @type {an <- @json sealed interface Shape
+310:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
+315:3 -> ../json-adapters.temper.md:34:5  static decodeFromJson(t, ic) <- @json sealed interface Shape
+315:10 -> ../json-adapters.temper.md:34:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Shape
+316:5 -> ../json-adapters.temper.md:34:5  { <- @json sealed interface Shape
+317:7 -> ../json-adapters.temper.md:34:5  const obj = requireInstanceO <- @json sealed interface Shape
+318:7 -> ../json-adapters.temper.md:34:5  const valueForRadius = obj.p <- @json sealed interface Shape
+319:7 -> ../json-adapters.temper.md:34:5  { <- @json sealed interface Shape
+320:9 -> ../json-adapters.temper.md:34:5  if (valueForRadius != null) <- @json sealed interface Shape
+321:11 -> ../json-adapters.temper.md:34:5  return Circle.jsonAdapter(). <- @json sealed interface Shape
+323:9 -> ../json-adapters.temper.md:34:5  if (valueForRadius == null) <- @json sealed interface Shape
+324:11 -> ../json-adapters.temper.md:34:5  return Rect.jsonAdapter().de <- @json sealed interface Shape
+327:7 -> ../json-adapters.temper.md:34:5  bubble(); <- @json sealed interface Shape
+331:3 -> ../json-adapters.temper.md:34:5  /** @returns {JsonAdapter<Sh <- @json sealed interface Shape
+332:3 -> ../json-adapters.temper.md:34:5  static jsonAdapter() { <- @json sealed interface Shape
+332:10 -> ../json-adapters.temper.md:34:5 (jsonAdapter)  jsonAdapter() { <- @json sealed interface Shape
+333:5 -> ../json-adapters.temper.md:34:5  return /** @type {JsonAdapte <- @json sealed interface Shape
+337:1 -> ../json-adapters.temper.md:35:5  class Circle extends type(Sh <- @json class Circle(public ra
+337:7 -> ../json-adapters.temper.md:35:17 (Circle)  Circle extends type(Shape) { <- Circle(public radius: Int) e
+337:13 -> ../json-adapters.temper.md:35:5   extends type(Shape) { <- @json class Circle(public ra
+338:3 -> ../json-adapters.temper.md:35:31  /** @type {number} */ <- radius: Int) extends Shape {
+339:3 -> ../json-adapters.temper.md:35:31  #radius; <- radius: Int) extends Shape {
+341:3 -> ../json-adapters.temper.md:35:5  /** @param {number} radius * <- @json class Circle(public ra
+342:3 -> ../json-adapters.temper.md:35:5  constructor(radius) { <- @json class Circle(public ra
+344:5 -> ../json-adapters.temper.md:35:31  this.#radius = radius; <- radius: Int) extends Shape {
+347:3 -> ../json-adapters.temper.md:35:31  /** @returns {number} */ <- radius: Int) extends Shape {
+348:3 -> ../json-adapters.temper.md:35:31  get radius() { <- radius: Int) extends Shape {
+348:7 -> ../json-adapters.temper.md:35:31 (radius)  radius() { <- radius: Int) extends Shape {
+352:3 -> ../json-adapters.temper.md:35:5  /** @param {JsonProducer} p <- @json class Circle(public ra
+353:3 -> ../json-adapters.temper.md:35:5 (encodeToJson)  encodeToJson(p) { <- @json class Circle(public ra
+354:5 -> ../json-adapters.temper.md:35:5  p.startObject(); <- @json class Circle(public ra
+355:5 -> ../json-adapters.temper.md:35:5  p.objectKey("radius"); <- @json class Circle(public ra
+356:5 -> ../json-adapters.temper.md:35:5  p.int32Value(this.#radius); <- @json class Circle(public ra
+357:5 -> ../json-adapters.temper.md:35:5  p.endObject(); <- @json class Circle(public ra
+360:3 -> ../json-adapters.temper.md:35:5  /** <- @json class Circle(public ra
+365:3 -> ../json-adapters.temper.md:35:5  static decodeFromJson(t, ic) <- @json class Circle(public ra
+365:10 -> ../json-adapters.temper.md:35:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Circle(public ra
+366:5 -> ../json-adapters.temper.md:35:5  const obj = requireInstanceO <- @json class Circle(public ra
+367:5 -> ../json-adapters.temper.md:35:5  const radiusJson = requireIn <- @json class Circle(public ra
+368:5 -> ../json-adapters.temper.md:35:5  const radius = radiusJson.as <- @json class Circle(public ra
+369:5 -> ../json-adapters.temper.md:35:5  return new Circle(radius); <- @json class Circle(public ra
+372:3 -> ../json-adapters.temper.md:35:5  /** @returns {JsonAdapter<Ci <- @json class Circle(public ra
+373:3 -> ../json-adapters.temper.md:35:5  static jsonAdapter() { <- @json class Circle(public ra
+373:10 -> ../json-adapters.temper.md:35:5 (jsonAdapter)  jsonAdapter() { <- @json class Circle(public ra
+374:5 -> ../json-adapters.temper.md:35:5  return /** @type {JsonAdapte <- @json class Circle(public ra
+378:1 -> ../json-adapters.temper.md:36:5  class RectJsonAdapter extend <- @json class Rect(public widt
+378:7 -> ../json-adapters.temper.md:36:5 (RectJsonAdapter)  RectJsonAdapter extends type <- @json class Rect(public widt
+378:22 -> ../json-adapters.temper.md:36:5   extends type(JsonAdapter) { <- @json class Rect(public widt
+379:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
+383:3 -> ../json-adapters.temper.md:36:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Rect(public widt
+384:5 -> ../json-adapters.temper.md:36:5  x.encodeToJson(p); <- @json class Rect(public widt
+387:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
+392:3 -> ../json-adapters.temper.md:36:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Rect(public widt
+393:5 -> ../json-adapters.temper.md:36:5  return Rect.decodeFromJson(t <- @json class Rect(public widt
+397:1 -> ../json-adapters.temper.md:36:5  class Rect extends type(Shap <- @json class Rect(public widt
+397:7 -> ../json-adapters.temper.md:36:17 (Rect)  Rect extends type(Shape) { <- Rect(public width: Int, publ
+397:11 -> ../json-adapters.temper.md:36:5   extends type(Shape) { <- @json class Rect(public widt
+398:3 -> ../json-adapters.temper.md:36:29  /** @type {number} */ <- width: Int, public height: I
+399:3 -> ../json-adapters.temper.md:36:29  #width; <- width: Int, public height: I
+400:3 -> ../json-adapters.temper.md:36:48  /** @type {number} */ <- height: Int) extends Shape {
+401:3 -> ../json-adapters.temper.md:36:48  #height; <- height: Int) extends Shape {
+411:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
+415:3 -> ../json-adapters.temper.md:36:5  constructor(width, height) { <- @json class Rect(public widt
+417:5 -> ../json-adapters.temper.md:36:29  this.#width = width; <- width: Int, public height: I
+418:5 -> ../json-adapters.temper.md:36:48  this.#height = height; <- height: Int) extends Shape {
+421:3 -> ../json-adapters.temper.md:36:29  /** @returns {number} */ <- width: Int, public height: I
+422:3 -> ../json-adapters.temper.md:36:29  get width() { <- width: Int, public height: I
+422:7 -> ../json-adapters.temper.md:36:29 (width)  width() { <- width: Int, public height: I
+426:3 -> ../json-adapters.temper.md:36:48  /** @returns {number} */ <- height: Int) extends Shape {
+427:3 -> ../json-adapters.temper.md:36:48  get height() { <- height: Int) extends Shape {
+427:7 -> ../json-adapters.temper.md:36:48 (height)  height() { <- height: Int) extends Shape {
+431:3 -> ../json-adapters.temper.md:36:5  /** @param {JsonProducer} p <- @json class Rect(public widt
+432:3 -> ../json-adapters.temper.md:36:5 (encodeToJson)  encodeToJson(p) { <- @json class Rect(public widt
+433:5 -> ../json-adapters.temper.md:36:5  p.startObject(); <- @json class Rect(public widt
+434:5 -> ../json-adapters.temper.md:36:5  p.objectKey("width"); <- @json class Rect(public widt
+435:5 -> ../json-adapters.temper.md:36:5  p.int32Value(this.#width); <- @json class Rect(public widt
+436:5 -> ../json-adapters.temper.md:36:5  p.objectKey("height"); <- @json class Rect(public widt
+437:5 -> ../json-adapters.temper.md:36:5  p.int32Value(this.#height); <- @json class Rect(public widt
+438:5 -> ../json-adapters.temper.md:36:5  p.endObject(); <- @json class Rect(public widt
+441:3 -> ../json-adapters.temper.md:36:5  /** <- @json class Rect(public widt
+446:3 -> ../json-adapters.temper.md:36:5  static decodeFromJson(t, ic) <- @json class Rect(public widt
+446:10 -> ../json-adapters.temper.md:36:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Rect(public widt
+447:5 -> ../json-adapters.temper.md:36:5  const obj = requireInstanceO <- @json class Rect(public widt
+448:5 -> ../json-adapters.temper.md:36:5  const widthJson = requireIns <- @json class Rect(public widt
+449:5 -> ../json-adapters.temper.md:36:5  const width = widthJson.asIn <- @json class Rect(public widt
+450:5 -> ../json-adapters.temper.md:36:5  const heightJson = requireIn <- @json class Rect(public widt
+451:5 -> ../json-adapters.temper.md:36:5  const height = heightJson.as <- @json class Rect(public widt
+452:5 -> ../json-adapters.temper.md:36:5  return new Rect(width, heigh <- @json class Rect(public widt
+455:3 -> ../json-adapters.temper.md:36:5  /** @returns {JsonAdapter<Re <- @json class Rect(public widt
+456:3 -> ../json-adapters.temper.md:36:5  static jsonAdapter() { <- @json class Rect(public widt
+456:10 -> ../json-adapters.temper.md:36:5 (jsonAdapter)  jsonAdapter() { <- @json class Rect(public widt
+457:5 -> ../json-adapters.temper.md:36:5  return /** @type {JsonAdapte <- @json class Rect(public widt
+461:1 -> ../json-adapters.temper.md:34:5  class ShapeJsonAdapter exten <- @json sealed interface Shape
+461:7 -> ../json-adapters.temper.md:34:5 (ShapeJsonAdapter)  ShapeJsonAdapter extends typ <- @json sealed interface Shape
+461:23 -> ../json-adapters.temper.md:34:5   extends type(JsonAdapter) { <- @json sealed interface Shape
+462:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
+466:3 -> ../json-adapters.temper.md:34:5 (encodeToJson)  encodeToJson(x, p) { <- @json sealed interface Shape
+467:5 -> ../json-adapters.temper.md:34:5  x.encodeToJson(p); <- @json sealed interface Shape
+470:3 -> ../json-adapters.temper.md:34:5  /** <- @json sealed interface Shape
+475:3 -> ../json-adapters.temper.md:34:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Shape
+476:5 -> ../json-adapters.temper.md:34:5  return Shape.decodeFromJson( <- @json sealed interface Shape
+480:1 -> ../json-adapters.temper.md:39:5  class HelloJsonAdapter exten <- @json @jsonExtra("kind", "he
+480:7 -> ../json-adapters.temper.md:39:5 (HelloJsonAdapter)  HelloJsonAdapter extends typ <- @json @jsonExtra("kind", "he
+480:23 -> ../json-adapters.temper.md:39:5   extends type(JsonAdapter) { <- @json @jsonExtra("kind", "he
+481:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
+485:3 -> ../json-adapters.temper.md:39:5 (encodeToJson)  encodeToJson(x, p) { <- @json @jsonExtra("kind", "he
+486:5 -> ../json-adapters.temper.md:39:5  x.encodeToJson(p); <- @json @jsonExtra("kind", "he
+489:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
+494:3 -> ../json-adapters.temper.md:39:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "he
+495:5 -> ../json-adapters.temper.md:39:5  return Hello.decodeFromJson( <- @json @jsonExtra("kind", "he
+499:1 -> ../json-adapters.temper.md:38:5  class Message extends type() <- @json sealed interface Messa
+499:7 -> ../json-adapters.temper.md:38:28 (Message)  Message extends type() { <- Message {}
+499:14 -> ../json-adapters.temper.md:38:5   extends type() { <- @json sealed interface Messa
+500:3 -> ../json-adapters.temper.md:38:5  /** @type {(p: JsonProducer) <- @json sealed interface Messa
+501:3 -> ../json-adapters.temper.md:38:5  encodeToJson = /** @type {an <- @json sealed interface Messa
+503:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
+508:3 -> ../json-adapters.temper.md:38:5  static decodeFromJson(t, ic) <- @json sealed interface Messa
+508:10 -> ../json-adapters.temper.md:38:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Messa
+509:5 -> ../json-adapters.temper.md:38:5  { <- @json sealed interface Messa
+510:7 -> ../json-adapters.temper.md:38:5  const obj = requireInstanceO <- @json sealed interface Messa
+511:7 -> ../json-adapters.temper.md:38:5  const valueForKind = obj.pro <- @json sealed interface Messa
+512:7 -> ../json-adapters.temper.md:38:5  { <- @json sealed interface Messa
+513:9 -> ../json-adapters.temper.md:38:5  if (valueForKind != null && <- @json sealed interface Messa
+514:11 -> ../json-adapters.temper.md:38:5  const subject = /** @type {J <- @json sealed interface Messa
+515:11 -> ../json-adapters.temper.md:38:5  if (subject === "hello") { <- @json sealed interface Messa
+516:13 -> ../json-adapters.temper.md:38:5  return Hello.jsonAdapter().d <- @json sealed interface Messa
+517:18 -> ../json-adapters.temper.md:38:5  if (subject === "bye") { <- @json sealed interface Messa
+518:13 -> ../json-adapters.temper.md:38:5  return Bye.jsonAdapter().dec <- @json sealed interface Messa
+522:7 -> ../json-adapters.temper.md:38:5  bubble(); <- @json sealed interface Messa
+526:3 -> ../json-adapters.temper.md:38:5  /** @returns {JsonAdapter<Me <- @json sealed interface Messa
+527:3 -> ../json-adapters.temper.md:38:5  static jsonAdapter() { <- @json sealed interface Messa
+527:10 -> ../json-adapters.temper.md:38:5 (jsonAdapter)  jsonAdapter() { <- @json sealed interface Messa
+528:5 -> ../json-adapters.temper.md:38:5  return /** @type {JsonAdapte <- @json sealed interface Messa
+532:1 -> ../json-adapters.temper.md:39:5  class Hello extends type(Mes <- @json @jsonExtra("kind", "he
+532:7 -> ../json-adapters.temper.md:40:11 (Hello)  Hello extends type(Message) <- Hello(public text: String) e
+532:12 -> ../json-adapters.temper.md:39:5   extends type(Message) { <- @json @jsonExtra("kind", "he
+533:3 -> ../json-adapters.temper.md:40:24  /** @type {string} */ <- text: String) extends Messag
+534:3 -> ../json-adapters.temper.md:40:24  #text; <- text: String) extends Messag
+536:3 -> ../json-adapters.temper.md:39:5  /** @param {string} text */ <- @json @jsonExtra("kind", "he
+537:3 -> ../json-adapters.temper.md:39:5  constructor(text) { <- @json @jsonExtra("kind", "he
+539:5 -> ../json-adapters.temper.md:40:24  this.#text = text; <- text: String) extends Messag
+542:3 -> ../json-adapters.temper.md:40:24  /** @returns {string} */ <- text: String) extends Messag
+543:3 -> ../json-adapters.temper.md:40:24  get text() { <- text: String) extends Messag
+543:7 -> ../json-adapters.temper.md:40:24 (text)  text() { <- text: String) extends Messag
+547:3 -> ../json-adapters.temper.md:39:5  /** @param {JsonProducer} p <- @json @jsonExtra("kind", "he
+548:3 -> ../json-adapters.temper.md:39:5 (encodeToJson)  encodeToJson(p) { <- @json @jsonExtra("kind", "he
+549:5 -> ../json-adapters.temper.md:39:5  p.startObject(); <- @json @jsonExtra("kind", "he
+550:5 -> ../json-adapters.temper.md:39:5  p.objectKey("text"); <- @json @jsonExtra("kind", "he
+551:5 -> ../json-adapters.temper.md:39:5  p.stringValue(this.#text); <- @json @jsonExtra("kind", "he
+552:5 -> ../json-adapters.temper.md:39:5  p.objectKey("kind"); <- @json @jsonExtra("kind", "he
+553:5 -> ../json-adapters.temper.md:39:5  p.stringValue("hello"); <- @json @jsonExtra("kind", "he
+554:5 -> ../json-adapters.temper.md:39:5  p.endObject(); <- @json @jsonExtra("kind", "he
+557:3 -> ../json-adapters.temper.md:39:5  /** <- @json @jsonExtra("kind", "he
+562:3 -> ../json-adapters.temper.md:39:5  static decodeFromJson(t, ic) <- @json @jsonExtra("kind", "he
+562:10 -> ../json-adapters.temper.md:39:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "he
+563:5 -> ../json-adapters.temper.md:39:5  const obj = requireInstanceO <- @json @jsonExtra("kind", "he
+564:5 -> ../json-adapters.temper.md:39:5  const textJson = requireInst <- @json @jsonExtra("kind", "he
+565:5 -> ../json-adapters.temper.md:39:5  const text = textJson.conten <- @json @jsonExtra("kind", "he
+566:5 -> ../json-adapters.temper.md:39:5  return new Hello(text); <- @json @jsonExtra("kind", "he
+569:3 -> ../json-adapters.temper.md:39:5  /** @returns {JsonAdapter<He <- @json @jsonExtra("kind", "he
+570:3 -> ../json-adapters.temper.md:39:5  static jsonAdapter() { <- @json @jsonExtra("kind", "he
+570:10 -> ../json-adapters.temper.md:39:5 (jsonAdapter)  jsonAdapter() { <- @json @jsonExtra("kind", "he
+571:5 -> ../json-adapters.temper.md:39:5  return /** @type {JsonAdapte <- @json @jsonExtra("kind", "he
+575:1 -> ../json-adapters.temper.md:41:5  class ByeJsonAdapter extends <- @json @jsonExtra("kind", "by
+575:7 -> ../json-adapters.temper.md:41:5 (ByeJsonAdapter)  ByeJsonAdapter extends type( <- @json @jsonExtra("kind", "by
+575:21 -> ../json-adapters.temper.md:41:5   extends type(JsonAdapter) { <- @json @jsonExtra("kind", "by
+576:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
+580:3 -> ../json-adapters.temper.md:41:5 (encodeToJson)  encodeToJson(x, p) { <- @json @jsonExtra("kind", "by
+581:5 -> ../json-adapters.temper.md:41:5  x.encodeToJson(p); <- @json @jsonExtra("kind", "by
+584:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
+589:3 -> ../json-adapters.temper.md:41:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "by
+590:5 -> ../json-adapters.temper.md:41:5  return Bye.decodeFromJson(t, <- @json @jsonExtra("kind", "by
+594:1 -> ../json-adapters.temper.md:41:5  class Bye extends type(Messa <- @json @jsonExtra("kind", "by
+594:7 -> ../json-adapters.temper.md:42:11 (Bye)  Bye extends type(Message) { <- Bye(public text: String) ext
+594:10 -> ../json-adapters.temper.md:41:5   extends type(Message) { <- @json @jsonExtra("kind", "by
+595:3 -> ../json-adapters.temper.md:42:22  /** @type {string} */ <- text: String) extends Messag
+596:3 -> ../json-adapters.temper.md:42:22  #text; <- text: String) extends Messag
+598:3 -> ../json-adapters.temper.md:41:5  /** @param {string} text */ <- @json @jsonExtra("kind", "by
+599:3 -> ../json-adapters.temper.md:41:5  constructor(text) { <- @json @jsonExtra("kind", "by
+601:5 -> ../json-adapters.temper.md:42:22  this.#text = text; <- text: String) extends Messag
+604:3 -> ../json-adapters.temper.md:42:22  /** @returns {string} */ <- text: String) extends Messag
+605:3 -> ../json-adapters.temper.md:42:22  get text() { <- text: String) extends Messag
+605:7 -> ../json-adapters.temper.md:42:22 (text)  text() { <- text: String) extends Messag
+609:3 -> ../json-adapters.temper.md:41:5  /** @param {JsonProducer} p <- @json @jsonExtra("kind", "by
+610:3 -> ../json-adapters.temper.md:41:5 (encodeToJson)  encodeToJson(p) { <- @json @jsonExtra("kind", "by
+611:5 -> ../json-adapters.temper.md:41:5  p.startObject(); <- @json @jsonExtra("kind", "by
+612:5 -> ../json-adapters.temper.md:41:5  p.objectKey("text"); <- @json @jsonExtra("kind", "by
+613:5 -> ../json-adapters.temper.md:41:5  p.stringValue(this.#text); <- @json @jsonExtra("kind", "by
+614:5 -> ../json-adapters.temper.md:41:5  p.objectKey("kind"); <- @json @jsonExtra("kind", "by
+615:5 -> ../json-adapters.temper.md:41:5  p.stringValue("bye"); <- @json @jsonExtra("kind", "by
+616:5 -> ../json-adapters.temper.md:41:5  p.endObject(); <- @json @jsonExtra("kind", "by
+619:3 -> ../json-adapters.temper.md:41:5  /** <- @json @jsonExtra("kind", "by
+624:3 -> ../json-adapters.temper.md:41:5  static decodeFromJson(t, ic) <- @json @jsonExtra("kind", "by
+624:10 -> ../json-adapters.temper.md:41:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json @jsonExtra("kind", "by
+625:5 -> ../json-adapters.temper.md:41:5  const obj = requireInstanceO <- @json @jsonExtra("kind", "by
+626:5 -> ../json-adapters.temper.md:41:5  const textJson = requireInst <- @json @jsonExtra("kind", "by
+627:5 -> ../json-adapters.temper.md:41:5  const text = textJson.conten <- @json @jsonExtra("kind", "by
+628:5 -> ../json-adapters.temper.md:41:5  return new Bye(text); <- @json @jsonExtra("kind", "by
+631:3 -> ../json-adapters.temper.md:41:5  /** @returns {JsonAdapter<By <- @json @jsonExtra("kind", "by
+632:3 -> ../json-adapters.temper.md:41:5  static jsonAdapter() { <- @json @jsonExtra("kind", "by
+632:10 -> ../json-adapters.temper.md:41:5 (jsonAdapter)  jsonAdapter() { <- @json @jsonExtra("kind", "by
+633:5 -> ../json-adapters.temper.md:41:5  return /** @type {JsonAdapte <- @json @jsonExtra("kind", "by
+637:1 -> ../json-adapters.temper.md:38:5  class MessageJsonAdapter ext <- @json sealed interface Messa
+637:7 -> ../json-adapters.temper.md:38:5 (MessageJsonAdapter)  MessageJsonAdapter extends t <- @json sealed interface Messa
+637:25 -> ../json-adapters.temper.md:38:5   extends type(JsonAdapter) { <- @json sealed interface Messa
+638:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
+642:3 -> ../json-adapters.temper.md:38:5 (encodeToJson)  encodeToJson(x, p) { <- @json sealed interface Messa
+643:5 -> ../json-adapters.temper.md:38:5  x.encodeToJson(p); <- @json sealed interface Messa
+646:3 -> ../json-adapters.temper.md:38:5  /** <- @json sealed interface Messa
+651:3 -> ../json-adapters.temper.md:38:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json sealed interface Messa
+652:5 -> ../json-adapters.temper.md:38:5  return Message.decodeFromJso <- @json sealed interface Messa
+656:1 -> ../json-adapters.temper.md:44:5  class CelsiusJsonAdapter ext <- @json class Celsius(public d
+656:7 -> ../json-adapters.temper.md:44:5 (CelsiusJsonAdapter)  CelsiusJsonAdapter extends t <- @json class Celsius(public d
+656:25 -> ../json-adapters.temper.md:44:5   extends type(JsonAdapter) { <- @json class Celsius(public d
+657:3 -> ../json-adapters.temper.md:44:5  /** <- @json class Celsius(public d
+661:3 -> ../json-adapters.temper.md:44:5 (encodeToJson)  encodeToJson(x, p) { <- @json class Celsius(public d
+662:5 -> ../json-adapters.temper.md:44:5  x.encodeToJson(p); <- @json class Celsius(public d
+665:3 -> ../json-adapters.temper.md:44:5  /** <- @json class Celsius(public d
+670:3 -> ../json-adapters.temper.md:44:5 (decodeFromJson)  decodeFromJson(t, ic) { <- @json class Celsius(public d
+671:5 -> ../json-adapters.temper.md:44:5  return Celsius.decodeFromJso <- @json class Celsius(public d
+675:1 -> ../json-adapters.temper.md:44:5  class Celsius extends type() <- @json class Celsius(public d
+675:7 -> ../json-adapters.temper.md:44:17 (Celsius)  Celsius extends type() { <- Celsius(public degrees: Int)
+675:14 -> ../json-adapters.temper.md:44:5   extends type() { <- @json class Celsius(public d
+676:3 -> ../json-adapters.temper.md:44:32  /** @type {number} */ <- degrees: Int) {
+677:3 -> ../json-adapters.temper.md:44:32  #degrees; <- degrees: Int) {
+679:3 -> ../json-adapters.temper.md:44:5  /** @param {number} degrees <- @json class Celsius(public d
+680:3 -> ../json-adapters.temper.md:44:5  constructor(degrees) { <- @json class Celsius(public d
+682:5 -> ../json-adapters.temper.md:44:32  this.#degrees = degrees; <- degrees: Int) {
+685:3 -> ../json-adapters.temper.md:44:32  /** @returns {number} */ <- degrees: Int) {
+686:3 -> ../json-adapters.temper.md:44:32  get degrees() { <- degrees: Int) {
+686:7 -> ../json-adapters.temper.md:44:32 (degrees)  degrees() { <- degrees: Int) {
+690:3 -> ../json-adapters.temper.md:45:14  /** @param {JsonProducer} p <- encodeToJson(p: JsonProducer
+691:3 -> ../json-adapters.temper.md:45:14 (encodeToJson)  encodeToJson(p) { <- encodeToJson(p: JsonProducer
+692:5 -> ../json-adapters.temper.md:46:9  p.int32Value(this.#degrees); <- p.int32Value(degrees);
+695:3 -> ../json-adapters.temper.md:49:21  /** <- decodeFromJson(
+700:3 -> ../json-adapters.temper.md:49:21  static decodeFromJson(t, ic) <- decodeFromJson(
+700:10 -> ../json-adapters.temper.md:49:21 (decodeFromJson)  decodeFromJson(t, ic) { <- decodeFromJson(
+701:5 -> ../json-adapters.temper.md:53:9  return new Celsius(requireIn <- new Celsius((t as JsonNumeri
+704:3 -> ../json-adapters.temper.md:44:5  /** @returns {JsonAdapter<Ce <- @json class Celsius(public d
+705:3 -> ../json-adapters.temper.md:44:5  static jsonAdapter() { <- @json class Celsius(public d
+705:10 -> ../json-adapters.temper.md:44:5 (jsonAdapter)  jsonAdapter() { <- @json class Celsius(public d
+706:5 -> ../json-adapters.temper.md:44:5  return /** @type {JsonAdapte <- @json class Celsius(public d
+710:1 -> ../json-adapters.temper.md:74:5  roundTrip(Point.jsonAdapter( <- roundTrip(Point.jsonAdapter(
+711:1 -> ../json-adapters.temper.md:75:5  roundTrip(Record.jsonAdapter <- roundTrip(
+712:1 -> ../json-adapters.temper.md:79:5  /** @type {readonly Shape[]} <- let shapes: List<Shape> = [n
+713:1 -> ../json-adapters.temper.md:79:5  const shapes = Object.freeze <- let shapes: List<Shape> = [n
+714:1 -> ../json-adapters.temper.md:80:5  roundTrip(listJsonAdapter(Sh <- roundTrip(List.jsonAdapter(S
+715:1 -> ../json-adapters.temper.md:81:5  /** @type {readonly Message[ <- let messages: List<Message>
+716:1 -> ../json-adapters.temper.md:81:5  const messages = Object.free <- let messages: List<Message>
+717:1 -> ../json-adapters.temper.md:82:5  roundTrip(listJsonAdapter(Me <- roundTrip(List.jsonAdapter(M
+718:1 -> ../json-adapters.temper.md:83:5  roundTrip(Celsius.jsonAdapte <- roundTrip(Celsius.jsonAdapte
+719:1 -> ../json-adapters.temper.md:85:5  /** @type {Shape} */ <- let shape = decode(Shape.jso
+720:1 -> ../json-adapters.temper.md:85:5  let shape; <- let shape = decode(Shape.jso
+721:1 -> ../json-adapters.temper.md:85:5  try { <- let shape = decode(Shape.jso
+726:1 -> ../json-adapters.temper.md:86:5  { <- when (shape) {
+727:3 -> ../json-adapters.temper.md:87:18  if (shape instanceof Rect) { <- console.log("rect ${shape.wi
+728:5 -> ../json-adapters.temper.md:87:18  console.log(`rect ${/** @typ <- console.log("rect ${shape.wi
+730:5 -> ../json-adapters.temper.md:88:15  console.log("not a rect"); <- console.log("not a rect");
+733:1 -> ../json-adapters.temper.md:90:5  /** @type {Record} */ <- let record = decode(
+734:1 -> ../json-adapters.temper.md:90:5  let record; <- let record = decode(
+735:1 -> ../json-adapters.temper.md:90:5  try { <- let record = decode(
+740:1 -> ../json-adapters.temper.md:94:5  console.log(`${record.name} <- console.log("${record.name}
+741:1 -> ../json-adapters.temper.md:95:5  /** @type {string} */ <- console.log(do { decode(Poin
+742:1 -> ../json-adapters.temper.md:95:5  let t$0; <- console.log(do { decode(Poin
+743:1 -> ../json-adapters.temper.md:95:5  try { <- console.log(do { decode(Poin
+744:3 -> ../json-adapters.temper.md:95:22  decode(Point.jsonAdapter(), <- decode(Point.jsonAdapter(),
+750:1 -> ../json-adapters.temper.md:95:5  console.log(t$0); <- console.log(do { decode(Poin
+751:1 -> ../json-adapters.temper.md:96:5  /** @type {string} */ <- console.log(
+752:1 -> ../json-adapters.temper.md:96:5  let t$1; <- console.log(
+753:1 -> ../json-adapters.temper.md:96:5  try { <- console.log(
+754:3 -> ../json-adapters.temper.md:97:12  decode(Message.jsonAdapter() <- decode(Message.jsonAdapter()
+760:1 -> ../json-adapters.temper.md:96:5  console.log(t$1); <- console.log(

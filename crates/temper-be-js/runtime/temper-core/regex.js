@@ -1,5 +1,7 @@
 // @ts-check
 
+import { bubble } from "./core.js";
+
 export const regexCompiledFound = (_, compiled, text) => {
   compiled.lastIndex = 0;
   return compiled.test(text);
@@ -17,8 +19,7 @@ export const regexCompiledFound = (_, compiled, text) => {
 export const regexCompiledFind = (_, compiled, text, begin, regexRefs) => {
   const match = regexCompiledFindEx(_, /** @type {RegExp} */ (compiled), text, begin, regexRefs);
   if (match === undefined) {
-    // We could just fail on `undefined.groups`, but that seems accidental.
-    throw Error();
+    bubble();
   }
   return match;
 };

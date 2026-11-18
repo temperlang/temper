@@ -209,23 +209,28 @@ do
         msg = "Bubble"
     }, bubble_meta)
 
-    if TEMPER_LUA_DEBUG_PCALL then
-        function temper.pcall(f, ...)
-            local res = {pcall(f, ...)}
-            if res[1] then
-                return table_unpack(res)
-            end
-            if type(res[2]) ~= 'table' then
-                io.stderr:write(res[2] .. '\n')
-                error(res[2])
-            else
-                return table_unpack(res)
-            end
+    -- Whether an error is a bubble, which `temper.bubble` raises, rather
+    -- than a panic or a host error.
+    local function is_bubble(err)
+        return getmetatable(err) == bubble_meta
+    end
+    temper.is_bubble = is_bubble
+
+    local function caught(ok, ...)
+        if ok or is_bubble((...)) then
+            return ok, ...
         end
-    else
-        temper.pcall = pcall
+        error((...), 0)
     end
 
+    -- `orelse`: `pcall`, but catching only a bubble, raising anything
+    -- else (a panic, a host error) again, so it passes every `orelse`.
+    function temper.pcall(f, ...)
+        return caught(pcall(f, ...))
+    end
+
+    -- Bubbles, as every builtin that bubbles does; host code bubbles by
+    -- calling it, as anything else it raises passes every `orelse`.
     function temper.bubble(msg)
         if msg ~= nil then
             error(setmetatable({
@@ -235,6 +240,8 @@ do
             error(bubble_object)
         end
     end
+    -- The integer module's own failures bubble too.
+    temper_int.bubble = temper.bubble
 end
 
 function temper.yield(...)
@@ -902,12 +909,14 @@ temper.int32_min = math_min
 temper.int32_maxvalue = 0x7fffffff
 temper.int32_minvalue = -0x80000000
 
+-- Whether `n` is an `Int32`'s value; not for `nil`, as a failed
+-- `tonumber` gives.
 function temper.is_safe_int32(n)
-    return temper.int32_minvalue <= n and n <= temper.int32_maxvalue
+    return n ~= nil and temper.int32_minvalue <= n and n <= temper.int32_maxvalue
 end
 
 function temper.is_safe_integer(n)
-    local ret, _ = temper.pcall(function()
+    local ret, _ = pcall(function()
         return string_format("%i", n)
     end)
     return ret
@@ -1833,6 +1842,9 @@ end
 function temper.string_toint32(str, radix)
     if radix == nil then
         radix = 10
+    elseif radix < 2 or radix > 36 then
+        -- Not `tonumber`'s error, which isn't a bubble.
+        temper.bubble("core.type String.toInt32() bad radix")
     end
     local ret = tonumber(str, radix)
     if temper.is_safe_int32(ret) then
@@ -2335,11 +2347,14 @@ function temper.cast_to_null(thing)
     return thing
 end
 
-function temper.cast_to(thing, type)
-    if thing and thing[temper.type_tag].super[type.typename] then
+-- `thing as T`, for a class or interface `T`, which bubbles for anything
+-- else: a value of another type, `temper.null`, or a builtin's value.
+function temper.cast_to(thing, to)
+    local tag = type(thing) == "table" and thing[temper.type_tag] or nil
+    if type(tag) == "table" and tag.super[to.typename] then
         return thing
     else
-        return temper.bubble("cast to " .. tostring(type) .. " type (was a " .. tostring(thing[temper.type_tag]) .. ")")
+        return temper.bubble("cast to " .. tostring(to.typename) .. " (was a " .. tostring(tag) .. ")")
     end
 end
 
@@ -2389,7 +2404,7 @@ function temper.test(name, cb)
             [temper.type_tag] = 'ListBuilder'
         }
     }
-    local ok, err = temper.pcall(function()
+    local ok, err = pcall(function()
         cb(test)
     end)
 

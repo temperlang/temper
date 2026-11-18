@@ -1,4 +1,9 @@
-import { requireInstanceOf, requireNotNull, type } from "@temperlang/core";
+import {
+  isBubble,
+  requireInstanceOf,
+  requireNotNull,
+  type,
+} from "@temperlang/core";
 
 class Apple extends type() {
   /** @type {string} */
@@ -30,7 +35,8 @@ class Gala extends type(Apple) {
   let t$0;
   try {
     t$0 = requireInstanceOf(x, Fuji).name;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$0 = "Cast failed!";
   }
   console.log(t$0);
@@ -39,7 +45,8 @@ class Gala extends type(Apple) {
   let t$1;
   try {
     t$1 = requireInstanceOf(y, Apple).name;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$1 = "Cast from AnyValue failed!";
   }
   console.log(t$1);
@@ -47,7 +54,8 @@ class Gala extends type(Apple) {
   let t$2;
   try {
     t$2 = requireInstanceOf(y, Gala).name;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$2 = "Cast from AnyValue failed!";
   }
   console.log(t$2);
@@ -55,7 +63,8 @@ class Gala extends type(Apple) {
   let t$3;
   try {
     t$3 = requireInstanceOf(y, Fuji).name;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$3 = "Cast from AnyValue failed!";
   }
   console.log(t$3);
@@ -65,7 +74,8 @@ class Gala extends type(Apple) {
   try {
     requireNotNull(x);
     t$4 = "Tasty nothing.";
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$4 = "Was null!";
   }
   console.log(t$4);

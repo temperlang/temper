@@ -4,6 +4,7 @@ import {
   cmpString,
   divIntInt,
   float64ToString,
+  isBubble,
   listBuilderToList,
   listedGet,
   listedJoin,
@@ -169,7 +170,8 @@ function cube(x) {
 function corner(grid) {
   try {
     return grid.get(1, 1);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return -1.0;
   }
 }
@@ -334,7 +336,8 @@ function captured(s) {
   let found;
   try {
     found = parseGrid(s);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     found = null;
   }
   return listedJoin(/** @type {boolean[]} */ (listedMap(/** @type {number[]} */ (Object.freeze([1, 2])), (x) => found == null)), ",", (b) => b.toString());
@@ -463,7 +466,8 @@ function sumParsed(xs) {
       let held = null;
       try {
         held = stringToInt32(x, null);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
       }
       if (held == null) {
         {
@@ -489,7 +493,8 @@ function sumParsed(xs) {
       let held = null;
       try {
         held = stringToInt32(x, null);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
       }
       if (held == null) {
         continue;
@@ -576,7 +581,8 @@ export class Grid extends type() {
   static parse(s) {
     try {
       return parseGrid(s);
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       return null;
     }
   }

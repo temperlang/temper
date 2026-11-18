@@ -605,8 +605,9 @@ fn next_safe(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `console.log(message)`.
-/// `strict.fail(test.messagesCombined())`, with `strict` from Node's
-/// `assert`, as Kotlin's `bailExpander`.
+/// `bubble(test.messagesCombined())`, a bubble with the test's messages,
+/// which a test runner shows, as Kotlin's `bailExpander` gives with
+/// Node's `strict.fail`, whose `AssertionError` no `orelse` catches.
 fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [test] = args else {
         return Err(NotYet {
@@ -614,12 +615,11 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
         });
     };
     let test = t.expr(*test)?;
-    t.import_from("assert", "strict");
-    // `?? undefined`, as Node's `fail` takes no null, where Kotlin's
-    // passes `messagesCombined()`'s null as is.
+    t.import("bubble");
+    // `?? undefined`, as `bubble` takes no null.
     let messages = test.method("messagesCombined", Vec::new());
     let messages = Expr::bin(Bin::Coalesce, messages, Expr::Undefined);
-    Ok(Expr::name("strict").method("fail", vec![messages]))
+    Ok(Expr::name("bubble").call(vec![messages]))
 }
 
 fn console_log(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {

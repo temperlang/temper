@@ -1,4 +1,5 @@
 import {
+  isBubble,
   listBuilderAdd,
   listBuilderRemoveLast,
   listBuilderSet,
@@ -414,14 +415,16 @@ const m = mapConstructor(/** @type {any} */ (Object.freeze([pairConstructor("a",
 let t$19;
 try {
   t$19 = mappedGet(m, "b");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$19 = -1;
 }
 /** @type {number} */
 let t$20;
 try {
   t$20 = mappedGet(m, "c");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$20 = -1;
 }
 console.log(`${t$19} ${t$20} ${m.has("a")} ${m.size}`);
@@ -437,7 +440,8 @@ let t$21;
   let subject6;
   try {
     subject6 = mapBuilderRemove(mb, "q");
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     subject6 = 0;
   }
   t$21 = subject6 == null ? null : subject6.toString();
@@ -453,21 +457,24 @@ tally.set("k", 2);
 let t$22;
 try {
   t$22 = bump("k");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$22 = -1;
 }
 /** @type {number} */
 let t$23;
 try {
   t$23 = bump("z");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$23 = -1;
 }
 /** @type {number} */
 let t$24;
 try {
   t$24 = mappedGet(tally, "k");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$24 = -1;
 }
 console.log(`${t$22} ${t$23} ${t$24}`);

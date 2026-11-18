@@ -1,4 +1,4 @@
-import { listedGet, requireInstanceOf } from "@temperlang/core";
+import { isBubble, listedGet, requireInstanceOf } from "@temperlang/core";
 import {
   InterchangeContext,
   JsonArray,
@@ -29,7 +29,8 @@ import {
     let jsonValue;
     try {
       jsonValue = parseJson(s);
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       jsonValue = null;
     }
     console.log(`\`${s}\` is empty array: ${jsonValue != null && jsonValue instanceof JsonArray && !/** @type {JsonArray} */ (/** @type {unknown} */ (jsonValue)).elements.length}`);
@@ -48,7 +49,8 @@ import {
     parseJsonToProducer(s2, /** @type {JsonProducer} */ (/** @type {unknown} */ (p)));
     try {
       p.toJsonSyntaxTree();
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       bubbled = true;
     }
     const error = p.jsonError;
@@ -63,7 +65,8 @@ const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e
   let t$0;
   try {
     t$0 = p2.toJsonString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$0 = "?!";
   }
   console.log(`string with select code points: ${t$0}`);

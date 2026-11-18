@@ -1,4 +1,4 @@
-import { bubble, type } from "@temperlang/core";
+import { bubble, isBubble, type } from "@temperlang/core";
 
 /**
  * @param {number} x
@@ -119,35 +119,40 @@ class Box extends type() {
 let a;
 try {
   a = mismatched(1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   a = -1;
 }
 /** @type {number} */
 let b;
 try {
   b = undeclared();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   b = -1;
 }
 /** @type {number} */
 let c;
 try {
   c = misspelled("a");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   c = -1;
 }
 /** @type {number} */
 let d;
 try {
   d = misspelledMethod("a");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   d = -1;
 }
 /** @type {number} */
 let e;
 try {
   e = wrongArity();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   e = -1;
 }
 const box = new Box(3);
@@ -155,7 +160,8 @@ const box = new Box(3);
 let f;
 try {
   f = box.bad();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   f = "caught";
 }
 console.log(`${good(1)} ${a} ${b} ${c} ${d} ${e}`);
@@ -164,28 +170,32 @@ console.log(`${unknownType(1)} ${afterUnclosed(2)} ${box.get()} ${f}`);
 let g;
 try {
   g = stored(1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   g = "caught";
 }
 /** @type {number} */
 let h;
 try {
   h = returned();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   h = -1;
 }
 /** @type {number} */
 let i;
 try {
   i = passedOn("in");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   i = -1;
 }
 /** @type {string} */
 let j;
 try {
   j = dropped(1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   j = "dropped";
 }
 console.log(`${g} ${h} ${i} ${j}`);

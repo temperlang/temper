@@ -1,4 +1,9 @@
-import { PromiseBuilder, adaptAwaiter, runAsync } from "@temperlang/core";
+import {
+  PromiseBuilder,
+  adaptAwaiter,
+  isBubble,
+  runAsync,
+} from "@temperlang/core";
 
 /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
 const b = new PromiseBuilder();
@@ -12,7 +17,8 @@ function* fn(doAwait) {
   let v;
   try {
     v = yield doAwait(b.promise);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     v = -1;
   }
   console.log(`got ${v}`);

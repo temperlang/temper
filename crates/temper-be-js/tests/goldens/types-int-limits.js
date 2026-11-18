@@ -1,10 +1,13 @@
 import {
   clampInt64,
+  divInt64,
   divIntInt,
   int64Max,
   int64Min,
   int64ToInt32,
   int64ToInt32Unsafe,
+  isBubble,
+  modInt64,
   modIntInt,
   stringToInt32,
   stringToInt64,
@@ -16,7 +19,8 @@ function checkParse32(string) {
   let converted;
   try {
     converted = stringToInt32(string, 16).toString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -28,7 +32,8 @@ function checkParse64(string) {
   let converted;
   try {
     converted = stringToInt64(string, 16).toString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -68,18 +73,18 @@ const small64 = clampInt64(-9223372036854775808n * BigInt(one));
 console.log(`${big64.toString()} + 1 == ${clampInt64(big64 + 1n).toString()}`);
 console.log(`${small64.toString()} - 1 == ${clampInt64(small64 - 1n).toString()}`);
 console.log(`${small64.toString()} / -1 == ${clampInt64(small64 / -1n).toString()}`);
-console.log(`${small64.toString()} % -1 == ${(small64 % -1n).toString()}`);
+console.log(`${small64.toString()} % -1 == ${modInt64(small64, -1n).toString()}`);
 console.log(`-(${small64.toString()}) == ${clampInt64(-small64).toString()}`);
 const three64 = BigInt(three);
 const five64 = BigInt(five);
-console.log(`${five64.toString()} / ${three64.toString()} == ${clampInt64(five64 / three64).toString()}`);
-console.log(`${five64.toString()} / -${three64.toString()} == ${clampInt64(five64 / clampInt64(-three64)).toString()}`);
-console.log(`-${five64.toString()} / ${three64.toString()} == ${clampInt64(clampInt64(-five64) / three64).toString()}`);
-console.log(`-${five64.toString()} / -${three64.toString()} == ${clampInt64(clampInt64(-five64) / clampInt64(-three64)).toString()}`);
-console.log(`${five64.toString()} % ${three64.toString()} == ${(five64 % three64).toString()}`);
-console.log(`${five64.toString()} % -${three64.toString()} == ${(five64 % clampInt64(-three64)).toString()}`);
-console.log(`-${five64.toString()} % ${three64.toString()} == ${(clampInt64(-five64) % three64).toString()}`);
-console.log(`-${five64.toString()} % -${three64.toString()} == ${(clampInt64(-five64) % clampInt64(-three64)).toString()}`);
+console.log(`${five64.toString()} / ${three64.toString()} == ${divInt64(five64, three64).toString()}`);
+console.log(`${five64.toString()} / -${three64.toString()} == ${divInt64(five64, clampInt64(-three64)).toString()}`);
+console.log(`-${five64.toString()} / ${three64.toString()} == ${divInt64(clampInt64(-five64), three64).toString()}`);
+console.log(`-${five64.toString()} / -${three64.toString()} == ${divInt64(clampInt64(-five64), clampInt64(-three64)).toString()}`);
+console.log(`${five64.toString()} % ${three64.toString()} == ${modInt64(five64, three64).toString()}`);
+console.log(`${five64.toString()} % -${three64.toString()} == ${modInt64(five64, clampInt64(-three64)).toString()}`);
+console.log(`-${five64.toString()} % ${three64.toString()} == ${modInt64(clampInt64(-five64), three64).toString()}`);
+console.log(`-${five64.toString()} % -${three64.toString()} == ${modInt64(clampInt64(-five64), clampInt64(-three64)).toString()}`);
 checkParse32("7FFFFFFF");
 checkParse32("-80000000");
 checkParse32("80000000");
@@ -89,7 +94,8 @@ console.log(`Not so big: ${int64ToInt32Unsafe(notSoBig)}`);
 let t$0;
 try {
   t$0 = int64ToInt32(big64).toString();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = "no";
 }
 console.log(`Actually big: ${t$0}`);

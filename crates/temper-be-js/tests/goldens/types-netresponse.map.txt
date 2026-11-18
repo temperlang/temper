@@ -1,13 +1,13 @@
 # generated line:column -> source:line:column, and the text at each
-9:1 -> ../netresponse.temper.md:10:5  const url = `http://127.0.0. <- let url = "http://127.0.0.1:
-11:1 -> ../netresponse.temper.md:12:11  /** <- { (): GeneratorResult<Empty>
-15:1 -> ../netresponse.temper.md:12:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-16:3 -> ../netresponse.temper.md:13:7  try { <- do {
-17:5 -> ../netresponse.temper.md:14:9  const req = new NetRequest(u <- let req = new NetRequest(url
-18:5 -> ../netresponse.temper.md:15:9  req.post("[]", "application/ <- req.post("[]", "application/
-19:5 -> ../netresponse.temper.md:16:9  const resp = yield doAwait(r <- let resp: NetResponse = awai
-20:5 -> ../netresponse.temper.md:18:9  if (netResponseGetStatus(res <- if (resp.status == 200) {
-21:7 -> ../netresponse.temper.md:19:11  const body = (yield doAwait( <- let body: String = (await re
-22:7 -> ../netresponse.temper.md:22:11  console.log(`Thanks, server. <- console.log("Thanks, server.
-24:7 -> ../netresponse.temper.md:24:11  console.log(`HTTP status was <- console.log("HTTP status was
-31:1 -> ../netresponse.temper.md:12:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+10:1 -> ../netresponse.temper.md:10:5  const url = `http://127.0.0. <- let url = "http://127.0.0.1:
+12:1 -> ../netresponse.temper.md:12:11  /** <- { (): GeneratorResult<Empty>
+16:1 -> ../netresponse.temper.md:12:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+17:3 -> ../netresponse.temper.md:13:7  try { <- do {
+18:5 -> ../netresponse.temper.md:14:9  const req = new NetRequest(u <- let req = new NetRequest(url
+19:5 -> ../netresponse.temper.md:15:9  req.post("[]", "application/ <- req.post("[]", "application/
+20:5 -> ../netresponse.temper.md:16:9  const resp = yield doAwait(r <- let resp: NetResponse = awai
+21:5 -> ../netresponse.temper.md:18:9  if (netResponseGetStatus(res <- if (resp.status == 200) {
+22:7 -> ../netresponse.temper.md:19:11  const body = (yield doAwait( <- let body: String = (await re
+23:7 -> ../netresponse.temper.md:22:11  console.log(`Thanks, server. <- console.log("Thanks, server.
+25:7 -> ../netresponse.temper.md:24:11  console.log(`HTTP status was <- console.log("HTTP status was
+33:1 -> ../netresponse.temper.md:12:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<

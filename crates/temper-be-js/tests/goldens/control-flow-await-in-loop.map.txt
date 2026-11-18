@@ -1,29 +1,29 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../await-in-loop.temper.md:6:5  /** @type {import("@temperla <- let once = new PromiseBuilde
-4:1 -> ../await-in-loop.temper.md:6:5  const once = new PromiseBuil <- let once = new PromiseBuilde
-5:1 -> ../await-in-loop.temper.md:7:5  once.complete("same"); <- once.complete("same");
-6:1 -> ../await-in-loop.temper.md:9:5  /** @type {import("@temperla <- let later = new PromiseBuild
-7:1 -> ../await-in-loop.temper.md:9:5  const later = new PromiseBui <- let later = new PromiseBuild
-9:1 -> ../await-in-loop.temper.md:11:11  /** <- { (): GeneratorResult<Empty>
-13:1 -> ../await-in-loop.temper.md:11:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-14:3 -> ../await-in-loop.temper.md:12:7  { <- for (var i = 0; i < 2; i +=
-15:5 -> ../await-in-loop.temper.md:12:12  let i = 0; <- var i = 0; i < 2; i += 1) {
-16:5 -> ../await-in-loop.temper.md:12:7  while (i < 2) { <- for (var i = 0; i < 2; i +=
-17:7 -> ../await-in-loop.temper.md:13:9  /** @type {string} */ <- let s = await once.promise o
-18:7 -> ../await-in-loop.temper.md:13:9  let s; <- let s = await once.promise o
-19:7 -> ../await-in-loop.temper.md:13:9  try { <- let s = await once.promise o
-24:7 -> ../await-in-loop.temper.md:14:9  console.log(`${s} ${i}`); <- console.log("${s} ${i}");
-25:7 -> ../await-in-loop.temper.md:12:30  i = (i + 1) | 0; <- i += 1) {
-28:3 -> ../await-in-loop.temper.md:16:7  let j = 0; <- var j = 0;
-29:3 -> ../await-in-loop.temper.md:17:7  while (j < 2) { <- while (j < 2) {
-30:5 -> ../await-in-loop.temper.md:18:9  /** @type {string} */ <- let s = await later.promise
-31:5 -> ../await-in-loop.temper.md:18:9  let s; <- let s = await later.promise
-32:5 -> ../await-in-loop.temper.md:18:9  try { <- let s = await later.promise
-37:5 -> ../await-in-loop.temper.md:19:9  console.log(`${s} ${j}`); <- console.log("${s} ${j}");
-38:5 -> ../await-in-loop.temper.md:20:9  j = (j + 1) | 0; <- j += 1;
-40:3 -> ../await-in-loop.temper.md:22:7  /** @type {string} */ <- let t = await once.promise o
-41:3 -> ../await-in-loop.temper.md:22:7  let t; <- let t = await once.promise o
-42:3 -> ../await-in-loop.temper.md:22:7  try { <- let t = await once.promise o
-47:3 -> ../await-in-loop.temper.md:23:7  console.log(`${t} after the <- console.log("${t} after the
-50:1 -> ../await-in-loop.temper.md:11:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-51:1 -> ../await-in-loop.temper.md:29:5  later.complete("later"); <- later.complete("later");
+8:1 -> ../await-in-loop.temper.md:6:5  /** @type {import("@temperla <- let once = new PromiseBuilde
+9:1 -> ../await-in-loop.temper.md:6:5  const once = new PromiseBuil <- let once = new PromiseBuilde
+10:1 -> ../await-in-loop.temper.md:7:5  once.complete("same"); <- once.complete("same");
+11:1 -> ../await-in-loop.temper.md:9:5  /** @type {import("@temperla <- let later = new PromiseBuild
+12:1 -> ../await-in-loop.temper.md:9:5  const later = new PromiseBui <- let later = new PromiseBuild
+14:1 -> ../await-in-loop.temper.md:11:11  /** <- { (): GeneratorResult<Empty>
+18:1 -> ../await-in-loop.temper.md:11:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+19:3 -> ../await-in-loop.temper.md:12:7  { <- for (var i = 0; i < 2; i +=
+20:5 -> ../await-in-loop.temper.md:12:12  let i = 0; <- var i = 0; i < 2; i += 1) {
+21:5 -> ../await-in-loop.temper.md:12:7  while (i < 2) { <- for (var i = 0; i < 2; i +=
+22:7 -> ../await-in-loop.temper.md:13:9  /** @type {string} */ <- let s = await once.promise o
+23:7 -> ../await-in-loop.temper.md:13:9  let s; <- let s = await once.promise o
+24:7 -> ../await-in-loop.temper.md:13:9  try { <- let s = await once.promise o
+30:7 -> ../await-in-loop.temper.md:14:9  console.log(`${s} ${i}`); <- console.log("${s} ${i}");
+31:7 -> ../await-in-loop.temper.md:12:30  i = (i + 1) | 0; <- i += 1) {
+34:3 -> ../await-in-loop.temper.md:16:7  let j = 0; <- var j = 0;
+35:3 -> ../await-in-loop.temper.md:17:7  while (j < 2) { <- while (j < 2) {
+36:5 -> ../await-in-loop.temper.md:18:9  /** @type {string} */ <- let s = await later.promise
+37:5 -> ../await-in-loop.temper.md:18:9  let s; <- let s = await later.promise
+38:5 -> ../await-in-loop.temper.md:18:9  try { <- let s = await later.promise
+44:5 -> ../await-in-loop.temper.md:19:9  console.log(`${s} ${j}`); <- console.log("${s} ${j}");
+45:5 -> ../await-in-loop.temper.md:20:9  j = (j + 1) | 0; <- j += 1;
+47:3 -> ../await-in-loop.temper.md:22:7  /** @type {string} */ <- let t = await once.promise o
+48:3 -> ../await-in-loop.temper.md:22:7  let t; <- let t = await once.promise o
+49:3 -> ../await-in-loop.temper.md:22:7  try { <- let t = await once.promise o
+55:3 -> ../await-in-loop.temper.md:23:7  console.log(`${t} after the <- console.log("${t} after the
+58:1 -> ../await-in-loop.temper.md:11:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+59:1 -> ../await-in-loop.temper.md:29:5  later.complete("later"); <- later.complete("later");

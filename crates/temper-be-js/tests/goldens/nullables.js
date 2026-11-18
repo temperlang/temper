@@ -1,6 +1,7 @@
 import {
   bubble,
   divIntInt,
+  isBubble,
   panic,
   stringToInt32,
   type,
@@ -54,7 +55,8 @@ function sameInt(a, b) {
 function parse(s) {
   try {
     return stringToInt32(s, null);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return -1;
   }
 }
@@ -67,7 +69,8 @@ function parse(s) {
 function halved(s, d) {
   try {
     return divIntInt(stringToInt32(s, null), d);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return -1;
   }
 }
@@ -129,7 +132,8 @@ function reason(n, why) {
   try {
     positive(n);
     return "ok";
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return why == null ? "fails" : why;
   }
 }
@@ -206,14 +210,16 @@ if (tail != null) {
 }
 try {
   positive(-1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   console.log("negative");
 }
 /** @type {number} */
 let fallback;
 try {
   fallback = positive(-2);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   fallback = 0;
 }
 console.log(fallback.toString());

@@ -31,7 +31,12 @@
 //! nullable types (`T | null`, `null`, `== null` checks, `??` for its
 //! tmpl form, and `===` or a null-safe helper call for `==` with a side
 //! that may be null), `orelse` as `try { … } catch { … }`, `bubble()`,
-//! and `panic()`, as Kotlin's; and generics, with JSDoc's `@template`
+//! and `panic()`, as Kotlin's, but catching only a bubble: `bubble()`
+//! and every builtin that bubbles throw the runtime's `Bubble`, and
+//! `catch (e$) { if (!isBubble(e$)) throw e$; … }` rethrows anything
+//! else (a panic, a plain `Error`; a host error), as host code
+//! (`_connected.js`) does unless it throws a `Bubble` or calls
+//! `bubble()`; and generics, with JSDoc's `@template`
 //! (`{Named} T` for a bound), and core's lists as arrays (a `List` or
 //! `Listed` frozen and `readonly T[]` for TypeScript, cast to `T[]` for
 //! the runtime's helpers, where Kotlin's types don't check), maps as

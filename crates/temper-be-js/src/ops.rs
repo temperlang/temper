@@ -7,8 +7,9 @@
 //! `divIntInt` and `modIntInt`, which bubble on a zero divisor (`divSafe`,
 //! by a divisor that can't fail it, is `a / b | 0`); `Int64` is
 //! a `bigint`, wrapped by `clampInt64` after `+`, `-`, `*`, `/`, and
-//! negation (BigInt's `/` and `%` throw on a zero divisor, which bubbles
-//! as any exception does); shifts that JS's own operators get wrong
+//! negation, with `/` and `%` as `divInt64` and `modInt64`, which bubble
+//! on a zero divisor, where BigInt's throw a `RangeError` (by a divisor
+//! that can't fail them, `clampInt64(a / b)` and `a % b`); shifts that JS's own operators get wrong
 //! (`Int32.ushr`, and every `Int64` shift) call the runtime; `Float64` and
 //! `String` comparisons go through `cmpFloat64` and `cmpString`, which
 //! order NaN, signed zeros, and code points as Temper does, and
@@ -94,8 +95,11 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Int64", "add") => Clamp64(crate::tree::Bin::Add),
         ("Int64", "sub") => Clamp64(crate::tree::Bin::Sub),
         ("Int64", "mul") => Clamp64(crate::tree::Bin::Mul),
-        ("Int64", "div" | "divSafe") => Clamp64(crate::tree::Bin::Div),
-        ("Int64", "mod" | "modSafe") => Bin(crate::tree::Bin::Mod),
+        // A zero divisor bubbles, where BigInt's `/` and `%` throw.
+        ("Int64", "div") => Helper("divInt64"),
+        ("Int64", "divSafe") => Clamp64(crate::tree::Bin::Div),
+        ("Int64", "mod") => Helper("modInt64"),
+        ("Int64", "modSafe") => Bin(crate::tree::Bin::Mod),
         ("Int64", "neg") => Neg64,
         ("Int32", "add") => Wrap32(crate::tree::Bin::Add),
         ("Int32", "sub") => Wrap32(crate::tree::Bin::Sub),

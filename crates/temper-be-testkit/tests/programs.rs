@@ -23,7 +23,15 @@ fn programs_log_as_the_interpreter_does() {
                 continue;
             }
             let (failure, output) = kit::interpret(&case);
-            assert_eq!(failure, None, "{}", case.key);
+            // A run that fails (`panics`) panics, as nothing catches it.
+            match &failure {
+                Some(why) => assert!(
+                    case.fails && why.starts_with("Panicked"),
+                    "{}: {why}",
+                    case.key
+                ),
+                None => assert!(!case.fails, "{}: didn't fail", case.key),
+            }
             let expected = temper_funtests::expected_log(text, "interp");
             assert_eq!(output, expected, "{}", case.key);
         }

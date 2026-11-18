@@ -2,6 +2,7 @@ import {
   PromiseBuilder,
   adaptAwaiter,
   empty,
+  isBubble,
   panic,
   runAsync,
 } from "@temperlang/core";
@@ -27,7 +28,8 @@ function* fn(doAwait) {
     let t$0;
     try {
       t$0 = yield doAwait(b2.promise);
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       t$0 = "Broken synchronously";
     }
     console.log(t$0);
@@ -95,7 +97,8 @@ function* fn(doAwait) {
     b6.complete("Blue");
     b6.complete("No, yell...");
     console.log(yield doAwait(b6.promise));
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
   }
 }
 

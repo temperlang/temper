@@ -1,123 +1,123 @@
 # generated line:column -> source:line:column, and the text at each
-9:1 -> ../nullables.temper.md:17:5  /** <- export let describe(x: Int?)
-13:1 -> ../nullables.temper.md:17:5  export function describe(x) <- export let describe(x: Int?)
-13:17 -> ../nullables.temper.md:17:16 (describe)  describe(x) { <- describe(x: Int?): String {
-13:25 -> ../nullables.temper.md:17:5  (x) { <- export let describe(x: Int?)
-14:3 -> ../nullables.temper.md:18:7  if (x == null) { <- if (x == null) { return "non
-15:5 -> ../nullables.temper.md:18:24  return "none"; <- return "none"; }
-17:3 -> ../nullables.temper.md:19:7  return `some ${(x + 1) | 0}` <- "some ${x + 1}"
-20:1 -> ../nullables.temper.md:22:5  /** <- export let firstWord(s: Stri
-24:1 -> ../nullables.temper.md:22:5  export function firstWord(s) <- export let firstWord(s: Stri
-24:17 -> ../nullables.temper.md:22:16 (firstWord)  firstWord(s) { <- firstWord(s: String?): Strin
-24:26 -> ../nullables.temper.md:22:5  (s) { <- export let firstWord(s: Stri
-25:3 -> ../nullables.temper.md:23:7  if (s != null && s !== "") { <- if (s != null && s != "") {
-26:5 -> ../nullables.temper.md:23:35  return s; <- s } else { null }
-28:5 -> ../nullables.temper.md:23:46  return null; <- null }
-32:1 -> ../nullables.temper.md:26:5  /** <- let same(a: String?, b: Stri
-37:1 -> ../nullables.temper.md:26:5  function same(a, b) { <- let same(a: String?, b: Stri
-37:10 -> ../nullables.temper.md:26:9 (same)  same(a, b) { <- same(a: String?, b: String?)
-37:14 -> ../nullables.temper.md:26:5  (a, b) { <- let same(a: String?, b: Stri
-38:3 -> ../nullables.temper.md:26:49  return a === b; <- a == b }
-41:1 -> ../nullables.temper.md:27:5  /** <- let sameInt(a: Int?, b: Int?
-46:1 -> ../nullables.temper.md:27:5  function sameInt(a, b) { <- let sameInt(a: Int?, b: Int?
-46:10 -> ../nullables.temper.md:27:9 (sameInt)  sameInt(a, b) { <- sameInt(a: Int?, b: Int?): B
-46:17 -> ../nullables.temper.md:27:5  (a, b) { <- let sameInt(a: Int?, b: Int?
-47:3 -> ../nullables.temper.md:27:46  return a === b; <- a == b }
-50:1 -> ../nullables.temper.md:29:5  /** <- let parse(s: String): Int {
-54:1 -> ../nullables.temper.md:29:5  function parse(s) { <- let parse(s: String): Int {
-54:10 -> ../nullables.temper.md:29:9 (parse)  parse(s) { <- parse(s: String): Int { s.to
-54:15 -> ../nullables.temper.md:29:5  (s) { <- let parse(s: String): Int {
-55:3 -> ../nullables.temper.md:29:33  try { <- s.toInt32() orelse -1 }
-62:1 -> ../nullables.temper.md:33:5  /** <- let halved(s: String, d: Int
-67:1 -> ../nullables.temper.md:33:5  function halved(s, d) { <- let halved(s: String, d: Int
-67:10 -> ../nullables.temper.md:33:9 (halved)  halved(s, d) { <- halved(s: String, d: Int): I
-67:16 -> ../nullables.temper.md:33:5  (s, d) { <- let halved(s: String, d: Int
-68:3 -> ../nullables.temper.md:33:42  try { <- s.toInt32() / d orelse -1 }
-75:1 -> ../nullables.temper.md:35:5  /** <- let positive(n: Int): Int th
-79:1 -> ../nullables.temper.md:35:5  function positive(n) { <- let positive(n: Int): Int th
-79:10 -> ../nullables.temper.md:35:9 (positive)  positive(n) { <- positive(n: Int): Int throws
-79:18 -> ../nullables.temper.md:35:5  (n) { <- let positive(n: Int): Int th
-80:3 -> ../nullables.temper.md:36:7  if (n < 0) { <- if (n < 0) { bubble() }
-81:5 -> ../nullables.temper.md:36:20  bubble(); <- bubble() }
-83:3 -> ../nullables.temper.md:37:7  return n; <- n
-86:1 -> ../nullables.temper.md:40:5  /** <- let checked(n: Int): Int { p
-90:1 -> ../nullables.temper.md:40:5  function checked(n) { <- let checked(n: Int): Int { p
-90:10 -> ../nullables.temper.md:40:9 (checked)  checked(n) { <- checked(n: Int): Int { posit
-90:17 -> ../nullables.temper.md:40:5  (n) { <- let checked(n: Int): Int { p
-91:3 -> ../nullables.temper.md:40:32  try { <- positive(n) orelse panic() }
-98:1 -> ../nullables.temper.md:44:5  /** @returns {number} */ <- export let stops(): Int { (d
-99:1 -> ../nullables.temper.md:44:5  export function stops() { <- export let stops(): Int { (d
-99:17 -> ../nullables.temper.md:44:16 (stops)  stops() { <- stops(): Int { (do { panic()
-99:22 -> ../nullables.temper.md:44:5  () { <- export let stops(): Int { (d
-100:3 -> ../nullables.temper.md:44:31  /** @type {number} */ <- (do { panic(); 1 }) orelse 2
-101:3 -> ../nullables.temper.md:44:31  let t$0; <- (do { panic(); 1 }) orelse 2
-102:3 -> ../nullables.temper.md:44:31  { <- (do { panic(); 1 }) orelse 2
-103:5 -> ../nullables.temper.md:44:37  panic(); <- panic(); 1 }) orelse 2 }
-106:3 -> ../nullables.temper.md:44:31  return t$0; <- (do { panic(); 1 }) orelse 2
-109:1 -> ../nullables.temper.md:46:5  /** <- let orZero(x: Int?): Int { x
-113:1 -> ../nullables.temper.md:46:5  function orZero(x) { <- let orZero(x: Int?): Int { x
-113:10 -> ../nullables.temper.md:46:9 (orZero)  orZero(x) { <- orZero(x: Int?): Int { x ??
-113:16 -> ../nullables.temper.md:46:5  (x) { <- let orZero(x: Int?): Int { x
-114:3 -> ../nullables.temper.md:46:32  { <- x ?? 0 }
-115:5 -> ../nullables.temper.md:46:32  if (x == null) { <- x ?? 0 }
-116:7 -> ../nullables.temper.md:46:37  return 0; <- 0 }
-118:7 -> ../nullables.temper.md:46:32  return x; <- x ?? 0 }
-123:1 -> ../nullables.temper.md:48:5  /** <- let reason(n: Int, why: Stri
-128:1 -> ../nullables.temper.md:48:5  function reason(n, why) { <- let reason(n: Int, why: Stri
-128:10 -> ../nullables.temper.md:48:9 (reason)  reason(n, why) { <- reason(n: Int, why: String?)
-128:16 -> ../nullables.temper.md:48:5  (n, why) { <- let reason(n: Int, why: Stri
-129:3 -> ../nullables.temper.md:49:7  try { <- do { positive(n); "ok" } ore
-130:5 -> ../nullables.temper.md:49:12  positive(n); <- positive(n); "ok" } orelse (
-137:1 -> ../nullables.temper.md:52:5  function varying() { <- let varying(): Void {
-137:10 -> ../nullables.temper.md:52:9 (varying)  varying() { <- varying(): Void {
-137:17 -> ../nullables.temper.md:52:5  () { <- let varying(): Void {
-138:3 -> ../nullables.temper.md:53:7  /** @type {number | null} */ <- var maybe: Int? = null;
-139:3 -> ../nullables.temper.md:53:7  let maybe = null; <- var maybe: Int? = null;
-140:3 -> ../nullables.temper.md:54:7  console.log((maybe == null). <- console.log((maybe == null).
-141:3 -> ../nullables.temper.md:55:7  maybe = 3; <- maybe = 3;
-142:3 -> ../nullables.temper.md:56:7  console.log((maybe != null). <- console.log((maybe != null).
-145:1 -> ../nullables.temper.md:10:5  export class Node extends ty <- export class Node(public val
-145:14 -> ../nullables.temper.md:10:18 (Node)  Node extends type() { <- Node(public value: Int, publ
-145:18 -> ../nullables.temper.md:10:5   extends type() { <- export class Node(public val
-146:3 -> ../nullables.temper.md:10:30  /** @type {number} */ <- value: Int, public next: Nod
-147:3 -> ../nullables.temper.md:10:30  #value; <- value: Int, public next: Nod
-148:3 -> ../nullables.temper.md:10:49  /** @type {Node | null} */ <- next: Node?) {
-149:3 -> ../nullables.temper.md:10:49  #next; <- next: Node?) {
-159:3 -> ../nullables.temper.md:10:5  /** <- export class Node(public val
-163:3 -> ../nullables.temper.md:10:5  constructor(value, next) { <- export class Node(public val
-165:5 -> ../nullables.temper.md:10:30  this.#value = value; <- value: Int, public next: Nod
-166:5 -> ../nullables.temper.md:10:49  this.#next = next; <- next: Node?) {
-169:3 -> ../nullables.temper.md:10:30  /** @returns {number} */ <- value: Int, public next: Nod
-170:3 -> ../nullables.temper.md:10:30  get value() { <- value: Int, public next: Nod
-170:7 -> ../nullables.temper.md:10:30 (value)  value() { <- value: Int, public next: Nod
-174:3 -> ../nullables.temper.md:10:49  /** @returns {Node | null} * <- next: Node?) {
-175:3 -> ../nullables.temper.md:10:49  get next() { <- next: Node?) {
-175:7 -> ../nullables.temper.md:10:49 (next)  next() { <- next: Node?) {
-179:3 -> ../nullables.temper.md:11:14  /** @returns {number} */ <- last(): Int {
-180:3 -> ../nullables.temper.md:11:14 (last)  last() { <- last(): Int {
-181:5 -> ../nullables.temper.md:12:9  const n = this.#next; <- let n = next;
-182:5 -> ../nullables.temper.md:13:9  if (n == null) { <- if (n == null) { value } els
-183:7 -> ../nullables.temper.md:13:26  return this.#value; <- value } else { n.last() }
-185:7 -> ../nullables.temper.md:13:41  return n.last(); <- n.last() }
-190:1 -> ../nullables.temper.md:59:5  console.log(describe(null)); <- console.log(describe(null));
-191:1 -> ../nullables.temper.md:60:5  console.log(describe(41)); <- console.log(describe(41));
-192:1 -> ../nullables.temper.md:61:5  console.log(firstWord("hi") <- console.log(firstWord("hi")
-193:1 -> ../nullables.temper.md:62:5  console.log(firstWord("") ?? <- console.log(firstWord("") ??
-194:1 -> ../nullables.temper.md:63:5  console.log(`${same(null, nu <- console.log("${same(null, nu
-195:1 -> ../nullables.temper.md:64:5  console.log(`${sameInt(1, 2) <- console.log("${sameInt(1, 2)
-196:1 -> ../nullables.temper.md:65:5  console.log(`${parse("12")} <- console.log("${parse("12")}
-197:1 -> ../nullables.temper.md:66:5  console.log(`${halved("12", <- console.log("${halved("12",
-198:1 -> ../nullables.temper.md:67:5  console.log(checked(7).toStr <- console.log(checked(7).toStr
-199:1 -> ../nullables.temper.md:68:5  console.log(`${orZero(null)} <- console.log("${orZero(null)}
-200:1 -> ../nullables.temper.md:69:5  varying(); <- varying();
-201:1 -> ../nullables.temper.md:70:5  const list = new Node(1, new <- let list = new Node(1, new N
-202:1 -> ../nullables.temper.md:71:5  console.log(list.last().toSt <- console.log(list.last().toSt
-203:1 -> ../nullables.temper.md:72:5  const tail = list.next; <- let tail = list.next;
-204:1 -> ../nullables.temper.md:73:5  if (tail != null) { <- if (tail != null) {
-205:3 -> ../nullables.temper.md:74:7  console.log(tail.value.toStr <- console.log(tail.value.toStr
-207:1 -> ../nullables.temper.md:76:5  try { <- positive(-1) orelse console.
-212:1 -> ../nullables.temper.md:77:5  /** @type {number} */ <- let fallback = positive(-2)
-213:1 -> ../nullables.temper.md:77:5  let fallback; <- let fallback = positive(-2)
-214:1 -> ../nullables.temper.md:77:5  try { <- let fallback = positive(-2)
-219:1 -> ../nullables.temper.md:78:5  console.log(fallback.toStrin <- console.log(fallback.toStrin
-220:1 -> ../nullables.temper.md:79:5  console.log(`${reason(1, nul <- console.log("${reason(1, nul
+10:1 -> ../nullables.temper.md:17:5  /** <- export let describe(x: Int?)
+14:1 -> ../nullables.temper.md:17:5  export function describe(x) <- export let describe(x: Int?)
+14:17 -> ../nullables.temper.md:17:16 (describe)  describe(x) { <- describe(x: Int?): String {
+14:25 -> ../nullables.temper.md:17:5  (x) { <- export let describe(x: Int?)
+15:3 -> ../nullables.temper.md:18:7  if (x == null) { <- if (x == null) { return "non
+16:5 -> ../nullables.temper.md:18:24  return "none"; <- return "none"; }
+18:3 -> ../nullables.temper.md:19:7  return `some ${(x + 1) | 0}` <- "some ${x + 1}"
+21:1 -> ../nullables.temper.md:22:5  /** <- export let firstWord(s: Stri
+25:1 -> ../nullables.temper.md:22:5  export function firstWord(s) <- export let firstWord(s: Stri
+25:17 -> ../nullables.temper.md:22:16 (firstWord)  firstWord(s) { <- firstWord(s: String?): Strin
+25:26 -> ../nullables.temper.md:22:5  (s) { <- export let firstWord(s: Stri
+26:3 -> ../nullables.temper.md:23:7  if (s != null && s !== "") { <- if (s != null && s != "") {
+27:5 -> ../nullables.temper.md:23:35  return s; <- s } else { null }
+29:5 -> ../nullables.temper.md:23:46  return null; <- null }
+33:1 -> ../nullables.temper.md:26:5  /** <- let same(a: String?, b: Stri
+38:1 -> ../nullables.temper.md:26:5  function same(a, b) { <- let same(a: String?, b: Stri
+38:10 -> ../nullables.temper.md:26:9 (same)  same(a, b) { <- same(a: String?, b: String?)
+38:14 -> ../nullables.temper.md:26:5  (a, b) { <- let same(a: String?, b: Stri
+39:3 -> ../nullables.temper.md:26:49  return a === b; <- a == b }
+42:1 -> ../nullables.temper.md:27:5  /** <- let sameInt(a: Int?, b: Int?
+47:1 -> ../nullables.temper.md:27:5  function sameInt(a, b) { <- let sameInt(a: Int?, b: Int?
+47:10 -> ../nullables.temper.md:27:9 (sameInt)  sameInt(a, b) { <- sameInt(a: Int?, b: Int?): B
+47:17 -> ../nullables.temper.md:27:5  (a, b) { <- let sameInt(a: Int?, b: Int?
+48:3 -> ../nullables.temper.md:27:46  return a === b; <- a == b }
+51:1 -> ../nullables.temper.md:29:5  /** <- let parse(s: String): Int {
+55:1 -> ../nullables.temper.md:29:5  function parse(s) { <- let parse(s: String): Int {
+55:10 -> ../nullables.temper.md:29:9 (parse)  parse(s) { <- parse(s: String): Int { s.to
+55:15 -> ../nullables.temper.md:29:5  (s) { <- let parse(s: String): Int {
+56:3 -> ../nullables.temper.md:29:33  try { <- s.toInt32() orelse -1 }
+64:1 -> ../nullables.temper.md:33:5  /** <- let halved(s: String, d: Int
+69:1 -> ../nullables.temper.md:33:5  function halved(s, d) { <- let halved(s: String, d: Int
+69:10 -> ../nullables.temper.md:33:9 (halved)  halved(s, d) { <- halved(s: String, d: Int): I
+69:16 -> ../nullables.temper.md:33:5  (s, d) { <- let halved(s: String, d: Int
+70:3 -> ../nullables.temper.md:33:42  try { <- s.toInt32() / d orelse -1 }
+78:1 -> ../nullables.temper.md:35:5  /** <- let positive(n: Int): Int th
+82:1 -> ../nullables.temper.md:35:5  function positive(n) { <- let positive(n: Int): Int th
+82:10 -> ../nullables.temper.md:35:9 (positive)  positive(n) { <- positive(n: Int): Int throws
+82:18 -> ../nullables.temper.md:35:5  (n) { <- let positive(n: Int): Int th
+83:3 -> ../nullables.temper.md:36:7  if (n < 0) { <- if (n < 0) { bubble() }
+84:5 -> ../nullables.temper.md:36:20  bubble(); <- bubble() }
+86:3 -> ../nullables.temper.md:37:7  return n; <- n
+89:1 -> ../nullables.temper.md:40:5  /** <- let checked(n: Int): Int { p
+93:1 -> ../nullables.temper.md:40:5  function checked(n) { <- let checked(n: Int): Int { p
+93:10 -> ../nullables.temper.md:40:9 (checked)  checked(n) { <- checked(n: Int): Int { posit
+93:17 -> ../nullables.temper.md:40:5  (n) { <- let checked(n: Int): Int { p
+94:3 -> ../nullables.temper.md:40:32  try { <- positive(n) orelse panic() }
+101:1 -> ../nullables.temper.md:44:5  /** @returns {number} */ <- export let stops(): Int { (d
+102:1 -> ../nullables.temper.md:44:5  export function stops() { <- export let stops(): Int { (d
+102:17 -> ../nullables.temper.md:44:16 (stops)  stops() { <- stops(): Int { (do { panic()
+102:22 -> ../nullables.temper.md:44:5  () { <- export let stops(): Int { (d
+103:3 -> ../nullables.temper.md:44:31  /** @type {number} */ <- (do { panic(); 1 }) orelse 2
+104:3 -> ../nullables.temper.md:44:31  let t$0; <- (do { panic(); 1 }) orelse 2
+105:3 -> ../nullables.temper.md:44:31  { <- (do { panic(); 1 }) orelse 2
+106:5 -> ../nullables.temper.md:44:37  panic(); <- panic(); 1 }) orelse 2 }
+109:3 -> ../nullables.temper.md:44:31  return t$0; <- (do { panic(); 1 }) orelse 2
+112:1 -> ../nullables.temper.md:46:5  /** <- let orZero(x: Int?): Int { x
+116:1 -> ../nullables.temper.md:46:5  function orZero(x) { <- let orZero(x: Int?): Int { x
+116:10 -> ../nullables.temper.md:46:9 (orZero)  orZero(x) { <- orZero(x: Int?): Int { x ??
+116:16 -> ../nullables.temper.md:46:5  (x) { <- let orZero(x: Int?): Int { x
+117:3 -> ../nullables.temper.md:46:32  { <- x ?? 0 }
+118:5 -> ../nullables.temper.md:46:32  if (x == null) { <- x ?? 0 }
+119:7 -> ../nullables.temper.md:46:37  return 0; <- 0 }
+121:7 -> ../nullables.temper.md:46:32  return x; <- x ?? 0 }
+126:1 -> ../nullables.temper.md:48:5  /** <- let reason(n: Int, why: Stri
+131:1 -> ../nullables.temper.md:48:5  function reason(n, why) { <- let reason(n: Int, why: Stri
+131:10 -> ../nullables.temper.md:48:9 (reason)  reason(n, why) { <- reason(n: Int, why: String?)
+131:16 -> ../nullables.temper.md:48:5  (n, why) { <- let reason(n: Int, why: Stri
+132:3 -> ../nullables.temper.md:49:7  try { <- do { positive(n); "ok" } ore
+133:5 -> ../nullables.temper.md:49:12  positive(n); <- positive(n); "ok" } orelse (
+141:1 -> ../nullables.temper.md:52:5  function varying() { <- let varying(): Void {
+141:10 -> ../nullables.temper.md:52:9 (varying)  varying() { <- varying(): Void {
+141:17 -> ../nullables.temper.md:52:5  () { <- let varying(): Void {
+142:3 -> ../nullables.temper.md:53:7  /** @type {number | null} */ <- var maybe: Int? = null;
+143:3 -> ../nullables.temper.md:53:7  let maybe = null; <- var maybe: Int? = null;
+144:3 -> ../nullables.temper.md:54:7  console.log((maybe == null). <- console.log((maybe == null).
+145:3 -> ../nullables.temper.md:55:7  maybe = 3; <- maybe = 3;
+146:3 -> ../nullables.temper.md:56:7  console.log((maybe != null). <- console.log((maybe != null).
+149:1 -> ../nullables.temper.md:10:5  export class Node extends ty <- export class Node(public val
+149:14 -> ../nullables.temper.md:10:18 (Node)  Node extends type() { <- Node(public value: Int, publ
+149:18 -> ../nullables.temper.md:10:5   extends type() { <- export class Node(public val
+150:3 -> ../nullables.temper.md:10:30  /** @type {number} */ <- value: Int, public next: Nod
+151:3 -> ../nullables.temper.md:10:30  #value; <- value: Int, public next: Nod
+152:3 -> ../nullables.temper.md:10:49  /** @type {Node | null} */ <- next: Node?) {
+153:3 -> ../nullables.temper.md:10:49  #next; <- next: Node?) {
+163:3 -> ../nullables.temper.md:10:5  /** <- export class Node(public val
+167:3 -> ../nullables.temper.md:10:5  constructor(value, next) { <- export class Node(public val
+169:5 -> ../nullables.temper.md:10:30  this.#value = value; <- value: Int, public next: Nod
+170:5 -> ../nullables.temper.md:10:49  this.#next = next; <- next: Node?) {
+173:3 -> ../nullables.temper.md:10:30  /** @returns {number} */ <- value: Int, public next: Nod
+174:3 -> ../nullables.temper.md:10:30  get value() { <- value: Int, public next: Nod
+174:7 -> ../nullables.temper.md:10:30 (value)  value() { <- value: Int, public next: Nod
+178:3 -> ../nullables.temper.md:10:49  /** @returns {Node | null} * <- next: Node?) {
+179:3 -> ../nullables.temper.md:10:49  get next() { <- next: Node?) {
+179:7 -> ../nullables.temper.md:10:49 (next)  next() { <- next: Node?) {
+183:3 -> ../nullables.temper.md:11:14  /** @returns {number} */ <- last(): Int {
+184:3 -> ../nullables.temper.md:11:14 (last)  last() { <- last(): Int {
+185:5 -> ../nullables.temper.md:12:9  const n = this.#next; <- let n = next;
+186:5 -> ../nullables.temper.md:13:9  if (n == null) { <- if (n == null) { value } els
+187:7 -> ../nullables.temper.md:13:26  return this.#value; <- value } else { n.last() }
+189:7 -> ../nullables.temper.md:13:41  return n.last(); <- n.last() }
+194:1 -> ../nullables.temper.md:59:5  console.log(describe(null)); <- console.log(describe(null));
+195:1 -> ../nullables.temper.md:60:5  console.log(describe(41)); <- console.log(describe(41));
+196:1 -> ../nullables.temper.md:61:5  console.log(firstWord("hi") <- console.log(firstWord("hi")
+197:1 -> ../nullables.temper.md:62:5  console.log(firstWord("") ?? <- console.log(firstWord("") ??
+198:1 -> ../nullables.temper.md:63:5  console.log(`${same(null, nu <- console.log("${same(null, nu
+199:1 -> ../nullables.temper.md:64:5  console.log(`${sameInt(1, 2) <- console.log("${sameInt(1, 2)
+200:1 -> ../nullables.temper.md:65:5  console.log(`${parse("12")} <- console.log("${parse("12")}
+201:1 -> ../nullables.temper.md:66:5  console.log(`${halved("12", <- console.log("${halved("12",
+202:1 -> ../nullables.temper.md:67:5  console.log(checked(7).toStr <- console.log(checked(7).toStr
+203:1 -> ../nullables.temper.md:68:5  console.log(`${orZero(null)} <- console.log("${orZero(null)}
+204:1 -> ../nullables.temper.md:69:5  varying(); <- varying();
+205:1 -> ../nullables.temper.md:70:5  const list = new Node(1, new <- let list = new Node(1, new N
+206:1 -> ../nullables.temper.md:71:5  console.log(list.last().toSt <- console.log(list.last().toSt
+207:1 -> ../nullables.temper.md:72:5  const tail = list.next; <- let tail = list.next;
+208:1 -> ../nullables.temper.md:73:5  if (tail != null) { <- if (tail != null) {
+209:3 -> ../nullables.temper.md:74:7  console.log(tail.value.toStr <- console.log(tail.value.toStr
+211:1 -> ../nullables.temper.md:76:5  try { <- positive(-1) orelse console.
+217:1 -> ../nullables.temper.md:77:5  /** @type {number} */ <- let fallback = positive(-2)
+218:1 -> ../nullables.temper.md:77:5  let fallback; <- let fallback = positive(-2)
+219:1 -> ../nullables.temper.md:77:5  try { <- let fallback = positive(-2)
+225:1 -> ../nullables.temper.md:78:5  console.log(fallback.toStrin <- console.log(fallback.toStrin
+226:1 -> ../nullables.temper.md:79:5  console.log(`${reason(1, nul <- console.log("${reason(1, nul

@@ -272,8 +272,10 @@ pub fn without_net(cases: &mut [Case]) {
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
-/// and what nothing does, which runs as tests ([`AS_TESTS`]).
-pub const PROGRAMS: [&str; 20] = [
+/// and what nothing does, which runs as tests ([`AS_TESTS`]); `panics`
+/// `orelse` handling bubbles from everywhere but never a panic, whose
+/// run fails ([`FAILING`]).
+pub const PROGRAMS: [&str; 21] = [
     "classes",
     "nullables",
     "generics",
@@ -294,7 +296,12 @@ pub const PROGRAMS: [&str; 20] = [
     "content-tags",
     "json-adapters",
     "reach",
+    "panics",
 ];
+
+/// The shared programs whose run fails, after logging what's expected
+/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops.
+pub const FAILING: [&str; 1] = ["panics"];
 
 /// The shared programs that run as tests, as a functional test with
 /// `runAsTest = true` does, none expected to fail: their tests check
@@ -576,7 +583,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             host_files: Vec::new(),
             no_connected: false,
             tests: AS_TESTS.contains(&file).then(Vec::new),
-            fails: false,
+            fails: FAILING.contains(&file),
         });
     }
     cases

@@ -1,6 +1,7 @@
 import {
   bubble,
   divIntInt,
+  isBubble,
   modIntInt,
   panic,
   requireNotNull,
@@ -35,7 +36,8 @@ function report(x) {
   let message;
   try {
     message = something(x);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     message = "null";
   }
   /** @type {string} */
@@ -46,11 +48,13 @@ function report(x) {
     try {
       requireNotNull(x);
       t$0 = 1;
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       t$0 = 0;
     }
     suffix = more(t$0).toString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     suffix = "";
   }
   console.log(message + suffix);
@@ -152,21 +156,24 @@ function viaOrElse(n) {
   let t$1;
   try {
     t$1 = firstOver(n);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$1 = -1;
   }
   /** @type {number} */
   let t$2;
   try {
     t$2 = sumSkipping(n);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$2 = -1;
   }
   /** @type {number} */
   let t$3;
   try {
     t$3 = tenTimes(n);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$3 = -1;
   }
   return `${t$1} ${t$2} ${t$3}`;
@@ -284,7 +291,8 @@ console.log(calcRows(3, 6).toString());
 let t$4;
 try {
   t$4 = countBelow("abc");
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$4 = -1;
 }
 console.log(t$4.toString());
@@ -292,14 +300,16 @@ console.log(t$4.toString());
 let t$5;
 try {
   t$5 = firstOver(1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$5 = -1;
 }
 /** @type {number | null} */
 let t$6;
 try {
   t$6 = firstOver(1);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$6 = null;
 }
 console.log(`${t$5} ${isNone(t$6)}`);
@@ -310,21 +320,24 @@ console.log(`${pick(true)} ${named(true) ?? "-"} ${named(false) ?? "null"}`);
 let t$7;
 try {
   t$7 = half(4);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$7 = -1;
 }
 /** @type {number} */
 let t$8;
 try {
   t$8 = half(3);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$8 = -1;
 }
 /** @type {number} */
 let t$9;
 try {
   t$9 = half(-2);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$9 = -1;
 }
 console.log(`${t$7} ${t$8} ${t$9}`);

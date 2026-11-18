@@ -1,4 +1,4 @@
-import { bubble, eqFloat64 } from "@temperlang/core";
+import { bubble, eqFloat64, isBubble } from "@temperlang/core";
 
 /**
  * @param {number} n
@@ -45,7 +45,8 @@ const t$1 = noted(1);
 let t$0;
 try {
   t$0 = failing(3);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = 9;
 }
 console.log(pair(t$1, t$0));
@@ -57,7 +58,8 @@ if (t$3) {
   let t$2;
   try {
     t$2 = failing(5);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$2 = 1;
   }
   t$3 = t$2 === 1;
@@ -69,7 +71,8 @@ if (t$5) {
   let t$4;
   try {
     t$4 = failing(1);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$4 = 2;
   }
   t$5 = t$4 === 1;
@@ -81,7 +84,8 @@ let t$6;
 if (t) {
   try {
     t$6 = failing(4);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$6 = 4;
   }
 } else {
@@ -94,7 +98,8 @@ while (true) {
   let t$7;
   try {
     t$7 = failing(i);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$7 = 100;
   }
   if (t$7 >= 3) {

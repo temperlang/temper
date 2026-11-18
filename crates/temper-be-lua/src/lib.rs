@@ -26,7 +26,12 @@
 //! `T|temper.Null` for LuaLS. `orelse` is Kotlin's `temper.pcall` of a
 //! function, which an `if` then follows with the fallback (and redoes
 //! a jump out of the body, which returns a signal saying which), and
-//! `bubble()` the runtime's error. What Lua can't write inline (`orelse`,
+//! `bubble()` the runtime's `temper.bubble()`, which raises a table
+//! marked as a bubble; unlike Kotlin's, `temper.pcall` catches only
+//! that, raising anything else again, so a panic (`error("panic")`) or
+//! a host error passes every `orelse`. Every builtin that bubbles calls
+//! `temper.bubble`, as host code (`_connected.lua`) must to bubble.
+//! What Lua can't write inline (`orelse`,
 //! statements before a value, as `??` makes, and `if` values that Lua's
 //! `and` and `or` can't choose) goes before its statement
 //! ([`translate`], "Hoisting").

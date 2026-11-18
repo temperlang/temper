@@ -1,4 +1,4 @@
-import { bubble } from "@temperlang/core";
+import { bubble, isBubble } from "@temperlang/core";
 
 function yay() {
   console.log("yay");
@@ -42,7 +42,8 @@ try {
   let a;
   a = "1";
   bubble();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   yay();
 }
 console.log("Checkpoint 1");
@@ -61,7 +62,8 @@ console.log("Checkpoint 2");
     a3 = "2";
     bubble();
     boo();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     meh();
   }
   if (a3 === 1) {
@@ -83,38 +85,44 @@ console.log("Checkpoint 4");
 try {
   f(0);
   yay();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   boo();
 }
 try {
   f("0");
   meh();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   meh();
 }
 console.log("Checkpoint 5");
 try {
   g(0);
   yay();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   boo();
 }
 try {
   g("0");
   meh();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   meh();
 }
 console.log("Checkpoint 6");
 try {
   i(0);
   yay();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   boo();
 }
 try {
   i("0");
   meh();
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   meh();
 }

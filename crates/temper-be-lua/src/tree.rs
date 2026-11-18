@@ -273,7 +273,8 @@ pub enum Stmt {
     /// `do … end`.
     Do(Vec<Stmt>),
     /// Temper's `orelse`, as Kotlin's: `body` in a function that
-    /// `temper.pcall` runs, then `fallback` if it failed:
+    /// `temper.pcall` runs, then `fallback` if it bubbled (anything
+    /// else it raises, `temper.pcall` raises again):
     /// `if not temper.pcall(function() … end) then … end`.
     Try {
         body: Vec<Stmt>,

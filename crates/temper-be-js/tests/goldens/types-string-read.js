@@ -1,4 +1,5 @@
 import {
+  isBubble,
   stringCountBetween,
   stringFromCodePoint,
   stringFromCodePoints,
@@ -75,7 +76,8 @@ function checkParse(string, radix) {
   let converted;
   try {
     converted = (radix != null ? stringToInt32(string, radix) : stringToInt32(string, null)).toString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -130,7 +132,8 @@ console.log(fromCodeNoInline(127757));
 let t$0;
 try {
   t$0 = fromCodeNoInline(1114112);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = "nope";
 }
 console.log(t$0);
@@ -138,7 +141,8 @@ console.log(t$0);
 let t$1;
 try {
   t$1 = fromCodeNoInline(55296);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$1 = "no to surrogate";
 }
 console.log(t$1);
@@ -147,7 +151,8 @@ console.log(fromCodesNoInline(Object.freeze([128059, 8205, 10052, 65039])));
 let t$2;
 try {
   t$2 = fromCodesNoInline(Object.freeze([55296, 56320]));
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$2 = "no to surrogates";
 }
 console.log(t$2);

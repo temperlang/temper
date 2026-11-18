@@ -193,6 +193,7 @@ patches that made them (other docs cite these numbers):
 | C++ | 0021 | `to_base`, an upcast of a never-null `shared_ptr`, so g++'s `-Wnull-dereference` has no null path to follow |
 | C++ | 0022 | Skip `List::make`'s `reserve` for Booleans, so g++'s false `-Warray-bounds` at -O3 in `vector<bool>` doesn't fail `-Werror` builds |
 | C++ | 0023 | `DenseBitVector`, as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
+| C++ | 0025 | `panic()` flushes what was logged and prints `panic` before `std::terminate`, which lost both |
 | C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
 | C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
 | Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |
@@ -201,11 +202,13 @@ patches that made them (other docs cite these numbers):
 | JS | 0002 | Fix `listBuilderSplice`'s JSDoc types, likewise |
 | JS | 0004 | Make `breakPromise`'s reason optional in its JSDoc |
 | JS | 0015 | Type `sendRequest`'s method as any string in its JSDoc, for std/net's generated call |
+| JS | 0025 | A distinct bubble: `bubble()` throws `Bubble` (an `Error` subclass carrying a mark that `isBubble` checks, the same across copies of the runtime), `panic()` a plain `Error`; builtins that threw host errors bubble (`divInt64` and `modInt64`, code points out of range, string index casts, a regex that finds nothing), and an awaited rejection bubbles |
 | Lua | 0006 | Add promises and async blocks, which Kotlin's Lua calls but its runtime lacks |
 | Lua | 0011 | Queue promise waiters behind one drain loop; make generators callable tables that `for`-`in` steps and a failed step leaves done |
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
 | Lua | 0020 | Let generators yield values and take their factory's arguments |
 | Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
+| Lua | 0025 | `temper.pcall` catches only a bubble (`temper.is_bubble`, a table `temper.bubble` raises), raising anything else again; integer division by zero, failed `Float64` and `Int64` conversions, `String.toInt32` with a bad radix, and `as` on a value with no class (`temper.null`, a builtin's) bubble, where they raised strings or host errors |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
@@ -387,7 +390,7 @@ spills nor fails; its translator hoists and orders operands itself.
 |---|---|---|---|---|---|---|---|
 | **Target** | C++14, as Kotlin | .NET 6 (`net6.0`) | Java 17 | ES modules, Node | Lua 5.1 declared; tested on 5.4.6 and LuaJIT | Python 3.11+ | `rust-version` 1.71.1, as Kotlin; tested on 1.85.0 |
 | **Package** | `init.hpp`/`.cpp` per module, `main.cpp`, `test.cpp`, plus a CMake project (Kotlin writes none) | `src` and `program` projects, `ROOTGlobal` class, a file per type | Maven `pom.xml`, `NAMEGlobal` and `NAMEMain`, a file per type | `package.json`, `.internal.js` modules re-exported by public ones | `init.lua` per library, a rockspec | `pyproject.toml`, a package, `__all__` | a crate, `Cargo.toml` |
-| **Failure (`orelse`)** | `try`/`catch` of `TemperBubble` | `try`/`catch`; `panic()` uncaught | `try`/`catch (RuntimeException)`; `panic()` an `AssertionError` | `try`/`catch` | `temper.pcall` | `try`/`except Exception`; `panic()` a `BaseException` | `Result` and `?`, closures for complex bodies |
+| **Failure (`orelse`)** | `try`/`catch` of `TemperBubble` | `try`/`catch`; `panic()` uncaught | `try`/`catch (RuntimeException)`; `panic()` an `AssertionError` | `try`/`catch` of a `Bubble` (`isBubble`), rethrowing anything else | `temper.pcall`, which catches only `temper.bubble`'s | `try`/`except Exception`; `panic()` a `BaseException` | `Result` and `?`, closures for complex bodies |
 | **Null** | null `shared_ptr` or `NullableParam` | `T?` | `@Nullable`, boxed | `T \| null` (JSDoc) | `temper.null` (Lua's `nil` can't be a table value) | `T \| None` | `Option<T>` |
 | **Statements in expressions** | translator, after `spill_with` | translator (`hoist`, `sink`), after `spill_with` | translator (`spilled`) | translator (`pre`, `t$0`) | translator, after `spill` | translator (`:=` for `??`) | native block expressions |
 | **Order of evaluation** | its own analysis ([`effects`](../../../crates/temper-be-cpp/src/effects.rs)), since C++ leaves argument order open | left to right | left to right | left to right | left to right | left to right | left to right |

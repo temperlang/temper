@@ -125,15 +125,16 @@ namespace temper {
 
         template<class T = void>
         [[noreturn]] T panic(std::string message) {
-            // Surface the panic message before aborting; otherwise the reason for the
-            // crash is lost.
+            // Keep what was logged before, and surface the panic message
+            // before aborting; otherwise both are lost.
+            std::cout.flush();
             std::cerr << message << std::endl;
             std::terminate();
         }
 
         template<class T = void>
         [[noreturn]] T panic() {
-            std::terminate();
+            panic<T>("panic");
         }
 
         template<class T>

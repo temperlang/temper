@@ -1,4 +1,10 @@
-import { bubble, panic, requireInstanceOf, type } from "@temperlang/core";
+import {
+  bubble,
+  isBubble,
+  panic,
+  requireInstanceOf,
+  type,
+} from "@temperlang/core";
 import {
   InterchangeContext,
   JsonAdapter,
@@ -27,7 +33,8 @@ function encode(adapter, value) {
   adapter.encodeToJson(value, /** @type {JsonProducer} */ (/** @type {unknown} */ (p)));
   try {
     return p.toJsonString();
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return "bad JSON";
   }
 }
@@ -736,7 +743,8 @@ let t$0;
 try {
   decode(Point.jsonAdapter(), '{"x": 1}');
   t$0 = "decoded";
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = "no y";
 }
 console.log(t$0);
@@ -745,7 +753,8 @@ let t$1;
 try {
   decode(Message.jsonAdapter(), '{"kind": "what", "text": "?"}');
   t$1 = "decoded";
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$1 = "no such kind";
 }
 console.log(t$1);

@@ -1,6 +1,7 @@
 import {
   PromiseBuilder,
   adaptAwaiter,
+  isBubble,
   panic,
   runAsync,
 } from "@temperlang/core";
@@ -26,7 +27,8 @@ function* fn(doAwait) {
       let v;
       try {
         v = yield doAwait_1(b.promise);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
         v = -1;
       }
       firstDone.complete(v);
@@ -41,7 +43,8 @@ function* fn(doAwait) {
       let v;
       try {
         v = yield doAwait_1(b.promise);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
         v = -1;
       }
       secondDone.complete(v);
@@ -77,7 +80,8 @@ function* fn(doAwait) {
       let v;
       try {
         v = yield doAwait_1(b2.promise);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
         v = -1;
       }
       firstDone2.complete(v);
@@ -92,7 +96,8 @@ function* fn(doAwait) {
       let v;
       try {
         v = yield doAwait_1(b2.promise);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
         v = -1;
       }
       secondDone2.complete(v);

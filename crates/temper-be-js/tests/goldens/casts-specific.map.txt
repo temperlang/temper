@@ -7,26 +7,26 @@
 6:3 -> ../specific.temper.md:19:7  let t$0; <- console.log(do { instance as
 7:3 -> ../specific.temper.md:19:7  try { <- console.log(do { instance as
 8:5 -> ../specific.temper.md:19:24  requireInstanceOf(instance, <- instance as BravoClass; "yep
-13:3 -> ../specific.temper.md:19:7  console.log(t$0); <- console.log(do { instance as
-16:1 -> ../specific.temper.md:54:5  /** @param {AlphaInterface} <- let checkIfB(instance: Alpha
-17:1 -> ../specific.temper.md:54:5  function checkIfB(instance) <- let checkIfB(instance: Alpha
-17:10 -> ../specific.temper.md:54:9 (checkIfB)  checkIfB(instance) { <- checkIfB(instance: AlphaInte
-17:18 -> ../specific.temper.md:54:5  (instance) { <- let checkIfB(instance: Alpha
-18:3 -> ../specific.temper.md:55:7  console.log(instance instanc <- console.log(if (instance is
-21:1 -> ../specific.temper.md:7:5  class AlphaInterface extends <- interface AlphaInterface { }
-21:7 -> ../specific.temper.md:7:15 (AlphaInterface)  AlphaInterface extends type( <- AlphaInterface { }
-21:21 -> ../specific.temper.md:7:5   extends type() {} <- interface AlphaInterface { }
-23:1 -> ../specific.temper.md:8:5  class BravoClass extends typ <- class BravoClass extends Alp
-23:7 -> ../specific.temper.md:8:11 (BravoClass)  BravoClass extends type(Alph <- BravoClass extends AlphaInte
-23:17 -> ../specific.temper.md:8:5   extends type(AlphaInterface <- class BravoClass extends Alp
-25:1 -> ../specific.temper.md:9:5  class CharlieClass extends t <- class CharlieClass extends A
-25:7 -> ../specific.temper.md:9:11 (CharlieClass)  CharlieClass extends type(Al <- CharlieClass extends AlphaIn
-25:19 -> ../specific.temper.md:9:5   extends type(AlphaInterface <- class CharlieClass extends A
-27:1 -> ../specific.temper.md:24:5  checkB(new BravoClass()); <- checkB(new BravoClass());
-28:1 -> ../specific.temper.md:25:5  checkB(new CharlieClass()); <- checkB(new CharlieClass());
-29:1 -> ../specific.temper.md:39:5  /** @type {readonly AlphaInt <- let items: List<AlphaInterfa
-30:1 -> ../specific.temper.md:39:5  const items = Object.freeze( <- let items: List<AlphaInterfa
-31:1 -> ../specific.temper.md:40:5  checkB(listedGet(/** @type { <- checkB(items[0]);
-32:1 -> ../specific.temper.md:41:5  checkB(listedGet(/** @type { <- checkB(items[1]);
-33:1 -> ../specific.temper.md:57:5  checkIfB(listedGet(/** @type <- checkIfB(items[0]);
-34:1 -> ../specific.temper.md:58:5  checkIfB(listedGet(/** @type <- checkIfB(items[1]);
+14:3 -> ../specific.temper.md:19:7  console.log(t$0); <- console.log(do { instance as
+17:1 -> ../specific.temper.md:54:5  /** @param {AlphaInterface} <- let checkIfB(instance: Alpha
+18:1 -> ../specific.temper.md:54:5  function checkIfB(instance) <- let checkIfB(instance: Alpha
+18:10 -> ../specific.temper.md:54:9 (checkIfB)  checkIfB(instance) { <- checkIfB(instance: AlphaInte
+18:18 -> ../specific.temper.md:54:5  (instance) { <- let checkIfB(instance: Alpha
+19:3 -> ../specific.temper.md:55:7  console.log(instance instanc <- console.log(if (instance is
+22:1 -> ../specific.temper.md:7:5  class AlphaInterface extends <- interface AlphaInterface { }
+22:7 -> ../specific.temper.md:7:15 (AlphaInterface)  AlphaInterface extends type( <- AlphaInterface { }
+22:21 -> ../specific.temper.md:7:5   extends type() {} <- interface AlphaInterface { }
+24:1 -> ../specific.temper.md:8:5  class BravoClass extends typ <- class BravoClass extends Alp
+24:7 -> ../specific.temper.md:8:11 (BravoClass)  BravoClass extends type(Alph <- BravoClass extends AlphaInte
+24:17 -> ../specific.temper.md:8:5   extends type(AlphaInterface <- class BravoClass extends Alp
+26:1 -> ../specific.temper.md:9:5  class CharlieClass extends t <- class CharlieClass extends A
+26:7 -> ../specific.temper.md:9:11 (CharlieClass)  CharlieClass extends type(Al <- CharlieClass extends AlphaIn
+26:19 -> ../specific.temper.md:9:5   extends type(AlphaInterface <- class CharlieClass extends A
+28:1 -> ../specific.temper.md:24:5  checkB(new BravoClass()); <- checkB(new BravoClass());
+29:1 -> ../specific.temper.md:25:5  checkB(new CharlieClass()); <- checkB(new CharlieClass());
+30:1 -> ../specific.temper.md:39:5  /** @type {readonly AlphaInt <- let items: List<AlphaInterfa
+31:1 -> ../specific.temper.md:39:5  const items = Object.freeze( <- let items: List<AlphaInterfa
+32:1 -> ../specific.temper.md:40:5  checkB(listedGet(/** @type { <- checkB(items[0]);
+33:1 -> ../specific.temper.md:41:5  checkB(listedGet(/** @type { <- checkB(items[1]);
+34:1 -> ../specific.temper.md:57:5  checkIfB(listedGet(/** @type <- checkIfB(items[0]);
+35:1 -> ../specific.temper.md:58:5  checkIfB(listedGet(/** @type <- checkIfB(items[1]);

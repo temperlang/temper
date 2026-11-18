@@ -658,12 +658,14 @@ fn luarc(libraries: &[&Path]) -> String {
 /// for NaN, where LuaJIT's `math.max(nan, 2)` gives 2
 /// (`types/float/ops`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
-/// and `regex/zero-advance`).
-const NEEDS_LUA53: [&str; 4] = [
+/// and `regex/zero-advance`, and the shared `panics`, whose bubbles from
+/// integer division are checked on LuaJIT by hand).
+const NEEDS_LUA53: [&str; 5] = [
     "types-float-ops",
     "types-string-read",
     "regex-match",
     "regex-zero-advance",
+    "panics",
 ];
 
 /// Whether a library imports std's modules, which it then runs beside

@@ -2292,9 +2292,36 @@ copied Kotlin's:
     call a panic unrecoverable. Tempest's Python raises
     `BaseException`, Java an `AssertionError`, C# `Environment.FailFast`,
     C++ the runtime's `panic()`, and Rust `panic!()`, none of which
-    `orelse` catches. Not yet in JS and Lua, which still match Kotlin's
-    (their runtimes' panic is their bubble).
-    Test: each backend's nullables golden (`checked`).
+    `orelse` catches. JS and Lua, whose `orelse` catches anything,
+    mark a bubble instead (2026-11-18): JS throws the runtime's
+    `Bubble` (an `Error` subclass, recognized by `isBubble` across
+    copies of the runtime), and Lua raises `temper.bubble`'s marked
+    table; JS's `orelse` is `catch (e$) { if (!isBubble(e$)) throw e$;
+    … }` (a bare `catch` where the fallback only panics), Lua's
+    `temper.pcall` raises anything else again, and a JS panic is a
+    plain `Error("panic")` (Lua's `error("panic")`, a string). So a
+    panic or a host error (a `TypeError` in a callback, Lua's "attempt
+    to index a nil value") passes every `orelse`, as in the other
+    backends. Builtins that failed by a host error now bubble: JS's
+    `Int64` `/` and `%` by zero (`divInt64` and `modInt64`, where
+    Kotlin's `clampInt64(a / b)` throws BigInt's `RangeError`), a code
+    point out of range or a surrogate (Kotlin's `RangeError`), a
+    `StringIndexOption` cast (Kotlin's `TypeError`), a regex that finds
+    nothing (Kotlin's `Error`), `Test.bail` (Kotlin's `strict.fail`,
+    an `AssertionError`), and an awaited promise rejected with anything
+    (Kotlin's throws the rejection's reason, `undefined` for
+    `breakPromise()`); Lua's integer `//` and `%` by zero (Lua's own
+    error, or `intold.lua`'s `assert`), its runtime's
+    `error("out of range")` and `error("bad parse")` in `Float64` and
+    `Int64` conversions, `String.toInt32` with a radix `tonumber`
+    rejects, `String.toInt32` of what isn't a number (Kotlin's compares
+    `nil` with a number), and `as` a class of `temper.null` or a
+    builtin's value (Kotlin's indexes its missing type tag). C++'s
+    `panic()` now flushes what was logged and prints `panic` before
+    `std::terminate`, where Kotlin's (and tempest's before) lost both. Kotlin's Lua translates `panic()` as
+    `temper.bubble()`, so even the type of what's raised can't tell.
+    Test: programs/panics.temper.md on every backend, and each
+    backend's nullables golden (`checked`).
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

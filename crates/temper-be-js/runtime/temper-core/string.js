@@ -8,7 +8,7 @@ import {
  * @returns {string}
  */
 export const stringFromCodePoint = (codePoint) => {
-    denySurrogate(codePoint);
+    requireScalarValue(codePoint);
     return String.fromCodePoint(codePoint);
 };
 
@@ -19,7 +19,7 @@ export const stringFromCodePoint = (codePoint) => {
  */
 export const stringFromCodePoints = (codePoints) => {
     for (const codePoint of codePoints) {
-        denySurrogate(codePoint);
+        requireScalarValue(codePoint);
     }
     // TODO Append in batches if codePoints is long?
     return String.fromCodePoint(...codePoints);
@@ -227,7 +227,7 @@ export const stringIndexNone = -1;
  */
 export const requireStringIndex = (i) => {
     if (i >= 0) { return i; }
-    throw new TypeError(`Expected StringIndex, not ${i}`);
+    bubble(`Expected StringIndex, not ${i}`);
 };
 
 /**
@@ -237,7 +237,7 @@ export const requireStringIndex = (i) => {
  */
 export const requireNoStringIndex = (i) => {
     if (i < 0) { return i; }
-    throw new TypeError(`Expected NoStringIndex, not ${i}`);
+    bubble(`Expected NoStringIndex, not ${i}`);
 };
 
 /**
@@ -245,15 +245,15 @@ export const requireNoStringIndex = (i) => {
  * @param {number} c
  */
 export const stringBuilderAppendCodePoint = (s, c) => {
-    denySurrogate(c);
+    requireScalarValue(c);
     s[0] += String.fromCodePoint(c);
 }
 
 /**
  * @param {number} c
  */
-const denySurrogate = (c) => {
-    if (c >= 0xD800 && c <= 0xDFFF) {
-        throw new RangeError(`Invalid Unicode scalar value ${c}`)
+const requireScalarValue = (c) => {
+    if (c < 0 || c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF)) {
+        bubble(`Invalid Unicode scalar value ${c}`);
     }
 }

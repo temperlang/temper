@@ -1,0 +1,155 @@
+tmpl 1 model 1 library panics 0.0.0
+
+uses std#18 0.0.0-alpha.0.0 {
+  module regex#19 {
+    class Regex#20 {
+      method find#68(text: String, begin?: StringIndex#66?): Match#64 throws Bubble;
+    }
+    interface RegexNode#41 {
+      method compiled#42(): Regex#20;
+    }
+    class Repeat#43 extends RegexNode#41 {
+      let item#44: RegexNode#41;
+      let min#45: Int32;
+      let max#46: Int32?;
+      let reluctant#47: Boolean;
+      constructor constructor#48(item: RegexNode#41, min: Int32, max: Int32?, reluctant?: Boolean?): Repeat#43;
+    }
+    class CodeSet#49 extends RegexNode#41 {
+      let items#55: List#50<CodePart#54>;
+      let negated#56: Boolean;
+      constructor constructor#57(items: List#50<CodePart#54>, negated?: Boolean?): CodeSet#49;
+    }
+    interface CodePart#54 extends RegexNode#41 {}
+    class CodeRange#58 extends CodePart#54 {
+      let min#59: Int32;
+      let max#60: Int32;
+      constructor constructor#61(min: Int32, max: Int32): CodeRange#58;
+    }
+    class Group#62 {
+      let value#63: String;
+    }
+    class Match#64 {
+      let full#65: Group#62;
+    }
+  }
+}
+
+uses `temper-core`#32 0.0.0-alpha.0.0 {
+  class Int64#33 {
+    connected method toInt32#34(): Int32 throws Bubble;
+  }
+  class Int32#35 {
+    connected method toInt64#36(): Int64;
+    connected method toString#73(radix?: Int32): String;
+  }
+  class String#37 {
+    connected method toInt32#38(radix?: Int32): Int32 throws Bubble;
+    connected method toFloat64#39(): Float64 throws Bubble;
+    connected static fromCodePoint#40(codePoint: Int32): String throws Bubble;
+  }
+  class List#50<T#51> extends Listed#52<T#51> {}
+  interface Listed#52<T#53> {}
+  class StringIndex#66 extends StringIndexOption#67 {}
+  interface StringIndexOption#67 {}
+  interface Console#70 {
+    connected method log#71(message: String): Void;
+  }
+  class Boolean#74 {
+    connected method toString#75(): String;
+  }
+  connected fn getConsole#78(name?: String): Console#70;
+}
+
+module panics#0 {
+  let ~console#72: Console#70;
+
+  interface Shape#1 {}
+
+  class Square#2 extends Shape#1 {
+    let side#4: Int32;
+    constructor constructor#5(side#28: Int32): Square#2 {
+      this.side#4 = side#28;
+    }
+  }
+
+  class Circle#3 extends Shape#1 {
+    constructor constructor#6(): Circle#3 {}
+  }
+
+  fn failing#7(n#29: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#29, 0)) {
+      (bubble()^): Void;
+    }
+    return n#29;
+  }
+
+  fn downcast#8(s#30: Shape#1): Square#2 throws Bubble {
+    return (as(s#30)^): Square#2;
+  }
+
+  fn calling#9(f#31: fn (): Int32 throws Bubble): Int32 {
+    return (orelse(f#31()^, %Int32.neg(9))): Int32;
+  }
+
+  let zero#10: Int32;
+
+  let a#11: Int32;
+
+  let b#12: Int32;
+
+  let c#13: Int32;
+
+  let d#14: Int32;
+
+  let e#15: Int32;
+
+  let f#16: Float64;
+
+  let g#17: String;
+
+  let digits#21: Regex#20;
+
+  let h#22: String;
+
+  let i#23: Int32;
+
+  fn explode#24(n#76: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#76, 0)) {
+      (panic()): Void;
+    }
+    (bubble()^): Void;
+  }
+
+  fn noted#25(name#77: String): Int32 {
+    ~console#72.log#71(%String.cat(name#77, " fallback"));
+    return %Int32.neg(2);
+  }
+
+  fn inner#26(): Int32 throws Bubble {
+    return (orelse(explode#24(1)^, noted#25("inner"))): Int32;
+  }
+
+  let p#27: Int32;
+
+  init {
+    init ~console#72 = getConsole#78(omitted);
+    init zero#10 = (orelse(failing#7(0)^, %Int32.neg(1))): Int32;
+    init a#11 = (orelse(failing#7(1)^, %Int32.neg(1))): Int32;
+    init b#12 = (orelse(downcast#8((upcast(new constructor#6())): Shape#1)^.side#4, %Int32.neg(2))): Int32;
+    init c#13 = (orelse(%Int32.div(1, zero#10)^, %Int32.neg(3))): Int32;
+    init d#14 = (orelse(%Int64.div(1i64, zero#10.toInt64#36())^.toInt32#34()^, %Int32.neg(4))): Int32;
+    init e#15 = (orelse("nope".toInt32#38(omitted)^, %Int32.neg(5))): Int32;
+    init f#16 = (orelse("x".toFloat64#39()^, %Float64.neg(6.0))): Float64;
+    init g#17 = (orelse(fromCodePoint#40(1114112)^, "?")): String;
+    init digits#21 = ((upcast(new constructor#48((upcast(new constructor#57((list((upcast(new constructor#61(48, 57))): CodePart#54)): List#50<CodePart#54>, (asNullable(false)): Boolean?))): RegexNode#41, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#41).compiled#42();
+    init h#22 = (orelse(digits#21.find#68("none", omitted)^.full#65.value#63, "no digits")): String;
+    init i#23 = calling#9((fn ~fn#69(): Int32 throws Bubble {
+      return failing#7(2)^;
+    }): fn (): Int32 throws Bubble);
+    ~console#72.log#71(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(a#11.toString#73(omitted), " "), b#12.toString#73(omitted)), " "), c#13.toString#73(omitted)), " "), d#14.toString#73(omitted)), " "), e#15.toString#73(omitted)), " "), %Float64.eq(f#16, %Float64.neg(6.0)).toString#75()), " "), g#17), " "), h#22), " "), i#23.toString#73(omitted)));
+    ~console#72.log#71("panicking");
+    init p#27 = (orelse(inner#26()^, %Int32.neg(1))): Int32;
+    ~console#72.log#71(%String.cat("after the panic ", p#27.toString#73(omitted)));
+  }
+}

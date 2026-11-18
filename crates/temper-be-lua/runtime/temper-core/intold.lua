@@ -94,7 +94,9 @@ local function int64_cmp(a, b)
 end
 
 local function int64_divmod(a, b)
-    assert(b.hi ~= 0 or b.lo ~= 0, "division by zero")
+    if b.hi == 0 and b.lo == 0 then
+        temper.bubble("division by zero")
+    end
     -- Handle sign, so we can work unsigned below.
     local neg = false
     if a.hi >= uint32_halfmax then
@@ -178,11 +180,11 @@ local function trunc(x)
     return result
 end
 
--- Integer division by zero fails, as `//` does on integers in Lua 5.3+,
--- where floats would give inf or nan.
+-- Integer division by zero bubbles, as `intnew.lua`'s does, where floats
+-- would give inf or nan.
 local function nonzero(b)
     if b == 0 then
-        error("attempt to perform 'n//0'")
+        temper.bubble("division by zero")
     end
     return b
 end
@@ -242,7 +244,7 @@ function temper.float64_toint64(x)
     if math.abs(x) <= mantissa_max then
         return temper.float64_toint64unsafe(x)
     end
-    error("out of range")
+    temper.bubble("out of range")
 end
 
 function temper.float64_toint64unsafe(x)
@@ -311,7 +313,7 @@ function temper.int64_tofloat64(x)
     if math.abs(result) <= mantissa_max then
         return result
     end
-    error("out of range")
+    temper.bubble("out of range")
 end
 
 function temper.int64_tofloat64unsafe(x)

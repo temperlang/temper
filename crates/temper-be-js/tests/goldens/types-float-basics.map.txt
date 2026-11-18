@@ -1,186 +1,186 @@
 # generated line:column -> source:line:column, and the text at each
-15:1 -> ../basics.temper.md:17:5  /** <- let gt(a: Float64, b: Float6
-20:1 -> ../basics.temper.md:17:5  function gt(a, b) { <- let gt(a: Float64, b: Float6
-20:10 -> ../basics.temper.md:17:9 (gt)  gt(a, b) { <- gt(a: Float64, b: Float64):
-20:12 -> ../basics.temper.md:17:5  (a, b) { <- let gt(a: Float64, b: Float6
-21:3 -> ../basics.temper.md:18:7  return cmpFloat64(a, b) > 0; <- return a > b;
-24:1 -> ../basics.temper.md:20:5  /** <- let lt(a: Float64, b: Float6
-29:1 -> ../basics.temper.md:20:5  function lt(a, b) { <- let lt(a: Float64, b: Float6
-29:10 -> ../basics.temper.md:20:9 (lt)  lt(a, b) { <- lt(a: Float64, b: Float64):
-29:12 -> ../basics.temper.md:20:5  (a, b) { <- let lt(a: Float64, b: Float6
-30:3 -> ../basics.temper.md:21:7  return cmpFloat64(a, b) < 0; <- return a < b;
-33:1 -> ../basics.temper.md:23:5  /** <- let eq(a: Float64, b: Float6
-38:1 -> ../basics.temper.md:23:5  function eq(a, b) { <- let eq(a: Float64, b: Float6
-38:10 -> ../basics.temper.md:23:9 (eq)  eq(a, b) { <- eq(a: Float64, b: Float64):
-38:12 -> ../basics.temper.md:23:5  (a, b) { <- let eq(a: Float64, b: Float6
-39:3 -> ../basics.temper.md:24:7  return eqFloat64(a, b); <- return a == b;
-42:1 -> ../basics.temper.md:26:5  /** <- let neq(a: Float64, b: Float
-47:1 -> ../basics.temper.md:26:5  function neq(a, b) { <- let neq(a: Float64, b: Float
-47:10 -> ../basics.temper.md:26:9 (neq)  neq(a, b) { <- neq(a: Float64, b: Float64):
-47:13 -> ../basics.temper.md:26:5  (a, b) { <- let neq(a: Float64, b: Float
-48:3 -> ../basics.temper.md:27:7  return !eqFloat64(a, b); <- return a != b;
-51:1 -> ../basics.temper.md:29:5  /** <- let add(a: Float64, b: Float
-56:1 -> ../basics.temper.md:29:5  function add(a, b) { <- let add(a: Float64, b: Float
-56:10 -> ../basics.temper.md:29:9 (add)  add(a, b) { <- add(a: Float64, b: Float64):
-56:13 -> ../basics.temper.md:29:5  (a, b) { <- let add(a: Float64, b: Float
-57:3 -> ../basics.temper.md:30:7  return a + b; <- return a + b;
-60:1 -> ../basics.temper.md:286:5  /** @param {string} string * <- let checkParse(string: Strin
-61:1 -> ../basics.temper.md:286:5  function checkParse(string) <- let checkParse(string: Strin
-61:10 -> ../basics.temper.md:286:9 (checkParse)  checkParse(string) { <- checkParse(string: String):
-61:20 -> ../basics.temper.md:286:5  (string) { <- let checkParse(string: Strin
-62:3 -> ../basics.temper.md:287:7  /** @type {string} */ <- let converted = string.toFlo
-63:3 -> ../basics.temper.md:287:7  let converted; <- let converted = string.toFlo
-64:3 -> ../basics.temper.md:287:7  try { <- let converted = string.toFlo
-69:3 -> ../basics.temper.md:288:7  console.log(`Parse ${string} <- console.log("Parse ${string}
-72:1 -> ../basics.temper.md:303:5  /** @param {string} string * <- let checkTiny(string: String
-73:1 -> ../basics.temper.md:303:5  function checkTiny(string) { <- let checkTiny(string: String
-73:10 -> ../basics.temper.md:303:9 (checkTiny)  checkTiny(string) { <- checkTiny(string: String): V
-73:19 -> ../basics.temper.md:303:5  (string) { <- let checkTiny(string: String
-74:3 -> ../basics.temper.md:304:7  /** @type {string} */ <- let positive = (string.toFlo
-75:3 -> ../basics.temper.md:304:7  let positive; <- let positive = (string.toFlo
-76:3 -> ../basics.temper.md:304:7  try { <- let positive = (string.toFlo
-81:3 -> ../basics.temper.md:305:7  console.log(`Parse ${string} <- console.log("Parse ${string}
-84:1 -> ../basics.temper.md:7:5  const negativeZero = -0.0; <- let negativeZero = -0.0;
-85:1 -> ../basics.temper.md:8:5  let zero = 0.0; <- var zero = 0.0;
-86:1 -> ../basics.temper.md:9:5  zero = zero; <- zero = zero;
-87:1 -> ../basics.temper.md:10:5  let one = 1.0; <- var one = 1.0;
-88:1 -> ../basics.temper.md:11:5  one = one; <- one = one;
-89:1 -> ../basics.temper.md:12:5  let two = 2.0; <- var two = 2.0;
-90:1 -> ../basics.temper.md:13:5  two = two; <- two = two;
-91:1 -> ../basics.temper.md:14:5  let three = 3.0; <- var three = 3.0;
-92:1 -> ../basics.temper.md:15:5  three = three; <- three = three;
-93:1 -> ../basics.temper.md:35:5  if (gt(one, zero)) { <- if (gt(one, zero)) {
-94:3 -> ../basics.temper.md:36:7  console.log("greater than"); <- console.log("greater than");
-96:1 -> ../basics.temper.md:38:5  if (lt(zero, one)) { <- if (lt(zero, one)) {
-97:3 -> ../basics.temper.md:39:7  console.log("less than"); <- console.log("less than");
-99:1 -> ../basics.temper.md:41:5  if (eq(zero, one)) { <- if (eq(zero, one)) {
-100:3 -> ../basics.temper.md:42:7  console.log("equality is wro <- console.log("equality is wro
-102:1 -> ../basics.temper.md:44:5  if (neq(zero, one)) { <- if (neq(zero, one)) {
-103:3 -> ../basics.temper.md:45:7  console.log("inequality"); <- console.log("inequality")
-105:1 -> ../basics.temper.md:47:5  console.log(float64ToString( <- console.log("${zero}");
-106:1 -> ../basics.temper.md:60:5  if (neq(negativeZero, zero)) <- if (neq(negativeZero, zero))
-107:3 -> ../basics.temper.md:61:7  console.log("zeroes not equa <- console.log("zeroes not equa
-109:1 -> ../basics.temper.md:63:5  if (lt(negativeZero, zero)) <- if (lt(negativeZero, zero))
-110:3 -> ../basics.temper.md:64:5  console.log("negZero < zero" <- console.log("negZero < zero"
-112:1 -> ../basics.temper.md:66:5  if (eqFloat64(zero - zero, z <- if (zero - zero == zero) {
-113:3 -> ../basics.temper.md:67:7  console.log("zero subtractio <- console.log("zero subtractio
-115:1 -> ../basics.temper.md:69:5  if (eqFloat64(zero + zero, z <- if (zero + zero == zero) {
-116:3 -> ../basics.temper.md:70:7  console.log("zero addition") <- console.log("zero addition")
-118:1 -> ../basics.temper.md:72:5  if (eqFloat64(negativeZero - <- if (negativeZero - zero == n
-119:3 -> ../basics.temper.md:73:7  console.log("negative zero m <- console.log("negative zero m
-121:1 -> ../basics.temper.md:75:5  if (eqFloat64(negativeZero + <- if (negativeZero + zero == z
-122:3 -> ../basics.temper.md:76:7  console.log("negative zero p <- console.log("negative zero p
-124:1 -> ../basics.temper.md:78:5  if (eqFloat64(zero - negativ <- if (zero - negativeZero == z
-125:3 -> ../basics.temper.md:79:7  console.log("zero minus nega <- console.log("zero minus nega
-127:1 -> ../basics.temper.md:81:5  if (eqFloat64(zero + negativ <- if (zero + negativeZero == z
-128:3 -> ../basics.temper.md:82:7  console.log("zero plus negat <- console.log("zero plus negat
-130:1 -> ../basics.temper.md:84:5  if (eqFloat64(negativeZero - <- if (negativeZero - negativeZ
-131:3 -> ../basics.temper.md:85:7  console.log("negative zero m <- console.log("negative zero m
-133:1 -> ../basics.temper.md:87:5  if (eqFloat64(negativeZero + <- if (negativeZero + negativeZ
-134:3 -> ../basics.temper.md:88:7  console.log("negative zero p <- console.log("negative zero p
-136:1 -> ../basics.temper.md:90:5  console.log(float64ToString( <- console.log("${negativeZero}
-137:1 -> ../basics.temper.md:108:5  let third = one / three; <- var third = one / three;
-138:1 -> ../basics.temper.md:109:5  third = third; <- third = third;
-139:1 -> ../basics.temper.md:110:5  let half = one / two; <- var half = one / two;
-140:1 -> ../basics.temper.md:111:5  half = half; <- half = half;
-141:1 -> ../basics.temper.md:112:5  let twoThirds = two / three; <- var twoThirds = two / three;
-142:1 -> ../basics.temper.md:113:5  twoThirds = twoThirds; <- twoThirds = twoThirds;
-143:1 -> ../basics.temper.md:115:5  if (gt(third, half)) { <- if (gt(third, half)) {
-144:3 -> ../basics.temper.md:116:7  console.log("oops third > ha <- console.log("oops third > ha
-146:1 -> ../basics.temper.md:118:5  if (gt(half, twoThirds)) { <- if (gt(half, twoThirds)) {
-147:3 -> ../basics.temper.md:119:7  console.log("oops half > two <- console.log("oops half > two
-149:1 -> ../basics.temper.md:121:5  if (neq(third * two, twoThir <- if (neq(third * two, twoThir
-150:3 -> ../basics.temper.md:122:7  console.log("misaligned mult <- console.log("misaligned mult
-152:1 -> ../basics.temper.md:124:5  if (neq(add(third, twoThirds <- if (neq(add(third, twoThirds
-153:3 -> ../basics.temper.md:125:7  console.log("doesn't add bac <- console.log("doesn't add bac
-155:1 -> ../basics.temper.md:130:5  console.log(float64ToString( <- console.log("${half}");
-156:1 -> ../basics.temper.md:131:5  console.log(float64ToString( <- console.log("${4.0 ** -half}
-157:1 -> ../basics.temper.md:132:5  console.log(float64ToString( <- console.log("${third}");
-158:1 -> ../basics.temper.md:133:5  console.log(float64ToString( <- console.log("${twoThirds}");
-159:1 -> ../basics.temper.md:134:5  console.log(float64ToString( <- console.log("${one}")
-160:1 -> ../basics.temper.md:135:5  const almostBig = 1e25 * one <- let almostBig = 1e25 * one;
-161:1 -> ../basics.temper.md:136:5  console.log(float64ToString( <- console.log("${almostBig}")
-162:1 -> ../basics.temper.md:137:5  let big = 99999999999999.0 * <- var big = 99999999999999.0 *
-163:1 -> ../basics.temper.md:138:5  big = big; <- big = big;
-164:1 -> ../basics.temper.md:139:5  console.log(float64ToString( <- console.log("${big}");
-165:1 -> ../basics.temper.md:140:5  let bigger = big * big * big <- var bigger = big * big * big
-166:1 -> ../basics.temper.md:141:5  bigger = bigger; <- bigger = bigger;
-167:1 -> ../basics.temper.md:142:5  console.log(float64ToString( <- console.log("${bigger}");
-168:1 -> ../basics.temper.md:159:5  const middling = -1500.0 * o <- let middling = -1500.0 * one
-169:1 -> ../basics.temper.md:160:5  console.log(`${float64ToStri <- console.log("${middling} ${1
-170:1 -> ../basics.temper.md:161:5  console.log(`${float64ToStri <- console.log("${1e21 * one} $
-171:1 -> ../basics.temper.md:174:5  let biggest = bigger * bigge <- var biggest = bigger * bigge
-172:1 -> ../basics.temper.md:175:5  biggest = biggest; <- biggest = biggest;
-173:1 -> ../basics.temper.md:176:5  console.log(`biggest ${float <- console.log("biggest ${bigge
-174:1 -> ../basics.temper.md:177:5  let tiniest = one / biggest; <- var tiniest = one / biggest;
-175:1 -> ../basics.temper.md:178:5  tiniest = tiniest; <- tiniest = tiniest;
-176:1 -> ../basics.temper.md:179:5  console.log(`tiniest ${float <- console.log("tiniest ${tinie
-177:1 -> ../basics.temper.md:180:5  let negativeInfinity = bigge <- var negativeInfinity = bigge
-178:1 -> ../basics.temper.md:181:5  negativeInfinity = negativeI <- negativeInfinity = negativeI
-179:1 -> ../basics.temper.md:182:5  console.log(`negative infini <- console.log("negative infini
-180:1 -> ../basics.temper.md:194:5  let infinity = Infinity; <- var infinity = 1E999;
-181:1 -> ../basics.temper.md:195:5  infinity = infinity; <- infinity = infinity;
-182:1 -> ../basics.temper.md:196:5  console.log(float64ToString( <- console.log("${infinity}");
-183:1 -> ../basics.temper.md:197:5  console.log("processed an in <- console.log("processed an in
-184:1 -> ../basics.temper.md:206:5  let nan = NaN; <- var nan = NaN;
-185:1 -> ../basics.temper.md:207:5  nan = nan; <- nan = nan;
-186:1 -> ../basics.temper.md:208:5  console.log(float64ToString( <- console.log("${nan}");
-187:1 -> ../basics.temper.md:209:5  if (cmpFloat64(nan, infinity <- if (nan > infinity) {
-188:3 -> ../basics.temper.md:210:7  console.log("NaN is biggest" <- console.log("NaN is biggest"
-190:3 -> ../basics.temper.md:212:7  console.log("Infinity is big <- console.log("Infinity is big
-192:1 -> ../basics.temper.md:220:5  console.log(`NaN == NaN? ${e <- console.log("NaN == NaN? ${n
-193:1 -> ../basics.temper.md:231:5  console.log(`Int to float: $ <- console.log("Int to float: $
-194:1 -> ../basics.temper.md:232:5  console.log(`Positive to int <- console.log("Positive to int
-195:1 -> ../basics.temper.md:233:5  console.log(`Negative to int <- console.log("Negative to int
-196:1 -> ../basics.temper.md:234:5  /** @type {string} */ <- console.log(
-197:1 -> ../basics.temper.md:234:5  let t$0; <- console.log(
-198:1 -> ../basics.temper.md:234:5  try { <- console.log(
-203:1 -> ../basics.temper.md:234:5  console.log(`Infinity to int <- console.log(
-204:1 -> ../basics.temper.md:237:5  /** @type {string} */ <- console.log("NaN to int: ${N
-205:1 -> ../basics.temper.md:237:5  let t$1; <- console.log("NaN to int: ${N
-206:1 -> ../basics.temper.md:237:5  try { <- console.log("NaN to int: ${N
-211:1 -> ../basics.temper.md:237:5  console.log(`NaN to int: ${t <- console.log("NaN to int: ${N
-212:1 -> ../basics.temper.md:251:5  const oneInt64 = float64ToIn <- let oneInt64 = one.toInt64Un
-213:1 -> ../basics.temper.md:252:5  const notSoBig = clampInt64( <- let notSoBig = 0x7fff_ffffi6
-214:1 -> ../basics.temper.md:253:5  const notSoSmall = clampInt6 <- let notSoSmall = -0x8000_000
-215:1 -> ../basics.temper.md:254:5  const slightlyBigger = float <- let slightlyBigger = (notSoB
-216:1 -> ../basics.temper.md:255:5  const slightlySmaller = floa <- let slightlySmaller = (notSo
-217:1 -> ../basics.temper.md:256:5  const tooBigForFloat64 = cla <- let tooBigForFloat64 = 0x20_
-218:1 -> ../basics.temper.md:257:5  const okToConvert64 = int64T <- let okToConvert64 = (tooBigF
-219:1 -> ../basics.temper.md:258:5  const sneakyBig = okToConver <- let sneakyBig = okToConvert6
-220:1 -> ../basics.temper.md:260:5  console.log(`Bigger to Int64 <- console.log("Bigger to Int64
-221:1 -> ../basics.temper.md:261:5  console.log(`Smaller to Int6 <- console.log("Smaller to Int6
-222:1 -> ../basics.temper.md:262:5  console.log(`Barely ok to In <- console.log("Barely ok to In
-223:1 -> ../basics.temper.md:263:5  /** @type {string} */ <- console.log("Sneaky big to I
-224:1 -> ../basics.temper.md:263:5  let t$2; <- console.log("Sneaky big to I
-225:1 -> ../basics.temper.md:263:5  try { <- console.log("Sneaky big to I
-230:1 -> ../basics.temper.md:263:5  console.log(`Sneaky big to I <- console.log("Sneaky big to I
-231:1 -> ../basics.temper.md:266:5  /** @type {string} */ <- console.log("Too big Int64 t
-232:1 -> ../basics.temper.md:266:5  let t$3; <- console.log("Too big Int64 t
-233:1 -> ../basics.temper.md:266:5  try { <- console.log("Too big Int64 t
-238:1 -> ../basics.temper.md:266:5  console.log(`Too big Int64 t <- console.log("Too big Int64 t
-239:1 -> ../basics.temper.md:269:5  /** @type {string} */ <- console.log(
-240:1 -> ../basics.temper.md:269:5  let t$4; <- console.log(
-241:1 -> ../basics.temper.md:269:5  try { <- console.log(
-246:1 -> ../basics.temper.md:269:5  console.log(`Infinity to Int <- console.log(
-247:1 -> ../basics.temper.md:272:5  /** @type {string} */ <- console.log("NaN to Int64: $
-248:1 -> ../basics.temper.md:272:5  let t$5; <- console.log("NaN to Int64: $
-249:1 -> ../basics.temper.md:272:5  try { <- console.log("NaN to Int64: $
-254:1 -> ../basics.temper.md:272:5  console.log(`NaN to Int64: $ <- console.log("NaN to Int64: $
-255:1 -> ../basics.temper.md:290:5  checkParse("-1.5"); <- checkParse("-1.5");
-256:1 -> ../basics.temper.md:291:5  checkParse("-0"); <- checkParse("-0");
-257:1 -> ../basics.temper.md:292:5  checkParse("2.0"); <- checkParse("2.0");
-258:1 -> ../basics.temper.md:293:5  checkParse("2"); <- checkParse("2");
-259:1 -> ../basics.temper.md:294:5  checkParse(" 2 "); <- checkParse(" 2 ");
-260:1 -> ../basics.temper.md:295:5  checkParse("5e-1"); <- checkParse("5e-1");
-261:1 -> ../basics.temper.md:296:5  checkParse("NaN"); <- checkParse("NaN");
-262:1 -> ../basics.temper.md:297:5  checkParse("-Infinity"); <- checkParse("-Infinity");
-263:1 -> ../basics.temper.md:307:5  checkTiny("2.225e-308"); <- checkTiny("2.225e-308");
-264:1 -> ../basics.temper.md:308:5  checkTiny("5e-324"); <- checkTiny("5e-324");
-265:1 -> ../basics.temper.md:309:5  checkParse("1e-400"); <- checkParse("1e-400");
-266:1 -> ../basics.temper.md:310:5  checkParse("-1e-400"); <- checkParse("-1e-400");
-267:1 -> ../basics.temper.md:316:5  checkParse("2."); <- checkParse("2.");
-268:1 -> ../basics.temper.md:317:5  checkParse(".2"); <- checkParse(".2");
-269:1 -> ../basics.temper.md:318:5  checkParse("2.0.0"); <- checkParse("2.0.0");
-270:1 -> ../basics.temper.md:319:5  checkParse("-inf"); <- checkParse("-inf");
-271:1 -> ../basics.temper.md:320:5  checkParse("totally"); <- checkParse("totally");
+16:1 -> ../basics.temper.md:17:5  /** <- let gt(a: Float64, b: Float6
+21:1 -> ../basics.temper.md:17:5  function gt(a, b) { <- let gt(a: Float64, b: Float6
+21:10 -> ../basics.temper.md:17:9 (gt)  gt(a, b) { <- gt(a: Float64, b: Float64):
+21:12 -> ../basics.temper.md:17:5  (a, b) { <- let gt(a: Float64, b: Float6
+22:3 -> ../basics.temper.md:18:7  return cmpFloat64(a, b) > 0; <- return a > b;
+25:1 -> ../basics.temper.md:20:5  /** <- let lt(a: Float64, b: Float6
+30:1 -> ../basics.temper.md:20:5  function lt(a, b) { <- let lt(a: Float64, b: Float6
+30:10 -> ../basics.temper.md:20:9 (lt)  lt(a, b) { <- lt(a: Float64, b: Float64):
+30:12 -> ../basics.temper.md:20:5  (a, b) { <- let lt(a: Float64, b: Float6
+31:3 -> ../basics.temper.md:21:7  return cmpFloat64(a, b) < 0; <- return a < b;
+34:1 -> ../basics.temper.md:23:5  /** <- let eq(a: Float64, b: Float6
+39:1 -> ../basics.temper.md:23:5  function eq(a, b) { <- let eq(a: Float64, b: Float6
+39:10 -> ../basics.temper.md:23:9 (eq)  eq(a, b) { <- eq(a: Float64, b: Float64):
+39:12 -> ../basics.temper.md:23:5  (a, b) { <- let eq(a: Float64, b: Float6
+40:3 -> ../basics.temper.md:24:7  return eqFloat64(a, b); <- return a == b;
+43:1 -> ../basics.temper.md:26:5  /** <- let neq(a: Float64, b: Float
+48:1 -> ../basics.temper.md:26:5  function neq(a, b) { <- let neq(a: Float64, b: Float
+48:10 -> ../basics.temper.md:26:9 (neq)  neq(a, b) { <- neq(a: Float64, b: Float64):
+48:13 -> ../basics.temper.md:26:5  (a, b) { <- let neq(a: Float64, b: Float
+49:3 -> ../basics.temper.md:27:7  return !eqFloat64(a, b); <- return a != b;
+52:1 -> ../basics.temper.md:29:5  /** <- let add(a: Float64, b: Float
+57:1 -> ../basics.temper.md:29:5  function add(a, b) { <- let add(a: Float64, b: Float
+57:10 -> ../basics.temper.md:29:9 (add)  add(a, b) { <- add(a: Float64, b: Float64):
+57:13 -> ../basics.temper.md:29:5  (a, b) { <- let add(a: Float64, b: Float
+58:3 -> ../basics.temper.md:30:7  return a + b; <- return a + b;
+61:1 -> ../basics.temper.md:286:5  /** @param {string} string * <- let checkParse(string: Strin
+62:1 -> ../basics.temper.md:286:5  function checkParse(string) <- let checkParse(string: Strin
+62:10 -> ../basics.temper.md:286:9 (checkParse)  checkParse(string) { <- checkParse(string: String):
+62:20 -> ../basics.temper.md:286:5  (string) { <- let checkParse(string: Strin
+63:3 -> ../basics.temper.md:287:7  /** @type {string} */ <- let converted = string.toFlo
+64:3 -> ../basics.temper.md:287:7  let converted; <- let converted = string.toFlo
+65:3 -> ../basics.temper.md:287:7  try { <- let converted = string.toFlo
+71:3 -> ../basics.temper.md:288:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+74:1 -> ../basics.temper.md:303:5  /** @param {string} string * <- let checkTiny(string: String
+75:1 -> ../basics.temper.md:303:5  function checkTiny(string) { <- let checkTiny(string: String
+75:10 -> ../basics.temper.md:303:9 (checkTiny)  checkTiny(string) { <- checkTiny(string: String): V
+75:19 -> ../basics.temper.md:303:5  (string) { <- let checkTiny(string: String
+76:3 -> ../basics.temper.md:304:7  /** @type {string} */ <- let positive = (string.toFlo
+77:3 -> ../basics.temper.md:304:7  let positive; <- let positive = (string.toFlo
+78:3 -> ../basics.temper.md:304:7  try { <- let positive = (string.toFlo
+84:3 -> ../basics.temper.md:305:7  console.log(`Parse ${string} <- console.log("Parse ${string}
+87:1 -> ../basics.temper.md:7:5  const negativeZero = -0.0; <- let negativeZero = -0.0;
+88:1 -> ../basics.temper.md:8:5  let zero = 0.0; <- var zero = 0.0;
+89:1 -> ../basics.temper.md:9:5  zero = zero; <- zero = zero;
+90:1 -> ../basics.temper.md:10:5  let one = 1.0; <- var one = 1.0;
+91:1 -> ../basics.temper.md:11:5  one = one; <- one = one;
+92:1 -> ../basics.temper.md:12:5  let two = 2.0; <- var two = 2.0;
+93:1 -> ../basics.temper.md:13:5  two = two; <- two = two;
+94:1 -> ../basics.temper.md:14:5  let three = 3.0; <- var three = 3.0;
+95:1 -> ../basics.temper.md:15:5  three = three; <- three = three;
+96:1 -> ../basics.temper.md:35:5  if (gt(one, zero)) { <- if (gt(one, zero)) {
+97:3 -> ../basics.temper.md:36:7  console.log("greater than"); <- console.log("greater than");
+99:1 -> ../basics.temper.md:38:5  if (lt(zero, one)) { <- if (lt(zero, one)) {
+100:3 -> ../basics.temper.md:39:7  console.log("less than"); <- console.log("less than");
+102:1 -> ../basics.temper.md:41:5  if (eq(zero, one)) { <- if (eq(zero, one)) {
+103:3 -> ../basics.temper.md:42:7  console.log("equality is wro <- console.log("equality is wro
+105:1 -> ../basics.temper.md:44:5  if (neq(zero, one)) { <- if (neq(zero, one)) {
+106:3 -> ../basics.temper.md:45:7  console.log("inequality"); <- console.log("inequality")
+108:1 -> ../basics.temper.md:47:5  console.log(float64ToString( <- console.log("${zero}");
+109:1 -> ../basics.temper.md:60:5  if (neq(negativeZero, zero)) <- if (neq(negativeZero, zero))
+110:3 -> ../basics.temper.md:61:7  console.log("zeroes not equa <- console.log("zeroes not equa
+112:1 -> ../basics.temper.md:63:5  if (lt(negativeZero, zero)) <- if (lt(negativeZero, zero))
+113:3 -> ../basics.temper.md:64:5  console.log("negZero < zero" <- console.log("negZero < zero"
+115:1 -> ../basics.temper.md:66:5  if (eqFloat64(zero - zero, z <- if (zero - zero == zero) {
+116:3 -> ../basics.temper.md:67:7  console.log("zero subtractio <- console.log("zero subtractio
+118:1 -> ../basics.temper.md:69:5  if (eqFloat64(zero + zero, z <- if (zero + zero == zero) {
+119:3 -> ../basics.temper.md:70:7  console.log("zero addition") <- console.log("zero addition")
+121:1 -> ../basics.temper.md:72:5  if (eqFloat64(negativeZero - <- if (negativeZero - zero == n
+122:3 -> ../basics.temper.md:73:7  console.log("negative zero m <- console.log("negative zero m
+124:1 -> ../basics.temper.md:75:5  if (eqFloat64(negativeZero + <- if (negativeZero + zero == z
+125:3 -> ../basics.temper.md:76:7  console.log("negative zero p <- console.log("negative zero p
+127:1 -> ../basics.temper.md:78:5  if (eqFloat64(zero - negativ <- if (zero - negativeZero == z
+128:3 -> ../basics.temper.md:79:7  console.log("zero minus nega <- console.log("zero minus nega
+130:1 -> ../basics.temper.md:81:5  if (eqFloat64(zero + negativ <- if (zero + negativeZero == z
+131:3 -> ../basics.temper.md:82:7  console.log("zero plus negat <- console.log("zero plus negat
+133:1 -> ../basics.temper.md:84:5  if (eqFloat64(negativeZero - <- if (negativeZero - negativeZ
+134:3 -> ../basics.temper.md:85:7  console.log("negative zero m <- console.log("negative zero m
+136:1 -> ../basics.temper.md:87:5  if (eqFloat64(negativeZero + <- if (negativeZero + negativeZ
+137:3 -> ../basics.temper.md:88:7  console.log("negative zero p <- console.log("negative zero p
+139:1 -> ../basics.temper.md:90:5  console.log(float64ToString( <- console.log("${negativeZero}
+140:1 -> ../basics.temper.md:108:5  let third = one / three; <- var third = one / three;
+141:1 -> ../basics.temper.md:109:5  third = third; <- third = third;
+142:1 -> ../basics.temper.md:110:5  let half = one / two; <- var half = one / two;
+143:1 -> ../basics.temper.md:111:5  half = half; <- half = half;
+144:1 -> ../basics.temper.md:112:5  let twoThirds = two / three; <- var twoThirds = two / three;
+145:1 -> ../basics.temper.md:113:5  twoThirds = twoThirds; <- twoThirds = twoThirds;
+146:1 -> ../basics.temper.md:115:5  if (gt(third, half)) { <- if (gt(third, half)) {
+147:3 -> ../basics.temper.md:116:7  console.log("oops third > ha <- console.log("oops third > ha
+149:1 -> ../basics.temper.md:118:5  if (gt(half, twoThirds)) { <- if (gt(half, twoThirds)) {
+150:3 -> ../basics.temper.md:119:7  console.log("oops half > two <- console.log("oops half > two
+152:1 -> ../basics.temper.md:121:5  if (neq(third * two, twoThir <- if (neq(third * two, twoThir
+153:3 -> ../basics.temper.md:122:7  console.log("misaligned mult <- console.log("misaligned mult
+155:1 -> ../basics.temper.md:124:5  if (neq(add(third, twoThirds <- if (neq(add(third, twoThirds
+156:3 -> ../basics.temper.md:125:7  console.log("doesn't add bac <- console.log("doesn't add bac
+158:1 -> ../basics.temper.md:130:5  console.log(float64ToString( <- console.log("${half}");
+159:1 -> ../basics.temper.md:131:5  console.log(float64ToString( <- console.log("${4.0 ** -half}
+160:1 -> ../basics.temper.md:132:5  console.log(float64ToString( <- console.log("${third}");
+161:1 -> ../basics.temper.md:133:5  console.log(float64ToString( <- console.log("${twoThirds}");
+162:1 -> ../basics.temper.md:134:5  console.log(float64ToString( <- console.log("${one}")
+163:1 -> ../basics.temper.md:135:5  const almostBig = 1e25 * one <- let almostBig = 1e25 * one;
+164:1 -> ../basics.temper.md:136:5  console.log(float64ToString( <- console.log("${almostBig}")
+165:1 -> ../basics.temper.md:137:5  let big = 99999999999999.0 * <- var big = 99999999999999.0 *
+166:1 -> ../basics.temper.md:138:5  big = big; <- big = big;
+167:1 -> ../basics.temper.md:139:5  console.log(float64ToString( <- console.log("${big}");
+168:1 -> ../basics.temper.md:140:5  let bigger = big * big * big <- var bigger = big * big * big
+169:1 -> ../basics.temper.md:141:5  bigger = bigger; <- bigger = bigger;
+170:1 -> ../basics.temper.md:142:5  console.log(float64ToString( <- console.log("${bigger}");
+171:1 -> ../basics.temper.md:159:5  const middling = -1500.0 * o <- let middling = -1500.0 * one
+172:1 -> ../basics.temper.md:160:5  console.log(`${float64ToStri <- console.log("${middling} ${1
+173:1 -> ../basics.temper.md:161:5  console.log(`${float64ToStri <- console.log("${1e21 * one} $
+174:1 -> ../basics.temper.md:174:5  let biggest = bigger * bigge <- var biggest = bigger * bigge
+175:1 -> ../basics.temper.md:175:5  biggest = biggest; <- biggest = biggest;
+176:1 -> ../basics.temper.md:176:5  console.log(`biggest ${float <- console.log("biggest ${bigge
+177:1 -> ../basics.temper.md:177:5  let tiniest = one / biggest; <- var tiniest = one / biggest;
+178:1 -> ../basics.temper.md:178:5  tiniest = tiniest; <- tiniest = tiniest;
+179:1 -> ../basics.temper.md:179:5  console.log(`tiniest ${float <- console.log("tiniest ${tinie
+180:1 -> ../basics.temper.md:180:5  let negativeInfinity = bigge <- var negativeInfinity = bigge
+181:1 -> ../basics.temper.md:181:5  negativeInfinity = negativeI <- negativeInfinity = negativeI
+182:1 -> ../basics.temper.md:182:5  console.log(`negative infini <- console.log("negative infini
+183:1 -> ../basics.temper.md:194:5  let infinity = Infinity; <- var infinity = 1E999;
+184:1 -> ../basics.temper.md:195:5  infinity = infinity; <- infinity = infinity;
+185:1 -> ../basics.temper.md:196:5  console.log(float64ToString( <- console.log("${infinity}");
+186:1 -> ../basics.temper.md:197:5  console.log("processed an in <- console.log("processed an in
+187:1 -> ../basics.temper.md:206:5  let nan = NaN; <- var nan = NaN;
+188:1 -> ../basics.temper.md:207:5  nan = nan; <- nan = nan;
+189:1 -> ../basics.temper.md:208:5  console.log(float64ToString( <- console.log("${nan}");
+190:1 -> ../basics.temper.md:209:5  if (cmpFloat64(nan, infinity <- if (nan > infinity) {
+191:3 -> ../basics.temper.md:210:7  console.log("NaN is biggest" <- console.log("NaN is biggest"
+193:3 -> ../basics.temper.md:212:7  console.log("Infinity is big <- console.log("Infinity is big
+195:1 -> ../basics.temper.md:220:5  console.log(`NaN == NaN? ${e <- console.log("NaN == NaN? ${n
+196:1 -> ../basics.temper.md:231:5  console.log(`Int to float: $ <- console.log("Int to float: $
+197:1 -> ../basics.temper.md:232:5  console.log(`Positive to int <- console.log("Positive to int
+198:1 -> ../basics.temper.md:233:5  console.log(`Negative to int <- console.log("Negative to int
+199:1 -> ../basics.temper.md:234:5  /** @type {string} */ <- console.log(
+200:1 -> ../basics.temper.md:234:5  let t$0; <- console.log(
+201:1 -> ../basics.temper.md:234:5  try { <- console.log(
+207:1 -> ../basics.temper.md:234:5  console.log(`Infinity to int <- console.log(
+208:1 -> ../basics.temper.md:237:5  /** @type {string} */ <- console.log("NaN to int: ${N
+209:1 -> ../basics.temper.md:237:5  let t$1; <- console.log("NaN to int: ${N
+210:1 -> ../basics.temper.md:237:5  try { <- console.log("NaN to int: ${N
+216:1 -> ../basics.temper.md:237:5  console.log(`NaN to int: ${t <- console.log("NaN to int: ${N
+217:1 -> ../basics.temper.md:251:5  const oneInt64 = float64ToIn <- let oneInt64 = one.toInt64Un
+218:1 -> ../basics.temper.md:252:5  const notSoBig = clampInt64( <- let notSoBig = 0x7fff_ffffi6
+219:1 -> ../basics.temper.md:253:5  const notSoSmall = clampInt6 <- let notSoSmall = -0x8000_000
+220:1 -> ../basics.temper.md:254:5  const slightlyBigger = float <- let slightlyBigger = (notSoB
+221:1 -> ../basics.temper.md:255:5  const slightlySmaller = floa <- let slightlySmaller = (notSo
+222:1 -> ../basics.temper.md:256:5  const tooBigForFloat64 = cla <- let tooBigForFloat64 = 0x20_
+223:1 -> ../basics.temper.md:257:5  const okToConvert64 = int64T <- let okToConvert64 = (tooBigF
+224:1 -> ../basics.temper.md:258:5  const sneakyBig = okToConver <- let sneakyBig = okToConvert6
+225:1 -> ../basics.temper.md:260:5  console.log(`Bigger to Int64 <- console.log("Bigger to Int64
+226:1 -> ../basics.temper.md:261:5  console.log(`Smaller to Int6 <- console.log("Smaller to Int6
+227:1 -> ../basics.temper.md:262:5  console.log(`Barely ok to In <- console.log("Barely ok to In
+228:1 -> ../basics.temper.md:263:5  /** @type {string} */ <- console.log("Sneaky big to I
+229:1 -> ../basics.temper.md:263:5  let t$2; <- console.log("Sneaky big to I
+230:1 -> ../basics.temper.md:263:5  try { <- console.log("Sneaky big to I
+236:1 -> ../basics.temper.md:263:5  console.log(`Sneaky big to I <- console.log("Sneaky big to I
+237:1 -> ../basics.temper.md:266:5  /** @type {string} */ <- console.log("Too big Int64 t
+238:1 -> ../basics.temper.md:266:5  let t$3; <- console.log("Too big Int64 t
+239:1 -> ../basics.temper.md:266:5  try { <- console.log("Too big Int64 t
+245:1 -> ../basics.temper.md:266:5  console.log(`Too big Int64 t <- console.log("Too big Int64 t
+246:1 -> ../basics.temper.md:269:5  /** @type {string} */ <- console.log(
+247:1 -> ../basics.temper.md:269:5  let t$4; <- console.log(
+248:1 -> ../basics.temper.md:269:5  try { <- console.log(
+254:1 -> ../basics.temper.md:269:5  console.log(`Infinity to Int <- console.log(
+255:1 -> ../basics.temper.md:272:5  /** @type {string} */ <- console.log("NaN to Int64: $
+256:1 -> ../basics.temper.md:272:5  let t$5; <- console.log("NaN to Int64: $
+257:1 -> ../basics.temper.md:272:5  try { <- console.log("NaN to Int64: $
+263:1 -> ../basics.temper.md:272:5  console.log(`NaN to Int64: $ <- console.log("NaN to Int64: $
+264:1 -> ../basics.temper.md:290:5  checkParse("-1.5"); <- checkParse("-1.5");
+265:1 -> ../basics.temper.md:291:5  checkParse("-0"); <- checkParse("-0");
+266:1 -> ../basics.temper.md:292:5  checkParse("2.0"); <- checkParse("2.0");
+267:1 -> ../basics.temper.md:293:5  checkParse("2"); <- checkParse("2");
+268:1 -> ../basics.temper.md:294:5  checkParse(" 2 "); <- checkParse(" 2 ");
+269:1 -> ../basics.temper.md:295:5  checkParse("5e-1"); <- checkParse("5e-1");
+270:1 -> ../basics.temper.md:296:5  checkParse("NaN"); <- checkParse("NaN");
+271:1 -> ../basics.temper.md:297:5  checkParse("-Infinity"); <- checkParse("-Infinity");
+272:1 -> ../basics.temper.md:307:5  checkTiny("2.225e-308"); <- checkTiny("2.225e-308");
+273:1 -> ../basics.temper.md:308:5  checkTiny("5e-324"); <- checkTiny("5e-324");
+274:1 -> ../basics.temper.md:309:5  checkParse("1e-400"); <- checkParse("1e-400");
+275:1 -> ../basics.temper.md:310:5  checkParse("-1e-400"); <- checkParse("-1e-400");
+276:1 -> ../basics.temper.md:316:5  checkParse("2."); <- checkParse("2.");
+277:1 -> ../basics.temper.md:317:5  checkParse(".2"); <- checkParse(".2");
+278:1 -> ../basics.temper.md:318:5  checkParse("2.0.0"); <- checkParse("2.0.0");
+279:1 -> ../basics.temper.md:319:5  checkParse("-inf"); <- checkParse("-inf");
+280:1 -> ../basics.temper.md:320:5  checkParse("totally"); <- checkParse("totally");

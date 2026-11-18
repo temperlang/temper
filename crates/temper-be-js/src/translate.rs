@@ -284,12 +284,6 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// Imports `name` from another package, as `strict` from `assert`.
-    pub(crate) fn import_from(&mut self, specifier: &str, name: &str) {
-        let names = self.from.entry(specifier.to_string()).or_default();
-        names.insert(name.to_string());
-    }
-
     /// Imports a runtime helper.
     pub(crate) fn import(&mut self, name: &'static str) {
         self.imports.insert(name);
@@ -1369,9 +1363,9 @@ impl<'a> Translator<'a> {
                 };
                 let (mut pre, body) = self.part(body)?;
                 pre.push(Stmt::Return(Some(body)));
-                let (mut catch, fallback) = self.part(fallback)?;
-                catch.push(Stmt::Return(Some(fallback)));
-                out.push(Stmt::Try { body: pre, catch });
+                let (mut catch, value) = self.part(fallback)?;
+                catch.push(Stmt::Return(Some(value)));
+                out.push(self.try_catch(pre, catch, fallback));
             }
             Node::Return { value } => {
                 let value = match value {
@@ -1386,7 +1380,7 @@ impl<'a> Translator<'a> {
                 };
                 let body = self.effects(body)?;
                 let catch = self.effects(fallback)?;
-                out.push(Stmt::Try { body, catch });
+                out.push(self.try_catch(body, catch, fallback));
             }
             Node::ExprStatement { expr } => match self.setter_call(expr)? {
                 Some(assign) => out.push(assign),
@@ -1502,12 +1496,23 @@ impl<'a> Translator<'a> {
             target: target.clone(),
             value: body,
         });
-        let (mut catch, fallback) = self.part(fallback)?;
-        catch.push(Stmt::Assign {
-            target,
-            value: fallback,
-        });
-        Ok(Stmt::Try { body: pre, catch })
+        let (mut catch, value) = self.part(fallback)?;
+        catch.push(Stmt::Assign { target, value });
+        Ok(self.try_catch(pre, catch, fallback))
+    }
+
+    /// An `orelse`'s `try`, catching only a bubble ([`Stmt::Try`]), or
+    /// anything where `fallback` only panics.
+    fn try_catch(&mut self, body: Vec<Stmt>, catch: Vec<Stmt>, fallback: NodeId) -> Stmt {
+        let checked = !matches!(self.p.nodes.get(fallback), Node::Panic {});
+        if checked {
+            self.imports.insert("isBubble");
+        }
+        Stmt::Try {
+            body,
+            catch,
+            checked,
+        }
     }
 
     /// A fresh temporary's name.

@@ -28,23 +28,23 @@
 44:1 -> ../hoisting.temper.md:21:5  /** @type {number} */ <- console.log(pair(noted(1), f
 45:1 -> ../hoisting.temper.md:21:5  let t$0; <- console.log(pair(noted(1), f
 46:1 -> ../hoisting.temper.md:21:5  try { <- console.log(pair(noted(1), f
-51:1 -> ../hoisting.temper.md:21:5  console.log(pair(t$1, t$0)); <- console.log(pair(noted(1), f
-52:1 -> ../hoisting.temper.md:22:5  const t = true; <- let t = true;
-53:1 -> ../hoisting.temper.md:23:5  const f = false; <- let f = false;
-54:1 -> ../hoisting.temper.md:24:5  let t$3 = f; <- console.log((f && (failing(5
-55:1 -> ../hoisting.temper.md:24:5  if (t$3) { <- console.log((f && (failing(5
-65:1 -> ../hoisting.temper.md:24:5  console.log(t$3.toString()); <- console.log((f && (failing(5
-66:1 -> ../hoisting.temper.md:25:5  let t$5 = t; <- console.log((t && (failing(1
-67:1 -> ../hoisting.temper.md:25:5  if (t$5) { <- console.log((t && (failing(1
-77:1 -> ../hoisting.temper.md:25:5  console.log(t$5.toString()); <- console.log((t && (failing(1
-78:1 -> ../hoisting.temper.md:26:5  console.log((t || noted(7) = <- console.log((t || (noted(7)
-79:1 -> ../hoisting.temper.md:27:5  /** @type {number} */ <- console.log((if (t) { failin
-80:1 -> ../hoisting.temper.md:27:5  let t$6; <- console.log((if (t) { failin
-81:1 -> ../hoisting.temper.md:27:5  if (t) { <- console.log((if (t) { failin
-90:1 -> ../hoisting.temper.md:27:5  console.log(t$6.toString()); <- console.log((if (t) { failin
-91:1 -> ../hoisting.temper.md:28:5  let i = 0; <- var i = 0;
-92:1 -> ../hoisting.temper.md:29:5  while (true) { <- while ((failing(i) orelse 10
-103:3 -> ../hoisting.temper.md:30:7  i = (i + 1) | 0; <- i += 1;
-105:1 -> ../hoisting.temper.md:32:5  console.log(i.toString()); <- console.log(i.toString());
-106:1 -> ../hoisting.temper.md:33:5  console.log(`${sameFloat(nul <- console.log("${sameFloat(nul
-107:1 -> ../hoisting.temper.md:34:5  console.log(calls.toString() <- console.log(calls.toString()
+52:1 -> ../hoisting.temper.md:21:5  console.log(pair(t$1, t$0)); <- console.log(pair(noted(1), f
+53:1 -> ../hoisting.temper.md:22:5  const t = true; <- let t = true;
+54:1 -> ../hoisting.temper.md:23:5  const f = false; <- let f = false;
+55:1 -> ../hoisting.temper.md:24:5  let t$3 = f; <- console.log((f && (failing(5
+56:1 -> ../hoisting.temper.md:24:5  if (t$3) { <- console.log((f && (failing(5
+67:1 -> ../hoisting.temper.md:24:5  console.log(t$3.toString()); <- console.log((f && (failing(5
+68:1 -> ../hoisting.temper.md:25:5  let t$5 = t; <- console.log((t && (failing(1
+69:1 -> ../hoisting.temper.md:25:5  if (t$5) { <- console.log((t && (failing(1
+80:1 -> ../hoisting.temper.md:25:5  console.log(t$5.toString()); <- console.log((t && (failing(1
+81:1 -> ../hoisting.temper.md:26:5  console.log((t || noted(7) = <- console.log((t || (noted(7)
+82:1 -> ../hoisting.temper.md:27:5  /** @type {number} */ <- console.log((if (t) { failin
+83:1 -> ../hoisting.temper.md:27:5  let t$6; <- console.log((if (t) { failin
+84:1 -> ../hoisting.temper.md:27:5  if (t) { <- console.log((if (t) { failin
+94:1 -> ../hoisting.temper.md:27:5  console.log(t$6.toString()); <- console.log((if (t) { failin
+95:1 -> ../hoisting.temper.md:28:5  let i = 0; <- var i = 0;
+96:1 -> ../hoisting.temper.md:29:5  while (true) { <- while ((failing(i) orelse 10
+108:3 -> ../hoisting.temper.md:30:7  i = (i + 1) | 0; <- i += 1;
+110:1 -> ../hoisting.temper.md:32:5  console.log(i.toString()); <- console.log(i.toString());
+111:1 -> ../hoisting.temper.md:33:5  console.log(`${sameFloat(nul <- console.log("${sameFloat(nul
+112:1 -> ../hoisting.temper.md:34:5  console.log(calls.toString() <- console.log(calls.toString()

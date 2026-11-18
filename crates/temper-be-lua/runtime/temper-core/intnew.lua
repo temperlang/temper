@@ -48,6 +48,10 @@ local function trunc(n)
 end
 
 local function int64_div(a, b)
+    if b == 0 then
+        -- Not Lua's own error for `//` by zero, which isn't a bubble.
+        temper.bubble("division by zero")
+    end
     local result = a // b
     if (a < 0) ~= (b < 0) and a % b ~= 0 then
         -- Truncate instead of flooring.
@@ -108,7 +112,7 @@ function temper.float64_toint64(n)
     if -mantissa_max <= n and n <= mantissa_max then
         return temper.float64_toint64unsafe(n)
     end
-    error("out of range")
+    temper.bubble("out of range")
 end
 
 function temper.float64_toint64unsafe(x)
@@ -153,7 +157,7 @@ function temper.int64_tofloat64(n)
     if -mantissa_max <= n and n <= mantissa_max then
         return temper.int64_tofloat64unsafe(n)
     end
-    error("out of range")
+    temper.bubble("out of range")
 end
 
 function temper.int64_tofloat64unsafe(n)
@@ -200,7 +204,7 @@ function temper.string_toint64(str, radix)
     if temper.int64_is_safe(ret) then
         return ret
     end
-    error("bad parse")
+    temper.bubble("bad parse")
 end
 
 return {

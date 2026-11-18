@@ -1,0 +1,88 @@
+# generated line:column -> source:line:column, and the text at each
+23:1 -> ../panics.temper.md:16:5  /** <- let failing(n: Int): Int thr
+27:1 -> ../panics.temper.md:16:5  function failing(n) { <- let failing(n: Int): Int thr
+27:10 -> ../panics.temper.md:16:9 (failing)  failing(n) { <- failing(n: Int): Int throws
+27:17 -> ../panics.temper.md:16:5  (n) { <- let failing(n: Int): Int thr
+28:3 -> ../panics.temper.md:17:7  if (n > 0) { <- if (n > 0) { bubble() }
+29:5 -> ../panics.temper.md:17:20  bubble(); <- bubble() }
+31:3 -> ../panics.temper.md:18:7  return n; <- n
+34:1 -> ../panics.temper.md:20:5  /** <- let downcast(s: Shape): Squa
+38:1 -> ../panics.temper.md:20:5  function downcast(s) { <- let downcast(s: Shape): Squa
+38:10 -> ../panics.temper.md:20:9 (downcast)  downcast(s) { <- downcast(s: Shape): Square t
+38:18 -> ../panics.temper.md:20:5  (s) { <- let downcast(s: Shape): Squa
+39:3 -> ../panics.temper.md:20:52  return requireInstanceOf(s, <- s as Square }
+42:1 -> ../panics.temper.md:21:5  /** <- let calling(f: fn (): Int th
+46:1 -> ../panics.temper.md:21:5  function calling(f) { <- let calling(f: fn (): Int th
+46:10 -> ../panics.temper.md:21:9 (calling)  calling(f) { <- calling(f: fn (): Int throws
+46:17 -> ../panics.temper.md:21:5  (f) { <- let calling(f: fn (): Int th
+47:3 -> ../panics.temper.md:21:53  try { <- f() orelse -9 }
+55:1 -> ../panics.temper.md:40:5  /** <- let explode(n: Int): Int thr
+59:1 -> ../panics.temper.md:40:5  function explode(n) { <- let explode(n: Int): Int thr
+59:10 -> ../panics.temper.md:40:9 (explode)  explode(n) { <- explode(n: Int): Int throws
+59:17 -> ../panics.temper.md:40:5  (n) { <- let explode(n: Int): Int thr
+60:3 -> ../panics.temper.md:41:7  if (n > 0) { <- if (n > 0) { panic() }
+61:5 -> ../panics.temper.md:41:20  panic(); <- panic() }
+63:3 -> ../panics.temper.md:42:7  bubble(); <- bubble()
+66:1 -> ../panics.temper.md:44:5  /** <- let noted(name: String): Int
+70:1 -> ../panics.temper.md:44:5  function noted(name) { <- let noted(name: String): Int
+70:10 -> ../panics.temper.md:44:9 (noted)  noted(name) { <- noted(name: String): Int {
+70:15 -> ../panics.temper.md:44:5  (name) { <- let noted(name: String): Int
+71:3 -> ../panics.temper.md:45:7  console.log(`${name} fallbac <- console.log("${name} fallbac
+72:3 -> ../panics.temper.md:46:7  return -2; <- -2
+75:1 -> ../panics.temper.md:48:5  /** @returns {number} */ <- let inner(): Int throws Bubb
+76:1 -> ../panics.temper.md:48:5  function inner() { <- let inner(): Int throws Bubb
+76:10 -> ../panics.temper.md:48:9 (inner)  inner() { <- inner(): Int throws Bubble {
+76:15 -> ../panics.temper.md:48:5  () { <- let inner(): Int throws Bubb
+77:3 -> ../panics.temper.md:48:38  try { <- explode(1) orelse noted("inn
+85:1 -> ../panics.temper.md:12:5  class Shape extends type() { <- interface Shape {}
+85:7 -> ../panics.temper.md:12:15 (Shape)  Shape extends type() {} <- Shape {}
+85:12 -> ../panics.temper.md:12:5   extends type() {} <- interface Shape {}
+87:1 -> ../panics.temper.md:13:5  class Square extends type(Sh <- class Square(public side: In
+87:7 -> ../panics.temper.md:13:11 (Square)  Square extends type(Shape) { <- Square(public side: Int) ext
+87:13 -> ../panics.temper.md:13:5   extends type(Shape) { <- class Square(public side: In
+88:3 -> ../panics.temper.md:13:25  /** @type {number} */ <- side: Int) extends Shape {}
+89:3 -> ../panics.temper.md:13:25  #side; <- side: Int) extends Shape {}
+91:3 -> ../panics.temper.md:13:5  /** @param {number} side */ <- class Square(public side: In
+92:3 -> ../panics.temper.md:13:5  constructor(side) { <- class Square(public side: In
+94:5 -> ../panics.temper.md:13:25  this.#side = side; <- side: Int) extends Shape {}
+97:3 -> ../panics.temper.md:13:25  /** @returns {number} */ <- side: Int) extends Shape {}
+98:3 -> ../panics.temper.md:13:25  get side() { <- side: Int) extends Shape {}
+98:7 -> ../panics.temper.md:13:25 (side)  side() { <- side: Int) extends Shape {}
+103:1 -> ../panics.temper.md:14:5  class Circle extends type(Sh <- class Circle extends Shape {
+103:7 -> ../panics.temper.md:14:11 (Circle)  Circle extends type(Shape) { <- Circle extends Shape {}
+103:13 -> ../panics.temper.md:14:5   extends type(Shape) {} <- class Circle extends Shape {
+105:1 -> ../panics.temper.md:23:5  /** @type {number} */ <- let zero = failing(0) orelse
+106:1 -> ../panics.temper.md:23:5  let zero; <- let zero = failing(0) orelse
+107:1 -> ../panics.temper.md:23:5  try { <- let zero = failing(0) orelse
+113:1 -> ../panics.temper.md:24:5  /** @type {number} */ <- let a = failing(1) orelse -1
+114:1 -> ../panics.temper.md:24:5  let a; <- let a = failing(1) orelse -1
+115:1 -> ../panics.temper.md:24:5  try { <- let a = failing(1) orelse -1
+121:1 -> ../panics.temper.md:25:5  /** @type {number} */ <- let b = downcast(new Circle(
+122:1 -> ../panics.temper.md:25:5  let b; <- let b = downcast(new Circle(
+123:1 -> ../panics.temper.md:25:5  try { <- let b = downcast(new Circle(
+129:1 -> ../panics.temper.md:26:5  /** @type {number} */ <- let c = 1 / zero orelse -3;
+130:1 -> ../panics.temper.md:26:5  let c; <- let c = 1 / zero orelse -3;
+131:1 -> ../panics.temper.md:26:5  try { <- let c = 1 / zero orelse -3;
+137:1 -> ../panics.temper.md:27:5  /** @type {number} */ <- let d = (1i64 / zero.toInt64
+138:1 -> ../panics.temper.md:27:5  let d; <- let d = (1i64 / zero.toInt64
+139:1 -> ../panics.temper.md:27:5  try { <- let d = (1i64 / zero.toInt64
+145:1 -> ../panics.temper.md:28:5  /** @type {number} */ <- let e = "nope".toInt32() ore
+146:1 -> ../panics.temper.md:28:5  let e; <- let e = "nope".toInt32() ore
+147:1 -> ../panics.temper.md:28:5  try { <- let e = "nope".toInt32() ore
+153:1 -> ../panics.temper.md:29:5  /** @type {number} */ <- let f = "x".toFloat64() orel
+154:1 -> ../panics.temper.md:29:5  let f; <- let f = "x".toFloat64() orel
+155:1 -> ../panics.temper.md:29:5  try { <- let f = "x".toFloat64() orel
+161:1 -> ../panics.temper.md:30:5  /** @type {string} */ <- let g = String.fromCodePoint
+162:1 -> ../panics.temper.md:30:5  let g; <- let g = String.fromCodePoint
+163:1 -> ../panics.temper.md:30:5  try { <- let g = String.fromCodePoint
+169:1 -> ../panics.temper.md:31:5  const digits = /** @type {Re <- let digits: Regex = /[0-9]+/
+170:1 -> ../panics.temper.md:32:5  /** @type {string} */ <- let h = digits.find("none").
+171:1 -> ../panics.temper.md:32:5  let h; <- let h = digits.find("none").
+172:1 -> ../panics.temper.md:32:5  try { <- let h = digits.find("none").
+178:1 -> ../panics.temper.md:33:5  const i = calling(() => fail <- let i = calling(fn (): Int t
+179:1 -> ../panics.temper.md:34:5  console.log(`${a} ${b} ${c} <- console.log("${a} ${b} ${c}
+180:1 -> ../panics.temper.md:49:5  console.log("panicking"); <- console.log("panicking");
+181:1 -> ../panics.temper.md:50:5  /** @type {number} */ <- let p = inner() orelse -1;
+182:1 -> ../panics.temper.md:50:5  let p; <- let p = inner() orelse -1;
+183:1 -> ../panics.temper.md:50:5  try { <- let p = inner() orelse -1;
+189:1 -> ../panics.temper.md:51:5  console.log(`after the panic <- console.log("after the panic

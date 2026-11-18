@@ -1,4 +1,5 @@
 import {
+  isBubble,
   listedGet,
   requireNoStringIndex,
   requireStringIndex,
@@ -35,14 +36,16 @@ function comparePositions(s, a, b) {
   let t$0;
   try {
     t$0 = stringFromCodePoint(a);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$0 = "?";
   }
   /** @type {string} */
   let t$1;
   try {
     t$1 = stringFromCodePoint(b);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$1 = "?";
   }
   console.log(`'${t$0}' is ${relPos} '${t$1}' in "${s}".`);
@@ -87,7 +90,8 @@ function has3(s, c) {
   try {
     requireStringIndex(i);
     return true;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return false;
   }
 }
@@ -102,7 +106,8 @@ function has4(s, c) {
   try {
     requireNoStringIndex(i);
     return false;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return true;
   }
 }
@@ -126,7 +131,8 @@ const s = "cookie";
     let t$2;
     try {
       t$2 = stringFromCodePoint(c);
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       t$2 = "?";
     }
     console.log(`'${t$2}' in "${s}": ${has0(s, c) ? "y" : "n"}, ${has1(s, c) ? "y" : "n"}, ${has2(s, c) ? "y" : "n"}, ${has3(s, c) ? "y" : "n"}, ${has4(s, c) ? "y" : "n"}`);

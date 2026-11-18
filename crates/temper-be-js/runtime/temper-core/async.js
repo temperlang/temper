@@ -1,3 +1,5 @@
+import { Bubble, isBubble } from "./core.js";
+
 
 /**
  * @param generatorFactory {() => Generator<unknown>}
@@ -23,9 +25,14 @@ export const adaptAwaiter = (generatorFactory) => {
      * @param {Promise<R>} p
      */
     const doAwait = (p) => {
+      // A broken promise bubbles where it's awaited, whatever it was
+      // rejected with (`breakPromise()` gives no reason, host code may
+      // give any).
       p.then(
         (result) => { generator.next(result) },
-        (error) => { generator.throw(error) },
+        (error) => {
+          generator.throw(isBubble(error) ? error : new Bubble("broken promise"));
+        },
       );
     };
 

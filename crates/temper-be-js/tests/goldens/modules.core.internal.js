@@ -1,4 +1,4 @@
-import { divIntInt, type } from "@temperlang/core";
+import { divIntInt, isBubble, type } from "@temperlang/core";
 
 /**
  * @param {number} n
@@ -8,7 +8,8 @@ import { divIntInt, type } from "@temperlang/core";
 export function share(n, d) {
   try {
     return divIntInt(n, d);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     return 0;
   }
 }

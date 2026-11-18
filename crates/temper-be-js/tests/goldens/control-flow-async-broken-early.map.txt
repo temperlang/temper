@@ -1,11 +1,11 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../async-broken-early.temper.md:6:5  /** @type {import("@temperla <- let b = new PromiseBuilder<I
-4:1 -> ../async-broken-early.temper.md:6:5  const b = new PromiseBuilder <- let b = new PromiseBuilder<I
-6:1 -> ../async-broken-early.temper.md:7:11  /** <- { (): GeneratorResult<Empty>
-10:1 -> ../async-broken-early.temper.md:7:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-11:3 -> ../async-broken-early.temper.md:8:7  /** @type {number} */ <- let v = await b.promise orel
-12:3 -> ../async-broken-early.temper.md:8:7  let v; <- let v = await b.promise orel
-13:3 -> ../async-broken-early.temper.md:8:7  try { <- let v = await b.promise orel
-18:3 -> ../async-broken-early.temper.md:9:7  console.log(`got ${v}`); <- console.log("got ${v}");
-21:1 -> ../async-broken-early.temper.md:7:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-22:1 -> ../async-broken-early.temper.md:15:5  b.breakPromise(); <- b.breakPromise();
+8:1 -> ../async-broken-early.temper.md:6:5  /** @type {import("@temperla <- let b = new PromiseBuilder<I
+9:1 -> ../async-broken-early.temper.md:6:5  const b = new PromiseBuilder <- let b = new PromiseBuilder<I
+11:1 -> ../async-broken-early.temper.md:7:11  /** <- { (): GeneratorResult<Empty>
+15:1 -> ../async-broken-early.temper.md:7:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+16:3 -> ../async-broken-early.temper.md:8:7  /** @type {number} */ <- let v = await b.promise orel
+17:3 -> ../async-broken-early.temper.md:8:7  let v; <- let v = await b.promise orel
+18:3 -> ../async-broken-early.temper.md:8:7  try { <- let v = await b.promise orel
+24:3 -> ../async-broken-early.temper.md:9:7  console.log(`got ${v}`); <- console.log("got ${v}");
+27:1 -> ../async-broken-early.temper.md:7:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+28:1 -> ../async-broken-early.temper.md:15:5  b.breakPromise(); <- b.breakPromise();

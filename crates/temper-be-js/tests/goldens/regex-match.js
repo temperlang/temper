@@ -1,4 +1,9 @@
-import { listedGet, mappedGet, stringCountBetween } from "@temperlang/core";
+import {
+  isBubble,
+  listedGet,
+  mappedGet,
+  stringCountBetween,
+} from "@temperlang/core";
 import {
   Begin,
   Capture,
@@ -67,14 +72,16 @@ function fn(match) {
   let option1;
   try {
     option1 = mappedGet(groups, "option1").value;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     option1 = "";
   }
   /** @type {string} */
   let alphaOption2;
   try {
     alphaOption2 = mappedGet(groups, "alphaOption2").value;
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     alphaOption2 = "";
   }
   const begin = stringCountBetween(moreText, 0, match.full.begin);
@@ -89,7 +96,8 @@ console.log(`not replaced: ${notReplaced}`);
 let noMatch;
 try {
   noMatch = catcher.find("not here").full.value;
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   noMatch = "sorry";
 }
 console.log(`No match says ${noMatch}`);
@@ -116,7 +124,8 @@ console.log(/** @type {RegexNode} */ (/** @type {unknown} */ (new Repeat(/** @ty
 let t$0;
 try {
   t$0 = /** @type {RegexNode} */ (/** @type {unknown} */ (new Repeat(/** @type {RegexNode} */ (/** @type {unknown} */ (new CodeSet(Object.freeze([]), false))), 1, null, false))).compiled().find(simplerLines).full.value;
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = "-";
 }
 console.log(t$0);

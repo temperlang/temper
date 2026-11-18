@@ -1,4 +1,9 @@
-import { PromiseBuilder, adaptAwaiter, runAsync } from "@temperlang/core";
+import {
+  PromiseBuilder,
+  adaptAwaiter,
+  isBubble,
+  runAsync,
+} from "@temperlang/core";
 
 /** @type {import("@temperlang/core/async.js").PromiseBuilder<string>} */
 const once = new PromiseBuilder();
@@ -18,7 +23,8 @@ function* fn(doAwait) {
       let s;
       try {
         s = yield doAwait(once.promise);
-      } catch {
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
         s = "?";
       }
       console.log(`${s} ${i}`);
@@ -31,7 +37,8 @@ function* fn(doAwait) {
     let s;
     try {
       s = yield doAwait(later.promise);
-    } catch {
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
       s = "?";
     }
     console.log(`${s} ${j}`);
@@ -41,7 +48,8 @@ function* fn(doAwait) {
   let t;
   try {
     t = yield doAwait(once.promise);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t = "?";
   }
   console.log(`${t} after the loops`);

@@ -1,6 +1,7 @@
 import {
   PromiseBuilder,
   adaptAwaiter,
+  isBubble,
   listBuilderToList,
   listedJoin,
   modIntInt,
@@ -211,7 +212,8 @@ function* fn2(doAwait) {
   let k;
   try {
     k = yield doAwait(gateA.promise);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     k = -1;
   }
   c.bump(`A${k}`, 10000);
@@ -229,7 +231,8 @@ function* fn3(doAwait) {
   let k;
   try {
     k = yield doAwait(gateB.promise);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     k = -1;
   }
   c.bump(`B${k}`, 10000);

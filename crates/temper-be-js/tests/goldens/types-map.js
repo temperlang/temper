@@ -1,4 +1,5 @@
 import {
+  isBubble,
   listedGet,
   listedJoin,
   listedMap,
@@ -92,7 +93,8 @@ console.log(`Has 200: ${messageDefined(200)}, 302: ${messageDefined(302)}`);
 let t$0;
 try {
   t$0 = mappedGet(messages, 302);
-} catch {
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
   t$0 = "Found";
 }
 console.log(`Fallback: ${t$0}`);
@@ -115,7 +117,8 @@ let t$1;
   builder2.set("Panama", Object.freeze(["Colombia", "Costa Rica"]));
   try {
     mapBuilderRemove(builder2, "Honduras");
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
   }
   /** @type {readonly string[]} */
   const was = mapBuilderRemove(builder2, "El Salvador");
@@ -124,7 +127,8 @@ let t$1;
   let t$2;
   try {
     t$2 = listedGet(/** @type {string[]} */ (mapBuilderRemove(builder2, "El Salvador")), 0);
-  } catch {
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
     t$2 = "Gone";
   }
   console.log(t$2);

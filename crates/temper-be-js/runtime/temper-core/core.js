@@ -96,6 +96,33 @@ export const clampInt64 = (x) => {
 };
 
 /**
+ * `a / b`, truncated, wrapped to Int64, bubbling on a zero divisor,
+ * where BigInt's `/` throws a `RangeError`.
+ * @param {bigint} a
+ * @param {bigint} b
+ * @returns {bigint}
+ */
+export const divInt64 = (a, b) => {
+  if (b === 0n) {
+    bubble();
+  }
+  return clampInt64(a / b);
+};
+
+/**
+ * `a % b`, bubbling on a zero divisor.
+ * @param {bigint} a
+ * @param {bigint} b
+ * @returns {bigint}
+ */
+export const modInt64 = (a, b) => {
+  if (b === 0n) {
+    bubble();
+  }
+  return a % b;
+};
+
+/**
  * Implements extension method `core.type Int64.max()`
  * @param {bigint} a
  * @param {bigint} b
@@ -239,19 +266,51 @@ export const cmpInt64 = (a, b) =>
  */
 export const cmpBoolean = (a, b) => +a - +b;
 
+/** What marks a bubble, the same in every copy of this runtime. */
+const bubbleMark = Symbol.for("@temperlang/core.Bubble");
+
 /**
+ * A Temper bubble: what `bubble()` and every builtin that bubbles throw,
+ * and the only thing an `orelse` catches. Host code bubbles by throwing
+ * one (or calling `bubble()`); anything else it throws passes every
+ * `orelse`, as a panic does.
+ */
+export class Bubble extends Error {
+  /** @param {string} [message] */
+  constructor(message) {
+    super(message);
+    this.name = "Bubble";
+  }
+}
+Object.defineProperty(Bubble.prototype, bubbleMark, { value: true });
+
+/**
+ * Whether `e` is a bubble, made by this copy of the runtime or another,
+ * as two libraries built against different versions of it each have
+ * their own.
+ *
+ * @param {unknown} e
+ * @returns {boolean}
+ */
+export const isBubble = (e) =>
+  typeof e === "object" && e !== null && bubbleMark in e;
+
+/**
+ * @param {string} [message]
  * @returns {never}
  */
-export const bubble = () => {
-  throw Error();
+export const bubble = (message) => {
+  throw new Bubble(message);
 };
 
 /**
- * TODO Distinguish panic from bubble.
+ * Throws a plain `Error`, which no `orelse` catches.
  *
  * @returns {never}
  */
-export const panic = bubble;
+export const panic = () => {
+  throw new Error("panic");
+};
 
 /**
  * @template T
