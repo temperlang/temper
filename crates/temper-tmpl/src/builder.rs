@@ -122,6 +122,8 @@ impl Builder {
         for m in &mut modules {
             roots.extend(m.items.iter_mut());
             roots.push(&mut m.init);
+            roots.extend(m.test_items.iter_mut());
+            roots.extend(m.test_init.iter_mut());
             roots.extend(m.tests.iter_mut());
         }
         self.p.nodes = self.p.nodes.renumbered(&mut roots);
@@ -261,6 +263,8 @@ impl Builder {
             path: String::new(),
             items: Vec::new(),
             init: NodeId::NONE,
+            test_items: Vec::new(),
+            test_init: None,
             tests: Vec::new(),
         });
     }
@@ -377,6 +381,17 @@ impl Builder {
 
     pub fn set_init(&mut self, module: DeclId, block: NodeId) {
         self.module_mut(module).init = block;
+    }
+
+    /// Adds an item that only tests reach ([`Module::test_items`]).
+    pub fn add_test_item(&mut self, module: DeclId, item: NodeId) {
+        self.module_mut(module).test_items.push(item);
+    }
+
+    /// Sets the block of init statements that set what only tests reach
+    /// ([`Module::test_init`]).
+    pub fn set_test_init(&mut self, module: DeclId, block: Option<NodeId>) {
+        self.module_mut(module).test_init = block;
     }
 
     fn module_mut(&mut self, module: DeclId) -> &mut Module {

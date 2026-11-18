@@ -54,6 +54,9 @@ pub struct Translator<'a> {
     /// For a tests file, the module tested, whose `.internal.js` it
     /// imports from.
     tested: DeclId,
+    /// For a tests file, what its module's test parts define, which are
+    /// the file's own.
+    test_own: HashSet<DeclId>,
     /// The module's declarations its tests use, exported from its
     /// `.internal.js`.
     test_access: HashSet<DeclId>,
@@ -93,9 +96,10 @@ pub struct Translator<'a> {
     type_args: HashMap<DeclId, String>,
 }
 
-/// What a module's tests use of it that it doesn't export: its private
-/// declarations (functions, `let`s, and classes they construct), which its `.internal.js` exports too, and the `var`s
-/// they assign, each with a setter there, `NAME$set`.
+/// What a module's tests file uses of it (its tests, and what only they
+/// reach, which only that file has: `analysis::test_parts`), which its
+/// `.internal.js` exports, its private declarations too, and of those,
+/// the `var`s they assign, each with a setter there, `NAME$set`.
 #[derive(Clone, Debug, Default)]
 pub struct TestAccess {
     pub used: HashSet<DeclId>,
@@ -104,32 +108,11 @@ pub struct TestAccess {
 
 impl TestAccess {
     pub fn of(p: &Program, module: &Module) -> TestAccess {
-        let mut access = TestAccess::default();
-        for &test in &module.tests {
-            walk(p, test, &mut |id| {
-                let (decl, assigned) = match p.nodes.get(id) {
-                    Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
-                        (callee, false)
-                    }
-                    Node::GetModuleLet { target } => (target, false),
-                    Node::SetModuleLet { target, .. } => (target, true),
-                    // A class the tests construct, as `new TestHelper(…)`.
-                    Node::New { ctor, .. } if p.decls.contains(ctor) => {
-                        (p.decls.get(ctor).owner, false)
-                    }
-                    _ => return,
-                };
-                if home(p, decl) != Some(module.decl) {
-                    return;
-                }
-                access.used.insert(decl);
-                if assigned && !access.assigned.contains(&decl) {
-                    access.assigned.push(decl);
-                }
-            });
+        let parts = analysis::test_parts(p, module);
+        TestAccess {
+            used: parts.used.into_iter().collect(),
+            assigned: parts.assigned,
         }
-        access.assigned.sort();
-        access
     }
 }
 
@@ -173,12 +156,13 @@ impl<'a> Translator<'a> {
             here: DeclId::NONE,
             dir: String::new(),
             tested: DeclId::NONE,
+            test_own: HashSet::new(),
             test_access: HashSet::new(),
             from: BTreeMap::new(),
             class: DeclId::NONE,
             class_nodes: (p.modules.iter())
-                .flat_map(|m| m.items.iter())
-                .filter_map(|&item| match p.nodes.get(item) {
+                .flat_map(|m| m.all_items())
+                .filter_map(|item| match p.nodes.get(item) {
                     Node::Class { decl, .. } | Node::Interface { decl, .. } => Some((decl, item)),
                     _ => None,
                 })
@@ -208,7 +192,7 @@ impl<'a> Translator<'a> {
         let Some(module) = home(p, decl) else {
             return name;
         };
-        if module == self.here {
+        if self.is_here(decl) {
             return name;
         }
         let d = p.decls.get(module);
@@ -231,6 +215,15 @@ impl<'a> Translator<'a> {
         };
         self.from.entry(specifier).or_default().insert(name.clone());
         name
+    }
+
+    /// Whether a module-level declaration is this file's own: its module's,
+    /// or in a tests file, its test parts'.
+    pub(crate) fn is_here(&self, decl: DeclId) -> bool {
+        match self.here.is_none() {
+            true => self.test_own.contains(&decl),
+            false => home(self.p, decl) == Some(self.here),
+        }
     }
 
     /// The other modules' names imported, taken.
@@ -521,6 +514,7 @@ impl<'a> Translator<'a> {
         let file = module_file(p, module.decl);
         self.dir = file.rsplit_once('/').map_or("", |(d, _)| d).to_string();
         self.tested = DeclId::NONE;
+        self.test_own.clear();
         self.test_access = access.used.clone();
         self.imports.clear();
         self.temps = 0;
@@ -529,8 +523,56 @@ impl<'a> Translator<'a> {
             .any(|f| f.path == host)
             .then_some(host);
         self.uses_host = false;
+        let mut body = Vec::new();
+        self.declarations(module, &module.items, Some(module.init), &mut body)?;
+        // Setters for the `var`s its tests assign.
+        for &var in &access.assigned {
+            let name = self.name(var);
+            let ty = self.ty(p.decls.get(var).ty)?;
+            body.push(Stmt::Function {
+                generator: false,
+                export: true,
+                name: format!("{name}$set"),
+                name_span: temper_tmpl::Span::UNKNOWN,
+                source_name: String::new(),
+                params: vec![("value$".into(), ty)],
+                result: None,
+                body: vec![Stmt::Assign {
+                    target: Expr::name(name),
+                    value: Expr::name("value$"),
+                }],
+            });
+        }
+        let namespace = match &self.host {
+            Some(host) if self.uses_host => {
+                Some((CONNECTED.to_string(), relative(&self.dir, host)))
+            }
+            _ => None,
+        };
+        Ok(tree::Module {
+            namespace,
+            imports: self.imports.iter().map(|s| s.to_string()).collect(),
+            from: self.take_from(),
+            body,
+        })
+    }
+
+    /// A file's declarations and init block: a module's items and init,
+    /// or in its tests file, its test items and test init, which
+    /// continues it. Functions, then classes and interfaces, each after
+    /// its supertypes, then module `let`s and `var`s that the init block
+    /// doesn't initialize at its top level, then the init block, where
+    /// those it does are declared.
+    fn declarations(
+        &mut self,
+        module: &Module,
+        items: &[NodeId],
+        init: Option<NodeId>,
+        body: &mut Vec<Stmt>,
+    ) -> R<()> {
+        let p = self.p;
         let state = module_state(p, module);
-        for &item in module.items.iter().chain([&module.init]) {
+        for &item in items.iter().chain(&init) {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
                 if self.type_connection(p.decls.get(decl).ty) == Some(TypeConnection::Erased) {
                     self.erased.insert(decl);
@@ -542,10 +584,18 @@ impl<'a> Translator<'a> {
                 }
             });
         }
-
-        let mut body = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             match p.nodes.get(item) {
+                Node::Function { decl, .. }
+                | Node::BodilessFunction { decl, .. }
+                | Node::Class { decl, .. }
+                    if self.here.is_none() && uses_host(p, decl, NAMES) =>
+                {
+                    return not_yet(format!(
+                        "host code for what only tests reach, {}",
+                        p.name(decl)
+                    ));
+                }
                 Node::Function { decl, params, .. } | Node::BodilessFunction { decl, params }
                     if uses_host(p, decl, NAMES) =>
                 {
@@ -564,12 +614,12 @@ impl<'a> Translator<'a> {
         // Classes and interfaces, each after its supertypes, which its
         // `extends` reads.
         let mut done = HashSet::new();
-        for &item in &module.items {
-            self.class_after_supers(item, &mut done, &mut body)?;
+        for &item in items {
+            self.class_after_supers(item, &mut done, body)?;
         }
         // Module `let`s and `var`s that the init block doesn't initialize
         // at its top level are declared first.
-        for &item in &module.items {
+        for &item in items {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
                 if !self.erased.contains(&decl) && !state.initialized_at_top.contains(&decl) {
                     let decl_stmt = Stmt::Decl {
@@ -583,8 +633,11 @@ impl<'a> Translator<'a> {
                 }
             }
         }
-        self.begin(module.init);
-        match p.nodes.get(module.init) {
+        let Some(init) = init else {
+            return Ok(());
+        };
+        self.begin(init);
+        match p.nodes.get(init) {
             Node::Block { stmts } => {
                 for &s in p.nodes.list(stmts) {
                     match p.nodes.get(s) {
@@ -627,42 +680,20 @@ impl<'a> Translator<'a> {
                             };
                             body.push(decl.spanned(span));
                         }
-                        _ => self.stmt(s, &mut body)?,
+                        // A local its tests use, exported for them.
+                        Node::Let { local, .. } if self.test_access.contains(&local) => {
+                            let from = body.len();
+                            self.stmt(s, body)?;
+                            let name = self.name(local);
+                            body[from..].iter_mut().for_each(|s| s.export_named(&name));
+                        }
+                        _ => self.stmt(s, body)?,
                     }
                 }
             }
-            _ => self.stmt(module.init, &mut body)?,
+            _ => self.stmt(init, body)?,
         }
-        // Setters for the `var`s its tests assign.
-        for &var in &access.assigned {
-            let name = self.name(var);
-            let ty = self.ty(p.decls.get(var).ty)?;
-            body.push(Stmt::Function {
-                generator: false,
-                export: true,
-                name: format!("{name}$set"),
-                name_span: temper_tmpl::Span::UNKNOWN,
-                source_name: String::new(),
-                params: vec![("value$".into(), ty)],
-                result: None,
-                body: vec![Stmt::Assign {
-                    target: Expr::name(name),
-                    value: Expr::name("value$"),
-                }],
-            });
-        }
-        let namespace = match &self.host {
-            Some(host) if self.uses_host => {
-                Some((CONNECTED.to_string(), relative(&self.dir, host)))
-            }
-            _ => None,
-        };
-        Ok(tree::Module {
-            namespace,
-            imports: self.imports.iter().map(|s| s.to_string()).collect(),
-            from: self.take_from(),
-            body,
-        })
+        Ok(())
     }
 
     /// The module's host code, as `_connected`, marked used; `NotYet`,
@@ -757,7 +788,9 @@ impl<'a> Translator<'a> {
     }
 
     /// A module's tests, as a Mocha file in `test/`, named as the module's
-    /// file, as Kotlin's: an `it` per test. `None` if it has none.
+    /// file, as Kotlin's: what only tests reach (its test items, and its
+    /// test init, which continues the module's init here), then an `it`
+    /// per test. `None` if it has none.
     pub fn tests(&mut self, module: &Module) -> R<Option<tree::Module>> {
         if module.tests.is_empty() {
             return Ok(None);
@@ -765,10 +798,17 @@ impl<'a> Translator<'a> {
         let p = self.p;
         self.here = DeclId::NONE;
         self.tested = module.decl;
+        let parts = analysis::test_parts(p, module);
+        if parts.assign_init_locals(p) {
+            return not_yet("tests that assign a local of their module's init block");
+        }
+        self.test_own = parts.own;
         let file = format!("test/{}", module_file(p, module.decl));
         self.dir = file.rsplit_once('/').map_or("", |(d, _)| d).to_string();
         self.test_access.clear();
         self.imports.clear();
+        // Nothing here is exported, for host code or another module.
+        self.host = None;
         // What tests assign is `let`, not `const`.
         for &test in &module.tests {
             walk(p, test, &mut |id| {
@@ -777,7 +817,9 @@ impl<'a> Translator<'a> {
                 }
             });
         }
+        // What only tests reach, first.
         let mut body = Vec::new();
+        self.declarations(module, &module.test_items, module.test_init, &mut body)?;
         for &test in &module.tests {
             let Node::Test {
                 name,
@@ -1237,7 +1279,7 @@ impl<'a> Translator<'a> {
                     },
                 });
             }
-            Node::SetModuleLet { target, value } if home(p, target) != Some(self.here) => {
+            Node::SetModuleLet { target, value } if !self.is_here(target) => {
                 // Another module's `var`, which only its setter assigns.
                 let value = self.expr(value)?;
                 let setter = format!("{}$set", self.name(target));

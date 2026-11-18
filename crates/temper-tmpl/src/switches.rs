@@ -25,7 +25,10 @@ pub fn to_if_chains(p: &Program) -> Option<Program> {
 pub fn to_if_chains_where(p: &Program, which: &dyn Fn(NodeId) -> bool) -> Option<Program> {
     let mut found = Vec::new();
     for m in &p.modules {
-        for &root in m.items.iter().chain(&m.tests).chain([&m.init]) {
+        for &root in (m.items.iter().chain(&m.test_items).chain(&m.tests))
+            .chain([&m.init])
+            .chain(&m.test_init)
+        {
             find(p, root, m.decl, &mut found);
         }
     }

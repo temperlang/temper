@@ -38,8 +38,11 @@
 //!   `JAVA`) runs each program's main class, which logs what the test
 //!   expects of Kotlin's `java` backend. Libraries that import others
 //!   compile with them, in the same `javac`. A test that runs as tests
-//!   (`TESTS`) compiles with std and JUnit 5.9.2's jars from Maven's
-//!   cache, as strictly, and runs through JUnit's launcher
+//!   (`TESTS`, and the shared programs of `AS_TESTS`) compiles with std
+//!   and JUnit 5.9.2's jars from Maven's cache, as strictly, its main
+//!   sources and then its test sources against them, as Maven does, so
+//!   the library builds without what only tests reach, and runs through
+//!   JUnit's launcher
 //!   ([`tools::RUN_TESTS`]), its failures compared with its
 //!   `expectedFailures`. Skipped, with a message, without
 //!   `javac` or `java`; with `TEMPER_REQUIRE_CHECKERS` set, as in CI,
@@ -295,7 +298,8 @@ public final class ModuleStateThreads {
 ";
 
 /// A run as tests, as Kotlin's `RunJava`: std's package and the
-/// library's main and test sources compiled with JUnit, its tests run
+/// library's main sources compiled with JUnit, then the library's test
+/// sources against them, as Maven compiles them, its tests run
 /// through JUnit's launcher ([`tools::RUN_TESTS`], as `temper test -b
 /// java` runs them), and their failures compared
 /// with its `expectedFailures`.
@@ -312,46 +316,67 @@ fn run_tests(
         return;
     };
     let root = out.join("tests").join(&case.key);
-    let mut sources = Vec::new();
+    // Main sources, std's and the library's, apart from the library's test
+    // sources, which compile against them, as Maven compiles them: so the
+    // library builds without what only its tests reach.
+    let (mut main, mut tested) = (Vec::new(), Vec::new());
     let std = translate(&kit::std_program(), &JAVA).unwrap_or_else(|e| panic!("std: {e}"));
-    for file in std.iter().chain(&generate(case)) {
+    let library = generate(case);
+    for (file, own) in (std.iter().map(|f| (f, false))).chain(library.iter().map(|f| (f, true))) {
         let path = root.join(&file.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, &file.text).unwrap();
-        if file.path.ends_with(".java") {
-            sources.push(path);
+        match (
+            file.path.ends_with(".java"),
+            file.path.contains("/src/test/"),
+        ) {
+            (true, false) => main.push(path),
+            (true, true) if own => tested.push(path),
+            _ => {}
         }
     }
     let runner = root.join("temper/RunTests.java");
     fs::create_dir_all(runner.parent().unwrap()).unwrap();
     fs::write(&runner, tools::RUN_TESTS).unwrap();
-    sources.push(runner);
-    let classes = root.join("classes");
-    let classpath = env::join_paths([runtime.to_path_buf()].iter().chain(&jars)).unwrap();
-    let build = javac(
-        javac_tool,
-        LINTS,
-        Some(Path::new(&classpath)),
-        &classes,
-        &sources,
-    );
-    if !build.status.success() {
-        failures.push(format!(
-            "{}: javac {}:\n{}",
-            case.key,
-            LINTS.join(" "),
-            String::from_utf8_lossy(&build.stderr)
-        ));
-        return;
+    main.push(runner);
+    let (classes, test_classes) = (root.join("classes"), root.join("test-classes"));
+    let compile = |out: &Path, cp: &[PathBuf], sources: &[PathBuf]| {
+        let classpath = env::join_paths(cp.iter().chain(&jars)).unwrap();
+        javac(javac_tool, LINTS, Some(Path::new(&classpath)), out, sources)
+    };
+    let steps = [
+        ("main", &classes, vec![runtime.to_path_buf()], &main),
+        (
+            "tests",
+            &test_classes,
+            vec![classes.clone(), runtime.to_path_buf()],
+            &tested,
+        ),
+    ];
+    for (what, out, cp, sources) in steps {
+        let build = compile(out, &cp, sources);
+        if !build.status.success() {
+            failures.push(format!(
+                "{}: javac {}, {what}:\n{}",
+                case.key,
+                LINTS.join(" "),
+                String::from_utf8_lossy(&build.stderr)
+            ));
+            return;
+        }
     }
-    let classpath =
-        env::join_paths([classes.clone(), runtime.to_path_buf()].iter().chain(&jars)).unwrap();
+    let classpath = env::join_paths(
+        [test_classes.clone(), classes, runtime.to_path_buf()]
+            .iter()
+            .chain(&jars),
+    )
+    .unwrap();
     let run = Command::new(java)
         .current_dir(env!("CARGO_TARGET_TMPDIR"))
         .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
         .arg(&classpath)
         .arg("temper.RunTests")
-        .arg(&classes)
+        .arg(&test_classes)
         .output()
         .unwrap();
     let results = tools::results(&String::from_utf8_lossy(&run.stdout));
@@ -501,6 +526,24 @@ fn runs() {
             run_tests(&mut failures, case, &out, &javac_tool, &java, &runtime);
         }
         kit::assert_none(&failures);
+    });
+}
+
+/// What only the `reach` program's tests reach is only under
+/// `src/test/java`, and what nothing reaches nowhere, as tmpl's
+/// `reach::partition` splits the program; `runs` builds the library
+/// without its tests, and runs its test, which passes only if they're
+/// set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".java"))).flat_map(|f| {
+            let tests = f.path.contains("/src/test/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
     });
 }
 

@@ -36,10 +36,17 @@
 //! temper_std::Test> const &test)`, as Kotlin's, but only where
 //! `TEMPER_TESTS` is defined: at the end of the `.cpp`, after an include
 //! of what only they import (std's `testing`), and declared in the header,
-//! so the library builds and runs without std, which tmpl doesn't
-//! translate yet, and a test build ([`crate::test_main`]) has them; the
-//! private functions only they call are in that `#ifdef` too
-//! ([`Item::TestsOnly`]), where they are in the module. Functions are
+//! so the library builds and runs without std, and a test build
+//! ([`crate::test_main`]) has them. What only tests reach
+//! (`temper_tmpl::reach::partition`, the module's test items and init)
+//! is in that `#ifdef` too ([`Item::TestsOnly`]), after the library's:
+//! functions, `@keepTest` ones for tests' host code among them, which
+//! the header declares there, classes' members, whose structs the
+//! header defines there, storage, and the module's lock where only they
+//! use it; and the overloads of a private function that only tests
+//! call. The test init ends the init function there
+//! ([`Stmt::TestsOnly`]), in its scope. What nothing reaches isn't
+//! written. Functions are
 //! functions, `static` unless exported or called by a template in the
 //! header (a generic function's body), which the header declares; the
 //! init block is the body of the module's init function,
@@ -117,7 +124,7 @@ use crate::tree::{self, Bin, Expr, Item, Labels, Stmt, Unary};
 use crate::{NAMES, NotYet};
 use std::collections::{HashMap, HashSet};
 use temper_tmpl::analysis::{
-    Effect, Import, calls_nothing, module_imports, module_refs, module_state, module_writes,
+    self, Effect, Import, calls_nothing, module_imports, module_refs, module_state, module_writes,
     test_imports,
 };
 use temper_tmpl::host::uses_host;
@@ -164,6 +171,9 @@ pub struct Translated {
     pub test_includes: Vec<String>,
     /// Its tests' prototypes, without the `;`.
     pub test_prototypes: Vec<String>,
+    /// Its `@keepTest` functions' prototypes, without the `;`, for tests'
+    /// host code: declared only where the tests are.
+    pub kept_for_tests: Vec<String>,
     /// Its classes' and interfaces' structs, for the header: each
     /// declared, then each defined, supertypes first.
     pub classes: String,
@@ -171,12 +181,39 @@ pub struct Translated {
     /// after its prototypes: exported generic functions, and generic
     /// classes' members.
     pub templates: String,
+    /// What the header has of what only tests reach, only where
+    /// `TEMPER_TESTS` is defined.
+    pub tests: TestHeader,
     /// Whether it takes a function or class from host code, and so its
     /// `.cpp` includes the module's `_connected.hpp`.
     pub host: bool,
     /// The runtime's headers beyond `core.hpp` that its `.cpp` includes,
     /// as `<temper-core/net.hpp>` ([`crate::connected::BODILESS`]).
     pub runtime_includes: Vec<String>,
+}
+
+/// What a module's header declares of what only tests reach, as
+/// [`Translated`] has the library's.
+#[derive(Default)]
+pub struct TestHeader {
+    /// Its classes' and interfaces' structs.
+    pub classes: String,
+    /// The storage its templates use.
+    pub template_storage: Vec<String>,
+    /// The private functions its templates call, as prototypes.
+    pub functions: Vec<String>,
+    /// Its generic classes' members, and the private generic functions
+    /// its templates call.
+    pub templates: String,
+}
+
+impl TestHeader {
+    pub fn is_empty(&self) -> bool {
+        self.classes.is_empty()
+            && self.template_storage.is_empty()
+            && self.functions.is_empty()
+            && self.templates.is_empty()
+    }
 }
 
 /// An exported module value, as the header declares it.
@@ -206,8 +243,11 @@ pub struct Translator<'a> {
     /// Those that functions write, which functions use under the lock.
     shared: HashSet<DeclId>,
     /// The storage of those, and of static fields, which the init
-    /// constructs first: `temper_globals::x`, `Rect::temper_statics::unit`.
-    pub(crate) slots: Vec<String>,
+    /// constructs first: `temper_globals::x`, `Rect::temper_statics::unit`;
+    /// each with whether only tests reach it.
+    pub(crate) slots: Vec<(String, bool)>,
+    /// Whether translating what only tests reach.
+    pub(crate) tests_only: bool,
     /// Every name the module's declarations take, and the reserved ones.
     taken: HashSet<String>,
     /// The module's mutex and its helpers, if used, by name.
@@ -309,7 +349,7 @@ impl<'a> Translator<'a> {
         }
         let mut class_nodes = HashMap::new();
         for m in &p.modules {
-            for &item in &m.items {
+            for item in m.all_items() {
                 if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                     class_nodes.insert(decl, item);
                 }
@@ -326,6 +366,7 @@ impl<'a> Translator<'a> {
             statics: HashSet::new(),
             shared: HashSet::new(),
             slots: Vec::new(),
+            tests_only: false,
             taken,
             mutex: None,
             load: None,
@@ -644,11 +685,15 @@ impl<'a> Translator<'a> {
         }
         // Module values kept past the init: storage in `temper_globals`,
         // and an exported one's accessor, as Kotlin's.
+        // Each with whether only tests reach it, as below.
         let mut globals = Vec::new();
         let mut accessors = Vec::new();
         let mut exported_variables = Vec::new();
         let mut init_locals = Vec::new();
-        for &item in &module.items {
+        let parts: Vec<(NodeId, bool)> = (module.items.iter().map(|&i| (i, false)))
+            .chain(module.test_items.iter().map(|&i| (i, true)))
+            .collect();
+        for &(item, tests) in &parts {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
                 let d = p.decls.get(decl);
                 let ty = self.ty(d.ty)?;
@@ -659,7 +704,7 @@ impl<'a> Translator<'a> {
                         self.shared.insert(decl);
                     }
                     let slot = format!("{CORE}::GlobalSlot<{ty}>");
-                    self.slots.push(format!("temper_globals::{name}"));
+                    self.slots.push((format!("temper_globals::{name}"), tests));
                     if self.exported(decl) {
                         let accessor = self.accessor(decl, &ty, &name);
                         exported_variables.push(Exported {
@@ -670,54 +715,60 @@ impl<'a> Translator<'a> {
                         });
                         accessors.push(Item::Function(accessor));
                     }
-                    globals.push((decl, slot, name));
+                    globals.push((decl, slot, name, tests));
                 } else if !state.initialized_at_top.contains(&decl) {
                     // Assigned only inside the init block's blocks, so
                     // declared first.
-                    init_locals.push(Stmt::Local {
+                    let local = Stmt::Local {
                         ty,
                         name,
                         value: None,
-                    });
+                    };
+                    init_locals.push((local, tests));
                 }
             }
         }
-        // Functions and classes' members, in source order, and the
-        // private functions called before they're defined, which need
-        // prototypes.
+        // Functions and classes' members, the library's in source order,
+        // then what only tests reach, in theirs; and the private
+        // functions called before they're defined, which need prototypes.
         let mut functions: Vec<Item> = Vec::new();
         let mut exported_functions = Vec::new();
+        // `@keepTest` functions' prototypes, which the header declares
+        // only where `TEMPER_TESTS` is defined.
+        let mut kept_for_tests = Vec::new();
         let mut defined: HashSet<DeclId> = HashSet::new();
         let mut early: Vec<DeclId> = Vec::new();
+        // Classes' and interfaces' structs, the library's and the tests'.
         let mut structs = Vec::new();
+        let mut test_structs = Vec::new();
         // Exported templates and generic classes' members, defined in the
-        // header, where others may instantiate them.
-        let mut templates: Vec<tree::Function> = Vec::new();
+        // header, where others may instantiate them, each with whether
+        // only tests reach it.
+        let mut templates: Vec<(tree::Function, bool)> = Vec::new();
         // What the module's items that give templates use: its storage
         // among them goes in the header too.
         let mut template_refs: HashSet<DeclId> = HashSet::new();
         // The private generic functions those templates call, which go in
         // the header too, where the templates can call them.
         let header_private = self.header_private_templates(module);
-        // What the module calls: a private function it doesn't is left
-        // out, which `-Wunused-function` would mention.
-        let mut called = HashSet::new();
-        // And how many arguments each call gives, so a private function's
-        // overloads that nothing calls are left out too; a reference may
-        // be called with any (`usize::MAX`).
-        let mut arities: HashSet<(DeclId, usize)> = HashSet::new();
-        // A class's members but those connected, which aren't written
+        // How many arguments each call gives, everywhere and in the
+        // library's parts, so a private function's overloads that nothing
+        // calls are left out, and those that only tests call are where
+        // they are; a reference may be called with any (`usize::MAX`). A
+        // class's members but those connected, which aren't written
         // (std's `Date`'s, whose bodies call `isLeapYear` and `padTo`).
-        let mut roots = Vec::new();
-        for &item in module
-            .items
-            .iter()
-            .chain(&module.tests)
-            .chain([&module.init])
-        {
-            match p.nodes.get(item) {
+        let mut arities: HashSet<(DeclId, usize)> = HashSet::new();
+        let mut live_arities: HashSet<(DeclId, usize)> = HashSet::new();
+        let library_roots = module.items.len() + 1;
+        let roots = (module.items.iter().chain([&module.init]))
+            .chain(&module.test_items)
+            .chain(&module.test_init)
+            .chain(&module.tests);
+        for (i, &root) in roots.enumerate() {
+            let mut found = Vec::new();
+            match p.nodes.get(root) {
                 Node::Class { members, .. } | Node::Interface { members, .. } => {
-                    roots.extend(p.nodes.list(members).iter().copied().filter(|&m| {
+                    found.extend(p.nodes.list(members).iter().copied().filter(|&m| {
                         !temper_tmpl::qname::connected_member_node(
                             p,
                             m,
@@ -725,76 +776,41 @@ impl<'a> Translator<'a> {
                         )
                     }))
                 }
-                _ => roots.push(item),
+                _ => found.push(root),
+            }
+            for root in found {
+                temper_tmpl::analysis::walk(p, root, &mut |id| {
+                    let called = match p.nodes.get(id) {
+                        Node::CallFunction { callee, args, .. } => {
+                            let given = (p.nodes.list(args).iter())
+                                .rposition(|&a| !matches!(p.nodes.get(a), Node::Omitted {}))
+                                .map_or(0, |i| i + 1);
+                            (callee, given)
+                        }
+                        Node::FunctionRef { target } => (target, usize::MAX),
+                        _ => return,
+                    };
+                    arities.insert(called);
+                    if i < library_roots {
+                        live_arities.insert(called);
+                    }
+                });
             }
         }
-        for root in roots {
-            temper_tmpl::analysis::walk(p, root, &mut |id| match p.nodes.get(id) {
-                Node::CallFunction { callee, args, .. } => {
-                    called.insert(callee);
-                    let given = (p.nodes.list(args).iter())
-                        .rposition(|&a| !matches!(p.nodes.get(a), Node::Omitted {}))
-                        .map_or(0, |i| i + 1);
-                    arities.insert((callee, given));
-                }
-                Node::FunctionRef { target } => {
-                    called.insert(target);
-                    arities.insert((target, usize::MAX));
-                }
-                _ => {}
-            });
-        }
-        // The private functions that only tests call, directly or through
-        // others: only where `TEMPER_TESTS` is defined, as the tests are,
-        // or a library built without them has unused `static` functions
-        // (`-Wunused-function`). Everything else is reached from the
-        // module's other items, its exports and `@keep`s, and its init.
-        let bodies: HashMap<DeclId, NodeId> = (module.items.iter())
-            .filter_map(|&i| match p.nodes.get(i) {
-                Node::Function { decl, .. } => Some((decl, i)),
-                _ => None,
-            })
-            .collect();
-        let private = |d: DeclId| !self.exported(d) && !p.decls.get(d).facts.contains(Facts::KEEP);
-        let mut live = HashSet::new();
-        // And the arities they're called with outside tests, as `arities`,
-        // so an overload only tests call is with them too.
-        let mut live_arities: HashSet<(DeclId, usize)> = HashSet::new();
-        let mut work: Vec<NodeId> = (module.items.iter().copied())
-            .filter(|&i| !matches!(p.nodes.get(i), Node::Function { decl, .. } if private(decl)))
-            .chain([module.init])
-            .collect();
-        while let Some(item) = work.pop() {
-            temper_tmpl::analysis::walk(p, item, &mut |id| {
-                let (callee, arity) = match p.nodes.get(id) {
-                    Node::CallFunction { callee, args, .. } => {
-                        let given = (p.nodes.list(args).iter())
-                            .rposition(|&a| !matches!(p.nodes.get(a), Node::Omitted {}))
-                            .map_or(0, |i| i + 1);
-                        (callee, given)
-                    }
-                    Node::FunctionRef { target } => (target, usize::MAX),
-                    _ => return,
-                };
-                live_arities.insert((callee, arity));
-                if let Some(&body) = bodies.get(&callee) {
-                    if live.insert(callee) {
-                        work.push(body);
-                    }
-                }
-            });
-        }
-        let tests_only: HashSet<String> = (called.iter())
-            .filter(|&&d| bodies.contains_key(&d) && private(d) && !live.contains(&d))
-            .map(|&d| self.name(d))
-            .collect();
         // Host code (`_connected.hpp` beside the module's source, and the
         // `.cpp`s the library has), which the `.cpp` includes where it
         // takes a function or class from it.
         let host = (p.host.files.iter()).any(|f| f.path == host_header_path(module));
         let mut host_classes = Vec::new();
         let mut host_used = false;
-        for &item in &module.items {
+        // The module's lock and its helpers, if the library's parts use
+        // them, found after those parts are translated.
+        let mut library_locks = None;
+        for &(item, tests) in &parts {
+            if tests && library_locks.is_none() {
+                library_locks = Some(self.locks());
+            }
+            self.tests_only = tests;
             let node = p.nodes.get(item);
             if let Node::Function { decl, .. } | Node::BodilessFunction { decl, .. } = node {
                 defined.insert(decl);
@@ -856,9 +872,11 @@ impl<'a> Translator<'a> {
                     };
                     // `@keep`: for host code, which calls it by its
                     // name, so declared in the header, as Kotlin declares
-                    // every function.
-                    let keep = p.decls.get(decl).facts.contains(Facts::KEEP);
-                    if keep {
+                    // every function; `@keepTest`: for tests' host code,
+                    // so the same, but where the tests are, unless the
+                    // library uses it too.
+                    let facts = p.decls.get(decl).facts;
+                    if facts.contains(Facts::KEEP) || facts.contains(Facts::KEEP_TEST) {
                         f.exported = true;
                     }
                     let k = trailing_optional(p, params);
@@ -879,24 +897,21 @@ impl<'a> Translator<'a> {
                                 (o, tests)
                             }),
                     );
-                    for (f, tests) in made {
+                    for (f, only) in made {
                         // An exported template, defined where others include,
                         // or a private one that one calls.
                         if (f.exported || header_private.contains(&decl)) && !f.template.is_empty()
                         {
                             template_refs.extend(module_refs(p, item));
-                            templates.push(f);
+                            templates.push((f, tests));
                             continue;
                         }
-                        if f.exported {
+                        if f.exported && tests {
+                            kept_for_tests.push(header_signature(&f));
+                        } else if f.exported {
                             exported_functions.push(header_signature(&f));
-                        } else if !called.contains(&decl) && !keep {
-                            continue;
                         }
-                        functions.push(match tests {
-                            true => Item::TestsOnly(Box::new(Item::Function(f))),
-                            false => Item::Function(f),
-                        });
+                        functions.push(tests_only(Item::Function(f), only || tests));
                     }
                 }
                 Node::Class { decl, .. } | Node::Interface { decl, .. } => {
@@ -909,7 +924,7 @@ impl<'a> Translator<'a> {
                                     f.template = self.template_line(decl);
                                 }
                                 template_refs.extend(module_refs(p, item));
-                                templates.push(f);
+                                templates.push((f, tests));
                             }
                         }
                     } else {
@@ -920,13 +935,16 @@ impl<'a> Translator<'a> {
                             match i {
                                 Item::Function(f) if exported && !f.template.is_empty() => {
                                     template_refs.extend(module_refs(p, item));
-                                    templates.push(f)
+                                    templates.push((f, tests))
                                 }
-                                i => functions.push(i),
+                                i => functions.push(tests_only(i, tests)),
                             }
                         }
                     }
-                    structs.push((decl, class.header));
+                    match tests {
+                        true => test_structs.push((decl, class.header)),
+                        false => structs.push((decl, class.header)),
+                    }
                 }
                 // std's, as `sendRequest`.
                 Node::BodilessFunction { .. } => {
@@ -934,11 +952,13 @@ impl<'a> Translator<'a> {
                     if f.exported {
                         exported_functions.push(header_signature(&f));
                     }
-                    functions.push(Item::Function(f));
+                    functions.push(tests_only(Item::Function(f), tests));
                 }
                 _ => {}
             }
         }
+        self.tests_only = false;
+        let library_locks = library_locks.unwrap_or_else(|| self.locks());
         let mut test_functions = Vec::new();
         let mut test_prototypes = Vec::new();
         for &test in &module.tests {
@@ -947,72 +967,57 @@ impl<'a> Translator<'a> {
             test_functions.push(f);
         }
         self.in_function = false;
-        self.begin(module.init);
+        // The init block, and where the tests are, the test init, which
+        // continues it.
+        let blocks: Vec<NodeId> = [module.init].into_iter().chain(module.test_init).collect();
+        self.begin(&blocks);
         self.locals = self.taken.clone();
         // Its storage constructed first, even before the modules it
         // imports run, so a read that comes back here while they do
         // finds a live value, as Kotlin's.
-        let mut init: Vec<Stmt> = (self.slots.iter())
-            .map(|slot| Stmt::Expr(Expr::name(format!("{slot}.construct")).call(Vec::new())))
-            .collect();
-        init.extend(init_locals);
+        let construct = |tests: bool| {
+            (self.slots.iter())
+                .filter(move |(_, t)| *t == tests)
+                .map(|(slot, _)| {
+                    Stmt::Expr(Expr::name(format!("{slot}.construct")).call(Vec::new()))
+                })
+                .collect::<Vec<Stmt>>()
+        };
+        let mut init = construct(false);
+        let mut test_init = construct(true);
+        for (local, tests) in init_locals {
+            match tests {
+                true => test_init.push(local),
+                false => init.push(local),
+            }
+        }
         // Then the modules it imports, each once.
         let imports = module_imports(p, module);
         for import in &imports {
-            let init_fn = match external_library(p, import.from) {
-                Some(library) => format!(
-                    "{}::{}",
-                    names::namespace(&library),
-                    init_name(p, import.from)
-                ),
-                None => init_name(p, import.from),
-            };
-            init.push(Stmt::Expr(Expr::name(init_fn).call(Vec::new())));
+            init.push(init_call(p, import.from));
         }
-        match p.nodes.get(module.init) {
-            Node::Block { stmts } => {
-                for &s in p.nodes.list(stmts) {
-                    match p.nodes.get(s) {
-                        Node::InitLet { target, value }
-                            if !self.statics.contains(&target)
-                                && matches!(p.nodes.get(value), Node::OrElse { .. }) =>
-                        {
-                            let ty = self.ty(p.decls.get(target).ty)?;
-                            let name = self.name(target);
-                            init.push(Stmt::Local {
-                                ty,
-                                name: name.clone(),
-                                value: None,
-                            });
-                            init.extend(self.deliver(value, &Sink::Assign(name))?);
-                        }
-                        Node::InitLet { target, value } if !self.statics.contains(&target) => {
-                            let ty = self.ty(p.decls.get(target).ty)?;
-                            let value = self.expr(value)?;
-                            init.append(&mut self.pending);
-                            let name = self.name(target);
-                            let unused = unused_warns(&ty) && !self.is_read(target);
-                            init.push(Stmt::Local {
-                                ty,
-                                name: name.clone(),
-                                value: Some(value),
-                            });
-                            if unused {
-                                let cast = format!("static_cast<void>({name})");
-                                init.push(Stmt::Expr(Expr::name(cast)));
-                            }
-                        }
-                        _ => self.stmt(s, &mut init)?,
-                    }
+        self.init_stmts(module.init, &mut init)?;
+        // Then, where the tests are, what only they reach: the modules
+        // only it imports, and the test init.
+        if let Some(block) = module.test_init {
+            for import in analysis::imports(p, module.decl, &[block]) {
+                if !imports.iter().any(|i| i.from == import.from) {
+                    test_init.push(init_call(p, import.from));
                 }
             }
-            _ => self.stmt(module.init, &mut init)?,
+            self.init_stmts(block, &mut test_init)?;
         }
+        let library_init = !init.is_empty();
+        if !test_init.is_empty() {
+            init.push(Stmt::TestsOnly(test_init));
+        }
+        let init = reachable(init);
         // The private functions that templates in the header call: not
         // `static`, and declared there, where the templates can call
-        // them. Their names are the library's alone ([`names::RULES`]).
-        let header_called: HashSet<String> = (module.items.iter())
-            .filter_map(|&item| match p.nodes.get(item) {
+        // them; where only tests reach them, where the tests are. Their
+        // names are the library's alone ([`names::RULES`]).
+        let header_called: HashSet<String> = (module.all_items())
+            .filter_map(|item| match p.nodes.get(item) {
                 Node::Function { decl, .. } => Some(decl),
                 _ => None,
             })
@@ -1023,100 +1028,128 @@ impl<'a> Translator<'a> {
             })
             .map(|d| self.name(d))
             .collect();
+        let mut test_header_functions = Vec::new();
         for item in &mut functions {
-            if let Item::Function(f) = item {
-                if !f.exported && f.template.is_empty() && header_called.contains(&f.name) {
-                    f.exported = true;
-                    exported_functions.push(header_signature(f));
+            let (f, tests) = match item {
+                Item::Function(f) => (f, false),
+                Item::TestsOnly(inner) => match &mut **inner {
+                    Item::Function(f) => (f, true),
+                    _ => continue,
+                },
+                _ => continue,
+            };
+            if !f.exported && f.template.is_empty() && header_called.contains(&f.name) {
+                f.exported = true;
+                match tests {
+                    true => test_header_functions.push(header_signature(f)),
+                    false => exported_functions.push(header_signature(f)),
                 }
             }
         }
-        // Entry points run the init first, if there's anything to run.
-        let init = reachable(init);
-        if !init.is_empty() {
+        // Entry points run the init first, if the library's has anything
+        // to run; `test.cpp` runs it before the tests.
+        if library_init {
             let call = Stmt::Expr(Expr::name(init_name(p, module.decl)).call(Vec::new()));
             let entries = (functions.iter_mut().chain(&mut accessors))
                 .filter_map(|i| match i {
                     Item::Function(f) => Some(f),
                     _ => None,
                 })
-                .chain(&mut templates)
+                .chain(templates.iter_mut().map(|(f, _)| f))
                 .filter(|f| f.entry);
             for f in entries {
                 f.body.insert(0, call.clone());
             }
         }
-        let template_storage: Vec<String> = (globals.iter())
-            .filter(|(d, _, _)| !self.exported(*d) && template_refs.contains(d))
-            .map(|(_, slot, name)| format!("{} {name}", tree::spell_core(slot)))
-            .collect();
+        let template_storage = |tests: bool| -> Vec<String> {
+            (globals.iter())
+                .filter(|(d, _, _, t)| {
+                    *t == tests && !self.exported(*d) && template_refs.contains(d)
+                })
+                .map(|(_, slot, name, _)| format!("{} {name}", tree::spell_core(slot)))
+                .collect()
+        };
+        let (template_storage, test_template_storage) =
+            (template_storage(false), template_storage(true));
         let mut items = Vec::new();
-        if !globals.is_empty() {
+        for tests in [false, true] {
+            let mine: Vec<_> = globals.iter().filter(|g| g.3 == tests).collect();
+            if mine.is_empty() {
+                continue;
+            }
             let mut block = String::from("namespace temper_globals {\n\n");
-            for (decl, slot, name) in &globals {
+            for (decl, slot, name, _) in mine {
                 let header = self.exported(*decl) || template_refs.contains(decl);
                 let storage = if header { "" } else { "static " };
                 block.push_str(&format!("{storage}{slot} {name};\n"));
             }
             block.push_str("\n}  // namespace temper_globals\n");
-            items.push(Item::Raw(block));
+            items.push(tests_only(Item::Raw(block), tests));
         }
+        // The module's lock and its helpers, where only tests use them,
+        // where the tests are.
         if let Some(mutex) = &self.mutex {
-            items.push(Item::Variable {
-                exported: false,
-                ty: "std::mutex".into(),
-                name: mutex.clone(),
-            });
-            if let Some(load) = &self.load {
-                items.push(Item::Raw(format!(
+            let (lock, load, store) = library_locks;
+            items.push(tests_only(
+                Item::Variable {
+                    exported: false,
+                    ty: "std::mutex".into(),
+                    name: mutex.clone(),
+                },
+                !lock,
+            ));
+            if let Some(name) = &self.load {
+                let helper = format!(
                     "// Reads a variable that functions write, under the module's lock.\n\
                      template <class T>\n\
-                     static T {load}(T const &variable) {{\n  \
+                     static T {name}(T const &variable) {{\n  \
                        std::lock_guard<std::mutex> lock({mutex});\n  \
                        return variable;\n\
                      }}\n"
-                )));
+                );
+                items.push(tests_only(Item::Raw(helper), !load));
             }
-            if let Some(store) = &self.store {
-                items.push(Item::Raw(format!(
+            if let Some(name) = &self.store {
+                let helper = format!(
                     "// Writes a variable that functions write, under the module's lock.\n\
                      template <class T, class V>\n\
-                     static void {store}(T &variable, V &&value) {{\n  \
+                     static void {name}(T &variable, V &&value) {{\n  \
                        std::lock_guard<std::mutex> lock({mutex});\n  \
                        variable = std::forward<V>(value);\n\
                      }}\n"
-                )));
+                );
+                items.push(tests_only(Item::Raw(helper), !store));
             }
         }
         for decl in early {
             let found = functions.iter().find_map(|f| match f {
-                Item::Function(f) if f.name == self.name(decl) => Some(f),
+                Item::Function(f) if f.name == self.name(decl) => Some((f, false)),
+                Item::TestsOnly(inner) => match &**inner {
+                    Item::Function(f) if f.name == self.name(decl) => Some((f, true)),
+                    _ => None,
+                },
                 _ => None,
             });
-            if let Some(f) = found {
+            if let Some((f, tests)) = found {
                 if !f.exported {
-                    items.push(Item::Prototype(f.clone()));
+                    items.push(tests_only(Item::Prototype(f.clone()), tests));
                 }
             }
         }
         items.extend(accessors);
         items.extend(functions);
-        for item in &mut items {
-            let name = match item {
-                Item::Function(f) | Item::Prototype(f) if !f.exported => &f.name,
-                _ => continue,
-            };
-            if tests_only.contains(name) {
-                let it = std::mem::replace(item, Item::Raw(String::new()));
-                *item = Item::TestsOnly(Box::new(it));
-            }
-        }
-        let templates: String = (templates.iter())
-            .map(|f| tree::header_definition(f) + "\n")
-            .collect();
+        let templates = |tests: bool| -> String {
+            (templates.iter())
+                .filter(|(_, t)| *t == tests)
+                .map(|(f, _)| tree::header_definition(f) + "\n")
+                .collect()
+        };
+        let (templates, test_templates) = (templates(false), templates(true));
         // The module's lock and its helpers are the `.cpp`'s alone.
         let locks = [&self.mutex, &self.load, &self.store];
-        if (locks.iter().copied().flatten()).any(|name| mentions(&templates, name)) {
+        if (locks.iter().copied().flatten())
+            .any(|name| mentions(&templates, name) || mentions(&test_templates, name))
+        {
             return not_yet("a template in a header that takes its module's lock");
         }
         let mut header_includes = includes(p, &imports);
@@ -1144,11 +1177,71 @@ impl<'a> Translator<'a> {
             header_includes,
             test_includes,
             test_prototypes,
+            kept_for_tests,
             classes: host_class_names(&host_classes) + &classes::structs(p, structs),
             templates,
+            tests: TestHeader {
+                classes: classes::structs(p, test_structs),
+                template_storage: test_template_storage,
+                functions: test_header_functions,
+                templates: test_templates,
+            },
             host: host_used,
             runtime_includes: std::mem::take(&mut self.runtime_includes),
         })
+    }
+
+    /// Whether the module's lock, and its `load` and `store` helpers, are
+    /// used so far.
+    fn locks(&self) -> (bool, bool, bool) {
+        (
+            self.mutex.is_some(),
+            self.load.is_some(),
+            self.store.is_some(),
+        )
+    }
+
+    /// An init block's statements, or its test init's, into `init`.
+    fn init_stmts(&mut self, block: NodeId, init: &mut Vec<Stmt>) -> R<()> {
+        let p = self.p;
+        let Node::Block { stmts } = p.nodes.get(block) else {
+            return self.stmt(block, init);
+        };
+        for &s in p.nodes.list(stmts) {
+            match p.nodes.get(s) {
+                Node::InitLet { target, value }
+                    if !self.statics.contains(&target)
+                        && matches!(p.nodes.get(value), Node::OrElse { .. }) =>
+                {
+                    let ty = self.ty(p.decls.get(target).ty)?;
+                    let name = self.name(target);
+                    init.push(Stmt::Local {
+                        ty,
+                        name: name.clone(),
+                        value: None,
+                    });
+                    init.extend(self.deliver(value, &Sink::Assign(name))?);
+                }
+                Node::InitLet { target, value } if !self.statics.contains(&target) => {
+                    let ty = self.ty(p.decls.get(target).ty)?;
+                    let value = self.expr(value)?;
+                    init.append(&mut self.pending);
+                    let name = self.name(target);
+                    let unused = unused_warns(&ty) && !self.is_read(target);
+                    init.push(Stmt::Local {
+                        ty,
+                        name: name.clone(),
+                        value: Some(value),
+                    });
+                    if unused {
+                        let cast = format!("static_cast<void>({name})");
+                        init.push(Stmt::Expr(Expr::name(cast)));
+                    }
+                }
+                _ => self.stmt(s, init)?,
+            }
+        }
+        Ok(())
     }
 
     /// A function, a test, or a class's member with a body: a method,
@@ -1167,7 +1260,7 @@ impl<'a> Translator<'a> {
         };
         let mut nodes: HashMap<DeclId, NodeId> = HashMap::new();
         let mut stack = Vec::new();
-        for &item in &module.items {
+        for item in module.all_items() {
             match p.nodes.get(item) {
                 Node::Function { decl, .. } => {
                     nodes.insert(decl, item);
@@ -1278,7 +1371,7 @@ impl<'a> Translator<'a> {
         };
         let result_ty = self.ty(result)?;
         self.in_function = true;
-        self.begin(item);
+        self.begin(&[item]);
         // What `this` is: in a constructor, the object it makes; in a
         // method, `this`, or a `shared_ptr` that holds it where the method
         // gives it out or could drop the last other one.
@@ -1532,7 +1625,7 @@ impl<'a> Translator<'a> {
         let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.result);
         let result_ty = self.ty(result)?;
         self.in_function = true;
-        self.begin(item);
+        self.begin(&[item]);
         let mut body = Vec::new();
         for d in &defaults {
             self.stmt(d.stmt, &mut body)?;
@@ -1563,7 +1656,7 @@ impl<'a> Translator<'a> {
     /// continues. A label takes its loop's source name, or for a
     /// compiler-made one, `outer`, then `End` for a `break` and `Next` for
     /// a `continue`, numbered only if another label has it.
-    fn begin(&mut self, scope: NodeId) {
+    fn begin(&mut self, scopes: &[NodeId]) {
         fn visit(
             p: &Program,
             id: NodeId,
@@ -1603,16 +1696,18 @@ impl<'a> Translator<'a> {
         let p = self.p;
         self.hoisted.clear();
         self.let_names.clear();
-        temper_tmpl::analysis::walk(p, scope, &mut |id| {
-            if let Node::Let { local, .. } = p.nodes.get(id) {
-                *self
-                    .let_names
-                    .entry(self.names.get(local).to_string())
-                    .or_default() += 1;
-            }
-        });
         let mut jumps = Vec::new();
-        visit(p, scope, &mut Vec::new(), &mut jumps);
+        for &scope in scopes {
+            temper_tmpl::analysis::walk(p, scope, &mut |id| {
+                if let Node::Let { local, .. } = p.nodes.get(id) {
+                    *self
+                        .let_names
+                        .entry(self.names.get(local).to_string())
+                        .or_default() += 1;
+                }
+            });
+            visit(p, scope, &mut Vec::new(), &mut jumps);
+        }
         self.loops.clear();
         self.labels.clear();
         let mut taken: HashSet<String> = HashSet::new();
@@ -3169,6 +3264,24 @@ pub(crate) fn init_name(p: &Program, module: DeclId) -> String {
     )
 }
 
+/// `item`, only where `TEMPER_TESTS` is defined if `tests`.
+fn tests_only(item: Item, tests: bool) -> Item {
+    match tests {
+        true => Item::TestsOnly(Box::new(item)),
+        false => item,
+    }
+}
+
+/// A call of an imported module's init function: `global_init_helpers()`,
+/// or another library's, `temper_std::global_init_testing()`.
+fn init_call(p: &Program, from: DeclId) -> Stmt {
+    let init_fn = match external_library(p, from) {
+        Some(library) => format!("{}::{}", names::namespace(&library), init_name(p, from)),
+        None => init_name(p, from),
+    };
+    Stmt::Expr(Expr::name(init_fn).call(Vec::new()))
+}
+
 /// Whether g++ warns of a local of this type that nothing reads, as it
 /// doesn't of a class's with a destructor.
 fn unused_warns(ty: &str) -> bool {
@@ -3273,7 +3386,7 @@ pub(crate) fn completes(s: &Stmt) -> bool {
                 || cases.iter().any(|(_, body)| body.iter().all(completes))
         }
         Stmt::Break | Stmt::Continue | Stmt::Goto(_) | Stmt::Return(_) | Stmt::Bubble(_) => false,
-        Stmt::Block(body) => body.iter().all(completes),
+        Stmt::Block(body) | Stmt::TestsOnly(body) => body.iter().all(completes),
         Stmt::If { then, els, .. } => {
             els.is_empty() || then.iter().all(completes) || els.iter().all(completes)
         }

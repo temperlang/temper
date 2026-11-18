@@ -3,7 +3,9 @@
 //! `let`s by `from MODULE import NAME`, and to its `var`s through the
 //! module (`import MODULE as ALIAS`, `ALIAS.NAME`), so a read is current
 //! and a write lands there. Tests go in a file of their own
-//! ([`Translator::tests`]), each a method of a `unittest.TestCase`.
+//! ([`Translator::tests`]), each a method of a `unittest.TestCase`, after
+//! what only tests reach, which only that file has, as tmpl's
+//! `reach::partition` splits it.
 //! Classes and interfaces, and their members' uses, are in
 //! [`crate::classes`].
 
@@ -12,7 +14,7 @@ use crate::connected::{self, Connection};
 use crate::ops::{self, Spelling};
 use crate::tree::{self, Bin, Expr, FPart, Stmt};
 use std::collections::{BTreeMap, BTreeSet};
-use temper_tmpl::analysis::{self, home, module_writes, nominal_decl};
+use temper_tmpl::analysis::{self, TestParts, home, module_writes, nominal_decl};
 use temper_tmpl::coroutines::pauses;
 use temper_tmpl::host::{HostFile, uses_host};
 use temper_tmpl::naming::NameMap;
@@ -43,6 +45,11 @@ pub struct Translator<'a> {
     modules: BTreeMap<String, String>,
     /// The module whose file this is; `NONE` for a tests file.
     pub(crate) here: DeclId,
+    /// For a tests file, the module tested, and what its test parts
+    /// define, which are the file's own, and use of it, which the file
+    /// imports.
+    tested: DeclId,
+    test_parts: TestParts,
     /// The class or interface whose member this is; `NONE` outside one.
     pub(crate) class: DeclId,
     /// This module's classes and interfaces defined so far, which
@@ -139,7 +146,7 @@ impl<'a> Translator<'a> {
     pub fn new(p: &'a Program, names: &'a NameMap) -> Translator<'a> {
         let mut class_nodes = BTreeMap::new();
         for module in &p.modules {
-            for &item in &module.items {
+            for item in module.all_items() {
                 if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                     class_nodes.insert(decl, item);
                 }
@@ -154,6 +161,8 @@ impl<'a> Translator<'a> {
             own: BTreeSet::new(),
             modules: BTreeMap::new(),
             here: DeclId::NONE,
+            tested: DeclId::NONE,
+            test_parts: TestParts::default(),
             class: DeclId::NONE,
             defined: BTreeSet::new(),
             class_nodes,
@@ -175,12 +184,18 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// The names a module binds at its top level: its own declarations',
-    /// and those of other modules' and libraries' it uses, which it
-    /// imports, so imports of Python's or the runtime's names make way.
-    fn module_level_names(&self, module: &Module) -> BTreeSet<String> {
+    /// The names a file binds at its top level: its `items`'
+    /// declarations, and those of other modules' and libraries' that its
+    /// `roots` use, which it imports, so imports of Python's or the
+    /// runtime's names make way.
+    fn module_level_names(
+        &self,
+        module: &Module,
+        items: &[NodeId],
+        roots: &[NodeId],
+    ) -> BTreeSet<String> {
         let p = self.p;
-        let own = (module.items.iter()).filter_map(|&item| match p.nodes.get(item) {
+        let own = (items.iter()).filter_map(|&item| match p.nodes.get(item) {
             Node::Function { decl, .. }
             | Node::BodilessFunction { decl, .. }
             | Node::ModuleLet { decl }
@@ -188,11 +203,7 @@ impl<'a> Translator<'a> {
             | Node::Interface { decl, .. } => Some(decl),
             _ => None,
         });
-        let roots: Vec<NodeId> = (module.items.iter().copied())
-            .chain([module.init])
-            .chain(module.tests.iter().copied())
-            .collect();
-        let imports = temper_tmpl::analysis::imports(p, module.decl, &roots);
+        let imports = temper_tmpl::analysis::imports(p, module.decl, roots);
         let used = imports.into_iter().flat_map(|i| i.decls);
         (own.chain(used))
             .map(|d| self.name(d))
@@ -266,10 +277,10 @@ impl<'a> Translator<'a> {
     /// module's alias and its name.
     pub(crate) fn top(&mut self, decl: DeclId) -> Expr {
         let name = self.name(decl);
-        let from = home(self.p, decl).unwrap_or(DeclId::NONE);
-        if from == self.here {
+        if self.is_here(decl) {
             return Expr::name(name);
         }
+        let from = home(self.p, decl).unwrap_or(DeclId::NONE);
         let module = self.py_module(from);
         let d = self.p.decls.get(decl);
         if d.kind == DeclKind::ModuleLet && d.facts.contains(Facts::VAR) {
@@ -282,6 +293,15 @@ impl<'a> Translator<'a> {
             return Expr::name(name);
         }
         Expr::name(self.import(&module, &name))
+    }
+
+    /// Whether a module-level declaration is this file's own: its module's,
+    /// or in a tests file, its test parts'.
+    pub(crate) fn is_here(&self, decl: DeclId) -> bool {
+        match self.here.is_none() {
+            true => self.test_parts.own.contains(&decl),
+            false => home(self.p, decl) == Some(self.here),
+        }
     }
 
     /// The alias a module imported whole goes by: `_m_` and its dotted
@@ -453,7 +473,7 @@ impl<'a> Translator<'a> {
                     _ => match self.top(decl) {
                         Expr::Name(name) => {
                             quote |= !is_external(self.p, decl)
-                                && home(self.p, decl) == Some(self.here)
+                                && self.is_here(decl)
                                 && !self.defined.contains(&decl);
                             name
                         }
@@ -513,14 +533,14 @@ impl<'a> Translator<'a> {
         ))
     }
 
-    /// The module's type parameters as `TypeVar`s, which Python declares
+    /// Items' type parameters as `TypeVar`s, which Python declares
     /// at the top level: one per name and bound, numbered past names in
     /// use, but a generic method's own apart from its class's.
-    fn type_vars(&mut self, module: &Module) -> R<Vec<Stmt>> {
+    fn type_vars(&mut self, items: &[NodeId]) -> R<Vec<Stmt>> {
         let p = self.p;
         self.type_vars.clear();
         let mut groups: Vec<(DeclId, Vec<DeclId>)> = Vec::new();
-        for &item in &module.items {
+        for &item in items {
             match p.nodes.get(item) {
                 Node::Function { decl, .. } => groups.push((DeclId::NONE, vec![decl])),
                 Node::Class { decl, members } | Node::Interface { decl, members } => {
@@ -614,12 +634,32 @@ impl<'a> Translator<'a> {
 
     pub fn module(&mut self, module: &Module) -> R<tree::Module> {
         self.here = module.decl;
+        self.tested = DeclId::NONE;
+        self.test_parts = TestParts::default();
         self.defined.clear();
-        self.own = self.module_level_names(module);
-        let mut body = self.type_vars(module)?;
+        let roots: Vec<NodeId> = (module.items.iter().copied())
+            .chain([module.init])
+            .collect();
+        self.own = self.module_level_names(module, &module.items, &roots);
+        let mut body = self.type_vars(&module.items)?;
+        self.items(module, &module.items, &mut body)?;
+        self.init_block(module.decl, module.init, &mut body)?;
+        self.qualify_builtins(&mut body);
+        tree::mark_unused(&mut body);
+        let exports = self.exports(module);
+        let mut tree = self.finish(body);
+        tree.host = host_file(self.p, module).map(|f| f.text.clone());
+        tree.exports = Some(exports);
+        Ok(tree)
+    }
+
+    /// A file's functions, classes, and interfaces, of `items`: a
+    /// module's, or its test items, in a tests file. Module `let`s are
+    /// declared where an init block initializes them.
+    fn items(&mut self, module: &Module, items: &[NodeId], body: &mut Vec<Stmt>) -> R<()> {
         let mut done = BTreeSet::new();
         let host = host_file(self.p, module);
-        for &item in &module.items {
+        for &item in items {
             match self.p.nodes.get(item) {
                 Node::Function { decl, params, .. } | Node::BodilessFunction { decl, params }
                     if uses_host(self.p, decl, NAMES) =>
@@ -629,6 +669,12 @@ impl<'a> Translator<'a> {
                             "{}'s host code, with no {}",
                             self.p.name(decl),
                             host_path(module)
+                        ));
+                    }
+                    if self.here.is_none() {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            self.p.name(decl)
                         ));
                     }
                     body.push(self.host_wrapper(item, decl, params)?);
@@ -652,6 +698,12 @@ impl<'a> Translator<'a> {
                             host_path(module)
                         ));
                     }
+                    if self.here.is_none() {
+                        return not_yet(format!(
+                            "host code for what only tests reach, {}",
+                            self.p.name(decl)
+                        ));
+                    }
                     let host_name = self.p.name(decl).to_string();
                     body.push(Stmt::Assign {
                         target: Expr::Name(self.name(decl)),
@@ -672,23 +724,22 @@ impl<'a> Translator<'a> {
                     done.insert(decl);
                 }
                 Node::Class { .. } | Node::Interface { .. } => {
-                    self.class_after_supers(item, &mut done, &mut body)?;
+                    self.class_after_supers(item, &mut done, body)?;
                 }
                 // Declared where its init block initializes it.
                 _ => {}
             }
         }
-        self.bindings = self.bindings_of(module.decl, module.init, &[]);
-        let init = self.block(module.init, &mut body);
+        Ok(())
+    }
+
+    /// An init block's statements, at a file's top level: a module's, or
+    /// its test init, in a tests file, which continues it.
+    fn init_block(&mut self, module: DeclId, init: NodeId, body: &mut Vec<Stmt>) -> R<()> {
+        self.bindings = self.bindings_of(module, init, &[]);
+        let done = self.block(init, body);
         self.bindings = Bindings::default();
-        init?;
-        self.qualify_builtins(&mut body);
-        tree::mark_unused(&mut body);
-        let exports = self.exports(module);
-        let mut module = self.finish(body);
-        module.host = host.map(|f| f.text.clone());
-        module.exports = Some(exports);
-        Ok(module)
+        done
     }
 
     /// The names a module exports, for `__all__`, in order: its exported
@@ -757,6 +808,16 @@ impl<'a> Translator<'a> {
         Ok(def)
     }
 
+    /// The names of the file's own module `var`s that a function (or a
+    /// test) assigns, which it declares `global`; another module's it
+    /// assigns through that module.
+    fn globals(&self, function: NodeId) -> Vec<String> {
+        (module_writes(self.p, function).into_iter())
+            .filter(|&d| self.is_here(d))
+            .map(|d| self.name(d))
+            .collect()
+    }
+
     /// A function, named, its parameters' names and annotations first,
     /// with `self` first for a method or constructor (`params` itself not
     /// including it); its body declares any module `var` it assigns
@@ -808,10 +869,7 @@ impl<'a> Translator<'a> {
         let mut stmts = Vec::new();
         match body {
             Some(block) => {
-                let globals: Vec<String> = module_writes(self.p, item)
-                    .into_iter()
-                    .map(|d| self.name(d))
-                    .collect();
+                let globals = self.globals(item);
                 if !globals.is_empty() {
                     stmts.push(Stmt::Global(globals));
                 }
@@ -1281,17 +1339,33 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A module's tests, as a `unittest` file: one `TestCase` class, named
-    /// for the module, with a method per test, as `test_adds` for "adds",
-    /// whose docstring is the test's name. Each makes std's `Test`, runs
-    /// the test's body, and then, even if the body raised, fails if the
-    /// `Test` has failures (`softFailToHard`), as Kotlin's do. `None` if
-    /// the module has no tests.
+    /// A module's tests, as a `unittest` file: what only tests reach (its
+    /// test items, and its test init, which continues the module's init
+    /// here), then one `TestCase` class, named for the module, with a
+    /// method per test, as `test_adds` for "adds", whose docstring is the
+    /// test's name. Each makes std's `Test`, runs the test's body, and
+    /// then, even if the body raised, fails if the `Test` has failures
+    /// (`softFailToHard`), as Kotlin's do. What they use of the module,
+    /// its private names too, is imported from it, as Kotlin's do. `None`
+    /// if the module has no tests.
     pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::Module>> {
         if module.tests.is_empty() {
             return Ok(None);
         }
         self.here = DeclId::NONE;
+        self.tested = module.decl;
+        self.test_parts = analysis::test_parts(self.p, module);
+        if self.test_parts.assign_init_locals(self.p) {
+            return not_yet("tests that assign a local of their module's init block");
+        }
+        self.defined.clear();
+        let roots: Vec<NodeId> = module.test_roots().collect();
+        self.own = self.module_level_names(module, &module.test_items, &roots);
+        let mut body = self.type_vars(&module.test_items)?;
+        self.items(module, &module.test_items, &mut body)?;
+        if let Some(init) = module.test_init {
+            self.init_block(module.decl, init, &mut body)?;
+        }
         let mut methods = Vec::new();
         let mut used = BTreeSet::new();
         for &test in &module.tests {
@@ -1327,35 +1401,43 @@ impl<'a> Translator<'a> {
             let test_var = self.name(param);
             let soft_fail = Expr::name(&test_var).attr("soft_fail_to_hard").call(vec![]);
             let method = test_method_name(&text, &mut used);
+            let mut method_body = vec![Stmt::Expr(Expr::Str(text))];
+            // The file's own `var`s it assigns, as what only tests reach.
+            let globals = self.globals(test);
+            if !globals.is_empty() {
+                method_body.push(Stmt::Global(globals));
+            }
+            method_body.push(Stmt::Assign {
+                target: Expr::name(test_var),
+                ann: Some(test_class.clone()),
+                value: Expr::name(test_class).call(vec![]),
+            });
+            method_body.push(Stmt::Try {
+                body: stmts,
+                except: None,
+                finally: vec![Stmt::Expr(soft_fail)],
+            });
             methods.push(Stmt::Def {
                 decorators: Vec::new(),
                 name: method,
                 params: vec![("self".into(), String::new())],
                 positional: 1,
                 result: "None".into(),
-                body: vec![
-                    Stmt::Expr(Expr::Str(text)),
-                    Stmt::Assign {
-                        target: Expr::name(test_var),
-                        ann: Some(test_class.clone()),
-                        value: Expr::name(test_class).call(vec![]),
-                    },
-                    Stmt::Try {
-                        body: stmts,
-                        except: None,
-                        finally: vec![Stmt::Expr(soft_fail)],
-                    },
-                ],
+                body: method_body,
             });
         }
         self.import("unittest", "TestCase");
-        let mut body = vec![Stmt::Class {
+        body.push(Stmt::Class {
             name: class.to_string(),
             bases: vec!["TestCase".into()],
             body: methods,
-        }];
+        });
         self.qualify_builtins(&mut body);
-        Ok(Some(self.finish(body)))
+        tree::mark_unused(&mut body);
+        let tests = self.finish(body);
+        self.tested = DeclId::NONE;
+        self.test_parts = TestParts::default();
+        Ok(Some(tests))
     }
 
     pub(crate) fn block(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
@@ -2009,6 +2091,13 @@ impl<'a> Translator<'a> {
                         }
                     }
                     Expr::Walrus(name, Box::new(value))
+                }
+                // The module's init block's, in its tests file, imported.
+                None if self.test_parts.used.contains(&decl) => {
+                    let name = self.name(decl);
+                    let module = self.py_module(self.tested);
+                    self.imports.entry(module).or_default().insert(name.clone());
+                    Expr::name(name)
                 }
                 None => Expr::name(self.name(decl)),
             },

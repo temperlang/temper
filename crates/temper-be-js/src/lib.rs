@@ -12,8 +12,11 @@
 //! parameters, results, and declarations without a value, so
 //! `tsc --checkJs --strict` passes on the output.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! JS's rules ([`names::RULES`]), then [`translate`] into JS's output tree
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the
+//! tests files, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with JS's rules ([`names::RULES`]),
+//! then [`translate`] into JS's output tree
 //! ([`tree`]), with operators spelled by [`ops`] and core's connected
 //! declarations by [`connected`], then the printer, which can mark where
 //! statements and functions' names come from for a source map
@@ -133,9 +136,11 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 ///
 /// The package takes the library's name; the root module's files take it
 /// with `_` for `-`, and other modules' their paths. A module imports
-/// another's exports from its public file, and its tests import from its
-/// `.internal.js`, which exports what they use, and a setter, `NAME$set`,
-/// for each `var` they assign. Kotlin also copies `@temperlang/core` beside the package;
+/// another's exports from its public file. Its tests file has what only
+/// its tests reach, before them, and imports from its `.internal.js`,
+/// which exports what they use, and a setter, `NAME$set`, for each `var`
+/// they assign, so a library that only its tests check doesn't import
+/// std's `testing` (nor Node's `assert`), as a browser bundle can't. Kotlin also copies `@temperlang/core` beside the package;
 /// `temper build` does too ([`runtime`]).
 ///
 /// A library's own `.js` and `.mjs` files, its host code, are copied
@@ -185,6 +190,11 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         .then(|| temper_tmpl::switches::to_if_chains(p))
         .flatten();
     let p = chained.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests files, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let package = &p.library.name;
     let mut translator = translate::Translator::new(p, &names);
@@ -288,14 +298,40 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     } else {
         ""
     };
-    let dev = if tested {
-        r#",
-    "devDependencies": {
-        "mocha": "^10.0.0",
-        "mocha-junit-reporter": "^2.0.2"
-    }"#
-    } else {
-        ""
+    // Sorted, as Kotlin's: `@temperlang/core` first. A library only the
+    // tests use is a dev dependency.
+    let tests_only = temper_tmpl::analysis::test_only_libraries(p);
+    let (mut dependencies, mut dev) = (
+        vec![format!(
+            "        \"@temperlang/core\": \"{}\"",
+            version::current().spell(Spelling::SemVer)
+        )],
+        Vec::new(),
+    );
+    for (name, version) in p.dependencies() {
+        let line = format!(
+            "        \"{}\": \"{}\"",
+            translate::package_of(p, name),
+            match version {
+                "0.0.0" => "*".to_string(),
+                v => version::respell(v, Spelling::SemVer),
+            }
+        );
+        match tests_only.iter().any(|l| l == name) {
+            true => dev.push(line),
+            false => dependencies.push(line),
+        }
+    }
+    if tested {
+        dev.push("        \"mocha\": \"^10.0.0\"".into());
+        dev.push("        \"mocha-junit-reporter\": \"^2.0.2\"".into());
+    }
+    let dev = match dev.is_empty() {
+        true => String::new(),
+        false => format!(
+            ",\n    \"devDependencies\": {{\n{}\n    }}",
+            dev.join(",\n")
+        ),
     };
     let package_json = format!(
         r#"{{
@@ -314,22 +350,7 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         name = translate::package_of(p, package),
         metadata = package_metadata(p),
         entries = entries.join("\n"),
-        dependencies = {
-            // Sorted, as Kotlin's: `@temperlang/core` first.
-            let mut lines = vec![format!(
-                "        \"@temperlang/core\": \"{}\"",
-                version::current().spell(Spelling::SemVer)
-            )];
-            for (name, version) in p.dependencies() {
-                let name = translate::package_of(p, name);
-                let version = match version {
-                    "0.0.0" => "*".to_string(),
-                    v => version::respell(v, Spelling::SemVer),
-                };
-                lines.push(format!("        \"{name}\": \"{version}\""));
-            }
-            lines.join(",\n")
-        },
+        dependencies = dependencies.join(",\n"),
     );
     files.insert(
         0,

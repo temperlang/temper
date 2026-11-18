@@ -1521,6 +1521,7 @@ impl Translator<'_> {
             if self.is_exported(node) {
                 self.b.add_facts(decl, Facts::EXPORTED);
             }
+            self.keep_facts(decl, node);
             self.decl_spans(decl, node);
             self.decls.insert(node, decl);
             self.bodiless.insert(node);
@@ -1565,12 +1566,21 @@ impl Translator<'_> {
         if self.is_exported(node) {
             self.b.add_facts(decl, Facts::EXPORTED);
         }
-        if self.s.library.kept.contains(&node) {
-            self.b.add_facts(decl, Facts::KEEP);
-        }
+        self.keep_facts(decl, node);
         self.decl_spans(decl, node);
         self.decls.insert(node, decl);
         Ok(())
+    }
+
+    /// `KEEP` for a top-level declaration marked `@keep`, and `KEEP_TEST`
+    /// for one marked `@keepTest`.
+    fn keep_facts(&mut self, decl: DeclId, node: FNode) {
+        if self.s.library.kept.contains(&node) {
+            self.b.add_facts(decl, Facts::KEEP);
+        }
+        if self.s.library.kept_for_tests.contains(&node) {
+            self.b.add_facts(decl, Facts::KEEP_TEST);
+        }
     }
 
     fn function(&mut self, node: FNode, decl: DeclId) -> Tx<NodeId> {

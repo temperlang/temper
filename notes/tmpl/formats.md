@@ -375,11 +375,11 @@ As built (2026-10-29), the grammar above with these changes:
 
 ```text
 uses        := "uses" decl VERSION "{" external* "}"   // the library has an id
-external    := doc* "keep"? connected? ("class" | "interface") decl "{" member* "}"
-             | doc* "keep"? connected? "fn" decl ext-sig ";"
-member      := doc* "keep"? connected? ("method" | "get" | "static") decl ext-sig ";"
+external    := doc* "keep"? "keepTest"? connected? ("class" | "interface") decl "{" member* "}"
+             | doc* "keep"? "keepTest"? connected? "fn" decl ext-sig ";"
+member      := doc* "keep"? "keepTest"? connected? ("method" | "get" | "static") decl ext-sig ";"
 connected   := "connected" ("(" STRING ("," STRING)* ")")?   // backends with host code
-item        := doc* ("qname" STRING)? "keep"? connected? "export"? (function | module-let)
+item        := doc* ("qname" STRING)? "keep"? "keepTest"? connected? "export"? (function | module-let)
 param       := ("qname" STRING)? decl "?"? ":" type
 stmt        := … | "qname" STRING ("let" | "var") …       // a local's override
 ```
@@ -388,8 +388,9 @@ stmt        := … | "qname" STRING ("let" | "var") …       // a local's overr
   external declarations' owner is an id like any other; text writes
   its id as a module's, ``uses `temper-core`#12 0.1.0``, so ids survive
   a round trip.
-- **Marks come in one order:** `qname "…"`, `keep`, `connected` (with
-  its backends, as `connected("cpp", "rust")`), then `export`. A
+- **Marks come in one order:** `qname "…"`, `keep`, `keepTest` (2026-11-17:
+  `@keepTest`, kept for tests' host code), `connected` (with its
+  backends, as `connected("cpp", "rust")`), then `export`. A
   connected function without a body ends in `;`.
 - **The program's own parameters** take `?` when optional, as
   externals' do, and the signature records it too.
@@ -450,6 +451,30 @@ As built (2026-10-30), with modules and tests:
 
   Writing order, which numbers nodes, takes each module's items, its
   init block, and then its tests.
+- **Test parts** (2026-11-18): a partitioned module's test items and
+  test init ([modules.md](modules.md)) come between its init block and
+  its tests, in a section of their own, written only where there are
+  some (`for-tests := "for" "tests" "{" item* ("init" block)? "}"`):
+
+  ```text
+    init {
+      init libValue#2 = 1;
+    }
+
+    for tests {
+      fn forTests#3(): Int32 {
+        return testValue#4;
+      }
+
+      let testValue#4: Int32;
+
+      init {
+        init testValue#4 = 2;
+      }
+    }
+  ```
+
+  Writing order takes them after the init block, before the tests.
 
 As built (2026-10-30), with classes and interfaces (subset B):
 
@@ -460,7 +485,7 @@ class-member:= doc* marks ("static"? ("let" | "var") decl ":" type ";"     // Fi
              | "static" "fn" decl params ":" type bubbles? block           // a static Function
              | "abstract"? ("method" | "get" | "set" | "constructor")
                decl params ":" type bubbles? (block | ";"))                // Method, AbstractMethod
-marks       := ("qname" STRING)? "keep"? connected? "export"? "private"? "protected"?
+marks       := ("qname" STRING)? "keep"? "keepTest"? connected? "export"? "private"? "protected"?
                "auto"? ("operator" "(" "\"==\"" ")")? ("operator" "(" "\"<=>\"" ")")?
 stmt        := … | postfix "." ref "=" expr ";"   // SetField
              | "init" ref "=" expr ";"           // InitStatic, for a static field

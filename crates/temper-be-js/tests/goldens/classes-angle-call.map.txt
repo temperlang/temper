@@ -12,50 +12,36 @@
 19:16 -> ../angle-call.temper.md:81:5  (things) { <- let lastOf<T>(things: List<T
 20:3 -> ../angle-call.temper.md:82:7  const thing = listedGet(/** <- let thing = things[things.le
 21:3 -> ../angle-call.temper.md:83:7  return thing; <- thing
-24:1 -> ../angle-call.temper.md:12:5  /** @template T */ <- @imu class Blah<@imu T> { }
-25:7 -> ../angle-call.temper.md:12:16 (Blah)  Blah extends type() {} <- Blah<@imu T> { } // include
-25:11 -> ../angle-call.temper.md:12:5   extends type() {} <- @imu class Blah<@imu T> { }
-27:1 -> ../angle-call.temper.md:14:5  class Hi extends type() { <- class Hi(
-27:7 -> ../angle-call.temper.md:14:11 (Hi)  Hi extends type() { <- Hi(
-27:9 -> ../angle-call.temper.md:14:5   extends type() { <- class Hi(
-28:3 -> ../angle-call.temper.md:15:14  /** @type {Blah<string>} */ <- let thing: Blah<String>,
-29:3 -> ../angle-call.temper.md:15:14  #thing; <- let thing: Blah<String>,
-31:3 -> ../angle-call.temper.md:14:5  /** @param {Blah<string>} th <- class Hi(
-32:3 -> ../angle-call.temper.md:14:5  constructor(thing) { <- class Hi(
-34:5 -> ../angle-call.temper.md:15:14  this.#thing = thing; <- let thing: Blah<String>,
-37:3 -> ../angle-call.temper.md:15:14  /** @returns {Blah<string>} <- let thing: Blah<String>,
-38:3 -> ../angle-call.temper.md:15:14  get thing() { <- let thing: Blah<String>,
-38:7 -> ../angle-call.temper.md:15:18 (thing)  thing() { <- thing: Blah<String>,
-43:1 -> ../angle-call.temper.md:45:5  class Classy extends type() <- class Classy(
-43:7 -> ../angle-call.temper.md:45:11 (Classy)  Classy extends type() { <- Classy(
-43:13 -> ../angle-call.temper.md:45:5   extends type() { <- class Classy(
-44:3 -> ../angle-call.temper.md:46:14  /** @type {number} */ <- index: Int,
-45:3 -> ../angle-call.temper.md:46:14  #index; <- index: Int,
-47:3 -> ../angle-call.temper.md:45:5  /** @param {number} index */ <- class Classy(
-48:3 -> ../angle-call.temper.md:45:5  constructor(index) { <- class Classy(
-50:5 -> ../angle-call.temper.md:46:14  this.#index = index; <- index: Int,
-53:3 -> ../angle-call.temper.md:46:14  /** @returns {number} */ <- index: Int,
-54:3 -> ../angle-call.temper.md:46:14  get index() { <- index: Int,
-54:7 -> ../angle-call.temper.md:46:14 (index)  index() { <- index: Int,
-58:3 -> ../angle-call.temper.md:49:21  /** <- first<T>(things: List<T>): T
-63:3 -> ../angle-call.temper.md:49:21  static first(things) { <- first<T>(things: List<T>): T
-63:10 -> ../angle-call.temper.md:49:21 (first)  first(things) { <- first<T>(things: List<T>): T
-64:5 -> ../angle-call.temper.md:51:9  const thing = listedGet(/** <- let thing = things[0];
-65:5 -> ../angle-call.temper.md:52:9  return thing; <- thing
-68:3 -> ../angle-call.temper.md:56:14  /** <- indexed<T>(things: List<T>):
-73:3 -> ../angle-call.temper.md:56:14 (indexed)  indexed(things) { <- indexed<T>(things: List<T>):
-74:5 -> ../angle-call.temper.md:57:9  const thing = listedGet(/** <- let thing = things[index];
-75:5 -> ../angle-call.temper.md:58:9  return thing; <- thing
-79:1 -> ../angle-call.temper.md:77:5  class Picker extends type() <- class Picker {
-79:7 -> ../angle-call.temper.md:77:11 (Picker)  Picker extends type() { <- Picker {
-79:13 -> ../angle-call.temper.md:77:5   extends type() { <- class Picker {
-80:3 -> ../angle-call.temper.md:78:14  /** <- pick<T>(things: List<T>): T
-85:3 -> ../angle-call.temper.md:78:14 (pick)  pick(things) { <- pick<T>(things: List<T>): T
-86:5 -> ../angle-call.temper.md:78:44  return lastOf(things); <- lastOf(things) }
-90:1 -> ../angle-call.temper.md:38:5  whatever(1); <- whatever(1);
-91:1 -> ../angle-call.temper.md:62:5  /** @type {readonly string[] <- let someThings = ["a", "b"];
-92:1 -> ../angle-call.temper.md:62:5  const someThings = Object.fr <- let someThings = ["a", "b"];
-93:1 -> ../angle-call.temper.md:63:5  const first = Classy.first(s <- let first = Classy.first(som
-94:1 -> ../angle-call.temper.md:64:5  const second = new Classy(1) <- let second = new Classy(1).i
-95:1 -> ../angle-call.temper.md:65:5  console.log(`Some things: ${ <- console.log("Some things: ${
-96:1 -> ../angle-call.temper.md:86:5  console.log(`Picked: ${new P <- console.log("Picked: ${new P
+24:1 -> ../angle-call.temper.md:45:5  class Classy extends type() <- class Classy(
+24:7 -> ../angle-call.temper.md:45:11 (Classy)  Classy extends type() { <- Classy(
+24:13 -> ../angle-call.temper.md:45:5   extends type() { <- class Classy(
+25:3 -> ../angle-call.temper.md:46:14  /** @type {number} */ <- index: Int,
+26:3 -> ../angle-call.temper.md:46:14  #index; <- index: Int,
+28:3 -> ../angle-call.temper.md:45:5  /** @param {number} index */ <- class Classy(
+29:3 -> ../angle-call.temper.md:45:5  constructor(index) { <- class Classy(
+31:5 -> ../angle-call.temper.md:46:14  this.#index = index; <- index: Int,
+34:3 -> ../angle-call.temper.md:46:14  /** @returns {number} */ <- index: Int,
+35:3 -> ../angle-call.temper.md:46:14  get index() { <- index: Int,
+35:7 -> ../angle-call.temper.md:46:14 (index)  index() { <- index: Int,
+39:3 -> ../angle-call.temper.md:49:21  /** <- first<T>(things: List<T>): T
+44:3 -> ../angle-call.temper.md:49:21  static first(things) { <- first<T>(things: List<T>): T
+44:10 -> ../angle-call.temper.md:49:21 (first)  first(things) { <- first<T>(things: List<T>): T
+45:5 -> ../angle-call.temper.md:51:9  const thing = listedGet(/** <- let thing = things[0];
+46:5 -> ../angle-call.temper.md:52:9  return thing; <- thing
+49:3 -> ../angle-call.temper.md:56:14  /** <- indexed<T>(things: List<T>):
+54:3 -> ../angle-call.temper.md:56:14 (indexed)  indexed(things) { <- indexed<T>(things: List<T>):
+55:5 -> ../angle-call.temper.md:57:9  const thing = listedGet(/** <- let thing = things[index];
+56:5 -> ../angle-call.temper.md:58:9  return thing; <- thing
+60:1 -> ../angle-call.temper.md:77:5  class Picker extends type() <- class Picker {
+60:7 -> ../angle-call.temper.md:77:11 (Picker)  Picker extends type() { <- Picker {
+60:13 -> ../angle-call.temper.md:77:5   extends type() { <- class Picker {
+61:3 -> ../angle-call.temper.md:78:14  /** <- pick<T>(things: List<T>): T
+66:3 -> ../angle-call.temper.md:78:14 (pick)  pick(things) { <- pick<T>(things: List<T>): T
+67:5 -> ../angle-call.temper.md:78:44  return lastOf(things); <- lastOf(things) }
+71:1 -> ../angle-call.temper.md:38:5  whatever(1); <- whatever(1);
+72:1 -> ../angle-call.temper.md:62:5  /** @type {readonly string[] <- let someThings = ["a", "b"];
+73:1 -> ../angle-call.temper.md:62:5  const someThings = Object.fr <- let someThings = ["a", "b"];
+74:1 -> ../angle-call.temper.md:63:5  const first = Classy.first(s <- let first = Classy.first(som
+75:1 -> ../angle-call.temper.md:64:5  const second = new Classy(1) <- let second = new Classy(1).i
+76:1 -> ../angle-call.temper.md:65:5  console.log(`Some things: ${ <- console.log("Some things: ${
+77:1 -> ../angle-call.temper.md:86:5  console.log(`Picked: ${new P <- console.log("Picked: ${new P

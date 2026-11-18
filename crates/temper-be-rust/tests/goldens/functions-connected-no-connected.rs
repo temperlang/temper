@@ -27,6 +27,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .clone()
 }
 
+#[allow(dead_code)]
 pub(crate) fn sum_of3(a: i32, b: i32, c: i32) -> i32 {
     a.wrapping_add(b).wrapping_add(c)
 }

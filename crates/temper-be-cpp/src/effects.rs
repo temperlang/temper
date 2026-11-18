@@ -85,7 +85,7 @@ const READS_HERE: &[&str] = &[
 /// constructors too) and static functions, with bodies.
 pub fn callables(p: &Program, module: &Module) -> Vec<(DeclId, NodeId)> {
     let mut out = Vec::new();
-    for &item in &module.items {
+    for item in module.all_items() {
         match p.nodes.get(item) {
             Node::Function { decl, .. } => out.push((decl, item)),
             Node::Class { members, .. } | Node::Interface { members, .. } => {
@@ -146,11 +146,13 @@ impl Effects {
         let mut functions = Vec::new();
         for module in &p.modules {
             // A function literal in the init block may run later.
-            walk(p, module.init, &mut |n| {
-                if let Node::FunctionLiteral { .. } = p.nodes.get(n) {
-                    effects.mutable.extend(module_writes(p, n));
-                }
-            });
+            for block in [module.init].into_iter().chain(module.test_init) {
+                walk(p, block, &mut |n| {
+                    if let Node::FunctionLiteral { .. } = p.nodes.get(n) {
+                        effects.mutable.extend(module_writes(p, n));
+                    }
+                });
+            }
             for (decl, item) in callables(p, module) {
                 effects.mutable.extend(module_writes(p, item));
                 let key = (names.get(decl).to_string(), p.decls.get(decl).kind);
@@ -290,12 +292,7 @@ impl Effects {
 pub fn needing_temporaries(p: &Program, effects: &Effects, names: &NameMap) -> HashSet<NodeId> {
     let mut found = HashSet::new();
     for module in &p.modules {
-        for &root in module
-            .items
-            .iter()
-            .chain(&module.tests)
-            .chain([&module.init])
-        {
+        for root in module.roots() {
             walk(p, root, &mut |n| {
                 if needs_temporaries(p, effects, names, n) {
                     found.insert(n);

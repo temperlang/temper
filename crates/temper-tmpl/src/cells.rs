@@ -29,7 +29,7 @@ pub fn copy_captured_params(p: &Program) -> Option<Program> {
     // Each parameter's function: its body, by its `Param` node.
     let mut bodies = Vec::new();
     for m in &p.modules {
-        for &root in m.items.iter().chain([&m.init]).chain(&m.tests) {
+        for root in m.roots() {
             walk(p, root, &mut |id| {
                 let (ps, body) = match p.nodes.get(id) {
                     Node::Function { params, body, .. }
@@ -90,7 +90,7 @@ pub fn copy_captured_params(p: &Program) -> Option<Program> {
     let mut all = Vec::new();
     let p = b.program();
     for m in &p.modules {
-        for &root in m.items.iter().chain([&m.init]).chain(&m.tests) {
+        for root in m.roots() {
             walk(p, root, &mut |id| {
                 if let Node::FunctionLiteral { decl, .. } = p.nodes.get(id) {
                     all.push((id, decl));

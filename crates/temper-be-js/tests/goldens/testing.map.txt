@@ -4,6 +4,4 @@
 5:17 -> ../testing.temper.md:10:16 (twice)  twice(n) { <- twice(n: Int): Int { n * 2 }
 5:22 -> ../testing.temper.md:10:5  (n) { <- export let twice(n: Int): In
 6:3 -> ../testing.temper.md:10:37  return Math.imul(n, 2); <- n * 2 }
-9:1 -> ../testing.temper.md:11:5  export let runs = 0; <- var runs = 0;
-10:1 -> ../testing.temper.md:12:5  export const base = 10; <- let base = 10;
-11:1 -> ../testing.temper.md:29:5  console.log(`init ${twice(1) <- console.log("init ${twice(1)
+9:1 -> ../testing.temper.md:29:5  console.log(`init ${twice(1) <- console.log("init ${twice(1)

@@ -67,27 +67,6 @@ export class Person extends type(Stringable) {
   }
 }
 
-class Named extends type(Stringable) {
-  /** @type {string} */
-  #name;
-
-  /** @param {string} name */
-  constructor(name) {
-    super();
-    this.#name = name;
-  }
-
-  /** @returns {string} */
-  get name() {
-    return this.#name;
-  }
-
-  /** @returns {string} */
-  toString() {
-    return `Named ${this.#name}`;
-  }
-}
-
 class Whatever extends type() {
   /** @type {string} */
   #blah;

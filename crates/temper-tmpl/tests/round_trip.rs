@@ -442,6 +442,9 @@ impl Gen {
         if self.rng.chance(10) {
             self.b.add_facts(decl, Facts::KEEP);
         }
+        if self.rng.chance(10) {
+            self.b.add_facts(decl, Facts::KEEP_TEST);
+        }
         if self.rng.chance(20) {
             let doc = self
                 .rng

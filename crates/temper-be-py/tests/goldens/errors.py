@@ -36,10 +36,6 @@ def _unknown_type(x: object, /) -> int:
     return 1
 
 
-def _unclosed(x: int, /) -> int:  # pyright: ignore[reportUnusedFunction]
-    return _int_mul(x, 2)
-
-
 def _after_unclosed(x: int, /) -> int:
     return _int_mul(x, 3)
 

@@ -3,18 +3,21 @@ local tested = require("testing")["$test"]
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
 
+local runs = 0
+local base = 10
+
 Test_ = {}
 
 function Test_.test_twice_works()
   temper.test("twice works", function(test)
     local x = tested.twice(2)
-    tested.runs__set(temper.int32_add(temper.int32_add(tested.runs__get(), x), tested.base))
+    runs = temper.int32_add(temper.int32_add(runs, x), base)
   end)
 end
 
 function Test_.test_names_punctuation_quotes_and_n_code()
   temper.test("names: punctuation, 'quotes', and ünïcode", function(t)
-    tested.twice(tested.runs__get())
+    tested.twice(runs)
   end)
 end
 
@@ -28,7 +31,7 @@ function Test_.test_locals_a_test_assigns()
         i = temper.int32_add(i, 1)
       end
     end
-    tested.runs__set(n)
+    runs = n
   end)
 end
 

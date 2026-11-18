@@ -24,7 +24,7 @@
 use crate::translate::{R, Translator, present};
 use crate::tree::{Bin, Expr, Stmt};
 use std::collections::BTreeSet;
-use temper_tmpl::analysis::{ancestors, as_super, home, is_plain_to_string, nominal_decl};
+use temper_tmpl::analysis::{ancestors, as_super, is_plain_to_string, nominal_decl};
 use temper_tmpl::qname::{is_external, library_of};
 use temper_tmpl::{DeclId, DeclKind, Facts, Node, NodeId, TypeId};
 
@@ -336,7 +336,7 @@ impl Translator<'_> {
             types.extend(self.p.types.args(t));
         }
         for up in named {
-            if home(self.p, up) != Some(self.here) {
+            if !self.is_here(up) {
                 continue;
             }
             if let Some(&node) = self.class_nodes.get(&up) {

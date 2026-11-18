@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Runtime.CompilerServices;
 using TemperLang.Std.Testing;
 
 namespace Testing;
@@ -6,6 +7,16 @@ namespace Testing;
 [TestClass]
 public class TestingTests
 {
+    internal static volatile int runs;
+    internal static readonly int @base;
+
+    static TestingTests()
+    {
+        RuntimeHelpers.RunClassConstructor(typeof(TestingGlobal).TypeHandle);
+        runs = 0;
+        @base = 10;
+    }
+
     [TestMethod]
     public void TwiceWorks()
     {
@@ -13,7 +24,7 @@ public class TestingTests
         try
         {
             int x = TestingGlobal.Twice(2);
-            TestingGlobal.runs = TestingGlobal.runs + x + TestingGlobal.@base;
+            runs = runs + x + @base;
         }
         finally
         {
@@ -27,7 +38,7 @@ public class TestingTests
         Test t = new Test();
         try
         {
-            TestingGlobal.Twice(TestingGlobal.runs);
+            TestingGlobal.Twice(runs);
         }
         finally
         {
@@ -50,7 +61,7 @@ public class TestingTests
                     i = i + 1;
                 }
             }
-            TestingGlobal.runs = n;
+            runs = n;
         }
         finally
         {

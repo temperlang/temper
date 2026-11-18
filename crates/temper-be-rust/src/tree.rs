@@ -291,6 +291,9 @@ pub enum Stmt {
         value: Expr,
     },
     Block(Block),
+    /// A block only tests build, `#[cfg(test)] { … }`, as a module's
+    /// test init at the end of its init.
+    TestsOnly(Block),
     /// An item in a function's body, as a group of local functions'
     /// struct and its `impl`.
     Item(Box<Item>),
@@ -371,6 +374,12 @@ pub enum Item {
         vis: &'static str,
         name: String,
         items: Vec<Item>,
+    },
+    /// An item after attributes, each on a line of its own, as
+    /// `#[cfg(test)]` for what only tests reach.
+    Attributed {
+        attrs: Vec<&'static str>,
+        item: Box<Item>,
     },
 }
 
@@ -459,10 +468,10 @@ fn items_at(items: &[Item], indent: usize) -> String {
     out
 }
 
-fn attrs_text(attrs: &[String], pad: &str) -> String {
+fn attrs_text(attrs: &[impl AsRef<str>], pad: &str) -> String {
     attrs
         .iter()
-        .map(|a| format!("{pad}{a}\n"))
+        .map(|a| format!("{pad}{}\n", a.as_ref()))
         .collect::<Vec<_>>()
         .concat()
 }
@@ -647,6 +656,7 @@ fn item_at(item: &Item, indent: usize) -> String {
             vis_text(vis),
             items_at(items, indent + 4)
         ),
+        Item::Attributed { attrs, item } => attrs_text(attrs, &pad) + &item_at(item, indent),
         Item::Tests { uses, tests } => {
             let mut out = String::from("#[cfg(test)]\nmod tests {\n");
             for u in uses {
@@ -1801,6 +1811,7 @@ fn stmt(s: &Stmt, indent: usize) -> String {
             static_at(&head, value, indent)
         }
         Stmt::Block(b) => format!("{p}{}\n", braced(b, indent)),
+        Stmt::TestsOnly(b) => format!("{p}#[cfg(test)]\n{p}{}\n", braced(b, indent)),
         Stmt::Item(item) => item_at(item, indent),
     }
 }
@@ -1860,9 +1871,10 @@ fn retarget_stmt(s: &mut Stmt, label: &str) -> bool {
             retarget_expr(scrutinee, label)
                 && arms.iter_mut().all(|(_, b)| retarget_block(b, label))
         }
-        Stmt::Loop { body, .. } | Stmt::Labeled { body, .. } | Stmt::Block(body) => {
-            retarget_block(body, label)
-        }
+        Stmt::Loop { body, .. }
+        | Stmt::Labeled { body, .. }
+        | Stmt::Block(body)
+        | Stmt::TestsOnly(body) => retarget_block(body, label),
         Stmt::Static { value, .. } => retarget_expr(value, label),
         Stmt::Break(_) | Stmt::Continue(_) | Stmt::Item(_) => true,
     }
@@ -1929,9 +1941,10 @@ fn stmt_leaves(s: &Stmt) -> bool {
         Stmt::Match { scrutinee, arms } => {
             expr_leaves(scrutinee) || arms.iter().any(|(_, b)| block_leaves(b))
         }
-        Stmt::Loop { body, .. } | Stmt::Labeled { body, .. } | Stmt::Block(body) => {
-            block_leaves(body)
-        }
+        Stmt::Loop { body, .. }
+        | Stmt::Labeled { body, .. }
+        | Stmt::Block(body)
+        | Stmt::TestsOnly(body) => block_leaves(body),
         Stmt::Break(_) | Stmt::Continue(_) | Stmt::Item(_) => false,
     }
 }

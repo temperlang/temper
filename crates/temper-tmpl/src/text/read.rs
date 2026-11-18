@@ -383,6 +383,9 @@ struct ModuleHead {
     decl: DeclId,
     items: Vec<Item>,
     init: usize,
+    /// Its `for tests` section's items, and where its init block starts.
+    test_items: Vec<Item>,
+    test_init: Option<usize>,
     /// Each test's name and head.
     tests: Vec<(String, Head)>,
 }
@@ -417,13 +420,14 @@ enum Member {
     StaticFunction(Head),
 }
 
-/// What may precede a declaration: `qname "…"`, `keep`, `connected`, maybe
-/// with backends, `export`, and a member's `private`, `protected`, `auto`,
-/// and `operator("…")`.
+/// What may precede a declaration: `qname "…"`, `keep`, `keepTest`,
+/// `connected`, maybe with backends, `export`, and a member's `private`,
+/// `protected`, `auto`, and `operator("…")`.
 #[derive(Default)]
 struct Marks {
     qname: Option<String>,
     keep: bool,
+    keep_test: bool,
     connected: Option<Vec<String>>,
     export: bool,
     /// The member's marks, as facts.
@@ -764,6 +768,7 @@ impl Reader {
             marks.qname = Some(qname);
         }
         marks.keep = self.eat_word("keep");
+        marks.keep_test = self.eat_word("keepTest");
         if self.eat_word("connected") {
             let mut backends = Vec::new();
             if self.eat("(") {
@@ -813,6 +818,9 @@ impl Reader {
         }
         if marks.keep {
             self.b.add_facts(decl, Facts::KEEP);
+        }
+        if marks.keep_test {
+            self.b.add_facts(decl, Facts::KEEP_TEST);
         }
         if let Some(backends) = &marks.connected {
             let backends: Vec<&str> = backends.iter().map(String::as_str).collect();
@@ -1116,33 +1124,22 @@ impl Reader {
             self.b.set_module_path(decl, &path);
         }
         self.expect("{")?;
-        let mut items = Vec::new();
-        loop {
-            let doc = self.doc();
-            if doc.is_none() && self.eat_word("init") {
-                break;
-            }
-            let marks = self.marks()?;
-            let item = if self.eat_word("fn") {
-                Item::Function(self.function_head(DeclKind::Function, decl)?)
-            } else if self.is_word("let") || self.is_word("var") {
-                Item::ModuleLet(self.let_head(DeclKind::ModuleLet, decl)?)
-            } else if self.is_word("class") || self.is_word("interface") {
-                self.class_head(decl)?
-            } else {
-                return self.error("expected `fn`, `let`, `var`, `class`, `interface`, or `init`");
-            };
-            let d = match item {
-                Item::Function(Head { decl: d, .. }) | Item::ModuleLet(d) | Item::Class(d, _) => d,
-            };
-            self.apply(d, &marks);
-            if let Some(doc) = doc {
-                self.b.set_doc(d, &doc);
-            }
-            items.push(item);
-        }
+        let (items, _) = self.items(decl, false)?;
         let init = self.pos;
         self.skip_braces()?;
+        // What only tests reach: `for tests { item* ("init" block)? }`.
+        let (mut test_items, mut test_init) = (Vec::new(), None);
+        if self.eat_word("for") {
+            self.expect_word("tests")?;
+            self.expect("{")?;
+            let (found, init) = self.items(decl, true)?;
+            test_items = found;
+            if init {
+                test_init = Some(self.pos);
+                self.skip_braces()?;
+                self.expect("}")?;
+            }
+        }
         let mut tests = Vec::new();
         while self.eat_word("test") {
             let Tok::Str(name) = self.next() else {
@@ -1160,8 +1157,47 @@ impl Reader {
             decl,
             items,
             init,
+            test_items,
+            test_init,
             tests,
         })
+    }
+
+    /// A module's items, up to its `init` (eaten), or in its `for tests`
+    /// section (`section`), up to an `init` or its closing `}` (eaten);
+    /// and whether an `init` ends them.
+    fn items(&mut self, module: DeclId, section: bool) -> Read<(Vec<Item>, bool)> {
+        let mut items = Vec::new();
+        loop {
+            let doc = self.doc();
+            if doc.is_none() && self.eat_word("init") {
+                return Ok((items, true));
+            }
+            if section && doc.is_none() && self.eat("}") {
+                return Ok((items, false));
+            }
+            let marks = self.marks()?;
+            let item = if self.eat_word("fn") {
+                Item::Function(self.function_head(DeclKind::Function, module)?)
+            } else if self.is_word("let") || self.is_word("var") {
+                Item::ModuleLet(self.let_head(DeclKind::ModuleLet, module)?)
+            } else if self.is_word("class") || self.is_word("interface") {
+                self.class_head(module)?
+            } else if section {
+                return self
+                    .error("expected `fn`, `let`, `var`, `class`, `interface`, `init`, or `}`");
+            } else {
+                return self.error("expected `fn`, `let`, `var`, `class`, `interface`, or `init`");
+            };
+            let d = match item {
+                Item::Function(Head { decl: d, .. }) | Item::ModuleLet(d) | Item::Class(d, _) => d,
+            };
+            self.apply(d, &marks);
+            if let Some(doc) = doc {
+                self.b.set_doc(d, &doc);
+            }
+            items.push(item);
+        }
     }
 
     /// `let name#id: T;`, or `var …`.
@@ -1313,6 +1349,7 @@ impl Reader {
             let marks = self.marks()?;
             if marks.export
                 || marks.keep
+                || marks.keep_test
                 || marks.connected.is_some()
                 || marks.member != Facts::NONE
             {
@@ -1348,40 +1385,23 @@ impl Reader {
     fn bodies(mut self, modules: Vec<ModuleHead>) -> Read<Program> {
         for module in modules {
             for item in module.items {
-                let node = match item {
-                    Item::Function(head) => self.function(head)?,
-                    Item::ModuleLet(decl) => self.b.module_let(decl),
-                    Item::Class(decl, members) => {
-                        let ty = self.b.program().decls.get(decl).ty;
-                        let mut nodes = Vec::with_capacity(members.len());
-                        for member in members {
-                            nodes.push(match member {
-                                Member::Field(d) => self.b.field(d),
-                                Member::StaticField(d) => self.b.static_field(d),
-                                Member::StaticFunction(head) => self.function(head)?,
-                                Member::Method(head) => {
-                                    let params = self.params(&head.params);
-                                    match head.body {
-                                        Some(body) => {
-                                            self.this = ty;
-                                            let body = self.body(head.decl, body);
-                                            self.this = TypeId::NONE;
-                                            self.b.method(head.decl, &params, body?)
-                                        }
-                                        None => self.b.abstract_method(head.decl, &params),
-                                    }
-                                }
-                            });
-                        }
-                        self.b.class(decl, &nodes)
-                    }
-                };
+                let node = self.item(item)?;
                 self.b.add_item(module.decl, node);
             }
             self.pos = module.init;
             self.owner = module.decl;
             let init = self.block()?;
             self.b.set_init(module.decl, init);
+            for item in module.test_items {
+                let node = self.item(item)?;
+                self.b.add_test_item(module.decl, node);
+            }
+            if let Some(pos) = module.test_init {
+                self.pos = pos;
+                self.owner = module.decl;
+                let block = self.block()?;
+                self.b.set_test_init(module.decl, Some(block));
+            }
             for (name, head) in module.tests {
                 let params = self.params(&head.params);
                 let body = self.body(head.decl, head.body.unwrap_or(0))?;
@@ -1396,6 +1416,38 @@ impl Reader {
             self.spans()?;
         }
         Ok(self.b.finish())
+    }
+
+    /// An item's node, with its body.
+    fn item(&mut self, item: Item) -> Read<NodeId> {
+        Ok(match item {
+            Item::Function(head) => self.function(head)?,
+            Item::ModuleLet(decl) => self.b.module_let(decl),
+            Item::Class(decl, members) => {
+                let ty = self.b.program().decls.get(decl).ty;
+                let mut nodes = Vec::with_capacity(members.len());
+                for member in members {
+                    nodes.push(match member {
+                        Member::Field(d) => self.b.field(d),
+                        Member::StaticField(d) => self.b.static_field(d),
+                        Member::StaticFunction(head) => self.function(head)?,
+                        Member::Method(head) => {
+                            let params = self.params(&head.params);
+                            match head.body {
+                                Some(body) => {
+                                    self.this = ty;
+                                    let body = self.body(head.decl, body);
+                                    self.this = TypeId::NONE;
+                                    self.b.method(head.decl, &params, body?)
+                                }
+                                None => self.b.abstract_method(head.decl, &params),
+                            }
+                        }
+                    });
+                }
+                self.b.class(decl, &nodes)
+            }
+        })
     }
 
     /// A function, with its body if it has one.

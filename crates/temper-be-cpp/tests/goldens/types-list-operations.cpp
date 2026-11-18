@@ -109,7 +109,6 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, core::List::join(messageBuilder, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
     core::Console::log(temper_globals::console.value, core::List::join(core::List::sorted(copyThat, [](core::Str a, core::Str b) -> int32_t { return core::Compare::cmp(b, a); }), TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
     core::Console::log(temper_globals::console.value, core::List::join(copyThat, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
-    std::shared_ptr<std::vector<core::Str>> typed = messageBuilder;
     core::Str oldLast = core::ListBuilder::removeLast<core::Str>(copyThat);
     core::Console::log(temper_globals::console.value, "Removed " + oldLast + " so " + core::List::join(copyThat, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
     std::shared_ptr<std::vector<core::Str>> nextLast = core::ListBuilder::splice<core::Str>(copyThat, core::Int::sub(core::List::length<core::Str>(copyThat), 1), 1);

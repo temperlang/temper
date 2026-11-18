@@ -113,7 +113,6 @@ public final class OperationsGlobal {
         console.log(Core.listJoinObj(messageBuilder, " ", x -> x));
         console.log(Core.listJoinObj(Core.listSorted(copyThat, (a, b) -> compareCodePoints(b, a)), " ", x -> x));
         console.log(Core.listJoinObj(copyThat, " ", x -> x));
-        List<String> typed = messageBuilder;
         String oldLast = Core.listRemoveLast(copyThat);
         console.log("Removed " + oldLast + " so " + Core.listJoinObj(copyThat, " ", x -> x));
         List<String> nextLast = Core.listSplice(copyThat, copyThat.size() - 1, 1);

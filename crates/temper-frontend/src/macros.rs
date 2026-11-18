@@ -1846,10 +1846,13 @@ impl Settle {
         if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "sealed") {
             self.sealed.insert(call);
         }
-        // `@keep`, which keeps a declaration that only host code uses; the
-        // `Let` it becomes keeps this node's id.
-        if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "keep") {
-            self.lib.kept.insert(call);
+        // `@keep`, which keeps a declaration that only host code uses, and
+        // `@keepTest`, only tests' host code; the `Let` or `Class` it
+        // becomes keeps this node's id.
+        match (self.lib.name(decorator)).map(|n| self.lib.names.get(n)) {
+            Some("keep") => _ = self.lib.kept.insert(call),
+            Some("keepTest") => _ = self.lib.kept_for_tests.insert(call),
+            _ => {}
         }
         if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "json") {
             self.json_decorated.insert(call);

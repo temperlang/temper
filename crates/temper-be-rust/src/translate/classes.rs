@@ -59,7 +59,7 @@ pub(crate) enum This {
 pub(crate) fn index(p: &Program) -> HashMap<DeclId, NodeId> {
     let mut out = HashMap::new();
     for module in &p.modules {
-        for &item in &module.items {
+        for item in module.all_items() {
             if let Node::Class { decl, .. } | Node::Interface { decl, .. } = p.nodes.get(item) {
                 out.insert(decl, item);
             }
@@ -203,9 +203,7 @@ impl<'a> Translator<'a> {
     /// marked `#[allow(dead_code)]`.
     pub(crate) fn plan_accessors(&mut self, module: &Module) {
         let p = self.p;
-        let mut roots: Vec<NodeId> = module.items.clone();
-        roots.push(module.init);
-        roots.extend(&module.tests);
+        let roots: Vec<NodeId> = module.roots().collect();
         // Upcasts that are receivers, which calls leave out.
         let mut receivers = HashSet::new();
         for &root in &roots {
@@ -237,7 +235,7 @@ impl<'a> Translator<'a> {
         }
         // Interfaces whose default methods need `this` as a value, by
         // `clone_boxed`.
-        for &item in &module.items {
+        for item in module.all_items() {
             let Node::Interface { decl: iface, .. } = p.nodes.get(item) else {
                 continue;
             };
@@ -255,7 +253,7 @@ impl<'a> Translator<'a> {
             }
         }
         let host = !temper_tmpl::host::files(p, &[".rs"]).is_empty();
-        for &item in &module.items {
+        for item in module.all_items() {
             let Node::Class { decl: class, .. } = p.nodes.get(item) else {
                 continue;
             };
@@ -1976,7 +1974,7 @@ impl<'a> Translator<'a> {
     /// functions use.
     pub(crate) fn class_refs(p: &Program, module: &Module) -> Vec<DeclId> {
         let mut out = Vec::new();
-        for &item in &module.items {
+        for item in module.all_items() {
             if let Node::Class { .. } | Node::Interface { .. } = p.nodes.get(item) {
                 out.extend(temper_tmpl::analysis::module_refs(p, item));
             }

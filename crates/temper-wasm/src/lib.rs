@@ -920,7 +920,9 @@ mod tests {
 
     /// The playground's case: an operator missing in `cents % 100` is one
     /// error, at `100`; `part` is still declared, so its later uses are
-    /// fine; the run fails where the error is; and the code is written.
+    /// fine; the run fails where the error is; and the code is written,
+    /// failing there, without `cents`, which nothing else reads
+    /// (`temper_tmpl::reach`).
     #[test]
     fn compiles_with_a_missing_operator() {
         let source = "let cents = 1234;\n\
@@ -937,7 +939,7 @@ mod tests {
         assert!(json.starts_with(expected), "{json}");
         if py != 0 {
             assert!(
-                json.contains("_cents: int = 1234\\nraise RuntimeError()\\n"),
+                json.contains("__all__ = ()\\n\\nraise RuntimeError()\\n"),
                 "{json}"
             );
         }

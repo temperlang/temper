@@ -764,7 +764,9 @@ many times. Golden tests list problems as `RULE @node: message`.
   exported top-level declarations, of a module before it in
   `Program::modules`, and assigns or initializes only its own module
   `let`s. M2: a test's signature is `fn (Test): Void throws Bubble`, with
-  std's `testing` module's `Test`.
+  std's `testing` module's `Test`. M3 (2026-11-18): a module's library
+  parts, its items and init block, use nothing of its test parts, its
+  test items and test init.
 
 `Error` nodes are exempt from T2 and T3.
 

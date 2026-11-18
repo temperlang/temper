@@ -43,8 +43,11 @@
 //!   after `types/int/basics`) takes a number (`basics2`), but for one
 //!   with host code, which names its namespace, so compiles, as strictly,
 //!   into an assembly of its own, with its own `Program.cs`. A test that
-//!   runs as tests (`TESTS`) compiles with std, as strictly, against
-//!   MSTest's framework from NuGet's cache, and runs by reflection
+//!   runs as tests (`TESTS`, and the shared programs of `AS_TESTS`)
+//!   compiles with std, as strictly, against MSTest's framework from
+//!   NuGet's cache, the library and then its tests' project against it,
+//!   which sees its internals, so the library builds without what only
+//!   tests reach, and runs by reflection
 //!   ([`RUN_TESTS`]), its failures compared with its `expectedFailures`.
 //!   Skipped, with a message, without `dotnet`, the .NET 6 targeting pack,
 //!   or those packages; with `TEMPER_REQUIRE_CHECKERS` set, as in CI,
@@ -307,6 +310,54 @@ fn goldens() {
             }
         }
         goldens.finish();
+    });
+}
+
+/// What only the `reach` program's tests reach is only in the tests'
+/// project, and what nothing reaches nowhere, as tmpl's
+/// `reach::partition` splits the program; `runs` builds the library
+/// without its tests, and runs its test, which passes only if they're
+/// set.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let lines = (files.iter().filter(|f| f.path.ends_with(".cs"))).flat_map(|f| {
+            let tests = f.path.contains("/tests/");
+            (f.text.lines()).map(move |line| (f.path.as_str(), tests, line))
+        });
+        let tests_only = [
+            "ForTests",
+            "testFactor",
+            "testCount",
+            "ITestShape",
+            "TestSquare",
+            "AddArea",
+        ];
+        let unreached = [
+            "UnreachedFunction",
+            "UnreachedClass",
+            "IUnreachedInterface",
+            "unreachedValue",
+        ];
+        kit::check_test_parts_apart(lines, &tests_only, &unreached);
+    });
+}
+
+/// A helper that what only tests reach and the tests both use is the
+/// test class's once.
+#[test]
+fn test_class_helpers_once() {
+    kit::with_stack(|| {
+        let text = "# Helped\n\n    let shownForTests(x: Float64): String { x.toString() }\n\n    test(\"shows\") {\n      assert(shownForTests(1.5) == 1.5.toString());\n    }\n";
+        let case = Case::inline("helped", "helped.temper.md", text, Vec::new());
+        let files = generate(&case);
+        let tests = (files.iter())
+            .find(|f| f.path.ends_with("/tests/HelpedTests.cs"))
+            .unwrap();
+        let defined = tests.text.matches("static string FormatFloat64(").count();
+        assert_eq!(defined, 1, "{}", tests.text);
     });
 }
 
@@ -1035,8 +1086,9 @@ static class RunTests
 }
 "#;
 
-/// A run as tests, as Kotlin's `RunCSharp`: std, then the library with
-/// its tests, each compiled strictly by `csc` against MSTest's framework
+/// A run as tests, as Kotlin's `RunCSharp`: std, then the library, then
+/// its tests against it, each compiled strictly by `csc` against MSTest's
+/// framework
 /// ([`mstest`]), its tests run by [`RUN_TESTS`], and their failures
 /// compared with its `expectedFailures`.
 fn run_tests(
@@ -1080,16 +1132,51 @@ fn run_tests(
         ));
         return;
     }
-    let library = bin.join(format!("{}.dll", names::root_namespace(&case.library)));
-    let sources = write(generate(case));
-    let build = dotnet.csc(&strict(&library), &[runtime, &mstest, &std_dll], &sources);
-    if !build.status.success() {
-        failures.push(format!(
-            "{}: csc, the library and its tests:\n{}",
-            case.key,
-            String::from_utf8_lossy(&build.stdout)
-        ));
-        return;
+    // The library, then its tests' project, against it, as MSBuild builds
+    // them, so the library builds without what only its tests reach, and
+    // they see its internals as its project's `InternalsVisibleTo` lets
+    // them.
+    let root = names::root_namespace(&case.library);
+    let library = bin.join(format!("{root}.dll"));
+    let tests = bin.join(format!("{root}Test.dll"));
+    let (mut main, tested): (Vec<PathBuf>, Vec<PathBuf>) = (write(generate(case)).into_iter())
+        .partition(|path| !path.starts_with(dir.join(&case.library).join("tests")));
+    let visible = dir.join("InternalsVisibleTo.cs");
+    fs::write(
+        &visible,
+        format!("[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(\"{root}Test\")]\n"),
+    )
+    .unwrap();
+    main.push(visible);
+    let steps = [
+        (
+            "the library",
+            &library,
+            vec![runtime, mstest.as_path(), std_dll.as_path()],
+            &main,
+        ),
+        (
+            "its tests",
+            &tests,
+            vec![
+                runtime,
+                mstest.as_path(),
+                std_dll.as_path(),
+                library.as_path(),
+            ],
+            &tested,
+        ),
+    ];
+    for (what, dll, refs, sources) in steps {
+        let build = dotnet.csc(&strict(dll), &refs, sources);
+        if !build.status.success() {
+            failures.push(format!(
+                "{}: csc, {what}:\n{}",
+                case.key,
+                String::from_utf8_lossy(&build.stdout)
+            ));
+            return;
+        }
     }
     let runner = dir.join("RunTests.cs");
     fs::write(&runner, RUN_TESTS).unwrap();
@@ -1117,7 +1204,7 @@ fn run_tests(
     let run = Command::new(&dotnet.dotnet)
         .env("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
         .arg(&exe)
-        .arg(&library)
+        .arg(&tests)
         .output()
         .unwrap();
     let actual = kit::runner_failures(&String::from_utf8_lossy(&run.stdout));

@@ -54,11 +54,9 @@ pub fn is_user_connected(p: &Program, decl: DeclId) -> bool {
 pub fn has_temper_implementation(p: &Program, decl: DeclId) -> bool {
     match p.decls.get(decl).kind {
         DeclKind::Class => true,
-        _ => !(p.modules.iter())
-            .flat_map(|m| m.items.iter())
-            .any(|&item| {
-                p.nodes.kind(item) == Kind::BodilessFunction && p.nodes.slots(item).0 == decl.0
-            }),
+        _ => !(p.modules.iter()).flat_map(|m| m.all_items()).any(|item| {
+            p.nodes.kind(item) == Kind::BodilessFunction && p.nodes.slots(item).0 == decl.0
+        }),
     }
 }
 

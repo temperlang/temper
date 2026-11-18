@@ -66,28 +66,6 @@ end
 
 with_tostring(Person)
 
----@class object-literals.Named: object-literals.extra-class.Stringable
----@field name string
----@field toString fun(self: object-literals.Named): string
-
----@class object-literals.Named.type: temper.Type
----@operator call: object-literals.Named
-local Named = temper.type("object-literals.Named", Stringable)
-
----@param this object-literals.Named
----@param name string
-function Named.constructor(this, name)
-  this.name = name
-end
-
----@param this object-literals.Named
----@return string
-function Named.methods.toString(this)
-  return "Named " .. this.name
-end
-
-with_tostring(Named)
-
 ---@class object-literals.Whatever
 ---@field blah string
 

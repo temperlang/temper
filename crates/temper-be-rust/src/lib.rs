@@ -11,8 +11,11 @@
 //! inside format strings, only the `use`s needed, and laid out as
 //! rustfmt lays it out.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! Rust's rules ([`names::RULES`]), then [`translate`] into Rust's output
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach apart,
+//! under `#[cfg(test)]`, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with Rust's rules
+//! ([`names::RULES`]), then [`translate`] into Rust's output
 //! tree ([`tree`]), with operators spelled by [`ops`] and core's
 //! connected declarations by [`connected`], then the printer. Module
 //! state is safe across threads ([`translate`]'s documentation says how).
@@ -271,6 +274,11 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // A captured `var` parameter as a local, which may be a cell.
     let copied = temper_tmpl::cells::copy_captured_params(p);
     let p = copied.as_ref().unwrap_or(p);
+    // What only tests reach apart, under `cfg(test)`, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(NotYet::new)?;
     let package = &p.library.name;
     // std's package is `temper-std`, as Kotlin's, in `std/`; a config's
@@ -520,10 +528,11 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
 "
         ),
     };
-    // std declares what its own code never uses (`Codes.highControlMin`,
-    // `RegexRefs`'s fields), and its connected members' Temper bodies
-    // ignore parameters their support code reads, so rustc's warnings of
-    // them are allowed there, where Kotlin allows every warning in every
+    // std declares members its own code never uses
+    // (`Codes.highControlMin`, `RegexRefs`'s fields), which reach doesn't
+    // prune yet, and methods that ignore parameters (`getHeader`'s
+    // `headerName`, its JSON adapters' `ic`), so rustc's warnings of them
+    // are allowed there, where Kotlin allows every warning in every
     // crate. clippy's style lints that std's json source trips
     // (`48 <= c && c <= 57`, `if x.is_none() { return None; }`, an
     // `orelse panic()` alone in an `if`) are allowed there too.

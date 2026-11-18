@@ -50,24 +50,6 @@ class Person(_Stringable):
         return isinstance(other, Person) and self.eq(other)
 
 
-class _Named(_Stringable):  # pyright: ignore[reportUnusedClass]
-    __slots__ = ('_name',)
-    _name: str
-
-    def __init__(self, /, name: str) -> None:
-        self._name = name
-
-    @property
-    def name(self, /) -> str:
-        return self._name
-
-    def to_string(self, /) -> str:
-        return f'Named {self._name}'
-
-    def __str__(self, /) -> str:
-        return self.to_string()
-
-
 class _Whatever:
     __slots__ = ('_blah',)
     _blah: str

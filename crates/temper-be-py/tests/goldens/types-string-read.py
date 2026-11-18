@@ -148,9 +148,6 @@ _needle: str = 'time'
 _after1: int = _report_found('found 1', _hay, _needle)
 _after2: int = _report_found('found 2', _hay, _needle, _after1)
 _report_found('found 3', _hay, _needle, _after2)
-_hay2: str = 'time comes for us all'
-_hay3: str = 'in the nick of time'
-_hay4: str = 'tim'
 _report_found('hay 2', 'time comes for us all', _needle)
 _report_found('hay 3', 'in the nick of time', _needle)
 _report_found('hay 4', 'my name is tim', _needle)

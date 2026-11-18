@@ -162,6 +162,22 @@ struct Labels {
     end: Option<String>,
 }
 
+/// What a chunk declares and runs ([`Translator::part`]), in the order
+/// it writes them, after its imports: the tables it keeps declarations
+/// in, module `let`s and `var`s declared before the functions, functions
+/// declared before they're defined, the functions and types, and the
+/// init block's statements; and its declarations, in source order, and
+/// whether its exports table holds any `var`s.
+struct Part {
+    declared: Vec<(NodeId, DeclId)>,
+    live: bool,
+    head: Vec<Stmt>,
+    lets: Vec<Stmt>,
+    forward: Vec<DeclId>,
+    defs: Vec<Stmt>,
+    init: Vec<Stmt>,
+}
+
 pub struct Translator<'a> {
     pub(crate) p: &'a Program,
     pub(crate) names: &'a NameMap,
@@ -190,6 +206,9 @@ pub struct Translator<'a> {
     pub(crate) here: DeclId,
     /// In a tests file, the module tested, reached through `tested`.
     pub(crate) tested: DeclId,
+    /// In a tests file, what its module's test parts define, which are
+    /// the file's own.
+    test_own: HashSet<DeclId>,
     /// The program's classes and interfaces.
     pub(crate) types: Types,
     /// Module `var`s that a function or a member writes.
@@ -239,9 +258,11 @@ enum Jump {
 /// The key of the table a module with tests adds to its exports for them.
 pub const TEST_KEY: &str = "$test";
 
-/// What a module's tests use of it: its declarations, which the table
-/// under [`TEST_KEY`] holds, and of those, the `var`s, which it reads
-/// and assigns through functions there, `NAME__get` and `NAME__set`.
+/// What a module's tests file uses of it (its tests, and what only they
+/// reach, which only that file has), which the table under [`TEST_KEY`]
+/// holds, and of those, the `var`s, which it reads and assigns through
+/// functions there, `NAME__get` and `NAME__set`, as Kotlin's
+/// `neededByTest` exposes what its tests use.
 #[derive(Clone, Debug, Default)]
 pub struct TestAccess {
     pub used: Vec<DeclId>,
@@ -249,44 +270,24 @@ pub struct TestAccess {
 }
 
 impl TestAccess {
+    /// What a module's tests file uses of it: what its test parts
+    /// (`analysis::test_parts`) name, and the types they cast to.
     pub fn of(p: &Program, module: &Module) -> TestAccess {
-        let mut access = TestAccess::default();
-        for &test in &module.tests {
-            walk(p, test, &mut |id| {
-                let decl = match p.nodes.get(id) {
-                    Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
-                        classes::owner_type(p, callee).unwrap_or(callee)
-                    }
-                    Node::GetModuleLet { target } | Node::SetModuleLet { target, .. } => target,
-                    // A type, through what's used of its table.
-                    Node::New { ctor: d, .. } | Node::GetStatic { target: d } => {
-                        match classes::owner_type(p, d) {
-                            Some(t) => t,
-                            None => return,
-                        }
-                    }
-                    Node::Is { ty, .. } => match temper_tmpl::analysis::nominal_decl(p, ty) {
-                        Some(t) => t,
-                        None => return,
-                    },
-                    Node::As { .. } => {
-                        match temper_tmpl::analysis::nominal_decl(p, p.nodes.ty(id)) {
-                            Some(t) => t,
-                            None => return,
-                        }
-                    }
-                    _ => return,
-                };
-                if home(p, decl) == Some(module.decl) && !access.used.contains(&decl) {
-                    access.used.push(decl);
+        let parts = temper_tmpl::analysis::test_parts(p, module);
+        let mut used = parts.used;
+        for root in module.test_roots() {
+            walk(p, root, &mut |id| {
+                if let Node::As { .. } = p.nodes.get(id) {
+                    let cast = temper_tmpl::analysis::nominal_decl(p, p.nodes.ty(id));
+                    let local = cast.filter(|&t| home(p, t) == Some(module.decl));
+                    used.extend(local.filter(|t| !parts.own.contains(t)));
                 }
             });
         }
-        access.used.sort();
-        access.vars = (access.used.iter().copied())
-            .filter(|&d| is_var(p, d))
-            .collect();
-        access
+        used.sort();
+        used.dedup();
+        let vars = (used.iter().copied()).filter(|&d| is_var(p, d)).collect();
+        TestAccess { used, vars }
     }
 }
 
@@ -384,6 +385,7 @@ impl<'a> Translator<'a> {
             returns: false,
             here: module.decl,
             tested: DeclId::NONE,
+            test_own: HashSet::new(),
             types: Types::of(p, &|d| names.get(d).to_string()),
             mutable: HashSet::new(),
             classy: HashSet::new(),
@@ -413,6 +415,10 @@ impl<'a> Translator<'a> {
             return None;
         }
         let module = home(p, decl).filter(|&m| m != self.here)?;
+        // A tests file's own, as what only tests reach.
+        if self.test_own.contains(&decl) {
+            return None;
+        }
         let name = self.name(decl);
         if module == self.tested {
             return Some(if is_var(p, decl) {
@@ -646,8 +652,155 @@ impl<'a> Translator<'a> {
                 });
             }
         }
+        let other_locals = imports.len() + 2 * access.vars.len();
+        let Part {
+            declared,
+            live,
+            head,
+            lets,
+            forward,
+            defs,
+            init,
+        } = self.part(
+            module,
+            &module.items,
+            Some(module.init),
+            host,
+            other_locals,
+            &[],
+        )?;
+
+        // The exports, in source order, as Kotlin lists them.
+        let exports: Vec<DeclId> = (declared.iter())
+            .map(|&(_, d)| d)
+            .filter(|&d| self.exported(d))
+            .collect();
+        let mut tail = Vec::new();
+        // What its tests use, under `'$test'`, with a getter and a setter
+        // for each `var`.
+        let mut test_entries = Vec::new();
+        for &d in access.used.iter().filter(|d| !access.vars.contains(d)) {
+            test_entries.push((self.name(d), self.access(d)));
+        }
+        for &d in &access.vars {
+            let name = self.name(d);
+            let ty = self.ty(p.decls.get(d).ty)?;
+            for suffix in ["__get", "__set"] {
+                let f = format!("{name}{suffix}");
+                if p.decls.ids().any(|o| self.names.get(o) == f) {
+                    return not_yet(format!("a test helper named as a declaration, {f}"));
+                }
+                test_entries.push((f, Expr::name(format!("{name}{suffix}"))));
+            }
+            tail.push(Stmt::Function {
+                local: true,
+                name: format!("{name}__get"),
+                signature: Signature {
+                    params: Vec::new(),
+                    result: Some(ty.clone()),
+                },
+                body: vec![Stmt::Return(Some(self.access(d)))],
+            });
+            tail.push(Stmt::Function {
+                local: true,
+                name: format!("{name}__set"),
+                signature: Signature {
+                    params: vec![("value".into(), ty)],
+                    result: None,
+                },
+                body: vec![Stmt::Assign {
+                    target: self.access(d),
+                    value: Expr::name("value"),
+                }],
+            });
+        }
+        if !tail.is_empty() {
+            tail.push(Stmt::Blank);
+        }
+        let test_table = (!test_entries.is_empty()).then_some(Expr::Table(test_entries));
+        if live {
+            if let Some(table) = test_table.clone() {
+                tail.push(Stmt::Assign {
+                    target: Expr::name(EXPORTS).member(TEST_KEY),
+                    value: table,
+                });
+            }
+            for &d in &exports {
+                if self.fields.get(&d) != Some(&EXPORTS) {
+                    tail.push(Stmt::Assign {
+                        target: Expr::name(EXPORTS).member(self.key(d)),
+                        value: self.access(d),
+                    });
+                }
+            }
+            tail.push(Stmt::Return(Some(Expr::name(EXPORTS))));
+        } else {
+            let mut entries: Vec<(String, Expr)> = (exports.iter())
+                .map(|&d| (self.key(d), self.access(d)))
+                .collect();
+            if let Some(table) = test_table {
+                entries.push((TEST_KEY.into(), table));
+            }
+            tail.push(Stmt::Return(Some(Expr::Table(entries))));
+        }
+
+        let mut body = Vec::new();
+        if self.uses_temper {
+            body.push(Stmt::Local {
+                name: "temper".into(),
+                ty: None,
+                value: Some(Expr::name("require").call(vec![Expr::Str("temper-core".into())])),
+            });
+        }
+        body.extend(self.int64_decls());
+        body.extend(imports);
+        body.extend(head);
+        if !lets.is_empty() || !forward.is_empty() {
+            body.push(Stmt::Blank);
+        }
+        body.extend(lets);
+        if !forward.is_empty() {
+            body.push(Stmt::Locals(
+                forward.iter().map(|&d| self.name(d)).collect(),
+            ));
+        }
+        if let Some(host) = host {
+            body.push(Stmt::Blank);
+            body.push(Stmt::Raw(
+                host.text.trim_end().lines().map(str::to_string).collect(),
+            ));
+            body.push(Stmt::Blank);
+        }
+        body.extend(defs);
+        if !body.is_empty() {
+            body.push(Stmt::Blank);
+        }
+        body.extend(init);
+        if !body.is_empty() && !matches!(body.last(), Some(Stmt::Blank)) {
+            body.push(Stmt::Blank);
+        }
+        body.extend(tail);
+        Ok(tree::Chunk { body })
+    }
+
+    /// A chunk's declarations and init: a module's items and init block,
+    /// or in its tests file, its test items and test init, which
+    /// continues it. `host` is the module's host code, which a tests file
+    /// has none of, `other_locals` how many locals the chunk declares
+    /// besides, and `tests` its tests, which use its `Int64` constants
+    /// too.
+    fn part(
+        &mut self,
+        module: &Module,
+        items: &[NodeId],
+        init: Option<NodeId>,
+        host: Option<&HostFile>,
+        other_locals: usize,
+        tests: &[NodeId],
+    ) -> R<Part> {
+        let p = self.p;
         let state = module_state(p, module);
-        for &item in module.items.iter().chain([&module.init]) {
+        for &item in items.iter().chain(&init) {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
                 if self.type_connection(p.decls.get(decl).ty) == Some(TypeConnection::Erased) {
                     self.erased.insert(decl);
@@ -655,7 +808,7 @@ impl<'a> Translator<'a> {
             }
         }
         // The module's own declarations, in source order.
-        let declared: Vec<(NodeId, DeclId)> = (module.items.iter())
+        let declared: Vec<(NodeId, DeclId)> = (items.iter())
             .filter_map(|&item| match p.nodes.get(item) {
                 Node::Function { decl, .. }
                 | Node::Class { decl, .. }
@@ -667,6 +820,12 @@ impl<'a> Translator<'a> {
             .collect();
         if host.is_none() {
             if let Some(&(_, decl)) = (declared.iter()).find(|&&(_, d)| uses_host(p, d, NAMES)) {
+                if self.here.is_none() {
+                    return not_yet(format!(
+                        "host code for what only tests reach, {}",
+                        p.name(decl)
+                    ));
+                }
                 return not_yet(format!(
                     "{}'s host code, with no {}",
                     p.name(decl),
@@ -712,15 +871,16 @@ impl<'a> Translator<'a> {
                 self.fields.insert(decl, EXPORTS);
             }
         }
-        let live = !self.fields.is_empty();
+        let live = (declared.iter()).any(|(_, d)| self.fields.get(d) == Some(&EXPORTS));
         // `Int64` constants, as locals or one table's fields.
         let host_words = host.as_ref().map(|h| identifiers(&h.text));
-        let roots: Vec<NodeId> = (module.items.iter().copied())
-            .chain([module.init])
+        let roots: Vec<NodeId> = (items.iter().copied())
+            .chain(init)
+            .chain(tests.iter().copied())
             .collect();
         let consts = self.plan_int64s(&roots, &host_words.unwrap_or_default());
         // Past the threshold, those after the first few are a table's.
-        let init_locals = max_locals(p, module.init) + imports.len() + 2 * access.vars.len();
+        let init_locals = init.map_or(0, |i| max_locals(p, i)) + other_locals;
         let locals = declared.len() + init_locals + consts + 3;
         let overflow = locals > MODULE_LOCALS;
         if overflow {
@@ -883,12 +1043,15 @@ impl<'a> Translator<'a> {
         }
 
         // The init block.
-        let mut init = Vec::new();
-        self.begin(module.init);
-        let stmts: Vec<NodeId> = match p.nodes.get(module.init) {
-            Node::Block { stmts } => p.nodes.list(stmts).to_vec(),
-            _ => vec![module.init],
+        let mut run = Vec::new();
+        let stmts: Vec<NodeId> = match init.map(|i| (i, p.nodes.get(i))) {
+            Some((_, Node::Block { stmts })) => p.nodes.list(stmts).to_vec(),
+            Some((i, _)) => vec![i],
+            None => Vec::new(),
         };
+        if let Some(init) = init {
+            self.begin(init);
+        }
         for s in stmts {
             match p.nodes.get(s) {
                 Node::InitLet { target, value }
@@ -898,139 +1061,35 @@ impl<'a> Translator<'a> {
                 {
                     self.check_hoisting(s)?;
                     if matches!(p.nodes.get(value), Node::OrElse { .. }) {
-                        init.push(Stmt::Local {
+                        run.push(Stmt::Local {
                             name: self.name(target),
                             ty: Some(self.ty(p.decls.get(target).ty)?),
                             value: None,
                         });
                         let t = self.or_else_into(Expr::name(self.name(target)), value)?;
-                        init.extend(t);
+                        run.extend(t);
                         continue;
                     }
                     let (pre, value) = self.parts(value)?;
-                    init.extend(pre);
-                    init.push(Stmt::Local {
+                    run.extend(pre);
+                    run.push(Stmt::Local {
                         name: self.name(target),
                         ty: None,
                         value: Some(value),
                     });
                 }
-                _ => self.stmt(s, &mut init)?,
+                _ => self.stmt(s, &mut run)?,
             }
         }
-        let init = reachable(init);
-
-        // The exports, in source order, as Kotlin lists them.
-        let exports: Vec<DeclId> = (declared.iter())
-            .map(|&(_, d)| d)
-            .filter(|&d| self.exported(d))
-            .collect();
-        let mut tail = Vec::new();
-        // What its tests use, under `'$test'`, with a getter and a setter
-        // for each `var`.
-        let mut test_entries = Vec::new();
-        for &d in access.used.iter().filter(|d| !access.vars.contains(d)) {
-            test_entries.push((self.name(d), self.access(d)));
-        }
-        for &d in &access.vars {
-            let name = self.name(d);
-            let ty = self.ty(p.decls.get(d).ty)?;
-            for suffix in ["__get", "__set"] {
-                let f = format!("{name}{suffix}");
-                if p.decls.ids().any(|o| self.names.get(o) == f) {
-                    return not_yet(format!("a test helper named as a declaration, {f}"));
-                }
-                test_entries.push((f, Expr::name(format!("{name}{suffix}"))));
-            }
-            tail.push(Stmt::Function {
-                local: true,
-                name: format!("{name}__get"),
-                signature: Signature {
-                    params: Vec::new(),
-                    result: Some(ty.clone()),
-                },
-                body: vec![Stmt::Return(Some(self.access(d)))],
-            });
-            tail.push(Stmt::Function {
-                local: true,
-                name: format!("{name}__set"),
-                signature: Signature {
-                    params: vec![("value".into(), ty)],
-                    result: None,
-                },
-                body: vec![Stmt::Assign {
-                    target: self.access(d),
-                    value: Expr::name("value"),
-                }],
-            });
-        }
-        if !tail.is_empty() {
-            tail.push(Stmt::Blank);
-        }
-        let test_table = (!test_entries.is_empty()).then_some(Expr::Table(test_entries));
-        if live {
-            if let Some(table) = test_table.clone() {
-                tail.push(Stmt::Assign {
-                    target: Expr::name(EXPORTS).member(TEST_KEY),
-                    value: table,
-                });
-            }
-            for &d in &exports {
-                if self.fields.get(&d) != Some(&EXPORTS) {
-                    tail.push(Stmt::Assign {
-                        target: Expr::name(EXPORTS).member(self.key(d)),
-                        value: self.access(d),
-                    });
-                }
-            }
-            tail.push(Stmt::Return(Some(Expr::name(EXPORTS))));
-        } else {
-            let mut entries: Vec<(String, Expr)> = (exports.iter())
-                .map(|&d| (self.key(d), self.access(d)))
-                .collect();
-            if let Some(table) = test_table {
-                entries.push((TEST_KEY.into(), table));
-            }
-            tail.push(Stmt::Return(Some(Expr::Table(entries))));
-        }
-
-        let mut body = Vec::new();
-        if self.uses_temper {
-            body.push(Stmt::Local {
-                name: "temper".into(),
-                ty: None,
-                value: Some(Expr::name("require").call(vec![Expr::Str("temper-core".into())])),
-            });
-        }
-        body.extend(self.int64_decls());
-        body.extend(imports);
-        body.extend(head);
-        if !lets.is_empty() || !forward.is_empty() {
-            body.push(Stmt::Blank);
-        }
-        body.extend(lets);
-        if !forward.is_empty() {
-            body.push(Stmt::Locals(
-                forward.iter().map(|&d| self.name(d)).collect(),
-            ));
-        }
-        if let Some(host) = host {
-            body.push(Stmt::Blank);
-            body.push(Stmt::Raw(
-                host.text.trim_end().lines().map(str::to_string).collect(),
-            ));
-            body.push(Stmt::Blank);
-        }
-        body.extend(defs);
-        if !body.is_empty() {
-            body.push(Stmt::Blank);
-        }
-        body.extend(init);
-        if !body.is_empty() && !matches!(body.last(), Some(Stmt::Blank)) {
-            body.push(Stmt::Blank);
-        }
-        body.extend(tail);
-        Ok(tree::Chunk { body })
+        Ok(Part {
+            declared,
+            live,
+            head,
+            lets,
+            forward,
+            defs,
+            init: reachable(run),
+        })
     }
 
     /// A module's tests, as a LuaUnit file, as Kotlin's: a function of
@@ -1045,8 +1104,25 @@ impl<'a> Translator<'a> {
         let p = self.p;
         self.here = DeclId::NONE;
         self.tested = module.decl;
+        let parts = temper_tmpl::analysis::test_parts(p, module);
+        if parts.assign_init_locals(p) {
+            return not_yet("tests that assign a local of their module's init block");
+        }
+        self.test_own = parts.own;
         self.uses_temper = true;
-        self.plan_int64s(&module.tests, &HashSet::new());
+        let imported = temper_tmpl::analysis::test_imports(p, module);
+        let roots: Vec<NodeId> = module.test_roots().collect();
+        let imported = classes::with_casts(p, module.decl, &roots, imported);
+        // `temper`, `tested`, `luaunit`, and the imports.
+        let other_locals = 3 + imported.iter().map(|i| i.decls.len()).sum::<usize>();
+        let part = self.part(
+            module,
+            &module.test_items,
+            module.test_init,
+            None,
+            other_locals,
+            &module.tests,
+        )?;
         let mut used = Vec::new();
         let mut tests = Vec::new();
         for &test in &module.tests {
@@ -1087,8 +1163,7 @@ impl<'a> Translator<'a> {
             ty: None,
             value: Some(require(require_path(p, module.decl)).member(TEST_KEY)),
         });
-        let imported = temper_tmpl::analysis::test_imports(p, module);
-        for import in classes::with_casts(p, module.decl, &module.tests, imported) {
+        for import in imported {
             let path = require_path(p, import.from);
             for d in import.decls {
                 if !importable(p, d) {
@@ -1111,6 +1186,30 @@ impl<'a> Translator<'a> {
             value: Expr::name("temper").member("test_failure_prefix"),
         });
         body.push(Stmt::Blank);
+        // What only tests reach, as a module's chunk declares it.
+        let Part {
+            head,
+            lets,
+            forward,
+            defs,
+            init,
+            ..
+        } = part;
+        body.extend(head);
+        body.extend(lets);
+        if !forward.is_empty() {
+            body.push(Stmt::Locals(
+                forward.iter().map(|&d| self.name(d)).collect(),
+            ));
+        }
+        body.extend(defs);
+        if !init.is_empty() {
+            body.push(Stmt::Blank);
+            body.extend(init);
+            body.push(Stmt::Blank);
+        } else if !matches!(body.last(), Some(Stmt::Blank)) {
+            body.push(Stmt::Blank);
+        }
         body.push(Stmt::Assign {
             target: Expr::name("Test_"),
             value: Expr::Table(Vec::new()),
@@ -1719,7 +1818,9 @@ impl<'a> Translator<'a> {
                     },
                 });
             }
-            Node::SetModuleLet { target, value } if home(p, target) == Some(self.tested) => {
+            Node::SetModuleLet { target, value }
+                if home(p, target) == Some(self.tested) && !self.test_own.contains(&target) =>
+            {
                 let value = self.expr(value)?;
                 let setter = format!("{}__set", self.name(target));
                 out.push(Stmt::Expr(Expr::name("tested").method(setter, vec![value])));

@@ -21,25 +21,6 @@ function lastOf(things) {
   return thing;
 }
 
-/** @template T */
-class Blah extends type() {}
-
-class Hi extends type() {
-  /** @type {Blah<string>} */
-  #thing;
-
-  /** @param {Blah<string>} thing */
-  constructor(thing) {
-    super();
-    this.#thing = thing;
-  }
-
-  /** @returns {Blah<string>} */
-  get thing() {
-    return this.#thing;
-  }
-}
-
 class Classy extends type() {
   /** @type {number} */
   #index;

@@ -128,8 +128,6 @@ listBuilderAddAll(copyThat, /** @type {string[]} */ (messageBuilder));
 console.log(listedJoin(messageBuilder, " ", (x) => x));
 console.log(listedJoin(/** @type {string[]} */ (listedSorted(copyThat, (a, b) => Math.sign(cmpString(b, a)))), " ", (x) => x));
 console.log(listedJoin(copyThat, " ", (x) => x));
-/** @type {string[]} */
-const typed = messageBuilder;
 const oldLast = listBuilderRemoveLast(copyThat);
 console.log(`Removed ${oldLast} so ${listedJoin(copyThat, " ", (x) => x)}`);
 /** @type {readonly string[]} */

@@ -1577,6 +1577,92 @@ fn strict() {
     });
 }
 
+/// A file's lines, each with whether it's inside `#ifdef TEMPER_TESTS`.
+fn under_tests(text: &str) -> Vec<(bool, &str)> {
+    let mut depth = 0;
+    let mut tests = None;
+    let mut found = Vec::new();
+    for line in text.lines() {
+        if line.starts_with("#if") {
+            depth += 1;
+            if line == "#ifdef TEMPER_TESTS" && tests.is_none() {
+                tests = Some(depth);
+            }
+        } else if line.starts_with("#endif") {
+            if tests == Some(depth) {
+                tests = None;
+            }
+            depth -= 1;
+        }
+        found.push((tests.is_some(), line));
+    }
+    found
+}
+
+/// `@keepTest` keeps a function that no Temper code calls for tests' host
+/// code, as Kotlin's `ReachabilityTracer` marks it test-reachable: only
+/// where `TEMPER_TESTS` is defined, not `static`, and declared in the
+/// header there, as an exported function is for users; the private
+/// function only it calls is test-only too. `@keep` on a class keeps it
+/// as every class is kept, where host code may read it.
+#[test]
+fn kept_for_tests() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter())
+            .find(|c| c.key == "testing-asserts")
+            .unwrap();
+        let files = generate(&case);
+        let file = |name: &str| {
+            let file = files.iter().find(|f| f.path.ends_with(name));
+            &file.unwrap_or_else(|| panic!("no {name}")).text
+        };
+        let (header, source) = (file("/init.hpp"), file("/init.cpp"));
+        let lines = |text, needle: &str| -> Vec<bool> {
+            (under_tests(text).into_iter())
+                .filter(|(_, line)| line.contains(needle))
+                .map(|(tests, _)| tests)
+                .collect()
+        };
+        // Declared in the header, under `TEMPER_TESTS`.
+        assert_eq!(lines(header, "int32_t keptForTests("), [true], "{header}");
+        // Defined, not `static`, under `TEMPER_TESTS`; and its callee
+        // too, `static` as private functions are.
+        let defined = lines(source, "int32_t keptForTests(");
+        assert!(
+            !defined.is_empty() && defined.iter().all(|&t| t),
+            "{source}"
+        );
+        assert!(!source.contains("static int32_t keptForTests("), "{source}");
+        let callee = lines(source, "static int32_t sumOf(");
+        assert!(!callee.is_empty() && callee.iter().all(|&t| t), "{source}");
+        // The kept class, outside `TEMPER_TESTS`.
+        assert_eq!(lines(header, "struct KeptForHost :"), [false], "{header}");
+    });
+}
+
+/// The shared `reach` program's test parts, in its header and `.cpp`,
+/// only where `TEMPER_TESTS` is defined, and what nothing reaches
+/// nowhere, as tmpl's `reach::partition` splits the program; `runs` and
+/// `strict` build it strictly with and without `TEMPER_TESTS`, and run
+/// its test.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let modules = (files.iter()).filter(|f| {
+            (f.path.ends_with(".hpp") || f.path.ends_with(".cpp"))
+                && !f.path.ends_with("/main.cpp")
+                && !f.path.ends_with("/test.cpp")
+        });
+        let lines = modules.flat_map(|file| {
+            (under_tests(&file.text).into_iter())
+                .map(|(tests, line)| (file.path.as_str(), tests, line))
+        });
+        kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
+    });
+}
+
 /// Host code that a connected function needs, missing: `NotYet`, naming
 /// the file, where Kotlin's fails in `g++`.
 #[test]

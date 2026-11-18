@@ -173,9 +173,6 @@ local needle = "time"
 local after1 = reportFound("found 1", hay, needle)
 local after2 = reportFound("found 2", hay, needle, after1)
 reportFound("found 3", hay, needle, after2)
-local hay2 = "time comes for us all"
-local hay3 = "in the nick of time"
-local hay4 = "tim"
 reportFound("hay 2", "time comes for us all", needle)
 reportFound("hay 3", "in the nick of time", needle)
 reportFound("hay 4", "my name is tim", needle)

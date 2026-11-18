@@ -12,8 +12,11 @@
 //! (`mapped_for_each as _mapped_for_each`), `TypeVar`s, and the `def`s
 //! and temporaries the translator makes included.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
-//! Python's rules ([`names::RULES`]), then [`translate`] into Python's
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach in the
+//! tests files, what nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with Python's rules
+//! ([`names::RULES`]), then [`translate`] into Python's
 //! output tree ([`tree`]), with operators spelled by [`ops`], core's
 //! connected declarations by [`connected`], and classes and interfaces
 //! by [`classes`], then the printer.
@@ -169,6 +172,9 @@ fn author(authors: &str) -> String {
 /// mods/tests/test_helpers_deep.py  another's
 /// ```
 ///
+/// A tests file has what only its module's tests reach, before them, and
+/// imports what they use of the module, its private names too.
+///
 /// The project directory takes the library's name; the package and the
 /// root module's file take it as a Python name (`hello-world` gives
 /// `hello_world`).
@@ -186,6 +192,11 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         .then(|| temper_tmpl::switches::to_if_chains(p))
         .flatten();
     let p = chained.as_ref().unwrap_or(p);
+    // What only tests reach apart, in the tests files, and what nothing
+    // reaches left out (`temper_tmpl::reach`), as the lowerings left it:
+    // errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     // std's is `temper-std`, its package `temper_std`, as Kotlin's; a
     // config's `pyName` names the project and its package, but not its

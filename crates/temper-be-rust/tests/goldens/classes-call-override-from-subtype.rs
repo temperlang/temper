@@ -98,10 +98,6 @@ impl SlappyTrait for Slippy {
 
 temper_core::impl_any_value_trait!(Slippy, [Slappy]);
 
-pub(crate) fn check_from_outside(slipster: Slippy) -> bool {
-    slipster.thingums() == 5
-}
-
 pub(crate) trait ATrait:
     temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync
 {
@@ -590,65 +586,6 @@ temper_core::impl_any_value_trait_for_interface!(B2Deep);
 
 impl std::ops::Deref for B2Deep {
     type Target = dyn B2DeepTrait;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
-}
-
-pub(crate) trait B3DeepTrait:
-    temper_core::AsAnyValue + temper_core::AnyValueTrait + Send + Sync + B2DeepTrait
-{
-    #[allow(dead_code)]
-    fn clone_boxed(&self) -> B3Deep;
-}
-
-#[derive(Clone)]
-pub(crate) struct B3Deep(Arc<dyn B3DeepTrait>);
-
-impl B3Deep {
-    #[allow(dead_code)]
-    pub fn new(selfish: impl B3DeepTrait + 'static) -> B3Deep {
-        B3Deep(Arc::new(selfish))
-    }
-}
-
-impl B3DeepTrait for B3Deep {
-    fn clone_boxed(&self) -> B3Deep {
-        B3DeepTrait::clone_boxed(&*self.0)
-    }
-}
-
-impl B2DeepTrait for B3Deep {
-    fn clone_boxed(&self) -> B2Deep {
-        B2DeepTrait::clone_boxed(&*self.0)
-    }
-}
-
-impl B1DeepTrait for B3Deep {
-    fn clone_boxed(&self) -> B1Deep {
-        B1DeepTrait::clone_boxed(&*self.0)
-    }
-
-    fn a(&self) -> Arc<String> {
-        B1DeepTrait::a(&*self.0)
-    }
-}
-
-impl ADeepTrait for B3Deep {
-    fn clone_boxed(&self) -> ADeep {
-        ADeepTrait::clone_boxed(&*self.0)
-    }
-
-    fn a(&self) -> Arc<String> {
-        ADeepTrait::a(&*self.0)
-    }
-}
-
-temper_core::impl_any_value_trait_for_interface!(B3Deep);
-
-impl std::ops::Deref for B3Deep {
-    type Target = dyn B3DeepTrait;
 
     fn deref(&self) -> &Self::Target {
         &*self.0

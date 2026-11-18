@@ -183,9 +183,6 @@ void global_init_init() {
     int32_t after1 = read::reportFound(TEMPER_STR("found 1"), temper_globals::hay.value, needle);
     int32_t after2 = read::reportFound(TEMPER_STR("found 2"), temper_globals::hay.value, needle, after1);
     read::reportFound(TEMPER_STR("found 3"), temper_globals::hay.value, needle, after2);
-    core::Str hay2 = TEMPER_STR("time comes for us all");
-    core::Str hay3 = TEMPER_STR("in the nick of time");
-    core::Str hay4 = TEMPER_STR("tim");
     read::reportFound(TEMPER_STR("hay 2"), TEMPER_STR("time comes for us all"), needle);
     read::reportFound(TEMPER_STR("hay 3"), TEMPER_STR("in the nick of time"), needle);
     read::reportFound(TEMPER_STR("hay 4"), TEMPER_STR("my name is tim"), needle);

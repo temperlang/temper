@@ -88,7 +88,6 @@ temper.listbuilder_addall(copyThat, messageBuilder)
 print(temper.listed_join(messageBuilder, " ", function(x) return x end))
 print(temper.listed_join(temper.listed_sorted(copyThat, function(a, b) return temper.str_cmp(b, a) end), " ", function(x) return x end))
 print(temper.listed_join(copyThat, " ", function(x) return x end))
-local typed = messageBuilder
 local oldLast = temper.listbuilder_removelast(copyThat)
 print("Removed " .. oldLast .. " so " .. temper.listed_join(copyThat, " ", function(x) return x end))
 local nextLast = temper.listbuilder_splice(copyThat, temper.int32_sub(temper.listbuilder_length(copyThat), 1), 1)

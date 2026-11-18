@@ -4,27 +4,11 @@ from temper_core import (
     int_sub as _int_sub,
     list_get as _list_get,
 )
-from typing import Generic as _Generic, TypeVar as _TypeVar
+from typing import TypeVar as _TypeVar
 
 __all__ = ()
 
 _T = _TypeVar('_T')
-
-
-class _Blah(_Generic[_T]):
-    __slots__ = ()
-
-
-class _Hi:  # pyright: ignore[reportUnusedClass]
-    __slots__ = ('_thing',)
-    _thing: _Blah[str]
-
-    def __init__(self, /, thing: _Blah[str]) -> None:
-        self._thing = thing
-
-    @property
-    def thing(self, /) -> _Blah[str]:
-        return self._thing
 
 
 def _whatever(n: int, /) -> type:

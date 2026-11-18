@@ -40,11 +40,6 @@ public static class ErrorsGlobal
         return 1;
     }
 
-    internal static int Unclosed(int x)
-    {
-        return x * 2;
-    }
-
     internal static int AfterUnclosed(int x)
     {
         return x * 3;
@@ -63,11 +58,6 @@ public static class ErrorsGlobal
     internal static int Returned()
     {
         return Core.Bubble<int>();
-    }
-
-    internal static int PassedOn(int x)
-    {
-        return x;
     }
 
     static ErrorsGlobal()

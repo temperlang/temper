@@ -34,6 +34,82 @@ program it came from; stored facts are rechecked by recomputing them.
 - **Naming hints** (`naming::hints`): candidate names for any
   expression a pass hoists or copies ([names.md](names.md)), so every pass and backend
   names what it adds well, and function bodies read as hand-written.
+- **Reachability** (As built, 2026-11-17): `reach::reach` says which
+  of a program's own top-level declarations its library needs, which
+  only its tests do, and which nothing does, as Kotlin's
+  `ReachabilityTracer` marks them (`@reach(\test)`, `@reach(\none)`),
+  and `Reached::split` splits a module by it: the library's items and
+  init statements, the tests' (what only tests reach, and the init
+  statements that set it, to run before the tests), and what's left out.
+  - **Units:** functions, module `let`s and `var`s, classes and
+    interfaces (each whole, members and all, as Kotlin traces them), and
+    the init block's top-level locals; each with its item and the init
+    statements that set it, a static field's going with its class.
+  - **Roots:** the library's are exports, `keep`s, and init statements
+    that may do something: any that sets no unit, and any that sets one
+    with a value that isn't simple (anything but literals, names,
+    function values, and list literals, conversions, operators that
+    can't bubble, and core's pure calls such as `getConsole()`, of
+    those). The tests' are tests and `keepTest`s. Connected
+    declarations aren't roots, as in Kotlin: host code uses only what's
+    exported or kept.
+  - **Tracing** follows mentions, not flow: what a unit's nodes call,
+    refer to, read, set, or construct; the classes their types,
+    expressions' types, and members used name; supertypes; and type
+    parameters' bounds. The library's roots go first, so what both reach
+    is the library's. `reach::reach_for` traces as a backend sees the
+    program: the Temper bodies of the std classes' members it connects,
+    which it doesn't write, reach nothing (std `Date`'s, which call
+    `isLeapYear` and `padTo`); an interface's still do, as defaults that
+    implementing classes may inherit.
+  - **Partitioned** (2026-11-18): `reach::partition(p, connects)` gives
+    the program split: each module's `items` and `init` keep the
+    library's parts, its `test_items` and `test_init` take the tests'
+    ([modules.md](modules.md)), and what nothing reaches is dropped, with
+    every declaration it defines or owns; the class members the backend
+    connects lose their bodies, as connected members without one are
+    (rule C1), so nothing refers to what's dropped. Partitioning again
+    changes nothing. The test init runs after the init, in its scope, where the
+    tests are; its statements are all simple (any other is a root), so
+    moving them after the library's changes nothing the library sees.
+    The validator's M3 checks that the library's parts use nothing of
+    the tests'.
+  - **A backend partitions the program it translates,** after its
+    lowerings: errors' lowering may drop a call (C++'s `errors` program
+    no longer calls `passedOn`, whose argument's type is an error).
+    C++ does (2026-11-18): what only tests reach is defined, and its
+    classes and storage declared, only where `TEMPER_TESTS` is, the
+    test init at the end of the init function there, and what nothing
+    reaches isn't written; this replaced its own liveness, which
+    covered only private functions. Rust does (2026-11-18): what only
+    tests reach is `#[cfg(test)]`, the test init a `#[cfg(test)]`
+    block at the end of the init, in its scope, and what nothing
+    reaches isn't written; this replaced its scan for module `let`s
+    only tests read, which now gives a library value's getter only to
+    tests where only they read it. Python, JS, and Lua do
+    (2026-11-18): what only tests reach, and the test init, go in each
+    module's tests file, before the tests, which import what they use of
+    the module (`analysis::test_parts`): Python by name, its private
+    names too; JS from the module's `.internal.js`, which exports them,
+    with a `NAME$set` setter for each `var` they assign; and Lua through
+    the table the module adds to its exports for its tests, with getters
+    and setters for `var`s. What nothing reaches isn't written. So a
+    library that only its tests check doesn't import std's `testing`
+    (and JS's no Node `assert`, which a browser bundle can't load).
+    Java and C# do (2026-11-18): what only tests reach goes in each
+    module's test class (Java's `NAMETest` under `src/test/java`, C#'s
+    `NAMETests` in the tests' project), as statics whose initializer
+    runs the module class's first and then the test init, its classes
+    and interfaces beside it there; the tests reach the library's
+    package-private (Java) or `internal` (C#, through
+    `InternalsVisibleTo`) statics. `analysis::test_only_libraries`
+    says which libraries only tests use, which Java's `pom.xml` scopes
+    `test`, C#'s tests' project alone refers to, and JS's
+    `package.json` lists as `devDependencies`. The shared `reach` program
+    (temper-be-testkit's `programs/`), which every backend runs as
+    tests, checks each one's split.
+  - **Not yet:** per-member pruning, and finer rules for which
+    initializers may do something (a constructor without effects).
 - **Type queries:** subtyping, substitution, member lookup, operator
   methods, override chains, and which interface method bodies a class
   inherits (for Go and Rust trait defaults).

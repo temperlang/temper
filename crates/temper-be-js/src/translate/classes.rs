@@ -78,9 +78,7 @@ impl Translator<'_> {
 
     fn home_is_here(&self, node: NodeId) -> bool {
         match self.p.nodes.get(node) {
-            Node::Class { decl, .. } | Node::Interface { decl, .. } => {
-                home(self.p, decl) == Some(self.here)
-            }
+            Node::Class { decl, .. } | Node::Interface { decl, .. } => self.is_here(decl),
             _ => false,
         }
     }

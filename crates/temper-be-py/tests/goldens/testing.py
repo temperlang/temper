@@ -8,6 +8,4 @@ def twice(n: int, /) -> int:
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
-_runs: int = 0
-_base: int = 10
 _console.log(f'init {twice(1)}')

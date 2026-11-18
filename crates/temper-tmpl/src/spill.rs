@@ -48,7 +48,10 @@ pub fn spill_with(p: &Program, also: &dyn Fn(NodeId) -> bool) -> Option<Program>
     let mut loops = Vec::new();
     let mut choices = Vec::new();
     for m in &p.modules {
-        for &root in m.items.iter().chain(&m.tests).chain([&m.init]) {
+        for &root in (m.items.iter().chain(&m.test_items).chain(&m.tests))
+            .chain([&m.init])
+            .chain(&m.test_init)
+        {
             find(p, root, m.decl, &mut sites);
             find_choices(p, root, m.decl, also, &mut choices);
             crate::analysis::walk(p, root, &mut |n| {

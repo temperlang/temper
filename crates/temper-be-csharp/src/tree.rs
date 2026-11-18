@@ -749,30 +749,27 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
     }
 }
 
-/// A module's tests, as an MSTest class: each test a method.
+/// A module's test class: what only its tests reach, as statics, and
+/// its tests.
+#[derive(Clone, Debug, PartialEq)]
 pub struct TestClass {
-    pub usings: Vec<String>,
-    pub namespace: String,
-    pub name: String,
+    /// Its `using`s, namespace, name, and statics.
+    pub statics: Class,
     /// Each test's method name and body.
-    pub methods: Vec<(String, Vec<Stmt>)>,
+    pub tests: Vec<(String, Vec<Stmt>)>,
 }
 
-/// Prints a test class's file.
+/// Prints a test class's file: as a class of statics, but one MSTest
+/// makes, with a method for each test.
 pub fn test_class(c: &TestClass) -> String {
-    let mut out = String::new();
-    for using in &c.usings {
-        let _ = writeln!(out, "using {using};");
-    }
-    if !c.usings.is_empty() {
-        out.push('\n');
-    }
-    let _ = writeln!(out, "namespace {};\n", c.namespace);
-    let _ = writeln!(out, "[TestClass]\npublic class {}\n{{", c.name);
-    for (i, (name, body)) in c.methods.iter().enumerate() {
-        if i > 0 {
+    let mut out = header(&c.statics);
+    let _ = writeln!(out, "[TestClass]\npublic class {}\n{{", c.statics.name);
+    let mut first = statics(&mut out, &c.statics);
+    for (name, body) in &c.tests {
+        if !first {
             out.push('\n');
         }
+        first = false;
         let _ = writeln!(out, "    [TestMethod]\n    public void {name}()");
         block(&mut out, body, 1);
     }
@@ -964,8 +961,8 @@ pub fn type_decl(t: &TypeDecl) -> String {
     out
 }
 
-/// Prints a class's file.
-pub fn class(c: &Class) -> String {
+/// A file's `using`s and namespace.
+fn header(c: &Class) -> String {
     let mut out = String::new();
     for using in &c.usings {
         let _ = writeln!(out, "using {using};");
@@ -974,7 +971,21 @@ pub fn class(c: &Class) -> String {
         out.push('\n');
     }
     let _ = writeln!(out, "namespace {};\n", c.namespace);
+    out
+}
+
+/// Prints a class's file.
+pub fn class(c: &Class) -> String {
+    let mut out = header(c);
     let _ = writeln!(out, "public static class {}\n{{", c.name);
+    statics(&mut out, c);
+    out.push_str("}\n");
+    out
+}
+
+/// A class's statics, as members, each kind after a blank line but the
+/// first; whether there were none.
+fn statics(out: &mut String, c: &Class) -> bool {
     let mut first = true;
     let mut gap = |out: &mut String| {
         if !first {
@@ -983,7 +994,7 @@ pub fn class(c: &Class) -> String {
         first = false;
     };
     if !c.fields.is_empty() {
-        gap(&mut out);
+        gap(out);
     }
     for f in &c.fields {
         out.push_str("    ");
@@ -1002,7 +1013,7 @@ pub fn class(c: &Class) -> String {
         out.push_str(";\n");
     }
     for m in &c.methods {
-        gap(&mut out);
+        gap(out);
         out.push_str("    ");
         out.push_str(if m.public { "public " } else { "internal " });
         let params: Vec<String> = m.params.iter().map(|(t, n)| format!("{t} {n}")).collect();
@@ -1010,15 +1021,14 @@ pub fn class(c: &Class) -> String {
         for c in &m.constraints {
             let _ = writeln!(out, "        {c}");
         }
-        block(&mut out, &m.body, 1);
+        block(out, &m.body, 1);
     }
     if !c.init.is_empty() {
-        gap(&mut out);
+        gap(out);
         let _ = writeln!(out, "    static {}()", c.name);
-        block(&mut out, &c.init, 1);
+        block(out, &c.init, 1);
     }
-    out.push_str("}\n");
-    out
+    first
 }
 
 #[cfg(test)]

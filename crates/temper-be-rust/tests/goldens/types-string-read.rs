@@ -84,9 +84,6 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let after1 = report_found("found 1", hay(), needle.clone(), None);
             let after2 = report_found("found 2", hay(), needle.clone(), Some(after1));
             report_found("found 3", hay(), needle.clone(), Some(after2));
-            let _hay2 = Arc::new("time comes for us all".to_string());
-            let _hay3 = Arc::new("in the nick of time".to_string());
-            let _hay4 = Arc::new("tim".to_string());
             report_found("hay 2", "time comes for us all", needle.clone(), None);
             report_found("hay 3", "in the nick of time", needle.clone(), None);
             report_found("hay 4", "my name is tim", needle.clone(), None);
