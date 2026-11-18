@@ -34,7 +34,7 @@ public static class BubbleGlobal
         {
             message = Something(x);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             message = "null";
         }
@@ -47,13 +47,13 @@ public static class BubbleGlobal
                 Core.CastToNonNull<string>(x);
                 t1 = 1;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t1 = 0;
             }
             suffix = More(t1).ToString(CultureInfo.InvariantCulture);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             suffix = "";
         }
@@ -143,7 +143,7 @@ public static class BubbleGlobal
         {
             t2 = FirstOver(n);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t2 = -1;
         }
@@ -152,7 +152,7 @@ public static class BubbleGlobal
         {
             t3 = SumSkipping(n);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t3 = -1;
         }
@@ -161,7 +161,7 @@ public static class BubbleGlobal
         {
             t4 = TenTimes(n);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t4 = -1;
         }
@@ -283,7 +283,7 @@ public static class BubbleGlobal
         {
             t5 = CountBelow("abc");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t5 = -1;
         }
@@ -293,7 +293,7 @@ public static class BubbleGlobal
         {
             t6 = FirstOver(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t6 = -1;
         }
@@ -302,7 +302,7 @@ public static class BubbleGlobal
         {
             t7 = FirstOver(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t7 = null;
         }
@@ -318,7 +318,7 @@ public static class BubbleGlobal
         {
             t8 = Half(4);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t8 = -1;
         }
@@ -327,7 +327,7 @@ public static class BubbleGlobal
         {
             t9 = Half(3);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t9 = -1;
         }
@@ -336,7 +336,7 @@ public static class BubbleGlobal
         {
             t10 = Half(-2);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t10 = -1;
         }

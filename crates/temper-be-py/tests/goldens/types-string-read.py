@@ -1,5 +1,6 @@
 from collections.abc import Sequence as _Sequence
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     int_to_string as _int_to_string,
@@ -62,7 +63,7 @@ def _from_codes_no_inline(codes: _Sequence[int], /) -> str:
 def _check_parse(string: str, radix: int | None = None, /) -> None:
     try:
         converted = str(_string_to_int32(string, radix) if radix is not None else _string_to_int32(string))
-    except Exception:
+    except _Bubble:
         converted = 'failed'
     _console.log(f'Parse {string} -> {converted}')
 
@@ -99,20 +100,20 @@ _console.log(_from_code_no_inline(127757))
 _t_0: str
 try:
     _t_0 = _from_code_no_inline(1114112)
-except Exception:
+except _Bubble:
     _t_0 = 'nope'
 _console.log(_t_0)
 _t_1: str
 try:
     _t_1 = _from_code_no_inline(55296)
-except Exception:
+except _Bubble:
     _t_1 = 'no to surrogate'
 _console.log(_t_1)
 _console.log(_from_codes_no_inline((128059, 8205, 10052, 65039)))
 _t_2: str
 try:
     _t_2 = _from_codes_no_inline((55296, 56320))
-except Exception:
+except _Bubble:
     _t_2 = 'no to surrogates'
 _console.log(_t_2)
 _check_parse('-1', None)

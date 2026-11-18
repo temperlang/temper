@@ -1,6 +1,7 @@
 from abc import ABCMeta as _ABCMeta
 from collections.abc import Sequence as _Sequence
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     cast_by_type as _cast_by_type,
     list_get as _list_get,
@@ -26,7 +27,7 @@ def _check_b(instance: _AlphaInterface, /) -> None:
     try:
         _cast_by_type(instance, _BravoClass)
         t_0 = 'yep'
-    except Exception:
+    except _Bubble:
         t_0 = 'nope'
     _console.log(t_0)
 

@@ -1,6 +1,7 @@
 package build;
 
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -22,12 +23,12 @@ public final class BuildGlobal {
         console.log(builder.toString());
         try {
             Core.stringBuilderAppendCodePoint(builder, 1114112);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             console.log("High code blocked.");
         }
         try {
             Core.stringBuilderAppendCodePoint(builder, 55296);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             console.log("Surrogate blocked.");
         }
         console.log(builder.toString());
@@ -43,13 +44,13 @@ public final class BuildGlobal {
         builder.append("??");
         try {
             Core.stringBuilderAppendCodePoint(builder, 1);
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             console.log("No U+1.");
         }
         builder.append("0");
         try {
             Core.stringBuilderAppendCodePoint(builder, 8364);
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             console.log("No euro.");
         }
         builder.append("1");

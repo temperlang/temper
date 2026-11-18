@@ -1,24 +1,24 @@
 # generated line:column -> source:line:column, and the text at each
-8:1 -> ../date.temper.md:36:5  const d = dateConstructor(20 <- let d = { year: 2023, month:
-9:1 -> ../date.temper.md:40:5  console.log(`year    = ${d.g <- console.log(
-10:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${ d
-11:1 -> ../date.temper.md:67:5  const yonksAgo = dateConstru <- let yonksAgo = { year: 12, m
-12:1 -> ../date.temper.md:69:5  console.log(`ISO 8601 yonks: <- console.log("ISO 8601 yonks:
-13:1 -> ../date.temper.md:74:5  console.log(`yonksAgo.year = <- console.log("yonksAgo.year =
-14:1 -> ../date.temper.md:85:5  { <- for (let y of [1700, 1800, 1
-15:3 -> ../date.temper.md:85:19  /** @type {readonly number[] <- [1700, 1800, 1900, 2000, 210
-16:3 -> ../date.temper.md:85:19  const list = Object.freeze([ <- [1700, 1800, 1900, 2000, 210
-17:3 -> ../date.temper.md:85:5  const length = list.length; <- for (let y of [1700, 1800, 1
-18:3 -> ../date.temper.md:85:5  let i = 0; <- for (let y of [1700, 1800, 1
-19:3 -> ../date.temper.md:85:5  while (i < length) { <- for (let y of [1700, 1800, 1
-20:5 -> ../date.temper.md:85:5  const y = listedGet(/** @typ <- for (let y of [1700, 1800, 1
-21:5 -> ../date.temper.md:85:5  i = (i + 1) | 0; <- for (let y of [1700, 1800, 1
-22:5 -> ../date.temper.md:86:7  console.log(`${y}: Jan 1 wee <- console.log(
-25:1 -> ../date.temper.md:108:5  dateToday(); <- Date.today();
-26:1 -> ../date.temper.md:114:5  const start = dateConstructo <- let start = new Date(2010, 3
-27:1 -> ../date.temper.md:115:5  const firstYears = dateYears <- let firstYears = Date.yearsB
-28:1 -> ../date.temper.md:116:5  console.log(`First years bet <- console.log("First years bet
-29:1 -> ../date.temper.md:117:5  const secondYears = dateYear <- let secondYears = Date.years
-30:1 -> ../date.temper.md:118:5  console.log(`Second years be <- console.log("Second years be
-31:1 -> ../date.temper.md:129:5  const rdc = new (globalThis. <- let rdc = Date.fromIsoString
-32:1 -> ../date.temper.md:130:5  console.log(`Happy birthday, <- console.log(
+9:1 -> ../date.temper.md:36:5  const d = dateConstructor(20 <- let d = { year: 2023, month:
+10:1 -> ../date.temper.md:40:5  console.log(`year    = ${d.g <- console.log(
+11:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${ d
+12:1 -> ../date.temper.md:67:5  const yonksAgo = dateConstru <- let yonksAgo = { year: 12, m
+13:1 -> ../date.temper.md:69:5  console.log(`ISO 8601 yonks: <- console.log("ISO 8601 yonks:
+14:1 -> ../date.temper.md:74:5  console.log(`yonksAgo.year = <- console.log("yonksAgo.year =
+15:1 -> ../date.temper.md:85:5  { <- for (let y of [1700, 1800, 1
+16:3 -> ../date.temper.md:85:19  /** @type {readonly number[] <- [1700, 1800, 1900, 2000, 210
+17:3 -> ../date.temper.md:85:19  const list = Object.freeze([ <- [1700, 1800, 1900, 2000, 210
+18:3 -> ../date.temper.md:85:5  const length = list.length; <- for (let y of [1700, 1800, 1
+19:3 -> ../date.temper.md:85:5  let i = 0; <- for (let y of [1700, 1800, 1
+20:3 -> ../date.temper.md:85:5  while (i < length) { <- for (let y of [1700, 1800, 1
+21:5 -> ../date.temper.md:85:5  const y = listedGet(/** @typ <- for (let y of [1700, 1800, 1
+22:5 -> ../date.temper.md:85:5  i = (i + 1) | 0; <- for (let y of [1700, 1800, 1
+23:5 -> ../date.temper.md:86:7  console.log(`${y}: Jan 1 wee <- console.log(
+26:1 -> ../date.temper.md:108:5  dateToday(); <- Date.today();
+27:1 -> ../date.temper.md:114:5  const start = dateConstructo <- let start = new Date(2010, 3
+28:1 -> ../date.temper.md:115:5  const firstYears = dateYears <- let firstYears = Date.yearsB
+29:1 -> ../date.temper.md:116:5  console.log(`First years bet <- console.log("First years bet
+30:1 -> ../date.temper.md:117:5  const secondYears = dateYear <- let secondYears = Date.years
+31:1 -> ../date.temper.md:118:5  console.log(`Second years be <- console.log("Second years be
+32:1 -> ../date.temper.md:129:5  const rdc = dateFromIsoStrin <- let rdc = Date.fromIsoString
+33:1 -> ../date.temper.md:130:5  console.log(`Happy birthday, <- console.log(

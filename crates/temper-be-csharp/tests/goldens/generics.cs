@@ -138,14 +138,14 @@ public static class GenericsGlobal
     internal static int Bump(string key)
     {
         {
-            tally[key] = tally[key] - 1;
+            tally[key] = Mapped.Get(tally, key) - 1;
         }
         int before;
-        int t = tally[key];
+        int t = Mapped.Get(tally, key);
         tally[key] = t + 1;
         before = t;
         int after;
-        int t2 = tally[key] + 1;
+        int t2 = Mapped.Get(tally, key) + 1;
         tally[key] = t2;
         after = t2;
         return before + after;
@@ -187,18 +187,18 @@ public static class GenericsGlobal
         int t9;
         try
         {
-            t9 = m["b"];
+            t9 = Mapped.Get(m, "b");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t9 = -1;
         }
         int t10;
         try
         {
-            t10 = m["c"];
+            t10 = Mapped.Get(m, "c");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t10 = -1;
         }
@@ -215,7 +215,7 @@ public static class GenericsGlobal
         {
             subject6 = Core.RemoveGet(mb, "q");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             subject6 = 0;
         }
@@ -231,7 +231,7 @@ public static class GenericsGlobal
         {
             t11 = Bump("k");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t11 = -1;
         }
@@ -240,16 +240,16 @@ public static class GenericsGlobal
         {
             t12 = Bump("z");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t12 = -1;
         }
         int t13;
         try
         {
-            t13 = tally["k"];
+            t13 = Mapped.Get(tally, "k");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t13 = -1;
         }

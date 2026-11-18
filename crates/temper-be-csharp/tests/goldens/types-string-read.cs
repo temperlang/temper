@@ -66,7 +66,7 @@ public static class ReadGlobal
         {
             converted = (radix != null ? Core.ToInt(@string, radix.Value) : Core.ToInt(@string)).ToString(CultureInfo.InvariantCulture);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             converted = "failed";
         }
@@ -121,7 +121,7 @@ public static class ReadGlobal
         {
             t1 = FromCodeNoInline(1114112);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "nope";
         }
@@ -131,7 +131,7 @@ public static class ReadGlobal
         {
             t2 = FromCodeNoInline(55296);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t2 = "no to surrogate";
         }
@@ -142,7 +142,7 @@ public static class ReadGlobal
         {
             t3 = FromCodesNoInline(Listed.CreateReadOnlyList<int>(55296, 56320));
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t3 = "no to surrogates";
         }

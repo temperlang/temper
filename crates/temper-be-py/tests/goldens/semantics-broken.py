@@ -1,3 +1,5 @@
+from temper_core import Bubble as _Bubble
+
 __all__ = ()
 
-raise RuntimeError()
+raise _Bubble()

@@ -25,8 +25,16 @@
 //! and interfaces, each a file of its own as Kotlin's
 //! (`translate::classes` says how); and nullable types, as Kotlin's,
 //! `@Nullable` and boxed (`@Nullable Integer`), with `orelse` as a `try`
-//! and `catch (RuntimeException …)`, `bubble()` as `throw Core.bubble()`,
-//! and `panic()` as an `AssertionError`, which no `orelse` catches; and
+//! and `catch (Bubble …)`, `bubble()` as `throw Core.bubble()`, and
+//! `panic()` as an `AssertionError`, which no `orelse` catches; unlike
+//! Kotlin's, `catch (RuntimeException …)`, a handler catches only the
+//! runtime's `temper.core.Bubble` (unchecked, without a stack trace), which
+//! `as` and every builtin that bubbles throw, the runtime turning host
+//! failures (`NumberFormatException`, `DateTimeException`, a broken
+//! promise's `ExecutionException`) into one; so anything else, a host
+//! exception from a builtin not declared to bubble or from a callback,
+//! passes every `orelse`, and a library's host code (its `.java` files)
+//! bubbles only by throwing a `Bubble` (`throw Core.bubble()`); and
 //! generics, with boxed type arguments (`List<Integer>`) and explicit
 //! ones on `new`, core's lists as `java.util.List`s, maps as
 //! `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's, but with two
@@ -156,11 +164,18 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// (begun as Kotlin's, in `runtime/std/`), in the module's package, whose static
 /// methods its connected members call
 /// ([`connected::Connection::StdStatic`]).
-pub const STD_SUPPORT: &[(&str, &str, &str)] = &[(
-    "regex",
-    "Core.java",
-    include_str!("../runtime/std/regex/Core.java"),
-)];
+pub const STD_SUPPORT: &[(&str, &str, &str)] = &[
+    (
+        "regex",
+        "Core.java",
+        include_str!("../runtime/std/regex/Core.java"),
+    ),
+    (
+        "temporal",
+        "Core.java",
+        include_str!("../runtime/std/temporal/Core.java"),
+    ),
+];
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
     // Type-only errors run as written, or fail where they are

@@ -3,8 +3,11 @@
 //!
 //! `Int32` and `Int64` arithmetic that can overflow calls `temper_core`'s
 //! wrapping helpers (`int_add`, `int64_mul`, …), as Kotlin's Python
-//! backend does; everything Python's own operators get right is written
-//! with them. Three-way comparisons of ints and strings are
+//! backend does, and division and remainder call helpers that bubble for
+//! a zero divisor (`int_div`, `float64_div`, …), as the runtime's
+//! `Bubble`, where Python raises `ZeroDivisionError` (but `Float64`
+//! division by a nonzero literal is Python's `/`); everything Python's
+//! own operators get right is written with them. Three-way comparisons of ints and strings are
 //! `(a > b) - (a < b)`, which gives -1, 0, or 1, where the operands are
 //! names or literals; otherwise ints' is `a - b`, as Kotlin's, which has
 //! the right sign, and strings' waits for operand temporaries (the
@@ -65,8 +68,9 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Float64", "add") => Bin(crate::tree::Bin::Add),
         ("Float64", "sub") => Bin(crate::tree::Bin::Sub),
         ("Float64", "mul") => Bin(crate::tree::Bin::Mul),
-        ("Float64", "div") => Bin(crate::tree::Bin::Div),
-        ("Float64", "mod") => Helper("math", "fmod"),
+        // Bubbling for a zero divisor, where Python raises.
+        ("Float64", "div") => Helper(CORE, "float64_div"),
+        ("Float64", "mod") => Helper(CORE, "float64_mod"),
         ("Float64", "neg") => Unary(crate::tree::Unary::Neg),
         ("Float64", "pow") => Bin(crate::tree::Bin::Pow),
         (_, "add") => Helper(CORE, if int64 { "int64_add" } else { "int_add" }),

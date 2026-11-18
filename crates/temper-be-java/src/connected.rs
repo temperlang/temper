@@ -501,7 +501,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.constructor()",
-        Connection::Static("LocalDate", "of"),
+        Connection::StdStatic("temper.std.temporal.Core", "dateOf"),
     ),
     (
         "std/temporal.type Date.day",
@@ -509,7 +509,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.fromIsoString()",
-        Connection::Static("LocalDate", "parse"),
+        Connection::StdStatic("temper.std.temporal.Core", "dateFromIsoString"),
     ),
     (
         "std/temporal.type Date.get dayOfWeek()",

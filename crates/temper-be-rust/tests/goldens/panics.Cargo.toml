@@ -6,4 +6,4 @@ rust-version = "1.71.1"
 
 [dependencies]
 temper-core = { path = "../temper-core", version = "=0.0.0-alpha.0.0" }
-temper-std = { path = "../std", version = "0.0.0-alpha.0.0", features = ["regex"] }
+temper-std = { path = "../std", version = "0.0.0-alpha.0.0", features = ["regex", "temporal"] }

@@ -27,7 +27,8 @@
 //! `==` where either may be null is
 //! `Objects.equals`, and `c ? x : 1` for an `Integer` `x` boxes the `1`
 //! (else Java unboxes `x`). `x as T` for `x: T?` is
-//! `Objects.requireNonNull(x)`, whose `NullPointerException` bubbles.
+//! `Core.requireNonNull(x)`, which bubbles for null, and `x as C` is
+//! `Core.cast(C.class, x)` (`Translator::checked_cast`).
 //!
 //! What an expression needs first, an `orelse`'s `try` or a block's
 //! statements, goes before the statement around it ([`Translator::emit`]),
@@ -36,8 +37,8 @@
 //! need statements become `if` statements, and a `while` condition that
 //! does a `while (true)` with a test first. Where the statement puts the
 //! value somewhere, the `try` puts it there itself, as Kotlin's do:
-//! `String converted; try { converted = …; } catch (RuntimeException
-//! ignored) { converted = "failed"; }`. A bubble is a `RuntimeException`;
+//! `String converted; try { converted = …; } catch (Bubble ignored) {
+//! converted = "failed"; }`. A bubble is the runtime's `Bubble`;
 //! `panic()` throws an `AssertionError`, which no `orelse` catches, where
 //! Kotlin's throws a bubble.
 
@@ -584,6 +585,18 @@ impl<'a> Translator<'a> {
                     _ => self.stmt(s, &mut body)?,
                 }
             }
+            // A static initializer must be able to complete normally, by
+            // javac's rules, so a `throw` that ends it, a failure or a
+            // panic, calls a method that throws (`semantics/broken`).
+            if let Some(i) = body.iter().position(|s| !completes(s)) {
+                if let Stmt::Throw(thrown) = &body[i] {
+                    let (method, args) = match thrown {
+                        Expr::New(_, args) => ("throwAssertionError", args.clone()),
+                        _ => ("throwBubble", Vec::new()),
+                    };
+                    body[i] = Stmt::Expr(Expr::name("Core").method(method, args));
+                }
+            }
         }
         Ok(tree::Class {
             package: self.package.clone(),
@@ -1089,16 +1102,7 @@ impl<'a> Translator<'a> {
             },
             Node::ExprStatement { expr } => {
                 if let Node::Error { .. } = p.nodes.get(expr) {
-                    // A static initializer must be able to complete
-                    // normally, by javac's rules, so it calls a method that
-                    // throws (`semantics/broken`).
-                    let throw = match self.in_function {
-                        true => self.throw(),
-                        false => {
-                            self.import("temper.core.Core");
-                            Stmt::Expr(Expr::name("Core").method("throwBubble", Vec::new()))
-                        }
-                    };
+                    let throw = self.throw();
                     self.emit(out, throw);
                     return Ok(());
                 }
@@ -1129,6 +1133,7 @@ impl<'a> Translator<'a> {
                 let body = self.sub(|t, o| t.into(into, body, o))?;
                 let var = self.fresh("ignored");
                 let handler = self.sub(|t, o| t.into(into, fallback, o))?;
+                self.import("temper.core.Bubble");
                 self.emit(out, Stmt::TryCatch { body, var, handler });
                 Ok(())
             }
@@ -1178,7 +1183,7 @@ impl<'a> Translator<'a> {
                 Ok(())
             }
             // A cast for its check alone, which Java can't write as a
-            // statement: `C.class.cast(x)`.
+            // statement: the call that checks.
             (Place::Discard, Node::As { .. })
                 if string_index_check(p, p.nodes.ty(value)).is_some() =>
             {
@@ -1186,15 +1191,12 @@ impl<'a> Translator<'a> {
                 self.emit(out, Stmt::Expr(e));
                 Ok(())
             }
-            (Place::Discard, Node::As { value: v, .. })
-                if !p.types.is_nullable(p.nodes.ty(v))
-                    && !p.types.is_generic(p.nodes.ty(value))
-                    && p.types.args(p.nodes.ty(value)).is_empty() =>
-            {
-                let ty = self.ty(p.nodes.ty(value))?;
-                let v = self.expr(v)?;
-                let cast = Expr::name(format!("{ty}.class")).method("cast", vec![v]);
-                self.emit(out, Stmt::Expr(cast));
+            (Place::Discard, Node::As { value: v, .. }) => {
+                let check = match self.checked_cast(v, p.nodes.ty(value))? {
+                    Expr::Cast(_, check) => *check,
+                    check => check,
+                };
+                self.emit(out, Stmt::Expr(check));
                 Ok(())
             }
             // `void`, as an `orelse`'s fallback, does nothing.
@@ -1410,6 +1412,44 @@ impl<'a> Translator<'a> {
     fn throw(&mut self) -> Stmt {
         self.import("temper.core.Core");
         Stmt::Throw(Expr::name("Core").method("bubble", Vec::new()))
+    }
+
+    /// `value as ty`, bubbling where it fails, as a `Bubble`, never a
+    /// host exception: `Core.requireNonNull(x)` where only null fails,
+    /// `Core.cast(C.class, x)` to a class without type arguments, and
+    /// `(C<A>) Core.check(C.class, x)` to one with them, javac checking
+    /// that cast from `x`'s own type; to a type parameter, which Java
+    /// erases, the unchecked `(T) x`.
+    fn checked_cast(&mut self, value: NodeId, ty: TypeId) -> Result<Expr, NotYet> {
+        let p = self.p;
+        let from = p.nodes.ty(value);
+        let x = self.expr(value)?;
+        self.import("temper.core.Core");
+        let not_null = p.types.is_nullable(from) && p.types.non_null(from) == ty;
+        if not_null || matches!(p.types.get(ty), TypeData::TypeParam { .. }) {
+            let x = match p.types.is_nullable(from) {
+                true => Expr::name("Core").method("requireNonNull", vec![x]),
+                false => x,
+            };
+            return Ok(match not_null {
+                true => x,
+                false => Expr::Cast(self.ty(ty)?, Box::new(x)),
+            });
+        }
+        let mut class = match boxed(p, ty) {
+            Some((boxed, _)) => boxed.to_string(),
+            None => self.ty(ty)?,
+        };
+        let generic = class.contains('<');
+        class.truncate(class.find('<').unwrap_or(class.len()));
+        let lit = Expr::name(format!("{class}.class"));
+        Ok(match generic {
+            false => Expr::name("Core").method("cast", vec![lit, x]),
+            true => Expr::Cast(
+                self.ty(ty)?,
+                Box::new(Expr::name("Core").method("check", vec![lit, x])),
+            ),
+        })
     }
 
     /// A call of a connected declaration, by the connection table; `args`
@@ -1634,20 +1674,6 @@ impl<'a> Translator<'a> {
                 }
             }
             Node::Upcast { value } => self.expr(value)?,
-            // `requireNonNull` throws `NullPointerException`, a
-            // `RuntimeException` as a bubble is, so it bubbles for `as`;
-            // and so does a failed cast's `ClassCastException`.
-            Node::As { value, .. } if p.types.is_nullable(p.nodes.ty(value)) => {
-                self.import("java.util.Objects");
-                let checked =
-                    Expr::name("Objects").method("requireNonNull", vec![self.expr(value)?]);
-                if p.types.non_null(p.nodes.ty(value)) == p.nodes.ty(id) {
-                    checked
-                } else {
-                    let ty = self.ty(p.nodes.ty(id))?;
-                    Expr::Cast(ty, Box::new(checked))
-                }
-            }
             // A string index is an int: `Core.requireStringIndex(i)`, as
             // Kotlin's, or for a downcast, the int.
             Node::As { value, .. } if string_index_check(p, p.nodes.ty(id)).is_some() => {
@@ -1658,10 +1684,11 @@ impl<'a> Translator<'a> {
                 self.import("temper.core.Core");
                 Expr::name("Core").method(name, vec![self.expr(value)?])
             }
+            Node::As { value, .. } => self.checked_cast(value, p.nodes.ty(id))?,
             Node::Downcast { value } if string_index_check(p, p.nodes.ty(id)).is_some() => {
                 self.expr(value)?
             }
-            Node::Downcast { value } | Node::As { value, .. } => {
+            Node::Downcast { value } => {
                 let ty = self.ty(p.nodes.ty(id))?;
                 Expr::Cast(ty, Box::new(self.expr(value)?))
             }
@@ -2032,7 +2059,7 @@ fn negate(cond: Expr) -> Expr {
     ops::apply(Spelling::Unary(Unary::Not), vec![cond])
 }
 
-/// `panic()`: an `Error`, which no `orelse`'s `catch (RuntimeException)`
+/// `panic()`: an `AssertionError`, which no `orelse`'s `catch (Bubble …)`
 /// catches, where Kotlin's throws a bubble, which one does.
 fn panic() -> Stmt {
     Stmt::Throw(Expr::New(

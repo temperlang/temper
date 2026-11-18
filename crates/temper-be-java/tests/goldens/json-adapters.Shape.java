@@ -13,7 +13,7 @@ interface Shape {
 
     static Shape decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
         {
-            JsonObject obj = (JsonObject) t;
+            JsonObject obj = Core.cast(JsonObject.class, t);
             @Nullable JsonSyntaxTree valueForRadius = obj.propertyValueOrNull("radius");
             if (valueForRadius != null) {
                 return Circle.jsonAdapter().decodeFromJson(obj, ic);

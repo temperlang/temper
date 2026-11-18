@@ -68,7 +68,7 @@ public static class ErrorsGlobal
         {
             a = Mismatched(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             a = -1;
         }
@@ -77,7 +77,7 @@ public static class ErrorsGlobal
         {
             b = Undeclared();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             b = -1;
         }
@@ -86,7 +86,7 @@ public static class ErrorsGlobal
         {
             c = Misspelled("a");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             c = -1;
         }
@@ -95,7 +95,7 @@ public static class ErrorsGlobal
         {
             d = MisspelledMethod("a");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             d = -1;
         }
@@ -104,7 +104,7 @@ public static class ErrorsGlobal
         {
             e = WrongArity();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             e = -1;
         }
@@ -114,7 +114,7 @@ public static class ErrorsGlobal
         {
             f = box.Bad();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             f = "caught";
         }
@@ -125,7 +125,7 @@ public static class ErrorsGlobal
         {
             g = Stored(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             g = "caught";
         }
@@ -134,7 +134,7 @@ public static class ErrorsGlobal
         {
             h = Returned();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             h = -1;
         }
@@ -143,7 +143,7 @@ public static class ErrorsGlobal
         {
             i = Core.Bubble<int>();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             i = -1;
         }
@@ -152,7 +152,7 @@ public static class ErrorsGlobal
         {
             j = Dropped(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             j = "dropped";
         }

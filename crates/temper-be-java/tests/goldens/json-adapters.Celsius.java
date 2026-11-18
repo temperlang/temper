@@ -1,5 +1,6 @@
 package json_adapters;
 
+import temper.core.Core;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonNumeric;
@@ -18,7 +19,7 @@ final class Celsius {
     }
 
     public static Celsius decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        return new Celsius(((JsonNumeric) t).asInt32());
+        return new Celsius(Core.cast(JsonNumeric.class, t).asInt32());
     }
 
     public static JsonAdapter<Celsius> jsonAdapter() {

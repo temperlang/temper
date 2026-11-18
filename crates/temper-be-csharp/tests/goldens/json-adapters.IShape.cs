@@ -10,7 +10,7 @@ internal interface IShape
     public static IShape DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         {
-            JsonObject obj = (JsonObject)t;
+            JsonObject obj = Core.Cast<JsonObject>(t);
             IJsonSyntaxTree? valueForRadius = obj.PropertyValueOrNull("radius");
             {
                 if (valueForRadius != null)

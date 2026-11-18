@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -71,7 +72,7 @@ public final class NetresponseNotFoundGlobal {
                                 caseIndex.value = 3;
                                 Core.awakeUpon(awaited.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored) {
+                            } catch (Bubble ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -85,7 +86,7 @@ public final class NetresponseNotFoundGlobal {
                                 caseIndex.value = 6;
                                 Core.awakeUpon(awaited3.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored2) {
+                            } catch (Bubble ignored2) {
                                 caseIndex.value = 5;
                             }
                             break;
@@ -97,7 +98,7 @@ public final class NetresponseNotFoundGlobal {
                                 caseIndex.value = 4;
                                 Core.awakeUpon(awaited2.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored3) {
+                            } catch (Bubble ignored3) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -107,7 +108,7 @@ public final class NetresponseNotFoundGlobal {
                                 body.value = subject.value == null ? "missing" : subject.value;
                                 console.log("body " + body.value);
                                 caseIndex.value = 2;
-                            } catch (RuntimeException ignored4) {
+                            } catch (Bubble ignored4) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -120,7 +121,7 @@ public final class NetresponseNotFoundGlobal {
                                 Core.getPromiseResult(awaited3.value);
                                 console.log("port 1 answered");
                                 caseIndex.value = -1;
-                            } catch (RuntimeException ignored5) {
+                            } catch (Bubble ignored5) {
                                 caseIndex.value = 5;
                             }
                             break;

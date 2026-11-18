@@ -23,7 +23,7 @@ public static class BuildGlobal
         {
             StringUtil.AppendCodePoint(builder, 1114112);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             console.Log("High code blocked.");
         }
@@ -31,7 +31,7 @@ public static class BuildGlobal
         {
             StringUtil.AppendCodePoint(builder, 55296);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             console.Log("Surrogate blocked.");
         }
@@ -50,7 +50,7 @@ public static class BuildGlobal
         {
             StringUtil.AppendCodePoint(builder, 1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             console.Log("No U+1.");
         }
@@ -59,7 +59,7 @@ public static class BuildGlobal
         {
             StringUtil.AppendCodePoint(builder, 8364);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             console.Log("No euro.");
         }

@@ -5,6 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
+    Bubble as _Bubble,
     Pair as _Pair,
     int_add as _int_add,
     list_get as _list_get,
@@ -583,7 +584,7 @@ class _RegexFormatter:
                 self._out.append(_string_from_code_point(code))
             else:
                 _regex_formatter_push_code_to(self, self._out, code, inside_code_set)
-        except Exception:
+        except _Bubble:
             raise BaseException('panic')
 
     def _push_code_points(self, code_points: CodePoints, inside_code_set: bool, /) -> None:

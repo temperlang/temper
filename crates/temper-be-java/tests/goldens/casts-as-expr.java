@@ -1,7 +1,7 @@
 package as_expr;
 
-import java.util.Objects;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -19,44 +19,44 @@ public final class AsExprGlobal {
         {
             @Nullable Apple x;
             x = new Fuji();
-            console.log(Objects.requireNonNull(x).getName());
-            console.log(((Fuji) Objects.requireNonNull(x)).getName());
+            console.log(Core.requireNonNull(x).getName());
+            console.log(Core.cast(Fuji.class, x).getName());
             x = new Gala();
             String t;
             try {
-                t = ((Fuji) Objects.requireNonNull(x)).getName();
-            } catch (RuntimeException ignored) {
+                t = Core.cast(Fuji.class, x).getName();
+            } catch (Bubble ignored) {
                 t = "Cast failed!";
             }
             console.log(t);
             @Nullable Object y = x;
             String t2;
             try {
-                t2 = ((Apple) Objects.requireNonNull(y)).getName();
-            } catch (RuntimeException ignored2) {
+                t2 = Core.cast(Apple.class, y).getName();
+            } catch (Bubble ignored2) {
                 t2 = "Cast from AnyValue failed!";
             }
             console.log(t2);
             String t3;
             try {
-                t3 = ((Gala) Objects.requireNonNull(y)).getName();
-            } catch (RuntimeException ignored3) {
+                t3 = Core.cast(Gala.class, y).getName();
+            } catch (Bubble ignored3) {
                 t3 = "Cast from AnyValue failed!";
             }
             console.log(t3);
             String t4;
             try {
-                t4 = ((Fuji) Objects.requireNonNull(y)).getName();
-            } catch (RuntimeException ignored4) {
+                t4 = Core.cast(Fuji.class, y).getName();
+            } catch (Bubble ignored4) {
                 t4 = "Cast from AnyValue failed!";
             }
             console.log(t4);
             x = null;
             String t5;
             try {
-                Objects.requireNonNull(x);
+                Core.requireNonNull(x);
                 t5 = "Tasty nothing.";
-            } catch (RuntimeException ignored5) {
+            } catch (Bubble ignored5) {
                 t5 = "Was null!";
             }
             console.log(t5);

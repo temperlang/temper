@@ -91,14 +91,14 @@ internal class Record
 
     public static Record DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = (JsonObject)t;
-        JsonString nameJson = (JsonString)obj.PropertyValueOrBubble("name");
+        JsonObject obj = Core.Cast<JsonObject>(t);
+        JsonString nameJson = Core.Cast<JsonString>(obj.PropertyValueOrBubble("name"));
         string name = nameJson.Content;
-        JsonBoolean activeJson = (JsonBoolean)obj.PropertyValueOrBubble("is-active");
+        JsonBoolean activeJson = Core.Cast<JsonBoolean>(obj.PropertyValueOrBubble("is-active"));
         bool active = activeJson.Content;
-        IJsonNumeric scoreJson = (IJsonNumeric)obj.PropertyValueOrBubble("score");
+        IJsonNumeric scoreJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("score"));
         double score = scoreJson.AsFloat64();
-        IJsonNumeric bigJson = (IJsonNumeric)obj.PropertyValueOrBubble("big");
+        IJsonNumeric bigJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("big"));
         long big = bigJson.AsInt64();
         string? nickname = Optional.OrNull<string>(new OrNullJsonAdapter<string>(JsonGlobal.StringJsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("nickname"), ic));
         IReadOnlyList<Point> points = JsonGlobal.ListJsonAdapter(Point.JsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("points"), ic);

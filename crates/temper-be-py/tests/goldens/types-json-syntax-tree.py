@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     cast_by_type as _cast_by_type,
@@ -33,7 +34,7 @@ while _i < _length:
     _json_value: _JsonSyntaxTree | None
     try:
         _json_value = _parse_json(_s)
-    except Exception:
+    except _Bubble:
         _json_value = None
     _console.log(f'`{_s}` is empty array: {_boolean_to_string(_json_value is not None and isinstance(_json_value, _JsonArray) and not _json_value.elements)}')
 _list2 = ('[', ']', '[,]', '[]]', '[1,]', '[1,,2]')
@@ -47,7 +48,7 @@ while _i2 < _length2:
     _parse_json_to_producer(_s2, _p)
     try:
         _p.to_json_syntax_tree()
-    except Exception:
+    except _Bubble:
         _bubbled = True
     _error: str | None = _p.json_error
     _console.log(f"`{_s2}` has{'' if _bubbled else ' no'} error: {'MISSING ERROR' if _error is None else _error}")
@@ -57,7 +58,7 @@ _p2.string_value(_select_code_points)
 _t_0: str
 try:
     _t_0 = _p2.to_json_string()
-except Exception:
+except _Bubble:
     _t_0 = '?!'
 _console.log(f'string with select code points: {_t_0}')
 _p3 = _JsonTextProducer(_NullInterchangeContext.instance)

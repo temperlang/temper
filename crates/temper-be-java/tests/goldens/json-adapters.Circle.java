@@ -1,5 +1,6 @@
 package json_adapters;
 
+import temper.core.Core;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonNumeric;
@@ -22,8 +23,8 @@ final class Circle implements Shape {
     }
 
     public static Circle decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = (JsonObject) t;
-        JsonNumeric radiusJson = (JsonNumeric) obj.propertyValueOrBubble("radius");
+        JsonObject obj = Core.cast(JsonObject.class, t);
+        JsonNumeric radiusJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("radius"));
         int radius = radiusJson.asInt32();
         return new Circle(radius);
     }

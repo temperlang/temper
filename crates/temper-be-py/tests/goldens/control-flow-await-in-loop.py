@@ -1,6 +1,7 @@
 from collections.abc import Callable as _Callable
 from concurrent.futures import Future as _Future
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     TemperFuture as _TemperFuture,
     adapt_generator_factory as _adapt_generator_factory,
@@ -25,7 +26,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
     while i < 2:
         try:
             s = yield do_await(_once)
-        except Exception:
+        except _Bubble:
             s = '?'
         _console.log(f'{s} {i}')
         i = _int_add(i, 1)
@@ -33,13 +34,13 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
     while j < 2:
         try:
             s = yield do_await(_later)
-        except Exception:
+        except _Bubble:
             s = '?'
         _console.log(f'{s} {j}')
         j = _int_add(j, 1)
     try:
         t = yield do_await(_once)
-    except Exception:
+    except _Bubble:
         t = '?'
     _console.log(f'{t} after the loops')
 

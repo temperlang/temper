@@ -1,3 +1,4 @@
+using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -41,10 +42,10 @@ internal class Point
 
     public static Point DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = (JsonObject)t;
-        IJsonNumeric xJson = (IJsonNumeric)obj.PropertyValueOrBubble("x");
+        JsonObject obj = Core.Cast<JsonObject>(t);
+        IJsonNumeric xJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("x"));
         int x = xJson.AsInt32();
-        IJsonNumeric yJson = (IJsonNumeric)obj.PropertyValueOrBubble("y");
+        IJsonNumeric yJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("y"));
         int y = yJson.AsInt32();
         return new Point(x, y);
     }

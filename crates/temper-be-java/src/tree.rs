@@ -292,8 +292,8 @@ pub enum Stmt {
         body: Vec<Stmt>,
         finally: Vec<Stmt>,
     },
-    /// `try { … } catch (RuntimeException var) { … }`: Temper's `orelse`,
-    /// a bubble being a `RuntimeException`.
+    /// `try { … } catch (Bubble var) { … }`: Temper's `orelse`, catching
+    /// only the runtime's `Bubble`.
     TryCatch {
         body: Vec<Stmt>,
         var: String,
@@ -862,7 +862,7 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         Stmt::TryCatch { body, var, handler } => {
             out.push_str("try ");
             block(out, body, depth);
-            let _ = write!(out, " catch (RuntimeException {var}) ");
+            let _ = write!(out, " catch (Bubble {var}) ");
             block(out, handler, depth);
             out.push('\n');
         }

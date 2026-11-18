@@ -1,5 +1,6 @@
 package modules.core;
 
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Nullable;
 
@@ -9,7 +10,7 @@ public final class CoreGlobal {
     public static int share(int n, int d) {
         try {
             return Core.divIntInt(n, d);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return 0;
         }
     }

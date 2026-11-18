@@ -118,7 +118,7 @@ public final class ClassesGlobal {
         console.log(b1.value + " " + b1.eq(new Boxed<String>("y", 1)) + " " + !b1.eq(b3) + " " + b1.sameAs(new Boxed<String>("y", 1)) + " " + b3.sameAs(b1));
         console.log((new Version(1, 2).compareTo(new Version(1, 3)) < 0) + " " + (new Version(2, 0).compareTo(new Version(1, 9)) >= 0));
         console.log((q instanceof Square) + " " + (s instanceof Square));
-        Square sq = (Square) q;
+        Square sq = Core.cast(Square.class, q);
         console.log(Integer.toString(sq.getArea()));
         if (s instanceof Rect) {
             console.log(Integer.toString(((Rect) s).w));

@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     arith_int_mod as _arith_int_mod,
     int64_add as _int64_add,
@@ -23,7 +24,7 @@ __all__ = ()
 def _check_parse32(string: str, /) -> None:
     try:
         converted = str(_string_to_int32(string, 16))
-    except Exception:
+    except _Bubble:
         converted = 'failed'
     _console.log(f'Parse {string} -> {converted}')
 
@@ -31,7 +32,7 @@ def _check_parse32(string: str, /) -> None:
 def _check_parse64(string: str, /) -> None:
     try:
         converted = str(_string_to_int64(string, 16))
-    except Exception:
+    except _Bubble:
         converted = 'failed'
     _console.log(f'Parse {string} -> {converted}')
 
@@ -91,7 +92,7 @@ _console.log(f'Not so big: {_int64_to_int32_unsafe(_not_so_big)}')
 _t_0: str
 try:
     _t_0 = str(_int64_to_int32(_big64))
-except Exception:
+except _Bubble:
     _t_0 = 'no'
 _console.log(f'Actually big: {_t_0}')
 _check_parse64('7FFFFFFFFFFFFFFF')

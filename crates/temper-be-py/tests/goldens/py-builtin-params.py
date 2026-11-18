@@ -5,6 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     cast_by_type as _cast_by_type,
@@ -207,8 +208,8 @@ def help_of(d: Described, /) -> str:
     option: Option
     try:
         option = _cast_by_type(d, Option)
-    except Exception:
-        raise RuntimeError()
+    except _Bubble:
+        raise _Bubble()
     return option.help
 
 
@@ -246,12 +247,12 @@ _console.log(f'{resized(False)} {resized(True)}')
 _t_0: str
 try:
     _t_0 = help_of(_o)
-except Exception:
+except _Bubble:
     _t_0 = '-'
 _t_1: str
 try:
     _t_1 = help_of(_Plain())
-except Exception:
+except _Bubble:
     _t_1 = '-'
 _console.log(f'{_t_0} {_t_1}')
 _console.log(_list_join(pieces(7), ',', lambda i: str(i)))

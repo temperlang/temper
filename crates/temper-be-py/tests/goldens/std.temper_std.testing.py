@@ -4,6 +4,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
+    Bubble as _Bubble,
     Pair as _Pair,
     int_add as _int_add,
     int_to_string as _int_to_string,
@@ -81,7 +82,7 @@ def process_test_cases(test_cases: _Sequence[_Pair[str, _Callable[[Test], None]]
         had_bubble = False
         try:
             fun(test)
-        except Exception:
+        except _Bubble:
             had_bubble = True
         messages = test.messages()
         t_1: _Sequence[str]
@@ -176,6 +177,6 @@ def run_test(test_fun: _Callable[[Test], None], /) -> None:
     test = Test()
     try:
         test_fun(test)
-    except Exception:
+    except _Bubble:
         test.assert_(False, lambda: 'bubble during test running')
     test.soft_fail_to_hard()

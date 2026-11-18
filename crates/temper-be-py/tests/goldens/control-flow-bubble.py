@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     arith_int_mod as _arith_int_mod,
     boolean_to_string as _boolean_to_string,
@@ -14,30 +15,30 @@ __all__ = ()
 
 
 def _more(x: int | None, /) -> int:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _something(x: str | None, /) -> str:
     if x is not None:
         return x
     else:
-        raise RuntimeError()
+        raise _Bubble()
 
 
 def _report(x: str | None, /) -> None:
     try:
         message = _something(x)
-    except Exception:
+    except _Bubble:
         message = 'null'
     try:
         t_0: int
         try:
             _cast_none(x)
             t_0 = 1
-        except Exception:
+        except _Bubble:
             t_0 = 0
         suffix = str(_more(t_0))
-    except Exception:
+    except _Bubble:
         suffix = ''
     _console.log(message + suffix)
 
@@ -45,7 +46,7 @@ def _report(x: str | None, /) -> None:
 def _calc_rows(cols: int, total: int, /) -> int:
     _console.log(f'calcRows({cols}, {total})')
     if _arith_int_mod(total, cols) != 0:
-        raise RuntimeError()
+        raise _Bubble()
     return _int_div(total, cols)
 
 
@@ -83,7 +84,7 @@ def _ten_times(n: int, /) -> int:
         if i == n:
             return _int_mul(i, 10)
         i = _int_add(i, 1)
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _is_none(r: int | None, /) -> bool:
@@ -94,17 +95,17 @@ def _via_or_else(n: int, /) -> str:
     t_0: int
     try:
         t_0 = _first_over(n)
-    except Exception:
+    except _Bubble:
         t_0 = -1
     t_1: int
     try:
         t_1 = _sum_skipping(n)
-    except Exception:
+    except _Bubble:
         t_1 = -1
     t_2: int
     try:
         t_2 = _ten_times(n)
-    except Exception:
+    except _Bubble:
         t_2 = -1
     return f'{t_0} {t_1} {t_2}'
 
@@ -114,11 +115,11 @@ def _unreachable_int() -> _NoReturn:
 
 
 def _fail_as(fallback: object, /) -> _NoReturn:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _bail() -> _NoReturn:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _no_name() -> str | None:
@@ -181,18 +182,18 @@ _console.log(str(_calc_rows(3, 6)))
 _t_0: int
 try:
     _t_0 = _count_below('abc')
-except Exception:
+except _Bubble:
     _t_0 = -1
 _console.log(str(_t_0))
 _t_1: int
 try:
     _t_1 = _first_over(1)
-except Exception:
+except _Bubble:
     _t_1 = -1
 _t_2: int | None
 try:
     _t_2 = _first_over(1)
-except Exception:
+except _Bubble:
     _t_2 = None
 _console.log(f'{_t_1} {_boolean_to_string(_is_none(_t_2))}')
 _console.log(_via_or_else(2))
@@ -201,17 +202,17 @@ _console.log(f"{_pick(True)} {'-' if (_subject := _named(True)) is None else _su
 _t_3: int
 try:
     _t_3 = _half(4)
-except Exception:
+except _Bubble:
     _t_3 = -1
 _t_4: int
 try:
     _t_4 = _half(3)
-except Exception:
+except _Bubble:
     _t_4 = -1
 _t_5: int
 try:
     _t_5 = _half(-2)
-except Exception:
+except _Bubble:
     _t_5 = -1
 _console.log(f'{_t_3} {_t_4} {_t_5}')
 _console.log(f"{_chosen(True)} {_shout('hey')}")

@@ -1,3 +1,4 @@
+using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -26,7 +27,7 @@ internal class Celsius
 
     public static Celsius DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        return new Celsius(((IJsonNumeric)t).AsInt32());
+        return new Celsius(Core.Cast<IJsonNumeric>(t).AsInt32());
     }
 
     public static IJsonAdapter<Celsius> JsonAdapter()

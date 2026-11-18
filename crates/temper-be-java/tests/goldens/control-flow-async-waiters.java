@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -133,7 +134,7 @@ public final class AsyncWaitersGlobal {
                                                         caseIndex.value = 3;
                                                         Core.awakeUpon(awaited.value, generator);
                                                         return new ValueResult<>(Optional.empty());
-                                                    } catch (RuntimeException ignored) {
+                                                    } catch (Bubble ignored) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -148,7 +149,7 @@ public final class AsyncWaitersGlobal {
                                                     try {
                                                         v.value = Core.getPromiseResult(awaited.value);
                                                         caseIndex.value = 2;
-                                                    } catch (RuntimeException ignored2) {
+                                                    } catch (Bubble ignored2) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -187,7 +188,7 @@ public final class AsyncWaitersGlobal {
                                                         caseIndex.value = 3;
                                                         Core.awakeUpon(awaited.value, generator);
                                                         return new ValueResult<>(Optional.empty());
-                                                    } catch (RuntimeException ignored3) {
+                                                    } catch (Bubble ignored3) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -202,7 +203,7 @@ public final class AsyncWaitersGlobal {
                                                     try {
                                                         v.value = Core.getPromiseResult(awaited.value);
                                                         caseIndex.value = 2;
-                                                    } catch (RuntimeException ignored4) {
+                                                    } catch (Bubble ignored4) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -238,7 +239,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 3;
                                 Core.awakeUpon(awaited2.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored5) {
+                            } catch (Bubble ignored5) {
                                 caseIndex2.value = 1;
                             }
                             break;
@@ -276,7 +277,7 @@ public final class AsyncWaitersGlobal {
                                                         caseIndex.value = 3;
                                                         Core.awakeUpon(awaited.value, generator);
                                                         return new ValueResult<>(Optional.empty());
-                                                    } catch (RuntimeException ignored6) {
+                                                    } catch (Bubble ignored6) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -291,7 +292,7 @@ public final class AsyncWaitersGlobal {
                                                     try {
                                                         v.value = Core.getPromiseResult(awaited.value);
                                                         caseIndex.value = 2;
-                                                    } catch (RuntimeException ignored7) {
+                                                    } catch (Bubble ignored7) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -330,7 +331,7 @@ public final class AsyncWaitersGlobal {
                                                         caseIndex.value = 3;
                                                         Core.awakeUpon(awaited.value, generator);
                                                         return new ValueResult<>(Optional.empty());
-                                                    } catch (RuntimeException ignored8) {
+                                                    } catch (Bubble ignored8) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -345,7 +346,7 @@ public final class AsyncWaitersGlobal {
                                                     try {
                                                         v.value = Core.getPromiseResult(awaited.value);
                                                         caseIndex.value = 2;
-                                                    } catch (RuntimeException ignored9) {
+                                                    } catch (Bubble ignored9) {
                                                         caseIndex.value = 1;
                                                     }
                                                     break;
@@ -381,7 +382,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 6;
                                 Core.awakeUpon(awaited4.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored10) {
+                            } catch (Bubble ignored10) {
                                 caseIndex2.value = 5;
                             }
                             break;
@@ -392,7 +393,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 4;
                                 Core.awakeUpon(awaited3.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored11) {
+                            } catch (Bubble ignored11) {
                                 caseIndex2.value = 1;
                             }
                             break;
@@ -401,7 +402,7 @@ public final class AsyncWaitersGlobal {
                                 second.value = Core.getPromiseResult(awaited3.value);
                                 console.log("after complete: first got " + first.value + ", second got " + second.value);
                                 caseIndex2.value = 2;
-                            } catch (RuntimeException ignored12) {
+                            } catch (Bubble ignored12) {
                                 caseIndex2.value = 1;
                             }
                             break;
@@ -414,7 +415,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 7;
                                 Core.awakeUpon(awaited5.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored13) {
+                            } catch (Bubble ignored13) {
                                 caseIndex2.value = 5;
                             }
                             break;
@@ -423,7 +424,7 @@ public final class AsyncWaitersGlobal {
                                 second2.value = Core.getPromiseResult(awaited5.value);
                                 console.log("after breakPromise: first got " + first2.value + ", second got " + second2.value);
                                 caseIndex2.value = -1;
-                            } catch (RuntimeException ignored14) {
+                            } catch (Bubble ignored14) {
                                 caseIndex2.value = 5;
                             }
                             break;

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -171,14 +172,14 @@ public final class GenericsGlobal {
         int t;
         try {
             t = Core.mappedGet(m, "b");
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = -1;
         }
         String t2 = t + " ";
         int t3;
         try {
             t3 = Core.mappedGet(m, "c");
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             t3 = -1;
         }
         console.log(t2 + t3 + " " + m.containsKey("a") + " " + m.size());
@@ -192,7 +193,7 @@ public final class GenericsGlobal {
         @Nullable Integer subject6;
         try {
             subject6 = Core.mapBuilderRemove(mb, "q");
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             subject6 = 0;
         }
         @Nullable String subject5 = subject6 == null ? null : Integer.toString(subject6);
@@ -205,21 +206,21 @@ public final class GenericsGlobal {
         int t5;
         try {
             t5 = bump("k");
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             t5 = -1;
         }
         String t6 = t5 + " ";
         int t7;
         try {
             t7 = bump("z");
-        } catch (RuntimeException ignored5) {
+        } catch (Bubble ignored5) {
             t7 = -1;
         }
         String t8 = t6 + t7 + " ";
         int t9;
         try {
             t9 = Core.mappedGet(tally, "k");
-        } catch (RuntimeException ignored6) {
+        } catch (Bubble ignored6) {
             t9 = -1;
         }
         console.log(t8 + t9);

@@ -1,6 +1,7 @@
 from collections.abc import Callable as _Callable
 from concurrent.futures import Future as _Future
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     TemperFuture as _TemperFuture,
     adapt_generator_factory as _adapt_generator_factory,
@@ -26,7 +27,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         def fn2(do_await_1: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
             try:
                 v = yield do_await_1(b)
-            except Exception:
+            except _Bubble:
                 v = -1
             _complete_promise(first_done, v)
         _async_launch(fn2)
@@ -34,7 +35,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         def fn3(do_await_1: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
             try:
                 v = yield do_await_1(b)
-            except Exception:
+            except _Bubble:
                 v = -1
             _complete_promise(second_done, v)
         _async_launch(fn3)
@@ -47,7 +48,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         first = yield do_await(first_done)
         second = yield do_await(second_done)
         _console.log(f'after complete: first got {first}, second got {second}')
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
     try:
         b2: _TemperFuture[int] = _new_unbound_promise()
@@ -57,7 +58,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         def fn5(do_await_1: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
             try:
                 v = yield do_await_1(b2)
-            except Exception:
+            except _Bubble:
                 v = -1
             _complete_promise(first_done2, v)
         _async_launch(fn5)
@@ -65,7 +66,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         def fn6(do_await_1: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
             try:
                 v = yield do_await_1(b2)
-            except Exception:
+            except _Bubble:
                 v = -1
             _complete_promise(second_done2, v)
         _async_launch(fn6)
@@ -78,7 +79,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         first = yield do_await(first_done2)
         second = yield do_await(second_done2)
         _console.log(f'after breakPromise: first got {first}, second got {second}')
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 

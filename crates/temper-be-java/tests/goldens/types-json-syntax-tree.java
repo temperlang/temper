@@ -2,6 +2,7 @@ package json_syntax_tree;
 
 import java.util.List;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -31,7 +32,7 @@ public final class JsonSyntaxTreeGlobal {
                 @Nullable JsonSyntaxTree jsonValue;
                 try {
                     jsonValue = JsonGlobal.parseJson(s);
-                } catch (RuntimeException ignored) {
+                } catch (Bubble ignored) {
                     jsonValue = null;
                 }
                 console.log("`" + s + "` is empty array: " + (jsonValue != null && jsonValue instanceof JsonArray && ((JsonArray) jsonValue).elements.isEmpty()));
@@ -49,7 +50,7 @@ public final class JsonSyntaxTreeGlobal {
                 JsonGlobal.parseJsonToProducer(s2, p);
                 try {
                     p.toJsonSyntaxTree();
-                } catch (RuntimeException ignored2) {
+                } catch (Bubble ignored2) {
                     bubbled = true;
                 }
                 @Nullable String error = p.getJsonError();
@@ -63,7 +64,7 @@ public final class JsonSyntaxTreeGlobal {
             String t;
             try {
                 t = p2.toJsonString();
-            } catch (RuntimeException ignored3) {
+            } catch (Bubble ignored3) {
                 t = "?!";
             }
             console.log("string with select code points: " + t);
@@ -84,7 +85,7 @@ public final class JsonSyntaxTreeGlobal {
         {
             String s3 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
             JsonSyntaxTree ast = JsonGlobal.parseJson(s3);
-            JsonObject obj = (JsonObject) ast;
+            JsonObject obj = Core.cast(JsonObject.class, ast);
             JsonSyntaxTree xAst = obj.propertyValueOrBubble("x");
             JsonSyntaxTree yAst = obj.propertyValueOrBubble("y");
             console.log("for x, got JSON null: " + (xAst instanceof JsonNull));

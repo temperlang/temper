@@ -940,7 +940,7 @@ mod tests {
         assert!(json.starts_with(expected), "{json}");
         if py != 0 {
             assert!(
-                json.contains("_cents: int = 1234\\nraise RuntimeError()\\n"),
+                json.contains("_cents: int = 1234\\nraise _Bubble()\\n"),
                 "{json}"
             );
         }

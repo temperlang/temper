@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -75,28 +76,57 @@ public final class Core {
     public static void doNothing(Object val) {}
 
     /**
+     * Temper's `as`: bubbles if value is null or not an instance.
      * @param klass the class literal to cast to
      * @param value the value to cast
      * @return the value cast to the new type
      * @param <T> the governing type
      */
     public static <T> T cast(Class<? extends T> klass, Object value) {
-        // TODO Inline?
+        if (!klass.isInstance(value)) {
+            throw bubble();
+        }
         return klass.cast(value);
     }
 
     /**
-     * Casts but throws [{@link NullPointerException}] if value is null.
+     * Casts, bubbling if value is null or not an instance, as {@link #cast}.
      * @param klass the class literal to cast to
      * @param value the value to cast
      * @return the value cast to the new type
      * @param <T> the governing type
      */
     public static <T> T castToNonNull(Class<? extends T> klass, Object value) {
-        if (value == null) {
-            throw new NullPointerException();
+        return cast(klass, value);
+    }
+
+    /**
+     * Temper's `as` to a generic class: bubbles if value is null or not
+     * an instance of klass, else gives it back with its own type, for a
+     * Java cast to the type with its arguments that then can't fail.
+     * @param klass the class literal to check against
+     * @param value the value to check
+     * @return value
+     * @param <T> value's type
+     */
+    public static <T> T check(Class<?> klass, T value) {
+        if (!klass.isInstance(value)) {
+            throw bubble();
         }
-        return klass.cast(value);
+        return value;
+    }
+
+    /**
+     * Temper's `as` from a nullable type to its non-null one.
+     * @param value the value to check
+     * @return value, bubbling if it's null
+     * @param <T> value's type
+     */
+    public static <T> T requireNonNull(T value) {
+        if (value == null) {
+            throw bubble();
+        }
+        return value;
     }
 
     /**
@@ -105,7 +135,7 @@ public final class Core {
      */
     public static int requireNoStringIndex(int i) {
         if (i < 0) { return -1; }
-        throw new IllegalArgumentException("Required NoStringIndex but got " + i);
+        throw new Bubble("Required NoStringIndex but got " + i);
     }
 
     /**
@@ -114,7 +144,7 @@ public final class Core {
      */
     public static int requireStringIndex(int i) {
         if (i >= 0) { return i; }
-        throw new IllegalArgumentException("Required StringIndex but got " + i);
+        throw new Bubble("Required StringIndex but got " + i);
     }
 
     /**
@@ -284,8 +314,8 @@ public final class Core {
      * <p>This must be `throw`n by the caller, to help the compiler with flow analysis.
      * </p>
      */
-    public static RuntimeException bubble() {
-        return new RuntimeException();
+    public static Bubble bubble() {
+        return new Bubble();
     }
 
     /**
@@ -337,7 +367,7 @@ public final class Core {
 
     /**
      * @param n the value to convert to an int
-     * @throws RuntimeException if the result can't be expressed with less than an error of 1
+     * @throws Bubble if the result can't be expressed with less than an error of 1
      * @return the value as an int
      */
     public static int float64ToInt(double n) {
@@ -352,7 +382,7 @@ public final class Core {
 
     /**
      * @param n the value to convert to a long
-     * @throws RuntimeException if the result can't be expressed with less than an error of 1
+     * @throws Bubble if the result can't be expressed with less than an error of 1
      * @return the value as a long
      */
     public static long float64ToInt64(double n) {
@@ -393,7 +423,7 @@ public final class Core {
 
     /**
      * @param n the value to convert to a double
-     * @throws RuntimeException if the result can't be expressed
+     * @throws Bubble if the result can't be expressed
      * @return the value as a double
      */
     public static double int64ToFloat64(long n) {
@@ -408,7 +438,7 @@ public final class Core {
 
     /**
      * @param n the value to convert to an int
-     * @throws RuntimeException if the result can't be expressed
+     * @throws Bubble if the result can't be expressed
      * @return the value as an int
      */
     public static int int64ToInt(long n) {
@@ -419,12 +449,15 @@ public final class Core {
         }
     }
 
+    /** Bubbles unless codePoint is a Unicode scalar value: in range and not a surrogate. */
     private static void denySurrogate(int codePoint) {
         // Use custom logic because Character.isSurrogate works on char, not int.
-        if (codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE) {
-            // Use error message similar to code point bounds message, which is checked elsewhere.
+        if (
+            !Character.isValidCodePoint(codePoint)
+                || codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE
+        ) {
             // Focus on Unicode scalar value wording, because it might explain motive better than avoiding surrogates.
-            throw new IllegalArgumentException(String.format("Not a valid Unicode scalar value: 0x%X", codePoint));
+            throw new Bubble(String.format("Not a valid Unicode scalar value: 0x%X", codePoint));
         }
     }
 
@@ -655,7 +688,11 @@ public final class Core {
         if (trimmed.startsWith(".") || trimmed.endsWith(".")) {
             throw bubble();
         }
-        return Double.parseDouble(s);
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            throw new Bubble(e.getMessage(), e);
+        }
     }
 
     public static int stringToInt(String s) {
@@ -663,7 +700,11 @@ public final class Core {
     }
 
     public static int stringToInt(String s, int radix) {
-        return Integer.parseInt(s.trim(), radix);
+        try {
+            return Integer.parseInt(s.trim(), radix);
+        } catch (NumberFormatException e) {
+            throw new Bubble(e.getMessage(), e);
+        }
     }
 
     public static long stringToInt64(String s) {
@@ -671,7 +712,11 @@ public final class Core {
     }
 
     public static long stringToInt64(String s, int radix) {
-        return Long.parseLong(s.trim(), radix);
+        try {
+            return Long.parseLong(s.trim(), radix);
+        } catch (NumberFormatException e) {
+            throw new Bubble(e.getMessage(), e);
+        }
     }
 
     /**
@@ -1720,7 +1765,8 @@ public final class Core {
     /**
      * The promise's result, waiting for it if need be.  Waiting inside a
      * turn, for a promise not yet settled, throws instead of deadlocking,
-     * since what would settle it may need the turn.
+     * since what would settle it may need the turn.  A broken promise
+     * bubbles.
      */
     public static <T> T getPromiseResult(Future<T> future) {
         if (!future.isDone() && TURN.isHeldByCurrentThread()) {
@@ -1731,7 +1777,20 @@ public final class Core {
         }
         try {
             return future.get();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (ExecutionException e) {
+            // A broken promise bubbles, whatever broke it, but a panic
+            // (an Error) passes.
+            Throwable cause = e.getCause();
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+            if (cause instanceof Bubble) {
+                throw (Bubble) cause;
+            }
+            throw new Bubble(String.valueOf(cause), cause);
+        } catch (CancellationException e) {
+            throw new Bubble("cancelled", e);
+        } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

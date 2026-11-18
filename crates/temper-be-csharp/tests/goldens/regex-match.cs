@@ -43,8 +43,8 @@ public static class MatchGlobal
         text = "🌍aaabbceef";
         global::TemperLang.Std.Regex.Match match = catcher.Find(text);
         CheckGroup(match.Full);
-        CheckGroup(match.Groups["intro"]);
-        CheckGroup(match.Groups["alphaOption2"]);
+        CheckGroup(Mapped.Get(match.Groups, "intro"));
+        CheckGroup(Mapped.Get(match.Groups, "alphaOption2"));
         Regex thing = ((IRegexNode)new Repeat(new CodeSet(Listed.CreateReadOnlyList<ICodePart>(new CodeRange(97, 122)), false), 1, null, false)).Compiled();
         string multiText = "---abc---xyz---";
         global::TemperLang.Std.Regex.Match first = thing.Find(multiText);
@@ -57,18 +57,18 @@ public static class MatchGlobal
             string option1;
             try
             {
-                option1 = groups["option1"].Value;
+                option1 = Mapped.Get(groups, "option1").Value;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 option1 = "";
             }
             string alphaOption2;
             try
             {
-                alphaOption2 = groups["alphaOption2"].Value;
+                alphaOption2 = Mapped.Get(groups, "alphaOption2").Value;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 alphaOption2 = "";
             }
@@ -84,7 +84,7 @@ public static class MatchGlobal
         {
             noMatch = catcher.Find("not here").Full.Value;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             noMatch = "sorry";
         }
@@ -113,7 +113,7 @@ public static class MatchGlobal
         {
             t1 = ((IRegexNode)new Repeat(new CodeSet(Listed.CreateReadOnlyList<ICodePart>(), false), 1, null, false)).Compiled().Find(simplerLines).Full.Value;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "-";
         }
@@ -133,7 +133,7 @@ public static class MatchGlobal
         global::TemperLang.Std.Regex.Match escapedMatch = regexWithInterpolatedString.Find(stringToEscapeAndMore);
         console.Log(escapedMatch.Full.Value);
         global::TemperLang.Std.Regex.Match ownFullMatch = ((IRegexNode)new Sequence(Listed.CreateReadOnlyList<IRegexNode>(RegexGlobal.Dot, new Capture("full", RegexGlobal.Dot)))).Compiled().Find("ab");
-        string ownFull = ownFullMatch.Groups["full"].Value;
+        string ownFull = Mapped.Get(ownFullMatch.Groups, "full").Value;
         console.Log("Own full: " + ownFull + " vs " + ownFullMatch.Full.Value);
         string comboLines = "It was the best\nof times.\r\n\rIt was the worst of times.";
         {

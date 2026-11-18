@@ -146,7 +146,7 @@ public static class ClassesGlobal
         console.Log(b1.Value + " " + (b1.Eq(new Boxed<string>("y", 1)) ? "true" : "false") + " " + (!b1.Eq(b3) ? "true" : "false") + " " + (b1.SameAs(new Boxed<string>("y", 1)) ? "true" : "false") + " " + (b3.SameAs(b1) ? "true" : "false"));
         console.Log((new Version(1, 2).CompareTo(new Version(1, 3)) < 0 ? "true" : "false") + " " + (new Version(2, 0).CompareTo(new Version(1, 9)) >= 0 ? "true" : "false"));
         console.Log((q is Square ? "true" : "false") + " " + (s is Square ? "true" : "false"));
-        Square sq = (Square)q;
+        Square sq = Core.Cast<Square>(q);
         console.Log(sq.Area.ToString(CultureInfo.InvariantCulture));
         if (s is Rect)
         {

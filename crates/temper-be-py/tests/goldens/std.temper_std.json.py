@@ -4,6 +4,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
+    Bubble as _Bubble,
     cast_by_type as _cast_by_type,
     cast_none as _cast_none,
     float64_to_int as _float64_to_int,
@@ -26,6 +27,7 @@ from temper_core import (
     list_get_or as _list_get_or,
     map_builder_set as _map_builder_set,
     mapped_for_each as _mapped_for_each,
+    mapped_get as _mapped_get,
     mapped_has as _mapped_has,
     mapped_to_map as _mapped_to_map,
     require_string_index as _require_string_index,
@@ -403,13 +405,13 @@ class JsonNumericToken(JsonNumeric):
     def as_int32(self, /) -> int:
         try:
             return _string_to_int32(self._content)
-        except Exception:
+        except _Bubble:
             return _float64_to_int(_string_to_float64(self._content))
 
     def as_int64(self, /) -> int:
         try:
             return _string_to_int64(self._content)
-        except Exception:
+        except _Bubble:
             return _float64_to_int64(_string_to_float64(self._content))
 
     def as_float64(self, /) -> float:
@@ -553,7 +555,7 @@ class JsonTextProducer(JsonProducer):
         if self._well_formed and (len(self._stack) == 1 and self._state() == _json_state_one_value):
             return ''.join(self._buffer)
         else:
-            raise RuntimeError()
+            raise _Bubble()
 
 
 class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
@@ -601,19 +603,19 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
                 mb: dict[str, _MutableSequence[JsonSyntaxTree]]
                 try:
                     mb = _cast_none(multis)
-                except Exception:
+                except _Bubble:
                     raise BaseException('panic')
                 if not _mapped_has(mb, key):
                     t_0: _Sequence[JsonSyntaxTree]
                     try:
-                        t_0 = m[key]
-                    except Exception:
+                        t_0 = _mapped_get(m, key)
+                    except _Bubble:
                         raise BaseException('panic')
                     _map_builder_set(mb, key, list(t_0))
                 t_1: _MutableSequence[JsonSyntaxTree]
                 try:
-                    t_1 = mb[key]
-                except Exception:
+                    t_1 = _mapped_get(mb, key)
+                except _Bubble:
                     raise BaseException('panic')
                 t_1.append(value)
             else:
@@ -660,10 +662,10 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
 
     def to_json_syntax_tree(self, /) -> JsonSyntaxTree:
         if len(self._stack) != 1 or self._error is not None:
-            raise RuntimeError()
+            raise _Bubble()
         ls = _list_get(self._stack, 0)
         if len(ls) != 1:
-            raise RuntimeError()
+            raise _Bubble()
         return _list_get(ls, 0)
 
     @property
@@ -793,7 +795,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
             if lead_surrogate >= 0:
                 try:
                     sb.append(_string_from_code_point(lead_surrogate))
-                except Exception:
+                except _Bubble:
                     raise BaseException('panic')
             if 55296 <= decoded_cp and decoded_cp <= 56319:
                 lead_surrogate = decoded_cp
@@ -801,7 +803,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
                 lead_surrogate = -1
                 try:
                     sb.append(_string_from_code_point(decoded_cp))
-                except Exception:
+                except _Bubble:
                     raise BaseException('panic')
             consumed = i_next
         i = i_next
@@ -812,7 +814,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
         if lead_surrogate >= 0:
             try:
                 sb.append(_string_from_code_point(lead_surrogate))
-            except Exception:
+            except _Bubble:
                 raise BaseException('panic')
         else:
             sb.append(source_text[consumed : i])
@@ -837,7 +839,7 @@ def _parse_json_object(source_text: str, i: int, out: JsonProducer, /) -> int:
                 t_0: int
                 try:
                     t_0 = _require_string_index(after_key)
-                except Exception:
+                except _Bubble:
                     raise BaseException('panic')
                 i = _skip_json_spaces(source_text, t_0)
                 if len(source_text) > i and _string_get(source_text, i) == 58:
@@ -861,7 +863,7 @@ def _parse_json_object(source_text: str, i: int, out: JsonProducer, /) -> int:
         else:
             _expected_token_error(source_text, i, out, "'}'")
             return -1
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
@@ -890,7 +892,7 @@ def _parse_json_array(source_text: str, i: int, out: JsonProducer, /) -> int:
         else:
             _expected_token_error(source_text, i, out, "']'")
             return -1
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
@@ -1030,14 +1032,14 @@ def _parse_json_number(source_text: str, i: int, out: JsonProducer, /) -> int:
         if n_exponent_digits != 0 or n_digits_after_point != 0:
             try:
                 double_value = _string_to_float64(numeric_token_string)
-            except Exception:
+            except _Bubble:
                 pass
         if not _float_eq(double_value, -float('inf')) and (not _float_eq(double_value, float('inf')) and not _float_eq(double_value, float('nan'))):
             out.float64_value(double_value)
         else:
             out.numeric_token_value(numeric_token_string)
         return i
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 

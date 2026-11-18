@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.std.regex.Capture;
@@ -68,13 +69,13 @@ public final class MatchGlobal {
             String option1_2;
             try {
                 option1_2 = Core.mappedGet(groups, "option1").value;
-            } catch (RuntimeException ignored) {
+            } catch (Bubble ignored) {
                 option1_2 = "";
             }
             String alphaOption2;
             try {
                 alphaOption2 = Core.mappedGet(groups, "alphaOption2").value;
-            } catch (RuntimeException ignored2) {
+            } catch (Bubble ignored2) {
                 alphaOption2 = "";
             }
             int begin2 = Core.stringCountBetween(moreText, 0, match2.full.begin);
@@ -87,7 +88,7 @@ public final class MatchGlobal {
         String noMatch;
         try {
             noMatch = catcher.find("not here").full.value;
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             noMatch = "sorry";
         }
         console.log("No match says " + noMatch);
@@ -113,7 +114,7 @@ public final class MatchGlobal {
         String t;
         try {
             t = new Repeat(new CodeSet(List.of(), false), 1, null, false).compiled().find(simplerLines).full.value;
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             t = "-";
         }
         console.log(t);

@@ -23,7 +23,7 @@ public static class JsonSyntaxTreeGlobal
                 {
                     jsonValue = JsonGlobal.ParseJson(s);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     jsonValue = null;
                 }
@@ -45,7 +45,7 @@ public static class JsonSyntaxTreeGlobal
                 {
                     p.ToJsonSyntaxTree();
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     bubbled = true;
                 }
@@ -62,7 +62,7 @@ public static class JsonSyntaxTreeGlobal
             {
                 t1 = p2.ToJsonString();
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t1 = "?!";
             }
@@ -84,7 +84,7 @@ public static class JsonSyntaxTreeGlobal
         {
             string s3 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
             IJsonSyntaxTree ast = JsonGlobal.ParseJson(s3);
-            JsonObject obj = (JsonObject)ast;
+            JsonObject obj = Core.Cast<JsonObject>(ast);
             IJsonSyntaxTree xAst = obj.PropertyValueOrBubble("x");
             IJsonSyntaxTree yAst = obj.PropertyValueOrBubble("y");
             console.Log("for x, got JSON null: " + (xAst is JsonNull ? "true" : "false"));

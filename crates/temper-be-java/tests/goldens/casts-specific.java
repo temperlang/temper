@@ -2,6 +2,7 @@ package specific;
 
 import java.util.List;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -13,9 +14,9 @@ public final class SpecificGlobal {
     static void checkB(AlphaInterface instance) {
         String t;
         try {
-            BravoClass.class.cast(instance);
+            Core.cast(BravoClass.class, instance);
             t = "yep";
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = "nope";
         }
         console.log(t);

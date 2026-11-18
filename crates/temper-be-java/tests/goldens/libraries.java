@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -53,7 +54,7 @@ public final class LibrariesGlobal {
     static int rows(List<Double> values, int ncols) {
         try {
             return Core.divIntInt(values.size(), ncols);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
     }
@@ -69,7 +70,7 @@ public final class LibrariesGlobal {
         try {
             List<Double> more = Core.listMapDoubleToDouble(scaled(grid).values, x -> x * x * x);
             return more;
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
     }
@@ -94,7 +95,7 @@ public final class LibrariesGlobal {
             try {
                 double part = x / 2.0;
                 sum.value = sum.value + part;
-            } catch (RuntimeException ignored) {
+            } catch (Bubble ignored) {
                 throw new AssertionError("panic");
             }
         };
@@ -105,7 +106,7 @@ public final class LibrariesGlobal {
     static double half(double x) {
         try {
             return x / 2.0;
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
     }
@@ -117,7 +118,7 @@ public final class LibrariesGlobal {
     static double corner(Grid grid) {
         try {
             return grid.get(1, 1);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return -1.0;
         }
     }
@@ -134,7 +135,7 @@ public final class LibrariesGlobal {
         Grid t;
         try {
             t = scaled(grid);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
         DoubleUnaryOperator fn = x -> {
@@ -228,7 +229,7 @@ public final class LibrariesGlobal {
         @Nullable Grid found_;
         try {
             found_ = parseGrid(s);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             found_ = null;
         }
         @Nullable Grid found = found_;
@@ -309,7 +310,7 @@ public final class LibrariesGlobal {
                 @Nullable Integer held = null;
                 try {
                     held = Core.stringToInt(x);
-                } catch (RuntimeException ignored) {
+                } catch (Bubble ignored) {
                 }
                 if (held == null) {
                     i = i + 1;
@@ -331,7 +332,7 @@ public final class LibrariesGlobal {
                 @Nullable Integer held = null;
                 try {
                     held = Core.stringToInt(x);
-                } catch (RuntimeException ignored2) {
+                } catch (Bubble ignored2) {
                 }
                 if (held == null) {
                     continue;

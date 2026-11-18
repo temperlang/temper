@@ -67,6 +67,18 @@ const ALLOWED: &[(&str, &str, Side, &str)] = &[
         "a CMake project per library, which Kotlin doesn't write (decided 2026-10-30)",
     ),
     (
+        "csharp",
+        "temper-core/Bubble.cs",
+        Side::Tempest,
+        "a bubble type of the runtime's own, which handlers catch alone (patch 0026)",
+    ),
+    (
+        "java",
+        "temper/core/Bubble.java",
+        Side::Tempest,
+        "a bubble type of the runtime's own, which handlers catch alone (patch 0026)",
+    ),
+    (
         "cpp",
         "temper-core/net.hpp",
         Side::Tempest,

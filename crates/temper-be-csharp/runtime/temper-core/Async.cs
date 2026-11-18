@@ -20,7 +20,7 @@ namespace TemperLang.Core
         {
             if (resolution == null)
             {
-                resolution = new Exception();
+                resolution = new Bubble();
             }
             Exception reason = resolution;
             // Temper semantics allow for multiple resolution where subsequent
@@ -198,7 +198,8 @@ namespace TemperLang.Core
         /// <summary>
         /// The task's result, waiting for it if need be.  Waiting inside a
         /// turn for a task not yet settled throws rather than deadlocking,
-        /// since what would settle it may need the turn.
+        /// since what would settle it may need the turn. A broken promise
+        /// bubbles.
         /// </summary>
         public static T GetPromiseResult<T>(Task<T> task)
         {
@@ -208,7 +209,19 @@ namespace TemperLang.Core
                     "blocking on an unsettled Temper promise inside an async turn"
                         + " would deadlock; await it instead");
             }
-            return task.GetAwaiter().GetResult();
+            try
+            {
+                return task.GetAwaiter().GetResult();
+            }
+            catch (Bubble)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                // A broken promise bubbles, whatever broke it.
+                throw new Bubble(e.Message, e);
+            }
         }
 
 #if NET6_0_OR_GREATER

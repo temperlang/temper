@@ -16,15 +16,18 @@ namespace TemperLang.Core
             sb.Append(s, left, right - left);
         }
 
-        public static void AppendCodePoint(T.StringBuilder sb, int codePoint)
+        /// <summary>Bubbles unless codePoint is a Unicode scalar value.</summary>
+        public static void RequireScalarValue(int codePoint)
         {
             if (codePoint < 0 || (codePoint >= 0xD800 && codePoint <= 0xDFFF) || codePoint > 0x10FFFF)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(codePoint),
-                    $"Invalid Unicode scalar value: {codePoint:X}"
-                );
+                throw new Bubble($"Invalid Unicode scalar value: {codePoint:X}");
             }
+        }
+
+        public static void AppendCodePoint(T.StringBuilder sb, int codePoint)
+        {
+            RequireScalarValue(codePoint);
             // Manually append needed chars to avoid intermediate string.
             if (codePoint <= 0xFFFF)
             {
@@ -200,7 +203,7 @@ namespace TemperLang.Core
             {
                 return i;
             }
-            throw new ArgumentOutOfRangeException("i");
+            throw new Bubble($"Required StringIndex but got {i}");
         }
 
         public static int RequireNoStringIndex(int i)
@@ -209,7 +212,7 @@ namespace TemperLang.Core
             {
                 return -1;
             }
-            throw new ArgumentOutOfRangeException("i");
+            throw new Bubble($"Required NoStringIndex but got {i}");
         }
 
         /**

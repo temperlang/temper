@@ -1,0 +1,14 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../host-errors.temper.md:9:5  /** <- let read(ls: List<Int>, i: I
+8:1 -> ../host-errors.temper.md:9:5  function read(ls, i) { <- let read(ls: List<Int>, i: I
+8:10 -> ../host-errors.temper.md:9:9 (read)  read(ls, i) { <- read(ls: List<Int>, i: Int):
+8:14 -> ../host-errors.temper.md:9:5  (ls, i) { <- let read(ls: List<Int>, i: I
+9:3 -> ../host-errors.temper.md:10:7  if (i < 0) { <- if (i < 0) { bubble() }
+10:5 -> ../host-errors.temper.md:10:20  bubble(); <- bubble() }
+12:3 -> ../host-errors.temper.md:11:7  return listedGet(/** @type { <- ls[i]
+15:1 -> ../host-errors.temper.md:13:5  console.log("reading"); <- console.log("reading");
+16:1 -> ../host-errors.temper.md:14:5  /** @type {number} */ <- let r = read([1, 2], 5) orel
+17:1 -> ../host-errors.temper.md:14:5  let r; <- let r = read([1, 2], 5) orel
+18:1 -> ../host-errors.temper.md:14:5  try { <- let r = read([1, 2], 5) orel
+24:1 -> ../host-errors.temper.md:15:5  console.log(`read past the e <- console.log("read past the e
+25:1 -> ../host-errors.temper.md:16:5  panic(); <- panic();

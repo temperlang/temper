@@ -31,16 +31,16 @@ public static class AwaitInLoopGlobal
                         {
                             promise1 = once.Task;
                         }
-                        catch
+                        catch (global::TemperLang.Core.Bubble)
                         {
                             goto CATCH1;
                         }
                         yield return global::TemperLang.Core.Async.AwakeUpon(promise1);
                         try
                         {
-                            s = promise1.Result;
+                            s = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                         }
-                        catch
+                        catch (global::TemperLang.Core.Bubble)
                         {
                             goto CATCH1;
                         }
@@ -65,16 +65,16 @@ public static class AwaitInLoopGlobal
                     {
                         promise2 = later.Task;
                     }
-                    catch
+                    catch (global::TemperLang.Core.Bubble)
                     {
                         goto CATCH2;
                     }
                     yield return global::TemperLang.Core.Async.AwakeUpon(promise2);
                     try
                     {
-                        s = promise2.Result;
+                        s = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     }
-                    catch
+                    catch (global::TemperLang.Core.Bubble)
                     {
                         goto CATCH2;
                     }
@@ -95,16 +95,16 @@ public static class AwaitInLoopGlobal
                 {
                     promise3 = once.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH3;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise3);
                 try
                 {
-                    t = promise3.Result;
+                    t = global::TemperLang.Core.Async.GetPromiseResult(promise3);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH3;
                 }

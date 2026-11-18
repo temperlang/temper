@@ -1,9 +1,11 @@
 from collections.abc import Sequence as _Sequence_
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     list_get as _list_get,
+    mapped_get as _mapped_get,
     string_count_between as _string_count_between,
 )
 from temper_std.regex import (
@@ -53,8 +55,8 @@ _catcher: _Regex = _Sequence((_Repeat(_CodePoints('a'), 1, None, False), _Captur
 _text: str = '🌍aaabbceef'
 _match: _Match = _catcher.find(_text)
 _check_group(_match.full)
-_check_group(_match.groups['intro'])
-_check_group(_match.groups['alphaOption2'])
+_check_group(_mapped_get(_match.groups, 'intro'))
+_check_group(_mapped_get(_match.groups, 'alphaOption2'))
 _thing: _Regex = _Repeat(_CodeSet((_CodeRange(97, 122),), False), 1, None, False).compiled()
 _multi_text: str = '---abc---xyz---'
 _first: _Match = _thing.find(_multi_text)
@@ -66,12 +68,12 @@ _more_text: str = '🌍aaabbcee🌎abcd🌏'
 def _fn(match: _Match, /) -> str:
     groups = match.groups
     try:
-        option1 = groups['option1'].value
-    except Exception:
+        option1 = _mapped_get(groups, 'option1').value
+    except _Bubble:
         option1 = ''
     try:
-        alpha_option2 = groups['alphaOption2'].value
-    except Exception:
+        alpha_option2 = _mapped_get(groups, 'alphaOption2').value
+    except _Bubble:
         alpha_option2 = ''
     begin = _string_count_between(_more_text, 0, match.full.begin)
     return f'-{option1}{alpha_option2}{begin}-'
@@ -84,7 +86,7 @@ _console.log(f'not replaced: {_not_replaced}')
 _no_match: str
 try:
     _no_match = _catcher.find('not here').full.value
-except Exception:
+except _Bubble:
     _no_match = 'sorry'
 _console.log(f'No match says {_no_match}')
 _or: _RegexNode = _Or((_CodePoints('ab'), _CodePoints('bc'))).compiled().data
@@ -109,7 +111,7 @@ _console.log(_Repeat(_CodeSet((), True), 1, None, False).compiled().find(_simple
 _t_0: str
 try:
     _t_0 = _Repeat(_CodeSet((), False), 1, None, False).compiled().find(_simpler_lines).full.value
-except Exception:
+except _Bubble:
     _t_0 = '-'
 _console.log(_t_0)
 _not_low: _Regex = _one_or_more(_CodeSet((_CodeRange(0, 47),), True)).compiled()
@@ -127,7 +129,7 @@ _string_to_escape_and_more: str = f'a{_string_to_escape}{_string_to_escape}b'
 _escaped_match: _Match = _regex_with_interpolated_string.find(_string_to_escape_and_more)
 _console.log(_escaped_match.full.value)
 _own_full_match: _Match = _Sequence((_dot, _Capture('full', _dot))).compiled().find('ab')
-_own_full: str = _own_full_match.groups['full'].value
+_own_full: str = _mapped_get(_own_full_match.groups, 'full').value
 _console.log(f'Own full: {_own_full} vs {_own_full_match.full.value}')
 _combo_lines: str = 'It was the best\nof times.\r\n\rIt was the worst of times.'
 _list = _Or((_CodePoints('\n'), _Sequence((_CodePoints('\r'), _Repeat(_CodePoints('\n'), 0, 1, False))))).compiled().split(_combo_lines)

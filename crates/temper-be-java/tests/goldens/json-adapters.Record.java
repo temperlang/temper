@@ -1,6 +1,7 @@
 package json_adapters;
 
 import java.util.List;
+import temper.core.Core;
 import temper.core.Nullable;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
@@ -48,14 +49,14 @@ final class Record {
     }
 
     public static Record decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = (JsonObject) t;
-        JsonString nameJson = (JsonString) obj.propertyValueOrBubble("name");
+        JsonObject obj = Core.cast(JsonObject.class, t);
+        JsonString nameJson = Core.cast(JsonString.class, obj.propertyValueOrBubble("name"));
         String name = nameJson.content;
-        JsonBoolean activeJson = (JsonBoolean) obj.propertyValueOrBubble("is-active");
+        JsonBoolean activeJson = Core.cast(JsonBoolean.class, obj.propertyValueOrBubble("is-active"));
         boolean active = activeJson.content;
-        JsonNumeric scoreJson = (JsonNumeric) obj.propertyValueOrBubble("score");
+        JsonNumeric scoreJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("score"));
         double score = scoreJson.asFloat64();
-        JsonNumeric bigJson = (JsonNumeric) obj.propertyValueOrBubble("big");
+        JsonNumeric bigJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("big"));
         long big = bigJson.asInt64();
         @Nullable String nickname = new OrNullJsonAdapter<String>(JsonGlobal.stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
         List<Point> points = JsonGlobal.listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);

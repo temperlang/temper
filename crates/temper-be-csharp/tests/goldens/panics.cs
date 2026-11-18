@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using TemperLang.Core;
+using TemperLang.Std.Json;
 using TemperLang.Std.Regex;
+using TemperLang.Std.Temporal;
 
 namespace Panics;
 
@@ -20,7 +24,7 @@ public static class PanicsGlobal
 
     internal static Square Downcast(IShape s)
     {
-        return (Square)s;
+        return Core.Cast<Square>(s);
     }
 
     internal static int Calling(Func<int> f)
@@ -29,10 +33,23 @@ public static class PanicsGlobal
         {
             return f();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return -9;
         }
+    }
+
+    internal static string Appending(int codePoint)
+    {
+        StringBuilder sb = new StringBuilder();
+        StringUtil.AppendCodePoint(sb, codePoint);
+        return sb.ToString();
+    }
+
+    internal static string Parsing(string text)
+    {
+        JsonGlobal.ParseJson(text);
+        return "parsed";
     }
 
     internal static int Explode(int n)
@@ -57,7 +74,7 @@ public static class PanicsGlobal
         {
             return Explode(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return Noted("inner");
         }
@@ -68,16 +85,17 @@ public static class PanicsGlobal
         string trimmed = s.Trim();
         if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
         {
-            throw new global::System.FormatException();
+            throw new global::TemperLang.Core.Bubble();
         }
         return trimmed switch
         {
             "Infinity" => double.PositiveInfinity,
             "-Infinity" => double.NegativeInfinity,
-            _ => double.Parse(
+            _ => double.TryParse(
                 trimmed,
                 global::System.Globalization.NumberStyles.Float,
-                global::System.Globalization.CultureInfo.InvariantCulture),
+                global::System.Globalization.CultureInfo.InvariantCulture,
+                out double d) ? d : throw new global::TemperLang.Core.Bubble(),
         };
     }
 
@@ -89,7 +107,7 @@ public static class PanicsGlobal
         {
             zero = Failing(0);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             zero = -1;
         }
@@ -98,7 +116,7 @@ public static class PanicsGlobal
         {
             a = Failing(1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             a = -1;
         }
@@ -107,7 +125,7 @@ public static class PanicsGlobal
         {
             b = Downcast(new Circle()).Side;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             b = -2;
         }
@@ -116,7 +134,7 @@ public static class PanicsGlobal
         {
             c = Core.Div(1, zero);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             c = -3;
         }
@@ -125,7 +143,7 @@ public static class PanicsGlobal
         {
             d = Core.ToInt(Core.Div(1L, (long)zero));
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             d = -4;
         }
@@ -134,7 +152,7 @@ public static class PanicsGlobal
         {
             e = Core.ToInt("nope");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             e = -5;
         }
@@ -143,7 +161,7 @@ public static class PanicsGlobal
         {
             f = ParseFloat64("x");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             f = -6.0;
         }
@@ -152,7 +170,7 @@ public static class PanicsGlobal
         {
             g = Core.StringFromCodePoint(1114112);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             g = "?";
         }
@@ -162,19 +180,122 @@ public static class PanicsGlobal
         {
             h = digits.Find("none").Full.Value;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             h = "no digits";
         }
         int i = Calling(() => Failing(2));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{a} {b} {c} {d} {e} {(Float64.Compare(f, -6.0) == 0 ? "true" : "false")} {g} {h} {i}"));
+        string? nothing = null;
+        string j;
+        try
+        {
+            j = Core.CastToNonNull<string>(nothing);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            j = "null";
+        }
+        long k;
+        try
+        {
+            k = Core.ToInt64("zz");
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            k = -7L;
+        }
+        int l;
+        try
+        {
+            l = Core.ToInt("99999999999");
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            l = -8;
+        }
+        int m;
+        try
+        {
+            m = Float64.ToInt(1e20);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            m = -9;
+        }
+        int n;
+        try
+        {
+            n = Core.ToInt(5000000000L);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            n = -10;
+        }
+        IReadOnlyList<int> points = Listed.CreateReadOnlyList<int>(65, 1114112);
+        string o;
+        try
+        {
+            o = Core.StringFromCodePoints(points);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            o = "?";
+        }
+        string q;
+        try
+        {
+            q = Appending(-1);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            q = "?";
+        }
+        IDictionary<string, int> builder = new TemperLang.Core.OrderedDictionary<string, int>();
+        int r;
+        try
+        {
+            r = Core.RemoveGet(builder, "x");
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            r = -11;
+        }
+        string s;
+        try
+        {
+            s = TemporalSupport.Date(2023, 2, 30).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            s = "no date";
+        }
+        string t;
+        try
+        {
+            t = TemporalSupport.FromIsoString("2023-13-01").ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            t = "bad date";
+        }
+        string u;
+        try
+        {
+            u = Parsing("[1,");
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            u = "bad json";
+        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{j} {k} {l} {m} {n} {o} {q} {r} {s} {t} {u}"));
         console.Log("panicking");
         int p;
         try
         {
             p = Inner();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             p = -1;
         }

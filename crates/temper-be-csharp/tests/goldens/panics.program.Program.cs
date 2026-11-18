@@ -11,6 +11,8 @@ static class Program
         try
         {
             RuntimeHelpers.RunClassConstructor(typeof(TemperLang.Std.Regex.RegexGlobal).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(TemperLang.Std.Json.JsonGlobal).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(TemperLang.Std.Temporal.TemporalGlobal).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(Panics.PanicsGlobal).TypeHandle);
         }
         finally

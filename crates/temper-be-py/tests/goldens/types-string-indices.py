@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     int_add as _int_add,
     list_get as _list_get,
@@ -28,12 +29,12 @@ def _compare_positions(s: str, a: int, b: int, /) -> None:
     t_0: str
     try:
         t_0 = _string_from_code_point(a)
-    except Exception:
+    except _Bubble:
         t_0 = '?'
     t_1: str
     try:
         t_1 = _string_from_code_point(b)
-    except Exception:
+    except _Bubble:
         t_1 = '?'
     _console.log(f'\'{t_0}\' is {rel_pos} \'{t_1}\' in "{s}".')
 
@@ -57,7 +58,7 @@ def _has3(s: str, c: int, /) -> bool:
     try:
         _require_string_index(i)
         return True
-    except Exception:
+    except _Bubble:
         return False
 
 
@@ -66,7 +67,7 @@ def _has4(s: str, c: int, /) -> bool:
     try:
         _require_no_string_index(i)
         return False
-    except Exception:
+    except _Bubble:
         return True
 
 
@@ -87,7 +88,7 @@ while _i < _length:
     _t_0: str
     try:
         _t_0 = _string_from_code_point(_c)
-    except Exception:
+    except _Bubble:
         _t_0 = '?'
     _console.log(f"'{_t_0}' in \"{_s}\": {'y' if _has0(_s, _c) else 'n'}, {'y' if _has1(_s, _c) else 'n'}, {'y' if _has2(_s, _c) else 'n'}, {'y' if _has3(_s, _c) else 'n'}, {'y' if _has4(_s, _c) else 'n'}")
 _string_builder = ['']

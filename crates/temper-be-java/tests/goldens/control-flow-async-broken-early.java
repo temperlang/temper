@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -49,7 +50,7 @@ public final class AsyncBrokenEarlyGlobal {
                                 caseIndex.value = 3;
                                 Core.awakeUpon(awaited.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored) {
+                            } catch (Bubble ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -64,7 +65,7 @@ public final class AsyncBrokenEarlyGlobal {
                             try {
                                 v.value = Core.getPromiseResult(awaited.value);
                                 caseIndex.value = 2;
-                            } catch (RuntimeException ignored2) {
+                            } catch (Bubble ignored2) {
                                 caseIndex.value = 1;
                             }
                             break;

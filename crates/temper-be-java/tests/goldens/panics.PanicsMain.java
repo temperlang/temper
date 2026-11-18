@@ -10,6 +10,8 @@ public final class PanicsMain {
         Core.beginTopLevel();
         try {
             Class.forName("temper.std.regex.RegexGlobal");
+            Class.forName("temper.std.json.JsonGlobal");
+            Class.forName("temper.std.temporal.TemporalGlobal");
             Class.forName("panics.PanicsGlobal");
         } finally {
             Core.endTopLevel();

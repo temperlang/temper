@@ -1,3 +1,4 @@
+using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -41,10 +42,10 @@ internal class Rect : IShape
 
     public static Rect DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = (JsonObject)t;
-        IJsonNumeric widthJson = (IJsonNumeric)obj.PropertyValueOrBubble("width");
+        JsonObject obj = Core.Cast<JsonObject>(t);
+        IJsonNumeric widthJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("width"));
         int width = widthJson.AsInt32();
-        IJsonNumeric heightJson = (IJsonNumeric)obj.PropertyValueOrBubble("height");
+        IJsonNumeric heightJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("height"));
         int height = heightJson.AsInt32();
         return new Rect(width, height);
     }

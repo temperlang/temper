@@ -26,9 +26,17 @@
 //! getters and setters, statics, default and abstract members, `is`,
 //! `as`, `==` and `toString` protocols), and nullable types (`T | None`,
 //! `is None` checks, `??` as a `:=` test), `orelse` as `try` and
-//! `except Exception`, `bubble()` as `raise RuntimeError()`, and
-//! `panic()` as `raise BaseException('panic')`, which no `orelse`
-//! catches; and generics: module-level `TypeVar`s (invariant, as
+//! `except Bubble` (the runtime's `temper_core.Bubble`, an `Exception`),
+//! `bubble()` as `raise Bubble()`, and `panic()` as `raise
+//! BaseException('panic')`, which no `orelse` catches. Unlike Kotlin's
+//! `except Exception` and `RuntimeError()`, a handler catches only a
+//! `Bubble`, which `as` and every builtin that bubbles raise, the
+//! runtime turning host failures (`ValueError`, `KeyError`,
+//! `ZeroDivisionError`, a broken promise's exception) into one; so
+//! anything else, a host error from a builtin not declared to bubble or
+//! from a callback, passes every `orelse`, and a library's host code
+//! bubbles only by raising a `Bubble` (or calling `bubble()`); and
+//! generics: module-level `TypeVar`s (invariant, as
 //! Temper's type parameters are, where Kotlin's makes some covariant),
 //! `Generic[…]` bases, and core's lists and maps as Kotlin's runtime
 //! models them (`List` and `Listed` a `Sequence`, a literal a `tuple`,

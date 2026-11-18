@@ -1,6 +1,7 @@
 from collections.abc import Callable as _Callable
 from concurrent.futures import Future as _Future
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     adapt_generator_factory as _adapt_generator_factory,
     async_launch as _async_launch,
@@ -25,7 +26,7 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
             _console.log(f'Thanks, server.  I got {body}.')
         else:
             _console.log(f'HTTP status was not 200: {resp.status}!')
-    except Exception:
+    except _Bubble:
         _console.log('failed')
 
 

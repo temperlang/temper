@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -73,7 +74,7 @@ public final class NetresponseGlobal {
                                 caseIndex.value = 2;
                                 Core.awakeUpon(awaited.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored) {
+                            } catch (Bubble ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -89,7 +90,7 @@ public final class NetresponseGlobal {
                                 } else {
                                     caseIndex.value = 5;
                                 }
-                            } catch (RuntimeException ignored2) {
+                            } catch (Bubble ignored2) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -99,14 +100,14 @@ public final class NetresponseGlobal {
                                 caseIndex.value = 6;
                                 Core.awakeUpon(awaited2.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (RuntimeException ignored3) {
+                            } catch (Bubble ignored3) {
                                 caseIndex.value = 1;
                             }
                             break;
                         case 4:
                             try {
                                 caseIndex.value = -1;
-                            } catch (RuntimeException ignored4) {
+                            } catch (Bubble ignored4) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -114,7 +115,7 @@ public final class NetresponseGlobal {
                             try {
                                 console.log("HTTP status was not 200: " + resp.value.getStatus() + "!");
                                 caseIndex.value = 4;
-                            } catch (RuntimeException ignored5) {
+                            } catch (Bubble ignored5) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -124,7 +125,7 @@ public final class NetresponseGlobal {
                                 body.value = subject.value == null ? "missing" : subject.value;
                                 console.log("Thanks, server.  I got " + body.value + ".");
                                 caseIndex.value = 4;
-                            } catch (RuntimeException ignored6) {
+                            } catch (Bubble ignored6) {
                                 caseIndex.value = 1;
                             }
                             break;

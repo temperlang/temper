@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
@@ -58,27 +59,27 @@ def _same_int(a: int | None, b: int | None, /) -> bool:
 def _parse(s: str, /) -> int:
     try:
         return _string_to_int32(s)
-    except Exception:
+    except _Bubble:
         return -1
 
 
 def _halved(s: str, d: int, /) -> int:
     try:
         return _int_div(_string_to_int32(s), d)
-    except Exception:
+    except _Bubble:
         return -1
 
 
 def _positive(n: int, /) -> int:
     if n < 0:
-        raise RuntimeError()
+        raise _Bubble()
     return n
 
 
 def _checked(n: int, /) -> int:
     try:
         return _positive(n)
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
@@ -98,7 +99,7 @@ def _reason(n: int, why: str | None, /) -> str:
     try:
         _positive(n)
         return 'ok'
-    except Exception:
+    except _Bubble:
         return 'fails' if why is None else why
 
 
@@ -128,12 +129,12 @@ if _tail is not None:
     _console.log(str(_tail.value))
 try:
     _positive(-1)
-except Exception:
+except _Bubble:
     _console.log('negative')
 _fallback: int
 try:
     _fallback = _positive(-2)
-except Exception:
+except _Bubble:
     _fallback = 0
 _console.log(str(_fallback))
 _console.log(f"{_reason(1, None)} {_reason(-1, None)} {_reason(-1, 'bad')}")

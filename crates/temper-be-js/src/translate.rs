@@ -274,6 +274,16 @@ impl<'a> Translator<'a> {
         }
     }
 
+    /// A declaration's JSDoc `@type`, where its value says too little of
+    /// it: `null` alone, or `[]` or `new Map()` of their type arguments.
+    fn decl_ty(&mut self, ty: TypeId, value: NodeId) -> R<Option<String>> {
+        let null = matches!(self.p.nodes.get(value), Node::Null {});
+        Ok(match null || self.has_args(ty) {
+            true => Some(self.ty(ty)?),
+            false => None,
+        })
+    }
+
     /// Whether a type has type arguments, which a declaration's JSDoc
     /// gives where its value may not, as `[]`.
     fn has_args(&self, ty: TypeId) -> bool {
@@ -655,16 +665,11 @@ impl<'a> Translator<'a> {
                                 body.push(made.spanned(span));
                                 continue;
                             }
+                            let ty = self.decl_ty(p.decls.get(target).ty, value)?;
                             let saved = std::mem::take(&mut self.pre);
                             let value = self.expr(value)?;
                             let pre = std::mem::replace(&mut self.pre, saved);
                             body.extend(pre.into_iter().map(|s| s.spanned(span)));
-                            let ty = p.decls.get(target).ty;
-                            let ty = if self.has_args(ty) {
-                                Some(self.ty(ty)?)
-                            } else {
-                                None
-                            };
                             let decl = Stmt::Decl {
                                 export,
                                 keyword: if var { Keyword::Let } else { Keyword::Const },
@@ -1253,15 +1258,7 @@ impl<'a> Translator<'a> {
                             Keyword::Const
                         },
                         name,
-                        // `null` alone says too little of the type, and
-                        // `[]` or `new Map()` of their type arguments.
-                        ty: match p.nodes.get(init) {
-                            Node::Null {} => Some(self.ty(p.decls.get(local).ty)?),
-                            _ if self.has_args(p.decls.get(local).ty) => {
-                                Some(self.ty(p.decls.get(local).ty)?)
-                            }
-                            _ => None,
-                        },
+                        ty: self.decl_ty(p.decls.get(local).ty, init)?,
                         value: Some(self.expr(init)?),
                     },
                     None => Stmt::Decl {

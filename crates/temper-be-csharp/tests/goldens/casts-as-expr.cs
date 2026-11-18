@@ -23,7 +23,7 @@ public static class AsExprGlobal
             {
                 t1 = Core.CastToNonNull<Fuji>(x).Name;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t1 = "Cast failed!";
             }
@@ -34,7 +34,7 @@ public static class AsExprGlobal
             {
                 t2 = Core.CastToNonNull<IApple>(y).Name;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t2 = "Cast from AnyValue failed!";
             }
@@ -44,7 +44,7 @@ public static class AsExprGlobal
             {
                 t3 = Core.CastToNonNull<Gala>(y).Name;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t3 = "Cast from AnyValue failed!";
             }
@@ -54,7 +54,7 @@ public static class AsExprGlobal
             {
                 t4 = Core.CastToNonNull<Fuji>(y).Name;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t4 = "Cast from AnyValue failed!";
             }
@@ -66,7 +66,7 @@ public static class AsExprGlobal
                 Core.CastToNonNull<IApple>(x);
                 t5 = "Tasty nothing.";
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 t5 = "Was null!";
             }

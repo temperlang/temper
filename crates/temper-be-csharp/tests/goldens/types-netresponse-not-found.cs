@@ -28,29 +28,29 @@ public static class NetresponseNotFoundGlobal
                 {
                     promise1 = new NetRequest(url).Send();
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise1);
                 try
                 {
-                    resp = promise1.Result;
+                    resp = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                     console.Log("status " + resp.Status.ToString(CultureInfo.InvariantCulture));
                     promise2 = resp.BodyContent;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise2);
                 try
                 {
-                    subject = promise2.Result;
+                    subject = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     body = subject == null ? "missing" : subject;
                     console.Log("body " + body);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
@@ -67,17 +67,17 @@ public static class NetresponseNotFoundGlobal
                 {
                     promise3 = new NetRequest("http://127.0.0.1:1/").Send();
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH2;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise3);
                 try
                 {
-                    _ = promise3.Result;
+                    _ = global::TemperLang.Core.Async.GetPromiseResult(promise3);
                     console.Log("port 1 answered");
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH2;
                 }

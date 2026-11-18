@@ -89,8 +89,22 @@ namespace temper {
                 return years;
             }
 
+            /// Bubbles unless there's such a day in the proleptic Gregorian calendar.
+            inline void requireValid(int32_t year, int32_t month, int32_t day) {
+                static const int32_t days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+                if (month < 1 || month > 12 || day < 1) {
+                    bubble("no such date");
+                }
+                bool leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+                int32_t last = month == 2 && leap ? 29 : days[month - 1];
+                if (day > last) {
+                    bubble("no such date");
+                }
+            }
+
             template<class D>
             std::shared_ptr<D> makeDate(int32_t year, int32_t month, int32_t day) {
+                requireValid(year, month, day);
                 std::shared_ptr<D> d = std::make_shared<D>();
                 d->year = year;
                 d->month = month;

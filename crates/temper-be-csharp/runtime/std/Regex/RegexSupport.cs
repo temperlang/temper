@@ -124,7 +124,7 @@ namespace TemperLang.Std.Regex
             var match = CompiledFindEx((R::Regex)compiled, text, begin);
             if (match == null)
             {
-                throw new Exception();
+                throw new Bubble();
             }
             return match;
         }

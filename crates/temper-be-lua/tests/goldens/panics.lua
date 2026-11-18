@@ -1,11 +1,15 @@
 local temper = require("temper-core")
 local int64_1 = temper.int64_constructor(1)
+local int64_neg7 = temper.int64_constructor(-7)
+local int64_5000000000 = temper.int64_constructor(1, 705032704)
 local Regex = require("std/regex").Regex
 local RegexNode = require("std/regex").RegexNode
 local Repeat = require("std/regex").Repeat
 local CodeSet = require("std/regex").CodeSet
 local CodePart = require("std/regex").CodePart
 local CodeRange = require("std/regex").CodeRange
+local parseJson = require("std/json").parseJson
+local Date = require("std/temporal").Date
 
 ---@class panics.Shape
 
@@ -54,13 +58,28 @@ end
 ---@return integer
 local function calling(f)
   ---@type integer
-  local t
+  local t_1
   if not temper.pcall(function()
-    t = f()
+    t_1 = f()
   end) then
-    t = -9
+    t_1 = -9
   end
-  return t
+  return t_1
+end
+
+---@param codePoint integer
+---@return string
+local function appending(codePoint)
+  local sb = temper.stringbuilder_constructor()
+  temper.stringbuilder_appendcodepoint(sb, codePoint)
+  return temper.stringbuilder_tostring(sb)
+end
+
+---@param text string
+---@return string
+local function parsing(text)
+  parseJson(text)
+  return "parsed"
 end
 
 ---@param n integer
@@ -82,13 +101,13 @@ end
 ---@return integer
 local function inner()
   ---@type integer
-  local t
+  local t_1
   if not temper.pcall(function()
-    t = explode(1)
+    t_1 = explode(1)
   end) then
-    t = noted("inner")
+    t_1 = noted("inner")
   end
-  return t
+  return t_1
 end
 
 ---@type integer
@@ -157,6 +176,87 @@ end) then
 end
 local i = calling(function() return failing(2) end)
 print(a .. " " .. b .. " " .. c .. " " .. d .. " " .. e .. " " .. tostring(temper.float_eq(f, -6.0)) .. " " .. g .. " " .. h .. " " .. i)
+local nothing = temper.null
+---@type string
+local j
+if not temper.pcall(function()
+  j = temper.cast_to_string(nothing)
+end) then
+  j = "null"
+end
+---@type integer
+local k
+if not temper.pcall(function()
+  k = temper.string_toint64("zz")
+end) then
+  k = int64_neg7
+end
+---@type integer
+local l
+if not temper.pcall(function()
+  l = temper.string_toint32("99999999999")
+end) then
+  l = -8
+end
+---@type integer
+local m
+if not temper.pcall(function()
+  m = temper.float64_toint32(1e20)
+end) then
+  m = -9
+end
+---@type integer
+local n
+if not temper.pcall(function()
+  n = temper.int64_toint32(int64_5000000000)
+end) then
+  n = -10
+end
+local points = { 65, 1114112 }
+---@type string
+local o
+if not temper.pcall(function()
+  o = temper.string_fromcodepoints(points)
+end) then
+  o = "?"
+end
+---@type string
+local q
+if not temper.pcall(function()
+  q = appending(-1)
+end) then
+  q = "?"
+end
+local builder = temper.mapbuilder_constructor()
+---@type integer
+local r
+if not temper.pcall(function()
+  r = temper.mapbuilder_remove(builder, "x")
+end) then
+  r = -11
+end
+---@type string
+local s
+if not temper.pcall(function()
+  s = temper.date_tostring(temper.date_constructor(2023, 2, 30))
+end) then
+  s = "no date"
+end
+---@type string
+local t
+if not temper.pcall(function()
+  t = temper.date_tostring(temper.date_fromisostring("2023-13-01"))
+end) then
+  t = "bad date"
+end
+---@type string
+local u
+if not temper.pcall(function()
+  u = parsing("[1,")
+end) then
+  u = "bad json"
+end
+print(j .. " " .. temper.int64_tostring(k) .. " " .. l .. " " .. m .. " " .. n .. " " .. o .. " " .. q .. " " .. r .. " " .. s .. " " .. t .. " " .. u)
 print("panicking")
 ---@type integer
 local p

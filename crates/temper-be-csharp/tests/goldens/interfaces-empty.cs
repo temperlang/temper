@@ -10,6 +10,6 @@ public static class EmptyGlobal
     {
         console = Support.Logging.LoggingConsoleFactory.CreateConsole("Empty");
         IGreeter greeter = new HiGreeter();
-        ((HiGreeter)greeter).Greet();
+        Core.Cast<HiGreeter>(greeter).Greet();
     }
 }

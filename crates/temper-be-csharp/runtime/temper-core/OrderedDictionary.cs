@@ -44,6 +44,12 @@ namespace TemperLang.Core
             TValue fallback
         ) => dictionary.TryGetValue(key, out var value) ? value : fallback;
 
+        /// Temper's get: the key's value, bubbling if it's missing.
+        public static TValue Get<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) => dictionary.TryGetValue(key, out var value) ? value : throw new Bubble();
+
         public static bool ContainsKey<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary,
             TKey key
@@ -106,6 +112,11 @@ namespace TemperLang.Core
         ) => dictionary.ContainsKey(key)
             ? dictionary[key]
             : fallback;
+
+        public static TValue Get<TKey, TValue>(
+            this IDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) => dictionary.TryGetValue(key, out var value) ? value : throw new Bubble();
 
         public static bool ContainsKey<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary,

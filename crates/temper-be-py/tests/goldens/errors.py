@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     int_add as _int_add,
     int_mul as _int_mul,
@@ -17,19 +18,19 @@ def _mismatched(x: int, /) -> int:
 
 
 def _undeclared() -> int:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _misspelled(s: str, /) -> int:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _misspelled_method(s: str, /) -> int:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _wrong_arity() -> int:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _unknown_type(x: object, /) -> int:
@@ -41,7 +42,7 @@ def _after_unclosed(x: int, /) -> int:
 
 
 def _dropped(cents: int, /) -> str:
-    raise RuntimeError()
+    raise _Bubble()
 
 
 def _stored(x: int, /) -> str:
@@ -79,54 +80,54 @@ _console: _LoggingConsole = _LoggingConsole(__name__)
 _a: int
 try:
     _a = _mismatched(1)
-except Exception:
+except _Bubble:
     _a = -1
 _b: int
 try:
     _b = _undeclared()
-except Exception:
+except _Bubble:
     _b = -1
 _c: int
 try:
     _c = _misspelled('a')
-except Exception:
+except _Bubble:
     _c = -1
 _d: int
 try:
     _d = _misspelled_method('a')
-except Exception:
+except _Bubble:
     _d = -1
 _e: int
 try:
     _e = _wrong_arity()
-except Exception:
+except _Bubble:
     _e = -1
 _box: _Box = _Box(3)
 _f: str
 try:
     _f = _box.bad()
-except Exception:
+except _Bubble:
     _f = 'caught'
 _console.log(f'{good(1)} {_a} {_b} {_c} {_d} {_e}')
 _console.log(f'{_unknown_type(1)} {_after_unclosed(2)} {_box.get()} {_f}')
 _g: str
 try:
     _g = _stored(1)
-except Exception:
+except _Bubble:
     _g = 'caught'
 _h: int
 try:
     _h = _returned()
-except Exception:
+except _Bubble:
     _h = -1
 _i: int
 try:
     _i = _passed_on('in')
-except Exception:
+except _Bubble:
     _i = -1
 _j: str
 try:
     _j = _dropped(1)
-except Exception:
+except _Bubble:
     _j = 'dropped'
 _console.log(f'{_g} {_h} {_i} {_j}')

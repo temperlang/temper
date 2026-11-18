@@ -18,7 +18,7 @@ public static class JsonAdaptersGlobal
         {
             return p.ToJsonString();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return "bad JSON";
         }
@@ -37,7 +37,7 @@ public static class JsonAdaptersGlobal
         {
             back = Decode(adapter, text);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -61,7 +61,7 @@ public static class JsonAdaptersGlobal
         {
             shape = Decode(IShape.JsonAdapter(), "{\"height\": 6, \"width\": 5}");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -81,7 +81,7 @@ public static class JsonAdaptersGlobal
         {
             record = Decode(Record.JsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -95,7 +95,7 @@ public static class JsonAdaptersGlobal
             Decode(Point.JsonAdapter(), "{\"x\": 1}");
             t1 = "decoded";
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "no y";
         }
@@ -106,7 +106,7 @@ public static class JsonAdaptersGlobal
             Decode(IMessage.JsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
             t2 = "decoded";
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t2 = "no such kind";
         }

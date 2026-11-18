@@ -8,7 +8,7 @@ public static class CoreGlobal
         {
             return global::TemperLang.Core.Core.Div(n, d);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return 0;
         }

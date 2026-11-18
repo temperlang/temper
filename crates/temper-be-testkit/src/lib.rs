@@ -274,8 +274,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]); `panics`
 /// `orelse` handling bubbles from everywhere but never a panic, whose
-/// run fails ([`FAILING`]).
-pub const PROGRAMS: [&str; 21] = [
+/// run fails ([`FAILING`]); and `host-errors` a host's failure in a
+/// builtin not declared to bubble passing `orelse`, whose run fails too.
+pub const PROGRAMS: [&str; 22] = [
     "classes",
     "nullables",
     "generics",
@@ -297,11 +298,13 @@ pub const PROGRAMS: [&str; 21] = [
     "json-adapters",
     "reach",
     "panics",
+    "host-errors",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
-/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops.
-pub const FAILING: [&str; 1] = ["panics"];
+/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
+/// `host-errors`, whose host failure none does.
+pub const FAILING: [&str; 2] = ["panics", "host-errors"];
 
 /// The shared programs that run as tests, as a functional test with
 /// `runAsTest = true` does, none expected to fail: their tests check

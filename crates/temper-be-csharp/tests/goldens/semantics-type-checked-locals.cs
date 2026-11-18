@@ -45,7 +45,7 @@ public static class TypeCheckedLocalsGlobal
             int a;
             Core.Bubble();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Yay();
         }
@@ -59,7 +59,7 @@ public static class TypeCheckedLocalsGlobal
             {
                 Core.Bubble();
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 Meh();
             }
@@ -82,7 +82,7 @@ public static class TypeCheckedLocalsGlobal
             F(0);
             Yay();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Boo();
         }
@@ -90,7 +90,7 @@ public static class TypeCheckedLocalsGlobal
         {
             Core.Bubble();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Meh();
         }
@@ -100,7 +100,7 @@ public static class TypeCheckedLocalsGlobal
             G(0);
             Yay();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Boo();
         }
@@ -108,7 +108,7 @@ public static class TypeCheckedLocalsGlobal
         {
             Core.Bubble();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Meh();
         }
@@ -118,7 +118,7 @@ public static class TypeCheckedLocalsGlobal
             I(0);
             Yay();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Boo();
         }
@@ -126,7 +126,7 @@ public static class TypeCheckedLocalsGlobal
         {
             Core.Bubble();
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Meh();
         }

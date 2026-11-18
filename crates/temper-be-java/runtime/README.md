@@ -6,5 +6,6 @@ list what changed.
 
 - `temper-core/`: the runtime, which `src/runtime.rs` embeds for
   `temper build` to write beside the output.
-- `std/regex/`: std's `regex` host code, which `src/lib.rs`'s
-  `STD_SUPPORT` writes beside std's output.
+- `std/regex/` and `std/temporal/`: std's `regex` and `temporal` host
+  code, which `src/lib.rs`'s `STD_SUPPORT` writes beside std's output
+  (`temporal`'s, which bubbles for invalid dates, is this compiler's own).

@@ -31,32 +31,32 @@ public static class NetresponseGlobal
                     req.Post("[]", "application/json");
                     promise1 = req.Send();
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise1);
                 try
                 {
-                    resp = promise1.Result;
+                    resp = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                     if (!(resp.Status == 200))
                     {
                         goto ELSE1;
                     }
                     promise2 = resp.BodyContent;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise2);
                 try
                 {
-                    subject = promise2.Result;
+                    subject = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     body = subject == null ? "missing" : subject;
                     console.Log("Thanks, server.  I got " + body + ".");
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
@@ -66,7 +66,7 @@ public static class NetresponseGlobal
                 {
                     console.Log("HTTP status was not 200: " + resp.Status.ToString(CultureInfo.InvariantCulture) + "!");
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }

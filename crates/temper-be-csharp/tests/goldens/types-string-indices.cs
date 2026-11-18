@@ -31,7 +31,7 @@ public static class IndicesGlobal
         {
             t1 = Core.StringFromCodePoint(a);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "?";
         }
@@ -40,7 +40,7 @@ public static class IndicesGlobal
         {
             t2 = Core.StringFromCodePoint(b);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t2 = "?";
         }
@@ -72,7 +72,7 @@ public static class IndicesGlobal
             StringUtil.RequireStringIndex(i);
             return true;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return false;
         }
@@ -86,7 +86,7 @@ public static class IndicesGlobal
             StringUtil.RequireNoStringIndex(i);
             return false;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return true;
         }
@@ -115,7 +115,7 @@ public static class IndicesGlobal
                 {
                     t3 = Core.StringFromCodePoint(c);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     t3 = "?";
                 }

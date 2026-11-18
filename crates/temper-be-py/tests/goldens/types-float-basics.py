@@ -1,6 +1,8 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
+    float64_div as _float64_div,
     float64_to_int as _float64_to_int,
     float64_to_int64 as _float64_to_int64,
     float64_to_int64_unsafe as _float64_to_int64_unsafe,
@@ -40,7 +42,7 @@ def _add(a: float, b: float, /) -> float:
 def _check_parse(string: str, /) -> None:
     try:
         converted = _float64_to_string(_string_to_float64(string))
-    except Exception:
+    except _Bubble:
         converted = 'failed'
     _console.log(f'Parse {string} -> {converted}')
 
@@ -48,7 +50,7 @@ def _check_parse(string: str, /) -> None:
 def _check_tiny(string: str, /) -> None:
     try:
         positive = _boolean_to_string(_float_cmp(_string_to_float64(string), 0.0) > 0)
-    except Exception:
+    except _Bubble:
         positive = 'failed'
     _console.log(f'Parse {string} > 0 -> {positive}')
 
@@ -93,11 +95,11 @@ if _float_eq(_negative_zero - _negative_zero, _zero):
 if _float_eq(_negative_zero + _negative_zero, _negative_zero):
     _console.log('negative zero plus negative zero is negative zero')
 _console.log(_float64_to_string(_negative_zero))
-_third: float = _one / _three
+_third: float = _float64_div(_one, _three)
 _third = _third
-_half: float = _one / _two
+_half: float = _float64_div(_one, _two)
 _half = _half
-_two_thirds: float = _two / _three
+_two_thirds: float = _float64_div(_two, _three)
 _two_thirds = _two_thirds
 if _gt(_third, _half):
     _console.log('oops third > half')
@@ -126,7 +128,7 @@ _console.log(f'{_float64_to_string(1e21 * _one)} {_float64_to_string(1.5e-10 * _
 _biggest: float = _bigger * _bigger * _bigger * _bigger * _bigger * _bigger
 _biggest = _biggest
 _console.log(f'biggest {_float64_to_string(_biggest)}')
-_tiniest: float = _one / _biggest
+_tiniest: float = _float64_div(_one, _biggest)
 _tiniest = _tiniest
 _console.log(f'tiniest {_float64_to_string(_tiniest)}')
 _negative_infinity: float = _biggest * -1.0
@@ -150,13 +152,13 @@ _console.log(f'Negative to int: {_float64_to_int_unsafe(-4.9 * _one)}')
 _t_0: str
 try:
     _t_0 = str(_float64_to_int(_infinity))
-except Exception:
+except _Bubble:
     _t_0 = 'no'
 _console.log(f'Infinity to int: {_t_0}')
 _t_1: str
 try:
     _t_1 = str(_float64_to_int(float('nan')))
-except Exception:
+except _Bubble:
     _t_1 = 'no'
 _console.log(f'NaN to int: {_t_1}')
 _one_int64: int = _float64_to_int64_unsafe(_one)
@@ -173,25 +175,25 @@ _console.log(f'Barely ok to Int64: {str(_float64_to_int64_unsafe(_ok_to_convert6
 _t_2: str
 try:
     _t_2 = str(_float64_to_int64(_sneaky_big))
-except Exception:
+except _Bubble:
     _t_2 = 'no'
 _console.log(f'Sneaky big to Int64: {_t_2}')
 _t_3: str
 try:
     _t_3 = _float64_to_string(_int64_to_float64(_too_big_for_float64))
-except Exception:
+except _Bubble:
     _t_3 = 'no'
 _console.log(f'Too big Int64 to Float64: {_t_3}')
 _t_4: str
 try:
     _t_4 = str(_float64_to_int64(_infinity))
-except Exception:
+except _Bubble:
     _t_4 = 'no'
 _console.log(f'Infinity to Int64: {_t_4}')
 _t_5: str
 try:
     _t_5 = str(_float64_to_int64(float('nan')))
-except Exception:
+except _Bubble:
     _t_5 = 'no'
 _console.log(f'NaN to Int64: {_t_5}')
 _check_parse('-1.5')

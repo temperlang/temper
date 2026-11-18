@@ -1,6 +1,7 @@
 from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
 from collections.abc import Sequence as _Sequence
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     cast_by_type as _cast_by_type,
@@ -179,7 +180,7 @@ class _Shape(metaclass=_ABCMeta):
             return _Circle.json_adapter().decode_from_json(obj, ic)
         if value_for_radius is None:
             return _Rect.json_adapter().decode_from_json(obj, ic)
-        raise RuntimeError()
+        raise _Bubble()
 
     @staticmethod
     def json_adapter() -> '_JsonAdapter[_Shape]':
@@ -301,7 +302,7 @@ class _Message(metaclass=_ABCMeta):
                 return _Hello.json_adapter().decode_from_json(obj, ic)
             elif subject == 'bye':
                 return _Bye.json_adapter().decode_from_json(obj, ic)
-        raise RuntimeError()
+        raise _Bubble()
 
     @staticmethod
     def json_adapter() -> '_JsonAdapter[_Message]':
@@ -438,7 +439,7 @@ def _encode(adapter: _JsonAdapter[_T], value: _T, /) -> str:
     adapter.encode_to_json(value, p)
     try:
         return p.to_json_string()
-    except Exception:
+    except _Bubble:
         return 'bad JSON'
 
 
@@ -450,7 +451,7 @@ def _round_trip(adapter: _JsonAdapter[_T], value: _T, /) -> None:
     text = _encode(adapter, value)
     try:
         back = _decode(adapter, text)
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
     again = _encode(adapter, back)
     _console.log(text if again == text else f'{text} became {again}')
@@ -467,7 +468,7 @@ _round_trip(_Celsius.json_adapter(), _Celsius(21))
 _shape: _Shape
 try:
     _shape = _decode(_Shape.json_adapter(), '{"height": 6, "width": 5}')
-except Exception:
+except _Bubble:
     raise BaseException('panic')
 if isinstance(_shape, _Rect):
     _console.log(f'rect {_shape.width}x{_shape.height}')
@@ -476,20 +477,20 @@ else:
 _record: _Record
 try:
     _record = _decode(_Record.json_adapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}')
-except Exception:
+except _Bubble:
     raise BaseException('panic')
 _console.log(f"{_record.name} {_boolean_to_string(_record.active)} {'none' if (_subject := _record.nickname) is None else _subject} {len(_record.points)}")
 _t_0: str
 try:
     _decode(_Point.json_adapter(), '{"x": 1}')
     _t_0 = 'decoded'
-except Exception:
+except _Bubble:
     _t_0 = 'no y'
 _console.log(_t_0)
 _t_1: str
 try:
     _decode(_Message.json_adapter(), '{"kind": "what", "text": "?"}')
     _t_1 = 'decoded'
-except Exception:
+except _Bubble:
     _t_1 = 'no such kind'
 _console.log(_t_1)

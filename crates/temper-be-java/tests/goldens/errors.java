@@ -1,6 +1,7 @@
 package errors;
 
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -56,38 +57,38 @@ public final class ErrorsGlobal {
         int a;
         try {
             a = mismatched(1);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             a = -1;
         }
         int b;
         try {
             b = undeclared();
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             b = -1;
         }
         int c;
         try {
             c = misspelled("a");
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             c = -1;
         }
         int d;
         try {
             d = misspelledMethod("a");
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             d = -1;
         }
         int e;
         try {
             e = wrongArity();
-        } catch (RuntimeException ignored5) {
+        } catch (Bubble ignored5) {
             e = -1;
         }
         Box box = new Box(3);
         String f;
         try {
             f = box.bad();
-        } catch (RuntimeException ignored6) {
+        } catch (Bubble ignored6) {
             f = "caught";
         }
         console.log(good(1) + " " + a + " " + b + " " + c + " " + d + " " + e);
@@ -95,25 +96,25 @@ public final class ErrorsGlobal {
         String g;
         try {
             g = stored(1);
-        } catch (RuntimeException ignored7) {
+        } catch (Bubble ignored7) {
             g = "caught";
         }
         int h;
         try {
             h = returned();
-        } catch (RuntimeException ignored8) {
+        } catch (Bubble ignored8) {
             h = -1;
         }
         int i;
         try {
             i = Core.throwBubble();
-        } catch (RuntimeException ignored9) {
+        } catch (Bubble ignored9) {
             i = -1;
         }
         String j;
         try {
             j = dropped(1);
-        } catch (RuntimeException ignored10) {
+        } catch (Bubble ignored10) {
             j = "dropped";
         }
         console.log(g + " " + h + " " + i + " " + j);

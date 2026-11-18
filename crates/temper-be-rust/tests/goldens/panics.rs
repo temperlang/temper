@@ -35,6 +35,37 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 "{a} {b} {c} {d} {e} {} {g} {h} {i}",
                 temper_core::float64::cmp(f, -6.0) == 0
             );
+            let nothing = None;
+            let j = nothing
+                .clone()
+                .ok_or_else(temper_core::Error::new)
+                .unwrap_or_else(|_| Arc::new("null".to_string()));
+            let k = temper_core::string::to_int64("zz", None).unwrap_or(-7);
+            let l = temper_core::string::to_int("99999999999", None).unwrap_or(-8);
+            let m = temper_core::float64::to_int(1e20).unwrap_or(-9);
+            let n = temper_core::int64_to_int32(5000000000).unwrap_or(-10);
+            let points: temper_core::List<i32> = Arc::new(vec![65, 1114112]);
+            let o =
+                temper_core::string::from_code_points(&*temper_core::Listed::new(points.clone()))
+                    .unwrap_or_else(|_| Arc::new("?".to_string()));
+            let q = appending(-1).unwrap_or_else(|_| Arc::new("?".to_string()));
+            let builder: temper_core::MapBuilder<Arc<String>, i32> = temper_core::MapBuilder::new();
+            let r =
+                temper_core::MapBuilder::remove(&builder, Arc::new("x".to_string())).unwrap_or(-11);
+            let s = (|| {
+                Ok::<_, temper_core::Error>(
+                    temper_std::temporal::Date::new(2023, 2, 30)?.to_string(),
+                )
+            })()
+            .unwrap_or_else(|_| Arc::new("no date".to_string()));
+            let t = (|| {
+                Ok::<_, temper_core::Error>(
+                    temper_std::temporal::Date::from_iso_string("2023-13-01")?.to_string(),
+                )
+            })()
+            .unwrap_or_else(|_| Arc::new("bad date".to_string()));
+            let u = parsing("[1,").unwrap_or_else(|_| Arc::new("bad json".to_string()));
+            println!("{j} {k} {l} {m} {n} {o} {q} {r} {s} {t} {u}");
             println!("panicking");
             let p = inner().unwrap_or(-1);
             println!("after the panic {p}");
@@ -129,6 +160,18 @@ pub(crate) fn downcast(s: Shape) -> temper_core::Result<Square> {
 
 pub(crate) fn calling(f: Arc<dyn Fn() -> temper_core::Result<i32> + Send + Sync>) -> i32 {
     f().unwrap_or(-9)
+}
+
+pub(crate) fn appending(code_point: i32) -> temper_core::Result<Arc<String>> {
+    let sb = Arc::new(std::sync::RwLock::new(String::new()));
+    temper_core::string::builder::append_code_point(&sb, code_point)?;
+    Ok(temper_core::string::builder::to_string(&sb))
+}
+
+pub(crate) fn parsing(text: impl ToArcString) -> temper_core::Result<Arc<String>> {
+    let text = text.to_arc_string();
+    temper_std::json::parse_json(text.clone())?;
+    Ok(Arc::new("parsed".to_string()))
 }
 
 pub(crate) fn explode(n: i32) -> temper_core::Result<i32> {

@@ -10,7 +10,7 @@ internal interface IMessage
     public static IMessage DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         {
-            JsonObject obj = (JsonObject)t;
+            JsonObject obj = Core.Cast<JsonObject>(t);
             IJsonSyntaxTree? valueForKind = obj.PropertyValueOrNull("kind");
             {
                 if (valueForKind != null && valueForKind is JsonString)

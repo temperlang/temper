@@ -47,7 +47,7 @@ public static class DroppedGlobal
         {
             Go(l, true, 1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -58,7 +58,7 @@ public static class DroppedGlobal
         {
             t1 = Go(l, true, 0);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = -1;
         }

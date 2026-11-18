@@ -1,4 +1,5 @@
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     string_from_code_point as _string_from_code_point,
@@ -34,11 +35,11 @@ _builder.append(_built)
 _console.log(''.join(_builder))
 try:
     _builder.append(_string_from_code_point(1114112))
-except Exception:
+except _Bubble:
     _console.log('High code blocked.')
 try:
     _builder.append(_string_from_code_point(55296))
-except Exception:
+except _Bubble:
     _console.log('Surrogate blocked.')
 _console.log(''.join(_builder))
 _builder.clear()
@@ -53,12 +54,12 @@ _builder.clear()
 _builder.append('??')
 try:
     _builder.append(_string_from_code_point(1))
-except Exception:
+except _Bubble:
     _console.log('No U+1.')
 _builder.append('0')
 try:
     _builder.append(_string_from_code_point(8364))
-except Exception:
+except _Bubble:
     _console.log('No euro.')
 _builder.append('1')
 _console.log('Digits after escapes: ' + _boolean_to_string(''.join(_builder) == '??\x010€1'))

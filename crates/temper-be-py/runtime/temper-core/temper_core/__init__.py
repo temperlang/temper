@@ -15,10 +15,10 @@ from abc import abstractmethod
 from array import array
 from collections import deque
 from contextlib import contextmanager
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
 from logging import getLogger, INFO
-from math import copysign, inf, isclose, isinf, isnan, nan
+from math import copysign, fmod, inf, isclose, isinf, isnan, nan
 import threading
 from traceback import print_exception
 from typing import (
@@ -144,8 +144,19 @@ def string_builder_end(string_builder: list[str]) -> int:
     return len(compacted)
 
 
+class Bubble(Exception):
+    """
+    A Temper bubble: a failure that Temper declares (`throws Bubble`), and
+    all that generated `orelse` handlers catch, so any other exception, a
+    panic or a host failure, passes them. Host code (a library's
+    `@connected` code) bubbles by raising one or calling `bubble()`.
+    """
+
+    __slots__ = ()
+
+
 def make_bubble_exception() -> Exception:
-    return RuntimeError()
+    return Bubble()
 
 
 def bubble() -> Any:
@@ -194,6 +205,8 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     arith_int_mod(5, -3) == 2
     arith_int_mod(-5, 3) == -2
     """
+    if divisor == 0:
+        raise Bubble("division by zero")
     q = dividend // divisor
     if (dividend ^ divisor) < 0 and q * divisor != dividend:
         q += 1
@@ -265,9 +278,9 @@ def isinstance_char(val: T) -> bool:
 
 
 def cast_none(val: Union[T, None]) -> T:
-    "Checks that value is not None."
+    "Checks that value is not None, else bubbling."
     if val is None:
-        raise TypeError()
+        raise Bubble()
     return val
 
 
@@ -275,17 +288,17 @@ _cbtT = TypeVar("_cbtT")
 
 
 def cast_by_type(val: Union[_cbtT, Any], py_type: Type[_cbtT]) -> _cbtT:
-    "Cast to a python type by an isinstance check."
+    "Cast to a python type by an isinstance check, else bubbling."
     if isinstance(val, py_type):
         return val
     else:
-        raise TypeError()
+        raise Bubble()
 
 
 def cast_by_test(val: T, predicate: Callable[[T], bool]) -> Any:
     "This cast validates that a temper function meets some predicate, e.g. callable."
     if not predicate(val):
-        raise ValueError()
+        raise Bubble()
     return val
 
 
@@ -435,7 +448,40 @@ def int_div(a: int, b: int) -> int:
     # Mostly concerned with b == -1, but maybe evil `a` snuck in from outside?
     if a <= -0x8000_0000 and b < 0:
         return int_clamp(int(a / b))
+    if b == 0:
+        raise Bubble("division by zero")
     return int(a / b)
+
+
+def float64_div(a: float, b: float) -> float:
+    "Float64 division, bubbling for a zero divisor, where Python raises."
+    if b == 0.0:
+        raise Bubble("division by zero")
+    return a / b
+
+
+def float64_mod(a: float, b: float) -> float:
+    "Float64 remainder, bubbling where `fmod` raises (a zero divisor)."
+    try:
+        return fmod(a, b)
+    except ValueError as e:
+        raise Bubble(*e.args) from e
+
+
+def mapped_get(mapping: Mapping[T, U], key: T) -> U:
+    "A key's value, bubbling if the key is missing."
+    try:
+        return mapping[key]
+    except KeyError:
+        raise Bubble() from None
+
+
+def map_builder_remove(mapping: Dict[T, U], key: T) -> U:
+    "Removes a key, giving its value, bubbling if the key is missing."
+    try:
+        return mapping.pop(key)
+    except KeyError:
+        raise Bubble() from None
 
 
 def int_mul(a: int, b: int) -> int:
@@ -494,6 +540,8 @@ def int64_div(a: int, b: int) -> int:
     # Mostly concerned with b == -1, but maybe evil `a` snuck in from outside?
     if a <= -0x8000_0000_0000_0000 and b < 0:
         return int64_clamp(int(a / b))
+    if b == 0:
+        raise Bubble("division by zero")
     r = a // b
     if (a ^ b) < 0 and r * b != a:
         r += 1
@@ -518,14 +566,14 @@ def int64_to_float64(value: int) -> float:
     "Implements connected method core.type Int64.toFloat64()."
     if -0x20_0000_0000_0000 < value < 0x20_0000_0000_0000:
         return float(value)
-    raise OverflowError()
+    raise Bubble()
 
 
 def int64_to_int32(value: int) -> int:
     "Implements connected method core.type Int64.toInt32()."
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return int(value)
-    raise OverflowError()
+    raise Bubble()
 
 
 def int64_to_int32_unsafe(value: int) -> int:
@@ -571,32 +619,24 @@ def float64_to_int(value: float) -> int:
     "Implements connected method core.type Float64.toInt32()."
     if -0x8000_0001 < value < 0x8000_0000:
         return int(value)
-    if isnan(value):
-        raise ValueError()
-    else:
-        raise OverflowError()
+    raise Bubble()
 
 
 def float64_to_int_unsafe(value: float) -> int:
     "Implements connected method core.type Float64.toInt32Unsafe()."
-    try:
-        # Checks limits first to avoid absurdly large ints.
-        return float64_to_int(value)
-    except OverflowError:
-        # TODO If a common case, is this faster to void exceptions?
-        return -0x8000_0000 if value < 0 else 0x7FFF_FFFF
-    except ValueError:  # NaN
+    # Checks limits first to avoid absurdly large ints.
+    if -0x8000_0001 < value < 0x8000_0000:
+        return int(value)
+    if isnan(value):
         return 0
+    return -0x8000_0000 if value < 0 else 0x7FFF_FFFF
 
 
 def float64_to_int64(value: float) -> int:
     "Implements connected method core.type Float64.toInt64()."
     if -0x1F_FFFF_FFFF_FFFF <= value <= 0x1F_FFFF_FFFF_FFFF:
         return int(value)
-    if isnan(value):
-        raise ValueError()
-    else:
-        raise OverflowError()
+    raise Bubble()
 
 
 def float64_to_int64_unsafe(value: float) -> int:
@@ -641,8 +681,20 @@ def date_to_string(value: Date) -> str:
     return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
 
-# Converts a date from a string in YYYY-MM-DD format
-date_from_iso_string = Date.fromisoformat
+def date_from_iso_string(iso_string: str) -> Date:
+    "Converts a date from a string in YYYY-MM-DD format, else bubbling."
+    try:
+        return Date.fromisoformat(iso_string)
+    except ValueError as e:
+        raise Bubble(*e.args) from e
+
+
+def date_of(year: int, month: int, day: int) -> Date:
+    "Implements std/temporal's Date constructor, bubbling for no such date."
+    try:
+        return Date(year, month, day)
+    except (ValueError, OverflowError) as e:
+        raise Bubble(*e.args) from e
 
 
 utc = timezone.utc
@@ -708,8 +760,8 @@ def string_step(s: str, i: int, by: int) -> int:
 
 
 def string_from_code_point(code_point: int) -> str:
-    if code_point >= 0xD800 and code_point <= 0xDFFF:
-        raise ValueError(f"invalid Unicode scalar value {code_point:X}")
+    if not 0 <= code_point <= 0x10FFFF or 0xD800 <= code_point <= 0xDFFF:
+        raise Bubble(f"invalid Unicode scalar value {code_point:X}")
     return chr(code_point)
 
 
@@ -717,14 +769,14 @@ def require_string_index(i: int) -> int:
     "Checked cast from i to StringIndex, an alias for a non-negative int"
     if i >= 0:
         return i
-    raise AssertionError(f"require_string_index; {i!r} not >= 0 ")
+    raise Bubble(f"require_string_index; {i!r} not >= 0 ")
 
 
 def require_no_string_index(i: int) -> int:
     "Checked cast from i to NoStringIndex, a negative int"
     if i < 0:
         return i
-    raise AssertionError(f"require_string_index; {i!r} not < 0 ")
+    raise Bubble(f"require_no_string_index; {i!r} not < 0 ")
 
 
 utf32_type_code: str = ""
@@ -736,7 +788,10 @@ def string_from_code_points(code_points: Iterable[int]) -> str:
     if utf32_type_code == "":
         # Rely on at least one of these to be 4 bytes.
         utf32_type_code = next((_ for _ in ["I", "L"] if array(_, []).itemsize == 4))
-    return array(utf32_type_code, code_points).tobytes().decode("utf-32")
+    try:
+        return array(utf32_type_code, code_points).tobytes().decode("utf-32")
+    except (OverflowError, UnicodeDecodeError) as e:
+        raise Bubble("invalid Unicode scalar value") from e
 
 
 def string_split(string: str, separator: str) -> Sequence[str]:
@@ -745,9 +800,12 @@ def string_split(string: str, separator: str) -> Sequence[str]:
 
 
 def string_to_float64(string: str) -> float:
-    "Convert string to float following Temper rules"
+    "Convert string to float following Temper rules, else bubbling"
     # Presume the common case, which also handles "NaN" and "Infinity".
-    result = float(string)
+    try:
+        result = float(string)
+    except ValueError as e:
+        raise Bubble(*e.args) from e
     trimmed = string.strip()
     # But guard against things not in Temper.
     if (
@@ -756,28 +814,34 @@ def string_to_float64(string: str) -> float:
         or (isnan(result) and string != "NaN")
         or (isinf(result) and not string.endswith("Infinity"))
     ):
-        raise ValueError(string)
+        raise Bubble(string)
     return result
 
 
 def string_to_int32(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
-        raise ValueError()
-    value = int(string, radix or 10)
+        raise Bubble()
+    try:
+        value = int(string, radix or 10)
+    except ValueError as e:
+        raise Bubble(*e.args) from e
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return value
-    raise OverflowError()
+    raise Bubble()
 
 
 def string_to_int64(string: str, radix: Optional[int] = None) -> int:
     if radix == 0:
         # Other values we reject are checked already.
-        raise ValueError()
-    value = int(string, radix or 10)
+        raise Bubble()
+    try:
+        value = int(string, radix or 10)
+    except ValueError as e:
+        raise Bubble(*e.args) from e
     if -0x8000_0000_0000_0000 <= value <= 0x7FFF_FFFF_FFFF_FFFF:
         return value
-    raise OverflowError()
+    raise Bubble()
 
 
 def list_filter(lst: Sequence[T], predicate: Callable[[T], bool]) -> Sequence[T]:
@@ -902,12 +966,12 @@ _lbmdT = TypeVar("_lbmdT")
 def list_map_dropping(
     lst: Sequence[_lbmdT], func: Callable[[_lbmdT], Union[_lbmdT, NoReturn]]
 ) -> Sequence[_lbmdT]:
-    "Map a list of elements, omitting any for which func raises any Exception."
+    "Map a list of elements, omitting any for which func bubbles."
     results = []
     for entry in lst:
         try:
             value = func(entry)
-        except Exception:
+        except Bubble:
             continue
         results.append(value)
     return tuple(results)
@@ -1291,6 +1355,12 @@ def _step_async_coro(
             exc = p.exception()
             if exc is None:
                 result = p.result()
+            elif isinstance(exc, Exception) and not isinstance(exc, Bubble):
+                # A broken promise bubbles, whatever broke it; a panic,
+                # a BaseException, passes.
+                bubbled = Bubble(*exc.args)
+                bubbled.__cause__ = exc
+                exc = bubbled
         try:
             if exc is not None:
                 yielded = generator.throw(exc)
@@ -1380,8 +1450,7 @@ def complete_promise(p: Future[T], resolution: T) -> None:
     """
     try:
         p.set_result(resolution)
-        # The illegal state exception is not public in concurrent.futures.
-    except Exception:
+    except InvalidStateError:
         pass
 
 
@@ -1394,8 +1463,7 @@ def break_promise(p: Future[T], exc: Union[BaseException, None] = None) -> None:
         exc = make_bubble_exception()
     try:
         p.set_exception(exc)
-        # The illegal state exception is not public in concurrent.futures.
-    except Exception:
+    except InvalidStateError:
         pass
 
 

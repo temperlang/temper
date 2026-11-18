@@ -318,7 +318,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Mapped.get length()",
         Connection::Translate(count),
     ),
-    ("core.type Mapped.get()", Connection::Translate(index)),
+    (
+        "core.type Mapped.get()",
+        Connection::Static("Mapped", "Get"),
+    ),
     (
         "core.type Mapped.getOr()",
         Connection::Static("Mapped", "GetOrDefault"),
@@ -525,7 +528,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.constructor()",
-        Connection::Translate(new_of_type),
+        Connection::Static("TemporalSupport", "Date"),
     ),
     (
         "std/temporal.type Date.day",
@@ -607,16 +610,17 @@ return main + frac + exp;",
         body: "string trimmed = s.Trim();
 if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
 {
-    throw new global::System.FormatException();
+    throw new global::TemperLang.Core.Bubble();
 }
 return trimmed switch
 {
     \"Infinity\" => double.PositiveInfinity,
     \"-Infinity\" => double.NegativeInfinity,
-    _ => double.Parse(
+    _ => double.TryParse(
         trimmed,
         global::System.Globalization.NumberStyles.Float,
-        global::System.Globalization.CultureInfo.InvariantCulture),
+        global::System.Globalization.CultureInfo.InvariantCulture,
+        out double d) ? d : throw new global::TemperLang.Core.Bubble(),
 };",
     },
 ];

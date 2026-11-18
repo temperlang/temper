@@ -34,8 +34,17 @@
 //!
 //! It covers libraries of several modules, classes and interfaces (each in a file of its own, as
 //! Kotlin's: see [`translate`]), and nullable types (`T?`, `x.Value` or
-//! C#'s own narrowing), `orelse` (a `try` and `catch`), `bubble()`, and
-//! `panic()`, which, unlike Kotlin's, no `orelse` catches; and generics
+//! C#'s own narrowing), `orelse` (a `try` and `catch
+//! (global::TemperLang.Core.Bubble)`), `bubble()`, and `panic()`, which,
+//! unlike Kotlin's, no `orelse` catches. Unlike Kotlin's catch-all, a
+//! handler catches only the runtime's `Bubble` (an `Exception`), which
+//! `as` (`Core.Cast<T>`) and every builtin that bubbles throw, the
+//! runtime turning host failures (`FormatException`,
+//! `KeyNotFoundException`, a broken promise's exception) into one; so
+//! anything else, a host exception from a builtin not declared to
+//! bubble or from a callback, passes every `orelse`, and a library's
+//! host code (its `.cs` files) bubbles only by throwing a `Bubble`
+//! (`Core.Bubble()`); and generics
 //! (`First<T>`, `class Shelf<T> where T : Named`, and explicit type
 //! arguments on `new`), with core's lists as `IReadOnlyList` and `IList`,
 //! maps as `IReadOnlyDictionary` and `IDictionary` (the runtime's

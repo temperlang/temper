@@ -2322,6 +2322,50 @@ copied Kotlin's:
     `temper.bubble()`, so even the type of what's raised can't tell.
     Test: programs/panics.temper.md on every backend, and each
     backend's nullables golden (`checked`).
+  - **Temper catches only what Temper declares** (2026-11-18): Kotlin's
+    Java `orelse` catches `RuntimeException` (its bubble is a plain
+    one), C#'s is a bare `catch` (its bubble a plain `Exception`), and
+    Python's `except Exception` (its bubble `RuntimeError()`), so a
+    host exception anywhere under an `orelse` (a callback's
+    `NullPointerException`, a `KeyError`, a list read past the end)
+    became its fallback. Tempest's runtimes have a bubble type of their
+    own, Java `temper.core.Bubble` (unchecked, no stack trace), C#
+    `TemperLang.Core.Bubble`, and Python `temper_core.Bubble`, and
+    handlers catch only it, as JS's and Lua's now do. Everything
+    declared to bubble raises it: `as` (Java `Core.cast(C.class, x)`,
+    `Core.requireNonNull(x)`, or `(C<A>) Core.check(C.class, x)`
+    where Kotlin's casts or calls `Objects.requireNonNull`; C#
+    `Core.Cast<T>(x)` where Kotlin's casts), and builtins whose host
+    calls failed with host errors: number parses (Java
+    `NumberFormatException`, C# `FormatException` and
+    `OverflowException`, Python `ValueError`), conversions out of
+    range (C#'s and Python's `OverflowError`s), code points out of
+    range (all three), a missing key in `Mapped.get` and
+    `MapBuilder.remove` (C# `KeyNotFoundException`, Python
+    `KeyError`), `Date`'s constructor and `fromIsoString` (Java
+    `DateTimeException`, C# `ArgumentOutOfRangeException` and
+    `FormatException`, Python `ValueError`; and JS and C++, which
+    rolled invalid dates over, gave an invalid `Date`, or kept the
+    fields as given), string index
+    casts, a regex that finds nothing (a plain `RuntimeException`,
+    `Exception`, or `RuntimeError`), Python's `Int` and `Float64`
+    division by zero (`ZeroDivisionError`, where `Float64` division by
+    a nonzero literal stays `/`), and an awaited promise broken by
+    anything (Java's `ExecutionException` wrapped in a
+    `RuntimeException`, C#'s and Python's the breaker's own). A builtin
+    not declared to bubble now passes its host failure through every
+    `orelse`, as a panic: a list read past the end on Java, C#, Python,
+    and JS (C++ and Lua still bubble there, as Kotlin's runtimes do,
+    until list reads panic everywhere). Java's regex `replace` no longer
+    swallows a format callback's exceptions, and Python's
+    `mapDropping` drops only elements whose callback bubbles. Host code
+    bubbles by raising the runtime's `Bubble`; anything else passes.
+    A top-level `panic()` that ends a Java module's static initializer
+    calls `Core.throwAssertionError`, which javac takes, where a `throw`
+    there fails to compile ("initializer must be able to complete
+    normally").
+    Test: programs/panics.temper.md and programs/host-errors.temper.md
+    on every backend.
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

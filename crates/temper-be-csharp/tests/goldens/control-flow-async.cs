@@ -23,16 +23,16 @@ public static class AsyncGlobal
                     global::TemperLang.Core.Async.CompletePromise(b, "Completed synchronously");
                     promise1 = b.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise1);
                 try
                 {
-                    console.Log(promise1.Result);
+                    console.Log(global::TemperLang.Core.Async.GetPromiseResult(promise1));
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
@@ -54,16 +54,16 @@ public static class AsyncGlobal
                     {
                         promise2 = b2.Task;
                     }
-                    catch
+                    catch (global::TemperLang.Core.Bubble)
                     {
                         goto CATCH2;
                     }
                     yield return global::TemperLang.Core.Async.AwakeUpon(promise2);
                     try
                     {
-                        t1 = promise2.Result;
+                        t1 = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     }
-                    catch
+                    catch (global::TemperLang.Core.Bubble)
                     {
                         goto CATCH2;
                     }
@@ -94,16 +94,16 @@ public static class AsyncGlobal
                     global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn2);
                     promise3 = b3.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH3;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise3);
                 try
                 {
-                    console.Log(promise3.Result);
+                    console.Log(global::TemperLang.Core.Async.GetPromiseResult(promise3));
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH3;
                 }
@@ -125,26 +125,26 @@ public static class AsyncGlobal
                     global::TemperLang.Core.Async.CompletePromise(b4, "Worth doing twice");
                     promise4 = b4.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH4;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise4);
                 try
                 {
-                    console.Log(promise4.Result);
+                    console.Log(global::TemperLang.Core.Async.GetPromiseResult(promise4));
                     promise5 = b4.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH4;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise5);
                 try
                 {
-                    console.Log(promise5.Result);
+                    console.Log(global::TemperLang.Core.Async.GetPromiseResult(promise5));
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH4;
                 }
@@ -167,16 +167,16 @@ public static class AsyncGlobal
                         {
                             promise6 = b5.Task;
                         }
-                        catch
+                        catch (global::TemperLang.Core.Bubble)
                         {
                             goto CATCH5;
                         }
                         yield return global::TemperLang.Core.Async.AwakeUpon(promise6);
                         try
                         {
-                            _ = promise6.Result;
+                            global::TemperLang.Core.Async.GetPromiseResult(promise6);
                         }
-                        catch
+                        catch (global::TemperLang.Core.Bubble)
                         {
                             goto CATCH5;
                         }
@@ -214,16 +214,16 @@ public static class AsyncGlobal
                     global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn4);
                     promise7 = a.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH6;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise7);
                 try
                 {
-                    _ = promise7.Result;
+                    _ = global::TemperLang.Core.Async.GetPromiseResult(promise7);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH6;
                 }
@@ -246,16 +246,16 @@ public static class AsyncGlobal
                     global::TemperLang.Core.Async.CompletePromise(b6, "No, yell...");
                     promise8 = b6.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH7;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise8);
                 try
                 {
-                    console.Log(promise8.Result);
+                    console.Log(global::TemperLang.Core.Async.GetPromiseResult(promise8));
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH7;
                 }

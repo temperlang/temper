@@ -32,9 +32,11 @@ export const requireIsArray = (x) => {
 };
 
 /**
+ * `NonNullable`, so a value TypeScript has narrowed to `null` gives
+ * `never`, not `null`.
  * @template T
- * @param {T?} x
- * @returns {T}
+ * @param {T} x
+ * @returns {NonNullable<T>}
  */
 export const requireNotNull = (x) =>
   x == null ? bubble() : x

@@ -57,18 +57,18 @@ namespace TemperLang.Core
             bits[index] = value;
         }
 
-        public static void Bubble() => throw new Exception();
+        public static void Bubble() => throw new Bubble();
 
-        public static T Bubble<T>() => throw new Exception();
+        public static T Bubble<T>() => throw new Bubble();
 
-        public static T CastToNonNull<T>(object item)
-        {
-            if (item == null)
-            {
-                throw new ArgumentNullException();
-            }
-            return (T)item;
-        }
+        /// <summary>Temper's <c>as</c>: bubbles if item isn't a T.</summary>
+        public static T Cast<T>(object item) => item is T t ? t : throw new Bubble();
+
+        /// <summary>
+        /// Temper's <c>as</c> from a nullable type: bubbles if item is null
+        /// or isn't a T.
+        /// </summary>
+        public static T CastToNonNull<T>(object item) => Cast<T>(item);
 
         internal static int Clamp(this int i, int min, int max)
         {
@@ -272,7 +272,7 @@ namespace TemperLang.Core
 #endif
             if (!found)
             {
-                throw new KeyNotFoundException();
+                throw new Bubble();
             }
 #if !NETCOREAPP2_0_OR_GREATER
             dictionary.Remove(key);
@@ -305,6 +305,7 @@ namespace TemperLang.Core
 
         public static string StringFromCodePoint(int codePoint)
         {
+            StringUtil.RequireScalarValue(codePoint);
             return char.ConvertFromUtf32(codePoint);
         }
 
@@ -320,14 +321,14 @@ namespace TemperLang.Core
 
         public static string StringFromCodePoints(IReadOnlyList<int> codePoints)
         {
-            return string.Concat(codePoints.Select(codePoint => char.ConvertFromUtf32(codePoint)));
+            return string.Concat(codePoints.Select(StringFromCodePoint));
         }
 
         public static int ToInt(this long i64)
         {
             if (i64 < int.MinValue || i64 > int.MaxValue)
             {
-                throw new OverflowException();
+                throw new Bubble();
             }
             return (int)i64;
         }
@@ -341,14 +342,14 @@ namespace TemperLang.Core
 
         public static long ToInt64(this string text, int radix = 10)
         {
-            // Use the same exception types as Convert.ToInt32, where convenient enough.
+            // Bubbles for whatever isn't an Int64 in the radix.
             if (radix < 2 || radix > 36)
             {
-                throw new ArgumentException();
+                throw new Bubble();
             }
             if (text == "")
             {
-                throw new ArgumentOutOfRangeException();
+                throw new Bubble();
             }
             // Parse manually because Convert.ToInt[N] only supports bases 2, 8, 10, & 16.
             long sum = 0;
@@ -384,7 +385,7 @@ namespace TemperLang.Core
                 var digit = c >= 'a' ? c - 'a' + 10 : c - '0';
                 if (digit < 0 || digit >= radix || (c < 'a' && digit > 9))
                 {
-                    throw new FormatException();
+                    throw new Bubble();
                 }
                 // Check for overflow before adding.
                 if (sign > 0)
@@ -395,7 +396,7 @@ namespace TemperLang.Core
                     // 1 > (15 - 5) / 10 -> 1 > 10 / 10 -> 1 > 1 -> false
                     if (sum > (long.MaxValue - digit) / radix)
                     {
-                        throw new OverflowException();
+                        throw new Bubble();
                     }
                 }
                 else
@@ -407,7 +408,7 @@ namespace TemperLang.Core
                     // Then 1 * 10 + 6 -> 16 -> -16, later -16 * -1 -> -16
                     if (-sum < (long.MinValue + digit) / radix)
                     {
-                        throw new OverflowException();
+                        throw new Bubble();
                     }
                 }
                 sum = sum * radix + digit;
@@ -418,7 +419,7 @@ namespace TemperLang.Core
                 var c = text[index];
                 if (!char.IsWhiteSpace(c))
                 {
-                    throw new FormatException();
+                    throw new Bubble();
                 }
                 index += 1;
             }

@@ -5,6 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
     float64_to_string as _float64_to_string,
@@ -83,13 +84,13 @@ class Grid:
     def parse(s: str, /) -> 'Grid | None':
         try:
             return parse_grid(s)
-        except Exception:
+        except _Bubble:
             return None
 
 
 def parse_grid(s: str, /) -> Grid:
     if s == '':
-        raise RuntimeError()
+        raise _Bubble()
     return Grid(1, (_string_to_float64(s),))
 
 
@@ -249,13 +250,13 @@ def _sizes(s: Shape, /) -> _Sequence[int]:
 def _rows(values: _Sequence[float], ncols: int, /) -> int:
     try:
         return _int_div(len(values), ncols)
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
 def _scaled(grid: Grid, /) -> Grid:
     if grid.ncols == 0:
-        raise RuntimeError()
+        raise _Bubble()
     return grid
 
 
@@ -263,7 +264,7 @@ def _cubes(grid: Grid, /) -> _Sequence[float]:
     try:
         more = _list_map(_scaled(grid).values, lambda x: x * x * x)
         return more
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
@@ -281,7 +282,7 @@ def _total(values: _Sequence[float], /) -> float:
         try:
             part = x / 2.0
             sum = sum + part
-        except Exception:
+        except _Bubble:
             raise BaseException('panic')
     _each(values, fn)
     return sum
@@ -290,7 +291,7 @@ def _total(values: _Sequence[float], /) -> float:
 def _half(x: float, /) -> float:
     try:
         return x / 2.0
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
 
 
@@ -301,7 +302,7 @@ def _cube(x: float, /) -> float:
 def _corner(grid: Grid, /) -> float:
     try:
         return grid.get(1, 1)
-    except Exception:
+    except _Bubble:
         return -1.0
 
 
@@ -316,7 +317,7 @@ def _mapped(grid: Grid, /) -> _Sequence[float]:
     t_0: Grid
     try:
         t_0 = _scaled(grid)
-    except Exception:
+    except _Bubble:
         raise BaseException('panic')
     t_1 = t_0.values
     def fn(x: float, /) -> float:
@@ -400,7 +401,7 @@ def _captured(s: str, /) -> str:
     found: Grid | None
     try:
         found = parse_grid(s)
-    except Exception:
+    except _Bubble:
         found = None
     return _list_join(_list_map((1, 2), lambda x: found is None), ',', lambda b: _boolean_to_string(b))
 
@@ -714,7 +715,7 @@ def _sum_parsed(xs: _Sequence[str], /) -> int:
         held: int | None = None
         try:
             held = _string_to_int32(x)
-        except Exception:
+        except _Bubble:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             i = _int_add(i, 1)
@@ -732,7 +733,7 @@ def _sum_parsed(xs: _Sequence[str], /) -> int:
         held = None
         try:
             held = _string_to_int32(x)
-        except Exception:
+        except _Bubble:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             continue

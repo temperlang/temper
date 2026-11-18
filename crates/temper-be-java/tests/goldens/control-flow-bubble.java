@@ -1,7 +1,7 @@
 package bubble;
 
-import java.util.Objects;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -27,20 +27,20 @@ public final class BubbleGlobal {
         String message;
         try {
             message = something(x);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             message = "null";
         }
         String suffix;
         try {
             int t;
             try {
-                Objects.requireNonNull(x);
+                Core.requireNonNull(x);
                 t = 1;
-            } catch (RuntimeException ignored2) {
+            } catch (Bubble ignored2) {
                 t = 0;
             }
             suffix = Integer.toString(more(t));
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             suffix = "";
         }
         console.log(message + suffix);
@@ -110,21 +110,21 @@ public final class BubbleGlobal {
         int t;
         try {
             t = firstOver(n);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = -1;
         }
         String t2 = t + " ";
         int t3;
         try {
             t3 = sumSkipping(n);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             t3 = -1;
         }
         String t4 = t2 + t3 + " ";
         int t5;
         try {
             t5 = tenTimes(n);
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             t5 = -1;
         }
         return t4 + t5;
@@ -212,21 +212,21 @@ public final class BubbleGlobal {
         int t;
         try {
             t = countBelow("abc");
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = -1;
         }
         console.log(Integer.toString(t));
         int t2;
         try {
             t2 = firstOver(1);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             t2 = -1;
         }
         String t3 = t2 + " ";
         @Nullable Integer t4;
         try {
             t4 = firstOver(1);
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             t4 = null;
         }
         console.log(t3 + isNone(t4));
@@ -240,21 +240,21 @@ public final class BubbleGlobal {
         int t7;
         try {
             t7 = half(4);
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             t7 = -1;
         }
         String t8 = t7 + " ";
         int t9;
         try {
             t9 = half(3);
-        } catch (RuntimeException ignored5) {
+        } catch (Bubble ignored5) {
             t9 = -1;
         }
         String t10 = t8 + t9 + " ";
         int t11;
         try {
             t11 = half(-2);
-        } catch (RuntimeException ignored6) {
+        } catch (Bubble ignored6) {
             t11 = -1;
         }
         console.log(t10 + t11);

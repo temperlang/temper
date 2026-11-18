@@ -1,6 +1,7 @@
 package type_checked_locals;
 
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -39,7 +40,7 @@ public final class TypeCheckedLocalsGlobal {
         try {
             int a;
             Core.throwBubble();
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             yay();
         }
         console.log("Checkpoint 1");
@@ -50,7 +51,7 @@ public final class TypeCheckedLocalsGlobal {
             int a3 = 1;
             try {
                 Core.throwBubble();
-            } catch (RuntimeException ignored2) {
+            } catch (Bubble ignored2) {
                 meh();
             }
             if (a3 == 1) {
@@ -67,36 +68,36 @@ public final class TypeCheckedLocalsGlobal {
         try {
             f(0);
             yay();
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             boo();
         }
         try {
             Core.throwBubble();
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             meh();
         }
         console.log("Checkpoint 5");
         try {
             g(0);
             yay();
-        } catch (RuntimeException ignored5) {
+        } catch (Bubble ignored5) {
             boo();
         }
         try {
             Core.throwBubble();
-        } catch (RuntimeException ignored6) {
+        } catch (Bubble ignored6) {
             meh();
         }
         console.log("Checkpoint 6");
         try {
             i(0);
             yay();
-        } catch (RuntimeException ignored7) {
+        } catch (Bubble ignored7) {
             boo();
         }
         try {
             Core.throwBubble();
-        } catch (RuntimeException ignored8) {
+        } catch (Bubble ignored8) {
             meh();
         }
     }

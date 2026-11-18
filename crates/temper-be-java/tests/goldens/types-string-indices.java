@@ -2,6 +2,7 @@ package indices;
 
 import java.util.List;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -27,14 +28,14 @@ public final class IndicesGlobal {
         String t;
         try {
             t = Core.stringFromCodePoint(a);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = "?";
         }
         String t2 = "'" + t + "' is " + relPos + " '";
         String t3;
         try {
             t3 = Core.stringFromCodePoint(b);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             t3 = "?";
         }
         console.log(t2 + t3 + "' in \"" + s + "\".");
@@ -59,7 +60,7 @@ public final class IndicesGlobal {
         try {
             Core.requireStringIndex(i);
             return true;
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return false;
         }
     }
@@ -69,7 +70,7 @@ public final class IndicesGlobal {
         try {
             Core.requireNoStringIndex(i);
             return false;
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return true;
         }
     }
@@ -93,7 +94,7 @@ public final class IndicesGlobal {
                 String t;
                 try {
                     t = Core.stringFromCodePoint(c);
-                } catch (RuntimeException ignored) {
+                } catch (Bubble ignored) {
                     t = "?";
                 }
                 console.log("'" + t + "' in \"" + s + "\": " + (has0(s, c) ? "y" : "n") + ", " + (has1(s, c) ? "y" : "n") + ", " + (has2(s, c) ? "y" : "n") + ", " + (has3(s, c) ? "y" : "n") + ", " + (has4(s, c) ? "y" : "n"));

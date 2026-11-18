@@ -1,5 +1,6 @@
 from collections.abc import Mapping as _Mapping, Sequence as _Sequence
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     Pair as _Pair,
     boolean_to_string as _boolean_to_string,
@@ -7,9 +8,11 @@ from temper_core import (
     list_get as _list_get,
     list_join as _list_join,
     list_map as _list_map,
+    map_builder_remove as _map_builder_remove,
     map_builder_set as _map_builder_set,
     map_constructor as _map_constructor,
     mapped_for_each as _mapped_for_each,
+    mapped_get as _mapped_get,
     mapped_has as _mapped_has,
     mapped_to_list as _mapped_to_list,
     mapped_to_list_with as _mapped_to_list_with,
@@ -58,13 +61,13 @@ def _print_map_builder(name: str, map: dict[str, str], /) -> None:
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _messages: _MappingProxyType[int, str] = _map_constructor((_Pair(200, 'OK'), _Pair(404, 'Not Found'), _Pair(500, 'Internal Server Error')))
-_message: str = _messages[200]
+_message: str = _mapped_get(_messages, 200)
 _console.log(f'Message: {_message}')
 _console.log(f'Has 200: {_message_defined(200)}, 302: {_message_defined(302)}')
 _t_0: str
 try:
-    _t_0 = _messages[302]
-except Exception:
+    _t_0 = _mapped_get(_messages, 302)
+except _Bubble:
     _t_0 = 'Found'
 _console.log(f'Fallback: {_t_0}')
 _console.log(f"Codes: {_list_join(_list_keys(_messages), ' ', lambda it: str(it))}")
@@ -74,25 +77,25 @@ _groups: _Sequence[int] = _mapped_to_list_with(_messages, lambda key, value: _in
 _console.log(f"Groups: {_list_join(_groups, ' ', lambda it: str(it))}")
 _builder2: dict[str, _Sequence[str]] = {}
 _map_builder_set(_builder2, 'Honduras', ('El Salvador', 'Guatemala', 'Nicaragua'))
-_console.log(f"From builder: {_list_join(_builder2['Honduras'], ', ', lambda it: it)}")
+_console.log(f"From builder: {_list_join(_mapped_get(_builder2, 'Honduras'), ', ', lambda it: it)}")
 _console.log(f'Key so far: {_list_get(_list_keys(_builder2), 0)}')
 _map_builder_set(_builder2, 'El Salvador', ('Guatemala', 'Honduras'))
 _map_builder_set(_builder2, 'Nicaragua', ('Costa Rica', 'Honduras'))
 _map_builder_set(_builder2, 'Panama', ('Colombia', 'Costa Rica'))
 try:
-    _builder2.pop('Honduras')
-except Exception:
+    _map_builder_remove(_builder2, 'Honduras')
+except _Bubble:
     pass
-_was = _builder2.pop('El Salvador')
+_was = _map_builder_remove(_builder2, 'El Salvador')
 _console.log(f"Was there: {_list_join(_was, ', ', lambda it: it)}")
 _t_1: str
 try:
-    _t_1 = _list_get(_builder2.pop('El Salvador'), 0)
-except Exception:
+    _t_1 = _list_get(_map_builder_remove(_builder2, 'El Salvador'), 0)
+except _Bubble:
     _t_1 = 'Gone'
 _console.log(_t_1)
 _neighbors: _MappingProxyType[str, _Sequence[str]] = _mapped_to_map(_builder2)
-_console.log(f"From built: {_list_join(_neighbors['Nicaragua'], ', ', lambda it: it)}")
+_console.log(f"From built: {_list_join(_mapped_get(_neighbors, 'Nicaragua'), ', ', lambda it: it)}")
 _map_of_none: _MappingProxyType[int, int] = _map_constructor(())
 _map_of_one: _MappingProxyType[str, str] = _map_constructor((_Pair('jack', 'all trades'),))
 _map_of_two: _MappingProxyType[int, str] = _map_constructor((_Pair(1, 'one'), _Pair(2, 'electric boogaloo')))
@@ -133,7 +136,7 @@ _new_map: _MappingProxyType[str, str] = _mapped_to_map(_builder)
 _print_map('builder to map', _new_map)
 _builder_as_mapped: _Mapping[str, str] = _builder
 _new_map_from_mapped: _MappingProxyType[str, str] = _mapped_to_map(_builder_as_mapped)
-_builder.pop('other key')
+_map_builder_remove(_builder, 'other key')
 _map_builder_set(_builder, 'key', 'double replaced value')
 _print_map('builder to map (same as above)', _new_map)
 _print_map('builder to map via mapped (same as above)', _new_map_from_mapped)

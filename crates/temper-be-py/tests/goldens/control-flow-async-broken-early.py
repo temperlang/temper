@@ -1,6 +1,7 @@
 from collections.abc import Callable as _Callable
 from concurrent.futures import Future as _Future
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     TemperFuture as _TemperFuture,
     adapt_generator_factory as _adapt_generator_factory,
@@ -20,7 +21,7 @@ _b: _TemperFuture[int] = _new_unbound_promise()
 def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
     try:
         v = yield do_await(_b)
-    except Exception:
+    except _Bubble:
         v = -1
     _console.log(f'got {v}')
 

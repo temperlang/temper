@@ -1,10 +1,15 @@
 package panics;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.IntSupplier;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.Nullable;
+import temper.std.json.JsonGlobal;
 import temper.std.regex.CodeRange;
 import temper.std.regex.CodeSet;
 import temper.std.regex.Regex;
@@ -23,15 +28,26 @@ public final class PanicsGlobal {
     }
 
     static Square downcast(Shape s) {
-        return (Square) s;
+        return Core.cast(Square.class, s);
     }
 
     static int calling(IntSupplier f) {
         try {
             return f.getAsInt();
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return -9;
         }
+    }
+
+    static String appending(int codePoint) {
+        StringBuilder sb = new StringBuilder();
+        Core.stringBuilderAppendCodePoint(sb, codePoint);
+        return sb.toString();
+    }
+
+    static String parsing(String text) {
+        JsonGlobal.parseJson(text);
+        return "parsed";
     }
 
     static int explode(int n) {
@@ -49,7 +65,7 @@ public final class PanicsGlobal {
     static int inner() {
         try {
             return explode(1);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return noted("inner");
         }
     }
@@ -59,65 +75,135 @@ public final class PanicsGlobal {
         int zero;
         try {
             zero = failing(0);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             zero = -1;
         }
         int a;
         try {
             a = failing(1);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             a = -1;
         }
         int b;
         try {
             b = downcast(new Circle()).side;
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             b = -2;
         }
         int c;
         try {
             c = Core.divIntInt(1, zero);
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             c = -3;
         }
         int d;
         try {
             d = Core.int64ToInt(Core.divIntInt(1L, (long) zero));
-        } catch (RuntimeException ignored5) {
+        } catch (Bubble ignored5) {
             d = -4;
         }
         int e;
         try {
             e = Core.stringToInt("nope");
-        } catch (RuntimeException ignored6) {
+        } catch (Bubble ignored6) {
             e = -5;
         }
         double f;
         try {
             f = Core.stringToFloat64("x");
-        } catch (RuntimeException ignored7) {
+        } catch (Bubble ignored7) {
             f = -6.0;
         }
         String g;
         try {
             g = Core.stringFromCodePoint(1114112);
-        } catch (RuntimeException ignored8) {
+        } catch (Bubble ignored8) {
             g = "?";
         }
         Regex digits = new Repeat(new CodeSet(List.of(new CodeRange(48, 57)), false), 1, null, false).compiled();
         String h;
         try {
             h = digits.find("none").full.value;
-        } catch (RuntimeException ignored9) {
+        } catch (Bubble ignored9) {
             h = "no digits";
         }
         int i = calling(() -> failing(2));
         console.log(a + " " + b + " " + c + " " + d + " " + e + " " + (Double.compare(f, -6.0) == 0) + " " + g + " " + h + " " + i);
+        @Nullable String nothing = null;
+        String j;
+        try {
+            j = Core.requireNonNull(nothing);
+        } catch (Bubble ignored10) {
+            j = "null";
+        }
+        long k;
+        try {
+            k = Core.stringToInt64("zz");
+        } catch (Bubble ignored11) {
+            k = -7L;
+        }
+        int l;
+        try {
+            l = Core.stringToInt("99999999999");
+        } catch (Bubble ignored12) {
+            l = -8;
+        }
+        int m;
+        try {
+            m = Core.float64ToInt(1e20);
+        } catch (Bubble ignored13) {
+            m = -9;
+        }
+        int n;
+        try {
+            n = Core.int64ToInt(5000000000L);
+        } catch (Bubble ignored14) {
+            n = -10;
+        }
+        List<Integer> points = List.of(65, 1114112);
+        String o;
+        try {
+            o = Core.stringFromCodePoints(points);
+        } catch (Bubble ignored15) {
+            o = "?";
+        }
+        String q;
+        try {
+            q = appending(-1);
+        } catch (Bubble ignored16) {
+            q = "?";
+        }
+        Map<String, Integer> builder = new LinkedHashMap<>();
+        int r;
+        try {
+            r = Core.mapBuilderRemove(builder, "x");
+        } catch (Bubble ignored17) {
+            r = -11;
+        }
+        String s;
+        try {
+            s = temper.std.temporal.Core.dateOf(2023, 2, 30).toString();
+        } catch (Bubble ignored18) {
+            s = "no date";
+        }
+        String t;
+        try {
+            t = temper.std.temporal.Core.dateFromIsoString("2023-13-01").toString();
+        } catch (Bubble ignored19) {
+            t = "bad date";
+        }
+        String u;
+        try {
+            u = parsing("[1,");
+        } catch (Bubble ignored20) {
+            u = "bad json";
+        }
+        console.log(j + " " + Long.toString(k) + " " + l + " " + m + " " + n + " " + o + " " + q + " " + r + " " + s + " " + t + " " + u);
         console.log("panicking");
         int p;
         try {
             p = inner();
-        } catch (RuntimeException ignored10) {
+        } catch (Bubble ignored21) {
             p = -1;
         }
         console.log("after the panic " + p);

@@ -5,6 +5,7 @@ from collections.abc import (
 )
 from concurrent.futures import Future as _Future
 from temper_core import (
+    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     TemperFuture as _TemperFuture,
     adapt_generator_factory as _adapt_generator_factory,
@@ -148,7 +149,7 @@ def _fn2(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any
     _c.bump('A', 10000)
     try:
         k = yield do_await(_gate_a)
-    except Exception:
+    except _Bubble:
         k = -1
     _c.bump(f'A{k}', 10000)
 
@@ -161,7 +162,7 @@ def _fn3(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any
     _c.bump('B', 10000)
     try:
         k = yield do_await(_gate_b)
-    except Exception:
+    except _Bubble:
         k = -1
     _c.bump(f'B{k}', 10000)
 

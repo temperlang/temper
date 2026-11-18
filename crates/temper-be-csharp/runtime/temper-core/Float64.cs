@@ -92,7 +92,7 @@ namespace TemperLang.Core
         {
             if (i64 < -mantissaLimit || i64 > mantissaLimit)
             {
-                throw new OverflowException();
+                throw new Bubble();
             }
             return (double)i64;
         }
@@ -117,7 +117,7 @@ namespace TemperLang.Core
             // Check this way because nans, too.
             if (!(value > int.MinValue - 1.0 && value < int.MaxValue + 1.0))
             {
-                throw new OverflowException();
+                throw new Bubble();
             }
             return (int)value;
         }
@@ -127,7 +127,7 @@ namespace TemperLang.Core
             // Check this way because nans, too.
             if (!(value >= -mantissaLimit && value <= mantissaLimit))
             {
-                throw new OverflowException();
+                throw new Bubble();
             }
             return (long)value;
         }

@@ -1,3 +1,4 @@
+using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -29,8 +30,8 @@ internal class Circle : IShape
 
     public static Circle DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = (JsonObject)t;
-        IJsonNumeric radiusJson = (IJsonNumeric)obj.PropertyValueOrBubble("radius");
+        JsonObject obj = Core.Cast<JsonObject>(t);
+        IJsonNumeric radiusJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("radius"));
         int radius = radiusJson.AsInt32();
         return new Circle(radius);
     }

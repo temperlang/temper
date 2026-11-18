@@ -297,7 +297,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type MapBuilder.constructor()",
         Connection::Translate(empty_dict),
     ),
-    ("core.type MapBuilder.remove()", Connection::Method("pop")),
+    (
+        "core.type MapBuilder.remove()",
+        Connection::Runtime("map_builder_remove"),
+    ),
     (
         "core.type MapBuilder.set()",
         Connection::Runtime("map_builder_set"),
@@ -307,7 +310,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Runtime("mapped_for_each"),
     ),
     ("core.type Mapped.get length()", Connection::Builtin("len")),
-    ("core.type Mapped.get()", Connection::Translate(subscript)),
+    ("core.type Mapped.get()", Connection::Runtime("mapped_get")),
     ("core.type Mapped.getOr()", Connection::Method("get")),
     ("core.type Mapped.has()", Connection::Runtime("mapped_has")),
     (
@@ -506,7 +509,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.constructor()",
-        Connection::Import("datetime", "date"),
+        Connection::Runtime("date_of"),
     ),
     (
         "std/temporal.type Date.fromIsoString()",
@@ -631,13 +634,6 @@ fn list_builder_add(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
         None => b.attr("append").call(vec![x]),
         Some(at) => Expr::name(im("list_builder_add")).call(vec![b, x, at]),
     }
-}
-
-/// `m[k]`, which raises `KeyError`, a bubble, for a missing key.
-fn subscript(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
-    let m = arg(&mut args, 0).unwrap_or(Expr::None);
-    let k = arg(&mut args, 1).unwrap_or(Expr::None);
-    Expr::Index(Box::new(m), Box::new(k))
 }
 
 /// `list(m.keys())`, as Kotlin's.

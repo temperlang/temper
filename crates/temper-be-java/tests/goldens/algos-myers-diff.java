@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.BiPredicate;
 import java.util.logging.Logger;
 import temper.core.Core;
@@ -67,7 +66,7 @@ public final class MyersDiffGlobal {
                 {
                     @Nullable DiffPath pathElement = diffPath;
                     while (pathElement != null) {
-                        DiffPath path = Objects.requireNonNull(pathElement);
+                        DiffPath path = Core.requireNonNull(pathElement);
                         pathElements.add(path);
                         pathElement = path.previous;
                     }

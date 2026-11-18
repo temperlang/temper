@@ -106,6 +106,7 @@ pub const PRINTED: &[&str] = &[
     "cmpString",
     "console",
     "dateConstructor",
+    "dateFromIsoString",
     "dateToday",
     "dateYearsBetween",
     "denseBitVectorConstructor",

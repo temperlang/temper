@@ -103,6 +103,7 @@ const NAMESPACES: &[(&str, &str)] = &[
         "Microsoft.VisualStudio.TestTools.UnitTesting",
     ),
     ("Async", "TemperLang.Core"),
+    ("Bubble", "TemperLang.Core"),
     ("Core", "TemperLang.Core"),
     ("CultureInfo", "System.Globalization"),
     ("Enumerable", "System.Linq"),
@@ -337,10 +338,11 @@ impl<'a> Translator<'a> {
             .iter()
             .find(|(n, _)| *n == name)
             .map_or("System", |(_, ns)| ns);
-        // `Async` always in full: a library or module named `async` is
-        // likely, and its namespace, which other libraries' code sees too,
-        // hides the class.
-        if self.taken.contains(name) || self.namespace_hides(name) || name == "Async" {
+        // `Async` and `Bubble` always in full: a library or module named
+        // `async` or `bubble` is likely, and its namespace, which other
+        // libraries' code sees too, hides the class.
+        let full = matches!(name, "Async" | "Bubble");
+        if self.taken.contains(name) || self.namespace_hides(name) || full {
             Expr::name(format!("global::{namespace}.{name}"))
         } else {
             self.usings.insert(namespace.to_string());
@@ -2147,8 +2149,10 @@ impl<'a> Translator<'a> {
                     out.push(self.try_around_yields(tried, caught)?);
                     return Ok(());
                 }
+                let class = self.class("Bubble");
                 out.push(Stmt::TryCatch {
                     body: tried,
+                    class,
                     catch: caught,
                 });
                 return Ok(());
@@ -2239,6 +2243,7 @@ impl<'a> Translator<'a> {
         let catch_label = self.temporary("CATCH");
         let ok_label = self.temporary("OK");
         let mut split = Split {
+            class: self.class("Bubble"),
             catch: catch_label.clone(),
             decls: Vec::new(),
             out: Vec::new(),
@@ -3071,10 +3076,10 @@ impl<'a> Translator<'a> {
             }
             // C# converts to an interface by itself.
             Node::Upcast { value } => self.expr(value)?,
-            // A failed cast throws, which is how C# bubbles.
-            // A null cast to a class succeeds, so one from a nullable
-            // type checks for null first, as the runtime's
-            // `CastToNonNull` does, throwing if it's null.
+            // `as` bubbles where it fails, by the runtime's `Cast`, or
+            // from a nullable type, its `CastToNonNull`, as C#'s own
+            // cast would throw `InvalidCastException`, which no `orelse`
+            // catches, and lets null through to a class.
             Node::As { value, .. } if p.types.is_nullable(p.nodes.ty(value)) => {
                 let ty = self.ty(p.nodes.ty(id))?;
                 let e = self.expr(value)?;
@@ -3094,7 +3099,12 @@ impl<'a> Translator<'a> {
                 let e = self.expr(value)?;
                 self.class("StringUtil").method(method, vec![e])
             }
-            Node::Downcast { value } | Node::As { value, .. } => {
+            Node::As { value, .. } => {
+                let ty = self.ty(p.nodes.ty(id))?;
+                let e = self.expr(value)?;
+                self.class("Core").method(format!("Cast<{ty}>"), vec![e])
+            }
+            Node::Downcast { value } => {
                 let ty = self.ty(p.nodes.ty(id))?;
                 Expr::Cast(ty, Box::new(self.expr(value)?))
             }
@@ -3177,9 +3187,11 @@ impl<'a> Translator<'a> {
                 self.literal(id, decl, params, body, None)?
             }
             // `Task<T> promise = p; yield return Async.AwakeUpon(promise);`
-            // before its statement, which reads `promise.Result`, as
-            // Kotlin's: the runtime steps the generator again once the
-            // task is done, and a broken one's `Result` throws.
+            // before its statement, which reads
+            // `Async.GetPromiseResult(promise)`, where Kotlin's reads
+            // `promise.Result`: the runtime steps the generator again once
+            // the task is done, and a broken one bubbles, where `Result`
+            // throws an `AggregateException`.
             Node::Await { promise, .. } => {
                 if !self.in_generator {
                     return not_yet("an await outside a generator");
@@ -3198,7 +3210,7 @@ impl<'a> Translator<'a> {
                 let awake =
                     (self.class("Async")).method("AwakeUpon", vec![Expr::name(name.clone())]);
                 self.pre.push(Stmt::YieldReturn(awake));
-                Expr::name(name).member("Result")
+                (self.class("Async")).method("GetPromiseResult", vec![Expr::name(name)])
             }
             Node::FunctionRef { target } => self.function_ref(target)?,
             Node::CallValue { callee, args, .. } => {
@@ -3558,7 +3570,9 @@ fn completes(s: &Stmt) -> bool {
         | Stmt::Bubble(_)
         | Stmt::Throw(_)
         | Stmt::Expr(Expr::Throw(_)) => false,
-        Stmt::TryCatch { body, catch } => body.iter().all(completes) || catch.iter().all(completes),
+        Stmt::TryCatch { body, catch, .. } => {
+            body.iter().all(completes) || catch.iter().all(completes)
+        }
         // A label is reached by a `goto` from before it.
         Stmt::Block(body) if body.iter().any(|s| matches!(s, Stmt::Label(_))) => true,
         Stmt::Block(body) | Stmt::Lock { body, .. } => body.iter().all(completes),
@@ -3593,7 +3607,7 @@ pub(crate) fn yields(body: &[Stmt]) -> bool {
         Stmt::YieldReturn(_) | Stmt::YieldBreak => true,
         Stmt::Block(b) | Stmt::Lock { body: b, .. } => yields(b),
         Stmt::Try { body, finally } => yields(body) || yields(finally),
-        Stmt::TryCatch { body, catch } => yields(body) || yields(catch),
+        Stmt::TryCatch { body, catch, .. } => yields(body) || yields(catch),
         Stmt::If { then, els, .. } => yields(then) || yields(els),
         Stmt::While { body, .. } | Stmt::DoWhile { body, .. } => yields(body),
         _ => false,
@@ -3611,7 +3625,7 @@ pub(crate) fn yield_breaks(body: &mut [Stmt]) {
                 yield_breaks(body);
                 yield_breaks(finally);
             }
-            Stmt::TryCatch { body, catch } => {
+            Stmt::TryCatch { body, catch, .. } => {
                 yield_breaks(body);
                 yield_breaks(catch);
             }
@@ -3639,7 +3653,7 @@ fn jumps(body: &[Stmt], brk: bool) -> bool {
         Stmt::Break => brk,
         Stmt::Continue => !brk,
         Stmt::Block(b) | Stmt::Lock { body: b, .. } | Stmt::Try { body: b, .. } => jumps(b, brk),
-        Stmt::TryCatch { body, catch } => jumps(body, brk) || jumps(catch, brk),
+        Stmt::TryCatch { body, catch, .. } => jumps(body, brk) || jumps(catch, brk),
         Stmt::If { then, els, .. } => jumps(then, brk) || jumps(els, brk),
         _ => false,
     })
@@ -3781,9 +3795,10 @@ fn block_writes(p: &Program) -> HashSet<DeclId> {
 }
 
 /// An `orelse` that awaits, as [`Translator::try_around_yields`] splits
-/// it: the `catch` label, the locals declared first, the statements so
+/// it: the class it catches, the `catch` label, the locals declared first, the statements so
 /// far, and the run of statements not yet in a `try`.
 struct Split {
+    class: Expr,
     catch: String,
     decls: Vec<Stmt>,
     out: Vec<Stmt>,
@@ -3796,6 +3811,7 @@ impl Split {
         if !self.run.is_empty() {
             self.out.push(Stmt::TryCatch {
                 body: std::mem::take(&mut self.run),
+                class: self.class.clone(),
                 catch: vec![Stmt::Goto(self.catch.clone())],
             });
         }

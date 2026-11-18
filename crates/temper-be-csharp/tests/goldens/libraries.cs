@@ -79,7 +79,7 @@ public static class LibrariesGlobal
         {
             return Core.Div(values.Count, ncols);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -102,7 +102,7 @@ public static class LibrariesGlobal
             IReadOnlyList<double> more = Listed.ToReadOnlyList(Enumerable.Select(Scaled(grid).Values, (double x) => x * x * x));
             return more;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -131,7 +131,7 @@ public static class LibrariesGlobal
                 double part = x / 2.0;
                 sum = sum + part;
             }
-            catch
+            catch (global::TemperLang.Core.Bubble)
             {
                 Environment.FailFast("panic");
                 throw new InvalidOperationException();
@@ -147,7 +147,7 @@ public static class LibrariesGlobal
         {
             return x / 2.0;
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -165,7 +165,7 @@ public static class LibrariesGlobal
         {
             return grid.Get(1, 1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return -1.0;
         }
@@ -190,7 +190,7 @@ public static class LibrariesGlobal
         {
             t1 = Scaled(grid);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -322,7 +322,7 @@ public static class LibrariesGlobal
         {
             found = ParseGrid(s);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             found = null;
         }
@@ -463,7 +463,7 @@ public static class LibrariesGlobal
                 {
                     held = Core.ToInt(x);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                 }
                 if (held == null)
@@ -494,7 +494,7 @@ public static class LibrariesGlobal
                 {
                     held = Core.ToInt(x);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                 }
                 if (held == null)
@@ -552,16 +552,17 @@ public static class LibrariesGlobal
         string trimmed = s.Trim();
         if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
         {
-            throw new global::System.FormatException();
+            throw new global::TemperLang.Core.Bubble();
         }
         return trimmed switch
         {
             "Infinity" => double.PositiveInfinity,
             "-Infinity" => double.NegativeInfinity,
-            _ => double.Parse(
+            _ => double.TryParse(
                 trimmed,
                 global::System.Globalization.NumberStyles.Float,
-                global::System.Globalization.CultureInfo.InvariantCulture),
+                global::System.Globalization.CultureInfo.InvariantCulture,
+                out double d) ? d : throw new global::TemperLang.Core.Bubble(),
         };
     }
 

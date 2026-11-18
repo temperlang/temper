@@ -1,0 +1,36 @@
+tmpl 1 model 1 library `host-errors` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  class List#3<T#4> extends Listed#5<T#4> {
+    connected method get#10(index: Int32): T#4;
+  }
+  interface Listed#5<T#6> {}
+  interface Console#11 {
+    connected method log#12(message: String): Void;
+  }
+  class Int32#14 {
+    connected method toString#15(radix?: Int32): String;
+  }
+  connected fn getConsole#16(name?: String): Console#11;
+}
+
+module `host-errors`#0 {
+  let ~console#13: Console#11;
+
+  fn read#1(ls#8: List#3<Int32>, i#9: Int32): Int32 throws Bubble {
+    if (%Int32.lt(i#9, 0)) {
+      (bubble()^): Void;
+    }
+    return ls#8.get#10(i#9);
+  }
+
+  let r#7: Int32;
+
+  init {
+    init ~console#13 = getConsole#16(omitted);
+    ~console#13.log#12("reading");
+    init r#7 = (orelse(read#1((list(1, 2)): List#3<Int32>, 5)^, %Int32.neg(1))): Int32;
+    ~console#13.log#12(%String.cat("read past the end ", r#7.toString#15(omitted)));
+    (panic()): Void;
+  }
+}

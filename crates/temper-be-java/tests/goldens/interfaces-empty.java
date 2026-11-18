@@ -12,6 +12,6 @@ public final class EmptyGlobal {
     static {
         console = Core.getConsole(Logger.getLogger("empty"));
         Greeter greeter = new HiGreeter();
-        ((HiGreeter) greeter).greet();
+        Core.cast(HiGreeter.class, greeter).greet();
     }
 }

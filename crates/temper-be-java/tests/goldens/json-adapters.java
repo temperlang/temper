@@ -2,6 +2,7 @@ package json_adapters;
 
 import java.util.List;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -20,7 +21,7 @@ public final class JsonAdaptersGlobal {
         adapter.encodeToJson(value, p);
         try {
             return p.toJsonString();
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return "bad JSON";
         }
     }
@@ -34,7 +35,7 @@ public final class JsonAdaptersGlobal {
         T back;
         try {
             back = decode(adapter, text);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
         String again = encode(adapter, back);
@@ -53,7 +54,7 @@ public final class JsonAdaptersGlobal {
         Shape shape;
         try {
             shape = decode(Shape.jsonAdapter(), "{\"height\": 6, \"width\": 5}");
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
         if (shape instanceof Rect) {
@@ -64,7 +65,7 @@ public final class JsonAdaptersGlobal {
         Record record_;
         try {
             record_ = decode(Record.jsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             throw new AssertionError("panic");
         }
         String t = record_.name + " " + record_.active + " ";
@@ -74,7 +75,7 @@ public final class JsonAdaptersGlobal {
         try {
             decode(Point.jsonAdapter(), "{\"x\": 1}");
             t2 = "decoded";
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             t2 = "no y";
         }
         console.log(t2);
@@ -82,7 +83,7 @@ public final class JsonAdaptersGlobal {
         try {
             decode(Message.jsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
             t3 = "decoded";
-        } catch (RuntimeException ignored4) {
+        } catch (Bubble ignored4) {
             t3 = "no such kind";
         }
         console.log(t3);

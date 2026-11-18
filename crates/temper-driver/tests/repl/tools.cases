@@ -523,10 +523,10 @@ interactive#6: void
 interactive#7: "2020-01-02 2021-03-04"
 # interactive/interactive/interactive.py
 from datetime import date as _date
-from temper_core import date_to_string as _date_to_string
+from temper_core import date_of as _date_of, date_to_string as _date_to_string
 
 __all__ = ()
 
-_d1: _date = _date(2020, 1, 2)
-f'{_date_to_string(_d1)} {_date_to_string(_date(2021, 3, 4))}'
+_d1: _date = _date_of(2020, 1, 2)
+f'{_date_to_string(_d1)} {_date_to_string(_date_of(2021, 3, 4))}'
 interactive#8: void

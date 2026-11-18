@@ -2,6 +2,7 @@ package read;
 
 import java.util.List;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -61,7 +62,7 @@ public final class ReadGlobal {
         String converted;
         try {
             converted = Integer.toString(radix != null ? Core.stringToInt(string, radix) : Core.stringToInt(string));
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             converted = "failed";
         }
         console.log("Parse " + string + " -> " + converted);
@@ -112,14 +113,14 @@ public final class ReadGlobal {
         String t;
         try {
             t = fromCodeNoInline(1114112);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = "nope";
         }
         console.log(t);
         String t2;
         try {
             t2 = fromCodeNoInline(55296);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             t2 = "no to surrogate";
         }
         console.log(t2);
@@ -127,7 +128,7 @@ public final class ReadGlobal {
         String t3;
         try {
             t3 = fromCodesNoInline(List.of(55296, 56320));
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             t3 = "no to surrogates";
         }
         console.log(t3);

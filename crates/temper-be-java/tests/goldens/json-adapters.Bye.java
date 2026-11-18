@@ -1,5 +1,6 @@
 package json_adapters;
 
+import temper.core.Core;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonObject;
@@ -24,8 +25,8 @@ final class Bye implements Message {
     }
 
     public static Bye decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = (JsonObject) t;
-        JsonString textJson = (JsonString) obj.propertyValueOrBubble("text");
+        JsonObject obj = Core.cast(JsonObject.class, t);
+        JsonString textJson = Core.cast(JsonString.class, obj.propertyValueOrBubble("text"));
         String text = textJson.content;
         return new Bye(text);
     }

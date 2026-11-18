@@ -1,5 +1,6 @@
 import {
   dateConstructor,
+  dateFromIsoString,
   dateToday,
   dateYearsBetween,
   listedGet,
@@ -28,5 +29,5 @@ const firstYears = dateYearsBetween(start, dateConstructor(2012, 3, 20));
 console.log(`First years between: ${firstYears}`);
 const secondYears = dateYearsBetween(start, dateConstructor(2012, 3, 21));
 console.log(`Second years between: ${secondYears}`);
-const rdc = new (globalThis.Date)(globalThis.Date.parse("1596-03-31"));
+const rdc = dateFromIsoString("1596-03-31");
 console.log(`Happy birthday, René: day=${rdc.getUTCDate()}, month=${rdc.getUTCMonth() + 1}, year=${rdc.getUTCFullYear()}`);

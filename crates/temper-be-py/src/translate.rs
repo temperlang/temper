@@ -1531,14 +1531,16 @@ impl<'a> Translator<'a> {
                 };
                 self.value_into(body, sink, &mut tried)?;
                 self.value_into(fallback, again, &mut caught)?;
+                let bubble = self.import("temper_core", "Bubble");
                 out.push(Stmt::Try {
                     body: tried,
-                    except: Some(caught),
+                    except: Some((bubble, caught)),
                     finally: Vec::new(),
                 });
             }
             Node::Bubble { .. } | Node::Error { .. } => {
-                out.push(Stmt::Raise(Expr::builtin("RuntimeError").call(vec![])))
+                let bubble = self.import("temper_core", "Bubble");
+                out.push(Stmt::Raise(Expr::name(bubble).call(vec![])))
             }
             Node::Panic {} => out.push(panic()),
             _ => {
@@ -2181,6 +2183,16 @@ impl<'a> Translator<'a> {
                         return Ok(Expr::Int(-n));
                     }
                 }
+                // By a nonzero literal, `Float64` division can't fail.
+                if let (Spelling::Helper(_, "float64_div"), [_, Expr::Float(d)]) =
+                    (spelling, &args[..])
+                {
+                    if *d != 0.0 {
+                        let d = args.pop().unwrap_or(Expr::None);
+                        let n = args.pop().unwrap_or(Expr::None);
+                        return Ok(Expr::bin(Bin::Div, n, d));
+                    }
+                }
                 let helper = match spelling {
                     Spelling::FloatCmp(_) => self.import("temper_core", "float_cmp"),
                     Spelling::Helper(from, name) => self.import(from, name),
@@ -2649,7 +2661,7 @@ fn not(e: Expr) -> Expr {
     Expr::unary(tree::Unary::Not, e)
 }
 
-/// `panic()`: raised past any `orelse`, which catches only `Exception`s.
+/// `panic()`: raised past any `orelse`, which catches only `Bubble`s.
 /// Kotlin's raises `RuntimeError`, as `bubble()` does, so an `orelse`
 /// caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {

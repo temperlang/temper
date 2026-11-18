@@ -467,7 +467,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.fromIsoString()",
-        Connection::Translate(date_from_iso_string),
+        Connection::Helper("dateFromIsoString"),
     ),
     (
         "std/temporal.type Date.get dayOfWeek()",
@@ -564,14 +564,6 @@ fn date_to_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYe
     let iso = date_arg(t, args, "toString")?.method("toISOString", Vec::new());
     let parts = iso.method("split", vec![Expr::Str("T".into())]);
     Ok(Expr::Index(Box::new(parts), Box::new(Expr::Int(0))))
-}
-
-/// `new (globalThis.Date)(globalThis.Date.parse(s))`, as Kotlin's.
-fn date_from_iso_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let s = date_arg(t, args, "fromIsoString")?;
-    let class = || Expr::name("globalThis").member("Date");
-    let parsed = class().method("parse", vec![s]);
-    Ok(Expr::New(Box::new(class()), vec![parsed]))
 }
 
 /// `new PromiseBuilder()`, the runtime's, as Kotlin's.

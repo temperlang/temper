@@ -303,12 +303,12 @@ pub enum Stmt {
     /// A statement with a comment after its first line: `# pyright:
     /// ignore[…]`, where a checker's rule doesn't fit the code.
     Commented(Box<Stmt>, String),
-    /// `try: …`, then `except Exception: …` if `except` is given (how a
-    /// bubble is caught, as Kotlin's), then `finally: …` if it isn't
-    /// empty.
+    /// `try: …`, then `except Name: …` if `except` gives the class to
+    /// catch (the runtime's `Bubble`, as imported, for `orelse`), then
+    /// `finally: …` if it isn't empty.
     Try {
         body: Vec<Stmt>,
-        except: Option<Vec<Stmt>>,
+        except: Option<(String, Vec<Stmt>)>,
         finally: Vec<Stmt>,
     },
     /// `raise value`.
@@ -765,7 +765,7 @@ impl Qualify<'_> {
                 finally,
             } => {
                 self.stmts(body, hidden);
-                if let Some(except) = except {
+                if let Some((_, except)) = except {
                     self.stmts(except, hidden);
                 }
                 self.stmts(finally, hidden);
@@ -950,7 +950,7 @@ fn bound_by_stmt(s: &Stmt, bound: &mut Vec<String>) {
             except,
             finally,
         } => {
-            let except = except.iter().flatten();
+            let except = except.iter().flat_map(|(_, e)| e);
             for s in body.iter().chain(except).chain(finally) {
                 bound_by_stmt(s, bound);
             }
@@ -1179,9 +1179,9 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         } => {
             out.push_str("try:\n");
             block(out, body, depth + 1);
-            if let Some(except) = except {
+            if let Some((class, except)) = except {
                 indent(out, depth);
-                out.push_str("except Exception:\n");
+                let _ = writeln!(out, "except {class}:");
                 block(out, except, depth + 1);
             }
             if !finally.is_empty() || except.is_none() {

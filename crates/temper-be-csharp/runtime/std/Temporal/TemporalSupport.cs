@@ -24,11 +24,28 @@ namespace TemperLang.Std.Temporal
 
         public static int IsoWeekdayNum(DateOnly d) => IsoWeekdayNum(d.DayOfWeek);
 
-        public static DateTime FromIsoString(string isoString) => DateTime.ParseExact(
+        /// The date an ISO 8601 date string ("2000-12-31") gives, else
+        /// bubbling.
+        public static DateTime FromIsoString(string isoString) => DateTime.TryParseExact(
             isoString,
             "yyyy-MM-dd",
             // Do not take any locale-specific strings into account for ISO 8601.
-            CultureInfo.InvariantCulture
-        );
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var date
+        ) ? date : throw new TemperLang.Core.Bubble();
+
+        /// The date, bubbling where there's no such date.
+        public static DateTime Date(int year, int month, int day)
+        {
+            try
+            {
+                return new DateTime(year, month, day);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                throw new TemperLang.Core.Bubble(e.Message, e);
+            }
+        }
     }
 }

@@ -55,15 +55,15 @@ public static class MapGlobal
     {
         console = Support.Logging.LoggingConsoleFactory.CreateConsole("Map");
         messages = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<int, string>>(new KeyValuePair<int, string>(200, "OK"), new KeyValuePair<int, string>(404, "Not Found"), new KeyValuePair<int, string>(500, "Internal Server Error")));
-        string message = messages[200];
+        string message = Mapped.Get(messages, 200);
         console.Log("Message: " + message);
         console.Log("Has 200: " + MessageDefined(200) + ", 302: " + MessageDefined(302));
         string t1;
         try
         {
-            t1 = messages[302];
+            t1 = Mapped.Get(messages, 302);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "Found";
         }
@@ -76,7 +76,7 @@ public static class MapGlobal
         IReadOnlyDictionary<string, IReadOnlyList<string>> neighbors;
         IDictionary<string, IReadOnlyList<string>> builder2 = new TemperLang.Core.OrderedDictionary<string, IReadOnlyList<string>>();
         builder2["Honduras"] = Listed.CreateReadOnlyList<string>("El Salvador", "Guatemala", "Nicaragua");
-        console.Log("From builder: " + Listed.Join(builder2["Honduras"], ", ", (string it) => it));
+        console.Log("From builder: " + Listed.Join(Mapped.Get(builder2, "Honduras"), ", ", (string it) => it));
         console.Log("Key so far: " + ListKeys(Mapped.AsReadOnly(builder2))[0]);
         builder2["El Salvador"] = Listed.CreateReadOnlyList<string>("Guatemala", "Honduras");
         builder2["Nicaragua"] = Listed.CreateReadOnlyList<string>("Costa Rica", "Honduras");
@@ -85,7 +85,7 @@ public static class MapGlobal
         {
             Core.RemoveGet(builder2, "Honduras");
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
         }
         IReadOnlyList<string> was = Core.RemoveGet(builder2, "El Salvador");
@@ -95,13 +95,13 @@ public static class MapGlobal
         {
             t2 = Core.RemoveGet(builder2, "El Salvador")[0];
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t2 = "Gone";
         }
         console.Log(t2);
         neighbors = Mapped.ToMap(builder2);
-        console.Log("From built: " + Listed.Join(neighbors["Nicaragua"], ", ", (string it) => it));
+        console.Log("From built: " + Listed.Join(Mapped.Get(neighbors, "Nicaragua"), ", ", (string it) => it));
         IReadOnlyDictionary<int, int> mapOfNone = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<int, int>>());
         IReadOnlyDictionary<string, string> mapOfOne = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<string, string>>(new KeyValuePair<string, string>("jack", "all trades")));
         IReadOnlyDictionary<int, string> mapOfTwo = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<int, string>>(new KeyValuePair<int, string>(1, "one"), new KeyValuePair<int, string>(2, "electric boogaloo")));

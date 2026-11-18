@@ -2,6 +2,7 @@ package nullables;
 
 import java.util.Objects;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -37,7 +38,7 @@ public final class NullablesGlobal {
     static int parse(String s) {
         try {
             return Core.stringToInt(s);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return -1;
         }
     }
@@ -45,7 +46,7 @@ public final class NullablesGlobal {
     static int halved(String s, int d) {
         try {
             return Core.divIntInt(Core.stringToInt(s), d);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return -1;
         }
     }
@@ -60,7 +61,7 @@ public final class NullablesGlobal {
     static int checked(int n) {
         try {
             return positive(n);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             throw new AssertionError("panic");
         }
     }
@@ -81,7 +82,7 @@ public final class NullablesGlobal {
         try {
             positive(n);
             return "ok";
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             return why == null ? "fails" : why;
         }
     }
@@ -116,13 +117,13 @@ public final class NullablesGlobal {
         }
         try {
             positive(-1);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             console.log("negative");
         }
         int fallback;
         try {
             fallback = positive(-2);
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
             fallback = 0;
         }
         console.log(Integer.toString(fallback));

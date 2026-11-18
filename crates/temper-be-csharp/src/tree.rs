@@ -315,10 +315,11 @@ pub enum Stmt {
     Throw(Expr),
     /// Lines of code as written, each indented in place: a helper's body.
     Raw(String),
-    /// `try { … } catch { … }`: Temper's `orelse`, where a bubble is an
-    /// exception.
+    /// `try { … } catch (Bubble) { … }`: Temper's `orelse`, catching
+    /// only the runtime's `Bubble` (`class`, as the translator names it).
     TryCatch {
         body: Vec<Stmt>,
+        class: Expr,
         catch: Vec<Stmt>,
     },
     /// `yield return value;`, in an iterator: a generator's.
@@ -732,11 +733,11 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         Stmt::Throw(e) => {
             let _ = writeln!(out, "throw {};", expr(e, TOP));
         }
-        Stmt::TryCatch { body, catch } => {
+        Stmt::TryCatch { body, class, catch } => {
             out.push_str("try\n");
             block(out, body, depth);
             indent(out, depth);
-            out.push_str("catch\n");
+            let _ = writeln!(out, "catch ({})", expr(class, TOP));
             block(out, catch, depth);
         }
         Stmt::YieldReturn(e) => {

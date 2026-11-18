@@ -12,10 +12,10 @@ public static class SpecificGlobal
         string t1;
         try
         {
-            _ = (BravoClass)instance;
+            Core.Cast<BravoClass>(instance);
             t1 = "yep";
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             t1 = "nope";
         }

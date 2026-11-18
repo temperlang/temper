@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
@@ -56,7 +57,7 @@ public final class MapGlobal {
         String t;
         try {
             t = Core.mappedGet(messages, 302);
-        } catch (RuntimeException ignored) {
+        } catch (Bubble ignored) {
             t = "Found";
         }
         console.log("Fallback: " + t);
@@ -74,14 +75,14 @@ public final class MapGlobal {
         builder2.put("Panama", List.of("Colombia", "Costa Rica"));
         try {
             Core.mapBuilderRemove(builder2, "Honduras");
-        } catch (RuntimeException ignored2) {
+        } catch (Bubble ignored2) {
         }
         List<String> was = Core.mapBuilderRemove(builder2, "El Salvador");
         console.log("Was there: " + Core.listJoinObj(was, ", ", it -> it));
         String t2;
         try {
             t2 = Core.listGet(Core.mapBuilderRemove(builder2, "El Salvador"), 0);
-        } catch (RuntimeException ignored3) {
+        } catch (Bubble ignored3) {
             t2 = "Gone";
         }
         console.log(t2);

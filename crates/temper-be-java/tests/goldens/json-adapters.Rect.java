@@ -1,5 +1,6 @@
 package json_adapters;
 
+import temper.core.Core;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonNumeric;
@@ -26,10 +27,10 @@ final class Rect implements Shape {
     }
 
     public static Rect decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = (JsonObject) t;
-        JsonNumeric widthJson = (JsonNumeric) obj.propertyValueOrBubble("width");
+        JsonObject obj = Core.cast(JsonObject.class, t);
+        JsonNumeric widthJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("width"));
         int width = widthJson.asInt32();
-        JsonNumeric heightJson = (JsonNumeric) obj.propertyValueOrBubble("height");
+        JsonNumeric heightJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("height"));
         int height = heightJson.asInt32();
         return new Rect(width, height);
     }

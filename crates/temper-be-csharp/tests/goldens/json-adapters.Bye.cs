@@ -1,3 +1,4 @@
+using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -31,8 +32,8 @@ internal class Bye : IMessage
 
     public static Bye DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = (JsonObject)t;
-        JsonString textJson = (JsonString)obj.PropertyValueOrBubble("text");
+        JsonObject obj = Core.Cast<JsonObject>(t);
+        JsonString textJson = Core.Cast<JsonString>(obj.PropertyValueOrBubble("text"));
         string text = textJson.Content;
         return new Bye(text);
     }

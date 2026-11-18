@@ -24,16 +24,16 @@ public static class AsyncBrokenEarlyGlobal
                 {
                     promise1 = b.Task;
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise1);
                 try
                 {
-                    v = promise1.Result;
+                    v = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                 }
-                catch
+                catch (global::TemperLang.Core.Bubble)
                 {
                     goto CATCH1;
                 }

@@ -1,5 +1,6 @@
 package json_adapters;
 
+import temper.core.Core;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonNumeric;
@@ -26,10 +27,10 @@ final class Point {
     }
 
     public static Point decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = (JsonObject) t;
-        JsonNumeric xJson = (JsonNumeric) obj.propertyValueOrBubble("x");
+        JsonObject obj = Core.cast(JsonObject.class, t);
+        JsonNumeric xJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("x"));
         int x = xJson.asInt32();
-        JsonNumeric yJson = (JsonNumeric) obj.propertyValueOrBubble("y");
+        JsonNumeric yJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("y"));
         int y = yJson.asInt32();
         return new Point(x, y);
     }

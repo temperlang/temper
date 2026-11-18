@@ -96,7 +96,7 @@ class Core {
         Matcher matcher = internal.pattern.matcher(text);
         matcher.region(begin, text.length());
         if (!matcher.find()) {
-            throw new RuntimeException();
+            throw temper.core.Core.bubble();
         }
         return new ConvertGroups(internal, text).convertGroups(matcher);
     }
@@ -112,15 +112,9 @@ class Core {
         while (matcher.find()) {
             sb.append(sourceText, prior, matcher.start());
             prior = matcher.end();
-            Match match = converter.convertGroups(matcher);
-            String replacement = null;
-            try {
-                replacement = replaceText.apply(match);
-            } catch (RuntimeException ignored) {
-            }
-            if (replacement != null) {
-                sb.append(replacement);
-            }
+            // The format function can't bubble, and what else it throws
+            // passes, as from any callback.
+            sb.append(replaceText.apply(converter.convertGroups(matcher)));
         }
         sb.append(sourceText, prior, sourceText.length());
         return sb.toString();

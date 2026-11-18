@@ -1,3 +1,5 @@
+import { bubble } from "./core.js";
+
 /**
  * Implements std/temporal.type Date.constructor()
  * @param {number} year
@@ -10,10 +12,29 @@ export const dateConstructor = (year, month, day) => {
   // If we were to pass year into `new Date`, then it would
   // have 1900 added when in the range [0, 99].
   // developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date#year
-  d.setUTCFullYear(year);
-  d.setUTCMonth(month - 1 /* JS months are zero indexed */);
-  d.setUTCDate(day);  // UTCDay is day of the week
+  d.setUTCFullYear(year, month - 1 /* JS months are zero indexed */, day);
+  // JS rolls a day or month out of range over into the next; Temper bubbles.
+  if (
+    d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 ||
+      d.getUTCDate() !== day
+  ) {
+    bubble();
+  }
   return d;
+};
+
+/**
+ * Implements std/temporal.type Date.fromIsoString(), bubbling for what
+ * isn't a date such as "2000-12-31".
+ * @param {string} isoString
+ * @returns {Date}
+ */
+export const dateFromIsoString = (isoString) => {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoString);
+  if (!parts) {
+    return bubble();
+  }
+  return dateConstructor(+parts[1], +parts[2], +parts[3]);
 };
 
 /**

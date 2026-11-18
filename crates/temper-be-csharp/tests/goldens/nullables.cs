@@ -45,7 +45,7 @@ public static class NullablesGlobal
         {
             return Core.ToInt(s);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return -1;
         }
@@ -57,7 +57,7 @@ public static class NullablesGlobal
         {
             return Core.Div(Core.ToInt(s), d);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return -1;
         }
@@ -78,7 +78,7 @@ public static class NullablesGlobal
         {
             return Positive(n);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             Environment.FailFast("panic");
             throw new InvalidOperationException();
@@ -112,7 +112,7 @@ public static class NullablesGlobal
             Positive(n);
             return "ok";
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             return why == null ? "fails" : why;
         }
@@ -153,7 +153,7 @@ public static class NullablesGlobal
         {
             Positive(-1);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             console.Log("negative");
         }
@@ -162,7 +162,7 @@ public static class NullablesGlobal
         {
             fallback = Positive(-2);
         }
-        catch
+        catch (global::TemperLang.Core.Bubble)
         {
             fallback = 0;
         }
