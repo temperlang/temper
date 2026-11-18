@@ -1,11 +1,11 @@
 # The playground
 
-The [playground](https://temperlang.github.io/tempest/playground/)
+The [playground](https://temperlang.dev/playground/)
 runs the whole compiler in your browser, as WebAssembly, with no
 server: type Temper on the left, and see each language's translation,
 the errors, and what your code and tests log, as you type. Links share
 the code, which travels in the URL itself. It's published with the
-[docs site](https://temperlang.github.io/tempest/), which links back to it.
+[docs site](https://temperlang.dev/), which links back to it.
 
 Building it, and how it fits together, is in
 [site/playground](../../site/playground/README.md), and

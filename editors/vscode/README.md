@@ -38,7 +38,7 @@ and likewise `linux-arm64`, `darwin-arm64`, `win32-x64`, and
 `win32-arm64`. The universal `temper-VERSION.vsix` has none, and
 uses `temper` on `PATH`. CI's Binaries workflow builds them all, and
 each release, and the `nightly` prerelease, on
-[GitHub](https://github.com/temperlang/tempest/releases) carries them.
+[GitHub](https://github.com/temperlang/temper/releases) carries them.
 The extension isn't in the VS Code Marketplace yet.
 
 Install one with `code --install-extension temper-linux-x64-VERSION.vsix`,

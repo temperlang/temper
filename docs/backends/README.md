@@ -32,7 +32,7 @@ build, 123 commits after the last release) for npm, Cargo, NuGet, and
 Maven, `0.7.0.dev123` for Python, and `0.7.0.alpha.0.123-1` for
 LuaRocks. `temper build` writes both beside the library, in
 `temper.out/BACKEND/`. They aren't on package registries yet; each
-[release](https://github.com/temperlang/tempest/releases) carries
+[release](https://github.com/temperlang/temper/releases) carries
 them, packed as each registry takes them, for installing by hand.
 
 How each backend is built, and what it chooses for failure, null,

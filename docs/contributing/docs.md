@@ -1,7 +1,7 @@
 # Writing these docs
 
 The docs are Markdown that reads well on GitHub, and the same files,
-unchanged, make the [docs site](https://temperlang.github.io/tempest/)
+unchanged, make the [docs site](https://temperlang.dev/)
 (see [the site](#the-site)).
 
 ## Where things go
@@ -92,8 +92,9 @@ checker fails until you remove the comment and update the entry. Today, 14 are k
 ## Where they came from
 
 Most of the guide, reference, and release notes were Temper's mkdocs
-site, built from `docs/for-users/` and `build-user-docs/` in the
-[temperlang/temper](https://github.com/temperlang/temper) repository.
+site, built from `docs/for-users/` and `build-user-docs/` in the first
+compiler's tree
+([kotlin-final](https://github.com/temperlang/temper/tree/kotlin-final)).
 There, the reference pages (types, builtins, and syntax) were woven
 together from doc comments in the compiler's Kotlin source and std,
 with each example's marker and value filled in by running it. Here,
@@ -132,10 +133,10 @@ Anchors changed too: the old pages linked generated anchors, such as
 
 ## The site
 
-The [docs site](https://temperlang.github.io/tempest/) is README.md
+The [docs site](https://temperlang.dev/) is README.md
 as its home page and every page of docs/ at the same path, as
 `.html`, with the
-[playground](https://temperlang.github.io/tempest/playground/) beside
+[playground](https://temperlang.dev/playground/) beside
 them.
 
 [Kelpto](https://github.com/temperlang/kelpto), the lossless Markdown

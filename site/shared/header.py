@@ -19,7 +19,7 @@ ROOT = HERE.parents[1]
 LOGO = ROOT / "docs/images/temper-logo-text-auto.svg"
 CSS = HERE / "header.css"
 JS = HERE / "header.js"
-REPO_URL = "https://github.com/temperlang/tempest"
+REPO_URL = "https://github.com/temperlang/temper"
 # The header's sections: docs/ folders and their names.
 SECTIONS = [
     ("guide", "Guide"),
@@ -114,7 +114,7 @@ def facts(page: str, commit: str, extra: tuple[str, ...] = ()) -> list[str]:
     return [
         f'Code <a href="{text("LICENSE-APACHE")}">Apache-2.0</a> OR <a href="{text("LICENSE-MIT")}">MIT</a>; '
         f'docs <a href="{text("LICENSE-CC-BY-SA-4.0")}">CC BY-SA 4.0</a> (<a href="{text("COPYRIGHT")}">details</a>)',
-        f'<a href="{REPO_URL}">temperlang/tempest on GitHub</a>',
+        f'<a href="{REPO_URL}">temperlang/temper on GitHub</a>',
         built,
         *extra,
     ]

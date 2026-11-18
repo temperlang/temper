@@ -44,10 +44,11 @@ New here? Start with the [quick tour](guide/tour.md).
 ## Where these docs come from
 
 Most of the guide, reference, and release notes began as Temper's
-documentation site, [temperlang.dev](https://temperlang.dev/), and its
-sources in the [temperlang/temper](https://github.com/temperlang/temper)
-repository, including reference pages generated there from doc
-comments in the compiler's source. They're Markdown source here, edited
+earlier documentation site, at [temperlang.dev](https://temperlang.dev/),
+and its sources in the first compiler's tree
+([kotlin-final](https://github.com/temperlang/temper/tree/kotlin-final)),
+including reference pages generated there from doc comments in the
+compiler's source. They're Markdown source here, edited
 by hand ([how, and how the docs site is built](contributing/docs.md)).
 The [blog](https://temperlang.dev/blog/) stays in its own repository.
 

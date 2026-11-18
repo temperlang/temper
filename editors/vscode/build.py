@@ -80,7 +80,7 @@ TARGETS = {
 # kept.
 VSCODE_VERSION = "1.144.1"
 # Relative links in README.md, as the package's details page shows them.
-BASE_URL = "https://github.com/temperlang/tempest/blob/main/editors/vscode"
+BASE_URL = "https://github.com/temperlang/temper/blob/main/editors/vscode"
 
 
 def run(*command: str | Path, cwd: Path = HERE) -> None:

@@ -20,7 +20,7 @@ type parameters) and [#7][i7] (`early` and `late` properties), from Mike
 Samuel's early design, and the functional test
 `semantics/mutually-referencing-types`, which shows what stays legal.
 
-[tutorial]: https://github.com/temperlang/temper/blob/main/docs/for-users/temper-docs/docs/tutorial/06-memory.md
+[tutorial]: ../docs/guide/tutorial/06-memory.md
 [i5]: https://github.com/temperlang/temper/issues/5
 [i7]: https://github.com/temperlang/temper/issues/7
 

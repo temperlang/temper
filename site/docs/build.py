@@ -86,7 +86,7 @@ REMOVALS = HERE / "removals.txt"
 KELPTO_LIBS = ["kelpto-core", "kelpto-md", "kelpto-html", "kelpto"]
 # The site's published address, which links to it (as the README's to
 # the playground) are made relative to.
-SITE_URL = "https://temperlang.github.io/tempest/"
+SITE_URL = "https://temperlang.dev/"
 # Links to the repository's files outside the site go to REPO_URL, at a
 # commit; the header's sections are SECTIONS (both from site/shared).
 # Files at the top of the repository published as text, for the license links.

@@ -413,9 +413,9 @@ Congratulations! You've used a Temper-built library in Rust.
 - **NEXT:** [Classes and functions](tutorial/01-classes-and-functions.md)
 - Reference: [Why yet another programming language](why.md)
 
-[LatestRelease]: https://github.com/temperlang/tempest/releases/latest
+[LatestRelease]: https://github.com/temperlang/temper/releases/latest
 [LiterateProgramming]: https://en.wikipedia.org/wiki/Literate_programming
-[Nightly]: https://github.com/temperlang/tempest/releases/tag/nightly
+[Nightly]: https://github.com/temperlang/temper/releases/tag/nightly
 [MavenToolchains]: https://maven.apache.org/guides/mini/guide-using-toolchains.html
 [TypeModule]: https://nodejs.org/api/packages.html#type
 [VsixInstall]: https://code.visualstudio.com/docs/editor/extension-marketplace#_install-from-a-vsix

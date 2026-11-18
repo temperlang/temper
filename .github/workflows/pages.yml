@@ -1,8 +1,9 @@
 # Publishes the docs site (site/docs: README.md and docs/, rendered by
 # Kelpto) and the playground (site/playground) to GitHub Pages: the docs
-# at https://temperlang.github.io/tempest/, the playground at
+# at https://temperlang.dev/, the playground at
 # playground/ there. Kelpto's commit is in site/docs/kelpto-ref. The
-# repository's Pages source must be GitHub Actions (Settings, Pages).
+# repository's Pages source must be GitHub Actions, with temperlang.dev
+# as its custom domain (Settings, Pages).
 name: Pages
 
 on:
