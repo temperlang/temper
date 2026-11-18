@@ -529,6 +529,19 @@ class Repo:
         return problems
 
 
+def themed_picture(m: re.Match) -> str:
+    """A `<picture>` whose dark image is chosen by `prefers-color-scheme`
+    (as the blog's are), as two images the site's theme picks between,
+    so the header's toggle switches them too; any other picture as is."""
+    dark = re.search(r'<source\b[^>]*\bsrcset="([^"]*)"[^>]*\bmedia="\(prefers-color-scheme: dark\)"', m.group(1))
+    img = re.search(r"<img\b[^>]*>", m.group(1))
+    if not dark or not img:
+        return m.group(0)
+    light = img.group(0).replace("<img", '<img class="only-light"', 1)
+    darker = re.sub(r'\bsrc="[^"]*"', f'src="{dark.group(1)}"', img.group(0)).replace("<img", '<img class="only-dark"', 1)
+    return f"<picture>{light}{darker}</picture>"
+
+
 class Site:
     def __init__(self, kelpto: Kelpto, highlighter: Highlighter, out: Path, diagrams: Diagrams | None, repo: Repo):
         self.kelpto = kelpto
@@ -660,7 +673,8 @@ class Site:
             return f'{m.group(1)}"{html.escape(new)}"'
 
         body = re.sub(r"<a\b([^>]*)>(.*?)</a>", anchor, body, flags=re.S)
-        return re.sub(r'(<(?:img|source)\b[^>]*?\b(?:src|srcset)=)"([^"]*)"', image, body)
+        body = re.sub(r'(<(?:img|source)\b[^>]*?\b(?:src|srcset)=)"([^"]*)"', image, body)
+        return re.sub(r"<picture>(.*?)</picture>", themed_picture, body, flags=re.S)
 
     # Blocks
 
@@ -828,7 +842,7 @@ class Site:
 </head>
 <body>
 <a class="skip" href="#content">Skip to the content</a>
-{shared.header(page, self.section_of(src))}
+{shared.header(page, self.section_of(src) or (shared.BLOG if src.startswith(shared.BLOG + "/") else None))}
 <div class="layout">
 <main id="content" class="doc">
 {body}

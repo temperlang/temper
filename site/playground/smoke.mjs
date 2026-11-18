@@ -419,7 +419,7 @@ try {
   step("Temper link", linkProblems);
 
   // The site's header, shared with the docs pages (site/shared).
-  const SECTIONS = ["Guide", "Language", "Std", "Tools", "Backends", "Contributing", "Internals", "Release notes", "Playground"];
+  const SECTIONS = ["Guide", "Language", "Std", "Tools", "Backends", "Contributing", "Internals", "Release notes", "Blog", "Playground"];
   const KEY = "temper-theme";
   const headerProblems = [];
   const nav = await page.$$eval("header.top nav a", (as) => as.map((a) => [a.textContent, a.getAttribute("aria-current")]));

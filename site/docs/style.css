@@ -196,6 +196,7 @@ code, pre, kbd, samp {
 .doc .post-summary + .post-summary { margin-top: 2em; }
 .doc picture { display: block; margin: 0 0 1em; }
 .doc picture img { display: block; }
+.doc picture img.only-dark { display: none; }
 
 /* A `temper inert` block, Temper that isn't compiled: tinted, labeled. */
 .doc pre.inert {
@@ -288,13 +289,13 @@ code, pre, kbd, samp {
 .diagram { margin: 0 0 1em; }
 .diagram-art { overflow-x: auto; padding: 4px 0; }
 .diagram-art svg { display: block; height: auto; margin: 0 auto; }
-.diagram-dark { display: none; }
+.diagram-dark, .only-dark { display: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .diagram-light { display: none; }
-  :root:not([data-theme="light"]) .diagram-dark { display: block; }
+  :root:not([data-theme="light"]) :is(.diagram-light, .only-light) { display: none; }
+  :root:not([data-theme="light"]) :is(.diagram-dark, .only-dark) { display: block; }
 }
-:root[data-theme="dark"] .diagram-light { display: none; }
-:root[data-theme="dark"] .diagram-dark { display: block; }
+:root[data-theme="dark"] :is(.diagram-light, .only-light) { display: none; }
+:root[data-theme="dark"] :is(.diagram-dark, .only-dark) { display: block; }
 .diagram-source summary { color: var(--muted); font-size: 13px; cursor: pointer; }
 .diagram-source pre { margin: 6px 0 0; }
 .diagram figcaption {
