@@ -451,6 +451,30 @@ As built (2026-10-30), with modules and tests:
 
   Writing order, which numbers nodes, takes each module's items, its
   init block, and then its tests.
+- **Test parts** (2026-11-18): a partitioned module's test items and
+  test init ([modules.md](modules.md)) come between its init block and
+  its tests, in a section of their own, written only where there are
+  some (`for-tests := "for" "tests" "{" item* ("init" block)? "}"`):
+
+  ```text
+    init {
+      init libValue#2 = 1;
+    }
+
+    for tests {
+      fn forTests#3(): Int32 {
+        return testValue#4;
+      }
+
+      let testValue#4: Int32;
+
+      init {
+        init testValue#4 = 2;
+      }
+    }
+  ```
+
+  Writing order takes them after the init block, before the tests.
 
 As built (2026-10-30), with classes and interfaces (subset B):
 

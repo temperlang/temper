@@ -167,15 +167,49 @@ pub struct Module {
     /// Its directory relative to the library's root, as `foo/bar`; empty
     /// at the root. Qnames start with it.
     pub path: String,
-    /// `Function`, `BodilessFunction`, and `ModuleLet` nodes, in source
-    /// order.
+    /// `Function`, `BodilessFunction`, `ModuleLet`, `Class`, and
+    /// `Interface` nodes, in source order: the library's, once
+    /// [`reach::partition`] has moved out what only tests reach.
     pub items: Vec<NodeId>,
     /// A `Block`: `InitLet`s and top-level statements, in source order.
     pub init: NodeId,
+    /// Items that only tests reach, in source order: empty until
+    /// [`reach::partition`] moves them here.
+    pub test_items: Vec<NodeId>,
+    /// A `Block` of the init statements that set what only tests reach,
+    /// in source order, which run after `init` and before the tests;
+    /// `None` where there are none.
+    pub test_init: Option<NodeId>,
     /// `Test` nodes, in source order, run after init. What a module
     /// imports isn't stored: it's the other modules' declarations its
     /// nodes and types name ([`analysis::imports`]).
     pub tests: Vec<NodeId>,
+}
+
+impl Module {
+    /// Its items, the library's then the tests'.
+    pub fn all_items(&self) -> impl Iterator<Item = NodeId> + '_ {
+        self.items.iter().chain(&self.test_items).copied()
+    }
+
+    /// Every node that isn't another's child, in writing order: its
+    /// items, its init block, its test items and init, and its tests.
+    pub fn roots(&self) -> impl Iterator<Item = NodeId> + '_ {
+        (self.items.iter().chain([&self.init]))
+            .chain(&self.test_items)
+            .chain(&self.test_init)
+            .chain(&self.tests)
+            .copied()
+    }
+
+    /// What tests may use beyond the library: its test items and init
+    /// block, and its tests.
+    pub fn test_roots(&self) -> impl Iterator<Item = NodeId> + '_ {
+        (self.test_items.iter())
+            .chain(&self.test_init)
+            .chain(&self.tests)
+            .copied()
+    }
 }
 
 /// One library's program: modules plus the tables they share.

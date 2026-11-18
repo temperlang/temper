@@ -55,13 +55,20 @@ pub fn settle(p: &Program, profile: &Profile) -> Option<Program> {
             errors.insert(error);
         }
         let modules: Vec<_> = (b.program().modules.iter())
-            .map(|m| (m.items.clone(), m.tests.clone(), m.init))
+            .map(|m| {
+                let roots: Vec<NodeId> = (m.items.iter().chain(&m.test_items).chain(&m.tests))
+                    .copied()
+                    .collect();
+                (roots, [m.init].into_iter().chain(m.test_init))
+            })
             .collect();
-        for (items, tests, init) in modules {
-            for root in items.into_iter().chain(tests) {
+        for (roots, inits) in modules {
+            for root in roots {
                 fail(&mut b, root, &mut errors, false);
             }
-            fail(&mut b, init, &mut errors, true);
+            for init in inits {
+                fail(&mut b, init, &mut errors, true);
+            }
         }
     }
     b.renumber();
@@ -78,7 +85,10 @@ pub fn has_type_errors(p: &Program) -> bool {
 fn type_errors(p: &Program) -> Vec<NodeId> {
     let mut found = Vec::new();
     for m in &p.modules {
-        for &root in m.items.iter().chain(&m.tests).chain([&m.init]) {
+        for &root in (m.items.iter().chain(&m.test_items).chain(&m.tests))
+            .chain([&m.init])
+            .chain(&m.test_init)
+        {
             find(p, root, &mut found);
         }
     }

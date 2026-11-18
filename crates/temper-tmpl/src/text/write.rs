@@ -305,6 +305,31 @@ impl Writer {
         self.line();
         self.out.push_str("init ");
         self.block(p, module.init);
+        // What only tests reach, once partitioned: its items, then its
+        // init block.
+        if !module.test_items.is_empty() || module.test_init.is_some() {
+            self.out.push('\n');
+            self.line();
+            self.out.push_str("for tests {");
+            self.indent += 1;
+            for (i, &item) in module.test_items.iter().enumerate() {
+                if i > 0 {
+                    self.out.push('\n');
+                }
+                self.item(p, item);
+            }
+            if let Some(init) = module.test_init {
+                if !module.test_items.is_empty() {
+                    self.out.push('\n');
+                }
+                self.line();
+                self.out.push_str("init ");
+                self.block(p, init);
+            }
+            self.indent -= 1;
+            self.line();
+            self.out.push('}');
+        }
         for &test in &module.tests {
             self.out.push('\n');
             self.item(p, test);

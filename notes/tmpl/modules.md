@@ -82,6 +82,8 @@ pub struct Module {
     pub path: String,       // from the library's root: "", "helpers", "a/b"
     pub items: Vec<NodeId>,
     pub init: NodeId,
+    pub test_items: Vec<NodeId>,   // what only tests reach, once partitioned
+    pub test_init: Option<NodeId>, // a Block, which continues init
     pub tests: Vec<NodeId>, // Test nodes, in source order
 }
 ```
@@ -144,6 +146,19 @@ pub struct Module {
 - **Rule M1:** a module refers to another of the program's modules only
   for its exported top-level declarations, of a module before it, and
   assigns or initializes only its own module `let`s.
+- **Test parts** (2026-11-18): a module partitioned by reach
+  (`reach::partition`, [analyses.md](analyses.md), "Reachability")
+  keeps the library's parts in `items` and `init`, and has what only
+  tests reach in `test_items` (in source order) and `test_init` (a
+  `Block` of the init statements that set it, `None` where there are
+  none), which runs after the init, continuing it in its scope, and
+  before the tests. Before partitioning they're empty. What a module
+  imports for its library (`module_imports`) comes from `items` and
+  `init` alone; what its tests import (`test_imports`) from its test
+  parts and tests. `Module::roots` lists every root in writing order,
+  and `Module::all_items` both parts' items. **Rule M3:** the library's
+  parts use nothing of the tests', which a build without tests leaves
+  out.
 - **Tests:** each a `Test` node, a function (a compiler-made
   `Function` declaration owned by the module) taking std's `Test` and
   returning `Void`, which may bubble (rule M2), named in reports by its

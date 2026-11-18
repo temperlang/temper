@@ -23,7 +23,6 @@ struct DSplit;
 struct ADeep;
 struct B1Deep;
 struct B2Deep;
-struct B3Deep;
 struct CDeep;
 struct DDeep;
 struct EDeep;
@@ -80,8 +79,6 @@ struct B1Deep : public virtual ADeep {
 };
 
 struct B2Deep : public virtual B1Deep {};
-
-struct B3Deep : public virtual B2Deep {};
 
 struct CDeep : public virtual ADeep {};
 

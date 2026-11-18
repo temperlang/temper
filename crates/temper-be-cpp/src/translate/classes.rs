@@ -126,7 +126,7 @@ pub fn mutating_members(p: &Program, names: &NameMap) -> HashSet<String> {
         }
     }
     for module in &p.modules {
-        for &item in &module.items {
+        for item in module.all_items() {
             let (Node::Class { members, .. } | Node::Interface { members, .. }) = p.nodes.get(item)
             else {
                 continue;
@@ -494,7 +494,7 @@ impl Translator<'_> {
                 let slot_ty = format!("{CORE}::GlobalSlot<{ty}>");
                 slots.push_str(&format!("    static {} {name};\n", spelled(&slot_ty)));
                 let slot = format!("{class_name}::temper_statics::{name}");
-                self.slots.push(slot.clone());
+                self.slots.push((slot.clone(), self.tests_only));
                 items.push(Item::Variable {
                     exported: true,
                     ty: slot_ty,

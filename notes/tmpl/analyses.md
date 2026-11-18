@@ -57,16 +57,35 @@ program it came from; stored facts are rechecked by recomputing them.
     refer to, read, set, or construct; the classes their types,
     expressions' types, and members used name; supertypes; and type
     parameters' bounds. The library's roots go first, so what both reach
-    is the library's.
-  - **A backend asks it of the program it translates,** after its
+    is the library's. `reach::reach_for` traces as a backend sees the
+    program: the Temper bodies of the std classes' members it connects,
+    which it doesn't write, reach nothing (std `Date`'s, which call
+    `isLeapYear` and `padTo`); an interface's still do, as defaults that
+    implementing classes may inherit.
+  - **Partitioned** (2026-11-18): `reach::partition(p, connects)` gives
+    the program split: each module's `items` and `init` keep the
+    library's parts, its `test_items` and `test_init` take the tests'
+    ([modules.md](modules.md)), and what nothing reaches is dropped, with
+    every declaration it defines or owns; the class members the backend
+    connects lose their bodies, as connected members without one are
+    (rule C1), so nothing refers to what's dropped. Partitioning again
+    changes nothing. The test init runs after the init, in its scope, where the
+    tests are; its statements are all simple (any other is a root), so
+    moving them after the library's changes nothing the library sees.
+    The validator's M3 checks that the library's parts use nothing of
+    the tests'.
+  - **A backend partitions the program it translates,** after its
     lowerings: errors' lowering may drop a call (C++'s `errors` program
     no longer calls `passedOn`, whose argument's type is an error).
-  - **Not yet:** backends don't consume it; each will in its own step
-    (C++'s own liveness and Rust's test-only `let`s first). Checked
-    against C++'s liveness on every case its tests build: they agree on
-    every private function but `passedOn`, above. Per-member
-    pruning, and finer rules for which initializers may do something
-    (a constructor without effects), are later.
+    C++ does (2026-11-18): what only tests reach is defined, and its
+    classes and storage declared, only where `TEMPER_TESTS` is, the
+    test init at the end of the init function there, and what nothing
+    reaches isn't written; this replaced its own liveness, which
+    covered only private functions. The others don't partition yet,
+    so their output is as it was; each will in its own step (Rust's
+    test-only `let`s next).
+  - **Not yet:** per-member pruning, and finer rules for which
+    initializers may do something (a constructor without effects).
 - **Type queries:** subtyping, substitution, member lookup, operator
   methods, override chains, and which interface method bodies a class
   inherits (for Go and Rust trait defaults).

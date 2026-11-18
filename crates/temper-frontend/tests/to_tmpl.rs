@@ -15,8 +15,9 @@
 //!   review the diff.
 //! - `every_functional_test_translates_or_says_why`: no functional test
 //!   panics the translation or gives tmpl the validator rejects; the rest
-//!   say what isn't covered yet. Each that translates, and std, is split
-//!   by reach so that each part keeps what it uses ([`check_split`]).
+//!   say what isn't covered yet. Each that translates, and std, is
+//!   partitioned by reach, validly, so each part keeps what it uses
+//!   ([`check_partition`]).
 //! - `reach_as_kotlins_*`: Kotlin Temper's own reachability tests, nearly
 //!   as written, reached as Kotlin marks them.
 
@@ -27,9 +28,8 @@ use temper_frontend::settle::{Settled, settle};
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::{NotYet, gaps, to_tmpl};
 use temper_syntax::lex::SourceKind;
-use temper_tmpl::analysis::walk;
 use temper_tmpl::coroutines::{CoroutineStrategy, lower};
-use temper_tmpl::reach::{Reach, reach};
+use temper_tmpl::reach::{Reach, partition, reach, reach_for};
 use temper_tmpl::version::current_as_sentinel;
 use temper_tmpl::{Facts, Node, NodeId, Profile, Program, difference, text, validate};
 
@@ -312,7 +312,7 @@ fn every_functional_test_translates_or_says_why() {
                 Ok(program) => {
                     let problems = validate(&program, &Profile::full());
                     assert!(problems.is_empty(), "{test}: {problems:#?}");
-                    check_split(test, &program);
+                    check_partition(test, &program);
                     ok.push(test.as_str());
                 }
                 Err(e) => assert!(!e.what.is_empty(), "{test}"),
@@ -355,7 +355,9 @@ fn std_library() {
             .unwrap_or_else(|e| panic!("std: {e}"));
         let problems = validate(&program, &Profile::full());
         assert!(problems.is_empty(), "std: {problems:#?}");
-        check_split("std", &program);
+        check_partition("std", &program);
+        // As a backend that connects every std member it can.
+        check_partition_for("std", &program, |_| true);
         let full = text::write(&program);
         let back = text::read(&full).unwrap_or_else(|e| panic!("std: {e}\n{full}"));
         assert_eq!(difference(&program, &back), None, "std");
@@ -844,54 +846,69 @@ fn reach_as_kotlins_init_assignment_reachability() {
     });
 }
 
-/// Each module's split by reach ([`temper_tmpl::reach`]) keeps what its
-/// parts use: what the library's items and init call, refer to, read,
-/// set, or construct is the library's, and what the tests and their
-/// items and init do is the library's or the tests'. Every item and init
-/// statement is in one part.
-fn check_split(test: &str, p: &Program) {
-    let reached = reach(p);
-    for module in &p.modules {
+/// The program partitioned by reach ([`temper_tmpl::reach::partition`])
+/// keeps every item and init statement in the part its split says, or
+/// drops it where nothing reaches it; validates, so each part uses only
+/// what it may (the library's parts nothing of the tests', rule M3, and
+/// nothing what's dropped); round trips as text, with its spans; and
+/// partitioned again, stays as it is.
+fn check_partition(test: &str, p: &Program) {
+    check_partition_for(test, p, |_| false);
+}
+
+/// [`check_partition`] for a backend that connects the std members
+/// `connects` takes, by their keys.
+fn check_partition_for(test: &str, p: &Program, connects: fn(&str) -> bool) {
+    let parted = partition(p, connects);
+    let reached = reach_for(p, connects);
+    for (module, parted_module) in p.modules.iter().zip(&parted.modules) {
         let split = reached.split(p, module);
-        let library: Vec<NodeId> = (split.items.iter()).chain(&split.init).copied().collect();
-        let tests: Vec<NodeId> = (split.test_items.iter())
-            .chain(&split.test_init)
-            .chain(&module.tests)
-            .copied()
-            .collect();
-        for (roots, allowed) in [
-            (library, &[Reach::Library][..]),
-            (tests, &[Reach::Library, Reach::Test][..]),
-        ] {
-            for root in roots {
-                walk(p, root, &mut |id| {
-                    let used = match p.nodes.get(id) {
-                        Node::CallFunction { callee: d, .. }
-                        | Node::FunctionRef { target: d }
-                        | Node::GetModuleLet { target: d }
-                        | Node::SetModuleLet { target: d, .. }
-                        | Node::InitLet { target: d, .. }
-                        | Node::Local { local: d } => d,
-                        Node::New { ctor, .. } => p.decls.get(ctor).owner,
-                        _ => return,
-                    };
-                    if let Some(r) = reached.get(used) {
-                        assert!(allowed.contains(&r), "{test}: {} is {r:?}", p.name(used));
-                    }
-                });
-            }
-        }
-        let stmts = match p.nodes.get(module.init) {
-            Node::Block { stmts } => p.nodes.list(stmts).len(),
+        let stmts = |block: Option<NodeId>| match block.map(|b| p.nodes.get(b)) {
+            Some(Node::Block { stmts }) => p.nodes.list(stmts).len(),
             _ => 0,
         };
-        let parts = [
+        let parted_stmts = |block: Option<NodeId>| match block.map(|b| parted.nodes.get(b)) {
+            Some(Node::Block { stmts }) => parted.nodes.list(stmts).len(),
+            _ => 0,
+        };
+        assert_eq!(parted_module.items.len(), split.items.len(), "{test}");
+        assert_eq!(
+            parted_stmts(Some(parted_module.init)),
+            split.init.len(),
+            "{test}"
+        );
+        assert_eq!(
+            parted_module.test_items.len(),
+            split.test_items.len(),
+            "{test}"
+        );
+        assert_eq!(
+            parted_stmts(parted_module.test_init),
+            split.test_init.len(),
+            "{test}"
+        );
+        let placed = [
             &split.items,
             &split.init,
             &split.test_items,
             &split.test_init,
-        ];
-        let placed = parts.iter().map(|part| part.len()).sum::<usize>() + split.unreached.len();
-        assert_eq!(placed, module.items.len() + stmts, "{test}");
+        ]
+        .iter()
+        .map(|part| part.len())
+        .sum::<usize>()
+            + split.unreached.len();
+        assert_eq!(
+            placed,
+            module.items.len() + stmts(Some(module.init)),
+            "{test}"
+        );
     }
+    let problems = validate(&parted, &Profile::full());
+    assert!(problems.is_empty(), "{test}: {problems:#?}");
+    let full = text::write(&parted);
+    let back = text::read(&full).unwrap_or_else(|e| panic!("{test}: {e}\n{full}"));
+    assert_eq!(difference(&parted, &back), None, "{test}");
+    assert_eq!(text::write(&back), full, "{test}");
+    let again = partition(&parted, connects);
+    assert_eq!(difference(&parted, &again), None, "{test}");
 }

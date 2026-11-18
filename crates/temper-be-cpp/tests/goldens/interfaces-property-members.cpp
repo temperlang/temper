@@ -24,7 +24,6 @@ struct Holder;
 template <class L, class T>
 struct Labeled;
 struct LabeledSub;
-struct AllAlone;
 struct High;
 struct Low1;
 struct Mid;
@@ -79,8 +78,6 @@ struct LabeledSub : public virtual Labeled<temper::core::Str, std::shared_ptr<C>
   temper::core::Str label(temper::core::Str l) const override;
   std::shared_ptr<C> get_held() const override;
 };
-
-struct AllAlone : public virtual I {};
 
 struct High : public virtual temper::core::AnyValueBase {
   virtual temper::core::Str toString() const = 0;

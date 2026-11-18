@@ -1,11 +1,15 @@
 //! Tests of reachability ([`temper_tmpl::reach`]) on hand-written tmpl:
-//! each kind of root, what tracing follows, and each module's split. The
+//! each kind of root, what tracing follows, each module's split, and the
+//! program partitioned by it: its parts, their text, their imports, and
+//! the validator's rule that each part uses only what it may (M3). The
 //! frontend's tests port Kotlin Temper's own reachability tests
-//! (`export-some`, `init-assignment-reachability`) from Temper.
+//! (`export-some`, `init-assignment-reachability`) from Temper, and
+//! partition every functional test.
 
 use std::collections::BTreeMap;
-use temper_tmpl::reach::{Reach, Split, reach};
-use temper_tmpl::{NodeId, Program, text};
+use temper_tmpl::analysis::{Import, module_imports, test_imports};
+use temper_tmpl::reach::{Reach, Split, partition, reach};
+use temper_tmpl::{Node, NodeId, Profile, Program, Rule, difference, text, validate};
 
 /// Each unit's reach, by name.
 fn reaches(p: &Program) -> BTreeMap<String, Reach> {
@@ -490,5 +494,321 @@ module split#0 {{
             test_init: vec![at(1)],
             unreached,
         }
+    );
+}
+
+/// Connects nothing: these programs have no std members to connect.
+fn none(_: &str) -> bool {
+    false
+}
+
+/// The names of what items declare.
+fn item_names(p: &Program, items: &[NodeId]) -> Vec<String> {
+    (items.iter())
+        .map(|&item| match p.nodes.get(item) {
+            Node::Function { decl, .. }
+            | Node::BodilessFunction { decl, .. }
+            | Node::ModuleLet { decl }
+            | Node::Class { decl, .. }
+            | Node::Interface { decl, .. } => p.name(decl).to_string(),
+            _ => panic!("not an item"),
+        })
+        .collect()
+}
+
+/// A block's statement count.
+fn stmt_count(p: &Program, block: NodeId) -> usize {
+    match p.nodes.get(block) {
+        Node::Block { stmts } => p.nodes.list(stmts).len(),
+        _ => panic!("not a block"),
+    }
+}
+
+/// A library with a part of each kind: what the library reaches stays,
+/// what only the test does (a function, a class and its static, and a
+/// module `let`, with their init statements) moves to the test parts,
+/// and what nothing does (a function with its parameter and local, an
+/// interface, and a module `let`, the last declaration) is dropped.
+fn parts_program() -> Program {
+    read(&format!(
+        "tmpl 1 model 1 library parts 0.1.0
+
+{USES}
+module parts#0 {{
+  export fn exported#1(): Int32 {{
+    return libValue#2;
+  }}
+
+  let libValue#2: Int32;
+
+  fn forTests#3(): Int32 {{
+    let box#4: Box#5 = new constructor#6();
+    return %Int32.add(testValue#8, box#4.size#7());
+  }}
+
+  class Box#5 {{
+    constructor constructor#6(): Box#5 {{}}
+    method size#7(): Int32 {{
+      return shared#9;
+    }}
+    static let shared#9: Int32;
+  }}
+
+  let testValue#8: Int32;
+
+  fn unused#10(p#11: Int32): Int32 {{
+    let q#12: Int32 = p#11;
+    return q#12;
+  }}
+
+  interface Unused#13 {{}}
+
+  let unusedValue#16: Int32;
+
+  init {{
+    init libValue#2 = 1;
+    init testValue#8 = 2;
+    init shared#9 = 3;
+    init unusedValue#16 = 4;
+    exported#1();
+  }}
+
+  test \"t\" ~test#14(~test#15: Test#98): Void throws Bubble {{
+    forTests#3();
+  }}
+}}
+"
+    ))
+}
+
+/// Partitioned, each module keeps the library's items and init
+/// statements; the test items and init take what only tests reach, in
+/// source order; and what nothing reaches is gone, its declarations and
+/// theirs too. The result validates, and partitioning it again changes
+/// nothing.
+#[test]
+fn partition_parts() {
+    let p = parts_program();
+    let parted = partition(&p, none);
+    let module = &parted.modules[0];
+    assert_eq!(item_names(&parted, &module.items), ["exported", "libValue"]);
+    assert_eq!(
+        item_names(&parted, &module.test_items),
+        ["forTests", "Box", "testValue"]
+    );
+    assert_eq!(stmt_count(&parted, module.init), 2);
+    let test_init = module.test_init.expect("a test init");
+    assert_eq!(stmt_count(&parted, test_init), 2);
+    assert_eq!(module.tests.len(), 1);
+    let live = |name: &str| {
+        (parted.decls.ids())
+            .filter(|&d| parted.decls.contains(d))
+            .any(|d| parted.name(d) == name)
+    };
+    for gone in ["unused", "p", "q", "Unused", "unusedValue"] {
+        assert!(!live(gone), "{gone} is still declared");
+    }
+    for kept in ["exported", "forTests", "box", "size", "shared", "testValue"] {
+        assert!(live(kept), "{kept} is gone");
+    }
+    assert_eq!(validate(&parted, &Profile::full()), []);
+    assert_eq!(difference(&partition(&parted, none), &parted), None);
+}
+
+/// Text writes the test parts in a section of their own after the init
+/// block, `for tests`, its items and then its init block, which reads
+/// back to an equal program and writes the same again.
+#[test]
+fn partition_text() {
+    let parted = partition(&parts_program(), none);
+    let written = text::write(&parted);
+    let module = &written[written.find("module parts#0").expect("the module")..];
+    assert_eq!(
+        module,
+        "module parts#0 {
+  export fn exported#1(): Int32 {
+    return libValue#2;
+  }
+
+  let libValue#2: Int32;
+
+  init {
+    init libValue#2 = 1;
+    exported#1();
+  }
+
+  for tests {
+    fn forTests#3(): Int32 {
+      let box#4: Box#5 = new constructor#6();
+      return %Int32.add(testValue#8, box#4.size#7());
+    }
+
+    class Box#5 {
+      constructor constructor#6(): Box#5 {}
+      method size#7(): Int32 {
+        return shared#9;
+      }
+      static let shared#9: Int32;
+    }
+
+    let testValue#8: Int32;
+
+    init {
+      init testValue#8 = 2;
+      init shared#9 = 3;
+    }
+  }
+
+  test \"t\" ~test#14(~test#15: Test#98): Void throws Bubble {
+    forTests#3();
+  }
+}
+"
+    );
+    let back = read(&written);
+    assert_eq!(difference(&parted, &back), None);
+    assert_eq!(text::write(&back), written);
+    // Test items alone, or a test init alone, too.
+    for program in [
+        "module m#0 {\n  init {}\n\n  for tests {\n    fn f#1(): Int32 {\n      return 1;\n    }\n  }\n}\n",
+        "module m#0 {\n  let v#1: Int32;\n\n  init {}\n\n  for tests {\n    init {\n      init v#1 = 1;\n    }\n  }\n}\n",
+    ] {
+        let text = format!("tmpl 1 model 1 library m 0.1.0\n\n{program}");
+        assert_eq!(text::write(&read(&text)), text);
+    }
+}
+
+/// What a module imports for its library comes from its library's
+/// parts alone; what its tests import, from its test parts and tests.
+#[test]
+fn partition_imports() {
+    let p = read(&format!(
+        "tmpl 1 model 1 library imports 0.1.0
+
+{USES}
+module helpers#20 in \"helpers\" {{
+  export fn forLibrary#21(): Int32 {{
+    return 1;
+  }}
+
+  export fn forTests#22(): Int32 {{
+    return 2;
+  }}
+
+  init {{}}
+}}
+
+module imports#0 {{
+  export fn exported#1(): Int32 {{
+    return forLibrary#21();
+  }}
+
+  fn testHelper#2(t#3: Test#98): Int32 {{
+    return forTests#22();
+  }}
+
+  init {{}}
+
+  test \"t\" ~test#4(~test#5: Test#98): Void throws Bubble {{
+    testHelper#2(~test#5);
+  }}
+}}
+"
+    ));
+    let shown = |p: &Program, imports: Vec<Import>| -> Vec<(String, Vec<String>)> {
+        (imports.into_iter())
+            .map(|i| {
+                let decls = i.decls.iter().map(|&d| p.name(d).to_string()).collect();
+                (p.name(i.from).to_string(), decls)
+            })
+            .collect()
+    };
+    let parted = partition(&p, none);
+    let module = &parted.modules[1];
+    assert_eq!(
+        shown(&parted, module_imports(&parted, module)),
+        [("helpers".to_string(), vec!["forLibrary".to_string()])]
+    );
+    assert_eq!(
+        shown(&parted, test_imports(&parted, module)),
+        [
+            ("helpers".to_string(), vec!["forTests".to_string()]),
+            ("testing".to_string(), vec!["Test".to_string()]),
+        ]
+    );
+}
+
+/// M3: the library's items and init block use nothing of the test
+/// parts', which a build without tests leaves out: here a call of a test
+/// item, and an init statement setting one.
+#[test]
+fn library_parts_use_no_test_parts() {
+    let p = read(
+        "tmpl 1 model 1 library bad 0.1.0
+
+module bad#0 {
+  export fn exported#1(): Int32 {
+    return forTests#2();
+  }
+
+  init {
+    init value#3 = 1;
+  }
+
+  for tests {
+    fn forTests#2(): Int32 {
+      return 1;
+    }
+
+    let value#3: Int32;
+  }
+}
+",
+    );
+    let rules: Vec<Rule> = (validate(&p, &Profile::full()).into_iter())
+        .map(|problem| problem.rule)
+        .collect();
+    assert_eq!(rules, [Rule::M3, Rule::M3]);
+}
+
+/// The body of a std class's member that a backend connects reaches
+/// nothing, as the backend doesn't write it: what only it uses is
+/// dropped, where a backend that doesn't connect it keeps it; and the
+/// member loses its body, so the program stays valid, as a connected
+/// member without one is.
+#[test]
+fn connected_members_reach_nothing() {
+    let p = read(
+        "tmpl 1 model 1 library std 0.1.0
+
+module temporal#0 in \"temporal\" {
+  export class Date#1 {
+    constructor constructor#2(): Date#1 {}
+    connected method label#3(): Int32 {
+      return helper#4();
+    }
+  }
+
+  fn helper#4(): Int32 {
+    return 1;
+  }
+
+  init {}
+}
+",
+    );
+    let connects = |key: &str| key == "std/temporal.type Date.label()";
+    let helper = |p: &Program| {
+        let module = &p.modules[0];
+        item_names(p, &module.items).contains(&"helper".to_string())
+    };
+    assert!(helper(&partition(&p, none)));
+    let parted = partition(&p, connects);
+    assert!(!helper(&parted));
+    assert_eq!(validate(&parted, &Profile::full()), []);
+    let written = text::write(&parted);
+    assert!(
+        written.contains("connected abstract method label#3(): Int32;"),
+        "{written}"
     );
 }

@@ -14,8 +14,9 @@
 //! operators, jumps, module state, string order, nullables, and classes beyond
 //! those tests, and on programs of C++'s own: names C++ takes
 //! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]),
-//! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
-//! a call frees while it runs ([`LIFETIMES`]).
+//! `Float64.toString` across its range ([`FLOAT_FORMAT`]), objects
+//! a call frees while it runs ([`LIFETIMES`]), and what only tests reach,
+//! or nothing does ([`REACH`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.cpp` matching the golden in `tests/goldens/`, named
@@ -186,6 +187,38 @@ const BIT_VECTOR: &str = "# Bit vector
     let before = v.get(5);
     v.set(9, true);
     console.log(\"${before} ${v.get(9)} ${v.get(8)} ${v.get(100)}\");
+";
+
+/// What only tests reach, a function, a class and the interface it
+/// implements, a module `let` computed from the library's, and a module
+/// `var` the test writes, and what nothing reaches, a function, a class,
+/// an interface, and a module `let` ([`test_parts_apart`]). The test
+/// passes only if the test-only values are set before it runs.
+const REACH: &str = "# Reach
+
+    export let shown(n: Int): Int { n + base }
+    let base = 1;
+
+    let forTests(n: Int): Int { n * testFactor }
+    let testFactor = base * 2;
+    var testCount = 0;
+    interface TestShape { area(): Int; }
+    class TestSquare(public side: Int) extends TestShape {
+      public area(): Int { side * side }
+    }
+
+    let unreachedFunction(): Int { 3 }
+    class UnreachedClass {}
+    interface UnreachedInterface {}
+    let unreachedValue = 4;
+
+    console.log(\"shown ${shown(1).toString()}\");
+
+    test(\"test parts\") {
+      let shape: TestShape = new TestSquare(forTests(2));
+      testCount = testCount + shape.area();
+      assert(testCount == 16);
+    }
 ";
 
 const LIFETIMES: &str = "# Lifetimes
@@ -402,6 +435,12 @@ fn cases() -> Vec<Case> {
         "bit-vector.temper.md",
         BIT_VECTOR,
         vec!["false true false false".into()],
+    ));
+    cases.push(Case::inline(
+        "reach",
+        "reach.temper.md",
+        REACH,
+        vec!["shown 2".into()],
     ));
     cases.push(Case::inline(
         "lifetimes",
@@ -1637,6 +1676,66 @@ fn kept_for_tests() {
         assert!(!callee.is_empty() && callee.iter().all(|&t| t), "{source}");
         // The kept class, outside `TEMPER_TESTS`.
         assert_eq!(lines(header, "struct KeptForHost :"), [false], "{header}");
+    });
+}
+
+/// [`REACH`]'s test parts, in its header and `.cpp`, only where
+/// `TEMPER_TESTS` is defined, and what nothing reaches nowhere, as
+/// tmpl's `reach::partition` splits the program; `runs` and `strict`
+/// build it strictly with and without `TEMPER_TESTS`, and run its test.
+#[test]
+fn test_parts_apart() {
+    kit::with_stack(|| {
+        let case = (cases().into_iter()).find(|c| c.key == "reach").unwrap();
+        let files = generate(&case);
+        let mentions = |line: &str, name: &str| {
+            let word = |c: char| c == '_' || c.is_ascii_alphanumeric();
+            line.match_indices(name).any(|(at, _)| {
+                let before = line[..at].chars().next_back();
+                let after = line[at + name.len()..].chars().next();
+                !before.is_some_and(word) && !after.is_some_and(word)
+            })
+        };
+        let tests_only = [
+            "forTests",
+            "testFactor",
+            "testCount",
+            "TestShape",
+            "TestSquare",
+        ];
+        let unreached = [
+            "unreachedFunction",
+            "UnreachedClass",
+            "UnreachedInterface",
+            "unreachedValue",
+        ];
+        let mut seen = Vec::new();
+        let modules = (files.iter()).filter(|f| {
+            (f.path.ends_with(".hpp") || f.path.ends_with(".cpp"))
+                && !f.path.ends_with("/main.cpp")
+                && !f.path.ends_with("/test.cpp")
+        });
+        for file in modules {
+            for (tests, line) in under_tests(&file.text) {
+                for name in tests_only {
+                    if mentions(line, name) {
+                        assert!(tests, "{}: {line}\n{}", file.path, file.text);
+                        seen.push(name);
+                    }
+                }
+                for name in unreached {
+                    assert!(
+                        !mentions(line, name),
+                        "{}: {line}\n{}",
+                        file.path,
+                        file.text
+                    );
+                }
+            }
+        }
+        for name in tests_only {
+            assert!(seen.contains(&name), "{name} is missing");
+        }
     });
 }
 

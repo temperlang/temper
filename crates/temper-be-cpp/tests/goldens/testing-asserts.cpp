@@ -2,7 +2,9 @@
 #pragma once
 
 #include <temper-core/core.hpp>
+#ifdef TEMPER_TESTS
 #include <std/testing.hpp>
+#endif
 
 namespace asserts {
 
@@ -12,7 +14,6 @@ namespace asserts {
 void global_init_init();
 
 struct Vec2;
-struct TestHelper;
 struct KeptForHost;
 
 struct Vec2 : public std::enable_shared_from_this<Vec2> {
@@ -24,14 +25,6 @@ struct Vec2 : public std::enable_shared_from_this<Vec2> {
   double get_y() const;
 };
 
-struct TestHelper : public std::enable_shared_from_this<TestHelper> {
-  int32_t i;
-  int32_t j;
-  static std::shared_ptr<TestHelper> make(int32_t i, int32_t j);
-  int32_t get_i() const;
-  int32_t get_j() const;
-};
-
 struct KeptForHost : public std::enable_shared_from_this<KeptForHost> {
   int32_t n;
   static std::shared_ptr<KeptForHost> make(int32_t n);
@@ -40,6 +33,16 @@ struct KeptForHost : public std::enable_shared_from_this<KeptForHost> {
 
 
 #ifdef TEMPER_TESTS
+struct TestHelper;
+
+struct TestHelper : public std::enable_shared_from_this<TestHelper> {
+  int32_t i;
+  int32_t j;
+  static std::shared_ptr<TestHelper> make(int32_t i, int32_t j);
+  int32_t get_i() const;
+  int32_t get_j() const;
+};
+
 // For tests' host code (`@keepTest`).
 int32_t keptForTests(std::shared_ptr<TestHelper> const & helper);
 // Tests, which `test.cpp` runs.
@@ -91,6 +94,17 @@ static double normSquared(std::shared_ptr<Vec2> const & vec) {
   return vec->x * vec->x + vec->y * vec->y;
 }
 
+std::shared_ptr<KeptForHost> KeptForHost::make(int32_t n) {
+  std::shared_ptr<KeptForHost> self = std::make_shared<KeptForHost>();
+  self->n = n;
+  return self;
+}
+
+int32_t KeptForHost::get_n() const {
+  return this->n;
+}
+
+#ifdef TEMPER_TESTS
 std::shared_ptr<TestHelper> TestHelper::make(int32_t i, int32_t j) {
   std::shared_ptr<TestHelper> self = std::make_shared<TestHelper>();
   self->i = i;
@@ -106,7 +120,6 @@ int32_t TestHelper::get_j() const {
   return this->j;
 }
 
-#ifdef TEMPER_TESTS
 static void assertMoreThings(std::shared_ptr<temper_std::Test> const & t, std::shared_ptr<TestHelper> const & helper, std::shared_ptr<std::vector<std::shared_ptr<std::vector<core::Str>>>> const & strings) {
   {
     int32_t i = 0;
@@ -132,19 +145,7 @@ static void assertMoreThings(std::shared_ptr<temper_std::Test> const & t, std::s
     }
   }
 }
-#endif  // TEMPER_TESTS
 
-std::shared_ptr<KeptForHost> KeptForHost::make(int32_t n) {
-  std::shared_ptr<KeptForHost> self = std::make_shared<KeptForHost>();
-  self->n = n;
-  return self;
-}
-
-int32_t KeptForHost::get_n() const {
-  return this->n;
-}
-
-#ifdef TEMPER_TESTS
 static int32_t sumOf(std::shared_ptr<TestHelper> const & helper) {
   return core::Int::add(helper->i, helper->j);
 }
@@ -157,8 +158,6 @@ int32_t keptForTests(std::shared_ptr<TestHelper> const & helper) {
 void global_init_init() {
   core::init_once([] {
     temper_globals::unitVecs.construct();
-    temper_std::global_init_testing();
-    core::Str name = TEMPER_STR("case");
     temper_globals::unitVecs.value = core::List::make<std::shared_ptr<Vec2>>(Vec2::make(1.0, 0.0), Vec2::make(0.0, 1.0));
   });
 }
@@ -267,18 +266,18 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Threads REQUIRED)
-if(NOT TARGET std)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../std ${CMAKE_CURRENT_BINARY_DIR}/std)
-endif()
 
 add_library(asserts init.cpp)
 target_include_directories(asserts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
-target_link_libraries(asserts PUBLIC Threads::Threads std)
+target_link_libraries(asserts PUBLIC Threads::Threads)
 
 add_executable(asserts-main main.cpp)
 target_link_libraries(asserts-main PRIVATE asserts)
 
-if(TRUE)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
+  if(NOT TARGET std)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../std ${CMAKE_CURRENT_BINARY_DIR}/std)
+  endif()
   add_executable(asserts-test test.cpp init.cpp)
   target_compile_definitions(asserts-test PRIVATE TEMPER_TESTS)
   target_include_directories(asserts-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

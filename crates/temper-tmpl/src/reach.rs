@@ -1,7 +1,8 @@
 //! Reachability: which of a program's own top-level declarations its
 //! library needs, which only its tests do, and which nothing does, as
-//! Kotlin Temper's `ReachabilityTracer` decides, and each module split
-//! by it ([`Split`]) (notes/tmpl/analyses.md, "Reachability").
+//! Kotlin Temper's `ReachabilityTracer` decides, each module split by
+//! it ([`Split`]), and the program partitioned by it ([`partition`]),
+//! as backends take it (notes/tmpl/analyses.md, "Reachability").
 //!
 //! - **Units** are the top-level declarations of the program's own
 //!   modules (functions, module `let`s and `var`s, classes, and
@@ -18,25 +19,30 @@
 //!   literals, conversions, operators that can't bubble, and core's pure
 //!   functions' calls (`getConsole()`) of those.
 //! - **The tests' roots** are tests and `keepTest`s.
-//! - **Tracing** follows what a unit's nodes name ([`named`]: calls,
+//! - **Tracing** follows what a unit's nodes name ([`crate::analysis::named`]: calls,
 //!   references, module `let`s, constructors, and the types of what they
 //!   declare), the types of their expressions, the classes of the members
 //!   they use, the init block's locals they read, and the bounds of type
 //!   parameters they declare. What the library's roots reach is
 //!   [`Reach::Library`], what only the tests' do [`Reach::Test`], and the
 //!   rest [`Reach::Unreached`]. Like Kotlin's, it follows mentions, not
-//!   flow: a call in a branch that never runs still reaches.
+//!   flow: a call in a branch that never runs still reaches. For a
+//!   backend ([`reach_for`]), the Temper bodies of the std members it
+//!   connects, which it doesn't write, reach nothing.
 //! - **Connected declarations aren't roots,** as in Kotlin: host code
 //!   may use only what's exported or kept. Reach is per library, so
 //!   another library's declarations are never units.
-//! - **A backend asks it of the program it translates,** after the
+//! - **A backend partitions the program it translates,** after the
 //!   lowerings it picks: one may drop a call (an argument whose type is
 //!   an error fails before the call), leaving its callee unreached.
 
-use crate::analysis::{named, nominals, pure_core, top_level, walk};
+use crate::analysis::{named_but, nominals, pure_core, top_level, walk, walk_but};
+use crate::builder::Builder;
 use crate::decls::Facts;
 use crate::ids::{DeclId, NodeId};
+use crate::qname::connected_member_node;
 use crate::schema::Node;
+use crate::validate::defined_decl;
 use crate::{Module, Program};
 use std::collections::{HashMap, HashSet};
 
@@ -55,6 +61,8 @@ pub enum Reach {
 #[derive(Clone, Debug, Default)]
 pub struct Reached {
     reach: HashMap<DeclId, Reach>,
+    /// The class members whose bodies the backend doesn't write.
+    connected: HashSet<NodeId>,
 }
 
 /// A module split by reach, each list in source order.
@@ -62,8 +70,9 @@ pub struct Reached {
 pub struct Split {
     /// The library's items.
     pub items: Vec<NodeId>,
-    /// The library's init statements: the init block's top level but
-    /// those of [`Split::test_init`] and [`Split::unreached`].
+    /// The library's init statements: the top level of the init block
+    /// and the test init but those of [`Split::test_init`] and
+    /// [`Split::unreached`].
     pub init: Vec<NodeId>,
     /// Items only the tests reach.
     pub test_items: Vec<NodeId>,
@@ -82,18 +91,19 @@ impl Reached {
         self.reach.get(&decl).copied()
     }
 
-    /// `module` split by reach.
+    /// `module` split by reach: its items, test items too, and the
+    /// statements of its init block and test init.
     pub fn split(&self, p: &Program, module: &Module) -> Split {
         let mut split = Split::default();
         let reach = |d: Option<DeclId>| d.and_then(|d| self.get(d)).unwrap_or(Reach::Library);
-        for &item in &module.items {
+        for item in module.all_items() {
             match reach(item_decl(p, item)) {
                 Reach::Library => split.items.push(item),
                 Reach::Test => split.test_items.push(item),
                 Reach::Unreached => split.unreached.push(item),
             }
         }
-        for &stmt in init_stmts(p, module) {
+        for stmt in init_stmts(p, module) {
             match reach(sets(p, stmt).map(|(d, _)| d)) {
                 Reach::Library => split.init.push(stmt),
                 Reach::Test => split.test_init.push(stmt),
@@ -106,11 +116,21 @@ impl Reached {
 
 /// The reach of each of `p`'s units (see the module's docs).
 pub fn reach(p: &Program) -> Reached {
+    reach_for(p, |_| false)
+}
+
+/// The reach of each of `p`'s units for a backend that connects the std
+/// classes' members `connects` takes, by their keys
+/// ([`crate::qname::connected_member_node`]): their Temper bodies, which
+/// it doesn't write, reach nothing. (An interface's are defaults that
+/// classes implementing it may inherit, so they still reach.)
+pub fn reach_for(p: &Program, connects: fn(&str) -> bool) -> Reached {
     let pure = pure_core(p);
     let mut units: HashMap<DeclId, Vec<NodeId>> = HashMap::new();
+    let mut connected = HashSet::new();
     let (mut library, mut tests) = (Roots::default(), Roots::default());
     for module in &p.modules {
-        for &item in &module.items {
+        for item in module.all_items() {
             let Some(decl) = item_decl(p, item) else {
                 continue;
             };
@@ -122,8 +142,12 @@ pub fn reach(p: &Program) -> Reached {
             if facts.contains(Facts::KEEP_TEST) {
                 tests.decls.push(decl);
             }
+            if let Node::Class { members, .. } = p.nodes.get(item) {
+                let members = p.nodes.list(members).iter().copied();
+                connected.extend(members.filter(|&m| connected_member_node(p, m, connects)));
+            }
         }
-        for &stmt in init_stmts(p, module) {
+        for stmt in init_stmts(p, module) {
             match sets(p, stmt) {
                 Some((decl, value)) => {
                     units.entry(decl).or_default().push(stmt);
@@ -140,12 +164,85 @@ pub fn reach(p: &Program) -> Reached {
         p,
         reach: (units.keys()).map(|&d| (d, Reach::Unreached)).collect(),
         units,
+        connected,
     };
     tracer.trace(Reach::Library, library);
     tracer.trace(Reach::Test, tests);
     Reached {
         reach: tracer.reach,
+        connected: tracer.connected,
     }
+}
+
+/// `p` partitioned by reach, as [`reach_for`] gives it for a backend
+/// that connects what `connects` takes: each module's items and init
+/// block keep the library's parts, in source order; its test items and
+/// test init take what only tests reach; and what nothing reaches is
+/// dropped, with every declaration in it or owned by one dropped. The
+/// class members the backend connects lose their Temper bodies, as a
+/// connected member without one is (rule C1): a method becomes abstract,
+/// a static function bodiless. A backend partitions the program it
+/// translates, after its lowerings. Partitioning a partitioned program
+/// changes nothing.
+pub fn partition(p: &Program, connects: fn(&str) -> bool) -> Program {
+    let reached = reach_for(p, connects);
+    let mut b = Builder::from_program(p.clone());
+    let mut dropped = HashSet::new();
+    for (i, module) in p.modules.iter().enumerate() {
+        let split = reached.split(p, module);
+        let span = p.nodes.span(module.init);
+        let init = b.block(&split.init);
+        b.set_span(init, span, false);
+        let test_init = (!split.test_init.is_empty()).then(|| {
+            let span = module.test_init.map_or(span, |t| p.nodes.span(t));
+            let block = b.block(&split.test_init);
+            b.set_span(block, span, false);
+            block
+        });
+        let m = &mut b.program_mut().modules[i];
+        m.items = split.items;
+        m.init = init;
+        m.test_items = split.test_items;
+        m.test_init = test_init;
+        for root in split.unreached {
+            walk(p, root, &mut |id| dropped.extend(defined_decl(p, id)));
+        }
+    }
+    for &member in &reached.connected {
+        let (decl, params, body) = match p.nodes.get(member) {
+            Node::Method { decl, params, body } | Node::Function { decl, params, body } => {
+                (decl, p.nodes.list(params).to_vec(), body)
+            }
+            _ => continue,
+        };
+        walk(p, body, &mut |id| dropped.extend(defined_decl(p, id)));
+        let bodiless = match p.nodes.get(member) {
+            Node::Method { .. } => b.abstract_method(decl, &params),
+            _ => b.bodiless_function(decl, &params),
+        };
+        b.replace_with(member, bodiless);
+    }
+    // What the dropped declarations own: type parameters, and anything a
+    // node doesn't define.
+    let owned_by_dropped = |d: DeclId, dropped: &HashSet<DeclId>| {
+        let mut owner = p.decls.get(d).owner;
+        while p.decls.contains(owner) {
+            if dropped.contains(&owner) {
+                return true;
+            }
+            owner = p.decls.get(owner).owner;
+        }
+        false
+    };
+    let owned: Vec<DeclId> = (p.decls.ids())
+        .filter(|&d| p.decls.contains(d) && owned_by_dropped(d, &dropped))
+        .collect();
+    dropped.extend(owned);
+    for d in dropped {
+        b.remove_decl(d);
+    }
+    b.renumber();
+    b.finish()
 }
 
 /// Where tracing starts: units, and nodes outside any.
@@ -159,6 +256,9 @@ struct Tracer<'a> {
     p: &'a Program,
     units: HashMap<DeclId, Vec<NodeId>>,
     reach: HashMap<DeclId, Reach>,
+    /// Members whose bodies the backend doesn't write, which reach
+    /// nothing.
+    connected: HashSet<NodeId>,
 }
 
 impl Tracer<'_> {
@@ -200,8 +300,9 @@ impl Tracer<'_> {
                 found.insert(top);
             }
         };
-        named(p, node, &mut add);
-        walk(p, node, &mut |id| {
+        let skip = |id: NodeId| self.connected.contains(&id);
+        named_but(p, node, &skip, &mut add);
+        walk_but(p, node, &skip, &mut |id| {
             // What each expression's type names, as a cast's.
             let mut types = Vec::new();
             nominals(p, p.nodes.ty(id), &mut types);
@@ -250,12 +351,16 @@ fn item_decl(p: &Program, item: NodeId) -> Option<DeclId> {
     }
 }
 
-/// The statements of a module's init block's top level.
-fn init_stmts<'a>(p: &'a Program, module: &Module) -> &'a [NodeId] {
-    match p.nodes.get(module.init) {
+/// The statements of a module's init block's top level, then its test
+/// init's.
+fn init_stmts<'a>(p: &'a Program, module: &Module) -> impl Iterator<Item = NodeId> + 'a {
+    let block = |b: NodeId| match p.nodes.get(b) {
         Node::Block { stmts } => p.nodes.list(stmts),
         _ => &[],
-    }
+    };
+    (block(module.init).iter())
+        .chain(module.test_init.map_or(&[][..], block))
+        .copied()
 }
 
 /// The unit an init statement sets, and the value it sets it to, if any:

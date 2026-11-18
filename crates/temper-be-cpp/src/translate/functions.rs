@@ -141,7 +141,7 @@ impl Translator<'_> {
         );
         self.deferred = 0;
         self.in_function = true;
-        self.begin(body);
+        self.begin(&[body]);
         let stmts = self.stmts(body).map(reachable);
         let (loops, labels, pending, deferred, in_function) = saved;
         self.loops = loops;

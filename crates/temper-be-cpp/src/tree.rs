@@ -343,6 +343,9 @@ pub enum Stmt {
         body: Vec<Stmt>,
         fallback: Vec<Stmt>,
     },
+    /// Statements only where `TEMPER_TESTS` is defined, in the same
+    /// scope: the init's for what only tests reach.
+    TestsOnly(Vec<Stmt>),
 }
 
 /// A loop's labels, for `goto`s from inner loops: one at the end of its
@@ -423,10 +426,11 @@ pub enum Item {
     Function(Function),
     /// Text as it is, such as a helper's definition.
     Raw(String),
-    /// A private function, or its prototype, that only tests call: only
-    /// where `TEMPER_TESTS` is defined, as the tests are, or a build
-    /// without them would have an unused `static` function
-    /// (`-Wunused-function`).
+    /// What only tests reach (`temper_tmpl::reach`): a function, its
+    /// prototype, a class's member, storage, or the module's lock; or a
+    /// private function's overload that only tests call. Only where
+    /// `TEMPER_TESTS` is defined, as the tests are, or a build without
+    /// them would have unused `static` functions (`-Wunused-function`).
     TestsOnly(Box<Item>),
 }
 
@@ -711,6 +715,14 @@ fn lambda_head(captures: &str, params: &[(String, String)], result: &str) -> Str
 }
 
 fn stmt(out: &mut String, s: &Stmt, depth: usize) {
+    if let Stmt::TestsOnly(stmts) = s {
+        out.push_str("#ifdef TEMPER_TESTS\n");
+        for s in stmts {
+            stmt(out, s, depth);
+        }
+        out.push_str("#endif  // TEMPER_TESTS\n");
+        return;
+    }
     indent(out, depth);
     match s {
         Stmt::LambdaLocal {
@@ -883,6 +895,8 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             body(out, fallback, depth);
             out.push('\n');
         }
+        // Written above, without the indent.
+        Stmt::TestsOnly(_) => {}
     }
 }
 

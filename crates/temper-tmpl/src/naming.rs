@@ -685,10 +685,11 @@ pub fn assign(p: &Program, rules: &NamingRules) -> NameMap {
     map
 }
 
-/// A module's functions, `let`s, classes, and interfaces.
+/// A module's functions, `let`s, classes, and interfaces, its test
+/// items' too.
 fn module_level(p: &Program, module: &Module) -> Vec<DeclId> {
-    (module.items.iter())
-        .filter_map(|&item| match p.nodes.get(item) {
+    (module.all_items())
+        .filter_map(|item| match p.nodes.get(item) {
             Node::Function { decl, .. }
             | Node::BodilessFunction { decl, .. }
             | Node::ModuleLet { decl }
@@ -816,11 +817,12 @@ fn name_module(
             level.push(decl);
         }
     }
-    // The init block's locals, but those of the function literals in it,
-    // which are named as functions are.
+    // The init block's locals, and its test init's, which continues it,
+    // but those of the function literals in them, which are named as
+    // functions are.
     let mut literals = Vec::new();
     let mut init_locals = Vec::new();
-    let mut stack = vec![module.init];
+    let mut stack: Vec<NodeId> = module.test_init.into_iter().chain([module.init]).collect();
     while let Some(id) = stack.pop() {
         match p.nodes.get(id) {
             Node::Let { local, .. } => {
@@ -917,7 +919,10 @@ fn name_module(
 
     // Where the init is one function, a literal in it avoids the names of
     // the module's `let`s and of the init's locals whose blocks hold it.
-    let scopes = Scopes::of(p, module.init);
+    let mut scopes = Scopes::of(p, module.init);
+    if let Some(test_init) = module.test_init {
+        scopes.continued(p, test_init, module.init);
+    }
     // Under block scoping without shadowing, a literal a target declares
     // as a local of the init (Java's and C#'s hoisted `fn`s) avoids the
     // names of those named before it whose blocks nest with its own; and
@@ -944,7 +949,7 @@ fn name_module(
             }
         }
         if rules.init_literals_avoid_module {
-            for &item in &module.items {
+            for item in module.all_items() {
                 if let Node::ModuleLet { decl } = p.nodes.get(item) {
                     around.insert(map.get(decl).to_string());
                 }
@@ -961,7 +966,7 @@ fn name_module(
             before.push((decl, at));
         }
     }
-    for &item in module.items.iter().chain(&module.tests) {
+    for item in module.all_items().chain(module.tests.iter().copied()) {
         match p.nodes.get(item) {
             Node::Function { .. } | Node::BodilessFunction { .. } | Node::Test { .. } => {
                 let reserved = [reserved, local_reserved];
@@ -1305,37 +1310,45 @@ struct Scopes {
 
 impl Scopes {
     fn of(p: &Program, function: NodeId) -> Scopes {
-        fn visit(p: &Program, id: NodeId, scope: NodeId, scopes: &mut Scopes) {
-            let mut scope = scope;
-            match p.nodes.get(id) {
-                Node::Param { decl } => {
-                    scopes.of.insert(decl, scope);
-                }
-                Node::Let { local, .. } => {
-                    scopes.of.insert(local, scope);
-                }
-                Node::FunctionLiteral { decl, .. } => {
-                    scopes.of.insert(decl, scope);
-                }
-                // A block that's the root (an init block) has no parent.
-                Node::Block { .. } => {
-                    if id != scope {
-                        scopes.parent.insert(id, scope);
-                    }
-                    scope = id;
-                }
-                _ => {}
-            }
-            for &kid in p.nodes.kids(id) {
-                visit(p, kid, scope, scopes);
-            }
-        }
         let mut scopes = Scopes {
             of: HashMap::new(),
             parent: HashMap::new(),
         };
-        visit(p, function, function, &mut scopes);
+        scopes.visit(p, function, function);
         scopes
+    }
+
+    /// Adds a block that continues `outer` in its scope: a module's test
+    /// init, which continues its init block.
+    fn continued(&mut self, p: &Program, block: NodeId, outer: NodeId) {
+        self.parent.insert(block, outer);
+        self.visit(p, block, block);
+    }
+
+    fn visit(&mut self, p: &Program, id: NodeId, scope: NodeId) {
+        let mut scope = scope;
+        match p.nodes.get(id) {
+            Node::Param { decl } => {
+                self.of.insert(decl, scope);
+            }
+            Node::Let { local, .. } => {
+                self.of.insert(local, scope);
+            }
+            Node::FunctionLiteral { decl, .. } => {
+                self.of.insert(decl, scope);
+            }
+            // A block that's the root (an init block) has no parent.
+            Node::Block { .. } => {
+                if id != scope {
+                    self.parent.insert(id, scope);
+                }
+                scope = id;
+            }
+            _ => {}
+        }
+        for &kid in p.nodes.kids(id) {
+            self.visit(p, kid, scope);
+        }
     }
 
     /// Whether `inner` is `outer` or inside it.

@@ -37,6 +37,22 @@ pub fn walk(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
     }
 }
 
+/// [`walk`], but past the subtrees whose roots `skip` takes.
+pub(crate) fn walk_but(
+    p: &Program,
+    id: NodeId,
+    skip: &impl Fn(NodeId) -> bool,
+    visit: &mut impl FnMut(NodeId),
+) {
+    if skip(id) {
+        return;
+    }
+    visit(id);
+    for &kid in p.nodes.kids(id) {
+        walk_but(p, kid, skip, visit);
+    }
+}
+
 /// The module `var`s a function (or any subtree) assigns, in the order
 /// first assigned: what Python declares `global` in it.
 pub fn module_writes(p: &Program, function: NodeId) -> Vec<DeclId> {
@@ -152,7 +168,17 @@ pub fn imports(p: &Program, module: DeclId, roots: &[NodeId]) -> Vec<Import> {
 /// member found stands for its class ([`imports`] takes each one's top
 /// level). Each may come more than once.
 pub fn named(p: &Program, root: NodeId, found: &mut impl FnMut(DeclId)) {
-    walk(p, root, &mut |id| {
+    named_but(p, root, &|_| false, found)
+}
+
+/// [`named`], but past the subtrees whose roots `skip` takes.
+pub(crate) fn named_but(
+    p: &Program,
+    root: NodeId,
+    skip: &impl Fn(NodeId) -> bool,
+    found: &mut impl FnMut(DeclId),
+) {
+    walk_but(p, root, skip, &mut |id| {
         let node = p.nodes.get(id);
         match node {
             Node::CallFunction { callee, .. } | Node::FunctionRef { target: callee } => {
@@ -223,7 +249,8 @@ pub fn named(p: &Program, root: NodeId, found: &mut impl FnMut(DeclId)) {
     });
 }
 
-/// What a module's items and init block import ([`imports`]).
+/// What a module's items and init block, the library's parts, import
+/// ([`imports`]).
 pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
     let roots: Vec<NodeId> = (module.items.iter().copied())
         .chain([module.init])
@@ -231,9 +258,11 @@ pub fn module_imports(p: &Program, module: &Module) -> Vec<Import> {
     imports(p, module.decl, &roots)
 }
 
-/// What a module's tests import ([`imports`]), std's `Test` among them.
+/// What a module's tests and its test items and init import beyond the
+/// library ([`imports`]), std's `Test` among them.
 pub fn test_imports(p: &Program, module: &Module) -> Vec<Import> {
-    imports(p, module.decl, &module.tests)
+    let roots: Vec<NodeId> = module.test_roots().collect();
+    imports(p, module.decl, &roots)
 }
 
 /// The top-level declaration a declaration is or is a member of: itself
@@ -300,10 +329,10 @@ pub struct ModuleState {
     pub initialized_at_top: HashSet<DeclId>,
 }
 
-/// The module state of `module`.
+/// The module state of `module`, its test parts' included.
 pub fn module_state(p: &Program, module: &Module) -> ModuleState {
     let mut state = ModuleState::default();
-    for &item in &module.items {
+    for item in module.all_items() {
         if let Node::Function { .. } = p.nodes.get(item) {
             for d in module_refs(p, item) {
                 if p.decls.get(d).kind == DeclKind::ModuleLet {
@@ -312,20 +341,22 @@ pub fn module_state(p: &Program, module: &Module) -> ModuleState {
             }
         }
     }
-    // A function literal in the init block may run after it.
-    walk(p, module.init, &mut |id| {
-        if let Node::FunctionLiteral { .. } = p.nodes.get(id) {
-            for d in module_refs(p, id) {
-                if p.decls.get(d).kind == DeclKind::ModuleLet {
-                    state.used_by_functions.insert(d);
+    for block in [module.init].into_iter().chain(module.test_init) {
+        // A function literal in the init block may run after it.
+        walk(p, block, &mut |id| {
+            if let Node::FunctionLiteral { .. } = p.nodes.get(id) {
+                for d in module_refs(p, id) {
+                    if p.decls.get(d).kind == DeclKind::ModuleLet {
+                        state.used_by_functions.insert(d);
+                    }
                 }
             }
-        }
-    });
-    if let Node::Block { stmts } = p.nodes.get(module.init) {
-        for &s in p.nodes.list(stmts) {
-            if let Node::InitLet { target, .. } = p.nodes.get(s) {
-                state.initialized_at_top.insert(target);
+        });
+        if let Node::Block { stmts } = p.nodes.get(block) {
+            for &s in p.nodes.list(stmts) {
+                if let Node::InitLet { target, .. } = p.nodes.get(s) {
+                    state.initialized_at_top.insert(target);
+                }
             }
         }
     }
@@ -463,14 +494,14 @@ pub struct Effects {
 }
 
 impl Effects {
-    /// The effects of `module`'s functions.
+    /// The effects of `module`'s functions, its test items' included.
     pub fn of(p: &Program, module: &Module) -> Effects {
         let mut effects = Effects {
             pure: pure_core(p),
             ..Effects::default()
         };
         let mut functions = Vec::new();
-        for &item in &module.items {
+        for item in module.all_items() {
             if let Node::Function { decl, .. } = p.nodes.get(item) {
                 effects.mutable.extend(module_writes(p, item));
                 functions.push((decl, item));
@@ -850,10 +881,7 @@ pub fn captures(p: &Program, literal: NodeId) -> Vec<DeclId> {
 pub fn assigned_captures(p: &Program) -> HashSet<DeclId> {
     let mut captured: HashSet<DeclId> = HashSet::new();
     let mut assigned: HashSet<DeclId> = HashSet::new();
-    let roots = p
-        .modules
-        .iter()
-        .flat_map(|m| m.items.iter().chain([&m.init]).chain(&m.tests).copied());
+    let roots = p.modules.iter().flat_map(|m| m.roots());
     for root in roots {
         walk(p, root, &mut |id| match p.nodes.get(id) {
             Node::FunctionLiteral { decl, .. } => {

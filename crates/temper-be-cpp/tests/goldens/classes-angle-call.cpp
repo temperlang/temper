@@ -11,22 +11,8 @@ namespace angle_call {
 // optional.
 void global_init_init();
 
-template <class T>
-struct Blah;
-struct Hi;
 struct Classy;
 struct Picker;
-
-template <class T>
-struct Blah : public std::enable_shared_from_this<Blah<T>> {
-  static std::shared_ptr<Blah<T>> make();
-};
-
-struct Hi : public std::enable_shared_from_this<Hi> {
-  std::shared_ptr<Blah<temper::core::Str>> thing;
-  static std::shared_ptr<Hi> make(std::shared_ptr<Blah<temper::core::Str>> const & thing);
-  std::shared_ptr<Blah<temper::core::Str>> get_thing() const;
-};
 
 struct Classy : public std::enable_shared_from_this<Classy> {
   int32_t index;
@@ -44,12 +30,6 @@ struct Picker : public std::enable_shared_from_this<Picker> {
   T pick(std::shared_ptr<std::vector<T>> const & things) const;
 };
 
-template <class T>
-std::shared_ptr<Blah<T>> Blah<T>::make() {
-  std::shared_ptr<Blah<T>> self = std::make_shared<Blah<T>>();
-  return self;
-}
-
 }  // namespace angle_call
 
 // init.cpp
@@ -64,16 +44,6 @@ namespace temper_globals {
 static core::GlobalSlot<std::shared_ptr<core::Console::Type>> console;
 
 }  // namespace temper_globals
-
-std::shared_ptr<Hi> Hi::make(std::shared_ptr<Blah<core::Str>> const & thing) {
-  std::shared_ptr<Hi> self = std::make_shared<Hi>();
-  self->thing = thing;
-  return self;
-}
-
-std::shared_ptr<Blah<core::Str>> Hi::get_thing() const {
-  return this->thing;
-}
 
 static std::type_index whatever(int32_t n) {
   if (n == 0) {

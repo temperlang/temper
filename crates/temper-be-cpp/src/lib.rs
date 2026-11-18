@@ -34,7 +34,10 @@
 //! list them), and runs clean under AddressSanitizer,
 //! UndefinedBehaviorSanitizer, and ThreadSanitizer.
 //!
-//! The pipeline: the naming pass ([`temper_tmpl::naming::assign`]) with
+//! The pipeline: tmpl's lowerings, the program partitioned by reach
+//! ([`temper_tmpl::reach::partition`]: what only tests reach apart, what
+//! nothing does left out), the naming pass
+//! ([`temper_tmpl::naming::assign`]) with
 //! C++'s rules ([`names::RULES`]), then [`translate`] into C++'s output
 //! tree ([`tree`]), with operators spelled by [`ops`], core's connected
 //! declarations by [`connected`], and the order of evaluation kept by
@@ -225,6 +228,11 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n))
     };
     let p = spilled.as_ref().unwrap_or(p);
+    // What only tests reach apart, under `TEMPER_TESTS`, and what
+    // nothing reaches left out (`temper_tmpl::reach`), as the lowerings
+    // left it: errors' may drop a call.
+    let parted = temper_tmpl::reach::partition(p, connected::connects_std);
+    let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     let library = &p.library.name;
     let namespace = names::namespace(library);
@@ -495,7 +503,7 @@ fn used_libraries(p: &Program, tests: bool) -> Vec<String> {
 /// Whether the library sends through the runtime's network client
 /// (`net.hpp`, as std `net` does, [`connected::BODILESS`]).
 fn uses_net_client(p: &Program) -> bool {
-    (p.modules.iter().flat_map(|m| &m.items)).any(|&item| match p.nodes.get(item) {
+    (p.modules.iter().flat_map(|m| m.all_items())).any(|item| match p.nodes.get(item) {
         Node::BodilessFunction { decl, .. } => temper_tmpl::qname::std_key(p, decl)
             .and_then(|key| connected::bodiless(&key))
             .is_some_and(|(_, header)| header == "<temper-core/net.hpp>"),
@@ -628,7 +636,7 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
     for include in &t.header_includes {
         out.push_str(&format!("#include {include}\n"));
     }
-    if !t.test_prototypes.is_empty() && !t.test_includes.is_empty() {
+    if !t.test_includes.is_empty() {
         out.push_str("#ifdef TEMPER_TESTS\n");
         for include in &t.test_includes {
             out.push_str(&format!("#include {include}\n"));
@@ -680,8 +688,28 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
         out.push('\n');
     }
     out.push_str(&t.templates);
-    if !t.kept_for_tests.is_empty() || !t.test_prototypes.is_empty() {
+    // What only tests reach, and the tests.
+    let tests = &t.tests;
+    if !tests.is_empty() || !t.kept_for_tests.is_empty() || !t.test_prototypes.is_empty() {
         out.push_str("\n#ifdef TEMPER_TESTS\n");
+        if !tests.classes.is_empty() {
+            out.push_str(&tests.classes);
+            out.push('\n');
+        }
+        if !tests.template_storage.is_empty() {
+            out.push_str("namespace temper_globals {\n");
+            for v in &tests.template_storage {
+                out.push_str(&format!("extern {v};\n"));
+            }
+            out.push_str("}  // namespace temper_globals\n\n");
+        }
+        for f in &tests.functions {
+            out.push_str(&format!("{f};\n"));
+        }
+        if !tests.functions.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(&tests.templates);
         for (comment, prototypes) in [
             ("For tests' host code (`@keepTest`).", &t.kept_for_tests),
             ("Tests, which `test.cpp` runs.", &t.test_prototypes),

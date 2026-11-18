@@ -1077,8 +1077,8 @@ Other differences we won't copy:
 - **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
   library needs, what only tests do, and what nothing does, as Kotlin's
   `ReachabilityTracer` does in its frontend
-  ([analyses.md](tmpl/analyses.md), "Reachability"); no backend uses it
-  yet. Differences:
+  ([analyses.md](tmpl/analyses.md), "Reachability"); C++ partitions by
+  it (below), the other backends not yet. Differences:
   - An initializer is a root only if it may do something: a list literal
     of simple values, an operator that can't bubble, and core's pure
     calls (`getConsole()`) aren't. Kotlin's is a root unless it's a
@@ -1095,6 +1095,23 @@ Other differences we won't copy:
   Test: temper-tmpl/tests/reach.rs; temper-frontend/tests/to_tmpl.rs,
   `reach_as_kotlins_export_some` and
   `reach_as_kotlins_init_assignment_reachability`.
+- **C++ by reach** (2026-11-18): Kotlin's C++ ignores reach, putting
+  everything in the library, tests included. Tempest's partitions the
+  program by tmpl's `reach` (as Kotlin's C#, Java, JS, Lua, and Python
+  backends place what its tracer marks): what only tests reach,
+  functions, classes and interfaces, and module values with their
+  initialization, is defined (and declared in the header) only where
+  `TEMPER_TESTS` is, its init at the end of the module's init function
+  there; what nothing reaches isn't written, unused private classes,
+  interfaces, and module values too (before, only unused private
+  functions were left out). So a library built without tests has no
+  test helpers, doesn't initialize test data, and doesn't need std's
+  `testing` (its CMake links std only for the tests). The module's lock
+  is under `TEMPER_TESTS` too where only tests use it. The Temper
+  bodies of std members that C++ connects reach nothing, as C++ doesn't
+  write them. Test: temper-be-cpp/tests/functional.rs,
+  `test_parts_apart` (its `reach` program), `runs` and `strict` (built
+  with and without `TEMPER_TESTS`), and the goldens.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where
@@ -1902,6 +1919,7 @@ copied Kotlin's:
   tests call (Hrefine's `urlTestData`) are in the same `#ifdef`. Before,
   a build without tests had them as unused `static` functions, which
   `-Wall -Werror` fails (`-Wunused-function`), in all five libraries.
+  Since 2026-11-18, tmpl's reach decides it ("C++ by reach").
   Test: temper-be-cpp/tests/functional.rs, `strict` (libraries with
   tests compiled without `TEMPER_TESTS` too), and the
   `testing-asserts` golden.
