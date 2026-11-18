@@ -16,7 +16,7 @@ public static class JsonSyntaxTreeGlobal
             int i = 0;
             while (i < length)
             {
-                string s = list[i];
+                string s = Listed.Get(list, i);
                 i = i + 1;
                 IJsonSyntaxTree? jsonValue;
                 try
@@ -36,7 +36,7 @@ public static class JsonSyntaxTreeGlobal
             int i2 = 0;
             while (i2 < length2)
             {
-                string s2 = list2[i2];
+                string s2 = Listed.Get(list2, i2);
                 i2 = i2 + 1;
                 bool bubbled = false;
                 JsonSyntaxTreeProducer p = new JsonSyntaxTreeProducer();

@@ -59,6 +59,23 @@ namespace TemperLang.Core
 
         public static void Bubble() => throw new Bubble();
 
+        /// <summary>
+        /// A Temper panic, as core's docs say an operation panics: the
+        /// process ends at once, saying why, as generated code's
+        /// <c>panic()</c> does. Returns an exception only so callers can
+        /// <c>throw</c> it, telling C# nothing after runs.
+        /// </summary>
+        public static Exception Panic(string message)
+        {
+            Environment.FailFast(message);
+            return new InvalidOperationException(message);
+        }
+
+        internal static Exception OutOfBounds(int index, int length) =>
+            Panic(FormattableString.Invariant(
+                $"index {index} out of bounds for length {length}"
+            ));
+
         public static T Bubble<T>() => throw new Bubble();
 
         /// <summary>Temper's <c>as</c>: bubbles if item isn't a T.</summary>

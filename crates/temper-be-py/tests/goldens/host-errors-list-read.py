@@ -8,10 +8,14 @@ from temper_core import (
 __all__ = ()
 
 
-def _read(ls: _Sequence[int], i: int, /) -> int:
-    if i < 0:
+def _at(i: int, /) -> int:
+    if i == 99:
         raise _Bubble()
-    return _list_get(ls, i)
+    return i
+
+
+def _read(ls: _Sequence[int], i: int, /) -> int:
+    return _list_get(ls, _at(i))
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
@@ -22,4 +26,3 @@ try:
 except _Bubble:
     _r = -1
 _console.log(f'read past the end {_r}')
-raise BaseException('panic')

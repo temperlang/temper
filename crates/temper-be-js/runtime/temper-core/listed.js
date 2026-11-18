@@ -1,3 +1,15 @@
+import { panic } from "./core.js";
+
+/**
+ * Panics for an index out of a list's bounds, as core's docs say.
+ *
+ * @param {number} index
+ * @param {number} length
+ * @returns {never}
+ */
+const panicOutOfBounds = (index, length) =>
+  panic(`index ${index} out of bounds for length ${length}`);
+
 
 /**
  * Implements extension method core.type Listed.map()
@@ -26,6 +38,21 @@ export const listedMap = (ls, transform) => {
  */
 export const listedReduceFrom = (ls, initial, accumulate) => {
   return ls.reduce(accumulate, initial);
+}
+
+/**
+ * Implements extension method core.type Listed.reduce(), which panics on
+ * an empty list, as reading its first item does.
+ * @template T
+ * @param {readonly T[]} ls
+ * @param {(prev: T, cur: T) => T} accumulate
+ * @returns {T}
+ */
+export const listedReduce = (ls, accumulate) => {
+  if (!ls.length) {
+    panicOutOfBounds(0, 0);
+  }
+  return ls.reduce(accumulate);
 }
 
 /**
@@ -67,7 +94,7 @@ export const listBuilderAdd = (ls, newItem, at) => {
     ls.push(newItem);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      panicOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, newItem);
   }
@@ -85,7 +112,7 @@ export const listBuilderAddAll = (ls, newItems, at) => {
     ls.push(...newItems);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      panicOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, ...newItems);
   }
@@ -135,7 +162,7 @@ export const listedGet = (ls, i) => {
   if (0 <= i && i < length) {
     return ls[i];
   }
-  bubble();
+  return panicOutOfBounds(i, length);
 }
 
 /**
@@ -201,9 +228,8 @@ export const listBuilderClear = (ls) => {
 export const listBuilderRemoveLast = (ls) => {
   if (ls.length) {
     return ls.pop();
-  } else {
-    bubble();
   }
+  return panic("removeLast on an empty ListBuilder");
 }
 
 /**
@@ -233,6 +259,8 @@ export const listBuilderReverse = (ls) => {
 export const listBuilderSet = (ls, i, newValue) => {
   if (0 <= i && i < ls.length) {
     ls[i] = newValue;
+  } else {
+    panicOutOfBounds(i, ls.length);
   }
 }
 

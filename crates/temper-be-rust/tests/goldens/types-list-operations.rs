@@ -274,6 +274,29 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     &(|x: Arc<String>| x.clone()),
                 )
             );
+            let past_end: temper_core::List<Arc<String>> = temper_core::listed::splice(
+                &copy_that,
+                Some(temper_core::ListedTrait::len(&copy_that).wrapping_add(5)),
+                Some(1),
+                None::<temper_core::Listed<_>>,
+            );
+            temper_core::listed::splice(
+                &copy_that,
+                Some(-3),
+                Some(0),
+                Some(temper_core::Listed::new(Arc::new(vec![Arc::new(
+                    "first".to_string(),
+                )]))),
+            );
+            println!(
+                "{} {}",
+                temper_core::ListedTrait::len(&past_end),
+                temper_core::listed::join(
+                    &copy_that,
+                    Arc::new(" ".to_string()),
+                    &(|x: Arc<String>| x.clone()),
+                )
+            );
             temper_core::listed::clear(&message_builder);
             temper_core::listed::add(&message_builder, Arc::new("Bye".to_string()), None);
             println!(

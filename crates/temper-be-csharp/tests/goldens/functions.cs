@@ -57,7 +57,7 @@ public static class FunctionsGlobal
             int i = 0;
             while (i < length)
             {
-                int x = xs[i];
+                int x = Listed.Get(xs, i);
                 i = i + 1;
                 if (x < least)
                 {
@@ -174,7 +174,7 @@ public static class FunctionsGlobal
         }
         else
         {
-            return ls[0];
+            return Listed.Get(ls, 0);
         }
     }
 
@@ -221,7 +221,7 @@ public static class FunctionsGlobal
             int i2 = 0;
             while (i2 < length)
             {
-                int n = ns[i2];
+                int n = Listed.Get(ns, i2);
                 i2 = i2 + 1;
                 total = total + n;
             }

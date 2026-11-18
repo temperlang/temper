@@ -303,10 +303,18 @@ Take some out, and put others in. Try different variations of missing args.
     ignore(copyThat.splice(null, null, ["gone"]));
     console.log(copyThat.join(" ") { x => x });
 
+An index outside the items is clamped to them, so nothing past the end
+is removed, and a negative index is the start:
+
+    let pastEnd = copyThat.splice(copyThat.length + 5, 1);
+    ignore(copyThat.splice(-3, 0, ["first"]));
+    console.log("${pastEnd.length} ${copyThat.join(" ") { x => x }}");
+
 ```log
 Removed y'all so say hi there y'all say more than hi there
 say more than say hi there y'all there hi and the end
 gone
+0 first gone
 ```
 
     messageBuilder.clear();

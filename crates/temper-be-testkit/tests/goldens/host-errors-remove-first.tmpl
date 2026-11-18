@@ -1,0 +1,40 @@
+tmpl 1 model 1 library `host-errors-remove-first` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  class Deque#4<T#5> {
+    connected method removeFirst#13(): T#5;
+    connected constructor constructor#14(): Deque#4<T#5>;
+  }
+  interface Console#8 {
+    connected method log#9(message: String): Void;
+  }
+  class Int32#15 {
+    connected method toString#16(radix?: Int32): String;
+  }
+  connected fn getConsole#17(name?: String): Console#8;
+}
+
+module `host-errors-remove-first`#0 {
+  let ~console#10: Console#8;
+
+  fn at#1(i#7: Int32): Int32 throws Bubble {
+    if (%Int32.eq(i#7, 99)) {
+      (bubble()^): Void;
+    }
+    return i#7;
+  }
+
+  fn removeFirst#2(d#11: Deque#4<Int32>, i#12: Int32): Int32 throws Bubble {
+    at#1(i#12)^;
+    return d#11.removeFirst#13();
+  }
+
+  let r#6: Int32;
+
+  init {
+    init ~console#10 = getConsole#17(omitted);
+    ~console#10.log#9("reading");
+    init r#6 = (orelse(removeFirst#2(new constructor#14<Int32>(), 0)^, %Int32.neg(1))): Int32;
+    ~console#10.log#9(%String.cat("removed from empty ", r#6.toString#16(omitted)));
+  }
+}

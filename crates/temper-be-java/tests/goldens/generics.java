@@ -66,24 +66,24 @@ public final class GenericsGlobal {
         int at = 0;
         {
             int k = at;
-            counts.set(k, Core.listGet(counts, k) + 4);
+            Core.listSet(counts, k, Core.listGet(counts, k) + 4);
         }
-        counts.set(1, Core.listGet(counts, 1) * 3);
+        Core.listSet(counts, 1, Core.listGet(counts, 1) * 3);
         int t = at;
         at = t + 1;
         int k2 = t;
         int t2 = Core.listGet(counts, k2);
-        counts.set(k2, t2 + 1);
+        Core.listSet(counts, k2, t2 + 1);
         int was = t2;
         int k3 = at;
         int t3 = Core.listGet(counts, k3) + 1;
-        counts.set(k3, t3);
+        Core.listSet(counts, k3, t3);
         int pre = t3;
         int t4 = Core.listGet(counts, 0);
-        counts.set(0, t4 - 1);
+        Core.listSet(counts, 0, t4 - 1);
         int post = t4;
         int t5 = Core.listGet(counts, 0) - 1;
-        counts.set(0, t5);
+        Core.listSet(counts, 0, t5);
         int down = t5;
         console.log(was + " " + pre + " " + post + " " + down + " " + at);
     }
@@ -118,11 +118,11 @@ public final class GenericsGlobal {
         int i = 0;
         int k = i;
         int t7 = Core.listGet(a, k);
-        a.set(k, t7 + 1);
+        Core.listSet(a, k, t7 + 1);
         int t12 = t7;
         int k2 = i;
         int t8 = Core.listGet(b, k2);
-        b.set(k2, t8 + 1);
+        Core.listSet(b, k2, t8 + 1);
         int items = t12 + t8;
         console.log(locals + " " + x + " " + y + " " + fields + " " + same + " " + p.n + " " + q.n + " " + items + " " + Core.listGet(a, 0) + " " + Core.listGet(b, 0));
     }
@@ -164,7 +164,7 @@ public final class GenericsGlobal {
         List<String> builder = new ArrayList<>();
         builder.add("x");
         builder.add("y");
-        builder.add(0, "w");
+        Core.listAdd(builder, "w", 0);
         console.log(builder.size() + " " + Core.listGet(builder, 0) + " " + Core.listRemoveLast(builder));
         List<String> built = List.copyOf(builder);
         console.log(built.size() + " " + Core.listGetOr(built, 5, "?") + " " + Core.listGet(Core.listSlice(built, 1, 2), 0));

@@ -2,55 +2,55 @@ tmpl 1 model 1 library operations 0.0.0
 
 uses `temper-core`#3 0.0.0-alpha.0.0 {
   interface Listed#4<T#5> {
-    connected get length#28(): Int32;
-    connected method sorted#31(compare: fn (T#5, T#5): Int32): List#6<T#5>;
-    connected method join#35(separator: String, stringify: fn (T#5): String): String;
-    connected method filter#38(predicate: fn (T#5): Boolean): List#6<T#5>;
-    connected method map#47<O#48>(transform: fn (T#5): O#48): List#6<O#48>;
-    connected method toList#57(): List#6<T#5>;
-    connected method get#82(index: Int32): T#5;
-    connected method slice#118(begin: Int32, end: Int32): List#6<T#5>;
-    connected method getOr#121(index: Int32, fallback: T#5): T#5;
+    connected get length#29(): Int32;
+    connected method sorted#32(compare: fn (T#5, T#5): Int32): List#6<T#5>;
+    connected method join#36(separator: String, stringify: fn (T#5): String): String;
+    connected method filter#39(predicate: fn (T#5): Boolean): List#6<T#5>;
+    connected method map#48<O#49>(transform: fn (T#5): O#49): List#6<O#49>;
+    connected method toList#58(): List#6<T#5>;
+    connected method get#83(index: Int32): T#5;
+    connected method slice#121(begin: Int32, end: Int32): List#6<T#5>;
+    connected method getOr#124(index: Int32, fallback: T#5): T#5;
   }
   class List#6<T#7> extends Listed#4<T#7> {
-    connected get length#58(): Int32;
-    connected method get#61(index: Int32): T#7;
-    connected method toListBuilder#70(): ListBuilder#13<T#7>;
+    connected get length#59(): Int32;
+    connected method get#62(index: Int32): T#7;
+    connected method toListBuilder#71(): ListBuilder#13<T#7>;
   }
   class ListBuilder#13<T#14> extends Listed#4<T#14> {
-    connected method sort#74(compare: fn (T#14, T#14): Int32): Void;
-    connected get length#80(): Int32;
-    connected method reverse#85(): Void;
-    connected constructor constructor#91(): ListBuilder#13<T#14>;
-    connected method add#92(newValue: T#14, at?: Int32): Void;
-    connected method set#93(index: Int32, newValue: T#14): Void;
-    connected method addAll#94(newValues: Listed#4<T#14>, at?: Int32): Void;
-    connected method toListBuilder#95(): ListBuilder#13<T#14>;
-    connected method removeLast#105(): T#14;
-    connected method splice#108(index?: Int32, removeCount?: Int32, newValues?: Listed#4<T#14>): List#6<T#14>;
-    connected method clear#113(): Void;
-    connected method toList#154(): List#6<T#14>;
+    connected method sort#75(compare: fn (T#14, T#14): Int32): Void;
+    connected get length#81(): Int32;
+    connected method reverse#86(): Void;
+    connected constructor constructor#92(): ListBuilder#13<T#14>;
+    connected method add#93(newValue: T#14, at?: Int32): Void;
+    connected method set#94(index: Int32, newValue: T#14): Void;
+    connected method addAll#95(newValues: Listed#4<T#14>, at?: Int32): Void;
+    connected method toListBuilder#96(): ListBuilder#13<T#14>;
+    connected method removeLast#106(): T#14;
+    connected method splice#109(index?: Int32, removeCount?: Int32, newValues?: Listed#4<T#14>): List#6<T#14>;
+    connected method clear#116(): Void;
+    connected method toList#157(): List#6<T#14>;
   }
-  interface Console#25 {
-    connected method log#26(message: String): Void;
+  interface Console#26 {
+    connected method log#27(message: String): Void;
   }
-  class Int32#29 {
-    connected method toString#30(radix?: Int32): String;
+  class Int32#30 {
+    connected method toString#31(radix?: Int32): String;
   }
-  class String#65 {
-    connected method split#66(separator: String): List#6<String>;
+  class String#66 {
+    connected method split#67(separator: String): List#6<String>;
   }
-  class Boolean#125 {
-    connected method toString#126(): String;
+  class Boolean#128 {
+    connected method toString#129(): String;
   }
-  connected fn getConsole#160(name?: String): Console#25;
+  connected fn getConsole#163(name?: String): Console#26;
 }
 
 module operations#0 {
-  let ~console#27: Console#25;
+  let ~console#28: Console#26;
 
-  fn reportLength#1<T#2>(list#24: Listed#4<T#2>): Void {
-    ~console#27.log#26(%String.cat("Length: ", list#24.length#28().toString#30(omitted)));
+  fn reportLength#1<T#2>(list#25: Listed#4<T#2>): Void {
+    ~console#28.log#27(%String.cat("Length: ", list#25.length#29().toString#31(omitted)));
   }
 
   let ls#8: List#6<Int32>;
@@ -61,12 +61,12 @@ module operations#0 {
 
   let n#11: Int32;
 
-  fn reportSplit#12(string#62: String, sep#63: String): Void {
-    let strings#64: List#6<String> = string#62.split#66(sep#63);
-    let len#67: String = strings#64.length#58().toString#30(omitted);
-    ~console#27.log#26(%String.cat(%String.cat(%String.cat("Split ", strings#64.join#35(", ", (fn ~fn#68(x#69: String): String {
-      return x#69;
-    }): fn (String): String)), " - "), len#67));
+  fn reportSplit#12(string#63: String, sep#64: String): Void {
+    let strings#65: List#6<String> = string#63.split#67(sep#64);
+    let len#68: String = strings#65.length#59().toString#31(omitted);
+    ~console#28.log#27(%String.cat(%String.cat(%String.cat("Split ", strings#65.join#36(", ", (fn ~fn#69(x#70: String): String {
+      return x#70;
+    }): fn (String): String)), " - "), len#68));
   }
 
   let triangleOfFooBar#15: ListBuilder#13<ListBuilder#13<String>>;
@@ -83,57 +83,59 @@ module operations#0 {
 
   let oldWords#21: List#6<String>;
 
-  fn something#22(callback#147: fn (Listed#4<String>): Void): Void {
-    callback#147((upcast((list("Called", "with", "listed.")): List#6<String>)): Listed#4<String>);
+  let pastEnd#22: List#6<String>;
+
+  fn something#23(callback#150: fn (Listed#4<String>): Void): Void {
+    callback#150((upcast((list("Called", "with", "listed.")): List#6<String>)): Listed#4<String>);
   }
 
-  fn runSomething#23(): Void {
-    something#22((fn ~fn#148(words#149: Listed#4<String>): Void {
-      ~console#27.log#26(words#149.join#35(" ", (fn ~fn#150(word#151: String): String {
-        return word#151;
+  fn runSomething#24(): Void {
+    something#23((fn ~fn#151(words#152: Listed#4<String>): Void {
+      ~console#28.log#27(words#152.join#36(" ", (fn ~fn#153(word#154: String): String {
+        return word#154;
       }): fn (String): String));
     }): fn (Listed#4<String>): Void);
   }
 
   init {
-    init ~console#27 = getConsole#160(omitted);
+    init ~console#28 = getConsole#163(omitted);
     reportLength#1<AnyValue>((upcast((list((upcast(4)): AnyValue, (upcast(5)): AnyValue, (upcast(6)): AnyValue)): List#6<AnyValue>)): Listed#4<AnyValue>);
-    init ls#8 = ((list(5, 6, 7, 8, 9, 0, 1, 2, 3, 4)): List#6<Int32>).sorted#31((fn ~fn#32(i#33: Int32, j#34: Int32): Int32 {
-      return %Int32.sub(i#33, j#34);
+    init ls#8 = ((list(5, 6, 7, 8, 9, 0, 1, 2, 3, 4)): List#6<Int32>).sorted#32((fn ~fn#33(i#34: Int32, j#35: Int32): Int32 {
+      return %Int32.sub(i#34, j#35);
     }): fn (Int32, Int32): Int32);
-    ~console#27.log#26(%String.cat("All  ", ls#8.join#35(", ", (fn ~fn#36(x#37: Int32): String {
-      return x#37.toString#30(omitted);
+    ~console#28.log#27(%String.cat("All  ", ls#8.join#36(", ", (fn ~fn#37(x#38: Int32): String {
+      return x#38.toString#31(omitted);
     }): fn (Int32): String)));
-    ~console#27.log#26(%String.cat("Even ", ls#8.filter#38((fn ~fn#39(x#40: Int32): Boolean {
-      return %Int32.eq(%Int32.bitAnd(x#40, 1), 0);
-    }): fn (Int32): Boolean).join#35(", ", (fn ~fn#41(x#42: Int32): String {
-      return x#42.toString#30(omitted);
+    ~console#28.log#27(%String.cat("Even ", ls#8.filter#39((fn ~fn#40(x#41: Int32): Boolean {
+      return %Int32.eq(%Int32.bitAnd(x#41, 1), 0);
+    }): fn (Int32): Boolean).join#36(", ", (fn ~fn#42(x#43: Int32): String {
+      return x#43.toString#31(omitted);
     }): fn (Int32): String)));
-    ~console#27.log#26(%String.cat("Odd  ", ls#8.filter#38((fn ~fn#43(x#44: Int32): Boolean {
-      return %Boolean.not(%Int32.eq(%Int32.bitAnd(x#44, 1), 0));
-    }): fn (Int32): Boolean).join#35(", ", (fn ~fn#45(x#46: Int32): String {
-      return x#46.toString#30(omitted);
+    ~console#28.log#27(%String.cat("Odd  ", ls#8.filter#39((fn ~fn#44(x#45: Int32): Boolean {
+      return %Boolean.not(%Int32.eq(%Int32.bitAnd(x#45, 1), 0));
+    }): fn (Int32): Boolean).join#36(", ", (fn ~fn#46(x#47: Int32): String {
+      return x#47.toString#31(omitted);
     }): fn (Int32): String)));
-    ~console#27.log#26(%String.cat("Neg  ", ls#8.map#47<Int32>((fn ~fn#49(x#50: Int32): Int32 {
-      return %Int32.neg(x#50);
-    }): fn (Int32): Int32).join#35(", ", (fn ~fn#51(x#52: Int32): String {
-      return x#52.toString#30(omitted);
+    ~console#28.log#27(%String.cat("Neg  ", ls#8.map#48<Int32>((fn ~fn#50(x#51: Int32): Int32 {
+      return %Int32.neg(x#51);
+    }): fn (Int32): Int32).join#36(", ", (fn ~fn#52(x#53: Int32): String {
+      return x#53.toString#31(omitted);
     }): fn (Int32): String)));
     init listed#9 = (upcast(ls#8)): Listed#4<Int32>;
-    ~console#27.log#26(%String.cat("Neg  ", listed#9.map#47<Int32>((fn ~fn#53(x#54: Int32): Int32 {
-      return %Int32.neg(x#54);
-    }): fn (Int32): Int32).join#35(", ", (fn ~fn#55(x#56: Int32): String {
-      return x#56.toString#30(omitted);
+    ~console#28.log#27(%String.cat("Neg  ", listed#9.map#48<Int32>((fn ~fn#54(x#55: Int32): Int32 {
+      return %Int32.neg(x#55);
+    }): fn (Int32): Int32).join#36(", ", (fn ~fn#56(x#57: Int32): String {
+      return x#57.toString#31(omitted);
     }): fn (Int32): String)));
-    init listedList#10 = listed#9.toList#57();
-    ~console#27.log#26(%String.cat("Listed list length is ", listedList#10.length#58().toString#30(omitted)));
-    ~console#27.log#26("Looping");
-    init n#11 = ls#8.length#58();
+    init listedList#10 = listed#9.toList#58();
+    ~console#28.log#27(%String.cat("Listed list length is ", listedList#10.length#59().toString#31(omitted)));
+    ~console#28.log#27("Looping");
+    init n#11 = ls#8.length#59();
     {
-      var i#59: Int32 = 0;
-      ~loop#60: while (%Int32.lt(i#59, n#11)) {
-        ~console#27.log#26(%String.cat("  ", ls#8.get#61(i#59).toString#30(omitted)));
-        i#59 = %Int32.add(i#59, 1);
+      var i#60: Int32 = 0;
+      ~loop#61: while (%Int32.lt(i#60, n#11)) {
+        ~console#28.log#27(%String.cat("  ", ls#8.get#62(i#60).toString#31(omitted)));
+        i#60 = %Int32.add(i#60, 1);
       }
     }
     reportSplit#12("a ; b ; c", " ; ");
@@ -143,138 +145,143 @@ module operations#0 {
     reportSplit#12("", " ");
     reportSplit#12("", "");
     reportSplit#12("🌍", "");
-    init triangleOfFooBar#15 = ((list((list()): List#6<String>, (list("bar")): List#6<String>, (list("bar", "baz")): List#6<String>, (list("bar", "baz", "boo")): List#6<String>, (list("bar", "baz", "boo", "far")): List#6<String>, (list("bar", "baz", "boo", "far", "faz")): List#6<String>, (list("far", "faz", "foo", "bar", "baz", "boo")): List#6<String>)): List#6<List#6<String>>).map#47<ListBuilder#13<String>>((fn ~fn#71(list#72: List#6<String>): ListBuilder#13<String> {
-      let builder#73: ListBuilder#13<String> = list#72.toListBuilder#70();
-      builder#73.sort#74((fn ~fn#75(a#76: String, b#77: String): Int32 {
-        return %String.cmp(a#76, b#77);
+    init triangleOfFooBar#15 = ((list((list()): List#6<String>, (list("bar")): List#6<String>, (list("bar", "baz")): List#6<String>, (list("bar", "baz", "boo")): List#6<String>, (list("bar", "baz", "boo", "far")): List#6<String>, (list("bar", "baz", "boo", "far", "faz")): List#6<String>, (list("far", "faz", "foo", "bar", "baz", "boo")): List#6<String>)): List#6<List#6<String>>).map#48<ListBuilder#13<String>>((fn ~fn#72(list#73: List#6<String>): ListBuilder#13<String> {
+      let builder#74: ListBuilder#13<String> = list#73.toListBuilder#71();
+      builder#74.sort#75((fn ~fn#76(a#77: String, b#78: String): Int32 {
+        return %String.cmp(a#77, b#78);
       }): fn (String, String): Int32);
-      return builder#73;
-    }): fn (List#6<String>): ListBuilder#13<String>).toListBuilder#70();
+      return builder#74;
+    }): fn (List#6<String>): ListBuilder#13<String>).toListBuilder#71();
     {
-      var j#78: Int32 = 0;
-      ~loop#79: while (%Int32.lt(j#78, triangleOfFooBar#15.length#80())) {
-        let row#81: ListBuilder#13<String> = triangleOfFooBar#15.get#82(j#78);
-        ~console#27.log#26(%String.cat(%String.cat("Fwd  [", row#81.join#35(" ", (fn ~fn#83(x#84: String): String {
-          return x#84;
+      var j#79: Int32 = 0;
+      ~loop#80: while (%Int32.lt(j#79, triangleOfFooBar#15.length#81())) {
+        let row#82: ListBuilder#13<String> = triangleOfFooBar#15.get#83(j#79);
+        ~console#28.log#27(%String.cat(%String.cat("Fwd  [", row#82.join#36(" ", (fn ~fn#84(x#85: String): String {
+          return x#85;
         }): fn (String): String)), "]"));
-        row#81.reverse#85();
-        j#78 = %Int32.add(j#78, 1);
+        row#82.reverse#86();
+        j#79 = %Int32.add(j#79, 1);
       }
     }
-    triangleOfFooBar#15.reverse#85();
+    triangleOfFooBar#15.reverse#86();
     {
-      var j#86: Int32 = 0;
-      ~loop#87: while (%Int32.lt(j#86, triangleOfFooBar#15.length#80())) {
-        let row#88: ListBuilder#13<String> = triangleOfFooBar#15.get#82(j#86);
-        ~console#27.log#26(%String.cat(%String.cat("Back [", row#88.join#35(" ", (fn ~fn#89(x#90: String): String {
-          return x#90;
+      var j#87: Int32 = 0;
+      ~loop#88: while (%Int32.lt(j#87, triangleOfFooBar#15.length#81())) {
+        let row#89: ListBuilder#13<String> = triangleOfFooBar#15.get#83(j#87);
+        ~console#28.log#27(%String.cat(%String.cat("Back [", row#89.join#36(" ", (fn ~fn#90(x#91: String): String {
+          return x#91;
         }): fn (String): String)), "]"));
-        j#86 = %Int32.add(j#86, 1);
+        j#87 = %Int32.add(j#87, 1);
       }
     }
-    init messageBuilder#16 = new constructor#91<String>();
-    messageBuilder#16.add#92("hello", omitted);
-    messageBuilder#16.set#93(0, "hi");
-    messageBuilder#16.addAll#94((upcast((list("there", "y'all")): List#6<String>)): Listed#4<String>, omitted);
-    messageBuilder#16.add#92("say", 0);
-    init copyThat#17 = messageBuilder#16.toListBuilder#95();
-    messageBuilder#16.addAll#94((upcast((list("more", "than")): List#6<String>)): Listed#4<String>, 1);
-    copyThat#17.addAll#94((upcast(messageBuilder#16)): Listed#4<String>, omitted);
-    ~console#27.log#26(messageBuilder#16.join#35(" ", (fn ~fn#96(x#97: String): String {
-      return x#97;
+    init messageBuilder#16 = new constructor#92<String>();
+    messageBuilder#16.add#93("hello", omitted);
+    messageBuilder#16.set#94(0, "hi");
+    messageBuilder#16.addAll#95((upcast((list("there", "y'all")): List#6<String>)): Listed#4<String>, omitted);
+    messageBuilder#16.add#93("say", 0);
+    init copyThat#17 = messageBuilder#16.toListBuilder#96();
+    messageBuilder#16.addAll#95((upcast((list("more", "than")): List#6<String>)): Listed#4<String>, 1);
+    copyThat#17.addAll#95((upcast(messageBuilder#16)): Listed#4<String>, omitted);
+    ~console#28.log#27(messageBuilder#16.join#36(" ", (fn ~fn#97(x#98: String): String {
+      return x#98;
     }): fn (String): String));
-    ~console#27.log#26(copyThat#17.sorted#31((fn ~fn#98(a#99: String, b#100: String): Int32 {
-      return %String.cmp(b#100, a#99);
-    }): fn (String, String): Int32).join#35(" ", (fn ~fn#101(x#102: String): String {
-      return x#102;
+    ~console#28.log#27(copyThat#17.sorted#32((fn ~fn#99(a#100: String, b#101: String): Int32 {
+      return %String.cmp(b#101, a#100);
+    }): fn (String, String): Int32).join#36(" ", (fn ~fn#102(x#103: String): String {
+      return x#103;
     }): fn (String): String));
-    ~console#27.log#26(copyThat#17.join#35(" ", (fn ~fn#103(x#104: String): String {
-      return x#104;
+    ~console#28.log#27(copyThat#17.join#36(" ", (fn ~fn#104(x#105: String): String {
+      return x#105;
     }): fn (String): String));
     init typed#18 = messageBuilder#16;
-    init oldLast#19 = copyThat#17.removeLast#105();
-    ~console#27.log#26(%String.cat(%String.cat(%String.cat("Removed ", oldLast#19), " so "), copyThat#17.join#35(" ", (fn ~fn#106(x#107: String): String {
-      return x#107;
+    init oldLast#19 = copyThat#17.removeLast#106();
+    ~console#28.log#27(%String.cat(%String.cat(%String.cat("Removed ", oldLast#19), " so "), copyThat#17.join#36(" ", (fn ~fn#107(x#108: String): String {
+      return x#108;
     }): fn (String): String)));
-    init nextLast#20 = copyThat#17.splice#108(%Int32.sub(copyThat#17.length#80(), 1), 1, omitted);
-    init oldWords#21 = copyThat#17.splice#108(4, 3, (upcast(nextLast#20)): Listed#4<String>);
-    copyThat#17.splice#108(omitted, 0, (upcast(oldWords#21)): Listed#4<String>);
-    copyThat#17.splice#108(copyThat#17.length#80(), omitted, (upcast((list("and", "the", "end")): List#6<String>)): Listed#4<String>);
-    ~console#27.log#26(copyThat#17.join#35(" ", (fn ~fn#109(x#110: String): String {
-      return x#110;
+    init nextLast#20 = copyThat#17.splice#109(%Int32.sub(copyThat#17.length#81(), 1), 1, omitted);
+    init oldWords#21 = copyThat#17.splice#109(4, 3, (upcast(nextLast#20)): Listed#4<String>);
+    copyThat#17.splice#109(omitted, 0, (upcast(oldWords#21)): Listed#4<String>);
+    copyThat#17.splice#109(copyThat#17.length#81(), omitted, (upcast((list("and", "the", "end")): List#6<String>)): Listed#4<String>);
+    ~console#28.log#27(copyThat#17.join#36(" ", (fn ~fn#110(x#111: String): String {
+      return x#111;
     }): fn (String): String));
-    copyThat#17.splice#108(omitted, omitted, (upcast((list("gone")): List#6<String>)): Listed#4<String>);
-    ~console#27.log#26(copyThat#17.join#35(" ", (fn ~fn#111(x#112: String): String {
-      return x#112;
+    copyThat#17.splice#109(omitted, omitted, (upcast((list("gone")): List#6<String>)): Listed#4<String>);
+    ~console#28.log#27(copyThat#17.join#36(" ", (fn ~fn#112(x#113: String): String {
+      return x#113;
     }): fn (String): String));
-    messageBuilder#16.clear#113();
-    messageBuilder#16.add#92("Bye", omitted);
-    ~console#27.log#26(messageBuilder#16.join#35(" ", (fn ~fn#114(x#115: String): String {
+    init pastEnd#22 = copyThat#17.splice#109(%Int32.add(copyThat#17.length#81(), 5), 1, omitted);
+    copyThat#17.splice#109(%Int32.neg(3), 0, (upcast((list("first")): List#6<String>)): Listed#4<String>);
+    ~console#28.log#27(%String.cat(%String.cat(pastEnd#22.length#59().toString#31(omitted), " "), copyThat#17.join#36(" ", (fn ~fn#114(x#115: String): String {
       return x#115;
+    }): fn (String): String)));
+    messageBuilder#16.clear#116();
+    messageBuilder#16.add#93("Bye", omitted);
+    ~console#28.log#27(messageBuilder#16.join#36(" ", (fn ~fn#117(x#118: String): String {
+      return x#118;
     }): fn (String): String));
     {
-      var i#116: Int32 = %Int32.neg(2);
-      ~loop#117: while (%Int32.le(i#116, 10)) {
-        ~console#27.log#26(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("Slice(", i#116.toString#30(omitted)), ", "), %Int32.add(i#116, 2).toString#30(omitted)), "): ["), ls#8.slice#118(i#116, %Int32.add(i#116, 2)).join#35(", ", (fn ~fn#119(x#120: Int32): String {
-          return x#120.toString#30(omitted);
+      var i#119: Int32 = %Int32.neg(2);
+      ~loop#120: while (%Int32.le(i#119, 10)) {
+        ~console#28.log#27(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("Slice(", i#119.toString#31(omitted)), ", "), %Int32.add(i#119, 2).toString#31(omitted)), "): ["), ls#8.slice#121(i#119, %Int32.add(i#119, 2)).join#36(", ", (fn ~fn#122(x#123: Int32): String {
+          return x#123.toString#31(omitted);
         }): fn (Int32): String)), "]"));
-        i#116 = %Int32.add(i#116, 1);
+        i#119 = %Int32.add(i#119, 1);
       }
     }
-    ~console#27.log#26(%String.cat("Outside fallback: ", ls#8.getOr#121(ls#8.length#58(), 123).toString#30(omitted)));
+    ~console#28.log#27(%String.cat("Outside fallback: ", ls#8.getOr#124(ls#8.length#59(), 123).toString#31(omitted)));
     {
-      let booleanToString#122: fn (Boolean): String = (fn ~fn#123(b#124: Boolean): String {
-        return b#124.toString#126();
+      let booleanToString#125: fn (Boolean): String = (fn ~fn#126(b#127: Boolean): String {
+        return b#127.toString#129();
       }): fn (Boolean): String;
-      var ls#127: List#6<Boolean> = (list(true, false)): List#6<Boolean>;
-      var joined#128: String = ls#127.join#35(", ", booleanToString#122);
-      var inverted#129: List#6<Boolean> = ls#127.map#47<Boolean>((fn ~fn#130(b#131: Boolean): Boolean {
-        return %Boolean.not(b#131);
+      var ls#130: List#6<Boolean> = (list(true, false)): List#6<Boolean>;
+      var joined#131: String = ls#130.join#36(", ", booleanToString#125);
+      var inverted#132: List#6<Boolean> = ls#130.map#48<Boolean>((fn ~fn#133(b#134: Boolean): Boolean {
+        return %Boolean.not(b#134);
       }): fn (Boolean): Boolean);
-      var joinedAndInverted#132: String = inverted#129.join#35(", ", (fn ~fn#133(b#134: Boolean): String {
-        if (b#134) {
+      var joinedAndInverted#135: String = inverted#132.join#36(", ", (fn ~fn#136(b#137: Boolean): String {
+        if (b#137) {
           return "not false";
         } else {
           return "not true";
         }
       }): fn (Boolean): String);
-      ~console#27.log#26(%String.cat(%String.cat("list = [", joined#128), "]"));
-      ~console#27.log#26(%String.cat(%String.cat("list (each inverted) = [", joinedAndInverted#132), "]"));
-      var onlyTrue#135: List#6<Boolean> = ls#127.filter#38((fn ~fn#136(b#137: Boolean): Boolean {
-        return b#137;
+      ~console#28.log#27(%String.cat(%String.cat("list = [", joined#131), "]"));
+      ~console#28.log#27(%String.cat(%String.cat("list (each inverted) = [", joinedAndInverted#135), "]"));
+      var onlyTrue#138: List#6<Boolean> = ls#130.filter#39((fn ~fn#139(b#140: Boolean): Boolean {
+        return b#140;
       }): fn (Boolean): Boolean);
-      var onlyFalse#138: List#6<Boolean> = ls#127.filter#38((fn ~fn#139(b#140: Boolean): Boolean {
-        return %Boolean.not(b#140);
+      var onlyFalse#141: List#6<Boolean> = ls#130.filter#39((fn ~fn#142(b#143: Boolean): Boolean {
+        return %Boolean.not(b#143);
       }): fn (Boolean): Boolean);
-      ~console#27.log#26(%String.cat(%String.cat("list (== true only) = [", onlyTrue#135.join#35(", ", booleanToString#122)), "]"));
-      ~console#27.log#26(%String.cat(%String.cat("list (== false only) = [", onlyFalse#138.join#35(", ", booleanToString#122)), "]"));
+      ~console#28.log#27(%String.cat(%String.cat("list (== true only) = [", onlyTrue#138.join#36(", ", booleanToString#125)), "]"));
+      ~console#28.log#27(%String.cat(%String.cat("list (== false only) = [", onlyFalse#141.join#36(", ", booleanToString#125)), "]"));
     }
     {
-      let sizes#141: List#6<Float64> = (list(0.25, 3.0)): List#6<Float64>;
-      let labels#142: List#6<String> = sizes#141.map#47<String>((fn ~fn#143(f#144: Float64): String {
-        if (%Float64.lt(f#144, 1.0)) {
+      let sizes#144: List#6<Float64> = (list(0.25, 3.0)): List#6<Float64>;
+      let labels#145: List#6<String> = sizes#144.map#48<String>((fn ~fn#146(f#147: Float64): String {
+        if (%Float64.lt(f#147, 1.0)) {
           return "small";
         } else {
           return "big";
         }
       }): fn (Float64): String);
-      ~console#27.log#26(%String.cat(%String.cat("sizes = [", labels#142.join#35(", ", (fn ~fn#145(s#146: String): String {
-        return s#146;
+      ~console#28.log#27(%String.cat(%String.cat("sizes = [", labels#145.join#36(", ", (fn ~fn#148(s#149: String): String {
+        return s#149;
       }): fn (String): String)), "]"));
     }
-    runSomething#23();
+    runSomething#24();
     {
-      let aListBuilder#152: ListBuilder#13<String> = new constructor#91<String>();
-      aListBuilder#152.add#92("first", omitted);
-      let builtFirst#153: List#6<String> = aListBuilder#152.toList#154();
-      aListBuilder#152.add#92("second", omitted);
-      let builtSecond#155: List#6<String> = ((upcast(aListBuilder#152)): Listed#4<String>).toList#57();
-      aListBuilder#152.add#92("third", omitted);
-      ~console#27.log#26(%String.cat("builtFirst has ", builtFirst#153.join#35(", ", (fn ~fn#156(s#157: String): String {
-        return s#157;
+      let aListBuilder#155: ListBuilder#13<String> = new constructor#92<String>();
+      aListBuilder#155.add#93("first", omitted);
+      let builtFirst#156: List#6<String> = aListBuilder#155.toList#157();
+      aListBuilder#155.add#93("second", omitted);
+      let builtSecond#158: List#6<String> = ((upcast(aListBuilder#155)): Listed#4<String>).toList#58();
+      aListBuilder#155.add#93("third", omitted);
+      ~console#28.log#27(%String.cat("builtFirst has ", builtFirst#156.join#36(", ", (fn ~fn#159(s#160: String): String {
+        return s#160;
       }): fn (String): String)));
-      ~console#27.log#26(%String.cat("builtSecond has ", builtSecond#155.join#35(", ", (fn ~fn#158(s#159: String): String {
-        return s#159;
+      ~console#28.log#27(%String.cat("builtSecond has ", builtSecond#158.join#36(", ", (fn ~fn#161(s#162: String): String {
+        return s#162;
       }): fn (String): String)));
     }
   }

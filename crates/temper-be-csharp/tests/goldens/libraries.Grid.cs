@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace Libraries;
 
@@ -31,7 +32,7 @@ public class Grid
 
     public double Get(int i, int j)
     {
-        return this.values[i * this.ncols + j];
+        return Listed.Get(this.values, i * this.ncols + j);
     }
 
     public static Grid? Parse(string s)

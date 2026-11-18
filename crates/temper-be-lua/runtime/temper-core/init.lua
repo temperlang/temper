@@ -987,10 +987,21 @@ function temper.deque_isempty(deque)
     return deque.head == deque.tail
 end
 
+-- Panics with a message, as core's docs say an operation does: an
+-- error that isn't a bubble, so it passes every `orelse`, raised at the
+-- level of the generated code that called the runtime.
+local function panic(message)
+    error(message, 3)
+end
+
+local function out_of_bounds(index, length)
+    error("index " .. tostring(index) .. " out of bounds for length " .. tostring(length), 3)
+end
+
 function temper.deque_removefirst(deque)
     local head = deque.head
     if head == deque.tail then
-        return temper.bubble("core.type Deque.removeFirst() on empty deque")
+        panic("removeFirst on an empty Deque")
     end
     local first = deque[head]
     deque.head = head + 1
@@ -1012,7 +1023,10 @@ do
     end
 
     function temper.listed_reduce(list, accumulate)
-        local initial = temper.listed_get(list, 0)
+        local initial = list[1]
+        if initial == nil then
+            out_of_bounds(0, #list)
+        end
         return temper_reduce_from_index(list, initial, 2, accumulate)
     end
 
@@ -1139,7 +1153,7 @@ do
     local function temper_get(list, index)
         local got = list[index + 1]
         if got == nil then
-            return temper.bubble("core.type Listed.get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
+            out_of_bounds(index, #list)
         end
         return got
     end
@@ -1247,6 +1261,9 @@ function temper.list_foreach(list, func)
 end
 
 function temper.listbuilder_set(list, index, value)
+    if index < 0 or index >= #list then
+        out_of_bounds(index, #list)
+    end
     list[index + 1] = value
 end
 
@@ -1268,9 +1285,9 @@ function temper.listbuilder_splice(builder, at, remove, new)
     at = temper.null_to_nil(at) or 0
     remove = temper.null_to_nil(remove) or len
     new = temper.null_to_nil(new) or {}
-    if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
-    end
+    -- Core's docs clamp the index, and so what's removed, to the items.
+    at = math_max(0, math_min(at, len))
+    remove = math_max(0, math_min(remove, len - at))
     local ret = {}
     for i = 1, remove do
         ret[i] = table_remove(builder, at + 1)
@@ -1286,7 +1303,7 @@ function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        out_of_bounds(at, len)
     end
     if at == len then
         for read = 1, #from do
@@ -1305,7 +1322,7 @@ function temper.listbuilder_add(builder, obj, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.add() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        out_of_bounds(at, len)
     end
     if at == len then
         builder[at + 1] = obj
@@ -1757,7 +1774,7 @@ end
 function temper.listbuilder_removelast(lb)
     local len = #lb
     if len == 0 then
-        return temper.bubble("core.type ListBuilder.removeLast() on empty list")
+        panic("removeLast on an empty ListBuilder")
     end
     local got = lb[len]
     lb[len] = nil
@@ -1868,8 +1885,9 @@ function temper.string_slice(str, begin, end_)
 end
 
 function temper.string_get(str, i)
-    if i > #str then
-        temper.bubble("core.type String.get() failed")
+    if i < 1 or i > #str then
+        -- Lua's indices start at 1; the message counts from 0, as others'.
+        panic("string index " .. tostring(i - 1) .. " out of bounds")
     end
     local ok, cp = pcall(temper_utf8.codepoint, str, i)
     if ok then return cp; end

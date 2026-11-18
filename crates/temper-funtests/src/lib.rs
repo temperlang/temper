@@ -332,6 +332,13 @@ pub fn expected_log(main: &str, backend: &str) -> Vec<String> {
 /// The lines of a main file's log blocks that apply to a run with these
 /// names.
 pub fn expected_log_run(main: &str, run: &[&str]) -> Vec<String> {
+    fenced_lines(main, "log", run)
+}
+
+/// The lines of a main file's fenced blocks of `kind` (` ```log `, …) that
+/// apply to a run with these names.
+pub fn fenced_lines(main: &str, kind: &str, run: &[&str]) -> Vec<String> {
+    let fence = format!("```{kind}");
     let mut lines = Vec::new();
     let mut inside = None;
     for line in main.lines() {
@@ -345,7 +352,7 @@ pub fn expected_log_run(main: &str, run: &[&str]) -> Vec<String> {
                 }
             }
             None => {
-                if let Some(rest) = trimmed.strip_prefix("```log") {
+                if let Some(rest) = trimmed.strip_prefix(fence.as_str()) {
                     let selectors = rest.trim_end_matches([' ', '\t']);
                     let valid = selectors.is_empty() || selectors.starts_with([' ', '\t']);
                     if valid {

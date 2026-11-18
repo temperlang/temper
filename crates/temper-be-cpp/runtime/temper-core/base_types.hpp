@@ -137,6 +137,13 @@ namespace temper {
             panic<T>("panic");
         }
 
+        // A panic for an index out of a list's bounds, as core's docs say.
+        template<class T = void>
+        [[noreturn]] T panic_out_of_bounds(int64_t index, int64_t length) {
+            panic<T>("index " + std::to_string(index) + " out of bounds for length "
+                + std::to_string(length));
+        }
+
         template<class T>
         bool is_null(T) {
             return false;

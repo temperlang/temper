@@ -14,7 +14,7 @@ public final class IndicesGlobal {
     static int indexOfChar(String s, int c) {
         int i = 0;
         while (Core.stringHasIndex(s, i)) {
-            if (s.codePointAt(i) == c) {
+            if (Core.stringGet(s, i) == c) {
                 return i;
             }
             i = Core.stringNext(s, i);

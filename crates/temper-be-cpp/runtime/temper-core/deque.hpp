@@ -27,7 +27,7 @@ namespace temper {
             template<class Elem>
             Elem removeFirst(const std::shared_ptr<std::deque<Elem>>& dq) {
                 if (dq->empty()) {
-                    bubble<Elem>("removeFirst on empty deque");
+                    panic<Elem>("removeFirst on an empty Deque");
                 }
                 Elem front = dq->front();
                 dq->pop_front();

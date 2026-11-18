@@ -33,7 +33,7 @@ public static class MatchGlobal
             int i = 0;
             while (i < length)
             {
-                string @string = strings[i];
+                string @string = Listed.Get(strings, i);
                 i = i + 1;
                 console.Log("found " + @string + ": " + (regex.Found(@string) ? "true" : "false"));
                 console.Log("matches " + @string + ": " + (full.Found(@string) ? "true" : "false"));
@@ -142,7 +142,7 @@ public static class MatchGlobal
             int i2 = 0;
             while (i2 < length2)
             {
-                string line = list[i2];
+                string line = Listed.Get(list, i2);
                 i2 = i2 + 1;
                 console.Log(line + ";");
             }

@@ -274,8 +274,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]); `panics`
 /// `orelse` handling bubbles from everywhere but never a panic, whose
-/// run fails ([`FAILING`]); and `host-errors` a host's failure in a
-/// builtin not declared to bubble passing `orelse`, whose run fails too.
+/// run fails ([`FAILING`]); and `host-errors` builtins whose docs say
+/// they panic (index errors) panicking on every backend, past `orelse`,
+/// one run per section, each saying why on stderr.
 pub const PROGRAMS: [&str; 22] = [
     "classes",
     "nullables",
@@ -303,7 +304,8 @@ pub const PROGRAMS: [&str; 22] = [
 
 /// The shared programs whose run fails, after logging what's expected
 /// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
-/// `host-errors`, whose host failure none does.
+/// `host-errors`, whose panics none does. A failing program with
+/// sections runs each on its own (`runs`), as a run fails only once.
 pub const FAILING: [&str; 2] = ["panics", "host-errors"];
 
 /// The shared programs that run as tests, as a functional test with
@@ -413,6 +415,9 @@ pub struct Case {
     /// Whether its run fails (`expectRunFailure = true`), after logging
     /// what's expected ([`check_case`]).
     pub fails: bool,
+    /// What a run that fails must say on stderr, each line somewhere in
+    /// it: a shared program's `stderr` blocks that apply ([`check_case`]).
+    pub stderr: Vec<String>,
 }
 
 impl Case {
@@ -456,6 +461,7 @@ impl Case {
             no_connected: false,
             tests: None,
             fails: false,
+            stderr: Vec::new(),
         }
     }
 }
@@ -532,6 +538,7 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             no_connected: false,
             tests: (test.runs_as_test()).then(|| test.expected_failures()),
             fails: test.expects_run_failure(),
+            stderr: Vec::new(),
         };
         if !case.host_files.is_empty() {
             cases.push(case.clone());
@@ -560,36 +567,75 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             None if in_dir => (file, dir.join(file).join(format!("{file}.temper.md"))),
             None => (file, dir.join(format!("{file}.temper.md"))),
         };
-        let text = fs::read_to_string(&path).unwrap();
-        let expected = if file.ends_with(".tmpl") {
-            (text.lines())
-                .filter_map(|l| l.strip_prefix("// log: "))
-                .map(str::to_string)
-                .collect()
-        } else {
-            temper_funtests::expected_log(&text, backend)
+        let whole = fs::read_to_string(&path).unwrap();
+        let parts = match FAILING.contains(&file) {
+            true => runs(&whole),
+            false => vec![(String::new(), whole)],
         };
-        cases.push(Case {
-            key: name.to_string(),
-            library: name.to_string(),
-            expected,
-            sources: vec![(path.to_string_lossy().into_owned(), text)],
-            dir: if in_dir { dir.join(file) } else { dir.clone() },
-            libraries: if in_dir {
-                (LIBRARIES.iter())
-                    .filter(|&&l| l != file)
-                    .map(|&l| (l.to_string(), dir.join(l)))
+        for (suffix, text) in parts {
+            let expected = if file.ends_with(".tmpl") {
+                (text.lines())
+                    .filter_map(|l| l.strip_prefix("// log: "))
+                    .map(str::to_string)
                     .collect()
             } else {
-                Vec::new()
-            },
-            host_files: Vec::new(),
-            no_connected: false,
-            tests: AS_TESTS.contains(&file).then(Vec::new),
-            fails: FAILING.contains(&file),
-        });
+                temper_funtests::expected_log(&text, backend)
+            };
+            let key = format!("{name}{suffix}");
+            cases.push(Case {
+                key: key.clone(),
+                library: key,
+                expected,
+                stderr: temper_funtests::fenced_lines(&text, "stderr", &[backend]),
+                sources: vec![(path.to_string_lossy().into_owned(), text)],
+                dir: if in_dir { dir.join(file) } else { dir.clone() },
+                libraries: if in_dir {
+                    (LIBRARIES.iter())
+                        .filter(|&&l| l != file)
+                        .map(|&l| (l.to_string(), dir.join(l)))
+                        .collect()
+                } else {
+                    Vec::new()
+                },
+                host_files: Vec::new(),
+                no_connected: false,
+                tests: AS_TESTS.contains(&file).then(Vec::new),
+                fails: FAILING.contains(&file),
+            });
+        }
     }
     cases
+}
+
+/// A failing program's runs, as each fails once: one per section (a `## `
+/// heading), each with what comes before the first heading, its key's
+/// suffix the heading's words (`## List read` gives `-list-read`); or
+/// the whole program, if it has no sections. Other sections' lines are
+/// blank, so lines keep their numbers.
+fn runs(text: &str) -> Vec<(String, String)> {
+    let lines: Vec<&str> = text.lines().collect();
+    let headings: Vec<usize> = (0..lines.len())
+        .filter(|&i| lines[i].starts_with("## "))
+        .collect();
+    if headings.is_empty() {
+        return vec![(String::new(), text.to_string())];
+    }
+    let mut runs = Vec::new();
+    for (n, &start) in headings.iter().enumerate() {
+        let end = headings.get(n + 1).copied().unwrap_or(lines.len());
+        let kept = |i: usize| i < headings[0] || (start..end).contains(&i);
+        let mut run: String = (0..lines.len())
+            .map(|i| if kept(i) { lines[i] } else { "" })
+            .collect::<Vec<_>>()
+            .join("\n");
+        run.push('\n');
+        let words: Vec<String> = (lines[start][3..].split(|c: char| !c.is_ascii_alphanumeric()))
+            .filter(|w| !w.is_empty())
+            .map(str::to_ascii_lowercase)
+            .collect();
+        runs.push((format!("-{}", words.join("-")), run));
+    }
+    runs
 }
 
 /// A case's library, settled and translated to tmpl, or read as tmpl, and
@@ -1102,21 +1148,31 @@ pub fn check_log(failures: &mut Vec<String>, name: &str, out: &Output, expected:
 }
 
 /// [`check_log`] for a case's run: one that's expected to fail
-/// ([`Case::fails`]) must fail, after logging what's expected.
+/// ([`Case::fails`]) must fail, after logging what's expected, saying
+/// what it should on stderr ([`Case::stderr`]).
 pub fn check_case(failures: &mut Vec<String>, name: &str, out: &Output, case: &Case) {
     if !case.fails {
         return check_log(failures, name, out, &case.expected);
     }
     let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
-    if out.status.success() || actual != case.expected {
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let unsaid = unsaid(case, &stderr);
+    if out.status.success() || actual != case.expected || unsaid.is_some() {
+        let unsaid = unsaid.map_or(String::new(), |s| format!(", not saying {s:?}"));
         failures.push(format!(
-            "{name}: expected {:?} and a failed run, got {actual:?} ({})\n{}",
-            case.expected,
-            out.status,
-            String::from_utf8_lossy(&out.stderr)
+            "{name}: expected {:?} and a failed run, got {actual:?} ({}){unsaid}\n{stderr}",
+            case.expected, out.status,
         ));
     }
+}
+
+/// The first of what a failing case's run should say ([`Case::stderr`])
+/// that `said` lacks, if any.
+pub fn unsaid<'a>(case: &'a Case, said: &str) -> Option<&'a str> {
+    (case.stderr.iter())
+        .map(|s| s.trim())
+        .find(|s| !said.contains(s))
 }
 
 /// A test's failure in a run as tests: its name, as its runner's JUnit

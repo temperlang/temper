@@ -11,7 +11,12 @@ namespace TemperLang.Core
         public static void Add<T>(this IList<T> list, T item, int? index = null)
         {
             // Swap order.
-            list.Insert(index ?? list.Count, item);
+            int at = index ?? list.Count;
+            if ((uint)at > (uint)list.Count)
+            {
+                throw Core.OutOfBounds(at, list.Count);
+            }
+            list.Insert(at, item);
         }
 
         public static void AddAll<T>(
@@ -21,6 +26,10 @@ namespace TemperLang.Core
         )
         {
             int ind = index ?? list.Count;
+            if ((uint)ind > (uint)list.Count)
+            {
+                throw Core.OutOfBounds(ind, list.Count);
+            }
             if (ind == list.Count)
             {
                 // Customize in case `.Add` is more efficient then `.Insert` for
@@ -83,6 +92,59 @@ namespace TemperLang.Core
             }
         }
 
+        /// <summary>The item at index, panicking out of bounds.</summary>
+        public static T Get<T>(IReadOnlyList<T> list, int index) =>
+            (uint)index < (uint)list.Count
+                ? list[index]
+                : throw Core.OutOfBounds(index, list.Count);
+
+        /// <summary>The item at index, panicking out of bounds.</summary>
+        public static T Get<T>(IList<T> list, int index) =>
+            (uint)index < (uint)list.Count
+                ? list[index]
+                : throw Core.OutOfBounds(index, list.Count);
+
+        /// <summary>The item at index, panicking out of bounds.</summary>
+        public static T Get<T>(List<T> list, int index) =>
+            (uint)index < (uint)list.Count
+                ? list[index]
+                : throw Core.OutOfBounds(index, list.Count);
+
+        /// <summary>Sets the item at index, panicking out of bounds.</summary>
+        public static void Set<T>(IList<T> list, int index, T value)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                throw Core.OutOfBounds(index, list.Count);
+            }
+            list[index] = value;
+        }
+
+        /// <summary>
+        /// Core's <c>reduce</c>, from the first item, panicking for an
+        /// empty list, as reading its first item does.
+        /// </summary>
+        public static T Reduce<T>(IEnumerable<T> list, Func<T, T, T> accumulate)
+        {
+            using IEnumerator<T> items = list.GetEnumerator();
+            if (!items.MoveNext())
+            {
+                throw Core.OutOfBounds(0, 0);
+            }
+            T result = items.Current;
+            while (items.MoveNext())
+            {
+                result = accumulate(result, items.Current);
+            }
+            return result;
+        }
+
+        /// <summary>Removes the first item, panicking if there's none.</summary>
+        public static T RemoveFirst<T>(Queue<T> deque) =>
+            deque.Count != 0
+                ? deque.Dequeue()
+                : throw Core.Panic("removeFirst on an empty Deque");
+
         public static T GetOr<T>(this IReadOnlyList<T> list, int index, T alternative)
         {
             if (index < 0 || index >= list.Count)
@@ -106,7 +168,10 @@ namespace TemperLang.Core
 
         public static T RemoveLast<T>(this IList<T> list)
         {
-            // Let appropriate exceptions fly.
+            if (list.Count == 0)
+            {
+                throw Core.Panic("removeLast on an empty ListBuilder");
+            }
             T last = list[list.Count - 1];
             list.RemoveAt(list.Count - 1);
             return last;

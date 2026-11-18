@@ -101,6 +101,7 @@ fn cases() -> Vec<Case> {
             no_connected: false,
             tests: None,
             fails: false,
+            stderr: Vec::new(),
         });
     }
     cases

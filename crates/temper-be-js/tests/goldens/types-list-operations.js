@@ -139,6 +139,10 @@ listBuilderSplice(copyThat, copyThat.length, null, Object.freeze(["and", "the", 
 console.log(listedJoin(copyThat, " ", (x) => x));
 listBuilderSplice(copyThat, null, null, Object.freeze(["gone"]));
 console.log(listedJoin(copyThat, " ", (x) => x));
+/** @type {readonly string[]} */
+const pastEnd = listBuilderSplice(copyThat, (copyThat.length + 5) | 0, 1, null);
+listBuilderSplice(copyThat, -3, 0, Object.freeze(["first"]));
+console.log(`${pastEnd.length} ${listedJoin(copyThat, " ", (x) => x)}`);
 listBuilderClear(messageBuilder);
 messageBuilder.push("Bye");
 console.log(listedJoin(messageBuilder, " ", (x) => x));
@@ -167,14 +171,14 @@ console.log(`Outside fallback: ${listedGetOr(/** @type {number[]} */ (ls), ls.le
    * @param {boolean} b
    * @returns {string}
    */
-  function fn22(b) {
+  function fn23(b) {
     if (b) {
       return "not false";
     } else {
       return "not true";
     }
   }
-  const joinedAndInverted = listedJoin(/** @type {boolean[]} */ (inverted), ", ", fn22);
+  const joinedAndInverted = listedJoin(/** @type {boolean[]} */ (inverted), ", ", fn23);
   console.log(`list = [${joined}]`);
   console.log(`list (each inverted) = [${joinedAndInverted}]`);
   /** @type {readonly boolean[]} */

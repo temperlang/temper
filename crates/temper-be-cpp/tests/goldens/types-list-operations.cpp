@@ -118,6 +118,10 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, core::List::join(copyThat, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
     core::ListBuilder::splice<core::Str>(copyThat, nullptr, nullptr, core::List::make<core::Str>(TEMPER_STR("gone")));
     core::Console::log(temper_globals::console.value, core::List::join(copyThat, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
+    std::shared_ptr<std::vector<core::Str>> pastEnd = core::ListBuilder::splice<core::Str>(copyThat, core::Int::add(core::List::length<core::Str>(copyThat), 5), 1);
+    core::ListBuilder::splice<core::Str>(copyThat, -3, 0, core::List::make<core::Str>(TEMPER_STR("first")));
+    int32_t length = core::List::length<core::Str>(pastEnd);
+    core::Console::log(temper_globals::console.value, std::to_string(length) + " " + core::List::join(copyThat, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));
     core::ListBuilder::clear<core::Str>(messageBuilder);
     core::ListBuilder::add<core::Str>(messageBuilder, TEMPER_STR("Bye"));
     core::Console::log(temper_globals::console.value, core::List::join(messageBuilder, TEMPER_STR(" "), [](core::Str x) -> core::Str { return x; }));

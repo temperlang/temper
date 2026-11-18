@@ -39,7 +39,7 @@ public static class GenericsGlobal
         }
         else
         {
-            return items[0];
+            return Listed.Get(items, 0);
         }
     }
 
@@ -55,7 +55,7 @@ public static class GenericsGlobal
             int i = 0;
             while (i < ns.Count)
             {
-                sum = sum + ns[i];
+                sum = sum + Listed.Get(ns, i);
                 i = i + 1;
             }
         }
@@ -70,31 +70,31 @@ public static class GenericsGlobal
         int at = 0;
         {
             int k = at;
-            counts[k] = counts[k] + 4;
+            Listed.Set(counts, k, Listed.Get(counts, k) + 4);
         }
         {
-            counts[1] = counts[1] * 3;
+            Listed.Set(counts, 1, Listed.Get(counts, 1) * 3);
         }
         int was;
         int k2;
         int t = at;
         at = t + 1;
         k2 = t;
-        int t2 = counts[k2];
-        counts[k2] = t2 + 1;
+        int t2 = Listed.Get(counts, k2);
+        Listed.Set(counts, k2, t2 + 1);
         was = t2;
         int pre;
         int k3 = at;
-        int t3 = counts[k3] + 1;
-        counts[k3] = t3;
+        int t3 = Listed.Get(counts, k3) + 1;
+        Listed.Set(counts, k3, t3);
         pre = t3;
         int post;
-        int t4 = counts[0];
-        counts[0] = t4 - 1;
+        int t4 = Listed.Get(counts, 0);
+        Listed.Set(counts, 0, t4 - 1);
         post = t4;
         int down;
-        int t5 = counts[0] - 1;
-        counts[0] = t5;
+        int t5 = Listed.Get(counts, 0) - 1;
+        Listed.Set(counts, 0, t5);
         down = t5;
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{was} {pre} {post} {down} {at}"));
     }
@@ -126,13 +126,13 @@ public static class GenericsGlobal
         b.Add(30);
         int i = 0;
         int k1 = i;
-        int t7 = a[k1];
-        a[k1] = t7 + 1;
+        int t7 = Listed.Get(a, k1);
+        Listed.Set(a, k1, t7 + 1);
         int k21 = i;
-        int t8 = b[k21];
-        b[k21] = t8 + 1;
+        int t8 = Listed.Get(b, k21);
+        Listed.Set(b, k21, t8 + 1);
         int items = t7 + t8;
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{locals} {x} {y} {fields} {same} {p.N} {q.N} {items} {a[0]} {b[0]}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{locals} {x} {y} {fields} {same} {p.N} {q.N} {items} {Listed.Get(a, 0)} {Listed.Get(b, 0)}"));
     }
 
     internal static int Bump(string key)
@@ -153,7 +153,7 @@ public static class GenericsGlobal
 
     internal static bool FirstSame(IReadOnlyList<int> a, IReadOnlyList<int> b)
     {
-        return a[0] == b[0];
+        return Listed.Get(a, 0) == Listed.Get(b, 0);
     }
 
     static GenericsGlobal()
@@ -179,10 +179,10 @@ public static class GenericsGlobal
         IList<string> builder = new List<string>();
         builder.Add("x");
         builder.Add("y");
-        builder.Insert(0, "w");
-        console.Log(builder.Count.ToString(CultureInfo.InvariantCulture) + " " + builder[0] + " " + Listed.RemoveLast(builder));
+        Listed.Add(builder, "w", 0);
+        console.Log(builder.Count.ToString(CultureInfo.InvariantCulture) + " " + Listed.Get(builder, 0) + " " + Listed.RemoveLast(builder));
         IReadOnlyList<string> built = Listed.ToReadOnlyList(builder);
-        console.Log(built.Count.ToString(CultureInfo.InvariantCulture) + " " + Listed.GetOr(built, 5, "?") + " " + Listed.Slice(built, 1, 2)[0]);
+        console.Log(built.Count.ToString(CultureInfo.InvariantCulture) + " " + Listed.GetOr(built, 5, "?") + " " + Listed.Get(Listed.Slice(built, 1, 2), 0));
         IReadOnlyDictionary<string, int> m = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<string, int>>(new KeyValuePair<string, int>("a", 1), new KeyValuePair<string, int>("b", 2)));
         int t9;
         try

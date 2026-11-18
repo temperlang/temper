@@ -2354,9 +2354,7 @@ copied Kotlin's:
     anything (Java's `ExecutionException` wrapped in a
     `RuntimeException`, C#'s and Python's the breaker's own). A builtin
     not declared to bubble now passes its host failure through every
-    `orelse`, as a panic: a list read past the end on Java, C#, Python,
-    and JS (C++ and Lua still bubble there, as Kotlin's runtimes do,
-    until list reads panic everywhere). Java's regex `replace` no longer
+    `orelse`, as a panic (and index errors are panics, below). Java's regex `replace` no longer
     swallows a format callback's exceptions, and Python's
     `mapDropping` drops only elements whose callback bubbles. Host code
     bubbles by raising the runtime's `Bubble`; anything else passes.
@@ -2366,6 +2364,37 @@ copied Kotlin's:
     normally").
     Test: programs/panics.temper.md and programs/host-errors.temper.md
     on every backend.
+  - **Index errors panic everywhere, as core's docs say** (2026-11-18):
+    a list read out of bounds (`List.get`, `Listed.get`), a `set` or an
+    insert (`add`, `addAll` at) out of bounds, `removeLast` and a
+    `Deque`'s `removeFirst` when empty, `reduce` of an empty list, and
+    a string read at or past its end (`String.get`). Kotlin's runtimes
+    disagree: C++ and Lua bubble for all of them (Lua's `set` past the
+    end silently grows the list, as JS's ignores it); JS bubbles for
+    `removeFirst` but fails with a `ReferenceError` elsewhere
+    (`listed.js` calls `bubble()` without importing it) and a plain
+    `Error` for strings; Java, C#, and Python throw host exceptions
+    (`IndexOutOfBoundsException`, `ArgumentOutOfRangeException`,
+    `IndexError`, …), which Kotlin's catch-all `orelse` turns into
+    bubbles; Kotlin's interpreter panics for a negative list index but
+    bubbles past the end. Tempest's runtimes panic as each backend's
+    `panic()` does, with the interpreter's messages (`index 5 out of
+    bounds for length 2`, `string index 2 out of bounds`, `removeLast
+    on an empty ListBuilder`, `removeFirst on an empty Deque`): Java an
+    `AssertionError` (`Core.listGet`, and new `Core.listSet`,
+    `Core.stringGet`, and `Core.listAdd` at a place, which also keeps
+    Temper's argument order), C# `Environment.FailFast` (`Listed.Get`,
+    `Set`, `Reduce`, and `RemoveFirst`, where Kotlin's indexes, calls
+    `Enumerable.Aggregate`, or `Dequeue`), Python a `BaseException`
+    (`list_builder_remove_last` where Kotlin's calls `pop`), JS an
+    `Error` (`listedReduce` where Kotlin's calls `reduce`), Lua
+    `error`, C++ `panic`, and Rust `panic!` with the same messages,
+    where it unwrapped. `splice` clamps its index on Lua and Rust too,
+    as the docs say and the other backends do, where Lua bubbled and
+    Rust panicked past the end.
+    Test: programs/host-errors.temper.md, one run per case, each
+    checking its message on stderr, on every backend; funtest
+    types/list/operations for `splice`.
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

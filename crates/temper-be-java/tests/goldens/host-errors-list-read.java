@@ -1,4 +1,4 @@
-package host_errors;
+package host_errors_list_read;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -6,18 +6,22 @@ import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
-public final class HostErrorsGlobal {
-    private HostErrorsGlobal() {}
+public final class HostErrorsListReadGlobal {
+    private HostErrorsListReadGlobal() {}
 
-    static int read(List<Integer> ls, int i) {
-        if (i < 0) {
+    static int at(int i) {
+        if (i == 99) {
             throw Core.bubble();
         }
-        return Core.listGet(ls, i);
+        return i;
+    }
+
+    static int read(List<Integer> ls, int i) {
+        return Core.listGet(ls, at(i));
     }
 
     static {
-        Console console = Core.getConsole(Logger.getLogger("host_errors"));
+        Console console = Core.getConsole(Logger.getLogger("host_errors_list_read"));
         console.log("reading");
         int r;
         try {
@@ -26,6 +30,5 @@ public final class HostErrorsGlobal {
             r = -1;
         }
         console.log("read past the end " + r);
-        Core.throwAssertionError("panic");
     }
 }

@@ -195,11 +195,14 @@ patches that made them (other docs cite these numbers):
 | C++ | 0023 | `DenseBitVector`, as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
 | C++ | 0025 | `panic()` flushes what was logged and prints `panic` before `std::terminate`, which lost both |
 | C++ | 0026 | `Date::makeDate`, and so `fromIso`, bubbles for no such date (month 13, February 30), where it kept the fields as given |
+| C++ | 0027 | List and string index errors panic, as core's docs say, where they bubbled: reads, `set`, and inserts out of bounds, `removeLast` and `removeFirst` when empty, `reduce` of an empty list, and `String::get` at the end (`panic_out_of_bounds`) |
 | C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
 | C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
 | C# | 0026 | A distinct bubble, `TemperLang.Core.Bubble`, which `Core.Bubble()`, `Core.Cast<T>` (`as`), and `CastToNonNull` throw; builtins that threw host exceptions bubble (number parses and conversions, code points, string index casts, `Mapped.Get` and `RemoveGet` for a missing key, `Date` and `FromIsoString`, a regex that finds nothing), and `GetPromiseResult` turns a broken promise's exception into one |
+| C# | 0027 | Index errors panic (`Core.Panic`, `Environment.FailFast`), as core's docs say, where host exceptions flew: `Listed.Get`, `Set`, `Add` and `AddAll` at a place, `RemoveLast`, `RemoveFirst`, `Reduce`, and `StringUtil.Get` |
 | Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |
 | Java | 0026 | A distinct bubble, `temper.core.Bubble` (unchecked, no stack trace), which `Core.bubble()` makes; `Core.cast`, `castToNonNull`, `check`, and `requireNonNull` bubble for `as`; builtins that threw host exceptions bubble (number parses, code points, string index casts, std's `Date` through `temper.std.temporal.Core`, a regex that finds nothing), `getPromiseResult` bubbles for a broken promise (a panic's `Error` passes), and regex `replace` no longer swallows its callback's exceptions |
+| Java | 0027 | Index errors panic (an `AssertionError`), as core's docs say, where host exceptions flew: `listGet`, new `listSet` and `stringGet`, `listAdd` and `listAddAll` at a place, `listRemoveLast`, `dequeRemoveFirst`, and `listedReduce*` |
 | Java | 0016 | Connect and send std/net requests on the common pool, never in the async step that calls `stdNetSend` |
 | JS | 0001 | Fix the JSDoc types of eight helpers, so strict `tsc` takes generated calls without casts |
 | JS | 0002 | Fix `listBuilderSplice`'s JSDoc types, likewise |
@@ -207,18 +210,22 @@ patches that made them (other docs cite these numbers):
 | JS | 0015 | Type `sendRequest`'s method as any string in its JSDoc, for std/net's generated call |
 | JS | 0025 | A distinct bubble: `bubble()` throws `Bubble` (an `Error` subclass carrying a mark that `isBubble` checks, the same across copies of the runtime), `panic()` a plain `Error`; builtins that threw host errors bubble (`divInt64` and `modInt64`, code points out of range, string index casts, a regex that finds nothing), and an awaited rejection bubbles |
 | JS | 0026 | `Date`'s constructor and `dateFromIsoString` bubble for no such date, where JS rolled it over or gave an invalid `Date`; `requireNotNull` returns `NonNullable<T>`, so a value TypeScript narrowed to `null` checks |
+| JS | 0027 | Index errors panic (`panic(message)`, an `Error`), as core's docs say: list reads, `set` (which ignored the index), inserts, and `removeLast` (which called a `bubble` they didn't import), `dequeRemoveFirst` (which bubbled), new `listedReduce`, and `stringGet` |
 | Lua | 0006 | Add promises and async blocks, which Kotlin's Lua calls but its runtime lacks |
 | Lua | 0011 | Queue promise waiters behind one drain loop; make generators callable tables that `for`-`in` steps and a failed step leaves done |
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
 | Lua | 0020 | Let generators yield values and take their factory's arguments |
 | Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
 | Lua | 0025 | `temper.pcall` catches only a bubble (`temper.is_bubble`, a table `temper.bubble` raises), raising anything else again; integer division by zero, failed `Float64` and `Int64` conversions, `String.toInt32` with a bad radix, and `as` on a value with no class (`temper.null`, a builtin's) bubble, where they raised strings or host errors |
+| Lua | 0027 | Index errors panic (`error`), as core's docs say, where they bubbled: list reads, `set` (which grew the list), inserts, `removeLast`, `removeFirst`, `reduce`, and `string_get`; `listbuilder_splice` clamps its index, where it bubbled |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
 | Python | 0026 | A distinct bubble, `temper_core.Bubble(Exception)`, which `bubble()` raises; builtins that raised host errors raise it (casts, `Int` and `Float64` division by zero through `int_div`, `float64_div`, and the like, number parses and conversions, code points, string index casts, `mapped_get` and `map_builder_remove` for a missing key, `date_of` and `date_from_iso_string`, a regex that finds nothing), an awaited promise broken by any `Exception` bubbles, `list_map_dropping` drops only bubbles, and settling a settled promise catches only `InvalidStateError` |
+| Python | 0027 | Index errors panic (`panic(message)`, a `BaseException`), as core's docs say, where `IndexError` flew: `list_get`, `list_builder_set`, inserts, new `list_builder_remove_last`, `deque_remove_first`, `listed_reduce`, and `string_get` |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
 | Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
 | Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
+| Rust | 0027 | Index errors panic with core's messages (`index 5 out of bounds for length 2`), where they unwrapped or panicked bare; `list_builder::splice` clamps its index, where it panicked past the end |
 
 ### Versions: one version, spelled for each ecosystem
 

@@ -20,18 +20,18 @@ public static class DequeGlobal
         CheckEmpty();
         if (deque.Count != 0)
         {
-            console.Log(deque.Dequeue());
+            console.Log(Listed.RemoveFirst(deque));
         }
         deque.Enqueue("foo");
         deque.Enqueue("bar");
-        console.Log(deque.Dequeue());
+        console.Log(Listed.RemoveFirst(deque));
         deque.Enqueue("baz");
-        console.Log(deque.Dequeue());
+        console.Log(Listed.RemoveFirst(deque));
         deque.Enqueue("boo");
         CheckEmpty();
         while (deque.Count != 0)
         {
-            console.Log(deque.Dequeue());
+            console.Log(Listed.RemoveFirst(deque));
         }
         CheckEmpty();
     }

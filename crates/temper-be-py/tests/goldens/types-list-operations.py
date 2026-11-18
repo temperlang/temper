@@ -13,6 +13,7 @@ from temper_core import (
     int_sub as _int_sub,
     list_builder_add as _list_builder_add,
     list_builder_add_all as _list_builder_add_all,
+    list_builder_remove_last as _list_builder_remove_last,
     list_builder_set as _list_builder_set,
     list_builder_sort as _list_builder_sort,
     list_builder_splice as _list_builder_splice,
@@ -110,7 +111,7 @@ _list_builder_add_all(_copy_that, _message_builder)
 _console.log(_list_join(_message_builder, ' ', lambda x: x))
 _console.log(_list_join(_listed_sorted(_copy_that, lambda a, b: (b > a) - (b < a)), ' ', lambda x: x))
 _console.log(_list_join(_copy_that, ' ', lambda x: x))
-_old_last: str = _copy_that.pop()
+_old_last: str = _list_builder_remove_last(_copy_that)
 _console.log(f"Removed {_old_last} so {_list_join(_copy_that, ' ', lambda x: x)}")
 _next_last: _Sequence[str] = _list_builder_splice(_copy_that, _int_sub(len(_copy_that), 1), 1)
 _old_words: _Sequence[str] = _list_builder_splice(_copy_that, 4, 3, _next_last)
@@ -119,6 +120,9 @@ _list_builder_splice(_copy_that, len(_copy_that), None, ('and', 'the', 'end'))
 _console.log(_list_join(_copy_that, ' ', lambda x: x))
 _list_builder_splice(_copy_that, None, None, ('gone',))
 _console.log(_list_join(_copy_that, ' ', lambda x: x))
+_past_end: _Sequence[str] = _list_builder_splice(_copy_that, _int_add(len(_copy_that), 5), 1)
+_list_builder_splice(_copy_that, -3, 0, ('first',))
+_console.log(f"{len(_past_end)} {_list_join(_copy_that, ' ', lambda x: x)}")
 _message_builder.clear()
 _message_builder.append('Bye')
 _console.log(_list_join(_message_builder, ' ', lambda x: x))
@@ -138,14 +142,14 @@ _joined = _list_join(_ls2, ', ', _boolean_to_string)
 _inverted = _list_map(_ls2, lambda b: not b)
 
 
-def _fn25(b: bool, /) -> str:
+def _fn26(b: bool, /) -> str:
     if b:
         return 'not false'
     else:
         return 'not true'
 
 
-_joined_and_inverted = _list_join(_inverted, ', ', _fn25)
+_joined_and_inverted = _list_join(_inverted, ', ', _fn26)
 _console.log(f'list = [{_joined}]')
 _console.log(f'list (each inverted) = [{_joined_and_inverted}]')
 _only_true = _list_filter(_ls2, lambda b: b)
@@ -155,14 +159,14 @@ _console.log(f"list (== false only) = [{_list_join(_only_false, ', ', _boolean_t
 _sizes = (0.25, 3.0)
 
 
-def _fn28(f: float, /) -> str:
+def _fn29(f: float, /) -> str:
     if _float_cmp(f, 1.0) < 0:
         return 'small'
     else:
         return 'big'
 
 
-_labels = _list_map(_sizes, _fn28)
+_labels = _list_map(_sizes, _fn29)
 _console.log(f"sizes = [{_list_join(_labels, ', ', lambda s: s)}]")
 _run_something()
 _a_list_builder: _MutableSequence[str] = []

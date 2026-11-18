@@ -45,7 +45,13 @@ namespace TemperLang.Core
         {
             // Char.ConvertToUtf32 throws on orphaned surrogates, and we want to
             // control the output for that case.
-            // And do throw if we start out of bounds.
+            // And panic if we start out of bounds, as core's docs say.
+            if ((uint)index >= (uint)s.Length)
+            {
+                throw Core.Panic(
+                    FormattableString.Invariant($"string index {index} out of bounds")
+                );
+            }
             char c = s[index];
             if (0xD800 <= c && c <= 0xDBFF && index + 1 < s.Length)
             {

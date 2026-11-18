@@ -115,7 +115,7 @@ public static class LibrariesGlobal
             int i = 0;
             while (i < values.Count)
             {
-                f(values[i]);
+                f(Listed.Get(values, i));
                 i = i + 1;
             }
         }
@@ -211,7 +211,7 @@ public static class LibrariesGlobal
 
     internal static int ByteAt(IReadOnlyList<int> digits, bool @short, int c)
     {
-        int @byte = @short ? digits[c] * 17 : digits[2 * c] * 16 + digits[2 * c + 1];
+        int @byte = @short ? Listed.Get(digits, c) * 17 : Listed.Get(digits, 2 * c) * 16 + Listed.Get(digits, 2 * c + 1);
         return @byte;
     }
 
@@ -219,7 +219,7 @@ public static class LibrariesGlobal
     {
         if (digits.Count > 1)
         {
-            return digits[0] + 1 == digits[1];
+            return Listed.Get(digits, 0) + 1 == Listed.Get(digits, 1);
         }
         else
         {
@@ -230,7 +230,7 @@ public static class LibrariesGlobal
     internal static int FirstDrop(IReadOnlyList<int> digits)
     {
         int i = 1;
-        while (i < digits.Count && digits[i - 1] <= digits[i])
+        while (i < digits.Count && Listed.Get(digits, i - 1) <= Listed.Get(digits, i))
         {
             i = i + 1;
         }
@@ -353,7 +353,7 @@ public static class LibrariesGlobal
             int i = 0;
             while (i < length)
             {
-                IEffect<T> e = more[i];
+                IEffect<T> e = Listed.Get(more, i);
                 i = i + 1;
                 into.Add(e);
             }
@@ -374,7 +374,7 @@ public static class LibrariesGlobal
             int i = 0;
             while (i < length)
             {
-                IEffect<T> e = list[i];
+                IEffect<T> e = Listed.Get(list, i);
                 i = i + 1;
                 if (e is Plain<T>)
                 {
@@ -456,7 +456,7 @@ public static class LibrariesGlobal
             int i = 0;
             while (i < xs.Count)
             {
-                string x = xs[i];
+                string x = Listed.Get(xs, i);
                 int n;
                 int? held = null;
                 try
@@ -486,7 +486,7 @@ public static class LibrariesGlobal
             int i = 0;
             while (i < length)
             {
-                string x = xs[i];
+                string x = Listed.Get(xs, i);
                 i = i + 1;
                 int m;
                 int? held = null;
@@ -523,7 +523,7 @@ public static class LibrariesGlobal
                 {
                     break;
                 }
-                t = t * 10 + xs[i];
+                t = t * 10 + Listed.Get(xs, i);
             }
         }
         return t;
@@ -636,7 +636,7 @@ public static class LibrariesGlobal
         Ticks counter = new Ticks();
         ICounting<string> stepper = counter;
         stepper.Step();
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{stepper.Step()[0]} {counter.Count} {new Names().Take(new Tag("abc"))} {((IEscapes)new Quoting()).EscapeFlag(true)}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Listed.Get(stepper.Step(), 0)} {counter.Count} {new Names().Take(new Tag("abc"))} {((IEscapes)new Quoting()).EscapeFlag(true)}"));
         string? subject4 = Problem(0);
         string? subject5 = Message(1);
         string? subject6 = Message(2);

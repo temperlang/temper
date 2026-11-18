@@ -1,0 +1,27 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../host-errors.temper.md:12:5  /** <- let at(i: Int): Int throws B
+7:1 -> ../host-errors.temper.md:12:5  function at(i) { <- let at(i: Int): Int throws B
+7:10 -> ../host-errors.temper.md:12:9 (at)  at(i) { <- at(i: Int): Int throws Bubbl
+7:12 -> ../host-errors.temper.md:12:5  (i) { <- let at(i: Int): Int throws B
+8:3 -> ../host-errors.temper.md:13:7  if (i === 99) { <- if (i == 99) { bubble() }
+9:5 -> ../host-errors.temper.md:13:22  bubble(); <- bubble() }
+11:3 -> ../host-errors.temper.md:14:7  return i; <- i
+14:1 -> ../host-errors.temper.md:53:5  /** @returns {number[]} */ <- let built(): ListBuilder<Int
+15:1 -> ../host-errors.temper.md:53:5  function built() { <- let built(): ListBuilder<Int
+15:10 -> ../host-errors.temper.md:53:9 (built)  built() { <- built(): ListBuilder<Int> {
+15:15 -> ../host-errors.temper.md:53:5  () { <- let built(): ListBuilder<Int
+16:3 -> ../host-errors.temper.md:54:7  /** @type {number[]} */ <- let lb = new ListBuilder<Int
+17:3 -> ../host-errors.temper.md:54:7  const lb = []; <- let lb = new ListBuilder<Int
+18:3 -> ../host-errors.temper.md:55:7  lb.push(1); <- lb.add(1);
+19:3 -> ../host-errors.temper.md:56:7  return lb; <- lb
+22:1 -> ../host-errors.temper.md:58:5  /** <- let write(lb: ListBuilder<In
+27:1 -> ../host-errors.temper.md:58:5  function write(lb, i) { <- let write(lb: ListBuilder<In
+27:10 -> ../host-errors.temper.md:58:9 (write)  write(lb, i) { <- write(lb: ListBuilder<Int>,
+27:15 -> ../host-errors.temper.md:58:5  (lb, i) { <- let write(lb: ListBuilder<In
+28:3 -> ../host-errors.temper.md:59:7  listBuilderSet(lb, at(i), 3) <- lb.set(at(i), 3);
+29:3 -> ../host-errors.temper.md:60:7  return lb.length; <- lb.length
+32:1 -> ../host-errors.temper.md:16:5  console.log("reading"); <- console.log("reading");
+33:1 -> ../host-errors.temper.md:62:5  /** @type {number} */ <- let r = write(built(), 5) or
+34:1 -> ../host-errors.temper.md:62:5  let r; <- let r = write(built(), 5) or
+35:1 -> ../host-errors.temper.md:62:5  try { <- let r = write(built(), 5) or
+41:1 -> ../host-errors.temper.md:63:5  console.log(`set past the en <- console.log("set past the en

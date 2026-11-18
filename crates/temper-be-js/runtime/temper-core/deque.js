@@ -1,6 +1,6 @@
 
 // Implements extension method core.type Deque.add()
-import {bubble} from "./core.js";
+import {panic} from "./core.js";
 
 const DEQUE_NTAKEN = Symbol("Deque::nTaken");
 
@@ -48,7 +48,7 @@ export const dequeRemoveFirst = (deque) => {
   if (length === nTaken) {
     deque[DEQUE_NTAKEN] = 0;
     deque.length = 0;
-    bubble();
+    panic("removeFirst on an empty Deque");
   }
   let item = deque[nTaken];
   let nShiftThreshold = (length / 2) | 0;

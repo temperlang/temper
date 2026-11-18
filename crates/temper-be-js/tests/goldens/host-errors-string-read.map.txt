@@ -1,0 +1,19 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../host-errors.temper.md:12:5  /** <- let at(i: Int): Int throws B
+7:1 -> ../host-errors.temper.md:12:5  function at(i) { <- let at(i: Int): Int throws B
+7:10 -> ../host-errors.temper.md:12:9 (at)  at(i) { <- at(i: Int): Int throws Bubbl
+7:12 -> ../host-errors.temper.md:12:5  (i) { <- let at(i: Int): Int throws B
+8:3 -> ../host-errors.temper.md:13:7  if (i === 99) { <- if (i == 99) { bubble() }
+9:5 -> ../host-errors.temper.md:13:22  bubble(); <- bubble() }
+11:3 -> ../host-errors.temper.md:14:7  return i; <- i
+14:1 -> ../host-errors.temper.md:154:5  /** <- let codeAt(s: String, i: Int
+19:1 -> ../host-errors.temper.md:154:5  function codeAt(s, i) { <- let codeAt(s: String, i: Int
+19:10 -> ../host-errors.temper.md:154:9 (codeAt)  codeAt(s, i) { <- codeAt(s: String, i: Int): I
+19:16 -> ../host-errors.temper.md:154:5  (s, i) { <- let codeAt(s: String, i: Int
+20:3 -> ../host-errors.temper.md:155:7  at(i); <- at(i);
+21:3 -> ../host-errors.temper.md:156:7  return stringGet(s, s.length <- s[s.end]
+24:1 -> ../host-errors.temper.md:16:5  console.log("reading"); <- console.log("reading");
+25:1 -> ../host-errors.temper.md:158:5  /** @type {number} */ <- let r = codeAt("ab", 0) orel
+26:1 -> ../host-errors.temper.md:158:5  let r; <- let r = codeAt("ab", 0) orel
+27:1 -> ../host-errors.temper.md:158:5  try { <- let r = codeAt("ab", 0) orel
+33:1 -> ../host-errors.temper.md:159:5  console.log(`read the end ${ <- console.log("read the end ${

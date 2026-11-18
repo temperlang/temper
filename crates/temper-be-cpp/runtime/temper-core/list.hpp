@@ -91,7 +91,7 @@ namespace temper {
             Elem get(const std::shared_ptr<std::vector<Elem>>& list, int32_t index) {
                 int32_t sz = static_cast<int32_t>(list->size());
                 if (index < 0 || index >= sz) {
-                    bubble<Elem>("list index out of bounds");
+                    panic_out_of_bounds<Elem>(index, sz);
                 }
                 return (*list)[index];
             }
@@ -220,7 +220,8 @@ namespace temper {
             template<class Elem, class F>
             Elem reduce(const std::shared_ptr<std::vector<Elem>>& list, F fn) {
                 if (list->empty()) {
-                    bubble<Elem>("reduce on empty list");
+                    // Core's reduce starts from `this[0]`.
+                    panic_out_of_bounds<Elem>(0, 0);
                 }
                 Elem acc = (*list)[0];
                 int32_t sz = static_cast<int32_t>(list->size());

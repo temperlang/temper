@@ -97,6 +97,9 @@ temper.listbuilder_splice(copyThat, temper.listbuilder_length(copyThat), nil, { 
 print(temper.listed_join(copyThat, " ", function(x) return x end))
 temper.listbuilder_splice(copyThat, nil, nil, { "gone" })
 print(temper.listed_join(copyThat, " ", function(x) return x end))
+local pastEnd = temper.listbuilder_splice(copyThat, temper.int32_add(temper.listbuilder_length(copyThat), 5), 1)
+temper.listbuilder_splice(copyThat, -3, 0, { "first" })
+print(temper.list_length(pastEnd) .. " " .. temper.listed_join(copyThat, " ", function(x) return x end))
 temper.listbuilder_clear(messageBuilder)
 temper.listbuilder_add(messageBuilder, "Bye")
 print(temper.listed_join(messageBuilder, " ", function(x) return x end))
@@ -119,14 +122,14 @@ do
   local inverted = temper.listed_map(ls2, function(b) return not b end)
   ---@param b boolean
   ---@return string
-  local function fn22(b)
+  local function fn23(b)
     if b then
       return "not false"
     else
       return "not true"
     end
   end
-  local joinedAndInverted = temper.listed_join(inverted, ", ", fn22)
+  local joinedAndInverted = temper.listed_join(inverted, ", ", fn23)
   print("list = [" .. joined .. "]")
   print("list (each inverted) = [" .. joinedAndInverted .. "]")
   local onlyTrue = temper.listed_filter(ls2, function(b) return b end)

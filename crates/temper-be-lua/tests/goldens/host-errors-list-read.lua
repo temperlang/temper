@@ -1,13 +1,19 @@
 local temper = require("temper-core")
 
+---@param i integer
+---@return integer
+local function at(i)
+  if i == 99 then
+    return temper.bubble()
+  end
+  return i
+end
+
 ---@param ls integer[]
 ---@param i integer
 ---@return integer
 local function read(ls, i)
-  if i < 0 then
-    return temper.bubble()
-  end
-  return temper.list_get(ls, i)
+  return temper.list_get(ls, at(i))
 end
 
 print("reading")
@@ -19,6 +25,5 @@ end) then
   r = -1
 end
 print("read past the end " .. r)
-error("panic")
 
 return {}

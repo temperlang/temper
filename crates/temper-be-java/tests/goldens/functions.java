@@ -81,7 +81,7 @@ public final class FunctionsGlobal {
             int i = 0;
             int prev = i;
             while (Integer.compare(i, end) < 0) {
-                if (Integer.compare(prev, i) < 0 && s.codePointAt(prev) == s.codePointAt(i)) {
+                if (Integer.compare(prev, i) < 0 && Core.stringGet(s, prev) == Core.stringGet(s, i)) {
                     n = n + 1;
                 }
                 prev = i;
@@ -134,7 +134,7 @@ public final class FunctionsGlobal {
         int j = s.length();
         while (Integer.compare(i, j) < 0) {
             j = Core.stringPrev(s, j);
-            if (s.codePointAt(i) != s.codePointAt(j)) {
+            if (Core.stringGet(s, i) != Core.stringGet(s, j)) {
                 return false;
             }
             i = Core.stringNext(s, i);

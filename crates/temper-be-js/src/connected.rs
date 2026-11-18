@@ -230,7 +230,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Listed.map()",
         Connection::ListHelper("listedMap"),
     ),
-    ("core.type Listed.reduce()", Connection::Translate(reduce)),
+    (
+        "core.type Listed.reduce()",
+        Connection::ListHelper("listedReduce"),
+    ),
     (
         "core.type Listed.reduceFrom()",
         Connection::ListHelper("listedReduceFrom"),
@@ -707,11 +710,6 @@ fn sort(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `ls.reduce(accumulate)`, as Kotlin's.
-fn reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [ls, accumulate] = two(t, args, "reduce")?;
-    Ok(ls.method("reduce", vec![accumulate]))
-}
-
 /// `x.length`.
 fn length(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "length")?.member("length"))

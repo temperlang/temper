@@ -63,7 +63,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.type Deque.get isEmpty()", Connection::Translate(none)),
     (
         "core.type Deque.removeFirst()",
-        Connection::Method("Dequeue"),
+        Connection::Static("Listed", "RemoveFirst"),
     ),
     ("core.type Float64.abs()", Connection::Static("Math", "Abs")),
     (
@@ -196,7 +196,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(int_to_string),
     ),
     ("core.type List.get length()", Connection::Translate(count)),
-    ("core.type List.get()", Connection::Translate(index)),
+    ("core.type List.get()", Connection::Static("Listed", "Get")),
     ("core.type List.toList()", Connection::Translate(same)),
     (
         "core.type List.toListBuilder()",
@@ -229,7 +229,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type ListBuilder.set()",
-        Connection::Translate(set_index),
+        Connection::Static("Listed", "Set"),
     ),
     (
         "core.type ListBuilder.sort()",
@@ -259,7 +259,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Listed.get length()",
         Connection::Translate(count),
     ),
-    ("core.type Listed.get()", Connection::Translate(index)),
+    (
+        "core.type Listed.get()",
+        Connection::Static("Listed", "Get"),
+    ),
     (
         "core.type Listed.getOr()",
         Connection::Static("Listed", "GetOr"),
@@ -271,7 +274,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.type Listed.map()", Connection::Translate(list_map)),
     (
         "core.type Listed.reduce()",
-        Connection::Translate(listed_reduce),
+        Connection::Static("Listed", "Reduce"),
     ),
     (
         "core.type Listed.reduceFrom()",
@@ -1024,19 +1027,6 @@ fn none(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(Expr::bin(Bin::Eq, n, Expr::Int(0)))
 }
 
-/// `x[i]`: a list's item, or a map's value, which throws, as a bubble,
-/// for a key it lacks.
-fn index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [x, i] = args else {
-        return Err(NotYet {
-            what: "`get` without one index".into(),
-        });
-    };
-    let x = t.expr(*x)?;
-    let i = t.expr(*i)?;
-    Ok(Expr::Index(Box::new(x), Box::new(i)))
-}
-
 /// `x[i] = v`.
 fn set_index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [x, i, v] = args else {
@@ -1053,7 +1043,7 @@ fn set_index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     ))
 }
 
-/// `b.Add(x)`, or with a place, `b.Insert(at, x)`.
+/// `b.Add(x)`, or with a place, `Listed.Add(b, x, at)`.
 fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let (b, x, at) = match args {
         [b, x] => (*b, *x, None),
@@ -1071,7 +1061,7 @@ fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
         None => b.method("Add", vec![x]),
         Some(at) => {
             let at = t.expr(at)?;
-            b.method("Insert", vec![at, x])
+            t.class("Listed").method("Add", vec![b, x, at])
         }
     })
 }
@@ -1129,8 +1119,7 @@ fn linq(t: &mut Translator<'_>, args: &[NodeId], method: &str) -> Result<Expr, N
     Ok(t.class("Listed").method("ToReadOnlyList", vec![found]))
 }
 
-/// `Enumerable.Aggregate(ls, f)`, or with a first value,
-/// `Enumerable.Aggregate(ls, initial, f)`, as Kotlin's.
+/// `Enumerable.Aggregate(ls, initial, f)`, `reduceFrom`, as Kotlin's.
 fn listed_reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let exprs = t.connected_args(args)?;
     Ok(t.class("Enumerable").method("Aggregate", exprs))

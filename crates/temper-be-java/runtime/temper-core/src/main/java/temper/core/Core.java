@@ -330,6 +330,14 @@ public final class Core {
     /** Convenience for throwing assertion errors as an expression.  */
     public static <T> T throwAssertionError(String message) { throw new AssertionError(message); }
 
+    /**
+     * A Temper panic for an index out of a list's bounds, as core's docs
+     * say: an {@link AssertionError}, which no {@code orelse} catches.
+     */
+    static AssertionError outOfBounds(int index, int length) {
+        return new AssertionError("index " + index + " out of bounds for length " + length);
+    }
+
     private static final Pattern floatExponent = Pattern.compile("E([+-]?)");
 
     /**
@@ -575,6 +583,18 @@ public final class Core {
         return count >= minCount;
     }
 
+    /**
+     * Implements {@code core.type String.get()}: the code point at
+     * {@code i}, panicking (an {@link AssertionError}) outside the string.
+     */
+    public static int stringGet(String s, int i) {
+        try {
+            return s.codePointAt(i);
+        } catch (IndexOutOfBoundsException e) {
+            throw new AssertionError("string index " + i + " out of bounds");
+        }
+    }
+
     public static boolean stringHasIndex(String s, int i) {
         return i < s.length();
     }
@@ -788,7 +808,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAdd(List<E> target, E elem, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw outOfBounds(at, target.size());
+        }
         target.add(at, elem);
     }
 
@@ -808,7 +830,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAddAll(List<E> target, Collection<? extends E> source, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw outOfBounds(at, target.size());
+        }
         target.addAll(at, source);
     }
 
@@ -818,7 +842,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> E listRemoveLast(List<E> target) {
-        // TODO Inline?
+        if (target.isEmpty()) {
+            throw new AssertionError("removeLast on an empty ListBuilder");
+        }
         return target.remove(target.size() - 1);
     }
 
@@ -987,12 +1013,30 @@ public final class Core {
     /**
      * @param source accessed randomly for the element
      * @param index the index to the element
-     * @return the element, possibly throwing a RuntimeException if OOB
+     * @return the element, panicking (an {@link AssertionError}) out of bounds
      * @param <E> the element type
      */
     public static <E> E listGet(List<E> source, int index) {
-        // TODO Inline?
-        return source.get(index);
+        try {
+            return source.get(index);
+        } catch (IndexOutOfBoundsException e) {
+            throw outOfBounds(index, source.size());
+        }
+    }
+
+    /**
+     * Implements {@code core.type ListBuilder.set()}.
+     * @param target a ListBuilder instance
+     * @param index the index to the element
+     * @param value its new value
+     * @param <E> the element type
+     */
+    public static <E> void listSet(List<E> target, int index, E value) {
+        try {
+            target.set(index, value);
+        } catch (IndexOutOfBoundsException e) {
+            throw outOfBounds(index, target.size());
+        }
     }
 
     /**
@@ -1276,7 +1320,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static boolean listedReduceBool(List<Boolean> source, BooleanBiPredicate reducer) {
-        return listedReduceBoolToBool(source, source.get(0), 1, (reduction, item) -> reducer.test(reduction, item));
+        return listedReduceBoolToBool(source, listGet(source, 0), 1, (reduction, item) -> reducer.test(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1294,7 +1338,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static double listedReduceDouble(List<Double> source, DoubleBinaryOperator reducer) {
-        return listedReduceDoubleToDouble(source, source.get(0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
+        return listedReduceDoubleToDouble(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1312,7 +1356,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static int listedReduceInt(List<Integer> source, IntBinaryOperator reducer) {
-        return listedReduceIntToInt(source, source.get(0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
+        return listedReduceIntToInt(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1330,7 +1374,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static <R> R listedReduceObj(List<R> source, BinaryOperator<R> reducer) {
-        return listedReduceObjToObj(source, source.get(0), 1, (reduction, item) -> reducer.apply(reduction, item));
+        return listedReduceObjToObj(source, listGet(source, 0), 1, (reduction, item) -> reducer.apply(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1573,7 +1617,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> E dequeRemoveFirst(Deque<E> deque) {
-        // TODO Inline?
+        if (deque.isEmpty()) {
+            throw new AssertionError("removeFirst on an empty Deque");
+        }
         return deque.removeFirst();
     }
 

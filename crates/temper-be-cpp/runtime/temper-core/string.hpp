@@ -108,7 +108,7 @@ namespace temper {
             inline int32_t get(const Str& s, int32_t index) {
                 int32_t len = static_cast<int32_t>(s.size());
                 if (index < 0 || index >= len) {
-                    bubble<int32_t>("string index out of bounds");
+                    panic<int32_t>("string index " + std::to_string(index) + " out of bounds");
                 }
                 while (index > 0 && (static_cast<unsigned char>(s[index]) & 0xC0) == 0x80) {
                     --index;

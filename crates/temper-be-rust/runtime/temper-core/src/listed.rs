@@ -1,9 +1,23 @@
-use super::i32_to_usize;
 use std::{
     cell::RefCell,
     ops::Deref,
     sync::{Arc, RwLock},
 };
+
+/// Panics for an index out of a list's bounds, as core's docs say.
+#[cold]
+pub(crate) fn out_of_bounds(index: i32, len: usize) -> ! {
+    panic!("index {index} out of bounds for length {len}")
+}
+
+/// `index` as a place to insert into a list of `len` items, from 0
+/// through `len`, or else a panic, as core's docs say.
+fn place(index: i32, len: usize) -> usize {
+    match usize::try_from(index) {
+        Ok(i) if i <= len => i,
+        _ => out_of_bounds(index, len),
+    }
+}
 
 pub trait ListedTrait<T>: Sync + Send
 where
@@ -335,9 +349,10 @@ where
     }
 
     fn get(&self, index: i32) -> T {
-        <[T]>::get(self, i32_to_usize(index).unwrap())
-            .unwrap()
-            .clone()
+        match usize::try_from(index).ok().and_then(|i| <[T]>::get(self, i)) {
+            Some(item) => item.clone(),
+            None => out_of_bounds(index, <[T]>::len(self)),
+        }
     }
 
     fn is_empty(&self) -> bool {
@@ -372,7 +387,7 @@ where
 pub use list_builder::*;
 
 pub mod list_builder {
-    use super::{List, ListBuilder, Listed, ToListed};
+    use super::{List, ListBuilder, Listed, ToListed, out_of_bounds, place};
     use std::{
         cell::RefCell,
         sync::{Arc, RwLock},
@@ -382,7 +397,7 @@ pub mod list_builder {
         match index {
             Some(index) => {
                 let mut builder = builder.write().unwrap();
-                let index = index.try_into().unwrap();
+                let index = place(index, builder.len());
                 builder.insert(index, value);
             }
             None => {
@@ -398,7 +413,7 @@ pub mod list_builder {
         let values = values.to_listed();
         let builder = RefCell::new(builder.write().unwrap());
         let index = match index {
-            Some(index) => index.try_into().unwrap(),
+            Some(index) => place(index, builder.borrow().len()),
             None => builder.borrow().len(),
         };
         values.with_vec(&|values: &Vec<T>| {
@@ -417,7 +432,8 @@ pub mod list_builder {
     }
 
     pub fn remove_last<T>(builder: &ListBuilder<T>) -> T {
-        builder.write().unwrap().pop().unwrap()
+        (builder.write().unwrap().pop())
+            .unwrap_or_else(|| panic!("removeLast on an empty ListBuilder"))
     }
 
     pub fn reverse<T>(builder: &ListBuilder<T>) {
@@ -425,8 +441,12 @@ pub mod list_builder {
     }
 
     pub fn set<T>(builder: &ListBuilder<T>, index: i32, value: T) {
-        let index: usize = index.try_into().unwrap();
-        builder.write().unwrap()[index] = value;
+        let mut items = builder.write().unwrap();
+        let len = items.len();
+        match usize::try_from(index).ok().and_then(|i| items.get_mut(i)) {
+            Some(item) => *item = value,
+            None => out_of_bounds(index, len),
+        }
     }
 
     pub fn sort<T>(builder: &ListBuilder<T>, compare: &dyn Fn(T, T) -> i32)
@@ -453,12 +473,14 @@ pub mod list_builder {
             None => Listed::new(Arc::new(vec![])),
         };
         let builder = RefCell::new(builder.write().unwrap());
-        let begin = index.unwrap_or(0).max(0) as usize;
+        // Core's docs clamp the index to the items.
+        let len = builder.borrow().len();
+        let begin = (index.unwrap_or(0).max(0) as usize).min(len);
         let remove_count: usize = match remove_count {
             Some(remove_count) => remove_count.max(0).try_into().unwrap(),
             None => builder.borrow().len(),
         };
-        let end = begin + remove_count.min(builder.borrow().len() - begin);
+        let end = begin + remove_count.min(len - begin);
         let result: RefCell<Vec<T>> = RefCell::new(vec![]);
         values.with_vec(&|values: &Vec<T>| {
             result.replace(
@@ -506,9 +528,11 @@ where
     }
 
     fn get(&self, index: i32) -> T {
-        <[T]>::get(&self.read().unwrap(), i32_to_usize(index).unwrap())
-            .unwrap()
-            .clone()
+        let items = self.read().unwrap();
+        match usize::try_from(index).ok().and_then(|i| items.get(i)) {
+            Some(item) => item.clone(),
+            None => out_of_bounds(index, items.len()),
+        }
     }
 
     fn is_empty(&self) -> bool {

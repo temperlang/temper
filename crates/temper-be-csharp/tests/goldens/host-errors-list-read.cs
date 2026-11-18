@@ -1,24 +1,28 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
 
-namespace HostErrors;
+namespace HostErrorsListRead;
 
-public static class HostErrorsGlobal
+public static class HostErrorsListReadGlobal
 {
-    internal static int Read(IReadOnlyList<int> ls, int i)
+    internal static int At(int i)
     {
-        if (i < 0)
+        if (i == 99)
         {
             return Core.Bubble<int>();
         }
-        return ls[i];
+        return i;
     }
 
-    static HostErrorsGlobal()
+    internal static int Read(IReadOnlyList<int> ls, int i)
     {
-        ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("HostErrors");
+        return Listed.Get(ls, At(i));
+    }
+
+    static HostErrorsListReadGlobal()
+    {
+        ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("HostErrorsListRead");
         console.Log("reading");
         int r;
         try
@@ -30,7 +34,5 @@ public static class HostErrorsGlobal
             r = -1;
         }
         console.Log("read past the end " + r.ToString(CultureInfo.InvariantCulture));
-        Environment.FailFast("panic");
-        throw new InvalidOperationException();
     }
 }

@@ -306,10 +306,11 @@ export const bubble = (message) => {
 /**
  * Throws a plain `Error`, which no `orelse` catches.
  *
+ * @param {string} [message]
  * @returns {never}
  */
-export const panic = () => {
-  throw new Error("panic");
+export const panic = (message = "panic") => {
+  throw new Error(message);
 };
 
 /**

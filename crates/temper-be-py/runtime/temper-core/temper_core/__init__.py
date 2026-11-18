@@ -164,6 +164,18 @@ def bubble() -> Any:
     raise make_bubble_exception()
 
 
+def panic(message: str = "panic") -> NoReturn:
+    """
+    Raises a Temper panic: a `BaseException`, which no `orelse` and no
+    `except Exception` catches, as generated code raises for `panic()`.
+    """
+    raise BaseException(message)
+
+
+def _out_of_bounds(index: int, length: int) -> NoReturn:
+    panic(f"index {index} out of bounds for length {length}")
+
+
 def float_cmp(left: float, right: float) -> int:
     """Three-way compares floats, caring about nan and sign of zeroes."""
     if isnan(left):
@@ -714,9 +726,10 @@ def years_between(start: Date, end: Date) -> int:
 
 
 def string_get(s: str, i: int) -> int:
-    if i < 0:
-        raise IndexError()
-    return ord(s[i])
+    "The code point at `i`, panicking outside the string, as core's docs say."
+    if 0 <= i < len(s):
+        return ord(s[i])
+    panic(f"string index {i} out of bounds")
 
 
 def string_count_between(s: str, left: int, right: int) -> int:
@@ -856,10 +869,13 @@ def list_for_each(lst: Sequence[T], action: Callable[[T], None]) -> None:
 
 
 def list_get(lst: Sequence[T], index: int) -> T:
-    "Get an item from a list by index."
-    if index < 0:  # Prohibit python index semantics
-        raise IndexError()
-    return lst[index]
+    "Get an item from a list by index, panicking out of bounds."
+    if index >= 0:  # Prohibit python index semantics
+        try:
+            return lst[index]
+        except IndexError:
+            pass
+    _out_of_bounds(index, len(lst))
 
 
 def list_get_or(lst: Sequence[T], index: int, default: T) -> T:
@@ -882,7 +898,7 @@ def list_builder_add(
         lst.append(elem)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            _out_of_bounds(at, lst_len)
         lst.insert(at, elem)
 
 
@@ -895,7 +911,7 @@ def list_builder_add_all(
         lst.extend(elems)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            _out_of_bounds(at, lst_len)
         lst[at:at] = elems
 
 
@@ -945,10 +961,21 @@ _lbsT = TypeVar("_lbsT")
 
 
 def list_builder_set(lst: MutableSequence[_lbsT], idx: int, val: _lbsT) -> None:
-    "set a list element, bubbling if out of bounds, or void on success."
-    if idx < 0:
-        raise IndexError()
-    lst[idx] = val
+    "Sets a list element, panicking out of bounds."
+    if idx >= 0:
+        try:
+            lst[idx] = val
+            return
+        except IndexError:
+            pass
+    _out_of_bounds(idx, len(lst))
+
+
+def list_builder_remove_last(lst: MutableSequence[T]) -> T:
+    "Removes and returns the last element, panicking if there's none."
+    if lst:
+        return lst.pop()
+    panic("removeLast on an empty ListBuilder")
 
 
 _lbsoT = TypeVar("_lbsoT")
@@ -994,6 +1021,8 @@ _lrT = TypeVar("_lrT")
 def listed_reduce(
     lst: Sequence[_lrT], accumulate: Callable[[_lrT, _lrT], _lrT]
 ) -> _lrT:
+    if not lst:
+        _out_of_bounds(0, 0)  # Core's reduce starts from `this[0]`.
     return reduce(accumulate, lst)
 
 
@@ -1019,8 +1048,10 @@ def listed_to_list(lst: Sequence[T]) -> Sequence[T]:
 
 
 def deque_remove_first(deq: Deque[T]) -> T:
-    "Defer to deque.popleft, except bubbling when the deque is empty."
-    return deq.popleft()
+    "Defer to deque.popleft, except panicking when the deque is empty."
+    if deq:
+        return deq.popleft()
+    panic("removeFirst on an empty Deque")
 
 
 def dense_bit_vector_set(instance: DenseBitVector, idx: int, bit: bool) -> None:

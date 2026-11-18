@@ -459,7 +459,8 @@ pub mod deque {
     }
 
     pub fn remove_first<T>(deque: &Deque<T>) -> T {
-        deque.write().unwrap().pop_front().unwrap()
+        (deque.write().unwrap().pop_front())
+            .unwrap_or_else(|| panic!("removeFirst on an empty Deque"))
     }
 }
 

@@ -104,9 +104,9 @@ public final class OperationsGlobal {
         }
         List<String> messageBuilder = new ArrayList<>();
         messageBuilder.add("hello");
-        messageBuilder.set(0, "hi");
+        Core.listSet(messageBuilder, 0, "hi");
         Core.listAddAll(messageBuilder, List.of("there", "y'all"));
-        messageBuilder.add(0, "say");
+        Core.listAdd(messageBuilder, "say", 0);
         List<String> copyThat = new ArrayList<>(messageBuilder);
         Core.listAddAll(messageBuilder, List.of("more", "than"), 1);
         Core.listAddAll(copyThat, messageBuilder);
@@ -122,6 +122,9 @@ public final class OperationsGlobal {
         console.log(Core.listJoinObj(copyThat, " ", x -> x));
         Core.listSplice(copyThat, null, null, List.of("gone"));
         console.log(Core.listJoinObj(copyThat, " ", x -> x));
+        List<String> pastEnd = Core.listSplice(copyThat, copyThat.size() + 5, 1);
+        Core.listSplice(copyThat, -3, 0, List.of("first"));
+        console.log(pastEnd.size() + " " + Core.listJoinObj(copyThat, " ", x -> x));
         messageBuilder.clear();
         messageBuilder.add("Bye");
         console.log(Core.listJoinObj(messageBuilder, " ", x -> x));
@@ -138,14 +141,14 @@ public final class OperationsGlobal {
             List<Boolean> ls2 = List.of(true, false);
             String joined = Core.listJoinBool(ls2, ", ", booleanToString);
             List<Boolean> inverted = Core.listMapObjToBool(ls2, b -> !b);
-            Function<Boolean, String> fn22 = b -> {
+            Function<Boolean, String> fn23 = b -> {
                 if (b) {
                     return "not false";
                 } else {
                     return "not true";
                 }
             };
-            String joinedAndInverted = Core.listJoinBool(inverted, ", ", fn22);
+            String joinedAndInverted = Core.listJoinBool(inverted, ", ", fn23);
             console.log("list = [" + joined + "]");
             console.log("list (each inverted) = [" + joinedAndInverted + "]");
             List<Boolean> onlyTrue = Core.listFilterBool(ls2, b -> b);

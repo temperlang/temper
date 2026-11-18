@@ -853,10 +853,16 @@ fn runs() {
             // A run expected to fail (`semantics/broken`) ends with the
             // runner's line for the error.
             let failed = log.last().is_some_and(|l| l.starts_with("!!> "));
+            // What it should say for its failure, the runner's line says.
+            let mut unsaid = None;
             if case.fails && failed {
-                log.pop();
+                unsaid = log.pop().and_then(|l| kit::unsaid(case, l));
             }
-            if !run.status.success() || log != case.expected || case.fails != failed {
+            if !run.status.success()
+                || log != case.expected
+                || case.fails != failed
+                || unsaid.is_some()
+            {
                 failures.push(format!(
                     "{}: expected {:?}, got {log:?}\n{}",
                     case.key,
