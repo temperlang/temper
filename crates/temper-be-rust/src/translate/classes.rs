@@ -1406,7 +1406,12 @@ impl<'a> Translator<'a> {
 
     /// A builder, as Kotlin's, for an exported class whose public
     /// constructor takes two or more arguments: `RectBuilder { w, h }`,
-    /// whose `build()` calls `Rect::new`.
+    /// whose `build()` calls `Rect::new`. With optional parameters, the
+    /// builder holds the required ones, and its `options()` gives
+    /// `RectOptions`, with a method to set each optional one (`.h(2)`),
+    /// and `build()` on either. Kotlin passes the required ones first;
+    /// these keep the constructor's order. A generic class's take its
+    /// type parameters, as Kotlin's: `BoxBuilder<T>`, `BoxOptions<T>`.
     fn builder(&mut self, class: DeclId, ctor: DeclId) -> R<()> {
         let p = self.p;
         if !self.facts(class).contains(Facts::EXPORTED) || self.is_private(ctor) {
@@ -1427,10 +1432,10 @@ impl<'a> Translator<'a> {
         if params.len() < 2 {
             return Ok(());
         }
-        // A generic class's builder takes its type parameters, as
-        // Kotlin's: `ChangeBuilder<T> { … }`.
         let (gdecl, guse) = self.type_params(class)?;
         let name = self.name(class);
+        let (builder, options) = (format!("{name}Builder"), format!("{name}Options"));
+        let head = |ty: &str| format!("{gdecl} {ty}{guse}").trim_start().to_string();
         let any_optional = has_optional(p, params);
         let mut fields = Vec::new();
         let mut optional = Vec::new();
@@ -1460,65 +1465,39 @@ impl<'a> Translator<'a> {
             Some(_) => format!("temper_core::Result<{name}{guse}>"),
             None => format!("{name}{guse}"),
         };
-        if !optional.is_empty() {
-            if !gdecl.is_empty() {
-                return not_yet("a builder with options for a generic class");
-            }
-            return self.builder_with_options(&name, fields, optional, args, result);
-        }
-        self.builders.push(Item::Struct {
-            attrs: vec!["#[derive(Clone)]".into()],
-            vis: "pub",
-            name: format!("{name}Builder{gdecl}"),
-            fields,
-        });
-        self.builders.push(Item::Impl {
-            head: format!("{gdecl} {name}Builder{guse}")
-                .trim_start()
-                .to_string(),
-            items: vec![Member::Fn {
-                vis: "pub",
-                name: "build".into(),
-                params: vec!["self".into()],
-                result: Some(result),
-                body: Some(Block::of(Expr::path(format!("{name}::new")).call(args))),
-            }],
-        });
-        Ok(())
-    }
-
-    /// A builder for a constructor with optional parameters, as Kotlin's:
-    /// `RectBuilder { w }` for the required ones, whose `options()` gives
-    /// `RectOptions`, with a method to set each optional one (`.h(2)`),
-    /// and `build()` on either. Kotlin passes the required ones first;
-    /// these keep the constructor's order.
-    fn builder_with_options(
-        &mut self,
-        name: &str,
-        fields: Vec<(&'static str, String, String)>,
-        optional: Vec<(String, String, String)>,
-        args: Vec<Expr>,
-        result: String,
-    ) -> R<()> {
-        let (builder, options) = (format!("{name}Builder"), format!("{name}Options"));
         let required = !fields.is_empty();
         self.builders.push(Item::Struct {
             attrs: vec!["#[derive(Clone)]".into()],
             vis: "pub",
-            name: builder.clone(),
+            name: format!("{builder}{gdecl}"),
             fields,
         });
+        let build = |body: Expr| Member::Fn {
+            vis: "pub",
+            name: "build".into(),
+            params: vec!["self".into()],
+            result: Some(result.clone()),
+            body: Some(Block::of(body)),
+        };
+        let new = Expr::path(format!("{name}::new")).call(args);
+        if optional.is_empty() {
+            self.builders.push(Item::Impl {
+                head: head(&builder),
+                items: vec![build(new)],
+            });
+            return Ok(());
+        }
         // Kotlin keeps the builder in the options even without required
         // fields, which clippy then finds never read.
         let mut option_fields = Vec::new();
         if required {
-            option_fields.push(("", "selfish".to_string(), builder.clone()));
+            option_fields.push(("", "selfish".to_string(), format!("{builder}{guse}")));
         }
         option_fields.extend(optional.iter().map(|(n, t, _)| ("", n.clone(), t.clone())));
         self.builders.push(Item::Struct {
             attrs: vec!["#[derive(Clone)]".into()],
             vis: "pub",
-            name: options.clone(),
+            name: format!("{options}{gdecl}"),
             fields: option_fields,
         });
         let mut inits = Vec::new();
@@ -1534,7 +1513,7 @@ impl<'a> Translator<'a> {
         let mut items = vec![Member::Fn {
             vis: "pub",
             name: "new".into(),
-            params: vec![format!("{selfish}: {builder}")],
+            params: vec![format!("{selfish}: {builder}{guse}")],
             result: Some("Self".into()),
             body: Some(Block::of(Expr::Struct("Self".into(), inits))),
         }];
@@ -1551,35 +1530,23 @@ impl<'a> Translator<'a> {
                 body: Some(Block::new(vec![set], Some(Expr::path("self")))),
             });
         }
-        items.push(Member::Fn {
-            vis: "pub",
-            name: "build".into(),
-            params: vec!["self".into()],
-            result: Some(result.clone()),
-            body: Some(Block::of(Expr::path(format!("{name}::new")).call(args))),
-        });
+        items.push(build(new));
         self.builders.push(Item::Impl {
-            head: options.clone(),
+            head: head(&options),
             items,
         });
-        let build = Expr::path("self")
+        let via_options = Expr::path("self")
             .method("options", Vec::new())
             .method("build", Vec::new());
         self.builders.push(Item::Impl {
-            head: builder,
+            head: head(&builder),
             items: vec![
-                Member::Fn {
-                    vis: "pub",
-                    name: "build".into(),
-                    params: vec!["self".into()],
-                    result: Some(result),
-                    body: Some(Block::of(build)),
-                },
+                build(via_options),
                 Member::Fn {
                     vis: "pub",
                     name: "options".into(),
                     params: vec!["self".into()],
-                    result: Some(options.clone()),
+                    result: Some(format!("{options}{guse}")),
                     body: Some(Block::of(
                         Expr::path(format!("{options}::new")).call(vec![Expr::path("self")]),
                     )),

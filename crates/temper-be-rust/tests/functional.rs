@@ -462,7 +462,7 @@ values = { path = \"../values\" }
 ";
 
 /// The crate of `tests/host/interop.rs`, host code that uses
-/// `async-turns`.
+/// `async-turns` and `class-edges`.
 const HOST_INTEROP: &str = "[package]
 name = \"host-interop\"
 version = \"0.0.0\"
@@ -470,6 +470,7 @@ edition = \"2021\"
 
 [dependencies]
 async-turns = { path = \"../async-turns\" }
+class-edges = { path = \"../class-edges\" }
 temper-core = { path = \"../temper-core\" }
 ";
 
@@ -676,7 +677,7 @@ fn runs_and_lints() {
         // standard way: it `.await`s a generated promise on a std-only
         // executor, blocks on one inside a turn, which fails clearly, and
         // loops over a generated generator with `for`, which a failed step
-        // leaves done.
+        // leaves done; then it builds a generic class with its builder.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -688,6 +689,8 @@ fn runs_and_lints() {
                         "then done true",
                         "fibonacci 0,1,1,2,3,5,8,13",
                         "collatz 7,22,11,34,17,52,26,13,40,20,10,5,16,8,4,2,1",
+                        "builder Ann",
+                        "options Ann + Cy",
                     ]
                     .map(String::from),
                 )

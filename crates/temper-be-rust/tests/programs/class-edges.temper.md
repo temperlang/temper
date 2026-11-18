@@ -5,7 +5,10 @@ below another, and upcasts between them; a default method that returns
 `this` (`clone_boxed`); an exported class's `toString`, `@operator("==")`,
 and `var` property, which Rust's `Display`, `PartialEq`, and getters and
 setters show; and a constructor that reads fields it has set, then
-changes one and passes `this` on after it makes the instance.
+changes one and passes `this` on after it makes the instance. Then a
+generic class with a bound and optional constructor parameters, one of
+its type parameter's type, made with and without them, whose builder
+takes its type parameters.
 
     export interface Named {
       public get name(): String;
@@ -50,6 +53,21 @@ changes one and passes `this` on after it makes the instance.
     let q = n as Person;
     console.log(q.title);
 
+    export class Duo<T extends Named>(
+      public first: T,
+      public second: T? = null,
+      public joiner: String = " & ",
+    ) {
+      public names(): String {
+        let s = second;
+        if (s == null) { first.name } else { "${first.name}${joiner}${s.name}" }
+      }
+    }
+
+    console.log(new Duo<Person>(p).names());
+    console.log(new Duo(p, new Person("Cy", "Mr")).names());
+    console.log(new Duo<Person>(p, q, " + ").names());
+
 ```log
 Dr Ann
 Bob, I am Ann
@@ -60,4 +78,7 @@ true true true
 box 3
 3 2
 Dr
+Bea
+Bea & Cy
+Bea + Bea
 ```
