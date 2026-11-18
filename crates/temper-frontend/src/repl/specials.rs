@@ -352,6 +352,8 @@ impl Specials {
         self.input(n)?;
         let mut library = Library::new();
         library.libraries = self.libraries.clone();
+        // Any later input may use what one declares.
+        library.keep_all = true;
         library.add_file(
             "interactive.temper",
             &self.module(s, n)?,

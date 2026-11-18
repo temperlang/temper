@@ -612,6 +612,9 @@ pub struct Library {
     pub kept: std::collections::HashSet<NodeId>,
     /// Declarations marked `@keepTest`, which tests' host code may use.
     pub kept_for_tests: std::collections::HashSet<NodeId>,
+    /// Whether every top-level declaration is kept, as if marked
+    /// `@keep`: the REPL's, since any later input may use one.
+    pub keep_all: bool,
     /// Regex literals without interpolations, as the calls that compile
     /// them, which the interpreter compiles once and keeps
     /// ([`crate::interp`]): a compiled `Regex` can't change, so each run

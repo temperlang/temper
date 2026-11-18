@@ -11,9 +11,10 @@
 //!   `init C.s = …` for a class's static field, a local's `let`). A
 //!   class or interface is one unit with all its members, as Kotlin
 //!   traces it.
-//! - **The library's roots** are exported declarations, `keep`s, and
-//!   the init statements that may do something: those that set no unit
-//!   (calls, assignments, `if`s, …), and those that set one with a value
+//! - **The library's roots** are exported declarations, `keep`s (in a
+//!   REPL input, every top-level declaration, as later inputs may use
+//!   any), and the init statements that may do something: those that set
+//!   no unit (calls, assignments, `if`s, …), and those that set one with a value
 //!   that may do something, as Kotlin's are any but a value, a name, or
 //!   a function: anything but literals, names, function values, and list
 //!   literals, conversions, operators that can't bubble, and core's pure

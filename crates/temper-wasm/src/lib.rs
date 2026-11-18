@@ -243,6 +243,9 @@ pub fn analyze_into(source: &str, kind: SourceKind, out: &mut String) {
         _ => "main.temper",
     };
     let mut library = Library::new();
+    // The backends' tabs show all that's written, every top-level
+    // declaration kept, not only what an export would reach.
+    library.keep_all = true;
     library.add_file(file, source, kind);
     load_imports(&Sources::memory(&[]), &mut library);
     let analysis = Analysis::new(settle(library));
@@ -920,9 +923,7 @@ mod tests {
 
     /// The playground's case: an operator missing in `cents % 100` is one
     /// error, at `100`; `part` is still declared, so its later uses are
-    /// fine; the run fails where the error is; and the code is written,
-    /// failing there, without `cents`, which nothing else reads
-    /// (`temper_tmpl::reach`).
+    /// fine; the run fails where the error is; and the code is written.
     #[test]
     fn compiles_with_a_missing_operator() {
         let source = "let cents = 1234;\n\
@@ -939,7 +940,7 @@ mod tests {
         assert!(json.starts_with(expected), "{json}");
         if py != 0 {
             assert!(
-                json.contains("__all__ = ()\\n\\nraise RuntimeError()\\n"),
+                json.contains("_cents: int = 1234\\nraise RuntimeError()\\n"),
                 "{json}"
             );
         }

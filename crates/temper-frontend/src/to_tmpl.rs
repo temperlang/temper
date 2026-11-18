@@ -1572,10 +1572,12 @@ impl Translator<'_> {
         Ok(())
     }
 
-    /// `KEEP` for a top-level declaration marked `@keep`, and `KEEP_TEST`
-    /// for one marked `@keepTest`.
+    /// `KEEP` for a top-level declaration marked `@keep`, or any where the
+    /// library keeps all
+    /// ([`Library::keep_all`](crate::library::Library::keep_all)), and `KEEP_TEST` for one
+    /// marked `@keepTest`.
     fn keep_facts(&mut self, decl: DeclId, node: FNode) {
-        if self.s.library.kept.contains(&node) {
+        if self.s.library.keep_all || self.s.library.kept.contains(&node) {
             self.b.add_facts(decl, Facts::KEEP);
         }
         if self.s.library.kept_for_tests.contains(&node) {
