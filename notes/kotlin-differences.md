@@ -110,8 +110,13 @@ Language and frontend:
   (Int32, _?: Int32): Int32", where the name's is `fn (Int32, Int32):
   Int32`). Done ([milestone-4.md](history/milestone-4.md), first slice, and
   "Function types compared part by part").
+  Kotlin checks a name it folds to null as `null` itself: `let s:
+  String? = null; let m: String = s` is "Expected subtype of String, but
+  got String?", where tempest says "Cannot assign to String from
+  String?", as for a parameter `s`.
   Test: settle/types.cases, "null where a type isn't nullable" and
-  "function types compared part by part".
+  "function types compared part by part"; settle/flow.cases, "nullable
+  locals stay nullable until narrowed" (`d3`, `d5`).
 - **A function literal's result reported at the result,** "Expected
   subtype of Int32, but got String" for `{ x => let y = x; "a" }` where
   a `fn (Int32): Int32` is wanted at the `"a"`, where Kotlin's position
@@ -368,15 +373,34 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   when run"; settle/classes.cases, "private members aren't usable
   outside their class"; settle/types.cases, "Void expressions as
   values".
-- **Type checks depend on constant folding:** `take(maybe(1))` is
-  accepted, `take(maybe(y))` isn't. Tempest matches, reporting no more
-  than Kotlin (`may_fold`; [milestone-4.md](history/milestone-4.md), flow facts).
+- **Nullable until narrowed:** typing uses types, never values, so
+  evaluation never changes typing. Kotlin folds names and calls of
+  constants while compiling and checks their values, so it accepts
+  `take(c)` for `let c: String? = "q"`, `n + 1` for `let n: Int? = 2`,
+  `s.isEmpty` for `let s: String? = "q"`, and `take(maybe(1))` where
+  `maybe(1)` gives `"a"` (rejecting it where it gives null). Tempest
+  reports each as it does a parameter of that type, until a null check,
+  `??`, or early exit narrows it ([typing.md](typing.md), "Nullable
+  until narrowed"). Before 2026-11-19 it accepted what Kotlin might
+  fold, so values folded to null passed, then failed in translation or
+  at run time. A parameter with a default takes any nullable value whose
+  non-null type fits, since null selects the default on every backend:
+  Kotlin takes `g(noInline())` (funtest `functions/defaulting`), which it
+  might fold, but rejects `fallback(a)` for a parameter `a: String?`,
+  which tempest accepts.
+  Test: settle/flow.cases, "a nullable constant stays nullable until
+  narrowed", "nullable locals stay nullable until narrowed" (`i3`, `i4`,
+  `k6` to `k10`), and "nullable values where a non-null one is wanted"
+  (`b7`); settle/types.cases, "a member of a nullable value is an error
+  that fails where it runs" (`r11`).
 - **A nullable function folded to null,** `let g: fn (Int): Boolean =
   h` for `let h: (fn (Int): Boolean)? = null`, is reported with internal
   names: "Expected subtype of Fn__1006<Int32, Boolean>, but got
-  Fn__1006<Int32, Boolean>?". Tempest doesn't report it yet, as for any
-  nullable name Kotlin might fold ([milestone-4.md](history/milestone-4.md),
-  "Function types compared part by part").
+  Fn__1006<Int32, Boolean>?". Tempest reports it with the types as
+  written, "Cannot assign to fn (Int32): Boolean from (fn (Int32):
+  Boolean)?", as for a parameter of that type.
+  Test: settle/flow.cases, "nullable locals stay nullable until
+  narrowed" (`n1`).
 - **Builtins' errors:** `1 < 1.0` names `<=>`'s signature, `(Int32,
   Int32) -> Int32`; `console.log()` says "Expected 2", counting `this`;
   "Cannot bubble …" for `x as T` has an empty position; and a `fn` with
@@ -588,10 +612,9 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   `c: Counter?` "No member n in AnyValue" (or "No type for subject of
   .n"). Tempest names the value's type, "No member n in Counter?", at
   the same span (the member, not the call), once per chain, and the
-  access fails where it runs. Like Kotlin, it doesn't report a value
-  Kotlin might work out while compiling, as `s.isEmpty` for `let s:
-  String? = "q"`, but tempest's guess is looser (`let c: Counter? = new
-  Counter(1); c.n` is accepted, where Kotlin rejects it). Tempest's null
+  access fails where it runs. Kotlin doesn't report a value it works
+  out while compiling, as `s.isEmpty` for `let s: String? = "q"`;
+  tempest does ("Nullable until narrowed"). Tempest's null
   checks narrow more ("Flow facts"), so `if (c == null) { return 0 };
   c.n` is accepted. `a?.m` holds a `var` `a` in a temporary, as Kotlin
   does, so `g?.next()` for `var g: G?` is accepted.

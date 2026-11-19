@@ -158,7 +158,6 @@ error 181..182: Cannot assign to String from String?
 error 215..223: Cannot assign to String from String?
 error 273..278: Cannot assign to String from String?
 error 325..326: Expected subtype of String, but got String?
-error 366..367: Expected subtype of String, but got String?
 error 433..434: Expected subtype of String, but got String?
 error 464..465: Cannot assign to String from Int32?
 
@@ -355,7 +354,10 @@ let d8(a: String?): Void { if (a == null) { panic() } else { take(a) } }
       (Block
         (If (Call == a:18 null) (Block (Call panic)) (Block (Call take:0 a:18)))))))
 
-=== values Kotlin Temper works out while compiling
+=== a nullable constant stays nullable until narrowed
+// Typing uses types, never values: `c` is a `String?` though it's "q".
+// Kotlin Temper accepts `e1`, `e2` and `e3`, which it works out while
+// compiling.
 let take(s: String): Void {}
 let any(s: AnyValue): Void {}
 let maybe(x: Int): String? { if (x > 0) { "a" } else { null } }
@@ -396,8 +398,293 @@ let e6(): Void { var c: String? = "q"; c = "r"; take(c) }
         (Var ^c:16 (Call ? String) "q")
         (Assign c:16 "r")
         (Call take:0 c:16)))))
-error 283..291: Expected subtype of String, but got String?
-error 391..392: Expected subtype of String, but got String?
+error 324..325: Expected subtype of String, but got String?
+error 373..374: Expected subtype of String, but got String?
+error 400..408: Expected subtype of String, but got String?
+error 440..448: Expected subtype of String, but got String?
+error 548..549: Expected subtype of String, but got String?
+
+=== nullable locals stay nullable until narrowed
+// A nullable local used where a non-null value is wanted is an error,
+// as for a parameter of the same type, whatever its value (`k6` to
+// `k10`): typing uses types, never values. That holds at top level, in
+// loops and closures, after a `var` is assigned, for a field, and in an
+// `as` cast.
+//
+// It's fine once the local is narrowed (a null check, `??`, an early
+// exit). A parameter with a default takes any nullable value whose
+// non-null type fits, since null selects the default.
+let take(n: Int): Void {}
+let takeS(s: String): Void {}
+let run(f: fn (): Void): Void { f() }
+let find(s: String): Int? { if (s == "one") { 1 } else { null } }
+class Box(public n: Int?) {}
+let top: Int? = null;
+let topFound = find("two");
+var topVar: Int? = null;
+let d1(): Int { let n: Int? = null; n + 1 }
+let d2(): Void { let n: Int? = null; take(n) }
+let d3(): Void { let s: String? = null; let m: String = s; takeS(m) }
+let d4(): Boolean { let s: String? = null; s.isEmpty }
+let d5(): Int { let n: Int? = null; n }
+let i1(): Int { let n = find("two"); n + 1 }
+let i2(): Void { let n = find("two"); take(n) }
+let i3(): Void { let n = find("one"); take(n) }
+let i4(): Void { take(find("one")) }
+let v1(): Void { var n: Int? = null; take(n) }
+let v2(): Void { var n = find("two"); n = find("one"); take(n) }
+let v3(): Void { var n: Int? = null; n = 2; take(n) }
+let l1(): Void { for (var i = 0; i < 2; ++i) { let n = find("two"); take(n) } }
+let l2(): Void { let n = find("two"); for (var i = 0; i < 2; ++i) { take(n) } }
+let c1(): Int { let n = find("two"); let f(): Int { n + 1 }; f() }
+let c2(): Void { let n: Int? = null; run(fn (): Void { take(n) }) }
+let t1(): Void { take(top) }
+let t2(): Int { topFound + 1 }
+let t3(): Void { take(topVar) }
+let f1(): Void { let b = new Box(null); take(b.n) }
+let a1(): Int { let n = find("two"); let m = n as Int; m }
+let a2(): Int { let n: Int? = null; n as Int }
+let k1(): Void { let n = find("two"); if (n != null) { take(n) } }
+let k2(): Int { let n = find("two"); (n ?? 0) + 1 }
+let k3(): Void { let n = find("two"); if (n == null) { return; }; take(n) }
+let k4(): Void { let n = find("two"); if (n == null) { panic() }; take(n) }
+let k5(): Void { let n = find("two"); let f(): Void { if (n != null) { take(n) } }; f() }
+let k6(): Void { let n: Int? = 1; take(n) }
+let k7(): Int { let n: Int? = 1 + 1; take(n); n }
+let k8(): Void { let n: Int? = if (top == null) { 1 } else { 2 }; take(n) }
+let k10(): Int { let n: Int? = 1; n as Int }
+let k9(): Void { for (var i = 0; i < 2; ++i) { let n = find("two"); if (n == null) { continue; }; take(n) } }
+let n1(): Void { let h: (fn (Int): Boolean)? = null; let g: fn (Int): Boolean = h; }
+let dflt(n: Int = 0): Int { n }
+let o1(): Int { dflt(find("two")) }
+let o2(): Int { let n: Int? = null; dflt(n) }
+let o3(): Int { let n = find("one"); dflt(n) }
+--- settled
+(Block
+  (Let ^take:0 (Fn (Let ^n:45 Int) Void (Block)))
+  (Let ^takeS:1 (Fn (Let ^s:46 String) Void (Block)))
+  (Let ^run:2 (Fn (Let ^f:47 (Call FnType Void)) Void (Block (Call f:47))))
+  (Let
+    ^find:3
+    (Fn
+      (Let ^s:48 String)
+      (Call ? Int)
+      (Block (If (Call == s:48 "one") (Block 1) (Block null)))))
+  (Class ^Box:4 (Param ^n:50 (Call ? Int)))
+  (Let ^top:5 (Call ? Int) null)
+  (Let ^topFound:6 (Call find:3 "two"))
+  (Var ^topVar:7 (Call ? Int) null)
+  (Let ^d1:8 (Fn Int (Block (Let ^n:51 (Call ? Int) null) (Call + n:51 1))))
+  (Let ^d2:9 (Fn Void (Block (Let ^n:52 (Call ? Int) null) (Call take:0 n:52))))
+  (Let
+    ^d3:10
+    (Fn
+      Void
+      (Block
+        (Let ^s:53 (Call ? String) null)
+        (Let ^m:54 String s:53)
+        (Call takeS:1 m:54))))
+  (Let
+    ^d4:11
+    (Fn Boolean (Block (Let ^s:55 (Call ? String) null) (Call . s:55 \isEmpty))))
+  (Let ^d5:12 (Fn Int (Block (Let ^n:56 (Call ? Int) null) n:56)))
+  (Let ^i1:13 (Fn Int (Block (Let ^n:57 (Call find:3 "two")) (Call + n:57 1))))
+  (Let
+    ^i2:14
+    (Fn Void (Block (Let ^n:58 (Call find:3 "two")) (Call take:0 n:58))))
+  (Let
+    ^i3:15
+    (Fn Void (Block (Let ^n:59 (Call find:3 "one")) (Call take:0 n:59))))
+  (Let ^i4:16 (Fn Void (Block (Call take:0 (Call find:3 "one")))))
+  (Let
+    ^v1:17
+    (Fn Void (Block (Var ^n:60 (Call ? Int) null) (Call take:0 n:60))))
+  (Let
+    ^v2:18
+    (Fn
+      Void
+      (Block
+        (Var ^n:61 (Call find:3 "two"))
+        (Assign n:61 (Call find:3 "one"))
+        (Call take:0 n:61))))
+  (Let
+    ^v3:19
+    (Fn
+      Void
+      (Block (Var ^n:62 (Call ? Int) null) (Assign n:62 2) (Call take:0 n:62))))
+  (Let
+    ^l1:20
+    (Fn
+      Void
+      (Block
+        (Block
+          (Var ^i:63 0)
+          (Loop
+            (If
+              (Call < i:63 2)
+              (Block (Let ^n:64 (Call find:3 "two")) (Call take:0 n:64))
+              (Break @1375))
+            (Assign i:63 (Call + i:63 1)))))))
+  (Let
+    ^l2:21
+    (Fn
+      Void
+      (Block
+        (Let ^n:65 (Call find:3 "two"))
+        (Block
+          (Var ^i:66 0)
+          (Loop
+            (If (Call < i:66 2) (Block (Call take:0 n:65)) (Break @1476))
+            (Assign i:66 (Call + i:66 1)))))))
+  (Let
+    ^c1:22
+    (Fn
+      Int
+      (Block
+        (Let ^n:67 (Call find:3 "two"))
+        (Let ^f:68 (Fn Int (Block (Call + n:67 1))))
+        (Call f:68))))
+  (Let
+    ^c2:23
+    (Fn
+      Void
+      (Block
+        (Let ^n:69 (Call ? Int) null)
+        (Call run:2 (Fn Void (Block (Call take:0 n:69)))))))
+  (Let ^t1:24 (Fn Void (Block (Call take:0 top:5))))
+  (Let ^t2:25 (Fn Int (Block (Call + topFound:6 1))))
+  (Let ^t3:26 (Fn Void (Block (Call take:0 topVar:7))))
+  (Let
+    ^f1:27
+    (Fn
+      Void
+      (Block (Let ^b:70 (Call new Box:4 null)) (Call take:0 (Call . b:70 \n)))))
+  (Let
+    ^a1:28
+    (Fn
+      Int
+      (Block
+        (Let ^n:71 (Call find:3 "two"))
+        (Let ^m:72 (Call as n:71 Int))
+        m:72)))
+  (Let ^a2:29 (Fn Int (Block (Let ^n:73 (Call ? Int) null) (Call as n:73 Int))))
+  (Let
+    ^k1:30
+    (Fn
+      Void
+      (Block
+        (Let ^n:74 (Call find:3 "two"))
+        (If (Call != n:74 null) (Block (Call take:0 n:74)) (Block)))))
+  (Let
+    ^k2:31
+    (Fn
+      Int
+      (Block
+        (Let ^n:75 (Call find:3 "two"))
+        (Call + (Block (If (Call == n:75 #null) 0 n:75)) 1))))
+  (Let
+    ^k3:32
+    (Fn
+      Void
+      (Block
+        (Let ^n:76 (Call find:3 "two"))
+        (If (Call == n:76 null) (Block (Return @2022 #void) #void) (Block))
+        (Call take:0 n:76))))
+  (Let
+    ^k4:33
+    (Fn
+      Void
+      (Block
+        (Let ^n:77 (Call find:3 "two"))
+        (If (Call == n:77 null) (Block (Call panic)) (Block))
+        (Call take:0 n:77))))
+  (Let
+    ^k5:34
+    (Fn
+      Void
+      (Block
+        (Let ^n:78 (Call find:3 "two"))
+        (Let
+          ^f:79
+          (Fn
+            Void
+            (Block (If (Call != n:78 null) (Block (Call take:0 n:78)) (Block)))))
+        (Call f:79))))
+  (Let ^k6:35 (Fn Void (Block (Let ^n:80 (Call ? Int) 1) (Call take:0 n:80))))
+  (Let
+    ^k7:36
+    (Fn
+      Int
+      (Block (Let ^n:81 (Call ? Int) (Call + 1 1)) (Call take:0 n:81) n:81)))
+  (Let
+    ^k8:37
+    (Fn
+      Void
+      (Block
+        (Let ^n:82 (Call ? Int) (If (Call == top:5 null) (Block 1) (Block 2)))
+        (Call take:0 n:82))))
+  (Let ^k10:38 (Fn Int (Block (Let ^n:83 (Call ? Int) 1) (Call as n:83 Int))))
+  (Let
+    ^k9:39
+    (Fn
+      Void
+      (Block
+        (Block
+          (Var ^i:84 0)
+          (Loop
+            (If
+              (Call < i:84 2)
+              (Block
+                (Let ^n:85 (Call find:3 "two"))
+                (If (Call == n:85 null) (Block (Continue @2496) #void) (Block))
+                (Call take:0 n:85))
+              (Break @2496))
+            (Assign i:84 (Call + i:84 1)))))))
+  (Let
+    ^n1:40
+    (Fn
+      Void
+      (Block
+        (Let ^h:86 (Call ? (Call FnType Int Boolean)) null)
+        (Let ^g:87 (Call FnType Int Boolean) h:86)
+        #void)))
+  (Let ^dflt:41 (Fn (Let ^n:88 Int 0) Int (Block n:88)))
+  (Let ^o1:42 (Fn Int (Block (Call dflt:41 (Call find:3 "two")))))
+  (Let
+    ^o2:43
+    (Fn Int (Block (Let ^n:89 (Call ? Int) null) (Call dflt:41 n:89))))
+  (Let
+    ^o3:44
+    (Fn Int (Block (Let ^n:90 (Call find:3 "one")) (Call dflt:41 n:90)))))
+error 794..795: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 844..845: Expected subtype of Int32, but got Int32?
+error 905..906: Cannot assign to String from String?
+error 1010..1011: Cannot assign to Int32 from Int32?
+error 1051..1052: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 1102..1103: Expected subtype of Int32, but got Int32?
+error 1150..1151: Expected subtype of Int32, but got Int32?
+error 1177..1188: Expected subtype of Int32, but got Int32?
+error 1234..1235: Expected subtype of Int32, but got Int32?
+error 1299..1300: Expected subtype of Int32, but got Int32?
+error 1353..1354: Expected subtype of Int32, but got Int32?
+error 1431..1432: Expected subtype of Int32, but got Int32?
+error 1511..1512: Expected subtype of Int32, but got Int32?
+error 1570..1571: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 1645..1646: Expected subtype of Int32, but got Int32?
+error 1675..1678: Expected subtype of Int32, but got Int32?
+error 1698..1706: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 1735..1741: Expected subtype of Int32, but got Int32?
+error 1790..1793: Expected subtype of Int32, but got Int32?
+error 1842..1850: Cannot bubble from a function without Bubble in its return type
+error 1892..1900: Cannot bubble from a function without Bubble in its return type
+error 2303..2304: Expected subtype of Int32, but got Int32?
+error 2350..2351: Expected subtype of Int32, but got Int32?
+error 2354..2355: Cannot assign to Int32 from Int32?
+error 2429..2430: Expected subtype of Int32, but got Int32?
+hint 2468..2476: Unnecessary type check to Int32 from expression with type Int32 which is a subtype
+error 2468..2476: Cannot bubble from a function without Bubble in its return type
+error 2669..2670: Cannot assign to fn (Int32): Boolean from (fn (Int32): Boolean)?
+error 962..971: No member isEmpty in String?
 
 === null checks let a nullable value's members be used
 // Kotlin Temper accepts each of these but `a3`, the `return` after a

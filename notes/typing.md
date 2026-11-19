@@ -152,6 +152,20 @@ argument, gets the facts where it's written. So after `if (a == null) {
 return; };`, `let g(): String { a }` reports `a`, but `run(fn ():
 String { a })` doesn't.
 
+**Nullable until narrowed.** Typing uses types, never values:
+evaluation never changes typing. A nullable value isn't taken where a
+non-null one is wanted (stored, passed, an operator's operand, a
+member's object, or cast with `as`) until flow facts narrow it: a null
+check, `??`, an early exit, or a call that never returns. So `take(c)`
+for `let c: String? = "q"` is reported, as for a parameter `c: String?`.
+Kotlin Temper folds names and calls of constants to their values before
+checking them, so it accepts that, and `take(find("one"))` where `find`
+gives 1 ([kotlin-differences.md](kotlin-differences.md)). A nullable
+value may still be an `AnyValue`. A parameter with a default takes any
+nullable value whose non-null type fits, since null selects the
+default: every backend translates the parameter as nullable and puts
+the default in for null.
+
 **Narrower than Kotlin Temper**, which narrows only the branches of an
 `if` whose condition is a null check or `is` check of a name, negated at
 most once. Tempest accepts these, which Kotlin rejects, and the same
@@ -929,8 +943,7 @@ function does ("Expected subtype of Boolean, but got String");
 it:** a final builtin type, nullable or not, `null`, or a class or
 interface, nullable or not, which fits no variant (named as written,
 `[C, Int32]`). Not for a function, generic or `AnyValue` operand, nor
-`Never`; not for a nullable argument Kotlin might fold to a constant
-(`may_fold`); not for `==` or `!=` with a nullable or `Void` side, which
+`Never`; not for `==` or `!=` with a nullable or `Void` side, which
 Kotlin expands first; not for a compiler temporary, as `x++` reads; and
 not for `==`, `!=`, `<=>` or a comparison whose first operand is a
 non-null value of a class with a method marked `@operator`, nor of an
@@ -1070,8 +1083,8 @@ function without Bubble in its return type", at the call:
   type checks"): a downcast, as `i as D` for `D extends I` or `x as C`
   for `x: AnyValue`, or a nullable `x` (`x as Int` for `x: Int?`). Not
   one where `x` is a `T` already, nor one that's an error, nor a nullable
-  `x` for a nullable target (`x as Int?`, which null passes), nor where
-  Kotlin might fold `x`.
+  `x` for a nullable target (`x as Int?`, which null passes). What `x`
+  holds doesn't matter, so `n as Int` for `let n: Int? = 1` may bubble.
 - `a / b` and `a % b`, unless Kotlin might fold the call, or the divisor
   is an integer that's a constant (maybe negated) other than zero, or for
   `%`, positive, or the divisor is anything Kotlin might fold (it may

@@ -1423,7 +1423,7 @@ impl Settle {
             }
         }
         let s = self.known_type(result);
-        if t == VOID || matches!(s, NULL | VOID | NEVER) || !self.misfits(s, t, result) {
+        if t == VOID || matches!(s, NULL | VOID | NEVER) || !self.misfits(s, t) {
             return;
         }
         let message = Message::ExpectedSubType(self.show(t), self.show(s));
@@ -1447,7 +1447,7 @@ impl Settle {
             return;
         };
         let s = self.known_type(value);
-        if s == NEVER || !self.misfits(s, t, value) {
+        if s == NEVER || !self.misfits(s, t) {
             return;
         }
         let got = match s {
@@ -1576,8 +1576,15 @@ impl Settle {
             let Some(param) = params.get(i) else {
                 continue;
             };
-            // A default applies for null.
-            if !(param.optional && self.known_type(arg) == NULL) {
+            // Null selects a parameter's default, so a parameter with one
+            // takes null, or any nullable value whose non-null type fits.
+            let t = self.known_type(arg);
+            let defaults = match *self.typing.types.get(t) {
+                _ if t == NULL => true,
+                TypeData::Nullable(inner) => !self.is_mismatch(inner, param.ty),
+                _ => false,
+            };
+            if !(param.optional && defaults) {
                 self.check_value(param.ty, arg, Site::Arg);
             }
         }
@@ -1588,10 +1595,10 @@ impl Settle {
     /// read or assignment or a method's call, as Kotlin Temper rejects it,
     /// though in odder words ("No member n in AnyValue"): "No member n in
     /// Counter?". Beside [`Settle::check_call`]'s nullable function value.
-    /// `c?.n` is fine, and so is a value Kotlin might work out while
-    /// compiling ([`Settle::may_fold`]), as `s.isEmpty` for `let s:
-    /// String? = "q"`. Code is still generated; the access fails where it
-    /// runs, as for a member that isn't there.
+    /// `c?.n` is fine. A nullable value is nullable whatever it holds, so
+    /// `s.isEmpty` for `let s: String? = "q"` is reported too, where
+    /// Kotlin works `s` out while compiling. Code is still generated; the
+    /// access fails where it runs, as for a member that isn't there.
     fn check_nullable_member(&mut self, node: NodeId) {
         let Some((object, key)) = self.dot_parts(node) else {
             return;
@@ -1600,7 +1607,7 @@ impl Settle {
             return;
         };
         let t = self.known_type(object);
-        if !matches!(self.typing.types.get(t), TypeData::Nullable(_)) || self.may_fold(object, 0) {
+        if !matches!(self.typing.types.get(t), TypeData::Nullable(_)) {
             return;
         }
         let span = self.lib.tree.span(node);
@@ -1797,11 +1804,10 @@ impl Settle {
         if solves_wanted && self.check_generic_wanted(value, t) {
             return;
         }
-        // Kotlin Temper lets a nullable value be an `AnyValue`, and folds
-        // constants first, so `s` in `let s: String? = "a"` is a `String`
-        // there.
+        // Kotlin Temper lets a nullable value be an `AnyValue`. Otherwise
+        // a nullable value is nullable whatever it holds, until narrowed.
         if let TypeData::Nullable(inner) = *self.typing.types.get(s) {
-            if !self.is_mismatch(inner, t) && (t == ANY_VALUE || self.may_fold(value, 0)) {
+            if t == ANY_VALUE && !self.is_mismatch(inner, t) {
                 return;
             }
         }

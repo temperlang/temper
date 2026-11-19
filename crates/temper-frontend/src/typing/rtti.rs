@@ -138,16 +138,14 @@ impl Settle {
     }
 
     /// Whether `subject as target` may bubble: when it's allowed and
-    /// checks something, a downcast or that the subject isn't null, and
-    /// Kotlin Temper can't fold it. Not where either type isn't fully
-    /// known. Null passes a nullable target, as `x as T?`.
+    /// checks something, a downcast or that the subject isn't null,
+    /// judged by the subject's type, whatever its value. Not where either
+    /// type isn't fully known. Null passes a nullable target, as `x as
+    /// T?`.
     pub(super) fn cast_bubbles(&mut self, args: &[NodeId]) -> bool {
         let &[subject, target] = args else {
             return false;
         };
-        if self.may_fold(subject, 0) {
-            return false;
-        }
         let written = target;
         let target = self.strip_nullable(target);
         let s = self.known_type(subject);

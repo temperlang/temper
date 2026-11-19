@@ -167,12 +167,10 @@ impl Settle {
                 None => is_class,
             };
             let known = t == NULL || self.typing.types.is_final(base) || class_fits_none;
-            // Kotlin expands `==` with a nullable or `Void` side otherwise,
-            // and folds a nullable constant to its value's type first; a
-            // compiler temporary, as `x++` makes, gets other errors there.
+            // Kotlin expands `==` with a nullable or `Void` side otherwise;
+            // a compiler temporary, as `x++` makes, gets other errors there.
             if !known
                 || (is_eq && (t != base || t == NULL || base == VOID))
-                || (t != base && self.may_fold(arg, 0))
                 || self.is_synthetic(arg)
             {
                 return Ok(None);
@@ -273,12 +271,10 @@ impl Settle {
             ret,
         };
         let that = self.known_type(b);
-        // Kotlin expands `==` with a nullable side to a null check first,
-        // and folds a nullable constant to its value's type.
+        // Kotlin expands `==` with a nullable side to a null check first.
         let nullable = matches!(self.typing.types.get(that), TypeData::Nullable(_));
         let is_eq = matches!(f, Function::Eq | Function::Ne);
         let unfit = !((is_eq && (nullable || that == NULL))
-            || (nullable && self.may_fold(b, 0))
             || self.is_synthetic(a)
             || !self.is_mismatch(that, param));
         Some((sig, unfit))

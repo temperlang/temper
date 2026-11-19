@@ -173,41 +173,37 @@ let a3(x: AnyValue): Int { x * 2 }
 let a4(x: Int): Int { x + panic() }
 let a5(x: Int, y: Int?): Boolean { x == y }
 let a6(x: Int, y: String?): Boolean { x == y }
-let c: Int? = 1;
-let a7(): Int { c + 1 }
 let a8(x: String): String { var y = x; y++; y }
 let a9(x: Int): Boolean { x == null }
 --- settled
 (Block
-  (Let ^a2:0 (Fn (Let ^f:9 (Call FnType Int)) Int (Block (Call + 1 f:9))))
-  (Let ^a3:1 (Fn (Let ^x:10 AnyValue) Int (Block (Call * x:10 2))))
-  (Let ^a4:2 (Fn (Let ^x:11 Int) Int (Block (Call + x:11 (Call panic)))))
+  (Let ^a2:0 (Fn (Let ^f:7 (Call FnType Int)) Int (Block (Call + 1 f:7))))
+  (Let ^a3:1 (Fn (Let ^x:8 AnyValue) Int (Block (Call * x:8 2))))
+  (Let ^a4:2 (Fn (Let ^x:9 Int) Int (Block (Call + x:9 (Call panic)))))
   (Let
     ^a5:3
     (Fn
-      (Let ^x:12 Int)
-      (Let ^y:13 (Call ? Int))
+      (Let ^x:10 Int)
+      (Let ^y:11 (Call ? Int))
       Boolean
-      (Block (Call == x:12 y:13))))
+      (Block (Call == x:10 y:11))))
   (Let
     ^a6:4
     (Fn
-      (Let ^x:14 Int)
-      (Let ^y:15 (Call ? String))
+      (Let ^x:12 Int)
+      (Let ^y:13 (Call ? String))
       Boolean
-      (Block (Call == x:14 y:15))))
-  (Let ^c:5 (Call ? Int) 1)
-  (Let ^a7:6 (Fn Int (Block (Call + c:5 1))))
+      (Block (Call == x:12 y:13))))
   (Let
-    ^a8:7
+    ^a8:5
     (Fn
-      (Let ^x:16 String)
+      (Let ^x:14 String)
       String
       (Block
-        (Var ^y:17 x:16)
-        (Block (Let ^t#18 y:17) (Assign y:17 (Call + t#18 1)) t#18)
-        y:17)))
-  (Let ^a9:8 (Fn (Let ^x:19 Int) Boolean (Block (Call == x:19 null)))))
+        (Var ^y:15 x:14)
+        (Block (Let ^t#16 y:15) (Assign y:15 (Call + t#16 1)) t#16)
+        y:15)))
+  (Let ^a9:6 (Fn (Let ^x:17 Int) Boolean (Block (Call == x:17 null)))))
 
 === what may bubble where it can't
 let g(x: Int): Int throws Bubble { if (x == 0) { bubble() } else { x } }

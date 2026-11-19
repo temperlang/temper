@@ -2945,8 +2945,8 @@ Failed: No member lengthy in String
 // the value (flow.cases has the accepted forms): a property's read or
 // assignment, a method's call, a chained member, a builtin type's member,
 // a `var` (never narrowed), and `orelse`, which doesn't catch null. Only
-// the first of a chain is reported. A value Kotlin might work out while
-// compiling isn't reported, as `take(c)` for `let c: String? = "q"` isn't.
+// the first of a chain is reported. A nullable value is nullable whatever
+// it holds, as `s` in `r11` (Kotlin Temper accepts that, folding `s`).
 class Counter(public var n: Int) {
   public inc(): Void { n += 1; }
   public get next(): Counter? { null }
@@ -2962,7 +2962,6 @@ let r8(var x: Int?): String? { if (x != null) { x.toString() } else { null } }
 let r9(c: Counter?): Int { var d = c; if (d != null) { d.n } else { 0 } }
 let r10(c: Counter?): Int { c.n orelse 0 }
 let r11(): Boolean { let s: String? = "q"; s.isEmpty }
-console.log(r11().toString());
 console.log(r1(new Counter(1)).toString());
 console.log(r1(null).toString());
 --- settled
@@ -3024,23 +3023,22 @@ console.log(r1(null).toString());
   (Let
     ^r11:11
     (Fn Boolean (Block (Let ^s:27 (Call ? String) "q") (Call . s:27 \isEmpty))))
-  (Call (Call . console \log) (Call (Call . (Call r11:11) \toString)))
   (Call
     (Call . console \log)
     (Call (Call . (Call r1:1 (Call new Counter:0 1)) \toString)))
   (Call (Call . console \log) (Call (Call . (Call r1:1 null) \toString)))
   #void)
-error 579..582: No member n in Counter?
-error 613..618: No member inc in Counter?
-error 651..654: No member n in Counter?
-error 688..696: No member n in Counter?
-error 726..732: No member next in Counter?
-error 767..776: No member isEmpty in String?
-error 809..818: No member length in List<Int32>?
-error 869..879: No member toString in Int32?
-error 955..958: No member n in Counter?
-error 1002..1005: No member n in Counter?
-log false
+error 577..580: No member n in Counter?
+error 611..616: No member inc in Counter?
+error 649..652: No member n in Counter?
+error 686..694: No member n in Counter?
+error 724..730: No member next in Counter?
+error 765..774: No member isEmpty in String?
+error 807..816: No member length in List<Int32>?
+error 867..877: No member toString in Int32?
+error 953..956: No member n in Counter?
+error 1000..1003: No member n in Counter?
+error 1058..1067: No member isEmpty in String?
 Failed: No member n in Counter?
 
 === a comment mentioning @extension doesn't hide a missing member

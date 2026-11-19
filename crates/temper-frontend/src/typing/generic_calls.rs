@@ -528,7 +528,7 @@ impl Settle {
             })
             .collect();
         let unfit: Vec<usize> = (0..wanted.len())
-            .filter(|&i| self.misfits(arg_types[i], wanted[i], solved.args[i]))
+            .filter(|&i| self.misfits(arg_types[i], wanted[i]))
             .collect();
         let (Some(&first), Some(&last)) = (unfit.first(), unfit.last()) else {
             return false;
@@ -618,7 +618,7 @@ impl Settle {
 
     /// Whether a value of type `s` can't be passed where a `t` is wanted,
     /// as [`Settle::check_value`] judges it.
-    pub(super) fn misfits(&mut self, s: TypeId, t: TypeId, value: NodeId) -> bool {
+    pub(super) fn misfits(&mut self, s: TypeId, t: TypeId) -> bool {
         if s == NULL {
             return self.is_mismatch(NULL, t);
         }
@@ -626,9 +626,7 @@ impl Settle {
             return false;
         }
         match self.typing.types.get(s).clone() {
-            TypeData::Nullable(inner) if !self.is_mismatch(inner, t) => {
-                t != ANY_VALUE && !self.may_fold(value, 0)
-            }
+            TypeData::Nullable(inner) if !self.is_mismatch(inner, t) => t != ANY_VALUE,
             _ => true,
         }
     }

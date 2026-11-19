@@ -40,3 +40,15 @@ tries { test.fail("hard") };
 console.log("went on");
 --- settled
 soft, hard
+
+=== a local's null check that leaves through Test.fail narrows it
+let { Test } = import("std/testing");
+let find(s: String): Int? { if (s == "one") { 1 } else { null } }
+let viaLocal(test: Test): Int {
+  let n = find("one");
+  if (n == null) { test.fail("no n") }
+  n + 1
+}
+console.log("${viaLocal(new Test())}");
+--- settled
+log 2
