@@ -191,16 +191,12 @@ If outside bounds, returns a backend-dependent value. Use fuzz testing.
 `:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32) `throws` [*Bubble*](#class-bubble)
 
 Bubbles if the result isn't within bounds.
-TODO Should this panic instead since this is an easy check?
-TODO But many others cost more to check the panic on fail.
 
 #### `Int64.toInt32Unsafe`
 
 `:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32)
 
 If outside bounds, returns a backend-dependent value. Use fuzz testing.
-TODO Ensure wrapping here since we do that elsewhere?
-TODO For symmetry, define consistent semantics for all lossy conversions?
 
 #### `Int64.toString`
 

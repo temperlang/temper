@@ -112,8 +112,8 @@ fn cases_with_std_settle_as_expected() {
 /// core's generic list and map helpers (`map<O>`, `reduceFrom<O>`,
 /// `toListWith<T>` and their kin) are `@extension` functions. And its
 /// fields are set, but for the `content` fields that backends' own code
-/// sets, which only core may leave unset. Settling core as a library
-/// reports a few other things, which this doesn't check.
+/// sets, which only core may leave unset. Settled as a library, as an
+/// editor reads core's file, core reports nothing at all.
 #[test]
 fn core_keeps_the_rules_it_sets() {
     with_stack(|| {
@@ -122,13 +122,6 @@ fn core_keeps_the_rules_it_sets() {
         library.add_file("core/core.temper", core, SourceKind::Standalone);
         let settled = settle(library);
         let found: Vec<String> = (settled.library.diagnostics.iter())
-            .filter(|d| {
-                matches!(
-                    d.message,
-                    Message::TypeParameterInInterfaceMethod(_)
-                        | Message::PropertyNotInitializedInConstructor(_)
-                )
-            })
             .map(|d| {
                 let line = core[..d.span.start as usize].lines().count();
                 format!("line {line}: {}", d.message.text())

@@ -277,7 +277,8 @@ extends Generator<YIELD> {
   public get done(): Boolean { this._done }
 
   public close(): Void {
-    // TODO: trigger bubble at pause point in generatorFn
+    // TODO: Stop a paused generatorFn, as by bubbling at its pause point.
+    // For now, closing does nothing.
   }
 }
 
@@ -309,7 +310,8 @@ extends SafeGenerator<YIELD> {
   public get done(): Boolean { this._done }
 
   public close(): Void {
-    // TODO: trigger bubble at pause point in generatorFn
+    // TODO: Stop a paused generatorFn, as by bubbling at its pause point.
+    // For now, closing does nothing.
   }
 }
 
@@ -510,7 +512,6 @@ export class String extends MapKey<String> {
     if (by >= 0) {
       // Forward with next.
       steps: for (var i = 0; i < by; i += 1) {
-        // TODO Better just to waste cycles for odd cases of excess?
         let oldIndex = newIndex;
         newIndex = next(newIndex);
         if (newIndex == oldIndex) {
@@ -782,7 +783,6 @@ export class StringBuilder {
     begin: StringIndex,
     end: StringIndex,
   ): Void {
-    // TODO Do we expect it's faster to loop code points than to slice a string?
     var limit = end;
     let sourceEnd = source.end;
     // Do not loop infinitely if chosen end is past the source end
@@ -921,7 +921,6 @@ export sealed interface Listed<T> {
   public get length(): Int;
 
   /** True if this contains no elements. */
-  // TODO(tjp): Overrides don't seem to work here.
   @connected
   public get isEmpty(): Boolean { length == 0 }
 
@@ -970,7 +969,11 @@ export sealed interface Listed<T> {
    * `ListBuilder`.
    */
   @connected
-  public toListBuilder(): ListBuilder<T>;
+  public toListBuilder(): ListBuilder<T> {
+    let result: ListBuilder<T> = new ListBuilder<T>();
+    result.addAll(this);
+    result
+  }
 
   @connected
   public filter(predicate: fn (T): Boolean): List<T>;
@@ -1001,7 +1004,13 @@ export sealed interface Listed<T> {
 /** Maps elements using [transform]. */
 @extension("map")
 @connected
-export let listedMap<T, O>(listed: Listed<T>, transform: fn (T): O): List<O>;
+export let listedMap<T, O>(listed: Listed<T>, transform: fn (T): O): List<O> {
+  let result = new ListBuilder<O>();
+  for (var i = 0; i < listed.length; i += 1) {
+    result.add(transform(listed[i]));
+  }
+  result.toList()
+}
 
 /** Reduce to a single value, starting from the given initial value. */
 @extension("reduceFrom")
@@ -1033,8 +1042,8 @@ export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int
 @partialImu
 @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
 export class List<@out T> extends Listed<T> {
-  // TODO: Until Types.list is the same as List<T>, we need this trick.
-  private let content: List<T>;
+  // The content is used only from connected functions.
+  private let content: AnyValue;
 
   /** Same as `[...]` syntax but provides an explicit type argument. */
   public static nym`of` = _listify;
@@ -1050,15 +1059,10 @@ export class List<@out T> extends Listed<T> {
   public toList(): List<T> { this }
 
   @connected
-  public toListBuilder(): ListBuilder<T> {
-    // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
-    let result: ListBuilder<T> = new ListBuilder<T>();
-    result.addAll(this);
-    result
-  }
+  public toListBuilder(): ListBuilder<T>;
 
-  // TODO(mikesamuel): once we know what semantics we want for iterating when body mutates,
-  // move this onto Listed.
+  // TODO: Move this onto Listed once iterating while the body mutates the
+  // list has settled semantics.
   @connected
   public forEach(@inlineUnrealizedGoal let body: fn (T): Void): Void {
     let n = length;
@@ -1082,8 +1086,8 @@ export class ListBuilder<T> extends Listed<T> {
 
   @connected
   public constructor();
-  // TODO More useful as below once we have default args? Or use rest args?
-  // public constructor(initialContent: Listed<T> = [] as Listed<T>);
+  // TODO: Maybe a constructor taking initial content, now that default
+  // arguments work: `constructor(initialContent: Listed<T> = [])`.
 
   /** Panics for `at` less than 0 or greater than `length`. */
   @connected
@@ -1139,12 +1143,7 @@ export class ListBuilder<T> extends Listed<T> {
   public toList(): List<T>;
 
   @connected
-  public toListBuilder(): ListBuilder<T> {
-    // TODO(tjp): If in `Listed` gives error: Expected subtype of AnyValue, but got T__40
-    let result: ListBuilder<T> = new ListBuilder<T>();
-    result.addAll(this);
-    result
-  }
+  public toListBuilder(): ListBuilder<T>;
 }
 
 export class Pair<@out K, @out V> {
@@ -1193,8 +1192,8 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    */
   @connected
   public getOr(key: K, fallback: V): V {
-    // TODO Reimplement this to allow panic on simple get???
-    // TODO Is this method just for better optimization on some backends?
+    // TODO: Whether `get` should panic on a missing key, rather than
+    // bubble, is open (temperlang/temper#164).
     return this[key] orelse fallback;
   }
 
@@ -1323,10 +1322,6 @@ export let mappedToListBuilderWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, 
 export class Map<@in K extends MapKey<K>, @out V> extends Mapped<K, V> {
   // The content is used only from extension functions.
   private content: AnyValue;
-
-  // TODO Override toMap for identity.
-  // @connected
-  // public toMap(): Map<K, V> { this }
 
   /**
    * Preserves entry order when accessed from Temper code.
@@ -1554,7 +1549,8 @@ export class Int32 extends MapKey<Int32> {
  */
 @imu
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
-export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
+export class Int64 extends Equatable<Int64> {
+  // TODO: Whether Int64 should be a MapKey, as Int32 and String are.
   private let content: Int64;
 
   /** Bubbles if the result isn't within the exponent error of the original. */
@@ -1565,19 +1561,14 @@ export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
   @connected
   public toFloat64Unsafe(): Float64;
 
-  /**
-   * Bubbles if the result isn't within bounds.
-   * TODO Should this panic instead since this is an easy check?
-   * TODO But many others cost more to check the panic on fail.
-   */
+  // TODO: Whether this should panic instead is open (temperlang/temper#164).
+  /** Bubbles if the result isn't within bounds. */
   @connected
   public toInt32(): Int32 throws Bubble;
 
-  /**
-   * If outside bounds, returns a backend-dependent value. Use fuzz testing.
-   * TODO Ensure wrapping here since we do that elsewhere?
-   * TODO For symmetry, define consistent semantics for all lossy conversions?
-   */
+  // TODO: Define one out-of-range behavior for all lossy conversions,
+  // such as wrapping (temperlang/temper#164).
+  /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
   @connected
   public toInt32Unsafe(): Int32;
 

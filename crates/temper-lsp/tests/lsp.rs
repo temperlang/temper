@@ -550,3 +550,89 @@ fn definition_and_hover_into_core() {
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Opened from a definition, core's own (read-only) file navigates
+/// within itself: builtin types, members, aliases, and locals.
+#[test]
+fn definition_and_hover_within_core() {
+    let dir = std::env::temp_dir().join(format!("tempest-lsp-{}-in-core", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = uri(&dir, "uses-core.temper");
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    open(&mut client, &file, "let names: List<String> = [];\n");
+    let def = client.request("textDocument/definition", at(&file, 0, 12));
+    let core = str_at(&def, &["uri"]).to_string();
+    assert!(core.ends_with("/core/core.temper"), "{def}");
+    let text = std::fs::read_to_string(temper_lsp::uri_to_path(&core)).unwrap();
+    open(&mut client, &core, &text);
+    let lines: Vec<&str> = text.lines().collect();
+    // The position of `name` after `after` on the line starting with
+    // `line`.
+    let find = |line: &str, after: &str, name: &str| -> (u32, u32) {
+        let i = (lines.iter().position(|l| l.trim_start().starts_with(line)))
+            .unwrap_or_else(|| panic!("no line {line}"));
+        let from = lines[i].find(after).unwrap() + after.len();
+        let column = from + lines[i][from..].find(name).unwrap();
+        (i as u32, column as u32)
+    };
+    // The definition of what's at a place, as its line in core, trimmed.
+    let mut target = |(line, character): (u32, u32)| {
+        let def = client.request("textDocument/definition", at(&core, line, character));
+        assert_eq!(str_at(&def, &["uri"]), core, "{def}");
+        let line = num_at(&def, &["range", "start", "line"]) as usize;
+        lines[line].trim().to_string()
+    };
+    let reduce = "export let listedReduceFromIndex<";
+    let append = "append(String.fromCodePoint(cp));";
+    // Builtin types, in a parameter, an `extends`, and a result type.
+    let listed = target(find(reduce, "(", "Listed"));
+    assert!(
+        listed.starts_with("export sealed interface Listed<T>"),
+        "{listed}"
+    );
+    let listed = target(find("export class List<", "extends ", "Listed"));
+    assert!(
+        listed.starts_with("export sealed interface Listed<T>"),
+        "{listed}"
+    );
+    let list = target(find("public toList(): List<T> { this }", ":", "List"));
+    assert!(list.starts_with("export class List<"), "{list}");
+    // `Int`, an alias.
+    let int = target(find(reduce, "index: ", "Int"));
+    assert!(int.starts_with("export let Int = Int32"), "{int}");
+    // `String`, a static member on it, and a method on `this`.
+    let string = target(find(append, "(", "String"));
+    assert!(string.starts_with("export class String "), "{string}");
+    let from = target(find(append, ".", "fromCodePoint"));
+    assert!(from.starts_with("public static fromCodePoint("), "{from}");
+    let method = target(find(append, "", "append"));
+    assert!(
+        method.starts_with("public append(substring: String)"),
+        "{method}"
+    );
+    // A member of a parameter, and a local.
+    let length = target(find(
+        "for (var i = index; i < listed.length;",
+        ".",
+        "length",
+    ));
+    assert_eq!(length, "public get length(): Int;");
+    let result = target(find("result = accumulate(result,", "", "result"));
+    assert_eq!(result, "var result = initial;");
+    // Hover shows core's declarations and docs.
+    let mut hover = |(line, character): (u32, u32)| {
+        let hover = client.request("textDocument/hover", at(&core, line, character));
+        str_at(&hover, &["contents", "value"]).to_string()
+    };
+    let value = hover(find(reduce, "(", "Listed"));
+    assert!(value.contains("The *Listed* type is"), "{value}");
+    let value = hover(find(append, ".", "fromCodePoint"));
+    assert!(value.contains("fromCodePoint(codePoint: Int"), "{value}");
+    // Core's own file analyzes cleanly.
+    let diagnostics = client.diagnostics(&core);
+    assert_eq!(diagnostics, Vec::<Json>::new());
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}

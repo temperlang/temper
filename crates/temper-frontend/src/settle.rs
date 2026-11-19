@@ -925,12 +925,24 @@ impl Settle {
         match self.lookup(scope, name, node, false, forced) {
             Lookup::Found(b) => self.scopes.resolve(node, b),
             Lookup::Wait(s) => return Err(Fact::ScopeComplete(s)),
-            Lookup::Missing => {
-                let text = self.lib.names.get(name).to_string();
-                self.error(node, Message::UndeclaredName(text));
-            }
+            Lookup::Missing => match self.core_binding(node, name) {
+                Some(b) => self.scopes.resolve(node, b),
+                None => {
+                    let text = self.lib.names.get(name).to_string();
+                    self.error(node, Message::UndeclaredName(text));
+                }
+            },
         }
         Ok(())
+    }
+
+    /// What a name means in core's own text alone, read as a library, as
+    /// Kotlin Temper binds it in core's environment: `_listify`, the
+    /// list-making function `List.of` is.
+    fn core_binding(&self, node: NodeId, name: NameId) -> Option<SymbolId> {
+        let start = self.lib.tree.span(node).start;
+        let listify = self.lib.names.get(name) == "_listify" && self.lib.in_core(start);
+        listify.then(|| (self.scopes).hidden(Builtin::Function(crate::builtins::Function::List)))
     }
 
     /// Visits a call: expands it if its callee is a macro, returning true,

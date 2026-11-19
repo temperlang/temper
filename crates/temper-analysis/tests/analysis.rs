@@ -630,6 +630,10 @@ fn hover_core_docs() {
     );
     assert!(doc("ignore(", 0, 0).is_some());
     assert!(doc("fromCodePoint", 0, 0).is_some());
+    assert_eq!(
+        doc("isEmpty;", 0, 0).as_deref(),
+        Some("True if this contains no elements.")
+    );
     // Doc lines lose their leading `*`, as user declarations' do.
     let console = doc("console.", 0, 0).unwrap();
     assert!(
