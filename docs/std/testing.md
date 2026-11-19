@@ -25,6 +25,25 @@ test("lookup") { test =>
 }
 ```
 
+To check that something panics, put it in an `assertPanics` block,
+which passes if the block panics. If the block returns, the test fails,
+saying "expected a panic", or the message given before the block; a
+bubble is no panic, so if the block bubbles, the test fails too, saying
+so. Like `assert`, it lets the test go on:
+
+```temper
+test("reads past the end") { test =>
+  let ls = [1, 2];
+  test.assertPanics { ls[5]; };
+  test.assertPanics("index 2 is past the end") { ls[2]; };
+}
+```
+
+Only a panic in the block is caught, and a `fail` in it still ends the
+test. It's for tests alone: what the block changed before it panicked
+stays changed, maybe half done. Every backend and the interpreter catch
+the panic in the test's own process.
+
 A test that panics (a list read past the end, `panic()`) fails alone,
 with the panic's message, and the other tests still run: the runner
 catches it, test by test, though no `orelse` does, nor `runTest` and
@@ -38,6 +57,7 @@ and `temper test` runs them on any backend or on the interpreter
 | `Test.assert(ok, message)` | Records a failure, with `message()`, unless `ok` |
 | `Test.fail(message)` | Records `message` and ends the test as a failure, which no `orelse` catches; it never returns |
 | `Test.assertHard(ok, message)` | Records a failure and ends the test, as `fail` does, unless `ok` |
+| `Test.assertPanics(message) { … }` | Records a failure, with `message` (by default "expected a panic"), unless the block panics |
 | `Test.softFailToHard()` | Ends the test, as `fail` does, if it has failures so far |
 | `Test.passing`, `messages()` | Whether it passes so far, and its failure messages |
 | `runTest(f)`, `runTestCases(cases)`, `processTestCases(cases)`, `reportTestResults(…)` | How backends and the interpreter run a module's tests |

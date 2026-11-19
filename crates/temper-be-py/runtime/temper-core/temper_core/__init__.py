@@ -172,6 +172,22 @@ def panic(message: str = "panic") -> NoReturn:
     raise BaseException(message)
 
 
+def block_panics(block: Callable[[], None]) -> bool:
+    """
+    Runs `block`, giving whether it panicked, for std's
+    `Test.assertPanics`: whether it raised a plain `BaseException`, as
+    `panic` does. Anything else, a bubble, a test's failure, or a host
+    error, passes through.
+    """
+    try:
+        block()
+    except BaseException as e:
+        if type(e) is BaseException:
+            return True
+        raise
+    return False
+
+
 def _out_of_bounds(index: int, length: int) -> NoReturn:
     panic(f"index {index} out of bounds for length {length}")
 

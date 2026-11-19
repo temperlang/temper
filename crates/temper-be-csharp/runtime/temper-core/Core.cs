@@ -34,6 +34,25 @@ namespace TemperLang.Core
             }
         }
 
+        /// <summary>
+        /// Runs <paramref name="block"/>, giving whether it panicked, for
+        /// std's <c>Test.assertPanics</c>: whether it threw a
+        /// <see cref="Panic"/>. Anything else, a bubble, a test's failure,
+        /// or a host exception, passes through.
+        /// </summary>
+        public static bool BlockPanics(Action block)
+        {
+            try
+            {
+                block();
+            }
+            catch (Panic)
+            {
+                return true;
+            }
+            return false;
+        }
+
         public static bool BitGet(this BitArray bits, int index) =>
             index >= bits.Length ? false : bits[index];
 

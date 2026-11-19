@@ -305,6 +305,13 @@ function temper.test_asserthard(test, ok, get_msg) end
 ---@param test table
 function temper.test_softfailtohard(test) end
 
+---std's `Test.assertPanics`: records a failure, with `msg` or "expected a
+---panic", unless the block panics; a test's failure in it ends the test.
+---@param test table
+---@param block fun()
+---@param msg string?
+function temper.test_assertpanics(test, block, msg) end
+
 ---std's `Test.bail()`: ends the test with its failures, by an error no
 ---`orelse` catches.
 ---@param test table

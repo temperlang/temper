@@ -514,6 +514,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/testing.type Test.bail()",
         Connection::Translate(test_bail),
     ),
+    (
+        "std/testing.type Test.panics()",
+        Connection::Translate(test_panics),
+    ),
 ];
 
 /// How a connected type is written.
@@ -646,6 +650,16 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, N
     ))
 }
 
+/// `temper_core::block_panics(block)`, which catches the block's panic,
+/// for std's `Test.assertPanics`.
+fn test_panics(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    let [_, block] = args else {
+        return Err(NotYet::new("`Test.panics` without its receiver and block"));
+    };
+    let block = t.expr(*block, Want::Owned)?;
+    Ok(Expr::path("temper_core::block_panics").call(vec![block]))
+}
+
 /// `crate::support::run_async(f)`: runs an `async` block's generator on
 /// the library's runner, as Kotlin's `run_async`.
 fn run_async(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
@@ -773,6 +787,7 @@ pub const STD: &[&str] = &[
     "std/regex.type RegexFormatter.regexCompileFormatted()",
     "std/temporal.type Date.today()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// Whether this backend connects a std declaration, by its key

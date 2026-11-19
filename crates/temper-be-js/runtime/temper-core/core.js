@@ -314,6 +314,26 @@ export const panic = (message = "panic") => {
 };
 
 /**
+ * Runs `block`, giving whether it panicked, for std's `Test.assertPanics`:
+ * whether it threw a plain `Error`, as `panic` does. Anything else, a
+ * bubble or a host error such as a `TypeError`, passes through.
+ *
+ * @param {() => void} block
+ * @returns {boolean}
+ */
+export const blockPanics = (block) => {
+  try {
+    block();
+  } catch (e) {
+    if (e instanceof Error && Object.getPrototypeOf(e) === Error.prototype) {
+      return true;
+    }
+    throw e;
+  }
+  return false;
+};
+
+/**
  * @template T
  * @param {T} a
  */

@@ -500,6 +500,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/testing.type Test.bail()",
         Connection::Translate(test_bail),
     ),
+    (
+        "std/testing.type Test.panics()",
+        Connection::Translate(test_panics),
+    ),
 ];
 
 /// How a connected type is written.
@@ -615,6 +619,19 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let messages = test.method("messagesCombined", Vec::new());
     let messages = Expr::bin(Bin::Coalesce, messages, Expr::Undefined);
     Ok(Expr::name("panic").call(vec![messages]))
+}
+
+/// `blockPanics(block)`, core's, which catches a panic, a plain `Error`,
+/// alone, for std's `Test.assertPanics`.
+fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [_, block] = args else {
+        return Err(NotYet {
+            what: "`Test.panics` without its receiver and block".into(),
+        });
+    };
+    let block = t.expr(*block)?;
+    t.import("blockPanics");
+    Ok(Expr::name("blockPanics").call(vec![block]))
 }
 
 /// `console.log(message)`.
@@ -1050,6 +1067,7 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.year",
     "std/temporal.type Date.yearsBetween()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// Whether this backend connects a std declaration, by its key

@@ -542,6 +542,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/testing.type Test.bail()",
         Connection::Translate(test_bail),
     ),
+    (
+        "std/testing.type Test.panics()",
+        Connection::Translate(test_panics),
+    ),
 ];
 
 /// How a connected type is written: its simple name, and what to import
@@ -752,6 +756,19 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     t.import("temper.core.Core");
     let messages = test.method("messagesCombined", Vec::new());
     Ok(Expr::name("Core").method("throwAssertionError", vec![messages]))
+}
+
+/// `Core.blockPanics(block)`, which catches a panic, an
+/// `AssertionError`, alone, for std's `Test.assertPanics`.
+fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [_, block] = args else {
+        return Err(NotYet {
+            what: "`Test.panics` without its receiver and block".into(),
+        });
+    };
+    let block = t.expr(*block)?;
+    t.import("temper.core.Core");
+    Ok(Expr::name("Core").method("blockPanics", vec![block]))
 }
 
 /// `Core.getConsole(Logger.getLogger(name))`, the logger named for the
@@ -1269,6 +1286,7 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.year",
     "std/temporal.type Date.yearsBetween()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// Whether this backend connects a std declaration, by its key

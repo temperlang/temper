@@ -2490,6 +2490,28 @@ copied Kotlin's:
     Test: programs/test-fails.temper.md on every backend and the
     interpreter (each test's failure, text it mustn't say, and that
     all nine ran); settle-std/testing.cases.
+  - **`Test.assertPanics { … }`** (2026-11-19): std's `Test` gains
+    `assertPanics(block, message = "expected a panic")`, which Kotlin's
+    lacks: it passes if the block panics; if the block returns, the
+    test fails with the message, and if it bubbles, with the message
+    and ", but it bubbled". Soft, like `assert`; a `test.fail` in the
+    block still ends the test (where `bail` panics, its body bails
+    again). The trailing block goes to `block`, so
+    `test.assertPanics("why") { … }` gives the message. Its body calls
+    a bodiless `panics(block): Boolean`, each backend catching its own
+    panic in-process and nothing else: Java `AssertionError`, C# the
+    runtime's `Panic`, Python a plain `BaseException`, JS a plain
+    `Error`, Rust `catch_unwind` (with the panic hook quiet for caught
+    panics, so a runner reading the first panic message still sees the
+    test's own), C++ test builds' `TemperPanic`, and the interpreter
+    its program's panics but not its limits (steps, depth,
+    interrupts). Lua's `Test` is the runtime's, so
+    `temper.test_assertpanics` does it all with `pcall`: any error but
+    a bubble or a test failure counts as a panic. C# also writes a
+    function literal whose body is just `panic()` as a local function,
+    where it said "not yet: a Panic expression".
+    Test: programs/test-assert-panics.temper.md on every backend and
+    the interpreter.
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

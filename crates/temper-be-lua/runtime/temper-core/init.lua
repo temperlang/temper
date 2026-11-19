@@ -2414,6 +2414,21 @@ function temper.test_softfailtohard(test)
     end
 end
 
+-- std's `Test.assertPanics`: passes if the block panics, which on Lua is
+-- any error but a bubble or a test's failure, which still ends the test;
+-- a block that returns or bubbles fails the test, which goes on.
+function temper.test_assertpanics(test, block, msg)
+    msg = msg or 'expected a panic'
+    local ok, err = pcall(block)
+    if ok then
+        test.failures[#test.failures + 1] = msg
+    elseif temper.is_bubble(err) then
+        test.failures[#test.failures + 1] = msg .. ', but it bubbled'
+    elseif type(err) == 'string' and string_find(err, temper.test_failure_prefix, 1, true) then
+        error(err, 0)
+    end
+end
+
 function temper.test_passing(test)
     return #test.failures == 0
 end

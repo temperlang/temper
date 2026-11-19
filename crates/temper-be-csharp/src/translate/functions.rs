@@ -243,11 +243,12 @@ impl Translator<'_> {
     }
 }
 
-/// Whether a value has an `orelse` or a block's value in it, outside
-/// function literals, which C# writes as statements.
+/// Whether a value has an `orelse`, a block's value, or a `panic()` in
+/// it, outside function literals, which C# writes as statements, as the
+/// `throw` of a block `{ panic(); }`.
 fn has_statements(p: &temper_tmpl::Program, id: NodeId) -> bool {
     match p.nodes.get(id) {
-        Node::OrElse { .. } | Node::BlockValue { .. } => true,
+        Node::OrElse { .. } | Node::BlockValue { .. } | Node::Panic {} => true,
         Node::FunctionLiteral { .. } => false,
         _ => p.nodes.kids(id).iter().any(|&k| has_statements(p, k)),
     }

@@ -569,6 +569,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/testing.type Test.bail()",
         Connection::Translate(test_bail),
     ),
+    (
+        "std/testing.type Test.panics()",
+        Connection::Translate(test_panics),
+    ),
 ];
 
 /// A helper method: its name, result, parameters (type and name), and
@@ -837,6 +841,18 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let message = Expr::bin(Bin::Coalesce, messages, Expr::Str(String::new()));
     let exception = t.construct("AssertFailedException", vec![message]);
     Ok(Expr::Throw(Box::new(exception)))
+}
+
+/// `Core.BlockPanics(block)`, which catches a panic, the runtime's
+/// `Panic`, alone, for std's `Test.assertPanics`.
+fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [_, block] = args else {
+        return Err(NotYet {
+            what: "`Test.panics` without its receiver and block".into(),
+        });
+    };
+    let block = t.expr(*block)?;
+    Ok(t.class("Core").method("BlockPanics", vec![block]))
 }
 
 fn get_console(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
@@ -1217,6 +1233,7 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.year",
     "std/temporal.type Date.yearsBetween()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// Whether this backend connects a std declaration, by its key

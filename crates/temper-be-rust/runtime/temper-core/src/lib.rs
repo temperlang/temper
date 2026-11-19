@@ -527,6 +527,36 @@ pub fn usize_to_i32(u: usize) -> Result<i32> {
 
 pub fn ignore<T>(_: T) {}
 
+// Testing
+
+/// Runs `block`, giving whether it panicked, for std's
+/// `Test.assertPanics`. The panic hook says nothing of a panic caught
+/// here, so a test's failure, reported after, is the only one it shows.
+/// What the block changed before it panicked stays changed, as std's
+/// docs say; a value it was writing when it panicked is poisoned, so
+/// reading it later panics too.
+pub fn block_panics(block: Arc<dyn Fn() + Send + Sync>) -> bool {
+    use std::cell::Cell;
+    use std::panic::{self, AssertUnwindSafe};
+    thread_local! {
+        // How many `block_panics` calls this thread is in.
+        static CATCHING: Cell<u32> = const { Cell::new(0) };
+    }
+    static QUIET: std::sync::Once = std::sync::Once::new();
+    QUIET.call_once(|| {
+        let reported = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            if CATCHING.with(Cell::get) == 0 {
+                reported(info);
+            }
+        }));
+    });
+    CATCHING.with(|c| c.set(c.get() + 1));
+    let result = panic::catch_unwind(AssertUnwindSafe(|| block()));
+    CATCHING.with(|c| c.set(c.get() - 1));
+    result.is_err()
+}
+
 // Int
 
 pub fn int_div(a: i32, b: i32) -> Result<i32> {
@@ -641,6 +671,25 @@ impl ToArcString for &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn block_panics_catches_panics_nested_too() {
+        assert!(!block_panics(Arc::new(|| {})));
+        assert!(block_panics(Arc::new(|| panic!("inner"))));
+        // What the inner calls gave, as an assertion failing in the
+        // block would only be caught as its panic.
+        let inner = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = inner.clone();
+        let outer = block_panics(Arc::new(move || {
+            let mut seen = seen.lock().unwrap();
+            seen.push(block_panics(Arc::new(|| panic!("inner"))));
+            seen.push(block_panics(Arc::new(|| {})));
+            drop(seen);
+            panic!("outer");
+        }));
+        assert!(outer);
+        assert_eq!(*inner.lock().unwrap(), [true, false]);
+    }
 
     #[test]
     fn error_display_shows_message_or_bubble() {

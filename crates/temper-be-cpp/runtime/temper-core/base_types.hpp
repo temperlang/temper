@@ -208,5 +208,18 @@ namespace temper {
             throw TemperTestFailure(is_null(messages) ? std::string() : Str(messages).str());
         }
 
+        // std's `Test.panics(block)`, for `Test.assertPanics`: whether the
+        // block panicked, which in a test build throws a `TemperPanic`
+        // (`run_tests` sets the hook). Anything else passes through.
+        template<class T, class F>
+        bool testPanics(const T&, const F& block) {
+            try {
+                block();
+            } catch (const TemperPanic&) {
+                return true;
+            }
+            return false;
+        }
+
     }
 }

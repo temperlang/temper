@@ -274,13 +274,14 @@ pub fn without_net(cases: &mut [Case]) {
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]), as does
-/// `test-panics`, whose tests that panic fail alone, and `test-fails`,
-/// whose tests' hard failures no `orelse` stops; `panics`
-/// `orelse` handling bubbles from everywhere but never a panic, whose
-/// run fails ([`FAILING`]); and `host-errors` builtins whose docs say
+/// `test-panics`, whose tests that panic fail alone, `test-fails`,
+/// whose tests' hard failures no `orelse` stops, and
+/// `test-assert-panics`, whose `assertPanics` pass only on a panic;
+/// `panics` `orelse` handling bubbles from everywhere but never a
+/// panic, whose run fails ([`FAILING`]); and `host-errors` builtins whose docs say
 /// they panic (index errors) panicking on every backend, past `orelse`,
 /// one run per section, each saying why on stderr.
-pub const PROGRAMS: [&str; 24] = [
+pub const PROGRAMS: [&str; 25] = [
     "classes",
     "nullables",
     "generics",
@@ -305,6 +306,7 @@ pub const PROGRAMS: [&str; 24] = [
     "host-errors",
     "test-panics",
     "test-fails",
+    "test-assert-panics",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
@@ -319,7 +321,7 @@ pub const FAILING: [&str; 2] = ["panics", "host-errors"];
 /// fail. Those expected to fail are in `failures` blocks, a line each,
 /// a test's name and text its failure's cause contains, after `: `;
 /// text a test's failure mustn't contain is in `absent` blocks, alike.
-pub const AS_TESTS: [&str; 3] = ["reach", "test-panics", "test-fails"];
+pub const AS_TESTS: [&str; 4] = ["reach", "test-panics", "test-fails", "test-assert-panics"];
 
 /// What only the shared `reach` program's tests reach, by their Temper
 /// names, each of which a backend spells its own way.

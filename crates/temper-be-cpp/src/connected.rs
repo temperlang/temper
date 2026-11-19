@@ -564,6 +564,12 @@ pub const TABLE: &[(&str, Connection)] = &[
     // The runtime's `testBail(test)`, as Kotlin's, which throws a
     // `TemperTestFailure`, where Kotlin's throws a bubble.
     ("std/testing.type Test.bail()", Connection::Call("testBail")),
+    // The runtime's `testPanics(test, block)`, which catches a test
+    // build's `TemperPanic` alone.
+    (
+        "std/testing.type Test.panics()",
+        Connection::Call("testPanics"),
+    ),
 ];
 
 /// How a connected type is written, relative to `temper::core` where it
@@ -754,6 +760,7 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.year",
     "std/temporal.type Date.yearsBetween()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// std's bodiless connected functions that this backend gives a function

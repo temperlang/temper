@@ -6,6 +6,7 @@ from collections.abc import (
 from temper_core import (
     Bubble as _Bubble,
     Pair as _Pair,
+    block_panics as _block_panics,
     int_add as _int_add,
     int_to_string as _int_to_string,
     list_get as _list_get,
@@ -51,6 +52,23 @@ class Test:
     def assert_hard(self, success: bool, message: _Callable[[], str], /) -> None:
         if not success:
             self.fail(message())
+
+    def assert_panics(self, block: _Callable[[], None], message: str | None = None, /) -> None:
+        if message is None:
+            message = 'expected a panic'
+        bubbled = False
+        def fn() -> None:
+            nonlocal bubbled
+            try:
+                block()
+            except _Bubble:
+                bubbled = True
+        panicked = _block_panics(fn)
+        if self._failed_on_assert:
+            raise AssertionError(str(self.messages_combined()))
+        if not panicked:
+            self._passing = False
+            self._messages.append(f'{message}, but it bubbled' if bubbled else message)
 
     def soft_fail_to_hard(self, /) -> None:
         if self.has_unhandled_fail:

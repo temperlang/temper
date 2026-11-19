@@ -331,6 +331,21 @@ public final class Core {
     public static <T> T throwAssertionError(String message) { throw new AssertionError(message); }
 
     /**
+     * Runs {@code block}, giving whether it panicked, for std's
+     * {@code Test.assertPanics}: whether it threw an {@link AssertionError},
+     * as Temper's panics are. Anything else, a bubble or a host
+     * exception, passes through.
+     */
+    public static boolean blockPanics(Runnable block) {
+        try {
+            block.run();
+        } catch (AssertionError e) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * A Temper panic for an index out of a list's bounds, as core's docs
      * say: an {@link AssertionError}, which no {@code orelse} catches.
      */

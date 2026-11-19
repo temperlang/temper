@@ -45,6 +45,41 @@ failing as `fail` does.
         }
       }
 
+To check that something panics, as reading past a list's end does, put it in
+a block: `test.assertPanics { ls[5]; }` passes if the block panics. If the
+block returns, the test fails, saying "expected a panic", or the message given
+before the block, as in `test.assertPanics("past the end") { ls[5]; }` (a
+trailing block goes to the last function parameter, so the message can be
+last among the parameters, and left out). A bubble is no panic, so if the block bubbles, the test fails too, saying
+so. Like `assert`, a failing `assertPanics` lets the test go on.
+
+Only a panic in the block is caught, never one before or after it, and a
+`test.fail` in the block still ends the test. This is for tests alone: what
+the block changed before it panicked stays changed, maybe half done.
+
+      @connected
+      public assertPanics(
+        block: fn (): Void throws Bubble,
+        message: String = "expected a panic",
+      ): Void {
+        var bubbled = false;
+        let panicked = panics { block() orelse do { bubbled = true } };
+        // The block ended the test, by `fail` or a hard assertion, which some
+        // backends end the test by panicking.
+        if (_failedOnAssert) { bail() }
+        if (!panicked) {
+          _passing = false;
+          _messages.add(if (bubbled) { "${message}, but it bubbled" } else { message });
+        }
+      }
+
+Run a block, giving whether it panicked. Backends catch their panics, and
+only those: a bubble, a test failure, or another error passes through, except
+where a test failure is a panic, as `bail` ends a test by panicking on some.
+
+      @connected
+      private panics(block: fn (): Void): Boolean;
+
 Harden and end current test on any pending failure if not previously hardened.
 Backends typically insert calls to this if needed, but you can also call it
 manually at any desired point in your test.

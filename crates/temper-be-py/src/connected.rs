@@ -531,6 +531,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/temporal.type Date.yearsBetween()",
         Connection::Runtime("years_between"),
     ),
+    (
+        "std/testing.type Test.panics()",
+        Connection::Translate(test_panics),
+    ),
 ];
 
 /// Where Python finds the type a std class this backend connects is, and
@@ -567,6 +571,14 @@ fn get_console(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
 fn boolean_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
     let b = arg(&mut args, 0).unwrap_or(Expr::None);
     Expr::name(im("boolean_to_string")).call(vec![b])
+}
+
+/// `block_panics(block)`, the runtime's, which catches a panic, a plain
+/// `BaseException`, alone, for std's `Test.assertPanics` (not named
+/// `test_…`, which pytest would take for a test).
+fn test_panics(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
+    let block = arg(&mut args, 1).unwrap_or(Expr::None);
+    Expr::name(im("block_panics")).call(vec![block])
 }
 
 /// `str(n)` without a radix, else `int_to_string(n, radix)`.
@@ -766,6 +778,7 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.year",
     "std/temporal.type Date.yearsBetween()",
     "std/testing.type Test.bail()",
+    "std/testing.type Test.panics()",
 ];
 
 /// Whether this backend connects a std declaration, by its key

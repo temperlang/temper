@@ -317,6 +317,10 @@ const MAX_DEPTH: u32 = 500;
 const SLICE: u64 = 1 << 16;
 /// How an interrupted run fails.
 pub(crate) const INTERRUPTED: &str = "interrupted";
+/// How a run fails that's out of steps, before [`OUT_OF_STEPS`]'s prefix.
+const NO_STEPS: &str = "ran out of steps";
+/// How a run fails whose calls nest past [`MAX_DEPTH`].
+const TOO_DEEP: &str = "calls nested too deeply";
 /// A step budget for callers that must finish quickly, such as the web
 /// playground and tests' own runs of small programs; compile-time
 /// evaluation will need one too. About a second in a release build.
@@ -524,6 +528,12 @@ fn describe(abrupt: Abrupt) -> String {
 /// What a run that ran out of steps says, before any budget.
 pub(crate) const OUT_OF_STEPS: &str = "Panicked: ran out of steps";
 
+/// Whether a panic is the interpreter's limits' rather than the
+/// program's own, so no `Test.assertPanics` catches it.
+fn is_limit(why: &str) -> bool {
+    [INTERRUPTED, NO_STEPS, TOO_DEEP].contains(&why)
+}
+
 /// A JUnit report, as std's `reportTestResults` writes it, of one test
 /// that failed without a report of its own.
 fn junit_failure(name: &str, why: &str) -> Vec<String> {
@@ -651,7 +661,7 @@ impl Interp<'_> {
             return Err(compile_time::refused("a function of a std module"));
         }
         if self.depth >= MAX_DEPTH {
-            return Err(Abrupt::Panic("calls nested too deeply".into()));
+            return Err(Abrupt::Panic(TOO_DEEP.into()));
         }
         let code = self.lowering.function(s, f).map_err(fail)?;
         if args.len() > code.params as usize {
@@ -683,7 +693,7 @@ impl Interp<'_> {
     /// it already has if it's done. A failure in the body ends it too.
     fn step(&mut self, s: &Settled, generator: &Generator) -> R {
         if self.depth >= MAX_DEPTH {
-            return Err(Abrupt::Panic("calls nested too deeply".into()));
+            return Err(Abrupt::Panic(TOO_DEEP.into()));
         }
         let Some(mut frame) = generator.frame.borrow_mut().take() else {
             return Ok(Val::Void);
@@ -1543,8 +1553,9 @@ impl Interp<'_> {
 
     /// A bodiless `@connected` method that the interpreter implements
     /// itself, as Kotlin Temper's `standardLibraryConnecteds` do: so far
-    /// std's `Date.today()`, `regex`'s ([`regexes`]), and `Test.bail()`,
-    /// which ends the test with its messages ([`Abrupt::TestFailed`]).
+    /// std's `Date.today()`, `regex`'s ([`regexes`]), `Test.bail()`, which
+    /// ends the test with its messages ([`Abrupt::TestFailed`]), and
+    /// `Test.panics(block)`, which catches the block's panic.
     fn connected(
         &mut self,
         s: &Settled,
@@ -1564,6 +1575,16 @@ impl Interp<'_> {
                     _ => String::new(),
                 };
                 Err(Abrupt::TestFailed(messages))
+            }
+            // Whether the block panicked: only a panic of the program's
+            // own is caught, not the interpreter's limits, which must
+            // end the run, nor a test's failure.
+            ("Test", "panics", [block]) if in_std("testing") => {
+                match self.apply(s, block.clone(), Vec::new()) {
+                    Ok(_) => Ok(Val::Bool(false)),
+                    Err(Abrupt::Panic(why)) if !is_limit(&why) => Ok(Val::Bool(true)),
+                    Err(abrupt) => Err(abrupt),
+                }
             }
             ("Date", "today", []) if in_std("temporal") => {
                 let (year, month, day) = numbers::today_utc();

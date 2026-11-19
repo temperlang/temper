@@ -291,7 +291,7 @@ impl Interp<'_> {
             return Err(Abrupt::Panic(super::INTERRUPTED.into()));
         }
         if self.reserve == 0 {
-            return Err(Abrupt::Panic("ran out of steps".into()));
+            return Err(Abrupt::Panic(super::NO_STEPS.into()));
         }
         self.fuel = self.reserve.min(super::SLICE);
         self.reserve -= self.fuel;
