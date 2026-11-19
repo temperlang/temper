@@ -18,7 +18,7 @@ interactive#1: void
 interactive#2: 3
 (Call #desugarOperation + (Call twice x) 1)
 interactive#3: void
-(Block (Call + (Call twice:11 x:10) 1))
+(Block (Call + (Call twice:14 x:13) 1))
 interactive#4: void
 twice: fn (Int32): Int32
 interactive#5: void

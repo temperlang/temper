@@ -1858,7 +1858,7 @@ console.log("before");
 console.log(sum(1, 2).toString());
 --- settled
 (Block
-  (Let connected ^sum:0 (Call FnType Int Int Int))
+  (Let connected ^sum:0 (Signature (Let ^i:1 Int) (Let ^j:2 Int 0) Int))
   (Call (Call . console \log) "before")
   (Call (Call . console \log) (Call (Call . (Call sum:0 1 2) \toString)))
   #void)

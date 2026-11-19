@@ -1184,10 +1184,15 @@ impl Settle {
                     let message = Message::ConnectedBackendsNeedBody;
                     self.lib.report(Level::Error, message, span);
                 }
-                // Implemented outside Temper: its type, `fn (A): B`.
-                let lowered = self.lower_params(&sig.params);
+                // Implemented outside Temper: its signature, a bodiless
+                // `Fn` declaring its type parameters as a bodied one does.
+                let span = self.lib.tree.span(call);
+                let Some(f) = self.make_bodiless_fn(&sig, span, call) else {
+                    self.error(call, Message::MalformedFunction);
+                    return true;
+                };
                 // Its parameters' names, for backends' wrappers of host code.
-                let names: Vec<String> = (lowered.iter().flatten())
+                let names: Vec<String> = (crate::core::fn_parts(&self.lib.tree, f).0.iter())
                     .map(|&p| crate::core::let_parts(&self.lib.tree, p).0)
                     .map(|n| self.lib.name(n).map_or("", |n| self.lib.names.get(n)))
                     .map(str::to_string)
@@ -1195,22 +1200,11 @@ impl Settle {
                 if let Some(c) = self.lib.connected.get_mut(&call) {
                     c.params = names;
                 }
-                let types = lowered.and_then(|params| {
-                    let type_of = |&p: &NodeId| crate::core::let_parts(&self.lib.tree, p).1;
-                    params.iter().map(type_of).collect::<Option<Vec<_>>>()
-                });
-                let Some(types) = types else {
-                    self.error(call, Message::MalformedFunction);
-                    return true;
-                };
-                let span = self.lib.tree.span(call);
-                let parts = self.fn_type_parts(&types, sig.out_type, span, call);
-                let ty = self.lib.add(NodeKind::Call, span, 0, &parts, call);
                 self.rewrite(
                     call,
                     NodeKind::Let,
-                    LET_TYPE | MEMBER_CONNECTED,
-                    &[*name, ty],
+                    LET_INIT | MEMBER_CONNECTED,
+                    &[*name, f],
                 );
                 return true;
             }

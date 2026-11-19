@@ -1512,10 +1512,12 @@ impl Translator<'_> {
             let decl = self
                 .b
                 .declare(DeclKind::Function, &name, self.module, TypeId::NONE);
-            let Some(&t) = self.s.typing.decls.get(&node) else {
-                return self.not_yet(node, "an expression of unknown type");
+            // Its `Fn`, a signature, declares its type parameters.
+            let Some(f) = init.filter(|&f| self.kind(f) == NodeKind::Fn) else {
+                return self.not_yet(node, "a connected function's form");
             };
-            let sig = self.signature_of(t, node)?;
+            self.declare_type_params(f, decl)?;
+            let sig = self.signature(f)?;
             self.b.set_decl_type(decl, sig);
             self.b.add_facts(decl, Facts::CONNECTED);
             if self.is_exported(node) {

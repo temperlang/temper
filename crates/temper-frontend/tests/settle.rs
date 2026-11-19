@@ -220,6 +220,56 @@ fn imported_extensions_called_where_imported() {
     });
 }
 
+/// A generic function without a body, as host code implements a
+/// `@connected` one, declares its type parameters as a bodied one does,
+/// in std or another library module alike: they're usable in its
+/// parameters, result, and bounds, and a call from another module is
+/// solved from its arguments, reporting just what the bodied twin does.
+#[test]
+fn bodiless_generic_functions_across_modules() {
+    with_stack(|| {
+        let errors = |body: &str| {
+            let mut library = Library::new();
+            let main = "let { firstOf } = import(\"std/gen\");\n\
+                        let { mapAll, pick, Dog } = import(\"./lib/\");\n\
+                        export let f(xs: List<Int>): Void {\n\
+                        \x20 let a: Int = firstOf(xs);\n\
+                        \x20 let b: String = firstOf(xs);\n\
+                        \x20 let c: List<String> = mapAll(xs) { (x): String => x.toString() };\n\
+                        \x20 let d: Dog = pick(new Dog());\n\
+                        \x20 pick(1);\n\
+                        }";
+            library.add_file("app/main.temper", main, SourceKind::Standalone);
+            let std = format!("@connected\nexport let firstOf<T>(xs: List<T>): T{body}");
+            let lib = format!(
+                "export interface Animal {{}}\nexport class Dog extends Animal {{}}\n\
+                 @connected\nexport let mapAll<T, O>(xs: List<T>, transform: fn (T): O): List<O>{body}\n\
+                 @connected\nexport let pick<T extends Animal>(x: T): T{body}"
+            );
+            let std = [("gen/gen.temper", std.as_str())];
+            let app = [("app/lib/lib.temper", lib.as_str())];
+            let sources = Sources::new()
+                .mount("-std-", Source::memory(&std))
+                .mount("", Source::memory(&app));
+            load_imports(&sources, &mut library);
+            let settled = settle(library);
+            (settled.library.diagnostics.iter())
+                .map(|d| {
+                    let file = settled.library.locate(d.span.start).0;
+                    let path = &settled.library.files[file.0 as usize].path;
+                    format!("{path}: {}", d.message.text())
+                })
+                .collect::<Vec<_>>()
+        };
+        let expected = [
+            "app/main.temper: Cannot assign to String from Int32",
+            "app/main.temper: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]",
+        ];
+        assert_eq!(errors(" { panic() }"), expected, "with bodies");
+        assert_eq!(errors(";"), expected, "without bodies");
+    });
+}
+
 /// `std/…` imports, under `-std-`, and `...`, which imports every export
 /// not named otherwise.
 #[test]

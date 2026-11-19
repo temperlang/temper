@@ -969,11 +969,11 @@ console.log("${withBody(1)} ${nowhere(1)} ${notAList(1)}");
 --- settled
 (Block
   (Let ^withBody:0 (Fn (Let ^i:6 Int) Int (Block (Call + i:6 1))))
-  (Let connected ^everywhere:1 (Call FnType Int Int))
-  (Let ^nowhere:2 (Fn (Let ^i:7 Int) Int (Block (Call + i:7 3))))
-  (Let connected ^noBody:3 (Call FnType Int Int))
-  (Let ^notAList:4 (Fn (Let ^i:8 Int) Int (Block (Call + i:8 2))))
-  (Let ^notNames:5 (Fn (Let ^i:9 Int) Int (Block (Call + i:9 4))))
+  (Let connected ^everywhere:1 (Signature (Let ^i:7 Int) Int))
+  (Let ^nowhere:2 (Fn (Let ^i:8 Int) Int (Block (Call + i:8 3))))
+  (Let connected ^noBody:3 (Signature (Let ^i:9 Int) Int))
+  (Let ^notAList:4 (Fn (Let ^i:10 Int) Int (Block (Call + i:10 2))))
+  (Let ^notNames:5 (Fn (Let ^i:11 Int) Int (Block (Call + i:11 4))))
   (Call
     (Call . console \log)
     (Call

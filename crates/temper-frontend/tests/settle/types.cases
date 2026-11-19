@@ -1005,6 +1005,80 @@ error 1158..1167: Cannot assign to Int32 from String
 error 1187..1197: Cannot assign to String from Int32
 Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
 
+=== generic functions without bodies declare their type parameters
+// A generic function without a body, as a @connected one host code
+// implements, declares its type parameters as one with a body does:
+// they're usable in its parameters, result, and bounds, and each call
+// is solved from its arguments, so these report what bodied ones would.
+export interface Animal {}
+export class Dog extends Animal {}
+@connected
+export let mapAll<T, O>(xs: List<T>, transform: fn (T): O): List<O>;
+@connected
+export let pick<T extends Animal>(x: T): T;
+@connected
+export let pair<T, U extends T>(a: T, b: U): T;
+let use(xs: List<Int>): Void {
+  let a: List<String> = mapAll(xs) { (x): String => x.toString() };
+  let b: List<Int> = mapAll(xs, fn (x: Int): String { x.toString() });
+  let c: Dog = pick(new Dog());
+  pick(1);
+  let d: Dog = pair(new Dog(), new Dog());
+}
+console.log("ok");
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Let connected
+    ^mapAll:2
+    (Signature
+      (TypeParam ^T:8)
+      (TypeParam ^O:9)
+      (Let ^xs:10 (Call <> List T:8))
+      (Let ^transform:11 (Call FnType T:8 O:9))
+      (Call <> List O:9)))
+  (Let connected
+    ^pick:3
+    (Signature (TypeParam ^T:12 Animal:0) (Let ^x:13 T:12) T:12))
+  (Let connected
+    ^pair:4
+    (Signature
+      (TypeParam ^T:14)
+      (TypeParam ^U:15 T:14)
+      (Let ^a:16 T:14)
+      (Let ^b:17 U:15)
+      T:14))
+  (Let
+    ^use:5
+    (Fn
+      (Let ^xs:18 (Call <> List Int))
+      Void
+      (Block
+        (Let
+          ^a:19
+          (Call <> List String)
+          (Call
+            mapAll:2
+            xs:18
+            (Fn (Let ^x:23) String (Block (Call (Call . x:23 \toString))))))
+        (Let
+          ^b:20
+          (Call <> List Int)
+          (Call
+            mapAll:2
+            xs:18
+            (Fn (Let ^x:24 Int) String (Block (Call (Call . x:24 \toString))))))
+        (Let ^c:21 Dog:1 (Call pick:3 (Call new Dog:1)))
+        (Call pick:3 1)
+        (Let ^d:22 Dog:1 (Call pair:4 (Call new Dog:1) (Call new Dog:1)))
+        #void)))
+  (Call (Call . console \log) "ok")
+  #void)
+error 668..704: Actual arguments do not match signature: <T extends AnyValue, O extends AnyValue>(List<T>, fn (T): O) -> List<O> expected [List<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 741..748: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+log ok
+
 === generic classes and methods, as Kotlin Temper reports them
 // `new Box(1)` is solved as a call of `<T>(T) -> Box<T>`, a `Box<Int>`'s
 // members have `Int` for `T`, and a generic method's call is solved as a
