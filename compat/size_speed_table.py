@@ -19,8 +19,7 @@ import csv
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-CSV = ROOT / "stats/size-and-speed.csv"
+from size_speed_charts import CSV, missing
 IGNORED = ("tree=", "load=", "files=", "cpu=", "cores=")
 
 
@@ -29,9 +28,8 @@ def main() -> int:
     parser.add_argument("what", nargs="*", help="metric ids to show (default: all)")
     parser.add_argument("--csv", type=Path, default=CSV)
     args = parser.parse_args()
-    if not args.csv.exists():
-        hint = "check the stats branch out there (git worktree add stats stats), or give --csv FILE"
-        sys.exit(f"{args.csv} is missing" + (f": {hint}" if args.csv == CSV else ""))
+    if problem := missing(args.csv, "--csv FILE"):
+        sys.exit(problem)
 
     with args.csv.open(newline="") as f:
         rows = list(csv.DictReader(f))

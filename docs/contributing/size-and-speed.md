@@ -70,6 +70,8 @@ directory first:
     uv run compat/size_speed_charts.py --stats stats
 
 The scripts' defaults are that checkout's `size-and-speed.csv` and
-`charts/`; without it, they stop rather than start a new CSV there. Only the commit needs GitHub: [commit_stats.py](../../.github/ci-tools/commit_stats.py)
+`charts/`; without it, they stop rather than start a new CSV there.
+Only the commit needs GitHub:
+[commit_stats.py](../../.github/ci-tools/commit_stats.py)
 `DIR --branch stats --headline TEXT --repo temperlang/temper --dry-run -`
 prints the request it would send.

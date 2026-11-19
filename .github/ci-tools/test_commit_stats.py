@@ -9,7 +9,7 @@ untracked, deleted, and renamed files, and nothing changed), and its
 exit codes with a fake `gh` on PATH: 3 when the branch moved, 1 for
 other errors, 0 on success. Then stats.yml, read as YAML: a read-only
 token but for the `commit` job, which runs only on `main` in
-temperlang/temper; no event payload or inputs expanded into a shell
+temperlang/temper; no `${{ }}` expression expanded into a shell
 script; and no step or job hands every command the token as GH_TOKEN.
 Fast, with nothing sent; CI's `lint` job runs it.
 
@@ -133,7 +133,9 @@ def test_stats_yml() -> None:
         assert "GH_TOKEN" not in job.get("env", {}), name
         for step in job.get("steps", []):
             run = step.get("run", "")
-            assert "${{ github.event." not in run and "inputs." not in run, (name, run)
+            # No expression expanded into a script at all: values go
+            # through `env:`.
+            assert "${{" not in run, (name, step.get("name"), run)
             assert "GH_TOKEN" not in step.get("env", {}), (name, step.get("name"))
     guard = jobs["commit"]["if"]
     assert "github.repository == 'temperlang/temper'" in guard, guard

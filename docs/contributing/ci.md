@@ -227,10 +227,11 @@ commit_stats.py gets the token (`GH_TOKEN`). In the `lint` job,
 [test_commit_stats.py](../../.github/ci-tools/test_commit_stats.py)
 test the rows from writing to the charts, the request and exit codes
 with a fake `gh`, and stats.yml's read-only token outside `commit`,
-its guards, and that no event data reaches a shell script.
+its guards, and that no `${{ }}` expression reaches a shell script.
 [pages.yml](../../.github/workflows/pages.yml) checks `stats` out too,
-and copies the charts onto the docs site, so it also runs every
-morning (06:47 UTC), after the night's commit.
+and copies the charts onto the docs site, so it also runs whenever a
+Stats run on `main` finishes (`workflow_run`), after the night's
+commit; it runs as it is on `main`, never the Stats run's code.
 
 ### On a `v` tag: the release
 
@@ -257,7 +258,10 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   write`, `id-token: write`). release.yml's call of binaries.yml grants
   it `contents: write` too, as a called workflow can't otherwise have
   what its `nightly` job asks for, though that job never runs for a
-  tag; binaries.yml's other jobs stay read-only.
+  tag; binaries.yml's other jobs stay read-only. A ruleset on `stats`
+  should block force-pushes and deletion, and `main`'s protection
+  should reject writes by `GITHUB_TOKEN`, so the `commit` job's token
+  can only add commits to `stats`.
 - **Crates:** every `cargo` command over the workspace runs with
   `--locked`, so CI builds exactly `Cargo.lock`. Crates the backends'
   tests generate have no lockfile and aren't locked.

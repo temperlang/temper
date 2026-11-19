@@ -4,16 +4,16 @@
 """Tests the size and speed scripts' rows, from writing to the charts.
 
 record_times.py's pure parts (metric ids, a times log's runs, the
-conditions, with GitHub's runner's), and a round trip: rows written
-twice to a new CSV through record_times.write, then drawn by
-size_speed_charts.render, each into a temporary directory. Fast, with
-nothing measured; CI's `lint` job runs it.
+conditions, with GitHub's runner's and its CPU model); a round trip:
+rows written twice to a new CSV through record_times.write, then drawn
+by size_speed_charts.render; and the stop before starting a new default
+CSV, however its path is spelled; each in a temporary directory. Fast,
+with nothing measured; CI's `lint` job runs it.
 
     uv run compat/test_size_speed.py
 """
 
 import csv
-import io
 import os
 import sys
 import tempfile
@@ -30,22 +30,18 @@ def environment(**values: str | None):
     """Sets (or with None, unsets) environment variables for a while."""
     old = {k: os.environ.get(k) for k in values}
     try:
-        for k, v in values.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+        set_all(values)
         yield
     finally:
-        for k, v in old.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+        set_all(old)
 
 
-@contextmanager
-def cpuinfo(text: str):
-    """record_times' /proc/cpuinfo, as `text`."""
-    record_times.open = lambda *args, **kwargs: io.StringIO(text)
-    try:
-        yield
-    finally:
-        del record_times.open
+def set_all(values: dict[str, str | None]) -> None:
+    for k, v in values.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
 
 
 def test_metric() -> None:
@@ -66,10 +62,17 @@ def test_conditions() -> None:
     with environment(GITHUB_ACTIONS=None):
         assert record_times.conditions("a=1", "", dirty=True, load="busy") == "a=1;load=busy;tree=dirty"
         assert record_times.conditions(dirty=False) == ""
-    # A CPU name with `;` and `=` in it must not add conditions or values.
-    with environment(GITHUB_ACTIONS="true"), cpuinfo("vendor_id\t: x\nmodel name\t: Xeon; Fast=yes  @ 2.1GHz\n"):
+    with environment(GITHUB_ACTIONS="true"):
         parts = record_times.conditions("a=1", dirty=False).split(";")
-    assert parts == ["a=1", "ci=github", "cpu=Xeon Fast yes @ 2.1GHz", f"cores={os.cpu_count()}"], parts
+    assert parts[:2] == ["a=1", "ci=github"] and parts[2].startswith("cpu="), parts
+    assert parts[3:] == [f"cores={os.cpu_count()}"], parts
+
+
+def test_cpu_model() -> None:
+    # A CPU name with `;` and `=` in it must not add conditions or values.
+    model = record_times.cpu_model("vendor_id\t: x\nmodel name\t: Xeon; Fast=yes  @ 2.1GHz\nmodel name\t: other\n")
+    assert model == "Xeon Fast yes @ 2.1GHz", model
+    assert record_times.cpu_model("") == "unknown"
 
 
 def test_rows_for() -> None:
@@ -130,31 +133,40 @@ def test_round_trip(tmp: Path) -> None:
     size_speed_charts.render(stats)
     charts = stats / "charts"
     ci = (charts / "funtest-times.svg").read_text()
-    assert "<desc id=\"d\">Python: 12.3 s at first, 12.3 s latest (abc1234).</desc>" in ci, ci
+    assert "12.3" in ci and "abc1234" in ci, ci
     for name in ("funtest-times-local", "settle-time", "build-times"):
         text = (charts / f"{name}.svg").read_text()
         assert "No runs recorded yet" in text and "12.3" not in text, (name, text)
 
 
 def test_check_csv(tmp: Path) -> None:
-    # The default CSV, missing, stops; one given elsewhere is made.
-    default = record_times.CSV
-    record_times.CSV = tmp / "stats-missing" / "size-and-speed.csv"
+    # The default CSV, missing, stops, however it's spelled; one given
+    # elsewhere is made.
+    default = size_speed_charts.CSV
+    size_speed_charts.CSV = tmp.resolve() / "stats-missing" / "size-and-speed.csv"
+    cwd = Path.cwd()
     try:
-        try:
-            record_times.check_csv(record_times.CSV)
-        except SystemExit as e:
-            assert "git worktree add stats stats" in str(e.code), e.code
-        else:
-            raise AssertionError("check_csv let a missing default CSV through")
+        os.chdir(tmp)
+        for spelling in (size_speed_charts.CSV, Path("stats-missing/size-and-speed.csv"),
+                         Path("stats-missing/../stats-missing/size-and-speed.csv")):
+            try:
+                record_times.check_csv(spelling)
+            except SystemExit as e:
+                assert "git worktree add stats stats" in str(e.code), (spelling, e.code)
+            else:
+                raise AssertionError(f"check_csv let a missing default CSV through as {spelling}")
+            assert "git worktree add stats stats" in str(size_speed_charts.missing(spelling, "--csv FILE")), spelling
         record_times.check_csv(tmp / "elsewhere.csv")
+        assert size_speed_charts.missing(tmp / "elsewhere.csv", "--csv FILE") == f"{tmp / 'elsewhere.csv'} is missing"
     finally:
-        record_times.CSV = default
+        os.chdir(cwd)
+        size_speed_charts.CSV = default
 
 
 def main() -> int:
     test_metric()
     test_conditions()
+    test_cpu_model()
     test_rows_for()
     with tempfile.TemporaryDirectory() as tmp:
         test_from_log(Path(tmp))

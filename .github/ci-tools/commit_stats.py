@@ -109,7 +109,10 @@ def main() -> int:
     summary = f"{len(files['additions'])} files added or updated, {len(files['deletions'])} deleted"
     if args.dry_run:
         text = json.dumps(payload, indent=2) + "\n"
-        sys.stdout.write(text) if args.dry_run == "-" else Path(args.dry_run).write_text(text)
+        if args.dry_run == "-":
+            sys.stdout.write(text)
+        else:
+            Path(args.dry_run).write_text(text)
         print(f"commit_stats.py: dry run, {summary}, on {args.branch} at {head}", file=sys.stderr)
         return 0
     sent = subprocess.run(["gh", "api", "graphql", "--input", "-"], input=json.dumps(payload),

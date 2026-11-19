@@ -68,10 +68,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-# The `stats` branch, checked out here (.gitignore'd); see its README.
-STATS = ROOT / "stats"
-CSV = STATS / "size-and-speed.csv"
+from size_speed_charts import CSV, ROOT, is_default, missing
 FIELDS = ["date", "commit", "what", "value", "value_max", "unit", "conditions", "notes"]
 
 
@@ -115,18 +112,23 @@ def today() -> str:
     return datetime.date.today().isoformat()
 
 
+def cpu_model(cpuinfo: str) -> str:
+    """The CPU's model name from /proc/cpuinfo's text, as a condition's
+    value: without `;` or `=`, its spaces collapsed."""
+    model = next((line.split(":", 1)[1] for line in cpuinfo.splitlines() if line.startswith("model name")),
+                 "unknown")
+    return " ".join(re.sub(r"[;=]", " ", model).split())
+
+
 def ci_conditions() -> list[str]:
     """`ci=github`, the CPU's model, and its cores, in GitHub Actions."""
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return []
-    model = "unknown"
     try:
-        with open("/proc/cpuinfo") as f:
-            model = next((line.split(":", 1)[1] for line in f if line.startswith("model name")), model)
+        cpuinfo = Path("/proc/cpuinfo").read_text()
     except OSError:
-        pass
-    model = " ".join(re.sub(r"[;=]", " ", model).split())
-    return ["ci=github", f"cpu={model}", f"cores={os.cpu_count()}"]
+        cpuinfo = ""
+    return ["ci=github", f"cpu={cpu_model(cpuinfo)}", f"cores={os.cpu_count()}"]
 
 
 def conditions(*given: str, dirty: bool | None = None, load: str | None = None) -> str:
@@ -149,11 +151,11 @@ def row(what: str, value: str, unit: str, cond: str, note: str, date: str = "", 
 
 
 def check_csv(path: Path) -> None:
-    """Stops if `path` is the default CSV and it's missing (`stats` not
-    checked out), rather than starting a new one there."""
-    if path == CSV and not path.exists():
-        sys.exit(f"{path} is missing: check the stats branch out there (git worktree add stats stats), "
-                 "or give --csv FILE")
+    """Stops if `path` is the default CSV, however it's spelled, and it's
+    missing (`stats` not checked out), rather than starting a new one
+    there."""
+    if is_default(path) and (problem := missing(path, "--csv FILE")):
+        sys.exit(problem)
 
 
 def write(rows: list[dict[str, str]], path: Path | None) -> None:

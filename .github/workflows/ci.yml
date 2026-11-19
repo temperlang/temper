@@ -189,10 +189,19 @@ jobs:
         run: uv run compat/check_functional.py
       # Drawn from the `stats` branch's data (stats.yml records it there
       # nightly), into a temporary copy, so a change that breaks the
-      # charts fails here, not the next night.
+      # charts fails here, not the next night. Skipped where there's no
+      # `stats` (a fork).
       - name: Size and speed charts
         if: ${{ !cancelled() }}
         run: |
+          # 2: no such branch; any other failure fails the step.
+          found=0
+          git ls-remote --exit-code origin refs/heads/stats > /dev/null || found=$?
+          if [ "$found" = 2 ]; then
+            echo "::notice::No stats branch to draw the charts from; skipped"
+            exit 0
+          fi
+          [ "$found" = 0 ] || exit "$found"
           git fetch -q --no-tags --depth=1 origin stats
           mkdir "$RUNNER_TEMP/stats"
           git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/stats"

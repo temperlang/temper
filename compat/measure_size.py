@@ -118,8 +118,8 @@ def main() -> int:
     print(f"peak memory, lex, parse, build trees for and settle all: rust {rust / 1024:.1f} MiB")
     rows.append(("peak-memory-settle-all", mib(rust), "MiB", f"run=rust;{count}"))
     if args.record:
-        tree = record_times.conditions(dirty=dirty)
-        record_times.write([record_times.row(what, value, unit, ";".join(filter(None, (cond, tree))), "measure_size.py")
+        record_times.write([record_times.row(what, value, unit, record_times.conditions(cond, dirty=dirty),
+                                             "measure_size.py")
                             for what, value, unit, cond in rows], args.csv)
     return 0
 

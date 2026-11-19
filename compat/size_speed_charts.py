@@ -29,7 +29,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 # The `stats` branch, checked out here (.gitignore'd); see its README.
+# record_times.py and size_speed_table.py take these from here, which
+# imports nothing heavy.
 STATS = ROOT / "stats"
+CSV = STATS / "size-and-speed.csv"
+
+
+def is_default(path: Path) -> bool:
+    """Whether `path` is the default CSV, however it's spelled."""
+    return path.resolve() == CSV
+
+
+def missing(path: Path, other: str) -> str | None:
+    """Why the CSV at `path` can't be read, or None if it's there: missing,
+    and if it's the default one, how to check the `stats` branch out
+    there, or give `other` (`--csv FILE`)."""
+    if path.exists():
+        return None
+    if is_default(path):
+        return f"{path} is missing: check the stats branch out there (git worktree add stats stats), or give {other}"
+    return f"{path} is missing"
 
 
 @dataclass
@@ -56,6 +75,8 @@ class Chart:
 # GitHub's runners (the nightly stats workflow) and a local machine.
 CI, LOCAL = "ci=github", "!ci=github"
 TREND = "GitHub's shared runners, nightly: a trend, not a benchmark"
+# measure_size.BACKENDS's, as named on the charts; a backend added there
+# needs a line here too.
 BACKENDS = [("C++", "cpp"), ("C#", "csharp"), ("Java", "java"), ("JavaScript", "js"),
             ("Lua", "lua"), ("Python", "py"), ("Rust", "rust")]
 BUILDS = [("release, clean", "build-tempest-release-s"), ("release, incremental", "build-tempest-incremental-s"),
@@ -353,11 +374,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--stats", type=Path, default=STATS, help="a checkout of the stats branch (default stats/)")
     args = parser.parse_args()
-    if not (args.stats / "size-and-speed.csv").exists():
-        sys.exit(f"{args.stats / 'size-and-speed.csv'} is missing: check the stats branch out "
-                 + ("there (git worktree add stats stats), or give --stats DIR" if args.stats == STATS else "there"))
+    if problem := missing(args.stats / "size-and-speed.csv", "--stats DIR"):
+        sys.exit(problem)
     render(args.stats)
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
