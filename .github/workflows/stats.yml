@@ -1,0 +1,210 @@
+# Size and speed, measured every night on `main`'s latest commit and
+# whenever it's run by hand from the Actions tab, and recorded on the
+# `stats` branch: an orphan branch of data alone (size-and-speed.csv,
+# its charts, and a README saying what the columns mean), so `main`
+# gets no commits for it. notes/size-and-speed.md and the docs site
+# (pages.yml) show the charts from there.
+#
+# Measured on one runner, one step after another (docs/contributing/
+# size-and-speed.md):
+#
+# - build and test times (compat/record_times.py --steps): `temper`'s
+#   release build from clean and after touching one frontend file, every
+#   test built, clippy, each crate's tests with every backend's
+#   toolchain, and the small wasm build, a step each, wall and CPU
+#   seconds; with no build cache, so each night starts from the same
+#   place;
+# - sizes (compat/measure_size.py --no-kotlin): the binaries (`temper`
+#   as released, the `small` profile, and as `release`), the wasm, raw
+#   and gzipped, and peak memory over this repository's Temper files;
+#   on Sundays and by hand, each backend's share too (`--shares`);
+# - settle time over the same files (compat/bench_settle.py), the
+#   median of five runs.
+#
+# Every row says the runner's CPU and core count (`conditions`). Sizes
+# are exact; times on GitHub's shared runners vary from night to night,
+# so the charts show them as a trend, apart from the older times taken
+# on a quiet local machine.
+#
+# Then `commit` appends the rows to the CSV, redraws the charts, and
+# commits them to `stats` through GitHub's GraphQL API
+# (`createCommitOnBranch`, .github/ci-tools/commit_stats.py), with this
+# workflow's token: GitHub signs the commit (Verified, by
+# github-actions[bot]), and no key or `git push` is needed. If `stats`
+# moved meanwhile, it starts again from the new head, once. Only that
+# job can write, only on main, and only in temperlang/temper, not
+# forks. A scheduled run skips a commit already measured.
+#
+# Locally, the same steps write rows wherever `--csv` says, and
+# commit_stats.py's `--dry-run` writes the request it would send.
+name: Stats
+
+on:
+  workflow_dispatch:
+  # Apart from nightly.yml's start (03:41), so the two don't queue for
+  # runners together; pages.yml rebuilds the site, with the new charts,
+  # when this finishes (its `workflow_run`).
+  schedule:
+    - cron: "23 4 * * *"
+
+permissions:
+  contents: read
+
+# One at a time, so two runs never race to commit.
+concurrency:
+  group: stats
+  cancel-in-progress: false
+
+jobs:
+  # Whether `stats` already has rows for this commit: its CSV's last
+  # row's. If this fails (no `stats` yet), `measure` runs.
+  recent:
+    if: github.repository == 'temperlang/temper'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      measured: ${{ steps.last.outputs.measured }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: stats
+          persist-credentials: false
+      - id: last
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          last=$(tail -n 1 size-and-speed.csv | cut -d, -f2)
+          measured=false
+          if [ "$last" = "${SHA::7}" ]; then measured=true; fi
+          echo "Last row's commit: $last; this run's: ${SHA::7}; measured=$measured"
+          echo "measured=$measured" >> "$GITHUB_OUTPUT"
+
+  measure:
+    needs: recent
+    if: ${{ !cancelled() && github.repository == 'temperlang/temper' && (github.event_name != 'schedule' || needs.recent.outputs.measured != 'true') }}
+    # Pinned, as ci.yml's, for Ubuntu's lua5.4, which is 5.4.6 on noble.
+    runs-on: ubuntu-24.04
+    # An outer bound: each measuring step has its own, so after one times
+    # out, the rest, the Rows step, and the upload still run, and what was
+    # measured is kept.
+    timeout-minutes: 270
+    outputs:
+      rows: ${{ steps.rows.outputs.rows }}
+    env:
+      TEMPER_REQUIRE_CHECKERS: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Not `strict`'s other C++ compilers, as nightly.yml's `cpp`: the
+      # C++ backend's time is its functional tests'.
+      TEMPER_STRICT_CXX: ""
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+        # clippy for its step and the Rust backend's tests, which also
+        # lay out generated crates with rustfmt; wasm for its build.
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      # No rust-cache: every night builds from the same (empty) start.
+      - uses: ./.github/actions/toolchains
+        with:
+          backends: py js lua java csharp cpp rust
+      - name: Rows file
+        run: echo "ROWS=$RUNNER_TEMP/stats/rows.csv" >> "$GITHUB_ENV"
+      - name: Build and test times
+        timeout-minutes: 120
+        run: uv run compat/record_times.py --steps --record --csv "$ROWS"
+      # Sundays' shares add about twenty size-optimized builds.
+      - name: Sizes and peak memory
+        if: ${{ !cancelled() }}
+        timeout-minutes: 100
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          shares=
+          if [ "$EVENT" != schedule ] || [ "$(date -u +%u)" = 7 ]; then shares=--shares; fi
+          uv run compat/measure_size.py --no-kotlin $shares --record --csv "$ROWS" lib crates
+      - name: Settle time
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        run: uv run compat/bench_settle.py --runs 5 --rounds 10 --record --csv "$ROWS" lib crates
+      - id: rows
+        name: Rows
+        if: ${{ !cancelled() }}
+        run: |
+          rows=0
+          if [ -f "$ROWS" ]; then
+            rows=$(( $(wc -l < "$ROWS") - 1 ))
+            uv run compat/size_speed_table.py --csv "$ROWS" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "$rows rows"
+          echo "rows=$rows" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() && steps.rows.outputs.rows > 0 }}
+        with:
+          name: stats-rows
+          path: ${{ runner.temp }}/stats/rows.csv
+          retention-days: 14
+          # A re-run of `measure` replaces its earlier attempt's rows.
+          overwrite: true
+
+  # The rows onto `stats`, the charts redrawn, as one signed commit.
+  # Even after a failed step in `measure`: what it measured is kept.
+  commit:
+    needs: measure
+    if: ${{ !cancelled() && github.repository == 'temperlang/temper' && github.ref == 'refs/heads/main' && needs.measure.outputs.rows > 0 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # The chart script and commit_stats.py, at the commit measured.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            compat
+            .github/ci-tools
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: stats
+          path: stats
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        # As in ci.yml.
+        with:
+          version: "0.13.5"
+          checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: stats-rows
+          path: ${{ runner.temp }}/rows
+      # From `stats`' head each time: if it moved since (commit_stats.py
+      # exits 3), once more from the new head. Rows already there (this
+      # job re-run after it committed) aren't added again, so nothing
+      # changes and nothing is committed. The token is only
+      # commit_stats.py's: an unexported shell variable for the rest.
+      - name: Commit to stats
+        env:
+          TOKEN: ${{ github.token }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          token=$TOKEN
+          unset TOKEN
+          rows="$RUNNER_TEMP/rows/rows.csv"
+          for attempt in 1 2; do
+            git -C stats fetch -q --depth=1 origin stats
+            git -C stats checkout -q --force --detach FETCH_HEAD
+            if grep -qxF -- "$(sed -n 2p "$rows")" stats/size-and-speed.csv; then
+              echo "stats already has this run's rows"
+            else
+              tail -n +2 "$rows" >> stats/size-and-speed.csv
+            fi
+            uv run compat/size_speed_charts.py --stats stats
+            status=0
+            GH_TOKEN=$token uv run .github/ci-tools/commit_stats.py stats --branch stats \
+              --headline "Size and speed of ${GITHUB_SHA::7}" --body "Measured by $RUN" || status=$?
+            [ "$status" = 3 ] || exit "$status"
+          done
+          exit 1

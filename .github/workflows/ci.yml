@@ -7,7 +7,8 @@
 # - `lint`: formatting, clippy (with and without default features), the
 #   workflows parsed as YAML, the docs' links, Temper's functional
 #   tests (crates/temper-funtests/cases/) on Temper's interpreter, the
-#   size and speed charts, and release tags' rules (release.yml); then
+#   size and speed charts (drawn from the `stats` branch's data), and
+#   release tags' rules (release.yml); then
 #   `core`'s tests: every crate's but the backends' and `tempest`'s, and
 #   again without default features (no backends, no `net`), `tempest`'s
 #   included;
@@ -82,7 +83,7 @@ jobs:
   #   transcripts test, and `release`'s docs' examples and docs site; or
   #   blog, the submodule, which the docs site builds.
   #
-  # notes/ is read only by `lint` (its links and charts), which always
+  # notes/ is read only by `lint` (its links), which always
   # runs. With nothing to compare with (a new branch, or a base that
   # can't be fetched), both are "true". The other jobs check for
   # "false", not "true", so if this job fails they run.
@@ -167,7 +168,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: cargo clippy --locked --workspace --all-targets --no-default-features -- -D warnings
       # GitHub rejects a whole workflow over one bad line, so each must
-      # parse, the local action too.
+      # parse, the local actions too.
       - name: Workflows parse
         if: ${{ !cancelled() }}
         run: |
@@ -186,9 +187,33 @@ jobs:
       - name: Functional tests
         if: ${{ !cancelled() }}
         run: uv run compat/check_functional.py
-      - name: Size and speed charts are current
+      # Drawn from the `stats` branch's data (stats.yml records it there
+      # nightly), into a temporary copy, so a change that breaks the
+      # charts fails here, not the next night. Skipped where there's no
+      # `stats` (a fork).
+      - name: Size and speed charts
         if: ${{ !cancelled() }}
-        run: uv run compat/size_speed_charts.py --check
+        run: |
+          # 2: no such branch; any other failure fails the step.
+          found=0
+          git ls-remote --exit-code origin refs/heads/stats > /dev/null || found=$?
+          if [ "$found" = 2 ]; then
+            echo "::notice::No stats branch to draw the charts from; skipped"
+            exit 0
+          fi
+          [ "$found" = 0 ] || exit "$found"
+          git fetch -q --no-tags --depth=1 origin stats
+          mkdir "$RUNNER_TEMP/stats"
+          git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/stats"
+          uv run compat/size_speed_charts.py --stats "$RUNNER_TEMP/stats"
+      # The size and speed scripts' rows, written and drawn, and the
+      # commit to `stats` (with a fake `gh`), each in a temporary
+      # directory; and stats.yml's permissions and guards.
+      - name: Size and speed scripts' tests
+        if: ${{ !cancelled() }}
+        run: |
+          uv run compat/test_size_speed.py
+          uv run .github/ci-tools/test_commit_stats.py
       # Which tags release.yml takes (.github/ci-tools/release.py).
       - name: Release tags' rules
         if: ${{ !cancelled() }}

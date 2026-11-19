@@ -2,7 +2,7 @@
 # which are pinned by commit SHA with a version comment that Dependabot
 # keeps in step. Only releases at least two weeks old (cooldown), as
 # docs/contributing/ci.md asks. Every bump, major ones too, comes in one
-# pull request for the ecosystem, the workflows and the local action
+# pull request for the ecosystem, the workflows and the local actions
 # together, so a version moves everywhere at once; read the majors'
 # release notes before merging, as some workflows (Pages, releases,
 # nightly) only run after merging. Cargo and npm aren't here (yet):
@@ -10,8 +10,8 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    # The workflows, and the local action they share.
-    directories: ["/", "/.github/actions/toolchains"]
+    # The workflows, and the local actions they share.
+    directories: ["/", "/.github/actions/java", "/.github/actions/toolchains"]
     schedule:
       interval: monthly
     cooldown:

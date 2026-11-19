@@ -1,21 +1,23 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Draws the size and speed history as SVG charts, for notes/size-and-speed.md.
+"""Draws the size and speed history as SVG charts.
 
-Reads notes/size-and-speed.csv and writes notes/charts/*.svg: binary sizes
-(tempest as released, and run-temper without the network code),
-settle time, peak memory, Ordable's test times by runner, each backend's
-functional-test time, and build times. Each point is one commit's
-measurement (clean or with the chunk's changes, `tree=dirty`), at the
-middle of its range, with the range as a whisker; on the timing charts
-(`smooth`), each point is one run instead, with a centered rolling median
-over its neighbors as the line and the spread around it as a band, since
-single runs on a shared machine are noisy. Sizes in bytes show as KiB.
-`record_times.py --record` redraws them too. With --check, writes nothing
-and fails if the charts are out of date, as CI runs it.
+Reads size-and-speed.csv in a checkout of the `stats` branch (stats/,
+beside this repository's files, or `--stats DIR`) and writes its
+charts/*.svg: binary sizes (tempest as released, and run-temper without
+the network code), settle time, peak memory, Ordable's test times by
+runner, each backend's functional-test time, and build times. Each point
+is one commit's measurement (clean or with the chunk's changes,
+`tree=dirty`), at the middle of its range, with the range as a whisker;
+on the timing charts (`smooth`), each point is one run instead, with a
+centered rolling median over its neighbors as the line and the spread
+around it as a band, since single runs are noisy. Sizes in bytes show as
+KiB. The timings from GitHub's runners (`ci=github`, the nightly stats
+workflow's) are kept apart from those on a local machine, which stopped
+on 2026-11-13: a shared runner's times are a trend, not a benchmark.
 
-    uv run compat/size_speed_charts.py [--check]
+    uv run compat/size_speed_charts.py [--stats DIR]
 """
 
 import argparse
@@ -26,16 +28,34 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV = ROOT / "notes/size-and-speed.csv"
-OUT = ROOT / "notes/charts"
+# The `stats` branch, checked out here (.gitignore'd); see its README.
+# record_times.py and size_speed_table.py take these from here, which
+# imports nothing heavy.
+STATS = ROOT / "stats"
+CSV = STATS / "size-and-speed.csv"
+
+
+def is_default(path: Path) -> bool:
+    """Whether `path` is the default CSV, however it's spelled."""
+    return path.resolve() == CSV
+
+
+def missing(path: Path, other: str) -> str | None:
+    """Why the CSV at `path` can't be read, or None if it's there: missing,
+    and if it's the default one, how to check the `stats` branch out
+    there, or give `other` (`--csv FILE`)."""
+    if path.exists():
+        return None
+    if is_default(path):
+        return f"{path} is missing: check the stats branch out there (git worktree add stats stats), or give {other}"
+    return f"{path} is missing"
 
 
 @dataclass
 class Series:
     label: str
     what: str
-    # Every condition here must be among the row's; `features=no-net` also
-    # matches rows from before the `net` feature existed, which had none.
+    # Every condition here must be among the row's, and none marked `!`.
     conditions: tuple[str, ...] = ()
 
 
@@ -48,38 +68,52 @@ class Chart:
     note: str = ""
     # One point per row (a run), smoothed, rather than per commit.
     smooth: bool = False
+    # Conditions every series here has too.
+    conditions: tuple[str, ...] = ()
+
+
+# GitHub's runners (the nightly stats workflow) and a local machine.
+CI, LOCAL = "ci=github", "!ci=github"
+TREND = "GitHub's shared runners, nightly: a trend, not a benchmark"
+# measure_size.BACKENDS's, as named on the charts; a backend added there
+# needs a line here too.
+BACKENDS = [("C++", "cpp"), ("C#", "csharp"), ("Java", "java"), ("JavaScript", "js"),
+            ("Lua", "lua"), ("Python", "py"), ("Rust", "rust")]
+BUILDS = [("release, clean", "build-tempest-release-s"), ("release, incremental", "build-tempest-incremental-s"),
+          ("clippy", "clippy-s"), ("wasm (small)", "build-wasm-small-s")]
 
 
 CHARTS = [
     Chart("sizes", "Binary sizes", "KiB", [
         Series("tempest (small, as released)", "tempest-small", ("features=net",)),
-        Series("run-temper (small, no net)", "run-temper-small", ("features=no-net",)),
+        Series("run-temper (small, no net)", "run-temper-small", ("!features=net",)),
         Series("wasm (small)", "wasm-small"),
         Series("wasm, gzipped", "wasm-small-gzip"),
     ], note="small: the profile releases use, optimized for size, with LTO, stripped"),
     Chart("settle-time", "Settling every Temper file", "ms", [
-        Series("settle time", "lex-parse-module-settle-ms"),
-    ]),
+        Series("local", "lex-parse-module-settle-ms", (LOCAL,)),
+        Series("GitHub", "lex-parse-module-settle-ms", (CI,)),
+    ], note="local: about 850 files of three repositories; GitHub: this repository's own"),
     Chart("peak-memory", "Peak memory, settling every Temper file", "MiB", [
-        Series("peak memory", "peak-memory-settle-all"),
-    ]),
+        Series("local", "peak-memory-settle-all", (LOCAL,)),
+        Series("GitHub", "peak-memory-settle-all", (CI,)),
+    ], note="local: about 850 files of three repositories; GitHub: this repository's own"),
     Chart("ordable-tests", "Ordable's tests", "s", [
         Series("tempest (release)", "ordable-tests", ("runner=tempest", "build=release")),
         Series("Python (Kotlin Temper)", "ordable-tests", ("runner=py",)),
         Series("Lua (Kotlin Temper)", "ordable-tests", ("runner=lua",)),
     ]),
-    Chart("funtest-times", "Functional tests by backend", "s", [
-        Series(label, f"funtest-{name}-s")
-        for label, name in [("C++", "cpp"), ("C#", "csharp"), ("Java", "java"), ("JavaScript", "js"),
-                            ("Lua", "lua"), ("Python", "py"), ("Rust", "rust")]
-    ], note="wall time of each backend crate's cargo test, one CI run each", smooth=True),
-    Chart("build-times", "Build and lint times", "s", [
-        Series("release, clean", "build-tempest-release-s"),
-        Series("release, incremental", "build-tempest-incremental-s"),
-        Series("clippy", "clippy-s"),
-        Series("wasm (small)", "build-wasm-small-s"),
-    ], note="wall time; tempest's release build from clean, and after touching one frontend file",
-       smooth=True),
+    Chart("funtest-times", "Functional tests by backend", "s",
+          [Series(label, f"funtest-{name}-s") for label, name in BACKENDS],
+          note=TREND, smooth=True, conditions=(CI,)),
+    Chart("build-times", "Build and lint times", "s", [Series(label, what) for label, what in BUILDS],
+          note=TREND, smooth=True, conditions=(CI,)),
+    Chart("funtest-times-local", "Functional tests by backend, on a local machine", "s",
+          [Series(label, f"funtest-{name}-s") for label, name in BACKENDS],
+          note="wall time of each backend crate's cargo test, until 2026-11-13", smooth=True, conditions=(LOCAL,)),
+    Chart("build-times-local", "Build and lint times, on a local machine", "s",
+          [Series(label, what) for label, what in BUILDS],
+          note="wall time, until 2026-11-13", smooth=True, conditions=(LOCAL,)),
 ]
 
 # The smoothing window: a point and this many neighbors each side.
@@ -105,15 +139,12 @@ class Data:
     points: list[dict[tuple[str, str, bool, int], Point]] = field(default_factory=list)
 
 
-def matches(row: dict[str, str], series: Series) -> bool:
+def matches(row: dict[str, str], series: Series, chart: Chart) -> bool:
     if row["what"] != series.what:
         return False
     conditions = set(filter(None, row["conditions"].split(";")))
-    for wanted in series.conditions:
-        if wanted == "features=no-net":
-            if "features=net" in conditions:
-                return False
-        elif wanted not in conditions:
+    for wanted in series.conditions + chart.conditions:
+        if (wanted[1:] in conditions) if wanted.startswith("!") else (wanted not in conditions):
             return False
     return True
 
@@ -146,7 +177,7 @@ def gather(rows: list[dict[str, str]], chart: Chart) -> Data:
     for series in chart.series:
         points: dict[tuple[str, str, bool, int], Point] = {}
         for order, row in enumerate(rows):
-            if not matches(row, series):
+            if not matches(row, series, chart):
                 continue
             low = to_unit(float(row["value"]), row["unit"], chart.unit)
             high = to_unit(float(row["value_max"]), row["unit"], chart.unit) if row["value_max"] else low
@@ -245,6 +276,9 @@ def draw(chart: Chart, data: Data) -> str:
            f'<text x="{LEFT}" y="42">{subtitle(chart)}</text>']
     if chart.note:
         out.append(f'<text x="{LEFT}" y="58">{chart.note}</text>')
+    if not n:
+        out.append(f'<text x="{LEFT + plot_w / 2}" y="{TOP + plot_h / 2}" text-anchor="middle">No runs recorded yet</text>')
+        return "\n".join(out + ["</svg>"]) + "\n"
     # Grid and y ticks.
     tick = 0.0
     while tick <= top + step / 1000:
@@ -315,6 +349,8 @@ def range_text(p: Point, unit: str) -> str:
 
 def describe(chart: Chart, data: Data) -> str:
     parts = []
+    if not data.keys:
+        return "No runs recorded yet."
     for series, points in zip(chart.series, data.points):
         if points:
             ordered = sorted(points.values(), key=lambda p: data.keys.index(p.key))
@@ -323,33 +359,26 @@ def describe(chart: Chart, data: Data) -> str:
     return "; ".join(parts) + "."
 
 
-def render(check: bool = False) -> list[Path]:
-    """Draws every chart from the CSV; with `check`, writes nothing and
-    returns the charts that are out of date instead."""
-    with CSV.open(newline="") as f:
+def render(stats: Path = STATS) -> None:
+    """Draws every chart from the stats directory's CSV into its charts/."""
+    with (stats / "size-and-speed.csv").open(newline="") as f:
         rows = list(csv.DictReader(f))
-    stale = []
+    out = stats / "charts"
+    out.mkdir(exist_ok=True)
     for chart in CHARTS:
-        svg = draw(chart, gather(rows, chart))
-        path = OUT / f"{chart.name}.svg"
-        if check:
-            if not path.exists() or path.read_text() != svg:
-                stale.append(path.relative_to(ROOT))
-        else:
-            OUT.mkdir(exist_ok=True)
-            path.write_text(svg)
-    return stale
+        (out / f"{chart.name}.svg").write_text(draw(chart, gather(rows, chart)))
+    print(f"drew {len(CHARTS)} charts in {out}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true", help="fail if the charts are out of date")
+    parser.add_argument("--stats", type=Path, default=STATS, help="a checkout of the stats branch (default stats/)")
     args = parser.parse_args()
-    stale = render(args.check)
-    if stale:
-        print("Out of date; run `uv run compat/size_speed_charts.py`:", *stale, sep="\n  ", file=sys.stderr)
-        return 1
+    if problem := missing(args.stats / "size-and-speed.csv", "--stats DIR"):
+        sys.exit(problem)
+    render(args.stats)
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
