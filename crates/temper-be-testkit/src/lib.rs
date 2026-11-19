@@ -853,6 +853,29 @@ pub fn with_stack(test: impl FnOnce() + Send + 'static) {
         .unwrap();
 }
 
+/// How a backend's work translating a template grows with its parts:
+/// `"${n}x"` repeated 250, 500, and 1,000 times, each library made by
+/// `program` and translated by `translate`, counting the kids lists read
+/// ([`temper_tmpl::kids_read`]) in `translate` alone. Gives the second
+/// doubling's added work over the first's: 2 where the work is linear in
+/// the parts, 4 where it's quadratic, as it was when a pass looked over
+/// each `String.cat`'s whole left side at every level of the chain.
+pub fn template_work_growth(
+    program: impl Fn(&Case) -> Program,
+    translate: impl Fn(&Program),
+) -> f64 {
+    let work = |n: usize| {
+        let body = "${n}x".repeat(n);
+        let text = format!("    export let f(n: Int): String {{ \"{body}\" }}\n");
+        let program = program(&Case::inline("joins", "joins.temper.md", text, Vec::new()));
+        let before = temper_tmpl::kids_read();
+        translate(&program);
+        temper_tmpl::kids_read() - before
+    };
+    let (a, b, c) = (work(250), work(500), work(1000));
+    (c - b) as f64 / (b - a) as f64
+}
+
 /// The goldens, beside std's, that show Temper's version as it is rather
 /// than as the sentinel, so each backend's spellings of it in a package
 /// file stay pinned: the `modules` program's, which depends on core and

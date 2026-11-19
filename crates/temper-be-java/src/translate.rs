@@ -53,7 +53,8 @@ use crate::tree::{self, Bin, Expr, Stmt, Unary};
 use classes::is_type;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use temper_tmpl::analysis::{
-    self, TestParts, home, module_refs, module_state, module_writes, reads_only_itself, walk,
+    self, Subtrees, TestParts, holding, home, module_refs, module_state, module_writes,
+    reads_only_itself, walk,
 };
 use temper_tmpl::host::uses_host;
 use temper_tmpl::naming::NameMap;
@@ -128,6 +129,10 @@ pub struct Translator<'a> {
     /// Values computed into temporaries ahead of a later operand's
     /// statements, so they're still computed first, by their nodes.
     spilled: HashMap<NodeId, Expr>,
+    /// Whether translating each value needs statements before it: an
+    /// `orelse`, or a block's statements, anywhere in it. Kept, since
+    /// [`Self::spill_before`] asks at every level of a deep tree.
+    needs: Subtrees<'a, bool>,
     /// The names of the function's (or init block's) locals and
     /// parameters, and the module's statics, with how many locals have
     /// each, which temporaries' names avoid.
@@ -194,6 +199,16 @@ impl<'a> Translator<'a> {
             pre: Vec::new(),
             groups: Vec::new(),
             spilled: HashMap::new(),
+            needs: holding(
+                p,
+                |n| {
+                    matches!(
+                        p.nodes.get(n),
+                        Node::OrElse { .. } | Node::BlockValue { .. }
+                    )
+                },
+                |_| false,
+            ),
             taken: HashMap::new(),
             same: HashMap::new(),
             sams: Vec::new(),
@@ -1002,7 +1017,7 @@ impl<'a> Translator<'a> {
                 value,
             } => {
                 let mut object_expr = self.expr(object)?;
-                if needs_stmts(p, value) && !stable(p, object) {
+                if self.needs_stmts(value) && !stable(p, object) {
                     object_expr = self.spill(object, object_expr)?;
                 }
                 let target = object_expr.member(self.name(field));
@@ -1024,7 +1039,7 @@ impl<'a> Translator<'a> {
                 };
                 self.emit(out, Stmt::If { cond, then, els });
             }
-            Node::While { label, cond, body } if needs_stmts(p, cond) => {
+            Node::While { label, cond, body } if self.needs_stmts(cond) => {
                 // `while (true) { …; if (!cond) break; … }`, so what the
                 // condition needs runs before each test.
                 let mut test = Vec::new();
@@ -1061,7 +1076,7 @@ impl<'a> Translator<'a> {
                     },
                 );
             }
-            Node::DoWhile { cond, .. } if needs_stmts(p, cond) => {
+            Node::DoWhile { cond, .. } if self.needs_stmts(cond) => {
                 return not_yet("a do … while condition that needs statements");
             }
             Node::DoWhile { label, body, cond } => {
@@ -1173,7 +1188,7 @@ impl<'a> Translator<'a> {
                 Ok(())
             }
             // A default with statements: `if (x == null) { … } else { x }`.
-            (_, Node::Coalesce { left, right }) if needs_stmts(p, right) => {
+            (_, Node::Coalesce { left, right }) if self.needs_stmts(right) => {
                 if !matches!(p.nodes.get(left), Node::Local { .. }) {
                     return not_yet("a coalesced value that isn't a local");
                 }
@@ -1184,7 +1199,7 @@ impl<'a> Translator<'a> {
                 Ok(())
             }
             (_, Node::IfValue { cond, then, els })
-                if needs_stmts(p, then) || needs_stmts(p, els) =>
+                if self.needs_stmts(then) || self.needs_stmts(els) =>
             {
                 let cond = self.expr(cond)?;
                 let then = self.sub(|t, o| t.into(into, then, o))?;
@@ -1266,8 +1281,8 @@ impl<'a> Translator<'a> {
         let p = self.p;
         match p.nodes.get(value) {
             Node::OrElse { .. } => true,
-            Node::IfValue { then, els, .. } => needs_stmts(p, then) || needs_stmts(p, els),
-            Node::Coalesce { right, .. } => needs_stmts(p, right),
+            Node::IfValue { then, els, .. } => self.needs_stmts(then) || self.needs_stmts(els),
+            Node::Coalesce { right, .. } => self.needs_stmts(right),
             Node::BlockValue { .. } => !self.flattens(value),
             _ => false,
         }
@@ -1313,13 +1328,19 @@ impl<'a> Translator<'a> {
         Ok(Expr::name(name))
     }
 
+    /// Whether translating a value needs statements before it: an
+    /// `orelse`, or a block's statements, anywhere in it.
+    fn needs_stmts(&self, id: NodeId) -> bool {
+        self.needs.of(id)
+    }
+
     /// Before a node's operands are translated: where a later one needs
     /// statements first, each earlier one that a statement could change
     /// goes into a temporary, so it's still computed first.
     fn spill_before(&mut self, id: NodeId) -> R<()> {
         let p = self.p;
         let kids = p.nodes.kids(id);
-        let Some(last) = kids.iter().rposition(|&k| needs_stmts(p, k)) else {
+        let Some(last) = kids.iter().rposition(|&k| self.needs_stmts(k)) else {
             return Ok(());
         };
         for &k in &kids[..last] {
@@ -1746,14 +1767,14 @@ impl<'a> Translator<'a> {
                 self.pre.extend(stmts);
                 Expr::name(name)
             }
-            Node::IfValue { then, els, .. } if needs_stmts(p, then) || needs_stmts(p, els) => {
+            Node::IfValue { then, els, .. } if self.needs_stmts(then) || self.needs_stmts(els) => {
                 let name = self.temp_for(id)?;
                 let mut stmts = Vec::new();
                 self.into(&Place::Assign(Expr::name(name.clone())), id, &mut stmts)?;
                 self.pre.extend(stmts);
                 Expr::name(name)
             }
-            Node::And { left, right } | Node::Or { left, right } if needs_stmts(p, right) => {
+            Node::And { left, right } | Node::Or { left, right } if self.needs_stmts(right) => {
                 // `boolean t = left; if (t) { t = right; }`, or `if (!t)`.
                 let and = matches!(p.nodes.get(id), Node::And { .. });
                 let left = self.expr(left)?;
@@ -1993,19 +2014,6 @@ fn rename_helper(e: &mut Expr, name: &str) {
         Expr::Bin(_, a, _) => rename_helper(a, name),
         _ => {}
     }
-}
-
-/// Whether translating a value needs statements before it: an `orelse`,
-/// or a block's statements, anywhere in it.
-fn needs_stmts(p: &Program, id: NodeId) -> bool {
-    let mut found = false;
-    walk(p, id, &mut |n| {
-        found |= matches!(
-            p.nodes.get(n),
-            Node::OrElse { .. } | Node::BlockValue { .. }
-        );
-    });
-    found
 }
 
 /// Whether putting a value somewhere assigns it in a `try` and again in

@@ -66,6 +66,8 @@ pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools};
 pub use builder::Builder;
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};
+#[cfg(feature = "work-count")]
+pub use nodes::kids_read;
 pub use nodes::{Flags, Kids, Nodes};
 pub use profile::{Features, Profile};
 pub use qname::{QName, QNames};

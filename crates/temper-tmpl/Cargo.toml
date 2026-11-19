@@ -14,3 +14,9 @@ workspace = true
 # but the OS calls behind its tools' children.
 [dependencies]
 temper-os = { path = "../temper-os" }
+
+[features]
+# Counts the kids lists read on each thread (`nodes::kids_read`), which
+# every walk goes through, so tests can bound a pass's work without
+# timing it. The backends' tests turn it on, through their testkit.
+work-count = []

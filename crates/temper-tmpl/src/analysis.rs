@@ -19,7 +19,8 @@
 //! are assigned, which some targets keep in cells ([`assigned_captures`]),
 //! and the groups of local functions that use each other or themselves
 //! ([`function_groups`]). And the defaults a function's body starts with
-//! ([`defaults`]).
+//! ([`defaults`]). And facts about each subtree, worked out once per node
+//! for passes that ask at every level ([`Subtrees`], [`holding`]).
 
 use crate::decls::{DeclKind, Facts};
 use crate::ids::TypeId;
@@ -37,6 +38,67 @@ pub fn walk(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
     for &kid in p.nodes.kids(id) {
         walk(p, kid, visit);
     }
+}
+
+/// A fact about each subtree, from each node's own part and its kids'
+/// facts, worked out once per node and kept: asking at every level of a
+/// deep tree, as a template's chain of `String.cat`s is, then takes time
+/// linear in its size, where walking each subtree afresh took quadratic.
+/// `own` gives a node's own part, and whether its kids count (not a
+/// function literal's body, for what runs here); `join` puts two
+/// together.
+pub struct Subtrees<'p, T> {
+    p: &'p Program,
+    own: Box<dyn Fn(NodeId) -> (T, bool) + 'p>,
+    join: fn(T, T) -> T,
+    known: std::cell::RefCell<HashMap<NodeId, T>>,
+}
+
+impl<'p, T: Copy> Subtrees<'p, T> {
+    pub fn new(
+        p: &'p Program,
+        own: impl Fn(NodeId) -> (T, bool) + 'p,
+        join: fn(T, T) -> T,
+    ) -> Self {
+        Subtrees {
+            p,
+            own: Box::new(own),
+            join,
+            known: Default::default(),
+        }
+    }
+
+    /// The fact about `id`'s subtree.
+    pub fn of(&self, id: NodeId) -> T {
+        if let Some(&fact) = self.known.borrow().get(&id) {
+            return fact;
+        }
+        let (mut fact, kids) = (self.own)(id);
+        if kids {
+            for &kid in self.p.nodes.kids(id) {
+                fact = (self.join)(fact, self.of(kid));
+            }
+        }
+        self.known.borrow_mut().insert(id, fact);
+        fact
+    }
+}
+
+/// Whether each subtree holds a node that `marks` marks, outside the
+/// nodes `closed` names, as [`Subtrees`].
+pub fn holding<'p>(
+    p: &'p Program,
+    marks: impl Fn(NodeId) -> bool + 'p,
+    closed: impl Fn(NodeId) -> bool + 'p,
+) -> Subtrees<'p, bool> {
+    Subtrees::new(
+        p,
+        move |id| {
+            let marked = marks(id);
+            (marked, !marked && !closed(id))
+        },
+        |a, b| a || b,
+    )
 }
 
 /// [`walk`], but past the subtrees whose roots `skip` takes.

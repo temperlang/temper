@@ -6,7 +6,7 @@
 //! reading a `var` field reads what calls may write.
 
 use std::collections::{HashMap, HashSet};
-use temper_tmpl::analysis::{Effect, PURE_CORE, module_writes, walk};
+use temper_tmpl::analysis::{Effect, PURE_CORE, Subtrees, module_writes, walk};
 use temper_tmpl::naming::NameMap;
 use temper_tmpl::qname::is_external;
 use temper_tmpl::schema::Family;
@@ -208,77 +208,79 @@ impl Effects {
     /// setting and reading the new object's fields shows nowhere else.
     fn node_in(&self, p: &Program, id: NodeId, names: &NameMap, ctor: bool) -> Effect {
         let mut effect = Effect::default();
-        let this = |object: NodeId| ctor && matches!(p.nodes.get(object), Node::This {});
-        let bubbles = |b: bool| Effect {
-            bubbles: b,
-            ..Effect::default()
-        };
         // A function literal's body runs where it's called, not here.
         let mut stack = vec![id];
         while let Some(n) = stack.pop() {
             if !matches!(p.nodes.get(n), Node::FunctionLiteral { .. }) {
                 stack.extend(p.nodes.kids(n).iter().rev());
             }
-            let here = match p.nodes.get(n) {
-                // A function value may do anything, its captures' writes
-                // among them.
-                Node::CallValue { may_bubble, .. } => Effect {
-                    reads: true,
-                    writes: true,
-                    ..Effect::default()
-                }
-                .and(bubbles(may_bubble)),
-                Node::Local { local } if self.cells.contains(&local) => Effect {
-                    reads: true,
-                    ..Effect::default()
-                },
-                Node::Assign { local, .. } if self.cells.contains(&local) => Effect {
-                    writes: true,
-                    ..Effect::default()
-                },
-                Node::SetField { object, .. } if this(object) => Effect::default(),
-                Node::SetModuleLet { .. } | Node::SetField { .. } | Node::InitStatic { .. } => {
-                    Effect {
-                        writes: true,
-                        ..Effect::default()
-                    }
-                }
-                Node::GetModuleLet { target } => Effect {
-                    reads: self.mutable.contains(&target),
-                    ..Effect::default()
-                },
-                Node::GetField { field, object } => Effect {
-                    reads: p.decls.get(field).facts.contains(Facts::VAR) && !this(object),
-                    ..Effect::default()
-                },
-                Node::CallFunction {
-                    callee: d,
-                    may_bubble,
-                    ..
-                }
-                | Node::CallMethod {
-                    method: d,
-                    may_bubble,
-                    ..
-                }
-                | Node::New {
-                    ctor: d,
-                    may_bubble,
-                    ..
-                } => self.called(p, d, names).and(bubbles(may_bubble)),
-                Node::Op { may_bubble, .. } | Node::As { may_bubble, .. } => bubbles(may_bubble),
-                Node::Error { .. } | Node::Bubble { .. } => bubbles(true),
-                // Stopping the program shows before or after anything
-                // else that shows.
-                Node::Panic {} => Effect {
-                    writes: true,
-                    ..Effect::default()
-                },
-                _ => Effect::default(),
-            };
-            effect = effect.and(here);
+            effect = effect.and(self.own(p, n, names, ctor));
         }
         effect
+    }
+
+    /// What `n` itself may do, apart from its kids ([`Self::node_in`]).
+    fn own(&self, p: &Program, n: NodeId, names: &NameMap, ctor: bool) -> Effect {
+        let this = |object: NodeId| ctor && matches!(p.nodes.get(object), Node::This {});
+        let bubbles = |b: bool| Effect {
+            bubbles: b,
+            ..Effect::default()
+        };
+        match p.nodes.get(n) {
+            // A function value may do anything, its captures' writes
+            // among them.
+            Node::CallValue { may_bubble, .. } => Effect {
+                reads: true,
+                writes: true,
+                ..Effect::default()
+            }
+            .and(bubbles(may_bubble)),
+            Node::Local { local } if self.cells.contains(&local) => Effect {
+                reads: true,
+                ..Effect::default()
+            },
+            Node::Assign { local, .. } if self.cells.contains(&local) => Effect {
+                writes: true,
+                ..Effect::default()
+            },
+            Node::SetField { object, .. } if this(object) => Effect::default(),
+            Node::SetModuleLet { .. } | Node::SetField { .. } | Node::InitStatic { .. } => Effect {
+                writes: true,
+                ..Effect::default()
+            },
+            Node::GetModuleLet { target } => Effect {
+                reads: self.mutable.contains(&target),
+                ..Effect::default()
+            },
+            Node::GetField { field, object } => Effect {
+                reads: p.decls.get(field).facts.contains(Facts::VAR) && !this(object),
+                ..Effect::default()
+            },
+            Node::CallFunction {
+                callee: d,
+                may_bubble,
+                ..
+            }
+            | Node::CallMethod {
+                method: d,
+                may_bubble,
+                ..
+            }
+            | Node::New {
+                ctor: d,
+                may_bubble,
+                ..
+            } => self.called(p, d, names).and(bubbles(may_bubble)),
+            Node::Op { may_bubble, .. } | Node::As { may_bubble, .. } => bubbles(may_bubble),
+            Node::Error { .. } | Node::Bubble { .. } => bubbles(true),
+            // Stopping the program shows before or after anything
+            // else that shows.
+            Node::Panic {} => Effect {
+                writes: true,
+                ..Effect::default()
+            },
+            _ => Effect::default(),
+        }
     }
 }
 
@@ -290,11 +292,21 @@ impl Effects {
 /// part or a loop's condition holding one statements, where temporaries
 /// can go. Choices run their parts in order, so aren't among them.
 pub fn needing_temporaries(p: &Program, effects: &Effects, names: &NameMap) -> HashSet<NodeId> {
+    // Each operand's effect, kept: asked of every node's operands, a
+    // walk of each would be quadratic in a deep tree's depth.
+    let each = Subtrees::new(
+        p,
+        |n| {
+            let closed = matches!(p.nodes.get(n), Node::FunctionLiteral { .. });
+            (effects.own(p, n, names, false), !closed)
+        },
+        Effect::and,
+    );
     let mut found = HashSet::new();
     for module in &p.modules {
         for root in module.roots() {
             walk(p, root, &mut |n| {
-                if needs_temporaries(p, effects, names, n) {
+                if needs_temporaries(p, &each, n) {
                     found.insert(n);
                 }
             });
@@ -305,7 +317,7 @@ pub fn needing_temporaries(p: &Program, effects: &Effects, names: &NameMap) -> H
 
 /// Whether `n` may hold some of its own operands in temporaries
 /// ([`needing_temporaries`]).
-fn needs_temporaries(p: &Program, effects: &Effects, names: &NameMap, n: NodeId) -> bool {
+fn needs_temporaries(p: &Program, effects: &Subtrees<Effect>, n: NodeId) -> bool {
     let operands: Vec<NodeId> = (p.nodes.kids(n).iter().copied())
         .filter(|&k| p.nodes.kind(k).family() == Family::Expr)
         .collect();
@@ -335,8 +347,6 @@ fn needs_temporaries(p: &Program, effects: &Effects, names: &NameMap, n: NodeId)
     if named {
         return true;
     }
-    let each: Vec<Effect> = (operands.iter())
-        .map(|&k| effects.node_with(p, k, names))
-        .collect();
+    let each: Vec<Effect> = operands.iter().map(|&k| effects.of(k)).collect();
     (0..each.len()).any(|i| each[i + 1..].iter().any(|&j| each[i].conflicts(j)))
 }

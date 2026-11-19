@@ -28,6 +28,7 @@
 //! order shows, so a choice's part or a loop's condition that needs one
 //! becomes statements as an `orelse` in it would.
 
+use crate::analysis::{Subtrees, holding};
 use crate::decls::DeclKind;
 use crate::ids::{DeclId, NodeId};
 use crate::schema::{Family, Kind, Node};
@@ -47,16 +48,17 @@ pub fn spill_with(p: &Program, also: &dyn Fn(NodeId) -> bool) -> Option<Program>
     let mut sites = Vec::new();
     let mut loops = Vec::new();
     let mut choices = Vec::new();
+    let (hoists, hoists_with) = (hoisting(p, &|_| false), hoisting(p, also));
     for m in &p.modules {
         for &root in (m.items.iter().chain(&m.test_items).chain(&m.tests))
             .chain([&m.init])
             .chain(&m.test_init)
         {
-            find(p, root, m.decl, &mut sites);
-            find_choices(p, root, m.decl, also, &mut choices);
+            find(p, root, m.decl, &hoists, &mut sites);
+            find_choices(p, root, m.decl, &hoists_with, &mut choices);
             crate::analysis::walk(p, root, &mut |n| {
                 if let Node::While { cond, .. } = p.nodes.get(n) {
-                    if hoists_with(p, cond, also) {
+                    if hoists_with.of(cond) {
                         loops.push(n);
                     }
                 }
@@ -171,7 +173,13 @@ pub fn spill_with(p: &Program, also: &dyn Fn(NodeId) -> bool) -> Option<Program>
 
 /// Finds, under `id`, the operands to spill, each with the function (or
 /// module) whose local will hold it.
-fn find(p: &Program, id: NodeId, owner: DeclId, sites: &mut Vec<(NodeId, DeclId)>) {
+fn find(
+    p: &Program,
+    id: NodeId,
+    owner: DeclId,
+    hoists: &Subtrees<bool>,
+    sites: &mut Vec<(NodeId, DeclId)>,
+) {
     let owner = match p.nodes.get(id) {
         Node::Function { decl, .. }
         | Node::Test { decl, .. }
@@ -188,7 +196,9 @@ fn find(p: &Program, id: NodeId, owner: DeclId, sites: &mut Vec<(NodeId, DeclId)
         let operands: Vec<NodeId> = (kids.iter().copied())
             .filter(|&k| p.nodes.kind(k).family() == Family::Expr)
             .collect();
-        if let Some(first) = operands.iter().position(|&k| hoists(p, k)) {
+        // Only where operands come before the first that hoists.
+        let first = operands.iter().position(|&k| hoists.of(k));
+        if let Some(first) = first.filter(|&first| first > 0) {
             // A local that what's hoisted assigns isn't simple there.
             let mut assigned = Vec::new();
             crate::analysis::walk(p, operands[first], &mut |n| {
@@ -204,7 +214,7 @@ fn find(p: &Program, id: NodeId, owner: DeclId, sites: &mut Vec<(NodeId, DeclId)
         }
     }
     for &kid in kids {
-        find(p, kid, owner, sites);
+        find(p, kid, owner, hoists, sites);
     }
 }
 
@@ -215,7 +225,7 @@ fn find_choices(
     p: &Program,
     id: NodeId,
     owner: DeclId,
-    also: &dyn Fn(NodeId) -> bool,
+    hoists: &Subtrees<bool>,
     found: &mut Vec<(NodeId, DeclId)>,
 ) {
     let owner = match p.nodes.get(id) {
@@ -226,31 +236,32 @@ fn find_choices(
         _ => owner,
     };
     let chooses = match p.nodes.get(id) {
-        Node::And { right, .. } | Node::Or { right, .. } => hoists_with(p, right, also),
-        Node::IfValue { then, els, .. } => hoists_with(p, then, also) || hoists_with(p, els, also),
+        Node::And { right, .. } | Node::Or { right, .. } => hoists.of(right),
+        Node::IfValue { then, els, .. } => hoists.of(then) || hoists.of(els),
         _ => false,
     };
     if chooses {
         found.push((id, owner));
     }
     for &kid in p.nodes.kids(id) {
-        find_choices(p, kid, owner, also, found);
+        find_choices(p, kid, owner, hoists, found);
     }
 }
 
-/// Whether an expression has an `orelse` or a block's value in it,
-/// outside function literals.
-fn hoists(p: &Program, id: NodeId) -> bool {
-    hoists_with(p, id, &|_| false)
-}
-
-/// [`hoists`], or has an expression in it that `also` marks.
-fn hoists_with(p: &Program, id: NodeId, also: &dyn Fn(NodeId) -> bool) -> bool {
-    match p.nodes.kind(id) {
-        Kind::OrElse | Kind::BlockValue => true,
-        Kind::FunctionLiteral => false,
-        _ => also(id) || p.nodes.kids(id).iter().any(|&k| hoists_with(p, k, also)),
-    }
+/// Whether each expression has an `orelse` or a block's value in it, or
+/// an expression that `also` marks, outside function literals: worked
+/// out once per node, since [`find`] asks at every level.
+fn hoisting<'p>(p: &'p Program, also: &'p dyn Fn(NodeId) -> bool) -> Subtrees<'p, bool> {
+    let closed = |id| p.nodes.kind(id) == Kind::FunctionLiteral;
+    holding(
+        p,
+        move |id| match p.nodes.kind(id) {
+            Kind::OrElse | Kind::BlockValue => true,
+            Kind::FunctionLiteral => false,
+            _ => also(id),
+        },
+        closed,
+    )
 }
 
 /// Whether an operand does nothing that running it later could show:

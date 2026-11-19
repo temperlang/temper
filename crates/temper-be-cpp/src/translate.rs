@@ -3132,11 +3132,15 @@ impl<'a> Translator<'a> {
         let effects: Vec<Effect> = (nodes.iter())
             .map(|n| n.map_or(Effect::default(), |n| self.effect(n)))
             .collect();
+        // Everything each part's later ones do, together: a part
+        // conflicts with one of them just when it conflicts with that.
+        let mut later = vec![Effect::default(); effects.len()];
+        for i in (1..effects.len()).rev() {
+            later[i - 1] = later[i].and(effects[i]);
+        }
         let mut out = Vec::new();
         for (i, part) in parts.into_iter().enumerate() {
-            let hoist = effects[i + 1..]
-                .iter()
-                .any(|&later| effects[i].conflicts(later));
+            let hoist = effects[i].conflicts(later[i]);
             let (n, convert) = match part {
                 Part::Lit(s) => {
                     out.push(Expr::Str(s));

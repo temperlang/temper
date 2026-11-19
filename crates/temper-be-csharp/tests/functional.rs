@@ -1210,3 +1210,17 @@ fn run_tests(
     let actual = kit::runner_failures(&String::from_utf8_lossy(&run.stdout));
     kit::check_tests(failures, case, actual, &run, kit::test_name_words);
 }
+
+/// Translating a template's chain of `String.cat`s takes work linear in
+/// its parts, counted, not timed: passes that looked over each operand's
+/// whole subtree at every level of the chain made it quadratic.
+#[test]
+fn template_work_is_linear() {
+    kit::with_stack(|| {
+        let growth = kit::template_work_growth(
+            |case| kit::program_for(case, &CSHARP.rules),
+            |program| drop(translate(program, &CSHARP).unwrap()),
+        );
+        assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
