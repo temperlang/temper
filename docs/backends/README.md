@@ -19,7 +19,7 @@ and Rust; C++ is built when asked for (`-b cpp`).
 | [C++](#c-cpp) | `cpp` | C++14 (C++20 for `co_await`) | a CMake project | its own test program |
 | [C#](#c-csharp) | `csharp` | .NET 6 (`net6.0`) | a `.csproj` | MSTest |
 | [Java](#java-java) | `java` | Java 17 | a Maven `pom.xml` | JUnit 5 |
-| [JavaScript](#javascript-js) | `js` | ES modules, with JSDoc types for TypeScript | a `package.json` | Mocha |
+| [JavaScript](#javascript-js) | `js` | ES modules, with JSDoc types for TypeScript | a `package.json` | Node's `node:test` |
 | [Lua](#lua-lua) | `lua` | Lua 5.1 and later, and LuaJIT | a rockspec | LuaUnit |
 | [Python](#python-py) | `py` | Python 3.11 and later | a `pyproject.toml` | `unittest` |
 | [Rust](#rust-rust) | `rust` | Rust 1.71.1 and later, edition 2021 | a crate | `cargo test` |
@@ -178,18 +178,39 @@ JavaScript debugger shows the Temper code it came from.
 
 ### Tooling notes
 
-Tests translate to [Mocha] tests, and a [`package.json`][package.json]
-makes `npm test` run them.
+Tests translate to tests for Node's own test runner, [`node:test`][node-test],
+which needs no package and gives each test as long as it takes, as the
+other backends' runners do. Each module's tests are a file named for
+it, such as `test/hello_world.test.js`, and a
+[`package.json`][package.json] makes `npm test` run them
+(`node --test "test/**/*.test.js"`, which needs Node 21 or later to
+expand the glob). The tests import only `it` from `node:test`, with no
+`describe`, hooks, mocks, or timers, so Bun and Deno run them too, as
+they run the libraries themselves, and find them by their `.test.js`
+names. In the package's directory:
+
+| Runtime | Command |
+| --- | --- |
+| Node | `npm test` |
+| Bun | `bun test --timeout 0` (by default, Bun fails a test that runs over 5 seconds) |
+| Deno | `deno test -A --no-check` (Deno's type check wants `@types/node` installed) |
+
+Running tests needs Node 22 or later, the oldest Node line still
+supported; CI tests on Node 24. `temper test -b js` runs every tests
+file in one process, with `--test-isolation=none`, which Node 22 spells
+`--experimental-test-isolation=none` and has from 22.8, so on the 22
+line it needs 22.8 or later, and says so on older Nodes.
 
 > **Note:** Temper's older docs say the JavaScript backend targets
 > ES2018, and its getting started guide says Node 14 or later, while a
-> 0.x release note requires Node 18
+> 0.x release note requires Node 18. Which Node and JavaScript versions
+> the generated libraries themselves support is still open
 > ([inconsistencies](../inconsistencies.md#i5-node-and-javascript-versions)).
 
 [TS-compat]: https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html#types-1
 [temperlang-core-code]: https://www.npmjs.com/package/@temperlang/core?activeTab=code
 [source map]: https://web.dev/source-maps/
-[Mocha]: https://mochajs.org/
+[node-test]: https://nodejs.org/api/test.html
 [package.json]: https://docs.npmjs.com/cli/v9/configuring-npm/package-json
 
 ## Lua (`lua`)

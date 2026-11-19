@@ -1,4 +1,5 @@
 import { bubble, isBubble, listedGet, panic } from "@temperlang/core";
+import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
 /**

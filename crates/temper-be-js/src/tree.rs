@@ -337,7 +337,8 @@ pub enum Stmt {
         extends: Option<Expr>,
         members: Vec<Member>,
     },
-    /// A test, as Mocha runs it: `it(name, function () { … })`, making
+    /// A test, as Node's test runner runs it, with no time limit:
+    /// `it(name, function () { … })`, making
     /// `test`, a new `class`, and running `body`, then, even if it threw,
     /// `test.softFailToHard()`.
     Test {
@@ -432,6 +433,10 @@ pub struct Module {
 
 /// The runtime's module, as generated code imports it.
 pub const RUNTIME: &str = "@temperlang/core";
+
+/// Node's test runner, whose `it` tests files import, which Bun and Deno
+/// run too, with `describe`, `it`, and `test`, if not all of its API.
+pub const TEST_MODULE: &str = "node:test";
 
 fn escape_into(out: &mut String, text: &str, quote: char) {
     let mut chars = text.chars().peekable();

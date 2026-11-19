@@ -44,9 +44,9 @@
 //!   another (`imports-library`) finds it in `node_modules`, as it
 //!   finds std's package, `@temperlang/std`. `node --check` parses tests
 //!   files, and a test that runs as tests (`testing/asserts`) runs with
-//!   Mocha (`mocha`, or `MOCHA`; its `xunit` reporter, where Kotlin's
-//!   uses `mocha-junit-reporter`), its failures compared with its
-//!   `expectedFailures`.
+//!   Node's test runner (`node --test`, as `temper test -b js` runs it,
+//!   with its JUnit reporter, where Kotlin's runs Mocha), its failures
+//!   compared with its `expectedFailures`.
 //!   Skipped, with a message,
 //!   without Node, and its type check without `tsc`; with
 //!   `TEMPER_REQUIRE_CHECKERS` set, as in CI, either missing fails it
@@ -781,32 +781,18 @@ fn host_interop(node: &str, root: &Path, logged: &[String], failures: &mut Vec<S
     script
 }
 
-/// What std's JS uses of Node's `assert`, as `@types/node` declares it.
-const ASSERT_TYPES: &str = "declare module \"assert\" {
-    export namespace strict {
-        function fail(message?: string | Error): never;
-    }
-}
-";
-
-/// Runs a package's tests, as Kotlin's `RunJs`, with Mocha, its
-/// failures, from Mocha's `xunit` reporter (Kotlin's uses
-/// `mocha-junit-reporter`), compared with its `expectedFailures`; std's
-/// package, `@temperlang/std`, is beside it in `node_modules`.
-fn run_tests(failures: &mut Vec<String>, case: &Case, package: &Path, mocha: Option<&str>) {
-    let Some(mocha) = mocha else {
-        return;
-    };
+/// Runs a package's tests, as Kotlin's `RunJs` does with Mocha, with
+/// Node's test runner, as `temper test -b js` runs it (`tools.rs`), its
+/// failures, from its JUnit reporter, compared with its
+/// `expectedFailures`; std's package, `@temperlang/std`, is beside it in
+/// `node_modules`. `isolation` is the flag for one process
+/// ([`temper_be_js::tools::isolation_flag`]).
+fn run_tests(failures: &mut Vec<String>, case: &Case, package: &Path, node: &str, isolation: &str) {
     let results = package.join("test-results.xml");
-    let run = Command::new(mocha)
-        .args([
-            "test",
-            "--recursive",
-            "--reporter",
-            "xunit",
-            "--reporter-option",
-        ])
-        .arg(format!("output={}", results.display()))
+    let run = Command::new(node)
+        .args(["--test", isolation, "--test-reporter=junit"])
+        .arg(format!("--test-reporter-destination={}", results.display()))
+        .arg("test/**/*.test.js")
         .current_dir(package)
         .output()
         .unwrap();
@@ -820,13 +806,13 @@ fn runs() {
         kit::missing("no Node (on PATH, or named by NODE)");
         return;
     };
+    // As `temper test -b js` picks it, from `node --version`, once.
+    let version = Command::new(&node).arg("--version").output().unwrap();
+    let isolation = temper_be_js::tools::isolation_flag(&String::from_utf8_lossy(&version.stdout))
+        .unwrap_or_else(|e| panic!("{e}"));
     let tsc = kit::tool("TSC", "tsc");
     if tsc.is_none() {
         kit::missing("type check: no tsc (on PATH, or named by TSC)");
-    }
-    let mocha = kit::tool("MOCHA", "mocha");
-    if mocha.is_none() {
-        kit::missing("tests: no Mocha (on PATH, or named by MOCHA)");
     }
     kit::with_stack(move || {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-js");
@@ -849,11 +835,6 @@ fn runs() {
                 .filter(|f| f.path.ends_with(".js"))
                 .map(|f| modules.join(&f.path)),
         );
-        // Node's `assert`, which std's `Test.bail()` uses, typed as
-        // `@types/node` types it, which isn't installed here.
-        let assert = out.join("assert.d.ts");
-        fs::write(&assert, ASSERT_TYPES).unwrap();
-        checked.push(assert);
         for case in cases() {
             let root = out.join(&case.key);
             let package = root.join(&case.library);
@@ -900,7 +881,7 @@ fn runs() {
                 }
             }
             if case.tests.is_some() {
-                run_tests(&mut failures, &case, &package, mocha.as_deref());
+                run_tests(&mut failures, &case, &package, &node, isolation);
                 checked.extend(
                     (files.iter())
                         .filter(|f| f.path.ends_with(".js") && !f.path.contains("/test/"))

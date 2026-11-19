@@ -1,4 +1,5 @@
 import { eqFloat64, float64ToString, listedGet, type } from "@temperlang/core";
+import { it } from "node:test";
 import { Vec2, normSquared, unitVecs } from "../asserts.internal.js";
 import { Test } from "@temperlang/std/testing";
 

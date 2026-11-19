@@ -370,7 +370,7 @@ command's own output, so what it prints streams.
 | C++ | CMake on the `CMakeLists.txt` this compiler writes, its test target, then the program, which writes JUnit XML |
 | C# | `dotnet test --logger:junit` in the `tests` project, then `dotnet build-server shutdown` |
 | Java | `javac` on runtime, std, and libraries, then JUnit 5's launcher from Maven's local repository (Kotlin runs Maven, which needs the network) |
-| JavaScript | Mocha with its xunit reporter, packages linked under `temper.out/js/node_modules` |
+| JavaScript | Node's own runner, `node --test`, in one process, with its JUnit reporter, packages linked under `temper.out/js/node_modules` (Kotlin runs Mocha) |
 | Lua | Each library's `tests/init-test.lua` with LuaUnit, writing JUnit XML |
 | Python | `python3 -m temper_core.testing result.xml`, as Kotlin's `RunPython` |
 | Rust | `cargo test`, offline, one shared target directory |

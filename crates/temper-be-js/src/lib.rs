@@ -23,7 +23,7 @@
 //! ([`translate_with_source_maps`]).
 //!
 //! It covers libraries of several modules, imports between them and
-//! from other libraries, and tests, as Mocha files; classes and
+//! from other libraries, and tests, for Node's test runner; classes and
 //! interfaces as Kotlin's JS backend
 //! writes them (JS classes over `@temperlang/core`'s `type` mixin, fields
 //! as `#name` with getters and setters, and `C.new({ … })` factories),
@@ -136,17 +136,20 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// hello-world/hello_world.internal.js     the library's root module
 /// hello-world/helpers/deep.js             another module, by its path, and
 /// hello-world/helpers/deep.internal.js    its code
-/// hello-world/test/hello_world.js         the root module's tests, for Mocha
+/// hello-world/test/hello_world.test.js    the root module's tests, for node --test
 /// ```
 ///
 /// The package takes the library's name; the root module's files take it
 /// with `_` for `-`, and other modules' their paths. A module imports
-/// another's exports from its public file. Its tests file has what only
-/// its tests reach, before them, and imports from its `.internal.js`,
-/// which exports what they use, and a setter, `NAME$set`, for each `var`
-/// they assign, so a library that only its tests check doesn't import
-/// std's `testing` (nor Node's `assert`), as a browser bundle can't. Kotlin also copies `@temperlang/core` beside the package;
-/// `temper build` does too ([`runtime`]).
+/// another's exports from its public file. Its tests file, named
+/// `.test.js` so that `bun test` and `deno test` find it as Node's
+/// runner does, from `package.json`'s glob, has what only its tests
+/// reach, before them, and imports from its `.internal.js`, which
+/// exports what they use, and a setter, `NAME$set`, for each `var` they
+/// assign, so a library that only its tests check doesn't import std's
+/// `testing`, as a browser bundle can't. Kotlin also copies
+/// `@temperlang/core` beside the package; `temper build` does too
+/// ([`runtime`]).
 ///
 /// A library's own `.js` and `.mjs` files, its host code, are copied
 /// into the package at their paths under its root, as Kotlin copies them
@@ -268,7 +271,7 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         if let Some(tests) = translator.tests(module)? {
             tested = true;
             files.push(OutFile {
-                path: format!("{package}/test/{file}.js"),
+                path: format!("{package}/test/{file}.test.js"),
                 text: tree::module(&tests),
             });
         }
@@ -295,10 +298,14 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         index.push_str(line);
         index.push('\n');
     }
+    // Node's own test runner, `node:test`, which needs no package and
+    // sets no time limit; Kotlin's runs Mocha. A glob, which Node 21 and
+    // later expand, since a directory isn't one: tests files only, the
+    // `.test.js` files Bun and Deno find too, not host code under `test/`.
     let tests = if tested {
         r#"
     "scripts": {
-        "test": "mocha test --recursive --reporter mocha-junit-reporter"
+        "test": "node --test \"test/**/*.test.js\""
     },"#
     } else {
         ""
@@ -326,10 +333,6 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
             true => dev.push(line),
             false => dependencies.push(line),
         }
-    }
-    if tested {
-        dev.push("        \"mocha\": \"^10.0.0\"".into());
-        dev.push("        \"mocha-junit-reporter\": \"^2.0.2\"".into());
     }
     let dev = match dev.is_empty() {
         true => String::new(),

@@ -173,10 +173,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # Mocha, for generated JS's tests, and the checkers at ci.yml's
-      # pins (mypy and pyright, for the type checks below), as the
-      # toolchains action installs them.
-      - name: Checkers for generated code, and Mocha
+      # The checkers at ci.yml's pins (mypy and pyright, for the type
+      # checks below), as the toolchains action installs them; generated
+      # JS's tests run with Node's own runner.
+      - name: Checkers for generated code
         run: uv run .github/ci-tools/install.py
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:

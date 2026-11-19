@@ -1212,8 +1212,8 @@ pub fn unsaid<'a>(case: &'a Case, said: &str) -> Option<&'a str> {
 /// and its failure's cause, if it failed, as Kotlin's
 /// `parseJunitResults` takes it: an `<error>`'s text (after its message
 /// and type, which Kotlin leaves out), or a `<failure>`'s
-/// `message`, else its `type`, else its text (Mocha's built-in `xunit`
-/// reporter's).
+/// `message`, else its `type`, else its text (Node's JUnit reporter's
+/// message, without the stack trace in its text).
 pub type TestRun = Vec<(String, Option<String>)>;
 
 /// The tests a small runner of this repo's ran, where a backend's tests

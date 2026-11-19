@@ -1,3 +1,4 @@
+import { it } from "node:test";
 import { twice } from "../testing.internal.js";
 import { Test } from "@temperlang/std/testing";
 

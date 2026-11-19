@@ -63,7 +63,7 @@ review the diff:
     uv run compat/check_functional.py algos/fibonacci        # one functional test, on the interpreter
 
 A backend's tests run the generated code with the language's own tools
-and checkers: mypy and pyright, `tsc` and Mocha, LuaLS, and the
+and checkers: mypy and pyright, `tsc` and Node's test runner, LuaLS, and the
 compilers. A missing tool skips its test with a message. CI sets
 `TEMPER_REQUIRE_CHECKERS`, so there a missing tool fails instead; set
 it locally to be sure nothing was skipped. Tools are found on `PATH`,

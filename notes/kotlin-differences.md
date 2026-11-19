@@ -2703,8 +2703,12 @@ copied Kotlin's:
   (`passing2()` beside the getter `passing()`). Python's private storage
   is `_messages`, as its naming knows fields' storage and private
   members take a `_`. The
-  test runners are the tests' own where Kotlin's need packages: Mocha's
-  built-in `xunit` reporter where Kotlin's uses `mocha-junit-reporter`;
+  test runners are the tests' own where Kotlin's need packages: Node's
+  built-in runner, `node:test` (`it` imported from it, `package.json`
+  running `node --test "test/**/*.test.js"`, no dev dependencies), where
+  Kotlin's runs Mocha with `mocha-junit-reporter`, so no 2 s per-test
+  time limit; tests files are `test/<module>.test.js` where Kotlin's
+  are `test/<module>.js`, so `bun test` and `deno test` find them too;
   Java's JUnit launcher and C#'s small reflection runner over MSTest's
   attributes, where Kotlin's run Maven's surefire and `dotnet test`.
   std's own Java and C# names are Kotlin's: package `temper.std`, Maven

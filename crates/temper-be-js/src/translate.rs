@@ -10,9 +10,11 @@
 
 use crate::NotYet;
 use crate::connected::{self, Connection, TypeConnection};
-use crate::names::{KEYWORDS, SPECIAL};
+use crate::names::{KEYWORDS, SPECIAL, TEST_RUNNER};
 use crate::ops::{self, Spelling};
-use crate::tree::{self, Bin, Expr, Keyword, Member, MethodKind, RUNTIME, Stmt, TPart};
+use crate::tree::{
+    self, Bin, Expr, Keyword, Member, MethodKind, RUNTIME, Stmt, TEST_MODULE, TPart,
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use temper_tmpl::analysis::{self, ancestors, home, module_state, nominal_decl, walk};
 use temper_tmpl::host::uses_host;
@@ -786,10 +788,11 @@ impl<'a> Translator<'a> {
         .spanned(self.p.nodes.span(item)))
     }
 
-    /// A module's tests, as a Mocha file in `test/`, named as the module's
-    /// file, as Kotlin's: what only tests reach (its test items, and its
-    /// test init, which continues the module's init here), then an `it`
-    /// per test. `None` if it has none.
+    /// A module's tests, as a file in `test/` for Node's test runner
+    /// (`node:test`), named as the module's file, as Kotlin's: what only
+    /// tests reach (its test items, and its test init, which continues
+    /// the module's init here), then an `it` per test, imported from
+    /// `node:test`. `None` if it has none.
     pub fn tests(&mut self, module: &Module) -> R<Option<tree::Module>> {
         if module.tests.is_empty() {
             return Ok(None);
@@ -851,10 +854,13 @@ impl<'a> Translator<'a> {
                 .spanned(p.nodes.span(test)),
             );
         }
+        // Node's runner's `it`, first among the other modules' names.
+        let mut from = vec![(TEST_MODULE.to_string(), vec![TEST_RUNNER[0].to_string()])];
+        from.extend(self.take_from());
         Ok(Some(tree::Module {
             namespace: None,
             imports: self.imports.iter().map(|s| s.to_string()).collect(),
-            from: self.take_from(),
+            from,
             body,
         }))
     }

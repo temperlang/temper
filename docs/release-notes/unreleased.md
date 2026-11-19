@@ -9,6 +9,7 @@
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
+- [🚨Breaking change: JavaScript tests run with Node's own runner](#breaking-change-javascript-tests-run-with-nodes-own-runner)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
 - [`++ls[i]` gives the new value](#lsi-gives-the-new-value)
 - [Unassigned locals in `for … of` bodies are errors](#unassigned-locals-in-for--of-bodies-are-errors)
@@ -324,6 +325,29 @@ Inside a function that names a parameter or local like a builtin it
 also uses, generated code reaches the builtin through Python's
 `builtins` module (`_builtins.len(items)`); elsewhere builtins stay as
 they are.
+
+## 🚨Breaking change: JavaScript tests run with Node's own runner
+
+Generated JavaScript tests run with Node's built-in test runner,
+[`node:test`](https://nodejs.org/api/test.html), not Mocha. Each
+module's tests file, now `test/<module>.test.js`, imports `it` from
+`node:test`, and `package.json` runs `node --test "test/**/*.test.js"`,
+with no dev dependencies on `mocha` or `mocha-junit-reporter`, so
+`npm test` needs Node 21 or later and no npm packages.
+`temper test -b js` runs them the same way and no longer needs Mocha or
+`MOCHA`. A test may take as long as it needs, as on the other backends,
+where Mocha failed one after 2 seconds. A tests file that fails as it
+loads is reported as one failure saying why. The tests use only
+`node:test`'s `it`, which Bun and Deno also implement, so
+`bun test --timeout 0` and `deno test -A --no-check` run them too, in
+the package's directory. Node 22 is the oldest Node supported for
+tests, and `temper test -b js` needs 22.8 or later on the 22 line, as
+it says on an older Node.
+
+A module-level declaration named `it` takes a trailing `_` in
+JavaScript (`it_`), so it doesn't clash with the import; parameters and
+locals keep the name. CI that installed Mocha to run generated tests
+can drop it.
 
 ## Rust crates depend on `temper-std` only when they use it
 

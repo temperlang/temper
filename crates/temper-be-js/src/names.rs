@@ -203,11 +203,17 @@ fn identifier(c: char, first: bool) -> bool {
     c == '_' || c == '$' || c.is_alphabetic() || (!first && c.is_alphanumeric())
 }
 
+/// What tests files import from Node's test runner, `node:test`, by
+/// name: module-level declarations avoid it, since a tests file imports
+/// it beside them, but a parameter or local may take it, since the `it`
+/// calls are only at a tests file's top level.
+pub const TEST_RUNNER: &[&str] = &["it"];
+
 /// The first variant's rules.
 pub const RULES: NamingRules = NamingRules {
-    reserved: &[KEYWORDS, SPECIAL, PRINTED],
+    reserved: &[KEYWORDS, SPECIAL, PRINTED, TEST_RUNNER],
     member_reserved: &[KEYWORDS, &["constructor"]],
-    local_reserved: None,
+    local_reserved: Some(&[KEYWORDS, SPECIAL, PRINTED]),
     case,
     private_prefix: "",
     escape_suffix: "_",

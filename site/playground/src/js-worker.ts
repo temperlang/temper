@@ -3,8 +3,9 @@
 // generated module becomes a blob URL, with its imports rewritten to
 // those of the modules it names: the library's own, std's (generated
 // by the same wasm build), the bundled `@temperlang/core` runtime, and
-// a stand-in for Node's `assert`, which std's `testing` uses. Tests
-// register with `it`, as under Mocha, and run after the library loads.
+// a stand-in for Node's test runner, `node:test`, whose `it` tests
+// files (`test/*.test.js`) import to register with, and run after the
+// library loads.
 
 import * as core from "@temperlang/core";
 import type { FromJsRunner, GeneratedFile, TestResult, ToJsRunner } from "./api";
@@ -42,10 +43,8 @@ function coreUrl(): string {
   return moduleUrl(lines.join("\n"));
 }
 
-const ASSERT = `export const strict = {
-  fail(message) { throw message instanceof Error ? message : new Error(message ?? "Failed"); },
-};
-export default strict;`;
+/** Node's test runner's `it`, registering each test (`registered`). */
+const TEST_RUNNER = "export const it = (name, body) => globalThis.__temperIt(name, body);";
 
 /** Generated modules by path, made into blob URLs as they're imported. */
 class Modules {
@@ -70,13 +69,13 @@ class Modules {
       }
     }
     this.urls.set("@temperlang/core", coreUrl());
-    this.urls.set("assert", moduleUrl(ASSERT));
+    this.urls.set("node:test", moduleUrl(TEST_RUNNER));
   }
 
   /** A path for an import from the module at `from`, if it's one of ours. */
   private resolve(specifier: string, from: string): string | null {
     if (specifier.startsWith("@temperlang/core")) return "@temperlang/core";
-    if (specifier === "assert" || specifier === "node:assert") return "assert";
+    if (specifier === "node:test") return "node:test";
     if (specifier.startsWith(".")) {
       const parts = from.split("/").slice(0, -1);
       for (const part of specifier.split("/")) {
@@ -119,9 +118,9 @@ class Modules {
   }
 }
 
-/** Tests as Mocha's `it` registers them. */
+/** Tests as `node:test`'s `it` (`TEST_RUNNER`) registers them. */
 const registered: { name: string; body: () => unknown }[] = [];
-(globalThis as unknown as Record<string, unknown>).it = (name: string, body: () => unknown) => {
+(globalThis as unknown as Record<string, unknown>).__temperIt = (name: string, body: () => unknown) => {
   registered.push({ name, body });
 };
 
@@ -138,7 +137,7 @@ async function run(message: ToJsRunner): Promise<void> {
     post({ type: "done" });
     return;
   }
-  const testFiles = message.files.filter((f) => /^main\/test\/.*\.js$/.test(f.path));
+  const testFiles = message.files.filter((f) => /^main\/test\/.*\.test\.js$/.test(f.path));
   try {
     for (const file of testFiles) await import(modules.url(file.path));
   } catch (error) {

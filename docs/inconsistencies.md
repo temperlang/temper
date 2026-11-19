@@ -17,7 +17,7 @@ page doesn't repeat those.
 | [I2](#i2-discord-invites) | READMEs, tour, site | Three Discord invites | Pick one permanent invite |
 | [I3](#i3-c-support) | README, target languages | C++ "coming soon" | Say C++ is supported |
 | [I4](#i4-backends-not-available-yet) | target languages, builtins, CLI | `java8`, `mypyc`, `data`, `cppv` | Decide which are needed |
-| [I5](#i5-node-and-javascript-versions) | getting started, release notes, target languages | Node 14 or 18; ES2018 | State one supported range |
+| [I5](#i5-node-and-javascript-versions) | getting started, release notes, target languages | Node 14 or 18; ES2018 | Tests: done here (Node 22); libraries' range still open |
 | [I6](#i6-the-temperout-layout) | getting started | Old output paths | Done here; check the site |
 | [I8](#i8-numbered-names-in-output-samples) | home page | `x__4` in samples | Done here |
 | [I9](#i9-the-command-line) | guide, tools | `temper` commands not available yet | CLI parity |
@@ -101,8 +101,15 @@ page doesn't repeat those.
   says ES2018.
 - **This compiler:** CI runs generated JavaScript on Node 24, and checks it
   with the latest TypeScript.
-- **Suggested:** state one tested range, such as Node 18 and later, and
-  test the oldest in CI.
+- **Tests, done here:** running tests (`temper test -b js`, and
+  `npm test` in a generated package) needs Node 22 or later, the oldest
+  Node line still supported (Node 20's ended 2026-04-30); on the 22 line,
+  `temper test -b js` needs 22.8 or later, and says so on older Nodes.
+  [JavaScript's notes](backends/README.md#javascript-js) say so.
+- **Still open:** which Node and JavaScript versions generated libraries
+  support at run time, and what language level they target.
+- **Suggested:** state one tested range for libraries, and test the
+  oldest in CI.
 
 ### I13: Lua versions
 

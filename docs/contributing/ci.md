@@ -22,7 +22,7 @@ run takes about as long as its slowest job:
 | --- | --- |
 | `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
-| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
+| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Node's test runner, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
 | `release, playground` | `temper`'s release build, the VS Code extension (tested in a real VS Code), the docs' examples, and the docs site; the wasm build, the playground, and its smoke test in headless Chromium |
 
@@ -145,7 +145,7 @@ last step, `temper`'s tests with backends, builds without, as
 | | Linux Arm64 | macOS Arm64 | Windows x64 | Windows Arm64 |
 | --- | --- | --- | --- | --- |
 | Python | the image's 3.12 | 3.12 from uv | 3.12 from uv | 3.12 from uv |
-| mypy, pyright, TypeScript, Mocha | pinned | pinned | pinned | pinned |
+| mypy, pyright, TypeScript | pinned | pinned | pinned | pinned |
 | Node | 24 | 24 | 24 | 24 |
 | Lua | 5.4.6 and LuaSocket, Ubuntu's | Homebrew's, no LuaSocket | MSYS2's, no LuaSocket | **none** |
 | LuaLS | **skipped** | **skipped** | **skipped** | **none** |
@@ -229,10 +229,9 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   tests generate have no lockfile and aren't locked.
 - **uv,** by version and SHA-256 (setup-uv's `version:` and
   `checksum:`).
-- **Checkers of generated code,** and Mocha, which runs generated JS
-  tests, installed by
+- **Checkers of generated code,** installed by
   [.github/ci-tools/install.py](../../.github/ci-tools/install.py):
-  TypeScript, pyright, and Mocha from the lockfile beside it, by `npm ci
+  TypeScript and pyright from the lockfile beside it, by `npm ci
   --ignore-scripts`; mypy at an exact version by `uv tool install`; and
   LuaLS at an exact version, its download checked against a recorded
   SHA-256.
@@ -330,7 +329,7 @@ baseline says.
   the checksum for `x86_64-unknown-linux-gnu-<version>` is in setup-uv's
   `src/download/checksum/known-checksums.json`, which setup-uv also
   checks the other platforms' downloads against.
-- **TypeScript, pyright, Mocha:** the version in
+- **TypeScript, pyright:** the version in
   [package.json](../../.github/ci-tools/package.json), then `npm install
   --package-lock-only --ignore-scripts` there.
 - **mypy, LuaLS:** `MYPY`, `LUALS`, and `LUALS_SHA256` in

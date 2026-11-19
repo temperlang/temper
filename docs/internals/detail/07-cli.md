@@ -493,7 +493,7 @@ library's tests with what that backend's `tools` module says
 | C++ | CMake on the generated `CMakeLists.txt`, then the test program | `CMAKE`, `CXX` |
 | C# | `dotnet test --logger:junit`, then `build-server shutdown` | `DOTNET` |
 | Java | `javac` against JUnit 5's jars in `~/.m2`, and a small launcher runner | `JAVAC`, `JAVA` |
-| JS | Mocha with its xunit reporter, packages linked into `node_modules` (`prepare`) | `MOCHA` |
+| JS | `node --test --test-isolation=none` (`--experimental-test-isolation` before Node 23.6; Node 22.8 or later) with its JUnit reporter, packages linked into `node_modules` (`prepare`) | `NODE` |
 | Lua | `tests/init-test.lua` with LuaUnit written beside (`prepare`) | `LUA` |
 | Python | `python3 -B -m temper_core.testing result.xml` | `PYTHON` |
 | Rust | `cargo test --offline`, one shared target directory | `CARGO` |

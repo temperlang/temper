@@ -52,7 +52,8 @@ the example, Share, and the compile's status.
   JavaScript's, run in a worker of its own (`src/js-worker.ts`): each
   generated module becomes a blob URL, with imports rewritten to the
   library's, std's, and the bundled `@temperlang/core` runtime from
-  `crates/temper-be-js/runtime/`. Its tests register with `it`, as under Mocha.
+  `crates/temper-be-js/runtime/`. Its tests register with `node:test`'s `it`,
+  which the worker stands in for.
 - **Highlighting:** Temper's is a small stream language
   (`src/temper-language.ts`); the backends' are CodeMirror's legacy
   modes.

@@ -98,10 +98,12 @@ written, failing where it runs, and the exit status is 1.
     temper test [-b BACKEND|interp]... [-w DIR | DIR] [same] [--fuel N|none] [--timeout S|none] [--std DIR]
 
 Builds the libraries and runs their tests with each backend's own tools
-(Mocha, JUnit, `dotnet test`, `cargo test`, and so on), or on the
+(Node's `node --test`, JUnit, `dotnet test`, `cargo test`, and so on), or on the
 interpreter with `-b interp`. It prints the tests that failed, or with
 `-v`, every test's result, then a tally, such as `Tests passed: 3 of
-3`, and exits with 1 if any test fails or doesn't run.
+3`, and exits with 1 if any test fails or doesn't run. `-b js` needs
+Node 22.8 or later (any Node 23.6 or later, such as Node 24), and says
+so on an older one.
 
 - **Backends.** Without `-b`, it runs on the interpreter, which takes
   milliseconds and writes no files (earlier releases need `-b`). Given
@@ -155,7 +157,7 @@ steps that build it have the usual 600 seconds.
 
 ### What tools start
 
-What `test -b` and `run -b` start (`lua`, `python3`, Node and Mocha,
+What `test -b` and `run -b` start (`lua`, `python3`, Node,
 `dotnet`, `java`, `cargo`, CMake, and the programs they build) is
 `temper`'s to stop, which earlier releases leave to the tools:
 

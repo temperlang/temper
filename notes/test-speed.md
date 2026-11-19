@@ -353,7 +353,8 @@ alike (each backend crate's `src/tools.rs`, run by
 
 - **Python:** `python3 -m temper_core.testing result.xml` in the
   library's directory, as Kotlin's `RunPython`.
-- **JS:** Mocha with its xunit reporter, `@temperlang/core`,
+- **JS:** Node's `node --test`, in one process, with its JUnit
+  reporter (Mocha's xunit reporter until 2026-11-19), `@temperlang/core`,
   `@temperlang/std`, and the libraries linked into
   `temper.out/js/node_modules`, as npm's workspace links them.
 - **Lua:** the library's `tests/init-test.lua` with LuaUnit beside it.

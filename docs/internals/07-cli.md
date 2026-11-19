@@ -99,7 +99,7 @@ flowchart TD
 - **With `-b BACKEND`**, each library is built as `build` does
   ([`test_backend`](../../crates/temper-driver/src/test_run.rs)), then
   its tests run with the language's own tools: Python's
-  `temper_core.testing`, Mocha for JavaScript, LuaUnit, JUnit through
+  `temper_core.testing`, Node's `node --test` for JavaScript, LuaUnit, JUnit through
   `javac`, `dotnet test`, `cargo test`, or CMake and the test program
   for C++. Each backend crate says how, in its `tools` module, as its
   `BACKEND`'s [`Tools`](../../crates/temper-tmpl/src/backend.rs), and

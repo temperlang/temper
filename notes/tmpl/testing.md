@@ -115,17 +115,25 @@ As built with the Python backend (2026-10-30):
   runtime's own JSDoc first, with `--skipLibCheck`, since those
   declarations don't all check themselves (`Pair` is declared twice, and
   `Union` is undeclared). A test that runs as tests (`testing/asserts`)
-  runs with Mocha (`mocha`, or `MOCHA`), against std's
-  `@temperlang/std` in the same `node_modules`. CI installs the latest
-  TypeScript and Mocha 11 with npm, on Node 24. To consider later
-  (2026-11-03): Node's built-in runner (`node:test`, stable since
-  Node 20, with `--test-reporter=junit`) in place of Mocha, so tests
-  need no npm package. It changes the generated test code and
-  `package.json`, so with the team and Kotlin's JS together. Bun and
-  Deno run `node:test` only partly (Bun lacks mocks, snapshots, and
-  timers; Deno's shim reportedly lacks `beforeEach`/`afterEach`), so
-  plain `describe`/`it`/`assert` would be the portable subset. A
-  missing Node or `tsc` skips with a message, or fails
+  runs with Node's built-in runner, as `temper test -b js` runs it
+  (2026-11-19, in place of Mocha): `node --test --test-isolation=none
+  --test-reporter=junit` on `test/**/*.test.js`, against std's
+  `@temperlang/std` in the same `node_modules`, so tests need no npm
+  package and have no per-test time limit (Mocha's 2 s was the only
+  one among the backends). One process, as Mocha's was, so a tests file
+  that fails as it loads is a failure saying why (with a process per
+  file, Node's JUnit report says only "test failed"). Tests files
+  import `it` from `node:test` (a module-level name `it` takes a `_`);
+  `package.json` runs `node --test "test/**/*.test.js"`; the `.test.js`
+  names are what `bun test` and `deno test` find by default. Node 22.8
+  named the flag `--experimental-test-isolation`, and 23.6 `--test-isolation`
+  (Node 24 takes both), so `tools.rs` picks one from `node --version`,
+  once (`isolation_flag`), and fails clearly below Node 22.8 rather
+  than run a process per file. Generated tests
+  keep to what Bun and Deno run too: `node:test`'s `it` only, no mocks,
+  snapshots, timers, or hooks (Bun lacks mocks, snapshots, and timers;
+  Deno's shim reportedly lacks `beforeEach`/`afterEach`). CI installs
+  pinned TypeScript with npm, on Node 24. A missing Node or `tsc` skips with a message, or fails
   with `TEMPER_REQUIRE_CHECKERS`. Besides the 7 functional tests, the
   JS backend runs the shared programs
   (`crates/temper-be-testkit/programs/`), with goldens of its own.

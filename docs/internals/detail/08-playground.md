@@ -247,15 +247,15 @@ Generated JavaScript runs in a new worker per run,
 after `JS_RUN_MS` (5 s) ([`runJs`](../../../site/playground/src/main.ts)).
 Its modules become blob URLs with imports rewritten to the library's,
 std's (from [`std_library`](../../../crates/temper-wasm/src/lib.rs),
-sent once), and the bundled runtime's; tests register with an `it` of
-its own, as under Mocha. The page shows both runs and whether they agree
+sent once), and the bundled runtime's; tests register with a stand-in
+for `node:test`'s `it`. The page shows both runs and whether they agree
 ([`compareRuns`](../../../site/playground/src/main.ts)).
 
 **Pros:** typing never waits on the compiler; a runaway program can be
 killed by terminating its worker; the two runs check the interpreter
 against a backend on every keystroke.
 
-**Cons:** the JavaScript run uses its own small test runner, not Mocha,
+**Cons:** the JavaScript run uses its own small test runner, not Node's,
 so it's a third way tests run besides the interpreter and
 `temper test -b js`.
 

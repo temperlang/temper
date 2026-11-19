@@ -89,7 +89,8 @@ runs:
     # (.github/ci-tools/install.py): the Python backend's tests check its
     # output with both mypy and pyright, since they sometimes disagree;
     # the JS backend's run generated packages under Node, check them with
-    # TypeScript's `tsc --checkJs --strict`, and run tests with Mocha 11;
+    # TypeScript's `tsc --checkJs --strict`, and run tests with Node's own
+    # runner (`node --test`), which needs no package;
     # the Lua backend's check generated Lua with LuaLS's `--check`. npm's
     # from a lockfile without install scripts, LuaLS against its SHA-256.
     # nightly.yml tries each checker's latest release too.
@@ -97,7 +98,7 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: 24
-    - name: Checkers for generated code, and Mocha
+    - name: Checkers for generated code
       if: contains(inputs.backends, 'py') || contains(inputs.backends, 'js') || contains(inputs.backends, 'lua')
       shell: bash
       run: uv run .github/ci-tools/install.py

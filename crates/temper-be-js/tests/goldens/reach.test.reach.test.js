@@ -1,4 +1,5 @@
 import { type } from "@temperlang/core";
+import { it } from "node:test";
 import {
   base,
   checked,

@@ -1,10 +1,9 @@
 {
   "name": "tempest-ci-tools",
   "private": true,
-  "description": "Exact versions of the checkers CI runs on generated code (tsc, pyright) and of Mocha, which runs generated JS tests; installed by install.py with npm ci --ignore-scripts",
+  "description": "Exact versions of the checkers CI runs on generated code (tsc, pyright); installed by install.py with npm ci --ignore-scripts",
   "license": "Apache-2.0 OR MIT",
   "dependencies": {
-    "mocha": "11.8.0",
     "pyright": "1.1.414",
     "typescript": "7.0.2"
   }

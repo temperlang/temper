@@ -885,17 +885,23 @@ fn test_a_library_in_cpp() {
     });
 }
 
-/// `temper test -b BACKEND` on a small library, two tests passing and
+/// `temper test -b BACKEND` on a small library, three tests passing and
 /// two failing, one of them [`CLASS_ASSERTS`]'s, on every backend whose
 /// tools run here: it builds, runs
 /// the language's own test tools, and reads their results, so each
 /// backend's runner (its crate's `tools` module) is tested on every push without the
 /// real libraries, which run nightly. A backend whose tools are missing is
 /// skipped, with a message, unless `TEMPER_REQUIRE_CHECKERS` is set.
+/// `a`'s module-level `it`, which only its test reads, and its local
+/// `it` are names a test runner may use too (JS's `it`).
 #[test]
 fn test_a_library_on_each_backend() {
     let files = [
-        ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
+        (
+            "a.temper",
+            "let it = 1;\ntest(\"a\") { let it2 = it; assert(it2 + it == 2) }\n\
+             test(\"a2\") { let it = 2; assert(it == 2) }\n",
+        ),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
     ];
@@ -919,7 +925,7 @@ fn test_a_library_on_each_backend() {
             let failed = out.to_lowercase().contains(CLASS_ASSERT_FAILED);
             assert!(failed, "{backend}:\n{out}{err}");
             assert!(
-                out.ends_with("Tests passed: 2 of 4\n"),
+                out.ends_with("Tests passed: 3 of 5\n"),
                 "{backend}:\n{out}{err}"
             );
             assert_eq!(code, 1, "{backend}");
@@ -933,8 +939,8 @@ fn test_a_library_on_each_backend() {
 /// `TEMPER_REQUIRE_CHECKERS` is set): `run` loads every module, and
 /// `test` runs every module's tests. A module that fails as it loads
 /// should be one failure by its name while the others' results still
-/// count; Python names its tests module, Lua its tests file, and Java and
-/// C# the test, but the rest don't yet, nor does Java's `run` load every
+/// count; Python names its tests module, Lua and JavaScript its tests
+/// file, and Java and C# the test, but the rest don't yet, nor does Java's `run` load every
 /// module, so those check what they do now.
 fn library_without_root_module(backend: &str) {
     let files = [
@@ -1009,6 +1015,8 @@ fn library_without_root_module(backend: &str) {
                 "1 of 2",
             ),
             "java" => (Some("  failed  y - panic"), "1 of 2"),
+            // Node's runner names the tests file that failed to load.
+            "js" => (Some("  failed  test/y.test.js - panic"), "1 of 2"),
             "csharp" => (
                 Some("  failed  Y - System.TypeInitializationException: "),
                 "1 of 2",

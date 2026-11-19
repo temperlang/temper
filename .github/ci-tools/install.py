@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Installs the checkers CI runs on generated code, and Mocha, and puts them on PATH.
+"""Installs the checkers CI runs on generated code and puts them on PATH.
 
 Pinned by default, as PR CI runs them:
 
-- TypeScript (tsc), pyright, and Mocha from package.json and
+- TypeScript (tsc) and pyright from package.json and
   package-lock.json here, by `npm ci --ignore-scripts`
 - mypy at MYPY, by `uv tool install`
 - LuaLS at LUALS, its download checked against LUALS_SHA256, on the
@@ -14,7 +14,7 @@ Pinned by default, as PR CI runs them:
 
 Runs on Linux, macOS, and Windows. On Windows, npm's tools are .cmd
 files, which Rust's Command (the tests') doesn't find by name, so their
-paths are set as TSC, PYRIGHT, and MOCHA for later steps.
+paths are set as TSC and PYRIGHT for later steps.
 
 With `--latest NAME` (typescript, pyright, mypy, or luals), that one
 checker is the latest release instead, ahead of the pinned one on PATH,
@@ -122,7 +122,7 @@ def main() -> None:
     base = (args.dir or Path(os.environ.get("RUNNER_TEMP") or tempfile.mkdtemp())).resolve() / "ci-tools"
     paths: list[Path] = []
 
-    # TypeScript, pyright, and Mocha, from the lockfile; no install scripts.
+    # TypeScript and pyright, from the lockfile; no install scripts.
     run("npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund", cwd=HERE)
     add_path(HERE / "node_modules/.bin", paths)
     if args.latest in ("typescript", "pyright"):
@@ -153,7 +153,6 @@ def main() -> None:
         "pyright": first_line("pyright", "--version"),
         "mypy": first_line("mypy", "--version"),
         "LuaLS": first_line("lua-language-server", "--version") if luals else "left out on this platform",
-        "Mocha": first_line("mocha", "--version"),
     }
     lines = [f"{k}: {v}" + (" (latest)" if args.latest and args.latest in k.lower() else "") for k, v in versions.items()]
     print("\n".join(lines))
@@ -163,7 +162,7 @@ def main() -> None:
             f.writelines(f"{p}\n" for p in paths)
     if (github_env := os.environ.get("GITHUB_ENV")) and platform.system() == "Windows":
         with open(github_env, "a") as f:
-            for var, name in (("TSC", "tsc"), ("PYRIGHT", "pyright"), ("MOCHA", "mocha")):
+            for var, name in (("TSC", "tsc"), ("PYRIGHT", "pyright")):
                 f.write(f"{var}={shutil.which(name)}\n")
     if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(summary, "a") as f:
