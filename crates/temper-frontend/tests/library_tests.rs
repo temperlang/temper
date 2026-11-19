@@ -553,6 +553,24 @@ fn temper_core_is_reserved() {
     library.add_file("user/core.temper", text, SourceKind::Standalone);
     assert!(!library.in_core(library.files[0].base));
     assert!(load_library(&sources, &libraries[0], &libraries).is_err());
+    // A copy of the built-in core, as editors write, is core, by its
+    // text, but not with another file.
+    let core = temper_frontend::corelib::TEXT;
+    let files = [
+        ("copy/config.temper.md", CORE_CONFIG),
+        ("copy/core.temper", core),
+    ];
+    let sources = Sources::memory(&files);
+    let libraries = find_libraries(&sources, "copy");
+    assert!(load_library(&sources, &libraries[0], &libraries).is_ok());
+    let files = [
+        ("copy/config.temper.md", CORE_CONFIG),
+        ("copy/core.temper", core),
+        ("copy/more.temper", "export let more = 1;\n"),
+    ];
+    let sources = Sources::memory(&files);
+    let libraries = find_libraries(&sources, "copy");
+    assert!(load_library(&sources, &libraries[0], &libraries).is_err());
     // A checkout's core, edited.
     let edited = format!(
         "{}\nexport let edited = 1;\n",

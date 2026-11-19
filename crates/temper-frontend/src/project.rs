@@ -17,7 +17,8 @@
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
 //!   name are an error, as in Kotlin, and so is a library named
 //!   `temper-core`, core's name, but for core in a Temper checkout
-//!   ([`is_core_checkout`]), which editors open.
+//!   ([`is_core_checkout`]), or the copy of the built-in core that
+//!   editors write, which they open.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -449,7 +450,8 @@ impl Scan<'_> {
 /// from the libraries in `all` (those of its work root), which imports
 /// name by their names. The error names a file that can't be read, or a
 /// library that takes core's name, [`crate::corelib::NAME`], but isn't
-/// core in a Temper checkout ([`is_core_checkout`]).
+/// core in a Temper checkout ([`is_core_checkout`]) or a copy of the
+/// built-in core, as editors write.
 pub fn load_library(
     sources: &Sources,
     library: &LibrarySources,
@@ -458,13 +460,14 @@ pub fn load_library(
     let mut loaded = Library::new();
     if library.config.name == crate::corelib::NAME {
         let root = &library.root;
-        if !is_core_checkout(sources, root) {
+        if is_core_checkout(sources, root) {
+            loaded.core_root = Some(root.clone());
+        } else if !is_core_copy(sources, library) {
             let name = crate::corelib::NAME;
             return Err(format!(
                 "{root}: {name} is reserved for Temper's core library"
             ));
         }
-        loaded.core_root = Some(root.clone());
     }
     loaded.libraries = (all.iter())
         .map(|l| (l.config.name.clone(), l.root.clone()))
@@ -500,6 +503,21 @@ pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
                     && has(&repo.join("crates/temper-frontend/src"), "corelib.rs")
             })
     })
+}
+
+/// Whether a library is a copy of the built-in core, as editors write
+/// for going to core's definitions: its one source file is
+/// [`crate::corelib::MAIN`] at its root, with the built-in text.
+fn is_core_copy(sources: &Sources, library: &LibrarySources) -> bool {
+    let [file] = &library.files[..] else {
+        return false;
+    };
+    let path = Path::new(file);
+    path.parent() == Some(Path::new(&library.root))
+        && path.file_name().is_some_and(|n| n == crate::corelib::MAIN)
+        && sources
+            .read(file)
+            .is_ok_and(|text| text == crate::corelib::TEXT)
 }
 
 /// Adds the files of each module that an `import` names, and of those
