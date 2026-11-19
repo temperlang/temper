@@ -86,7 +86,7 @@ use std::process::{Command, Output};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{env, fs};
-use temper_be_cpp::{CPP, OutFile, names, translate};
+use temper_be_cpp::{CPP, OutFile, names, tools, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// A library of names that C++ reserves or the translator prints
@@ -799,15 +799,12 @@ fn runtime_pch_with(
     root
 }
 
-/// How many compilers run at once: four at most, which the sanitizers'
-/// memory allows beside other work, or `TEMPER_CXX_JOBS`, fewer where
-/// memory's short (an `-O3` group's `cc1plus` takes up to a gigabyte).
+/// How many compilers run at once: as many as `temper test -b cpp`
+/// builds with ([`tools::jobs`]): `TEMPER_CXX_JOBS`, which can ask for
+/// fewer where memory's short (an `-O3` group's `cc1plus` takes up to a
+/// gigabyte), else one per CPU, four at most.
 fn jobs() -> usize {
-    let cpus = std::thread::available_parallelism().map_or(1, |n| n.get());
-    let cap = (env::var("TEMPER_CXX_JOBS").ok())
-        .and_then(|j| j.parse().ok())
-        .unwrap_or(4);
-    cpus.min(cap).max(1)
+    tools::jobs().unwrap_or_else(|why| panic!("{why}"))
 }
 
 /// Held by [`runs`] and [`strict`] while they build, so that only one

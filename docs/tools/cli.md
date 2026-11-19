@@ -176,6 +176,10 @@ What `test -b` and `run -b` start (`lua`, `python3`, Node and Mocha,
   which counts memory written, not address space reserved, which the
   JVM, .NET, and Node reserve far more of than they use, so they, and
   the compilers, have none.
+- **Parallel C++ compiles.** CMake runs `TEMPER_CXX_JOBS` compiles at
+  once, else one per CPU, four at most, which keeps a small machine's
+  memory free for other work; a value that isn't a whole number above
+  0 fails the build, saying so.
 
 Python runs in UTF-8 mode (`PYTHONUTF8=1`), so what it logs reads the
 same on every system.

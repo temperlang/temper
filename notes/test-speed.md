@@ -372,6 +372,12 @@ alike (each backend crate's `src/tools.rs`, run by
   (Kelpto's kelpto-core and std were built for each test library);
   where it doesn't configure, each library builds alone in
   `LIBRARY/build`, as before.
+  CMake runs `TEMPER_CXX_JOBS` compiles at once (2026-11-19; two
+  before, always), else one per CPU, four at most: GitHub's runners
+  have four, so CI needs no setting, and four debug compiles fit a
+  small machine beside other work. `temper-be-cpp`'s functional tests
+  run as many compilers at once, through the same function
+  (`tools::jobs`).
 
 Still planned: the fast paths below (one process per backend for all
 libraries, cached runtimes), and the package path checked against them.

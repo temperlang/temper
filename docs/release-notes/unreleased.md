@@ -462,6 +462,8 @@ Windows). The environment variables it reads are named `TEMPER_*`:
 ([the command line](../tools/cli.md#what-tools-start)). Development
 builds before this used other names for both, so scripts written for
 them need the new ones.
+`TEMPER_CXX_JOBS` sets how many compiles a C++ build runs at once,
+one per CPU, four at most, by default.
 
 ## Fixes on Windows
 

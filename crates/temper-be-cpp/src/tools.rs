@@ -4,7 +4,7 @@
 //! library that others use is built once for them all, as Rust's one
 //! target directory shares crates. For each library it builds its
 //! `LIBRARY-test` target, its tests with std and the libraries it
-//! imports, by `g++` or whatever CMake finds (`CXX`), two jobs at once,
+//! imports, by `g++` or whatever CMake finds (`CXX`), [`jobs`] at once,
 //! then runs that program in the library's directory, which writes
 //! `test-results.xml`, as Kotlin's `RunCpp` runs its `g++` build.
 //! `temper run -b cpp` builds the `LIBRARY-main` target the same way,
@@ -76,9 +76,38 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
     Ok(())
 }
 
+/// How many compiles run at once unless `TEMPER_CXX_JOBS` says: one per
+/// CPU, four at most, as a debug compile of generated C++ takes a few
+/// hundred megabytes, up to 0.8 GB for Kelpto's biggest library, so
+/// four keep within a small machine's memory beside other work.
+pub const MAX_DEFAULT_JOBS: usize = 4;
+
+/// How many compiles a C++ build runs at once (CMake's `-j`, and the C++
+/// backend's own tests): `TEMPER_CXX_JOBS`, a whole number above 0,
+/// where it's set and not empty, else one per CPU, up to
+/// [`MAX_DEFAULT_JOBS`]; or what `TEMPER_CXX_JOBS` should be.
+pub fn jobs() -> Result<usize, String> {
+    let cpus = std::thread::available_parallelism().map_or(1, |n| n.get());
+    choose_jobs(std::env::var("TEMPER_CXX_JOBS").ok().as_deref(), cpus)
+}
+
+/// [`jobs`], given `TEMPER_CXX_JOBS` and the CPUs.
+fn choose_jobs(given: Option<&str>, cpus: usize) -> Result<usize, String> {
+    match given {
+        None | Some("") => Ok(cpus.clamp(1, MAX_DEFAULT_JOBS)),
+        Some(text) => match text.parse() {
+            Ok(n) if n > 0 && text.bytes().all(|b| b.is_ascii_digit()) => Ok(n),
+            _ => Err(format!(
+                "TEMPER_CXX_JOBS must be a whole number above 0, not {text}"
+            )),
+        },
+    }
+}
+
 /// Builds a library's target, in the shared build where [`workspace`]
 /// configured it, or else alone in `LIBRARY/build`; the program's path.
 fn build(dir: &Path, library: &str, target: &str) -> Result<PathBuf, String> {
+    let jobs = jobs()?.to_string();
     let cmake = tool("CMAKE", "cmake");
     let shared = dir.join(WORKSPACE).join("tree");
     let (tree, programs) = match shared.join("CMakeCache.txt").is_file() {
@@ -101,7 +130,7 @@ fn build(dir: &Path, library: &str, target: &str) -> Result<PathBuf, String> {
         Command::new(&cmake)
             .arg("--build")
             .arg(&tree)
-            .args(["--target", target, "-j", "2"]),
+            .args(["--target", target, "-j", &jobs]),
         "cmake --build",
     )?;
     if !made.status.success() {
@@ -129,4 +158,44 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
         "the tests",
     )?;
     junit_file(&results, &run, str::to_string)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::choose_jobs;
+
+    #[test]
+    fn jobs_by_default() {
+        // As many as there are CPUs, four at most.
+        assert_eq!(choose_jobs(None, 1), Ok(1));
+        assert_eq!(choose_jobs(None, 2), Ok(2));
+        assert_eq!(choose_jobs(None, 4), Ok(4));
+        assert_eq!(choose_jobs(None, 16), Ok(4));
+        // Set but empty, as a workflow's `TEMPER_CXX_JOBS: ""`, is unset.
+        assert_eq!(choose_jobs(Some(""), 8), Ok(4));
+    }
+
+    #[test]
+    fn jobs_given() {
+        // Whatever's given, more than the CPUs or the default too.
+        assert_eq!(choose_jobs(Some("1"), 8), Ok(1));
+        assert_eq!(choose_jobs(Some("3"), 8), Ok(3));
+        assert_eq!(choose_jobs(Some("12"), 2), Ok(12));
+    }
+
+    #[test]
+    fn jobs_wrong() {
+        for wrong in [
+            "0",
+            "-2",
+            "+2",
+            "2.5",
+            " 2",
+            "two",
+            "99999999999999999999999",
+        ] {
+            let why = format!("TEMPER_CXX_JOBS must be a whole number above 0, not {wrong}");
+            assert_eq!(choose_jobs(Some(wrong), 8), Err(why));
+        }
+    }
 }

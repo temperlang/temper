@@ -895,6 +895,17 @@ fn test_a_library_in_cpp() {
                 .sum()
         }
         assert_eq!((count(&cpp, "a.dir"), count(&cpp, "std.dir")), (1, 1));
+        // A `TEMPER_CXX_JOBS` that isn't a number of jobs fails the
+        // build, saying so.
+        let wrong = Command::new(env!("CARGO_BIN_EXE_temper"))
+            .args(["test", "-b", "cpp", dir])
+            .env("TEMPER_CXX_JOBS", "two")
+            .output()
+            .unwrap();
+        let out = String::from_utf8_lossy(&wrong.stdout);
+        let why = "TEMPER_CXX_JOBS must be a whole number above 0, not two";
+        assert!(out.contains(why), "{out}");
+        assert_eq!(wrong.status.code(), Some(1));
     });
 }
 
