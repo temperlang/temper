@@ -415,6 +415,16 @@ alike (each backend crate's `src/tools.rs`, run by
   backend's own tests do, rather than Maven, which needs its network.
 - **C#:** `dotnet test --logger:junit`, as Kotlin's `RunCSharp`.
 - **Rust:** `cargo test --offline`, one target directory for all.
+  Since 2026-11-19 one Cargo workspace in `temper.out/rust/.build`
+  links every crate there, unchanged, and builds every tested
+  library's tests at once (`cargo build --tests --keep-going`), then
+  runs each library's test programs. Alone, a library was built again
+  for each library using it (as a dependency it's built with other
+  flags, so another hash); now each crate is built once, and the
+  libraries build side by side. Where the workspace doesn't load (no
+  links, as on Windows without the right to make them), or a
+  library's tests don't build there, it's `cargo test` in the crate,
+  as before.
 - **C++:** CMake on the `CMakeLists.txt` tempest writes, building the
   library's `LIBRARY-test` target (its tests, std, and the libraries it
   imports), then running it in the

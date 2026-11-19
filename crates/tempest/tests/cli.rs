@@ -923,7 +923,8 @@ fn test_a_library_on_each_backend() {
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
     ];
-    for backend in ["js", "lua", "rust", "java", "csharp"] {
+    // Rust's is `test_a_library_in_rust`'s, with a second library.
+    for backend in ["js", "lua", "java", "csharp"] {
         if !built_in(backend) {
             continue;
         }
@@ -949,6 +950,51 @@ fn test_a_library_on_each_backend() {
             assert_eq!(code, 1, "{backend}");
         });
     }
+}
+
+/// `temper test -b rust` as [`test_a_library_on_each_backend`] tests
+/// the others, where cargo runs (skipped otherwise; required with
+/// `TEMPER_REQUIRE_CHECKERS`), with a second library, `b`, using `a`:
+/// each library, std, and temper-core compile once, in one Cargo
+/// workspace for them all, not again for each library using them.
+#[test]
+#[cfg(feature = "rust")]
+fn test_a_library_in_rust() {
+    let files = [
+        ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
+        ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
+        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
+        ),
+    ];
+    with_library("rust-tests", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", "rust", dir]);
+        if tools_missing("rust", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.contains("  failed  b - expected"), "{out}{err}");
+        assert!(
+            out.to_lowercase().contains(CLASS_ASSERT_FAILED),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        // One library file for each crate: a crate built again for
+        // another library has another hash.
+        let deps = Path::new(dir).join("temper.out/rust/target/debug/deps");
+        let count = |name: &str| {
+            let entries = fs::read_dir(&deps).into_iter().flatten().flatten();
+            (entries.map(|e| e.file_name().to_string_lossy().into_owned()))
+                .filter(|f| f.starts_with(&format!("lib{name}-")) && f.ends_with(".rlib"))
+                .count()
+        };
+        let counts = ["a", "temper_std", "temper_core"].map(count);
+        assert_eq!(counts, [1, 1, 1], "{deps:?}");
+    });
 }
 
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some
