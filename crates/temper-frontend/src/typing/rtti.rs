@@ -19,7 +19,7 @@ impl Settle {
     /// `?`; whether it's unnecessary also counts null, which `T?` passes.
     pub(super) fn check_rtti(&mut self, call: NodeId, f: Function, args: &[NodeId]) {
         let &[subject, target] = args else { return };
-        let s = self.folded_type(subject, 0);
+        let s = self.known_type(subject);
         // The subject is an `AnyValue?` argument.
         if s == VOID {
             let message = Message::ExpectedSubType("AnyValue?".into(), self.show(VOID));
@@ -169,27 +169,6 @@ impl Settle {
         !self.typing.types.no_downcast(t)
             && self.rtti_subtype(t, s_judged) == Some(true)
             && !self.introduces_args(s_judged, t)
-    }
-
-    /// An expression's type, or for a name Kotlin Temper folds to a
-    /// literal, as `s` after `let s: AnyValue = "a"`, the literal's type,
-    /// as Kotlin checks that. Not one it might fold to an object, as
-    /// after `let s: I = new C()`, which it may not.
-    fn folded_type(&mut self, node: NodeId, depth: u32) -> TypeId {
-        let tree = &self.lib.tree;
-        let decl = (self.scopes.resolved(node))
-            .filter(|_| tree.kind(node) == NodeKind::RightName && depth < 8)
-            .and_then(|b| self.scopes.symbol(b).decl)
-            .filter(|&decl| tree.kind(decl) == NodeKind::Let);
-        match decl.and_then(|decl| core::let_parts(tree, decl).2) {
-            Some(init)
-                if matches!(tree.kind(init), NodeKind::Value | NodeKind::RightName)
-                    && self.may_fold(node, 0) =>
-            {
-                self.folded_type(init, depth + 1)
-            }
-            _ => self.known_type(node),
-        }
     }
 
     /// `t` without its `?`, as `String` for `String?`.

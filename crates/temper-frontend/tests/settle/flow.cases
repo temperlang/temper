@@ -681,7 +681,6 @@ error 2303..2304: Expected subtype of Int32, but got Int32?
 error 2350..2351: Expected subtype of Int32, but got Int32?
 error 2354..2355: Cannot assign to Int32 from Int32?
 error 2429..2430: Expected subtype of Int32, but got Int32?
-hint 2468..2476: Unnecessary type check to Int32 from expression with type Int32 which is a subtype
 error 2468..2476: Cannot bubble from a function without Bubble in its return type
 error 2669..2670: Cannot assign to fn (Int32): Boolean from (fn (Int32): Boolean)?
 error 962..971: No member isEmpty in String?

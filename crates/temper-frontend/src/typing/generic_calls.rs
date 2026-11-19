@@ -48,8 +48,8 @@ pub(super) struct Solved {
 impl Settle {
     /// Solves a call of a generic function declared by `let`, as `id(1)`
     /// or `id<Int>(x)`: from its type arguments, if there are as many as
-    /// the function has type parameters (else not at all), unless Kotlin
-    /// Temper would fold the call; otherwise from its arguments' types
+    /// the function has type parameters (else not at all), whatever its
+    /// arguments' values; otherwise from its arguments' types
     /// ([`crate::types::Types::unify`]), leaving a type parameter that's
     /// solved two different ways unknown, as Kotlin may find a common
     /// supertype. A function literal argument binds by the types it
@@ -69,18 +69,12 @@ impl Settle {
             return Ok(None);
         };
         let mut this = None;
-        let (sig, formals, type_args, args, foldable) = match self.generic_fn(callee) {
+        let (sig, formals, type_args, args) = match self.generic_fn(callee) {
             Some(f) => {
                 let Some((type_args, args)) = self.split_type_args(args) else {
                     return Ok(None);
                 };
-                (
-                    self.fn_signature(f),
-                    self.own_formals(f),
-                    type_args,
-                    args,
-                    true,
-                )
+                (self.fn_signature(f), self.own_formals(f), type_args, args)
             }
             None if self.scopes.resolved_builtin(callee).is_none() => {
                 let method = match self.generic_method(callee, forced)? {
@@ -92,7 +86,7 @@ impl Settle {
                     return Ok(None);
                 };
                 this = method.this;
-                (method.sig, method.formals, type_args, args, false)
+                (method.sig, method.formals, type_args, args)
             }
             None => match self.generic_new(callee, args) {
                 Some((class, type_args)) => {
@@ -105,7 +99,7 @@ impl Settle {
                         ret,
                         throws: false,
                     });
-                    (sig, formals, type_args, args[1..].to_vec(), false)
+                    (sig, formals, type_args, args[1..].to_vec())
                 }
                 None if self.scopes.resolved_builtin(callee)
                     != Some(Builtin::Function(Function::New)) =>
@@ -118,7 +112,7 @@ impl Settle {
                         let Some(values) = values else {
                             return Ok(None);
                         };
-                        (method.sig, method.formals, type_args, values, false)
+                        (method.sig, method.formals, type_args, values)
                     }
                     None => return Ok(None),
                 },
@@ -129,12 +123,10 @@ impl Settle {
         };
         let mut actuals = vec![UNKNOWN; formals.len()];
         let mut ambiguous = vec![false; formals.len()];
-        // Kotlin Temper folds a call of constants to its value before
-        // checking it, so its type arguments go unchecked: `let s: String
-        // = id<Int>("a")` passes, as the value is a `String`. It doesn't
-        // fold a constructor's call.
-        let folds = foldable && self.may_fold(call, 0);
-        if !type_args.is_empty() && !folds {
+        // Type arguments count whatever the arguments' values, though
+        // Kotlin Temper folds a call of constants first, so it passes
+        // `let s: String = id<Int>("a")`.
+        if !type_args.is_empty() {
             if type_args.len() == formals.len() {
                 for (actual, &t) in actuals.iter_mut().zip(&type_args) {
                     *actual = self.eval_type(t);

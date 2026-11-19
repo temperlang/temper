@@ -868,8 +868,9 @@ log a
 === generic calls solved per call, as Kotlin Temper reports them
 // Each call binds the function's type parameters, from its type
 // arguments or else its arguments' types; a parameter bound two ways is
-// left unknown, as Kotlin may find a common supertype. Kotlin folds a
-// call of constants first, so `id<Int>("a")` then passes as a `String`.
+// left unknown, as Kotlin may find a common supertype. Type arguments
+// count whatever the arguments' values: Kotlin folds a call of
+// constants first, so `id<Int>("a")` passes there as a `String`.
 interface Animal {}
 class Dog extends Animal {}
 let id<T>(x: T): T { x }
@@ -892,6 +893,7 @@ let c9: String = both(1, 2);
 let d1: String = id<Int>(1);
 let d2: Animal = id(new Dog());
 let d3 = id<Int, Int>(1);
+let d4: String = id<Int>("a");
 let f(n: Int, s: String, xs: List<Int>): Void {
   g(n, s);
   g(n);
@@ -911,47 +913,47 @@ console.log(id(1).toString());
 (Block
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
-  (Let ^id:2 (Fn (TypeParam ^T:25) (Let ^x:26 T:25) T:25 (Block x:26)))
+  (Let ^id:2 (Fn (TypeParam ^T:26) (Let ^x:27 T:26) T:26 (Block x:27)))
   (Let
     ^pair:3
-    (Fn (TypeParam ^T:27) (Let ^a:28 T:27) (Let ^b:29 T:27) T:27 (Block a:28)))
+    (Fn (TypeParam ^T:28) (Let ^a:29 T:28) (Let ^b:30 T:28) T:28 (Block a:29)))
   (Let
     ^wrap:4
     (Fn
-      (TypeParam ^T:30)
-      (Let ^x:31 T:30)
-      (Call <> List T:30)
-      (Block (Call list x:31))))
+      (TypeParam ^T:31)
+      (Let ^x:32 T:31)
+      (Call <> List T:31)
+      (Block (Call list x:32))))
   (Let
     ^pick:5
-    (Fn (TypeParam ^T:32 Animal:0) (Let ^x:33 T:32) T:32 (Block x:33)))
+    (Fn (TypeParam ^T:33 Animal:0) (Let ^x:34 T:33) T:33 (Block x:34)))
   (Let
     ^opt:6
     (Fn
-      (TypeParam ^T:34)
-      (Let ^x:35 (Call ? T:34))
-      T:34
-      (Block (Orelse x:35 (Call panic)))))
+      (TypeParam ^T:35)
+      (Let ^x:36 (Call ? T:35))
+      T:35
+      (Block (Orelse x:36 (Call panic)))))
   (Let
     ^both:7
     (Fn
-      (TypeParam ^T:36)
-      (TypeParam ^U:37)
-      (Let ^a:38 T:36)
-      (Let ^b:39 U:37)
-      U:37
-      (Block b:39)))
+      (TypeParam ^T:37)
+      (TypeParam ^U:38)
+      (Let ^a:39 T:37)
+      (Let ^b:40 U:38)
+      U:38
+      (Block b:40)))
   (Let
     ^g:8
-    (Fn (TypeParam ^T:40) (Let ^x:41 T:40) (Let ^n:42 Int) T:40 (Block x:41)))
+    (Fn (TypeParam ^T:41) (Let ^x:42 T:41) (Let ^n:43 Int) T:41 (Block x:42)))
   (Let
     ^k:9
     (Fn
-      (TypeParam ^T:43)
-      (Let ^xs:44 (Call <> List T:43))
-      (Let ^x:45 T:43)
-      T:43
-      (Block x:45)))
+      (TypeParam ^T:44)
+      (Let ^xs:45 (Call <> List T:44))
+      (Let ^x:46 T:44)
+      T:44
+      (Block x:46)))
   (Let ^c1:10 String (Call id:2 1))
   (Let ^c2:11 Int (Call id:2 1))
   (Let ^c3:12 (Call pair:3 1 "a"))
@@ -964,46 +966,49 @@ console.log(id(1).toString());
   (Let ^d1:19 String (Call id:2 \typeArg Int 1))
   (Let ^d2:20 Animal:0 (Call id:2 (Call new Dog:1)))
   (Let ^d3:21 (Call id:2 \typeArg Int \typeArg Int 1))
+  (Let ^d4:22 String (Call id:2 \typeArg Int "a"))
   (Let
-    ^f:22
+    ^f:23
     (Fn
-      (Let ^n:46 Int)
-      (Let ^s:47 String)
-      (Let ^xs:48 (Call <> List Int))
+      (Let ^n:47 Int)
+      (Let ^s:48 String)
+      (Let ^xs:49 (Call <> List Int))
       Void
       (Block
-        (Call g:8 n:46 s:47)
-        (Call g:8 n:46)
-        (Call g:8 \typeArg String n:46 s:47)
-        (Call pick:5 n:46)
+        (Call g:8 n:47 s:48)
+        (Call g:8 n:47)
+        (Call g:8 \typeArg String n:47 s:48)
+        (Call pick:5 n:47)
         (Call pick:5 \typeArg Dog:1 (Call new Dog:1))
         (Call id:2 \typeArg Animal:0 (Call new Dog:1))
-        (Let ^a:49 String (Call g:8 n:46 1))
-        (Call k:9 xs:48 s:47)
-        (Let ^b:50 String (Call k:9 xs:48 n:46))
-        (Let ^c:51 Int (Call id:2 (Call id:2 s:47)))
-        (Let ^e:52 String (Call id:2 \typeArg Int n:46))
-        (Let ^h:53 Int (Call id:2 \typeArg Int n:46))
+        (Let ^a:50 String (Call g:8 n:47 1))
+        (Call k:9 xs:49 s:48)
+        (Let ^b:51 String (Call k:9 xs:49 n:47))
+        (Let ^c:52 Int (Call id:2 (Call id:2 s:48)))
+        (Let ^e:53 String (Call id:2 \typeArg Int n:47))
+        (Let ^h:54 Int (Call id:2 \typeArg Int n:47))
         #void)))
   (Call (Call . console \log) (Call (Call . (Call id:2 1) \toString)))
   #void)
-error 488..489: Cannot assign to T from T?
-error 629..634: Cannot assign to String from Int32
-error 694..706: Cannot assign to Int32 from String
-error 736..737: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
-error 749..756: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 806..812: Cannot assign to String from Int32
-error 831..841: Cannot assign to String from Int32
-error 860..870: Cannot assign to String from Int32
-error 985..986: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
-error 991..995: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
-error 1009..1013: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
-error 1018..1025: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 1094..1101: Cannot assign to String from Int32
-error 1133..1141: Cannot assign to String from Int32
-error 1158..1167: Cannot assign to Int32 from String
-error 1187..1197: Cannot assign to String from Int32
-Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 545..546: Cannot assign to T from T?
+error 686..691: Cannot assign to String from Int32
+error 759..762: Actual arguments do not match signature: <T extends AnyValue>(T) -> T expected [Int32], but got [String]
+error 793..794: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 806..813: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 863..869: Cannot assign to String from Int32
+error 888..898: Cannot assign to String from Int32
+error 917..927: Cannot assign to String from Int32
+error 1012..1015: Actual arguments do not match signature: <T extends AnyValue>(T) -> T expected [Int32], but got [String]
+error 1004..1016: Cannot assign to String from Int32
+error 1073..1074: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
+error 1079..1083: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
+error 1097..1101: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
+error 1106..1113: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 1182..1189: Cannot assign to String from Int32
+error 1221..1229: Cannot assign to String from Int32
+error 1246..1255: Cannot assign to Int32 from String
+error 1275..1285: Cannot assign to String from Int32
+Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> T expected [Int32], but got [String]
 
 === generic classes and methods, as Kotlin Temper reports them
 // `new Box(1)` is solved as a call of `<T>(T) -> Box<T>`, a `Box<Int>`'s

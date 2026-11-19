@@ -949,7 +949,8 @@ let f5(i: I): Boolean { i is K }
 let f6(x: Int): Boolean { x is AnyValue }
 let f7(x: Int?): Boolean { x is Int }
 let f8(i: I): D { (i as D) orelse panic() }
-// Kotlin Temper folds names of literals first.
+// Judged by declared types, whatever the values: Kotlin Temper folds
+// names of literals first, so calls g1 unnecessary and g2 impossible.
 let g: AnyValue = "a";
 let h = g;
 var v: AnyValue = 1;
@@ -958,6 +959,8 @@ let g1(): Boolean { g is String }
 let g2(): Boolean { h is Int }
 let g3(): Boolean { v is Int }
 let g4(): Boolean { k is E }
+let g5(): Boolean { let s: AnyValue = "a"; s is Int }
+let g6(): Int { let s: AnyValue = 1; (s as Int) orelse 0 }
 v = 2;
 // An unrelated check doesn't narrow.
 let takeI(i: I): Void {}
@@ -970,95 +973,95 @@ let h1(i: I): Void { if (i is J) { takeI(i); } }
   (Class ^C:3)
   (Class ^D:4 I:0)
   (Class ^E:5 I:0 J:1)
-  (Let ^a1:6 (Fn (Let ^x:59 Int) Boolean (Block (Call is x:59 String))))
-  (Let ^a2:7 (Fn (Let ^c:60 C:3) Boolean (Block (Call is c:60 D:4))))
+  (Let ^a1:6 (Fn (Let ^x:61 Int) Boolean (Block (Call is x:61 String))))
+  (Let ^a2:7 (Fn (Let ^c:62 C:3) Boolean (Block (Call is c:62 D:4))))
   (Let
     ^a3:8
-    (Fn (Let ^x:61 (Call ? Int)) Boolean (Block (Call is x:61 String))))
+    (Fn (Let ^x:63 (Call ? Int)) Boolean (Block (Call is x:63 String))))
   (Let
     ^a4:9
-    (Fn (Let ^c:62 (Call ? C:3)) Boolean (Block (Call is c:62 (Call ? D:4)))))
-  (Let ^a5:10 (Fn (Let ^x:63 Int) String (Block (Call as x:63 String))))
+    (Fn (Let ^c:64 (Call ? C:3)) Boolean (Block (Call is c:64 (Call ? D:4)))))
+  (Let ^a5:10 (Fn (Let ^x:65 Int) String (Block (Call as x:65 String))))
   (Let
     ^a6:11
-    (Fn (Let ^x:64 Float64) Int (Block (Orelse (Call as x:64 Int) 0))))
-  (Let ^a7:12 (Fn (Let ^x:65 Int) Boolean (Block (Call is x:65 Int64))))
-  (Let ^a8:13 (Fn (Let ^x:66 Void) Boolean (Block (Call is x:66 Int))))
-  (Let ^b1:14 (Fn (Let ^i:67 I:0) Boolean (Block (Call is i:67 J:1))))
-  (Let ^b2:15 (Fn (Let ^c:68 C:3) Boolean (Block (Call is c:68 I:0))))
-  (Let ^b3:16 (Fn (Let ^i:69 I:0) Boolean (Block (Call is i:69 C:3))))
-  (Let ^b4:17 (Fn (Let ^x:70 Int) Boolean (Block (Call is x:70 I:0))))
-  (Let ^b5:18 (Fn (Let ^i:71 I:0) Boolean (Block (Call is i:71 Int))))
+    (Fn (Let ^x:66 Float64) Int (Block (Orelse (Call as x:66 Int) 0))))
+  (Let ^a7:12 (Fn (Let ^x:67 Int) Boolean (Block (Call is x:67 Int64))))
+  (Let ^a8:13 (Fn (Let ^x:68 Void) Boolean (Block (Call is x:68 Int))))
+  (Let ^b1:14 (Fn (Let ^i:69 I:0) Boolean (Block (Call is i:69 J:1))))
+  (Let ^b2:15 (Fn (Let ^c:70 C:3) Boolean (Block (Call is c:70 I:0))))
+  (Let ^b3:16 (Fn (Let ^i:71 I:0) Boolean (Block (Call is i:71 C:3))))
+  (Let ^b4:17 (Fn (Let ^x:72 Int) Boolean (Block (Call is x:72 I:0))))
+  (Let ^b5:18 (Fn (Let ^i:73 I:0) Boolean (Block (Call is i:73 Int))))
   (Let
     ^b6:19
-    (Fn (Let ^i:72 (Call ? I:0)) Boolean (Block (Call is i:72 (Call ? J:1)))))
-  (Let ^b7:20 (Fn (Let ^x:73 AnyValue) Boolean (Block (Call is x:73 Void))))
+    (Fn (Let ^i:74 (Call ? I:0)) Boolean (Block (Call is i:74 (Call ? J:1)))))
+  (Let ^b7:20 (Fn (Let ^x:75 AnyValue) Boolean (Block (Call is x:75 Void))))
   (Let
     ^b8:21
-    (Fn (Let ^f:74 (Call FnType Int Int)) Boolean (Block (Call is f:74 Int))))
+    (Fn (Let ^f:76 (Call FnType Int Int)) Boolean (Block (Call is f:76 Int))))
   (Let
     ^b9:22
     (Fn
-      (Let ^i:75 I:0)
+      (Let ^i:77 I:0)
       Boolean
       (Block
-        (Block (If (Call is i:75 D:4) true (If (Call is i:75 J:1) false false))))))
-  (Let ^c1:23 (Fn (Let ^x:76 AnyValue) Boolean (Block (Call is x:76 String))))
+        (Block (If (Call is i:77 D:4) true (If (Call is i:77 J:1) false false))))))
+  (Let ^c1:23 (Fn (Let ^x:78 AnyValue) Boolean (Block (Call is x:78 String))))
   (Let
     ^c2:24
-    (Fn (Let ^x:77 (Call ? AnyValue)) Boolean (Block (Call is x:77 Int))))
+    (Fn (Let ^x:79 (Call ? AnyValue)) Boolean (Block (Call is x:79 Int))))
   (Let
     ^c3:25
-    (Fn (Let ^x:78 AnyValue) String (Block (Orelse (Call as x:78 String) ""))))
+    (Fn (Let ^x:80 AnyValue) String (Block (Orelse (Call as x:80 String) ""))))
   (Let
     ^d1:26
     (Fn
-      (TypeParam ^T:79)
-      (Let ^x:80 AnyValue)
+      (TypeParam ^T:81)
+      (Let ^x:82 AnyValue)
       Boolean
-      (Block (Call is x:80 T:79))))
+      (Block (Call is x:82 T:81))))
   (Let
     ^d2:27
-    (Fn (TypeParam ^T:81) (Let ^i:82 I:0) Boolean (Block (Call is i:82 T:81))))
+    (Fn (TypeParam ^T:83) (Let ^i:84 I:0) Boolean (Block (Call is i:84 T:83))))
   (Let
     ^d3:28
     (Fn
-      (TypeParam ^T:83 I:0)
-      (Let ^i:84 I:0)
+      (TypeParam ^T:85 I:0)
+      (Let ^i:86 I:0)
       Boolean
-      (Block (Call is i:84 T:83))))
+      (Block (Call is i:86 T:85))))
   (Class
     ^G:29
-    (TypeParam ^T:85)
+    (TypeParam ^T:87)
     (Method
-      ^f:87
-      (Fn (Let ^x:88 (Call ? AnyValue)) Boolean (Block (Call is x:88 T:85)))))
-  (Let ^e1:30 (Fn (Let ^x:89 Int) Boolean (Block (Call is x:89 Int))))
-  (Let ^e2:31 (Fn (Let ^d:90 D:4) Boolean (Block (Call is d:90 I:0))))
-  (Let ^e3:32 (Fn (Let ^d:91 D:4) D:4 (Block (Call as d:91 D:4))))
+      ^f:89
+      (Fn (Let ^x:90 (Call ? AnyValue)) Boolean (Block (Call is x:90 T:87)))))
+  (Let ^e1:30 (Fn (Let ^x:91 Int) Boolean (Block (Call is x:91 Int))))
+  (Let ^e2:31 (Fn (Let ^d:92 D:4) Boolean (Block (Call is d:92 I:0))))
+  (Let ^e3:32 (Fn (Let ^d:93 D:4) D:4 (Block (Call as d:93 D:4))))
   (Let
     ^e4:33
-    (Fn (Let ^s:92 String) Boolean (Block (Call is s:92 (Call ? String)))))
-  (Let ^e5:34 (Fn (Let ^x:93 AnyValue) Boolean (Block (Call is x:93 AnyValue))))
-  (Let ^f1:35 (Fn (Let ^d:94 D:4) I:0 (Block (Call as d:94 I:0))))
+    (Fn (Let ^s:94 String) Boolean (Block (Call is s:94 (Call ? String)))))
+  (Let ^e5:34 (Fn (Let ^x:95 AnyValue) Boolean (Block (Call is x:95 AnyValue))))
+  (Let ^f1:35 (Fn (Let ^d:96 D:4) I:0 (Block (Call as d:96 I:0))))
   (Let
     ^f2:36
-    (Fn (Let ^s:95 (Call ? String)) Boolean (Block (Call is s:95 String))))
+    (Fn (Let ^s:97 (Call ? String)) Boolean (Block (Call is s:97 String))))
   (Let
     ^f3:37
     (Fn
-      (Let ^s:96 (Call ? String))
+      (Let ^s:98 (Call ? String))
       Boolean
-      (Block (Call is s:96 (Call ? String)))))
-  (Let ^f4:38 (Fn (Let ^x:97 AnyValue) Boolean (Block (Call is x:97 C:3))))
-  (Let ^f5:39 (Fn (Let ^i:98 I:0) Boolean (Block (Call is i:98 K:2))))
-  (Let ^f6:40 (Fn (Let ^x:99 Int) Boolean (Block (Call is x:99 AnyValue))))
+      (Block (Call is s:98 (Call ? String)))))
+  (Let ^f4:38 (Fn (Let ^x:99 AnyValue) Boolean (Block (Call is x:99 C:3))))
+  (Let ^f5:39 (Fn (Let ^i:100 I:0) Boolean (Block (Call is i:100 K:2))))
+  (Let ^f6:40 (Fn (Let ^x:101 Int) Boolean (Block (Call is x:101 AnyValue))))
   (Let
     ^f7:41
-    (Fn (Let ^x:100 (Call ? Int)) Boolean (Block (Call is x:100 Int))))
+    (Fn (Let ^x:102 (Call ? Int)) Boolean (Block (Call is x:102 Int))))
   (Let
     ^f8:42
-    (Fn (Let ^i:101 I:0) D:4 (Block (Orelse (Call as i:101 D:4) (Call panic)))))
+    (Fn (Let ^i:103 I:0) D:4 (Block (Orelse (Call as i:103 D:4) (Call panic)))))
   (Let ^g:43 AnyValue "a")
   (Let ^h:44 g:43)
   (Var ^v:45 AnyValue 1)
@@ -1068,14 +1071,20 @@ let h1(i: I): Void { if (i is J) { takeI(i); } }
   (Assign v:45 2)
   (Let ^g3:49 (Fn Boolean (Block (Call is v:45 Int))))
   (Let ^g4:50 (Fn Boolean (Block (Call is k:46 E:5))))
-  (Let ^takeI:51 (Fn (Let ^i:102 I:0) Void (Block)))
   (Let
-    ^h1:52
+    ^g5:51
+    (Fn Boolean (Block (Let ^s:104 AnyValue "a") (Call is s:104 Int))))
+  (Let
+    ^g6:52
+    (Fn Int (Block (Let ^s:105 AnyValue 1) (Orelse (Call as s:105 Int) 0))))
+  (Let ^takeI:53 (Fn (Let ^i:106 I:0) Void (Block)))
+  (Let
+    ^h1:54
     (Fn
-      (Let ^i:103 I:0)
+      (Let ^i:107 I:0)
       Void
       (Block
-        (If (Call is i:103 J:1) (Block (Call takeI:51 i:103) #void) (Block))))))
+        (If (Call is i:107 J:1) (Block (Call takeI:53 i:107) #void) (Block))))))
 error 195..206: Runtime type check from Int32 to String can never succeed
 error 233..239: Runtime type check from C to D can never succeed
 error 269..280: Runtime type check from Int32 to String can never succeed
@@ -1107,10 +1116,12 @@ hint 1424..1430: Unnecessary type check to D from expression with type D which i
 hint 1462..1474: Unnecessary type check to String? from expression with type String which is a subtype
 hint 1508..1521: Unnecessary type check to AnyValue from expression with type AnyValue which is a subtype
 hint 1634..1646: Unnecessary type check to String? from expression with type String? which is a subtype
-hint 1989..2000: Unnecessary type check to String from expression with type String which is a subtype
-error 2023..2031: Runtime type check from String to Int32 can never succeed
-error 2054..2062: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
-error 2189..2195: Unrelated types cannot be targeted with is or as runtime type checks: <[J]> from I
+error 2082..2093: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[String]> from AnyValue
+error 2116..2124: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+error 2147..2155: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+error 2230..2238: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+error 2279..2287: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+error 2395..2401: Unrelated types cannot be targeted with is or as runtime type checks: <[J]> from I
 
 === as may bubble
 interface I {}

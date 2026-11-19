@@ -357,12 +357,11 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
   Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
   while it fits an `AnyValue` bound. What doesn't bind is unknown.
-- **Folding:** Kotlin folds a call of constants (`may_fold`) to its
-  value before checking it, so such a call with type arguments is solved
-  from its arguments instead, as its value's type would be: `let s:
-  String = id<Int>("a")` passes, and `let n: Int = id<Int>("a")` is
-  "Cannot assign to Int32 from String". A constructor's or method's call
-  isn't folded.
+- **Values don't count:** a call with type arguments is solved from
+  them whatever its arguments' values, so `let s: String =
+  id<Int>("a")` reports the argument and the assignment. Kotlin folds a
+  call of constants to its value first, and passes it
+  ([kotlin-differences.md](kotlin-differences.md)).
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
   result, or assigned, and its type doesn't fit the type wanted there, the type
@@ -1306,8 +1305,10 @@ What tempest reports for `x is T` and `x as T` (`typing/rtti.rs`), as
 Kotlin Temper's `TypeFuns.kt` (`problems`) does, in its words and at its
 positions: the check's span, or in `when (x) { is T -> … }`, `T`'s.
 Status in [milestone-4.md](history/milestone-4.md). Let `S` be `x`'s type, from
-flow facts where they narrow it, or for a name Kotlin folds to a
-literal (`let s: AnyValue = "a"`), the literal's type, and `T` the
+flow facts where they narrow it, never from its value ("Nullable until
+narrowed", above): `s is Int` for `let s: AnyValue = "a"` judges an
+`AnyValue`, where Kotlin judges the `String` it folds `s` to
+([kotlin-differences.md](kotlin-differences.md)). Let `T` be the
 target with any `?` dropped. Rules 1 to 5 judge the check's non-null
 part, so they're as Kotlin's; rule 6 counts null, which a nullable
 target passes (below, "Nullable targets"). Both must be fully known: a

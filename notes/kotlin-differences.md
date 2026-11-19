@@ -387,12 +387,21 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   non-null type fits, since null selects the default on every backend:
   Kotlin takes `g(noInline())` (funtest `functions/defaulting`), which it
   might fold, but rejects `fallback(a)` for a parameter `a: String?`,
-  which tempest accepts.
+  which tempest accepts. The same goes for `is` and `as` checks and type
+  arguments, since 2026-11-19: Kotlin judges `s is Int` for `let s:
+  AnyValue = "a"` by the `String` it folds `s` to ("Runtime type check
+  from String to Int32 can never succeed"), calls `n as Int` for `let n:
+  Int? = 1` unnecessary, and passes `let s: String = id<Int>("a")`, a
+  call of constants it folds to `"a"`; tempest judges the `AnyValue`
+  (`@mayDowncastTo(false)`), says only that the cast may bubble, and
+  reports the argument and the assignment, as for non-constant values.
   Test: settle/flow.cases, "a nullable constant stays nullable until
   narrowed", "nullable locals stay nullable until narrowed" (`i3`, `i4`,
   `k6` to `k10`), and "nullable values where a non-null one is wanted"
   (`b7`); settle/types.cases, "a member of a nullable value is an error
-  that fails where it runs" (`r11`).
+  that fails where it runs" (`r11`) and "generic calls solved per call"
+  (`c4`, `d4`); settle/class-types.cases, "is and as checks" (`g1` to
+  `g6`).
 - **A nullable function folded to null,** `let g: fn (Int): Boolean =
   h` for `let h: (fn (Int): Boolean)? = null`, is reported with internal
   names: "Expected subtype of Fn__1006<Int32, Boolean>, but got
@@ -547,17 +556,18 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 - **Generic calls:** a call with type arguments whose arguments don't
   fit, as `id<String>(n)` for `n: Int` in a function, is also "Expected
   function type, but got Invalid" at the callee, which tempest doesn't
-  say; at top level, a call of constants is folded first, so
-  `id<Int>("a")` passes as a `String`, which tempest matches. `let xs:
-  List<String> = wrap(1)` reports the argument ("Actual arguments do
-  not match signature: … expected [String], but got [Int32]"), solving
-  from the type wanted first, where `let c: String = id(1)` reports the
-  assignment; tempest matches both ([typing.md](typing.md), "Generic
-  calls"). A nullable constant Kotlin folds to null, as a top-level
-  `let d: Dog? = null`, passed as `id(d)` for `id<T extends Animal>`, is
-  "Expected subtype of Animal, but got Animal?" at the argument; tempest
-  reports it as it does any `Dog?`, "Type formal <T extends Animal>
-  cannot bind to Dog? …", at the call, as Kotlin does in a function.
+  say. `let xs: List<String> = wrap(1)` reports the argument ("Actual
+  arguments do not match signature: … expected [String], but got
+  [Int32]"), solving from the type wanted first, where `let c: String =
+  id(1)` reports the assignment; tempest matches both
+  ([typing.md](typing.md), "Generic calls"). A call of constants Kotlin
+  folds first, as `let s: String = id<Int>("a")`, is under "Nullable
+  until narrowed", above. A nullable constant Kotlin folds to null, as a
+  top-level `let d: Dog? = null`, passed as `id(d)` for `id<T extends
+  Animal>`, is "Expected subtype of Animal, but got Animal?" at the
+  argument; tempest reports it as it does any `Dog?`, "Type formal <T
+  extends Animal> cannot bind to Dog? …", at the call, as Kotlin does in
+  a function.
 - **A generic call that's an argument** isn't checked against the
   parameter: `takeLS(wrap(1))`, for `takeLS(xs: List<String>)` and
   `wrap<T>(x: T): List<T>`, passes, where `let xs: List<String> =
