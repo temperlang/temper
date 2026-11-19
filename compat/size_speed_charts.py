@@ -353,6 +353,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--stats", type=Path, default=STATS, help="a checkout of the stats branch (default stats/)")
     args = parser.parse_args()
+    if not (args.stats / "size-and-speed.csv").exists():
+        sys.exit(f"{args.stats / 'size-and-speed.csv'} is missing: check the stats branch out "
+                 + ("there (git worktree add stats stats), or give --stats DIR" if args.stats == STATS else "there"))
     render(args.stats)
     return 0
 

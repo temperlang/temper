@@ -20,7 +20,7 @@ run takes about as long as its slowest job:
 
 | Job | What it checks |
 | --- | --- |
-| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
+| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data, and the tests of the scripts that write its rows and commit them, with stats.yml's permissions; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
 | `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
@@ -220,7 +220,14 @@ it's signed by GitHub and shows as Verified, authored by
 `github-actions[bot]`, with no key to keep and no `git push`. It names
 the head it expects (`expectedHeadOid`); if `stats` moved meanwhile, the
 job checks out the new head, appends its rows again, and tries once
-more. One run at a time (`concurrency`), so two never race.
+more; a re-run after a commit finds its rows there and adds nothing.
+One run at a time (`concurrency`), so two never race. Only
+commit_stats.py gets the token (`GH_TOKEN`). In the `lint` job,
+[test_size_speed.py](../../compat/test_size_speed.py) and
+[test_commit_stats.py](../../.github/ci-tools/test_commit_stats.py)
+test the rows from writing to the charts, the request and exit codes
+with a fake `gh`, and stats.yml's read-only token outside `commit`,
+its guards, and that no event data reaches a shell script.
 [pages.yml](../../.github/workflows/pages.yml) checks `stats` out too,
 and copies the charts onto the docs site, so it also runs every
 morning (06:47 UTC), after the night's commit.

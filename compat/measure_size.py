@@ -67,6 +67,8 @@ def main() -> int:
     parser.add_argument("--shares", action="store_true", help="also measure each backend's share")
     parser.add_argument("--no-kotlin", action="store_true", help="leave out Kotlin's peak memory")
     args = parser.parse_args()
+    if args.record:
+        record_times.check_csv(args.csv)
     rows: list[tuple[str, str, str, str]] = []  # what, value, unit, conditions
     dirty = bool(record_times.git("status", "--porcelain", "--untracked-files=no"))
     if args.shares:

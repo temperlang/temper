@@ -197,6 +197,14 @@ jobs:
           mkdir "$RUNNER_TEMP/stats"
           git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/stats"
           uv run compat/size_speed_charts.py --stats "$RUNNER_TEMP/stats"
+      # The size and speed scripts' rows, written and drawn, and the
+      # commit to `stats` (with a fake `gh`), each in a temporary
+      # directory; and stats.yml's permissions and guards.
+      - name: Size and speed scripts' tests
+        if: ${{ !cancelled() }}
+        run: |
+          uv run compat/test_size_speed.py
+          uv run .github/ci-tools/test_commit_stats.py
       # Which tags release.yml takes (.github/ci-tools/release.py).
       - name: Release tags' rules
         if: ${{ !cancelled() }}

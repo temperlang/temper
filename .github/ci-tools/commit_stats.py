@@ -60,7 +60,9 @@ def changes(directory: Path) -> tuple[list[str], list[str]]:
         files = sorted(p.relative_to(directory).as_posix() for p in directory.rglob("*") if p.is_file())
         return files, []
     added, deleted = [], []
-    status = git(directory, "status", "--porcelain=v1", "-z", "--untracked-files=all")
+    # Without renames, which would put the old path in an entry of its own:
+    # a rename is the new path added and the old one deleted.
+    status = git(directory, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames")
     for entry in filter(None, status.split("\0")):
         code, path = entry[:2], entry[3:]
         (deleted if "D" in code else added).append(path)

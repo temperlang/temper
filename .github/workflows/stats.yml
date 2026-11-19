@@ -173,19 +173,29 @@ jobs:
           name: stats-rows
           path: ${{ runner.temp }}/rows
       # From `stats`' head each time: if it moved since (commit_stats.py
-      # exits 3), once more from the new head.
+      # exits 3), once more from the new head. Rows already there (this
+      # job re-run after it committed) aren't added again, so nothing
+      # changes and nothing is committed. The token is only
+      # commit_stats.py's: an unexported shell variable for the rest.
       - name: Commit to stats
         env:
-          GH_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          token=$TOKEN
+          unset TOKEN
+          rows="$RUNNER_TEMP/rows/rows.csv"
           for attempt in 1 2; do
             git -C stats fetch -q --depth=1 origin stats
             git -C stats checkout -q --force --detach FETCH_HEAD
-            tail -n +2 "$RUNNER_TEMP/rows/rows.csv" >> stats/size-and-speed.csv
+            if grep -qxF -- "$(sed -n 2p "$rows")" stats/size-and-speed.csv; then
+              echo "stats already has this run's rows"
+            else
+              tail -n +2 "$rows" >> stats/size-and-speed.csv
+            fi
             uv run compat/size_speed_charts.py --stats stats
             status=0
-            uv run .github/ci-tools/commit_stats.py stats --branch stats \
+            GH_TOKEN=$token uv run .github/ci-tools/commit_stats.py stats --branch stats \
               --headline "Size and speed of ${GITHUB_SHA::7}" --body "Measured by $RUN" || status=$?
             [ "$status" = 3 ] || exit "$status"
           done

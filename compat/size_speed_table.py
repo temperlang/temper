@@ -29,6 +29,9 @@ def main() -> int:
     parser.add_argument("what", nargs="*", help="metric ids to show (default: all)")
     parser.add_argument("--csv", type=Path, default=CSV)
     args = parser.parse_args()
+    if not args.csv.exists():
+        hint = "check the stats branch out there (git worktree add stats stats), or give --csv FILE"
+        sys.exit(f"{args.csv} is missing" + (f": {hint}" if args.csv == CSV else ""))
 
     with args.csv.open(newline="") as f:
         rows = list(csv.DictReader(f))

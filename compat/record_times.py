@@ -37,7 +37,10 @@ the wasm build is `build-wasm-small-s`; other steps keep their names,
 with `-s`.
 
 Rows are printed, or with `--record` appended to the CSV (made, with
-its header, if missing). Redraw the charts after with
+its header, if missing, though only a `--csv` one: if the default
+stats/size-and-speed.csv is missing, `stats` isn't checked out, and the
+rows would start a new history there, so it stops before measuring).
+Redraw the charts after with
 compat/size_speed_charts.py.
 
     uv run compat/record_times.py --steps [--record] [--csv FILE]
@@ -145,12 +148,22 @@ def row(what: str, value: str, unit: str, cond: str, note: str, date: str = "", 
             "unit": unit, "conditions": cond, "notes": note}
 
 
+def check_csv(path: Path) -> None:
+    """Stops if `path` is the default CSV and it's missing (`stats` not
+    checked out), rather than starting a new one there."""
+    if path == CSV and not path.exists():
+        sys.exit(f"{path} is missing: check the stats branch out there (git worktree add stats stats), "
+                 "or give --csv FILE")
+
+
 def write(rows: list[dict[str, str]], path: Path | None) -> None:
     """Appends rows to the CSV at `path` (made, with its header, if
-    missing), or prints them if `path` is None."""
+    missing, unless it's the default; see check_csv), or prints them if
+    `path` is None."""
     if path is None:
         csv.DictWriter(sys.stdout, FIELDS, lineterminator="\n").writerows(rows)
         return
+    check_csv(path)
     new = not path.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", newline="") as f:
@@ -263,6 +276,8 @@ def main() -> int:
     split = argv.index("--") if "--" in argv else len(argv)
     args = parser.parse_args(argv[:split])
     command = argv[split + 1:]
+    if args.record:
+        check_csv(args.csv)
     passed = True
     if args.steps:
         rows, passed = steps(args.load)

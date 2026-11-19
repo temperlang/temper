@@ -37,6 +37,8 @@ def main() -> int:
     parser.add_argument("--record", action="store_true", help="append the medians to the CSV")
     parser.add_argument("--csv", type=Path, default=record_times.CSV, help="the CSV (default stats/size-and-speed.csv)")
     args = parser.parse_args()
+    if args.record:
+        record_times.check_csv(args.csv)
 
     subprocess.run(["cargo", "build", "-q", "--release"], cwd=ROOT, check=True)
     release = ROOT / "target/release"
