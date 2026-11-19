@@ -191,6 +191,7 @@ impl Session {
                 host: None,
                 inputs_parked: Vec::new(),
                 inputs_failed: Vec::new(),
+                core: None,
             },
             first_globals,
             ran: 0,

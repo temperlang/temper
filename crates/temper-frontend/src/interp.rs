@@ -21,8 +21,11 @@
 //! `Date.today()`, `regex`'s ([`regexes`]) and `net`'s ([`net`]). A
 //! user's `@connected` class with a complete Temper implementation runs
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
+//! Core's own members are native here; their Temper bodies in
+//! `core.temper` run only when a test asks ([`core_bodies`]).
 
 pub mod compile_time;
+pub mod core_bodies;
 mod frame;
 mod lower;
 mod maps;
@@ -337,13 +340,13 @@ pub const OUTPUT_LIMIT: usize = 64 << 10;
 /// evaluation steps if given. Without fuel, a program runs until it ends,
 /// as any language's would.
 pub fn run(settled: &Settled, fuel: Option<u64>) -> Run {
-    run_with(settled, fuel, false, None)
+    run_with(settled, fuel, false, None, None)
 }
 
 /// Runs a library's top-level code as [`run`] does, giving each line it
 /// logs to `out` as it's logged rather than keeping it.
 pub fn run_streaming(settled: &Settled, fuel: Option<u64>, out: &mut dyn FnMut(&str)) -> Run {
-    run_with(settled, fuel, false, Some(Box::new(out)))
+    run_with(settled, fuel, false, Some(Box::new(out)), None)
 }
 
 /// Runs a library as [`run`] does, then each module's tests, if it has
@@ -352,10 +355,28 @@ pub fn run_streaming(settled: &Settled, fuel: Option<u64>, out: &mut dyn FnMut(&
 /// steps; a test that runs out, or ends abruptly otherwise, fails alone,
 /// with a report of its own, and the others still run.
 pub fn run_tests(settled: &Settled, fuel: Option<u64>) -> Run {
-    run_with(settled, fuel, true, None)
+    run_with(settled, fuel, true, None, None)
 }
 
-fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<LineSink<'_>>) -> Run {
+/// Runs a library's tests as [`run_tests`] does, but with core's Temper
+/// bodies in place of the interpreter's natives wherever core has them
+/// ([`core_bodies`]), for testing that the two agree. The library holds
+/// core's text, [`crate::corelib::TEXT`], as a module, which runs first.
+/// Also gives the `Fn`s of core's that ran, to check against
+/// [`core_bodies::members`].
+pub fn run_tests_with_core_bodies(settled: &Settled, fuel: Option<u64>) -> (Run, Vec<NodeId>) {
+    let mut ran = Vec::new();
+    let run = run_with(settled, fuel, true, None, Some(&mut ran));
+    (run, ran)
+}
+
+fn run_with(
+    settled: &Settled,
+    fuel: Option<u64>,
+    tests: bool,
+    sink: Option<LineSink<'_>>,
+    mut core_bodies: Option<&mut Vec<NodeId>>,
+) -> Run {
     // `u64::MAX` steps take centuries, so no fuel needs no check of its own.
     let budget = fuel.unwrap_or(u64::MAX);
     // Modules' declarations are globals, each module's in order.
@@ -365,7 +386,7 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         first_globals.insert(module.scope, globals);
         globals += settled.scopes.get(module.scope).names.len() as u32;
     }
-    let lowering = Lowering::new(first_globals);
+    let lowering = Lowering::new(first_globals.clone());
     let globals = vec![Val::Uninit; globals as usize];
     let mut interp = Interp {
         output: Output {
@@ -389,9 +410,16 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         host: None,
         inputs_parked: Vec::new(),
         inputs_failed: Vec::new(),
+        core: None,
     };
     let mut result = Ok(Val::Void);
-    for module in &settled.modules {
+    // Core's module, if its bodies run, runs first.
+    let in_core = |m: &crate::settle::SettledModule| core_bodies::is_core(settled, m);
+    let mut modules: Vec<_> = settled.modules.iter().collect();
+    if core_bodies.is_some() {
+        modules.sort_by_key(|m| !in_core(m));
+    }
+    for module in modules {
         let code = interp
             .lowering
             .module(settled, module.scope, &module.top_levels);
@@ -399,6 +427,19 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         if result.is_err() {
             break;
         }
+        if core_bodies.is_some() && interp.core.is_none() && in_core(module) {
+            let first = first_globals[&module.scope];
+            match core_bodies::CoreBodies::new(&mut interp, settled, module, first) {
+                Ok(core) => interp.core = Some(Rc::new(core)),
+                Err(abrupt) => {
+                    result = Err(abrupt);
+                    break;
+                }
+            }
+        }
+    }
+    if core_bodies.is_some() && result.is_ok() && interp.core.is_none() {
+        result = Err(fail("No core module to run the bodies of"));
     }
     let runs = settled.modules.iter().filter_map(|m| {
         m.tests
@@ -419,6 +460,10 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
                 break;
             }
         }
+    }
+    if let (Some(ran), Some(core)) = (core_bodies.as_mut(), &interp.core) {
+        ran.extend(core.ran.borrow().iter().copied());
+        ran.sort();
     }
     let failure = result.err().map(|abrupt| match describe(abrupt) {
         why if why == OUT_OF_STEPS => format!("{why} (the top-level code may take {budget})"),
@@ -619,6 +664,9 @@ struct Interp<'a> {
     /// whatever ran the queue ([`repl`]).
     inputs_parked: Vec<(Rc<Generator>, usize)>,
     inputs_failed: Vec<(usize, Abrupt)>,
+    /// Core's bodies, run in place of natives where core has them, only
+    /// when asked for ([`run_tests_with_core_bodies`]).
+    core: Option<Rc<core_bodies::CoreBodies>>,
 }
 
 fn fail(message: impl Into<String>) -> Abrupt {
@@ -647,6 +695,9 @@ impl Interp<'_> {
         }
         if self.depth >= MAX_DEPTH {
             return Err(Abrupt::Panic("calls nested too deeply".into()));
+        }
+        if let Some(core) = &self.core {
+            core.ran.borrow_mut().insert(f);
         }
         let code = self.lowering.function(s, f).map_err(fail)?;
         if args.len() > code.params as usize {
@@ -745,6 +796,13 @@ impl Interp<'_> {
                 _ => {}
             }
         }
+        let (function, args) = match self.core.clone() {
+            Some(core) => match core.apply(self, s, function, args) {
+                Ok(result) => return result,
+                Err(not_taken) => not_taken,
+            },
+            None => (function, args),
+        };
         match function {
             Val::Fn(ref closure) => self.call(s, closure.node, closure.captures.clone(), args),
             Val::Builtin(Function::New) => match args.split_first() {
@@ -1780,6 +1838,11 @@ impl Interp<'_> {
         from: Option<&[NodeId]>,
     ) -> R {
         if !matches!(object, Val::Object(_) | Val::Class(_)) {
+            if let Some(result) =
+                (self.core.clone()).and_then(|core| core.get(self, s, &object, name))
+            {
+                return result;
+            }
             return property(object, name, s.library.names.get(name));
         }
         let class = class_of(&object);

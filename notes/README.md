@@ -51,6 +51,8 @@ This folder holds the plan in parts:
   (a preliminary assessment).
 - [test-speed.md](test-speed.md): fast `tempest test` on every backend,
   with a fast path kept in agreement with the package path (a proposal).
+- [core-bodies.md](core-bodies.md): core's Temper bodies, how each runs
+  in the interpreter and on backends, and where they disagree.
 - [tmpl/](tmpl/README.md): tmpl, the backend IR: its crate, nodes,
   types, profiles and lowering, formats, and targets, as a layered
   design with one file per topic.
