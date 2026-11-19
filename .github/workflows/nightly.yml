@@ -184,8 +184,16 @@ jobs:
           java-version: 21
       - name: JUnit
         run: |
-          mvn -q dependency:get -Dartifact=org.junit.jupiter:junit-jupiter-engine:5.9.2
-          mvn -q dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.9.2
+          # The plugin named in full, so Maven needn't look up the prefix
+          # `dependency` in Central's metadata (a lookup that sometimes fails
+          # for a moment), and each fetch tried three times.
+          for artifact in org.junit.jupiter:junit-jupiter-engine:5.9.2 org.junit.platform:junit-platform-launcher:1.9.2; do
+            for try in 1 2 3; do
+              mvn -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get -Dartifact="$artifact" && break
+              [ "$try" = 3 ] && exit 1
+              sleep 15
+            done
+          done
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 6.0.x
@@ -197,6 +205,7 @@ jobs:
           sudo update-alternatives --set lua-interpreter /usr/bin/lua5.4
           lua -v | grep -F "Lua 5.4.6"
       - name: Tests on each backend
+        id: tests
         run: |
           cargo build --locked --release -p tempest
           status=0
@@ -220,9 +229,10 @@ jobs:
       # passes with a notice to lower the allowance in the same change,
       # so allowances only shrink. `--strict` would ignore the baseline
       # and allow none. Even after a backend's tests fail, as it reports
-      # separately.
+      # separately, but not when the tests didn't run (an earlier step
+      # failed), which would leave no build to check.
       - name: Python type checks
-        if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' py ') }}
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' && contains(format(' {0} ', matrix.library.backends), ' py ') }}
         run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
 
   # Each checker of generated code at its latest release, the others at

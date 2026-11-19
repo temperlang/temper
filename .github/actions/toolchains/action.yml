@@ -136,8 +136,16 @@ runs:
       if: contains(inputs.backends, 'java')
       shell: bash
       run: |
-        mvn -q dependency:get -Dartifact=org.junit.jupiter:junit-jupiter-engine:5.9.2
-        mvn -q dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.9.2
+        # The plugin named in full, so Maven needn't look up the prefix
+        # `dependency` in Central's metadata (a lookup that sometimes fails
+        # for a moment), and each fetch tried three times.
+        for artifact in org.junit.jupiter:junit-jupiter-engine:5.9.2 org.junit.platform:junit-platform-launcher:1.9.2; do
+          for try in 1 2 3; do
+            mvn -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get -Dartifact="$artifact" && break
+            [ "$try" = 3 ] && exit 1
+            sleep 15
+          done
+        done
 
     # The C# backend's tests compile the runtime, TemperLang.Core, and
     # generated C# with Roslyn's csc from the .NET 6 SDK, as Kotlin's
