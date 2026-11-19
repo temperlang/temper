@@ -1,11 +1,14 @@
 //! How Java runs built libraries' tests, for `temper test -b java`:
-//! `javac` on the runtime, std, and the libraries, then on a library's
-//! tests, against JUnit 5's jars in Maven's local repository, as
-//! Kotlin's `pom.xml` names them, and a small runner of JUnit's launcher
-//! under `java`, as this crate's own tests do; Kotlin runs Maven
-//! instead, which needs its network. `temper run -b java` compiles the
-//! runtime, std, and the libraries the same way, quietly, and runs the
-//! library's `…Main` class under `java`, as Kotlin runs it by exec.
+//! `javac` on the runtime, std, and the libraries, then on the tested
+//! libraries' tests, against JUnit 5's jars in Maven's local repository,
+//! as Kotlin's `pom.xml` names them, and a small runner of JUnit's
+//! launcher under `java`, as this crate's own tests do; Kotlin runs
+//! Maven instead, which needs its network. Each compiles once per run,
+//! into `temper.out/java/.build` ([`build`]), not again for each library
+//! tested; then each library's tests run in a JVM of their own.
+//! `temper run -b java` compiles the runtime, std, and the libraries the
+//! same way, once, quietly, and runs the library's `…Main` class under
+//! `java`, as Kotlin runs it by exec.
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
 //! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
@@ -19,10 +22,74 @@ use temper_tmpl::tools::{files_with, output, program, strict_warnings, tool, too
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
-    prepare: None,
+    prepare: Some(build),
     test,
     run,
 };
+
+/// The shared build's directory in `temper.out/java`, a name no
+/// library's directory has: `classes`, the runtime's, std's, and every
+/// library's main sources, with the test runner; and `test-classes`,
+/// every tested library's tests.
+const BUILD: &str = ".build";
+
+/// Compiles, for `temper test`, the runtime, std, every library's main
+/// sources, and the test runner into `.build/classes` ([`BUILD`]), as
+/// each library's tests compiled them for themselves before, then every
+/// tested library's tests at once into `.build/test-classes`. It starts
+/// afresh each run. Where the tests don't compile together (one doesn't
+/// compile, or two libraries' tests clash), `test-classes` is removed,
+/// and each library's tests compile alone, saying what's wrong. With
+/// nothing to test, as for `temper run`, it does nothing.
+fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
+    let root = dir.join(BUILD);
+    let _ = std::fs::remove_dir_all(&root);
+    let tested: Vec<&Tested> = all.iter().filter(|l| l.tests > 0).collect();
+    if tested.is_empty() {
+        return Ok(());
+    }
+    let jars = junit()?;
+    let runner = root.join("temper/RunTests.java");
+    let written = runner
+        .parent()
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|()| std::fs::write(&runner, RUN_TESTS));
+    written.map_err(|e| format!("{}: {e}", runner.display()))?;
+    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
+    let (main, tests) = (root.join("classes"), root.join("test-classes"));
+    let strict = strict_warnings();
+    compile_main(dir, all, &main, &[runner], &classpath, strict)?;
+    let mut sources = Vec::new();
+    for library in tested {
+        files_with(&test_sources(dir, library), "java", &mut sources);
+    }
+    let with_main = with_main(&main, &jars)?;
+    if javac(&tests, &with_main, &sources, strict).is_err() {
+        let _ = std::fs::remove_dir_all(&tests);
+    }
+    Ok(())
+}
+
+/// A library's test sources' directory.
+fn test_sources(dir: &Path, library: &Tested) -> PathBuf {
+    dir.join(&library.name).join("src/test/java")
+}
+
+/// JUnit's jars, or why they can't be had.
+fn junit() -> Result<Vec<PathBuf>, String> {
+    junit_jars().map_err(|missing| {
+        format!(
+            "no {} (JUnit, as the generated pom.xml names it)",
+            missing.display()
+        )
+    })
+}
+
+/// A class path of `main` and JUnit's jars.
+fn with_main(main: &Path, jars: &[PathBuf]) -> Result<std::ffi::OsString, String> {
+    std::env::join_paths(std::iter::once(main).chain(jars.iter().map(PathBuf::as_path)))
+        .map_err(|e| e.to_string())
+}
 
 /// Compiles the runtime, std, and the libraries' main sources with
 /// `javac` (`JAVAC`) into `classes`, with `extra` sources and `classpath`;
@@ -127,7 +194,7 @@ pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsStr
 /// earlier ones by the system's code page.
 pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
 
-/// Compiles as [`test`] does, without JUnit, into
+/// Compiles as [`build`] does, without JUnit, into
 /// `temper.out/java/LIBRARY/target/temper/classes`, and runs the
 /// library's main class, the one its `…Main.java` declares.
 fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
@@ -187,18 +254,23 @@ pub const JUNIT: [&str; 7] = [
 ];
 
 /// Runs the tests compiled into the directory it's given through JUnit's
-/// launcher, printing a line per test: `ok`, or `failed` and its
-/// message, then its name, tab separated, with newlines as `\n`.
+/// launcher, or only those of the classes named after it, printing a
+/// line per test: `ok`, or `failed` and its message, then its name, tab
+/// separated, with newlines as `\n`.
 pub const RUN_TESTS: &str = r#"package temper;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import org.junit.platform.engine.DiscoverySelector;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClasspathRoots;
 import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
@@ -222,43 +294,51 @@ public final class RunTests {
                 }
             }
         };
-        launcher.execute(request().selectors(selectClasspathRoots(Set.of(Paths.get(args[0])))).build(), listener);
+        List<DiscoverySelector> selectors = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            selectors.add(selectClass(args[i]));
+        }
+        if (selectors.isEmpty()) {
+            selectors.addAll(selectClasspathRoots(Set.of(Paths.get(args[0]))));
+        }
+        launcher.execute(request().selectors(selectors).build(), listener);
     }
 }
 "#;
 
-/// Compiles the runtime, std, the libraries, and a library's tests with
-/// `javac` (`JAVAC`), against JUnit's jars in Maven's local repository,
-/// into `temper.out/java/LIBRARY/target/temper`, and runs them with
-/// `java` (`JAVA`) through JUnit's launcher ([`RUN_TESTS`]).
-fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
-    let jars = junit_jars().map_err(|missing| {
-        format!(
-            "no {} (JUnit, as the generated pom.xml names it)",
-            missing.display()
-        )
-    })?;
-    let out = dir.join(&library.name).join("target/temper");
-    let _ = std::fs::remove_dir_all(&out);
-    let (main, tests) = (out.join("classes"), out.join("test-classes"));
-    let runner = out.join("temper/RunTests.java");
-    let written = runner
-        .parent()
-        .map_or(Ok(()), std::fs::create_dir_all)
-        .and_then(|()| std::fs::write(&runner, RUN_TESTS));
-    written.map_err(|e| format!("{}: {e}", runner.display()))?;
-    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
-    let strict = strict_warnings();
-    compile_main(dir, all, &main, &[runner], &classpath, strict)?;
-    let mut test_sources = Vec::new();
-    files_with(
-        &dir.join(&library.name).join("src/test/java"),
-        "java",
-        &mut test_sources,
-    );
-    let with_main = std::env::join_paths(std::iter::once(main.clone()).chain(jars.iter().cloned()))
-        .map_err(|e| e.to_string())?;
-    javac(&tests, &with_main, &test_sources, strict)?;
+/// Runs a library's tests with `java` (`JAVA`) through JUnit's launcher
+/// ([`RUN_TESTS`]): those [`build`] compiled with the others', selected
+/// by their classes, or, where they didn't compile together, its own,
+/// compiled alone into `temper.out/java/LIBRARY/target/temper`.
+fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
+    let jars = junit()?;
+    let root = dir.join(BUILD);
+    let main = root.join("classes");
+    let shared = root.join("test-classes");
+    let mut sources = Vec::new();
+    let from = test_sources(dir, library);
+    files_with(&from, "java", &mut sources);
+    // Each source's class, by its path, as Java names them, but for
+    // `package-info.java`'s, which isn't one.
+    let classes: Vec<String> = (sources.iter())
+        .filter_map(|f| f.strip_prefix(&from).ok())
+        .filter(|f| !f.to_string_lossy().contains('-'))
+        .map(|f| {
+            f.with_extension("")
+                .to_string_lossy()
+                .replace(['/', '\\'], ".")
+        })
+        .collect();
+    // With no classes named, the runner runs every test it finds.
+    let (tests, classes) = match shared.is_dir() && !classes.is_empty() {
+        true => (shared, classes),
+        false => {
+            let own = dir.join(&library.name).join("target/temper/test-classes");
+            let _ = std::fs::remove_dir_all(&own);
+            javac(&own, &with_main(&main, &jars)?, &sources, strict_warnings())?;
+            (own, Vec::new())
+        }
+    };
     let everything = std::env::join_paths([tests.clone(), main].into_iter().chain(jars))
         .map_err(|e| e.to_string())?;
     let run = output(
@@ -266,7 +346,8 @@ fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
             .arg(everything)
             .arg("temper.RunTests")
-            .arg(&tests),
+            .arg(&tests)
+            .args(classes),
         "java",
     )?;
     let results = results(&String::from_utf8_lossy(&run.stdout));

@@ -413,6 +413,13 @@ alike (each backend crate's `src/tools.rs`, run by
 - **Java:** `javac` on everything against JUnit 5's jars in Maven's
   local repository, and a small runner of JUnit's launcher, as the
   backend's own tests do, rather than Maven, which needs its network.
+  Each library's tests compiled the runtime, std, and every library
+  again for themselves, most of a run's time (Kelpto's full run
+  compiled the same 226 files ten times). Since 2026-11-19 they compile
+  once per run into `temper.out/java/.build`, then every tested
+  library's tests at once; each library's tests still run in a JVM of
+  their own, picked by class. Where the tests don't compile together,
+  each library's compile alone, as before.
 - **C#:** `dotnet test --logger:junit`, as Kotlin's `RunCSharp`.
 - **Rust:** `cargo test --offline`, one target directory for all.
   Since 2026-11-19 one Cargo workspace in `temper.out/rust/.build`

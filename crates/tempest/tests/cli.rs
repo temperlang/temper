@@ -923,8 +923,9 @@ fn test_a_library_on_each_backend() {
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
     ];
-    // Rust's is `test_a_library_in_rust`'s, with a second library.
-    for backend in ["js", "lua", "java", "csharp"] {
+    // Rust's and Java's are `test_a_library_in_rust`'s and
+    // `test_a_library_in_java`'s, with a second library.
+    for backend in ["js", "lua", "csharp"] {
         if !built_in(backend) {
             continue;
         }
@@ -994,6 +995,57 @@ fn test_a_library_in_rust() {
         };
         let counts = ["a", "temper_std", "temper_core"].map(count);
         assert_eq!(counts, [1, 1, 1], "{deps:?}");
+    });
+}
+
+/// `temper test -b java` as [`test_a_library_on_each_backend`] tests
+/// the others, where javac and JUnit's jars are (skipped otherwise;
+/// required with `TEMPER_REQUIRE_CHECKERS`), with a second library, `b`,
+/// using `a`: each library, std, and temper-core compile once, into one
+/// directory of classes for them all, not again for each library tested.
+#[test]
+#[cfg(feature = "java")]
+fn test_a_library_in_java() {
+    let files = [
+        ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
+        ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
+        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
+        ),
+    ];
+    with_library("java-tests", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", "java", dir]);
+        if tools_missing("java", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.contains("  failed  b - expected"), "{out}{err}");
+        assert!(
+            out.to_lowercase().contains(CLASS_ASSERT_FAILED),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        // Each class file once: `a`'s, std's, and temper-core's.
+        fn count(dir: &Path, path: &str) -> usize {
+            let entries = fs::read_dir(dir).into_iter().flatten().flatten();
+            (entries.map(|e| e.path()))
+                .map(|p| match p.is_dir() {
+                    true => count(&p, path),
+                    false => usize::from(p.ends_with(path)),
+                })
+                .sum()
+        }
+        let java = Path::new(dir).join("temper.out/java");
+        let paths = [
+            "a/AGlobal.class",
+            "temper/std/net/NetGlobal.class",
+            "temper/core/Core.class",
+        ];
+        assert_eq!(paths.map(|p| count(&java, p)), [1, 1, 1], "{java:?}");
     });
 }
 
