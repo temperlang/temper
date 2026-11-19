@@ -168,7 +168,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: cargo clippy --locked --workspace --all-targets --no-default-features -- -D warnings
       # GitHub rejects a whole workflow over one bad line, so each must
-      # parse, the local action too.
+      # parse, the local actions too.
       - name: Workflows parse
         if: ${{ !cancelled() }}
         run: |

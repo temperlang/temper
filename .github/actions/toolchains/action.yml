@@ -126,26 +126,10 @@ runs:
     # generated Java with javac (the runtime for Java 8, generated code
     # for Java 17, as Kotlin's packages have them) and run it, without
     # Maven; tests that run as tests use JUnit 5.9.2's jars, as
-    # Kotlin's pom.xml names them, which Maven puts in its cache.
+    # Kotlin's pom.xml names them, which the java action fetches into
+    # Maven's cache, cached in turn.
     - if: contains(inputs.backends, 'java')
-      uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
-      with:
-        distribution: temurin
-        java-version: 21
-    - name: JUnit for generated Java's tests
-      if: contains(inputs.backends, 'java')
-      shell: bash
-      run: |
-        # The plugin named in full, so Maven needn't look up the prefix
-        # `dependency` in Central's metadata (a lookup that sometimes fails
-        # for a moment), and each fetch tried three times.
-        for artifact in org.junit.jupiter:junit-jupiter-engine:5.9.2 org.junit.platform:junit-platform-launcher:1.9.2; do
-          for try in 1 2 3; do
-            mvn -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get -Dartifact="$artifact" && break
-            [ "$try" = 3 ] && exit 1
-            sleep 15
-          done
-        done
+      uses: ./.github/actions/java
 
     # The C# backend's tests compile the runtime, TemperLang.Core, and
     # generated C# with Roslyn's csc from the .NET 6 SDK, as Kotlin's

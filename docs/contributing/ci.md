@@ -301,7 +301,10 @@ the image has, updates from Ubuntu's own sources only, and retries each
 download three times with a 30-second timeout, so a dead mirror fails
 in minutes; Playwright's Chromium is installed without `--with-deps`
 (which runs apt), as the image has Chrome's libraries; VS Code is cached
-(`actions/cache`, keyed on its version), and
+(`actions/cache`, keyed on its version); JUnit's jars, the only things
+CI fetches from Maven Central, are cached in Maven's local repository
+by the [java action](../../.github/actions/java/action.yml), which on
+a miss tries each fetch three times; and
 [test/run.ts](../../editors/vscode/test/run.ts) tries a failed download
 three times before running the tests, which run once, and prints each
 error inside an `AggregateError` or `cause`.
@@ -334,7 +337,7 @@ baseline says.
 
 - **Actions:** Dependabot ([.github/dependabot.yml](../../.github/dependabot.yml))
   opens one monthly pull request updating the SHAs and their comments,
-  in the workflows and the local action together, for releases at least
+  in the workflows and the local actions together, for releases at least
   two weeks old, majors included. Read each major's release notes and
   check the inputs we pass before merging, and after merging, run
   Nightly, Binaries, and Pages by hand, since only `ci.yml` runs on the

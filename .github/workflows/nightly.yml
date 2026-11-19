@@ -178,22 +178,8 @@ jobs:
       # toolchains action installs them.
       - name: Checkers for generated code, and Mocha
         run: uv run .github/ci-tools/install.py
-      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
-        with:
-          distribution: temurin
-          java-version: 21
-      - name: JUnit
-        run: |
-          # The plugin named in full, so Maven needn't look up the prefix
-          # `dependency` in Central's metadata (a lookup that sometimes fails
-          # for a moment), and each fetch tried three times.
-          for artifact in org.junit.jupiter:junit-jupiter-engine:5.9.2 org.junit.platform:junit-platform-launcher:1.9.2; do
-            for try in 1 2 3; do
-              mvn -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get -Dartifact="$artifact" && break
-              [ "$try" = 3 ] && exit 1
-              sleep 15
-            done
-          done
+      # Java 21 and JUnit, as the toolchains action has them.
+      - uses: ./.github/actions/java
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 6.0.x
