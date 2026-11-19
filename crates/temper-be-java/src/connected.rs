@@ -43,6 +43,15 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.getPromiseResultSync()",
         Connection::Translate(get_promise_result),
     ),
+    ("core.listedMap()", Connection::Translate(list_map)),
+    (
+        "core.listedReduceFrom()",
+        Connection::Translate(listed_reduce_from),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Translate(mapped_to_list_with),
+    ),
     (
         "core.safeAdaptGeneratorFn()",
         Connection::Translate(safe_adapt_generator_fn),
@@ -259,14 +268,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Core", "listGetOr"),
     ),
     ("core.type Listed.join()", Connection::Translate(list_join)),
-    ("core.type Listed.map()", Connection::Translate(list_map)),
     (
         "core.type Listed.reduce()",
         Connection::Translate(listed_reduce),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Translate(listed_reduce_from),
     ),
     (
         "core.type Listed.slice()",
@@ -313,10 +317,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Static("Core", "mappedToList"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Translate(mapped_to_list_with),
     ),
     (
         "core.type Mapped.toMap()",

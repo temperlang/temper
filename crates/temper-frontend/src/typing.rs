@@ -135,6 +135,9 @@ pub struct Typing {
     resolved: HashMap<NodeId, Resolved>,
     /// `==` and `!=` uses with nothing to call but identity, with why.
     identity_eqs: HashMap<NodeId, &'static str>,
+    /// Calls `x.name(…)` made calls of an instance extension, `f(x, …)`,
+    /// whose type arguments may be a method's ([`instance_extensions`]).
+    pub(crate) extension_calls: HashSet<NodeId>,
     /// What each call of a generic function, method, or class's
     /// constructor binds its type parameters to, by the call: the callee's
     /// own, or for a constructor, its class's, unknown where unsolved.

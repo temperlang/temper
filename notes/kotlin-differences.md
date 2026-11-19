@@ -125,9 +125,21 @@ Language and frontend:
 - **One type representation** (`types.rs`), where Kotlin has `type/` and
   `type2/` bridged by `hackMapOldStyleToNew`. Done.
 - **Core's generic interface methods** (`Listed.map<O>`, `reduceFrom<O>`,
-  `reduceFromIndex<O>`, `Mapped.toListWith<T>`) as `@extension`
-  functions, so core needs no exemption from "overridable methods don't
-  allow generics". Planned ([typing.md](typing.md), "To explore later").
+  `reduceFromIndex<O>`, `Mapped.toListWith<T>`, `toListBuilderWith<T>`)
+  are `@extension` functions in tempest's core (`listedMap`,
+  `listedReduceFrom`, `listedReduceFromIndex`, `mappedToListWith`,
+  `mappedToListBuilderWith`), so core needs no exemption from
+  "Overridable methods don't allow generics", which Kotlin gives it
+  (2026-11-18). Calls read the same, `xs.map { … }` and `xs.map<Int> {
+  … }`; tmpl calls the functions, so backends' connection keys are
+  `core.listedMap()` and the like, and the generated code is the same
+  runtime helpers' calls as before. Unlike a library's extensions,
+  core's aren't yet callable by name, nor given all their type
+  arguments (`xs.map<Int, String>`): typing reads them as their types'
+  members.
+  Test: temper-frontend tests/settle.rs,
+  `core_declares_no_generic_interface_methods`; programs/functions, on
+  every backend.
 - **Generic overrides matched by position.** Kotlin compares methods'
   type parameters by identity, so an override of a generic method, as
   `h<U>(x: U): U` for an interface's `h<T>(x: T): T`, always differs
@@ -750,10 +762,17 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   quietly calls the first; tempest reports "No callee matches", as for
   several that don't fit. `x.name` read alone is "No member" in both;
   tempest hid that error where an extension was visible before.
-  `x.name<T>(…)` with explicit type arguments isn't an extension call
-  in tempest yet. Core's generic list methods (`Listed.map<O>` and its
-  kin) can become such extensions later ([typing.md](typing.md), "To
-  explore later"); they're still core's methods.
+  `x.name<T>(…)` with explicit type arguments is an extension call in
+  both, `f<T>(x, …)`, as Kotlin looks through them (2026-11-18); its
+  type arguments give all the extension's type parameters, in order,
+  as for a call of it by name (Kotlin's reading), or in tempest also
+  only those the receiver's
+  parameter's type doesn't name, as a method's own:
+  `[3].firstThrough<String> { … }` for `listFirstThrough<T, O>(ls:
+  List<T>, f: fn (T): O): O`. Core's generic list and map methods are
+  such extensions (above, "Core's generic interface methods").
+  Test: programs/functions (`firstThrough<String>`, `firstOr<Int>`), on
+  every backend.
   Test: settle/run.cases, "instance extensions, as Kotlin Temper's tests
   use them"; settle/types.cases, "instance extensions' errors, as
   Kotlin Temper reports them"; programs/functions and programs/modules,

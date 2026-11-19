@@ -23,6 +23,15 @@
 //! of Int32, but got String"); among several, no fit, or more than one
 //! fitting as well in one scope, is "No callee matches" (Kotlin quietly
 //! calls the first of equals; kotlin-differences.md).
+//!
+//! Type arguments, `x.name<T>(…)`, stay with the call, `f<T>(x, …)`,
+//! as Kotlin looks through them; they give either all the extension's
+//! type parameters, as for `f<T>(x, …)`, or those `x`'s parameter's
+//! type doesn't name, as a method's own ([`Settle::solve_call`]).
+//! Core's extensions, as `listedMap` for `xs.map(f)`, aren't declared
+//! in any scope yet: typing reads them as their types' members
+//! ([`super::core_members`]), whose type arguments are a method's own,
+//! and tmpl calls them as functions.
 
 use crate::builtins::Builtin;
 use crate::core;
@@ -30,7 +39,6 @@ use crate::library::{Level, Message};
 use crate::scope::{Lookup, ScopeId, SymbolId};
 use crate::settle::{Fact, Settle};
 use crate::types::{Param, TypeData, TypeId, UNKNOWN};
-use temper_syntax::ast::Value;
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
 
@@ -64,16 +72,22 @@ impl Settle {
             return Ok(false);
         }
         // Not a static member's call, `T.name()`, nor yet with named
-        // arguments.
+        // arguments; with type arguments, `x.name<T>(…)`, as Kotlin
+        // looks through them.
         let names_type = tree.kind(object) == NodeKind::RightName
             && (self.builtin_type_named(object).is_some()
                 || (self.scopes.resolved(object)).is_some_and(|b| self.type_decl(b).is_some()));
         let is_console = self.scopes.resolved_builtin(object)
             == Some(Builtin::Value(crate::builtins::Constant::Console));
-        if names_type
-            || is_console
-            || (args.iter()).any(|&a| matches!(self.lib.value(a), Some(Value::Symbol(_))))
-        {
+        let Some((_, values)) = self.split_type_args(&args) else {
+            return Ok(false);
+        };
+        // `\typeArg T` pairs, kept as written.
+        let type_args: Vec<NodeId> = (args.iter().copied())
+            .filter(|a| !values.contains(a))
+            .collect();
+        let args = values;
+        if names_type || is_console {
             return Ok(false);
         }
         let candidates = self.visible_extensions(call, name);
@@ -148,9 +162,15 @@ impl Settle {
             .lib
             .add_name(NodeKind::RightName, symbol_name, span, key);
         self.scopes.resolve(new_callee, chosen);
-        let mut children = vec![new_callee, object];
+        // Type arguments first, `f<T>(x, …)` as written `f(\typeArg T, x,
+        // …)`, and then which of the extension's they bind is the
+        // solver's ([`Settle::solve_call`]).
+        let mut children = vec![new_callee];
+        children.extend(type_args);
+        children.push(object);
         children.extend(args);
         self.set_children(call, &children);
+        self.typing.extension_calls.insert(call);
         self.typing.set_parent(new_callee, call);
         self.typing.set_parent(object, call);
         // Anything typed through the method's name is typed again.

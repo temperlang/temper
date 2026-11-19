@@ -1897,6 +1897,13 @@ impl<'a> Translator<'a> {
                 let Some((&receiver, rest)) = args.split_first() else {
                     return not_yet(format!("a receiver for {qname}"));
                 };
+                // A list or map upcast to the handle, as an extension's
+                // receiver is (`listed::map(&ns, …)`), borrows as its
+                // trait object as it is, as a method's receiver does.
+                let receiver = match self.p.nodes.get(receiver) {
+                    Node::Upcast { value } => value,
+                    _ => receiver,
+                };
                 let mut fargs = vec![self.handle_ref(receiver)?];
                 self.connected_args(decl, rest, &mut fargs)?;
                 Ok(Expr::path(path).call(fargs))

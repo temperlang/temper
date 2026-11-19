@@ -3450,12 +3450,19 @@ impl Translator<'_> {
     }
 
     /// A call of core's method `key` on `object`, with the type arguments
-    /// typing solved, or of a static function of its type.
+    /// typing solved, or of a static function of its type, or of an
+    /// instance extension, a top-level function, with `object` first.
     fn core_method(&mut self, node: FNode, key: &str, object: FNode, args: &[FNode]) -> Tx<NodeId> {
         let Some(member) = self.core_decl(key) else {
             return self.not_yet(node, format!("core's {key}"));
         };
-        match self.b.program().decls.get(member).kind {
+        let decl = *self.b.program().decls.get(member);
+        if decl.kind == DeclKind::Function
+            && self.b.program().decls.get(decl.owner).kind == DeclKind::Library
+        {
+            return self.core_extension(node, member, object, args);
+        }
+        match decl.kind {
             DeclKind::Method => {
                 let mut receiver = self.expr(object)?;
                 // A non-generic owner's type, a supertype's method as
@@ -3478,6 +3485,70 @@ impl Translator<'_> {
             }
             _ => self.not_yet(node, format!("core's {key} used so")),
         }
+    }
+
+    /// A call of core's instance extension `function`, as `listedMap` for
+    /// `xs.map(f)`: `object` first, as is, as a method's receiver is, and
+    /// the type arguments its type gives (`T` in `Listed<T>`) and typing
+    /// solved for the rest, as a method's own.
+    fn core_extension(
+        &mut self,
+        node: FNode,
+        function: DeclId,
+        object: FNode,
+        args: &[FNode],
+    ) -> Tx<NodeId> {
+        let receiver = self.expr(object)?;
+        let p = self.b.program();
+        let formals = temper_tmpl::analysis::type_param_types(p, function);
+        // The receiver's parameter's type, as `Listed<T>`, and what the
+        // receiver gives for its type arguments.
+        let first = p
+            .signature(function)
+            .and_then(|s| s.params.first().copied());
+        let named = first.map(|t| p.types.args(t).to_vec()).unwrap_or_default();
+        let given = (first.and_then(|t| temper_tmpl::analysis::nominal_decl(p, t)))
+            .and_then(|d| temper_tmpl::analysis::as_super(p, p.nodes.ty(receiver), d))
+            .filter(|g| g.len() == named.len());
+        let Some(given) = given else {
+            return self.not_yet(node, "an extension's receiver's type arguments");
+        };
+        let own_count = formals.iter().filter(|f| !named.contains(f)).count();
+        let own = match own_count {
+            0 => Vec::new(),
+            _ => match self.s.typing.type_args(node) {
+                Some(own) if own.len() == own_count => own.to_vec(),
+                _ => return self.not_yet(node, "a generic call's type arguments"),
+            },
+        };
+        let mut own = own.into_iter();
+        let mut type_args = Vec::new();
+        for f in &formals {
+            match named.iter().position(|n| n == f) {
+                Some(i) => type_args.push(given[i]),
+                None => {
+                    let t = own.next().unwrap_or(ft::UNKNOWN);
+                    if !self.s.typing.types.is_known(t) {
+                        return self.not_yet(node, "a generic call's type arguments");
+                    }
+                    type_args.push(self.ty(t, node)?);
+                }
+            }
+        }
+        // As the parameter's type, as tmpl wants: an upcast of a `List`
+        // to `Listed`, say.
+        let want = (first.unwrap_or(TypeId::NONE), formals, type_args.clone());
+        let want = self
+            .b
+            .program_mut()
+            .types
+            .substitute(want.0, &want.1, &want.2);
+        let receiver = self.fit(receiver, want);
+        let mut values = vec![receiver];
+        let rest = self.args_from(node, function, None, &type_args, args, 1)?;
+        values.extend(rest);
+        let made = self.b.call_generic(function, &type_args, &values);
+        Ok(self.own(made, node))
     }
 
     /// An operator applied to its operands, a receiver first if any.
@@ -3741,10 +3812,25 @@ impl Translator<'_> {
         type_args: &[TypeId],
         args: &[FNode],
     ) -> Tx<Vec<NodeId>> {
+        self.args_from(node, callee, receiver, type_args, args, 0)
+    }
+
+    /// [`Self::args_for_with`], for the parameters past the first
+    /// `skip`, as an instance extension's past its receiver's.
+    fn args_from(
+        &mut self,
+        node: FNode,
+        callee: DeclId,
+        receiver: Option<NodeId>,
+        type_args: &[TypeId],
+        args: &[FNode],
+        skip: usize,
+    ) -> Tx<Vec<NodeId>> {
         let Some(sig) = self.b.program().signature(callee) else {
             return self.not_yet(node, "a call without a signature");
         };
-        let (params, optional) = (sig.params.to_vec(), sig.optional.to_vec());
+        let params = sig.params.get(skip..).unwrap_or(&[]).to_vec();
+        let optional = sig.optional.get(skip..).unwrap_or(&[]).to_vec();
         let receiver = receiver.map(|r| self.b.program().nodes.ty(r));
         let (from, to) =
             temper_tmpl::analysis::bindings(self.b.program(), callee, receiver, type_args);

@@ -134,13 +134,41 @@ impl Settle {
         // = id<Int>("a")` passes, as the value is a `String`. It doesn't
         // fold a constructor's call.
         let folds = foldable && self.may_fold(call, 0);
-        if !type_args.is_empty() && !folds {
+        // An instance extension's call, `x.name<A>(…)`, may give only the
+        // type parameters its receiver's type doesn't name, as a method's
+        // own; the receiver binds the rest.
+        let own: Vec<usize> = match params.first() {
+            Some(receiver) if self.typing.extension_calls.contains(&call) => (0..formals.len())
+                .filter(|&i| !self.typing.types.mentions(receiver.ty, &formals[i..=i]))
+                .collect(),
+            _ => Vec::new(),
+        };
+        let as_method = !type_args.is_empty()
+            && type_args.len() != formals.len()
+            && type_args.len() == own.len();
+        if !type_args.is_empty() && !folds && !as_method {
             if type_args.len() == formals.len() {
                 for (actual, &t) in actuals.iter_mut().zip(&type_args) {
                     *actual = self.eval_type(t);
                 }
             } else {
                 ambiguous.fill(true);
+            }
+        } else if as_method && !folds {
+            for (&i, &t) in own.iter().zip(&type_args) {
+                actuals[i] = self.eval_type(t);
+            }
+            let receiver = match args.first() {
+                Some(&first) => self.expr_type(first, forced)?,
+                None => UNKNOWN,
+            };
+            let mut bound = actuals.clone();
+            let types = &mut self.typing.types;
+            types.unify(params[0].ty, receiver, &formals, &mut bound, &mut ambiguous);
+            for (i, actual) in actuals.iter_mut().enumerate() {
+                if !own.contains(&i) {
+                    *actual = if ambiguous[i] { UNKNOWN } else { bound[i] };
+                }
             }
         } else {
             let placed = self.placed_params(&params, &args);

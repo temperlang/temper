@@ -1458,6 +1458,8 @@ Always creates a new object and backing buffer even if this is already a
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` *O*`):` [*List*](#class-list)&lt;*O*&gt;
 
+An [instance extension](builtins.md#extension-decorator), core's `listedMap`, as an interface's methods can't be generic.
+
 Maps elements using [transform].
 
 #### `Listed.filter`
@@ -1475,11 +1477,15 @@ Panic if empty.
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
 
+An [instance extension](builtins.md#extension-decorator), core's `listedReduceFrom`, as an interface's methods can't be generic.
+
 Reduce to a single value, starting from the given initial value.
 
 #### `Listed.reduceFromIndex`
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, [*Int32*](#class-int32), `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
+
+An [instance extension](builtins.md#extension-decorator), core's `listedReduceFromIndex`, as an interface's methods can't be generic.
 
 #### `Listed.join`
 
@@ -1649,6 +1655,8 @@ for each key and value in the [*Mapped*](#interface-mapped).
 
 `:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*List*](#class-list)&lt;*T*&gt;
 
+An [instance extension](builtins.md#extension-decorator), core's `mappedToListWith`, as an interface's methods can't be generic.
+
 Similar to [`Mapped.toListBuilderWith`](#mappedtolistbuilderwith).
 
 Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
@@ -1656,6 +1664,8 @@ Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
 #### `Mapped.toListBuilderWith`
 
 `:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*ListBuilder*](#class-listbuilder)&lt;*T*&gt;
+
+An [instance extension](builtins.md#extension-decorator), core's `mappedToListBuilderWith`, as an interface's methods can't be generic.
 
 Returns a [*ListBuilder*](#class-listbuilder)<*T*>.
 

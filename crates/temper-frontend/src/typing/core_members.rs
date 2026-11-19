@@ -100,8 +100,12 @@ pub(super) struct CoreMember {
     pub operator: Option<String>,
     /// A method's parameters' names, `_` where not read.
     pub param_names: Vec<String>,
-    /// Where its name is in core's text.
+    /// Where its name is in core's text: an instance extension's
+    /// function's name.
     pub at: usize,
+    /// For an instance extension, the function it is, as `listedMap`
+    /// for `Listed`'s `map`.
+    pub function: Option<String>,
 }
 
 /// A builtin type's declaration: how many type parameters it has, and its
@@ -186,12 +190,57 @@ fn read_class(name: &str) -> CoreClass {
             reader.member(m, false, &mut members);
         }
     }
+    members.extend(read_extensions(name));
     CoreClass {
         type_params: reader.type_params.len(),
         type_param_names: reader.type_params,
         type_param_bounds: reader.type_param_bounds,
         members,
     }
+}
+
+/// Core's instance extensions of a builtin type, the top-level functions
+/// marked `@extension("name")` whose first parameter is of that type, as
+/// `listedMap` for `Listed<T>`'s `map`, as members of the type: typing
+/// calls `xs.map(f)` as it would a method, with the extension's other
+/// type parameters as the member's own, and tmpl as a call of the
+/// function, `listedMap(xs, f)`. Each starts with a line of its own,
+/// `@extension("name")`, and ends with a `;` or a line `}`.
+fn read_extensions(type_name: &str) -> Vec<CoreMember> {
+    let mut out = Vec::new();
+    let mut offset = 0;
+    for line in CORE.split_inclusive('\n') {
+        let start = offset;
+        offset += line.len();
+        if !line.starts_with("@extension(") {
+            continue;
+        }
+        let rest = &CORE[start..];
+        let end = match (rest.find(';'), rest.find('{')) {
+            (Some(semi), Some(brace)) if semi < brace => semi + 1,
+            (Some(semi), None) => semi + 1,
+            _ => rest.find("\n}\n").map_or(rest.len(), |e| e + 2),
+        };
+        let ast = build(&parse(&rest[..end], SourceKind::Standalone));
+        let mut reader = Reader {
+            ast: &ast,
+            base: start,
+            type_params: Vec::new(),
+            type_param_bounds: Vec::new(),
+            own_params: Vec::new(),
+        };
+        // The declaration, or a block of it and the `;` after it.
+        let root = match ast.tree().kind(ast.root()) {
+            NodeKind::Block => *ast
+                .tree()
+                .children(ast.root())
+                .first()
+                .unwrap_or(&ast.root()),
+            _ => ast.root(),
+        };
+        reader.extension(root, None, type_name, &mut out);
+    }
+    out
 }
 
 /// Where core declares a builtin by name, as a byte offset of its name
@@ -507,44 +556,169 @@ impl<'a> Reader<'a> {
             }
             // `name \typeArg O (Block param) … \outType R`.
             (Some(_), parts) => {
-                self.own_params = (parts.windows(2))
-                    .filter(|pair| self.symbol(pair[0]) == Some("typeArg"))
-                    .map(|pair| {
-                        let name = self.type_param_name(pair[1]).unwrap_or_default();
-                        let bounded = self.ast.tree().kind(pair[1]) == NodeKind::Block;
-                        (name.to_string(), bounded)
-                    })
-                    .collect();
-                let mut params = Vec::new();
-                let mut names = Vec::new();
-                let mut rest = parts;
-                while let [p, after @ ..] = rest {
-                    match self.symbol(*p) {
-                        Some("typeArg") => rest = after.get(1..).unwrap_or(&[]),
-                        Some(_) => break,
-                        None => {
-                            if tree.kind(*p) != NodeKind::Fun {
-                                params.push(self.param(*p));
-                                names.push(self.param_name(*p).unwrap_or("_").to_string());
-                            }
-                            rest = after;
-                        }
-                    }
-                }
-                let (ret, throws) = self.out_type(parts);
-                let own_params = std::mem::take(&mut self.own_params);
-                let kind = CoreMemberKind::Method {
-                    type_params: own_params.into_iter().map(|(name, _)| name).collect(),
-                    params,
-                    ret,
-                    throws,
-                };
-                self.push(tree.children(node)[0], is_static, kind, out);
-                if let Some(m) = out.last_mut() {
-                    m.param_names = names;
-                }
+                self.own_params = self.type_args(parts);
+                self.method(tree.children(node)[0], parts, 0, is_static, out);
             }
             _ => {}
+        }
+    }
+
+    /// The type parameters among a declaration's parts, `\typeArg O`,
+    /// each with whether it has a bound.
+    fn type_args(&self, parts: &[NodeId]) -> Vec<(String, bool)> {
+        (parts.windows(2))
+            .filter(|pair| self.symbol(pair[0]) == Some("typeArg"))
+            .map(|pair| {
+                let name = self.type_param_name(pair[1]).unwrap_or_default();
+                let bounded = self.ast.tree().kind(pair[1]) == NodeKind::Block;
+                (name.to_string(), bounded)
+            })
+            .collect()
+    }
+
+    /// Adds a method named at `name`, from its parts, `\typeArg O (Block
+    /// param) … \outType R`, with its own type parameters already noted,
+    /// past its first `skip` parameters.
+    fn method(
+        &mut self,
+        name: NodeId,
+        parts: &[NodeId],
+        skip: usize,
+        is_static: bool,
+        out: &mut Vec<CoreMember>,
+    ) {
+        let mut params = Vec::new();
+        let mut names = Vec::new();
+        for p in self.param_nodes(parts) {
+            params.push(self.param(p));
+            names.push(self.param_name(p).unwrap_or("_").to_string());
+        }
+        let (ret, throws) = self.out_type(parts);
+        let own_params = std::mem::take(&mut self.own_params);
+        let kind = CoreMemberKind::Method {
+            type_params: own_params.into_iter().map(|(name, _)| name).collect(),
+            params: params.split_off(skip.min(params.len())),
+            ret,
+            throws,
+        };
+        self.push(name, is_static, kind, out);
+        if let Some(m) = out.last_mut() {
+            m.param_names = names.split_off(skip.min(names.len()));
+        }
+    }
+
+    /// The parameters among a declaration's parts, after its type
+    /// parameters and before its result's type and its body.
+    fn param_nodes(&self, parts: &[NodeId]) -> Vec<NodeId> {
+        let tree = self.ast.tree();
+        let mut out = Vec::new();
+        let mut rest = parts;
+        while let [p, after @ ..] = rest {
+            match self.symbol(*p) {
+                Some("typeArg") => rest = after.get(1..).unwrap_or(&[]),
+                Some(_) => break,
+                None => {
+                    if tree.kind(*p) != NodeKind::Fun {
+                        out.push(*p);
+                    }
+                    rest = after;
+                }
+            }
+        }
+        out
+    }
+
+    /// Adds an instance extension of `type_name`, read under its
+    /// decorations, `@extension("name")` among them, as a member named
+    /// so, if its first parameter's type is `type_name` given the
+    /// function's own type parameters, as `Listed<T>`; those are the
+    /// type's, and the function's others the member's own.
+    fn extension(
+        &mut self,
+        node: NodeId,
+        named: Option<String>,
+        type_name: &str,
+        out: &mut Vec<CoreMember>,
+    ) {
+        let Some((callee, args)) = self.call_parts(node) else {
+            return;
+        };
+        let (word, name, parts) = match (callee, args) {
+            (Some("@"), [decorator, target]) => {
+                let named = match self.call_parts(*decorator) {
+                    Some((Some("extension"), [n])) => match self.ast.value(*n) {
+                        Some(Value::String(n)) => Some(n.to_string()),
+                        _ => None,
+                    },
+                    _ => named,
+                };
+                return self.extension(*target, named, type_name, out);
+            }
+            (Some("let"), [word, name, parts @ ..]) => (*word, *name, parts),
+            _ => return,
+        };
+        let Some(named) = named.filter(|_| self.symbol(word) == Some("word")) else {
+            return;
+        };
+        let all = self.type_args(parts);
+        // The first parameter's type, `Listed<T>`, its arguments each a
+        // type parameter of the function's.
+        let first = self.param_nodes(parts).first().copied();
+        let receiver = first.and_then(|p| self.param_type_node(p));
+        let Some((base, targs)) = receiver.and_then(|r| self.applied_parts(r)) else {
+            return;
+        };
+        if self.text(base) != Some(type_name) {
+            return;
+        }
+        let receiver_params: Option<Vec<String>> = (targs.iter())
+            .map(|&a| {
+                let n = self.text(a)?;
+                all.iter().any(|(p, _)| p == n).then(|| n.to_string())
+            })
+            .collect();
+        let Some(receiver_params) = receiver_params else {
+            return;
+        };
+        self.type_params = receiver_params;
+        self.own_params = (all.into_iter())
+            .filter(|(p, _)| !self.type_params.contains(p))
+            .collect();
+        let function = self.text(name).map(str::to_string);
+        self.method(name, parts, 1, false, out);
+        if let Some(m) = out.last_mut() {
+            m.name = named;
+            m.function = function;
+        }
+    }
+
+    /// A parameter's type, as written: `T` in `(Block \_complexArg_ x
+    /// \type T)`.
+    fn param_type_node(&self, node: NodeId) -> Option<NodeId> {
+        let tree = self.ast.tree();
+        let parts = tree.children(node);
+        (tree.kind(node) == NodeKind::Block).then_some(())?;
+        (parts.windows(2))
+            .find(|pair| self.symbol(pair[0]) == Some("type"))
+            .map(|pair| pair[1])
+    }
+
+    /// A type given arguments, `Listed<T>`: its base and its arguments;
+    /// a type without them has none.
+    fn applied_parts(&self, node: NodeId) -> Option<(NodeId, &'a [NodeId])> {
+        let tree = self.ast.tree();
+        match tree.kind(node) {
+            NodeKind::RightName | NodeKind::BuiltinName => Some((node, &[])),
+            NodeKind::Call
+                if self.ast.value(tree.children(node)[0])
+                    == Some(&Value::Builtin(AstBuiltin::Angle)) =>
+            {
+                let (_, [base, args @ ..]) = self.call_parts(node)? else {
+                    return None;
+                };
+                Some((*base, args))
+            }
+            _ => None,
         }
     }
 
@@ -579,6 +753,7 @@ impl<'a> Reader<'a> {
                 operator: None,
                 param_names: Vec::new(),
                 at,
+                function: None,
             });
         }
     }
@@ -824,13 +999,36 @@ mod tests {
                 throws: false,
             }
         );
+        assert_eq!(find("Listed", "map").function.as_deref(), Some("listedMap"));
+        assert_eq!(find("Listed", "map").param_names, ["transform"]);
         let CoreMemberKind::Method {
-            type_params, ret, ..
+            type_params,
+            params,
+            ret,
+            ..
         } = &find("Mapped", "toListWith").kind
         else {
             panic!("a method");
         };
         assert_eq!((&type_params[..], ret), (&["T".to_string()][..], &list(&o)));
+        // `fn (K, V): T`, `K` and `V` the type's, as `Mapped<K, V>` gives
+        // them to `mappedToListWith<K extends MapKey<K>, V, T>`.
+        let kv = vec![t.clone(), CoreType::Param(1)];
+        assert_eq!(params[..], [(CoreType::Fn(kv, Box::new(o.clone())), false)]);
+        let CoreMemberKind::Method { params, .. } = &find("Listed", "reduceFromIndex").kind else {
+            panic!("a method");
+        };
+        assert_eq!(params[1], (int.clone(), false));
+        // Every generic method is an extension: an interface's may be
+        // overridden, so it can't be generic.
+        for ty in ["Listed", "Mapped"] {
+            for m in &core_class(ty).members {
+                if let CoreMemberKind::Method { type_params, .. } = &m.kind {
+                    let generic = !type_params.is_empty();
+                    assert!(!generic || m.function.is_some(), "{ty}.{}", m.name);
+                }
+            }
+        }
         assert_eq!(
             find("Mapped", "get").kind,
             CoreMemberKind::Method {
@@ -849,13 +1047,14 @@ mod tests {
 
     #[test]
     fn members_and_builtins_are_located() {
-        // Each member's place is its name, in its type's declaration.
+        // Each member's place is its name, in its type's declaration,
+        // or an instance extension's function's name, after it.
         for ty in READ_TYPES {
             let decl = declaration(ty, false).expect(ty).0;
             for m in &core_class(ty).members {
                 assert!(m.at > decl, "{ty}.{}", m.name);
                 assert!(
-                    CORE[m.at..].starts_with(&m.name),
+                    CORE[m.at..].starts_with(m.function.as_ref().unwrap_or(&m.name)),
                     "{ty}.{} at {}",
                     m.name,
                     m.at

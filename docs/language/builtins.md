@@ -2324,10 +2324,23 @@ Note that the extension function must have at least one required, positional
 parameter and that parameter is the *this* argument, the subject when
 called via `subject.methodName(other, args)` syntax.
 
+Type arguments in a method-style call, `subject.methodName<T>(args)`,
+are the function's type parameters that the subject's type doesn't
+name, as a method's own, or all of them, in order, as for a call of the
+function by its name.
+
 Backends translate these as if the *\@extension* decorator were
 ignored: an ordinary function, under its regular name, and a
 method-style call as a call of it, even in target languages that have
 extensions of their own, such as C#.
+
+Core's generic helpers for lists and maps are instance extensions, as
+an interface's methods, which implementations may override, can't be
+generic: `ls.map(f)` calls core's `listedMap`, and `ls.map<String>(f)`
+gives `map`'s own type parameter. So are `reduceFrom`,
+`reduceFromIndex`, `toListWith`, and `toListBuilderWith`. For now,
+these are called only method-style, given only their own type
+arguments.
 
 ### `@fun` decorator
 Marks an interface declaration as a [Functional interface](types.md#functional-interface).

@@ -106,6 +106,31 @@ fn cases_with_std_settle_as_expected() {
     });
 }
 
+/// Core holds to the rule it sets for every library: an interface's
+/// methods, which implementations may override, aren't generic ("Illegal
+/// type parameter"). Kotlin Temper exempts core; tempest doesn't, so
+/// core's generic list and map helpers (`map<O>`, `reduceFrom<O>`,
+/// `toListWith<T>` and their kin) are `@extension` functions. Settling
+/// core as a library reports much else, as it uses builtins no library
+/// may, but not that.
+#[test]
+fn core_declares_no_generic_interface_methods() {
+    with_stack(|| {
+        let mut library = Library::new();
+        let core = temper_frontend::corelib::TEXT;
+        library.add_file("core/core.temper", core, SourceKind::Standalone);
+        let settled = settle(library);
+        let found: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| matches!(d.message, Message::TypeParameterInInterfaceMethod(_)))
+            .map(|d| {
+                let line = core[..d.span.start as usize].lines().count();
+                format!("line {line}: {}", d.message.text())
+            })
+            .collect();
+        assert_eq!(found, Vec::<String>::new());
+    });
+}
+
 /// Imports between modules, which the cases' single files can't show.
 #[test]
 fn imports_across_modules() {

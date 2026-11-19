@@ -198,6 +198,11 @@ public static class FunctionsGlobal
         return s + " " + (g.Allows(1) ? "true" : "false");
     }
 
+    internal static O ListFirstThrough<T, O>(IReadOnlyList<T> ls, Func<T, O> f)
+    {
+        return f(ls[0]);
+    }
+
     static FunctionsGlobal()
     {
         console = Support.Logging.LoggingConsoleFactory.CreateConsole("Functions");
@@ -274,5 +279,13 @@ public static class FunctionsGlobal
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{IntOrZero(none)} {ListFirstOr(Listed.CreateReadOnlyList<int>(4, 5), 0)} {ListFirstOr(Listed.CreateReadOnlyList<string>("x"), "-")}"));
         console.Log(StringPadded("ab", 2) + " " + StringPadded("ab", 1, "*"));
         console.Log(gate.Passed(4).ToString(CultureInfo.InvariantCulture) + " " + GatePassed(gate, "gate"));
+        IReadOnlyList<string> tags = Listed.ToReadOnlyList(Enumerable.Select(ns, (int n) => "<" + n.ToString(CultureInfo.InvariantCulture) + ">"));
+        string digits = Enumerable.Aggregate(ns, "", (string s, int n) => s + n.ToString(CultureInfo.InvariantCulture));
+        IReadOnlyDictionary<string, int> named = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<string, int>>(new KeyValuePair<string, int>("a", 1), new KeyValuePair<string, int>("b", 2)));
+        IReadOnlyList<string> entries = Mapped.ToListWith(named, (string k, int v) => k + "=" + v.ToString(CultureInfo.InvariantCulture));
+        console.Log(tags[0] + tags[4] + " " + digits + " " + Listed.Join(entries, ",", (string e) => e));
+        string hashed = ListFirstThrough(Listed.CreateReadOnlyList<int>(3), (int n) => "#" + n.ToString(CultureInfo.InvariantCulture));
+        int bumped = ListFirstThrough(Listed.CreateReadOnlyList<int>(3), (int n) => n + 1);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{hashed} {bumped} {ListFirstOr(Listed.CreateReadOnlyList<int>(4, 5), 0)}"));
     }
 }

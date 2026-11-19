@@ -13,7 +13,11 @@ nullable `@fun` value held in a local and called after a null check;
 and instance extensions, functions marked `@extension("name")` that
 `x.name(…)` calls with `x` first, of a builtin type, a generic one, a
 nullable one, and a class, whose own method of that name wins where its
-parameters fit. The log is what the interpreter gives.
+parameters fit; and calls with explicit type arguments, of core's
+generic list and map extensions (`map<String>`, `reduceFrom<String>`,
+`toListWith<String>`) and of a library's own, given the type
+parameters its receiver doesn't name, as a method's, or all of them, as
+a function's. The log is what the interpreter gives.
 
     @fun interface Counter(): Int;
     @fun interface IntOp(x: Int): Int;
@@ -165,6 +169,16 @@ parameters fit. The log is what the interpreter gives.
     console.log("${none.orZero()} ${[4, 5].firstOr(0)} ${["x"].firstOr("-")}");
     console.log("${"ab".padded(2)} ${"ab".padded(1, "*")}");
     console.log("${gate.passed(4)} ${gate.passed("gate")}");
+    let tags = ns.map<String> { (n: Int): String => "<${n}>" };
+    let digits = ns.reduceFrom<String>("") { (s: String, n: Int): String => "${s}${n}" };
+    let named = new Map([new Pair("a", 1), new Pair("b", 2)]);
+    let entries = named.toListWith<String> { (k: String, v: Int): String => "${k}=${v}" };
+    console.log("${tags[0]}${tags[4]} ${digits} ${entries.join(",") { (e: String): String => e }}");
+    @extension("firstThrough")
+    let listFirstThrough<T, O>(ls: List<T>, f: fn (T): O): O { f(ls[0]) }
+    let hashed = [3].firstThrough<String> { (n: Int): String => "#${n}" };
+    let bumped = [3].firstThrough<Int, Int> { (n: Int): Int => n + 1 };
+    console.log("${hashed} ${bumped} ${[4, 5].firstOr<Int>(0)}");
 
 ```log
 count 12
@@ -185,4 +199,6 @@ true false
 0 4 x
 ab.. ab*
 3 gate false
+<5><4> 52814 a=1,b=2
+#3 4 4
 ```

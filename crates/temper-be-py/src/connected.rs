@@ -42,6 +42,15 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.async()", Connection::Runtime("async_launch")),
     ("core.empty()", Connection::Translate(empty)),
     ("core.getConsole()", Connection::Translate(get_console)),
+    ("core.listedMap()", Connection::Runtime("list_map")),
+    (
+        "core.listedReduceFrom()",
+        Connection::Runtime("listed_reduce_from"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Runtime("mapped_to_list_with"),
+    ),
     (
         "core.type Boolean.toString()",
         Connection::Translate(boolean_to_string),
@@ -263,14 +272,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Runtime("list_get_or"),
     ),
     ("core.type Listed.join()", Connection::Runtime("list_join")),
-    ("core.type Listed.map()", Connection::Runtime("list_map")),
     (
         "core.type Listed.reduce()",
         Connection::Runtime("listed_reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Runtime("listed_reduce_from"),
     ),
     (
         "core.type Listed.slice()",
@@ -321,10 +325,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toListBuilder()",
         Connection::Runtime("mapped_to_list_builder"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Runtime("mapped_to_list_with"),
     ),
     (
         "core.type Mapped.toMap()",

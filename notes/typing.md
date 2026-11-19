@@ -208,19 +208,15 @@ invariant.
    overridable methods ("Overridable methods don't allow generics"), so the
    sugar would follow the same rule. Classic Temper's Rust runtime takes the
    same approach for `map<O>` and friends: a non-generic trait, plus generic
-   free functions over `&dyn ListedTrait<T>`. Core's own `Listed.map<O>`,
-   `reduceFrom<O>`, `reduceFromIndex<O>` and `Mapped.toListWith<T>` break
-   the rule (Kotlin exempts core). Tempest's typed core will declare them
-   as extensions instead, keeping the same call syntax with static
-   dispatch:
-   `@extension("reduceFrom") let listedReduceFrom<T, O>(listed: Listed<T>, initial: O, accumulate: fn (O, T): O): O`,
-   and `@connected` ones (`map`) as connected top-level functions. Then
-   the rule holds everywhere, with no exemption. Accepted: Java and C#
-   host code then sees these as free functions rather than methods,
-   unlike classic Temper's output, which may make the same breaking
-   change. Today the untyped
-   interpreter runs them as built-in list methods (`interp.rs`), exercised
-   by `types/list/reduce` and `imports/functions`.
+   free functions over `&dyn ListedTrait<T>`. Core's own `map<O>`,
+   `reduceFrom<O>`, `reduceFromIndex<O>`, `toListWith<T>`, and
+   `toListBuilderWith<T>` are extensions instead (2026-11-18),
+   `@extension("map") listedMap<T, O>(listed: Listed<T>, transform: fn
+   (T): O): List<O>` and the like, so the rule holds in core too, with
+   the same call syntax and static dispatch. Typing reads them as their
+   types' members (`typing::core_members`); tmpl calls the functions.
+   Java and C# host code sees free functions rather than methods, as
+   tempest's runtimes' helpers already were.
 2. **Adapters inserted at conversions,** for what's left: wrap a function
    value to accept a narrower argument (O(1), always valid); wrap an `@out`
    read-only interface in a view that upcasts elements on access, or an

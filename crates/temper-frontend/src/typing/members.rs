@@ -483,7 +483,11 @@ impl Settle {
             "Int" => "Int32",
             other => other,
         };
-        let named = |m: &CoreMember| m.name == name && m.is_static == statics;
+        // An instance extension only as a callee: `xs.map` alone is no
+        // member, as for a library's extensions.
+        let named = |m: &CoreMember| {
+            m.name == name && m.is_static == statics && (callee || m.function.is_none())
+        };
         let is_method = |m: &CoreMember| matches!(m.kind, CoreMemberKind::Method { .. });
         let (class, index) = loop {
             let class = core_class(type_name);

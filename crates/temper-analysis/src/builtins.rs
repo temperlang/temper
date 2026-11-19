@@ -29,14 +29,20 @@ impl Analysis<'_> {
     /// and for builtins core doesn't declare.
     pub fn core_definition(&self, file: FileId, offset: u32) -> Option<CoreLocation> {
         let (_, target) = self.target(file, offset)?;
-        let (ats, name) = self.core_target(target?)?;
+        let (ats, _) = self.core_target(target?)?;
         let at = *ats.first()?;
+        // The name there: the member's, or an instance extension's
+        // function's, as `listedMap` for `map`.
+        let rest = &corelib::TEXT[at..];
+        let len = rest
+            .find(|c: char| !c.is_alphanumeric() && c != '_')
+            .unwrap_or(rest.len());
         Some(CoreLocation {
             path: corelib::MAIN,
             source: corelib::TEXT,
             span: Span {
                 start: at as u32,
-                end: (at + name.len()) as u32,
+                end: (at + len) as u32,
             },
         })
     }

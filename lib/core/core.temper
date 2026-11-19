@@ -972,10 +972,6 @@ export sealed interface Listed<T> {
   @connected
   public toListBuilder(): ListBuilder<T>;
 
-  /** Maps elements using [transform]. */
-  @connected
-  public map<O>(transform: fn (T): O): List<O>;
-
   @connected
   public filter(predicate: fn (T): builtins.Boolean): List<T>;
 
@@ -985,21 +981,7 @@ export sealed interface Listed<T> {
    */
   @connected
   public reduce(accumulate: fn (T, T): T): T {
-    reduceFromIndex(this[0], 1, accumulate)
-  }
-
-  /** Reduce to a single value, starting from the given initial value. */
-  @connected
-  public reduceFrom<O>(initial: O, accumulate: fn (O, T): O): O {
-    reduceFromIndex(initial, 0, accumulate)
-  }
-
-  public reduceFromIndex<O>(initial: O, index: Int, accumulate: fn (O, T): O): O {
-    var result = initial;
-    for (var i = index; i < length; i += 1) {
-      result = accumulate(result, this[i]);
-    }
-    result
+    listedReduceFromIndex(this, this[0], 1, accumulate)
   }
 
   @connected
@@ -1010,6 +992,35 @@ export sealed interface Listed<T> {
    */
   @connected
   public sorted(compare: fn (T, T): Int): List<T>;
+}
+
+// Listed's generic methods are extensions, `xs.map { … }` calling
+// `listedMap(xs) { … }`: an interface's methods may be overridden, so
+// they can't be generic, in core as in any library.
+
+/** Maps elements using [transform]. */
+@extension("map")
+@connected
+export let listedMap<T, O>(listed: Listed<T>, transform: fn (T): O): List<O>;
+
+/** Reduce to a single value, starting from the given initial value. */
+@extension("reduceFrom")
+@connected
+export let listedReduceFrom<T, O>(listed: Listed<T>, initial: O, accumulate: fn (O, T): O): O {
+  listedReduceFromIndex(listed, initial, 0, accumulate)
+}
+
+/**
+ * Reduce to a single value, starting from the given initial value and
+ * the item at [index].
+ */
+@extension("reduceFromIndex")
+export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int, accumulate: fn (O, T): O): O {
+  var result = initial;
+  for (var i = index; i < listed.length; i += 1) {
+    result = accumulate(result, listed[i]);
+  }
+  result
 }
 
 /**
@@ -1262,33 +1273,9 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    */
   @connected
   public toListBuilder(): ListBuilder<Pair<K, V>> {
-    toListBuilderWith { (key: K, value: V): Pair<K, V> =>
+    mappedToListBuilderWith(this) { (key: K, value: V): Pair<K, V> =>
       new Pair(key, value)
     }
-  }
-
-  /**
-   * Similar to [snippet/type/Mapped/method/toListBuilderWith].
-   *
-   * Calls [func] on each key and value in the [snippet/type/Mapped].
-   */
-  @connected
-  public toListWith<T>(func: fn(K, V): T): List<T> {
-    toListBuilderWith(func).toList()
-  }
-
-  /**
-   * Returns a [snippet/type/ListBuilder]<*T*>.
-   *
-   * Calls [func] on each key and value in the [snippet/type/Mapped].
-   */
-  @connected
-  public toListBuilderWith<T>(func: fn(K, V): T): ListBuilder<T> {
-    var builder = new ListBuilder<T>();
-    forEach { key, value =>
-      builder.add(func(key, value));
-    }
-    return builder;
   }
 
   /**
@@ -1298,6 +1285,34 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    */
   @connected
   public forEach(func: fn(K, V): Void): Void;
+}
+
+// Mapped's generic methods are extensions, as Listed's are.
+
+/**
+ * Similar to [snippet/type/Mapped/method/toListBuilderWith].
+ *
+ * Calls [func] on each key and value in the [snippet/type/Mapped].
+ */
+@extension("toListWith")
+@connected
+export let mappedToListWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, V>, func: fn(K, V): T): List<T> {
+  mappedToListBuilderWith(mapped, func).toList()
+}
+
+/**
+ * Returns a [snippet/type/ListBuilder]<*T*>.
+ *
+ * Calls [func] on each key and value in the [snippet/type/Mapped].
+ */
+@extension("toListBuilderWith")
+@connected
+export let mappedToListBuilderWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, V>, func: fn(K, V): T): ListBuilder<T> {
+  var builder = new ListBuilder<T>();
+  mapped.forEach { key, value =>
+    builder.add(func(key, value));
+  }
+  return builder;
 }
 
 /**

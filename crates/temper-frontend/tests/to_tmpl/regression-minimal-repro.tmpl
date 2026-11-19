@@ -5,7 +5,6 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   interface Listed#4<T#5> {
     connected method join#11(separator: String, stringify: fn (T#5): String): String;
     connected method filter#16(predicate: fn (T#5): Boolean): List#2<T#5>;
-    connected method map#25<O#26>(transform: fn (T#5): O#26): List#2<O#26>;
   }
   interface Console#8 {
     connected method log#9(message: String): Void;
@@ -13,10 +12,11 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   class Int32#14 {
     connected method toString#15(radix?: Int32): String;
   }
-  class String#31 {
-    connected method split#32(separator: String): List#2<String>;
+  connected fn listedMap#25<T#26, O#27>(listed: Listed#4<T#26>, transform: fn (T#26): O#27): List#2<O#27>;
+  class String#32 {
+    connected method split#33(separator: String): List#2<String>;
   }
-  connected fn getConsole#35(name?: String): Console#8;
+  connected fn getConsole#36(name?: String): Console#8;
 }
 
 module `minimal-repro`#0 {
@@ -27,7 +27,7 @@ module `minimal-repro`#0 {
   let strs#7: List#2<String>;
 
   init {
-    init ~console#10 = getConsole#35(omitted);
+    init ~console#10 = getConsole#36(omitted);
     init ls#6 = (list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)): List#2<Int32>;
     ~console#10.log#9(%String.cat("All  ", ls#6.join#11(", ", (fn ~fn#12(x#13: Int32): String {
       return x#13.toString#15(omitted);
@@ -42,14 +42,14 @@ module `minimal-repro`#0 {
     }): fn (Int32): Boolean).join#11(", ", (fn ~fn#23(x#24: Int32): String {
       return x#24.toString#15(omitted);
     }): fn (Int32): String)));
-    ~console#10.log#9(%String.cat("Neg  ", ls#6.map#25<Int32>((fn ~fn#27(x#28: Int32): Int32 {
-      return %Int32.neg(x#28);
-    }): fn (Int32): Int32).join#11(", ", (fn ~fn#29(x#30: Int32): String {
-      return x#30.toString#15(omitted);
+    ~console#10.log#9(%String.cat("Neg  ", listedMap#25<Int32, Int32>((upcast(ls#6)): Listed#4<Int32>, (fn ~fn#28(x#29: Int32): Int32 {
+      return %Int32.neg(x#29);
+    }): fn (Int32): Int32).join#11(", ", (fn ~fn#30(x#31: Int32): String {
+      return x#31.toString#15(omitted);
     }): fn (Int32): String)));
-    init strs#7 = "1 ; 2 ; 3".split#32(" ; ");
-    ~console#10.log#9(%String.cat("Splt ", strs#7.join#11(", ", (fn ~fn#33(x#34: String): String {
-      return x#34;
+    init strs#7 = "1 ; 2 ; 3".split#33(" ; ");
+    ~console#10.log#9(%String.cat("Splt ", strs#7.join#11(", ", (fn ~fn#34(x#35: String): String {
+      return x#35;
     }): fn (String): String)));
   }
 }

@@ -278,6 +278,11 @@ static core::Str gatePassed(std::shared_ptr<Gate> const & g, core::Str const & s
   return s + " " + core::Boolean::toString(g->allows(1));
 }
 
+template <class T, class O>
+static O listFirstThrough(std::shared_ptr<std::vector<T>> const & ls, std::function<O(T)> const & f) {
+  return f(core::List::get<T>(ls, 0));
+}
+
 void global_init_init() {
   core::init_once([] {
     temper_globals::console.construct();
@@ -389,6 +394,17 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, functions_program::stringPadded(TEMPER_STR("ab"), 2) + " " + functions_program::stringPadded(TEMPER_STR("ab"), 1, TEMPER_STR("*")));
     int32_t value7 = gate->passed(4);
     core::Console::log(temper_globals::console.value, std::to_string(value7) + " " + functions_program::gatePassed(gate, TEMPER_STR("gate")));
+    std::shared_ptr<std::vector<core::Str>> tags = core::List::map(ns, [](int32_t n) -> core::Str { return "<" + std::to_string(n) + ">"; });
+    core::Str digits = core::List::reduceFrom(ns, core::Str(), [](core::Str s, int32_t n) -> core::Str { return s + std::to_string(n); });
+    std::shared_ptr<core::Pair<core::Str, int32_t>> pair = core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1);
+    std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> named = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(pair, core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
+    std::shared_ptr<std::vector<core::Str>> entries = core::Mapped::toListWith(named, [](core::Str k, int32_t v) -> core::Str { return k + "=" + std::to_string(v); });
+    core::Str get = core::List::get<core::Str>(tags, 0);
+    core::Str string = core::List::get<core::Str>(tags, 4);
+    core::Console::log(temper_globals::console.value, get + string + " " + digits + " " + core::List::join(entries, TEMPER_STR(","), [](core::Str e) -> core::Str { return e; }));
+    core::Str hashed = functions_program::listFirstThrough<int32_t, core::Str>(core::List::make<int32_t>(3), [](int32_t n) -> core::Str { return "#" + std::to_string(n); });
+    int32_t bumped = functions_program::listFirstThrough<int32_t, int32_t>(core::List::make<int32_t>(3), [](int32_t n) -> int32_t { return core::Int::add(n, 1); });
+    core::Console::log(temper_globals::console.value, hashed + " " + std::to_string(bumped) + " " + std::to_string(functions_program::listFirstOr<int32_t>(core::List::make<int32_t>(4, 5), 0)));
   });
 }
 

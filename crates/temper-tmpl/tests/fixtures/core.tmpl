@@ -86,10 +86,8 @@ uses `temper-core`#0 0.1.0 {
     connected method slice#63(begin: Int32, end: Int32): List#64<T#58>;
     connected method toList#65(): List#64<T#58>;
     connected method toListBuilder#66(): ListBuilder#67<T#58>;
-    connected method map#117<O#118>(transform: fn (T#58): O#118): List#64<O#118>;
     connected method filter#119(predicate: fn (T#58): Boolean): List#64<T#58>;
     connected method reduce#120(accumulate: fn (T#58, T#58): T#58): T#58;
-    connected method reduceFrom#121<O#122>(initial: O#122, accumulate: fn (O#122, T#58): O#122): O#122;
     connected method join#123(separator: String, stringify: fn (T#58): String): String;
     connected method sorted#124(compare: fn (T#58, T#58): Int32): List#64<T#58>;
   }
@@ -131,7 +129,6 @@ uses `temper-core`#0 0.1.0 {
     connected method toList#105(): List#64<Pair#84<K#93, V#94>>;
     connected method toListBuilder#106(): ListBuilder#67<Pair#84<K#93, V#94>>;
     connected method forEach#126(func: fn (K#93, V#94): Void): Void;
-    connected method toListWith#156<T#157>(func: fn (K#93, V#94): T#157): List#64<T#157>;
   }
   class Map#102<K#107 extends MapKey#90<K#107>, V#108> extends Mapped#92<K#107, V#108> {
     connected constructor constructor#109(entries: List#64<Pair#84<K#107, V#108>>): Map#102<K#107, V#108>;
@@ -142,6 +139,8 @@ uses `temper-core`#0 0.1.0 {
     connected method remove#114(key: K#110): V#111 throws Bubble;
     connected method set#115(key: K#110, newValue: V#111): Void;
   }
+  connected fn listedMap#117<T#202, O#118>(listed: Listed#57<T#202>, transform: fn (T#202): O#118): List#64<O#118>;
+  connected fn listedReduceFrom#121<T#203, O#122>(listed: Listed#57<T#203>, initial: O#122, accumulate: fn (O#122, T#203): O#122): O#122;
   class StringIndex#128 extends StringIndexOption#140 {
     connected static let none#144: NoStringIndex#143;
   }
@@ -161,6 +160,7 @@ uses `temper-core`#0 0.1.0 {
   }
   class Empty#153 {}
   connected fn empty#154(): Empty#153;
+  connected fn mappedToListWith#156<K#204 extends MapKey#90<K#204>, V#205, T#157>(mapped: Mapped#92<K#204, V#205>, func: fn (K#204, V#205): T#157): List#64<T#157>;
   class Deque#158<T#159> {
     connected constructor constructor#160(): Deque#158<T#159>;
     connected method add#161(element: T#159): Void;

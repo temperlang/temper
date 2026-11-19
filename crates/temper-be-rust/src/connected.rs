@@ -57,6 +57,18 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.getConsole()", Connection::Erased),
     ("core.getPromiseResultSync()", Connection::Method("get")),
     (
+        "core.listedMap()",
+        Connection::Ufcs("temper_core::listed::map"),
+    ),
+    (
+        "core.listedReduceFrom()",
+        Connection::Ufcs("temper_core::listed::reduce_from"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Ufcs("temper_core::mapped_to_list_with"),
+    ),
+    (
         "core.safeAdaptGeneratorFn()",
         Connection::Function("temper_core::SafeGenerator::from_fn"),
     ),
@@ -252,16 +264,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Ufcs("temper_core::listed::join"),
     ),
     (
-        "core.type Listed.map()",
-        Connection::Ufcs("temper_core::listed::map"),
-    ),
-    (
         "core.type Listed.reduce()",
         Connection::Ufcs("temper_core::listed::reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Ufcs("temper_core::listed::reduce_from"),
     ),
     (
         "core.type Listed.slice()",
@@ -326,10 +330,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Ufcs("temper_core::MappedTrait::to_list"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Ufcs("temper_core::mapped_to_list_with"),
     ),
     (
         "core.type Mapped.toMap()",
