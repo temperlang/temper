@@ -219,6 +219,13 @@ public final class AsyncTurnsGlobal {
         return Core.listJoinInt(ints, " ", i -> Integer.toString(i));
     }
 
+    public static int halve(int n) {
+        if (n % 2 != 0) {
+            throw Core.bubble();
+        }
+        return n / 2;
+    }
+
     static {
         console = Core.getConsole(Logger.getLogger("async_turns"));
         Generator<Optional<? super Object>> t = ticks(2, i -> console.log("tick " + i));

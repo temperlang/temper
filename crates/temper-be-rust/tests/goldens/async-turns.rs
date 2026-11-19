@@ -411,3 +411,10 @@ static GATE_B: OnceLock<temper_core::PromiseBuilder<i32>> = OnceLock::new();
 pub(crate) fn gate_b() -> temper_core::PromiseBuilder<i32> {
     crate::support::initialized(|| GATE_B.get()).clone()
 }
+
+pub fn halve(n: i32) -> temper_core::Result<i32> {
+    if n.wrapping_rem(2) != 0 {
+        return Err(temper_core::Error::new());
+    }
+    Ok(n.wrapping_div(2))
+}

@@ -143,6 +143,15 @@ function Counter.methods.bump(this, tag, times)
   print(tag .. " done n=" .. this.n)
 end
 
+---@param n integer
+---@return integer
+local function halve(n)
+  if temper.int32_mod(n, 2) ~= 0 then
+    return temper.bubble()
+  end
+  return temper.int32_div(n, 2)
+end
+
 local t = ticks(2, function(i) print("tick " .. i) end)
 temper.generator_next(t)
 temper.generator_next(t)
@@ -199,4 +208,5 @@ return {
   ticks = ticks,
   fibonacci = fibonacci,
   collatz = collatz,
+  halve = halve,
 }

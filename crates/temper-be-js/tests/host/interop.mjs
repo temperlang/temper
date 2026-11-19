@@ -4,7 +4,7 @@
 // generated code. JS can't block, so there's no blocking check.
 
 // Its top-level code logs, and starts its `async` blocks.
-import { collatz, fibonacci, later, ticks } from "./async-turns/index.js";
+import { collatz, fibonacci, halve, later, ticks } from "./async-turns/index.js";
 
 // `await` takes a generated promise; the module's blocks have run by then.
 /** @type {number} */
@@ -44,3 +44,10 @@ for (const n of fibonacci()) {
 }
 console.log(`fibonacci ${fib.join(",")}`);
 console.log(`collatz ${[...collatz(7)].join(",")}`);
+
+// A Temper failure is an `Error`, as notes/api-compat.md promises.
+try {
+  console.log(`halve returned ${halve(3)}`);
+} catch (e) {
+  console.log(e instanceof Error ? `halve ${halve(8)} caught` : "halve threw");
+}

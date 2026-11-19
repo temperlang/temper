@@ -144,12 +144,14 @@ def string_builder_end(string_builder: list[str]) -> int:
     return len(compacted)
 
 
-class Bubble(Exception):
+class Bubble(RuntimeError):
     """
     A Temper bubble: a failure that Temper declares (`throws Bubble`), and
     all that generated `orelse` handlers catch, so any other exception, a
     panic or a host failure, passes them. Host code (a library's
-    `@connected` code) bubbles by raising one or calling `bubble()`.
+    `@connected` code) bubbles by raising one or calling `bubble()`, and
+    catches one as a `RuntimeError`, what Temper's failures have always
+    been in Python, though an `orelse` catches no other `RuntimeError`.
     """
 
     __slots__ = ()

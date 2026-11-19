@@ -20,7 +20,7 @@ from temper_core import (
 )
 from typing import Any as _Any, Generator as _Generator, TypeVar as _TypeVar
 
-__all__ = ('later', 'ticks', 'fibonacci', 'collatz')
+__all__ = ('later', 'ticks', 'fibonacci', 'collatz', 'halve')
 
 _T = _TypeVar('_T')
 
@@ -121,6 +121,12 @@ class _Counter:
             self._n = _int_add(before, 1)
             i = _int_add(i, 1)
         _console.log(f'{tag} done n={self._n}')
+
+
+def halve(n: int, /) -> int:
+    if _arith_int_mod(n, 2) != 0:
+        raise _Bubble()
+    return _int_div(n, 2)
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)

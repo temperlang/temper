@@ -918,9 +918,9 @@ fn runs() {
 /// `tests/host/interop.py`, host code that uses `async-turns` the
 /// standard way: it awaits a generated promise with `.result()`, with
 /// asyncio, and with asyncio as the runner; blocks on one inside a turn,
-/// which fails clearly; and loops over a generated generator, which a
-/// failed step leaves done; and, once `py-builtin-params`'s import has
-/// logged `then`, passes its constructor its parameters by name
+/// which fails clearly; loops over a generated generator, which a
+/// failed step leaves done; catches a failure as `RuntimeError`; and,
+/// once `py-builtin-params`'s import has logged `then`, passes its constructor its parameters by name
 /// (`help=`), as they keep their names. mypy and pyright check it,
 /// strict, as they do generated code, so a bare `await` of a generated
 /// promise must type-check.
@@ -977,6 +977,7 @@ fn host_interop(
                 "then done",
                 "fibonacci [0, 1, 1, 2, 3, 5, 8, 13]",
                 "collatz [7, 22, 11, 34, 17, 52, 26, 13, 40, 20, 10, 5, 16, 8, 4, 2, 1]",
+                "halve 4 caught",
             ]
             .map(String::from),
         )

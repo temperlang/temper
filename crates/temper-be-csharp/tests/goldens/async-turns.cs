@@ -133,6 +133,15 @@ public static class AsyncTurnsGlobal
         return Listed.Join(ints, " ", (int i) => i.ToString(CultureInfo.InvariantCulture));
     }
 
+    public static int Halve(int n)
+    {
+        if (Core.ModSafe(n, 2) != 0)
+        {
+            return Core.Bubble<int>();
+        }
+        return Core.DivSafe(n, 2);
+    }
+
     static AsyncTurnsGlobal()
     {
         console = Support.Logging.LoggingConsoleFactory.CreateConsole("AsyncTurns");

@@ -84,4 +84,12 @@ int main() {
         steps += (steps.empty() ? "" : ",") + std::to_string(n);
     }
     std::printf("collatz %s\n", steps.c_str());
+
+    // A Temper failure is a `TemperBubble`, as notes/api-compat.md
+    // promises.
+    try {
+        std::printf("halve returned %d\n", async_turns::halve(3));
+    } catch (const core::TemperBubble&) {
+        std::printf("halve %d caught\n", async_turns::halve(8));
+    }
 }

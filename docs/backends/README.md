@@ -57,7 +57,8 @@ Generated code compiles without warnings under `-Wall -Wextra
 -Wpedantic -Werror`, and is tested under AddressSanitizer, UBSan, and
 TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
-C++20 code can `co_await` a Temper promise.
+C++20 code can `co_await` a Temper promise. A Temper failure throws
+`temper::core::TemperBubble`, a `std::exception`.
 
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
 > out of this list; the C++ backend passes every functional test
@@ -99,6 +100,9 @@ and [assembly][CsAssembly], and each module to a
 subnamespace. Each type defined in Temper gets its own C# file, and a
 module's top level goes in a static `…Global` class. Parameter names
 are part of a C# API, so they're never renamed.
+
+A Temper failure throws `TemperLang.Core.Bubble`, an `Exception`, and
+an `orelse` catches only that, so other exceptions pass it.
 
 Temper's [logging `console`][CsConsole] translates to the
 [`Microsoft.Extensions.Logging` framework][CsMsLogging] on modern .NET.
@@ -152,7 +156,9 @@ method per test. Temper provides soft assertions within tests.
 Translates Temper to Java 17 source, and a Maven project
 ([Java 17]). A module's top level goes in a `…Global` class, with a
 `…Main` class to run it, and each type gets its own file. Classes also
-get a `Builder`, since Java has no named arguments.
+get a `Builder`, since Java has no named arguments. A Temper failure
+throws `temper.core.Bubble`, an unchecked `RuntimeException`, and an
+`orelse` catches only that.
 
 Still to write up: how function types translate to single-method
 interfaces, how nullable types translate, primitive and boxed types,
@@ -175,6 +181,9 @@ that implement Temper interfaces.
 
 `temper.out/js` has a [source map] for each generated file, so a
 JavaScript debugger shows the Temper code it came from.
+
+A Temper failure throws `@temperlang/core`'s `Bubble`, an `Error`, and
+an `orelse` catches only that.
 
 ### Tooling notes
 
@@ -218,6 +227,7 @@ line it needs 22.8 or later, and says so on older Nodes.
 Translates Temper to Lua: an `init.lua` per library, a rockspec, and
 LuaCATS type annotations, checked with LuaLS. Generated code is
 declared for Lua 5.1 and later; it's tested on Lua 5.4 and LuaJIT.
+A Temper failure is an `error`, which `pcall` catches.
 
 > **Note:** a few features need Lua 5.3 or later, such as some string
 > and integer operations; Lua 5.1 itself isn't tested
@@ -236,6 +246,10 @@ returning Python's `None`.
 
 Temper default expressions are evaluated as needed, so they don't
 suffer the [singly evaluated default expression pitfall][default-pitfall].
+
+A Temper failure raises `temper_core.Bubble`, a `RuntimeError`, and an
+`orelse` catches only that, so other exceptions pass it. A panic raises
+a plain `BaseException`, which `except Exception` doesn't catch.
 
 Names translate to Python's conventions: `snake_case` for functions,
 methods, and properties, and a leading `_` for what isn't exported.

@@ -89,6 +89,15 @@ for n in fibonacci():
 print("fibonacci", fib)
 print("collatz", list(collatz(7)))
 
+# A Temper failure is a `RuntimeError`, as notes/api-compat.md promises.
+from async_turns import halve  # noqa: E402
+
+try:
+    halve(3)
+    print("halve returned")
+except RuntimeError:
+    print("halve", halve(8), "caught")
+
 # Parameters named like builtins keep their names, passed by name.
 from py_builtin_params import Option  # noqa: E402
 

@@ -112,6 +112,17 @@ static class Interop
             path.Add(n);
         }
         Console.WriteLine($"collatz {string.Join(",", path)}");
+
+        // A Temper failure is an Exception, as notes/api-compat.md
+        // promises.
+        try
+        {
+            Console.WriteLine($"halve returned {AsyncTurnsGlobal.Halve(3)}");
+        }
+        catch (Exception)
+        {
+            Console.WriteLine($"halve {AsyncTurnsGlobal.Halve(8)} caught");
+        }
         TemperAsync.WaitUntilSafeToExit();
     }
 }

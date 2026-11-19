@@ -23,7 +23,20 @@ the runtimes, and real output: Chromarite's `temper.out/`, built by Kotlin Tempe
   Java and Rust `Builder`s. Python always allows keywords instead.
 - **Bubble (failure)** is an unchecked exception in JS, Python, Java, C# and
   C++, `Result<T>` in Rust, and `error(...)` in Lua. It never appears in
-  JS/Python/Java/C# signatures.
+  JS/Python/Java/C# signatures. Each runtime raises a bubble type of its
+  own, which `orelse` catches alone, so panics and host exceptions pass
+  it (since 2026-11-18). Each subclasses what host code caught before,
+  which stays API: Python `temper_core.Bubble(RuntimeError)`, Java
+  `temper.core.Bubble extends RuntimeException`, C#
+  `TemperLang.Core.Bubble : Exception`, JS `Bubble extends Error`, and
+  C++ `TemperBubble` (unchanged). Lua's `pcall` catches it as any error.
+- **Panics aren't failures:** what core's docs say panics (an index out
+  of bounds, `panic()`) is Python `BaseException`, Java `AssertionError`,
+  C# `TemperLang.Core.Panic`, JS and Lua a plain error, Rust `panic!`, and
+  C++ the end of the process (outside test builds). Before 2026-11-18
+  some index errors were host exceptions (Python `IndexError`, Java
+  `IndexOutOfBoundsException`), which host code catching those no longer
+  sees; that's deliberate.
 - **Generated classes aren't meant to be subclassed** by host code (Java
   enforces it with `final`).
 - **Runtime libraries** (`temper-core` per language) are copied unchanged, so
@@ -113,8 +126,8 @@ effects. File names keep Temper's directory names.
 - Statics: `static g()`, static properties as private static field plus
   `static get`, so assigning one throws. (Tempest stores the value in a
   module `let`, `Class$name`, which the init block outside the class sets.)
-- Generics only in JSDoc; nullable is `T | null`; failure is `throw`;
-  promises are native; async uses the runtime's adapter.
+- Generics only in JSDoc; nullable is `T | null`; failure throws `Bubble`,
+  an `Error`; promises are native; async uses the runtime's adapter.
 
 **Naming.** Public names unchanged (camelCase). Reserved words get `_`,
 including on members (`else_`, `if_`, `class catch_`), and names ending in `_`
@@ -144,8 +157,9 @@ package `__init__.py` does `from .<root> import *` and imports every module.
 - Statics: `@staticmethod`; static properties assigned after the class with
   `ClassVar` annotations.
 - Generics via module-level `TypeVar`s; nullable is `Union[T, None]`; failure
-  is `RuntimeError`; promises are `concurrent.futures.Future`s, annotated
-  as `temper_core.TemperFuture`, its subclass that asyncio can `await`
+  is `temper_core.Bubble`, a `RuntimeError`; promises are
+  `concurrent.futures.Future`s, annotated as `temper_core.TemperFuture`,
+  its subclass that asyncio can `await`
   (Kotlin's annotate `Future`; a host passing its own plain `Future` as
   a promise argument now needs a cast for strict checkers).
 
@@ -180,15 +194,16 @@ initializer), one file per type, synthetic functional interfaces in
   `Builder` classes for 2+ parameters.
 - Generics `<T>`; nullable via `@temper.core.Nullable` with boxed types;
   function types use `java.util.function` where possible, else synthetic
-  interfaces; failure is unchecked `RuntimeException`; promises are
-  `CompletableFuture`.
+  interfaces; failure is `temper.core.Bubble`, an unchecked
+  `RuntimeException`; promises are `CompletableFuture`.
 
 **Naming.** camelCase kept, types PascalCase. Reserved words *and* contextual
 keywords get `_` (that's why Prismora, now Chromarite, had `to_`). Invalid characters become
 `$xx`.
 
 **Keep:** packages, class and member names, getters/setters, overloads,
-builders, nullability annotations, `CompletableFuture`.
+builders, nullability annotations, `CompletableFuture`, failure as a
+`RuntimeException`.
 **Free:** private names; parameter names, though they show in Javadoc and IDE
 hints, so make them pretty; type-parameter names (see Proposed changes).
 
@@ -210,14 +225,15 @@ sub-namespace and subdirectory; one file per type; module top levels in
 - Optional parameters `int? i = null`; generic nullable via
   `TemperLang.Core.Optional<T>`.
 - Collections: `IReadOnlyList`, `IList`, `IReadOnlyDictionary`,
-  `IDictionary`; functions `Func`/`Action`; `Task<T>`; failure is exceptions.
+  `IDictionary`; functions `Func`/`Action`; `Task<T>`; failure is
+  `TemperLang.Core.Bubble`, an `Exception`.
 - Exported `let`s are `public static` fields.
 
 **Naming.** Types PascalCase with `I` on interfaces; members PascalCase;
 keywords escaped with `@`; a member named like its type gets `_`.
 
 **Keep:** namespaces, type and member names, `I` prefixes, collection and task
-types, init entry points.
+types, init entry points, failure as an `Exception`.
 **Parameter names are API in C#** (callers can use named arguments), and so are
 type-parameter names in practice. Today they're numbered (`Fib(int i__0)`,
 `T__0`); see Proposed changes.

@@ -86,6 +86,14 @@ public final class Interop {
             steps.add(Integer.toString(n));
         }
         System.out.println("collatz " + String.join(",", steps));
+
+        // A Temper failure is a RuntimeException, as notes/api-compat.md
+        // promises.
+        try {
+            System.out.println("halve returned " + AsyncTurnsGlobal.halve(3));
+        } catch (RuntimeException e) {
+            System.out.println("halve " + AsyncTurnsGlobal.halve(8) + " caught");
+        }
         Core.waitUntilTasksComplete();
     }
 }

@@ -2376,7 +2376,9 @@ copied Kotlin's:
     became its fallback. Tempest's runtimes have a bubble type of their
     own, Java `temper.core.Bubble` (unchecked, no stack trace), C#
     `TemperLang.Core.Bubble`, and Python `temper_core.Bubble`, and
-    handlers catch only it, as JS's and Lua's now do. Everything
+    handlers catch only it, as JS's and Lua's now do. Each subclasses
+    what Kotlin's raises (`RuntimeException`, `Exception`,
+    `RuntimeError`), so host code that catches that still does. Everything
     declared to bubble raises it: `as` (Java `Core.cast(C.class, x)`,
     `Core.requireNonNull(x)`, or `(C<A>) Core.check(C.class, x)`
     where Kotlin's casts or calls `Objects.requireNonNull`; C#
@@ -2408,7 +2410,8 @@ copied Kotlin's:
     there fails to compile ("initializer must be able to complete
     normally").
     Test: programs/panics.temper.md and programs/host-errors.temper.md
-    on every backend.
+    on every backend, and each backend's host interop, which catches
+    `async-turns`'s `halve` as the type api-compat.md promises.
   - **Index errors panic everywhere, as core's docs say** (2026-11-18):
     a list read out of bounds (`List.get`, `Listed.get`), a `set` or an
     insert (`add`, `addAll` at) out of bounds, `removeLast` and a

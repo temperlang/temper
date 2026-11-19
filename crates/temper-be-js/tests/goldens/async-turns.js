@@ -1,6 +1,7 @@
 import {
   PromiseBuilder,
   adaptAwaiter,
+  bubble,
   isBubble,
   listBuilderToList,
   listedJoin,
@@ -141,6 +142,17 @@ function take(g, n) {
  */
 function shown(ints) {
   return listedJoin(/** @type {number[]} */ (ints), " ", (i) => i.toString());
+}
+
+/**
+ * @param {number} n
+ * @returns {number}
+ */
+export function halve(n) {
+  if (modIntInt(n, 2) !== 0) {
+    bubble();
+  }
+  return (n / 2) | 0;
 }
 
 class Counter extends type() {

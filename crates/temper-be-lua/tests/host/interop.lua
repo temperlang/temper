@@ -58,3 +58,8 @@ for _, n in turns.collatz(7) do
   steps[#steps + 1] = n
 end
 print("collatz " .. table.concat(steps, ","))
+
+-- A Temper failure is an `error`, which `pcall` catches, as
+-- notes/api-compat.md promises.
+ok = pcall(turns.halve, 3)
+print("halve " .. tostring(turns.halve(8)) .. (ok and " returned" or " caught"))

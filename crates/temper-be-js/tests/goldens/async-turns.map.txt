@@ -1,147 +1,154 @@
 # generated line:column -> source:line:column, and the text at each
-12:1 -> ../async-turns.temper.md:15:5  /** <- export let later(n: Int): Pr
-16:1 -> ../async-turns.temper.md:15:5  export function later(n) { <- export let later(n: Int): Pr
-16:17 -> ../async-turns.temper.md:15:16 (later)  later(n) { <- later(n: Int): Promise<Int>
-16:22 -> ../async-turns.temper.md:15:5  (n) { <- export let later(n: Int): Pr
-17:3 -> ../async-turns.temper.md:16:7  /** @type {import("@temperla <- let pb = new PromiseBuilder<
-18:3 -> ../async-turns.temper.md:16:7  const pb = new PromiseBuilde <- let pb = new PromiseBuilder<
-19:3 -> ../async-turns.temper.md:17:13  /** <- { (): GeneratorResult<Empty>
-23:3 -> ../async-turns.temper.md:17:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-24:5 -> ../async-turns.temper.md:18:9  pb.complete(Math.imul(n, 2)) <- pb.complete(n * 2);
-26:3 -> ../async-turns.temper.md:17:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-27:3 -> ../async-turns.temper.md:20:7  return pb.promise; <- pb.promise
-30:1 -> ../async-turns.temper.md:25:5  /** <- let generated<T>(make: fn ()
-35:1 -> ../async-turns.temper.md:25:5  function generated(make) { <- let generated<T>(make: fn ()
-35:10 -> ../async-turns.temper.md:25:9 (generated)  generated(make) { <- generated<T>(make: fn (): Sa
-35:19 -> ../async-turns.temper.md:25:5  (make) { <- let generated<T>(make: fn ()
-36:3 -> ../async-turns.temper.md:25:73  return make(); <- make() }
-39:1 -> ../async-turns.temper.md:27:5  /** <- export let ticks(n: Int, eac
-44:1 -> ../async-turns.temper.md:27:5  export function ticks(n, eac <- export let ticks(n: Int, eac
-44:17 -> ../async-turns.temper.md:27:16 (ticks)  ticks(n, each) { <- ticks(n: Int, each: Tick): S
-44:22 -> ../async-turns.temper.md:27:5  (n, each) { <- export let ticks(n: Int, eac
-45:3 -> ../async-turns.temper.md:28:17  /** <- { (): GeneratorResult<Empty>
-49:3 -> ../async-turns.temper.md:28:17  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-50:5 -> ../async-turns.temper.md:29:9  { <- for (var i = 0; i < n; i +=
-51:7 -> ../async-turns.temper.md:29:14  let i = 0; <- var i = 0; i < n; i += 1) {
-52:7 -> ../async-turns.temper.md:29:9  while (i < n) { <- for (var i = 0; i < n; i +=
-53:9 -> ../async-turns.temper.md:30:11  each(i); <- each(i);
-54:9 -> ../async-turns.temper.md:31:11  yield; <- yield();
-55:9 -> ../async-turns.temper.md:29:32  i = (i + 1) | 0; <- i += 1) {
-59:3 -> ../async-turns.temper.md:28:7  return generated(adaptAwaite <- generated { (): GeneratorRes
-62:1 -> ../async-turns.temper.md:51:5  /** <- let startedAt<T>(start: Int,
-68:1 -> ../async-turns.temper.md:51:5  function startedAt(start, ma <- let startedAt<T>(start: Int,
-68:10 -> ../async-turns.temper.md:51:9 (startedAt)  startedAt(start, make) { <- startedAt<T>(start: Int, mak
-68:19 -> ../async-turns.temper.md:51:5  (start, make) { <- let startedAt<T>(start: Int,
-69:3 -> ../async-turns.temper.md:52:7  return make(start); <- make(start)
-72:1 -> ../async-turns.temper.md:55:5  /** @returns {Generator<numb <- export let fibonacci(): Safe
-73:1 -> ../async-turns.temper.md:55:5  export function fibonacci() <- export let fibonacci(): Safe
-73:17 -> ../async-turns.temper.md:55:16 (fibonacci)  fibonacci() { <- fibonacci(): SafeGenerator<I
-73:26 -> ../async-turns.temper.md:55:5  () { <- export let fibonacci(): Safe
-74:3 -> ../async-turns.temper.md:56:17  /** <- { (): GeneratorResult<Int> e
-78:3 -> ../async-turns.temper.md:56:17  function* fn(doAwait) { <- { (): GeneratorResult<Int> e
-79:5 -> ../async-turns.temper.md:57:9  let a = 0; <- var a = 0;
-80:5 -> ../async-turns.temper.md:58:9  let b = 1; <- var b = 1;
-81:5 -> ../async-turns.temper.md:59:9  while (true) { <- while (true) {
-82:7 -> ../async-turns.temper.md:60:11  yield a; <- yield(a);
-83:7 -> ../async-turns.temper.md:61:11  const next = (a + b) | 0; <- let next = a + b;
-84:7 -> ../async-turns.temper.md:62:11  a = b; <- a = b;
-85:7 -> ../async-turns.temper.md:63:11  b = next; <- b = next;
-88:3 -> ../async-turns.temper.md:56:7  return generated(adaptAwaite <- generated { (): GeneratorRes
-91:1 -> ../async-turns.temper.md:68:5  /** <- export let collatz(start: In
-95:1 -> ../async-turns.temper.md:68:5  export function collatz(star <- export let collatz(start: In
-95:17 -> ../async-turns.temper.md:68:16 (collatz)  collatz(start) { <- collatz(start: Int): SafeGen
-95:24 -> ../async-turns.temper.md:68:5  (start) { <- export let collatz(start: In
-96:3 -> ../async-turns.temper.md:69:24  /** <- { (first: Int): GeneratorRes
-101:3 -> ../async-turns.temper.md:69:24  function* fn(doAwait, first) <- { (first: Int): GeneratorRes
-102:5 -> ../async-turns.temper.md:70:9  let n = first; <- var n = first;
-103:5 -> ../async-turns.temper.md:71:9  while (true) { <- while (true) {
-104:7 -> ../async-turns.temper.md:72:11  yield n; <- yield(n);
-105:7 -> ../async-turns.temper.md:73:11  if (n === 1) { <- if (n == 1) {
-106:9 -> ../async-turns.temper.md:74:13  break; <- break;
-108:7 -> ../async-turns.temper.md:76:11  if (modIntInt(n, 2) === 0) { <- if (n % 2 == 0) {
-109:9 -> ../async-turns.temper.md:77:13  n = (n / 2) | 0; <- n = n / 2;
-111:9 -> ../async-turns.temper.md:79:13  n = (Math.imul(3, n) + 1) | <- n = 3 * n + 1;
-115:3 -> ../async-turns.temper.md:69:7  return startedAt(start, adap <- startedAt(start) { (first: I
-118:1 -> ../async-turns.temper.md:89:5  /** <- let take(g: SafeGenerator<In
-123:1 -> ../async-turns.temper.md:89:5  function take(g, n) { <- let take(g: SafeGenerator<In
-123:10 -> ../async-turns.temper.md:89:9 (take)  take(g, n) { <- take(g: SafeGenerator<Int>,
-123:14 -> ../async-turns.temper.md:89:5  (g, n) { <- let take(g: SafeGenerator<In
-124:3 -> ../async-turns.temper.md:90:7  /** @type {number[]} */ <- let taken = new ListBuilder<
-125:3 -> ../async-turns.temper.md:90:7  const taken = []; <- let taken = new ListBuilder<
-126:3 -> ../async-turns.temper.md:91:7  while (taken.length < n) { <- while (taken.length < n) {
-127:5 -> ../async-turns.temper.md:92:9  /** @type {IteratorResult<nu <- let r = g.nextSafe();
-128:5 -> ../async-turns.temper.md:92:9  const r = g.next(); <- let r = g.nextSafe();
-129:5 -> ../async-turns.temper.md:93:9  if (!r.done) { <- if (r is ValueResult<Int>) {
-130:7 -> ../async-turns.temper.md:94:11  taken.push(/** @type {Iterat <- taken.add(r.value);
-132:7 -> ../async-turns.temper.md:96:11  break; <- break;
-135:3 -> ../async-turns.temper.md:99:7  return listBuilderToList(tak <- taken.toList()
-138:1 -> ../async-turns.temper.md:102:5  /** <- let shown(ints: List<Int>):
-142:1 -> ../async-turns.temper.md:102:5  function shown(ints) { <- let shown(ints: List<Int>):
-142:10 -> ../async-turns.temper.md:102:9 (shown)  shown(ints) { <- shown(ints: List<Int>): Stri
-142:15 -> ../async-turns.temper.md:102:5  (ints) { <- let shown(ints: List<Int>):
-143:3 -> ../async-turns.temper.md:103:7  return listedJoin(/** @type <- ints.join(" ") { (i: Int): S
-146:1 -> ../async-turns.temper.md:118:5  class Counter extends type() <- class Counter {
-146:7 -> ../async-turns.temper.md:118:11 (Counter)  Counter extends type() { <- Counter {
-146:14 -> ../async-turns.temper.md:118:5   extends type() { <- class Counter {
-147:3 -> ../async-turns.temper.md:119:17  /** @type {number} */ <-  n: Int = 0;
-148:3 -> ../async-turns.temper.md:119:17  #n; <-  n: Int = 0;
-150:3 -> ../async-turns.temper.md:118:5  constructor() { <- class Counter {
-152:5 -> ../async-turns.temper.md:119:17  this.#n = 0; <-  n: Int = 0;
-155:3 -> ../async-turns.temper.md:119:17  /** @returns {number} */ <-  n: Int = 0;
-156:3 -> ../async-turns.temper.md:119:17  get n() { <-  n: Int = 0;
-156:7 -> ../async-turns.temper.md:119:18 (n)  n() { <- n: Int = 0;
-160:3 -> ../async-turns.temper.md:119:17  /** @param {number} value */ <-  n: Int = 0;
-161:3 -> ../async-turns.temper.md:119:17  set n(value) { <-  n: Int = 0;
-161:7 -> ../async-turns.temper.md:119:18 (n)  n(value) { <- n: Int = 0;
-165:3 -> ../async-turns.temper.md:120:14  /** <- bump(tag: String, times: Int
-169:3 -> ../async-turns.temper.md:120:14 (bump)  bump(tag, times) { <- bump(tag: String, times: Int
-170:5 -> ../async-turns.temper.md:121:9  console.log(`${tag} start`); <- console.log("${tag} start");
-171:5 -> ../async-turns.temper.md:122:9  { <- for (var i = 0; i < times; +
-172:7 -> ../async-turns.temper.md:122:14  let i = 0; <- var i = 0; i < times; ++i) {
-173:7 -> ../async-turns.temper.md:122:9  while (i < times) { <- for (var i = 0; i < times; +
-174:9 -> ../async-turns.temper.md:123:11  const before = this.#n; <- let before = n;
-175:9 -> ../async-turns.temper.md:124:11  this.#n = (before + 1) | 0; <- n = before + 1;
-176:9 -> ../async-turns.temper.md:122:36  i = (i + 1) | 0; <- ++i) {
-179:5 -> ../async-turns.temper.md:126:9  console.log(`${tag} done n=$ <- console.log("${tag} done n=$
-183:1 -> ../async-turns.temper.md:36:22  /** @param {number} i */ <- { (i: Int): Void => console.
-184:1 -> ../async-turns.temper.md:36:22  function fn(i) { <- { (i: Int): Void => console.
-185:3 -> ../async-turns.temper.md:36:42  console.log(`tick ${i}`); <- console.log("tick ${i.toStri
-188:1 -> ../async-turns.temper.md:36:5  /** @type {Generator<{}>} */ <- let t = ticks(2) { (i: Int):
-189:1 -> ../async-turns.temper.md:36:5  const t = ticks(2, fn); <- let t = ticks(2) { (i: Int):
-190:1 -> ../async-turns.temper.md:37:5  t.next(); <- t.nextSafe();
-191:1 -> ../async-turns.temper.md:38:5  t.next(); <- t.nextSafe();
-192:1 -> ../async-turns.temper.md:39:5  t.next(); <- t.nextSafe();
-193:1 -> ../async-turns.temper.md:106:5  console.log(`fibonacci ${sho <- console.log("fibonacci ${sho
-194:1 -> ../async-turns.temper.md:107:5  console.log(`collatz ${shown <- console.log("collatz ${shown
-195:1 -> ../async-turns.temper.md:108:5  /** @type {Generator<number> <- let fib = fibonacci();
-196:1 -> ../async-turns.temper.md:108:5  const fib = fibonacci(); <- let fib = fibonacci();
-197:1 -> ../async-turns.temper.md:109:5  take(fib, 5); <- take(fib, 5);
-198:1 -> ../async-turns.temper.md:110:5  console.log(`then ${shown(ta <- console.log("then ${shown(ta
-199:1 -> ../async-turns.temper.md:130:5  const c = new Counter(); <- let c = new Counter();
-200:1 -> ../async-turns.temper.md:131:5  /** @type {import("@temperla <- let gateA = new PromiseBuild
-201:1 -> ../async-turns.temper.md:131:5  const gateA = new PromiseBui <- let gateA = new PromiseBuild
-202:1 -> ../async-turns.temper.md:132:5  /** @type {import("@temperla <- let gateB = new PromiseBuild
-203:1 -> ../async-turns.temper.md:132:5  const gateB = new PromiseBui <- let gateB = new PromiseBuild
-205:1 -> ../async-turns.temper.md:139:11  /** <- { (): GeneratorResult<Empty>
-209:1 -> ../async-turns.temper.md:139:11  function* fn2(doAwait) { <- { (): GeneratorResult<Empty>
-210:3 -> ../async-turns.temper.md:140:7  c.bump("A", 10000); <- c.bump("A", 10000);
-211:3 -> ../async-turns.temper.md:141:7  /** @type {number} */ <- let k = await gateA.promise
-212:3 -> ../async-turns.temper.md:141:7  let k; <- let k = await gateA.promise
-213:3 -> ../async-turns.temper.md:141:7  try { <- let k = await gateA.promise
-219:3 -> ../async-turns.temper.md:142:7  c.bump(`A${k}`, 10000); <- c.bump("A${k.toString()}", 1
-222:1 -> ../async-turns.temper.md:139:5  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
-224:1 -> ../async-turns.temper.md:144:11  /** <- { (): GeneratorResult<Empty>
-228:1 -> ../async-turns.temper.md:144:11  function* fn3(doAwait) { <- { (): GeneratorResult<Empty>
-229:3 -> ../async-turns.temper.md:145:7  c.bump("B", 10000); <- c.bump("B", 10000);
-230:3 -> ../async-turns.temper.md:146:7  /** @type {number} */ <- let k = await gateB.promise
-231:3 -> ../async-turns.temper.md:146:7  let k; <- let k = await gateB.promise
-232:3 -> ../async-turns.temper.md:146:7  try { <- let k = await gateB.promise
-238:3 -> ../async-turns.temper.md:147:7  c.bump(`B${k}`, 10000); <- c.bump("B${k.toString()}", 1
-241:1 -> ../async-turns.temper.md:144:5  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
-243:1 -> ../async-turns.temper.md:149:11  /** <- { (): GeneratorResult<Empty>
-247:1 -> ../async-turns.temper.md:149:11  function* fn4(doAwait) { <- { (): GeneratorResult<Empty>
-248:3 -> ../async-turns.temper.md:150:7  console.log("opener: calling <- console.log("opener: calling
-249:3 -> ../async-turns.temper.md:151:7  gateA.complete(1); <- gateA.complete(1);
-250:3 -> ../async-turns.temper.md:152:7  gateB.complete(2); <- gateB.complete(2);
-251:3 -> ../async-turns.temper.md:153:7  console.log("opener: complet <- console.log("opener: complet
-254:1 -> ../async-turns.temper.md:149:5  runAsync(adaptAwaiter(fn4)); <- async { (): GeneratorResult<
+13:1 -> ../async-turns.temper.md:15:5  /** <- export let later(n: Int): Pr
+17:1 -> ../async-turns.temper.md:15:5  export function later(n) { <- export let later(n: Int): Pr
+17:17 -> ../async-turns.temper.md:15:16 (later)  later(n) { <- later(n: Int): Promise<Int>
+17:22 -> ../async-turns.temper.md:15:5  (n) { <- export let later(n: Int): Pr
+18:3 -> ../async-turns.temper.md:16:7  /** @type {import("@temperla <- let pb = new PromiseBuilder<
+19:3 -> ../async-turns.temper.md:16:7  const pb = new PromiseBuilde <- let pb = new PromiseBuilder<
+20:3 -> ../async-turns.temper.md:17:13  /** <- { (): GeneratorResult<Empty>
+24:3 -> ../async-turns.temper.md:17:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+25:5 -> ../async-turns.temper.md:18:9  pb.complete(Math.imul(n, 2)) <- pb.complete(n * 2);
+27:3 -> ../async-turns.temper.md:17:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+28:3 -> ../async-turns.temper.md:20:7  return pb.promise; <- pb.promise
+31:1 -> ../async-turns.temper.md:25:5  /** <- let generated<T>(make: fn ()
+36:1 -> ../async-turns.temper.md:25:5  function generated(make) { <- let generated<T>(make: fn ()
+36:10 -> ../async-turns.temper.md:25:9 (generated)  generated(make) { <- generated<T>(make: fn (): Sa
+36:19 -> ../async-turns.temper.md:25:5  (make) { <- let generated<T>(make: fn ()
+37:3 -> ../async-turns.temper.md:25:73  return make(); <- make() }
+40:1 -> ../async-turns.temper.md:27:5  /** <- export let ticks(n: Int, eac
+45:1 -> ../async-turns.temper.md:27:5  export function ticks(n, eac <- export let ticks(n: Int, eac
+45:17 -> ../async-turns.temper.md:27:16 (ticks)  ticks(n, each) { <- ticks(n: Int, each: Tick): S
+45:22 -> ../async-turns.temper.md:27:5  (n, each) { <- export let ticks(n: Int, eac
+46:3 -> ../async-turns.temper.md:28:17  /** <- { (): GeneratorResult<Empty>
+50:3 -> ../async-turns.temper.md:28:17  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+51:5 -> ../async-turns.temper.md:29:9  { <- for (var i = 0; i < n; i +=
+52:7 -> ../async-turns.temper.md:29:14  let i = 0; <- var i = 0; i < n; i += 1) {
+53:7 -> ../async-turns.temper.md:29:9  while (i < n) { <- for (var i = 0; i < n; i +=
+54:9 -> ../async-turns.temper.md:30:11  each(i); <- each(i);
+55:9 -> ../async-turns.temper.md:31:11  yield; <- yield();
+56:9 -> ../async-turns.temper.md:29:32  i = (i + 1) | 0; <- i += 1) {
+60:3 -> ../async-turns.temper.md:28:7  return generated(adaptAwaite <- generated { (): GeneratorRes
+63:1 -> ../async-turns.temper.md:51:5  /** <- let startedAt<T>(start: Int,
+69:1 -> ../async-turns.temper.md:51:5  function startedAt(start, ma <- let startedAt<T>(start: Int,
+69:10 -> ../async-turns.temper.md:51:9 (startedAt)  startedAt(start, make) { <- startedAt<T>(start: Int, mak
+69:19 -> ../async-turns.temper.md:51:5  (start, make) { <- let startedAt<T>(start: Int,
+70:3 -> ../async-turns.temper.md:52:7  return make(start); <- make(start)
+73:1 -> ../async-turns.temper.md:55:5  /** @returns {Generator<numb <- export let fibonacci(): Safe
+74:1 -> ../async-turns.temper.md:55:5  export function fibonacci() <- export let fibonacci(): Safe
+74:17 -> ../async-turns.temper.md:55:16 (fibonacci)  fibonacci() { <- fibonacci(): SafeGenerator<I
+74:26 -> ../async-turns.temper.md:55:5  () { <- export let fibonacci(): Safe
+75:3 -> ../async-turns.temper.md:56:17  /** <- { (): GeneratorResult<Int> e
+79:3 -> ../async-turns.temper.md:56:17  function* fn(doAwait) { <- { (): GeneratorResult<Int> e
+80:5 -> ../async-turns.temper.md:57:9  let a = 0; <- var a = 0;
+81:5 -> ../async-turns.temper.md:58:9  let b = 1; <- var b = 1;
+82:5 -> ../async-turns.temper.md:59:9  while (true) { <- while (true) {
+83:7 -> ../async-turns.temper.md:60:11  yield a; <- yield(a);
+84:7 -> ../async-turns.temper.md:61:11  const next = (a + b) | 0; <- let next = a + b;
+85:7 -> ../async-turns.temper.md:62:11  a = b; <- a = b;
+86:7 -> ../async-turns.temper.md:63:11  b = next; <- b = next;
+89:3 -> ../async-turns.temper.md:56:7  return generated(adaptAwaite <- generated { (): GeneratorRes
+92:1 -> ../async-turns.temper.md:68:5  /** <- export let collatz(start: In
+96:1 -> ../async-turns.temper.md:68:5  export function collatz(star <- export let collatz(start: In
+96:17 -> ../async-turns.temper.md:68:16 (collatz)  collatz(start) { <- collatz(start: Int): SafeGen
+96:24 -> ../async-turns.temper.md:68:5  (start) { <- export let collatz(start: In
+97:3 -> ../async-turns.temper.md:69:24  /** <- { (first: Int): GeneratorRes
+102:3 -> ../async-turns.temper.md:69:24  function* fn(doAwait, first) <- { (first: Int): GeneratorRes
+103:5 -> ../async-turns.temper.md:70:9  let n = first; <- var n = first;
+104:5 -> ../async-turns.temper.md:71:9  while (true) { <- while (true) {
+105:7 -> ../async-turns.temper.md:72:11  yield n; <- yield(n);
+106:7 -> ../async-turns.temper.md:73:11  if (n === 1) { <- if (n == 1) {
+107:9 -> ../async-turns.temper.md:74:13  break; <- break;
+109:7 -> ../async-turns.temper.md:76:11  if (modIntInt(n, 2) === 0) { <- if (n % 2 == 0) {
+110:9 -> ../async-turns.temper.md:77:13  n = (n / 2) | 0; <- n = n / 2;
+112:9 -> ../async-turns.temper.md:79:13  n = (Math.imul(3, n) + 1) | <- n = 3 * n + 1;
+116:3 -> ../async-turns.temper.md:69:7  return startedAt(start, adap <- startedAt(start) { (first: I
+119:1 -> ../async-turns.temper.md:89:5  /** <- let take(g: SafeGenerator<In
+124:1 -> ../async-turns.temper.md:89:5  function take(g, n) { <- let take(g: SafeGenerator<In
+124:10 -> ../async-turns.temper.md:89:9 (take)  take(g, n) { <- take(g: SafeGenerator<Int>,
+124:14 -> ../async-turns.temper.md:89:5  (g, n) { <- let take(g: SafeGenerator<In
+125:3 -> ../async-turns.temper.md:90:7  /** @type {number[]} */ <- let taken = new ListBuilder<
+126:3 -> ../async-turns.temper.md:90:7  const taken = []; <- let taken = new ListBuilder<
+127:3 -> ../async-turns.temper.md:91:7  while (taken.length < n) { <- while (taken.length < n) {
+128:5 -> ../async-turns.temper.md:92:9  /** @type {IteratorResult<nu <- let r = g.nextSafe();
+129:5 -> ../async-turns.temper.md:92:9  const r = g.next(); <- let r = g.nextSafe();
+130:5 -> ../async-turns.temper.md:93:9  if (!r.done) { <- if (r is ValueResult<Int>) {
+131:7 -> ../async-turns.temper.md:94:11  taken.push(/** @type {Iterat <- taken.add(r.value);
+133:7 -> ../async-turns.temper.md:96:11  break; <- break;
+136:3 -> ../async-turns.temper.md:99:7  return listBuilderToList(tak <- taken.toList()
+139:1 -> ../async-turns.temper.md:102:5  /** <- let shown(ints: List<Int>):
+143:1 -> ../async-turns.temper.md:102:5  function shown(ints) { <- let shown(ints: List<Int>):
+143:10 -> ../async-turns.temper.md:102:9 (shown)  shown(ints) { <- shown(ints: List<Int>): Stri
+143:15 -> ../async-turns.temper.md:102:5  (ints) { <- let shown(ints: List<Int>):
+144:3 -> ../async-turns.temper.md:103:7  return listedJoin(/** @type <- ints.join(" ") { (i: Int): S
+147:1 -> ../async-turns.temper.md:174:5  /** <- export let halve(n: Int): In
+151:1 -> ../async-turns.temper.md:174:5  export function halve(n) { <- export let halve(n: Int): In
+151:17 -> ../async-turns.temper.md:174:16 (halve)  halve(n) { <- halve(n: Int): Int throws Bu
+151:22 -> ../async-turns.temper.md:174:5  (n) { <- export let halve(n: Int): In
+152:3 -> ../async-turns.temper.md:175:7  if (modIntInt(n, 2) !== 0) { <- if (n % 2 != 0) { bubble() }
+153:5 -> ../async-turns.temper.md:175:25  bubble(); <- bubble() }
+155:3 -> ../async-turns.temper.md:176:7  return (n / 2) | 0; <- n / 2
+158:1 -> ../async-turns.temper.md:118:5  class Counter extends type() <- class Counter {
+158:7 -> ../async-turns.temper.md:118:11 (Counter)  Counter extends type() { <- Counter {
+158:14 -> ../async-turns.temper.md:118:5   extends type() { <- class Counter {
+159:3 -> ../async-turns.temper.md:119:17  /** @type {number} */ <-  n: Int = 0;
+160:3 -> ../async-turns.temper.md:119:17  #n; <-  n: Int = 0;
+162:3 -> ../async-turns.temper.md:118:5  constructor() { <- class Counter {
+164:5 -> ../async-turns.temper.md:119:17  this.#n = 0; <-  n: Int = 0;
+167:3 -> ../async-turns.temper.md:119:17  /** @returns {number} */ <-  n: Int = 0;
+168:3 -> ../async-turns.temper.md:119:17  get n() { <-  n: Int = 0;
+168:7 -> ../async-turns.temper.md:119:18 (n)  n() { <- n: Int = 0;
+172:3 -> ../async-turns.temper.md:119:17  /** @param {number} value */ <-  n: Int = 0;
+173:3 -> ../async-turns.temper.md:119:17  set n(value) { <-  n: Int = 0;
+173:7 -> ../async-turns.temper.md:119:18 (n)  n(value) { <- n: Int = 0;
+177:3 -> ../async-turns.temper.md:120:14  /** <- bump(tag: String, times: Int
+181:3 -> ../async-turns.temper.md:120:14 (bump)  bump(tag, times) { <- bump(tag: String, times: Int
+182:5 -> ../async-turns.temper.md:121:9  console.log(`${tag} start`); <- console.log("${tag} start");
+183:5 -> ../async-turns.temper.md:122:9  { <- for (var i = 0; i < times; +
+184:7 -> ../async-turns.temper.md:122:14  let i = 0; <- var i = 0; i < times; ++i) {
+185:7 -> ../async-turns.temper.md:122:9  while (i < times) { <- for (var i = 0; i < times; +
+186:9 -> ../async-turns.temper.md:123:11  const before = this.#n; <- let before = n;
+187:9 -> ../async-turns.temper.md:124:11  this.#n = (before + 1) | 0; <- n = before + 1;
+188:9 -> ../async-turns.temper.md:122:36  i = (i + 1) | 0; <- ++i) {
+191:5 -> ../async-turns.temper.md:126:9  console.log(`${tag} done n=$ <- console.log("${tag} done n=$
+195:1 -> ../async-turns.temper.md:36:22  /** @param {number} i */ <- { (i: Int): Void => console.
+196:1 -> ../async-turns.temper.md:36:22  function fn(i) { <- { (i: Int): Void => console.
+197:3 -> ../async-turns.temper.md:36:42  console.log(`tick ${i}`); <- console.log("tick ${i.toStri
+200:1 -> ../async-turns.temper.md:36:5  /** @type {Generator<{}>} */ <- let t = ticks(2) { (i: Int):
+201:1 -> ../async-turns.temper.md:36:5  const t = ticks(2, fn); <- let t = ticks(2) { (i: Int):
+202:1 -> ../async-turns.temper.md:37:5  t.next(); <- t.nextSafe();
+203:1 -> ../async-turns.temper.md:38:5  t.next(); <- t.nextSafe();
+204:1 -> ../async-turns.temper.md:39:5  t.next(); <- t.nextSafe();
+205:1 -> ../async-turns.temper.md:106:5  console.log(`fibonacci ${sho <- console.log("fibonacci ${sho
+206:1 -> ../async-turns.temper.md:107:5  console.log(`collatz ${shown <- console.log("collatz ${shown
+207:1 -> ../async-turns.temper.md:108:5  /** @type {Generator<number> <- let fib = fibonacci();
+208:1 -> ../async-turns.temper.md:108:5  const fib = fibonacci(); <- let fib = fibonacci();
+209:1 -> ../async-turns.temper.md:109:5  take(fib, 5); <- take(fib, 5);
+210:1 -> ../async-turns.temper.md:110:5  console.log(`then ${shown(ta <- console.log("then ${shown(ta
+211:1 -> ../async-turns.temper.md:130:5  const c = new Counter(); <- let c = new Counter();
+212:1 -> ../async-turns.temper.md:131:5  /** @type {import("@temperla <- let gateA = new PromiseBuild
+213:1 -> ../async-turns.temper.md:131:5  const gateA = new PromiseBui <- let gateA = new PromiseBuild
+214:1 -> ../async-turns.temper.md:132:5  /** @type {import("@temperla <- let gateB = new PromiseBuild
+215:1 -> ../async-turns.temper.md:132:5  const gateB = new PromiseBui <- let gateB = new PromiseBuild
+217:1 -> ../async-turns.temper.md:139:11  /** <- { (): GeneratorResult<Empty>
+221:1 -> ../async-turns.temper.md:139:11  function* fn2(doAwait) { <- { (): GeneratorResult<Empty>
+222:3 -> ../async-turns.temper.md:140:7  c.bump("A", 10000); <- c.bump("A", 10000);
+223:3 -> ../async-turns.temper.md:141:7  /** @type {number} */ <- let k = await gateA.promise
+224:3 -> ../async-turns.temper.md:141:7  let k; <- let k = await gateA.promise
+225:3 -> ../async-turns.temper.md:141:7  try { <- let k = await gateA.promise
+231:3 -> ../async-turns.temper.md:142:7  c.bump(`A${k}`, 10000); <- c.bump("A${k.toString()}", 1
+234:1 -> ../async-turns.temper.md:139:5  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
+236:1 -> ../async-turns.temper.md:144:11  /** <- { (): GeneratorResult<Empty>
+240:1 -> ../async-turns.temper.md:144:11  function* fn3(doAwait) { <- { (): GeneratorResult<Empty>
+241:3 -> ../async-turns.temper.md:145:7  c.bump("B", 10000); <- c.bump("B", 10000);
+242:3 -> ../async-turns.temper.md:146:7  /** @type {number} */ <- let k = await gateB.promise
+243:3 -> ../async-turns.temper.md:146:7  let k; <- let k = await gateB.promise
+244:3 -> ../async-turns.temper.md:146:7  try { <- let k = await gateB.promise
+250:3 -> ../async-turns.temper.md:147:7  c.bump(`B${k}`, 10000); <- c.bump("B${k.toString()}", 1
+253:1 -> ../async-turns.temper.md:144:5  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
+255:1 -> ../async-turns.temper.md:149:11  /** <- { (): GeneratorResult<Empty>
+259:1 -> ../async-turns.temper.md:149:11  function* fn4(doAwait) { <- { (): GeneratorResult<Empty>
+260:3 -> ../async-turns.temper.md:150:7  console.log("opener: calling <- console.log("opener: calling
+261:3 -> ../async-turns.temper.md:151:7  gateA.complete(1); <- gateA.complete(1);
+262:3 -> ../async-turns.temper.md:152:7  gateB.complete(2); <- gateB.complete(2);
+263:3 -> ../async-turns.temper.md:153:7  console.log("opener: complet <- console.log("opener: complet
+266:1 -> ../async-turns.temper.md:149:5  runAsync(adaptAwaiter(fn4)); <- async { (): GeneratorResult<

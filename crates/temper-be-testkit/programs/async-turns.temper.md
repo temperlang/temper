@@ -165,3 +165,13 @@ A1 done n=30000
 B2 start
 B2 done n=40000
 ```
+
+`halve` bubbles for an odd number, which host code catches as the type
+notes/api-compat.md promises for its language: Python's `RuntimeError`,
+Java's `RuntimeException`, C#'s `Exception`, JavaScript's `Error`, C++'s
+`TemperBubble`, Lua's `pcall`, and Rust's `Err`.
+
+    export let halve(n: Int): Int throws Bubble {
+      if (n % 2 != 0) { bubble() }
+      n / 2
+    }

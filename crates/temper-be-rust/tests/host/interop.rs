@@ -96,6 +96,12 @@ fn main() {
     }
     println!("collatz {}", steps.join(","));
 
+    // A Temper failure is an `Err`, as notes/api-compat.md promises.
+    match async_turns::halve(3) {
+        Ok(n) => println!("halve returned {n}"),
+        Err(_) => println!("halve {} caught", async_turns::halve(8).unwrap()),
+    }
+
     // A generic class's builder, without its options and with them.
     use class_edges::builders::DuoBuilder;
     let ann = class_edges::Person::new("Ann", "Dr");

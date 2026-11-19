@@ -28,6 +28,7 @@ std::shared_ptr<temper::core::Promise<int32_t>> later(int32_t n);
 std::shared_ptr<temper::core::SafeGenerator<std::shared_ptr<temper::core::Empty>>> ticks(int32_t n, std::function<void(int32_t)> const & each);
 std::shared_ptr<temper::core::SafeGenerator<int32_t>> fibonacci();
 std::shared_ptr<temper::core::SafeGenerator<int32_t>> collatz(int32_t start);
+int32_t halve(int32_t n);
 
 }  // namespace async_turns
 
@@ -233,6 +234,14 @@ void Counter::bump(core::Str const & tag, int32_t times) {
 
 int32_t Counter::get_n() {
   return this->n;
+}
+
+int32_t halve(int32_t n) {
+  global_init_init();
+  if (n % 2 != 0) {
+    core::bubble();
+  }
+  return n / 2;
 }
 
 void global_init_init() {

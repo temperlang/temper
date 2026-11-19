@@ -945,9 +945,9 @@ fn runs() {
         // `tests/host/Interop.cs`, host code that uses `async-turns` the
         // standard way: it `await`s generated promises, resuming outside
         // any turn, also with a runner of its own, blocks on one inside a
-        // turn, which fails clearly, and
-        // loops over a generated generator with `foreach`, which a failed
-        // step leaves done.
+        // turn, which fails clearly, loops over a generated generator with
+        // `foreach`, which a failed step leaves done, and catches a failure
+        // as an `Exception`.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/Interop.cs");
             let interop = bin.join("Interop.dll");
@@ -976,6 +976,7 @@ fn runs() {
                         "then done True",
                         "fibonacci 0,1,1,2,3,5,8,13",
                         "collatz 7,22,11,34,17,52,26,13,40,20,10,5,16,8,4,2,1",
+                        "halve 4 caught",
                     ]
                     .map(String::from),
                 )
