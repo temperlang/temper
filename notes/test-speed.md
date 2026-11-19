@@ -364,9 +364,14 @@ alike (each backend crate's `src/tools.rs`, run by
 - **Rust:** `cargo test --offline`, one target directory for all.
 - **C++:** CMake on the `CMakeLists.txt` tempest writes, building the
   library's `LIBRARY-test` target (its tests, std, and the libraries it
-  imports) in `temper.out/cpp/LIBRARY/build`, then running it in the
+  imports), then running it in the
   library's directory, which writes `test-results.xml`, as Kotlin's
-  `RunCpp` runs its `g++` build (2026-11-06).
+  `RunCpp` runs its `g++` build (2026-11-06). Since 2026-11-19 one
+  CMake project in `temper.out/cpp/.build` adds every library, so a
+  library others use builds once per run, not once per dependent
+  (Kelpto's kelpto-core and std were built for each test library);
+  where it doesn't configure, each library builds alone in
+  `LIBRARY/build`, as before.
 
 Still planned: the fast paths below (one process per backend for all
 libraries, cached runtimes), and the package path checked against them.

@@ -847,7 +847,9 @@ fn cmake_builds_a_library() {
 
 /// `temper test -b cpp` builds a library's tests with CMake and runs
 /// them, reading the JUnit XML they write, where CMake is installed
-/// (skipped otherwise; required with `TEMPER_REQUIRE_CHECKERS`).
+/// (skipped otherwise; required with `TEMPER_REQUIRE_CHECKERS`). A
+/// library that others use, as `b` uses `a` and both use std, is built
+/// once, in one build for them all.
 #[test]
 #[cfg(feature = "cpp")]
 fn test_a_library_in_cpp() {
@@ -867,6 +869,12 @@ fn test_a_library_in_cpp() {
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
+        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
+        ),
     ];
     with_library("cpp-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "cpp", dir]);
@@ -875,13 +883,18 @@ fn test_a_library_in_cpp() {
             out.to_lowercase().contains(CLASS_ASSERT_FAILED),
             "{out}{err}"
         );
-        assert!(out.ends_with("Tests passed: 2 of 4\n"), "{out}{err}");
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
         assert_eq!(code, 1);
-        assert!(
-            Path::new(dir)
-                .join("temper.out/cpp/a/test-results.xml")
-                .is_file()
-        );
+        let cpp = Path::new(dir).join("temper.out/cpp");
+        assert!(cpp.join("a/test-results.xml").is_file());
+        // Each library's objects once, where CMake keeps a target's.
+        fn count(dir: &Path, name: &str) -> usize {
+            let entries = fs::read_dir(dir).into_iter().flatten().flatten();
+            (entries.filter(|e| e.path().is_dir()))
+                .map(|e| usize::from(e.file_name() == name) + count(&e.path(), name))
+                .sum()
+        }
+        assert_eq!((count(&cpp, "a.dir"), count(&cpp, "std.dir")), (1, 1));
     });
 }
 
