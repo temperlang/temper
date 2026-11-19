@@ -346,7 +346,7 @@ command's own output, so what it prints streams.
 | Backend | How its tests run |
 |---|---|
 | C++ | CMake on the `CMakeLists.txt` this compiler writes, its test target, then the program, which writes JUnit XML |
-| C# | `dotnet test --logger:junit` in the `tests` project, then `dotnet build-server shutdown` |
+| C# | `dotnet build`, then `dotnet test --logger:junit`, once over a solution of every library's `tests` project, then `dotnet build-server shutdown` |
 | Java | `javac` on runtime, std, and libraries, then JUnit 5's launcher from Maven's local repository (Kotlin runs Maven, which needs the network) |
 | JavaScript | Mocha with its xunit reporter, packages linked under `temper.out/js/node_modules` |
 | Lua | Each library's `tests/init-test.lua` with LuaUnit, writing JUnit XML |

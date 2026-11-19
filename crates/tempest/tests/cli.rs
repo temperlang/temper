@@ -923,9 +923,10 @@ fn test_a_library_on_each_backend() {
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
     ];
-    // Rust's and Java's are `test_a_library_in_rust`'s and
-    // `test_a_library_in_java`'s, with a second library.
-    for backend in ["js", "lua", "csharp"] {
+    // Rust's, Java's, and C#'s are `test_a_library_in_rust`'s,
+    // `test_a_library_in_java`'s, and `test_a_library_in_csharp`'s,
+    // with a second library.
+    for backend in ["js", "lua"] {
         if !built_in(backend) {
             continue;
         }
@@ -1046,6 +1047,52 @@ fn test_a_library_in_java() {
             "temper/core/Core.class",
         ];
         assert_eq!(paths.map(|p| count(&java, p)), [1, 1, 1], "{java:?}");
+    });
+}
+
+/// `temper test -b csharp` as [`test_a_library_on_each_backend`] tests
+/// the others, where dotnet runs (skipped otherwise; required with
+/// `TEMPER_REQUIRE_CHECKERS`), with a second library, `b`, using `a`:
+/// both libraries' tests build in one MSBuild run over one solution, so
+/// each project, `a`'s, std's, and temper-core's among them, builds
+/// once, and run in one `dotnet test`.
+#[test]
+#[cfg(feature = "csharp")]
+fn test_a_library_in_csharp() {
+    let files = [
+        ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
+        ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+        CLASS_ASSERTS,
+        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
+        ),
+    ];
+    with_library("csharp-tests", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", "csharp", dir]);
+        if tools_missing("csharp", &format!("{out}{err}")) {
+            return;
+        }
+        // C#'s method is `B`.
+        let failed = out.to_lowercase().contains("  failed  b - expected");
+        assert!(failed, "{out}{err}");
+        assert!(
+            out.to_lowercase().contains(CLASS_ASSERT_FAILED),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        // The one build's log names each assembly it built once.
+        let log = Path::new(dir).join("temper.out/csharp/.build/build.log");
+        let log = fs::read_to_string(&log).unwrap_or_default();
+        let built = |dll: &str| {
+            let dll = format!("{}{dll}", std::path::MAIN_SEPARATOR);
+            log.lines().filter(|l| l.ends_with(&dll)).count()
+        };
+        let counts = ["A.dll", "TemperLang.Std.dll", "TemperLang.Core.dll"].map(built);
+        assert_eq!(counts, [1, 1, 1], "{log}");
     });
 }
 

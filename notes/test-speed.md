@@ -421,6 +421,15 @@ alike (each backend crate's `src/tools.rs`, run by
   their own, picked by class. Where the tests don't compile together,
   each library's compile alone, as before.
 - **C#:** `dotnet test --logger:junit`, as Kotlin's `RunCSharp`.
+  MSBuild already built a shared project once (later libraries found
+  it up to date), but each library paid for its own MSBuild, restore,
+  test run, and compiler server, five to sixteen seconds each in
+  Kelpto. Since 2026-11-19 one solution in `temper.out/csharp/.build`
+  names every tested library's tests project, unchanged: one `dotnet
+  build` restores and builds them all, four projects at once, and one
+  `dotnet test --no-build` runs them, each library's results in its own
+  project, as before. A library without results after it (its tests
+  didn't build or run) runs `dotnet test` alone, as before.
 - **Rust:** `cargo test --offline`, one target directory for all.
   Since 2026-11-19 one Cargo workspace in `temper.out/rust/.build`
   links every crate there, unchanged, and builds every tested
