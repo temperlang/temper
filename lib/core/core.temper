@@ -2,9 +2,8 @@
  * The type for any successful value.
  *
  * All `class` and `interface` types, including builtin types like [snippet/type/Int32],
- * are sub-types of this type.
- *
- * The special type [snippet/type/Bubble] is not.
+ * are sub-types of this type, except the special types [snippet/type/Bubble] and
+ * [snippet/type/Void].
  */
 export interface AnyValue {}
 
@@ -29,8 +28,9 @@ export sealed interface Equatable<EQ extends AnyValue> {
  *
  * See also [snippet/builtin/orelse].
  */
-// export class Bubble {
-// }
+export class Bubble {
+  private constructor();
+}
 
 /**
  * *Invalid* is an untranslatable type that represents a failure to properly type an
@@ -121,6 +121,7 @@ export class Empty extends Equatable<Empty> {
   public eq(other: Empty): Boolean { true }
 }
 let emptySingleton: Empty = doPure { (): Empty => new Empty() };
+/** The [snippet/type/Empty] value. */
 @connected
 export let empty(): Empty { emptySingleton }
 
@@ -245,7 +246,10 @@ export class ValueResult<@out YIELD extends AnyValue> extends GeneratorResult<YI
  */
 @imu
 @connected
-export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {}
+export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
+  public constructor();
+}
+/** A [snippet/type/DoneResult], a generator's result once it is done. */
 @connected
 export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
 
@@ -323,7 +327,9 @@ extends SafeGenerator<YIELD> {
  * Use [builtin/await] to get at the value asynchronously.
  */
 @connected
-export class Promise<@out R extends AnyValue> {}
+export class Promise<@out R extends AnyValue> {
+  private constructor();
+}
 
 /**
  * A promise builder contains a promise that may be shared, but the
@@ -380,9 +386,11 @@ export /*sealed*/ interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
  *
  * ⎀ syntax/string/interpolation -heading
  */
+@connected
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
 export class String extends MapKey<String> {
   private let content: String;
+  private constructor();
 
   /**
    * Convert the single code point to a string if it's valid. Specifically, it
@@ -1039,11 +1047,13 @@ export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int
  *
  * See also `Listed` for recommendations on `List` vs `Listed` use.
  */
+@connected
 @partialImu
 @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
 export class List<@out T> extends Listed<T> {
   // The content is used only from connected functions.
   private let content: AnyValue;
+  private constructor();
 
   /** Same as `[...]` syntax but provides an explicit type argument. */
   public static nym`of` = _listify;
@@ -1079,6 +1089,7 @@ export class List<@out T> extends Listed<T> {
  * The *ListBuilder* type is a random-access, mutable, growable sequence of
  * values.
  */
+@connected
 @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
 export class ListBuilder<T> extends Listed<T> {
   // The content is used only from extension functions.
@@ -1146,6 +1157,7 @@ export class ListBuilder<T> extends Listed<T> {
   public toListBuilder(): ListBuilder<T>;
 }
 
+/** A *Pair* holds a *key* and its *value*, as a map's entries do. */
 export class Pair<@out K, @out V> {
   public key: K;
   public value: V;
@@ -1317,6 +1329,7 @@ export let mappedToListBuilderWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, 
 /**
  * A *Map* is a read-only key-value collection.
  */
+@connected
 @partialImu
 @mayDowncastTo(false) // Just use core.type Mapped.toMap() if immutable wanted.
 export class Map<@in K extends MapKey<K>, @out V> extends Mapped<K, V> {
@@ -1334,6 +1347,7 @@ export class Map<@in K extends MapKey<K>, @out V> extends Mapped<K, V> {
  * A *MapBuilder* is a read-write key-value collection for building `Map`
  * objects. Preserves insertion order when accessed from Temper code.
  */
+@connected
 @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
 export class MapBuilder<K extends MapKey<K>, V> extends Mapped<K, V> {
   // The content is used only from connected functions.
@@ -1409,10 +1423,12 @@ export class Deque<T> {
  *
  * ⎀ syntax/BooleanLiteral -heading
  */
+@connected
 @imu
 @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
 export class Boolean extends Equatable<Boolean> {
   private let content: Boolean;
+  private constructor();
 
   /**
    * For [snippet/builtin/false], the string `"false"`.
@@ -1497,9 +1513,11 @@ export let Int = Int32;
  *
  * ⎀ syntax/int32/examples
  */
+@connected
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
 export class Int32 extends MapKey<Int32> {
   private let content: Int;
+  private constructor();
 
   @connected
   public toFloat64(): Float64;
@@ -1547,11 +1565,13 @@ export class Int32 extends MapKey<Int32> {
  *
  * ⎀ syntax/int64/examples
  */
+@connected
 @imu
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
 export class Int64 extends Equatable<Int64> {
   // TODO: Whether Int64 should be a MapKey, as Int32 and String are.
   private let content: Int64;
+  private constructor();
 
   /** Bubbles if the result isn't within the exponent error of the original. */
   @connected
@@ -1609,10 +1629,12 @@ export class Int64 extends Equatable<Int64> {
  *
  * [FP64]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
  */
+@connected
 @imu
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
 export class Float64 extends Equatable<Float64> {
   private let content: Float64;
+  private constructor();
 
   /**
    * Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
@@ -1756,3 +1778,204 @@ export class Float64 extends Equatable<Float64> {
 export interface Problem {
   private let content: Problem;
 }
+
+// Builtins that the compiler provides: values, functions, and macros.
+// Each is `@connected` without a body: the compiler supplies it, so in
+// core the declaration declares nothing, and core's own code still names
+// the builtin. It's here for its doc comment, which editors show. Words
+// the parser treats specially are quoted, as ``nym`true` ``. Operators
+// and jumps (`return`, `break`, `continue`) aren't declared here:
+// operators wait on the operator design, and jumps are syntax, neither
+// values nor macros.
+
+// Values.
+
+/** The value `true` of type [snippet/type/Boolean]. */
+@connected
+export let nym`true`;
+
+/** The value `false` of type [snippet/type/Boolean]. */
+@connected
+export let nym`false`;
+
+/**
+ * The singleton value `null`, which any nullable type admits: a type
+ * followed by `?`, as *String?*. It may stand for an absent value, as an
+ * unspecified, optional input.
+ */
+@connected
+export let nym`null`;
+
+/**
+ * The sole value of type [snippet/type/Void]. *Void* is disjoint from
+ * [snippet/type/AnyValue], so no `void` value is directly usable.
+ */
+@connected
+export let nym`void`;
+
+/** The [snippet/type/Float64] value for "Not a Number". */
+@connected
+export let NaN;
+
+/** The [snippet/type/Float64] value for infinity. */
+@connected
+export let Infinity;
+
+// Types.
+
+/**
+ * *Void* is the return type for functions that are called for their
+ * effect, not to produce a value. Its sole value is `void`.
+ */
+export class Void {
+  private constructor();
+}
+
+/** Type values represent a Temper type, allowing them to be inputs to macros. */
+export class Type {
+  private constructor();
+}
+
+// Functions.
+
+/**
+ * Immediately panics, which is unrecoverable inside Temper.
+ * It might be recoverable in backend code.
+ */
+@connected
+export let panic;
+
+/**
+ * A string tag that requires a single code-point string and returns that
+ * code point as an [snippet/type/Int32]: `char'a' == 97`.
+ */
+@connected
+export let char;
+
+/** A tag for raw strings, as `raw"a\b"`, whose escape sequences aren't expanded. */
+@connected
+export let raw;
+
+/** Constructs a compiled regex from a regex literal, as `rgx"a+"` or `/a+/`. */
+@connected
+export let rgx;
+
+/**
+ * `doPure { x }` is the same as `x` except that the result is available
+ * to macro code early. `x` must be pure code: no side effects.
+ */
+@connected
+export let doPure;
+
+/**
+ * `async { … }` takes a safe generator block and runs it out of band,
+ * later, from the run queue.
+ */
+@connected
+export let async;
+
+// Macros.
+
+/** The word `let` defines names for variables and functions. */
+@connected
+export let let;
+
+/** `fn` defines function values, `fn (x: Int): Int { x }`, and function types, `fn (Int): Int`. */
+@connected
+export let fn;
+
+/**
+ * `if (condition) { … } else { … }` branches on a [snippet/type/Boolean]:
+ * it runs its first block when *condition* is true, and otherwise its
+ * `else` block, if any.
+ */
+@connected
+export let if;
+
+/**
+ * `while (condition) { body }` runs *body* for as long as *condition*
+ * is true, checking it before each run.
+ */
+@connected
+export let while;
+
+/**
+ * `for (initializer; condition; increment) { body }` is a simple loop,
+ * and `for (let one of many) { body }` runs *body* for each element of
+ * *many*.
+ */
+@connected
+export let for;
+
+/**
+ * `do { body } while (condition)` runs *body* once before checking
+ * *condition* the first time. Without a condition, `do { … }` runs its
+ * block once, as an expression.
+ */
+@connected
+export let do;
+
+/**
+ * `a orelse b` recovers from failure: if *a* fails to produce a result,
+ * it bubbles, then *b* runs and its result is used instead.
+ */
+@connected
+export let nym`orelse`;
+
+/**
+ * `when (x) { 0 -> a; is T -> b; else -> c }` checks what *x* matches,
+ * values or types, and is the result of the first match's branch.
+ */
+@connected
+export let when;
+
+/**
+ * Defines a concrete `class` type. Classes may extend `interface` types
+ * but may not themselves be extended.
+ */
+@connected
+export let nym`class`;
+
+/**
+ * Defines an abstract `interface` type, which may declare abstract
+ * properties and methods, but no constructors or backed properties.
+ */
+@connected
+export let interface;
+
+/** `let { a, b } = import("./path")` imports names that another module exports. */
+@connected
+export let import;
+
+/**
+ * `test("name") { … }` defines a test case. A module that defines tests
+ * is a test module rather than a production module.
+ */
+@connected
+export let test;
+
+/** `assert(condition) { "why" }`, in a test, fails the test with the message unless *condition* is true. */
+@connected
+export let assert;
+
+/**
+ * Immediately bubbles: fails to produce a result. Typically, this runs
+ * the right side of the closest containing `orelse`.
+ */
+@connected
+export let bubble;
+
+/**
+ * `await p`, in an `async` block, pauses until the [snippet/type/Promise]
+ * *p* is complete, then is its value, or bubbles if it was broken.
+ */
+@connected
+export let nym`await`;
+
+/**
+ * Called from the body of a generator function to pause the body and
+ * cause [snippet/type/Generator/method/next] to return: `yield(x)` with
+ * the value *x*, or a bare `yield` with the [snippet/type/Empty] value.
+ */
+@connected
+export let nym`yield`;

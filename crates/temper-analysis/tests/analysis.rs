@@ -606,8 +606,10 @@ fn definition_into_core() {
     assert_eq!(line, "public log(message: String): Void;");
     let (line, _) = found("console.", 0, 0);
     assert!(line.starts_with("export let console: Console"), "{line}");
-    // Nothing for what core doesn't declare, or what's not a builtin.
-    assert_eq!(core_at(&a, "panic", 0, 0), None);
+    // What only a bodiless `@connected` declaration documents, as `panic`.
+    let (line, _) = found("panic", 0, 0);
+    assert_eq!(line, "export let panic;");
+    // Nothing for what's not a builtin.
     assert_eq!(core_at(&a, "count);", 0, 0), None);
     assert_eq!(a.definition(MAIN, at(BUILTINS, "add(\"a\")", 0, 0)), None);
 }
@@ -628,6 +630,8 @@ fn hover_core_docs() {
         doc("log(", 0, 0).as_deref(),
         Some("Log a message at default informational level to this console.")
     );
+    let log = a.hover(MAIN, at(BUILTINS, "log(", 0, 0)).unwrap();
+    assert_eq!(log.headline(), "method log(message: String): Void");
     assert!(doc("ignore(", 0, 0).is_some());
     assert!(doc("fromCodePoint", 0, 0).is_some());
     assert_eq!(
@@ -668,6 +672,16 @@ fn hover_core_docs() {
         .doc
         .unwrap();
     assert!(!int.contains('⎀') && !int.ends_with('\n'), "{int}");
+    // A bare link names what it links to.
+    let source = "let e = empty();\nlet f(g: Generator<Int>): Void {}\n";
+    let a = analyze(source);
+    let doc = |needle| a.hover(MAIN, at(source, needle, 0, 0)).unwrap().doc;
+    assert_eq!(doc("empty").as_deref(), Some("The *Empty* value."));
+    let generator = doc("Generator").unwrap();
+    assert!(
+        generator.contains("\n`Generator.next` method."),
+        "{generator}"
+    );
 }
 
 const TYPED: &str = r#"
@@ -727,4 +741,202 @@ fn definitions_and_references_from_signatures() {
     let uses = a.references(MAIN, at(TYPED, "T>", 0, 0), false);
     let starts: Vec<u32> = uses.iter().map(|l| l.span.start).collect();
     assert_eq!(starts, [at(TYPED, "T;", 0, 0), at(TYPED, "T): Void", 0, 0)]);
+}
+
+/// Each builtin but the types, by name, used: a source, and the text
+/// whose start hover and go to definition ask about. Those core leaves
+/// undeclared, [`UNDECLARED`], too, for hover's fallback.
+const BUILTIN_USES: &[(&str, &str, &str)] = &[
+    ("let", "let x = 1;", "let"),
+    ("@", "@connected let f(): Int { 1 }", "@"),
+    ("fn", "let f = fn (x: Int): Int { x };", "fn"),
+    ("if", "if (true) { ignore(1); }", "if"),
+    ("while", "while (false) { ignore(1); }", "while"),
+    ("for", "for (let x of [1]) { ignore(x); }", "for"),
+    ("do", "do { ignore(1); }", "do"),
+    ("return", "let f(): Int { return 1; }", "return"),
+    ("break", "while (true) { break; }", "break"),
+    ("continue", "while (false) { continue; }", "continue"),
+    (
+        "bubble",
+        "let f(): Int throws Bubble { bubble() }",
+        "bubble",
+    ),
+    ("=", "var x = 1; x = 2;", "= 2"),
+    ("&&", "let b = true && false;", "&&"),
+    ("||", "let b = true || false;", "||"),
+    (
+        "orelse",
+        "let f(): Int throws Bubble { bubble() }\nlet y = f() orelse 0;",
+        "orelse",
+    ),
+    (
+        "when",
+        "let w = when (1) { 1 -> \"a\"; else -> \"b\" };",
+        "when",
+    ),
+    ("??", "let n: Int? = null; let m = n ?? 1;", "??"),
+    ("?.", "let s: String? = null; let l = s?.isEmpty;", "?."),
+    ("class", "class C {}", "class"),
+    ("interface", "interface I {}", "interface"),
+    ("import", "let { x } = import(\"./nope\");", "import"),
+    ("test", "test(\"t\") { assert(true); }", "test"),
+    ("assert", "test(\"t\") { assert(true); }", "assert"),
+    (
+        "yield",
+        "let g = fn (): GeneratorResult<Int> extends GeneratorFn { yield(1); };",
+        "yield",
+    ),
+    (
+        "await",
+        "let a = new PromiseBuilder<Int>();\nasync { (): GeneratorResult<Empty> extends GeneratorFn =>\n  let x = await a.promise orelse -1;\n}",
+        "await",
+    ),
+    ("+", "let a = 1 + 2;", "+"),
+    ("-", "let a = 1 - 2;", "-"),
+    ("*", "let a = 1 * 2;", "*"),
+    ("/", "let a = 1 / 2 orelse 0;", "/"),
+    ("%", "let a = 1 % 2 orelse 0;", "%"),
+    ("**", "let a = 1.0 ** 2.0;", "**"),
+    ("<", "let a = 1 < 2;", "<"),
+    ("<=", "let a = 1 <= 2;", "<="),
+    (">", "let a = 1 > 2;", ">"),
+    (">=", "let a = 1 >= 2;", ">="),
+    ("==", "let a = 1 == 2;", "=="),
+    ("!=", "let a = 1 != 2;", "!="),
+    ("!", "let a = !true;", "!"),
+    ("&", "let a = 1 & 2;", "&"),
+    ("|", "let a = 1 | 2;", "|"),
+    ("^", "let a = 1 ^ 2;", "^"),
+    ("<<", "let a = 1 << 2;", "<<"),
+    (">>", "let a = 1 >> 2;", ">>"),
+    (">>>", "let a = 1 >>> 2;", ">>>"),
+    ("~", "let a = ~1;", "~"),
+    ("panic", "let f(): Int { panic() }", "panic"),
+    (".", "let a = \"x\".isEmpty;", "."),
+    ("[]", "let a = [1][0];", "[0"),
+    ("throws", "let f(): Int throws Bubble { 1 }", "throws"),
+    ("?", "let a: Int? = null;", "?"),
+    ("new", "let a = new ListBuilder<Int>();", "new"),
+    ("as", "let a = (1 as Int) orelse 0;", "as"),
+    ("is", "let a = 1 is Int;", "is"),
+    ("<=>", "let a = 1 <=> 2;", "<=>"),
+    ("ignore", "ignore(1);", "ignore"),
+    ("char", "let a = char'a';", "char"),
+    ("raw", "let a = raw\"a\\b\";", "raw"),
+    ("empty", "let a = empty();", "empty"),
+    ("doPure", "let a = doPure { (): Int => 1 };", "doPure"),
+    ("doneResult", "let a = doneResult<Int>();", "doneResult"),
+    (
+        "async",
+        "async { (): GeneratorResult<Empty> extends GeneratorFn => ignore(1); }",
+        "async",
+    ),
+    ("rgx", "let a = rgx\"a\";", "rgx"),
+    ("cat", "let n = 1; let a = \"a${n}\";", "${"),
+    ("list", "let a = [1, 2];", "["),
+    ("<>", "let a = new ListBuilder<Int>();", "<"),
+    ("true", "let a = true;", "true"),
+    ("false", "let a = false;", "false"),
+    ("null", "let a: Int? = null;", "null"),
+    ("void", "let f(): Void { void }", "void"),
+    ("console", "console.log(\"a\");", "console"),
+    ("NaN", "let a = NaN;", "NaN"),
+    ("Infinity", "let a = Infinity;", "Infinity"),
+];
+
+/// The builtins core leaves undeclared, and why: operators wait on the
+/// operator design, and jumps are syntax, neither values nor macros.
+const UNDECLARED: &[(&str, &str)] = &[
+    ("=", "operator"),
+    ("&&", "operator"),
+    ("||", "operator"),
+    ("??", "operator"),
+    ("?.", "operator"),
+    ("@", "operator"),
+    ("+", "operator"),
+    ("-", "operator"),
+    ("*", "operator"),
+    ("/", "operator"),
+    ("%", "operator"),
+    ("**", "operator"),
+    ("<", "operator"),
+    ("<=", "operator"),
+    (">", "operator"),
+    (">=", "operator"),
+    ("==", "operator"),
+    ("!=", "operator"),
+    ("!", "operator"),
+    ("&", "operator"),
+    ("|", "operator"),
+    ("^", "operator"),
+    ("<<", "operator"),
+    (">>", "operator"),
+    (">>>", "operator"),
+    ("~", "operator"),
+    ("<=>", "operator"),
+    (".", "operator"),
+    ("[]", "operator"),
+    ("?", "operator"),
+    ("<>", "operator"),
+    ("new", "operator"),
+    ("as", "operator"),
+    ("is", "operator"),
+    ("throws", "operator"),
+    ("list", "operator: `[a, b]`, with no name to write"),
+    ("cat", "operator: interpolation, with no name to write"),
+    ("return", "jump"),
+    ("break", "jump"),
+    ("continue", "jump"),
+];
+
+/// Each builtin core declares has docs and a definition there; the
+/// others, [`UNDECLARED`], have neither, and hover still shows no `: ?`.
+#[test]
+fn every_builtin_has_core_docs() {
+    use temper_frontend::builtins::{BUILTINS, TYPES};
+    use temper_frontend::typing::core_declaration;
+    // Builtins that aren't in `BUILTINS` by name, as the tree names them:
+    // `"${a}"`'s `cat`, `[a]`'s `list`, and `List<T>`'s `<>`.
+    let mut names: Vec<&str> = BUILTINS.iter().map(|(n, _)| *n).collect();
+    names.extend(["cat", "list", "<>"]);
+    let mut missing = Vec::new();
+    for name in names {
+        let Some(&(_, source, needle)) = BUILTIN_USES.iter().find(|(n, _, _)| *n == name) else {
+            missing.push(format!("{name}: no use"));
+            continue;
+        };
+        let a = analyze(source);
+        let offset = at(source, needle, 0, 0);
+        let h = a.hover(MAIN, offset);
+        let undeclared = UNDECLARED.iter().any(|(n, _)| *n == name);
+        if undeclared {
+            if core_declaration(name).is_some() || a.core_definition(MAIN, offset).is_some() {
+                missing.push(format!("{name}: declared, but listed as undeclared"));
+            }
+            if let Some(h) = h.filter(|h| h.headline().ends_with(": ?")) {
+                missing.push(format!("{name}: {}", h.headline()));
+            }
+            continue;
+        }
+        let h = h.as_ref().filter(|h| h.name.as_deref() == Some(name));
+        match h {
+            None => missing.push(format!("{name}: hover names something else")),
+            Some(h) if h.doc.is_none() || h.headline().ends_with(": ?") => {
+                missing.push(format!("{name}: {}", h.headline()))
+            }
+            Some(_) => {}
+        }
+        if a.core_definition(MAIN, offset).is_none() {
+            missing.push(format!("{name}: no definition"));
+        }
+    }
+    for &t in TYPES {
+        let source = format!("let f(x: {t}): Void {{}}");
+        let h = analyze(&source).hover(MAIN, at(&source, t, 0, 0));
+        if core_declaration(t).is_none() || h.is_none_or(|h| h.doc.is_none()) {
+            missing.push(t.to_string());
+        }
+    }
+    assert_eq!(missing, Vec::<String>::new());
 }

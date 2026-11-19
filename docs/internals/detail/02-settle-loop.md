@@ -308,7 +308,11 @@ and member modifiers (`public`, `private`, `static`, `connected`,
 recognized one adds its declaration to a set on
 [`Settle`](../../../crates/temper-frontend/src/settle.rs) (`exports`,
 `connected`, `fun_interfaces`, `sealed`, `json_decorated`, and others),
-read when the declaration expands.
+read when the declaration expands. In core alone, a bodiless
+`@connected` declaration of a builtin's name, as `export let if;`,
+declares nothing ([`supplied_by_frontend`](../../../crates/temper-frontend/src/settle.rs)),
+as core's class named as a builtin type is that type, so core's own
+code still names the builtin; the declaration is there for its docs.
 
 **How Kotlin Temper does it:** decorators are builtins in the
 environment (`BuiltinEnvironment.kt`), resolved like any name.

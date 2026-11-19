@@ -115,6 +115,12 @@ or objects it does not create and may not print or cause other side effects.
 ### `new`
 The `new` operator allows constructing new instances of types.
 
+It makes classes with a public constructor, not interfaces. Builtin
+types say so in core: `new StringBuilder()` and `new Map<String,
+Int>([])` work, but strings, numbers, booleans and lists come from
+literals and methods, so `new String()` and `new List<Int>()` are
+errors.
+
 ### `yield()`
 Called from the body of a generator function, to pause the body
 and cause [`Generator.next`](types.md#generatornext) to return.
@@ -2853,8 +2859,8 @@ See also [`private` visibility](#private-visibility).
 See also [`@private` visibility](#private-visibility)
 
 ### `sealed` type modifier
-Marks an interface type as sealed; only types declared in the same source file
-may [extend](#subtype-extends-supertype) it.
+Marks an interface type as sealed; only types declared in the same module
+(the same directory's source files) may [extend](#subtype-extends-supertype) it.
 
 Sealed types are important because the Temper translator can assume there are
 no direct subtypes that it does not know about.

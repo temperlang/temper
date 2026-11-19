@@ -4,9 +4,10 @@
 
 use std::fs;
 use temper_frontend::library_tests::{TestOptions, parse_junit, test_dir, test_libraries};
-use temper_frontend::project::{Config, LibrarySources, find_libraries, work_root};
+use temper_frontend::project::{Config, LibrarySources, find_libraries, load_library, work_root};
 use temper_frontend::sources::Sources;
 use temper_frontend::stdlib;
+use temper_syntax::lex::SourceKind;
 
 /// A temporary directory, removed when dropped.
 struct TempTree {
@@ -522,6 +523,54 @@ fn duplicate_names() {
     let (passed, _, err) = test(root);
     assert_eq!(err, format!("Two libraries are named lib under {root}\n"));
     assert!(!passed);
+}
+
+/// Core's config, as `lib/core/config.temper.md` has it.
+const CORE_CONFIG: &str = "# Core\n\n    export let name = \"temper-core\";\n";
+
+/// `temper-core` is core's name: building another library of that name
+/// is an error, and its `core.temper` has none of core's powers, as
+/// naming `_listify`. Only a Temper checkout's own `lib/core` is core,
+/// whatever its text, as an editor may have changed it.
+#[test]
+fn temper_core_is_reserved() {
+    let text = "export let xs: List<Int> = _listify(1);\n";
+    let files = [
+        ("user/config.temper.md", CORE_CONFIG),
+        ("user/core.temper", text),
+    ];
+    let (passed, _, err) = test_in("user", true, move || Sources::memory(&files));
+    assert!(
+        err.contains("temper-core is reserved for Temper's core library"),
+        "{err}"
+    );
+    assert!(!passed);
+    // Loaded anyway, it's no more core than any library.
+    let sources = Sources::memory(&files);
+    let libraries = find_libraries(&sources, "user");
+    let mut library = temper_frontend::library::Library::new();
+    library.libraries = vec![("temper-core".into(), "user".into())];
+    library.add_file("user/core.temper", text, SourceKind::Standalone);
+    assert!(!library.in_core(library.files[0].base));
+    assert!(load_library(&sources, &libraries[0], &libraries).is_err());
+    // A checkout's core, edited.
+    let edited = format!(
+        "{}\nexport let edited = 1;\n",
+        temper_frontend::corelib::TEXT
+    );
+    let files = [
+        ("repo/Cargo.toml", "[workspace]\n"),
+        ("repo/crates/temper-frontend/src/corelib.rs", "//! Core.\n"),
+        ("repo/lib/core/config.temper.md", CORE_CONFIG),
+        ("repo/lib/core/core.temper", edited.as_str()),
+    ];
+    let sources = Sources::memory(&files);
+    let libraries = find_libraries(&sources, "repo/lib/core");
+    let library = load_library(&sources, &libraries[0], &libraries).unwrap();
+    let core = (library.files.iter())
+        .find(|f| f.path == "repo/lib/core/core.temper")
+        .unwrap();
+    assert!(library.in_core(core.base));
 }
 
 /// A test that loops forever runs out of its steps and fails alone; the

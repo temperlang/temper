@@ -151,7 +151,11 @@ fn declaration(name: &str, lets: bool) -> Option<(usize, &'static str, usize)> {
         let rest = (rest.strip_prefix("class "))
             .or_else(|| rest.strip_prefix("interface "))
             .or_else(|| rest.strip_prefix("let ").filter(|_| lets))?;
-        let after = rest.strip_prefix(name)?;
+        // The name, or quoted, as ``nym`true` ``.
+        let after = (rest.strip_prefix(name)).or_else(|| {
+            let quoted = rest.strip_prefix("nym`")?.strip_prefix(name)?;
+            quoted.strip_prefix('`')
+        })?;
         let ends = [' ', '<', '(', ':', ';', '\n'];
         after.starts_with(ends).then(|| line.len() - rest.len())
     };
@@ -244,9 +248,11 @@ fn read_extensions(type_name: &str) -> Vec<CoreMember> {
 }
 
 /// Where core declares a builtin by name, as a byte offset of its name
-/// in [`crate::corelib::TEXT`]: a type (`String`, `Listed`, `Console`)
-/// or a function or value (`ignore`, `console`, `Int`). None for a
-/// builtin core doesn't declare, as `if` or `panic`.
+/// in [`crate::corelib::TEXT`]: a type (`String`, `Listed`, `Console`),
+/// a function or value (`ignore`, `console`, `Int`), or a builtin that
+/// only a bodiless `@connected` declaration documents (`if`, `panic`,
+/// ``nym`true` ``, whose offset is the `nym`'s). None for a builtin core
+/// doesn't declare, as `+` or `return`.
 pub fn core_declaration(name: &str) -> Option<usize> {
     declaration(name, true).map(|(_, _, at)| at)
 }
@@ -276,6 +282,176 @@ pub fn core_member_declarations(type_name: &str, member: &str) -> Vec<usize> {
         name = crate::types::builtin_supertype(ty);
     }
     out
+}
+
+/// What core's declaration of a builtin type lets other libraries do with
+/// it, read from its declaration, so that core alone says what's enabled
+/// (notes/core-capabilities.md).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CoreShape {
+    /// The name core declares it by, as `Int32` for `Int`.
+    pub name: &'static str,
+    /// An interface, which `new` can't make.
+    pub interface: bool,
+    /// A `sealed` interface, which only core extends.
+    pub sealed: bool,
+    /// A class with a public constructor, which `new` may call. Core
+    /// declares every class's constructor, `private` where only core
+    /// or the host makes its values.
+    pub public_constructor: bool,
+    /// What its `@mayDowncastTo(…)` says, if core marks it: `false`
+    /// where `is` and `as` may not target it, as for `Boolean`, whose
+    /// values some backends can't tell from numbers.
+    pub may_downcast: Option<bool>,
+}
+
+/// The shape of a type core declares, by name, following an alias, as
+/// `export let Int = Int32;`. None for a name core doesn't declare as a
+/// type. Core's text is parsed once, the first time it's wanted. It's
+/// the built-in core's, also while an editor changes a checkout's
+/// `lib/core/core.temper`.
+pub fn core_shape(type_name: &str) -> Option<CoreShape> {
+    static SHAPES: OnceLock<Vec<(&'static str, Declared)>> = OnceLock::new();
+    let shapes = SHAPES.get_or_init(read_shapes);
+    let mut name = type_name;
+    // Each alias once, so that aliases naming each other end.
+    let mut seen = Vec::new();
+    loop {
+        match &shapes.iter().find(|(n, _)| *n == name)?.1 {
+            Declared::Type(shape) => return Some(*shape),
+            Declared::Alias(target) if !seen.contains(target) => {
+                seen.push(target);
+                name = target;
+            }
+            Declared::Alias(_) => return None,
+        }
+    }
+}
+
+/// What core's top level declares by a name.
+enum Declared {
+    Type(CoreShape),
+    /// An alias of the type it names, as `Int32` for `let Int = Int32`.
+    Alias(&'static str),
+}
+
+/// Each class, interface, and type alias core exports, by name, read from
+/// its text: `export class Name`, `export sealed interface Name<…>`, or
+/// `export let Name = Other;`, under its decorations, as
+/// `@mayDowncastTo(false)`.
+fn read_shapes() -> Vec<(&'static str, Declared)> {
+    let ast = build(&parse(CORE, SourceKind::Standalone));
+    let tree = ast.tree();
+    // A name as written, or where it's in core, for the names kept.
+    let text = |node: NodeId| Some(ast.names().get(ast.name(node)?));
+    let in_core = |node: NodeId| -> &'static str {
+        let span = tree.span(node);
+        &CORE[span.start as usize..span.end as usize]
+    };
+    let call = |node: NodeId| match tree.kind(node) {
+        NodeKind::Call => tree.children(node).split_first(),
+        _ => None,
+    };
+    // A declaration without its decorations, and theirs, each a name or
+    // a call, as `@export` or `@mayDowncastTo(false)`.
+    let undecorated = |mut node: NodeId| {
+        let mut decorations = Vec::new();
+        while let Some((&callee, &[decoration, target])) = call(node) {
+            if text(callee) != Some("@") {
+                break;
+            }
+            decorations.push(decoration);
+            node = target;
+        }
+        (decorations, node)
+    };
+    let named = |node: NodeId| call(node).map_or(text(node), |(&callee, _)| text(callee));
+    let mut out = Vec::new();
+    for &statement in tree.children(ast.root()) {
+        let (decorations, declaration) = undecorated(statement);
+        let has = |name: &str| decorations.iter().any(|&d| named(d) == Some(name));
+        if !has("export") {
+            continue;
+        }
+        // `export let Int = Int32;`, `(Decl ^Int \init Int32)`.
+        if tree.kind(declaration) == NodeKind::Decl {
+            let parts = tree.children(declaration);
+            let init = (parts.windows(2))
+                .find(|pair| {
+                    ast.value(pair[0])
+                        .is_some_and(|v| is_symbol(&ast, v, "init"))
+                })
+                .map(|pair| pair[1])
+                .filter(|&init| tree.kind(init) == NodeKind::RightName);
+            if let (Some(&name), Some(init)) = (parts.first(), init) {
+                out.push((in_core(name), Declared::Alias(in_core(init))));
+            }
+            continue;
+        }
+        let Some((&callee, args)) = call(declaration) else {
+            continue;
+        };
+        let interface = match text(callee) {
+            Some("class") => false,
+            Some("interface") => true,
+            _ => continue,
+        };
+        // `\word Name`.
+        let Some(name) = (args.windows(2))
+            .find(|pair| {
+                ast.value(pair[0])
+                    .is_some_and(|v| is_symbol(&ast, v, "word"))
+            })
+            .map(|pair| in_core(pair[1]))
+        else {
+            continue;
+        };
+        // `@mayDowncastTo(false)`.
+        let may_downcast = (decorations.iter())
+            .filter_map(|&d| call(d).filter(|(c, _)| text(**c) == Some("mayDowncastTo")))
+            .find_map(|(_, args)| match args.first().and_then(|&a| text(a)) {
+                Some("true") => Some(true),
+                Some("false") => Some(false),
+                _ => None,
+            });
+        // Its members, in the block of the function that ends it.
+        let body = (args.last())
+            .filter(|&&f| tree.kind(f) == NodeKind::Fun)
+            .and_then(|&f| tree.children(f).last().copied());
+        let members = body.map_or(&[][..], |b| tree.children(b));
+        let public_constructor = !interface
+            && members.iter().any(|&m| {
+                let (decorations, member) = undecorated(m);
+                let hidden = (decorations.iter())
+                    .any(|&d| matches!(named(d), Some("private" | "protected" | "static")));
+                !hidden && call(member).is_some_and(|(&c, _)| text(c) == Some("constructor"))
+            });
+        let shape = CoreShape {
+            name,
+            interface,
+            sealed: has("sealed"),
+            public_constructor,
+            may_downcast,
+        };
+        out.push((name, Declared::Type(shape)));
+    }
+    out
+}
+
+/// Whether a value is the symbol `\name`.
+fn is_symbol(ast: &Ast, value: &Value, name: &str) -> bool {
+    matches!(value, Value::Symbol(n) if ast.names().get(*n) == name)
+}
+
+/// Whether core declares a static member `name` of a builtin type, by
+/// its name in [`TYPES`], as `fromCodePoint` of `String`.
+pub(super) fn has_static(type_name: &str, name: &str) -> bool {
+    let declared = core_shape(type_name).map_or(type_name, |shape| shape.name);
+    let class = match READ_TYPES.contains(&declared) {
+        true => Some(core_class(declared)),
+        false => other_class(declared),
+    };
+    class.is_some_and(|c| (c.members.iter()).any(|m| m.is_static && m.name == name))
 }
 
 /// A type core declares that typing doesn't read, as `Console`, read the
@@ -938,7 +1114,7 @@ mod tests {
                 .all(|m| m.name != "content")
         );
         // Each type is found, though some declare no members.
-        let empty = ["DoneResult", "GeneratorResult", "Promise", "NoStringIndex"];
+        let empty = ["GeneratorResult", "Promise", "NoStringIndex"];
         // The final types come first, the generic ones after, then the
         // rest.
         for (i, ty) in READ_TYPES.into_iter().enumerate() {
@@ -1077,7 +1253,48 @@ mod tests {
             let at = core_declaration(name).expect(name);
             assert!(named(at, name), "{name}");
         }
-        assert_eq!(core_declaration("panic"), None);
+        // Bodiless `@connected` declarations, quoted where they must be,
+        // and none for operators or jumps.
+        assert!(named(core_declaration("panic").unwrap(), "panic;"));
+        assert!(named(core_declaration("true").unwrap(), "nym`true`;"));
+        assert_eq!(core_declaration("+"), None);
+        assert_eq!(core_declaration("return"), None);
         assert_eq!(core_declaration("Str"), None);
+    }
+
+    /// Every builtin type has core's declaration, read from its
+    /// decorations and members: one core is silent about would enable
+    /// nothing, so isn't a builtin type.
+    #[test]
+    fn shapes_are_cores() {
+        for &t in TYPES {
+            assert!(core_shape(t).is_some(), "{t}");
+        }
+        let shape = |t: &str| core_shape(t).unwrap();
+        // `Int` is an alias.
+        assert_eq!(shape("Int"), shape("Int32"));
+        assert_eq!(shape("Int").name, "Int32");
+        // `@mayDowncastTo(false)`, or nothing.
+        for t in [
+            "Boolean",
+            "Int32",
+            "Int64",
+            "Float64",
+            "String",
+            "List",
+            "MapBuilder",
+        ] {
+            assert_eq!(shape(t).may_downcast, Some(false), "{t}");
+        }
+        assert_eq!(shape("Void").may_downcast, None);
+        assert_eq!(shape("Null").may_downcast, Some(true));
+        let listed = shape("Listed");
+        assert!(listed.interface && listed.sealed && !listed.public_constructor);
+        // `/*sealed*/` is a comment.
+        assert!(!shape("MapKey").sealed);
+        assert!(shape("StringBuilder").public_constructor);
+        assert!(!shape("Empty").public_constructor);
+        assert_eq!(core_shape("ignore"), None);
+        assert_eq!(core_shape("Nope"), None);
     }
 }

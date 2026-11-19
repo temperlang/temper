@@ -979,12 +979,26 @@ impl Settle {
         let tree = &self.lib.tree;
         let is_interface = |c: NodeId| tree.data(c) & CLASS_INTERFACE != 0;
         let (name, supers, members) = class_parts(tree, class);
+        // The module a declaration is in.
+        let module = |node: NodeId| {
+            let file = self.lib.locate(tree.span(node).start).0;
+            (self.lib.modules.iter()).position(|m| m.files.contains(&file))
+        };
+        // Builtin types, which core declares, are checked once typed
+        // (`Settle::check_builtin_supertypes`), so aliases are too.
         for &sup in supers {
             let decl = self.super_name(sup).and_then(|n| self.scopes.resolved(n));
             if let Some(decl) = decl.and_then(|b| self.type_decl(b)) {
                 if !is_interface(decl) {
                     let text = self.member_text(decl).to_string();
                     problems.push((Message::CannotExtendConcrete(text), tree.span(sup)));
+                }
+                // A sealed interface is extended only in its own module,
+                // as Kotlin's `checkSealedExtension` checks.
+                if tree.data(decl) & CLASS_SEALED != 0 && module(decl) != module(class) {
+                    let sealed = self.member_text(decl).to_string();
+                    let sub = self.member_text(class).to_string();
+                    problems.push((Message::CannotExtendSealed(sealed, sub), tree.span(sup)));
                 }
                 // A sealed interface's direct subtypes can't add type
                 // parameters, as Kotlin's `checkSubTypeParams` checks:

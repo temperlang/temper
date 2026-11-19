@@ -15,7 +15,9 @@
 //!   (`# Hi There!` gives `hi-there`), or else its root's path under the
 //!   work root, with `-` between directories, or else `unnamed`, as
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
-//!   name are an error, as in Kotlin.
+//!   name are an error, as in Kotlin, and so is a library named
+//!   `temper-core`, core's name, but for core in a Temper checkout
+//!   ([`is_core_checkout`]), which editors open.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -445,13 +447,25 @@ impl Scan<'_> {
 
 /// Reads a library's sources and the modules they import, from std, and
 /// from the libraries in `all` (those of its work root), which imports
-/// name by their names. The error names a file that can't be read.
+/// name by their names. The error names a file that can't be read, or a
+/// library that takes core's name, [`crate::corelib::NAME`], but isn't
+/// core in a Temper checkout ([`is_core_checkout`]).
 pub fn load_library(
     sources: &Sources,
     library: &LibrarySources,
     all: &[LibrarySources],
 ) -> Result<Library, String> {
     let mut loaded = Library::new();
+    if library.config.name == crate::corelib::NAME {
+        let root = &library.root;
+        if !is_core_checkout(sources, root) {
+            let name = crate::corelib::NAME;
+            return Err(format!(
+                "{root}: {name} is reserved for Temper's core library"
+            ));
+        }
+        loaded.core_root = Some(root.clone());
+    }
     loaded.libraries = (all.iter())
         .map(|l| (l.config.name.clone(), l.root.clone()))
         .collect();
@@ -461,6 +475,31 @@ pub fn load_library(
     }
     load_imports(sources, &mut loaded);
     Ok(loaded)
+}
+
+/// Whether a library's root is core's in a Temper checkout, whose
+/// `core.temper` is core's whatever its text ([`Library::in_core`]):
+/// `lib/core` in the workspace that holds the compiler's
+/// `crates/temper-frontend/src/corelib.rs`, which builds core in.
+pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
+    let has = |dir: &Path, name: &str| {
+        let dir = match dir.as_os_str().is_empty() {
+            true => ".".to_string(),
+            false => slashed(&dir.to_string_lossy()),
+        };
+        (sources.list(&dir).unwrap_or_default().iter()).any(|e| e.name == name)
+    };
+    // As given, or absolute, as `.` for a work root in `lib/core`.
+    let absolute = std::path::absolute(root).ok();
+    let paths = [Some(Path::new(root).to_path_buf()), absolute];
+    paths.into_iter().flatten().any(|path| {
+        let repo = path.parent().and_then(Path::parent);
+        path.ends_with("lib/core")
+            && repo.is_some_and(|repo| {
+                has(repo, "Cargo.toml")
+                    && has(&repo.join("crates/temper-frontend/src"), "corelib.rs")
+            })
+    })
 }
 
 /// Adds the files of each module that an `import` names, and of those

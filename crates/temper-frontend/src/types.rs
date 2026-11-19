@@ -147,7 +147,7 @@ const CORE_NOMINAL: [&str; 5] = [
 ];
 
 /// Builtin generic types that core declares as classes, which no class
-/// extends; core marks the first four `@mayDowncastTo(false)`.
+/// extends.
 const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
     "List",
     "ListBuilder",
@@ -160,9 +160,6 @@ const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
     "PromiseBuilder",
     "ValueResult",
 ];
-
-/// How many of [`BUILTIN_GENERIC_CLASSES`] are `@mayDowncastTo(false)`.
-const NO_DOWNCAST: usize = 4;
 
 /// The builtin generic types' type parameters, by index, that core marks
 /// `@out` or `@in`, which Kotlin Temper honors and tempest doesn't
@@ -509,14 +506,19 @@ impl Types {
             || (self.builtin_name(base)).is_some_and(|n| BUILTIN_GENERIC_CLASSES.contains(&n))
     }
 
-    /// Whether core marks `t`, or a generic type's base, `@mayDowncastTo(false)`:
-    /// the final builtin types other than `Void`, and `List`, `Map` and
-    /// their builders.
+    /// Whether core marks `t`, or a generic type's base,
+    /// `@mayDowncastTo(false)`, as it does the final builtin types other
+    /// than `Void`, and `List`, `Map` and their builders
+    /// ([`crate::typing::core_shape`]).
     pub fn no_downcast(&self, t: TypeId) -> bool {
-        let base = self.base(t);
-        (self.is_final(base) && base != VOID)
-            || (self.builtin_name(base))
-                .is_some_and(|n| BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].contains(&n))
+        (self.builtin_name(self.base(t)))
+            .and_then(crate::typing::core_shape)
+            .is_some_and(|shape| shape.may_downcast == Some(false))
+    }
+
+    /// Whether `t` is `Bubble`, which core says isn't an `AnyValue`.
+    fn is_bubble(&self, t: TypeId) -> bool {
+        self.builtin_name(t) == Some("Bubble")
     }
 
     /// Whether core marks a builtin generic type's `index`th type
@@ -763,6 +765,8 @@ impl Types {
                 }
             }
             (_, Param(_)) => Some(false),
+            // Core's `AnyValue` docs: `Bubble` isn't one.
+            _ if t == ANY_VALUE && self.is_bubble(s) => Some(false),
             _ if t == ANY_VALUE => {
                 (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
             }
@@ -933,10 +937,11 @@ impl Types {
         }
         let is_applied = |x: TypeId| matches!(self.get(x), TypeData::Applied { .. });
         match (self.get(s_base), self.get(t_base)) {
-            // A builtin generic type or final type is no other type than
-            // those core says it extends, and no user's class or interface.
+            // A builtin type is no other type than those core says it
+            // extends, and no user's class or interface. Not `AnyValue`,
+            // which may hold any value.
             (TypeData::Builtin(_), TypeData::Builtin(_) | TypeData::Class(_))
-                if (is_applied(s) || self.is_final(s))
+                if s != ANY_VALUE
                     && (is_applied(t) || matches!(self.get(t), TypeData::Class(_))) =>
             {
                 Some(false)
@@ -1199,9 +1204,7 @@ mod tests {
     fn builtin_generics_are_cores() {
         let core = include_str!("../../../lib/core/core.temper");
         let mut classes = Vec::new();
-        let mut no_downcast = Vec::new();
         let mut variant = Vec::new();
-        let mut previous = "";
         for line in core.lines() {
             let decl = line.trim_start_matches("export ");
             let decl = decl.trim_start_matches("/*sealed*/ ");
@@ -1210,17 +1213,12 @@ mod tests {
                 match (decl.strip_prefix("class "), decl.strip_prefix("interface ")) {
                     (Some(rest), _) => (true, rest),
                     (_, Some(rest)) => (false, rest),
-                    _ => {
-                        previous = line;
-                        continue;
-                    }
+                    _ => continue,
                 };
             let Some((name, params)) = rest.split_once('<') else {
-                previous = line;
                 continue;
             };
             if !line.starts_with("export") || !name.chars().all(char::is_alphanumeric) {
-                previous = line;
                 continue;
             }
             // The parameters, split at commas outside nested `<…>`.
@@ -1243,21 +1241,13 @@ mod tests {
             }
             if is_class {
                 classes.push(name);
-                if previous.starts_with("@mayDowncastTo(false)") {
-                    no_downcast.push(name);
-                }
             }
-            previous = line;
         }
         let sorted = |mut v: Vec<&'static str>| {
             v.sort();
             v
         };
         assert_eq!(sorted(classes), sorted(BUILTIN_GENERIC_CLASSES.to_vec()));
-        assert_eq!(
-            sorted(no_downcast),
-            sorted(BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].to_vec())
-        );
         variant.sort();
         assert_eq!(variant, BUILTIN_VARIANT_PARAMS.to_vec());
     }

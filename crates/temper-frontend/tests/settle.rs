@@ -113,7 +113,10 @@ fn cases_with_std_settle_as_expected() {
 /// `toListWith<T>` and their kin) are `@extension` functions. And its
 /// fields are set, but for the `content` fields that backends' own code
 /// sets, which only core may leave unset. Settled as a library, as an
-/// editor reads core's file, core reports nothing at all.
+/// editor reads core's file, core reports nothing at all. Its bodiless
+/// `@connected` declarations of builtins, as `if` or `panic`, declare
+/// nothing, so its own code names the builtins; only those with Temper
+/// bodies of their own are core's names.
 #[test]
 fn core_keeps_the_rules_it_sets() {
     with_stack(|| {
@@ -128,6 +131,36 @@ fn core_keeps_the_rules_it_sets() {
             })
             .collect();
         assert_eq!(found, Vec::<String>::new());
+        let builtins = temper_frontend::builtins::BUILTINS;
+        let scope = settled.modules[0].scope;
+        let mut declared: Vec<&str> = (settled.scopes.get(scope).names.iter())
+            .map(|&(name, _)| settled.library.names.get(name))
+            .filter(|name| builtins.iter().any(|(n, _)| n == name))
+            .collect();
+        declared.sort();
+        assert_eq!(declared, ["console", "doneResult", "empty", "ignore"]);
+    });
+}
+
+/// In core, a bodiless `@connected` declaration documents a builtin the
+/// frontend supplies, so one whose name is no builtin's is a mistake, as
+/// a misspelling, not a declaration of a value core never sets.
+#[test]
+fn core_connects_only_builtins() {
+    with_stack(|| {
+        let mut library = Library::new();
+        library.core_root = Some("lib/core".into());
+        let core = temper_frontend::corelib::TEXT;
+        let text = format!("{core}\n/** A typo. */\n@connected\nexport let pancik;\n");
+        library.add_file("lib/core/core.temper", &text, SourceKind::Standalone);
+        let settled = settle(library);
+        let found: Vec<String> = (settled.library.diagnostics.iter())
+            .map(|d| d.message.text())
+            .collect();
+        assert_eq!(
+            found,
+            ["Core's @connected pancik has no body, but no builtin is named pancik"]
+        );
     });
 }
 

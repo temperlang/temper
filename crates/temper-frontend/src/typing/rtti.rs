@@ -65,6 +65,14 @@ impl Settle {
             }
         }
         let t = self.eval_type(target);
+        // A `Never<T>` has no values (core's docs), so no check finds one,
+        // though Kotlin Temper allows it.
+        let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
+        if never && !or_null && t != s_inner {
+            let message = Message::ImpossibleRttiCheck(self.show(s_inner), self.show(t));
+            self.lib.report(Level::Error, message, span);
+            return;
+        }
         if !self.is_nominal(t) && t != s_inner {
             return;
         }
@@ -154,7 +162,8 @@ impl Settle {
         let s_inner = self.non_null(s);
         let s_judged = self.typing.types.upper(s_inner);
         let t = self.eval_type(target);
-        if !self.is_nominal(s_judged) || !self.is_nominal(t) {
+        let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
+        if never || !self.is_nominal(s_judged) || !self.is_nominal(t) {
             return false;
         }
         let types = &self.typing.types;
@@ -241,7 +250,9 @@ impl Settle {
 
     /// Whether `a` is a subtype of `b`, by declarations only, as Kotlin
     /// Temper's checks see it: `AnyValue` is no other type's, nor `Void`
-    /// an `AnyValue`.
+    /// an `AnyValue`, nor `Bubble`, as core says
+    /// ([`crate::types::Types::is_subtype`]), though Kotlin's checks
+    /// allow `is Bubble`.
     fn rtti_subtype(&mut self, a: TypeId, b: TypeId) -> Option<bool> {
         match (a, b) {
             _ if a == b => Some(true),

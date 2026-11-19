@@ -127,6 +127,10 @@ impl Hover {
             {
                 format!("{} {ty}", kind.label())
             }
+            // A builtin with neither type nor signature, as `if`.
+            (Some(name), Some(DeclKind::Builtin)) if self.ty.is_none() => {
+                format!("{} {name}", DeclKind::Builtin.label())
+            }
             (Some(name), Some(kind)) => format!("{} {name}: {ty}", kind.label()),
             _ => ty.to_string(),
         }
@@ -305,6 +309,15 @@ impl Analysis<'_> {
     /// declaration's kind, type, and doc comment, or else the type of the
     /// smallest expression around it.
     pub fn hover(&self, file: FileId, offset: u32) -> Option<Hover> {
+        if let Some(syntax) = self.syntax_at(file, offset) {
+            return Some(Hover {
+                span: syntax.span,
+                ty: builtins::core_signature(syntax.at, &syntax.name),
+                name: Some(syntax.name),
+                kind: Some(DeclKind::Builtin),
+                doc: builtins::core_doc(syntax.at),
+            });
+        }
         let (node, target) = self.target(file, offset)?;
         let span = match target {
             Some(_) => self.name_span(node),
@@ -332,7 +345,12 @@ impl Analysis<'_> {
                 };
                 let ty = type_name_shown(s, &name).or_else(|| match decl {
                     Some(decl) => self.decl_type(decl, &name, node),
-                    None => self.settled.typing.expr(node).map(|t| self.show(t)),
+                    // A builtin's type, if typing knows it, or else
+                    // core's signature for it.
+                    None => self.known_type(node).or_else(|| {
+                        let (ats, _) = self.core_target(target)?;
+                        builtins::core_signature(*ats.first()?, &name)
+                    }),
                 });
                 (name, kind, ty, decl)
             }
@@ -367,10 +385,21 @@ impl Analysis<'_> {
                             };
                             (name, kind, Some(m.detail), None)
                         }
-                        None => {
-                            let ty = self.settled.typing.expr(call).map(|t| self.show(t));
-                            (name, DeclKind::Builtin, ty, None)
-                        }
+                        None => match self.known_type(call) {
+                            Some(ty) => (name, DeclKind::Builtin, Some(ty), None),
+                            // A member core declares, as `console`'s `log`.
+                            None => {
+                                let sig = (self.core_target(target)).and_then(|(ats, _)| {
+                                    builtins::core_signature(*ats.first()?, &name)
+                                });
+                                let kind = match &sig {
+                                    Some(sig) if sig.starts_with(&name) => DeclKind::Method,
+                                    Some(_) => DeclKind::Field,
+                                    None => DeclKind::Builtin,
+                                };
+                                (name, kind, sig, None)
+                            }
+                        },
                     },
                 }
             }
@@ -391,10 +420,21 @@ impl Analysis<'_> {
         })
     }
 
+    /// An expression's type as hover shows it, if typing knows it.
+    fn known_type(&self, node: NodeId) -> Option<String> {
+        let typing = &self.settled.typing;
+        let t = typing.expr(node)?;
+        (!matches!(typing.types.get(t), TypeData::Unknown)).then(|| self.show(t))
+    }
+
     /// Where the name at byte `offset` of `file` is declared: its
     /// declaration's name, in whichever file that is. None for builtins,
-    /// which [`Analysis::core_definition`] finds in core.
+    /// and builtin syntax, as `if`, which [`Analysis::core_definition`]
+    /// finds in core.
     pub fn definition(&self, file: FileId, offset: u32) -> Option<Location> {
+        if self.syntax_at(file, offset).is_some() {
+            return None;
+        }
         let decl = match self.target(file, offset)?.1? {
             Target::Symbol(symbol) => self.imported(self.settled.scopes.symbol(symbol).decl?),
             Target::Member { call, .. } => match self.member(call)? {
@@ -653,7 +693,10 @@ impl Analysis<'_> {
         let library = &self.settled.library;
         let tree = &library.tree;
         match tree.kind(node) {
-            NodeKind::RightName => self.settled.scopes.resolved(node).map(Target::Symbol),
+            // A builtin's name, as `[]` in `ls[i]`.
+            NodeKind::RightName | NodeKind::BuiltinName => {
+                self.settled.scopes.resolved(node).map(Target::Symbol)
+            }
             NodeKind::LeftName => {
                 let parent = self.parent(node)?;
                 if library.names.is_temporary(library.name(node)?) {
@@ -912,7 +955,8 @@ type Rank = (bool, bool, u32);
 /// leading `*`; None for another comment or an empty one. Core's
 /// docs-site directives go: a snippet included, `⎀ syntax/StringExpr`,
 /// and a link to one, `[string indices][snippet/type/StringIndex]`,
-/// which keeps its text.
+/// which keeps its text, or a bare one, `[snippet/type/Empty]`, which
+/// becomes what it names.
 pub(crate) fn doc_text(comment: &str) -> Option<String> {
     let body = comment.strip_prefix("/**")?.trim_end_matches("*/");
     let mut lines: Vec<String> = Vec::new();
@@ -931,7 +975,10 @@ pub(crate) fn doc_text(comment: &str) -> Option<String> {
     (!doc.is_empty()).then_some(doc)
 }
 
-/// `[text][snippet/…]` as its `text`.
+/// `[text][snippet/…]` as its `text`, and a bare link, `[snippet/…]`,
+/// as what it names: `*Int32*` for `type/Int32`, `` `Generator.next` ``
+/// for `type/Generator/method/next`, and `` `orelse` `` for
+/// `builtin/orelse`.
 fn without_snippet_links(line: &str) -> String {
     let mut out = String::new();
     let mut rest = line;
@@ -945,7 +992,25 @@ fn without_snippet_links(line: &str) -> String {
         rest = &after[close + 1..];
     }
     out.push_str(rest);
-    out
+    let mut bare = String::new();
+    let mut rest = out.as_str();
+    while let Some(at) = rest.find("[snippet/") {
+        let after = &rest[at + 9..];
+        let Some(close) = after.find(']') else {
+            break;
+        };
+        bare.push_str(&rest[..at]);
+        let parts: Vec<&str> = after[..close].split('/').collect();
+        match parts[..] {
+            ["type", name] => bare.push_str(&format!("*{name}*")),
+            ["type", name, _, member] => bare.push_str(&format!("`{name}.{member}`")),
+            [.., name] => bare.push_str(&format!("`{name}`")),
+            [] => {}
+        }
+        rest = &after[close + 1..];
+    }
+    bare.push_str(rest);
+    bare
 }
 
 /// What a name at a position names.

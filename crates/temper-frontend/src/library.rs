@@ -118,6 +118,11 @@ pub enum Message {
     ObjectLiteralWantsOther(String, String),
     /// `class C extends D` where `D` is a class: their names.
     CannotExtendConcrete(String),
+    /// `class C extends S` where `S` is a sealed interface declared in
+    /// another module, as core's `Listed`: their names. Kotlin's
+    /// `CannotExtendSealed`, which names where `S` is declared where
+    /// this names `S`.
+    CannotExtendSealed(String, String),
     /// `interface I(x: Int)`.
     ConstructorArgumentInInterfaceType,
     /// Ours: `interface I { x: Int = 1 }`; interfaces may define only
@@ -163,6 +168,13 @@ pub enum Message {
     ThisOutsideClassBody,
     /// `new I()` for an interface `I`.
     CannotInstantiateAbstractType(String),
+    /// Ours: core's bodiless `@connected` declaration of a name that no
+    /// builtin has, as a misspelled `export let pancik;`: its name.
+    ConnectedNotBuiltin(String),
+    /// `new T()` for a builtin class `T` that core gives no public
+    /// constructor, as `Int32` or `Empty`. Kotlin's `NotConstructible`,
+    /// which its interpreter reports.
+    NotConstructible(String),
     /// A use of `this` in a constructor, or a field's initializer, before
     /// every field is set (notes/typing.md, "Fields first"): what's done,
     /// as "Calling this.f()", and the fields not yet set.
@@ -381,6 +393,10 @@ impl Message {
             Message::CannotExtendConcrete(names) => {
                 format!("Cannot extend concrete type(s) {names}")
             }
+            Message::CannotExtendSealed(sealed, sub) => format!(
+                "Cannot extend sealed type {sealed} from {sub}. {sub} is not declared in the \
+                 same module."
+            ),
             Message::ConstructorArgumentInInterfaceType => {
                 "Constructor parameters are not allowed on interface types".into()
             }
@@ -433,6 +449,12 @@ impl Message {
             }
             Message::CannotInstantiateAbstractType(name) => {
                 format!("Cannot instantiate abstract type {name}")
+            }
+            Message::ConnectedNotBuiltin(name) => {
+                format!("Core's @connected {name} has no body, but no builtin is named {name}")
+            }
+            Message::NotConstructible(name) => {
+                format!("{name} is not a concrete type with a public constructor")
             }
             Message::ThisBeforeFieldsSet(what, fields) => {
                 let verb = if fields.len() == 1 { "is" } else { "are" };
@@ -604,6 +626,10 @@ pub struct Library {
     /// `import("other-lib/sub")`, each a name and its root directory
     /// ([`crate::project`]).
     pub libraries: Vec<(String, String)>,
+    /// The root of core's library in a Temper checkout, as `lib/core`,
+    /// when it's loaded ([`crate::project::load_library`]): its
+    /// `core.temper` is core's ([`Library::in_core`]).
+    pub core_root: Option<String>,
     /// A module, by its directory, whose relative imports resolve from
     /// another directory: the REPL's inputs', from the current one.
     pub relative_from: Option<(String, String)>,
@@ -809,12 +835,21 @@ impl Library {
         path.starts_with(&format!("{}/", self.std_root()))
     }
 
-    /// Whether the source at `pos` is core's own, [`corelib::TEXT`], read
-    /// as a library, as editors and core's checks read it: core declares
-    /// the builtin types, as no other library may.
+    /// Whether the source at `pos` is core's own, read as a library, as
+    /// editors and core's checks read it: core declares the builtin
+    /// types, as no other library may. It's core's if its text is
+    /// [`corelib::TEXT`], or if it's [`corelib::MAIN`] in
+    /// [`Library::core_root`], a Temper checkout's `lib/core`, whose text
+    /// an editor may have changed, or a build of another version may not
+    /// hold. No other library is core, whatever its name.
     pub fn in_core(&self, pos: u32) -> bool {
-        let file = self.locate(pos).0;
-        self.files[file.0 as usize].parsed.source() == corelib::TEXT
+        let file = &self.files[self.locate(pos).0.0 as usize];
+        let at_root = |root: &String| {
+            let path = std::path::Path::new(&file.path);
+            path.parent() == Some(std::path::Path::new(root))
+                && path.file_name().is_some_and(|name| name == corelib::MAIN)
+        };
+        file.parsed.source() == corelib::TEXT || self.core_root.as_ref().is_some_and(at_root)
     }
 
     /// The module for a directory, if it's loaded.

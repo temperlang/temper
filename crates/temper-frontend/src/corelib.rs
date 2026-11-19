@@ -3,11 +3,19 @@
 //! their members and doc comments. Tempest builds core in rather than
 //! loading it as a library; typing reads members' signatures from it
 //! (`typing::core_members`), and editors show these files for go to
-//! definition and read their doc comments for hover.
+//! definition and read their doc comments for hover. Builtin values,
+//! functions, and macros without a Temper body, as `true`, `panic` and
+//! `if`, have bodiless `@connected` declarations, which document them
+//! and, in core, declare nothing, so core's own code still names the
+//! builtins (`Settle::supplied_by_frontend`).
 
 /// The directory editors' paths into core start with, as
 /// `-core-/core.temper`, as [`crate::stdlib::DIR`] is std's.
 pub const DIR: &str = "-core-";
+
+/// core's library name, as its `config.temper.md` gives it: a library
+/// by this name is core, whatever its text ([`crate::library::Library::in_core`]).
+pub const NAME: &str = "temper-core";
 
 /// core's main file, by path from core's root, as [`FILES`] names it.
 pub const MAIN: &str = "core.temper";
@@ -37,6 +45,14 @@ mod tests {
         let mut listed: Vec<&str> = super::FILES.iter().map(|(p, _)| *p).collect();
         listed.sort();
         assert_eq!(found, listed);
+    }
+
+    /// [`super::NAME`] is the name core's config gives it.
+    #[test]
+    fn name_is_cores_config_name() {
+        let config = super::FILES[0].1;
+        let line = format!("export let name = \"{}\";", super::NAME);
+        assert!(config.lines().any(|l| l.trim() == line), "{config}");
     }
 
     /// Core and std name builtin types as any library does, `Int`, not

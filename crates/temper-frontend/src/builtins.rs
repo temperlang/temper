@@ -165,7 +165,6 @@ pub const TYPES: &[&str] = &[
     "MapKey",
     "Mapped",
     "Never",
-    "NoResult",
     "NoStringIndex",
     "Pair",
     "Promise",

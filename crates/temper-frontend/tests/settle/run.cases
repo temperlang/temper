@@ -1656,8 +1656,9 @@ do {
       " "
       (Call stringEight:3)))
   (Block (Let ^stringEight:6 0) (Call (Call . String \eight)) #void))
+error 313..325: No member eight in String
 log 7 70 8
-Failed: No method eight for Type
+Failed: No member eight in String
 
 === instance extensions, as Kotlin Temper's tests use them
 // A member that fits wins; else the extension that fits best. Its

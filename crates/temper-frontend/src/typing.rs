@@ -18,8 +18,9 @@
 //! members', read from core, in
 //! [`core_members`], what may bubble where it can't, in [`bubbles`],
 //! classes' and their members' types, in [`members`], named `@fun`
-//! interfaces' rules, nominal, in [`fun_interfaces`], run-time type
-//! checks' errors, in [`rtti`], generic functions' calls, solved per
+//! interfaces' rules, nominal, in [`fun_interfaces`], what other
+//! libraries may do with builtin types, in [`builtin_uses`], run-time
+//! type checks' errors, in [`rtti`], generic functions' calls, solved per
 //! call, in [`generic_calls`], and the type a value's place wants, which
 //! types list literals, in [`targets`], and decides object literals'
 //! classes, in [`object_literals`], and which `@overload` method a call
@@ -60,6 +61,7 @@ const FULL_TYPES: [&str; 10] = [
 ];
 
 mod bubbles;
+mod builtin_uses;
 mod connected;
 mod core_members;
 mod definite;
@@ -82,7 +84,8 @@ mod targets;
 
 pub(crate) use bubbles::{fold_float, fold_int};
 pub use core_members::{
-    BuiltinMember, builtin_members, core_declaration, core_member_declarations,
+    BuiltinMember, CoreShape, builtin_members, core_declaration, core_member_declarations,
+    core_shape,
 };
 pub use exprs::{FileCoverage, coverage};
 pub use resolve::Resolved;
@@ -886,7 +889,14 @@ impl Settle {
             }
             _ => {
                 let Some(class) = self.type_decl(b) else {
-                    return UNKNOWN;
+                    // An alias of a builtin generic type, as `let LL =
+                    // Listed;`, given arguments.
+                    let base = self.alias_type(b);
+                    if !matches!(self.typing.types.get(base), TypeData::Builtin(_)) {
+                        return UNKNOWN;
+                    }
+                    let args = args.iter().map(|&a| self.eval_type(a)).collect();
+                    return self.typing.types.apply_builtin(base, args);
                 };
                 if core::type_params(&self.lib.tree, class).len() != args.len() {
                     return UNKNOWN;
@@ -1052,6 +1062,17 @@ impl Settle {
             d.level == Level::Error && d.span.start < span.end && span.start < d.span.end
         };
         if self.lib.diagnostics.iter().any(overlaps) {
+            return;
+        }
+        // A builtin type's static member that core doesn't declare, as
+        // `Int32.nope`, as for a class's.
+        if let Some(i) = self.builtin_type_named(object) {
+            let (type_name, text) = (crate::builtins::TYPES[i as usize], self.lib.names.get(name));
+            if !core_members::has_static(type_name, text) {
+                let shown = core_shape(type_name).map_or(type_name, |shape| shape.name);
+                let message = Message::NoMember(text.to_string(), shown.to_string());
+                self.lib.report(Level::Error, message, span);
+            }
             return;
         }
         let tree = &self.lib.tree;
@@ -1268,6 +1289,7 @@ impl Settle {
                 }
             }
             (NodeKind::Class, ..) => {
+                self.check_builtin_supertypes(node);
                 self.check_overrides(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
@@ -1475,6 +1497,7 @@ impl Settle {
             Some(Builtin::Function(Function::New)) => match self.new_class(args) {
                 Some(class) => self.constructor_type(class),
                 None => {
+                    self.check_builtin_new(node);
                     self.check_generic_call(node);
                     return;
                 }

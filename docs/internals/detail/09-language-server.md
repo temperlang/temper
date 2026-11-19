@@ -154,8 +154,18 @@ a declaration's name, or a member after `.`. Then:
   first ([`core_member_declarations`](../../../crates/temper-frontend/src/typing/core_members.rs),
   from the spans `core_members` already parses). Hover takes the
   nearest of these with a `/** … */` right before it, past decorators'
-  lines, so `List`'s undocumented `length` shows `Listed`'s doc. A
-  builtin core doesn't declare, as `panic`, has no location.
+  lines, so `List`'s undocumented `length` shows `Listed`'s doc.
+  Builtin values, functions, and macros with no Temper body, as
+  `true`, `panic`, or `if`, have bodiless `@connected` declarations
+  there, which document them and, in core, declare nothing (quoted
+  where the parser needs it, ``export let nym`true`;``). Operators and
+  jumps (`return`, `break`, `continue`) have none, so hover shows only
+  a headline, as `builtin +`. A keyword the tree has no name for, as
+  `if`, `orelse`, or a `for` whose expansion's `forEach` covers it, is
+  found by its token
+  ([`syntax_at`](../../../crates/temper-analysis/src/builtins.rs)).
+  Where typing has no type for a builtin, hover shows core's signature,
+  as `ignore(value: AnyValue): Void`.
 - [`completions`](../../../crates/temper-analysis/src/lib.rs) lists
   names in scope at the position, innermost first, builtins last; after
   `.`, the members of the expression's type
@@ -358,6 +368,13 @@ ignores file permissions unless `files.readonlyFromPermissions` is set,
 and `files.readonlyInclude` globs match only inside a workspace, so the
 extension marks these editors read-only for the session as they become
 active ([`readonly.ts`](../../../editors/vscode/src/readonly.ts)).
+Core's own source, opened where a checkout keeps it (`lib/core/`, the
+library named `temper-core` beside the compiler's crates), is core
+whatever its text (`Library::in_core`, `project::is_core_checkout`), so
+it analyzes cleanly while edited; another library of that name is an
+error. What core enables other libraries to do with its types
+(`typing::core_shape`) is still read from the built-in core, not the
+edited text.
 
 **Alternatives:** a custom URI scheme, served by the extension as a
 virtual document.
@@ -631,7 +648,8 @@ line in view. The messages are typed in
   definition, completion, references, rename and its refusals, outlines,
   signature help, unknown requests); UTF-16 positions in a lone file;
   `exit` without `shutdown`; definition into std; definition and hover
-  into core, its file read-only; panics in an analysis
+  into core, its file read-only; core's source in a checkout
+  (`lib/core/`), edited, analyzed as core; panics in an analysis
   and a request becoming internal errors, with the server answering
   after them (`panics_become_internal_errors`). Unit tests in
   [`lib.rs`](../../../crates/temper-lsp/src/lib.rs): UTF-16 positions,

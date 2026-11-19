@@ -34,20 +34,29 @@ pub(super) struct Receiver {
 
 impl Settle {
     /// The type of a class's or interface's values, unless it's generic.
-    /// One named as a builtin type is core's declaration of it, as in
-    /// Kotlin Temper's `core.temper`, so it's that type.
+    /// Core's declaration of a builtin type, as in Kotlin Temper's
+    /// `core.temper`, is that type ([`Settle::declares_builtin`]).
     pub(super) fn class_type(&mut self, class: NodeId) -> TypeId {
         let tree = &self.lib.tree;
         if tree.kind(class) != NodeKind::Class || !core::type_params(tree, class).is_empty() {
             return UNKNOWN;
         }
-        if let Some(i) = TYPES.iter().position(|&t| t == self.member_text(class)) {
+        let builtin = TYPES.iter().position(|&t| t == self.member_text(class));
+        if let Some(i) = builtin.filter(|_| self.declares_builtin(class)) {
             return self.typing.types.builtin(i as u8);
         }
         match self.class_symbol(class) {
             Some(symbol) => self.typing.types.intern(TypeData::Class(symbol)),
             None => UNKNOWN,
         }
+    }
+
+    /// Whether a class or interface is core's declaration of a builtin
+    /// type, as `class Int32`: core's, named as one. Another library's
+    /// class of that name is its own.
+    pub(super) fn declares_builtin(&self, class: NodeId) -> bool {
+        TYPES.contains(&self.member_text(class))
+            && self.lib.in_core(self.lib.tree.span(class).start)
     }
 
     /// The symbol a class's or interface's declaration declares, once
@@ -125,8 +134,8 @@ impl Settle {
     /// `Box<Int32>`, unless it's unknown: core's builtin types aren't
     /// typed this way.
     pub(super) fn generic_class_type(&mut self, class: NodeId, args: Vec<TypeId>) -> TypeId {
+        let builtin = self.declares_builtin(class);
         let tree = &self.lib.tree;
-        let builtin = TYPES.contains(&self.member_text(class));
         if builtin || core::type_params(tree, class).len() != args.len() {
             return UNKNOWN;
         }

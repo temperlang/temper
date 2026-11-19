@@ -725,7 +725,7 @@ impl Settle {
             }
         };
         let generic = !core::type_params(tree, class).is_empty();
-        let builtin = crate::builtins::TYPES.contains(&self.member_text(class));
+        let builtin = self.declares_builtin(class);
         (generic && !builtin && tree.data(class) & CLASS_INTERFACE == 0)
             .then_some((class, type_args))
     }

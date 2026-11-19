@@ -560,6 +560,21 @@ impl Settle {
                 NodeKind::Decl => {
                     self.lower_decl(statement);
                 }
+                NodeKind::Let if self.supplied_by_frontend(statement, scope) => {
+                    // Core documents a builtin; another name is a typo.
+                    let name = core::let_parts(&self.lib.tree, statement).0;
+                    let named = self.lib.name(name);
+                    if named.is_none_or(|n| self.scopes.builtin(n).is_none()) {
+                        let text = named.map_or("", |n| self.lib.names.get(n)).to_string();
+                        let span = self.lib.tree.span(name);
+                        let message = Message::ConnectedNotBuiltin(text);
+                        self.lib.report(Level::Error, message, span);
+                    }
+                    self.connected.remove(&statement);
+                    self.lib.connected.remove(&statement);
+                    self.removed.insert(statement);
+                    return Ok(());
+                }
                 NodeKind::Let | NodeKind::Class => {
                     self.declare(statement, scope);
                     self.visit(statement, scope);
@@ -611,6 +626,27 @@ impl Settle {
                 }
             }
         }
+    }
+
+    /// Whether a top-level `Let` is core's `@connected` declaration
+    /// without a body or initial value, as `export let if;` or `export
+    /// let panic;`, of a builtin: the frontend supplies what it connects
+    /// to, the builtin, so it declares nothing, and core's own code still
+    /// names the builtin. It's there for its doc comment, which editors
+    /// show. As core's class named as a builtin type is that type. One
+    /// whose name no builtin has is an error.
+    fn supplied_by_frontend(&self, let_node: NodeId, scope: ScopeId) -> bool {
+        let tree = &self.lib.tree;
+        let init = core::let_parts(tree, let_node).2;
+        let connected =
+            self.connected.contains(&let_node) || tree.data(let_node) & core::MEMBER_CONNECTED != 0;
+        let bodiless = init.is_none_or(|init| {
+            tree.kind(init) == NodeKind::Fn && tree.data(init) & core::FN_NO_BODY != 0
+        });
+        connected
+            && bodiless
+            && self.scopes.get(scope).kind == ScopeKind::Module
+            && self.lib.in_core(tree.span(let_node).start)
     }
 
     /// Declares a `Let`'s or `Class`'s name in a scope, unless it's

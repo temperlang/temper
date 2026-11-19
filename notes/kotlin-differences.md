@@ -818,6 +818,52 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 
 ### Interpreter, core and std
 
+- **Core's types enable only what core declares** (2026-11-19;
+  [core-capabilities.md](core-capabilities.md)). Kotlin gives every
+  class without a constructor a public one, core's too, so its typer
+  takes `new Int32()`, `new String()`, `new Void()` or `new List<Int>()`,
+  and it doesn't enforce private constructors, so `new Empty()` passes
+  too. Temper refuses `new` on a builtin class without a public
+  constructor ("Int32 is not a concrete type with a public
+  constructor", adapted from Kotlin's interpreter message), and every
+  class core exports now declares its constructor. Both refuse
+  extending a builtin class ("Cannot extend concrete type(s) String"),
+  which Temper previously let through to tmpl. Temper checks the type a
+  name evaluates to, so an alias, as `let I = Int32;`, is checked as
+  `Int32`. A sealed interface may be extended only in its own module,
+  as Kotlin's `checkSealedExtension` checks ("Cannot extend sealed type
+  S from C. C is not declared in the same module.", where Kotlin names
+  where `S` is declared in place of the first `S`); Kotlin's check
+  compares documents, one per module. The docs said "source file", but
+  Wherewith extends one from another file of its module. Neither
+  enforces a user's private constructor yet. A static member core
+  doesn't declare, as `Int32.zzz`, is "No member zzz in Int32", as for a
+  class's, where both let it fail at run time. A user's class named as
+  a builtin type, as `class Int32`, is the user's own; typing took it
+  for the builtin.
+  Test: temper-frontend/tests/core_capabilities.rs.
+
+- **`Bubble` isn't an `AnyValue`, and `Never<T>` has no values**, as
+  core's docs say (2026-11-19). Temper refuses `x is Bubble` and `x as
+  Bubble` ("Unrelated types cannot be targeted …") and a `Bubble` used
+  as an `AnyValue` ("Cannot assign to AnyValue from Bubble"), and
+  reports `x is Never<Int>` as "Runtime type check from AnyValue to
+  Never<Int32> can never succeed". Kotlin's run-time check rules
+  (`TypeFuns.kt`, `problems`) have no rule for either target, and skip
+  a `Never<T>` target's value type, so it likely takes both (not run
+  against Kotlin). `Bubble`, `Empty`, `GeneratorFn` and `Type` aren't
+  `MapKey`s, so they can't be map keys.
+  Test: temper-frontend/tests/core_capabilities.rs.
+
+- **`temper-core` is core's name** (2026-11-19). Kotlin builds core
+  from `lib/core` in its own tree. Temper builds core in, and takes a
+  library as core only as a Temper checkout's `lib/core`, beside the
+  compiler's crates, which editors open, whatever its text; building
+  any other library named `temper-core` is an error, so none gets core's
+  powers (as naming `_listify`) or writes over core's output.
+  Test: temper-frontend/tests/library_tests.rs,
+  `temper_core_is_reserved`.
+
 - **`Float64.toString` cuts at 16 digits** in the interpreter
   (`FormatDouble.kt`), so `0.30000000000000004` prints as
   `0.3000000000000000`, which doesn't read back; the Python and JS

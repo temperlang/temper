@@ -470,6 +470,9 @@ fn definition_and_hover_into_core() {
         "ignore(frozen.length);",
         "console.log(\"hi\");",
         "let shout(s: String): Int { 1 }",
+        "if (blank) { panic(); }",
+        "let yes = true;",
+        "let sum = 1 + 2;",
         "",
     ];
     open(&mut client, &file, &text.join("\n"));
@@ -511,6 +514,20 @@ fn definition_and_hover_into_core() {
     // A parameter's type.
     let (line, _) = core_line(6, 13);
     assert!(line.starts_with("export class String "), "{line}");
+    // Builtins that only bodiless `@connected` declarations document: a
+    // macro, a function, and a value, quoted.
+    let (line, name) = core_line(7, 0);
+    assert_eq!((line.as_str(), name.as_str()), ("export let if;", "if;"));
+    let (line, _) = core_line(7, 13);
+    assert_eq!(line, "export let panic;");
+    let (line, name) = core_line(8, 10);
+    assert_eq!(
+        (line.as_str(), name.as_str()),
+        ("export let nym`true`;", "nym`true`;")
+    );
+    // Nothing for an operator, which core doesn't declare.
+    let def = client.request("textDocument/definition", at(&file, 9, 12));
+    assert_eq!(def, Json::Null);
     // Hover shows core's doc comment after the signature.
     let hover = client.request("textDocument/hover", at(&file, 1, 7));
     let value = str_at(&hover, &["contents", "value"]);
@@ -539,6 +556,33 @@ fn definition_and_hover_into_core() {
     let value = str_at(&hover, &["contents", "value"]);
     assert!(
         value.starts_with("```temper\nbuiltin Int: Int32\n```\n\n*Int32*"),
+        "{value}"
+    );
+    // Their hovers, an operator's, and `console.log`'s.
+    let mut hover = |line: u32, character: u32| {
+        let hover = client.request("textDocument/hover", at(&file, line, character));
+        str_at(&hover, &["contents", "value"]).to_string()
+    };
+    let value = hover(7, 0);
+    assert!(
+        value.starts_with("```temper\nbuiltin if\n```\n\n`if (condition)"),
+        "{value}"
+    );
+    let value = hover(7, 13);
+    assert!(
+        value.starts_with("```temper\nbuiltin panic\n```\n\nImmediately panics"),
+        "{value}"
+    );
+    let value = hover(8, 10);
+    assert!(
+        value.starts_with("```temper\nbuiltin true: Boolean\n```\n\nThe value `true`"),
+        "{value}"
+    );
+    let value = hover(9, 12);
+    assert!(!value.contains(": ?"), "{value}");
+    let value = hover(5, 9);
+    assert!(
+        value.starts_with("```temper\nmethod log(message: String): Void\n```\n\nLog a"),
         "{value}"
     );
     // Nothing for a local.
@@ -633,6 +677,46 @@ fn definition_and_hover_within_core() {
     // Core's own file analyzes cleanly.
     let diagnostics = client.diagnostics(&core);
     assert_eq!(diagnostics, Vec::<Json>::new());
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Core's source opened where it lives in a checkout, `lib/core/`, as
+/// one edits it, is core too: its bodiless `@connected` declarations of
+/// builtins, as `export let if;`, declare nothing there, and its classes
+/// named as builtins, as `AnyValue`, are those builtins, so it analyzes
+/// cleanly, in a workspace at the checkout's root, as it is and once
+/// edited, when it no longer matches the core built into the server, as
+/// it doesn't for a server built from another version. A copy of it
+/// alone, outside any library, is core while its text is; a lone file
+/// can't otherwise claim to be core.
+#[test]
+fn core_source_in_a_checkout_is_core() {
+    let repo = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    let repo = std::fs::canonicalize(repo).unwrap();
+    let path = repo.join("lib/core/core.temper");
+    let core = path_to_uri(&path.to_string_lossy());
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut client = Client::start();
+    let root = path_to_uri(&repo.to_string_lossy());
+    client.request("initialize", json!({"capabilities": {}, "rootUri": root}));
+    open(&mut client, &core, &text);
+    assert_eq!(client.diagnostics(&core), Vec::<Json>::new());
+    let edited = format!("{text}\n/** An edit. */\nexport let edited = 1;\n");
+    change(&mut client, &core, 2, &edited);
+    assert_eq!(client.diagnostics(&core), Vec::<Json>::new());
+    // A lone copy, as it is, and edited.
+    let dir = std::env::temp_dir().join(format!("tempest-lsp-{}-lone-core", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("core.temper"), &text).unwrap();
+    let lone = uri(&dir, "core.temper");
+    open(&mut client, &lone, &text);
+    assert_eq!(client.diagnostics(&lone), Vec::<Json>::new());
+    change(&mut client, &lone, 2, &edited);
+    let shadows = (client.diagnostics(&lone).iter())
+        .any(|d| str_at(d, &["message"]).contains("declared after a use that it would shadow"));
+    assert!(shadows, "an edited lone copy isn't core");
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
