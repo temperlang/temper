@@ -3884,10 +3884,39 @@ impl Translator<'_> {
     /// A string template, `"a${b}"`: each part as a `String`, by its
     /// `toString` if it's another builtin type, joined by `String.cat`.
     /// A nullable part is `null` where it's null, as Kotlin Temper's
-    /// templates show it.
+    /// templates show it. A run of text parts, as the parser gives each
+    /// escape, is one literal, so a long string with many escapes is no
+    /// deep chain of joins for each pass and backend to walk.
     fn cat(&mut self, node: FNode, parts: &[FNode]) -> Tx<NodeId> {
         let mut joined: Option<NodeId> = None;
-        for &part in parts {
+        let mut rest = parts;
+        while let [part, after @ ..] = rest {
+            let part = *part;
+            let run = (rest.iter())
+                .take_while(|&&p| self.plain_text(p).is_some())
+                .count();
+            if run > 1 {
+                let (first, last) = (rest[0], rest[run - 1]);
+                let text: String = (rest[..run].iter())
+                    .filter_map(|&p| self.plain_text(p))
+                    .collect();
+                rest = &rest[run..];
+                let made = self.b.string(&text);
+                let (from, to) = (self.span(first), self.span(last));
+                // From the run's start to its end.
+                let span = if from.file == to.file && from.start <= to.end {
+                    Span {
+                        end: to.end,
+                        ..from
+                    }
+                } else {
+                    from
+                };
+                self.b.set_span(made, span, false);
+                joined = Some(self.joined(joined, made, node));
+                continue;
+            }
+            rest = after;
             let value = self.expr(part)?;
             let ty = self.b.program().nodes.ty(value);
             let value = if self.b.program().types.is_nullable(ty) {
@@ -3931,6 +3960,22 @@ impl Translator<'_> {
                 let empty = self.b.string("");
                 Ok(self.own(empty, node))
             }
+        }
+    }
+
+    /// A template part's text, where it's a plain `String` constant that
+    /// translates as itself: no error, and no type error, there.
+    fn plain_text(&self, part: FNode) -> Option<&str> {
+        if self.kind(part) != NodeKind::Value || self.error_at(part).is_some() {
+            return None;
+        }
+        let span = self.s.library.tree.span(part);
+        if self.type_errors.contains_key(&(span.start, span.end)) {
+            return None;
+        }
+        match self.s.library.value(part) {
+            Some(Value::String(text)) => Some(text),
+            _ => None,
         }
     }
 }

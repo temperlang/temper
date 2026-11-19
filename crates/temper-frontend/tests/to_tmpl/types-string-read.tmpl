@@ -137,7 +137,7 @@ module read#0 {
 
   init {
     init ~console#32 = getConsole#87(omitted);
-    reportSliceInfo#1(%String.cat("κόσμε", "𐆊"));
+    reportSliceInfo#1("κόσμε𐆊");
     reportSliceInfo#1("Hi");
     compareEnds#2("Hi");
     ~console#32.log#31(fromCodePoint#50(127757)^);
@@ -188,13 +188,13 @@ module read#0 {
     reportFound#10("hay 3", "in the nick of time", needle#13, omitted);
     reportFound#10("hay 4", "my name is tim", needle#13, omitted);
     reportFound#10("hay 5", "tim", needle#13, omitted);
-    init nulHay#20 = %String.cat(%String.cat(%String.cat("ab", "\u{0}"), "#"), "\u{0}");
+    init nulHay#20 = "ab\u{0}#\u{0}";
     ~console#32.log#31(%String.cat("nul: ", foundAt#19(nulHay#20, "\u{0}", omitted).toString#34(omitted)));
     init afterNul#21 = nulHay#20.next#40(nulHay#20.next#40(nulHay#20.next#40(begin#25)));
     ~console#32.log#31(%String.cat("nul again: ", foundAt#19(nulHay#20, "\u{0}", (asNullable(afterNul#21)): StringIndex#11?).toString#34(omitted)));
-    ~console#32.log#31(%String.cat("soft hyphen: ", foundAt#19(%String.cat(%String.cat("ab", "­"), "#"), "­", omitted).toString#34(omitted)));
-    ~console#32.log#31(%String.cat("past soft hyphen: ", foundAt#19(%String.cat(%String.cat("ab", "­"), "#"), "b#", omitted).toString#34(omitted)));
-    ~console#32.log#31(%String.cat("zwj: ", foundAt#19(%String.cat(%String.cat("a", "‍"), "b"), "ab", omitted).toString#34(omitted)));
-    ~console#32.log#31(%String.cat("composed: ", foundAt#19(%String.cat("e", "́"), "é", omitted).toString#34(omitted)));
+    ~console#32.log#31(%String.cat("soft hyphen: ", foundAt#19("ab­#", "­", omitted).toString#34(omitted)));
+    ~console#32.log#31(%String.cat("past soft hyphen: ", foundAt#19("ab­#", "b#", omitted).toString#34(omitted)));
+    ~console#32.log#31(%String.cat("zwj: ", foundAt#19("a‍b", "ab", omitted).toString#34(omitted)));
+    ~console#32.log#31(%String.cat("composed: ", foundAt#19("é", "é", omitted).toString#34(omitted)));
   }
 }

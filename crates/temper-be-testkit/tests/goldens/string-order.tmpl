@@ -30,10 +30,10 @@ module `string-order`#0 {
     ~console#12.log#11(show#1("😀", "｡"));
     ~console#12.log#11(show#1("", "𐀀"));
     ~console#12.log#11(show#1("￿", "􏿿"));
-    ~console#12.log#11(show#1(%String.cat(%String.cat("a", "｡"), "b"), %String.cat("a", "😀")));
+    ~console#12.log#11(show#1("a｡b", "a😀"));
     ~console#12.log#11(show#1("😀", "😁"));
     ~console#12.log#11(show#1("😀", "😀"));
-    ~console#12.log#11(show#1("😀", %String.cat("😀", "a")));
+    ~console#12.log#11(show#1("😀", "😀a"));
     ~console#12.log#11(show#1("", "😀"));
     ~console#12.log#11(show#1("", ""));
     ~console#12.log#11(show#1("z", "a"));

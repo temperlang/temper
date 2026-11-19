@@ -102,7 +102,7 @@ module `json-syntax-tree`#0 {
         ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("`", s#34), "` has"), (if (bubbled#35) "" else " no"): String), " error: "), (if (isNull(error#42)) "MISSING ERROR" else (nonNull(error#42)): String): String));
       }
     }
-    init selectCodePoints#1 = %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("\u{0}", "\u{1}"), "\u{2}"), "\u{3}"), "\u{4}"), "\u{5}"), "\u{6}"), "\u{7}"), "\u{8}"), "\t"), "\n"), "\u{b}"), "\u{c}"), "\r"), "\u{e}"), "\u{f}"), "\u{10}"), "\u{11}"), "\u{12}"), "\u{13}"), "\u{14}"), "\u{15}"), "\u{16}"), "\u{17}"), "\u{18}"), "\u{19}"), "\u{1a}"), "\u{1b}"), "\u{1c}"), "\u{1d}"), "\u{1e}"), "\u{1f}"), " "), "-"), "𐀀"), "-"), ""), "-"), "퟿"), " "), " "), "\u{85}");
+    init selectCodePoints#1 = "\u{0}\u{1}\u{2}\u{3}\u{4}\u{5}\u{6}\u{7}\u{8}\t\n\u{b}\u{c}\r\u{e}\u{f}\u{10}\u{11}\u{12}\u{13}\u{14}\u{15}\u{16}\u{17}\u{18}\u{19}\u{1a}\u{1b}\u{1c}\u{1d}\u{1e}\u{1f} -𐀀--퟿  \u{85}";
     {
       let p#44: JsonTextProducer#4 = new constructor#46((asNullable((upcast(instance#48)): InterchangeContext#45)): InterchangeContext#45?);
       p#44.stringValue#49(selectCodePoints#1);

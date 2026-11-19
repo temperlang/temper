@@ -117,10 +117,10 @@ module defaulting#0 {
     init inked#12 = 0;
     ~console#22.log#21(%String.cat("maybeInc() -> ", ((value { let subject#47: Int32? = maybeInc#15(); (if (isNull(subject#47)) %Int32.neg(1) else (nonNull(subject#47)): Int32): Int32 }): Int32).toString#24(omitted)));
     ~console#22.log#21(%String.cat("inked: ", inked#12.toString#24(omitted)));
-    ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("lengthish ", "\""), "ab"), "\""), ": "), chainMore#16((asNullable("ab")): String?)));
+    ~console#22.log#21(%String.cat("lengthish \"ab\": ", chainMore#16((asNullable("ab")): String?)));
     ~console#22.log#21(%String.cat("lengthish null: ", chainMore#16((null): String?)));
     ~console#22.log#21(%String.cat("inked: ", inked#12.toString#24(omitted)));
-    ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat("maybeEmpty ", "\""), "\""), ": "), maybeEmpty#13((asNullable(new constructor#7(""))): StringHolder#2?)));
+    ~console#22.log#21(%String.cat("maybeEmpty \"\": ", maybeEmpty#13((asNullable(new constructor#7(""))): StringHolder#2?)));
     ~console#22.log#21(%String.cat("maybeEmpty null: ", maybeEmpty#13((null): StringHolder#2?)));
     ~console#22.log#21(%String.cat("inked: ", inked#12.toString#24(omitted)));
   }
