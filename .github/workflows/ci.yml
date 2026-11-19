@@ -24,9 +24,10 @@
 #   error, and run; and generated C++ compiled by g++ with every warning
 #   an error, and run, also under AddressSanitizer,
 #   UndefinedBehaviorSanitizer, and ThreadSanitizer, and compiled at -O2
-#   by g++ 12 and 14 (14 at -O3 too) and clang++, every warning an error;
-#   and the version's spellings, sorted by each ecosystem's own
-#   comparator (npm's, PEP 440's, Maven's, NuGet's, and LuaRocks');
+#   by clang++, every warning an error (nightly.yml adds g++ 12 and 14
+#   at -O2, and 14 at -O3); and the version's spellings, sorted by
+#   each ecosystem's own comparator (npm's, PEP 440's, Maven's,
+#   NuGet's, and LuaRocks');
 # - `release`: `temper`'s release build, the VS Code extension (type
 #   checked, bundled, packaged, and tested in a real VS Code against
 #   that build), the docs' examples on it, and the docs site (built,
@@ -52,7 +53,9 @@
 # from Ubuntu's archive can't change underneath the tests: noble's
 # lua5.4 is 5.4.6, its lua-socket 3.1.0, and its g++ 13. Each caches its
 # own build (Swatinem/rust-cache, keyed by job), saved only from main,
-# which pull requests read, so their caches don't crowd main's out. The
+# which pull requests read, so their caches don't crowd main's out; the
+# jobs that compile C++ keep ccache's cache the same way
+# (.github/actions/ccache). The
 # jobs whose builds say their version (`cli` and `release`) check out
 # the whole history and its tags, so it's a real dev build's
 # (`0.7.0-alpha.0.123`), as `temper --version` and the playground's
@@ -231,10 +234,21 @@ jobs:
       - uses: ./.github/actions/toolchains
         with:
           backends: py js lua java csharp cpp rust
+      # CMake's C++ builds through ccache (.github/actions/ccache), in
+      # the temporary directories the tests make.
+      - uses: ./.github/actions/ccache
+        with:
+          name: cli
+          temp-builds: "true"
       - name: Tests
         run: cargo test --locked -p tempest
         env:
           TEMPER_REQUIRE_CHECKERS: "1"
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/ccache
+        with:
+          name: cli
+          stage: end
 
   # Each backend's crate, its functional tests running generated code
   # with only its group's toolchains set up (.github/actions/toolchains
@@ -257,7 +271,7 @@ jobs:
           - id: compiled
             name: java, csharp, cpp
             backends: java csharp cpp
-            apt: g++-12 g++-14 clang
+            apt: clang
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     env:
@@ -278,6 +292,13 @@ jobs:
         with:
           backends: ${{ matrix.backends }}
           apt: ${{ matrix.apt }}
+      # The C++ backend's tests run g++ and clang++ themselves, so those
+      # go through ccache by name (.github/actions/ccache).
+      - if: contains(matrix.backends, 'cpp')
+        uses: ./.github/actions/ccache
+        with:
+          name: ${{ matrix.id }}
+          compilers: g++ clang++
       - name: Python
         if: ${{ !cancelled() && contains(matrix.backends, 'py') }}
         run: cargo test --locked -p temper-be-py
@@ -341,14 +362,22 @@ jobs:
         if: ${{ !cancelled() && contains(matrix.backends, 'cpp') }}
         run: cargo test --locked -p temper-be-cpp -- --exact --skip strict
       # `strict`: all generated C++ built at -O2, every warning an
-      # error, as other people's release builds might, by the oldest
-      # and newest g++ (the runner's g++ is 13) and clang++, which the
-      # container lacks, so only CI checks it.
+      # error, as other people's release builds might, here by clang++
+      # alone, which the container lacks, so only CI checks it; the
+      # previous step's g++ 13 builds already have every warning an
+      # error, at -O1. The oldest and newest g++ (12 and 14) at -O2, and
+      # 14 at -O3, which see more of GCC's path-following warnings, run
+      # nightly (nightly.yml's `strict`), and locally by default.
       - name: C++, strict
         if: ${{ !cancelled() && contains(matrix.backends, 'cpp') }}
         run: cargo test --locked -p temper-be-cpp --test functional -- --exact strict
         env:
-          TEMPER_STRICT_CXX: g++-12 g++-14 clang++
+          TEMPER_STRICT_CXX: clang++
+      - if: ${{ !cancelled() && contains(matrix.backends, 'cpp') }}
+        uses: ./.github/actions/ccache
+        with:
+          name: ${{ matrix.id }}
+          stage: end
 
   # `temper`'s release build (the small profile, as released), and what
   # runs on it; and the wasm build, with every backend, as released, and

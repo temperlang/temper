@@ -1,0 +1,122 @@
+# ccache for a job's C++ compiles, its cache kept between runs by
+# actions/cache. Used twice in a job: at the start, after the compilers
+# are installed, and at the end:
+#
+#     - uses: ./.github/actions/ccache
+#       with:
+#         name: cpp
+#         compilers: g++ g++-12 g++-14 clang++
+#     ...
+#     - if: ${{ !cancelled() }}
+#       uses: ./.github/actions/ccache
+#       with:
+#         name: cpp
+#         stage: end
+#
+# `start` installs ccache (Ubuntu's archive on Linux, Homebrew on macOS),
+# restores the latest cache this job saved (each run saves under its own
+# key, and the restore takes the newest with the job's prefix, so it
+# follows the code), and zeroes the stats. CMake's builds (`temper test
+# -b cpp`, `temper build`'s projects) go through it by
+# CMAKE_CXX_COMPILER_LAUNCHER. Tests that run a compiler themselves (the
+# C++ backend's own, by name: `g++`, `CXX`, TEMPER_STRICT_CXX's) go
+# through it by `compilers`: each named compiler that's installed gets a
+# ccache link of its name in a directory put first on PATH, which ccache
+# runs as that compiler (its "masquerade" mode). Not `c++`, which CMake
+# finds and runs through its launcher. The runtime's precompiled header
+# is cached too, so it comes back byte for byte and the files that
+# include it hit: hence the sloppiness ccache asks for with
+# precompiled headers.
+#
+# `end` prints the stats (to the log and the job's summary) and, on
+# main only, saves the cache, as Swatinem/rust-cache does: pull requests
+# read main's, so theirs don't crowd main's out of the repository's
+# 10 GB. Older entries, never read again, are the first GitHub evicts.
+#
+# Not on Windows, where both steps do nothing: CMake's MSVC builds put
+# debug info in .pdb files (`/Zi`), which ccache can't cache, and the
+# C++ backend's own tests don't run there.
+name: ccache
+description: ccache for C++ compiles, kept between runs by actions/cache.
+inputs:
+  name:
+    description: The job's part of the cache key (no commas), so each job keeps its own.
+    required: true
+  stage:
+    description: "`start` (install, restore, and zero the stats) or `end` (print the stats and save)."
+    default: start
+  compilers:
+    description: Compilers to run through ccache by name, on PATH (for tests that run them directly).
+    default: ""
+  temp-builds:
+    description: >-
+      "true" for jobs that build in the system's temporary directory
+      (TMPDIR, else /tmp), as `temper`'s own tests do, in directories
+      named anew each run: ccache then rewrites paths there relative to
+      the build's directory and leaves that directory out of its hash,
+      so those builds can hit.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: ccache
+      if: runner.os != 'Windows' && inputs.stage == 'start'
+      shell: bash
+      env:
+        COMPILERS: ${{ inputs.compilers }}
+        TEMP_BUILDS: ${{ inputs.temp-builds }}
+      run: |
+        if [ "$RUNNER_OS" = macOS ]; then
+          HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install ccache
+        else
+          bash .github/ci-tools/apt-install.sh ccache
+        fi
+        {
+          echo "CCACHE_DIR=$HOME/.cache/ccache"
+          echo "CCACHE_MAXSIZE=1G"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          if [ "$TEMP_BUILDS" = true ]; then
+            temp="${TMPDIR:-/tmp}"
+            echo "CCACHE_BASEDIR=${temp%/}"
+            echo "CCACHE_NOHASHDIR=true"
+          fi
+        } >> "$GITHUB_ENV"
+        bin="$RUNNER_TEMP/ccache-bin"
+        mkdir -p "$bin"
+        for compiler in $COMPILERS; do
+          if command -v "$compiler" >/dev/null; then
+            ln -sf "$(command -v ccache)" "$bin/$compiler"
+            echo "Through ccache: $compiler"
+          fi
+        done
+        echo "$bin" >> "$GITHUB_PATH"
+        ccache --version | head -1
+    - if: runner.os != 'Windows' && inputs.stage == 'start'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ccache
+        key: ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.name }}-
+    - if: runner.os != 'Windows' && inputs.stage == 'start'
+      shell: bash
+      run: ccache --zero-stats
+
+    - name: ccache's stats
+      if: runner.os != 'Windows' && inputs.stage == 'end'
+      shell: bash
+      run: |
+        # Nothing to show if the job failed before ccache was set up.
+        command -v ccache >/dev/null || exit 0
+        ccache --show-stats
+        {
+          echo '### ccache'
+          echo '```'
+          ccache --show-stats
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+    - if: runner.os != 'Windows' && inputs.stage == 'end' && github.ref == 'refs/heads/main'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ccache
+        key: ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}

@@ -237,7 +237,9 @@ As built with the Python backend (2026-10-30):
   GCC at `-O3` too: `-O1` misses some of GCC's path-following warnings,
   such as a null upcast's `-Wnull-dereference`, and only `-O3` showed
   libstdc++'s `vector<bool>` `-Warray-bounds`. CI adds clang++ with its own set
-  (`CLANG_STRICT`), which only CI checks.
+  (`CLANG_STRICT`), which only CI checks: on every push, clang++
+  alone; nightly, g++ 12 and 14 and clang++ (notes/test-speed.md, "C++
+  in CI").
 - **Lua** (2026-10-30): no compiler, so the checks are a run, a parse,
   and a type checker. With `lua` (or `LUA`), from one directory holding
   every generated library and a copy of the runtime, `temper-core`

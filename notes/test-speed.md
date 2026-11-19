@@ -333,13 +333,66 @@ templates, instantiated again in every file.
   dropping `-g` by 25%, but `-O1` drives warnings like
   `maybe-uninitialized` and `-g` makes ASan's reports readable. The
   plain build stays file by file, as a user's build, which is what
-  makes the warnings per file. ccache isn't installed, and `ld.gold`
-  links the ASan runner only 0.1 s faster.
+  makes the warnings per file. ccache wasn't installed then (CI uses
+  it since 2026-11-19, below), and `ld.gold` links the ASan runner only
+  0.1 s faster.
 
 `TEMPER_CXXFLAGS` adds options to every build but ThreadSanitizer's;
 the nightly workflow (`.github/workflows/nightly.yml`) uses it to
 run everything under ASan and UBSan, and runs the tests under g++ 12
 and 14, by `CXX`.
+
+## C++ in CI (2026-11-19)
+
+GitHub's runs of 2026-11-18 (three, including one on `main`): the
+`java, csharp, cpp` job took 6.2 to 7.8 minutes, the run's longest
+(the others 3.1 to 5.2), of which `C++` (the crate's tests but
+`strict`, g++ 13, plain and sanitized) took 111 to 154 s, and `C++,
+strict` 128 to 175 s: eight compiler-and-mode builds of every
+library, by g++ 12 (-O2, with and without `TEMPER_TESTS`), g++ 14
+(the same, and -O3 both ways), and clang++ (-O2 both ways).
+
+**Strict by tier.** Every push now builds `strict` by clang++ alone,
+-O2 both ways (`TEMPER_STRICT_CXX: clang++` in ci.yml): the one
+compiler nobody checks locally (the container has none), beside the
+`C++` step's g++ 13 builds, every warning an error at -O1. g++ 12 and
+14 at -O2, and 14 at -O3, which see GCC's path-following warnings
+(a null upcast's `-Wnull-dereference`, libstdc++'s `vector<bool>`
+`-Warray-bounds`), run nightly (nightly.yml's `cpp` job, `strict`,
+the full list as ci.yml had it) and weekly on Linux Arm64, and locally
+by default (g++ 12 and 14, whichever are installed). The sanitizers
+stay on every push: they check what the code does, not its warnings,
+and with `strict` trimmed the C++ job is about level with the others,
+so moving them would save runner minutes, not a run's time.
+
+| Variant | Before | After |
+| --- | --- | --- |
+| g++ 13, -O1, every warning an error (`runs`) | push | push |
+| g++ 13, ASan and UBSan; TSan (`runs`, `co_await_interop`, `net_client_from_host`) | push | push |
+| clang++, -O2, both ways (`strict`) | push; weekly Arm64 | push; nightly; weekly Arm64 |
+| g++ 12, -O2, both ways (`strict`) | push; weekly Arm64 | nightly; weekly Arm64 |
+| g++ 14, -O2 and -O3, both ways (`strict`) | push; weekly Arm64 | nightly; weekly Arm64 |
+| the crate's tests by g++ 12, by g++ 14, and sanitized throughout | nightly | nightly |
+
+Estimated, not measured: clang++'s two builds are about a quarter of
+the eight, and clang compiles faster than g++ at -O2, so the strict
+step should go from about 130 to 175 s to about 30 to 45 s, taking
+1.5 to 2 minutes off the C++ job, which then takes about as long as
+`lint, core` and `release, playground`.
+
+**ccache** (`.github/actions/ccache`) in every job that compiles C++:
+CMake's builds by its launcher, and the C++ backend's tests, which run
+compilers by name, by ccache's links named for them, first on `PATH`.
+Locally, `strict` by g++ 12 (four builds, two compiles at once): 185 s
+cold, 60 to 80 s warm, with 45 of 47 compiles hits, after removing the
+precompiled headers as a fresh runner would have none (ccache gives
+them back byte for byte, so what includes them hits). The two misses
+are the bulk groups holding `netresponse` and `netresponse-not-found`,
+whose generated `init.cpp` names the port of the server the test
+starts, new each run; putting those apart from the bulk groups, or
+reading the port at run time, would let the rest of their groups hit.
+In CI the first run on `main` after this fills each job's cache; its
+summary shows the hit rate.
 
 ## `tempest test -b`
 
