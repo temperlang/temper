@@ -349,6 +349,30 @@ impl<'a> Translator<'a> {
         }
     }
 
+    /// A generic type's type arguments as Java writes them,
+    /// `<String, Integer>`, for a literal that makes one, so javac infers
+    /// none: its time inferring a literal's diamonds nested in a generic
+    /// call grows faster than the literal does (77 pairs in `List.of`
+    /// took it 9 s; two of 150, 7 minutes, and then it failed). None for
+    /// a type without arguments, or with one Java can't write, where
+    /// javac infers them, as before.
+    fn literal_type_args(&mut self, ty: TypeId) -> Option<String> {
+        let args = self.p.types.args(ty).to_vec();
+        if args.is_empty() {
+            return None;
+        }
+        let mut texts = Vec::new();
+        for a in args {
+            texts.push(self.type_arg(a).ok()?);
+        }
+        Some(format!("<{}>", texts.join(", ")))
+    }
+
+    /// [`Self::literal_type_args`] of what a core constructor makes.
+    pub(crate) fn made_type_args(&mut self) -> Option<String> {
+        self.literal_type_args(self.made)
+    }
+
     /// A generic declaration's type parameters, `<T>` or `<T extends
     /// Named>`, with a space after, or nothing. `MapKey`, which Java's
     /// maps need nothing for, isn't a bound.
@@ -1621,16 +1645,19 @@ impl<'a> Translator<'a> {
                 Expr::New(class, args)
             }
             // `List.of(…)`, or where an item may be null, which `List.of`
-            // rejects, `Core.listOf(…)`.
+            // rejects, `Core.listOf(…)`; with its item type, `List.<T>of`,
+            // which javac would otherwise infer ([`Self::literal_type_args`]).
             Node::ListLit { items } => {
+                let ty = p.nodes.ty(id);
+                let type_args = self.literal_type_args(ty).unwrap_or_default();
                 let items = self.member_args(p.nodes.list(items))?;
-                let item = p.types.args(p.nodes.ty(id)).first().copied();
+                let item = p.types.args(ty).first().copied();
                 if item.is_some_and(|t| may_be_null(p, t)) {
                     self.import("temper.core.Core");
-                    Expr::name("Core").method("listOf", items)
+                    Expr::name("Core").method(format!("{type_args}listOf"), items)
                 } else {
                     self.import("java.util.List");
-                    Expr::name("List").method("of", items)
+                    Expr::name("List").method(format!("{type_args}of"), items)
                 }
             }
             Node::Upcast { value } => self.expr(value)?,

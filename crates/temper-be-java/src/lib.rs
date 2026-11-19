@@ -28,13 +28,14 @@
 //! and `catch (RuntimeException …)`, `bubble()` as `throw Core.bubble()`,
 //! and `panic()` as an `AssertionError`, which no `orelse` catches; and
 //! generics, with boxed type arguments (`List<Integer>`) and explicit
-//! ones on `new`, core's lists as `java.util.List`s, maps as
-//! `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's, but with two
-//! boxes compared by value; lists that may hold null are made by
-//! `Core.listOf` and `Core.listCopyOf`, since `List.of` and `List.copyOf`
-//! reject null; and a library's own connected functions and classes,
-//! with host code in its own `.java` files ([`translate()`] says how);
-//! anything else is [`NotYet`]. No source maps yet.
+//! ones on `new` and on literals (`List.<Integer>of(…)`), which javac
+//! is slow to infer for long ones, core's lists as `java.util.List`s,
+//! maps as `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's,
+//! but with two boxes compared by value; lists that may hold null are
+//! made by `Core.listOf` and `Core.listCopyOf`, since `List.of` and
+//! `List.copyOf` reject null; and a library's own connected functions
+//! and classes, with host code in its own `.java` files ([`translate()`]
+//! says how); anything else is [`NotYet`]. No source maps yet.
 
 pub mod connected;
 pub mod names;

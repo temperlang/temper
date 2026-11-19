@@ -21,10 +21,10 @@ public final class ContentTagsGlobal {
 
     public static After propagateOver(Propagator p, boolean before, @Nullable String known, BiPredicate<Boolean, Boolean> same, BiConsumer<String, Boolean> callout) {
         if (known == null) {
-            return new After(List.of(), before);
+            return new After(List.<Effect>of(), before);
         }
         if (known.equals("!")) {
-            return new After(List.of(new EventParseEffect(new Mark("bang"))), before);
+            return new After(List.<Effect>of(new EventParseEffect(new Mark("bang"))), before);
         }
         int angles = Core.stringSplit(known, "<").size();
         if (angles > 1) {
@@ -34,7 +34,7 @@ public final class ContentTagsGlobal {
             callout.accept("states differ from themselves", true);
         }
         int quotes = Core.stringSplit(known, p.quote).size() - 1;
-        return new After(List.of(new AppendParseEffect(known)), quotes % 2 == 1 ? !before : before);
+        return new After(List.<Effect>of(new AppendParseEffect(known)), quotes % 2 == 1 ? !before : before);
     }
 
     static String greet(String name, String who) {
@@ -142,9 +142,9 @@ public final class ContentTagsGlobal {
         console.log(greet("Ann", "Bob"));
         console.log(branch(true, "a"));
         console.log(branch(false, "b"));
-        console.log(each(List.of("c", "d")));
+        console.log(each(List.<String>of("c", "d")));
         console.log(counted(5, "e"));
         console.log(attribute(false, "f") + " " + attribute(true, "f"));
-        console.log(opened(List.of("g", "h", "i")));
+        console.log(opened(List.<String>of("g", "h", "i")));
     }
 }

@@ -25,7 +25,7 @@ public final class AngleCallGlobal {
     static {
         console = Core.getConsole(Logger.getLogger("angle_call"));
         whatever(1);
-        List<String> someThings = List.of("a", "b");
+        List<String> someThings = List.<String>of("a", "b");
         String first = Classy.first(someThings);
         String second = new Classy(1).indexed(someThings);
         console.log("Some things: " + first + ", " + second);

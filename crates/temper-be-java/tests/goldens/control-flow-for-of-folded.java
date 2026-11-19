@@ -90,10 +90,10 @@ public final class ForOfFoldedGlobal {
 
     static {
         Console console = Core.getConsole(Logger.getLogger("for_of_folded"));
-        console.log("total " + total(List.of(1, 2, 3)));
-        console.log("forEach " + totalForEach(List.of(1, 2, 3)));
-        console.log("filter " + totalFiltered(List.of(1, 2, 3)));
-        console.log("nested " + totalNested(List.of(List.of(1, 2), List.of(3), List.of())));
-        console.log("firstOver " + firstOver(List.of(1, 2, 3), 1) + " " + firstOver(List.of(1, 2, 3), 5));
+        console.log("total " + total(List.<Integer>of(1, 2, 3)));
+        console.log("forEach " + totalForEach(List.<Integer>of(1, 2, 3)));
+        console.log("filter " + totalFiltered(List.<Integer>of(1, 2, 3)));
+        console.log("nested " + totalNested(List.<List<Integer>>of(List.<Integer>of(1, 2), List.<Integer>of(3), List.<Integer>of())));
+        console.log("firstOver " + firstOver(List.<Integer>of(1, 2, 3), 1) + " " + firstOver(List.<Integer>of(1, 2, 3), 5));
     }
 }

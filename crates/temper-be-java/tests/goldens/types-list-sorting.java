@@ -29,13 +29,13 @@ public final class SortingGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("sorting"));
-        List<Entry> entries = new ArrayList<>(List.of(new Entry(0, 0), new Entry(1, 1), new Entry(2, 2), new Entry(3, 0), new Entry(4, 1), new Entry(5, 2), new Entry(6, 0), new Entry(7, 1), new Entry(8, 2)));
+        List<Entry> entries = new ArrayList<>(List.<Entry>of(new Entry(0, 0), new Entry(1, 1), new Entry(2, 2), new Entry(3, 0), new Entry(4, 1), new Entry(5, 2), new Entry(6, 0), new Entry(7, 1), new Entry(8, 2)));
         List<Entry> sortedEntries = Core.listSorted(entries, (a, b) -> a.group - b.group);
         console.log(Core.listJoinObj(sortedEntries, "\n", a -> a.toString()));
         console.log(Core.listGet(entries, 1).toString());
         Core.listSort(entries, (a, b) -> a.group - b.group);
         console.log(Core.listJoinObj(entries, "\n", a -> a.toString()));
-        mungeInts(List.of(2, 1));
-        mungeFloats(List.of(3.4, 1.2));
+        mungeInts(List.<Integer>of(2, 1));
+        mungeFloats(List.<Double>of(3.4, 1.2));
     }
 }

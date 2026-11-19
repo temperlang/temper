@@ -60,7 +60,7 @@ public final class PropertyMembersGlobal {
         High high2c = new Low2("to be");
         High high3 = new Low3();
         High high3b = new Low3();
-        List<Entry<High, High>> pairs = List.of(new SimpleImmutableEntry<>(high1, high1b), new SimpleImmutableEntry<>(high1b, high1c), new SimpleImmutableEntry<>(high1, high2), new SimpleImmutableEntry<>(high2, high2b), new SimpleImmutableEntry<>(high2b, high2c), new SimpleImmutableEntry<>(high1, high3), new SimpleImmutableEntry<>(high3, high3b));
+        List<Entry<High, High>> pairs = List.<Entry<High, High>>of(new SimpleImmutableEntry<High, High>(high1, high1b), new SimpleImmutableEntry<High, High>(high1b, high1c), new SimpleImmutableEntry<High, High>(high1, high2), new SimpleImmutableEntry<High, High>(high2, high2b), new SimpleImmutableEntry<High, High>(high2b, high2c), new SimpleImmutableEntry<High, High>(high1, high3), new SimpleImmutableEntry<High, High>(high3, high3b));
         {
             int length = pairs.size();
             int i2 = 0;

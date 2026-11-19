@@ -7,6 +7,6 @@ interface Holder<T> {
     T getHeld();
 
     default List<T> heldAnd(T other) {
-        return Core.listOf(this.getHeld(), other);
+        return Core.<T>listOf(this.getHeld(), other);
     }
 }

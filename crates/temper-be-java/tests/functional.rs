@@ -116,7 +116,12 @@ fn cases() -> Vec<Case> {
 
 /// This crate's own programs, in `tests/programs/`: Temper, with what
 /// each logs in a log block.
-const OWN: &[&str] = &["java-classes", "java-nullables", "java-generics"];
+const OWN: &[&str] = &[
+    "java-classes",
+    "java-nullables",
+    "java-generics",
+    "java-long-literals",
+];
 
 /// The lines of a program's log block.
 fn log_block(text: &str) -> Vec<String> {

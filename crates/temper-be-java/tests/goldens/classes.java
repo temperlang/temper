@@ -24,7 +24,7 @@ public final class ClassesGlobal {
     }
 
     static String compared(BiPredicate<@Nullable Loose, @Nullable Loose> eq) {
-        List<Integer> ns = List.of(0, 1, -1, 2);
+        List<Integer> ns = List.<Integer>of(0, 1, -1, 2);
         List<String> out = new ArrayList<>();
         {
             int length = ns.size();
@@ -123,8 +123,8 @@ public final class ClassesGlobal {
         if (s instanceof Rect) {
             console.log(Integer.toString(((Rect) s).w));
         }
-        Stock st = new Stock(List.of(4, 5));
-        st.setItems(List.of(1, 2, 3));
+        Stock st = new Stock(List.<Integer>of(4, 5));
+        st.setItems(List.<Integer>of(1, 2, 3));
         console.log(st.count + " " + st.size + " " + st.sizeNow() + " " + st.getItems().size());
         console.log(compared((a, b) -> a == null ? b == null : b == null ? false : a.eq(b)));
         console.log(compared((a, b) -> !(a == null ? b == null : b == null ? false : a.eq(b))));

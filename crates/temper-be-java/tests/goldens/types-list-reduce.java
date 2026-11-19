@@ -23,7 +23,7 @@ public final class ReduceGlobal {
 
     static {
         Console console = Core.getConsole(Logger.getLogger("reduce"));
-        List<Integer> vals = List.of(2, 3, 4);
+        List<Integer> vals = List.<Integer>of(2, 3, 4);
         int sum = Core.listedReduceInt(vals, (sum2, n) -> sum2 + n);
         String poorReverseJoin = Core.listedReduceIntToObj(vals, "", (text, n) -> n + text);
         console.log("Reductions: " + sum + " " + poorReverseJoin);

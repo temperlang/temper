@@ -15,7 +15,7 @@ public final class Box<T> implements Holder<T> {
     }
 
     public Entry<T, Integer> pairWith(int other) {
-        return new SimpleImmutableEntry<>(this.value, other);
+        return new SimpleImmutableEntry<T, Integer>(this.value, other);
     }
 
     public T getValue() {

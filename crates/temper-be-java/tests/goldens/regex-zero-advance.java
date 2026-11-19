@@ -8,6 +8,7 @@ import temper.std.regex.CodePoints;
 import temper.std.regex.Or;
 import temper.std.regex.Regex;
 import temper.std.regex.RegexGlobal;
+import temper.std.regex.RegexNode;
 import temper.std.regex.Repeat;
 import temper.std.regex.Sequence;
 
@@ -23,7 +24,7 @@ public final class ZeroAdvanceGlobal {
 
     static {
         Console console = Core.getConsole(Logger.getLogger("zero_advance"));
-        commaItemStartRegex = new Sequence(List.of(new Or(List.of(RegexGlobal.Begin, new CodePoints(","))), new Repeat(RegexGlobal.Space, 0, null, false))).compiled();
+        commaItemStartRegex = new Sequence(List.<RegexNode>of(new Or(List.<RegexNode>of(RegexGlobal.Begin, new CodePoints(","))), new Repeat(RegexGlobal.Space, 0, null, false))).compiled();
         console.log(bulletizeList("apples, bananas, cherries"));
     }
 }

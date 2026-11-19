@@ -20,7 +20,7 @@ public final class Person implements Stringable {
     }
 
     public String toString() {
-        String ageText = Core.listJoinInt(List.of(0), "", unused -> Integer.toString(this.age));
+        String ageText = Core.listJoinInt(List.<Integer>of(0), "", unused -> Integer.toString(this.age));
         return "Person " + this.name + " of age " + ageText;
     }
 

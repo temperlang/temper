@@ -22,7 +22,7 @@ public final class JsonSyntaxTreeGlobal {
     static {
         Console console = Core.getConsole(Logger.getLogger("json_syntax_tree"));
         {
-            List<String> list = List.of("[]", " [] ", " [ ] ", "[1]", "null");
+            List<String> list = List.<String>of("[]", " [] ", " [ ] ", "[1]", "null");
             int length = list.size();
             int i = 0;
             while (i < length) {
@@ -38,7 +38,7 @@ public final class JsonSyntaxTreeGlobal {
             }
         }
         {
-            List<String> list2 = List.of("[", "]", "[,]", "[]]", "[1,]", "[1,,2]");
+            List<String> list2 = List.<String>of("[", "]", "[,]", "[]]", "[1,]", "[1,,2]");
             int length2 = list2.size();
             int i2 = 0;
             while (i2 < length2) {

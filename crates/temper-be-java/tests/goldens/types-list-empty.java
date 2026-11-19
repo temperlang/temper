@@ -20,7 +20,7 @@ public final class EmptyGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("empty"));
-        f(List.of(2, 3));
-        f(List.of());
+        f(List.<Integer>of(2, 3));
+        f(List.<Integer>of());
     }
 }

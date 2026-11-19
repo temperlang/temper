@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.std.regex.Capture;
+import temper.std.regex.CodePart;
 import temper.std.regex.CodePoints;
 import temper.std.regex.CodeRange;
 import temper.std.regex.CodeSet;
@@ -38,9 +39,9 @@ public final class MatchGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("match"));
-        Regex regex = new Sequence(List.of(RegexGlobal.oneOrMore(new CodeSet(List.of(new CodePoints("ab")))), new CodePoints("c"))).compiled();
+        Regex regex = new Sequence(List.<RegexNode>of(RegexGlobal.oneOrMore(new CodeSet(List.<CodePart>of(new CodePoints("ab")))), new CodePoints("c"))).compiled();
         Regex full = RegexGlobal.entire(regex.data).compiled();
-        List<String> strings = List.of("abc", "ac", "bbabac", "ab", "dc", "acc", "cbc");
+        List<String> strings = List.<String>of("abc", "ac", "bbabac", "ab", "dc", "acc", "cbc");
         {
             int length = strings.size();
             int i = 0;
@@ -51,13 +52,13 @@ public final class MatchGlobal {
                 console.log("matches " + string + ": " + full.found(string));
             }
         }
-        Regex catcher = new Sequence(List.of(new Repeat(new CodePoints("a"), 1, null, false), new Capture("intro", new Repeat(new CodePoints("b"), 1, null, false)), new CodePoints("c"), new Repeat(new Or(List.of(new Capture("option1", new CodePoints("d")), new Capture("alphaOption2", new CodePoints("e")))), 1, null, false))).compiled();
+        Regex catcher = new Sequence(List.<RegexNode>of(new Repeat(new CodePoints("a"), 1, null, false), new Capture("intro", new Repeat(new CodePoints("b"), 1, null, false)), new CodePoints("c"), new Repeat(new Or(List.<RegexNode>of(new Capture("option1", new CodePoints("d")), new Capture("alphaOption2", new CodePoints("e")))), 1, null, false))).compiled();
         text = "🌍aaabbceef";
         Match match = catcher.find(text);
         checkGroup(match.full);
         checkGroup(Core.mappedGet(match.groups, "intro"));
         checkGroup(Core.mappedGet(match.groups, "alphaOption2"));
-        Regex thing = new Repeat(new CodeSet(List.of(new CodeRange(97, 122)), false), 1, null, false).compiled();
+        Regex thing = new Repeat(new CodeSet(List.<CodePart>of(new CodeRange(97, 122)), false), 1, null, false).compiled();
         String multiText = "---abc---xyz---";
         Match first = thing.find(multiText);
         Match second = thing.find(multiText, first.full.end);
@@ -91,52 +92,52 @@ public final class MatchGlobal {
             noMatch = "sorry";
         }
         console.log("No match says " + noMatch);
-        RegexNode or = new Or(List.of(new CodePoints("ab"), new CodePoints("bc"))).compiled().data;
+        RegexNode or = new Or(List.<RegexNode>of(new CodePoints("ab"), new CodePoints("bc"))).compiled().data;
         String option1 = "ab";
         String option2 = "bc";
         String optionNone = "cb";
         console.log("or option 1: " + or.found(option1));
         console.log("or option 2: " + or.found(option2));
         console.log("or option none: " + or.found(optionNone));
-        Regex begin = new Sequence(List.of(RegexGlobal.Begin, new CodePoints("a"))).compiled();
+        Regex begin = new Sequence(List.<RegexNode>of(RegexGlobal.Begin, new CodePoints("a"))).compiled();
         String beginsWithATrue = "ab";
         String beginsWithAFalse = "bab";
         console.log("begin true: " + begin.found(beginsWithATrue));
         console.log("begin false: " + begin.found(beginsWithAFalse));
-        Regex negatedBasic = RegexGlobal.entire(new Sequence(List.of(new CodePoints("a"), new CodeSet(List.of(new CodeRange(97, 99)), true))).compiled().data).compiled();
+        Regex negatedBasic = RegexGlobal.entire(new Sequence(List.<RegexNode>of(new CodePoints("a"), new CodeSet(List.<CodePart>of(new CodeRange(97, 99)), true))).compiled().data).compiled();
         String nbTrue = "a🌍";
         String nbFalse = "ac";
         console.log("negated basic true: " + negatedBasic.found(nbTrue));
         console.log("negated basic false: " + negatedBasic.found(nbFalse));
         String simplerLines = "It was the best of times.\nIt was the worst of times.";
-        console.log(new Repeat(new CodeSet(List.of(), true), 1, null, false).compiled().find(simplerLines).full.value);
+        console.log(new Repeat(new CodeSet(List.<CodePart>of(), true), 1, null, false).compiled().find(simplerLines).full.value);
         String t;
         try {
-            t = new Repeat(new CodeSet(List.of(), false), 1, null, false).compiled().find(simplerLines).full.value;
+            t = new Repeat(new CodeSet(List.<CodePart>of(), false), 1, null, false).compiled().find(simplerLines).full.value;
         } catch (RuntimeException ignored4) {
             t = "-";
         }
         console.log(t);
-        Regex notLow = RegexGlobal.oneOrMore(new CodeSet(List.of(new CodeRange(0, 47)), true)).compiled();
+        Regex notLow = RegexGlobal.oneOrMore(new CodeSet(List.<CodePart>of(new CodeRange(0, 47)), true)).compiled();
         console.log("not low: " + notLow.find("-/a🌍-").full.value);
-        console.log("not space or >: " + new Repeat(new CodeSet(List.of(new CodePoints("\t"), new CodePoints("\n"), new CodePoints(" "), new CodePoints(">")), true), 1, null, false).compiled().find("ab>c").full.value);
-        RegexNode idStart = new CodeSet(List.of(new CodeRange(97, 122), new CodeRange(65, 90), new CodePoints("_")), false).compiled().data;
-        Or idContinue = new Or(List.of(idStart, new CodeSet(List.of(new CodeRange(48, 57)), false).compiled().data));
-        Regex word = new Sequence(List.of(RegexGlobal.WordBoundary, idStart, new Repeat(idContinue, 0, null), RegexGlobal.WordBoundary)).compiled();
+        console.log("not space or >: " + new Repeat(new CodeSet(List.<CodePart>of(new CodePoints("\t"), new CodePoints("\n"), new CodePoints(" "), new CodePoints(">")), true), 1, null, false).compiled().find("ab>c").full.value);
+        RegexNode idStart = new CodeSet(List.<CodePart>of(new CodeRange(97, 122), new CodeRange(65, 90), new CodePoints("_")), false).compiled().data;
+        Or idContinue = new Or(List.<RegexNode>of(idStart, new CodeSet(List.<CodePart>of(new CodeRange(48, 57)), false).compiled().data));
+        Regex word = new Sequence(List.<RegexNode>of(RegexGlobal.WordBoundary, idStart, new Repeat(idContinue, 0, null), RegexGlobal.WordBoundary)).compiled();
         String expected = "def_456";
         String found = word.find("123_abc " + expected + " ghi_789").full.value;
         console.log("Found id: " + found);
         String stringToEscape = "$(*^";
-        Regex regexWithInterpolatedString = new Sequence(List.of(RegexGlobal.Dot, new Repeat(new CodePoints(stringToEscape), 1, null, false), RegexGlobal.Dot)).compiled();
+        Regex regexWithInterpolatedString = new Sequence(List.<RegexNode>of(RegexGlobal.Dot, new Repeat(new CodePoints(stringToEscape), 1, null, false), RegexGlobal.Dot)).compiled();
         String stringToEscapeAndMore = "a" + stringToEscape + stringToEscape + "b";
         Match escapedMatch = regexWithInterpolatedString.find(stringToEscapeAndMore);
         console.log(escapedMatch.full.value);
-        Match ownFullMatch = new Sequence(List.of(RegexGlobal.Dot, new Capture("full", RegexGlobal.Dot))).compiled().find("ab");
+        Match ownFullMatch = new Sequence(List.<RegexNode>of(RegexGlobal.Dot, new Capture("full", RegexGlobal.Dot))).compiled().find("ab");
         String ownFull = Core.mappedGet(ownFullMatch.groups, "full").value;
         console.log("Own full: " + ownFull + " vs " + ownFullMatch.full.value);
         String comboLines = "It was the best\nof times.\r\n\rIt was the worst of times.";
         {
-            List<String> list = new Or(List.of(new CodePoints("\n"), new Sequence(List.of(new CodePoints("\r"), new Repeat(new CodePoints("\n"), 0, 1, false))))).compiled().split(comboLines);
+            List<String> list = new Or(List.<RegexNode>of(new CodePoints("\n"), new Sequence(List.<RegexNode>of(new CodePoints("\r"), new Repeat(new CodePoints("\n"), 0, 1, false))))).compiled().split(comboLines);
             int length2 = list.size();
             int i2 = 0;
             while (i2 < length2) {

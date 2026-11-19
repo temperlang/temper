@@ -84,7 +84,7 @@ public final class IndicesGlobal {
         comparePositions("cookie", 120, 121);
         String s = "cookie";
         {
-            List<Integer> list = List.of(111, 105, 122);
+            List<Integer> list = List.<Integer>of(111, 105, 122);
             int length = list.size();
             int i = 0;
             while (i < length) {

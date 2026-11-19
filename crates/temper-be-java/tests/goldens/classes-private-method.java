@@ -24,9 +24,9 @@ public final class PrivateMethodGlobal {
         Label label = new Label(1);
         console.log("close: " + label.close(new TenSink()));
         console.log("noted: " + label.noted("!"));
-        Tally leaf = new Tally(2, null, List.of());
-        Tally mid = new Tally(3, leaf, List.of(leaf, leaf));
-        Tally top = new Tally(1, mid, List.of(mid, leaf));
+        Tally leaf = new Tally(2, null, List.<Tally>of());
+        Tally mid = new Tally(3, leaf, List.<Tally>of(leaf, leaf));
+        Tally top = new Tally(1, mid, List.<Tally>of(mid, leaf));
         console.log("depths: " + leaf.depth + " " + mid.depth + " " + top.depth);
         console.log("totals: " + leaf.getTotal() + " " + mid.getTotal() + " " + top.getTotal());
     }

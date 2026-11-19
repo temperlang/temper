@@ -32,7 +32,7 @@ public final class ObjectLiteralsGlobal {
         Person person2 = new Person("Bob", 45);
         Circle circle1 = new Circle(2);
         Circle circle2 = new Circle(1);
-        List<Stringable> things = List.of(person1, person2, circle1, circle2);
+        List<Stringable> things = List.<Stringable>of(person1, person2, circle1, circle2);
         ToIntFunction<Stringable> fn = thing -> {
             console.log(thing.toString());
             return 0;

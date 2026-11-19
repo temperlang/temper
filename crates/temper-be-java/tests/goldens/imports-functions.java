@@ -22,8 +22,8 @@ public final class FunctionsGlobal {
         double a = 3.0;
         a = a;
         double b = a + 1.0;
-        String values = Core.listJoinDouble(List.of(a, b, norm(a, b)), ", ", it -> Core.float64ToString(it));
+        String values = Core.listJoinDouble(List.<Double>of(a, b, norm(a, b)), ", ", it -> Core.float64ToString(it));
         console.log(values + " triangle");
-        console.log(Core.float64ToString(something(List.of(a, b))));
+        console.log(Core.float64ToString(something(List.<Double>of(a, b))));
     }
 }
