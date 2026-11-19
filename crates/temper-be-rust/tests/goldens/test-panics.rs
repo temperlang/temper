@@ -31,7 +31,8 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected 1 + 1 == ({expected}) not ({actual})"))),
             );
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -48,7 +49,8 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected n == ({expected}) not ({actual})"))),
             );
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -68,7 +70,8 @@ mod tests {
             1i32.wrapping_add(1) == 3,
             Arc::new(move || Arc::new("wrong on purpose".to_string())),
         );
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -88,6 +91,7 @@ mod tests {
                 }),
             );
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 }

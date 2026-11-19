@@ -446,9 +446,53 @@ impl Settle {
         Ok(t)
     }
 
-    /// [`never_returns`] here.
+    /// [`never_returns`] here, which before typing also knows a call of
+    /// a method whose result is `Never<T>` on a parameter or local declared
+    /// with its class's type, as `test.fail(why)` on a test's `Test`.
     pub(crate) fn never_returns(&self, node: NodeId) -> bool {
         never_returns(&self.lib.tree, &self.scopes, &self.typing, node)
+            || (self.typing.expr(node).is_none() && self.calls_never_method(node))
+    }
+
+    /// Whether an untyped call is `object.key(…)`, where `object` names a
+    /// parameter or local declared with a class's type, as `test: Test`,
+    /// whose own methods named `key` each declare a `Never<T>` result:
+    /// what typing the call will find. Methods it inherits aren't looked
+    /// for, so a call of one ends its path only once typed.
+    fn calls_never_method(&self, node: NodeId) -> bool {
+        let tree = &self.lib.tree;
+        let Some(&callee) = (tree.kind(node) == NodeKind::Call)
+            .then(|| tree.children(node).first())
+            .flatten()
+        else {
+            return false;
+        };
+        let Some((object, key)) = self.dot_parts(callee) else {
+            return false;
+        };
+        let Some(&Value::Symbol(name)) = self.lib.value(key) else {
+            return false;
+        };
+        let declared = (tree.kind(object) == NodeKind::RightName)
+            .then(|| self.scopes.resolved(object))
+            .flatten()
+            .map(|b| self.scopes.symbol(b))
+            .filter(|b| matches!(b.kind, SymbolKind::Parameter | SymbolKind::Local))
+            .and_then(|b| b.decl)
+            .and_then(|d| core::let_parts(tree, d).1)
+            .filter(|&ty| tree.kind(ty) == NodeKind::RightName);
+        let Some(class) =
+            (declared.and_then(|ty| self.scopes.resolved(ty))).and_then(|b| self.type_decl(b))
+        else {
+            return false;
+        };
+        let methods: Vec<NodeId> = (self.members_named(class, name, false).into_iter())
+            .filter(|&m| tree.data(m) & ROLE_MASK == core::ROLE_METHOD)
+            .collect();
+        !methods.is_empty()
+            && methods.iter().all(|&m| {
+                (core::let_parts(tree, m).2).is_some_and(|f| declares_never(tree, &self.scopes, f))
+            })
     }
 
     /// Whether a statement jumps away from the block it's in: `return`,
@@ -1954,11 +1998,27 @@ pub(crate) fn never_returns(
         return matches!(typing.types.get(t), TypeData::NeverOf(_));
     }
     let decl = (scopes.resolved(callee)).and_then(|b| scopes.symbol(b).decl);
-    let f = decl
-        .filter(|&d| tree.kind(d) == NodeKind::Let)
+    (decl.filter(|&d| tree.kind(d) == NodeKind::Let))
         .and_then(|d| core::let_parts(tree, d).2)
-        .filter(|&f| tree.kind(f) == NodeKind::Fn);
-    let Some(mut out) = f.and_then(|f| core::fn_parts(tree, f).1) else {
+        .is_some_and(|f| declares_never(tree, scopes, f))
+}
+
+/// Whether a function's declared result is `Never<T>`, as `fn (): Never<Void>`,
+/// or `Never<T> throws E`.
+fn declares_never(
+    tree: &temper_syntax::tree::Tree,
+    scopes: &crate::scope::Scopes,
+    f: NodeId,
+) -> bool {
+    let is = |n: NodeId, what: Function| {
+        tree.kind(n) == NodeKind::Call
+            && (tree.children(n).first())
+                .is_some_and(|&c| scopes.resolved_builtin(c) == Some(Builtin::Function(what)))
+    };
+    let out = (tree.kind(f) == NodeKind::Fn)
+        .then(|| core::fn_parts(tree, f).1)
+        .flatten();
+    let Some(mut out) = out else {
         return false;
     };
     if is(out, Function::Throws) {

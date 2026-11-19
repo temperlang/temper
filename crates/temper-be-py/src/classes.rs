@@ -279,8 +279,8 @@ impl Translator<'_> {
     }
 
     /// A call of a std method this backend connects as a statement:
-    /// `Test.bail()` as `assert False, str(test.messages_combined())`, as
-    /// Kotlin's `BailCall`, so unittest reports the test's messages; and
+    /// `Test.bail()` as `raise AssertionError(str(test.messages_combined()))`,
+    /// so unittest reports the test's messages as its failure; and
     /// a generator's step, whose result isn't needed.
     pub(crate) fn std_statement(&mut self, expr: NodeId) -> Option<R<Stmt>> {
         let Node::CallMethod {
@@ -297,12 +297,12 @@ impl Translator<'_> {
             );
         }
         match self.connected_std(method)?.as_str() {
+            // No `orelse` catches it. Kotlin's `assert False, …` would let
+            // `python -O` go on past a test's failure.
             "std/testing.type Test.bail()" => Some(self.expr(receiver).map(|test| {
                 let combined = test.attr("messages_combined").call(Vec::new());
-                Stmt::Assert(
-                    Expr::Bool(false),
-                    Some(Expr::builtin("str").call(vec![combined])),
-                )
+                let message = Expr::builtin("str").call(vec![combined]);
+                Stmt::Raise(Expr::builtin("AssertionError").call(vec![message]))
             })),
             _ => None,
         }

@@ -48,7 +48,8 @@ mod tests {
         let x = super::twice(2);
         *super::RUNS.write().unwrap() =
             Some(super::runs().wrapping_add(x).wrapping_add(super::base()));
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -57,7 +58,8 @@ mod tests {
         temper_std::init(None)?;
         let t = temper_std::testing::Test::new();
         super::twice(super::runs());
-        t.soft_fail_to_hard()
+        t.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -74,6 +76,7 @@ mod tests {
             }
         }
         *super::RUNS.write().unwrap() = Some(n);
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 }

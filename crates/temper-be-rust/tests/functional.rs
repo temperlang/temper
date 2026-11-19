@@ -116,10 +116,10 @@ const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-c
 /// `functions`' generator has; and `json-adapters`' nested calls, whose `?`
 /// call rustfmt doesn't overflow there, and a `let` of a chain whose
 /// first line is just 100 wide, which rustfmt breaks inside the call;
-/// and `test-panics`' assertion message closure, a call's last argument
-/// left on one line that's 100 wide before the `,` after the call, which
-/// the printer doesn't count there.
-const LAYOUT_GAPS: [&str; 7] = [
+/// and `test-panics`' and `test-fails`' assertion message closures, a
+/// call's last argument left on one line that's 100 wide before the `,`
+/// after the call, which the printer doesn't count there.
+const LAYOUT_GAPS: [&str; 8] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
@@ -127,6 +127,7 @@ const LAYOUT_GAPS: [&str; 7] = [
     "control-flow-async-waiters",
     "json-adapters",
     "test-panics",
+    "test-fails",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's

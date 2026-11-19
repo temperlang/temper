@@ -290,14 +290,25 @@ function temper.test(name, body) end
 ---@param get_msg fun(): string
 function temper.test_assert(test, ok, get_msg) end
 
+---std's `Test.fail`: records the message and ends the test.
+---@param test table
+---@param msg string
+function temper.test_fail(test, msg) end
+
 ---std's `Test.assertHard`: fails the test now if `ok` is false.
 ---@param test table
 ---@param ok boolean
----@param msg fun(): string
-function temper.test_asserthard(test, ok, msg) end
+---@param get_msg fun(): string
+function temper.test_asserthard(test, ok, get_msg) end
 
----std's `Test.bail()`: bubbles.
-function temper.test_bail() end
+---std's `Test.softFailToHard`: ends the test if it has failures.
+---@param test table
+function temper.test_softfailtohard(test) end
+
+---std's `Test.bail()`: ends the test with its failures, by an error no
+---`orelse` catches.
+---@param test table
+function temper.test_bail(test) end
 
 ---std's `Test.passing`.
 ---@param test table

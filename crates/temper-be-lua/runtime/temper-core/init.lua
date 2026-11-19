@@ -2391,13 +2391,26 @@ function temper.instance_of(thing, ...)
     return false
 end
 
-function temper.test_bail()
-    return temper.bubble()
+-- Ends a test with its failures, by an error that's no bubble, so no
+-- `orelse` catches it, and `temper.test` reports them.
+function temper.test_bail(test)
+    error(temper.test_failure_prefix .. table_concat(test.failures, ", "), 2)
 end
 
-function temper.test_asserthard(test, ok, msg)
+function temper.test_fail(test, msg)
+    test.failures[#test.failures + 1] = msg
+    temper.test_bail(test)
+end
+
+function temper.test_asserthard(test, ok, get_msg)
     if not ok then
-        return temper.test_bail(msg)
+        temper.test_fail(test, get_msg())
+    end
+end
+
+function temper.test_softfailtohard(test)
+    if #test.failures ~= 0 then
+        temper.test_bail(test)
     end
 end
 

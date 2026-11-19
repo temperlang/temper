@@ -509,7 +509,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type ValueResult.constructor()",
         Connection::Static("ValueResult", "make"),
     ),
-    // The runtime's `testBail(test)`, as Kotlin's: it throws.
     (
         "std/regex.type Regex.compiledFind()",
         Connection::Call("Regex::compiledFind"),
@@ -562,6 +561,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         "std/temporal.type Date.yearsBetween()",
         Connection::Call("Date::yearsBetween"),
     ),
+    // The runtime's `testBail(test)`, as Kotlin's, which throws a
+    // `TemperTestFailure`, where Kotlin's throws a bubble.
     ("std/testing.type Test.bail()", Connection::Call("testBail")),
 ];
 

@@ -15,6 +15,7 @@ from temper_core import (
     string_get as _string_get,
     string_next as _string_next,
 )
+from typing import NoReturn as _NoReturn
 
 __all__ = (
     'Test',
@@ -41,16 +42,20 @@ class Test:
             self._passing = False
             self._messages.append(message())
 
+    def fail(self, message: str, /) -> _NoReturn:
+        self._passing = False
+        self._messages.append(message)
+        self._failed_on_assert = True
+        raise AssertionError(str(self.messages_combined()))
+
     def assert_hard(self, success: bool, message: _Callable[[], str], /) -> None:
-        self.assert_(success, message)
         if not success:
-            self._failed_on_assert = True
-            assert False, str(self.messages_combined())
+            self.fail(message())
 
     def soft_fail_to_hard(self, /) -> None:
         if self.has_unhandled_fail:
             self._failed_on_assert = True
-            assert False, str(self.messages_combined())
+            raise AssertionError(str(self.messages_combined()))
 
     @property
     def passing(self, /) -> bool:

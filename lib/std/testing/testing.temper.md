@@ -19,20 +19,29 @@ you check multiple conditions more easily.
         }
       }
 
-Typical hard asserts that end the test on false condition also are available.
+A test can also fail outright: `fail` records its message and ends the test
+there, as a failure. Nothing in Temper can stop it, no `orelse` in the test or
+in the code under test, so only the test runner sees it. Since `fail` never
+returns, `if (n == null) { test.fail("no n") }` narrows `n` after the `if`.
+
+      @connected
+      public fail(message: String): Never<Void> {
+        _passing = false;
+        _messages.add(message);
+        _failedOnAssert = true;
+        bail()
+      }
+
+Typical hard asserts that end the test on false condition also are available,
+failing as `fail` does.
 
       @connected
       public assertHard(
         success: Boolean,
         message: fn (): String,
-      ): Void throws Bubble {
-        assert(success, message);
+      ): Void {
         if (!success) {
-          // Attempt to distinguish assert fails from others.
-          // Sadly, they can still orelse an assert failure, so this isn't
-          // flawless.
-          _failedOnAssert = true;
-          bail();
+          fail(message());
         }
       }
 
@@ -40,20 +49,21 @@ Harden and end current test on any pending failure if not previously hardened.
 Backends typically insert calls to this if needed, but you can also call it
 manually at any desired point in your test.
 
-      public softFailToHard(): Void throws Bubble {
+      @connected
+      public softFailToHard(): Void {
         if (hasUnhandledFail) {
           _failedOnAssert = true;
           bail();
         }
       }
 
-Provide a bailing `Bubble` method here that enables backends to customize
-message delivery on failure.
+End the test with its failures. Backends customize how: each throws, or
+panics, with the test's messages, as their test frameworks report failures,
+in a way no `orelse` catches. The interpreter reports the messages as the
+test's failure.
 
       @connected
-      private bail(): Never<Void> throws Bubble {
-        bubble()
-      }
+      private bail(): Never<Void>;
 
 You can check the current passing state of the test at any time. A test is
 currently passing if all soft checks and hard asserts have been successful.

@@ -199,9 +199,13 @@ namespace temper {
             throw TemperBubble("pure virtual call");
         }
 
-        template<class T = void>
-        void testBail(T = T()) {
-            throw TemperBubble("test bail");
+        // std's `Test.bail()`: ends the test with its messages, by a
+        // `TemperTestFailure`, which no `orelse` catches, and `run_tests`
+        // reports as the test's failure.
+        template<class T>
+        [[noreturn]] void testBail(const T& test) {
+            auto messages = test->messagesCombined();
+            throw TemperTestFailure(is_null(messages) ? std::string() : Str(messages).str());
         }
 
     }

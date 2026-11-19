@@ -278,6 +278,10 @@ enum Abrupt {
     Fail(Option<String>),
     /// Something `orelse` can't catch: a panic, or the interpreter's limits.
     Panic(String),
+    /// A test's failure, with its messages, from std's `Test.bail`, which
+    /// `Test.fail` and hard assertions call: as a panic, nothing but the
+    /// test runner stops it, which reports the messages as they are.
+    TestFailed(String),
 }
 
 type R = Result<Val, Abrupt>;
@@ -508,6 +512,7 @@ fn describe(abrupt: Abrupt) -> String {
         Abrupt::Fail(None) => "Failed".to_string(),
         Abrupt::Fail(Some(message)) => format!("Failed: {message}"),
         Abrupt::Panic(message) => format!("Panicked: {message}"),
+        Abrupt::TestFailed(messages) => messages,
         Abrupt::Return(..)
         | Abrupt::Break(_)
         | Abrupt::Continue(_)
@@ -919,7 +924,7 @@ impl Interp<'_> {
             None if s.library.tree.data(decl) & MEMBER_CONNECTED != 0
                 || s.library.tree.data(class.node) & CLASS_CONNECTED != 0 =>
             {
-                self.connected(s, &class, name, args)
+                self.connected(s, &class, this, name, args)
             }
             None => Err(fail("Abstract method")),
         }
@@ -1538,11 +1543,28 @@ impl Interp<'_> {
 
     /// A bodiless `@connected` method that the interpreter implements
     /// itself, as Kotlin Temper's `standardLibraryConnecteds` do: so far
-    /// std's `Date.today()` and `regex`'s ([`regexes`]).
-    fn connected(&mut self, s: &Settled, class: &Rc<Class>, name: NameId, args: Vec<Val>) -> R {
+    /// std's `Date.today()`, `regex`'s ([`regexes`]), and `Test.bail()`,
+    /// which ends the test with its messages ([`Abrupt::TestFailed`]).
+    fn connected(
+        &mut self,
+        s: &Settled,
+        class: &Rc<Class>,
+        this: &Val,
+        name: NameId,
+        args: Vec<Val>,
+    ) -> R {
         let class_name = class_name(s, class.node);
         let in_std = |module| in_std(s, class.node, module);
         match (class_name, s.library.names.get(name), args.as_slice()) {
+            ("Test", "bail", []) if in_std("testing") => {
+                let combined = s.library.names.find("messagesCombined");
+                let combined = combined.ok_or_else(|| fail("Test has no messagesCombined"))?;
+                let messages = match self.call_method(s, this, combined, Vec::new(), None)? {
+                    Val::Str(ref text) => text.to_string(),
+                    _ => String::new(),
+                };
+                Err(Abrupt::TestFailed(messages))
+            }
             ("Date", "today", []) if in_std("temporal") => {
                 let (year, month, day) = numbers::today_utc();
                 self.construct(

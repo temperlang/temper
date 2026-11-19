@@ -73,6 +73,12 @@ const ALLOWED: &[(&str, &str, Side, &str)] = &[
         "a bubble type of the runtime's own, which handlers catch alone (patch 0026)",
     ),
     (
+        "csharp",
+        "temper-core/Panic.cs",
+        Side::Tempest,
+        "a panic type of the runtime's own, which no orelse catches, where Kotlin fails fast",
+    ),
+    (
         "java",
         "temper/core/Bubble.java",
         Side::Tempest,

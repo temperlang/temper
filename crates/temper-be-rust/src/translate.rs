@@ -768,8 +768,8 @@ impl<'a> Translator<'a> {
     /// A module's tests, as Kotlin's: each a `#[test]` function that
     /// initializes the library and std, makes std's `Test`, runs the
     /// test's body, which may bubble, and ends with `soft_fail_to_hard`,
-    /// which fails it if the `Test` has failures, unless the body never
-    /// finishes. Named for the test, in
+    /// which fails it if the `Test` has failures, then `Ok(())`, unless
+    /// the body never finishes. Named for the test, in
     /// snake case, ASCII letters, digits, and `_` only.
     fn tests(&mut self, module: &Module) -> R<Option<Item>> {
         if module.tests.is_empty() {
@@ -828,7 +828,11 @@ impl<'a> Translator<'a> {
                 value: Some(Expr::path(format!("{class}::new")).call(Vec::new())),
             });
             stmts.extend(run);
-            let tail = finishes.then(|| Expr::path(var).method("soft_fail_to_hard", Vec::new()));
+            if finishes {
+                let soft_fail = Expr::path(var).method("soft_fail_to_hard", Vec::new());
+                stmts.push(Stmt::Expr(soft_fail));
+            }
+            let tail = finishes.then(|| Expr::path("Ok").call(vec![Expr::tuple(Vec::new())]));
             let name = test_name(p.strings.get(name), &mut used);
             tests.push((name, Block::new(stmts, tail)));
         }
@@ -1174,7 +1178,10 @@ impl<'a> Translator<'a> {
                 "temper_core::Result<{}>",
                 result.unwrap_or_else(|| "()".into())
             ));
-            if void && tail.is_none() {
+            // No `Ok(())` after statements that never finish, as a call
+            // of a `Never<Void>` method, then `panic!()` (rustc's
+            // `unreachable_code`).
+            if void && tail.is_none() && !crate::tree::diverges(&stmts) {
                 tail = Some(Expr::path("()").ok());
             }
         }

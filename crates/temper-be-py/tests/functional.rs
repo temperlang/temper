@@ -61,7 +61,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 19] = [
+const PROGRAMS: [&str; 20] = [
     "classes",
     "nullables",
     "generics",
@@ -81,6 +81,7 @@ const PROGRAMS: [&str; 19] = [
     "panics",
     "host-errors",
     "test-panics",
+    "test-fails",
 ];
 
 fn cases() -> Vec<Case> {

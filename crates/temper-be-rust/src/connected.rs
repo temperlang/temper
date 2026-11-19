@@ -629,19 +629,21 @@ fn new_pair(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, No
     }
 }
 
-/// `()`, core's `Empty`, as Kotlin's.
-/// `return Err(temper_core::Error::with_optional_message(test.messages_combined()))`,
-/// as Kotlin's `TestBail`, so a test's failure carries its messages.
+/// `panic!("{}", test.messages_combined().unwrap_or_default())`, which no
+/// `orelse` catches, so the test harness reports the test's messages as
+/// its failure; Kotlin's `TestBail` returns them as an `Err`, which one
+/// in the code under test could catch.
 fn test_bail(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     let [test] = args else {
         return Err(NotYet::new("`Test.bail` without its receiver"));
     };
     let test = t.receiver(*test, true)?;
-    let messages = test.method("messages_combined", Vec::new());
-    let error = Expr::path("temper_core::Error::with_optional_message").call(vec![messages]);
-    Ok(Expr::Return(Some(Box::new(
-        Expr::path("Err").call(vec![error]),
-    ))))
+    let messages =
+        (test.method("messages_combined", Vec::new())).method("unwrap_or_default", Vec::new());
+    Ok(Expr::Macro(
+        "panic".into(),
+        vec![Expr::Str("{}".into()), messages],
+    ))
 }
 
 /// `crate::support::run_async(f)`: runs an `async` block's generator on
@@ -687,6 +689,7 @@ fn none(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     Ok(Expr::path("None"))
 }
 
+/// `()`, core's `Empty`, as Kotlin's.
 fn empty(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<Expr, NotYet> {
     Ok(Expr::tuple(Vec::new()))
 }

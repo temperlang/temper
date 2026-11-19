@@ -33,5 +33,19 @@ namespace temper {
             }
         };
 
+        // A test's hard failure, from std's `Test.bail()`, with the test's
+        // messages: no `TemperBubble`, so no `orelse` catches it, and the
+        // test runner (`run_tests`) reports the messages as they are.
+        struct TemperTestFailure : std::exception {
+            std::string message;
+
+            explicit TemperTestFailure(std::string msg)
+                : message(std::move(msg)) {}
+
+            const char* what() const noexcept override {
+                return message.c_str();
+            }
+        };
+
     }
 }

@@ -215,6 +215,7 @@ mod tests {
                 }),
             );
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 }

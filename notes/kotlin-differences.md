@@ -2320,8 +2320,7 @@ copied Kotlin's:
     Kotlin's `clampInt64(a / b)` throws BigInt's `RangeError`), a code
     point out of range or a surrogate (Kotlin's `RangeError`), a
     `StringIndexOption` cast (Kotlin's `TypeError`), a regex that finds
-    nothing (Kotlin's `Error`), `Test.bail` (Kotlin's `strict.fail`,
-    an `AssertionError`), and an awaited promise rejected with anything
+    nothing (Kotlin's `Error`), and an awaited promise rejected with anything
     (Kotlin's throws the rejection's reason, `undefined` for
     `breakPromise()`); Lua's integer `//` and `%` by zero (Lua's own
     error, or `intold.lua`'s `assert`), its runtime's
@@ -2431,6 +2430,33 @@ copied Kotlin's:
     Test: programs/test-panics.temper.md on every backend and the
     interpreter (each test's failure and that all five ran);
     repl/specials.cases, "a test that panics fails alone".
+  - **`Test.fail(message)`, and hard failures no `orelse` catches**
+    (2026-11-19): std's `Test` gains `fail(message): Never<Void>`,
+    which Kotlin's lacks: it records the message and ends the test, so
+    `if (n == null) { test.fail("…") }` narrows `n` after it (flow
+    facts know a `Never<T>` method called on a parameter or local
+    declared with its class's type, before typing). `assertHard` and
+    `softFailToHard` fail through it and no longer say `throws Bubble`,
+    and `bail()` is bodiless, `Never<Void>` without `throws Bubble`.
+    Kotlin's `bail` bubbles on JS (before this chunk, tempest's too),
+    Lua, Rust (`return Err`), C++ (`TemperBubble`), and the
+    interpreter, so an `orelse` in the code under test swallowed a hard
+    assertion; Lua's `test_asserthard` lost its message too. Now each
+    backend's `bail` throws what no `orelse` catches, with the test's
+    messages, which its runner reports as the test's failure: Java's
+    `AssertionError` and C#'s `AssertFailedException`, as Kotlin's;
+    Python `raise AssertionError(…)`, where Kotlin's `assert False, …`
+    goes on under `python -O`; JS core's `panic(messages)`, a plain
+    `Error`, where Kotlin's imports Node's `assert` for `strict.fail`;
+    Lua an error with LuaUnit's failure prefix; Rust `panic!("{}",
+    messages)`; C++ the runtime's `TemperTestFailure`, which
+    `run_tests` reports as it is; the interpreter a test failure that
+    only its test runner stops, reporting the messages as they are.
+    Rust's tests end `soft_fail_to_hard(); Ok(())`, and no function
+    ending in a call that never returns gets an unreachable `Ok(())`.
+    Test: programs/test-fails.temper.md on every backend and the
+    interpreter (each test's failure, text it mustn't say, and that
+    all nine ran); settle-std/testing.cases.
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out
     the value after the panic (2026-11-04), which rustc's

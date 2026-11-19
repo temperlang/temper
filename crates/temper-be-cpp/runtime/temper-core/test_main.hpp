@@ -67,6 +67,10 @@ namespace temper {
                 // as whatever the outcome happened to be.
                 try {
                     outcome = test.run();
+                } catch (const TemperTestFailure& e) {
+                    // `Test.fail`, or a hard assertion: its messages are
+                    // the test's, soft ones before it too.
+                    outcome = TestOutcome{false, e.what()};
                 } catch (const TemperPanic& e) {
                     threw = true;
                     thrown = std::string("Panicked: ") + e.what();

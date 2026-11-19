@@ -1,0 +1,42 @@
+# std's `testing` with std loaded: input, then diagnostics and what
+# running it logs.
+=== a method whose result is Never<T> ends its path, as panic() does
+// `Test.fail` never returns, so a null check that leaves through it
+// narrows what follows, as one that leaves through a method of the
+// program's own class does: each called on a parameter or local
+// declared with its class's type, which flow facts see before typing.
+let { Test } = import("std/testing");
+class Stopper {
+  public stop(why: String): Never<Void> { panic() }
+}
+let viaTest(test: Test, n: Int?): Int {
+  if (n == null) { test.fail("no n") }
+  n + 1
+}
+let viaOwn(stopper: Stopper, n: Int?): Int {
+  if (n == null) { stopper.stop("no n") }
+  n + 2
+}
+let viaLocal(n: Int?): Int {
+  let stopper: Stopper = new Stopper();
+  if (n == null) { stopper.stop("no n") }
+  n + 3
+}
+let test = new Test();
+console.log("${viaTest(test, 1)} ${viaOwn(new Stopper(), 1)} ${viaLocal(1)}");
+console.log("${test.passing} ${test.messages().length}");
+--- settled
+log 2 3 4
+log true 0
+
+=== Test.fail records its message and ends the test, past any orelse
+// Outside a test runner, its failure ends the run, saying the test's
+// messages, the soft ones before it too.
+let { Test } = import("std/testing");
+let tries(f: fn (): Void throws Bubble): Void { f() orelse console.log("swallowed"); }
+let test = new Test();
+test.assert(false) { "soft" };
+tries { test.fail("hard") };
+console.log("went on");
+--- settled
+soft, hard

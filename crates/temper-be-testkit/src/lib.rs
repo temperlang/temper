@@ -274,12 +274,13 @@ pub fn without_net(cases: &mut [Case]) {
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]), as does
-/// `test-panics`, whose tests that panic fail alone; `panics`
+/// `test-panics`, whose tests that panic fail alone, and `test-fails`,
+/// whose tests' hard failures no `orelse` stops; `panics`
 /// `orelse` handling bubbles from everywhere but never a panic, whose
 /// run fails ([`FAILING`]); and `host-errors` builtins whose docs say
 /// they panic (index errors) panicking on every backend, past `orelse`,
 /// one run per section, each saying why on stderr.
-pub const PROGRAMS: [&str; 23] = [
+pub const PROGRAMS: [&str; 24] = [
     "classes",
     "nullables",
     "generics",
@@ -303,6 +304,7 @@ pub const PROGRAMS: [&str; 23] = [
     "panics",
     "host-errors",
     "test-panics",
+    "test-fails",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
@@ -315,8 +317,9 @@ pub const FAILING: [&str; 2] = ["panics", "host-errors"];
 /// `runAsTest = true` does: their tests check what a log can't, as the
 /// library's state their init set, or how a runner reports tests that
 /// fail. Those expected to fail are in `failures` blocks, a line each,
-/// a test's name and text its failure's cause contains, after `: `.
-pub const AS_TESTS: [&str; 2] = ["reach", "test-panics"];
+/// a test's name and text its failure's cause contains, after `: `;
+/// text a test's failure mustn't contain is in `absent` blocks, alike.
+pub const AS_TESTS: [&str; 3] = ["reach", "test-panics", "test-fails"];
 
 /// What only the shared `reach` program's tests reach, by their Temper
 /// names, each of which a backend spells its own way.
@@ -417,6 +420,10 @@ pub struct Case {
     /// then the tests it expects to fail, each its name and text its
     /// failure's cause contains ([`check_tests`]).
     pub tests: Option<Vec<(String, String)>>,
+    /// Text a test's failure, if it fails, mustn't contain, each with the
+    /// test's name: what it would say if it went on past where it
+    /// should have stopped.
+    pub absent: Vec<(String, String)>,
     /// Whether its run fails (`expectRunFailure = true`), after logging
     /// what's expected ([`check_case`]).
     pub fails: bool,
@@ -465,6 +472,7 @@ impl Case {
             host_files: Vec::new(),
             no_connected: false,
             tests: None,
+            absent: Vec::new(),
             fails: false,
             stderr: Vec::new(),
         }
@@ -542,6 +550,7 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             host_files,
             no_connected: false,
             tests: (test.runs_as_test()).then(|| test.expected_failures()),
+            absent: Vec::new(),
             fails: test.expects_run_failure(),
             stderr: Vec::new(),
         };
@@ -587,12 +596,14 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 temper_funtests::expected_log(&text, backend)
             };
             let key = format!("{name}{suffix}");
-            let tests = AS_TESTS.contains(&file).then(|| {
-                (temper_funtests::fenced_lines(&text, "failures", &[backend]).iter())
+            let causes = |block: &str| -> Vec<(String, String)> {
+                (temper_funtests::fenced_lines(&text, block, &[backend]).iter())
                     .filter_map(|l| l.trim().split_once(": "))
                     .map(|(name, cause)| (name.to_string(), cause.to_string()))
                     .collect()
-            });
+            };
+            let tests = AS_TESTS.contains(&file).then(|| causes("failures"));
+            let absent = causes("absent");
             cases.push(Case {
                 key: key.clone(),
                 library: key,
@@ -611,6 +622,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 host_files: Vec::new(),
                 no_connected: false,
                 tests,
+                absent,
                 fails: FAILING.contains(&file),
             });
         }
@@ -1253,8 +1265,9 @@ pub fn junit_results(xml: &str) -> TestRun {
 /// Compares a run as tests with what its case expects, as Kotlin's
 /// `assertTestingTestFromJunit`: the failing tests' names, through
 /// `name` (which undoes a backend's naming of tests) and lowercased,
-/// match the expected failures' names, and each expected cause is in
-/// some failure's cause. Every test ran, too: as many as its sources
+/// match the expected failures' names, each expected cause is in that
+/// test's failure, and no text the case says is absent ([`Case::absent`])
+/// is in that test's. Every test ran, too: as many as its sources
 /// declare (a line starting `test("`), so a test that ends the run, as
 /// a panic once did, shows. `actual` is the run, from its JUnit XML
 /// ([`junit_results`]) or its runner's output, or `None` if there are
@@ -1280,14 +1293,23 @@ pub fn check_tests(
     names.sort();
     let mut want: Vec<String> = expected.iter().map(|(n, _)| n.to_lowercase()).collect();
     want.sort();
-    let causes_found = (expected.iter()).all(|(_, c)| failed.iter().any(|(_, f)| f.contains(c)));
+    // Each test's own failure, by its name as the program spells it.
+    let failure_of = |test: &str| {
+        (failed.iter())
+            .find(|(n, _)| name(n).to_lowercase() == test.to_lowercase())
+            .map(|&(_, cause)| cause)
+    };
+    let causes_found = (expected.iter()).all(|(n, c)| failure_of(n).is_some_and(|f| f.contains(c)));
+    let none_absent =
+        (case.absent.iter()).all(|(n, c)| failure_of(n).is_none_or(|f| !f.contains(c)));
     let declared = (case.sources.iter())
         .flat_map(|(_, text)| text.lines())
         .filter(|l| l.trim_start().starts_with("test(\""))
         .count();
-    if names != want || !causes_found || actual.len() != declared {
+    if names != want || !causes_found || !none_absent || actual.len() != declared {
         failures.push(format!(
-            "{key}: expected failures {expected:?} of {declared} tests, got {actual:?}\n{}",
+            "{key}: expected failures {expected:?}, saying none of {:?}, of {declared} tests, got {actual:?}\n{}",
+            case.absent,
             output()
         ));
     }

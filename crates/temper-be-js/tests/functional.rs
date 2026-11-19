@@ -100,6 +100,7 @@ fn cases() -> Vec<Case> {
             host_files: Vec::new(),
             no_connected: false,
             tests: None,
+            absent: Vec::new(),
             fails: false,
             stderr: Vec::new(),
         });

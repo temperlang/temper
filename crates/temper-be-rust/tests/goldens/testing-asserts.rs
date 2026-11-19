@@ -184,7 +184,8 @@ mod tests {
             temper_core::float64::cmp(super::norm_squared(super::Vec2::new(0.0, 0.0)), 0.0) == 0,
             Arc::new(move || Arc::new("Oh noes".to_string())),
         );
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -202,7 +203,8 @@ mod tests {
             helper.clone(),
             Arc::new(vec![Arc::new(vec![Arc::new("bye".to_string())])]),
         )?;
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -224,7 +226,8 @@ mod tests {
                 })
             });
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]
@@ -254,6 +257,7 @@ mod tests {
                 }
             }
         }
-        test.soft_fail_to_hard()
+        test.soft_fail_to_hard();
+        Ok(())
     }
 }
