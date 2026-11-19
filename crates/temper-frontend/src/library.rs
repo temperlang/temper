@@ -8,6 +8,7 @@
 //! it came from, also shifted, so the files' parse results stay usable for
 //! formatting and the language server.
 
+use crate::corelib;
 use crate::stdlib;
 use temper_syntax::ast::{self, Value};
 use temper_syntax::lex::SourceKind;
@@ -806,6 +807,14 @@ impl Library {
         let file = self.locate(pos).0;
         let path = &self.files[file.0 as usize].path;
         path.starts_with(&format!("{}/", self.std_root()))
+    }
+
+    /// Whether the source at `pos` is core's own, [`corelib::TEXT`], read
+    /// as a library, as editors and core's checks read it: core declares
+    /// the builtin types, as no other library may.
+    pub fn in_core(&self, pos: u32) -> bool {
+        let file = self.locate(pos).0;
+        self.files[file.0 as usize].parsed.source() == corelib::TEXT
     }
 
     /// The module for a directory, if it's loaded.

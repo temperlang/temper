@@ -15,7 +15,7 @@ export interface AnyValue {}
  */
 export sealed interface Equatable<EQ extends AnyValue> {
   @operator("==")
-  eq(other: EQ): builtins.Boolean;
+  eq(other: EQ): Boolean;
 }
 
 /**
@@ -118,7 +118,7 @@ export class Empty extends Equatable<Empty> {
 
   @connected
   @operator("==")
-  public eq(other: Empty): builtins.Boolean { true }
+  public eq(other: Empty): Boolean { true }
 }
 let emptySingleton: Empty = doPure { (): Empty => new Empty() };
 @connected
@@ -185,7 +185,7 @@ export interface Generator<@out YIELD extends AnyValue> {
    * would get [snippet/builtin/true].
    */
   @connected
-  public done: builtins.Boolean;
+  public done: Boolean;
   /**
    * Should be called once it is realized that
    * [snippet/type/Generator/method/next] is not going to be called
@@ -255,7 +255,7 @@ export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneRes
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
 extends Generator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
-  private var _done: builtins.Boolean = false;
+  private var _done: Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Bubble) {
     this.generatorFn = generatorFn;
@@ -274,7 +274,7 @@ extends Generator<YIELD> {
     return result;
   }
 
-  public get done(): builtins.Boolean { this._done }
+  public get done(): Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -287,7 +287,7 @@ extends Generator<YIELD> {
 class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
 extends SafeGenerator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD>;
-  private var _done: builtins.Boolean = false;
+  private var _done: Boolean = false;
 
   public constructor(generatorFn: fn (): GeneratorResult<YIELD>) {
     this.generatorFn = generatorFn;
@@ -306,7 +306,7 @@ extends SafeGenerator<YIELD> {
     return result;
   }
 
-  public get done(): builtins.Boolean { this._done }
+  public get done(): Boolean { this._done }
 
   public close(): Void {
     // TODO: trigger bubble at pause point in generatorFn
@@ -380,7 +380,7 @@ export /*sealed*/ interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
 export class String extends MapKey<String> {
-  private let content: builtins.String;
+  private let content: String;
 
   /**
    * Convert the single code point to a string if it's valid. Specifically, it
@@ -396,7 +396,7 @@ export class String extends MapKey<String> {
 
   /** True iff this string has no code-points. */
   @connected
-  public get isEmpty(): builtins.Boolean { content == "" }
+  public get isEmpty(): Boolean { content == "" }
 
   /**
    * A string index that works for the start of any string.
@@ -442,7 +442,7 @@ export class String extends MapKey<String> {
    * ```
    */
   @connected
-  public hasIndex(index: StringIndex): builtins.Boolean;
+  public hasIndex(index: StringIndex): Boolean;
 
   /**
    * The first index of *target* if found, starting from *start*.
@@ -562,7 +562,7 @@ export class String extends MapKey<String> {
    * ```
    */
   @connected
-  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): builtins.Boolean;
+  public hasAtLeast(begin: StringIndex, end: StringIndex, minCount: Int): Boolean;
 
   /**
    * The count of codepoints between *begin* and *end*.
@@ -600,7 +600,7 @@ export class String extends MapKey<String> {
 
   /** Where splitting by "" returns each code point as a separate string. */
   @connected
-  public split(separator: builtins.String): List<builtins.String>;
+  public split(separator: String): List<String>;
 
   /**
    * Invokes body with each code point value in order.
@@ -628,22 +628,22 @@ export class String extends MapKey<String> {
 
   /** Supports numeric JSON format plus Infinity and NaN. */
   @connected
-  public toFloat64(): builtins.Float64 throws Bubble;
+  public toFloat64(): Float64 throws Bubble;
 
   /** Supports integer JSON format, plus any radix 2 through 36. */
   @connected
-  public toInt32(radix: builtins.Int = 10): builtins.Int throws Bubble;
+  public toInt32(radix: Int = 10): Int throws Bubble;
 
   /** Supports integer JSON format, plus any radix 2 through 36. */
   @connected
-  public toInt64(radix: builtins.Int = 10): builtins.Int64 throws Bubble;
+  public toInt64(radix: Int = 10): Int64 throws Bubble;
 
   @connected
-  public toString(): builtins.String { content }
+  public toString(): String { content }
 
   @connected
   @operator("==")
-  public eq(other: builtins.String): builtins.Boolean;
+  public eq(other: String): Boolean;
 }
 
 /**
@@ -673,7 +673,7 @@ export sealed interface StringIndexOption extends Equatable<StringIndexOption> {
 
   @operator("==")
   @connected
-  public eq(other: StringIndexOption): builtins.Boolean;
+  public eq(other: StringIndexOption): Boolean;
 }
 
 /**
@@ -727,7 +727,7 @@ export class StringIndex extends StringIndexOption {
   @connected
   public static let none: NoStringIndex;
 
-  private offset: builtins.Int;
+  private offset: Int;
   private constructor(offset: Int) { this.offset = offset; }
 }
 
@@ -918,12 +918,12 @@ export sealed interface Listed<T> {
    * ```
    */
   @connected
-  public get length(): builtins.Int;
+  public get length(): Int;
 
   /** True if this contains no elements. */
   // TODO(tjp): Overrides don't seem to work here.
   @connected
-  public get isEmpty(): builtins.Boolean { length == 0 }
+  public get isEmpty(): Boolean { length == 0 }
 
   /**
    * The i<sup>th</sup> element, or [snippet/builtin/Bubble] if *i* is outside the range \[0, [length]\).
@@ -946,10 +946,10 @@ export sealed interface Listed<T> {
    * ```
    */
   @connected
-  public get(index: builtins.Int): T;
+  public get(index: Int): T;
 
   @connected
-  public getOr(index: builtins.Int, fallback: T): T;
+  public getOr(index: Int, fallback: T): T;
 
   /**
    * A new list containing all and only elements from [begin] inclusive
@@ -973,7 +973,7 @@ export sealed interface Listed<T> {
   public toListBuilder(): ListBuilder<T>;
 
   @connected
-  public filter(predicate: fn (T): builtins.Boolean): List<T>;
+  public filter(predicate: fn (T): Boolean): List<T>;
 
   /**
    * Reduce to a single value, starting from the first item in this list.
@@ -1034,17 +1034,17 @@ export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int
 @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
 export class List<@out T> extends Listed<T> {
   // TODO: Until Types.list is the same as List<T>, we need this trick.
-  private let content: builtins.List<T>;
+  private let content: List<T>;
 
   /** Same as `[...]` syntax but provides an explicit type argument. */
-  public static nym`of` = builtins._listify;
+  public static nym`of` = _listify;
 
   @connected
-  public get length(): builtins.Int;
+  public get length(): Int;
 
   /** Panic on index out of bounds. */
   @connected
-  public get(index: builtins.Int): T;
+  public get(index: Int): T;
 
   @connected
   public toList(): List<T> { this }
@@ -1087,11 +1087,11 @@ export class ListBuilder<T> extends Listed<T> {
 
   /** Panics for `at` less than 0 or greater than `length`. */
   @connected
-  public add(newValue: T, at: builtins.Int = length): Void;
+  public add(newValue: T, at: Int = length): Void;
 
   /** Panics for `at` less than 0 or greater than `length`. */
   @connected
-  public addAll(newValues: Listed<T>, at: builtins.Int = length): Void;
+  public addAll(newValues: Listed<T>, at: Int = length): Void;
 
   /** Removes all values, retaining internal capacity where possible. */
   @connected
@@ -1112,7 +1112,7 @@ export class ListBuilder<T> extends Listed<T> {
 
   /** Panics on index out of bounds. */
   @connected
-  public set(index: builtins.Int, newValue: T): Void;
+  public set(index: Int, newValue: T): Void;
 
   /**
    * Sorts in place. Uses stable sorting.
@@ -1127,13 +1127,13 @@ export class ListBuilder<T> extends Listed<T> {
    */
   @connected
   public splice(
-    index: builtins.Int = 0,
-    removeCount: builtins.Int = length,
-    newValues: builtins.Listed<T> = [],
-  ): builtins.List<T>;
+    index: Int = 0,
+    removeCount: Int = length,
+    newValues: Listed<T> = [],
+  ): List<T>;
 
   @connected
-  public get length(): builtins.Int;
+  public get length(): Int;
 
   @connected
   public toList(): List<T>;
@@ -1167,7 +1167,7 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    * The number of key value pairs in the [snippet/type/Mapped].
    */
   @connected
-  public get length(): builtins.Int {
+  public get length(): Int {
     toListBuilder().length
   }
 
@@ -1202,7 +1202,7 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    * Checks whether [key] is present in the [snippet/type/Mapped].
    */
   @connected
-  public has(key: K): builtins.Boolean {
+  public has(key: K): Boolean {
     return do { this[key]; true } orelse false;
   }
 
@@ -1400,7 +1400,7 @@ export class Deque<T> {
    * True if this contains no elements.
    */
   @connected
-  public get isEmpty(): builtins.Boolean;
+  public get isEmpty(): Boolean;
 
   /**
    * Removes and returns the first element. Panics if empty.
@@ -1417,20 +1417,20 @@ export class Deque<T> {
 @imu
 @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
 export class Boolean extends Equatable<Boolean> {
-  private let content: builtins.Boolean;
+  private let content: Boolean;
 
   /**
    * For [snippet/builtin/false], the string `"false"`.
    * For [snippet/builtin/true], the string `"true"`.
    */
   @connected
-  public toString(): builtins.String {
+  public toString(): String {
     if (content) { "true" } else { "false" }
   }
 
   @connected
   @operator("==")
-  public eq(other: builtins.Boolean): builtins.Boolean;
+  public eq(other: Boolean): Boolean;
 }
 
 /**
@@ -1439,11 +1439,11 @@ export class Boolean extends Equatable<Boolean> {
  * depends on the probability of an adjacent bit being set.
  */
 export class DenseBitVector {
-  private let bits: ListBuilder<builtins.Boolean>;
+  private let bits: ListBuilder<Boolean>;
 
   @connected
-  public constructor(capacity: builtins.Int) {
-    bits = new ListBuilder<builtins.Boolean>();
+  public constructor(capacity: Int) {
+    bits = new ListBuilder<Boolean>();
     for (var i = 0; i < capacity; i += 1) {
       bits.add(false);
     }
@@ -1454,7 +1454,7 @@ export class DenseBitVector {
    * it is assumed to be [snippet/builtin/false].
    */
   @connected
-  public get(index: builtins.Int): builtins.Boolean {
+  public get(index: Int): Boolean {
     if (0 <= index && index < bits.length) {
       bits[index]
     } else {
@@ -1476,7 +1476,7 @@ export class DenseBitVector {
    * ```
    */
   @connected
-  public set(index: builtins.Int, newValue: builtins.Boolean): Void {
+  public set(index: Int, newValue: Boolean): Void {
     let bits = this.bits;
     var limit = bits.length;
     if (limit <= index) {
@@ -1504,7 +1504,7 @@ export let Int = Int32;
  */
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
 export class Int32 extends MapKey<Int32> {
-  private let content: builtins.Int;
+  private let content: Int;
 
   @connected
   public toFloat64(): Float64;
@@ -1514,35 +1514,35 @@ export class Int32 extends MapKey<Int32> {
 
   /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
   @connected
-  public toString(radix: builtins.Int = 10): String;
+  public toString(radix: Int = 10): String;
 
   @connected
-  public min(other: builtins.Int): builtins.Int {
+  public min(other: Int): Int {
     if (content <= other) { content } else { other }
   }
 
   @connected
-  public max(other: builtins.Int): builtins.Int {
+  public max(other: Int): Int {
     if (content >= other) { content } else { other }
   }
 
   /** `this + 1`, the successor value used by [snippet/builtin/++]. */
   @connected
-  public succ(): builtins.Int32 { content + 1 }
+  public succ(): Int32 { content + 1 }
 
   /** `this - 1`, the predecessor value used by [snippet/builtin/--]. */
   @connected
-  public pred(): builtins.Int32 { content - 1 }
+  public pred(): Int32 { content - 1 }
 
   /** `-1` if `this < 0`, `0` if `this == 0`, or otherwise `1`. */
   @connected
-  public get signum(): builtins.Int32 {
+  public get signum(): Int32 {
     (content >> 31) | (-content >>> 31)
   }
 
   @connected
   @operator("==")
-  public eq(other: builtins.Int32): builtins.Boolean;
+  public eq(other: Int32): Boolean;
 }
 
 /**
@@ -1555,7 +1555,7 @@ export class Int32 extends MapKey<Int32> {
 @imu
 @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
 export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
-  private let content: builtins.Int64;
+  private let content: Int64;
 
   /** Bubbles if the result isn't within the exponent error of the original. */
   @connected
@@ -1583,29 +1583,29 @@ export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
 
   /** Supports radix 2 through 36. Doesn't prefix `+` for positive. */
   @connected
-  public toString(radix: builtins.Int = 10): String;
+  public toString(radix: Int = 10): String;
 
   @connected
-  public min(other: builtins.Int64): builtins.Int64 {
+  public min(other: Int64): Int64 {
     if (content <= other) { content } else { other }
   }
 
   @connected
-  public max(other: builtins.Int64): builtins.Int64 {
+  public max(other: Int64): Int64 {
     if (content >= other) { content } else { other }
   }
 
   /** `this + 1i64`, the successor value used by [snippet/builtin/++]. */
   @connected
-  public succ(): builtins.Int64 { content + 1i64 }
+  public succ(): Int64 { content + 1i64 }
 
   /** `this - 1i64`, the predecessor value used by [snippet/builtin/--]. */
   @connected
-  public pred(): builtins.Int64 { content - 1i64 }
+  public pred(): Int64 { content - 1i64 }
 
   @connected
   @operator("==")
-  public eq(other: builtins.Int64): builtins.Boolean;
+  public eq(other: Int64): Boolean;
 }
 
 /**
@@ -1621,7 +1621,7 @@ export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
 @imu
 @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
 export class Float64 extends Equatable<Float64> {
-  private let content: builtins.Float64;
+  private let content: Float64;
 
   /**
    * Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
@@ -1711,10 +1711,10 @@ export class Float64 extends Equatable<Float64> {
   /** Matches semantics of Python's *math.isclose*. */
   @connected
   public near(
-    other: builtins.Float64,
-    relTol: builtins.Float64 = 1e-9,
-    absTol: builtins.Float64 = 0.0,
-  ): builtins.Boolean {
+    other: Float64,
+    relTol: Float64 = 1e-9,
+    absTol: Float64 = 0.0,
+  ): Boolean {
     let margin = (content.abs().max(other.abs()) * relTol).max(absTol);
     (content - other).abs() <= margin
   }
@@ -1742,15 +1742,15 @@ export class Float64 extends Equatable<Float64> {
 
   /** `this + 1.0`, the successor value used by [snippet/builtin/++]. */
   @connected
-  public succ(): builtins.Float64 { content + 1.0 }
+  public succ(): Float64 { content + 1.0 }
 
   /** `this - 1.0`, the predecessor value used by [snippet/builtin/--]. */
   @connected
-  public pred(): builtins.Float64 { content - 1.0 }
+  public pred(): Float64 { content - 1.0 }
 
   @connected
   @operator("==")
-  public eq(other: builtins.Float64): builtins.Boolean;
+  public eq(other: Float64): Boolean;
 }
 
 /**
@@ -1763,5 +1763,5 @@ export class Float64 extends Equatable<Float64> {
  * production-ready.
  */
 export interface Problem {
-  private let content: builtins.Problem;
+  private let content: Problem;
 }

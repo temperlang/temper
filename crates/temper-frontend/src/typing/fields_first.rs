@@ -227,17 +227,13 @@ impl Settle {
         cx.errors
     }
 
-    /// Core's `content: builtins.T`, which backends' own code sets, as
-    /// Kotlin allows.
+    /// Core's `content` fields, which backends' own code sets, as Kotlin
+    /// allows in core.
     fn core_content(&self, field: NodeId) -> bool {
         let tree = &self.lib.tree;
         let name = tree.children(field)[0];
         let named = (self.lib.name(name)).is_some_and(|n| self.lib.names.get(n) == "content");
-        let (start, end) = (tree.span(name).end, tree.span(field).end);
-        let ty = self.lib.source_text(Span { start, end });
-        named
-            && (ty.trim_start().strip_prefix(':'))
-                .is_some_and(|t| t.trim().starts_with("builtins."))
+        named && self.lib.in_core(tree.span(field).start)
     }
 
     /// Walks a node, given which fields are set before it, and gives

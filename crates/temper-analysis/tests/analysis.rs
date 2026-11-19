@@ -582,16 +582,16 @@ fn definition_into_core() {
     assert!(line.starts_with("public add(newValue: T"), "{line}");
     // A getter on List<String>, its own, and one its supertype declares.
     let (line, _) = found("length;", 0, 0);
-    assert_eq!(line, "public get length(): builtins.Int;");
+    assert_eq!(line, "public get length(): Int;");
     let isempty_list = core_at(&a, "isEmpty;", 0, 0).unwrap().0;
     assert_eq!(
         isempty_list,
-        "public get isEmpty(): builtins.Boolean { length == 0 }"
+        "public get isEmpty(): Boolean { length == 0 }"
     );
     // String's own, and a static after the type's name.
     let (line, _) = found("isEmpty;", 1, 0);
     assert!(
-        line.starts_with("public get isEmpty(): builtins.Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { content"),
         "{line}"
     );
     let (line, _) = found("fromCodePoint", 0, 0);

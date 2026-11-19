@@ -553,3 +553,13 @@ new Ok(1);
   #void)
 error 191..202: Property b not initialized in constructor
 error 321..322: Property a not initialized in constructor
+
+=== only core's content fields are exempt
+// Kotlin exempts core's `content` fields, which backends' own code
+// sets, but not a library's, however it's typed.
+class Wrapper {
+  private let content: builtins.Int;
+}
+--- settled
+(Block (Class ^Wrapper:0 (Let private ^content:2 Int)))
+error 148..155: Property content not initialized in constructor

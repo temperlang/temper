@@ -27,8 +27,8 @@ struct Member {
 
 /// Core's spelling of a type, as tmpl writes it.
 fn type_name(core: &str) -> String {
-    // Each word, `Int` as `Int32`, without `builtins.`; and `fn (` spaced.
-    let t = core.trim().replace("builtins.", "").replace("fn(", "fn (");
+    // Each word, `Int` as `Int32`; and `fn (` spaced.
+    let t = core.trim().replace("fn(", "fn (");
     let mut out = String::new();
     let mut word = String::new();
     for c in t.chars().chain([' ']) {

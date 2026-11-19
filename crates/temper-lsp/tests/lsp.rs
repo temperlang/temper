@@ -499,13 +499,13 @@ fn definition_and_hover_into_core() {
     // `console.log`.
     let (line, _) = core_line(3, 17);
     assert!(
-        line.starts_with("public get isEmpty(): builtins.Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { content"),
         "{line}"
     );
     let (line, _) = core_line(4, 2);
     assert!(line.starts_with("export let ignore("), "{line}");
     let (line, _) = core_line(4, 16);
-    assert_eq!(line, "public get length(): builtins.Int;");
+    assert_eq!(line, "public get length(): Int;");
     let (line, _) = core_line(5, 9);
     assert_eq!(line, "public log(message: String): Void;");
     // A parameter's type.

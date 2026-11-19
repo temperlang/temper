@@ -339,8 +339,8 @@ alone, and keeps what it read, once per type.
 **Alternative:** load core as a library, settled like std, with its
 types' members as ordinary declarations.
 
-**Pros:** core stays Kotlin's file, easy to diff; no settle of core per
-build.
+**Pros:** core stays close to Kotlin's file, easy to diff; no settle of
+core per build.
 
 **Cons:** a text search over source is fragile; core's own semantics
 aren't checked; and core's types are special cases throughout typing

@@ -708,7 +708,7 @@ impl<'a> Reader<'a> {
     fn applied_parts(&self, node: NodeId) -> Option<(NodeId, &'a [NodeId])> {
         let tree = self.ast.tree();
         match tree.kind(node) {
-            NodeKind::RightName | NodeKind::BuiltinName => Some((node, &[])),
+            NodeKind::RightName => Some((node, &[])),
             NodeKind::Call
                 if self.ast.value(tree.children(node)[0])
                     == Some(&Value::Builtin(AstBuiltin::Angle)) =>
@@ -802,13 +802,13 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// A type: a builtin type named as `String` or `builtins.String`
-    /// (`%String`), maybe given arguments, as `List<T>`; the method's own
-    /// type parameter, or else the type's; `T?`; or `fn (A): R`.
+    /// A type: a builtin type by name, as `String`, maybe given
+    /// arguments, as `List<T>`; the method's own type parameter, or else
+    /// the type's; `T?`; or `fn (A): R`.
     fn type_of(&self, node: NodeId) -> CoreType {
         let tree = self.ast.tree();
         match tree.kind(node) {
-            NodeKind::RightName | NodeKind::BuiltinName => {
+            NodeKind::RightName => {
                 let Some(name) = self.text(node) else {
                     return CoreType::Unknown;
                 };

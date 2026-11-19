@@ -38,4 +38,23 @@ mod tests {
         listed.sort();
         assert_eq!(found, listed);
     }
+
+    /// Core and std name builtin types as any library does, `Int`, not
+    /// `builtins.Int`: core's declarations of them are the builtins.
+    #[test]
+    fn core_and_std_use_no_builtins_qualifiers() {
+        let files = (super::FILES.iter()).chain(crate::stdlib::FILES);
+        let mut found = Vec::new();
+        for (path, text) in files {
+            for (i, line) in text.lines().enumerate() {
+                let qualified = (line.match_indices("builtins.")).any(|(at, _)| {
+                    line[at + 9..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
+                });
+                if qualified {
+                    found.push(format!("{path}:{}: {}", i + 1, line.trim()));
+                }
+            }
+        }
+        assert_eq!(found, Vec::<String>::new());
+    }
 }
