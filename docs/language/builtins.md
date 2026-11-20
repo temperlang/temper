@@ -444,7 +444,7 @@ let f<T extends A & B>(t: T): Void {
   b.b();
 }
 f<C>(c);
-// ✅ null
+// ✅
 ```
 
 ### Multiplication `*`
@@ -479,6 +479,7 @@ The builtin `+` operator has six variants:
 - *Infix* with two [*Float64*](types.md#class-float64)s: signed addition
 - *Prefix* with one [*Float64*](types.md#class-float64): numeric identity
 
+<!-- known: I10 -->
 ```temper
 1    + 2    == 3    &&
 1.0  + 2.0  == 3.0  &&
@@ -835,6 +836,7 @@ Unicode [scalar value]s, which exclude surrogate codes appearing by themselves.
 This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
 [`Float64.near`](types.md#float64near) checks `==` by this order first, so `NaN` is near `NaN`.
 
+<!-- known: I10 -->
 ```temper
 -Infinity < -1.0     &&
      -1.0 <  0.0     &&
@@ -1828,7 +1830,7 @@ class SubType extends SuperType {}
 // An instance of a subtype may be assigned to a variable
 // whose type is the supertype.
 let x: SuperType = new SubType();
-// ✅ null
+// ✅
 ```
 
 Second, when declaring a type variable.
@@ -1837,7 +1839,7 @@ that are subtypes of the upper bound.
 
 ```temper
 let f<T extends Listed<String>>(x: T): T { x }
-// ✅ null
+// ✅
 ```
 
 When more than one super-type is extended, use
@@ -1851,7 +1853,7 @@ class C extends I & J {}
 
 let f<T extends I & J>(x: T): T { x }
 // T extends I and T extends J
-// ✅ null
+// ✅
 ```
 
 ### `let`
@@ -1983,6 +1985,7 @@ raw"foo\bar"
 You can have a raw string with quotes by putting it in a
 [multi-quoted string](types.md#multi-quoted-strings).
 
+<!-- known: I25 -->
 ```temper
 raw"""
    ""quo\ted"

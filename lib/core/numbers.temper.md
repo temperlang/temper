@@ -68,6 +68,7 @@ depends on the probability of an adjacent bit being set.
        * console.log(bitVector.get(3).toString()); //!outputs "true"
        * bitVector.set(3, false);
        * console.log(bitVector.get(3).toString()); //!outputs "false"
+       * // ✅
        * ```
        */
       @connected

@@ -21,7 +21,7 @@ page doesn't repeat those.
 | [I6](#i6-the-temperout-layout) | getting started | Old output paths | Done here; check the site |
 | [I8](#i8-numbered-names-in-output-samples) | home page | `x__4` in samples | Done here |
 | [I9](#i9-the-command-line) | guide, tools | `temper` commands not available yet | CLI parity |
-| [I10](#i10-examples-that-dont-run-as-marked) | builtins, types | 9 examples | Fix the compiler, one by one |
+| [I10](#i10-examples-that-dont-run-as-marked) | builtins | 10 examples | Fix the compiler, one by one |
 | [I11](#i11-playground-addresses) | terms, previous README | Old playground addresses | Links done here; terms left |
 | [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Failures this compiler doesn't have | Regenerate, or retire |
 | [I13](#i13-lua-versions) | target languages | "Lua 5.1" | State what's tested |
@@ -36,6 +36,7 @@ page doesn't repeat those.
 | [I22](#i22-named-groups-in-regular-expressions) | std/regex | `(?<name>…)` | Pick one syntax, or both |
 | [I23](#i23-integer-literals-too-big-for-int32) | builtins | Four bit examples wrap | Decide literal typing, then fix |
 | [I24](#i24-tutorial-examples-that-dont-run) | tutorial 3 | `fn` without a declared type; `do(fn …)` | Fix the examples, or the compiler |
+| [I25](#i25-a-multi-quoted-strings-last-line-feed) | builtins, types | A `"` line's line feed at the string's end | Check Kotlin's rule, then fix one |
 
 ## Licensing and community
 
@@ -177,7 +178,7 @@ page doesn't repeat those.
 The reference's examples carry the result the previous compiler gave
 when its docs were generated, and `compat/check_doc_examples.py` runs
 them with this one ([writing these docs](contributing/docs.md#examples-that-are-checked)).
-These 9 disagree; each was checked on the previous compiler, which runs
+These 10 disagree; each was checked on the previous compiler, which runs
 them as marked. Each has a `<!-- known: I10 -->` comment before its
 fence, so the checker, which runs in CI, counts it as known.
 
@@ -188,7 +189,7 @@ fence, so the checker, which runs in CI, counts it as known.
 | [builtins](language/builtins.md#defining-functions) | A named function expression, `fn f(): String { … }` | "Use of builtin fn is malformed" |
 | [builtins](language/builtins.md#inlineunrealizedgoal-decorator) | `return` from a block lambda passed to `forEach`, inlined | "Expected subtype of Void, but got Boolean" |
 | [builtins](language/builtins.md#builtins-keyword) | Subclassing `Console`; `builtins.console` | "Console has not been declared" |
-| [types](language/types.md#float64-syntax-examples) | `1.` is an error | Accepted, as `1` and a dot |
+| [builtins `+`](language/builtins.md), [Float64 ordering](language/builtins.md#float64-ordering-caveats) | Unary `+` on `Int64` and `Float64` (`+1i64`, `+0.0`) | "Can't apply + to these arguments", as it runs (t253) |
 | [builtins](language/builtins.md#assignment--builtin), [`++`](language/builtins.md#-operator-increment), and [`--`](language/builtins.md#---operator-decrement) | Logging a top-level `var` around assignments | See [I20](#i20-top-level-statements-run-out-of-order); both compilers agree |
 
 **Suggested:** fix the compiler for each, or record a deliberate difference
@@ -296,3 +297,18 @@ out of it, as this compiler rejects them:
 
 **Suggested:** decide whether the compiler should accept them, or show
 what it accepts in the tutorial.
+
+### I25: A multi-quoted string's last line feed
+
+- **Docs:** the [raw string](language/builtins.md#raw) example's
+  value is `"quo\ted"`, with no line feed after it, and
+  [types](language/types.md#multi-quoted-strings) has
+  `"3 quotes" == """ "3 quotes` hold, though a `"` margin is said to add
+  a line feed, and the next example ends `"\n"`. The previous compiler
+  gave those values.
+- **This compiler:** every `"` line ends with a line feed, the last one
+  too, so the raw string's value is `"quo\ted"` and a line feed, and the
+  `"3 quotes"` comparison is `false` (its marker has no value, so the
+  checker doesn't see it yet).
+- **Suggested:** pin down Kotlin's rule (maybe it drops the last line
+  feed only in some cases), then fix the compiler, or the docs.

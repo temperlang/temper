@@ -60,6 +60,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        *
        * // Any other string's end is after its start.
        * "foo".end.compareTo(String.begin) >  0
+       * // ✅ true
        * ```
        */
       @connected
@@ -76,6 +77,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        *
        * ```temper
        * "foo"[String.begin] == char'f'
+       * // ✅ true
        * ```
        */
       @connected
@@ -86,6 +88,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        *
        * ```temper
        * !"".hasIndex(String.begin) && "foo".hasIndex(String.begin)
+       * // ✅ true
        * ```
        */
       @connected
@@ -127,6 +130,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        * let i = s.next(String.begin);
        *
        * s[i] == char'b'
+       * // ✅ true
        * ```
        */
       @connected
@@ -141,6 +145,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        * let i = s.prev(s.end);
        *
        * s[i] == char'c'
+       * // ✅ true
        * ```
        */
       @connected
@@ -205,6 +210,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        *  s.hasAtLeast(i, j, 24) && // Might require counting
        * !s.hasAtLeast(i, j, 25) && // Might require counting
        * !s.hasAtLeast(i, j, 100)   // Fast path too
+       * // ✅ true
        * ```
        */
       @connected
@@ -223,6 +229,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        * let j = s.prev(s.end);        // Points at 'y'
        *
        * s.countBetween(i, j) == (26 - 2)
+       * // ✅ true
        * ```
        */
       @connected
@@ -239,6 +246,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        * let j = s.prev(s.end);
        *
        * "sub" == s.slice(i, j)
+       * // ✅ true
        * ```
        */
       @connected
@@ -262,6 +270,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
        * //!outputs "U+62"
        * //!outputs "U+61"
        * //!outputs "U+72"
+       * // ✅
        * ```
        */
       @connected
@@ -386,6 +395,7 @@ console.log(stringBuilder.toString()); //!outputs "Hello, World!"
 stringBuilder.clear();
 stringBuilder.append("Goodbye.");
 console.log(stringBuilder.toString()); //!outputs "Goodbye."
+// ✅
 ```
 
     @connected
@@ -466,6 +476,7 @@ console.log(stringBuilder.toString()); //!outputs "Goodbye."
        * // ⚠️ Do not use afterHello after calling clear.
        * stringBuilder.clear();
        * // stringBuilder.toString()[afterHello] would panic!
+       * // ✅
        * ```
        */
       @connected

@@ -107,6 +107,7 @@ function, and is distinct from [snippet/type/Null].
 let e: Empty? = empty();
 console.log("Empty is not null: ${e != null}");
 //!outputs  "Empty is not null: true"
+// ✅
 ```
 
     @imu

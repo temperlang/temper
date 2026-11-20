@@ -284,13 +284,12 @@ An integer-like number with a decimal suffix is a Float64.
 
 Unlike in C, digits are required after a decimal point.
 
-<!-- known: I10 -->
 ```temper
 1.
 // ❌ Operator Dot expects at least 2 operands but got 1!
 ```
 
-> **Note:** Temper accepts `1.`, as a number followed by a dot ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
+> **Note:** Temper reads `1.` as a number followed by a dot, so it fails as it runs ("Malformed member access"), not as it's compiled.
 
 Which allows Temper to more flexibly combine numbers with class-use syntax.
 
@@ -549,7 +548,7 @@ Multi-quoted string content lines may be split across multiple lines.
 ~does not have a line feed at the end, until finally we get
 "to a line with a double-quote character in the margin, Phew!
 ;
-// ✅ null
+// ✅
 ```
 
 Statement fragment lines, which start with colon (`:`) allow

@@ -26,6 +26,7 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
        * ```temper
        * let myList: List<String> = ["foo", "bar"];
        * myList.length == 2
+       * // ✅ true
        * ```
        */
       @connected
@@ -44,6 +45,7 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
        * // The list is zero-indexed.
        * console.log(ls[0]); //!outputs "a"
        * console.log(ls[1]); //!outputs "b"
+       * // ✅
        * ```
        *
        * Out of bounds results in panic. Check in advance when handling indices of
@@ -280,6 +282,7 @@ deque.add("d");
 while (!deque.isEmpty) {
   console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
 }
+// ✅
 ```
 
     export class Deque<T> {
