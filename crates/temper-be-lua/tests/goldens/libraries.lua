@@ -851,47 +851,49 @@ local function sumParsed(xs)
   do
     local i = 0
     while i < temper.list_length(xs) do
-      local x = temper.list_get(xs, i)
-      ---@type integer
-      local n
-      ---@type integer|temper.Null
-      local held = temper.null
-      if not temper.pcall(function()
-        held = temper.string_toint32(x)
-      end) then
-      end
-      if temper.is_null(held) then
+      repeat
+        local x = temper.list_get(xs, i)
+        ---@type integer
+        local n
+        ---@type integer|temper.Null
+        local held = temper.null
+        if not temper.pcall(function()
+          held = temper.string_toint32(x)
+        end) then
+        end
+        if temper.is_null(held) then
+          i = temper.int32_add(i, 1)
+          break
+        else
+          n = held --[[@as integer]]
+        end
+        total = temper.int32_add(total, n)
         i = temper.int32_add(i, 1)
-        goto continue
-      else
-        n = held --[[@as integer]]
-      end
-      total = temper.int32_add(total, n)
-      i = temper.int32_add(i, 1)
-      ::continue::
+      until true
     end
   end
   do
     local length = temper.list_length(xs)
     local i = 0
     while i < length do
-      local x = temper.list_get(xs, i)
-      i = temper.int32_add(i, 1)
-      ---@type integer
-      local m
-      ---@type integer|temper.Null
-      local held = temper.null
-      if not temper.pcall(function()
-        held = temper.string_toint32(x)
-      end) then
-      end
-      if temper.is_null(held) then
-        goto continue
-      else
-        m = held --[[@as integer]]
-      end
-      total = temper.int32_add(total, temper.int32_mul(m, 10))
-      ::continue::
+      repeat
+        local x = temper.list_get(xs, i)
+        i = temper.int32_add(i, 1)
+        ---@type integer
+        local m
+        ---@type integer|temper.Null
+        local held = temper.null
+        if not temper.pcall(function()
+          held = temper.string_toint32(x)
+        end) then
+        end
+        if temper.is_null(held) then
+          break
+        else
+          m = held --[[@as integer]]
+        end
+        total = temper.int32_add(total, temper.int32_mul(m, 10))
+      until true
     end
   end
   return total

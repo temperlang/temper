@@ -104,13 +104,14 @@ local function sumFrom(xs, least)
     local length = temper.list_length(xs)
     local i = 0
     while i < length do
-      local x = temper.list_get(xs, i)
-      i = temper.int32_add(i, 1)
-      if x < least then
-        goto continue
-      end
-      sum = temper.int32_add(sum, x)
-      ::continue::
+      repeat
+        local x = temper.list_get(xs, i)
+        i = temper.int32_add(i, 1)
+        if x < least then
+          break
+        end
+        sum = temper.int32_add(sum, x)
+      until true
     end
   end
   return sum

@@ -475,7 +475,9 @@ fn generate(case: &Case) -> Vec<OutFile> {
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))
 }
 
-/// The rockspec Kotlin writes for a library without a version.
+/// The rockspec for a library without a version or dependencies, as
+/// Kotlin writes one, but listing its modules, the root module first: a
+/// library with one module and no host code installs only `init.lua`.
 fn rockspec(library: &str) -> String {
     format!(
         "package = '{library}'
@@ -485,8 +487,9 @@ description = {{
 }}
 build = {{
     type = 'builtin',
-    copy_directories = {{'.'}},
-    modules = {{}},
+    modules = {{
+        ['{library}'] = 'init.lua',
+    }},
 }}
 dependencies = {{
     'lua >= 5.1',
@@ -532,6 +535,154 @@ fn goldens() {
 /// The shared `reach` program's test parts only in its tests file, and
 /// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
 /// program; `runs` runs its test, which passes only if they're set.
+/// Every generated file parses on PUC Lua 5.1, which the rockspecs
+/// accept (`lua >= 5.1`): no `goto` or labels, which arrived in 5.2, and
+/// no statement starting with `;`, which 5.1 allows only after one; and
+/// so do the runtime's files that 5.1 loads (not `intnew.lua`, which
+/// only 5.3 and later load, nor the regex engine, which needs 5.3's
+/// `utf8`). Skipped, with a message, without Lua 5.1's `luac`
+/// (`luac5.1`, or `LUAC51`).
+#[test]
+fn parses_on_lua51() {
+    let Some(luac) = tool("LUAC51", "luac5.1", "-v") else {
+        eprintln!("skipped: no Lua 5.1 luac (luac5.1 on PATH, or named by LUAC51)");
+        return;
+    };
+    kit::with_stack(move || {
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-lua-51");
+        let _ = fs::remove_dir_all(&out);
+        let std = translate(&kit::std_program(), &LUA).unwrap_or_else(|e| panic!("std: {e}"));
+        let mut failures = Vec::new();
+        let cases = cases();
+        let generated = (cases.iter().map(generate)).chain([std]);
+        for (i, files) in generated.enumerate() {
+            let dir = out.join(i.to_string());
+            let lua: Vec<&OutFile> = files.iter().filter(|f| f.path.ends_with(".lua")).collect();
+            kit::write_files(&dir, lua.iter().map(|f| (f.path.as_str(), f.text.as_str())));
+            for f in lua {
+                let run = Command::new(&luac)
+                    .arg("-p")
+                    .arg(dir.join(&f.path))
+                    .output()
+                    .unwrap();
+                if !run.status.success() {
+                    failures.push(String::from_utf8_lossy(&run.stderr).into_owned());
+                }
+            }
+        }
+        let runtime_files = (temper_be_lua::runtime::FILES.iter())
+            .map(|(path, _)| *path)
+            .filter(|p| p.ends_with(".lua") && *p != "intnew.lua" && !p.starts_with("regex/"));
+        for path in runtime_files {
+            let run = Command::new(&luac)
+                .arg("-p")
+                .arg(runtime().join(path))
+                .output()
+                .unwrap();
+            if !run.status.success() {
+                failures.push(String::from_utf8_lossy(&run.stderr).into_owned());
+            }
+        }
+        kit::assert_none(&failures);
+    });
+}
+
+/// `luarocks make` installs the runtime's rock and a library's, of
+/// several modules, by their rockspecs, where `require` finds them: the
+/// library then logs what its test expects, from outside its directory,
+/// by LuaRocks' paths alone, with std's rock, which it uses; and its
+/// tests (`reach`'s) aren't installed.
+/// Skipped, with a message, without LuaRocks (`luarocks`, or
+/// `LUAROCKS`), whose own Lua runs it.
+#[test]
+fn rockspecs_install() {
+    let Some(luarocks) = tool("LUAROCKS", "luarocks", "--version") else {
+        eprintln!("skipped: no LuaRocks (on PATH, or named by LUAROCKS)");
+        return;
+    };
+    kit::with_stack(move || {
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-lua-rocks");
+        let _ = fs::remove_dir_all(&out);
+        let tree = out.join("tree");
+        let luarocks = |dir: &Path, args: &[&str]| {
+            let run = Command::new(&luarocks)
+                .args(args)
+                .arg(format!("--tree={}", tree.to_string_lossy()))
+                .current_dir(dir)
+                .output()
+                .unwrap();
+            let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
+            assert!(
+                run.status.success(),
+                "luarocks {args:?} in {}:\n{}{}",
+                dir.display(),
+                text(&run.stdout),
+                text(&run.stderr)
+            );
+            text(&run.stdout)
+        };
+        // The runtime as `temper build` writes it, its version filled in.
+        let runtime = temper_tmpl::version::fill_runtime(
+            temper_be_lua::runtime::FILES,
+            &temper_be_lua::runtime::VERSION,
+            temper_tmpl::version::current(),
+        );
+        let core = out.join("temper-core");
+        kit::write_files(&core, runtime.iter().map(|(p, t)| (p.as_str(), t.as_str())));
+        let spec = |files: &[(String, String)]| {
+            (files.iter().map(|(p, _)| p.clone()))
+                .find(|p| p.ends_with(".rockspec"))
+                .unwrap()
+        };
+        luarocks(&core, &["make", &spec(&runtime)]);
+        // std's, which `modules` uses.
+        let std: Vec<(String, String)> =
+            (translate(&kit::std_program(), &LUA).unwrap().into_iter())
+                .map(|f| (f.path, f.text))
+                .collect();
+        kit::write_files(&out, std.iter().map(|(p, t)| (p.as_str(), t.as_str())));
+        let (std_dir, std_spec) = spec(&std)
+            .split_once('/')
+            .map(|(d, s)| (d.to_string(), s.to_string()))
+            .unwrap();
+        luarocks(&out.join(std_dir), &["make", &std_spec]);
+        let mut expected = Vec::new();
+        for key in ["modules", "reach"] {
+            let case = (cases().into_iter()).find(|c| c.key == key).unwrap();
+            let files: Vec<(String, String)> = (generate(&case).into_iter())
+                .map(|f| (f.path, f.text))
+                .collect();
+            kit::write_files(&out, files.iter().map(|(p, t)| (p.as_str(), t.as_str())));
+            let spec = spec(&files);
+            let (library, spec) = spec.split_once('/').unwrap();
+            luarocks(&out.join(library), &["make", spec]);
+            if key == "modules" {
+                expected = case.expected.clone();
+            }
+        }
+        let installed = luarocks(&out, &["list", "--porcelain"]);
+        assert!(installed.contains("reach"), "{installed}");
+        let mut lua_files = Vec::new();
+        kit::files_with(&tree, "lua", &mut lua_files);
+        let tests: Vec<_> = (lua_files.iter())
+            .filter(|f| f.to_string_lossy().contains("-test"))
+            .collect();
+        assert!(tests.is_empty(), "tests installed: {tests:?}");
+        let lua = luarocks(&out, &["config", "variables.LUA"]);
+        let path = luarocks(&out, &["path", "--lr-path"]);
+        let run = Command::new(lua.trim())
+            .args(["-e", "require('modules')"])
+            .env("LUA_PATH", format!("{};", path.trim()))
+            .env("LUA_CPATH", ";")
+            .current_dir(&tree)
+            .output()
+            .unwrap();
+        let mut failures = Vec::new();
+        kit::check_log(&mut failures, "require('modules')", &run, &expected);
+        kit::assert_none(&failures);
+    });
+}
+
 #[test]
 fn test_parts_apart() {
     kit::with_stack(|| {
@@ -651,7 +802,7 @@ fn luarc(libraries: &[&Path]) -> String {
     )
 }
 
-/// Tests that the runtime gets wrong on LuaJIT (and Lua 5.1), Kotlin's
+/// Tests that the runtime gets wrong on LuaJIT and Lua 5.1, Kotlin's
 /// bugs, which these run on Lua 5.4 to show: LuaJIT's `tonumber(s, 10)`
 /// takes `"2.0"` and `"0x10"` (`String.toInt32()`, `types/string/read`);
 /// and `float64_max` and `float64_min` check only their second argument
@@ -692,7 +843,10 @@ fn runs() {
         kit::missing("no Lua (on PATH, or named by LUA)");
         return;
     };
-    let jit = version.contains("LuaJIT");
+    // LuaJIT, or a PUC Lua before 5.3, lacks `utf8` and integers.
+    let jit = ["LuaJIT", "Lua 5.1", "Lua 5.2"]
+        .iter()
+        .any(|v| version.contains(v));
     let luals = tool("LUALS", "lua-language-server", "--version");
     if luals.is_none() {
         kit::missing("type check: no LuaLS (lua-language-server on PATH, or named by LUALS)");

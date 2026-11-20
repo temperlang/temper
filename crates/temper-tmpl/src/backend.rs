@@ -81,3 +81,29 @@ pub struct OutFile {
     pub path: String,
     pub text: String,
 }
+
+/// Why a backend's files can't all be written, if two of them would be
+/// one file: the same path, or paths that differ only in case, which a
+/// case-insensitive file system (Windows's, macOS's) takes as one. Each
+/// would silently replace the other, as a class named like a module's
+/// generated class (Java's `NAMEGlobal`) would replace that class and
+/// drop the module's functions; tools report it as an error instead.
+pub fn clashing_paths(files: &[OutFile]) -> Option<String> {
+    let mut seen = std::collections::HashMap::new();
+    for f in files {
+        if let Some(earlier) = seen.insert(f.path.to_lowercase(), &f.path) {
+            let what = match *earlier == f.path {
+                true => format!("two generated files would be {}", f.path),
+                false => format!(
+                    "generated files {earlier} and {} would be one file where case doesn't count",
+                    f.path
+                ),
+            };
+            return Some(format!(
+                "{what}: a declaration is likely named like one the backend generates (or \
+                 like another but for case); rename it"
+            ));
+        }
+    }
+    None
+}

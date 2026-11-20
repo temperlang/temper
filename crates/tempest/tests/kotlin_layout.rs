@@ -61,6 +61,12 @@ const ALLOWED: &[(&str, &str, Side, &str)] = &[
         "no zip for LuaRocks, whose rockspec names it relative (kotlin-differences.md)",
     ),
     (
+        "py",
+        "/py.typed",
+        Side::Tempest,
+        "PEP 561's marker in each library's package, which Kotlin's leaves out (kotlin-differences.md)",
+    ),
+    (
         "cpp",
         "/CMakeLists.txt",
         Side::Tempest,

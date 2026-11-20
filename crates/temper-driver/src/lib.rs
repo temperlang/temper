@@ -133,15 +133,19 @@ pub fn with_std<'s>(
 }
 
 /// A program's files from a backend, each a path and its text, or what
-/// isn't covered yet. With `maps`, a prefix that leads from the
-/// library's output directory to its sources, a backend that writes
-/// source maps writes them.
+/// isn't covered yet, or that two would be one file
+/// ([`temper_tmpl::clashing_paths`]). With `maps`, a prefix that leads
+/// from the library's output directory to its sources, a backend that
+/// writes source maps writes them.
 pub fn translate(
     p: &Program,
     backend: &Backend,
     maps: Option<&str>,
 ) -> Result<Vec<(String, String)>, String> {
     let files = (backend.translate)(p, maps)?;
+    if let Some(why) = temper_tmpl::clashing_paths(&files) {
+        return Err(why);
+    }
     Ok(files.into_iter().map(|f| (f.path, f.text)).collect())
 }
 

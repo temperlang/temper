@@ -84,13 +84,14 @@ local function sumSkipping(n)
   do
     local i = 0
     while i < 5 do
-      if i == n then
+      repeat
+        if i == n then
+          i = temper.int32_add(i, 1)
+          break
+        end
+        sum = temper.int32_add(sum, i)
         i = temper.int32_add(i, 1)
-        goto continue
-      end
-      sum = temper.int32_add(sum, i)
-      i = temper.int32_add(i, 1)
-      ::continue::
+      until true
     end
   end
   return sum

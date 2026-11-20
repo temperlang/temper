@@ -3,10 +3,9 @@ local Powersorter, Runny__34, Run__39, RunPower__40, fill__114, log2__116, floor
 Powersorter = temper.type('Powersorter');
 Powersorter.methods.sort = function(this__31, items__293)
   local return__74, t_0, t_1, t_2, t_3;
-  ::continue_1::
   if (temper.listbuilder_length(items__293) < 2.0) then
     return__74 = nil;
-    goto break_0;
+    return return__74;
   else
   end
   t_1 = this__31.buffer__316;
@@ -16,7 +15,7 @@ Powersorter.methods.sort = function(this__31, items__293)
   t_0 = temper.listbuilder_length(items__293);
   this__31:powerSortPaper(items__293, 0.0, t_0);
   return__74 = nil;
-  ::break_0::return return__74;
+  return return__74;
 end;
 Powersorter.methods.powerSortPaper = function(this__32, items__296, begin__297, end__298)
   local t_4, t_5, t_6, t_7, t_8, t_9, t_10, t_11, t_12, length__300, maxStackHeight__301, beginStack__302, powerStack__303, top__304, t_13, runA__305, runB__306;
@@ -268,15 +267,15 @@ weaklyIncreasingPrefixEnd__111 = function(items__277, begin__278, end__279, comp
 end;
 extendAndReverseRunEnd__104 = function(items__194, begin__195, end__196, compare__197)
   local return__58, t_33, t_34, j__199;
-  ::continue_3::j__199 = begin__195;
+  j__199 = begin__195;
   if (j__199 == end__196) then
     return__58 = j__199;
-    goto break_2;
+    return return__58;
   else
   end
   if ((j__199 + 1.0) == end__196) then
     return__58 = (j__199 + 1.0);
-    goto break_2;
+    return return__58;
   else
   end
   t_33 = temper.listed_get(items__194, j__199);
@@ -289,7 +288,7 @@ extendAndReverseRunEnd__104 = function(items__194, begin__195, end__196, compare
   else
     return__58 = weaklyIncreasingPrefixEnd__111(items__194, begin__195, end__196, compare__197);
   end
-  ::break_2::return return__58;
+  return return__58;
 end;
 nodePowerDiv__113 = function(begin__321, end__322, beginA__323, beginB__324, endB__325)
   local t_35, t_36, t_37, twoN__327, n1__328, n2__329, a__330, b__331, k__332;

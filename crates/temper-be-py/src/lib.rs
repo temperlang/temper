@@ -174,6 +174,7 @@ fn author(authors: &str) -> String {
 /// mods/pyproject.toml
 /// mods/mods/__init__.py            imports each module, then
 ///                                  from .mods import *
+/// mods/mods/py.typed               empty: the package is typed (PEP 561)
 /// mods/mods/mods.py                the library's root module
 /// mods/mods/helpers/__init__.py    a module with modules under it
 /// mods/mods/helpers/deep.py        one without
@@ -347,6 +348,12 @@ build-backend = "hatchling.build"
         OutFile {
             path: format!("{library}/{package}/__init__.py"),
             text: init,
+        },
+        // PEP 561's marker, so checkers read an installed package's
+        // annotations.
+        OutFile {
+            path: format!("{library}/{package}/py.typed"),
+            text: String::new(),
         },
     ]
     .into_iter()

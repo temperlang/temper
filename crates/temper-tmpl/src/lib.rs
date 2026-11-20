@@ -62,7 +62,7 @@ mod types;
 pub mod validate;
 pub mod version;
 
-pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools};
+pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools, clashing_paths};
 pub use builder::Builder;
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};

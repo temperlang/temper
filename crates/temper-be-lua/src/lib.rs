@@ -11,8 +11,8 @@
 //! `temper-core`, as Kotlin Temper's `lua` backend, with prettier bodies:
 //! no numbered names, local functions and locals declared where they're
 //! first given a value, `..` for concatenation, `print` for logging,
-//! natural control flow, with `goto` only for `continue` and jumps out of
-//! inner loops, and blank lines between functions. LuaCATS annotations
+//! natural control flow, without `goto`, which Lua 5.1 lacks
+//! ([`translate`], "Jumps"), and blank lines between functions. LuaCATS annotations
 //! (`---@param i integer`) type parameters, results, and locals declared
 //! without a value, for LuaLS's checker.
 //!
@@ -79,7 +79,7 @@ pub struct Variant {
     pub profile: Profile,
     pub rules: NamingRules,
     /// The oldest Lua its rockspec accepts, as Kotlin's says (`lua >=
-    /// 5.1`), though `goto` needs 5.2 or LuaJIT.
+    /// 5.1`), which LuaJIT counts as; the output parses on 5.1.
     pub lua_version: &'static str,
 }
 
@@ -165,10 +165,14 @@ pub fn rock_version(p: &Program) -> String {
 /// `init-test.lua`: each module's tests are in their own file, which
 /// `temper test` runs in turn.
 ///
-/// Kotlin also zips the library beside the rockspec, for LuaRocks, whose
-/// `source.url` names the zip by its absolute path; this names it
-/// relative, as Kotlin does when it has no path, and writes no zip:
-/// `luarocks make` in the library's directory needs none.
+/// The rockspec lists each module in `build.modules`, by the name
+/// `require` takes (`fibonacci.helpers.deep`), so `luarocks make` in the
+/// library's directory installs them where `require` finds them; the
+/// tests aren't installed. (Kotlin's copies the directory into the rock's
+/// own, where `require` doesn't look.) Kotlin also zips the library
+/// beside the rockspec, for LuaRocks, whose `source.url` names the zip by
+/// its absolute path; this names it relative, as Kotlin does when it has
+/// no path, and writes no zip: `luarocks make` needs none.
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
@@ -257,6 +261,26 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             })
             .collect::<String>()
     };
+    // Each module, by the name `require` takes, from the file beside the
+    // rockspec, which `luarocks make` installs where `require` finds it;
+    // the tests aren't installed.
+    let mut modules = String::new();
+    let paths = (files.iter())
+        .filter_map(|f| f.path.strip_prefix(&format!("{library}/")))
+        .filter(|path| !path.starts_with("tests/"));
+    for path in paths {
+        let name = path.strip_suffix(".lua").unwrap_or(path);
+        let name = name.strip_suffix("/init").unwrap_or(name);
+        let name = match name {
+            "init" => library.clone(),
+            name => format!("{library}.{}", name.replace('/', ".")),
+        };
+        modules.push_str(&format!(
+            "        [{}] = {},\n",
+            quoted(&name),
+            quoted(path)
+        ));
+    }
     let rockspec = format!(
         "package = {package}
 version = {version_q}
@@ -265,8 +289,8 @@ description = {{
 {description}}}
 build = {{
     type = 'builtin',
-    copy_directories = {{'.'}},
-    modules = {{}},
+    modules = {{
+{modules}    }},
 }}
 dependencies = {{
     'lua >= {lua}',
@@ -278,6 +302,7 @@ dependencies = {{
 ",
         package = quoted(library),
         version_q = quoted(&version),
+        modules = modules,
         // The config's metadata, as Kotlin's: the description as the
         // summary, and the authors, for want of a field, in `detailed`;
         // the homepage, or else the repository; and the license.

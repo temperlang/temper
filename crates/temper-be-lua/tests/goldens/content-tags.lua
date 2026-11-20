@@ -445,19 +445,25 @@ local function counted(n, x)
     do
       local i = 0
       while i < n do
-        i = temper.int32_add(i, 1)
-        if i == 2 then
-          goto continue
-        end
-        collector:append("'")
-        collector:append(QuoteEscaper.instance:applyString(TextEscaper.instance:applyString(x)))
-        collector:append("'")
-        if i == 4 then
+        local jump
+        repeat
+          i = temper.int32_add(i, 1)
+          if i == 2 then
+            break
+          end
+          collector:append("'")
+          collector:append(QuoteEscaper.instance:applyString(TextEscaper.instance:applyString(x)))
+          collector:append("'")
+          if i == 4 then
+            jump = "break"
+            break
+          end
+          collector:append(TextEscaper.instance:applyString(x))
+          collector:append(",")
+        until true
+        if jump == "break" then
           break
         end
-        collector:append(TextEscaper.instance:applyString(x))
-        collector:append(",")
-        ::continue::
       end
     end
     return Quoting.fromCollector(collector)

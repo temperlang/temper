@@ -5,8 +5,16 @@ description = {
 }
 build = {
     type = 'builtin',
-    copy_directories = {'.'},
-    modules = {},
+    modules = {
+        ['modules'] = 'init.lua',
+        ['modules.helpers.deep'] = 'helpers/deep.lua',
+        ['modules.helpers'] = 'helpers.lua',
+        ['modules.core'] = 'core.lua',
+        ['modules.state'] = 'state.lua',
+        ['modules.parts.regex'] = 'parts/regex.lua',
+        ['modules.machine'] = 'machine.lua',
+        ['modules.client'] = 'client.lua',
+    },
 }
 dependencies = {
     'lua >= 5.1',

@@ -788,6 +788,58 @@ fn build_needs_libraries_with_names_of_their_own() {
     let _ = fs::remove_dir_all(&empty);
 }
 
+/// A declaration named like a file a backend generates is an error, not
+/// a silent replacement of that file: a class named like the module's
+/// class (`AGlobal`, on Java and C#), whose functions it would drop, or
+/// like C#'s `Logging.cs`; and so are two classes named alike but for
+/// case, which a case-insensitive file system takes as one file.
+#[test]
+fn generated_name_clashes_are_errors() {
+    let cases = [
+        (
+            "java",
+            "export class AGlobal {}\n",
+            "two generated files would be a/src/main/java/a/AGlobal.java",
+        ),
+        (
+            "csharp",
+            "export class AGlobal {}\n",
+            "two generated files would be a/src/AGlobal.cs",
+        ),
+        (
+            "csharp",
+            "export class Logging {}\n",
+            "two generated files would be a/src/Logging.cs",
+        ),
+        (
+            "java",
+            "export class Point {}\nexport class POINT {}\n",
+            "generated files a/src/main/java/a/Point.java and a/src/main/java/a/POINT.java would be one file",
+        ),
+    ];
+    for (i, (backend, class, expected)) in cases.into_iter().enumerate() {
+        if !built_in(backend) {
+            continue;
+        }
+        let text = format!("export let a(): Int {{ 1 }}\n{class}");
+        let files = [("a.temper", text.as_str())];
+        with_library(&format!("clash-{i}"), &files, |dir| {
+            let out = Path::new(dir).join("out");
+            let (code, _, err) = tempest(&[
+                "build",
+                "-w",
+                dir,
+                "-b",
+                backend,
+                "-o",
+                &out.to_string_lossy(),
+            ]);
+            assert_eq!(code, 1, "{backend} {class}: {err}");
+            assert!(err.contains(&format!("a: {backend}: {expected}")), "{err}");
+        });
+    }
+}
+
 /// A C++ library's generated CMake project builds and runs, with g++,
 /// where CMake is installed (skipped, with a message, otherwise; required
 /// with `TEMPER_REQUIRE_CHECKERS`).

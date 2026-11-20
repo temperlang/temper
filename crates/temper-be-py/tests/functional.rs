@@ -167,12 +167,15 @@ fn goldens() {
             let root_module = format!("{library}/{package}/{package}.py");
             assert!(paths.contains(&root_module.as_str()), "{path}");
             let single = format!("from .{package} import *\n");
-            if files.len() == 3 {
+            // With `py.typed`, which `packages_marked_typed` checks.
+            if files.len() == 4 {
                 assert_eq!(files[1].text, single, "{path}");
             }
             for file in &files[1..] {
                 let rest = &file.path[library.len() + 1..];
-                let name = if rest == format!("{package}/{package}.py") {
+                let name = if rest == format!("{package}/py.typed") {
+                    continue;
+                } else if rest == format!("{package}/{package}.py") {
                     format!("{path}.py")
                 } else if file.text == single {
                     continue;
@@ -234,6 +237,49 @@ fn test_only_libraries_grouped() {
             "{pyproject}"
         );
     });
+}
+
+/// Each library's package, std's too, is marked as typed with an empty
+/// `py.typed` (PEP 561), so checkers read an installed library's
+/// annotations rather than treat it as `Any`.
+#[test]
+fn packages_marked_typed() {
+    kit::with_stack(|| {
+        let mut libraries: Vec<(String, Vec<OutFile>)> = (cases().iter())
+            .map(|case| (case.library.clone(), generate(case)))
+            .collect();
+        let std = translate(&kit::std_program(), &PY).unwrap();
+        libraries.push(("temper-std".to_string(), std));
+        for (library, files) in libraries {
+            let package = temper_be_py::names::library_package(&library);
+            let marker = format!("{library}/{package}/py.typed");
+            let found = files.iter().find(|f| f.path == marker);
+            assert_eq!(found.map(|f| f.text.as_str()), Some(""), "{marker}");
+        }
+    });
+}
+
+/// The runtime's `Pair` indexes as a sequence of its key and value.
+#[test]
+fn pairs_index() {
+    let Some(python) = python() else {
+        kit::missing("no Python 3.11 or later (set PYTHON to one)");
+        return;
+    };
+    let run = python_command(&python)
+        .args([
+            "-B",
+            "-c",
+            "from temper_core import Pair\n\
+             p = Pair('k', 1)\n\
+             try:\n    p[2]\nexcept IndexError:\n    print(p[0], p[1], 'IndexError')",
+        ])
+        .env("PYTHONPATH", runtime())
+        .output()
+        .unwrap();
+    let out = String::from_utf8_lossy(&run.stdout);
+    let err = String::from_utf8_lossy(&run.stderr);
+    assert_eq!(out, "k 1 IndexError\n", "{err}");
 }
 
 /// Python 3.11 or later, if there is one.
@@ -991,7 +1037,7 @@ fn std_goldens() {
     kit::with_stack(|| {
         let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
         let files = translate(&kit::std_program(), &PY).unwrap_or_else(|e| panic!("std: {e}"));
-        for file in &files {
+        for file in files.iter().filter(|f| !f.path.ends_with("/py.typed")) {
             let rest = file.path.strip_prefix("temper-std/").unwrap_or(&file.path);
             goldens.check(&format!("std.{}", rest.replace('/', ".")), &file.text);
         }

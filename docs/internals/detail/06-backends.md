@@ -206,8 +206,10 @@ patches that made them (other docs cite these numbers):
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
 | Lua | 0020 | Let generators yield values and take their factory's arguments |
 | Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
+| Lua | 0025 | List each module in the rockspec's `build.modules`, so `luarocks make` installs what `require` finds; powersort's early returns as `return`s, not `goto`s, so it loads on Lua 5.1 |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
+| Python | 0026 | Index a `Pair` as its key and value: `__getitem__`, which was misspelled `__subscript__` |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
 | Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
 | Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
@@ -392,7 +394,7 @@ spills nor fails; its translator hoists and orders operands itself.
 | **Statements in expressions** | translator, after `spill_with` | translator (`hoist`, `sink`), after `spill_with` | translator (`spilled`) | translator (`pre`, `t$0`) | translator, after `spill` | translator (`:=` for `??`) | native block expressions |
 | **Order of evaluation** | its own analysis ([`effects`](../../../crates/temper-be-cpp/src/effects.rs)), since C++ leaves argument order open | left to right | left to right | left to right | left to right | left to right | left to right |
 | **Checked by** | `g++ -Wall -Wextra -Wpedantic -Werror` and more ([policy below](#cs-warning-policy)), at `-O1` to `-O3`; ASan, UBSan, TSan | `csc`, nullable references, warnings and analyzers as errors | `javac -Xlint:all -Werror` | `tsc --checkJs --strict` | `luac`, LuaLS | mypy and pyright, strict | `cargo build`, clippy |
-| **Notable** | module `var`s under a lock; shifts defined for every count; only exports in headers; strings the runtime's shared `core::Str`, literals `TEMPER_STR("…")`, as Kotlin | parameter names are API, never renamed; culture-invariant formatting | lists that may hold null via `Core.listOf` | source maps ([`translate_with_source_maps`](../../../crates/temper-be-js/src/lib.rs)) | `goto` only for `continue` and jumps out of inner loops; LuaCATS annotations | module privates start with `_` | module state safe across threads; `Arc<String>` strings |
+| **Notable** | module `var`s under a lock; shifts defined for every count; only exports in headers; strings the runtime's shared `core::Str`, literals `TEMPER_STR("…")`, as Kotlin | parameter names are API, never renamed; culture-invariant formatting | lists that may hold null via `Core.listOf` | source maps ([`translate_with_source_maps`](../../../crates/temper-be-js/src/lib.rs)) | no `goto`, so 5.1 parses it; LuaCATS annotations | module privates start with `_` | module state safe across threads; `Arc<String>` strings |
 
 Each row is from the crate's `lib.rs` doc comment and its profile;
 the per-language API rules are in

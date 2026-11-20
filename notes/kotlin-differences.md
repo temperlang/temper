@@ -1183,6 +1183,28 @@ Other differences we won't copy:
   lists every library under `dependencies`. Lua's rockspec lists them
   under `test_dependencies`, as Kotlin's does. Test: Python's
   tests/functional.rs, `test_only_libraries_grouped`.
+- **Generated files that would be one** (2026-11-20): a declaration
+  named like a file a backend generates (a class `AGlobal` in a module
+  whose functions Java and C# put in `AGlobal`, or a class `Logging`
+  beside C#'s `Logging.cs`), or two named alike but for case, which a
+  case-insensitive file system takes as one, is an error naming the
+  file (`temper_tmpl::clashing_paths`, which `temper_driver::translate`
+  checks for every backend). Kotlin's writes both, and the last
+  silently replaces the other, dropping the module's functions.
+  Test: tempest's tests/cli.rs, `generated_name_clashes_are_errors`.
+- **Python's `py.typed`** (2026-11-20): each library's package, std's
+  too, has an empty `py.typed` (PEP 561), as the runtime's always had,
+  so mypy and pyright read an installed library's annotations; Kotlin's
+  libraries have none, so checkers treat them as `Any`. Test: Python's
+  tests/functional.rs, `packages_marked_typed`.
+- **Lua's rockspecs install their modules** (2026-11-20): each rockspec,
+  the runtime's too, lists its modules in `build.modules` by the names
+  `require` takes (`fibonacci.helpers.deep`), and installs no tests;
+  Kotlin's lists none and copies the directory into the rock's own,
+  where `require` doesn't look, so `luarocks make` installed nothing
+  usable. Test: Lua's tests/functional.rs, `rockspecs_install` (where
+  LuaRocks is installed), and tests/tables.rs,
+  `runtime_rockspec_lists_each_module`.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where
@@ -2111,11 +2133,17 @@ copied Kotlin's:
   doesn't parse; tempest reserves it. And Kotlin says it supports Lua
   5.1 (its docs, and `lua >= 5.1` in its rockspecs, which tempest keeps
   for compatibility), but its output uses `goto` for every early return
-  and loop exit, which 5.1 can't parse (LuaJIT can). Tempest's uses
-  `goto` only for `continue` and for leaving an outer loop, so a program
-  without those parses on 5.1 too.
+  and loop exit, which 5.1 can't parse (LuaJIT can), and starts some
+  lines with `;`, which 5.1 takes only after a statement. Tempest's
+  parses on 5.1 (2026-11-20): no `goto` (a `continue`'s loop body is in
+  a `repeat … until true` that it leaves by `break`, and a jump leaving
+  more than one loop sets a flag, the module docs' "Jumps"), and a
+  statement starting with `(` in a `do … end`; the runtime's powersort
+  returns where it had `goto`s. On PUC 5.1, async code still fails (5.1
+  can't yield across `pcall`), as do negative zero and a few parses.
   Test: temper-be-lua/tests/functional.rs, `HIDING` (`end(goto: Int)`),
-  for the name; Lua 5.1 isn't tested.
+  for the name, and `parses_on_lua51`, where Lua 5.1's `luac` is
+  installed.
 - **Lua names hiding standard globals:** Kotlin's Lua escapes only
   keywords, so a local, parameter, or module value named `string`,
   `table`, `type`, `error`, or another of Lua's standard globals hides

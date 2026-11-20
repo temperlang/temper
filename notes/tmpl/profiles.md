@@ -57,7 +57,7 @@ kept; otherwise lowered):
 |---|---|---|---|
 | Statements inside expressions | no: temporaries | native | only Rust |
 | `ForOf` | native | native | all primary targets; `forEach` or index loops are the translator's choice |
-| Labeled `break` and `continue` | no: flags or restructuring | native | Java, JS native; C# and Lua (`continue`) by `goto` |
+| Labeled `break` and `continue` | no: flags or restructuring | native | Java, JS native; C# by `goto`; Lua by `repeat … until true` and flags |
 | `Switch` (`SWITCH`, built 2026-11-06 for state machines) | no: `if` chains | native (`match`) | C++, Java native (Java's `long` ones as `if` chains); C#, JS, Lua `if` chains until one needs it |
 | Generators | native | no: state machine | C#, JS, Lua (coroutines) native; C++, Java state machine |
 | `async` | native | native ([question 20](open-questions.md)) | C#, JS native; others state machine |
@@ -507,11 +507,12 @@ yet. Lua keeps natively everything else subset A has: `Void` as `nil`,
 left-to-right order (its reference implementation and LuaJIT evaluate
 operands and arguments in order; the manual leaves open only multiple
 assignment, which isn't printed), and `do … while` as `repeat … until
-not …`. Labeled jumps are `goto`, as Level 2's table has it: `continue`
-to a label ending the loop's body, which a `repeat`'s condition follows
-(a body that declares locals takes a `do … end` of its own first, since
-`until` is in their scope and a `goto` may not enter it), and a jump
-from an inner loop to a label named for the outer one. Its choices,
+not …`. Labeled jumps are `break`s, without `goto`, which Lua 5.1
+lacks: a `continue`'s loop has its body in a `repeat … until true` that
+the `continue` leaves, which a `repeat`'s condition follows, and a jump
+that leaves more than one loop (or `repeat`) sets the target loop's
+flag, a local its body declares, and breaks, with `if flag then break
+end` after each one it leaves. Its choices,
 made by the translator for now:
 
 - **Failure: exceptions.** A bubble is the runtime's `temper.bubble()`,
@@ -613,9 +614,10 @@ and the operators are Lua's own or the runtime's (`int64_div`, `shl64`).
 **Lua 5.1 and later**, and generated code calls the runtime for integer
 and bitwise work, never Lua 5.3's operators, so the runtime's
 `intold.lua` can stand in on 5.1 and LuaJIT. In practice: generated code
-needs **Lua 5.2 or LuaJIT** where it has `goto` (a `continue`, or a jump
-out of an inner loop; Kotlin's needs it for every early return too), and
-nothing more for integers: on 5.1 and LuaJIT, where numbers are doubles,
+needed **Lua 5.2 or LuaJIT** where it had `goto` (a `continue`, or a jump
+out of an inner loop; Kotlin's needs it for every early return too)
+until 2026-11-20, when it dropped `goto`; and it needs nothing more for
+integers: on 5.1 and LuaJIT, where numbers are doubles,
 `int32_mul` splits its operands to stay exact, and `Int64`s are the
 runtime's tables of halves; Kotlin's CI runs Lua 5.4.
 The tests use Lua 5.4.6, locally and in CI (Ubuntu 24.04's `lua5.4`,
