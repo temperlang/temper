@@ -79,6 +79,19 @@ impl Span {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    static KINDS_READ: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many node kinds ([`Tree::kind`]) this thread has read: a measure of
+/// the parser's work, nearly all of which asks nodes' kinds, for tests
+/// that bound it without timing it.
+#[cfg(test)]
+pub(crate) fn kinds_read() -> u64 {
+    KINDS_READ.with(std::cell::Cell::get)
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Tree {
     kinds: Vec<NodeKind>,
@@ -155,6 +168,8 @@ impl Tree {
     }
 
     pub fn kind(&self, id: NodeId) -> NodeKind {
+        #[cfg(test)]
+        KINDS_READ.with(|n| n.set(n.get() + 1));
         self.kinds[id.0 as usize]
     }
 
