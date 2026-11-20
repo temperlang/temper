@@ -28,8 +28,9 @@
 //!   until they change.
 //! - **Test server:** [`test_server_port`] starts, once per process, a
 //!   local server answering as Kotlin's `TestWebServer`, for std `net`'s
-//!   tests ([`NET`]), whose `testServerPort` is its port, any free one,
-//!   as Kotlin's suite picks; goldens show it as [`TEST_SERVER_PORT`].
+//!   tests ([`NET`]), whose `testServerPort` is its port, the first free
+//!   one of a fixed few ([`TEST_SERVER_PORTS`]), so their code is the
+//!   same each run; goldens show it as [`TEST_SERVER_PORT`].
 //! - **Runs:** [`check_log`] compares what a program logged with what's
 //!   expected, its line ends as on Linux ([`printed`]), and
 //!   [`check_case`] also that a run expected to fail does, and
@@ -741,15 +742,22 @@ fn load(case: &Case) -> Library {
 }
 
 /// The port goldens show for the test server's: generated code has
-/// `testServerPort` as a constant, and the server takes any free port,
-/// as Kotlin's `TestWebServer` does, so [`Goldens`] reads that one as
-/// this, keeping goldens stable.
+/// `testServerPort` as a constant, and the server may take another port
+/// ([`test_server_port`]), so [`Goldens`] reads that one as this,
+/// keeping goldens stable.
 pub const TEST_SERVER_PORT: u16 = 28461;
+
+/// The ports the test server tries first, in order: generated code has
+/// `testServerPort` as a constant, so a port that's the same each run
+/// keeps that code the same, and build caches such as ccache hit. A few,
+/// so test processes running at once each get one of them.
+pub const TEST_SERVER_PORTS: std::ops::Range<u16> = TEST_SERVER_PORT..TEST_SERVER_PORT + 4;
 
 static SERVER_PORT: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
 
 /// The port of this process's test server, which it starts the first
-/// time, on any free port. It answers as Kotlin
+/// time, on the first free port of [`TEST_SERVER_PORTS`], or, if none
+/// is, on any free one, as Kotlin's suite picks. It answers as Kotlin
 /// Temper's `TestWebServer`: for any path, 200 and `{"method": "POST",
 /// "json": true}` as JSON, saying the request's method and whether its
 /// `Content-Type`'s media type was JSON; for a path starting `/missing`,
@@ -757,7 +765,9 @@ static SERVER_PORT: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
 pub fn test_server_port() -> u16 {
     *SERVER_PORT.get_or_init(|| {
         use std::net::TcpListener;
-        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("a port for the test server");
+        let listener = (TEST_SERVER_PORTS.chain([0]))
+            .find_map(|port| TcpListener::bind(("127.0.0.1", port)).ok())
+            .expect("a port for the test server");
         let port = listener.local_addr().unwrap().port();
         std::thread::spawn(move || {
             for stream in listener.incoming().flatten() {

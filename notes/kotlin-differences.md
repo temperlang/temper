@@ -1701,8 +1701,10 @@ Other differences we won't copy:
     in. Host code plugs in its own with `temper.set_net_client` or
     `temper::core::net::set_client`.
   - **Test server:** one in the testkit, answering as Kotlin's
-    `TestWebServer`, on any free port, as Kotlin's suite picks one;
-    the net tests' goldens read it as 28461.
+    `TestWebServer`, on the first free port of 28461 to 28464, so the
+    generated code is the same each run and build caches hit, or else
+    any free one, as Kotlin's suite picks; the net tests' goldens read
+    it as 28461.
   Test: funtests `types/netresponse` and `netresponse-not-found` on
   every backend (C++'s logs, and Lua's where no Lua loads LuaSocket,
   are what a broken promise gives, as Kotlin's suite expects them to

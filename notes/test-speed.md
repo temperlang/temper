@@ -387,10 +387,12 @@ Locally, `strict` by g++ 12 (four builds, two compiles at once): 185 s
 cold, 60 to 80 s warm, with 45 of 47 compiles hits, after removing the
 precompiled headers as a fresh runner would have none (ccache gives
 them back byte for byte, so what includes them hits). The two misses
-are the bulk groups holding `netresponse` and `netresponse-not-found`,
+were the bulk groups holding `netresponse` and `netresponse-not-found`,
 whose generated `init.cpp` names the port of the server the test
-starts, new each run; putting those apart from the bulk groups, or
-reading the port at run time, would let the rest of their groups hit.
+starts, then new each run. The server now takes the first free port of
+a fixed few (the testkit's `TEST_SERVER_PORTS`), so that code is the
+same each run and all 47 hit: warm 15 to 23 s, from 120 to 176 s, under
+a load of 4 to 9 (2026-11-19, a scratch cache).
 In CI the first run on `main` after this fills each job's cache; its
 summary shows the hit rate.
 

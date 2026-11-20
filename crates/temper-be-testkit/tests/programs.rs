@@ -9,6 +9,9 @@
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
 //!   (`NET`) log what they expect on the interpreter, against the shared
 //!   test server.
+//! - `net_tests_translate_alike_each_run`: those tests' tmpl, and so
+//!   every backend's code for them, names a port from a fixed few, the
+//!   same each run, so build caches such as ccache hit.
 
 use temper_be_testkit::{self as kit};
 
@@ -39,6 +42,26 @@ fn net_tests_on_the_interpreter() {
             }
             let (failure, output) = kit::interpret(&case);
             assert_eq!((failure, output), (None, case.expected), "{}", case.key);
+        }
+    });
+}
+
+#[test]
+fn net_tests_translate_alike_each_run() {
+    kit::with_stack(|| {
+        let port = kit::test_server_port();
+        assert!(
+            kit::TEST_SERVER_PORTS.contains(&port),
+            "the test server's port {port}"
+        );
+        for case in kit::functional_cases("interp", &kit::NET) {
+            if !kit::NET.iter().any(|t| t.replace('/', "-") == case.key) {
+                continue;
+            }
+            let mut program = kit::program(&case);
+            program.has_spans = false;
+            let text = temper_tmpl::text::write(&program);
+            assert!(text.contains(&port.to_string()), "{}:\n{text}", case.key);
         }
     });
 }
