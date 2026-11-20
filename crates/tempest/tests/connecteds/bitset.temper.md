@@ -14,22 +14,11 @@ large surface area with most code in Temper, then consider making an actual
 wrapped type internal, and use it from a public Temper type. Or possibly extend
 a `sealed` public Temper interface.
 
-Kotlin's Bitset has no Temper implementation, only bodiless methods, which
-the new compiler can't translate yet; so this one has a plain one, which the
-interpreter would use, while each backend uses its host code, as a connected
-class with no backend list does.
-
     @connected
     export class Bitset {
-      private items: MapBuilder<Int, Boolean> = new MapBuilder<Int, Boolean>();
+      public add(i: Int): Void;
 
-      public add(i: Int): Void {
-        items.set(i, true);
-      }
-
-      public contains(i: Int): Boolean {
-        items.has(i)
-      }
+      public contains(i: Int): Boolean;
     }
 
 ## Tests

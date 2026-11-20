@@ -46,7 +46,8 @@
 //! - **Q1** qnames unique in the library; **Q2** every declaration but
 //!   compiler-made ones, labels, modules, and libraries has one; **Q3** a
 //!   function without a body is connected or external; **Q4** a connected
-//!   declaration with a backend list has a body, its fallback.
+//!   declaration with a backend list has a body, its fallback (a class,
+//!   on every method).
 //! - **M1** a module refers to another of the program's modules only for
 //!   its exported top-level declarations, and only to one before it in
 //!   `Program::modules` (imports are acyclic, so that's dependency
@@ -965,6 +966,15 @@ impl Validator {
                         let message =
                             "only an interface's or connected methods may have no body".into();
                         self.node_problem(Rule::C1, member, message);
+                    } else if kind == DeclKind::Class && !p.decls.backends(decl).is_empty() {
+                        // A user's connected class without a Temper
+                        // implementation; backends not listed would need one.
+                        let message = format!(
+                            "{} lists backends, so {} needs a body as their fallback",
+                            show(p, decl),
+                            show(p, d)
+                        );
+                        self.node_problem(Rule::Q4, member, message);
                     }
                     self.member(p, member, d, decl, params, None)
                 }

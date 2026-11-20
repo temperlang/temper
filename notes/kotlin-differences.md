@@ -445,10 +445,14 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   @connected function that lists backends needs a Temper body …"), at
   its name where Kotlin's position is empty, after its signature. Kotlin reports these only while generating code; tempest
   reports them while typing, in every module, skipping std's
-  connected classes and core-style ones that connect members. A bodiless
-  method of a user's connected class fails in the interpreter as "No
-  connected implementation of Counter.add", where it said "Abstract
-  method". Every backend reads a library's host files and chooses host
+  connected classes and core-style ones that connect members. A user's
+  connected class without a Temper implementation, every method bodiless,
+  takes host code on every backend, under `--no-connected` too, as
+  Kotlin's `TypeDeclChecker` counts its methods implemented (2026-11-20).
+  A bodiless method of a user's connected class, or a bodiless connected
+  function, panics in the interpreter as "No connected implementation of
+  Counter.add", as Kotlin's `AbstractPanic` does, so `temper test` reports
+  that rather than a bubble; tempest once failed with it instead. Every backend reads a library's host files and chooses host
   code or the Temper implementation as Kotlin's `ConnectedChoice.kt`
   does, with `--no-connected`, and Java and C# leave out a replaced
   `Counter.java` or `Counter.cs`. Where a backend needs host code that
@@ -460,7 +464,8 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   defaults either", and "connected functions that list backends need
   a body, as Kotlin's connected-backends"; each backend's
   `missing_host_code` and `kit::CONNECTED` runs, as is and under
-  `--no-connected`.
+  `--no-connected`; to_tmpl.rs `connected_class_without_temper_implementation`;
+  cli.rs `connecteds_*`.
 - **Declaration errors' positions** (2026-11-13): tempest reports
   Kotlin's "Constructor input s specified but there is already a
   constructor" without the constructors' positions Kotlin appends ("at
@@ -1316,9 +1321,9 @@ Other differences we won't copy:
   Kotlin; tempest once also read `export let` lines in its prose. Tests:
   crates/temper-frontend/src/config.rs, crates/tempest/tests/cli.rs
   (`typed_config_*`, `config_dependencies_in_package_files`, and
-  `connecteds_*`, Kotlin's `connecteds` test with real packages, its
-  Bitset given a Temper implementation, since tempest can't translate
-  a connected class without one yet).
+  `connecteds_*`, Kotlin's `connecteds` test with real packages, as
+  written, each checking the generated code defines Bitset once, in host
+  code using the package).
 
 - **Ignore files** (2026-11-06): Kotlin reads one, the nearest
   `.temperignore` or `.gitignore` at or above where it starts (its

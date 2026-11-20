@@ -625,6 +625,12 @@ fn fail(message: impl Into<String>) -> Abrupt {
     Abrupt::Fail(Some(message.into()))
 }
 
+/// A connected declaration's missing implementation, a panic, as Kotlin
+/// Temper's `AbstractPanic`, so no `orelse` or test runner catches it.
+fn no_connected(name: &str) -> Abrupt {
+    Abrupt::Panic(format!("No connected implementation of {name}"))
+}
+
 impl Interp<'_> {
     /// Runs top-level code, then the `async` blocks it started, even if it
     /// failed, as Kotlin Temper does. The first failure is the result.
@@ -1554,9 +1560,7 @@ impl Interp<'_> {
             (class @ ("Regex" | "RegexFormatter"), name, _) if in_std("regex") => {
                 self.regex_connected(s, class, name, args)
             }
-            (class, name, _) => Err(fail(format!(
-                "No connected implementation of {class}.{name}"
-            ))),
+            (class, name, _) => Err(no_connected(&format!("{class}.{name}"))),
         }
     }
 
@@ -1571,10 +1575,7 @@ impl Interp<'_> {
                 // Stopped as Ctrl-C stops code, not failed.
                 Some(Err(why)) if why == INTERRUPTED => Err(Abrupt::Panic(why)),
                 Some(result) => result.map_err(fail),
-                None => Err(fail(format!(
-                    "No connected implementation of {}",
-                    name.unwrap_or("?")
-                ))),
+                None => Err(no_connected(name.unwrap_or("?"))),
             },
         }
     }

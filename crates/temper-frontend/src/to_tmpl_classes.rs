@@ -136,10 +136,10 @@ impl Translator<'_> {
         let interface = self.data(class) & CLASS_INTERFACE != 0;
         let span = self.s.library.tree.span(class);
         if self.data(class) & CLASS_CONNECTED != 0 && !self.s.library.in_std(span.start) {
-            // A user's `@connected` class with its Temper implementation,
-            // which backends without host code for it translate (one
-            // without, all bodiless methods, is "not yet", below):
-            // connected as a function is (`declare_top_level`).
+            // A user's `@connected` class, connected as a function is
+            // (`declare_top_level`): with its Temper implementation, which
+            // backends without host code for it translate, or without,
+            // its methods bodiless and connected (`declare_member`).
             match (self.s.library.connected.get(&class)).and_then(|c| c.backends.as_ref()) {
                 None => self.b.add_facts(decl, Facts::CONNECTED),
                 Some(listed) if listed.is_empty() => {}
@@ -304,9 +304,15 @@ impl Translator<'_> {
                 let Some(f) = core::let_parts(&self.s.library.tree, m).2 else {
                     return self.not_yet(m, "a member of another kind");
                 };
-                // Only a connected class's methods (#633) have no body.
-                if !interface && !connected && self.data(f) & FN_NO_BODY != 0 {
-                    return self.not_yet(m, "a connected class");
+                // Only an interface's, or a connected class's (#633), whose
+                // bodiless methods are host code's (Kotlin's
+                // `TypeDeclChecker`), may have no body.
+                if self.data(f) & FN_NO_BODY != 0 && !interface && !connected {
+                    let program = self.b.program();
+                    if !program.decls.get(decl).facts.contains(Facts::CONNECTED) {
+                        return self.not_yet(m, "a bodiless method");
+                    }
+                    facts = facts | Facts::CONNECTED;
                 }
                 let generic = !core::type_params(&self.s.library.tree, f).is_empty();
                 let sig = if role == ROLE_SETTER || generic {

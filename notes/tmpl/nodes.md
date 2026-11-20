@@ -756,7 +756,8 @@ many times. Golden tests list problems as `RULE @node: message`.
   library. Q2: every declaration but compiler-made ones has one. Q3: a
   function or method without a body is connected or external (or,
   from subset B, abstract). Q4: a connected declaration with a backend
-  list has a body, its fallback.
+  list has a body, its fallback; a connected class, on every method
+  (one without, all its methods abstract, is host code's alone).
 - **P, positions.** P1: in a program with spans, every node and
   declaration has a known span inside its file.
 - **M, modules** (Proposed 2026-10-30, built; [modules.md](modules.md)).

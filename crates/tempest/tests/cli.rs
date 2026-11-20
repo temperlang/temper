@@ -1157,20 +1157,17 @@ fn test_a_library_on_each_backend() {
     }
 }
 
-/// Kotlin's `connecteds` test: a connected class, `Bitset`, whose host
-/// code wraps a package that the config's `dependencies` list for each
-/// backend (a Roaring bitmap), tested with `temper test -b BACKEND`,
-/// which fetches the real package with the language's own tools. A
-/// backend whose tools or package registry can't be reached is skipped,
-/// with a message, unless `TEMPER_REQUIRE_CHECKERS` is set.
-fn connecteds(backend: &str, registry: &str) {
-    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/connecteds");
-    let mut files = Vec::new();
-    for entry in fs::read_dir(dir).unwrap() {
-        let path = entry.unwrap().path();
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
-        files.push((name, fs::read_to_string(&path).unwrap()));
-    }
+/// Kotlin's `connecteds` test: a connected class, `Bitset`, with no
+/// Temper implementation, whose host code wraps a package that the
+/// config's `dependencies` list for each backend (a Roaring bitmap),
+/// tested with `temper test -b BACKEND`, which fetches the real package
+/// with the language's own tools. The generated code defines `Bitset`
+/// once, `defines` as written in the backend's language, in host code
+/// that uses the package, `uses`. A backend whose tools or package
+/// registry can't be reached is skipped, with a message, unless
+/// `TEMPER_REQUIRE_CHECKERS` is set.
+fn connecteds(backend: &str, registry: &str, defines: &str, uses: &str) {
+    let files = connecteds_files();
     let files: Vec<(&str, &str)> = (files.iter())
         .map(|(n, t)| (n.as_str(), t.as_str()))
         .collect();
@@ -1194,6 +1191,70 @@ fn connecteds(backend: &str, registry: &str) {
             "{backend}:\n{out}{err}"
         );
         assert_eq!(code, 0, "{backend}:\n{out}{err}");
+        let out_dir = Path::new(dir).join("temper.out").join(backend);
+        let generated = sources(&out_dir.join("connecteds"));
+        let defining: Vec<_> = (generated.iter())
+            .flat_map(|(path, text)| text.matches(defines).map(move |_| (path, text)))
+            .collect();
+        let [(path, text)] = defining[..] else {
+            let paths: Vec<_> = defining.iter().map(|(p, _)| p).collect();
+            panic!("{backend}: {defines:?} once, not in {paths:?}");
+        };
+        assert!(
+            text.contains(uses),
+            "{backend}: {}:\n{text}",
+            path.display()
+        );
+    });
+}
+
+/// The `connecteds` test's files, by name, and their text.
+fn connecteds_files() -> Vec<(String, String)> {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/connecteds");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        files.push((name, fs::read_to_string(&path).unwrap()));
+    }
+    files
+}
+
+/// The files under a backend's output for the `connecteds` library, but
+/// not its packages and builds (`node_modules`, `target`, `bin`, `obj`).
+fn sources(dir: &Path) -> Vec<(PathBuf, String)> {
+    let mut found = Vec::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy();
+        if path.is_dir() {
+            if !["node_modules", "target", "bin", "obj"].contains(&name.as_ref()) {
+                found.extend(sources(&path));
+            }
+        } else if let Ok(text) = fs::read_to_string(&path) {
+            found.push((path, text));
+        }
+    }
+    found
+}
+
+/// The `connecteds` test in the interpreter, where `Bitset` has no
+/// implementation: its test panics, naming the method, as Kotlin's
+/// `AbstractPanic` does.
+#[test]
+fn connecteds_interpreter() {
+    let files = connecteds_files();
+    let files: Vec<(&str, &str)> = (files.iter())
+        .map(|(n, t)| (n.as_str(), t.as_str()))
+        .collect();
+    with_library("connecteds-interp", &files, |dir| {
+        let (code, out, err) = tempest(&["test", dir]);
+        assert!(
+            out.contains("Panicked: No connected implementation of Bitset.add"),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 0 of 1\n"), "{out}{err}");
+        assert_eq!(code, 1, "{out}{err}");
     });
 }
 
@@ -1216,31 +1277,41 @@ fn reachable(host: &str) -> bool {
 #[test]
 #[cfg(feature = "csharp")]
 fn connecteds_csharp() {
-    connecteds("csharp", "api.nuget.org");
+    connecteds("csharp", "api.nuget.org", "class Bitset", "Roaring.Net");
 }
 
 #[test]
 #[cfg(feature = "java")]
 fn connecteds_java() {
-    connecteds("java", "repo.maven.apache.org");
+    connecteds(
+        "java",
+        "repo.maven.apache.org",
+        "class Bitset",
+        "org.roaringbitmap",
+    );
 }
 
 #[test]
 #[cfg(feature = "js")]
 fn connecteds_js() {
-    connecteds("js", "registry.npmjs.org");
+    connecteds("js", "registry.npmjs.org", "class Bitset", "roaring-wasm");
 }
 
 #[test]
 #[cfg(feature = "py")]
 fn connecteds_py() {
-    connecteds("py", "pypi.org");
+    connecteds("py", "pypi.org", "class Bitset", "pyroaring");
 }
 
 #[test]
 #[cfg(feature = "rust")]
 fn connecteds_rust() {
-    connecteds("rust", "index.crates.io");
+    connecteds(
+        "rust",
+        "index.crates.io",
+        "struct Bitset",
+        "roaring::RoaringBitmap",
+    );
 }
 
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some
