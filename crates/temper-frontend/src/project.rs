@@ -481,7 +481,7 @@ pub fn load_library(
 }
 
 /// Whether a library's root is core's in a Temper checkout, whose
-/// `core.temper` is core's whatever its text ([`Library::in_core`]):
+/// core sources are core's whatever their text ([`Library::in_core`]):
 /// `lib/core` in the workspace that holds the compiler's
 /// `crates/temper-frontend/src/corelib.rs`, which builds core in.
 pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
@@ -506,18 +506,22 @@ pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
 }
 
 /// Whether a library is a copy of the built-in core, as editors write
-/// for going to core's definitions: its one source file is
-/// [`crate::corelib::MAIN`] at its root, with the built-in text.
+/// for going to core's definitions: its source files are
+/// [`crate::corelib::SOURCES`] at its root, each with the built-in text.
 fn is_core_copy(sources: &Sources, library: &LibrarySources) -> bool {
-    let [file] = &library.files[..] else {
-        return false;
-    };
-    let path = Path::new(file);
-    path.parent() == Some(Path::new(&library.root))
-        && path.file_name().is_some_and(|n| n == crate::corelib::MAIN)
-        && sources
-            .read(file)
-            .is_ok_and(|text| text == crate::corelib::TEXT)
+    let core = crate::corelib::SOURCES;
+    library.files.len() == core.len()
+        && (library.files.iter()).all(|file| {
+            let path = Path::new(file);
+            let text = |name| {
+                let (_, text) = core.iter().find(|(core, _)| name == *core)?;
+                Some(*text)
+            };
+            let built_in = (path.file_name()).and_then(|name| text(name.to_str()?));
+            path.parent() == Some(Path::new(&library.root))
+                && built_in
+                    .is_some_and(|built_in| sources.read(file).is_ok_and(|read| read == built_in))
+        })
 }
 
 /// Adds the files of each module that an `import` names, and of those

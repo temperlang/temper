@@ -80,7 +80,7 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
         ("hasIndex", [I(i)]) => Val::Bool((*i as usize) < text.len()),
         ("next", [I(i)]) => index(next(text, *i)),
         ("prev", [I(i)]) => index(prev(text, *i)),
-        // As `core.temper`'s, stopping at either end.
+        // As core's, stopping at either end.
         ("step", [I(i), Val::Int(by)]) => {
             let mut i = *i;
             for _ in 0..by.unsigned_abs() {
@@ -156,7 +156,7 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
     }))
 }
 
-/// `s.indexOf(target, start)`, as `core.temper`'s: the first index from
+/// `s.indexOf(target, start)`, as core's: the first index from
 /// `start` where `target` is, or `StringIndex.none`. That finds an empty
 /// target at `start`, even past the end.
 fn index_of(text: &str, target: &str, start: u32) -> Val {
@@ -290,7 +290,7 @@ pub(super) fn builder_method(builder: &Rc<RefCell<String>>, name: &str, args: &[
             }
             Err(abrupt) => return Some(Err(abrupt)),
         },
-        // As `core.temper`'s, which appends the code points from `begin`
+        // As core's, which appends the code points from `begin`
         // up to `end` or the source's end.
         (
             "appendBetween",

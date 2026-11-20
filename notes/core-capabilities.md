@@ -1,9 +1,9 @@
 # What libraries may do with core's types
 
 Only what core means to enable is enabled. Core's declarations in
-`lib/core/core.temper` say what that is, and the frontend reads them
+`lib/core/` say what that is, and the frontend reads them
 (`typing::core_shape`, parsed once from the built-in core, even while
-an editor changes a checkout's `lib/core/core.temper`) rather than
+an editor changes a checkout's `lib/core/`) rather than
 keeping lists of names. Each check is on the type a name evaluates to,
 so an alias, as `let I = Int32;`, is checked as `Int32`
 (`typing/builtin_uses.rs`). A builtin type core declared nothing for

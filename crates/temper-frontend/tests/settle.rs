@@ -121,13 +121,16 @@ fn cases_with_std_settle_as_expected() {
 fn core_keeps_the_rules_it_sets() {
     with_stack(|| {
         let mut library = Library::new();
-        let core = temper_frontend::corelib::TEXT;
-        library.add_file("core/core.temper", core, SourceKind::Standalone);
+        for (path, text) in temper_frontend::corelib::SOURCES {
+            library.add_file(&format!("core/{path}"), text, SourceKind::Standalone);
+        }
         let settled = settle(library);
         let found: Vec<String> = (settled.library.diagnostics.iter())
             .map(|d| {
-                let line = core[..d.span.start as usize].lines().count();
-                format!("line {line}: {}", d.message.text())
+                let (file, at) = settled.library.locate(d.span.start);
+                let file = &settled.library.files[file.0 as usize];
+                let line = file.parsed.source()[..at as usize].lines().count();
+                format!("{} line {line}: {}", file.path, d.message.text())
             })
             .collect();
         assert_eq!(found, Vec::<String>::new());
@@ -150,9 +153,14 @@ fn core_connects_only_builtins() {
     with_stack(|| {
         let mut library = Library::new();
         library.core_root = Some("lib/core".into());
-        let core = temper_frontend::corelib::TEXT;
-        let text = format!("{core}\n/** A typo. */\n@connected\nexport let pancik;\n");
-        library.add_file("lib/core/core.temper", &text, SourceKind::Standalone);
+        let sources = temper_frontend::corelib::SOURCES;
+        for (i, (path, text)) in sources.iter().enumerate() {
+            let mut text = text.to_string();
+            if i + 1 == sources.len() {
+                text.push_str("\n/** A typo. */\n@connected\nexport let pancik;\n");
+            }
+            library.add_file(&format!("lib/core/{path}"), &text, SourceKind::Standalone);
+        }
         let settled = settle(library);
         let found: Vec<String> = (settled.library.diagnostics.iter())
             .map(|d| d.message.text())

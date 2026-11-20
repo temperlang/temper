@@ -22,7 +22,7 @@
 //! user's `@connected` class with a complete Temper implementation runs
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
 //! Core's own members are native here; their Temper bodies in
-//! `core.temper` run only when a test asks ([`core_bodies`]).
+//! `lib/core/` run only when a test asks ([`core_bodies`]).
 
 pub mod compile_time;
 pub mod core_bodies;
@@ -361,7 +361,7 @@ pub fn run_tests(settled: &Settled, fuel: Option<u64>) -> Run {
 /// Runs a library's tests as [`run_tests`] does, but with core's Temper
 /// bodies in place of the interpreter's natives wherever core has them
 /// ([`core_bodies`]), for testing that the two agree. The library holds
-/// core's text, [`crate::corelib::TEXT`], as a module, which runs first.
+/// core's files, [`crate::corelib::SOURCES`], as a module, which runs first.
 /// Also gives the `Fn`s of core's that ran, to check against
 /// [`core_bodies::members`].
 pub fn run_tests_with_core_bodies(settled: &Settled, fuel: Option<u64>) -> (Run, Vec<NodeId>) {
@@ -762,7 +762,7 @@ impl Interp<'_> {
         }
     }
 
-    /// A generator's methods. `close()` ends it, as core.temper documents,
+    /// A generator's methods. `close()` ends it, as core documents,
     /// where Kotlin Temper's is still a TODO that does nothing.
     fn generator_method(
         &mut self,
@@ -933,7 +933,7 @@ impl Interp<'_> {
                     self.generator_method(s, generator.clone(), s.library.names.get(method.1), args)
                 }
                 Val::Str(text) if s.library.names.get(method.1) == "forEach" => {
-                    // As `core.temper`'s `String.forEach`.
+                    // As core's `String.forEach`.
                     let text = text.clone();
                     let [f] =
                         <[Val; 1]>::try_from(args).map_err(|_| fail("forEach takes a function"))?;
@@ -1093,7 +1093,7 @@ impl Interp<'_> {
                 .borrow_mut()
                 .pop_front()
                 .ok_or_else(|| Abrupt::Panic("removeFirst on an empty Deque".into())),
-            // As `core.temper`'s `DenseBitVector`, which grows when a bit
+            // As core's `DenseBitVector`, which grows when a bit
             // past the end is set.
             (Val::Bits(bits), "get", [Val::Int(i)]) => Ok(Val::Bool(
                 usize::try_from(*i)

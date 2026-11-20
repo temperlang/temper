@@ -369,10 +369,10 @@ ignores file permissions unless `files.readonlyFromPermissions` is set,
 and `files.readonlyInclude` globs match only inside a workspace, so the
 extension marks these editors read-only for the session as they become
 active ([`readonly.ts`](../../../editors/vscode/src/readonly.ts)).
-Core's own source, opened where a checkout keeps it (`lib/core/`, the
-library named `temper-core` beside the compiler's crates), is core
-whatever its text (`Library::in_core`, `project::is_core_checkout`), so
-it analyzes cleanly while edited; another library of that name is an
+Core's own sources, opened where a checkout keeps them (`lib/core/`, the
+library named `temper-core` beside the compiler's crates), are core
+whatever their text (`Library::in_core`, `project::is_core_checkout`), so
+each analyzes cleanly while edited; another library of that name is an
 error. What core enables other libraries to do with its types
 (`typing::core_shape`) is still read from the built-in core, not the
 edited text.

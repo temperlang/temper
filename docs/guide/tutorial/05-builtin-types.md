@@ -11,7 +11,7 @@ We also diverge here from our example geometric shapes library, though it
 served us well for context to get started.
 
 For the types below, some of them can be found as class or interface definitions
-in the file [*core.temper*](../../../lib/core/core.temper) in the Temper source code. The
+in the files of [*lib/core*](../../../lib/core/) in the Temper source code. The
 interpreter uses much of the code here, but classes here are also separately
 redefined for each backend.
 
@@ -364,7 +364,7 @@ user-defined key types in the future (see [issue#29](https://github.com/temperla
 ## Other types
 
 Temper has additional built-in types, but above discussion highlights some of the
-most important ones. Also, some types currently in [*core.temper*](../../../lib/core/core.temper),
+most important ones. Also, some types currently in [*lib/core*](../../../lib/core/),
 such as `Deque<T>` and `DenseBitVector` might move to support libraries in the
 future (see [issue#30](https://github.com/temperlang/temper/issues/30)).
 

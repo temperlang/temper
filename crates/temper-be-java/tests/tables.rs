@@ -13,7 +13,7 @@ fn every_operator_is_spelled() {
     assert_eq!(ops::unspelled(), Vec::<&str>::new());
 }
 
-/// temper-tmpl's core fixture, checked against core.temper there.
+/// temper-tmpl's core fixture, checked against core there.
 fn core() -> Program {
     let path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../temper-tmpl/tests/fixtures/core.tmpl");

@@ -554,7 +554,10 @@ if (blank) { panic(); }
 /// `ahead` bytes in, as the line in core and the name there.
 fn core_at(a: &Analysis, needle: &str, nth: usize, ahead: u32) -> Option<(String, String)> {
     let d = a.core_definition(MAIN, at(BUILTINS, needle, nth, ahead))?;
-    assert_eq!(d.path, "core.temper");
+    let source = temper_frontend::corelib::SOURCES
+        .iter()
+        .find(|(p, _)| *p == d.path);
+    assert_eq!(source.map(|(_, text)| *text), Some(d.source));
     let name = &d.source[d.span.start as usize..d.span.end as usize];
     let line_start = d.source[..d.span.start as usize]
         .rfind('\n')

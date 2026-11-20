@@ -1186,7 +1186,7 @@ mod tests {
 
     #[test]
     fn builtin_supertypes_are_cores() {
-        let core = include_str!("../../../lib/core/core.temper");
+        let core = crate::corelib::TEXT;
         for (sub, sup) in BUILTIN_SUPERTYPES {
             let declared = core.lines().any(|line| {
                 let line = line.trim_start_matches("export ");
@@ -1202,7 +1202,7 @@ mod tests {
 
     #[test]
     fn builtin_generics_are_cores() {
-        let core = include_str!("../../../lib/core/core.temper");
+        let core = crate::corelib::TEXT;
         let mut classes = Vec::new();
         let mut variant = Vec::new();
         for line in core.lines() {

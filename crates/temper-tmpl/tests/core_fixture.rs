@@ -3,19 +3,31 @@
 //! generic types' (`Listed`, `List`, `ListBuilder`, `Pair`, `Mapped`,
 //! `Map`, and `MapBuilder`), those that take functions, and the string
 //! indices', `StringBuilder`'s, `Empty`'s, `Deque`'s, and
-//! `DenseBitVector`'s, checked against `core.temper`: each
+//! `DenseBitVector`'s, checked against core's `lib/core/*.temper`: each
 //! member's name, kind, parameters (names, types, and which are optional),
 //! result, bubbling, and `@connected` mark. Like the frontend's
-//! `builtin_supertypes_are_cores`, it reads `core.temper` as text, so this
+//! `builtin_supertypes_are_cores`, it reads core's files as text, so this
 //! crate needn't depend on the frontend.
 
 use std::collections::HashMap;
 use temper_tmpl::{DeclKind, Facts, Profile, Program, text, validate};
 
 const FIXTURE: &str = include_str!("fixtures/core.tmpl");
-const CORE: &str = include_str!("../../../lib/core/core.temper");
+/// Core's Temper files' texts, joined, in their paths' order.
+fn core_text() -> String {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/core");
+    let mut paths: Vec<_> = (std::fs::read_dir(dir).unwrap())
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "temper"))
+        .collect();
+    paths.sort();
+    let texts: Vec<String> = (paths.iter())
+        .map(|p| std::fs::read_to_string(p).unwrap())
+        .collect();
+    texts.join("\n")
+}
 
-/// A member as `core.temper` declares it.
+/// A member as core declares it.
 #[derive(Debug, PartialEq)]
 struct Member {
     kind: &'static str,
@@ -83,7 +95,7 @@ fn top_level_commas(text: &str) -> Vec<&str> {
 fn logical_lines() -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut open = 0i32;
-    for line in CORE.lines() {
+    for line in core_text().lines() {
         let depth = |s: &str| s.matches('(').count() as i32 - s.matches(')').count() as i32;
         if open > 0 {
             let last = out.last_mut().unwrap();
@@ -269,7 +281,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
     members
 }
 
-/// Builtins the compiler gives, which `core.temper` doesn't declare:
+/// Builtins the compiler gives, which core doesn't declare:
 /// `async`, Kotlin's `BuiltinOperatorId.Async`, and the state machines'
 /// helpers (Kotlin's `SafeAdaptGeneratorFn` and `CoroHelperSpecials`).
 const COMPILER_BUILTINS: [&str; 4] = [

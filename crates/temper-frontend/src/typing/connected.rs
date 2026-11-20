@@ -27,7 +27,7 @@ impl Settle {
         let members = class_parts(tree, class).2.to_vec();
         // Core's connected classes connect members too, as
         // `@connected public complete(…)`, which a user's can't, and
-        // core.temper, read as a user library, shouldn't be checked.
+        // core's files, read as a user library, shouldn't be checked.
         if members
             .iter()
             .any(|&m| tree.data(m) & MEMBER_CONNECTED != 0)

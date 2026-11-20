@@ -48,7 +48,7 @@ and settle tests use:
   reader's. With core's declarations (2026-10-29), `tests/qname.rs`
   checks qnames against Kotlin's examples and their derivation, and
   `tests/core_fixture.rs` checks `tests/fixtures/core.tmpl`, a `uses`
-  section for core's members, against `lib/core/core.temper`. Beside them, `tests/model.rs` tests what text can't
+  section for core's members, against `lib/core/`. Beside them, `tests/model.rs` tests what text can't
   express (broken structure, spans), and `tests/round_trip.rs`
   generates random valid programs, which must validate without
   problems and round trip (`TMPL_FUZZ_SEED`, `TMPL_FUZZ_ROUNDS`).

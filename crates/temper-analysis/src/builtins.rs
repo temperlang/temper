@@ -14,8 +14,8 @@ use temper_syntax::lex::TokenKind;
 /// A place in one of core's files.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CoreLocation {
-    /// Its file's path from core's root, as `core.temper`, one of
-    /// [`corelib::FILES`].
+    /// Its file's path from core's root, as `strings.temper`, one of
+    /// [`corelib::SOURCES`].
     pub path: &'static str,
     /// Its file's text.
     pub source: &'static str,
@@ -44,9 +44,10 @@ impl Analysis<'_> {
             Some(quoted) => quoted.find('`').map_or(rest.len(), |end| end + 5),
             None => (rest.find(|c: char| !c.is_alphanumeric() && c != '_')).unwrap_or(rest.len()),
         };
+        let (path, source, at) = corelib::source_at(at)?;
         Some(CoreLocation {
-            path: corelib::MAIN,
-            source: corelib::TEXT,
+            path,
+            source,
             span: Span {
                 start: at as u32,
                 end: (at + len) as u32,

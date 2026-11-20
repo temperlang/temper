@@ -4,7 +4,7 @@
 //! its static members, naming it or an alias of it. Allowed uses settle
 //! with no diagnostics; others get a clear error.
 //! notes/core-capabilities.md gives the reasons; core's declarations
-//! (`lib/core/core.temper`) carry them: an interface or a class without a
+//! (`lib/core/`) carry them: an interface or a class without a
 //! public constructor can't be made, only unsealed interfaces can be
 //! extended, and `@mayDowncastTo(false)` refuses `is`. The table covers
 //! every builtin type, and names core's other types, as core declares

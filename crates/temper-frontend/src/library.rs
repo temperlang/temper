@@ -628,7 +628,7 @@ pub struct Library {
     pub libraries: Vec<(String, String)>,
     /// The root of core's library in a Temper checkout, as `lib/core`,
     /// when it's loaded ([`crate::project::load_library`]): its
-    /// `core.temper` is core's ([`Library::in_core`]).
+    /// core sources are core's ([`Library::in_core`]).
     pub core_root: Option<String>,
     /// A module, by its directory, whose relative imports resolve from
     /// another directory: the REPL's inputs', from the current one.
@@ -843,8 +843,8 @@ impl Library {
 
     /// Whether the source at `pos` is core's own, read as a library, as
     /// editors and core's checks read it: core declares the builtin
-    /// types, as no other library may. It's core's if its text is
-    /// [`corelib::TEXT`], or if it's [`corelib::MAIN`] in
+    /// types, as no other library may. It's core's if its text is one of
+    /// [`corelib::SOURCES`], or if it's one of their paths in
     /// [`Library::core_root`], a Temper checkout's `lib/core`, whose text
     /// an editor may have changed, or a build of another version may not
     /// hold. No other library is core, whatever its name.
@@ -853,9 +853,11 @@ impl Library {
         let at_root = |root: &String| {
             let path = std::path::Path::new(&file.path);
             path.parent() == Some(std::path::Path::new(root))
-                && path.file_name().is_some_and(|name| name == corelib::MAIN)
+                && (corelib::SOURCES.iter())
+                    .any(|(core, _)| path.file_name().is_some_and(|name| name == *core))
         };
-        file.parsed.source() == corelib::TEXT || self.core_root.as_ref().is_some_and(at_root)
+        (corelib::SOURCES.iter()).any(|(_, text)| file.parsed.source() == *text)
+            || self.core_root.as_ref().is_some_and(at_root)
     }
 
     /// The module for a directory, if it's loaded.

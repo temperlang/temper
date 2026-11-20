@@ -1,9 +1,9 @@
 //! Running core's Temper bodies in place of the interpreter's natives,
 //! for testing that the two agree (`tests/core_bodies.rs`): typing reads
-//! `core.temper`'s signatures and editors show its docs, but nothing else
+//! core's signatures and editors show its docs, but nothing else
 //! runs its bodies, as the interpreter implements core natively and
 //! backends connect it. With core settled as a module of the library
-//! ([`crate::corelib::TEXT`]), a run with [`CoreBodies`] calls core's
+//! ([`crate::corelib::SOURCES`]), a run with [`CoreBodies`] calls core's
 //! body for a member of a builtin value wherever core declares one: a
 //! method, a getter, an `@extension` function, or `get` for `x[i]`.
 //! Members without bodies stay native, so a body calls the natives it
@@ -305,7 +305,7 @@ pub fn members(s: &Settled) -> Vec<(String, NodeId)> {
     found
 }
 
-/// Whether a module is core's, its text [`crate::corelib::TEXT`].
+/// Whether a module is core's, its files [`crate::corelib::SOURCES`].
 pub(super) fn is_core(s: &Settled, module: &SettledModule) -> bool {
     let tree = &s.library.tree;
     (module.top_levels.first()).is_some_and(|&t| s.library.in_core(tree.span(t).start))

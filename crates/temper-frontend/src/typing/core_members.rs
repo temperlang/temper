@@ -1,5 +1,5 @@
 //! Members of builtin types, with their signatures read from Kotlin
-//! Temper's `core.temper` (the repository's `lib/core/`): the final
+//! Temper's core (the repository's `lib/core/`): the final
 //! ones (`Boolean`, `Int32`, `Int64`, `Float64` and `String`), as
 //! `s.toInt32()`, `x.toString()`, `s.isEmpty` or `String.fromCodePoint(c)`,
 //! and the generic ones, as `ls.length`, `ls.get(i)` or `m.keys()`, whose
@@ -309,7 +309,7 @@ pub struct CoreShape {
 /// `export let Int = Int32;`. None for a name core doesn't declare as a
 /// type. Core's text is parsed once, the first time it's wanted. It's
 /// the built-in core's, also while an editor changes a checkout's
-/// `lib/core/core.temper`.
+/// `lib/core/`.
 pub fn core_shape(type_name: &str) -> Option<CoreShape> {
     static SHAPES: OnceLock<Vec<(&'static str, Declared)>> = OnceLock::new();
     let shapes = SHAPES.get_or_init(read_shapes);

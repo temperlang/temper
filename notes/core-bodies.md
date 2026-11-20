@@ -1,6 +1,6 @@
 # Core's Temper bodies
 
-`lib/core/core.temper` gives many members Temper bodies, but until
+`lib/core/` gives many members Temper bodies, but until
 2026-11-19 nothing ran them: typing reads core's signatures, editors show
 its docs, the interpreter implements core natively in Rust, and every
 backend connects core's members to host code. So a body could drift from

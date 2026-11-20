@@ -1,5 +1,5 @@
 //! Core's Temper bodies against what runs. Typing reads
-//! `lib/core/core.temper`'s signatures and editors show its docs, but the
+//! `lib/core/`'s signatures and editors show its docs, but the
 //! interpreter implements core natively and every backend connects it,
 //! so nothing ran core's bodies, which could drift from what runs.
 //!
@@ -345,8 +345,9 @@ fn cases_source(expected: Option<&BTreeMap<usize, String>>) -> String {
 fn settled() -> temper_frontend::settle::Settled {
     let source = cases_source(None);
     let mut library = Library::new();
-    let core = temper_frontend::corelib::TEXT;
-    library.add_file("core/core.temper", core, SourceKind::Standalone);
+    for (path, text) in temper_frontend::corelib::SOURCES {
+        library.add_file(&format!("core/{path}"), text, SourceKind::Standalone);
+    }
     library.add_file("cases/cases.temper", &source, SourceKind::Standalone);
     load_imports(&Sources::standard(), &mut library);
     let settled = settle(library);
@@ -449,11 +450,14 @@ fn bodies_agree_with_natives() {
                     println!("member {label}{}", if ran { "" } else { " (not run)" });
                 }
             }
-            let not_run: Vec<String> = (members(&settled).into_iter())
+            // By label, whichever of core's files declares each.
+            let mut not_run: Vec<String> = (members(&settled).into_iter())
                 .filter(|(_, f)| ran.binary_search(f).is_err())
                 .map(|(label, _)| label)
                 .collect();
-            let listed: Vec<&str> = NOT_RUN.iter().map(|&(label, _)| label).collect();
+            not_run.sort();
+            let mut listed: Vec<&str> = NOT_RUN.iter().map(|&(label, _)| label).collect();
+            listed.sort();
             assert_eq!(not_run, listed, "core's bodies that no case runs");
         })
         .unwrap()

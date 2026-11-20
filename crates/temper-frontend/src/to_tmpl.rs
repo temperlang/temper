@@ -8,7 +8,7 @@
 //! [`Typing::resolved`](crate::typing::Typing::resolved); nothing is
 //! resolved again here. Core's members are copied, as used, from
 //! temper-tmpl's core fixture (`tests/fixtures/core.tmpl`, which its tests
-//! check against `core.temper`), so their signatures, connected marks, and
+//! check against core's files), so their signatures, connected marks, and
 //! parameter names have one source.
 //!
 //! A library's own modules translate in the order they run, each after

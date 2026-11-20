@@ -529,7 +529,7 @@ fn duplicate_names() {
 const CORE_CONFIG: &str = "# Core\n\n    export let name = \"temper-core\";\n";
 
 /// `temper-core` is core's name: building another library of that name
-/// is an error, and its `core.temper` has none of core's powers, as
+/// is an error, and its files have none of core's powers, as
 /// naming `_listify`. Only a Temper checkout's own `lib/core` is core,
 /// whatever its text, as an editor may have changed it.
 #[test]
@@ -554,41 +554,45 @@ fn temper_core_is_reserved() {
     assert!(!library.in_core(library.files[0].base));
     assert!(load_library(&sources, &libraries[0], &libraries).is_err());
     // A copy of the built-in core, as editors write, is core, by its
-    // text, but not with another file.
-    let core = temper_frontend::corelib::TEXT;
-    let files = [
-        ("copy/config.temper.md", CORE_CONFIG),
-        ("copy/core.temper", core),
+    // files' texts, but not with another file or one missing.
+    let copy = |extra: &[(&'static str, &'static str)], skip: usize| {
+        let core = temper_frontend::corelib::SOURCES;
+        let files: Vec<(String, &str)> = std::iter::once(("config.temper.md", CORE_CONFIG))
+            .chain(core.iter().skip(skip).copied())
+            .chain(extra.iter().copied())
+            .map(|(path, text)| (format!("copy/{path}"), text))
+            .collect();
+        let files: Vec<(&str, &str)> = files.iter().map(|(p, t)| (p.as_str(), *t)).collect();
+        let sources = Sources::memory(&files);
+        let libraries = find_libraries(&sources, "copy");
+        load_library(&sources, &libraries[0], &libraries).is_ok()
+    };
+    assert!(copy(&[], 0));
+    assert!(!copy(&[("more.temper", "export let more = 1;\n")], 0));
+    assert!(!copy(&[], 1));
+    // A checkout's core, edited, each file of it.
+    let (first, text) = temper_frontend::corelib::SOURCES[0];
+    let edited = format!("{text}\nexport let edited = 1;\n");
+    let mut files: Vec<(String, &str)> = vec![
+        ("repo/Cargo.toml".into(), "[workspace]\n"),
+        (
+            "repo/crates/temper-frontend/src/corelib.rs".into(),
+            "//! Core.\n",
+        ),
+        ("repo/lib/core/config.temper.md".into(), CORE_CONFIG),
     ];
-    let sources = Sources::memory(&files);
-    let libraries = find_libraries(&sources, "copy");
-    assert!(load_library(&sources, &libraries[0], &libraries).is_ok());
-    let files = [
-        ("copy/config.temper.md", CORE_CONFIG),
-        ("copy/core.temper", core),
-        ("copy/more.temper", "export let more = 1;\n"),
-    ];
-    let sources = Sources::memory(&files);
-    let libraries = find_libraries(&sources, "copy");
-    assert!(load_library(&sources, &libraries[0], &libraries).is_err());
-    // A checkout's core, edited.
-    let edited = format!(
-        "{}\nexport let edited = 1;\n",
-        temper_frontend::corelib::TEXT
-    );
-    let files = [
-        ("repo/Cargo.toml", "[workspace]\n"),
-        ("repo/crates/temper-frontend/src/corelib.rs", "//! Core.\n"),
-        ("repo/lib/core/config.temper.md", CORE_CONFIG),
-        ("repo/lib/core/core.temper", edited.as_str()),
-    ];
+    for &(path, text) in temper_frontend::corelib::SOURCES {
+        let text = if path == first { edited.as_str() } else { text };
+        files.push((format!("repo/lib/core/{path}"), text));
+    }
+    let files: Vec<(&str, &str)> = files.iter().map(|(p, t)| (p.as_str(), *t)).collect();
     let sources = Sources::memory(&files);
     let libraries = find_libraries(&sources, "repo/lib/core");
     let library = load_library(&sources, &libraries[0], &libraries).unwrap();
-    let core = (library.files.iter())
-        .find(|f| f.path == "repo/lib/core/core.temper")
-        .unwrap();
-    assert!(library.in_core(core.base));
+    assert_eq!(library.files.len(), temper_frontend::corelib::SOURCES.len());
+    for file in &library.files {
+        assert!(library.in_core(file.base), "{}", file.path);
+    }
 }
 
 /// A test that loops forever runs out of its steps and fails alone; the
