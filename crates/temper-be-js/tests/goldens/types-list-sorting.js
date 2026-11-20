@@ -1,6 +1,7 @@
 import {
   float64ToInt32Unsafe,
   float64ToString,
+  listBuilderSort,
   listedGet,
   listedJoin,
   listedSorted,
@@ -11,7 +12,7 @@ import {
 function mungeInts(ints) {
   /** @type {number[]} */
   const builder = ints.slice();
-  builder.sort((a, b) => (a - b) | 0);
+  listBuilderSort(builder, (a, b) => (a - b) | 0);
   console.log(listedJoin(/** @type {number[]} */ (listedSorted(/** @type {number[]} */ (ints), (a2, b2) => (a2 - b2) | 0)), ", ", (a3) => a3.toString()));
   console.log(listedJoin(builder, ", ", (a4) => a4.toString()));
 }
@@ -28,7 +29,7 @@ function mungeFloats(floats) {
   function compareFloats(a, b) {
     return float64ToInt32Unsafe(Math.sign(a - b));
   }
-  builder.sort(compareFloats);
+  listBuilderSort(builder, compareFloats);
   console.log(listedJoin(/** @type {number[]} */ (listedSorted(/** @type {number[]} */ (floats), compareFloats)), ", ", (a2) => float64ToString(a2)));
   console.log(listedJoin(builder, ", ", (a3) => float64ToString(a3)));
 }
@@ -79,7 +80,7 @@ const entries = Object.freeze([new Entry(0, 0), new Entry(1, 1), new Entry(2, 2)
 const sortedEntries = listedSorted(entries, (a, b) => (a.group - b.group) | 0);
 console.log(listedJoin(/** @type {Entry[]} */ (sortedEntries), "\n", (a) => a.toString()));
 console.log(listedGet(entries, 1).toString());
-entries.sort((a, b) => (a.group - b.group) | 0);
+listBuilderSort(entries, (a, b) => (a.group - b.group) | 0);
 console.log(listedJoin(entries, "\n", (a) => a.toString()));
 mungeInts(Object.freeze([2, 1]));
 mungeFloats(Object.freeze([3.4, 1.2]));

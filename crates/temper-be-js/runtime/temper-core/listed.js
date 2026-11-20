@@ -117,8 +117,12 @@ export const listedFilter = (ls, predicate) => {
   if (filtered) {
     filtered.push(...ls.slice(nFiltered, length));
     fullyFiltered = filtered;
-  } else {
+  } else if (Object.isFrozen(ls)) {
+    // An immutable list, kept as is.
     fullyFiltered = ls;
+  } else {
+    // A builder, which freezing would make immutable.
+    fullyFiltered = ls.slice();
   }
   return Object.freeze(fullyFiltered);
 }
@@ -220,6 +224,22 @@ export const listBuilderReverse = (ls) => {
     let a = ls[i];
     ls[i] = ls[j];
     ls[j] = a;
+  }
+}
+
+/**
+ * Implements extension method core.type ListBuilder.sort(): JS's sort is
+ * stable. A comparison that changes the builder's length panics, as Java's and
+ * Python's sorts fail, rather than leaving what it added among the items.
+ * @template T
+ * @param {T[]} ls
+ * @param {(a: T, b: T) => number} compare
+ */
+export const listBuilderSort = (ls, compare) => {
+  let { length } = ls;
+  ls.sort(compare);
+  if (ls.length !== length) {
+    throw new Error("ListBuilder changed length during sort");
   }
 }
 

@@ -899,7 +899,15 @@ _lbsoT = TypeVar("_lbsoT")
 def list_builder_sort(
     lst: List[_lbsoT], compare: Callable[[_lbsoT, _lbsoT], int]
 ) -> None:
-    return lst.sort(key=cmp_to_key(compare))
+    """Sorts in place. A comparison that changes the builder panics, as
+    `panic()` raises, past any `orelse`, rather than raising the
+    `ValueError` that Python's sort does, which an `orelse` would catch."""
+    try:
+        lst.sort(key=cmp_to_key(compare))
+    except ValueError as error:
+        if str(error) != "list modified during sort":
+            raise
+        raise BaseException("ListBuilder changed during sort") from error
 
 
 _lbmdT = TypeVar("_lbmdT")

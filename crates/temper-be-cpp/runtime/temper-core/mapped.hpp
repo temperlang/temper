@@ -81,10 +81,25 @@ namespace temper {
                 return result;
             }
 
+            // The entries in order, copied, for those that call back
+            // (`forEach` and `toListWith`), which walk them as the
+            // interpreter walks a snapshot: the callback may change a map
+            // builder it walks, which would free or shrink the storage a
+            // walk of `order` itself reads, or remove a key it looks up.
+            template<class Key, class Value>
+            std::vector<std::pair<Key, Value>> entries(const std::shared_ptr<Ordered<Key, Value>>& m) {
+                std::vector<std::pair<Key, Value>> result;
+                result.reserve(m->order.size());
+                for (const Key& k : m->order) {
+                    result.emplace_back(k, m->data.at(k));
+                }
+                return result;
+            }
+
             template<class Key, class Value, class F>
             void forEach(const std::shared_ptr<Ordered<Key, Value>>& m, F fn) {
-                for (const Key& k : m->order) {
-                    fn(k, m->data.at(k));
+                for (const std::pair<Key, Value>& entry : entries(m)) {
+                    fn(entry.first, entry.second);
                 }
             }
 
@@ -108,8 +123,8 @@ namespace temper {
                 -> std::shared_ptr<std::vector<decltype(fn(std::declval<const Key&>(), std::declval<const Value&>()))>> {
                 using R = decltype(fn(std::declval<const Key&>(), std::declval<const Value&>()));
                 std::shared_ptr<std::vector<R>> result = std::make_shared<std::vector<R>>();
-                for (const Key& k : m->order) {
-                    result->push_back(fn(k, m->data.at(k)));
+                for (const std::pair<Key, Value>& entry : entries(m)) {
+                    result->push_back(fn(entry.first, entry.second));
                 }
                 return result;
             }

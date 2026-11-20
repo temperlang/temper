@@ -911,6 +911,32 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   Tempest reports the first failure.
   Test: settle/run.cases, "a failing async block doesn't stop the
   others".
+- **Builders changed by their own calls.** Kotlin's runtimes deadlock,
+  read freed memory, or lose data when a builder is added or spliced
+  into itself, or a callback changes the builder or map it walks:
+  Rust's `addAll(self)`, `splice(self)`, and any `sort` whose
+  comparison reads the builder deadlock (a lock held across the
+  call), and its `map` and `reduce` panic if the callback shrinks the
+  builder; C++'s `reduceFrom`, `map`, `filter`, `reduce`, `join`,
+  `sort`, and `Mapped`'s `forEach` and `toListWith` read freed or
+  destroyed items, and `splice(self)` inserts a vector's range into
+  itself; JS's `filter` keeping everything freezes the builder it was
+  given; Java, C#, and Lua splice in the builder as the removal left
+  it, and Lua's `addAll(self, at)` inserts values already moved.
+  Here, `addAll` and `splice` add the builder's values as they were
+  before the call, as Python's do; Rust's and C++'s callbacks walk a
+  snapshot, as the interpreter does (Rust's `MapBuilder.forEach` still
+  stops where the map shrinks, safely); JS's `filter` copies a
+  builder. A `sort` whose comparison adds or removes values panics on
+  every backend (decided 2026-11-19), where Kotlin's interpreter, C#,
+  JS, and Lua drop or keep what it added, and Java and Python throw
+  exceptions that `orelse` catches; Rust and C++ sort a copy. Which
+  values other callbacks see when they change what they walk is open
+  ([#671](https://github.com/temperlang/temper/issues/671)): the
+  interpreter, Rust, and C++ walk a snapshot, Python and Java the live
+  builder, and C# and Java throw their own exceptions for some.
+  Test: programs/callback-changes, which C++ runs under
+  AddressSanitizer.
 - **temper-regex-parser drops the code before a trailing dash** in a set:
   `/[a-]/` parses as `[-]`. Tempest keeps both (`regex.rs`).
   Test: temper-frontend/src/regex.rs, `parses_the_dialect`.

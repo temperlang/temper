@@ -1104,7 +1104,10 @@ export class ListBuilder<T> extends Listed<T> {
   @connected
   public add(newValue: T, at: Int = length): Void;
 
-  /** Panics for `at` less than 0 or greater than `length`. */
+  /**
+   * Panics for `at` less than 0 or greater than `length`. Given this
+   * builder, adds a copy of its values.
+   */
   @connected
   public addAll(newValues: Listed<T>, at: Int = length): Void;
 
@@ -1130,7 +1133,8 @@ export class ListBuilder<T> extends Listed<T> {
   public set(index: Int, newValue: T): Void;
 
   /**
-   * Sorts in place. Uses stable sorting.
+   * Sorts in place. Uses stable sorting. Panics if `compare` adds or
+   * removes values.
    */
   @connected
   public sort(compare: fn (T, T): Int): Void;
@@ -1138,7 +1142,8 @@ export class ListBuilder<T> extends Listed<T> {
   /**
    * Removes `removeCount` items starting at `index`, or until the end of the
    * current items. Returns the removed items, and `newValues` are put in their
-   * place. The `index` is clamped to current bounds.
+   * place, as they were before the call if they're this builder. The `index`
+   * is clamped to current bounds.
    */
   @connected
   public splice(

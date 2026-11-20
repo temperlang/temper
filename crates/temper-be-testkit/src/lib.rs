@@ -274,8 +274,13 @@ pub fn without_net(cases: &mut [Case]) {
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]);
 /// `core-numbers` core's number members where hosts differ, `succ`,
-/// `pred`, and `Float64.near` on NaN and infinities.
-pub const PROGRAMS: [&str; 21] = [
+/// `pred`, and `Float64.near` on NaN and infinities; `callback-changes`
+/// builders added to and spliced into themselves, and callbacks that
+/// change the builder or map they walk, which must stay memory safe and
+/// never deadlock, ending with a sort whose comparison grows its builder,
+/// which panics, so the run fails (`expectRunFailure = true`, as
+/// functional tests say it).
+pub const PROGRAMS: [&str; 22] = [
     "classes",
     "nullables",
     "generics",
@@ -297,6 +302,7 @@ pub const PROGRAMS: [&str; 21] = [
     "json-adapters",
     "reach",
     "core-numbers",
+    "callback-changes",
 ];
 
 /// The shared programs that run as tests, as a functional test with
@@ -554,6 +560,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             None => (file, dir.join(format!("{file}.temper.md"))),
         };
         let text = fs::read_to_string(&path).unwrap();
+        let fails = text.contains("expectRunFailure = true");
         let expected = if file.ends_with(".tmpl") {
             (text.lines())
                 .filter_map(|l| l.strip_prefix("// log: "))
@@ -579,7 +586,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             host_files: Vec::new(),
             no_connected: false,
             tests: AS_TESTS.contains(&file).then(Vec::new),
-            fails: false,
+            fails,
         });
     }
     cases
@@ -1095,14 +1102,17 @@ pub fn check_log(failures: &mut Vec<String>, name: &str, out: &Output, expected:
 }
 
 /// [`check_log`] for a case's run: one that's expected to fail
-/// ([`Case::fails`]) must fail, after logging what's expected.
+/// ([`Case::fails`]) must fail, after logging what's expected, and not
+/// by a sanitizer's report (AddressSanitizer's, say), which is a bug
+/// rather than the failure the case means.
 pub fn check_case(failures: &mut Vec<String>, name: &str, out: &Output, case: &Case) {
     if !case.fails {
         return check_log(failures, name, out, &case.expected);
     }
     let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
-    if out.status.success() || actual != case.expected {
+    let sanitized = String::from_utf8_lossy(&out.stderr).contains("Sanitizer");
+    if out.status.success() || actual != case.expected || sanitized {
         failures.push(format!(
             "{name}: expected {:?} and a failed run, got {actual:?} ({})\n{}",
             case.expected,

@@ -1251,11 +1251,17 @@ end
 
 -- Defer loading powersort, because it also loads temper-core.
 local powersort
+-- A comparison that changes the builder's length panics, as Java's and
+-- Python's sorts fail, rather than leaving what it added among the items.
 function temper.listbuilder_sort(list, compare)
     if powersort == nil then
         powersort = require("temper-core/powersort").powersort
     end
+    local len = #list
     powersort(list, compare)
+    if #list ~= len then
+        error("ListBuilder changed length during sort")
+    end
 end
 
 function temper.import(mod, ent)
@@ -1267,6 +1273,10 @@ function temper.listbuilder_splice(builder, at, remove, new)
     at = temper.null_to_nil(at) or 0
     remove = temper.null_to_nil(remove) or len
     new = temper.null_to_nil(new) or {}
+    if new == builder then
+        -- Its values as they were, before the removal changes them.
+        new = temper.listbuilder_tolist(builder)
+    end
     if at < 0 or at > len then
         return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
     end
@@ -1286,6 +1296,10 @@ function temper.listbuilder_addall(builder, from, at)
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
         return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+    end
+    if from == builder and at ~= len then
+        -- Its values as they were, before inserting moves them.
+        from = temper.listbuilder_tolist(builder)
     end
     if at == len then
         for read = 1, #from do

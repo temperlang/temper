@@ -12,6 +12,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -781,18 +782,37 @@ public final class Core {
     }
 
     /**
+     * A comparison that adds or removes items panics, as {@code panic()}
+     * does, with an {@code Error} that no {@code orelse} catches, rather
+     * than the {@code ConcurrentModificationException} that
+     * {@code ArrayList.sort} throws, which one would.
+     *
      * @param target a ListBuilder instance
      * @param <E> the element type
      */
     public static <E> void listSort(List<E> target, ToIntBiFunction<E, E> compare) {
-        target.sort((a, b) -> compare.applyAsInt(a, b));
+        try {
+            target.sort((a, b) -> compare.applyAsInt(a, b));
+        } catch (ConcurrentModificationException e) {
+            throw sortPanic(e);
+        }
     }
 
     /**
+     * As {@link #listSort}.
+     *
      * @param target a ListBuilder instance
      */
     public static void listSortInt(List<Integer> target, IntBinaryOperator compare) {
-        target.sort((a, b) -> compare.applyAsInt(a, b));
+        try {
+            target.sort((a, b) -> compare.applyAsInt(a, b));
+        } catch (ConcurrentModificationException e) {
+            throw sortPanic(e);
+        }
+    }
+
+    private static AssertionError sortPanic(ConcurrentModificationException e) {
+        return new AssertionError("ListBuilder changed during sort", e);
     }
 
     /**
@@ -859,11 +879,13 @@ public final class Core {
         int sliceStart = index != null ? clamp(index, 0, size) : 0;
         int removeClamped = removeCount != null ? clamp(removeCount, 0, size) : size;
         int sliceEnd = Math.min(sliceStart + removeClamped, size);
+        // Given the builder itself, its elements as they were go in.
+        List<E> added = newElems == target ? listCopyOf(target) : newElems;
         List<E> slice = target.subList(sliceStart, sliceEnd);
         List<E> result = listCopyOf(slice);
         slice.clear();
-        if (newElems != null) {
-            slice.addAll(newElems);
+        if (added != null) {
+            slice.addAll(added);
         }
         return result;
     }

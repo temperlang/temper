@@ -1,0 +1,224 @@
+# generated line:column -> source:line:column, and the text at each
+15:1 -> ../callback-changes.temper.md:13:5  /** <- let show(ls: Listed<Int>): S
+19:1 -> ../callback-changes.temper.md:13:5  function show(ls) { <- let show(ls: Listed<Int>): S
+19:10 -> ../callback-changes.temper.md:13:9 (show)  show(ls) { <- show(ls: Listed<Int>): Strin
+19:14 -> ../callback-changes.temper.md:13:5  (ls) { <- let show(ls: Listed<Int>): S
+20:3 -> ../callback-changes.temper.md:14:7  return listedJoin(/** @type <- ls.join(",") { (n: Int): Str
+23:1 -> ../callback-changes.temper.md:52:5  /** @returns {string[]} */ <- let words(): ListBuilder<Str
+24:1 -> ../callback-changes.temper.md:52:5  function words() { <- let words(): ListBuilder<Str
+24:10 -> ../callback-changes.temper.md:52:9 (words)  words() { <- words(): ListBuilder<String>
+24:15 -> ../callback-changes.temper.md:52:5  () { <- let words(): ListBuilder<Str
+25:3 -> ../callback-changes.temper.md:53:7  /** @type {string[]} */ <- let w = new ListBuilder<Stri
+26:3 -> ../callback-changes.temper.md:53:7  const w = []; <- let w = new ListBuilder<Stri
+27:3 -> ../callback-changes.temper.md:54:7  { <- for (var i = 0; i < 3; i +=
+28:5 -> ../callback-changes.temper.md:54:12  let i = 0; <- var i = 0; i < 3; i += 1) {
+29:5 -> ../callback-changes.temper.md:54:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
+30:7 -> ../callback-changes.temper.md:54:40  w.push(`w${i}`); <- w.add("w${i}"); }
+31:7 -> ../callback-changes.temper.md:54:30  i = (i + 1) | 0; <- i += 1) { w.add("w${i}"); }
+34:3 -> ../callback-changes.temper.md:55:7  return w; <- w
+37:1 -> ../callback-changes.temper.md:57:5  /** @returns {number} */ <- let reduceFromGrowing(): Int
+38:1 -> ../callback-changes.temper.md:57:5  function reduceFromGrowing() <- let reduceFromGrowing(): Int
+38:10 -> ../callback-changes.temper.md:57:9 (reduceFromGrowing)  reduceFromGrowing() { <- reduceFromGrowing(): Int thr
+38:27 -> ../callback-changes.temper.md:57:5  () { <- let reduceFromGrowing(): Int
+39:3 -> ../callback-changes.temper.md:58:7  /** @type {number[]} */ <- let g = [1, 2].toListBuilder
+40:3 -> ../callback-changes.temper.md:58:7  const g = Object.freeze([1, <- let g = [1, 2].toListBuilder
+41:3 -> ../callback-changes.temper.md:59:23  /** <- { (sum: Int, n: Int): Int =>
+46:3 -> ../callback-changes.temper.md:59:23  function fn(sum, n) { <- { (sum: Int, n: Int): Int =>
+47:5 -> ../callback-changes.temper.md:60:9  if (g.length < 4) { <- if (g.length < 4) { g.add(9)
+48:7 -> ../callback-changes.temper.md:60:29  g.push(9); <- g.add(9); }
+50:5 -> ../callback-changes.temper.md:61:9  return (Math.imul(sum, 10) + <- sum * 10 + n
+52:3 -> ../callback-changes.temper.md:59:7  return listedReduceFrom(/** <- g.reduceFrom(0) { (sum: Int,
+55:1 -> ../callback-changes.temper.md:64:5  /** @returns {number} */ <- let mapShrinking(): Int thro
+56:1 -> ../callback-changes.temper.md:64:5  function mapShrinking() { <- let mapShrinking(): Int thro
+56:10 -> ../callback-changes.temper.md:64:9 (mapShrinking)  mapShrinking() { <- mapShrinking(): Int throws B
+56:22 -> ../callback-changes.temper.md:64:5  () { <- let mapShrinking(): Int thro
+57:3 -> ../callback-changes.temper.md:65:7  /** @type {string[]} */ <- let w = words();
+58:3 -> ../callback-changes.temper.md:65:7  const w = words(); <- let w = words();
+59:3 -> ../callback-changes.temper.md:66:13  /** <- { (s: String): String =>
+63:3 -> ../callback-changes.temper.md:66:13  function fn(s) { <- { (s: String): String =>
+64:5 -> ../callback-changes.temper.md:67:9  if (w.length > 1) { <- if (w.length > 1) { w.remove
+65:7 -> ../callback-changes.temper.md:67:29  listBuilderRemoveLast(w); <- w.removeLast(); }
+67:5 -> ../callback-changes.temper.md:68:9  return s; <- s
+69:3 -> ../callback-changes.temper.md:66:7  return listedMap(/** @type { <- w.map { (s: String): String
+72:1 -> ../callback-changes.temper.md:71:5  /** @returns {number} */ <- let reduceShrinking(): Int t
+73:1 -> ../callback-changes.temper.md:71:5  function reduceShrinking() { <- let reduceShrinking(): Int t
+73:10 -> ../callback-changes.temper.md:71:9 (reduceShrinking)  reduceShrinking() { <- reduceShrinking(): Int throw
+73:25 -> ../callback-changes.temper.md:71:5  () { <- let reduceShrinking(): Int t
+74:3 -> ../callback-changes.temper.md:72:7  /** @type {string[]} */ <- let w = words();
+75:3 -> ../callback-changes.temper.md:72:7  const w = words(); <- let w = words();
+76:3 -> ../callback-changes.temper.md:73:26  /** <- { (all: String, s: String):
+81:3 -> ../callback-changes.temper.md:73:26  function fn(all, s) { <- { (all: String, s: String):
+82:5 -> ../callback-changes.temper.md:74:9  if (w.length > 1) { <- if (w.length > 1) { w.remove
+83:7 -> ../callback-changes.temper.md:74:29  listBuilderRemoveLast(w); <- w.removeLast(); }
+85:5 -> ../callback-changes.temper.md:75:9  return all; <- all
+87:3 -> ../callback-changes.temper.md:73:7  const all2 = w.reduce(fn); <- let all = w.reduce { (all: S
+88:3 -> ../callback-changes.temper.md:77:7  if (!all2) { <- if (all.isEmpty) { 0 } else
+89:5 -> ../callback-changes.temper.md:77:26  return 0; <- 0 } else { 1 }
+91:5 -> ../callback-changes.temper.md:77:37  return 1; <- 1 }
+95:1 -> ../callback-changes.temper.md:79:5  /** @returns {number} */ <- let filterGrowing(): Int thr
+96:1 -> ../callback-changes.temper.md:79:5  function filterGrowing() { <- let filterGrowing(): Int thr
+96:10 -> ../callback-changes.temper.md:79:9 (filterGrowing)  filterGrowing() { <- filterGrowing(): Int throws
+96:23 -> ../callback-changes.temper.md:79:5  () { <- let filterGrowing(): Int thr
+97:3 -> ../callback-changes.temper.md:80:7  /** @type {number[]} */ <- let g = [1, 2].toListBuilder
+98:3 -> ../callback-changes.temper.md:80:7  const g = Object.freeze([1, <- let g = [1, 2].toListBuilder
+99:3 -> ../callback-changes.temper.md:81:16  /** <- { (n: Int): Boolean =>
+103:3 -> ../callback-changes.temper.md:81:16  function fn(n) { <- { (n: Int): Boolean =>
+104:5 -> ../callback-changes.temper.md:82:9  if (g.length < 4) { <- if (g.length < 4) { g.add(9)
+105:7 -> ../callback-changes.temper.md:82:29  g.push(9); <- g.add(9); }
+107:5 -> ../callback-changes.temper.md:83:9  return true; <- true
+109:3 -> ../callback-changes.temper.md:81:7  return listedFilter(g, fn).l <- g.filter { (n: Int): Boolean
+112:1 -> ../callback-changes.temper.md:86:5  /** @returns {number} */ <- let joinGrowing(): Int throw
+113:1 -> ../callback-changes.temper.md:86:5  function joinGrowing() { <- let joinGrowing(): Int throw
+113:10 -> ../callback-changes.temper.md:86:9 (joinGrowing)  joinGrowing() { <- joinGrowing(): Int throws Bu
+113:21 -> ../callback-changes.temper.md:86:5  () { <- let joinGrowing(): Int throw
+114:3 -> ../callback-changes.temper.md:87:7  /** @type {number[]} */ <- let g = [1, 2].toListBuilder
+115:3 -> ../callback-changes.temper.md:87:7  const g = Object.freeze([1, <- let g = [1, 2].toListBuilder
+116:3 -> ../callback-changes.temper.md:88:32  /** <- { (n: Int): String =>
+120:3 -> ../callback-changes.temper.md:88:32  function fn(n) { <- { (n: Int): String =>
+121:5 -> ../callback-changes.temper.md:89:9  if (g.length < 4) { <- if (g.length < 4) { g.add(9)
+122:7 -> ../callback-changes.temper.md:89:29  g.push(9); <- g.add(9); }
+124:5 -> ../callback-changes.temper.md:90:9  return n.toString(); <- n.toString()
+126:3 -> ../callback-changes.temper.md:88:7  const joined = listedJoin(g, <- let joined = g.join(",") { (
+127:3 -> ../callback-changes.temper.md:92:7  if (!joined) { <- if (joined.isEmpty) { 0 } el
+128:5 -> ../callback-changes.temper.md:92:29  return 0; <- 0 } else { 1 }
+130:5 -> ../callback-changes.temper.md:92:40  return 1; <- 1 }
+134:1 -> ../callback-changes.temper.md:94:5  /** @returns {Map<string, nu <- let letters(): MapBuilder<St
+135:1 -> ../callback-changes.temper.md:94:5  function letters() { <- let letters(): MapBuilder<St
+135:10 -> ../callback-changes.temper.md:94:9 (letters)  letters() { <- letters(): MapBuilder<String
+135:17 -> ../callback-changes.temper.md:94:5  () { <- let letters(): MapBuilder<St
+136:3 -> ../callback-changes.temper.md:95:7  /** @type {Map<string, numbe <- let m = new MapBuilder<Strin
+137:3 -> ../callback-changes.temper.md:95:7  const m = new Map(); <- let m = new MapBuilder<Strin
+138:3 -> ../callback-changes.temper.md:96:7  m.set(`a${1}`, 1); <- m.set("a${1}", 1);
+139:3 -> ../callback-changes.temper.md:97:7  m.set(`b${2}`, 2); <- m.set("b${2}", 2);
+140:3 -> ../callback-changes.temper.md:98:7  m.set(`c${3}`, 3); <- m.set("c${3}", 3);
+141:3 -> ../callback-changes.temper.md:99:7  return m; <- m
+144:1 -> ../callback-changes.temper.md:101:5  /** @returns {number} */ <- let forEachRemoving(): Int t
+145:1 -> ../callback-changes.temper.md:101:5  function forEachRemoving() { <- let forEachRemoving(): Int t
+145:10 -> ../callback-changes.temper.md:101:9 (forEachRemoving)  forEachRemoving() { <- forEachRemoving(): Int throw
+145:25 -> ../callback-changes.temper.md:101:5  () { <- let forEachRemoving(): Int t
+146:3 -> ../callback-changes.temper.md:102:7  /** @type {Map<string, numbe <- let m = letters();
+147:3 -> ../callback-changes.temper.md:102:7  const m = letters(); <- let m = letters();
+148:3 -> ../callback-changes.temper.md:103:7  let sum = 0; <- var sum = 0;
+149:3 -> ../callback-changes.temper.md:104:17  /** <- { (k: String, v: Int): Void
+153:3 -> ../callback-changes.temper.md:104:17  function fn(k, v) { <- { (k: String, v: Int): Void
+154:5 -> ../callback-changes.temper.md:105:9  if (m.has("c3")) { <- if (m.has("c3")) { m.remove(
+155:7 -> ../callback-changes.temper.md:105:28  try { <- m.remove("c3") orelse void;
+160:5 -> ../callback-changes.temper.md:106:9  sum = (sum + v) | 0; <- sum += v;
+162:3 -> ../callback-changes.temper.md:104:7  mappedForEach(m, fn); <- m.forEach { (k: String, v: I
+163:3 -> ../callback-changes.temper.md:108:7  return sum; <- sum
+166:1 -> ../callback-changes.temper.md:110:5  /** @returns {number} */ <- let forEachAdding(): Int thr
+167:1 -> ../callback-changes.temper.md:110:5  function forEachAdding() { <- let forEachAdding(): Int thr
+167:10 -> ../callback-changes.temper.md:110:9 (forEachAdding)  forEachAdding() { <- forEachAdding(): Int throws
+167:23 -> ../callback-changes.temper.md:110:5  () { <- let forEachAdding(): Int thr
+168:3 -> ../callback-changes.temper.md:111:7  /** @type {Map<string, numbe <- let m = letters();
+169:3 -> ../callback-changes.temper.md:111:7  const m = letters(); <- let m = letters();
+170:3 -> ../callback-changes.temper.md:112:7  let count = 0; <- var count = 0;
+171:3 -> ../callback-changes.temper.md:113:17  /** <- { (k: String, v: Int): Void
+175:3 -> ../callback-changes.temper.md:113:17  function fn(k, v) { <- { (k: String, v: Int): Void
+176:5 -> ../callback-changes.temper.md:114:9  count = (count + 1) | 0; <- count += 1;
+177:5 -> ../callback-changes.temper.md:115:9  if (m.size < 30) { <- if (m.length < 30) { m.set("
+178:7 -> ../callback-changes.temper.md:115:30  m.set(`k${m.size}`, 1); <- m.set("k${m.length}", 1); }
+181:3 -> ../callback-changes.temper.md:113:7  mappedForEach(m, fn); <- m.forEach { (k: String, v: I
+182:3 -> ../callback-changes.temper.md:117:7  return count; <- count
+185:1 -> ../callback-changes.temper.md:119:5  /** @returns {number} */ <- let toListWithRemoving(): In
+186:1 -> ../callback-changes.temper.md:119:5  function toListWithRemoving( <- let toListWithRemoving(): In
+186:10 -> ../callback-changes.temper.md:119:9 (toListWithRemoving)  toListWithRemoving() { <- toListWithRemoving(): Int th
+186:28 -> ../callback-changes.temper.md:119:5  () { <- let toListWithRemoving(): In
+187:3 -> ../callback-changes.temper.md:120:7  /** @type {Map<string, numbe <- let m = letters();
+188:3 -> ../callback-changes.temper.md:120:7  const m = letters(); <- let m = letters();
+189:3 -> ../callback-changes.temper.md:121:20  /** <- { (k: String, v: Int): Int =
+194:3 -> ../callback-changes.temper.md:121:20  function fn(k, v) { <- { (k: String, v: Int): Int =
+195:5 -> ../callback-changes.temper.md:122:9  if (m.has("c3")) { <- if (m.has("c3")) { m.remove(
+196:7 -> ../callback-changes.temper.md:122:28  try { <- m.remove("c3") orelse void;
+201:5 -> ../callback-changes.temper.md:123:9  return v; <- v
+203:3 -> ../callback-changes.temper.md:121:7  return mappedToListWith(m, f <- m.toListWith { (k: String, v
+206:1 -> ../callback-changes.temper.md:20:5  /** @type {number[]} */ <- let b = [1, 2].toListBuilder
+207:1 -> ../callback-changes.temper.md:20:5  const b = Object.freeze([1, <- let b = [1, 2].toListBuilder
+208:1 -> ../callback-changes.temper.md:21:5  listBuilderAddAll(b, /** @ty <- b.addAll(b);
+209:1 -> ../callback-changes.temper.md:22:5  /** @type {number[]} */ <- let c = [1, 2].toListBuilder
+210:1 -> ../callback-changes.temper.md:22:5  const c = Object.freeze([1, <- let c = [1, 2].toListBuilder
+211:1 -> ../callback-changes.temper.md:23:5  listBuilderAddAll(c, /** @ty <- c.addAll(c, 1);
+212:1 -> ../callback-changes.temper.md:24:5  /** @type {number[]} */ <- let d = [1, 2, 3].toListBuil
+213:1 -> ../callback-changes.temper.md:24:5  const d = Object.freeze([1, <- let d = [1, 2, 3].toListBuil
+214:1 -> ../callback-changes.temper.md:25:5  /** @type {readonly number[] <- let removed = d.splice(1, 1,
+215:1 -> ../callback-changes.temper.md:25:5  const removed = listBuilderS <- let removed = d.splice(1, 1,
+216:1 -> ../callback-changes.temper.md:26:5  console.log(`self ${show(b)} <- console.log("self ${show(b)}
+217:1 -> ../callback-changes.temper.md:31:5  /** @type {number[]} */ <- let e = [1, 2].toListBuilder
+218:1 -> ../callback-changes.temper.md:31:5  const e = Object.freeze([1, <- let e = [1, 2].toListBuilder
+219:1 -> ../callback-changes.temper.md:32:5  /** @type {readonly number[] <- let kept = e.filter { (n: In
+220:1 -> ../callback-changes.temper.md:32:5  const kept = listedFilter(e, <- let kept = e.filter { (n: In
+221:1 -> ../callback-changes.temper.md:33:5  e.push(3); <- e.add(3);
+222:1 -> ../callback-changes.temper.md:34:5  console.log(`filter ${show(k <- console.log("filter ${show(k
+223:1 -> ../callback-changes.temper.md:39:5  /** @type {number[]} */ <- let f = [3, 1, 2].toListBuil
+224:1 -> ../callback-changes.temper.md:39:5  const f = Object.freeze([3, <- let f = [3, 1, 2].toListBuil
+225:1 -> ../callback-changes.temper.md:40:5  let peeks = 0; <- var peeks = 0;
+227:1 -> ../callback-changes.temper.md:41:12  /** <- { (a: Int, z: Int): Int => p
+232:1 -> ../callback-changes.temper.md:41:12  function fn2(a, z) { <- { (a: Int, z: Int): Int => p
+233:3 -> ../callback-changes.temper.md:41:39  peeks = (peeks + f.length) | <- peeks += f.length; a - z };
+234:3 -> ../callback-changes.temper.md:41:58  return (a - z) | 0; <- a - z };
+237:1 -> ../callback-changes.temper.md:41:5  listBuilderSort(f, fn2); <- f.sort { (a: Int, z: Int): I
+238:1 -> ../callback-changes.temper.md:42:5  console.log(`peeking ${show( <- console.log("peeking ${show(
+239:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+240:1 -> ../callback-changes.temper.md:127:5  let t$0; <- let walked = [
+241:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+246:1 -> ../callback-changes.temper.md:127:5  const t$2 = t$0; <- let walked = [
+247:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+248:1 -> ../callback-changes.temper.md:127:5  let t$1; <- let walked = [
+249:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+254:1 -> ../callback-changes.temper.md:127:5  const t$4 = t$2; <- let walked = [
+255:1 -> ../callback-changes.temper.md:127:5  const t$5 = t$1; <- let walked = [
+256:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+257:1 -> ../callback-changes.temper.md:127:5  let t$3; <- let walked = [
+258:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+263:1 -> ../callback-changes.temper.md:127:5  const t$7 = t$4; <- let walked = [
+264:1 -> ../callback-changes.temper.md:127:5  const t$8 = t$5; <- let walked = [
+265:1 -> ../callback-changes.temper.md:127:5  const t$9 = t$3; <- let walked = [
+266:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+267:1 -> ../callback-changes.temper.md:127:5  let t$6; <- let walked = [
+268:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+273:1 -> ../callback-changes.temper.md:127:5  const t$11 = t$7; <- let walked = [
+274:1 -> ../callback-changes.temper.md:127:5  const t$12 = t$8; <- let walked = [
+275:1 -> ../callback-changes.temper.md:127:5  const t$13 = t$9; <- let walked = [
+276:1 -> ../callback-changes.temper.md:127:5  const t$14 = t$6; <- let walked = [
+277:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+278:1 -> ../callback-changes.temper.md:127:5  let t$10; <- let walked = [
+279:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+284:1 -> ../callback-changes.temper.md:127:5  const t$16 = t$11; <- let walked = [
+285:1 -> ../callback-changes.temper.md:127:5  const t$17 = t$12; <- let walked = [
+286:1 -> ../callback-changes.temper.md:127:5  const t$18 = t$13; <- let walked = [
+287:1 -> ../callback-changes.temper.md:127:5  const t$19 = t$14; <- let walked = [
+288:1 -> ../callback-changes.temper.md:127:5  const t$20 = t$10; <- let walked = [
+289:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+290:1 -> ../callback-changes.temper.md:127:5  let t$15; <- let walked = [
+291:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+296:1 -> ../callback-changes.temper.md:127:5  const t$22 = t$16; <- let walked = [
+297:1 -> ../callback-changes.temper.md:127:5  const t$23 = t$17; <- let walked = [
+298:1 -> ../callback-changes.temper.md:127:5  const t$24 = t$18; <- let walked = [
+299:1 -> ../callback-changes.temper.md:127:5  const t$25 = t$19; <- let walked = [
+300:1 -> ../callback-changes.temper.md:127:5  const t$26 = t$20; <- let walked = [
+301:1 -> ../callback-changes.temper.md:127:5  const t$27 = t$15; <- let walked = [
+302:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+303:1 -> ../callback-changes.temper.md:127:5  let t$21; <- let walked = [
+304:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+309:1 -> ../callback-changes.temper.md:127:5  const t$29 = t$22; <- let walked = [
+310:1 -> ../callback-changes.temper.md:127:5  const t$30 = t$23; <- let walked = [
+311:1 -> ../callback-changes.temper.md:127:5  const t$31 = t$24; <- let walked = [
+312:1 -> ../callback-changes.temper.md:127:5  const t$32 = t$25; <- let walked = [
+313:1 -> ../callback-changes.temper.md:127:5  const t$33 = t$26; <- let walked = [
+314:1 -> ../callback-changes.temper.md:127:5  const t$34 = t$27; <- let walked = [
+315:1 -> ../callback-changes.temper.md:127:5  const t$35 = t$21; <- let walked = [
+316:1 -> ../callback-changes.temper.md:127:5  /** @type {number} */ <- let walked = [
+317:1 -> ../callback-changes.temper.md:127:5  let t$28; <- let walked = [
+318:1 -> ../callback-changes.temper.md:127:5  try { <- let walked = [
+323:1 -> ../callback-changes.temper.md:127:5  /** @type {readonly number[] <- let walked = [
+324:1 -> ../callback-changes.temper.md:127:5  const walked = Object.freeze <- let walked = [
+325:1 -> ../callback-changes.temper.md:137:5  console.log(`walks ${walked. <- console.log("walks ${walked.
+326:1 -> ../callback-changes.temper.md:144:5  /** @type {number[]} */ <- let s = [3, 1, 2].toListBuil
+327:1 -> ../callback-changes.temper.md:144:5  const s = Object.freeze([3, <- let s = [3, 1, 2].toListBuil
+329:1 -> ../callback-changes.temper.md:145:12  /** <- { (a: Int, z: Int): Int =>
+334:1 -> ../callback-changes.temper.md:145:12  function fn3(a, z) { <- { (a: Int, z: Int): Int =>
+335:3 -> ../callback-changes.temper.md:146:7  if (s.length < 40) { <- if (s.length < 40) { s.add(0
+336:5 -> ../callback-changes.temper.md:146:28  s.push(0); <- s.add(0); }
+338:3 -> ../callback-changes.temper.md:147:7  return (a - z) | 0; <- a - z
+341:1 -> ../callback-changes.temper.md:145:5  listBuilderSort(s, fn3); <- s.sort { (a: Int, z: Int): I
+342:1 -> ../callback-changes.temper.md:149:5  console.log(`sorted ${s.leng <- console.log("sorted ${s.leng

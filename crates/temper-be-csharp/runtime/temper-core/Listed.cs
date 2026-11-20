@@ -150,12 +150,22 @@ namespace TemperLang.Core
         public static IReadOnlyList<T> Slice<T>(this IList<T> list, int start, int endExclusive) =>
             list.AsReadOnly().Slice(start, endExclusive);
 
+        /// <summary>
+        /// Sorts stably. A comparison that changes the list's length ends
+        /// the process, as <c>panic()</c> does, rather than losing what it
+        /// added.
+        /// </summary>
         public static void Sort<T>(this IList<T> list, Func<T, T, int> compare)
         {
             // TODO Implement stable in place sorting on IList<T>.
             // For now, this is still stable, but unhappily, it allocates.
             // Cache ordered result.
+            int count = list.Count;
             var sorted = list.Sorted(compare);
+            if (list.Count != count)
+            {
+                Environment.FailFast("ListBuilder changed length during sort");
+            }
             // If this is a plain List<T>, Clear promises to retain Capacity.
             list.Clear();
             AddAllAtBack(list, sorted);
@@ -195,7 +205,10 @@ namespace TemperLang.Core
             // Find defaults & bounds.
             int ind = (index ?? 0).Clamp(0, list.Count);
             int count = (removeCount ?? list.Count).Clamp(0, list.Count);
-            var values = newValues ?? Enumerable.Empty<T>();
+            // Given the list itself, its values as they were go in.
+            var values = ReferenceEquals(newValues, list)
+                ? list.ToList()
+                : newValues ?? Enumerable.Empty<T>();
             int endExclusive = (ind + count).Clamp(0, list.Count);
             count = endExclusive - ind;
             // Get result.

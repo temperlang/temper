@@ -1477,8 +1477,17 @@ impl Interp<'_> {
                 Ok(Val::Void)
             }
             ("sort", [f]) => {
+                // Sorts a copy, so the comparison may read the builder; one
+                // that changes its length panics, rather than losing what
+                // it added, as every backend's runtime does.
                 let items = builder.borrow().clone();
-                *builder.borrow_mut() = self.sort(s, items, f)?;
+                let sorted = self.sort(s, items, f)?;
+                if builder.borrow().len() != len {
+                    return Err(Abrupt::Panic(
+                        "ListBuilder changed length during sort".into(),
+                    ));
+                }
+                *builder.borrow_mut() = sorted;
                 Ok(Val::Void)
             }
             ("splice", _) => {

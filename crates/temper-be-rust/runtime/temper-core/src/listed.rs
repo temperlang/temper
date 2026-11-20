@@ -82,6 +82,11 @@ where
 pub use listed::*;
 
 // TODO Just switch to using <ListedTrait<_>>::whatever calls where needed?
+//
+// Those that call back walk a snapshot of the items (`to_list`, which
+// copies only a builder's), as the interpreter does, holding no lock
+// while the callback runs, so a callback may read or change a builder it
+// walks without deadlocking or reading past its end.
 mod listed {
     use super::{List, ListedTrait};
     use crate::ToArcString;
@@ -91,14 +96,11 @@ mod listed {
     where
         T: Clone + Sync + Send,
     {
-        // We could make a callback option for holding any lock on a vec,
-        // but that risks deadlock.
-        // So just loop externally, potentially paying more cost.
+        let items = listed.to_list();
         let mut result = vec![];
-        for i in 0..listed.len() {
-            let value = listed.get(i);
+        for value in items.iter() {
             if predicate(value.clone()) {
-                result.push(value);
+                result.push(value.clone());
             }
         }
         Arc::new(result)
@@ -108,8 +110,8 @@ mod listed {
     where
         T: Clone + Sync + Send,
     {
-        for i in 0..listed.len() {
-            action(listed.get(i));
+        for value in listed.to_list().iter() {
+            action(value.clone());
         }
     }
 
@@ -123,11 +125,11 @@ mod listed {
     {
         let separator = separator.to_arc_string();
         let mut result = String::new();
-        for i in 0..listed.len() {
+        for (i, value) in listed.to_list().iter().enumerate() {
             if i > 0 {
                 result.push_str(separator.as_str());
             }
-            result.push_str(&stringify(listed.get(i)));
+            result.push_str(&stringify(value.clone()));
         }
         result.to_arc_string()
     }
@@ -136,9 +138,10 @@ mod listed {
     where
         T: Clone + Sync + Send,
     {
-        let mut result = vec![];
-        for i in 0..listed.len() {
-            result.push(transform(listed.get(i)));
+        let items = listed.to_list();
+        let mut result = Vec::with_capacity(items.as_slice().len());
+        for value in items.iter() {
+            result.push(transform(value.clone()));
         }
         Arc::new(result)
     }
@@ -172,9 +175,10 @@ mod listed {
         T: Clone + Sync + Send,
         O: Clone + Sync + Send,
     {
+        let items = listed.to_list();
         let mut result = initial;
-        for i in index..listed.len() {
-            result = accumulate(result, listed.get(i));
+        for value in items.iter().skip(index as usize) {
+            result = accumulate(result, value.clone());
         }
         result
     }
@@ -372,11 +376,8 @@ where
 pub use list_builder::*;
 
 pub mod list_builder {
-    use super::{List, ListBuilder, Listed, ToListed};
-    use std::{
-        cell::RefCell,
-        sync::{Arc, RwLock},
-    };
+    use super::{List, ListBuilder, ToListed};
+    use std::sync::{Arc, RwLock};
 
     pub fn add<T>(builder: &ListBuilder<T>, value: T, index: Option<i32>) -> () {
         match index {
@@ -395,17 +396,15 @@ pub mod list_builder {
     where
         T: Clone + Sync + Send,
     {
-        let values = values.to_listed();
-        let builder = RefCell::new(builder.write().unwrap());
+        // Copy the values before locking: they may be this builder, whose
+        // values as they were before the call are added, as Python's do.
+        let values = values.to_listed().to_vec();
+        let mut builder = builder.write().unwrap();
         let index = match index {
             Some(index) => index.try_into().unwrap(),
-            None => builder.borrow().len(),
+            None => builder.len(),
         };
-        values.with_vec(&|values: &Vec<T>| {
-            builder
-                .borrow_mut()
-                .splice(index..index, values.iter().cloned());
-        });
+        builder.splice(index..index, values);
     }
 
     pub fn clear<T>(builder: &ListBuilder<T>) {
@@ -429,14 +428,22 @@ pub mod list_builder {
         builder.write().unwrap()[index] = value;
     }
 
+    /// Sorts a copy, holding no lock while comparing, so the comparison
+    /// may read the builder, and a panic in it leaves the builder as it
+    /// was rather than poisoned. A comparison that changes the builder's
+    /// length panics, as Java's and Python's sorts fail.
     pub fn sort<T>(builder: &ListBuilder<T>, compare: &dyn Fn(T, T) -> i32)
     where
         T: Clone + Sync + Send,
     {
-        builder
-            .write()
-            .unwrap()
-            .sort_by(|a, b| compare(a.clone(), b.clone()).cmp(&0));
+        let mut items = builder.read().unwrap().clone();
+        let len = items.len();
+        items.sort_by(|a, b| compare(a.clone(), b.clone()).cmp(&0));
+        let mut stored = builder.write().unwrap();
+        if stored.len() != len {
+            panic!("ListBuilder changed length during sort");
+        }
+        *stored = items;
     }
 
     pub fn splice<T>(
@@ -448,27 +455,19 @@ pub mod list_builder {
     where
         T: 'static + Clone + Sync + Send,
     {
+        // Copy the values before locking, as `add_all` does.
         let values = match values {
-            Some(values) => values.to_listed(),
-            None => Listed::new(Arc::new(vec![])),
+            Some(values) => values.to_listed().to_vec(),
+            None => vec![],
         };
-        let builder = RefCell::new(builder.write().unwrap());
+        let mut builder = builder.write().unwrap();
         let begin = index.unwrap_or(0).max(0) as usize;
         let remove_count: usize = match remove_count {
             Some(remove_count) => remove_count.max(0).try_into().unwrap(),
-            None => builder.borrow().len(),
+            None => builder.len(),
         };
-        let end = begin + remove_count.min(builder.borrow().len() - begin);
-        let result: RefCell<Vec<T>> = RefCell::new(vec![]);
-        values.with_vec(&|values: &Vec<T>| {
-            result.replace(
-                builder
-                    .borrow_mut()
-                    .splice(begin..end, values.iter().cloned())
-                    .collect(),
-            );
-        });
-        Arc::new(result.into_inner())
+        let end = begin + remove_count.min(builder.len() - begin);
+        Arc::new(builder.splice(begin..end, values).collect())
     }
 }
 

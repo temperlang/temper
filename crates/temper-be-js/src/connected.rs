@@ -198,7 +198,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type ListBuilder.set()",
         Connection::Helper("listBuilderSet"),
     ),
-    ("core.type ListBuilder.sort()", Connection::Translate(sort)),
+    (
+        "core.type ListBuilder.sort()",
+        Connection::Helper("listBuilderSort"),
+    ),
     (
         "core.type ListBuilder.splice()",
         Connection::Helper("listBuilderSplice"),
@@ -703,12 +706,6 @@ fn two(t: &mut Translator<'_>, args: &[NodeId], what: &str) -> Result<[Expr; 2],
             what: format!("`{what}` with other than its receiver and one argument"),
         }),
     }
-}
-
-/// `b.sort(compare)`, as Kotlin's: JS's sort is stable.
-fn sort(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [b, compare] = two(t, args, "sort")?;
-    Ok(b.method("sort", vec![compare]))
 }
 
 /// `ls.reduce(accumulate)`, as Kotlin's.

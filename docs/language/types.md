@@ -1304,7 +1304,8 @@ Panics for `at` less than 0 or greater than `length`.
 
 `:` `fn(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, [*Listed*](#interface-listed)&lt;[*T*](#listbuildert)&gt;, [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Void*](#class-void)
 
-Panics for `at` less than 0 or greater than `length`.
+Panics for `at` less than 0 or greater than `length`. Given this
+builder, adds a copy of its values.
 
 #### `ListBuilder.clear`
 
@@ -1335,7 +1336,8 @@ Panics on index out of bounds.
 
 `:` `fn(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, `fn(`[*T*](#listbuildert), [*T*](#listbuildert)`):` [*Int32*](#class-int32)`):` [*Void*](#class-void)
 
-Sorts in place. Uses stable sorting.
+Sorts in place. Uses stable sorting. Panics if `compare` adds or
+removes values.
 
 #### `ListBuilder.splice`
 
@@ -1343,7 +1345,8 @@ Sorts in place. Uses stable sorting.
 
 Removes `removeCount` items starting at `index`, or until the end of the
 current items. Returns the removed items, and `newValues` are put in their
-place. The `index` is clamped to current bounds.
+place, as they were before the call if they're this builder. The `index`
+is clamped to current bounds.
 
 #### `ListBuilder.toList`
 

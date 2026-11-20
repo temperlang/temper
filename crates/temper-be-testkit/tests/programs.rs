@@ -3,7 +3,8 @@
 //!
 //! - `programs_log_as_the_interpreter_does`: each Temper program logs, on
 //!   the interpreter, what its log block says, so every backend that runs
-//!   it is checked against the interpreter.
+//!   it is checked against the interpreter; one expected to fail
+//!   (`expectRunFailure = true`) must end in a panic.
 //! - `programs_translate_to_tmpl`: each Temper program translates to
 //!   valid tmpl, as its golden shows.
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
@@ -23,7 +24,13 @@ fn programs_log_as_the_interpreter_does() {
                 continue;
             }
             let (failure, output) = kit::interpret(&case);
-            assert_eq!(failure, None, "{}", case.key);
+            // A run expected to fail (`callback-changes`) ends in a panic.
+            if case.fails {
+                let failure = failure.unwrap_or_else(|| panic!("{}: no failure", case.key));
+                assert!(failure.starts_with("Panicked"), "{}: {failure}", case.key);
+            } else {
+                assert_eq!(failure, None, "{}", case.key);
+            }
             let expected = temper_funtests::expected_log(text, "interp");
             assert_eq!(output, expected, "{}", case.key);
         }

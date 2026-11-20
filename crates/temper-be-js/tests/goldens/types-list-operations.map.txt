@@ -1,159 +1,159 @@
 # generated line:column -> source:line:column, and the text at each
-23:1 -> ../operations.temper.md:13:5  /** <- let reportLength<T>(list: Li
-27:1 -> ../operations.temper.md:13:5  function reportLength(list) <- let reportLength<T>(list: Li
-27:10 -> ../operations.temper.md:13:9 (reportLength)  reportLength(list) { <- reportLength<T>(list: Listed
-27:22 -> ../operations.temper.md:13:5  (list) { <- let reportLength<T>(list: Li
-28:3 -> ../operations.temper.md:14:7  console.log(`Length: ${list. <- console.log("Length: ${list.
-31:1 -> ../operations.temper.md:147:5  /** <- let reportSplit(string: Stri
-35:1 -> ../operations.temper.md:147:5  function reportSplit(string, <- let reportSplit(string: Stri
-35:10 -> ../operations.temper.md:147:9 (reportSplit)  reportSplit(string, sep) { <- reportSplit(string: String,
-35:21 -> ../operations.temper.md:147:5  (string, sep) { <- let reportSplit(string: Stri
-36:3 -> ../operations.temper.md:148:7  /** @type {readonly string[] <- let strings = string.split(s
-37:3 -> ../operations.temper.md:148:7  const strings = stringSplit( <- let strings = string.split(s
-38:3 -> ../operations.temper.md:149:7  const len = strings.length.t <- let len = strings.length.toS
-39:3 -> ../operations.temper.md:150:7  console.log(`Split ${listedJ <- console.log("Split ${(string
-42:1 -> ../operations.temper.md:419:5  /** @param {(arg0: readonly <- let something(callback: fn (
-43:1 -> ../operations.temper.md:419:5  function something(callback) <- let something(callback: fn (
-43:10 -> ../operations.temper.md:419:9 (something)  something(callback) { <- something(callback: fn (List
-43:19 -> ../operations.temper.md:419:5  (callback) { <- let something(callback: fn (
-44:3 -> ../operations.temper.md:420:7  callback(Object.freeze(["Cal <- callback(["Called", "with",
-47:1 -> ../operations.temper.md:422:5  function runSomething() { <- let runSomething(): Void {
-47:10 -> ../operations.temper.md:422:9 (runSomething)  runSomething() { <- runSomething(): Void {
-47:22 -> ../operations.temper.md:422:5  () { <- let runSomething(): Void {
-48:3 -> ../operations.temper.md:423:17  /** @param {readonly string[ <- { words => console.log(words
-49:3 -> ../operations.temper.md:423:17  function fn(words) { <- { words => console.log(words
-50:5 -> ../operations.temper.md:423:28  console.log(listedJoin(/** @ <- console.log(words.join(" ")
-52:3 -> ../operations.temper.md:423:7  something(fn); <- something { words => console
-55:1 -> ../operations.temper.md:20:5  reportLength(Object.freeze([ <- reportLength(List.of<AnyValu
-56:1 -> ../operations.temper.md:38:5  /** @type {readonly number[] <- let ls: List<Int> = [5, 6, 7
-57:1 -> ../operations.temper.md:38:5  const ls = listedSorted(/** <- let ls: List<Int> = [5, 6, 7
-58:1 -> ../operations.temper.md:44:5  console.log(`All  ${listedJo <- console.log("All  ${ (ls.joi
-59:1 -> ../operations.temper.md:54:5  console.log(`Even ${listedJo <- console.log(
-60:1 -> ../operations.temper.md:69:5  console.log(`Odd  ${listedJo <- console.log(
-61:1 -> ../operations.temper.md:84:5  console.log(`Neg  ${listedJo <- console.log(
-62:1 -> ../operations.temper.md:99:5  /** @type {readonly number[] <- let listed: Listed<Int> = ls
-63:1 -> ../operations.temper.md:99:5  const listed = ls; <- let listed: Listed<Int> = ls
-64:1 -> ../operations.temper.md:100:5  console.log(`Neg  ${listedJo <- console.log(
-65:1 -> ../operations.temper.md:114:5  /** @type {readonly number[] <- let listedList = listed.toLi
-66:1 -> ../operations.temper.md:114:5  const listedList = listedToL <- let listedList = listed.toLi
-67:1 -> ../operations.temper.md:115:5  console.log(`Listed list len <- console.log("Listed list len
-68:1 -> ../operations.temper.md:123:5  console.log("Looping"); <- console.log("Looping");
-69:1 -> ../operations.temper.md:124:5  const n = ls.length; <- let n = ls.length;
-70:1 -> ../operations.temper.md:125:5  { <- for (var i: Int = 0; i < n;
-71:3 -> ../operations.temper.md:125:10  let i = 0; <- var i: Int = 0; i < n; ++i)
-72:3 -> ../operations.temper.md:125:5  while (i < n) { <- for (var i: Int = 0; i < n;
-73:5 -> ../operations.temper.md:126:7  console.log(`  ${listedGet(/ <- console.log("  ${ls.get(i)}"
-74:5 -> ../operations.temper.md:125:33  i = (i + 1) | 0; <- ++i) {
-77:1 -> ../operations.temper.md:158:5  reportSplit("a ; b ; c", " ; <- reportSplit("a ; b ; c", " ;
-78:1 -> ../operations.temper.md:159:5  reportSplit("def", ""); <- reportSplit("def", "");
-79:1 -> ../operations.temper.md:160:5  reportSplit(" g  h i", " "); <- reportSplit(" g  h i", " ");
-80:1 -> ../operations.temper.md:161:5  reportSplit(" ", " "); <- reportSplit(" ", " ");
-81:1 -> ../operations.temper.md:162:5  reportSplit("", " "); <- reportSplit("", " ");
-82:1 -> ../operations.temper.md:163:5  reportSplit("", ""); <- reportSplit("", "");
-83:1 -> ../operations.temper.md:164:5  reportSplit("🌍", ""); <- reportSplit("🌍", "");
-85:1 -> ../operations.temper.md:193:11  /** <- { (list): ListBuilder<String
-89:1 -> ../operations.temper.md:193:11  function fn11(list) { <- { (list): ListBuilder<String
-90:3 -> ../operations.temper.md:194:7  /** @type {string[]} */ <- let builder = list.toListBui
-91:3 -> ../operations.temper.md:194:7  const builder = list.slice() <- let builder = list.toListBui
-92:3 -> ../operations.temper.md:198:7  builder.sort((a, b) => Math. <- builder.sort { a, b => a <=>
-93:3 -> ../operations.temper.md:199:7  return builder; <- builder
-96:1 -> ../operations.temper.md:182:5  /** @type {string[][]} */ <- let triangleOfFooBar = [
-97:1 -> ../operations.temper.md:182:5  const triangleOfFooBar = lis <- let triangleOfFooBar = [
-98:1 -> ../operations.temper.md:202:5  { <- for (var j = 0; j < triangle
-99:3 -> ../operations.temper.md:202:10  let j = 0; <- var j = 0; j < triangleOfFoo
-100:3 -> ../operations.temper.md:202:5  while (j < triangleOfFooBar. <- for (var j = 0; j < triangle
-101:5 -> ../operations.temper.md:203:7  /** @type {string[]} */ <- let row = triangleOfFooBar[j
-102:5 -> ../operations.temper.md:203:7  const row = listedGet(triang <- let row = triangleOfFooBar[j
-103:5 -> ../operations.temper.md:204:7  console.log(`Fwd  [${listedJ <- console.log("Fwd  [${
-104:5 -> ../operations.temper.md:208:7  listBuilderReverse(row); <- row.reverse();
-105:5 -> ../operations.temper.md:202:50  j = (j + 1) | 0; <- ++j) {
-108:1 -> ../operations.temper.md:211:5  listBuilderReverse(triangleO <- triangleOfFooBar.reverse();
-109:1 -> ../operations.temper.md:213:5  { <- for (var j = 0; j < triangle
-110:3 -> ../operations.temper.md:213:10  let j2 = 0; <- var j = 0; j < triangleOfFoo
-111:3 -> ../operations.temper.md:213:5  while (j2 < triangleOfFooBar <- for (var j = 0; j < triangle
-112:5 -> ../operations.temper.md:214:7  /** @type {string[]} */ <- let row = triangleOfFooBar[j
-113:5 -> ../operations.temper.md:214:7  const row2 = listedGet(trian <- let row = triangleOfFooBar[j
-114:5 -> ../operations.temper.md:215:7  console.log(`Back [${listedJ <- console.log("Back [${
-115:5 -> ../operations.temper.md:213:50  j2 = (j2 + 1) | 0; <- ++j) {
-118:1 -> ../operations.temper.md:242:5  /** @type {string[]} */ <- let messageBuilder = new Lis
-119:1 -> ../operations.temper.md:242:5  const messageBuilder = []; <- let messageBuilder = new Lis
-120:1 -> ../operations.temper.md:243:5  messageBuilder.push("hello") <- messageBuilder.add("hello");
-121:1 -> ../operations.temper.md:247:5  listBuilderSet(messageBuilde <- messageBuilder[0] = "hi";
-122:1 -> ../operations.temper.md:248:5  listBuilderAddAll(messageBui <- messageBuilder.addAll(["ther
-123:1 -> ../operations.temper.md:249:5  listBuilderAdd(messageBuilde <- messageBuilder.add("say", 0)
-124:1 -> ../operations.temper.md:256:5  /** @type {string[]} */ <- let copyThat = messageBuilde
-125:1 -> ../operations.temper.md:256:5  const copyThat = messageBuil <- let copyThat = messageBuilde
-126:1 -> ../operations.temper.md:260:5  listBuilderAddAll(messageBui <- messageBuilder.addAll(["more
-127:1 -> ../operations.temper.md:261:5  listBuilderAddAll(copyThat, <- copyThat.addAll(messageBuild
-128:1 -> ../operations.temper.md:265:5  console.log(listedJoin(messa <- console.log(messageBuilder.j
-129:1 -> ../operations.temper.md:270:5  console.log(listedJoin(/** @ <- console.log(copyThat.sorted
-130:1 -> ../operations.temper.md:271:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
-131:1 -> ../operations.temper.md:287:5  const oldLast = listBuilderR <- let oldLast = copyThat.remov
-132:1 -> ../operations.temper.md:288:5  console.log(`Removed ${oldLa <- console.log("Removed ${oldLa
-133:1 -> ../operations.temper.md:298:5  /** @type {readonly string[] <- let nextLast = copyThat.spli
-134:1 -> ../operations.temper.md:298:5  const nextLast = listBuilder <- let nextLast = copyThat.spli
-135:1 -> ../operations.temper.md:299:5  /** @type {readonly string[] <- let oldWords = copyThat.spli
-136:1 -> ../operations.temper.md:299:5  const oldWords = listBuilder <- let oldWords = copyThat.spli
-137:1 -> ../operations.temper.md:300:12  listBuilderSplice(copyThat, <- copyThat.splice(null, 0, old
-138:1 -> ../operations.temper.md:301:12  listBuilderSplice(copyThat, <- copyThat.splice(copyThat.len
-139:1 -> ../operations.temper.md:302:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
-140:1 -> ../operations.temper.md:303:12  listBuilderSplice(copyThat, <- copyThat.splice(null, null,
-141:1 -> ../operations.temper.md:304:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
-142:1 -> ../operations.temper.md:312:5  listBuilderClear(messageBuil <- messageBuilder.clear();
-143:1 -> ../operations.temper.md:313:5  messageBuilder.push("Bye"); <- messageBuilder.add("Bye")
-144:1 -> ../operations.temper.md:314:5  console.log(listedJoin(messa <- console.log(messageBuilder.j
-145:1 -> ../operations.temper.md:324:5  { <- for (var i = -2; i <= 10; ++
-146:3 -> ../operations.temper.md:324:10  let i2 = -2; <- var i = -2; i <= 10; ++i) {
-147:3 -> ../operations.temper.md:324:5  while (i2 <= 10) { <- for (var i = -2; i <= 10; ++
-148:5 -> ../operations.temper.md:325:7  console.log(`Slice(${i2}, ${ <- console.log("Slice(${i}, ${i
-149:5 -> ../operations.temper.md:324:31  i2 = (i2 + 1) | 0; <- ++i) {
-152:1 -> ../operations.temper.md:350:5  console.log(`Outside fallbac <- console.log("Outside fallbac
-153:1 -> ../operations.temper.md:364:5  { <- do {
-154:3 -> ../operations.temper.md:365:7  /** <- let booleanToString(b: Boole
-158:3 -> ../operations.temper.md:365:7  function booleanToString(b) <- let booleanToString(b: Boole
-158:12 -> ../operations.temper.md:365:11 (booleanToString)  booleanToString(b) { <- booleanToString(b: Boolean):
-158:27 -> ../operations.temper.md:365:7  (b) { <- let booleanToString(b: Boole
-159:5 -> ../operations.temper.md:366:9  return b.toString(); <- return b.toString();
-161:3 -> ../operations.temper.md:368:7  /** @type {readonly boolean[ <- var ls = [true, false];
-162:3 -> ../operations.temper.md:368:7  const ls2 = Object.freeze([t <- var ls = [true, false];
-163:3 -> ../operations.temper.md:369:7  const joined = listedJoin(/* <- var joined = ls.join(", ", b
-164:3 -> ../operations.temper.md:370:7  /** @type {readonly boolean[ <- var inverted = ls.map(fn(b:
-165:3 -> ../operations.temper.md:370:7  const inverted = listedMap(/ <- var inverted = ls.map(fn(b:
-166:3 -> ../operations.temper.md:373:51  /** <- fn(b: Boolean): String {
-170:3 -> ../operations.temper.md:373:51  function fn22(b) { <- fn(b: Boolean): String {
-171:5 -> ../operations.temper.md:374:9  if (b) { <- if (b) {
-172:7 -> ../operations.temper.md:375:11  return "not false"; <- return "not false";
-174:7 -> ../operations.temper.md:377:11  return "not true"; <- return "not true";
-177:3 -> ../operations.temper.md:373:7  const joinedAndInverted = li <- var joinedAndInverted = inve
-178:3 -> ../operations.temper.md:380:7  console.log(`list = [${joine <- console.log("list = [${joine
-179:3 -> ../operations.temper.md:381:7  console.log(`list (each inve <- console.log("list (each inve
-180:3 -> ../operations.temper.md:382:7  /** @type {readonly boolean[ <- var onlyTrue = ls.filter(fn(
-181:3 -> ../operations.temper.md:382:7  const onlyTrue = listedFilte <- var onlyTrue = ls.filter(fn(
-182:3 -> ../operations.temper.md:385:7  /** @type {readonly boolean[ <- var onlyFalse = ls.filter(fn
-183:3 -> ../operations.temper.md:385:7  const onlyFalse = listedFilt <- var onlyFalse = ls.filter(fn
-184:3 -> ../operations.temper.md:388:7  console.log(`list (== true o <- console.log("list (== true o
-185:3 -> ../operations.temper.md:389:7  console.log(`list (== false <- console.log("list (== false
-187:1 -> ../operations.temper.md:405:5  { <- do {
-188:3 -> ../operations.temper.md:406:7  /** @type {readonly number[] <- let sizes: List<Float64> = [
-189:3 -> ../operations.temper.md:406:7  const sizes = Object.freeze( <- let sizes: List<Float64> = [
-190:3 -> ../operations.temper.md:407:30  /** <- { (f): String => if (f < 1.0
-194:3 -> ../operations.temper.md:407:30  function fn12(f) { <- { (f): String => if (f < 1.0
-195:5 -> ../operations.temper.md:407:47  if (cmpFloat64(f, 1.0) < 0) <- if (f < 1.0) { "small" } els
-196:7 -> ../operations.temper.md:407:62  return "small"; <- "small" } else { "big" } };
-198:7 -> ../operations.temper.md:407:79  return "big"; <- "big" } };
-201:3 -> ../operations.temper.md:407:7  /** @type {readonly string[] <- let labels = sizes.map { (f)
-202:3 -> ../operations.temper.md:407:7  const labels = listedMap(/** <- let labels = sizes.map { (f)
-203:3 -> ../operations.temper.md:408:7  console.log(`sizes = [${list <- console.log("sizes = [${labe
-205:1 -> ../operations.temper.md:425:5  runSomething(); <- runSomething();
-206:1 -> ../operations.temper.md:437:5  { <- do {
-207:3 -> ../operations.temper.md:438:7  /** @type {string[]} */ <- let aListBuilder = new ListB
-208:3 -> ../operations.temper.md:438:7  const aListBuilder = []; <- let aListBuilder = new ListB
-209:3 -> ../operations.temper.md:439:7  aListBuilder.push("first"); <- aListBuilder.add("first");
-210:3 -> ../operations.temper.md:441:7  /** @type {readonly string[] <- let builtFirst = aListBuilde
-211:3 -> ../operations.temper.md:441:7  const builtFirst = listBuild <- let builtFirst = aListBuilde
-212:3 -> ../operations.temper.md:443:7  aListBuilder.push("second"); <- aListBuilder.add("second");
-213:3 -> ../operations.temper.md:445:7  /** @type {readonly string[] <- let builtSecond = (aListBuil
-214:3 -> ../operations.temper.md:445:7  const builtSecond = listedTo <- let builtSecond = (aListBuil
-215:3 -> ../operations.temper.md:447:7  aListBuilder.push("third"); <- aListBuilder.add("third");
-216:3 -> ../operations.temper.md:449:7  console.log(`builtFirst has <- console.log("builtFirst has
-217:3 -> ../operations.temper.md:450:7  console.log(`builtSecond has <- console.log("builtSecond has
+24:1 -> ../operations.temper.md:13:5  /** <- let reportLength<T>(list: Li
+28:1 -> ../operations.temper.md:13:5  function reportLength(list) <- let reportLength<T>(list: Li
+28:10 -> ../operations.temper.md:13:9 (reportLength)  reportLength(list) { <- reportLength<T>(list: Listed
+28:22 -> ../operations.temper.md:13:5  (list) { <- let reportLength<T>(list: Li
+29:3 -> ../operations.temper.md:14:7  console.log(`Length: ${list. <- console.log("Length: ${list.
+32:1 -> ../operations.temper.md:147:5  /** <- let reportSplit(string: Stri
+36:1 -> ../operations.temper.md:147:5  function reportSplit(string, <- let reportSplit(string: Stri
+36:10 -> ../operations.temper.md:147:9 (reportSplit)  reportSplit(string, sep) { <- reportSplit(string: String,
+36:21 -> ../operations.temper.md:147:5  (string, sep) { <- let reportSplit(string: Stri
+37:3 -> ../operations.temper.md:148:7  /** @type {readonly string[] <- let strings = string.split(s
+38:3 -> ../operations.temper.md:148:7  const strings = stringSplit( <- let strings = string.split(s
+39:3 -> ../operations.temper.md:149:7  const len = strings.length.t <- let len = strings.length.toS
+40:3 -> ../operations.temper.md:150:7  console.log(`Split ${listedJ <- console.log("Split ${(string
+43:1 -> ../operations.temper.md:419:5  /** @param {(arg0: readonly <- let something(callback: fn (
+44:1 -> ../operations.temper.md:419:5  function something(callback) <- let something(callback: fn (
+44:10 -> ../operations.temper.md:419:9 (something)  something(callback) { <- something(callback: fn (List
+44:19 -> ../operations.temper.md:419:5  (callback) { <- let something(callback: fn (
+45:3 -> ../operations.temper.md:420:7  callback(Object.freeze(["Cal <- callback(["Called", "with",
+48:1 -> ../operations.temper.md:422:5  function runSomething() { <- let runSomething(): Void {
+48:10 -> ../operations.temper.md:422:9 (runSomething)  runSomething() { <- runSomething(): Void {
+48:22 -> ../operations.temper.md:422:5  () { <- let runSomething(): Void {
+49:3 -> ../operations.temper.md:423:17  /** @param {readonly string[ <- { words => console.log(words
+50:3 -> ../operations.temper.md:423:17  function fn(words) { <- { words => console.log(words
+51:5 -> ../operations.temper.md:423:28  console.log(listedJoin(/** @ <- console.log(words.join(" ")
+53:3 -> ../operations.temper.md:423:7  something(fn); <- something { words => console
+56:1 -> ../operations.temper.md:20:5  reportLength(Object.freeze([ <- reportLength(List.of<AnyValu
+57:1 -> ../operations.temper.md:38:5  /** @type {readonly number[] <- let ls: List<Int> = [5, 6, 7
+58:1 -> ../operations.temper.md:38:5  const ls = listedSorted(/** <- let ls: List<Int> = [5, 6, 7
+59:1 -> ../operations.temper.md:44:5  console.log(`All  ${listedJo <- console.log("All  ${ (ls.joi
+60:1 -> ../operations.temper.md:54:5  console.log(`Even ${listedJo <- console.log(
+61:1 -> ../operations.temper.md:69:5  console.log(`Odd  ${listedJo <- console.log(
+62:1 -> ../operations.temper.md:84:5  console.log(`Neg  ${listedJo <- console.log(
+63:1 -> ../operations.temper.md:99:5  /** @type {readonly number[] <- let listed: Listed<Int> = ls
+64:1 -> ../operations.temper.md:99:5  const listed = ls; <- let listed: Listed<Int> = ls
+65:1 -> ../operations.temper.md:100:5  console.log(`Neg  ${listedJo <- console.log(
+66:1 -> ../operations.temper.md:114:5  /** @type {readonly number[] <- let listedList = listed.toLi
+67:1 -> ../operations.temper.md:114:5  const listedList = listedToL <- let listedList = listed.toLi
+68:1 -> ../operations.temper.md:115:5  console.log(`Listed list len <- console.log("Listed list len
+69:1 -> ../operations.temper.md:123:5  console.log("Looping"); <- console.log("Looping");
+70:1 -> ../operations.temper.md:124:5  const n = ls.length; <- let n = ls.length;
+71:1 -> ../operations.temper.md:125:5  { <- for (var i: Int = 0; i < n;
+72:3 -> ../operations.temper.md:125:10  let i = 0; <- var i: Int = 0; i < n; ++i)
+73:3 -> ../operations.temper.md:125:5  while (i < n) { <- for (var i: Int = 0; i < n;
+74:5 -> ../operations.temper.md:126:7  console.log(`  ${listedGet(/ <- console.log("  ${ls.get(i)}"
+75:5 -> ../operations.temper.md:125:33  i = (i + 1) | 0; <- ++i) {
+78:1 -> ../operations.temper.md:158:5  reportSplit("a ; b ; c", " ; <- reportSplit("a ; b ; c", " ;
+79:1 -> ../operations.temper.md:159:5  reportSplit("def", ""); <- reportSplit("def", "");
+80:1 -> ../operations.temper.md:160:5  reportSplit(" g  h i", " "); <- reportSplit(" g  h i", " ");
+81:1 -> ../operations.temper.md:161:5  reportSplit(" ", " "); <- reportSplit(" ", " ");
+82:1 -> ../operations.temper.md:162:5  reportSplit("", " "); <- reportSplit("", " ");
+83:1 -> ../operations.temper.md:163:5  reportSplit("", ""); <- reportSplit("", "");
+84:1 -> ../operations.temper.md:164:5  reportSplit("🌍", ""); <- reportSplit("🌍", "");
+86:1 -> ../operations.temper.md:193:11  /** <- { (list): ListBuilder<String
+90:1 -> ../operations.temper.md:193:11  function fn11(list) { <- { (list): ListBuilder<String
+91:3 -> ../operations.temper.md:194:7  /** @type {string[]} */ <- let builder = list.toListBui
+92:3 -> ../operations.temper.md:194:7  const builder = list.slice() <- let builder = list.toListBui
+93:3 -> ../operations.temper.md:198:7  listBuilderSort(builder, (a, <- builder.sort { a, b => a <=>
+94:3 -> ../operations.temper.md:199:7  return builder; <- builder
+97:1 -> ../operations.temper.md:182:5  /** @type {string[][]} */ <- let triangleOfFooBar = [
+98:1 -> ../operations.temper.md:182:5  const triangleOfFooBar = lis <- let triangleOfFooBar = [
+99:1 -> ../operations.temper.md:202:5  { <- for (var j = 0; j < triangle
+100:3 -> ../operations.temper.md:202:10  let j = 0; <- var j = 0; j < triangleOfFoo
+101:3 -> ../operations.temper.md:202:5  while (j < triangleOfFooBar. <- for (var j = 0; j < triangle
+102:5 -> ../operations.temper.md:203:7  /** @type {string[]} */ <- let row = triangleOfFooBar[j
+103:5 -> ../operations.temper.md:203:7  const row = listedGet(triang <- let row = triangleOfFooBar[j
+104:5 -> ../operations.temper.md:204:7  console.log(`Fwd  [${listedJ <- console.log("Fwd  [${
+105:5 -> ../operations.temper.md:208:7  listBuilderReverse(row); <- row.reverse();
+106:5 -> ../operations.temper.md:202:50  j = (j + 1) | 0; <- ++j) {
+109:1 -> ../operations.temper.md:211:5  listBuilderReverse(triangleO <- triangleOfFooBar.reverse();
+110:1 -> ../operations.temper.md:213:5  { <- for (var j = 0; j < triangle
+111:3 -> ../operations.temper.md:213:10  let j2 = 0; <- var j = 0; j < triangleOfFoo
+112:3 -> ../operations.temper.md:213:5  while (j2 < triangleOfFooBar <- for (var j = 0; j < triangle
+113:5 -> ../operations.temper.md:214:7  /** @type {string[]} */ <- let row = triangleOfFooBar[j
+114:5 -> ../operations.temper.md:214:7  const row2 = listedGet(trian <- let row = triangleOfFooBar[j
+115:5 -> ../operations.temper.md:215:7  console.log(`Back [${listedJ <- console.log("Back [${
+116:5 -> ../operations.temper.md:213:50  j2 = (j2 + 1) | 0; <- ++j) {
+119:1 -> ../operations.temper.md:242:5  /** @type {string[]} */ <- let messageBuilder = new Lis
+120:1 -> ../operations.temper.md:242:5  const messageBuilder = []; <- let messageBuilder = new Lis
+121:1 -> ../operations.temper.md:243:5  messageBuilder.push("hello") <- messageBuilder.add("hello");
+122:1 -> ../operations.temper.md:247:5  listBuilderSet(messageBuilde <- messageBuilder[0] = "hi";
+123:1 -> ../operations.temper.md:248:5  listBuilderAddAll(messageBui <- messageBuilder.addAll(["ther
+124:1 -> ../operations.temper.md:249:5  listBuilderAdd(messageBuilde <- messageBuilder.add("say", 0)
+125:1 -> ../operations.temper.md:256:5  /** @type {string[]} */ <- let copyThat = messageBuilde
+126:1 -> ../operations.temper.md:256:5  const copyThat = messageBuil <- let copyThat = messageBuilde
+127:1 -> ../operations.temper.md:260:5  listBuilderAddAll(messageBui <- messageBuilder.addAll(["more
+128:1 -> ../operations.temper.md:261:5  listBuilderAddAll(copyThat, <- copyThat.addAll(messageBuild
+129:1 -> ../operations.temper.md:265:5  console.log(listedJoin(messa <- console.log(messageBuilder.j
+130:1 -> ../operations.temper.md:270:5  console.log(listedJoin(/** @ <- console.log(copyThat.sorted
+131:1 -> ../operations.temper.md:271:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
+132:1 -> ../operations.temper.md:287:5  const oldLast = listBuilderR <- let oldLast = copyThat.remov
+133:1 -> ../operations.temper.md:288:5  console.log(`Removed ${oldLa <- console.log("Removed ${oldLa
+134:1 -> ../operations.temper.md:298:5  /** @type {readonly string[] <- let nextLast = copyThat.spli
+135:1 -> ../operations.temper.md:298:5  const nextLast = listBuilder <- let nextLast = copyThat.spli
+136:1 -> ../operations.temper.md:299:5  /** @type {readonly string[] <- let oldWords = copyThat.spli
+137:1 -> ../operations.temper.md:299:5  const oldWords = listBuilder <- let oldWords = copyThat.spli
+138:1 -> ../operations.temper.md:300:12  listBuilderSplice(copyThat, <- copyThat.splice(null, 0, old
+139:1 -> ../operations.temper.md:301:12  listBuilderSplice(copyThat, <- copyThat.splice(copyThat.len
+140:1 -> ../operations.temper.md:302:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
+141:1 -> ../operations.temper.md:303:12  listBuilderSplice(copyThat, <- copyThat.splice(null, null,
+142:1 -> ../operations.temper.md:304:5  console.log(listedJoin(copyT <- console.log(copyThat.join("
+143:1 -> ../operations.temper.md:312:5  listBuilderClear(messageBuil <- messageBuilder.clear();
+144:1 -> ../operations.temper.md:313:5  messageBuilder.push("Bye"); <- messageBuilder.add("Bye")
+145:1 -> ../operations.temper.md:314:5  console.log(listedJoin(messa <- console.log(messageBuilder.j
+146:1 -> ../operations.temper.md:324:5  { <- for (var i = -2; i <= 10; ++
+147:3 -> ../operations.temper.md:324:10  let i2 = -2; <- var i = -2; i <= 10; ++i) {
+148:3 -> ../operations.temper.md:324:5  while (i2 <= 10) { <- for (var i = -2; i <= 10; ++
+149:5 -> ../operations.temper.md:325:7  console.log(`Slice(${i2}, ${ <- console.log("Slice(${i}, ${i
+150:5 -> ../operations.temper.md:324:31  i2 = (i2 + 1) | 0; <- ++i) {
+153:1 -> ../operations.temper.md:350:5  console.log(`Outside fallbac <- console.log("Outside fallbac
+154:1 -> ../operations.temper.md:364:5  { <- do {
+155:3 -> ../operations.temper.md:365:7  /** <- let booleanToString(b: Boole
+159:3 -> ../operations.temper.md:365:7  function booleanToString(b) <- let booleanToString(b: Boole
+159:12 -> ../operations.temper.md:365:11 (booleanToString)  booleanToString(b) { <- booleanToString(b: Boolean):
+159:27 -> ../operations.temper.md:365:7  (b) { <- let booleanToString(b: Boole
+160:5 -> ../operations.temper.md:366:9  return b.toString(); <- return b.toString();
+162:3 -> ../operations.temper.md:368:7  /** @type {readonly boolean[ <- var ls = [true, false];
+163:3 -> ../operations.temper.md:368:7  const ls2 = Object.freeze([t <- var ls = [true, false];
+164:3 -> ../operations.temper.md:369:7  const joined = listedJoin(/* <- var joined = ls.join(", ", b
+165:3 -> ../operations.temper.md:370:7  /** @type {readonly boolean[ <- var inverted = ls.map(fn(b:
+166:3 -> ../operations.temper.md:370:7  const inverted = listedMap(/ <- var inverted = ls.map(fn(b:
+167:3 -> ../operations.temper.md:373:51  /** <- fn(b: Boolean): String {
+171:3 -> ../operations.temper.md:373:51  function fn22(b) { <- fn(b: Boolean): String {
+172:5 -> ../operations.temper.md:374:9  if (b) { <- if (b) {
+173:7 -> ../operations.temper.md:375:11  return "not false"; <- return "not false";
+175:7 -> ../operations.temper.md:377:11  return "not true"; <- return "not true";
+178:3 -> ../operations.temper.md:373:7  const joinedAndInverted = li <- var joinedAndInverted = inve
+179:3 -> ../operations.temper.md:380:7  console.log(`list = [${joine <- console.log("list = [${joine
+180:3 -> ../operations.temper.md:381:7  console.log(`list (each inve <- console.log("list (each inve
+181:3 -> ../operations.temper.md:382:7  /** @type {readonly boolean[ <- var onlyTrue = ls.filter(fn(
+182:3 -> ../operations.temper.md:382:7  const onlyTrue = listedFilte <- var onlyTrue = ls.filter(fn(
+183:3 -> ../operations.temper.md:385:7  /** @type {readonly boolean[ <- var onlyFalse = ls.filter(fn
+184:3 -> ../operations.temper.md:385:7  const onlyFalse = listedFilt <- var onlyFalse = ls.filter(fn
+185:3 -> ../operations.temper.md:388:7  console.log(`list (== true o <- console.log("list (== true o
+186:3 -> ../operations.temper.md:389:7  console.log(`list (== false <- console.log("list (== false
+188:1 -> ../operations.temper.md:405:5  { <- do {
+189:3 -> ../operations.temper.md:406:7  /** @type {readonly number[] <- let sizes: List<Float64> = [
+190:3 -> ../operations.temper.md:406:7  const sizes = Object.freeze( <- let sizes: List<Float64> = [
+191:3 -> ../operations.temper.md:407:30  /** <- { (f): String => if (f < 1.0
+195:3 -> ../operations.temper.md:407:30  function fn12(f) { <- { (f): String => if (f < 1.0
+196:5 -> ../operations.temper.md:407:47  if (cmpFloat64(f, 1.0) < 0) <- if (f < 1.0) { "small" } els
+197:7 -> ../operations.temper.md:407:62  return "small"; <- "small" } else { "big" } };
+199:7 -> ../operations.temper.md:407:79  return "big"; <- "big" } };
+202:3 -> ../operations.temper.md:407:7  /** @type {readonly string[] <- let labels = sizes.map { (f)
+203:3 -> ../operations.temper.md:407:7  const labels = listedMap(/** <- let labels = sizes.map { (f)
+204:3 -> ../operations.temper.md:408:7  console.log(`sizes = [${list <- console.log("sizes = [${labe
+206:1 -> ../operations.temper.md:425:5  runSomething(); <- runSomething();
+207:1 -> ../operations.temper.md:437:5  { <- do {
+208:3 -> ../operations.temper.md:438:7  /** @type {string[]} */ <- let aListBuilder = new ListB
+209:3 -> ../operations.temper.md:438:7  const aListBuilder = []; <- let aListBuilder = new ListB
+210:3 -> ../operations.temper.md:439:7  aListBuilder.push("first"); <- aListBuilder.add("first");
+211:3 -> ../operations.temper.md:441:7  /** @type {readonly string[] <- let builtFirst = aListBuilde
+212:3 -> ../operations.temper.md:441:7  const builtFirst = listBuild <- let builtFirst = aListBuilde
+213:3 -> ../operations.temper.md:443:7  aListBuilder.push("second"); <- aListBuilder.add("second");
+214:3 -> ../operations.temper.md:445:7  /** @type {readonly string[] <- let builtSecond = (aListBuil
+215:3 -> ../operations.temper.md:445:7  const builtSecond = listedTo <- let builtSecond = (aListBuil
+216:3 -> ../operations.temper.md:447:7  aListBuilder.push("third"); <- aListBuilder.add("third");
+217:3 -> ../operations.temper.md:449:7  console.log(`builtFirst has <- console.log("builtFirst has
+218:3 -> ../operations.temper.md:450:7  console.log(`builtSecond has <- console.log("builtSecond has
