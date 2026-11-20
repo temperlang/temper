@@ -20,11 +20,13 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use temper_tmpl::files::write_if_changed;
 use temper_tmpl::tools::{junit, junit_file, output, program, step, strict_warnings, tool};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(build),
+    build_dirs: &[".build", "*/bin", "*/obj", "*/*/bin", "*/*/obj"],
     note: None,
     test,
     run,
@@ -84,14 +86,16 @@ fn results_file(dir: &Path, library: &str) -> PathBuf {
 /// project once, a few at once, then `dotnet test --no-build` runs them,
 /// each library's results in its own `tests` project, as alone. Alone,
 /// each library paid for MSBuild, a restore, and a test run of its own,
-/// with the compiler server started again, most of a run's time. It
-/// starts afresh each run, and fails quietly: [`test`] runs a library
+/// with the compiler server started again, most of a run's time. Each
+/// project's `bin` and `obj` are kept from run to run, so MSBuild
+/// compiles only those whose files `temper build` rewrote; with strict
+/// warnings, everything compiles again, so every warning is seen. It
+/// fails quietly: [`test`] runs a library
 /// whose results aren't there alone, which says what's wrong, reusing
 /// what did build. With nothing to test, as for `temper run`, it does
 /// nothing.
 fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(BUILD);
-    let _ = std::fs::remove_dir_all(&root);
     let projects: Vec<(&str, String)> = (all.iter().filter(|l| l.tests > 0))
         .filter_map(|l| Some((l.name.as_str(), tests_project(dir, &l.name)?)))
         .collect();
@@ -101,9 +105,7 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     for (library, _) in &projects {
         let _ = std::fs::remove_file(results_file(dir, library));
     }
-    if std::fs::create_dir_all(&root).is_err()
-        || std::fs::write(root.join("Tests.sln"), solution(&projects)).is_err()
-    {
+    if write_if_changed(&root.join("Tests.sln"), solution(&projects).as_bytes()).is_err() {
         return Ok(());
     }
     // As many projects at once as CPUs, up to four, as each test run
@@ -111,13 +113,15 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let cpus = std::thread::available_parallelism().map_or(1, |n| n.get());
     let jobs = format!("-maxcpucount:{}", cpus.clamp(1, 4));
     let built = output(
-        dotnet(&root).args([
-            "build",
-            "Tests.sln",
-            &jobs,
-            "-p:NuGetAudit=false",
-            warning_level(),
-        ]),
+        dotnet(&root)
+            .args([
+                "build",
+                "Tests.sln",
+                &jobs,
+                "-p:NuGetAudit=false",
+                warning_level(),
+            ])
+            .args(strict_warnings().then_some("--no-incremental")),
         "dotnet build",
     );
     if let Ok(built) = built {

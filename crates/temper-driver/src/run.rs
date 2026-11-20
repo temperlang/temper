@@ -75,6 +75,9 @@ pub fn run(
         .map(|(name, _)| built.tested(name, 0))
         .collect();
     let this = built.tested(library, 0);
+    if options.clean {
+        crate::test_run::clean(backend, &dir);
+    }
     let ran = (tools.prepare)
         .map_or(Ok(()), |prepare| prepare(&dir, &all))
         .and_then(|()| (tools.run)(&dir, &this, &all));

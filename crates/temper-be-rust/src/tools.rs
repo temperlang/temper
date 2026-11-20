@@ -14,11 +14,13 @@
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use temper_tmpl::files::write_if_changed;
 use temper_tmpl::tools::{output, program, step, tool, tool_output};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(workspace),
+    build_dirs: &[".build", "target"],
     note: None,
     test,
     run,
@@ -35,14 +37,17 @@ const WORKSPACE: &str = ".build";
 /// temper-core's too, which libraries' path dependencies name, `../std`
 /// from a link reaching the link beside it), and its members are the
 /// libraries. Each crate stays a package of its own, whose `cargo build`
-/// is just as before. It starts afresh each run, with a fresh lockfile,
-/// as each crate's own build has today. Where it doesn't load (it can't
+/// is just as before. It's kept from run to run, with its lockfile, as
+/// is the target directory, so Cargo rebuilds only the crates whose
+/// files `temper build` rewrote, or whose tools or flags changed, as it
+/// tracks them itself. Where it doesn't load (it can't
 /// link, the libraries' packages clash, or their dependencies aren't
 /// there offline), it's removed, and libraries build alone; that's never
 /// an error here, as each library's own build says what's wrong.
 fn workspace(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(WORKSPACE);
-    let _ = std::fs::remove_dir_all(&root);
+    // What the last run built, which this one builds again.
+    let _ = std::fs::remove_file(root.join(BUILT));
     let members: Vec<String> = (all.iter())
         .filter(|l| dir.join(&l.name).join("Cargo.toml").is_file())
         .map(|l| temper_tmpl::json_string(&l.name))
@@ -59,7 +64,7 @@ members = [{}]
     );
     let loaded = std::fs::create_dir_all(&root).is_ok()
         && link_crates(dir, &root).is_ok()
-        && std::fs::write(root.join("Cargo.toml"), text).is_ok()
+        && write_if_changed(&root.join("Cargo.toml"), text.as_bytes()).is_ok()
         && output(
             Command::new(tool("CARGO", "cargo"))
                 .args(["metadata", "--offline", "--format-version", "1"])
@@ -74,13 +79,23 @@ members = [{}]
 }
 
 /// Links each crate directory in `dir` (one with a `Cargo.toml`) from
-/// `root`, by its name.
+/// `root`, by its name, where it isn't yet, and removes links to those
+/// that are gone.
 fn link_crates(dir: &Path, root: &Path) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(root)? {
+        let at = entry?.path();
+        let link = std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink());
+        if link && !at.join("Cargo.toml").is_file() {
+            std::fs::remove_file(&at).or_else(|_| std::fs::remove_dir(&at))?;
+        }
+    }
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let name = entry.file_name();
-        if name != WORKSPACE && entry.path().join("Cargo.toml").is_file() {
-            link_dir(&Path::new("..").join(&name), &root.join(&name))?;
+        let at = root.join(&name);
+        let linked = std::fs::symlink_metadata(&at).is_ok();
+        if name != WORKSPACE && !linked && entry.path().join("Cargo.toml").is_file() {
+            link_dir(&Path::new("..").join(&name), &at)?;
         }
     }
     Ok(())
@@ -204,8 +219,8 @@ fn built_tests(cargo: &str, root: &Path, target: &Path, all: &[Tested]) -> Resul
     Ok(json)
 }
 
-/// Where [`built_tests`] keeps what Cargo built, in the workspace, which
-/// [`workspace`] makes afresh each run.
+/// Where [`built_tests`] keeps what Cargo built, in the workspace, for
+/// one run: [`workspace`] removes it.
 const BUILT: &str = "tests-built.json";
 
 /// The test programs Cargo built, from its JSON messages, for the library

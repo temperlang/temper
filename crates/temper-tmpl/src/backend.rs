@@ -43,8 +43,14 @@ pub struct Backend {
 /// each test's name and its failure if it failed, or why there are no
 /// results. `all` is every library built there, which tests may import.
 pub struct Tools {
-    /// Readies `dir` once, before any library's tests run.
+    /// Readies `dir` once, before any library's tests run. Builds there
+    /// are kept from run to run, each tool's own incremental build
+    /// redoing only what changed.
     pub prepare: Option<Prepare>,
+    /// Where its builds go, removed for a clean build (`temper test
+    /// --clean`): paths from `temper.out/BACKEND`, each `*` any one name,
+    /// such as a library's ([`crate::tools::remove_build_dirs`]).
+    pub build_dirs: &'static [&'static str],
     /// What `temper test` says once, before the results, of how the
     /// tools build (C++'s ccache), if anything.
     pub note: Option<fn() -> Option<String>>,

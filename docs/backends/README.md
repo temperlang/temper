@@ -7,7 +7,10 @@ one per target language. Each backend:
 - writes source files, source maps where the language has them, and
   package files (a `.csproj`, a `pom.xml`, a `package.json`, …) under
   `temper.out/BACKEND/LIBRARY/`, and
-- runs the translated tests with the language's own tools.
+- runs the translated tests with the language's own tools, keeping
+  their builds in `temper.out/BACKEND` so the next run rebuilds only
+  what changed (`--clean` for a fresh build;
+  [the command line](../tools/cli.md#test)).
 
 Each backend has an ID, which the `-b` (`--backend`) flag of
 `temper build` and `temper test` takes ([the command line](../tools/cli.md)).

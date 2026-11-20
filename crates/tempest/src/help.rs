@@ -113,6 +113,13 @@ const TIMEOUT: &str = "    --timeout S|none
             if it runs over; as TEMPER_TIMEOUT. none for no limit.
 ";
 
+const CLEAN: &str = "    --clean
+            On a backend, build everything afresh: remove its build
+            directories (CMake's, Cargo's target, MSBuild's bin and obj,
+            javac's classes) first, rather than rebuilding only what
+            changed.
+";
+
 const STD: &str = "    --std DIR
             Read std from DIR instead of the copy built in.
 ";
@@ -156,7 +163,7 @@ pub fn command(name: &str) -> Option<String> {
              \x20           that runs out fails alone. none for no limit.\n\
              {TIMEOUT}\
              \x20           Default 600.\n\
-             {NO_CONNECTED}{VERBOSE}{LOGFORMAT}{STD}"
+             {CLEAN}{NO_CONNECTED}{VERBOSE}{LOGFORMAT}{STD}"
         ),
         "run" => format!(
             "usage: temper run --library NAME -b BACKEND [OPTION]...\n\
@@ -176,7 +183,7 @@ pub fn command(name: &str) -> Option<String> {
              {TIMEOUT}\
              \x20           The program itself has none by default; each step that\n\
              \x20           builds it, 600.\n\
-             {NO_CONNECTED}{VERBOSE}{LOGFORMAT}{STD}"
+             {CLEAN}{NO_CONNECTED}{VERBOSE}{LOGFORMAT}{STD}"
         ),
         "init" => "usage: temper init [-o DIR]\n\
              \n\

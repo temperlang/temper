@@ -3,9 +3,10 @@
 //! libraries' tests, against JUnit 5's jars in Maven's local repository,
 //! as Kotlin's `pom.xml` names them, and a small runner of JUnit's
 //! launcher under `java`, as this crate's own tests do; Kotlin runs
-//! Maven instead, which needs its network. Each compiles once per run,
-//! into `temper.out/java/.build` ([`build`]), not again for each library
-//! tested; then each library's tests run in a JVM of their own.
+//! Maven instead, which needs its network. Each compiles at most once
+//! per run, into `temper.out/java/.build` ([`build`]), not again for
+//! each library tested, nor where nothing changed since the last run;
+//! then each library's tests run in a JVM of their own.
 //! `temper run -b java` compiles the runtime, std, and the libraries the
 //! same way, once, quietly, and runs the library's `…Main` class under
 //! `java`, as Kotlin runs it by exec.
@@ -18,11 +19,16 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use temper_tmpl::tools::{files_with, output, program, strict_warnings, tool, tool_output};
+use temper_tmpl::files::write_if_changed;
+use temper_tmpl::tools::{
+    files_with, output, program, stamp_matches, strict_warnings, tool, tool_identity, tool_output,
+    write_stamp,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(build),
+    build_dirs: &[".build", "*/target/temper"],
     note: None,
     test,
     run,
@@ -37,38 +43,80 @@ const BUILD: &str = ".build";
 /// Compiles, for `temper test`, the runtime, std, every library's main
 /// sources, and the test runner into `.build/classes` ([`BUILD`]), as
 /// each library's tests compiled them for themselves before, then every
-/// tested library's tests at once into `.build/test-classes`. It starts
-/// afresh each run. Where the tests don't compile together (one doesn't
+/// tested library's tests at once into `.build/test-classes`. Each is
+/// kept from run to run, and compiled again, afresh, only where a source
+/// or how it's compiled changed ([`stale`]), as javac doesn't tell
+/// itself. Where the tests don't compile together (one doesn't
 /// compile, or two libraries' tests clash), `test-classes` is removed,
 /// and each library's tests compile alone, saying what's wrong. With
 /// nothing to test, as for `temper run`, it does nothing.
 fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(BUILD);
-    let _ = std::fs::remove_dir_all(&root);
     let tested: Vec<&Tested> = all.iter().filter(|l| l.tests > 0).collect();
     if tested.is_empty() {
         return Ok(());
     }
     let jars = junit()?;
     let runner = root.join("temper/RunTests.java");
-    let written = runner
-        .parent()
-        .map_or(Ok(()), std::fs::create_dir_all)
-        .and_then(|()| std::fs::write(&runner, RUN_TESTS));
+    let written = write_if_changed(&runner, RUN_TESTS.as_bytes());
     written.map_err(|e| format!("{}: {e}", runner.display()))?;
     let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
     let (main, tests) = (root.join("classes"), root.join("test-classes"));
     let strict = strict_warnings();
-    compile_main(dir, all, &main, &[runner], &classpath, strict)?;
+    let main_key = compile_main(dir, all, &main, &[runner], &classpath, strict)?;
     let mut sources = Vec::new();
     for library in tested {
         files_with(&test_sources(dir, library), "java", &mut sources);
     }
     let with_main = with_main(&main, &jars)?;
-    if javac(&tests, &with_main, &sources, strict).is_err() {
-        let _ = std::fs::remove_dir_all(&tests);
+    // Compiled again wherever the main classes were.
+    let key = format!("{main_key}{}", compile_key(&with_main, &sources, strict));
+    if stale(&tests, &key) {
+        match javac(&tests, &with_main, &sources, strict) {
+            Ok(()) => write_stamp(&stamp(&tests), &key),
+            Err(_) => {
+                let _ = std::fs::remove_dir_all(&tests);
+            }
+        }
     }
     Ok(())
+}
+
+/// What a javac build depends on: javac, the class path, the lints, and
+/// each source's path, size, and time, as `temper build` rewrites only
+/// sources that changed.
+fn compile_key(classpath: &std::ffi::OsStr, files: &[PathBuf], strict: bool) -> String {
+    let mut key = format!(
+        "javac {}\nclasspath {}\nstrict {strict}\n",
+        tool_identity(&tool("JAVAC", "javac")),
+        classpath.to_string_lossy()
+    );
+    for file in files {
+        let meta = std::fs::metadata(file).ok();
+        let time = (meta.as_ref())
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |d| d.as_nanos());
+        let size = meta.map_or(0, |m| m.len());
+        key.push_str(&format!("{} {size} {time}\n", file.display()));
+    }
+    key
+}
+
+/// A directory of classes' stamp, the [`compile_key`] it was built by.
+fn stamp(classes: &Path) -> PathBuf {
+    classes.with_extension("stamp")
+}
+
+/// Whether a directory of classes wasn't built by `key`, in which case
+/// it's removed, so no class of a source that's gone stays.
+fn stale(classes: &Path, key: &str) -> bool {
+    if classes.is_dir() && stamp_matches(&stamp(classes), key) {
+        return false;
+    }
+    let _ = std::fs::remove_dir_all(classes);
+    let _ = std::fs::remove_file(stamp(classes));
+    true
 }
 
 /// A library's test sources' directory.
@@ -95,7 +143,8 @@ fn with_main(main: &Path, jars: &[PathBuf]) -> Result<std::ffi::OsString, String
 /// Compiles the runtime, std, and the libraries' main sources with
 /// `javac` (`JAVAC`) into `classes`, with `extra` sources and `classpath`;
 /// with `strict`, the runtime first, quietly, then the rest with every
-/// lint an error.
+/// lint an error; only where they're [`stale`]. The [`compile_key`]
+/// they were built by.
 fn compile_main(
     dir: &Path,
     all: &[Tested],
@@ -103,7 +152,7 @@ fn compile_main(
     extra: &[PathBuf],
     classpath: &std::ffi::OsStr,
     strict: bool,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let mut runtime = Vec::new();
     files_with(&dir.join("temper-core/src/main/java"), "java", &mut runtime);
     let mut sources = Vec::new();
@@ -112,15 +161,23 @@ fn compile_main(
         files_with(&dir.join(root).join("src/main/java"), "java", &mut sources);
     }
     sources.extend(extra.iter().cloned());
-    if !strict {
-        runtime.extend(sources);
-        return javac(classes, classpath, &runtime, false);
+    let all: Vec<PathBuf> = runtime.iter().chain(&sources).cloned().collect();
+    let key = compile_key(classpath, &all, strict);
+    if !stale(classes, &key) {
+        return Ok(key);
     }
-    javac(classes, classpath, &runtime, false)?;
-    let mut with_runtime = vec![classes.to_path_buf()];
-    with_runtime.extend(std::env::split_paths(classpath).filter(|p| !p.as_os_str().is_empty()));
-    let with_runtime = std::env::join_paths(with_runtime).map_err(|e| e.to_string())?;
-    javac(classes, &with_runtime, &sources, true)
+    if !strict {
+        javac(classes, classpath, &all, false)?;
+    } else {
+        javac(classes, classpath, &runtime, false)?;
+        let mut with_runtime = vec![classes.to_path_buf()];
+        let given = std::env::split_paths(classpath).filter(|p| !p.as_os_str().is_empty());
+        with_runtime.extend(given);
+        let with_runtime = std::env::join_paths(with_runtime).map_err(|e| e.to_string())?;
+        javac(classes, &with_runtime, &sources, true)?;
+    }
+    write_stamp(&stamp(classes), &key);
+    Ok(key)
 }
 
 /// javac's options with `strict`: every lint and Javadoc check but for
@@ -215,7 +272,6 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
         })
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
     let classes = here.join("target/temper/classes");
-    let _ = std::fs::remove_dir_all(&classes);
     compile_main(dir, all, &classes, &[], std::ffi::OsStr::new(""), false)?;
     program(
         Command::new(tool("JAVA", "java"))

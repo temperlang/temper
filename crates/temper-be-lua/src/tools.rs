@@ -14,6 +14,7 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(write_luaunit),
+    build_dirs: &[],
     note: None,
     test,
     run,

@@ -18,8 +18,10 @@
 //!   Kotlin's, with the package files it writes (`pyproject.toml`,
 //!   `Cargo.toml`, `package.json`, `pom.xml`, the `.csproj`s, and the
 //!   rockspec), and the backend's runtime beside the libraries, as
-//!   `temper.out/BACKEND/temper-core`, as Kotlin copies it. A library's
-//!   directory is emptied first, so no stale file survives a rename.
+//!   `temper.out/BACKEND/temper-core`, as Kotlin copies it. Only files
+//!   whose text changed are written, and what Temper no longer
+//!   generates is removed, by a manifest of what it wrote
+//!   ([`crate::manifest`]); files it never wrote are left alone.
 //!   C++ also gets a `CMakeLists.txt` per library, which Kotlin doesn't
 //!   write.
 //! - **Backends:** those `-b` names, or else Kotlin's defaults that
@@ -44,12 +46,13 @@
 //! - **Reports** are text, or with `--logformat json`
 //!   ([`Options::log`]), a JSON record per line ([`temper_frontend::log`]).
 
+use crate::manifest::Writer;
 use crate::{checked, interface, sources_prefix, translate, uses_std};
 use std::io::Write;
 use std::path::Path;
 use temper_frontend::ignore::IgnoreFile;
 use temper_frontend::library_tests::{Reported, libraries_to_test, problem};
-use temper_frontend::log::LogFormat;
+use temper_frontend::log::{LogFormat, record};
 use temper_frontend::project::{LibrarySources, library_of, load_library};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::Sources;
@@ -77,6 +80,10 @@ pub struct Options<'a> {
     pub log: LogFormat,
     /// Reports hints, not only warnings and errors (`-v`).
     pub hints: bool,
+    /// For `temper test` and `temper run`: removes the backend's build
+    /// directories first ([`temper_tmpl::Tools::build_dirs`]), so
+    /// everything builds afresh (`--clean`), not only what changed.
+    pub clean: bool,
 }
 
 impl Options<'_> {
@@ -183,6 +190,8 @@ pub fn build(
         false => None,
     };
     for &backend in backends {
+        let dir = temper_out.join(backend.name);
+        let mut writer = Writer::open(&dir);
         let mut interfaces: Vec<Interface> = Vec::new();
         if let Some(std) = &std {
             interfaces.push(interface(std, backend));
@@ -191,7 +200,6 @@ pub fn build(
         // imports of std's modules need, as `temper.out/BACKEND/std`, as
         // Kotlin's.
         if let Some(std) = &std {
-            let dir = temper_out.join(backend.name);
             let result = translate(std, backend, None).and_then(|files| {
                 let files: Vec<(String, String)> = (files.into_iter())
                     .map(|(path, text)| {
@@ -199,7 +207,7 @@ pub fn build(
                         (format!("std/{rest}"), text)
                     })
                     .collect();
-                write_library(&dir, "std", &files)
+                writer.library("std", &files)
             });
             if let Err(why) = result {
                 results.push(("std".into(), backend.name, Err(why)));
@@ -210,25 +218,40 @@ pub fn build(
             let name = &library.config.name;
             program.interfaces = interfaces.clone();
             interfaces.push(interface(program, backend));
-            let dir = temper_out.join(backend.name);
             // Source maps lead back to the sources' directory.
             let maps = sources_prefix(
                 &dir.join(&program.library.name),
                 &format!("{}/x", library.root),
             );
             let result = translate(program, backend, Some(&maps))
-                .and_then(|files| write_library(&dir, name, &files));
+                .and_then(|files| writer.library(name, &files));
             if result.is_ok() && options.verbose {
                 let _ = writeln!(out, "Wrote {}", dir.join(name).display());
             }
             results.push((name.clone(), backend.name, result));
         }
-    }
-    for &backend in backends {
-        let dir = temper_out.join(backend.name);
-        if let Err(why) = write_runtime(&dir, backend) {
+        if let Err(why) = write_runtime(&mut writer, backend) {
             results.push(("temper-core".into(), backend.name, Err(why)));
         }
+        for path in &writer.edited {
+            let text = format!("{} was edited; regenerated", path.display());
+            let path = path.display().to_string();
+            let _ = match options.log {
+                LogFormat::Text => writeln!(err, "{text}"),
+                LogFormat::Json => writeln!(
+                    err,
+                    "{}",
+                    record(
+                        "warning",
+                        "GeneratedFileEdited",
+                        None,
+                        &[path.into()],
+                        &text
+                    )
+                ),
+            };
+        }
+        writer.finish();
     }
     for (library, backend, result) in &results {
         if let Err(why) = result {
@@ -377,35 +400,14 @@ fn program(
     Ok(program)
 }
 
-/// Writes a library's files under a backend's directory, after emptying
-/// the library's own directory there.
-fn write_library(dir: &Path, library: &str, files: &[(String, String)]) -> Result<(), String> {
-    let own = dir.join(library);
-    if own.exists() {
-        std::fs::remove_dir_all(&own).map_err(|e| format!("{}: {e}", own.display()))?;
-    }
-    for (file, text) in files {
-        let path = dir.join(file);
-        path.parent()
-            .map_or(Ok(()), std::fs::create_dir_all)
-            .and_then(|()| std::fs::write(&path, text))
-            .map_err(|e| format!("{}: {e}", path.display()))?;
-    }
-    Ok(())
-}
-
-/// Writes a backend's runtime as `temper-core` in its directory, replacing
-/// what was there, as Kotlin does, naming the build's version.
-fn write_runtime(dir: &Path, backend: &temper_tmpl::Backend) -> Result<(), String> {
-    let core = dir.join("temper-core");
-    if core.exists() {
-        std::fs::remove_dir_all(&core).map_err(|e| format!("{}: {e}", core.display()))?;
-    }
+/// Writes a backend's runtime as `temper-core` in its directory, as
+/// Kotlin does, naming the build's version.
+fn write_runtime(writer: &mut Writer, backend: &temper_tmpl::Backend) -> Result<(), String> {
     let version = temper_tmpl::version::current();
     let files =
         temper_tmpl::version::fill_runtime(backend.runtime, backend.runtime_version, version);
     let pairs: Vec<(String, String)> = (files.into_iter())
         .map(|(p, t)| (format!("temper-core/{p}"), t))
         .collect();
-    write_library(dir, "temper-core", &pairs)
+    writer.library("temper-core", &pairs)
 }

@@ -43,6 +43,7 @@ pub mod chunks;
 pub mod coroutines;
 mod decls;
 pub mod errors;
+pub mod files;
 pub mod host;
 mod ids;
 pub mod naming;
