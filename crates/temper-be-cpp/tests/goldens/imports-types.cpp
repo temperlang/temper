@@ -1,7 +1,8 @@
 // exporter.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace types {
 
@@ -25,8 +26,6 @@ struct ExportedClass : public std::enable_shared_from_this<ExportedClass> {
 
 namespace types {
 
-namespace core = temper::core;
-
 std::shared_ptr<ExportedClass> ExportedClass::make(int32_t foo) {
   std::shared_ptr<ExportedClass> self = std::make_shared<ExportedClass>();
   self->foo = foo;
@@ -44,7 +43,6 @@ void global_init_exporter() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
 #include <types/exporter.hpp>
 
 namespace types {
@@ -59,7 +57,10 @@ void global_init_init();
 // init.cpp
 #include <types/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
+#include <memory>
+#include <string>
 
 namespace types {
 

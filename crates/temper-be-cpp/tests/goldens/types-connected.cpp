@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace work {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -24,7 +22,10 @@ using Doubler = _connected::Doubler;
 // init.cpp
 #include <work/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
+#include <memory>
+#include <string>
 #include <temper-core/core.hpp>
 #include "_connected.hpp"
 

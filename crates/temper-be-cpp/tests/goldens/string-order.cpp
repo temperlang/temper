@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace string_order {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,10 +13,15 @@ void global_init_init();
 // init.cpp
 #include <string-order/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/compare.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/float64.hpp>
 #include <temper-core/console.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace string_order {
 

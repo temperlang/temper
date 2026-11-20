@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace ops {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,11 +13,15 @@ void global_init_init();
 // init.cpp
 #include <ops/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/float64.hpp>
 #include <temper-core/console.hpp>
 #include <cmath>
 #include <limits>
+#include <memory>
 
 namespace ops {
 

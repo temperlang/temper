@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace work {
 
@@ -38,8 +41,10 @@ int32_t twice(int32_t i);
 // init.cpp
 #include <work/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 #include <temper-core/core.hpp>
 #include "_connected.hpp"
 

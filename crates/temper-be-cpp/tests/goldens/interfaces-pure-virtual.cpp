@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace pure_virtual {
 
@@ -53,9 +56,11 @@ struct IntWrapper : public virtual Wrapper<int32_t> {
 // init.cpp
 #include <pure-virtual/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace pure_virtual {
 

@@ -114,8 +114,6 @@ interactive#0: void
 // interactive/init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace interactive {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -126,6 +124,9 @@ void global_init_init();
 }  // namespace interactive
 // interactive/init.cpp
 #include <interactive/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <cstdint>
 
 namespace interactive {
 
@@ -268,7 +269,8 @@ interactive#3: void
 // interactive/init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace interactive {
 
@@ -291,6 +293,9 @@ struct Point : public std::enable_shared_from_this<Point> {
 }  // namespace interactive
 // interactive/init.cpp
 #include <interactive/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
 
 namespace interactive {
 

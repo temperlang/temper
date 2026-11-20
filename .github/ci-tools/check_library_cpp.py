@@ -4,9 +4,9 @@
 """Checks that a build's generated C++ headers include only what they use.
 
 For the nightly's real libraries (nightly.yml's `libraries` job). A
-library's generated header includes the runtime's `base.hpp` and the
-other runtime headers it names, never the whole runtime (`core.hpp`),
-so a user's file that includes it parses only that. For each generated
+library's generated header includes the runtime's headers it names,
+never the whole runtime (`core.hpp`), so a user's file that includes it
+parses only those. For each generated
 header of each library (not std's or the runtime's, which the C++
 backend's own tests check), this checks that it doesn't include
 `core.hpp`, and that a file including it alone compiles
@@ -16,9 +16,9 @@ backend's own tests check), this checks that it doesn't include
 
 OUT is a backend directory as `temper build -b cpp` or `temper test -b
 cpp` writes it (`temper.out/cpp`): a directory per library beside
-`std` and `temper-core`. A generated header starts `#pragma once`,
-then includes the runtime; host code's headers, copied as they are,
-are left out. The compiler is CXX, or `g++`. Exit status 1 if any
+`std` and `temper-core`. A generated header starts `#pragma once` and
+declares its module's init function after a comment of its own (MARK);
+host code's headers, copied as they are, are left out. The compiler is CXX, or `g++`. Exit status 1 if any
 header fails, with GitHub Actions' `::error` lines.
 """
 
@@ -29,7 +29,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-GENERATED = "#pragma once\n\n#include <temper-core/"
+MARK = "// Runs the module's top level, once."
 WHOLE = "#include <temper-core/core.hpp>"
 SKIP = {"std", "temper-core"}
 
@@ -38,7 +38,8 @@ def headers(out: Path) -> list[Path]:
     found = []
     for library in sorted(p for p in out.iterdir() if p.is_dir() and p.name not in SKIP):
         for header in sorted(library.rglob("*.hpp")):
-            if header.read_text(encoding="utf-8").startswith(GENERATED):
+            text = header.read_text(encoding="utf-8")
+            if text.startswith("#pragma once\n") and MARK in text:
                 found.append(header)
     return found
 

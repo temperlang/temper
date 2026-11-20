@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace hello_world {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,7 +13,10 @@ void global_init_init();
 // init.cpp
 #include <hello-world/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
+#include <memory>
 
 namespace hello_world {
 

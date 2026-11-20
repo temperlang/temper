@@ -1,7 +1,10 @@
 // extra-class.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace object_literals {
 
@@ -37,6 +40,8 @@ struct Rectangle : public std::enable_shared_from_this<Rectangle> {
 
 // extra-class.cpp
 #include <object-literals/extra-class.hpp>
+
+#include <string>
 
 namespace object_literals {
 
@@ -78,7 +83,10 @@ void global_init_extra_class() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 #include <object-literals/extra-class.hpp>
 
 namespace object_literals {
@@ -125,9 +133,13 @@ struct Moreover : public std::enable_shared_from_this<Moreover> {
 // init.cpp
 #include <object-literals/init.hpp>
 
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/console.hpp>
+#include <string>
+#include <vector>
 
 namespace object_literals {
 

@@ -1,8 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-#include <typeindex>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace angle_call {
 
@@ -35,8 +36,12 @@ struct Picker : public std::enable_shared_from_this<Picker> {
 // init.cpp
 #include <angle-call/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <typeindex>
 
 namespace angle_call {
 

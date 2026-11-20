@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
+#include <memory>
 #ifdef TEMPER_TESTS
 #include <std/testing.hpp>
 #endif
@@ -28,9 +29,11 @@ void localsATestAssigns(std::shared_ptr<temper_std::Test> const &);
 // init.cpp
 #include <testing/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
 #include <mutex>
+#include <string>
 
 namespace testing {
 
@@ -115,6 +118,9 @@ int main() {
 // test.cpp
 #include "testing/init.hpp"
 #include "temper-core/test_main.hpp"
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <string>
 
 int main() {
   testing::global_init_init();

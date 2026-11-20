@@ -1,7 +1,12 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace property_members {
 
@@ -143,10 +148,13 @@ std::shared_ptr<std::vector<T>> Holder<T>::heldAnd(T other) const {
 // init.cpp
 #include <property-members/init.hpp>
 
+#include <temper-core/pair.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace property_members {
 

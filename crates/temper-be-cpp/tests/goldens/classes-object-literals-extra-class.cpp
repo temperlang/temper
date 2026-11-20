@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace extra_class {
 
@@ -37,6 +40,8 @@ struct Rectangle : public std::enable_shared_from_this<Rectangle> {
 
 // init.cpp
 #include <extra-class/init.hpp>
+
+#include <string>
 
 namespace extra_class {
 

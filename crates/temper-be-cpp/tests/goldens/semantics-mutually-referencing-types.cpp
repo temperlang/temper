@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <memory>
 
 namespace mutually_referencing_types {
 
@@ -30,6 +30,7 @@ struct Foo : public std::enable_shared_from_this<Foo> {
 // init.cpp
 #include <mutually-referencing-types/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/console.hpp>
 

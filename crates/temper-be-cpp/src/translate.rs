@@ -161,8 +161,6 @@ pub struct Translated {
     /// its declaration in `temper_globals`: `temper::core::GlobalSlot<T>
     /// name`.
     pub template_storage: Vec<String>,
-    /// Whether it has a lock, and so includes `<mutex>`.
-    pub uses_mutex: bool,
     /// Exported functions' prototypes, without the `;`.
     pub exported_functions: Vec<String>,
     /// The headers of the modules it imports, as `<lib/helpers.hpp>`.
@@ -1155,10 +1153,7 @@ impl<'a> Translator<'a> {
         {
             return not_yet("a template in a header that takes its module's lock");
         }
-        let mut header_includes = includes(p, &imports);
-        if mentions_type(p) {
-            header_includes.push("<typeindex>".into());
-        }
+        let header_includes = includes(p, &imports);
         let test_includes: Vec<String> = includes(p, &test_imports(p, module))
             .into_iter()
             .filter(|i| !header_includes.contains(i))
@@ -1175,7 +1170,6 @@ impl<'a> Translator<'a> {
             },
             exported_variables,
             template_storage,
-            uses_mutex: self.mutex.is_some(),
             exported_functions,
             header_includes,
             test_includes,
@@ -3330,28 +3324,6 @@ fn depends(p: &Program, t: TypeId) -> bool {
         }
         TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| depends(p, t)),
     }
-}
-
-/// Whether a program has types as values, `std::type_index`es, which
-/// `<typeindex>` declares.
-fn mentions_type(p: &Program) -> bool {
-    fn has(p: &Program, t: TypeId) -> bool {
-        if !p.types.contains(t) {
-            return false;
-        }
-        match p.types.get(t) {
-            TypeData::Never(inner) => has(p, inner),
-            TypeData::Scalar(s) => s == Scalar::Type,
-            TypeData::Nullable(inner) => has(p, inner),
-            TypeData::Function { params, result, .. } => {
-                p.types.list(params).iter().any(|&t| has(p, t)) || has(p, result)
-            }
-            TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| has(p, t)),
-            TypeData::TypeParam { .. } => false,
-        }
-    }
-    (p.decls.ids()).any(|d| p.decls.contains(d) && has(p, p.decls.get(d).ty))
-        || (0..p.nodes.len()).any(|i| p.nodes.ty(NodeId(i as u32)) == TypeId::TYPE)
 }
 
 /// The headers of the modules in `imports`, as `<lib/path.hpp>`.

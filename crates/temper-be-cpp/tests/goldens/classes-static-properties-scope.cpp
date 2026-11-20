@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <memory>
 
 namespace static_properties_scope {
 

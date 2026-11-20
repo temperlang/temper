@@ -310,7 +310,7 @@ jobs:
         run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
       # The library's generated C++ headers, as `temper test -b cpp` left
       # them, each compiled alone, including only the runtime it uses
-      # (`base.hpp` and what else it names, not `core.hpp`).
+      # (the headers it names, not `core.hpp`).
       - name: C++ headers alone
         if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' cpp ') }}
         run: uv run .github/ci-tools/check_library_cpp.py library/temper.out/cpp

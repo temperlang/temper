@@ -108,6 +108,8 @@ pub struct Built {
     pub errors: Vec<(String, usize)>,
     /// What each library's config says, by its name.
     pub metadata: Vec<(String, temper_tmpl::Metadata)>,
+    /// The libraries each library that reached tmpl uses, by its name.
+    pub uses: Vec<(String, Vec<String>)>,
 }
 
 impl Built {
@@ -118,10 +120,15 @@ impl Built {
             .find(|(n, _)| n == name)
             .map(|(_, m)| m.clone())
             .unwrap_or_default();
+        let uses = (self.uses.iter())
+            .find(|(n, _)| n == name)
+            .map(|(_, u)| u.clone())
+            .unwrap_or_default();
         Tested {
             name: name.to_string(),
             tests,
             metadata,
+            uses,
         }
     }
 }
@@ -271,6 +278,16 @@ pub fn build(
             let _ = writeln!(err, "{library}: {}", error_count(*count));
         }
     }
+    let uses = (programs.iter())
+        .map(|(l, p)| {
+            let names = p
+                .dependencies()
+                .iter()
+                .map(|(n, _)| n.to_string())
+                .collect();
+            (l.config.name.clone(), names)
+        })
+        .collect();
     let metadata = (libraries.iter())
         .map(|l| {
             let exports = l.config.exports.clone();
@@ -282,6 +299,7 @@ pub fn build(
         tests,
         errors,
         metadata,
+        uses,
     })
 }
 

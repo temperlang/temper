@@ -1,7 +1,7 @@
 // helpers/deep.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
 
 namespace modules {
 
@@ -32,7 +32,8 @@ void global_init_deep() {}
 // helpers.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/module_init.hpp>
+#include <cstdint>
 #include <modules/helpers/deep.hpp>
 
 namespace modules {
@@ -63,8 +64,10 @@ int32_t bump();
 // helpers.cpp
 #include <modules/helpers.hpp>
 
+#include <temper-core/str.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <memory>
 #include <mutex>
 
 namespace modules {
@@ -131,7 +134,8 @@ void global_init_helpers() {
 // core.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace modules {
 
@@ -159,6 +163,7 @@ std::shared_ptr<Ratio> ratioOf(int32_t n, int32_t d);
 // core.cpp
 #include <modules/core.hpp>
 
+#include <temper-core/temper_bubble.hpp>
 #include <temper-core/int.hpp>
 
 namespace modules {
@@ -207,7 +212,9 @@ void global_init_core() {}
 // state.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/module_init.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace modules {
 
@@ -311,7 +318,7 @@ void global_init_state() {
 // parts/regex.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
 
 namespace modules {
 
@@ -329,8 +336,6 @@ int32_t wheels();
 
 namespace modules {
 
-namespace core = temper::core;
-
 int32_t wheels() {
   return 4;
 }
@@ -342,7 +347,7 @@ void global_init_regex() {}
 // machine.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
 #include <modules/state.hpp>
 #include <modules/parts/regex.hpp>
 #include <std/regex.hpp>
@@ -361,8 +366,12 @@ temper::core::Str describe();
 // machine.cpp
 #include <modules/machine.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/int.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace modules {
 
@@ -390,7 +399,9 @@ void global_init_machine() {
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 #include <modules/helpers/deep.hpp>
 #include <modules/helpers.hpp>
 #include <modules/core.hpp>
@@ -418,9 +429,11 @@ int32_t sum(int32_t n);
 // init.cpp
 #include <modules/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace modules {
 
@@ -479,7 +492,7 @@ void global_init_init() {
 // client.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
 #include <modules/init.hpp>
 
 namespace modules {
@@ -496,6 +509,7 @@ int32_t sumTwice(int32_t n);
 // client.cpp
 #include <modules/client.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 
 namespace modules {

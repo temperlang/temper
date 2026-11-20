@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
+#include <memory>
 
 namespace direct_getter {
 
@@ -22,6 +23,7 @@ struct C : public std::enable_shared_from_this<C> {
 // init.cpp
 #include <direct-getter/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
 
 namespace direct_getter {

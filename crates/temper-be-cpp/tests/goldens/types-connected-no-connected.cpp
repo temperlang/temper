@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace work {
 
@@ -30,8 +31,10 @@ struct Doubler : public std::enable_shared_from_this<Doubler> {
 // init.cpp
 #include <work/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace work {
 

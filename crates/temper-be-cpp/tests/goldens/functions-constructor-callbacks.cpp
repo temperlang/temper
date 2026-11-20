@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
+#include <functional>
+#include <memory>
 
 namespace constructor_callbacks {
 

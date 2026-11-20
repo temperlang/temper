@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace float_format {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,9 +13,14 @@ void global_init_init();
 // init.cpp
 #include <float-format/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/float64.hpp>
 #include <temper-core/console.hpp>
 #include <limits>
+#include <memory>
+#include <vector>
 
 namespace float_format {
 

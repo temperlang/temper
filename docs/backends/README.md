@@ -62,8 +62,8 @@ TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise.
 
-A library's header includes only the part of the runtime its API uses
-(`temper-core/base.hpp`, and what else it names); include
+Generated headers and `.cpp` files include only the runtime and standard
+headers they use (`temper-core/str.hpp`, `<vector>`, …); include
 `temper-core/core.hpp` for all of it. The runtime and the standard
 headers it uses are still most of what a file including a library's
 header parses, so where many files include one, a precompiled header

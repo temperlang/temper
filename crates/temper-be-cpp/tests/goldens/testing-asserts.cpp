@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 #ifdef TEMPER_TESTS
 #include <std/testing.hpp>
 #endif
@@ -57,8 +59,12 @@ void moduleValues(std::shared_ptr<temper_std::Test> const & test);
 // init.cpp
 #include <asserts/init.hpp>
 
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/float64.hpp>
+#include <string>
+#include <vector>
 
 namespace asserts {
 
@@ -220,6 +226,9 @@ int main() {
 // test.cpp
 #include "asserts/init.hpp"
 #include "temper-core/test_main.hpp"
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <string>
 
 int main() {
   asserts::global_init_init();

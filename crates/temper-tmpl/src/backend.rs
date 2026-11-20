@@ -72,11 +72,14 @@ pub type Run = fn(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, 
 pub type Prepare = fn(dir: &Path, all: &[Tested]) -> Result<(), String>;
 
 /// A library that built, with how many tests it has (none, for `run`),
-/// and what its config says, for the names each backend gives it.
+/// what its config says, for the names each backend gives it, and what
+/// it uses.
 pub struct Tested {
     pub name: String,
     pub tests: usize,
     pub metadata: crate::Metadata,
+    /// The libraries it uses, by name: std's and others' in the build.
+    pub uses: Vec<String>,
 }
 
 /// Each test's name and its failure, if it failed; or why there are no

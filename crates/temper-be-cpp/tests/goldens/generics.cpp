@@ -1,8 +1,15 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/pair.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
 #include <temper-core/int.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace generics {
 
@@ -132,6 +139,8 @@ T first(std::shared_ptr<std::vector<T>> const & items, T fallback) {
 // init.cpp
 #include <generics/init.hpp>
 
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/console.hpp>
@@ -139,6 +148,7 @@ T first(std::shared_ptr<std::vector<T>> const & items, T fallback) {
 #include <temper-core/mapped.hpp>
 #include <temper-core/map_builder.hpp>
 #include <temper-core/map.hpp>
+#include <string>
 
 namespace generics {
 

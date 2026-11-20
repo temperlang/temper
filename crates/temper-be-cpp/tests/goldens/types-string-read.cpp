@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace read {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,11 +13,20 @@ void global_init_init();
 // init.cpp
 #include <read/init.hpp>
 
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/compare.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
 #include <temper-core/string.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace read {
 

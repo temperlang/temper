@@ -1,7 +1,12 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 #include <std/json.hpp>
 
 namespace json_adapters {
@@ -178,9 +183,14 @@ struct Celsius : public std::enable_shared_from_this<Celsius> {
 // init.cpp
 #include <json-adapters/init.hpp>
 
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/base_types.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace json_adapters {
 

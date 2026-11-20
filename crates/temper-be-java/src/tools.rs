@@ -4,12 +4,13 @@
 //! as Kotlin's `pom.xml` names them, and a small runner of JUnit's
 //! launcher under `java`, as this crate's own tests do; Kotlin runs
 //! Maven instead, which needs its network. Each compiles at most once
-//! per run, into `temper.out/java/.build` ([`build`]), not again for
-//! each library tested, nor where nothing changed since the last run;
-//! then each library's tests run in a JVM of their own.
-//! `temper run -b java` compiles the runtime, std, and the libraries the
-//! same way, once, quietly, and runs the library's `…Main` class under
-//! `java`, as Kotlin runs it by exec.
+//! per run, into `temper.out/java/.build` ([`build`]), each library
+//! apart ([`compile_main`]), not again for each library tested, nor
+//! where nothing it depends on changed since the last run; then each
+//! library's tests run in a JVM of their own. `temper run -b java`
+//! compiles the runtime, std, and the library with those it uses the
+//! same way, quietly, and runs the library's `…Main` class under `java`,
+//! as Kotlin runs it by exec.
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
 //! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
@@ -35,21 +36,22 @@ pub const TOOLS: Tools = Tools {
 };
 
 /// The shared build's directory in `temper.out/java`, a name no
-/// library's directory has: `classes`, the runtime's, std's, and every
-/// library's main sources, with the test runner; and `test-classes`,
+/// library's directory has: `classes`, a directory of classes for each
+/// of the runtime (`temper-core`), std, and each library's main sources
+/// ([`compile_main`]); `runner`, the test runner's; and `test-classes`,
 /// every tested library's tests.
 const BUILD: &str = ".build";
 
 /// Compiles, for `temper test`, the runtime, std, every library's main
-/// sources, and the test runner into `.build/classes` ([`BUILD`]), as
-/// each library's tests compiled them for themselves before, then every
-/// tested library's tests at once into `.build/test-classes`. Each is
-/// kept from run to run, and compiled again, afresh, only where a source
-/// or how it's compiled changed ([`stale`]), as javac doesn't tell
-/// itself. Where the tests don't compile together (one doesn't
-/// compile, or two libraries' tests clash), `test-classes` is removed,
-/// and each library's tests compile alone, saying what's wrong. With
-/// nothing to test, as for `temper run`, it does nothing.
+/// sources ([`compile_main`]), and the test runner, then every tested
+/// library's tests at once into `.build/test-classes` ([`BUILD`]). Each
+/// is kept from run to run, and compiled again, afresh, only where a
+/// source, what it's compiled against, or how changed ([`stale`]), as
+/// javac doesn't tell itself. Where the tests don't compile together
+/// (one doesn't compile, or two libraries' tests clash),
+/// `test-classes` is removed, and each library's tests compile alone,
+/// saying what's wrong. With nothing to test, as for `temper run`, it
+/// does nothing.
 fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(BUILD);
     let tested: Vec<&Tested> = all.iter().filter(|l| l.tests > 0).collect();
@@ -57,20 +59,30 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
         return Ok(());
     }
     let jars = junit()?;
-    let runner = root.join("temper/RunTests.java");
-    let written = write_if_changed(&runner, RUN_TESTS.as_bytes());
-    written.map_err(|e| format!("{}: {e}", runner.display()))?;
-    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
-    let (main, tests) = (root.join("classes"), root.join("test-classes"));
     let strict = strict_warnings();
-    let main_key = compile_main(dir, all, &main, &[runner], &classpath, strict)?;
+    let source = root.join("temper/RunTests.java");
+    let written = write_if_changed(&source, RUN_TESTS.as_bytes());
+    written.map_err(|e| format!("{}: {e}", source.display()))?;
+    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
+    let runner = root.join("runner");
+    let runner_key = compile_key(&classpath, std::slice::from_ref(&source), strict);
+    if stale(&runner, &runner_key) {
+        javac(&runner, &classpath, &[source], strict)?;
+        write_stamp(&stamp(&runner), &runner_key);
+    }
+    let mut units = Vec::new();
+    for library in all {
+        compile_main(dir, all, &library.name, strict, &mut units, 0)?;
+    }
     let mut sources = Vec::new();
     for library in tested {
         files_with(&test_sources(dir, library), "java", &mut sources);
     }
-    let with_main = with_main(&main, &jars)?;
+    let with_main = with_main(dir, all, &jars)?;
     // Compiled again wherever the main classes were.
-    let key = format!("{main_key}{}", compile_key(&with_main, &sources, strict));
+    let main_keys: String = units.iter().map(|u| u.key.as_str()).collect();
+    let key = format!("{main_keys}{}", compile_key(&with_main, &sources, strict));
+    let tests = root.join("test-classes");
     if stale(&tests, &key) {
         match javac(&tests, &with_main, &sources, strict) {
             Ok(()) => write_stamp(&stamp(&tests), &key),
@@ -134,50 +146,105 @@ fn junit() -> Result<Vec<PathBuf>, String> {
     })
 }
 
-/// A class path of `main` and JUnit's jars.
-fn with_main(main: &Path, jars: &[PathBuf]) -> Result<std::ffi::OsString, String> {
-    std::env::join_paths(std::iter::once(main).chain(jars.iter().map(PathBuf::as_path)))
-        .map_err(|e| e.to_string())
+/// A class path of every directory of main classes ([`compile_main`])
+/// and JUnit's jars.
+fn with_main(dir: &Path, all: &[Tested], jars: &[PathBuf]) -> Result<std::ffi::OsString, String> {
+    let names = ["temper-core", "std"].map(String::from);
+    let units = names.into_iter().chain(all.iter().map(|l| l.name.clone()));
+    let main = units.map(|unit| classes(dir, &unit));
+    std::env::join_paths(main.chain(jars.iter().cloned())).map_err(|e| e.to_string())
 }
 
-/// Compiles the runtime, std, and the libraries' main sources with
-/// `javac` (`JAVAC`) into `classes`, with `extra` sources and `classpath`;
-/// with `strict`, the runtime first, quietly, then the rest with every
-/// lint an error; only where they're [`stale`]. The [`compile_key`]
-/// they were built by.
+/// The directory of a unit's main classes: the runtime's
+/// (`temper-core`), std's, or a library's.
+fn classes(dir: &Path, unit: &str) -> PathBuf {
+    dir.join(BUILD).join("classes").join(unit)
+}
+
+/// A compiled unit of main classes ([`compile_main`]): its name, the
+/// key it was built by, with those of what it uses, and its class path,
+/// its own directory and theirs.
+struct Unit {
+    name: String,
+    key: String,
+    path: Vec<PathBuf>,
+}
+
+/// Compiles a unit's main sources with `javac` (`JAVAC`) into its own
+/// directory ([`classes`]), after those it uses: the runtime alone, std
+/// against it, and a library against those and the libraries it uses;
+/// only where it's [`stale`], its key ([`compile_key`]) taking in
+/// theirs, so a change in one library compiles it and those that use it
+/// again, not std. The runtime compiles quietly; the rest with every
+/// lint an error with `strict`. `done` holds the units compiled so far,
+/// so each compiles once; the unit's is last. `depth` is how many units
+/// it's compiled for.
 fn compile_main(
     dir: &Path,
     all: &[Tested],
-    classes: &Path,
-    extra: &[PathBuf],
-    classpath: &std::ffi::OsStr,
+    unit: &str,
     strict: bool,
-) -> Result<String, String> {
-    let mut runtime = Vec::new();
-    files_with(&dir.join("temper-core/src/main/java"), "java", &mut runtime);
+    done: &mut Vec<Unit>,
+    depth: usize,
+) -> Result<(), String> {
+    if done.iter().any(|u| u.name == unit) {
+        return Ok(());
+    }
+    // Deeper than every unit, only in a cycle, which imports rule out.
+    if depth > all.len() + 2 {
+        return Err(format!("{unit}: libraries that use each other in a cycle"));
+    }
+    let uses: Vec<String> = match unit {
+        "temper-core" => Vec::new(),
+        "std" => vec!["temper-core".into()],
+        _ => {
+            let library = all.iter().find(|l| l.name == unit);
+            let others = library.map(|l| l.uses.clone()).unwrap_or_default();
+            // Libraries in the build, but not the unit itself, nor a
+            // cycle's, which imports rule out.
+            let others = (others.into_iter()).filter(|u| {
+                !matches!(u.as_str(), "std" | "temper-core")
+                    && u != unit
+                    && all.iter().any(|l| l.name == *u)
+            });
+            let base = ["temper-core", "std"].map(String::from);
+            base.into_iter().chain(others).collect()
+        }
+    };
+    let mut path: Vec<PathBuf> = Vec::new();
+    let mut used_keys = String::new();
+    for used in &uses {
+        compile_main(dir, all, used, strict, done, depth + 1)?;
+        let Some(used) = done.iter().find(|u| u.name == *used) else {
+            continue;
+        };
+        used_keys.push_str(&used.key);
+        for p in &used.path {
+            if !path.contains(p) {
+                path.push(p.clone());
+            }
+        }
+    }
+    if done.iter().any(|u| u.name == unit) {
+        return Ok(());
+    }
     let mut sources = Vec::new();
-    let roots = std::iter::once("std".to_string());
-    for root in roots.chain(all.iter().map(|l| l.name.clone())) {
-        files_with(&dir.join(root).join("src/main/java"), "java", &mut sources);
+    files_with(&dir.join(unit).join("src/main/java"), "java", &mut sources);
+    let classpath = std::env::join_paths(&path).map_err(|e| e.to_string())?;
+    let strict = strict && unit != "temper-core";
+    let key = compile_key(&classpath, &sources, strict) + &used_keys;
+    let into = classes(dir, unit);
+    if !sources.is_empty() && stale(&into, &key) {
+        javac(&into, &classpath, &sources, strict)?;
+        write_stamp(&stamp(&into), &key);
     }
-    sources.extend(extra.iter().cloned());
-    let all: Vec<PathBuf> = runtime.iter().chain(&sources).cloned().collect();
-    let key = compile_key(classpath, &all, strict);
-    if !stale(classes, &key) {
-        return Ok(key);
-    }
-    if !strict {
-        javac(classes, classpath, &all, false)?;
-    } else {
-        javac(classes, classpath, &runtime, false)?;
-        let mut with_runtime = vec![classes.to_path_buf()];
-        let given = std::env::split_paths(classpath).filter(|p| !p.as_os_str().is_empty());
-        with_runtime.extend(given);
-        let with_runtime = std::env::join_paths(with_runtime).map_err(|e| e.to_string())?;
-        javac(classes, &with_runtime, &sources, true)?;
-    }
-    write_stamp(&stamp(classes), &key);
-    Ok(key)
+    path.insert(0, into);
+    done.push(Unit {
+        name: unit.to_string(),
+        key,
+        path,
+    });
+    Ok(())
 }
 
 /// javac's options with `strict`: every lint and Javadoc check but for
@@ -252,9 +319,8 @@ pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsStr
 /// earlier ones by the system's code page.
 pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
 
-/// Compiles as [`build`] does, without JUnit, into
-/// `temper.out/java/LIBRARY/target/temper/classes`, and runs the
-/// library's main class, the one its `…Main.java` declares.
+/// Compiles the library and what it uses as [`build`] does, quietly, and
+/// runs the library's main class, the one its `…Main.java` declares.
 fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
     let here = dir.join(&library.name);
     let mut mains = Vec::new();
@@ -271,12 +337,14 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
                 .replace(['/', '\\'], ".")
         })
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
-    let classes = here.join("target/temper/classes");
-    compile_main(dir, all, &classes, &[], std::ffi::OsStr::new(""), false)?;
+    let mut units = Vec::new();
+    compile_main(dir, all, &library.name, false, &mut units, 0)?;
+    let path = &units.last().unwrap().path;
+    let classpath = std::env::join_paths(path).map_err(|e| e.to_string())?;
     program(
         Command::new(tool("JAVA", "java"))
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
-            .arg(&classes)
+            .arg(classpath)
             .arg(main),
         "java",
     )
@@ -367,10 +435,10 @@ public final class RunTests {
 /// ([`RUN_TESTS`]): those [`build`] compiled with the others', selected
 /// by their classes, or, where they didn't compile together, its own,
 /// compiled alone into `temper.out/java/LIBRARY/target/temper`.
-fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
+fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
     let jars = junit()?;
     let root = dir.join(BUILD);
-    let main = root.join("classes");
+    let main = with_main(dir, all, &jars)?;
     let shared = root.join("test-classes");
     let mut sources = Vec::new();
     let from = test_sources(dir, library);
@@ -392,12 +460,13 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
         false => {
             let own = dir.join(&library.name).join("target/temper/test-classes");
             let _ = std::fs::remove_dir_all(&own);
-            javac(&own, &with_main(&main, &jars)?, &sources, strict_warnings())?;
+            javac(&own, &main, &sources, strict_warnings())?;
             (own, Vec::new())
         }
     };
-    let everything = std::env::join_paths([tests.clone(), main].into_iter().chain(jars))
-        .map_err(|e| e.to_string())?;
+    let mut everything = vec![tests.clone(), root.join("runner")];
+    everything.extend(std::env::split_paths(&main));
+    let everything = std::env::join_paths(everything).map_err(|e| e.to_string())?;
     let run = output(
         Command::new(tool("JAVA", "java"))
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])

@@ -1,7 +1,14 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <functional>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 namespace content_tags {
 
@@ -138,11 +145,13 @@ std::shared_ptr<After> propagateOver(std::shared_ptr<Propagator> const & p, bool
 // init.cpp
 #include <content-tags/init.hpp>
 
+#include <temper-core/list.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
 #include <temper-core/string.hpp>
 #include <temper-core/string_builder.hpp>
+#include <cstdint>
 
 namespace content_tags {
 

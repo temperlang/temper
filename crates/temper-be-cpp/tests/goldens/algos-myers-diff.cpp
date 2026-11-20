@@ -1,13 +1,20 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/list_builder.hpp>
 #include <temper-core/deque.hpp>
 #include <temper-core/dense_bit_vector.hpp>
+#include <cstdint>
 #include <deque>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace myers_diff {
 

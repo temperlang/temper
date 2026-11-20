@@ -1127,8 +1127,8 @@ fn test_a_library_in_rust() {
 /// `temper test -b java` as [`test_a_library_on_each_backend`] tests
 /// the others, where javac and JUnit's jars are (skipped otherwise;
 /// required with `TEMPER_REQUIRE_CHECKERS`), with a second library, `b`,
-/// using `a`: each library, std, and temper-core compile once, into one
-/// directory of classes for them all, not again for each library tested.
+/// using `a`: each library, std, and temper-core compile once, each into
+/// a directory of classes of its own, not again for each library tested.
 #[test]
 #[cfg(feature = "java")]
 fn test_a_library_in_java() {
@@ -1172,8 +1172,24 @@ fn test_a_library_in_java() {
             "temper/core/Core.class",
         ];
         assert_eq!(paths.map(|p| count(&java, p)), [1, 1, 1], "{java:?}");
-        // javac builds them all again for any change.
-        reuses_its_build("java", dir, ".class", "/classes/a/", "/temper/std/", false);
+        // javac builds each library apart: a change in `a` builds `a`
+        // and `b`, which uses it, again, not std.
+        reuses_its_build("java", dir, ".class", "/classes/a/", "/temper/std/", true);
+        let (_, out, err) = tempest(&["test", "-b", "java", dir]);
+        assert!(out.ends_with("Tests passed: 4 of 5\n"), "{out}{err}");
+        let b = |all: &std::collections::BTreeMap<String, std::time::SystemTime>| {
+            (all.iter())
+                .filter(|(p, _)| p.replace('\\', "/").contains("/classes/b/"))
+                .map(|(p, t)| (p.clone(), *t))
+                .collect::<Vec<_>>()
+        };
+        let before = stamps(&java, ".class");
+        assert!(!b(&before).is_empty(), "{before:?}");
+        let source = Path::new(dir).join("t.temper");
+        fs::write(&source, "export let triple(n: Int): Int { n + n + n }\n").unwrap();
+        let (_, out, err) = tempest(&["test", "-b", "java", dir]);
+        assert!(out.ends_with("Tests passed: 4 of 5\n"), "{out}{err}");
+        assert_ne!(b(&stamps(&java, ".class")), b(&before), "b not rebuilt");
     });
 }
 

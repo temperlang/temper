@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
-
 namespace types_list_empty {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -15,7 +13,13 @@ void global_init_init();
 // init.cpp
 #include <types-list-empty/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace types_list_empty {
 

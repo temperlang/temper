@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <cstdint>
 #include <modules/core.hpp>
 #include <renamed/init.hpp>
 #include <modules/init.hpp>
@@ -21,9 +21,13 @@ int32_t both(int32_t n);
 // init.cpp
 #include <imports-library/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/int.hpp>
 #include <temper-core/console.hpp>
+#include <memory>
+#include <string>
 
 namespace imports_library {
 

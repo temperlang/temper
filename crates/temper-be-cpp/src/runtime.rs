@@ -16,7 +16,6 @@ pub const FILES: &[(&str, &str)] = &[
         "any_value.hpp",
         include_str!("../runtime/temper-core/any_value.hpp"),
     ),
-    ("base.hpp", include_str!("../runtime/temper-core/base.hpp")),
     (
         "base_types.hpp",
         include_str!("../runtime/temper-core/base_types.hpp"),
@@ -118,7 +117,7 @@ pub const FILES: &[(&str, &str)] = &[
 /// own.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spots: &[VersionSpot {
-        path: "base.hpp",
+        path: "core.hpp",
         text: "#define TEMPER_CORE_VERSION \"0.0.0\"",
         spelling: Spelling::SemVer,
         rename: None,
@@ -126,14 +125,47 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     unpublished: &[],
 };
 
-/// The runtime's headers that `base.hpp`, which every generated header
-/// includes, leaves out, in `core.hpp`'s order, each with the names it
-/// declares in `temper::core`. A generated file that spells one
-/// (`core::Regex` in a `.cpp`, `temper::core::Mapped` in a header)
-/// includes its header ([`includes_for`]), so a user's file that
-/// includes a library's header parses only the runtime that header
-/// uses. A test checks that each names everything its header declares.
+/// The runtime's headers that generated code includes, in `core.hpp`'s
+/// order, each with the names it declares in `temper::core`. A generated
+/// header or `.cpp` that spells one (`core::Regex` in a `.cpp`,
+/// `temper::core::Mapped` in a header) includes its header
+/// ([`includes_for`]), so a user's file that includes a library's header
+/// parses only the runtime that header uses. A test checks that each
+/// names everything its header declares.
 pub const FEATURES: &[(&str, &[&str])] = &[
+    ("temper_bubble.hpp", &["TemperBubble"]),
+    ("any_value.hpp", &["AnyValueBase", "AnyValueBox", "any_box"]),
+    ("nullable_param.hpp", &["NullableParam"]),
+    ("pair.hpp", &["Pair", "PairFactory"]),
+    ("str.hpp", &["Str", "str_detail"]),
+    (
+        "base_types.hpp",
+        &[
+            "NonDeduced",
+            "IsIndirect",
+            "Param",
+            "Never",
+            "Invalid",
+            "Empty",
+            "empty",
+            "object",
+            "borrow_this",
+            "cat_impl",
+            "cat",
+            "bubble",
+            "panic",
+            "is_null",
+            "not_null",
+            "print",
+            "pure_virtual",
+            "testBail",
+        ],
+    ),
+    ("list.hpp", &["List"]),
+    (
+        "module_init.hpp",
+        &["ModuleInitState", "init_once", "GlobalSlot"],
+    ),
     (
         "casting.hpp",
         &[
@@ -207,23 +239,46 @@ pub const FEATURES: &[(&str, &[&str])] = &[
     ),
 ];
 
-/// Standard names that generated code spells and `base.hpp` doesn't
-/// promise, with their headers.
-const STD: &[(&str, &str)] = &[
-    ("deque", "<deque>"),
+/// The runtime's macros, with their headers.
+const MACROS: &[(&str, &str)] = &[("TEMPER_STR", "str.hpp")];
+
+/// Standard names that generated code spells, after `std::`, with their
+/// headers. A test checks that generated code spells no others.
+pub const STD: &[(&str, &str)] = &[
+    ("max", "<algorithm>"),
+    ("min", "<algorithm>"),
     ("fmod", "<cmath>"),
+    ("deque", "<deque>"),
+    ("function", "<functional>"),
     ("numeric_limits", "<limits>"),
+    ("enable_shared_from_this", "<memory>"),
+    ("make_shared", "<memory>"),
+    ("shared_ptr", "<memory>"),
+    ("lock_guard", "<mutex>"),
+    ("mutex", "<mutex>"),
+    ("ostringstream", "<sstream>"),
+    ("string", "<string>"),
+    ("to_string", "<string>"),
+    ("type_index", "<typeindex>"),
+    ("forward", "<utility>"),
+    ("move", "<utility>"),
+    ("vector", "<vector>"),
 ];
 
-/// What a generated file's text needs included beyond `base.hpp`: the
-/// [`FEATURES`] headers whose names it spells, in `core.hpp`'s order,
-/// then [`STD`]'s. It reads names after `core::`, unless another
-/// namespace than `temper` comes before (a library's own `core`), and
-/// after `std::`; one in a comment only adds an include.
+/// Standard names that generated code spells without `std::`, with
+/// their headers. A test checks that it spells no other `_t` types.
+pub const BARE_STD: &[(&str, &str)] = &[("int32_t", "<cstdint>"), ("int64_t", "<cstdint>")];
+
+/// What a generated file's text needs included: the [`FEATURES`] headers
+/// whose names it spells or whose [`MACROS`] it uses, in `core.hpp`'s
+/// order, then the standard headers of the [`STD`] and [`BARE_STD`]
+/// names it spells, in alphabetical order. It reads names after
+/// `core::`, unless another namespace than `temper` comes before (a
+/// library's own `core`), and after `std::`; one in a comment only adds
+/// an include.
 pub fn includes_for(text: &str) -> Vec<String> {
-    let ident = |c: char| c == '_' || c.is_ascii_alphanumeric();
     let mut runtime = vec![false; FEATURES.len()];
-    let mut std = vec![false; STD.len()];
+    let mut std = std::collections::BTreeSet::new();
     for (prefix, is_core) in [("core::", true), ("std::", false)] {
         for (i, _) in text.match_indices(prefix) {
             let before = &text[..i];
@@ -242,18 +297,36 @@ pub fn includes_for(text: &str) -> Vec<String> {
                 if let Some(j) = FEATURES.iter().position(|(_, names)| names.contains(&name)) {
                     runtime[j] = true;
                 }
-            } else if let Some(j) = STD.iter().position(|(n, _)| *n == name) {
-                std[j] = true;
+            } else if let Some((_, header)) = STD.iter().find(|(n, _)| *n == name) {
+                std.insert(*header);
             }
+        }
+    }
+    for (name, header) in MACROS {
+        if spells(text, name) {
+            let j = FEATURES.iter().position(|(h, _)| h == header).unwrap();
+            runtime[j] = true;
+        }
+    }
+    for (name, header) in BARE_STD {
+        if spells(text, name) {
+            std.insert(*header);
         }
     }
     let runtime = (FEATURES.iter().zip(runtime))
         .filter(|(_, used)| *used)
         .map(|((header, _), _)| format!("<temper-core/{header}>"));
-    let std = (STD.iter().zip(std))
-        .filter(|(_, used)| *used)
-        .map(|((_, header), _)| header.to_string());
-    runtime.chain(std).collect()
+    runtime.chain(std.into_iter().map(String::from)).collect()
+}
+
+fn ident(c: char) -> bool {
+    c == '_' || c.is_ascii_alphanumeric()
+}
+
+/// Whether `text` spells the identifier `name` (not as part of another).
+fn spells(text: &str, name: &str) -> bool {
+    text.match_indices(name)
+        .any(|(i, _)| !text[..i].ends_with(ident) && !text[i + name.len()..].starts_with(ident))
 }
 
 #[cfg(test)]
@@ -265,7 +338,6 @@ mod tests {
     /// generated code that spells it includes it.
     #[test]
     fn features_name_their_headers_declarations() {
-        let ident = |c: char| c == '_' || c.is_ascii_alphanumeric();
         for (header, names) in FEATURES {
             let (_, text) = FILES.iter().find(|(p, _)| p == header).unwrap();
             for line in text.lines() {
@@ -276,8 +348,10 @@ mod tests {
                 if decl.starts_with([' ', '/', '}', '#']) || decl.starts_with("template") {
                     continue;
                 }
-                let name = if decl.starts_with("struct ") || decl.starts_with("namespace ") {
-                    decl.split(' ').nth(1).unwrap()
+                let named = ["struct ", "class ", "namespace ", "using "];
+                let name = if named.iter().any(|k| decl.starts_with(k)) {
+                    let rest = decl.split_once(' ').unwrap().1;
+                    &rest[..rest.find(|c| !ident(c)).unwrap_or(rest.len())]
                 } else {
                     // A function: the name before its first `(` outside
                     // template arguments.
@@ -302,31 +376,48 @@ mod tests {
                 assert!(names.contains(&name), "{header}: {name}, in {line:?}");
             }
         }
-        // Every runtime header is in `base.hpp` or here, but `core.hpp`,
-        // `net.hpp` (std net's, which its `.cpp` includes), and
+        // Every runtime header is here, but `core.hpp`, which includes
+        // them all, `net.hpp` (std net's, which its `.cpp` includes), and
         // `test_main.hpp` (`test.cpp`'s).
-        let base = FILES.iter().find(|(p, _)| *p == "base.hpp").unwrap().1;
+        let core = FILES.iter().find(|(p, _)| *p == "core.hpp").unwrap().1;
         for (path, _) in FILES {
-            let in_base = base.contains(&format!("#include \"{path}\""));
             let featured = FEATURES.iter().any(|(h, _)| h == path);
-            let other = matches!(*path, "base.hpp" | "core.hpp" | "net.hpp" | "test_main.hpp");
-            let places = usize::from(in_base) + usize::from(featured) + usize::from(other);
-            assert_eq!(places, 1, "{path}");
+            let other = matches!(*path, "core.hpp" | "net.hpp" | "test_main.hpp");
+            assert!(featured != other, "{path}");
+            let in_core = core.contains(&format!("#include \"{path}\"\n"));
+            assert_eq!(in_core, featured, "{path} in core.hpp");
+        }
+        // In `core.hpp`'s order.
+        let order: Vec<usize> = (FEATURES.iter())
+            .map(|(h, _)| core.find(&format!("#include \"{h}\"\n")).unwrap())
+            .collect();
+        assert!(order.is_sorted(), "FEATURES out of core.hpp's order");
+        for (_, header) in MACROS {
+            assert!(FEATURES.iter().any(|(h, _)| h == header), "{header}");
         }
     }
 
     #[test]
     fn includes_for_reads_spelled_names() {
         let text = "core::Str s; temper::core::Mapped::Ordered m; core::Regex::x();\n\
-                    kelpto::core::Map k; mycore::Int i; std::fmod(a, b); xstd::deque d;";
+                    kelpto::core::Map k; mycore::Int i; std::fmod(a, b); xstd::deque d;\n\
+                    std::shared_ptr<std::vector<int32_t>> v; myint64_t w; std::thread t;";
         assert_eq!(
             includes_for(text),
             [
+                "<temper-core/str.hpp>",
                 "<temper-core/mapped.hpp>",
                 "<temper-core/regex.hpp>",
-                "<cmath>"
+                "<cmath>",
+                "<cstdint>",
+                "<memory>",
+                "<vector>",
             ]
         );
-        assert!(includes_for("temper::core::Str x;").is_empty());
+        assert_eq!(
+            includes_for("TEMPER_STR(\"a\") + MY_TEMPER_STR"),
+            ["<temper-core/str.hpp>"]
+        );
+        assert!(includes_for("temper::core::Unknown x; void f();").is_empty());
     }
 }

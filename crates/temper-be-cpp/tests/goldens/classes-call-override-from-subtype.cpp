@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/base.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace call_override_from_subtype {
 
@@ -96,9 +99,11 @@ struct EDeep : public virtual CDeep, public virtual B2Deep {
 // init.cpp
 #include <call-override-from-subtype/init.hpp>
 
+#include <temper-core/module_init.hpp>
 #include <temper-core/casting.hpp>
 #include <temper-core/boolean.hpp>
 #include <temper-core/console.hpp>
+#include <string>
 
 namespace call_override_from_subtype {
 

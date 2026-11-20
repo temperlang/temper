@@ -1,7 +1,18 @@
 #pragma once
-// The whole runtime. Generated headers include only `base.hpp`, and
-// what else they use; this is for host code that wants it all.
-#include "base.hpp"
+// The whole runtime, for host code and users that want it all.
+// Generated headers and `.cpp`s include only the runtime's headers they
+// use.
+
+// The runtime's version, which `temper build` writes in.
+#define TEMPER_CORE_VERSION "0.0.0"
+#include "temper_bubble.hpp"
+#include "any_value.hpp"
+#include "nullable_param.hpp"
+#include "pair.hpp"
+#include "str.hpp"
+#include "base_types.hpp"
+#include "list.hpp"
+#include "module_init.hpp"
 #include "casting.hpp"
 #include "compare.hpp"
 #include "boolean.hpp"
