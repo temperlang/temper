@@ -3,6 +3,8 @@
 Sequences of values: the read-only view `Listed`, the immutable `List`, the
 growable `ListBuilder`, and the double-ended queue `Deque`.
 
+## Listed
+
 *Listed* is an immutable view of a random-access sequence of values.
 A `Listed<String>` may contain strings, a `Listed<Boolean>` may contain
 booleans, etc.
@@ -114,6 +116,8 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
     // `listedMap(xs) { … }`: an interface's methods may be overridden, so
     // they can't be generic, in core as in any library.
 
+## Listed extensions
+
 `listedMap` (`listed.map { … }`) maps elements using [transform].
 
     @extension("map")
@@ -145,6 +149,8 @@ the item at [index].
       }
       result
     }
+
+## List
 
 *List* is a random-access, immutable sequence of values. List
 literals using `[...]` syntax represent immutable `List` instances. For
@@ -189,6 +195,8 @@ See also `Listed` for recommendations on `List` vs `Listed` use.
         }
       }
     }
+
+## ListBuilder
 
 *ListBuilder* is a random-access, mutable, growable sequence of
 values.
@@ -265,6 +273,8 @@ values.
       @connected
       public toListBuilder(): ListBuilder<T>;
     }
+
+## Deque
 
 *Deque* is a double-ended queue that allows for breadth-first processing via
 efficient adds at the end and efficient removal from the front.

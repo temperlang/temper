@@ -2,6 +2,8 @@
 
 Logging, through a `Console`, and the default `console` that code can use.
 
+## Console
+
 *Console* provides logging and diagnostic capabilities. It might be
 configured differently depending on the backend and environment. Don't rely
 on it being attached to any standard stream.
@@ -26,6 +28,8 @@ Use the builtin instance `console` for default logging needs.
       @connected
       private globalLog(message: String): Void;
     }
+
+## The default console
 
 `console` is the global default `Console` instance. It is designed to integrate with
 standard backend logging services. Frontend processing replaces references to

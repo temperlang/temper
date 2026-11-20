@@ -3,6 +3,8 @@
 Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
 `Map`, and the read-write `MapBuilder`.
 
+## Pair
+
 *Pair* holds a *key* and its *value*, as a map's entries do.
 
     export class Pair<@out K, @out V> {
@@ -15,6 +17,8 @@ Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
         this.value = value;
       }
     }
+
+## Mapped
 
 *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
 `MapBuilder`.
@@ -146,6 +150,8 @@ Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
 
     // Mapped's generic methods are extensions, as Listed's are.
 
+## Mapped extensions
+
 `mappedToListWith` (`mapped.toListWith(…)`) is similar to [snippet/type/Mapped/method/toListBuilderWith].
 
 Calls [func] on each key and value in the [snippet/type/Mapped].
@@ -170,6 +176,8 @@ Calls [func] on each key and value in the [snippet/type/Mapped].
       return builder;
     }
 
+## Map
+
 *Map* is a read-only key-value collection.
 
     @connected
@@ -185,6 +193,8 @@ Calls [func] on each key and value in the [snippet/type/Mapped].
       @connected
       public constructor(entries: List<Pair<K, V>>);
     }
+
+## MapBuilder
 
 *MapBuilder* is a read-write key-value collection for building `Map`
 objects. Preserves insertion order when accessed from Temper code.

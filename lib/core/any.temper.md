@@ -3,6 +3,8 @@
 The types that every value fits, and special types for failure, absence, and
 code that can't be compiled.
 
+## AnyValue
+
 *AnyValue* is the type for any successful value.
 
 All `class` and `interface` types, including builtin types like [snippet/type/Int32],
@@ -10,6 +12,8 @@ are sub-types of this type, except the special types [snippet/type/Bubble] and
 [snippet/type/Void].
 
     export interface AnyValue {}
+
+## Equatable
 
 *Equatable* indicates that values can be tested for equality using `==` and `!=`.
 User-defined types can't currently extend Equatable, but we expect to support
@@ -19,6 +23,8 @@ this in the future.
       @operator("==")
       eq(other: EQ): Boolean;
     }
+
+## Bubble
 
 *Bubble* is a type that represents failure to compute a value.
 
@@ -34,6 +40,8 @@ See also [snippet/builtin/orelse].
       private constructor();
     }
 
+## Invalid
+
 *Invalid* is an untranslatable type that represents a failure to properly type an
 expression.  Some backends, notably dynamic language backends, might be able
 to produce a partially working translation and run tests even in the presence of type
@@ -43,6 +51,8 @@ the invalid type enables that.
 It may be used in meta-programming code, but is not meant for general use by user code.
 
     export sealed interface Invalid {}
+
+## Never
 
 *Never* is a type for expressions that will never complete normally.
 
@@ -70,6 +80,8 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
     export sealed interface Never<@out T> {}
 
+## Null
+
 *Null* is the type of the singleton [*null*][snippet/builtin/null] value, which represents
 the absence of a value of another type.
 
@@ -84,6 +96,8 @@ input that might refer to either *null* or a string value.
     export class Null {
       private constructor(): Void {}
     }
+
+## Empty
 
 *Empty* is the type for a stateless singleton value which may be used
 judiciously to work around some problems in generic programming.
@@ -126,7 +140,11 @@ console.log("Empty is not null: ${e != null}");
     @connected
     export let empty(): Empty { emptySingleton }
 
+## Function
+
     export interface Function {}
+
+## GeneratorFn
 
 *GeneratorFn* is a marker interface for functions that may yield control to their caller even
 if they do not lexically mention the [snippet/builtin/yield]
@@ -134,11 +152,15 @@ pseudo-control-flow instruction.
 
     export interface GeneratorFn extends Function {}
 
+## MapKey
+
 *MapKey* is limited at present to String and Int keys but expected to be
 user-implementable in the future.
 
     @imu
     export /*sealed*/ interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
+
+## Problem
 
 *Problem* is an internal abstraction that represents code that
 cannot be compiled.

@@ -1394,3 +1394,70 @@ Distance is how far a point is from the origin.
     let skipped = first.find("skipped").unwrap() as u32;
     assert_eq!(docs.doc_string(skipped, "skipped"), None);
 }
+
+/// Docs from prose with more than paragraphs are the same settled as by
+/// place: examples, lists, and link definitions as written, HTML left
+/// out, and nothing past a heading.
+#[test]
+fn rich_prose_docs_by_place_and_settled() {
+    use temper_frontend::docs::DocsByPlace;
+    let source = "# Shapes
+
+`Shape` is one of:
+
+- a square
+- a circle
+
+<div>Left out.</div>
+
+See [more].
+
+[more]: https://example.com
+
+```temper inert
+new Shape(); // ✅
+```
+
+```temper
+export class Shape() {
+```
+
+`area` is old.
+
+## Measures
+
+**Area** is [how big][more] it is.
+
+```temper
+  public area(): Int { 1 }
+}
+```
+";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let docs = DocsByPlace::parse(&[("test.temper.md", source)]);
+    let shape = "`Shape` is one of:\n\n- a square\n- a circle\n\nSee [more].\n\n\
+        [more]: https://example.com\n\n```temper inert\nnew Shape(); // ✅\n```";
+    let cases = [
+        ("Shape", "class ", shape),
+        ("area", "public ", "**Area** is [how big][more] it is."),
+    ];
+    for (name, before, long) in cases {
+        let decl = (0..lib.tree.len() as u32)
+            .map(NodeId)
+            .find(|&n| {
+                matches!(lib.tree.kind(n), NodeKind::Let | NodeKind::Class)
+                    && lib
+                        .name(lib.tree.children(n)[0])
+                        .map(|id| lib.names.get(id))
+                        == Some(name)
+            })
+            .unwrap_or_else(|| panic!("{name}"));
+        let settled_doc = lib.doc_string(decl).unwrap();
+        assert_eq!(settled_doc.long, long);
+        let at = (source.find(&format!("{before}{name}(")).unwrap() + before.len()) as u32;
+        assert_eq!(docs.doc_string(at, name), Some(settled_doc));
+    }
+}

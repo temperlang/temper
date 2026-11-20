@@ -991,6 +991,54 @@ fn core_prose_docs() {
     );
 }
 
+/// Core's prose docs carry what follows their naming paragraph up to the
+/// declaration: examples as written, with their ✅ and `//!outputs`
+/// lines, and link definitions, but no raw HTML.
+#[test]
+fn hover_core_prose_blocks() {
+    let source = r#"let e: Empty? = null;
+let d = new Deque<String>();
+let b = new StringBuilder();
+let f: Float64 = 1.0;
+let n: Never<String>? = null;
+let i: StringIndex = String.begin;
+"#;
+    let a = analyze(source);
+    let doc = |needle| {
+        a.hover(MAIN, at(source, needle, 0, 0))
+            .unwrap()
+            .doc
+            .unwrap()
+    };
+    for (needle, example) in [
+        ("Empty?", "```temper inert\nlet e: Empty? = empty();"),
+        (
+            "Deque<",
+            "```temper inert\nlet deque = new Deque<String>();",
+        ),
+        (
+            "StringBuilder(",
+            "```temper inert\nlet stringBuilder = new StringBuilder();",
+        ),
+    ] {
+        let doc = doc(needle);
+        assert!(doc.contains(example), "{doc}");
+        assert!(
+            doc.contains("//!outputs") && doc.contains("// ✅\n```"),
+            "{doc}"
+        );
+    }
+    let float = doc("Float64 =");
+    assert!(float.contains("\n[FP64]: https://"), "{float}");
+    let never = doc("Never<");
+    assert!(never.contains("\n[bottom type]: https://"), "{never}");
+    let index = doc("StringIndex =");
+    assert!(
+        index.contains("| Glyph | UTF-8") && !index.contains("<t"),
+        "{index}"
+    );
+}
+
 /// A literate library documented in prose, as Kotlin Temper's
 /// `.temper.md` convention has it: a paragraph whose first word is a
 /// declaration's name, ignoring case, `` ` `` and `*`, documents it,

@@ -4,6 +4,8 @@ Booleans and numbers: `Boolean`, a `DenseBitVector` of them, the integer
 types `Int32`, aliased as `Int`, and `Int64`, and the floating point
 `Float64`.
 
+## Boolean
+
 *Boolean* is a truth value that may be used in `if` and loop conditions.
 
 ⎀ syntax/BooleanLiteral -heading
@@ -28,6 +30,8 @@ types `Int32`, aliased as `Int`, and `Int64`, and the floating point
       @operator("==")
       public eq(other: Boolean): Boolean;
     }
+
+## DenseBitVector
 
 *DenseBitVector* is a bit vector where the probability of any bit with index in \[0, capacity\]
 is high.  This does not assume that the probability of a bit being set
@@ -91,6 +95,8 @@ depends on the probability of an adjacent bit being set.
 
     export let Int = Int32;
 
+## Int32
+
 *Int32* is the default, general-use signed integer value type in Temper.
 Because it is so frequently used, the alias *Int* is encouraged in source
 code.
@@ -141,6 +147,8 @@ code.
       @operator("==")
       public eq(other: Int32): Boolean;
     }
+
+## Int64
 
 *Int64* is a double wide, signed integer type.
 
@@ -201,6 +209,8 @@ Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
       @operator("==")
       public eq(other: Int64): Boolean;
     }
+
+## Float64
 
 *Float64* is an [IEEE-754 64-bit (aka double-precision) floating point
 number][FP64].

@@ -21,6 +21,8 @@ Ignore any value.
 
     // Values.
 
+## Values
+
 `true` is the true value of type [snippet/type/Boolean].
 
     @connected
@@ -56,12 +58,16 @@ unspecified, optional input.
 
     // Types.
 
+## Void
+
 *Void* is the return type for functions that are called for their
 effect, not to produce a value. Its sole value is `void`.
 
     export class Void {
       private constructor();
     }
+
+## Type
 
 Type values represent a Temper type, allowing them to be inputs to macros.
 
@@ -70,6 +76,8 @@ Type values represent a Temper type, allowing them to be inputs to macros.
     }
 
     // Functions.
+
+## Functions
 
 `panic` immediately panics, which is unrecoverable inside Temper.
 It might be recoverable in backend code.
@@ -106,6 +114,8 @@ later, from the run queue.
     export let async;
 
     // Macros.
+
+## Macros
 
 `let` defines names for variables and functions.
 

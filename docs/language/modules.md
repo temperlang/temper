@@ -55,10 +55,16 @@ require blocks to begin and end at statement boundaries.
 
 ### Documenting declarations in prose
 
-Prose can document the declaration after it. A paragraph whose first
-word is the declared name, ignoring case and any `` ` `` or `*` around
-it, starts the declaration's documentation, which runs through the
-paragraphs after it, up to the declaration:
+In a `.temper.md` file, prose can document the declaration that
+follows it. The doc starts at the first top-level paragraph whose first
+word is the declared name (case doesn't matter, and `` ` `` or `*`
+around it is ignored, as in "`` `area` `` is …" or "**Square** holds …").
+It runs to the declaration and includes the Markdown in between as
+written: paragraphs, lists, block quotes, example code blocks (such as
+```` ```temper inert ````), and link reference definitions. HTML blocks
+are left out. A heading or thematic break ends the doc, so prose before
+one documents nothing after it, and a declaration's doc must start after
+the last one:
 
 ````tempermd
 Some introduction, which documents nothing.
@@ -78,9 +84,11 @@ export class Square(public side: Int) {}
 ```
 ````
 
-A doc comment, `/** … */`, right before the declaration wins over
-prose. Editors show the documentation on hover, as does the REPL's
-`help`. Its first paragraph is its brief summary; it stays Markdown.
+A doc comment, `/** … */`, right before the declaration still wins
+over prose. Editors show the documentation on hover, as does the REPL's
+`help`. Its first paragraph is its summary; it stays Markdown. Define
+links within the doc (or write them inline), since definitions elsewhere
+in the file don't come along.
 
 ## Parts of a Temper source file
 

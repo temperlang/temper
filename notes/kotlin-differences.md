@@ -1168,20 +1168,29 @@ Other differences we won't copy:
 - **Doc strings from prose** (2026-11-20): as Kotlin's
   `pickCommentToAttach`, a `/** … */` before a declaration documents
   it; otherwise, in a `.temper.md` file, the first paragraph whose first
-  word is its name (ignoring case and `` ` `` or `*`), with the
-  paragraphs after it. Kotlin keeps the result as `@docString(brief,
-  long, location)` metadata on the tree; tempest keeps each statement's
-  run of doc comments and paragraphs on the library and picks on
-  request (`Library::doc_string`, temper-frontend/src/docs.rs), with a
-  span for the location. Brief and long match Kotlin's: the first
-  paragraph, and all of it, both still Markdown (Kotlin's
-  `docStringSymbol` doc says markup is removed; its code doesn't remove
-  it either). Editors and the REPL's `help` show prose docs where
-  there's no `/** */`, whose own rules hover keeps unchanged. Not yet:
-  backends' doc comments (Kotlin's Python doc strings and Javadoc).
-  Test: temper-frontend/tests/settle.rs,
-  `doc_strings_from_comments_and_prose`; temper-analysis/tests/analysis.rs,
-  `hover_on_prose_docs` and `signature_help_shows_prose_docs`;
+  word is its name (ignoring case and `` ` `` or `*`), with what follows
+  it up to the declaration. Kotlin keeps the result as
+  `@docString(brief, long, location)` metadata on the tree; tempest
+  keeps each statement's run of doc comments and paragraphs on the
+  library and picks on request (`Library::doc_string`,
+  temper-frontend/src/docs.rs), with a span for the location. Both stay
+  Markdown (Kotlin's `docStringSymbol` doc says markup is removed; its
+  code doesn't remove it either). Where prose has only paragraphs, brief
+  and long match Kotlin's. Otherwise they differ (t890): the naming
+  paragraph must be top-level, and the doc is the Markdown from it to
+  the declaration as written, so lists keep their markers (Kotlin took
+  each item's paragraph alone), and block quotes, example fences, and
+  link reference definitions come along (Kotlin dropped them). HTML
+  blocks are left out, and a heading or thematic break ends a doc
+  (Kotlin went past them). The brief is the naming paragraph. Editors
+  and the REPL's `help` show prose docs where there's no `/** */`,
+  whose own rules hover keeps unchanged. Not yet: backends' doc comments
+  (Kotlin's Python doc strings and Javadoc). Test:
+  temper-frontend/src/docs.rs's unit tests;
+  temper-frontend/tests/settle.rs, `doc_strings_from_comments_and_prose`
+  and `rich_prose_docs_by_place_and_settled`;
+  temper-analysis/tests/analysis.rs, `hover_on_prose_docs`,
+  `signature_help_shows_prose_docs`, and `hover_core_prose_blocks`;
   temper-lsp/tests/lsp.rs, `hover_shows_prose_docs`.
 - **Reachability** (2026-11-17): tmpl's `reach` pass marks what the
   library needs, what only tests do, and what nothing does, as Kotlin's

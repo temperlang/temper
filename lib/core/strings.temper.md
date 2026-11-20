@@ -3,6 +3,8 @@
 Text: `String`, positions within strings, as `StringIndex`, and
 `StringBuilder` for composing strings.
 
+## String
+
 *String* is a chunk of textual content.
 
 ⎀ syntax/StringExpr -heading
@@ -301,6 +303,8 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
       public eq(other: String): Boolean;
     }
 
+## StringIndexOption
+
 *StringIndexOption* is a [string index][snippet/type/StringIndex], or a similar value
 that idiomatically represents [no string index][snippet/type/StringIndex/static/none].
 
@@ -330,6 +334,8 @@ that typically translates to an idiomatic integer.
       public eq(other: StringIndexOption): Boolean;
     }
 
+## NoStringIndex
+
 *NoStringIndex* represents the failure to find a string index.
 
 As noted in [snippet/type/StringIndexOption], this is an integer-like type
@@ -341,6 +347,8 @@ that represents the failure to find a valid string index.
       private constructor() {}
     }
 
+## StringIndex
+
 *StringIndex* represents a position within a string, at a character or at its end.
 
 String indices translate to integral types (usually `int` or `size_t`) but the exact integer
@@ -351,11 +359,14 @@ differs from language to language.
 
 For example a string like "κόσμε𐆊" can be represented in multiple ways.
 
-<table border=1><tr><th>↓Encoding/<div style="float:right">Glyph→</div></th><th colspan="2">κ<th colspan="2">ό</th><th colspan="3">σ</th><th colspan="2">μ</th><th colspan="2">ε</th><th colspan="4">𐆊</th></tr>
-<tr><th>UTF-8</td><td>ce</td><td>ba</td><td>e1</td><td>bd</td><td>b9</td><td>cf</td><td>83</td><td>ce</td><td>bc</td><td>ce</td><td>b5</td><td>f0</td><td>90</td><td>86</td><td>8a</td></tr>
-<tr><th>UTF-16</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="2">d800</td><td colspan="2">dd8a</td></tr>
-<tr><th>UTF-32</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="4">1018a</td></tr>
-</table>
+| Glyph | UTF-8       | UTF-16    | UTF-32 |
+|-------|-------------|-----------|--------|
+| κ     | ce ba       | 3ba       | 3ba    |
+| ό     | e1 bd b9    | 1f79      | 1f79   |
+| σ     | cf 83       | 3c3       | 3c3    |
+| μ     | ce bc       | 3bc       | 3bc    |
+| ε     | ce b5       | 3b5       | 3b5    |
+| 𐆊     | f0 90 86 8a | d800 dd8a | 1018a  |
 
 Go, and Rust and many C and C++ codebases use UTF-8 which can have between one to four bytes
 for a code-point.  The start of the n-th code-point could be anywhere between the n-th byte
@@ -382,6 +393,8 @@ of the native character size.
       private offset: Int;
       private constructor(offset: Int) { this.offset = offset; }
     }
+
+## StringBuilder
 
 *StringBuilder* allows composing a string by appending substrings at the
 end.

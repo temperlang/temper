@@ -3,11 +3,15 @@
 Generators, which compute results step by step, and promises, placeholders
 for values that may not be known yet, as `async` and `await` use them.
 
+## GeneratorResult
+
 *GeneratorResult* is one of a sequence of results from a [snippet/type/Generator].
 
     @partialImu
     @connected
     export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
+
+## Generator
 
 *Generator* is a multi-step computation that may be scheduled for a step by calling the
 [snippet/type/Generator/method/next] method.
@@ -66,6 +70,8 @@ narrowly with a kind of parallelism.
       public close(): Void;
     }
 
+## SafeGenerator
+
 *SafeGenerator* is a variant of [snippet/type/Generator] that does not bubble
 when computing the next result.
 
@@ -92,6 +98,8 @@ when computing the next result.
       public nextSafe(): GeneratorResult<YIELD>;
     }
 
+## ValueResult
+
 *ValueResult* is a result produced from [snippet/type/Generator/method/next] when there is a value to produce and
 [snippet/type/Generator/property/done] is [snippet/builtin/false].
 
@@ -104,6 +112,8 @@ when computing the next result.
         this.value = value;
       }
     }
+
+## DoneResult
 
 *DoneResult* is a result produced from [snippet/type/Generator/method/next] when there is no value to produce and
 [snippet/type/Generator/property/done] is [snippet/builtin/true].
@@ -118,6 +128,8 @@ when computing the next result.
 
     @connected
     export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
+
+## GeneratorFnWrapper
 
 *GeneratorFnWrapper* wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
 
@@ -151,6 +163,8 @@ when computing the next result.
       }
     }
 
+## SafeGeneratorFnWrapper
+
 *SafeGeneratorFnWrapper* is like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
 
     class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
@@ -183,6 +197,8 @@ when computing the next result.
       }
     }
 
+## Promise
+
 *Promise* is a placeholder for a value that may not be known yet.
 
 This class provides no methods that introspect over whether that
@@ -193,6 +209,8 @@ Use [builtin/await] to get at the value asynchronously.
     export class Promise<@out R extends AnyValue> {
       private constructor();
     }
+
+## PromiseBuilder
 
 *PromiseBuilder* contains a promise that may be shared, but the
 builder itself may be withheld.
