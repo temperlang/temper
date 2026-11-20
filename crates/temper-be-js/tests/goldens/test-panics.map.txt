@@ -1,0 +1,30 @@
+# generated line:column -> source:line:column, and the text at each
+5:1 -> ../../test-panics.temper.md:9:5  /** <- let at(ls: List<Int>, i: Int
+10:1 -> ../../test-panics.temper.md:9:5  function at(ls, i) { <- let at(ls: List<Int>, i: Int
+10:10 -> ../../test-panics.temper.md:9:9 (at)  at(ls, i) { <- at(ls: List<Int>, i: Int): I
+10:12 -> ../../test-panics.temper.md:9:5  (ls, i) { <- let at(ls: List<Int>, i: Int
+11:3 -> ../../test-panics.temper.md:10:7  if (i === 99) { <- if (i == 99) { bubble() }
+12:5 -> ../../test-panics.temper.md:10:22  bubble(); <- bubble() }
+14:3 -> ../../test-panics.temper.md:11:7  return listedGet(/** @type { <- ls[i]
+17:1 -> ../../test-panics.temper.md:14:5  it("passes before", function <- test("passes before") {
+20:5 -> ../../test-panics.temper.md:15:7  { <- assert(1 + 1 == 2);
+21:7 -> ../../test-panics.temper.md:15:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
+22:7 -> ../../test-panics.temper.md:15:7  const expected = 2; <- assert(1 + 1 == 2);
+23:7 -> ../../test-panics.temper.md:15:7  test.assert(actual === expec <- assert(1 + 1 == 2);
+30:1 -> ../../test-panics.temper.md:18:5  it("panics reading past the <- test("panics reading past th
+33:5 -> ../../test-panics.temper.md:19:7  /** @type {number} */ <- let n = at([1, 2], 5) orelse
+34:5 -> ../../test-panics.temper.md:19:7  let n; <- let n = at([1, 2], 5) orelse
+35:5 -> ../../test-panics.temper.md:19:7  try { <- let n = at([1, 2], 5) orelse
+41:5 -> ../../test-panics.temper.md:20:7  { <- assert(n == -1);
+42:7 -> ../../test-panics.temper.md:20:7  const actual = n; <- assert(n == -1);
+43:7 -> ../../test-panics.temper.md:20:7  const expected = -1; <- assert(n == -1);
+44:7 -> ../../test-panics.temper.md:20:7  test.assert(actual === expec <- assert(n == -1);
+51:1 -> ../../test-panics.temper.md:23:5  it("panics outright", functi <- test("panics outright") {
+54:5 -> ../../test-panics.temper.md:24:7  panic(); <- panic();
+60:1 -> ../../test-panics.temper.md:27:5  it("fails an assertion", fun <- test("fails an assertion") {
+63:5 -> ../../test-panics.temper.md:28:7  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "wrong
+69:1 -> ../../test-panics.temper.md:31:5  it("passes after", function <- test("passes after") {
+72:5 -> ../../test-panics.temper.md:32:7  { <- assert(at([1, 2], 1) == 2);
+73:7 -> ../../test-panics.temper.md:32:7  const actual = at(Object.fre <- assert(at([1, 2], 1) == 2);
+74:7 -> ../../test-panics.temper.md:32:7  const expected = 2; <- assert(at([1, 2], 1) == 2);
+75:7 -> ../../test-panics.temper.md:32:7  test.assert(actual === expec <- assert(at([1, 2], 1) == 2);

@@ -331,7 +331,8 @@ they are.
 Generated JavaScript tests run with Node's built-in test runner,
 [`node:test`](https://nodejs.org/api/test.html), not Mocha. Each
 module's tests file, now `test/<module>.test.js`, imports `it` from
-`node:test`, and `package.json` runs `node --test "test/**/*.test.js"`,
+`node:test`, and `package.json` runs
+`node --enable-source-maps --test "test/**/*.test.js"`,
 with no dev dependencies on `mocha` or `mocha-junit-reporter`, so
 `npm test` needs Node 21 or later and no npm packages.
 `temper test -b js` runs them the same way and no longer needs Mocha or
@@ -343,6 +344,17 @@ loads is reported as one failure saying why. The tests use only
 the package's directory. Node 22 is the oldest Node supported for
 tests, and `temper test -b js` needs 22.8 or later on the 22 line, as
 it says on an older Node.
+
+## JavaScript stack traces point at Temper source
+
+`temper test -b js`, `temper run -b js`, and the generated
+`package.json`'s `npm test` run Node with `--enable-source-maps`, and
+tests files now have source maps too, so a stack trace, in a failed
+test's JUnit results or an uncaught error from `temper run`, names the
+`.temper` or `.temper.md` file and line, such as
+`at boom (/work/a.temper.md:4:20)`, not the generated `.js` line. Deno
+reads the maps without the flag; Bun accepts the flag but doesn't read
+them.
 
 A module-level declaration named `it` takes a trailing `_` in
 JavaScript (`it_`), so it doesn't clash with the import; parameters and

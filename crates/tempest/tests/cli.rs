@@ -1442,6 +1442,72 @@ fn run_a_library() {
     });
 }
 
+/// On JavaScript, stack traces point at Temper source, through the
+/// generated source maps and Node's `--enable-source-maps`: a test that
+/// panics in a library function, or whose assertion fails, has a stack
+/// trace in its JUnit results naming the `.temper.md` file and the line
+/// of the panic, the call, and the assertion; and `run`'s uncaught
+/// bubble or panic names the `.temper` lines where it was raised and
+/// called from. Skipped without Node, unless `TEMPER_REQUIRE_CHECKERS`
+/// is set.
+#[test]
+#[cfg(feature = "js")]
+fn js_stack_traces_point_at_temper() {
+    let files = [
+        (
+            "a.temper.md",
+            "# A\n\n    export let boom(n: Int): Int {\n      if (n > 1) { panic() }\n      n\n    }\n\n\
+             \x20   test(\"panics\") {\n      assert(boom(5) == 5)\n    }\n\n\
+             \x20   test(\"fails\") {\n      let x = 2;\n      assert(x == 3)\n    }\n",
+        ),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
+             console.log(\"b\");\nf(5);\n",
+        ),
+        ("c/config.temper.md", "    export let name = \"c\";\n"),
+        (
+            "c/c.temper",
+            "let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
+             console.log(\"c\");\ng(5);\n",
+        ),
+    ];
+    with_library("js-traces", &files, |dir| {
+        // A frame at a source's line: Node names the source by its path,
+        // with `\` on Windows.
+        let at = |text: &str, file: &str, line: u32| {
+            let text = text.replace('\\', "/");
+            text.lines().any(|l| {
+                l.trim_start().starts_with("at ") && l.contains(&format!("/{file}:{line}:"))
+            })
+        };
+        let (code, out, err) = tempest(&["test", "-w", dir, "--library", "a", "-b", "js"]);
+        if tools_missing("js", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.ends_with("Tests passed: 0 of 2\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        let results = Path::new(dir).join("temper.out/js/a/test-results.xml");
+        let xml = fs::read_to_string(results).unwrap();
+        let (panics, fails) = xml.split_once("<testcase name=\"fails\"").unwrap();
+        // `panic()` in `boom`, then `boom(5)` in the test.
+        assert!(at(panics, "a.temper.md", 4), "{xml}");
+        assert!(at(panics, "a.temper.md", 9), "{xml}");
+        // `assert(x == 3)`.
+        assert!(at(fails, "a.temper.md", 14), "{xml}");
+        for (library, raised) in [("b", "Bubble"), ("c", "Error: panic")] {
+            let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "js"]);
+            assert_eq!((code, out.trim_end()), (1, library), "{err}");
+            assert!(err.contains(raised), "{library}: {err}");
+            let file = format!("{library}.temper");
+            // Raised in the function's `if`, called from the top level.
+            assert!(at(&err, &file, 2), "{library}: {err}");
+            assert!(at(&err, &file, 6), "{library}: {err}");
+        }
+    });
+}
+
 /// `test`'s flags: `-w`, `--library`, several `-b` (each backend's
 /// summary, then the total, as Kotlin's), and `--ignorefile` and
 /// `.temperignore` beside `.gitignore`.

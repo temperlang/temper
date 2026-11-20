@@ -192,11 +192,11 @@ which needs no package and gives each test as long as it takes, as the
 other backends' runners do. Each module's tests are a file named for
 it, such as `test/hello_world.test.js`, and a
 [`package.json`][package.json] makes `npm test` run them
-(`node --test "test/**/*.test.js"`, which needs Node 21 or later to
-expand the glob). The tests import only `it` from `node:test`, with no
-`describe`, hooks, mocks, or timers, so Bun and Deno run them too, as
-they run the libraries themselves, and find them by their `.test.js`
-names. In the package's directory:
+(`node --enable-source-maps --test "test/**/*.test.js"`, which needs
+Node 21 or later to expand the glob). The tests import only `it` from
+`node:test`, with no `describe`, hooks, mocks, or timers, so Bun and
+Deno run them too, as they run the libraries themselves, and find them
+by their `.test.js` names. In the package's directory:
 
 | Runtime | Command |
 | --- | --- |
@@ -210,6 +210,15 @@ file in one process, with `--test-isolation=none`, which Node 22 spells
 `--experimental-test-isolation=none` and has from 22.8, so on the 22
 line it needs 22.8 or later, and says so on older Nodes.
 
+Tests files have source maps too, and `temper test -b js`,
+`temper run -b js`, and `npm test` run Node with
+[`--enable-source-maps`][node-source-maps], so a failed test's stack
+trace (in `test-results.xml`) or an uncaught error's names Temper
+files and lines. Deno reads the maps by itself; Bun doesn't read them.
+The maps name the sources by relative paths from `temper.out`, without
+their text, so they resolve only where the sources are, not in a
+published package.
+
 > **Note:** Temper's older docs say the JavaScript backend targets
 > ES2018, and its getting started guide says Node 14 or later, while a
 > 0.x release note requires Node 18. Which Node and JavaScript versions
@@ -220,6 +229,7 @@ line it needs 22.8 or later, and says so on older Nodes.
 [temperlang-core-code]: https://www.npmjs.com/package/@temperlang/core?activeTab=code
 [source map]: https://web.dev/source-maps/
 [node-test]: https://nodejs.org/api/test.html
+[node-source-maps]: https://nodejs.org/api/cli.html#--enable-source-maps
 [package.json]: https://docs.npmjs.com/cli/v9/configuring-npm/package-json
 
 ## Lua (`lua`)

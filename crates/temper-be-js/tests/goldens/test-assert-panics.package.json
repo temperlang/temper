@@ -6,7 +6,7 @@
         ".": "./index.js"
     },
     "scripts": {
-        "test": "node --test \"test/**/*.test.js\""
+        "test": "node --enable-source-maps --test \"test/**/*.test.js\""
     },
     "dependencies": {
         "@temperlang/core": "0.0.0-alpha.0.0"

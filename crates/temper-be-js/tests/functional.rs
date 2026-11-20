@@ -44,7 +44,7 @@
 //!   another (`imports-library`) finds it in `node_modules`, as it
 //!   finds std's package, `@temperlang/std`. `node --check` parses tests
 //!   files, and a test that runs as tests (`testing/asserts`) runs with
-//!   Node's test runner (`node --test`, as `temper test -b js` runs it,
+//!   Node's test runner (`node --enable-source-maps --test`, as `temper test -b js` runs it,
 //!   with its JUnit reporter, where Kotlin's runs Mocha), its failures
 //!   compared with its `expectedFailures`.
 //!   Skipped, with a message,
@@ -559,10 +559,10 @@ fn relative(from: &Path, to: &Path) -> String {
     out
 }
 
-/// Has Node load a generated module with `--enable-source-maps`, then
-/// look up each of its map's mappings, and a column after each, with its
-/// own source map support; and says where Node reads them differently,
-/// or finds a source that isn't there.
+/// Has Node load a generated module or tests file with
+/// `--enable-source-maps`, then look up each of its map's mappings, and
+/// a column after each, with its own source map support; and says where
+/// Node reads them differently, or finds a source that isn't there.
 fn node_reads_map(node: &str, case: &Case, module: &Path, map: &Map) -> Vec<String> {
     const LOOKUP: &str = r#"
 import { findSourceMap } from "node:module";
@@ -601,7 +601,10 @@ for (const query of queries) {
         .filter_map(|l| l.strip_prefix("@@\t"))
         .map(|l| l.split('\t').collect())
         .collect();
-    if !run.status.success() || answers.len() != queries.len() {
+    // A tests file's tests run as it loads, and some are meant to fail
+    // (`run_tests` checks them), failing the process.
+    let tests = module.to_string_lossy().ends_with(".test.js");
+    if (!run.status.success() && !tests) || answers.len() != queries.len() {
         return vec![format!(
             "{}: Node's source map lookup failed:\n{stdout}{}",
             case.key,
@@ -795,7 +798,8 @@ fn host_interop(node: &str, root: &Path, logged: &[String], failures: &mut Vec<S
 fn run_tests(failures: &mut Vec<String>, case: &Case, package: &Path, node: &str, isolation: &str) {
     let results = package.join("test-results.xml");
     let run = Command::new(node)
-        .args(["--test", isolation, "--test-reporter=junit"])
+        .args(["--enable-source-maps", "--test", isolation])
+        .arg("--test-reporter=junit")
         .arg(format!("--test-reporter-destination={}", results.display()))
         .arg("test/**/*.test.js")
         .current_dir(package)
@@ -870,7 +874,9 @@ fn runs() {
                 let module = root.join(map.path.strip_suffix(".map").unwrap());
                 failures.extend(node_reads_map(&node, &case, &module, &read_map(&map.text)));
             }
-            for test in files.iter().filter(|f| f.path.contains("/test/")) {
+            for test in
+                (files.iter()).filter(|f| f.path.contains("/test/") && f.path.ends_with(".js"))
+            {
                 let check = Command::new(&node)
                     .arg("--check")
                     .arg(root.join(&test.path))

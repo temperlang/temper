@@ -168,9 +168,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     generate(p, variant, None)
 }
 
-/// [`translate`], with a source map for each `.internal.js` module, when
-/// the program has spans: `hello_world.internal.js.map` after it, and a
-/// `//# sourceMappingURL=` comment ending the module. The map names each
+/// [`translate`], with a source map for each `.internal.js` module and
+/// tests file, when the program has spans: `hello_world.internal.js.map`
+/// after it (`test/hello_world.test.js.map` after its tests), and a
+/// `//# sourceMappingURL=` comment ending the file. The map names each
 /// source by its path after `sources_prefix`, which leads from the
 /// package's directory to the library's root (`../../src/`, say), and
 /// leaves out the sources' text. It maps each statement and function, and
@@ -241,15 +242,15 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         let mapped = tree::module_mapped(&tree);
         // Sources are in the module's directory under the library's root.
         let prefix = maps.map(|prefix| {
-            let mut full = "../".repeat(depth);
-            full.push_str(prefix);
+            let mut full = up(depth, prefix);
             if !module.path.is_empty() {
                 full.push_str(&module.path);
                 full.push('/');
             }
             full
         });
-        let map = prefix.and_then(|prefix| source_map(p, &internal_leaf, &prefix, &mapped));
+        let map =
+            (prefix.as_ref()).and_then(|prefix| source_map(p, &internal_leaf, prefix, &mapped));
         let mut text = mapped.text;
         if map.is_some() {
             text.push_str(&format!("//# sourceMappingURL={internal_leaf}.map\n"));
@@ -270,10 +271,26 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         }
         if let Some(tests) = translator.tests(module)? {
             tested = true;
+            let path = format!("{package}/test/{file}.test.js");
+            let mapped = tree::module_mapped(&tests);
+            // A directory further from the sources, under `test/`.
+            let leaf = format!("{leaf}.test.js");
+            let map =
+                (prefix.as_ref()).and_then(|prefix| source_map(p, &leaf, &up(1, prefix), &mapped));
+            let mut text = mapped.text;
+            if map.is_some() {
+                text.push_str(&format!("//# sourceMappingURL={leaf}.map\n"));
+            }
             files.push(OutFile {
-                path: format!("{package}/test/{file}.test.js"),
-                text: tree::module(&tests),
+                path: path.clone(),
+                text,
             });
+            if let Some(map) = map {
+                files.push(OutFile {
+                    path: format!("{path}.map"),
+                    text: map.to_json(),
+                });
+            }
         }
         entries.push(format!("        \"./{file}\": \"./{file}.js\","));
         if module.path.is_empty() {
@@ -302,10 +319,12 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     // sets no time limit; Kotlin's runs Mocha. A glob, which Node 21 and
     // later expand, since a directory isn't one: tests files only, the
     // `.test.js` files Bun and Deno find too, not host code under `test/`.
+    // With source maps on, so failures point at Temper lines; Bun and
+    // Deno running the script as `node` take the flag too.
     let tests = if tested {
         r#"
     "scripts": {
-        "test": "node --test \"test/**/*.test.js\""
+        "test": "node --enable-source-maps --test \"test/**/*.test.js\""
     },"#
     } else {
         ""
@@ -377,6 +396,16 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     Ok(files)
 }
 
+/// A source map's `sources` prefix, `prefix`, from a file `depth`
+/// directories further down: `../` that many times before a relative
+/// one, and a `file:` URL, for sources on another drive, as it is.
+fn up(depth: usize, prefix: &str) -> String {
+    match prefix.starts_with("file:") {
+        true => prefix.to_string(),
+        false => "../".repeat(depth) + prefix,
+    }
+}
+
 /// A module's public file, re-exporting its exports from its
 /// `.internal.js`, beside it.
 fn public_module(exports: &[String], leaf: &str) -> String {
@@ -426,4 +455,17 @@ fn package_metadata(p: &Program) -> String {
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::up;
+
+    #[test]
+    fn prefixes_from_further_down() {
+        assert_eq!(up(0, "../../src/"), "../../src/");
+        assert_eq!(up(2, "../../src/"), "../../../../src/");
+        // Sources on another drive, as a URL, are where they are.
+        assert_eq!(up(2, "file:///D:/w/src/"), "file:///D:/w/src/");
+    }
 }

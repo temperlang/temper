@@ -9,6 +9,11 @@
 //! library's package under Node (`node`, or `NODE`), as Kotlin's
 //! `index.js` does.
 //!
+//! Both run with `--enable-source-maps`, so a stack trace, in a test's
+//! failure or an uncaught error, points at the Temper line through each
+//! module's and tests file's source map (Node 12.12 and later have the
+//! flag).
+//!
 //! Tests need Node 22.8 or later: one process is
 //! `--experimental-test-isolation=none` on 22.8 through 23.5 and
 //! `--test-isolation=none` from 23.6, the name it has had since (Node 24
@@ -32,7 +37,7 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     let name = crate::translate::js_name(&library.name, &library.metadata);
     program(
         Command::new(tool("NODE", "node"))
-            .args(["--input-type=module", "-e"])
+            .args(["--enable-source-maps", "--input-type=module", "-e"])
             .arg(format!("await import(\"{name}\");"))
             .current_dir(dir),
         "node",
@@ -86,7 +91,8 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
     // failed, and module state is shared as it was under Mocha.
     let run = output(
         Command::new(tool("NODE", "node"))
-            .args(["--test", isolation, "--test-reporter=junit"])
+            .args(["--enable-source-maps", "--test", isolation])
+            .arg("--test-reporter=junit")
             .arg(format!("--test-reporter-destination={}", results.display()))
             .arg("test/**/*.test.js")
             .current_dir(&here),

@@ -124,7 +124,8 @@ As built with the Python backend (2026-10-30):
   that fails as it loads is a failure saying why (with a process per
   file, Node's JUnit report says only "test failed"). Tests files
   import `it` from `node:test` (a module-level name `it` takes a `_`);
-  `package.json` runs `node --test "test/**/*.test.js"`; the `.test.js`
+  `package.json` runs `node --enable-source-maps --test
+  "test/**/*.test.js"`; the `.test.js`
   names are what `bun test` and `deno test` find by default. Node 22.8
   named the flag `--experimental-test-isolation`, and 23.6 `--test-isolation`
   (Node 24 takes both), so `tools.rs` picks one from `node --version`,
@@ -146,7 +147,13 @@ As built with the Python backend (2026-10-30):
   file that exists; and an error thrown in a generated function must
   have a stack trace pointing at its Temper line and column. CI runs
   these with the run test, on its Node 24, so a missing Node fails
-  there.
+  there. Tests files have maps too (2026-11-20), checked the same way
+  (loading one runs its tests, so its exit status is ignored there);
+  `temper test -b js` and `temper run -b js` pass
+  `--enable-source-maps`, and the CLI test
+  `js_stack_traces_point_at_temper` checks that a test's panic and
+  failed assertion (in the JUnit results) and `run`'s uncaught bubble
+  and panic name the `.temper(.md)` lines.
 - **Java** (2026-10-30): the compiler is the checker. Without Maven,
   `javac` (or `JAVAC`) compiles the runtime, `temper-core`
   (`crates/temper-be-java/runtime/temper-core`) once, for Java 8 as its
