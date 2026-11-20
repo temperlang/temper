@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace work {
 
@@ -38,6 +38,10 @@ int32_t twice(int32_t i);
 // init.cpp
 #include <work/init.hpp>
 
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/core.hpp>
 #include "_connected.hpp"
 
 namespace work {

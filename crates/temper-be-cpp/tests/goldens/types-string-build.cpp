@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace build {
 
@@ -22,6 +22,11 @@ struct StringBuilderOwner : public std::enable_shared_from_this<StringBuilderOwn
 
 // init.cpp
 #include <build/init.hpp>
+
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/string_builder.hpp>
 
 namespace build {
 

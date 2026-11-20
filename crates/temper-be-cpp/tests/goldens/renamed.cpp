@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace renamed {
 
@@ -49,6 +49,8 @@ int32_t lambda(int32_t n);
 
 // init.cpp
 #include <renamed/init.hpp>
+
+#include <temper-core/int.hpp>
 
 namespace renamed {
 

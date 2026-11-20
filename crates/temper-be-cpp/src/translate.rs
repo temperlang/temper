@@ -187,7 +187,7 @@ pub struct Translated {
     /// Whether it takes a function or class from host code, and so its
     /// `.cpp` includes the module's `_connected.hpp`.
     pub host: bool,
-    /// The runtime's headers beyond `core.hpp` that its `.cpp` includes,
+    /// The runtime's headers outside `core.hpp` that its `.cpp` includes,
     /// as `<temper-core/net.hpp>` ([`crate::connected::BODILESS`]).
     pub runtime_includes: Vec<String>,
 }
@@ -258,7 +258,7 @@ pub struct Translator<'a> {
     in_function: bool,
     /// Whether the module's lock is held where translating.
     locked: bool,
-    /// The runtime's headers the module's `.cpp` needs beyond `core.hpp`.
+    /// The runtime's headers outside `core.hpp` that the module's `.cpp` needs.
     runtime_includes: Vec<String>,
     /// The enclosing loops, innermost last.
     loops: Vec<DeclId>,

@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/list_builder.hpp>
 
 namespace locals {
 
@@ -58,6 +60,8 @@ void Hub<T>::actionPerformed(T item) const {
 
 // init.cpp
 #include <locals/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace locals {
 

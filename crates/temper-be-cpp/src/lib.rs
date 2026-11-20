@@ -9,11 +9,12 @@
 //! name, [`names::namespace`]), names, init function
 //! (`global_init_init()`, which entry points call first, so a program
 //! needn't), storage (`temper_globals` and `temper_statics`), and
-//! accessors (`x()`, `Type::x()`),
-//! the `temper-core` runtime, included as `<temper-core/core.hpp>` from
-//! the directory above the library's, and C++14, as Kotlin Temper's `cpp`
-//! backend, with prettier bodies: no numbered names, the source's names
-//! for parameters and locals, a `core` alias for `temper::core`, natural
+//! accessors (`x()`, `Type::x()`), the `temper-core` runtime, included
+//! from the directory above the library's (its `base.hpp` and what else
+//! a file uses, where Kotlin's includes all of it, [`header`]), and
+//! C++14, as Kotlin Temper's `cpp` backend, with prettier bodies: no
+//! numbered names, the source's names for parameters and locals, a
+//! `core` alias for `temper::core`, natural
 //! control flow without Kotlin's extra blocks and labels, and blank lines
 //! between functions. Kotlin writes no build files, building a library
 //! with `g++ -std=c++14 -I..` on its `.cpp` files and its dependencies';
@@ -253,26 +254,35 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         translator.mutating = mutating.clone();
         translator.limits = variant.limits;
         let mut translated = translator.module(module)?;
+        translated.source.namespace = namespace.clone();
+        translated.source.init = init.clone();
+        let header_text = header(&namespace, &translated, &init);
+        // The rest of the runtime that the module's code uses, which its
+        // header doesn't include ([`header`]).
+        let in_header = runtime::includes_for(&header_text);
+        let used = runtime::includes_for(&tree::source(&translated.source));
         translated.source.includes = vec![format!("<{library}/{stem}.hpp>")];
+        (translated.source.includes).extend(used.into_iter().filter(|i| !in_header.contains(i)));
         if translated.uses_mutex {
             translated.source.includes.push("<mutex>".into());
         }
         let runtime_includes = std::mem::take(&mut translated.runtime_includes);
         translated.source.includes.extend(runtime_includes);
         // Host code's definitions, which `_connected.hpp` beside the
-        // module's directory gives, as Kotlin includes it.
+        // module's directory gives, as Kotlin includes it, after the whole
+        // runtime, which host code written for Kotlin's headers may
+        // expect.
         if translated.host {
+            (translated.source.includes).push("<temper-core/core.hpp>".into());
             let dir = module.path.rsplit('/').next().unwrap_or_default();
             translated.source.includes.push(match dir {
                 "" => "\"_connected.hpp\"".to_string(),
                 dir => format!("\"{dir}/_connected.hpp\""),
             });
         }
-        translated.source.namespace = namespace.clone();
-        translated.source.init = init.clone();
         files.push(OutFile {
             path: format!("{library}/{stem}.hpp"),
-            text: header(&namespace, &translated, &init),
+            text: header_text,
         });
         files.push(OutFile {
             path: format!("{library}/{stem}.cpp"),
@@ -634,10 +644,16 @@ fn cmake_version(version: &str) -> Option<(String, String)> {
     numeric.then_some((numbers, full))
 }
 
-/// The header: the runtime, then the module's exports and its init
-/// function, in its namespace.
+/// The header: the runtime's `base.hpp` and what else of it the header
+/// uses ([`runtime::includes_for`]), not all of it (`core.hpp`), so a
+/// user's file that includes it parses only that; then the module's
+/// exports and its init function, in its namespace.
 fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
-    let mut out = String::from("#pragma once\n\n#include <temper-core/core.hpp>\n");
+    let body = header_body(namespace, t, init);
+    let mut out = String::from("#pragma once\n\n#include <temper-core/base.hpp>\n");
+    for include in runtime::includes_for(&body) {
+        out.push_str(&format!("#include {include}\n"));
+    }
     for include in &t.header_includes {
         out.push_str(&format!("#include {include}\n"));
     }
@@ -648,7 +664,12 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
         }
         out.push_str("#endif\n");
     }
-    out.push_str(&format!("\nnamespace {namespace} {{\n\n"));
+    out + &body
+}
+
+/// The header after its includes.
+fn header_body(namespace: &str, t: &translate::Translated, init: &str) -> String {
+    let mut out = format!("\nnamespace {namespace} {{\n\n");
     // First, since the entry points below, some defined here, call it.
     out.push_str(&format!(
         "// Runs the module's top level, once. Exported functions, constructors,\n\

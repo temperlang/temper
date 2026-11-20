@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace async_broken_early {
 
@@ -14,6 +14,10 @@ void global_init_init();
 
 // init.cpp
 #include <async-broken-early/init.hpp>
+
+#include <temper-core/console.hpp>
+#include <temper-core/generator.hpp>
+#include <temper-core/promise.hpp>
 
 namespace async_broken_early {
 

@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace module_state {
 
@@ -34,6 +34,8 @@ temper::core::Str report();
 // init.cpp
 #include <module-state/init.hpp>
 
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 #include <mutex>
 
 namespace module_state {

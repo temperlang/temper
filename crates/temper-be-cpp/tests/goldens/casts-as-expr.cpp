@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace as_expr {
 
@@ -46,6 +46,9 @@ std::shared_ptr<temper::core::AnyValueBase> const & thing3();
 
 // init.cpp
 #include <as-expr/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/console.hpp>
 
 namespace as_expr {
 

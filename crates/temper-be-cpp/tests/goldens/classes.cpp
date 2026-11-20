@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <typeindex>
 
 namespace classes {
@@ -218,6 +218,13 @@ T AnyFailing<T>::fail() const {
 
 // init.cpp
 #include <classes/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
 
 namespace classes {
 

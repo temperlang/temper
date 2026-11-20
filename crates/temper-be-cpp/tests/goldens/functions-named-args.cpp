@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace named_args {
 
@@ -48,6 +48,8 @@ struct CalcOptions : public std::enable_shared_from_this<CalcOptions> {
 // init.cpp
 #include <named-args/init.hpp>
 
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 #include <mutex>
 
 namespace named_args {

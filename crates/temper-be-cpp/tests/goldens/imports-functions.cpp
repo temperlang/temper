@@ -1,7 +1,7 @@
 // exporter.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace functions {
 
@@ -32,7 +32,7 @@ void global_init_exporter() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <functions/exporter.hpp>
 
 namespace functions {
@@ -49,6 +49,9 @@ double something(std::shared_ptr<std::vector<double>> const & vals);
 
 // init.cpp
 #include <functions/init.hpp>
+
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
 
 namespace functions {
 

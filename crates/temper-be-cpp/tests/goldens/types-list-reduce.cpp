@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace reduce {
 
@@ -14,6 +14,10 @@ void global_init_init();
 
 // init.cpp
 #include <reduce/init.hpp>
+
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 
 namespace reduce {
 

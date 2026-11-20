@@ -1,7 +1,7 @@
 // exporter.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace values {
 
@@ -22,6 +22,8 @@ int32_t const & magicNumber();
 
 // exporter.cpp
 #include <values/exporter.hpp>
+
+#include <temper-core/int.hpp>
 
 namespace values {
 
@@ -55,7 +57,7 @@ void global_init_exporter() {
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <values/exporter.hpp>
 
 namespace values {
@@ -71,6 +73,9 @@ int32_t timesMagic(int32_t n);
 
 // init.cpp
 #include <values/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 
 namespace values {
 

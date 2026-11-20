@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace types_float_basics {
 
@@ -14,6 +14,14 @@ void global_init_init();
 
 // init.cpp
 #include <types-float-basics/init.hpp>
+
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/int64.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <limits>
 
 namespace types_float_basics {
 

@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace simple_locals {
 
@@ -14,6 +14,9 @@ void global_init_init();
 
 // init.cpp
 #include <simple-locals/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 
 namespace simple_locals {
 

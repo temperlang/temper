@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace defaulting {
 
@@ -33,6 +33,10 @@ struct StringHolder : public std::enable_shared_from_this<StringHolder> {
 // init.cpp
 #include <defaulting/init.hpp>
 
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
 #include <mutex>
 
 namespace defaulting {

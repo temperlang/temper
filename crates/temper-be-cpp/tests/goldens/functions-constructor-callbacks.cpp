@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace constructor_callbacks {
 
@@ -44,6 +44,8 @@ std::shared_ptr<Hi<T>> makeHi(std::function<T(T)> const & ha) {
 
 // init.cpp
 #include <constructor-callbacks/init.hpp>
+
+#include <temper-core/int.hpp>
 
 namespace constructor_callbacks {
 

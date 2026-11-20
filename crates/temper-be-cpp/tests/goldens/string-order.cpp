@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace string_order {
 
@@ -14,6 +14,11 @@ void global_init_init();
 
 // init.cpp
 #include <string-order/init.hpp>
+
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
 
 namespace string_order {
 

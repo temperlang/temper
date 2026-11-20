@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace specific {
 
@@ -28,6 +28,9 @@ struct CharlieClass : public virtual AlphaInterface {
 
 // init.cpp
 #include <specific/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/console.hpp>
 
 namespace specific {
 

@@ -1,7 +1,7 @@
 // extra-class.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace object_literals {
 
@@ -78,7 +78,7 @@ void global_init_extra_class() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <object-literals/extra-class.hpp>
 
 namespace object_literals {
@@ -124,6 +124,10 @@ struct Moreover : public std::enable_shared_from_this<Moreover> {
 
 // init.cpp
 #include <object-literals/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
 
 namespace object_literals {
 

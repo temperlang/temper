@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace content_tags {
 
@@ -137,6 +137,12 @@ std::shared_ptr<After> propagateOver(std::shared_ptr<Propagator> const & p, bool
 
 // init.cpp
 #include <content-tags/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/string_builder.hpp>
 
 namespace content_tags {
 

@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace property_order {
 
@@ -24,6 +24,8 @@ struct C : public std::enable_shared_from_this<C> {
 
 // init.cpp
 #include <property-order/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace property_order {
 

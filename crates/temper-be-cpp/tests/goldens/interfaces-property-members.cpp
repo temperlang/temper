@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace property_members {
 
@@ -142,6 +142,11 @@ std::shared_ptr<std::vector<T>> Holder<T>::heldAnd(T other) const {
 
 // init.cpp
 #include <property-members/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 
 namespace property_members {
 

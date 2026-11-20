@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace lifetimes {
 
@@ -64,6 +64,8 @@ struct Names : public std::enable_shared_from_this<Names> {
 
 // init.cpp
 #include <lifetimes/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace lifetimes {
 

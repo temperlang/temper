@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace discarded {
 
@@ -24,6 +24,9 @@ struct Lexer : public std::enable_shared_from_this<Lexer> {
 
 // init.cpp
 #include <discarded/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 
 namespace discarded {
 

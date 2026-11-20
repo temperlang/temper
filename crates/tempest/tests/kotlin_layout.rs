@@ -73,6 +73,12 @@ const ALLOWED: &[(&str, &str, Side, &str)] = &[
         "std net's pluggable client in the runtime (patch 0019); Kotlin's C++ has no net",
     ),
     (
+        "cpp",
+        "temper-core/base.hpp",
+        Side::Tempest,
+        "what generated headers include in place of all of core.hpp, so files that include them parse less",
+    ),
+    (
         "csharp",
         "/IB3_Deep.cs",
         Side::Tempest,

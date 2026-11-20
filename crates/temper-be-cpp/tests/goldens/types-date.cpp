@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <std/temporal.hpp>
 
 namespace date {
@@ -15,6 +15,10 @@ void global_init_init();
 
 // init.cpp
 #include <date/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/date.hpp>
 
 namespace date {
 

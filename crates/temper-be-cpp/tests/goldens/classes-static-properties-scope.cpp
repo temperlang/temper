@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace static_properties_scope {
 
@@ -26,6 +26,8 @@ struct Simple : public std::enable_shared_from_this<Simple> {
 
 // init.cpp
 #include <static-properties-scope/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace static_properties_scope {
 

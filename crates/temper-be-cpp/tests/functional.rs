@@ -22,15 +22,19 @@
 //!   for the test's path (`algos-fibonacci.cpp`), and its header and
 //!   `main.cpp` as the test expects; a library of several modules, or
 //!   with tests (`modules`, `imports-library`, and `testing`), has every
-//!   file in its golden. To accept new or changed output, run with
-//!   `UPDATE_SNAPSHOTS=1` and review the diff.
+//!   file in its golden. Its files, and std's, include only the part of
+//!   the runtime they use ([`light_includes`]). To accept new or changed
+//!   output, run with `UPDATE_SNAPSHOTS=1` and review the diff.
 //! - `runs`: without CMake, `g++` (or `CXX`) compiles every generated
 //!   `.cpp` against the runtime (`crates/temper-be-cpp/runtime`), C++14
 //!   as Kotlin's, with every warning [`STRICT`] lists an error, through a
 //!   precompiled header of the runtime, built once per set of options
 //!   and kept under `CARGO_TARGET_TMPDIR` until the runtime, the options,
 //!   or `g++` change (when it's built, the runtime is checked with every
-//!   warning it tolerates, [`RUNTIME_WARNINGS`]). It links one library's
+//!   warning it tolerates, [`RUNTIME_WARNINGS`], and each of its headers
+//!   alone). That header is only `base.hpp`, as generated headers include
+//!   ([`pch_header`]), so each file is checked to include what else of
+//!   the runtime it uses ([`light_includes`]). It links one library's
 //!   `main.cpp` as Kotlin's program, and a runner of every library, which
 //!   runs a library's init by name, entry points with no init first
 //!   ([`FIRST_USE`]), which run it themselves, and `module-state` from 8
@@ -456,6 +460,36 @@ fn generate(case: &Case) -> Vec<OutFile> {
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))
 }
 
+/// A library's generated headers include the runtime's `base.hpp`, and
+/// what else they use, never the whole runtime (`core.hpp`), so a user's
+/// file that includes one parses only what it needs; a module's `.cpp`
+/// includes it only for its host code (`_connected.hpp`), which may have
+/// been written against it. `runs` compiles each header so, with only
+/// `base.hpp` before it.
+fn light_includes(key: &str, files: &[OutFile], host_files: &[(String, String)]) {
+    for file in files {
+        let rest = file.path.split_once('/').map_or("", |(_, r)| r);
+        if host_files.iter().any(|(path, _)| path == rest) {
+            continue;
+        }
+        let whole = file.text.contains("#include <temper-core/core.hpp>");
+        let host = file.text.contains("_connected.hpp\"");
+        assert!(
+            !whole || (host && file.path.ends_with(".cpp")),
+            "{key}: {} includes core.hpp",
+            file.path
+        );
+        if file.path.ends_with(".hpp") {
+            assert!(
+                file.text
+                    .starts_with("#pragma once\n\n#include <temper-core/base.hpp>\n"),
+                "{key}: {}",
+                file.path
+            );
+        }
+    }
+}
+
 fn runtime_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("runtime")
 }
@@ -464,8 +498,11 @@ fn runtime_dir() -> PathBuf {
 fn goldens() {
     kit::with_stack(|| {
         let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        let std = translate(&kit::std_program(), &CPP).unwrap_or_else(|e| panic!("std: {e}"));
+        light_includes("std", &std, &[]);
         for case in cases() {
             let files = generate(&case);
+            light_includes(&case.key, &files, &case.host_files);
             let library = &case.library;
             let namespace = names::namespace(library);
             let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
@@ -503,7 +540,7 @@ fn goldens() {
             );
             let header = &files[0].text;
             assert!(
-                header.starts_with("#pragma once\n\n#include <temper-core/core.hpp>\n")
+                header.starts_with("#pragma once\n\n#include <temper-core/base.hpp>\n")
                     && header.contains(&format!("namespace {namespace} {{\n"))
                     && header.contains("void global_init_init();\n"),
                 "{}: {header}",
@@ -723,9 +760,9 @@ fn check(what: &str, mut command: Command) -> Output {
 /// The runtime's precompiled header for a mode, built once and kept
 /// under `CARGO_TARGET_TMPDIR` until the runtime's headers, the options,
 /// or `g++` change: a directory holding `runtime.hpp`, which includes
-/// `<temper-core/core.hpp>`, and its `.gch`, for `-include runtime.hpp`.
+/// [`pch_header`], and its `.gch`, for `-include runtime.hpp`.
 /// The first build also checks the runtime itself with every warning it
-/// tolerates.
+/// tolerates, and, for [`PLAIN`], each of its headers alone.
 fn runtime_pch(gxx: &str, version: &str, mode: &Mode) -> PathBuf {
     runtime_pch_with(
         gxx,
@@ -745,6 +782,7 @@ fn runtime_pch_with(
     warnings: &[&str],
     runtime: Option<&[&str]>,
 ) -> PathBuf {
+    let header = pch_header(mode);
     let compiler = Path::new(gxx).file_name().unwrap().to_string_lossy();
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("be-cpp-runtime-{}-{compiler}", mode.name));
@@ -756,7 +794,7 @@ fn runtime_pch_with(
     let gch = root.join("runtime.hpp.gch");
     kit::cached(
         &root,
-        (version, warnings, mode.flags()),
+        (version, warnings, mode.flags(), header),
         &headers,
         &gch,
         || {
@@ -777,10 +815,13 @@ fn runtime_pch_with(
                     .args(["-fsyntax-only"])
                     .arg(&probe);
                 check("g++, the runtime with its warnings", command);
+                if mode.name == PLAIN.name {
+                    headers_alone(gxx, runtime, mode, &root, &headers);
+                }
             }
             fs::write(
                 root.join("runtime.hpp"),
-                "#include <temper-core/core.hpp>\n",
+                format!("#include <temper-core/{header}>\n"),
             )
             .unwrap();
             let mut command = Command::new(gxx);
@@ -886,6 +927,49 @@ fn compile_one(
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     ))
+}
+
+/// What a mode's precompiled header includes: for [`PLAIN`]'s and
+/// [`TESTS`]'s builds, which compile each file alone, only `base.hpp`,
+/// so each generated header and `.cpp` is checked to include whatever
+/// else of the runtime it uses ([`light_includes`]); for the rest, which
+/// build what those have checked, the whole runtime.
+fn pch_header(mode: &Mode) -> &'static str {
+    match mode.name == PLAIN.name || mode.name == TESTS.name {
+        true => "base.hpp",
+        false => "core.hpp",
+    }
+}
+
+/// Each of the runtime's headers compiles alone, so including only what
+/// a file uses ([`light_includes`]) works whatever it uses; `net.hpp`'s
+/// libcurl client only where `g++` finds libcurl ([`curl`]).
+fn headers_alone(gxx: &str, warnings: &[&str], mode: &Mode, root: &Path, headers: &[PathBuf]) {
+    let errors: Vec<String> = parallel(headers, |header| {
+        let name = header.file_name().unwrap().to_string_lossy();
+        let probe = root.join(format!("alone-{name}.cpp"));
+        fs::write(&probe, format!("#include <temper-core/{name}>\n")).unwrap();
+        let out = Command::new(gxx)
+            .args(warnings)
+            .args(mode.flags())
+            .arg("-I")
+            .arg(runtime_dir())
+            .arg("-fsyntax-only")
+            .arg(&probe)
+            .output()
+            .unwrap();
+        match out.status.success() {
+            true => None,
+            false => Some(format!(
+                "g++, {name} alone:\n{}",
+                String::from_utf8_lossy(&out.stderr)
+            )),
+        }
+    })
+    .into_iter()
+    .flatten()
+    .collect();
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
 
 /// Compiles `.cpp` files to objects beside `out`, each alone, [`jobs`]

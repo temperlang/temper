@@ -1,7 +1,7 @@
 // exporter.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace types {
 
@@ -44,7 +44,7 @@ void global_init_exporter() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <types/exporter.hpp>
 
 namespace types {
@@ -58,6 +58,8 @@ void global_init_init();
 
 // init.cpp
 #include <types/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace types {
 

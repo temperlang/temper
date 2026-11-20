@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <std/json.hpp>
 
 namespace json_adapters {
@@ -177,6 +177,10 @@ struct Celsius : public std::enable_shared_from_this<Celsius> {
 
 // init.cpp
 #include <json-adapters/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
 
 namespace json_adapters {
 

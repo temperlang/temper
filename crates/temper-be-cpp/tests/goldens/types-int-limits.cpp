@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace limits {
 
@@ -14,6 +14,11 @@ void global_init_init();
 
 // init.cpp
 #include <limits/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/int64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
 
 namespace limits {
 

@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace type_checked_locals {
 
@@ -14,6 +14,8 @@ void global_init_init();
 
 // init.cpp
 #include <type-checked-locals/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace type_checked_locals {
 

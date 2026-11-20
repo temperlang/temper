@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #ifdef TEMPER_TESTS
 #include <std/testing.hpp>
 #endif
@@ -40,6 +40,9 @@ void testParts(std::shared_ptr<temper_std::Test> const & test);
 // init.cpp
 #include <reach/init.hpp>
 
+#include <temper-core/casting.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 #include <mutex>
 
 namespace reach {

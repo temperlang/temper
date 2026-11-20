@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace is_empty {
 
@@ -14,6 +14,8 @@ void global_init_init();
 
 // init.cpp
 #include <is-empty/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace is_empty {
 

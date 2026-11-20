@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace hello_from_class_to_top {
 
@@ -22,6 +22,8 @@ struct Something : public std::enable_shared_from_this<Something> {
 
 // init.cpp
 #include <hello-from-class-to-top/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace hello_from_class_to_top {
 

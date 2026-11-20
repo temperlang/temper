@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #ifdef TEMPER_TESTS
 #include <std/testing.hpp>
 #endif
@@ -56,6 +56,9 @@ void moduleValues(std::shared_ptr<temper_std::Test> const & test);
 
 // init.cpp
 #include <asserts/init.hpp>
+
+#include <temper-core/int.hpp>
+#include <temper-core/float64.hpp>
 
 namespace asserts {
 

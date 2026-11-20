@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
+#include <temper-core/int.hpp>
 
 namespace generics {
 
@@ -130,6 +131,14 @@ T first(std::shared_ptr<std::vector<T>> const & items, T fallback) {
 
 // init.cpp
 #include <generics/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
+#include <temper-core/mapped.hpp>
+#include <temper-core/map_builder.hpp>
+#include <temper-core/map.hpp>
 
 namespace generics {
 

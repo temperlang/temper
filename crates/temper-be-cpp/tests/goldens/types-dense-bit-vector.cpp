@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace dense_bit_vector {
 
@@ -14,6 +14,10 @@ void global_init_init();
 
 // init.cpp
 #include <dense-bit-vector/init.hpp>
+
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/dense_bit_vector.hpp>
 
 namespace dense_bit_vector {
 

@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace operations {
 
@@ -14,6 +14,14 @@ void global_init_init();
 
 // init.cpp
 #include <operations/init.hpp>
+
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/list_builder.hpp>
 
 namespace operations {
 

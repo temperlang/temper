@@ -1,5 +1,11 @@
 #include <split-shape/init.hpp>
 
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/list_builder.hpp>
+#include <temper-core/mapped.hpp>
+#include <temper-core/map.hpp>
+
 namespace split_shape {
 
 namespace core = temper::core;

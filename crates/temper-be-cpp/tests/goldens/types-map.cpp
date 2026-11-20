@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace map {
 
@@ -14,6 +14,12 @@ void global_init_init();
 
 // init.cpp
 #include <map/init.hpp>
+
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/mapped.hpp>
+#include <temper-core/map_builder.hpp>
+#include <temper-core/map.hpp>
 
 namespace map {
 

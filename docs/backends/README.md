@@ -59,6 +59,22 @@ TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise.
 
+A library's header includes only the part of the runtime its API uses
+(`temper-core/base.hpp`, and what else it names); include
+`temper-core/core.hpp` for all of it. The runtime and the standard
+headers it uses are still most of what a file including a library's
+header parses, so where many files include one, a precompiled header
+pays that once per target, not once per file (about 3x faster per
+file in our measurements, with g++ 13 at `-O0`):
+
+```cmake
+target_precompile_headers(myapp PRIVATE <ordable/init.hpp>)
+# or, for every Temper library at once:
+target_precompile_headers(myapp PRIVATE <temper-core/core.hpp>)
+```
+
+Keep it `PRIVATE`: GCC takes one precompiled header per file.
+
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
 > out of this list; the C++ backend passes every functional test
 > ([inconsistencies](../inconsistencies.md#i3-c-support)).

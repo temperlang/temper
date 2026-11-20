@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace if_return {
 
@@ -14,6 +14,8 @@ void global_init_init();
 
 // init.cpp
 #include <if-return/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace if_return {
 

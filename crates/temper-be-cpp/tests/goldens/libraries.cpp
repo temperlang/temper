@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/list_builder.hpp>
 
 namespace libraries {
 
@@ -349,6 +352,11 @@ std::shared_ptr<std::vector<T>> Counting<T>::step() {
 // init.cpp
 #include <libraries/init.hpp>
 
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
 #include <mutex>
 
 namespace libraries {

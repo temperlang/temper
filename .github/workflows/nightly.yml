@@ -23,7 +23,9 @@
 # pyright, strict, at ci.yml's pins), against a ratchet: a count over
 # its allowance in .github/ci-tools/library-py-baseline.json (0 if
 # unlisted) fails the job, and one under it asks for the allowance to
-# be lowered (.github/ci-tools/check_library_py.py); per-push
+# be lowered (.github/ci-tools/check_library_py.py), and each library's
+# generated C++ headers compiled alone, including only the runtime they
+# use (.github/ci-tools/check_library_cpp.py); per-push
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
@@ -306,6 +308,12 @@ jobs:
       - name: Python type checks
         if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' py ') }}
         run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
+      # The library's generated C++ headers, as `temper test -b cpp` left
+      # them, each compiled alone, including only the runtime it uses
+      # (`base.hpp` and what else it names, not `core.hpp`).
+      - name: C++ headers alone
+        if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' cpp ') }}
+        run: uv run .github/ci-tools/check_library_cpp.py library/temper.out/cpp
       - if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' cpp ') }}
         uses: ./.github/actions/ccache
         with:

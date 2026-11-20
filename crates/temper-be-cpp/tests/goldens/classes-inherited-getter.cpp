@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace inherited_getter {
 
@@ -25,6 +25,8 @@ struct C : public virtual I {
 
 // init.cpp
 #include <inherited-getter/init.hpp>
+
+#include <temper-core/console.hpp>
 
 namespace inherited_getter {
 

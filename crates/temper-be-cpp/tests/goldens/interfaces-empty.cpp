@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace empty {
 
@@ -24,6 +24,9 @@ struct HiGreeter : public virtual Greeter {
 
 // init.cpp
 #include <empty/init.hpp>
+
+#include <temper-core/casting.hpp>
+#include <temper-core/console.hpp>
 
 namespace empty {
 

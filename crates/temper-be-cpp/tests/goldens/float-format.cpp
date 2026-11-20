@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 
 namespace float_format {
 
@@ -14,6 +14,10 @@ void global_init_init();
 
 // init.cpp
 #include <float-format/init.hpp>
+
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <limits>
 
 namespace float_format {
 

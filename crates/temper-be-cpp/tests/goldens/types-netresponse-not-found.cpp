@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/base.hpp>
 #include <std/net.hpp>
 
 namespace netresponse_not_found {
@@ -15,6 +15,10 @@ void global_init_init();
 
 // init.cpp
 #include <netresponse-not-found/init.hpp>
+
+#include <temper-core/console.hpp>
+#include <temper-core/generator.hpp>
+#include <temper-core/promise.hpp>
 
 namespace netresponse_not_found {
 
