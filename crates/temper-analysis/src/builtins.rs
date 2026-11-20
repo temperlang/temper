@@ -14,7 +14,7 @@ use temper_syntax::lex::TokenKind;
 /// A place in one of core's files.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CoreLocation {
-    /// Its file's path from core's root, as `strings.temper`, one of
+    /// Its file's path from core's root, as `strings.temper.md`, one of
     /// [`corelib::SOURCES`].
     pub path: &'static str,
     /// Its file's text.
@@ -39,7 +39,7 @@ impl Analysis<'_> {
         // The name there: the member's, or an instance extension's
         // function's, as `listedMap` for `map`, or a quoted one,
         // ``nym`true` ``.
-        let rest = &corelib::TEXT[at..];
+        let rest = &corelib::code()[at..];
         let len = match rest.strip_prefix("nym`") {
             Some(quoted) => quoted.find('`').map_or(rest.len(), |end| end + 5),
             None => (rest.find(|c: char| !c.is_alphanumeric() && c != '_')).unwrap_or(rest.len()),
@@ -165,7 +165,7 @@ pub(crate) struct Syntax {
 /// `ignore(value: AnyValue): Void`, or a value's type, as `Console`; None
 /// for a declaration with neither, as `export let if;`.
 pub(crate) fn core_signature(at: usize, name: &str) -> Option<String> {
-    let rest = &corelib::TEXT[at..];
+    let rest = &corelib::code()[at..];
     let rest = match rest.strip_prefix("nym`") {
         Some(quoted) => &quoted[quoted.find('`')? + 1..],
         None => rest.strip_prefix(name)?,
@@ -200,7 +200,7 @@ pub(crate) fn builtin_type_shown(name: &str) -> String {
     if let Some(aliased) = core_alias(at) {
         return aliased.to_string();
     }
-    let rest = &corelib::TEXT[at + name.len()..];
+    let rest = &corelib::code()[at + name.len()..];
     let Some(rest) = rest.strip_prefix('<') else {
         return name.to_string();
     };
@@ -230,10 +230,10 @@ pub(crate) fn builtin_type_shown(name: &str) -> String {
 /// What core's declaration at byte `at` of its text aliases, if it's an
 /// alias, as `export let Int = Int32;`.
 fn core_alias(at: usize) -> Option<&'static str> {
-    let text = corelib::TEXT;
+    let text = corelib::code();
     let line_start = text.get(..at)?.rfind('\n').map_or(0, |i| i + 1);
     let line = text[line_start..].lines().next()?;
-    let rest = line.strip_prefix("export let ")?;
+    let rest = line.trim_start().strip_prefix("export let ")?;
     let (_, aliased) = rest.split_once(" = ")?;
     let aliased = aliased.strip_suffix(';')?;
     aliased
@@ -246,7 +246,7 @@ fn core_alias(at: usize) -> Option<&'static str> {
 /// at byte `at` of core's text, past decorations' lines, as
 /// [`doc_text`] gives it.
 pub(crate) fn core_doc(at: usize) -> Option<String> {
-    let text = corelib::TEXT;
+    let text = corelib::code();
     let line_start = text.get(..at)?.rfind('\n').map_or(0, |i| i + 1);
     if text[line_start..at].contains(|c| ";{}()=,".contains(c)) {
         return None;

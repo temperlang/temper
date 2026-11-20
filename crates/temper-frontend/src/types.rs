@@ -1186,10 +1186,10 @@ mod tests {
 
     #[test]
     fn builtin_supertypes_are_cores() {
-        let core = crate::corelib::TEXT;
+        let core = crate::corelib::code();
         for (sub, sup) in BUILTIN_SUPERTYPES {
             let declared = core.lines().any(|line| {
-                let line = line.trim_start_matches("export ");
+                let line = line.trim_start().trim_start_matches("export ");
                 let declares = ["class ", "interface ", "sealed interface "]
                     .iter()
                     .any(|kind| line.starts_with(&format!("{kind}{sub}")));
@@ -1202,10 +1202,10 @@ mod tests {
 
     #[test]
     fn builtin_generics_are_cores() {
-        let core = crate::corelib::TEXT;
+        let core = crate::corelib::code();
         let mut classes = Vec::new();
         let mut variant = Vec::new();
-        for line in core.lines() {
+        for line in core.lines().map(str::trim_start) {
             let decl = line.trim_start_matches("export ");
             let decl = decl.trim_start_matches("/*sealed*/ ");
             let decl = decl.trim_start_matches("sealed ");

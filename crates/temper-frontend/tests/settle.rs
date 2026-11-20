@@ -27,7 +27,7 @@ use common::{Rng, case_files, check_cases, env_number, mutate};
 use temper_frontend::interp::{run, run_tests};
 use temper_frontend::library::{Level, Library, Message};
 use temper_frontend::print::write_settled;
-use temper_frontend::project::load_imports;
+use temper_frontend::project::{load_imports, source_kind};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::typing::{Resolved, coverage};
@@ -122,7 +122,7 @@ fn core_keeps_the_rules_it_sets() {
     with_stack(|| {
         let mut library = Library::new();
         for (path, text) in temper_frontend::corelib::SOURCES {
-            library.add_file(&format!("core/{path}"), text, SourceKind::Standalone);
+            library.add_file(&format!("core/{path}"), text, source_kind(path));
         }
         let settled = settle(library);
         let found: Vec<String> = (settled.library.diagnostics.iter())
@@ -157,9 +157,9 @@ fn core_connects_only_builtins() {
         for (i, (path, text)) in sources.iter().enumerate() {
             let mut text = text.to_string();
             if i + 1 == sources.len() {
-                text.push_str("\n/** A typo. */\n@connected\nexport let pancik;\n");
+                text.push_str("\n    /** A typo. */\n    @connected\n    export let pancik;\n");
             }
-            library.add_file(&format!("lib/core/{path}"), &text, SourceKind::Standalone);
+            library.add_file(&format!("lib/core/{path}"), &text, source_kind(path));
         }
         let settled = settle(library);
         let found: Vec<String> = (settled.library.diagnostics.iter())

@@ -27,7 +27,7 @@ use std::collections::BTreeMap;
 use temper_frontend::interp::core_bodies::members;
 use temper_frontend::interp::{Run, run_tests, run_tests_with_core_bodies};
 use temper_frontend::library::{Level, Library};
-use temper_frontend::project::load_imports;
+use temper_frontend::project::{load_imports, source_kind};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::Sources;
 use temper_syntax::lex::SourceKind;
@@ -346,7 +346,7 @@ fn settled() -> temper_frontend::settle::Settled {
     let source = cases_source(None);
     let mut library = Library::new();
     for (path, text) in temper_frontend::corelib::SOURCES {
-        library.add_file(&format!("core/{path}"), text, SourceKind::Standalone);
+        library.add_file(&format!("core/{path}"), text, source_kind(path));
     }
     library.add_file("cases/cases.temper", &source, SourceKind::Standalone);
     load_imports(&Sources::standard(), &mut library);

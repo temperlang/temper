@@ -65,6 +65,26 @@ pub fn find_blocks(text: &str) -> Vec<Block> {
     scanner.blocks
 }
 
+/// `text` with only its Temper code ([`Block::is_temper_code`]) left: every
+/// other byte but a line break becomes a space, so offsets stay the same,
+/// and code reads as it would in a `.temper` file, apart from indentation.
+pub fn blank_prose(text: &str) -> String {
+    fn blank(bytes: &mut [u8]) {
+        for b in bytes.iter_mut().filter(|b| **b != b'\n') {
+            *b = b' ';
+        }
+    }
+    let mut out = text.as_bytes().to_vec();
+    let mut from = 0;
+    for block in find_blocks(text).iter().filter(|b| b.is_temper_code()) {
+        blank(&mut out[from..block.begin.end]);
+        from = block.end.start;
+    }
+    blank(&mut out[from..]);
+    // Each blanked character's every byte is a space now.
+    String::from_utf8(out).expect("blanking keeps UTF-8")
+}
+
 /// A line's start offset, and its content end before any `\r\n` or `\n`.
 #[derive(Clone, Copy)]
 struct Line {
@@ -799,6 +819,16 @@ mod tests {
         let text = "# Title\n\nSome prose.\n\n    let x = 1;\n\nMore.\n";
         let found: Vec<String> = kinds(text).into_iter().map(|(kind, _)| kind).collect();
         assert_eq!(found, ["para", "code[]", "para"]);
+    }
+
+    #[test]
+    fn blank_prose_keeps_code_and_offsets() {
+        let text = "# T\n\nProsé.\n\n    let x = 1;\n\n```log\nhi\n```\n\n```temper\ny;\n```\n";
+        let blanked = blank_prose(text);
+        assert_eq!(blanked.len(), text.len());
+        let expected =
+            "   \n\n       \n\n    let x = 1;\n\n      \n  \n   \n\n         \ny;\n   \n";
+        assert_eq!(blanked, expected);
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //! generic types' (`Listed`, `List`, `ListBuilder`, `Pair`, `Mapped`,
 //! `Map`, and `MapBuilder`), those that take functions, and the string
 //! indices', `StringBuilder`'s, `Empty`'s, `Deque`'s, and
-//! `DenseBitVector`'s, checked against core's `lib/core/*.temper`: each
+//! `DenseBitVector`'s, checked against core's `lib/core/*.temper.md`: each
 //! member's name, kind, parameters (names, types, and which are optional),
 //! result, bubbling, and `@connected` mark. Like the frontend's
 //! `builtin_supertypes_are_cores`, it reads core's files as text, so this
@@ -13,16 +13,29 @@ use std::collections::HashMap;
 use temper_tmpl::{DeclKind, Facts, Profile, Program, text, validate};
 
 const FIXTURE: &str = include_str!("fixtures/core.tmpl");
-/// Core's Temper files' texts, joined, in their paths' order.
+/// Core's Temper files' code, joined, in their paths' order: their
+/// indented code blocks' lines, without the indent, and blank lines.
+/// Core's config holds no members, and core's code is all in indented
+/// blocks, which this reads without a Markdown parser.
 fn core_text() -> String {
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/core");
     let mut paths: Vec<_> = (std::fs::read_dir(dir).unwrap())
         .map(|e| e.unwrap().path())
-        .filter(|p| p.extension().is_some_and(|e| e == "temper"))
+        .filter(|p| p.to_string_lossy().ends_with(".temper.md"))
+        .filter(|p| !p.ends_with("config.temper.md"))
         .collect();
     paths.sort();
+    let code = |text: String| -> String {
+        (text.lines())
+            .filter_map(|l| match l.trim().is_empty() {
+                true => Some(""),
+                false => l.strip_prefix("    "),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
     let texts: Vec<String> = (paths.iter())
-        .map(|p| std::fs::read_to_string(p).unwrap())
+        .map(|p| code(std::fs::read_to_string(p).unwrap()))
         .collect();
     texts.join("\n")
 }

@@ -13,20 +13,20 @@ none.
 
 Core is one module, a file per topic, as std is a module per topic:
 
-- `any.temper`: `AnyValue`, `Equatable`, `MapKey`, `Bubble`, `Invalid`,
+- `any.temper.md`: `AnyValue`, `Equatable`, `MapKey`, `Bubble`, `Invalid`,
   `Never`, `Null`, `Empty`, `Function`, `GeneratorFn`, and `Problem`
-- `console.temper`: `Console` and `console`
-- `generators.temper`: generators, their results, and promises
-- `language.temper`: `ignore`, and the bodiless `@connected` declarations
+- `console.temper.md`: `Console` and `console`
+- `generators.temper.md`: generators, their results, and promises
+- `language.temper.md`: `ignore`, and the bodiless `@connected` declarations
   that document what the compiler supplies, as `true`, `panic`, or `if`,
   with `Void` and `Type`
-- `lists.temper`: `Listed`, `List`, `ListBuilder`, their extensions, and
+- `lists.temper.md`: `Listed`, `List`, `ListBuilder`, their extensions, and
   `Deque`
-- `maps.temper`: `Pair`, `Mapped`, `Map`, `MapBuilder`, and their
+- `maps.temper.md`: `Pair`, `Mapped`, `Map`, `MapBuilder`, and their
   extensions
-- `numbers.temper`: `Boolean`, `Int`, `Int32`, `Int64`, `Float64`, and
+- `numbers.temper.md`: `Boolean`, `Int`, `Int32`, `Int64`, `Float64`, and
   `DenseBitVector`
-- `strings.temper`: `String`, string indices, and `StringBuilder`
+- `strings.temper.md`: `String`, string indices, and `StringBuilder`
 
 Top-level declarations may come in any order, in any of these files.
 

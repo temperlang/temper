@@ -119,7 +119,7 @@ impl CoreBodies {
             }
         }
         let mut extensions = HashMap::new();
-        for (extension, function) in extension_names(crate::corelib::TEXT) {
+        for (extension, function) in extension_names(crate::corelib::code()) {
             if let Some(value) = by_symbol.get(function) {
                 extensions.insert(extension.to_string(), value.clone());
             }

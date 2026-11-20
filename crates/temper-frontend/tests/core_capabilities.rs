@@ -346,7 +346,7 @@ struct CoreExport {
 /// Each class and interface core exports, parsed from its text.
 fn core_exports() -> Vec<CoreExport> {
     let ast = build(&parse(
-        temper_frontend::corelib::TEXT,
+        temper_frontend::corelib::code(),
         SourceKind::Standalone,
     ));
     let mut out = Vec::new();

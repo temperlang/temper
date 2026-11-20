@@ -642,7 +642,7 @@ fn definition_and_hover_within_core() {
     open(&mut client, &file, "let names: List<String> = [];\n");
     let def = client.request("textDocument/definition", at(&file, 0, 12));
     let core = str_at(&def, &["uri"]).to_string();
-    assert!(core.ends_with("/core/lists.temper"), "{def}");
+    assert!(core.ends_with("/core/lists.temper.md"), "{def}");
     // Core's files, each opened, by name, with its lines.
     let core_dir = core.rsplit_once('/').unwrap().0.to_string();
     let mut files = Vec::new();
@@ -684,7 +684,7 @@ fn definition_and_hover_within_core() {
     let append = "append(String.fromCodePoint(cp));";
     // Builtin types, in a parameter, an `extends`, and a result type.
     let (file, listed) = target(find(reduce, "(", "Listed"));
-    assert_eq!(file, "lists.temper");
+    assert_eq!(file, "lists.temper.md");
     assert!(
         listed.starts_with("export sealed interface Listed<T>"),
         "{listed}"
@@ -698,11 +698,11 @@ fn definition_and_hover_within_core() {
     assert!(list.starts_with("export class List<"), "{list}");
     // `Int`, an alias, in another of core's files.
     let (file, int) = target(find(reduce, "index: ", "Int"));
-    assert_eq!(file, "numbers.temper");
+    assert_eq!(file, "numbers.temper.md");
     assert!(int.starts_with("export let Int = Int32"), "{int}");
     // `String`, a static member on it, and a method on `this`.
     let (file, string) = target(find(append, "(", "String"));
-    assert_eq!(file, "strings.temper");
+    assert_eq!(file, "strings.temper.md");
     assert!(string.starts_with("export class String "), "{string}");
     let (_, from) = target(find(append, ".", "fromCodePoint"));
     assert!(from.starts_with("public static fromCodePoint("), "{from}");
@@ -753,7 +753,7 @@ fn core_source_in_a_checkout_is_core() {
     let mut client = Client::start();
     let root = path_to_uri(&repo.to_string_lossy());
     client.request("initialize", json!({"capabilities": {}, "rootUri": root}));
-    let edit = |text: &str| format!("{text}\n/** An edit. */\nexport let edited = 1;\n");
+    let edit = |text: &str| format!("{text}\n    /** An edit. */\n    export let edited = 1;\n");
     for (name, _) in temper_frontend::corelib::SOURCES {
         let path = repo.join("lib/core").join(name);
         let core = path_to_uri(&path.to_string_lossy());
@@ -765,13 +765,13 @@ fn core_source_in_a_checkout_is_core() {
     }
     // A lone copy of the file that documents builtins, as it is, and
     // edited. (A lone file sees no other file, so a lone copy of one that
-    // names a sibling's declaration, as `numbers.temper` does
+    // names a sibling's declaration, as `numbers.temper.md` does
     // `Equatable`, reports it undeclared, as any lone file would.)
     let dir = std::env::temp_dir().join(format!("tempest-lsp-{}-lone-core", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let (name, text) = (temper_frontend::corelib::SOURCES.iter())
-        .find(|(name, _)| *name == "language.temper")
+        .find(|(name, _)| *name == "language.temper.md")
         .unwrap();
     std::fs::write(dir.join(name), text).unwrap();
     let lone = uri(&dir, name);

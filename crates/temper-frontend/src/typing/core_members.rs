@@ -23,7 +23,7 @@ use temper_syntax::lex::SourceKind;
 use temper_syntax::parse::parse;
 use temper_syntax::tree::{NodeId, NodeKind};
 
-use crate::corelib::TEXT as CORE;
+use crate::corelib::code;
 
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
@@ -139,12 +139,13 @@ pub(super) fn core_class(type_name: &str) -> &'static CoreClass {
     }
 }
 
-/// Where core declares an exported name at the start of a line, as
-/// `export class Name`, `export sealed interface Name<…>`, or `export let
-/// name(…)`: the line's offset in core, the line, and the name's offset.
+/// Where core declares an exported name at the start of a line's code,
+/// as `export class Name`, `export sealed interface Name<…>`, or `export
+/// let name(…)`: the line's offset in core, the line, and the name's
+/// offset.
 fn declaration(name: &str, lets: bool) -> Option<(usize, &'static str, usize)> {
     let declared = |line: &'static str| {
-        let rest = line.strip_prefix("export ")?;
+        let rest = line.trim_start().strip_prefix("export ")?;
         let rest = (rest.strip_prefix("sealed "))
             .or_else(|| rest.strip_prefix("/*sealed*/ "))
             .unwrap_or(rest);
@@ -160,13 +161,23 @@ fn declaration(name: &str, lets: bool) -> Option<(usize, &'static str, usize)> {
         after.starts_with(ends).then(|| line.len() - rest.len())
     };
     let mut offset = 0;
-    for line in CORE.split_inclusive('\n') {
+    for line in code().split_inclusive('\n') {
         if let Some(at) = declared(line) {
             return Some((offset, line, offset + at));
         }
         offset += line.len();
     }
     None
+}
+
+/// Where a declaration whose first line, `line`, starts at byte `start`
+/// of core's code ends: past the `}` alone on a line at `line`'s indent,
+/// or the end of core.
+fn closing_brace(start: usize, line: &str) -> usize {
+    let indent = &line[..line.len() - line.trim_start().len()];
+    let close = format!("\n{indent}}}\n");
+    let rest = &code()[start..];
+    (rest.find(&close)).map_or(code().len(), |e| start + e + close.len() - 1)
 }
 
 /// Reads one type's declaration, from the line `export class Name` or
@@ -178,9 +189,9 @@ fn read_class(name: &str) -> CoreClass {
     };
     let end = match line.trim_end().ends_with("{}") {
         true => start + line.len(),
-        false => (CORE[start..].find("\n}\n")).map_or(CORE.len(), |e| start + e + 2),
+        false => closing_brace(start, line),
     };
-    let ast = build(&parse(&CORE[start..end], SourceKind::Standalone));
+    let ast = build(&parse(&code()[start..end], SourceKind::Standalone));
     let mut reader = Reader {
         ast: &ast,
         base: start,
@@ -209,21 +220,21 @@ fn read_class(name: &str) -> CoreClass {
 /// calls `xs.map(f)` as it would a method, with the extension's other
 /// type parameters as the member's own, and tmpl as a call of the
 /// function, `listedMap(xs, f)`. Each starts with a line of its own,
-/// `@extension("name")`, and ends with a `;` or a line `}`.
+/// `@extension("name")`, and ends with a `;` or a line `}` at its indent.
 fn read_extensions(type_name: &str) -> Vec<CoreMember> {
     let mut out = Vec::new();
     let mut offset = 0;
-    for line in CORE.split_inclusive('\n') {
+    for line in code().split_inclusive('\n') {
         let start = offset;
         offset += line.len();
-        if !line.starts_with("@extension(") {
+        if !line.trim_start().starts_with("@extension(") {
             continue;
         }
-        let rest = &CORE[start..];
+        let rest = &code()[start..];
         let end = match (rest.find(';'), rest.find('{')) {
             (Some(semi), Some(brace)) if semi < brace => semi + 1,
             (Some(semi), None) => semi + 1,
-            _ => rest.find("\n}\n").map_or(rest.len(), |e| e + 2),
+            _ => closing_brace(start, line) - start,
         };
         let ast = build(&parse(&rest[..end], SourceKind::Standalone));
         let mut reader = Reader {
@@ -340,13 +351,13 @@ enum Declared {
 /// `export let Name = Other;`, under its decorations, as
 /// `@mayDowncastTo(false)`.
 fn read_shapes() -> Vec<(&'static str, Declared)> {
-    let ast = build(&parse(CORE, SourceKind::Standalone));
+    let ast = build(&parse(code(), SourceKind::Standalone));
     let tree = ast.tree();
     // A name as written, or where it's in core, for the names kept.
     let text = |node: NodeId| Some(ast.names().get(ast.name(node)?));
     let in_core = |node: NodeId| -> &'static str {
         let span = tree.span(node);
-        &CORE[span.start as usize..span.end as usize]
+        &code()[span.start as usize..span.end as usize]
     };
     let call = |node: NodeId| match tree.kind(node) {
         NodeKind::Call => tree.children(node).split_first(),
@@ -502,7 +513,7 @@ pub fn builtin_members(type_name: &str, args: &[String]) -> Vec<BuiltinMember> {
             Some(&t) => (core_class(t), t),
             // A type core declares outside the builtins, as `Console`.
             None if !TYPES.contains(&ty) => match (other_class(ty), declaration(ty, false)) {
-                (Some(class), Some((_, _, at))) => (class, &CORE[at..at + ty.len()]),
+                (Some(class), Some((_, _, at))) => (class, &code()[at..at + ty.len()]),
                 _ => break,
             },
             None => break,
@@ -921,7 +932,10 @@ impl<'a> Reader<'a> {
         if let Some(text) = self.text(name) {
             // A name's node may span more than the name, as its type.
             let start = self.base + self.ast.tree().span(name).start as usize;
-            let at = start + (CORE[start..].find(text)).filter(|&i| i < 256).unwrap_or(0);
+            let at = start
+                + (code()[start..].find(text))
+                    .filter(|&i| i < 256)
+                    .unwrap_or(0);
             out.push(CoreMember {
                 name: text.to_string(),
                 is_static,
@@ -1230,15 +1244,15 @@ mod tests {
             for m in &core_class(ty).members {
                 assert!(m.at > decl, "{ty}.{}", m.name);
                 assert!(
-                    CORE[m.at..].starts_with(m.function.as_ref().unwrap_or(&m.name)),
+                    code()[m.at..].starts_with(m.function.as_ref().unwrap_or(&m.name)),
                     "{ty}.{} at {}",
                     m.name,
                     m.at
                 );
             }
         }
-        let line = |at: usize| CORE[..at].lines().count();
-        let named = |at: usize, name: &str| CORE[at..].starts_with(name);
+        let line = |at: usize| code()[..at].lines().count();
+        let named = |at: usize, name: &str| code()[at..].starts_with(name);
         // Through supertypes, nearest first, and a type typing doesn't read.
         let length = core_member_declarations("List", "length");
         assert_eq!(length.len(), 2);

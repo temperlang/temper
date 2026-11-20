@@ -9,21 +9,24 @@
 //! and, in core, declare nothing, so core's own code still names the
 //! builtins (`Settle::supplied_by_frontend`).
 
+use temper_syntax::literate::blank_prose;
+
 /// The directory editors' paths into core start with, as
-/// `-core-/strings.temper`, as [`crate::stdlib::DIR`] is std's.
+/// `-core-/strings.temper.md`, as [`crate::stdlib::DIR`] is std's.
 pub const DIR: &str = "-core-";
 
 /// core's library name, as its `config.temper.md` gives it: a library
 /// by this name is core, whatever its text ([`crate::library::Library::in_core`]).
 pub const NAME: &str = "temper-core";
 
-/// Declares [`TEXT`] and [`SOURCES`] from core's Temper files, in order.
+/// Declares [`TEXT`] and [`SOURCES`] from core's literate Temper files,
+/// in order.
 macro_rules! core_sources {
     ($first:literal $(, $path:literal)* $(,)?) => {
-        /// core's Temper text: its sources' texts, in [`SOURCES`]' order,
-        /// with a blank line between each and the next, as one text that
-        /// typing reads core's declarations from. An offset in it is in
-        /// one of the sources ([`source_at`]).
+        /// core's text: its sources' texts, in [`SOURCES`]' order, with a
+        /// blank line between each and the next, as one text, whose code
+        /// ([`code`]) typing reads core's declarations from. An offset in
+        /// it is in one of the sources ([`source_at`]).
         pub const TEXT: &str = concat!(
             include_str!(concat!("../../../lib/core/", $first)),
             $("\n", include_str!(concat!("../../../lib/core/", $path)),)*
@@ -40,14 +43,14 @@ macro_rules! core_sources {
 // In their paths' order, as a library's files load
 // (`crate::project::load_library`).
 core_sources!(
-    "any.temper",
-    "console.temper",
-    "generators.temper",
-    "language.temper",
-    "lists.temper",
-    "maps.temper",
-    "numbers.temper",
-    "strings.temper",
+    "any.temper.md",
+    "console.temper.md",
+    "generators.temper.md",
+    "language.temper.md",
+    "lists.temper.md",
+    "maps.temper.md",
+    "numbers.temper.md",
+    "strings.temper.md",
 );
 
 /// Each core Temper source, by path from core's root, with its text, in
@@ -70,6 +73,18 @@ const fn sources() -> [(&'static str, &'static str); LENGTHS.len()] {
         (i, start) = (i + 1, start + len + 1);
     }
     out
+}
+
+/// [`TEXT`] with its prose blanked, so only core's code is left, at the
+/// same offsets (`temper_syntax::literate::blank_prose`): what scans of
+/// core's declarations read, each line's code as in a `.temper` file but
+/// indented by its code block's indent.
+pub fn code() -> &'static str {
+    static CODE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    CODE.get_or_init(|| {
+        let blanked = SOURCES.iter().map(|(_, text)| blank_prose(text));
+        blanked.collect::<Vec<_>>().join("\n")
+    })
 }
 
 /// The source that byte `at` of [`TEXT`] is in, by path and text, and
@@ -136,6 +151,19 @@ mod tests {
         assert_eq!(super::source_at(super::TEXT.len()), None);
     }
 
+    /// [`super::code`] is [`super::TEXT`]'s code at the same offsets,
+    /// with each source's prose blanked, so a declaration found in it is
+    /// at its place in [`super::TEXT`].
+    #[test]
+    fn code_keeps_texts_offsets() {
+        let (code, text) = (super::code(), super::TEXT);
+        assert_eq!(code.len(), text.len());
+        let at = code.find("export class StringBuilder").unwrap();
+        assert!(text[at..].starts_with("export class StringBuilder"));
+        assert!(!code.contains("# Strings"), "headings are prose");
+        assert!(text.contains("# Strings"));
+    }
+
     /// [`super::NAME`] is the name core's config gives it.
     #[test]
     fn name_is_cores_config_name() {
@@ -144,14 +172,19 @@ mod tests {
         assert!(config.lines().any(|l| l.trim() == line), "{config}");
     }
 
-    /// Core and std name builtin types as any library does, `Int`, not
-    /// `builtins.Int`: core's declarations of them are the builtins.
+    /// Core's and std's code names builtin types as any library's does,
+    /// `Int`, not `builtins.Int`: core's declarations of them are the
+    /// builtins. Their prose may name either.
     #[test]
     fn core_and_std_use_no_builtins_qualifiers() {
         let files = (super::FILES.iter()).chain(crate::stdlib::FILES);
         let mut found = Vec::new();
         for (path, text) in files {
-            for (i, line) in text.lines().enumerate() {
+            let code = match path.ends_with(".md") {
+                true => super::blank_prose(text),
+                false => text.to_string(),
+            };
+            for (i, line) in code.lines().enumerate() {
                 let qualified = (line.match_indices("builtins.")).any(|(at, _)| {
                     line[at + 9..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
                 });

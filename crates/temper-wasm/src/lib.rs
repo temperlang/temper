@@ -383,7 +383,7 @@ pub extern "C" fn hover(at: u32) {
 /// as `{"from": 4, "to": 9}` in the same source, or in std or core, also
 /// with the file's path and its text, `{"file":
 /// "std/regex/regex.temper.md", "text": "…", "from": …, "to": …}` or
-/// `{"file": "core/numbers.temper", …}` for a builtin, or `null` for a
+/// `{"file": "core/numbers.temper.md", …}` for a builtin, or `null` for a
 /// builtin core doesn't declare.
 #[allow(unsafe_code)]
 #[unsafe(no_mangle)]
@@ -1087,7 +1087,7 @@ mod tests {
         let (_, core, int) = temper_frontend::corelib::source_at(int).unwrap();
         let from = Position::of(core, int).utf16;
         assert!(
-            answers[5].starts_with("{\"file\":\"core/numbers.temper\",\"text\":"),
+            answers[5].starts_with("{\"file\":\"core/numbers.temper.md\",\"text\":"),
             "{}",
             &answers[5][..80]
         );
