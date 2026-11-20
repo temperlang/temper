@@ -244,18 +244,12 @@ add these to the config to try them out. These include the following:
 - `description`, `authors`, `homepage`, and `repository`: A line about your
   library, who wrote it (such as `"Jo Doe <jo@example.com>"`), and links to its
   home page and source, for the package files.
-- `csharpRootNamespace`: The root namespace and assembly name of the generated
-  C\# library. The default comes from your Temper library name. Further
-  configuration may be provided in the future.
-- `javaName`: The name of the generated Java library, such as the Maven
-  `artifactId`. Again, the default is based on the Temper name of your library.
-  You can also configure the root Java package with `javaPackage`.
-- `jsName`: The name of the generated JS library. Again, the default comes from
-  your Temper library name.
-- `pyName`: The name of the generated Python library. Again, the default comes
-  from your Temper library name.
-- `rustName`: The name of the generated Rust package. Again, the default comes
-  from your Temper library name.
+- Each backend's own settings, such as its package name, in its config class:
+  `CSharpConfig`, `JavaConfig`, `JsConfig`, `PyConfig`, and `RustConfig`
+  (`CppConfig` and `LuaConfig` have no settings yet). By default, each
+  backend names its package after your library's `name`, so you only need
+  these to pick another name. [Backends](../../backends/README.md#configuration)
+  lists every setting.
 
 You need to `export` these values for them to be used. After adding them, your
 "config.temper.md" file might look something like this:
@@ -280,24 +274,21 @@ A library for geometric shapes and calculations.
 
 ## Backend configuration
 
-Just examples here. You should choose available package names. Some additional
-options are available on some backends, and we may add more options in the
-future.
+Just examples here. You should choose available package names. Each backend's
+settings go in an object of its config class, exported under the backend's
+name.
 
-    export let csharpRootNamespace = "GeometryNet";
-    export let javaName = "geometry-java";
-    export let jsName = "geometry-js";
-    export let pyName = "geometry-py";
-    export let rustName = "geometry-rs";
-
-Lua naming configuration isn't yet supported.
-
-    // Has no effect yet.
-    export let luaName = "geometry-lua";
+    export let csharp = { class: CSharpConfig, rootNamespace: "GeometryNet" };
+    export let java = { class: JavaConfig, name: "geometry-java" };
+    export let js = { class: JsConfig, name: "geometry-js" };
+    export let py = { class: PyConfig, name: "geometry-py" };
+    export let rust = { class: RustConfig, name: "geometry-rs" };
 ````
 
-We'll likely change some of the structure and introduce more configuration
-options in future Temper releases.
+A setting the class doesn't have, or a value that isn't a string, is an error
+when you build, so a typo can't go unnoticed. Temper's earlier releases read
+flat names such as `javaName` and `pyName` instead; those are now ordinary
+values with no effect.
 
 ## Library use
 

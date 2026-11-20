@@ -74,6 +74,12 @@ impl Registry {
         &self.backends
     }
 
+    /// Each backend's config class, which a library's config may use
+    /// whichever backends a build is for ([`temper_tmpl::config`]).
+    pub fn config_types(&self) -> Vec<&'static temper_tmpl::ConfigType> {
+        self.backends.iter().map(|b| b.config).collect()
+    }
+
     /// A backend it has, by name.
     pub fn get(&self, name: &str) -> Option<&'static Backend> {
         self.backends.iter().copied().find(|b| b.name == name)

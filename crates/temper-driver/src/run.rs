@@ -116,7 +116,8 @@ fn run_interp(
         }
     };
     // Each counted under the library it's in, as `build` counts them.
-    let mut reported = Reported::new(options.hints);
+    let types = crate::Registry::built_in().config_types();
+    let mut reported = Reported::new(options.hints).with_config_types(types);
     let diagnostics = reported.new_diagnostics(&settled, found, &libraries, log);
     let _ = err.write_all(diagnostics.as_bytes());
     // Each line as it's logged, so a long run's output isn't kept.

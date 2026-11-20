@@ -36,7 +36,10 @@ fn link(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let modules = dir.join("node_modules");
     let mut links = vec![
         ("@temperlang/core".to_string(), dir.join("temper-core")),
-        ("@temperlang/std".to_string(), dir.join("std")),
+        (
+            crate::translate::js_name("std", &Default::default()),
+            dir.join("std"),
+        ),
     ];
     links.extend((all.iter()).map(|l| {
         (

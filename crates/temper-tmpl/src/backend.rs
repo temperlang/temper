@@ -36,6 +36,9 @@ pub struct Backend {
     /// How its language's own tools run built libraries' tests; `None`
     /// in wasm, which runs no tools.
     pub tools: Option<&'static Tools>,
+    /// Its config class, which configs may use whichever backends a build
+    /// is for ([`crate::config`]).
+    pub config: &'static crate::ConfigType,
 }
 
 /// How a backend runs the tests of libraries built in

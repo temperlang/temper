@@ -99,6 +99,19 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let py = {
+/// class: PyConfig, … };`, as Kotlin's `PyConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "py",
+    class: "PyConfig",
+    properties: &[temper_tmpl::Property {
+        name: "name",
+        doc: "The Python project's name, which, as a Python name, also names its package; else the library's name.",
+    }],
+    std: &[("name", "temper-std")],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "py",
@@ -111,6 +124,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &PY.rules,
     translate: |p, _| translate(p, &PY).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -210,7 +224,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     // std's is `temper-std`, its package `temper_std`, as Kotlin's; a
-    // config's `pyName` names the project and its package, but not its
+    // config's `PyConfig` name names the project and its package, but not its
     // directory, which has the library's name.
     let project = translate::library_name(p, &p.library.name);
     let package = names::library_package(&project);

@@ -102,6 +102,19 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let js = {
+/// class: JsConfig, … };`, as Kotlin's `JsConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "js",
+    class: "JsConfig",
+    properties: &[temper_tmpl::Property {
+        name: "name",
+        doc: "The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name.",
+    }],
+    std: &[("name", "@temperlang/std")],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "js",
@@ -114,6 +127,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &JS.rules,
     translate: |p, maps| generate(p, &JS, maps).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),

@@ -2584,19 +2584,19 @@ pub(crate) fn present(mut args: Vec<Option<Expr>>) -> R<Vec<Expr>> {
     Ok(args.into_iter().map(|a| a.unwrap_or(Expr::None)).collect())
 }
 
-/// A library's name as its Python package is named: std's is
-/// `temper-std`, as Kotlin's, and another's is its config's `pyName`, or
-/// else its own.
+/// A library's name as its Python package is named: its config's
+/// `PyConfig` name ([`crate::CONFIG`]; std's is `temper-std`, as
+/// Kotlin's), or else its own.
 pub fn library_name(p: &Program, name: &str) -> String {
     py_name(name, p.metadata_of(name))
 }
 
 /// [`library_name`], given what the library's config says.
 pub fn py_name(name: &str, metadata: &temper_tmpl::Metadata) -> String {
-    match name {
-        "std" => "temper-std".into(),
-        _ => metadata.get("pyName").unwrap_or(name).into(),
-    }
+    crate::CONFIG
+        .get(name, metadata, "name")
+        .unwrap_or(name)
+        .into()
 }
 
 /// `package.a.b` for a module's path `a/b`.

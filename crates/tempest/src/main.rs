@@ -477,6 +477,7 @@ fn test_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         fuel,
+        config_types: Some(registry().config_types()),
     };
     let build_options = build::Options {
         verbose: false,

@@ -357,7 +357,7 @@ fn another_librarys_fun_interface() {
     let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fun", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let files = [
-        ("a/config.temper.md", "export let name = \"a\";\n"),
+        ("a/config.temper.md", "    export let name = \"a\";\n"),
         (
             "a/a.temper",
             "export @fun interface Pred(x: Int): Boolean;\n\
@@ -367,7 +367,7 @@ fn another_librarys_fun_interface() {
              n\n\
              }\n",
         ),
-        ("b/config.temper.md", "export let name = \"b\";\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
             "let { Pred, countIf } = import(\"a\");\n\
@@ -403,12 +403,12 @@ fn imported_errors_are_reported_once() {
     let dir = std::env::temp_dir().join(format!("tempest-cli-{}-deps", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let files = [
-        ("a/config.temper.md", "export let name = \"a\";\n"),
+        ("a/config.temper.md", "    export let name = \"a\";\n"),
         (
             "a/a.temper",
             "export let one(): Int { 1 }\nlet bad: String = 5;\n",
         ),
-        ("b/config.temper.md", "export let name = \"b\";\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
             "let { one } = import(\"a\");\nexport let two(): Int { one() + 1 }\n",
@@ -786,6 +786,102 @@ fn build_needs_libraries_with_names_of_their_own() {
     assert_eq!(code, 1);
     assert!(err.starts_with("No Temper library"), "{err}");
     let _ = fs::remove_dir_all(&empty);
+}
+
+/// Each backend's config class names its packages, whichever backends
+/// a build is for; flat keys (`pyName`) are ordinary values.
+#[test]
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+fn typed_config_names_packages() {
+    let config = "# Geo
+
+    export let name = \"geo\";
+    export let csharp = { class: CSharpConfig, rootNamespace: \"GeometryNet\" };
+    export let java = {
+      class: JavaConfig,
+      package: \"com.example.geo\",
+
+The group and artifact, for Maven:
+
+      group: \"com.example\",
+      artifact: \"geo-java\",
+    };
+    export let js = { class: JsConfig, name: \"@example/geo\" };
+    export let py = { class: PyConfig, name: \"geo-py\" };
+    export let rust = { class: RustConfig, name: \"geo-rs\" };
+    export let cpp = { class: CppConfig };
+    export let lua = { class: LuaConfig };
+    export let pyName = \"flat-py\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("g.temper", "export let g = 1;\n"),
+    ];
+    with_library("typed-config", &files, |dir| {
+        let (code, out, err) = tempest(&["build", "-w", dir]);
+        assert_eq!((code, out.as_str(), err.as_str()), (0, "", ""));
+        let out = Path::new(dir).join("temper.out");
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        assert!(read("py/geo/pyproject.toml").contains("name = \"geo-py\"\n"));
+        assert!(read("js/geo/package.json").contains("\"name\": \"@example/geo\",\n"));
+        assert!(read("rust/geo/Cargo.toml").contains("name = \"geo-rs\"\n"));
+        let pom = read("java/geo/pom.xml");
+        assert!(
+            pom.contains("  <groupId>com.example</groupId>\n  <artifactId>geo-java</artifactId>\n"),
+            "{pom}"
+        );
+        assert!(
+            out.join("java/geo/src/main/java/com/example/geo/GeoGlobal.java")
+                .is_file()
+        );
+        assert!(out.join("csharp/geo/src/GeometryNet.csproj").is_file());
+    });
+}
+
+/// A typo or a wrong type in a backend's config class is an error, at
+/// its place in the config file, for `build` and `test` alike.
+#[test]
+fn typed_config_errors() {
+    let config = "    export let name = \"a\";
+    export let java = { class: JavaConfig, pacakge: \"com.example\" };
+    export let py = { class: PyConfig, name: 3 };
+    export let js = { class: JsConf, name: \"j\" };
+    export let rs = { class: RustConfig, name: \"r\" };
+    export let csharp = \"Example\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("typed-config-errors", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            format!(
+                "{path}:2:44: error: JavaConfig has no property `pacakge`; did you mean \
+                 `package`?\n"
+            ),
+            format!("{path}:3:46: error: PyConfig's `name` is a String, not an Int\n"),
+            format!("{path}:4:30: error: `js` is for JsConfig, not `JsConf`\n"),
+            format!("{path}:5:16: error: RustConfig goes in `export let rust`, not `rs`\n"),
+            format!(
+                "{path}:6:16: error: `csharp` is for CSharpConfig, as \
+                 `export let csharp = {{ class: CSharpConfig, … }}`\n"
+            ),
+        ];
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                assert!(err.contains(line.as_str()), "{command}: {line}{err}");
+            }
+        }
+    });
 }
 
 /// A declaration named like a file a backend generates is an error, not

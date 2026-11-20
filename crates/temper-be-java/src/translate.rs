@@ -2202,18 +2202,19 @@ fn jumps(body: &[Stmt], label: Option<&str>, innermost: bool, brk: bool) -> bool
     })
 }
 
-/// A library's package: std's is `temper.std`, as Kotlin's; another's is
-/// its config's `javaPackage`, each part as [`crate::names::package`]
-/// gives it, or else its `javaName` or its own name, as that gives it.
+/// A library's package: its config's `JavaConfig` package
+/// ([`crate::CONFIG`]; std's is `temper.std`, as Kotlin's), each part as
+/// [`crate::names::package`] gives it, or else its Java name or its own
+/// name, as that gives it.
 pub fn library_package(p: &Program, library: &str) -> String {
     let meta = p.metadata_of(library);
-    match (library, meta.get("javaPackage")) {
-        ("std", _) => "temper.std".into(),
-        (_, Some(package)) => (package.split('.'))
+    let config = |property| crate::CONFIG.get(library, meta, property);
+    match config("package") {
+        Some(package) => (package.split('.'))
             .map(crate::names::package)
             .collect::<Vec<_>>()
             .join("."),
-        _ => crate::names::package(meta.get("javaName").unwrap_or(library)),
+        None => crate::names::package(config("name").unwrap_or(library)),
     }
 }
 

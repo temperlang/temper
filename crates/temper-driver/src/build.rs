@@ -143,7 +143,10 @@ pub fn build(
     let mut results = Vec::new();
     let mut programs = Vec::new();
     let mut tests = Vec::new();
-    let mut reported = Reported::new(options.hints);
+    // Configs may use every backend's config class, not only those of the
+    // backends built for.
+    let types = crate::Registry::built_in().config_types();
+    let mut reported = Reported::new(options.hints).with_config_types(types.clone());
     for library in &libraries {
         let name = &library.config.name;
         match program(sources, library, &libraries, options, &mut reported, err) {
@@ -249,10 +252,7 @@ pub fn build(
         }
     }
     let metadata = (libraries.iter())
-        .map(|l| {
-            let exports = l.config.exports.clone();
-            (l.config.name.clone(), temper_tmpl::Metadata { exports })
-        })
+        .map(|l| (l.config.name.clone(), metadata(&l.config, &types)))
         .collect();
     Some(Built {
         results,
@@ -260,6 +260,20 @@ pub fn build(
         errors,
         metadata,
     })
+}
+
+/// What a library's config says, for package files: its string exports,
+/// and its values for each backend's config class, as checked against
+/// `types`, every backend's; its problems are reported with its
+/// diagnostics ([`Reported`]).
+pub fn metadata(
+    config: &temper_frontend::project::Config,
+    types: &[&'static temper_tmpl::ConfigType],
+) -> temper_tmpl::Metadata {
+    temper_tmpl::Metadata {
+        exports: config.exports.clone(),
+        configs: config.check(types).configs,
+    }
 }
 
 /// "1 error" or "N errors".
@@ -345,9 +359,8 @@ fn program(
     // files' dependencies.
     // Their configs' metadata, and its own, for package files and each
     // backend's names for them.
-    let metadata = |config: &temper_frontend::project::Config| temper_tmpl::Metadata {
-        exports: config.exports.clone(),
-    };
+    let types = crate::Registry::built_in().config_types();
+    let metadata = |config| metadata(config, &types);
     program.metadata = vec![(library.config.name.clone(), metadata(&library.config))];
     for uses in &mut program.uses {
         let name = program.decls.get(uses.decl).name;

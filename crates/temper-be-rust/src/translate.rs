@@ -2616,13 +2616,14 @@ pub fn library_crate(p: &Program, name: &str) -> String {
     crate::names::crate_name(&rust_name(name, p.metadata_of(name)))
 }
 
-/// A library's package name: std's is `temper-std`, as Kotlin's, and
-/// another's is its config's `rustName`, or else its own name.
+/// A library's package name: its config's `RustConfig` name
+/// ([`crate::CONFIG`]; std's is `temper-std`, as Kotlin's), or else its
+/// own name.
 pub fn rust_name(name: &str, metadata: &temper_tmpl::Metadata) -> String {
-    match name {
-        "std" => "temper-std".into(),
-        _ => metadata.get("rustName").unwrap_or(name).into(),
-    }
+    crate::CONFIG
+        .get(name, metadata, "name")
+        .unwrap_or(name)
+        .into()
 }
 
 /// `item` after `attrs`, but a macro's after `#[cfg(test)]` alone: its

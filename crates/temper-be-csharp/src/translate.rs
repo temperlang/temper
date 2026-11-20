@@ -3645,14 +3645,13 @@ fn jumps(body: &[Stmt], brk: bool) -> bool {
     })
 }
 
-/// A library's root namespace: std's is `TemperLang.Std`, as Kotlin's;
-/// another's is its config's `csharpRootNamespace`, or else
-/// [`crate::names::root_namespace`]'s.
+/// A library's root namespace: its config's `CSharpConfig`
+/// `rootNamespace` ([`crate::CONFIG`]; std's is `TemperLang.Std`, as
+/// Kotlin's), or else [`crate::names::root_namespace`]'s.
 pub fn library_namespace(p: &Program, library: &str) -> String {
-    match (library, p.metadata_of(library).get("csharpRootNamespace")) {
-        ("std", _) => "TemperLang.Std".into(),
-        (_, Some(namespace)) => namespace.into(),
-        _ => crate::names::root_namespace(library),
+    match crate::CONFIG.get(library, p.metadata_of(library), "rootNamespace") {
+        Some(namespace) => namespace.into(),
+        None => crate::names::root_namespace(library),
     }
 }
 

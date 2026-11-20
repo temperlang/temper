@@ -96,6 +96,37 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let java = {
+/// class: JavaConfig, … };`, as Kotlin's `JavaConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "java",
+    class: "JavaConfig",
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The library's Java name, which the package and the Maven artifact ID default to; else the library's name.",
+        },
+        temper_tmpl::Property {
+            name: "package",
+            doc: "The Java package, as `com.example.geometry`; else the Java name, as a package.",
+        },
+        temper_tmpl::Property {
+            name: "group",
+            doc: "The Maven group ID; else the package.",
+        },
+        temper_tmpl::Property {
+            name: "artifact",
+            doc: "The Maven artifact ID; else the Java name.",
+        },
+    ],
+    std: &[
+        ("group", "dev.temperlang"),
+        ("artifact", "temper-std"),
+        ("package", "temper.std"),
+    ],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "java",
@@ -108,6 +139,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &JAVA.rules,
     translate: |p, _| translate(p, &JAVA).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -352,22 +384,20 @@ public final class {main} {{
     )
 }
 
-/// A library's Maven group and artifact, as Kotlin's configuration has
-/// them: its config's `javaGroup`, or else its `javaPackage`, or else its
-/// Java name (its `javaName`, or else its own) as Java names a package;
-/// and its `javaArtifact`, or else its Java name. std's Java
-/// configuration sets them (`dev.temperlang` and `temper-std`).
+/// A library's Maven group and artifact, as Kotlin's `JavaConfig` has
+/// them ([`CONFIG`]): its group, or else its package, or else its Java
+/// name (its `name`, or else its own) as Java names a package; and its
+/// artifact, or else its Java name. std's Java configuration sets them
+/// (`dev.temperlang` and `temper-std`).
 fn coordinates(p: &Program, library: &str) -> (String, String) {
     let meta = p.metadata_of(library);
-    let name = meta.get("javaName").unwrap_or(library);
-    match library {
-        "std" => ("dev.temperlang".to_string(), "temper-std".to_string()),
-        _ => (
-            (meta.get("javaGroup").or(meta.get("javaPackage")))
-                .map_or_else(|| names::package(name), temper_tmpl::xml_text),
-            temper_tmpl::xml_text(meta.get("javaArtifact").unwrap_or(name)),
-        ),
-    }
+    let config = |property| CONFIG.get(library, meta, property);
+    let name = config("name").unwrap_or(library);
+    (
+        (config("group").or(config("package")))
+            .map_or_else(|| names::package(name), temper_tmpl::xml_text),
+        temper_tmpl::xml_text(config("artifact").unwrap_or(name)),
+    )
 }
 
 /// The config's metadata, as Kotlin's `pomXml` writes it after the name:

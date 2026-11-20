@@ -35,7 +35,13 @@ fn program(full: bool) -> Program {
         let exports = (exports.iter())
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
-        program.metadata = vec![("app".into(), Metadata { exports })];
+        program.metadata = vec![(
+            "app".into(),
+            Metadata {
+                exports,
+                ..Metadata::default()
+            },
+        )];
     }
     program
 }
@@ -276,46 +282,86 @@ module util#0 {
 }
 ";
 
-/// [`USES`]'s `app`, for a backend's naming rules, with names for it and
-/// `util` in their configs.
+/// The flat keys that configs once set each backend's names with, which
+/// are now ordinary values that no backend reads.
 #[allow(dead_code)] // Unless every backend is left out.
-fn named(rules: &temper_tmpl::naming::NamingRules) -> Program {
+const FLAT: [(&str, &str); 8] = [
+    ("pyName", "flat-py"),
+    ("jsName", "flat-js"),
+    ("rustName", "flat-rs"),
+    ("javaName", "flat-java"),
+    ("javaPackage", "com.flat"),
+    ("javaGroup", "com.flat.group"),
+    ("javaArtifact", "flat-artifact"),
+    ("csharpRootNamespace", "Flat.Namespace"),
+];
+
+/// A library's metadata: the flat keys, and what it sets in each
+/// backend's config class, by the class's key.
+#[allow(dead_code)] // Unless every backend is left out.
+fn metadata(configs: &[(&str, &[(&str, &str)])]) -> Metadata {
+    let pairs = |pairs: &[(&str, &str)]| {
+        (pairs.iter())
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    };
+    Metadata {
+        exports: pairs(&FLAT),
+        configs: (configs.iter())
+            .map(|(key, values)| (key.to_string(), pairs(values)))
+            .collect(),
+    }
+}
+
+/// [`USES`]'s `app`, for a backend's naming rules, with names for it and
+/// `util` in their configs' backend config classes, where `typed`, and
+/// otherwise only in flat keys, which have no effect.
+#[allow(dead_code)] // Unless every backend is left out.
+fn named_as(rules: &temper_tmpl::naming::NamingRules, typed: bool) -> Program {
     use temper_tmpl::naming::{self, Interface};
     let mut program = text::read(USES).unwrap();
     let util = text::read(UTIL).unwrap();
     let names = naming::assign(&util, rules);
     program.interfaces.push(Interface::of(&util, &names));
-    let config = |pairs: &[(&str, &str)]| Metadata {
-        exports: (pairs.iter())
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect(),
+    let app: &[(&str, &[(&str, &str)])] = &[
+        ("py", &[("name", "App_Py")]),
+        ("js", &[("name", "@example/app-js")]),
+        ("rust", &[("name", "app-rs")]),
+        (
+            "java",
+            &[("name", "app-java"), ("package", "com.example.app")],
+        ),
+        ("csharp", &[("rootNamespace", "Example.App")]),
+    ];
+    let util: &[(&str, &[(&str, &str)])] = &[
+        ("py", &[("name", "util-py")]),
+        ("js", &[("name", "util-js")]),
+        ("rust", &[("name", "util-rs")]),
+        (
+            "java",
+            &[
+                ("name", "util-java"),
+                ("group", "com.example"),
+                ("artifact", "util-lib"),
+            ],
+        ),
+        ("csharp", &[("rootNamespace", "Example.Util")]),
+    ];
+    let (app, util) = match typed {
+        true => (app, util),
+        false => (&[][..], &[][..]),
     };
     program.metadata = vec![
-        (
-            "app".into(),
-            config(&[
-                ("pyName", "App_Py"),
-                ("jsName", "@example/app-js"),
-                ("rustName", "app-rs"),
-                ("javaName", "app-java"),
-                ("javaPackage", "com.example.app"),
-                ("csharpRootNamespace", "Example.App"),
-            ]),
-        ),
-        (
-            "util".into(),
-            config(&[
-                ("pyName", "util-py"),
-                ("jsName", "util-js"),
-                ("rustName", "util-rs"),
-                ("javaName", "util-java"),
-                ("javaGroup", "com.example"),
-                ("javaArtifact", "util-lib"),
-                ("csharpRootNamespace", "Example.Util"),
-            ]),
-        ),
+        ("app".into(), metadata(app)),
+        ("util".into(), metadata(util)),
     ];
     program
+}
+
+/// [`named_as`], with typed config.
+#[allow(dead_code)] // Unless every backend is left out.
+fn named(rules: &temper_tmpl::naming::NamingRules) -> Program {
+    named_as(rules, true)
 }
 
 /// A file's text, by its path, from what a backend made of [`named`].
@@ -419,4 +465,57 @@ fn csharp_names() {
         text.starts_with("using Example.Util;\n\nnamespace Example.App;\n"),
         "{text}"
     );
+}
+
+/// Flat keys (`pyName`, `javaPackage`, …) are ordinary config values now:
+/// each backend names libraries as it does without config.
+#[test]
+fn flat_keys_have_no_effect() {
+    #[allow(unused_variables)] // Unless every backend is left out.
+    let check = |files: Vec<temper_tmpl::OutFile>, path: &str, default: &str| {
+        let text = file(files.clone(), path);
+        assert!(text.contains(default), "{path}: {text}");
+        for f in &files {
+            let text = f.text.to_lowercase();
+            assert!(!text.contains("flat"), "{}: {}", f.path, f.text);
+        }
+    };
+    #[cfg(feature = "py")]
+    {
+        use temper_be_py::{PY, translate};
+        let files = translate(&named_as(&PY.rules, false), &PY).unwrap();
+        check(files, "app/pyproject.toml", "name = \"app\"\n");
+    }
+    #[cfg(feature = "js")]
+    {
+        use temper_be_js::{JS, translate};
+        let files = translate(&named_as(&JS.rules, false), &JS).unwrap();
+        check(files, "app/package.json", "\"name\": \"app\",\n");
+    }
+    #[cfg(feature = "rust")]
+    {
+        use temper_be_rust::{RUST, translate};
+        let files = translate(&named_as(&RUST.rules, false), &RUST).unwrap();
+        check(files, "app/Cargo.toml", "name = \"app\"\n");
+    }
+    #[cfg(feature = "java")]
+    {
+        use temper_be_java::{JAVA, translate};
+        let files = translate(&named_as(&JAVA.rules, false), &JAVA).unwrap();
+        check(
+            files,
+            "app/pom.xml",
+            "  <groupId>app</groupId>\n  <artifactId>app</artifactId>\n",
+        );
+    }
+    #[cfg(feature = "csharp")]
+    {
+        use temper_be_csharp::{CSHARP, translate};
+        let files = translate(&named_as(&CSHARP.rules, false), &CSHARP).unwrap();
+        check(
+            files,
+            "app/src/App.csproj",
+            "<RootNamespace>App</RootNamespace>",
+        );
+    }
 }

@@ -46,6 +46,36 @@ Getting started with each language is in the
 > `data` backends, and an experimental `cppv`; they aren't available
 > yet ([inconsistencies](../inconsistencies.md#i4-backends-not-available-yet)).
 
+## Configuration
+
+Each backend has a config class for its own settings, which a
+library's `config.temper.md` sets in an object of that class, exported
+under the backend's ID:
+
+```temper
+export let java = { class: JavaConfig, package: "com.example.geometry" };
+```
+
+Each setting is a string, and unset by default. A setting the class
+doesn't have, or a value of another type, is a config error.
+[Library configuration](../guide/tutorial/04-modules-and-libraries.md#library-configuration)
+has a whole config file.
+
+<!-- Generated from each backend's config class by crates/temper-driver/tests/config_classes.rs. -->
+| Class | Export | Property | Sets |
+|---|---|---|---|
+| `CppConfig` | `cpp` | | Nothing yet |
+| `CSharpConfig` | `csharp` | `rootNamespace` | The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case. |
+| `JavaConfig` | `java` | `name` | The library's Java name, which the package and the Maven artifact ID default to; else the library's name. |
+|  |  | `package` | The Java package, as `com.example.geometry`; else the Java name, as a package. |
+|  |  | `group` | The Maven group ID; else the package. |
+|  |  | `artifact` | The Maven artifact ID; else the Java name. |
+| `JsConfig` | `js` | `name` | The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name. |
+| `LuaConfig` | `lua` | | Nothing yet |
+| `PyConfig` | `py` | `name` | The Python project's name, which, as a Python name, also names its package; else the library's name. |
+| `RustConfig` | `rust` | `name` | The crate's name, which code that uses the library names with `_` for `-`; else the library's name. |
+<!-- End of generated table. -->
+
 ## C++ (`cpp`)
 
 Translates Temper to C++14: a header and a source file per module
@@ -114,9 +144,10 @@ its `ILogger`. Without one, generated libraries log through
 Each Temper library gets a [`.csproj` file][CsCsProj], so each builds
 to its own .NET assembly.
 
-The only .NET naming setting in [`config.temper.md`][CsConfig] today is
-`csharpRootNamespace`. It sets the project's root namespace, the
-assembly's name, and the presumed NuGet [package ID][CsPackageId].
+The only .NET setting in [`config.temper.md`][CsConfig] today is
+`CSharpConfig`'s `rootNamespace` ([Configuration](#configuration)). It
+sets the project's root namespace, the assembly's name, and the
+presumed NuGet [package ID][CsPackageId].
 Microsoft has advice on [choosing a namespace][CsNamespaceSelection].
 
 Temper [`test` blocks][CsTestBlocks] translate to the
@@ -161,7 +192,8 @@ code can't reassign them.
 Still to write up: how function types translate to single-method
 interfaces, how nullable types translate, primitive and boxed types,
 overloads for optional arguments, picking a Java package and Maven
-identifiers (`javaName`, `javaPackage`), and the generated POM.
+identifiers (`JavaConfig`, [Configuration](#configuration)), and the
+generated POM.
 
 [Java 17]: https://docs.oracle.com/javase/specs/jls/se17/html/index.html
 

@@ -161,6 +161,19 @@ pub struct StdSupport {
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let rust = {
+/// class: RustConfig, … };`, as Kotlin's `RustConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "rust",
+    class: "RustConfig",
+    properties: &[temper_tmpl::Property {
+        name: "name",
+        doc: "The crate's name, which code that uses the library names with `_` for `-`; else the library's name.",
+    }],
+    std: &[("name", "temper-std")],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "rust",
@@ -173,6 +186,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &RUST.rules,
     translate: |p, _| translate(p, &RUST).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -282,7 +296,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let names = assign_checked(p, &variant.rules).map_err(NotYet::new)?;
     let package = &p.library.name;
     // std's package is `temper-std`, as Kotlin's, in `std/`; a config's
-    // `rustName` names another's, in the library's directory still.
+    // `RustConfig` name names another's, in the library's directory
+    // still.
     let cargo_name = &translate::rust_name(package, p.metadata());
     let krate = names::crate_name(cargo_name);
     let mut translator = translate::Translator::new(p, &names);

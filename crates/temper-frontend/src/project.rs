@@ -59,40 +59,36 @@ pub struct LibrarySources {
     pub config: Config,
 }
 
-/// What a library's config file says, as far as tempest reads it: the
-/// string values it exports, `export let KEY = "VALUE";` a line, in
-/// order, and the library's name. Kotlin runs the config as Temper; this
-/// reads only such lines, which is all that the libraries we know of
-/// write.
+/// What a library's config file says: the string values it exports, in
+/// order, and the library's name; and everything it exports, which the
+/// config classes that backends inject check ([`Config::check`]). Kotlin
+/// runs the config as Temper; this reads its code without running it
+/// ([`crate::config`]).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Config {
     /// The library's name (see the module docs).
     pub name: String,
     pub exports: Vec<(String, String)>,
+    /// Everything it exports, strings and config class instances among
+    /// them.
+    pub values: Vec<crate::config::Export>,
+    /// Its syntax errors.
+    pub problems: Vec<crate::config::Problem>,
+    /// Its text, which problems' spans are in.
+    pub text: String,
 }
 
 impl Config {
     /// Reads a config file's text, for a library whose root is `path`
     /// under the work root (as `a/b`, or empty for the work root).
     pub fn read(text: &str, path: &str) -> Config {
-        let mut exports = Vec::new();
-        for line in text.lines() {
-            let Some(rest) = line.trim().strip_prefix("export let ") else {
-                continue;
-            };
-            let Some((key, value)) = rest.split_once('=') else {
-                continue;
-            };
-            let key = key.trim();
-            let value = value.trim().trim_end_matches(';').trim_end();
-            let Some(value) = value.strip_prefix('"').and_then(|v| v.strip_suffix('"')) else {
-                continue;
-            };
-            let simple = |s: &str| !s.contains(['"', '\\']);
-            if key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') && simple(value) {
-                exports.push((key.to_string(), value.to_string()));
-            }
-        }
+        let (values, problems) = crate::config::read(text);
+        let exports: Vec<(String, String)> = (values.iter())
+            .filter_map(|e| match &e.value {
+                crate::config::Value::String(s) => Some((e.key.clone(), s.clone())),
+                _ => None,
+            })
+            .collect();
         let configured = (exports.iter())
             .find(|(k, v)| k == "name" && !v.trim().is_empty())
             .map(|(_, v)| v.clone());
@@ -107,7 +103,21 @@ impl Config {
             .or_else(|| text.lines().next().and_then(|l| dashed(&slug(l))))
             .or_else(from_path)
             .unwrap_or_else(|| "unnamed".to_string());
-        Config { name, exports }
+        Config {
+            name,
+            exports,
+            values,
+            problems,
+            text: text.to_string(),
+        }
+    }
+
+    /// Its exports checked against the config classes in its scope, one
+    /// for each of a build's backends, with its syntax errors first.
+    pub fn check(&self, types: &[&temper_tmpl::ConfigType]) -> crate::config::Checked {
+        let mut checked = crate::config::check(&self.values, types);
+        checked.problems.splice(0..0, self.problems.iter().cloned());
+        checked
     }
 
     /// A string the config exports, if it does.

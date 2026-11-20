@@ -1284,12 +1284,28 @@ Other differences we won't copy:
   repository, which also goes in `RepositoryUrl` (Kotlin's is the
   repository). The rockspec's homepage, as the pom's URL, falls back to
   the repository. CMakeLists.txt's `project` has the description, where
-  Kotlin writes none. Each backend's names for a library (`pyName`,
-  `jsName`, `rustName`, `javaName`, `javaPackage`, `javaGroup`,
-  `javaArtifact`, and `csharpRootNamespace`) name its package and what
-  code that uses it imports, as Kotlin's, but an empty `javaPackage`,
-  which Kotlin takes as no package at all, counts as unset.
-  Test: crates/temper-driver/tests/metadata.rs.
+  Kotlin writes none. Each backend's names for a library, in its config
+  class (`PyConfig`'s `name`, `JavaConfig`'s `package`, …), name its
+  package and what code that uses it imports, as Kotlin's, but an empty
+  Java package, which Kotlin takes as no package at all, counts as
+  unset. Test: crates/temper-driver/tests/metadata.rs.
+
+- **Backend config classes** (2026-11-20): each backend injects its
+  config class (`CSharpConfig`, `JavaConfig`, …) as Kotlin's do, with
+  Kotlin's names and properties, and `CppConfig` and `LuaConfig` with
+  none, as Kotlin's placeholders. Kotlin runs the config module; tempest
+  reads its exports without running it, so values are literals (a
+  string, or `null`), and a computed one is an error. Kotlin's
+  `dependencies` lists aren't supported yet, so they're errors too.
+  Kotlin also read the older flat keys (`pyName`, `javaPackage`, …) where
+  a config class didn't set a value; tempest doesn't, so they're
+  ordinary values. A class or property that isn't there, a value of
+  another type, or an instance under another backend's name is a config
+  error at its place in the file, where Kotlin printed a console error
+  and went on. A config file's code is only its code blocks, as in
+  Kotlin; tempest once also read `export let` lines in its prose. Tests:
+  crates/temper-frontend/src/config.rs, crates/tempest/tests/cli.rs
+  (`typed_config_*`).
 
 - **Ignore files** (2026-11-06): Kotlin reads one, the nearest
   `.temperignore` or `.gitignore` at or above where it starts (its

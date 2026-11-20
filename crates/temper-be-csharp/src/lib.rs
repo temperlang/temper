@@ -103,6 +103,19 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let csharp = {
+/// class: CSharpConfig, … };`, as Kotlin's `CSharpConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "csharp",
+    class: "CSharpConfig",
+    properties: &[temper_tmpl::Property {
+        name: "rootNamespace",
+        doc: "The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case.",
+    }],
+    std: &[("rootNamespace", "TemperLang.Std")],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "csharp",
@@ -115,6 +128,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &CSHARP.rules,
     translate: |p, _| translate(p, &CSHARP).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
