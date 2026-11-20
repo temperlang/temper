@@ -1,22 +1,24 @@
 # Lists
 
-    /**
-     * The *Listed* type is an immutable view of a random-access sequence of values.
-     * A `Listed<String>` may contain strings, a `Listed<Boolean>` may contain
-     * booleans, etc.
-     *
-     * The backing object might or might not be mutable. During a function call, an
-     * argument of type `Listed` shouldn't be modified concurrently, although it
-     * might be modified after the end of the call, so receivers *shouldn't* keep
-     * any references to a `Listed` parameter for later use, unless accounting for
-     * possible changes or according to specific contracts defined for particular
-     * use cases.
-     *
-     * If you want to keep a reference to a `Listed` argument, it's often best to
-     * call `toList` on it and retain that value instead.
-     *
-     * Usually, don't return type `Listed`. It's usually best to return type `List`.
-     */
+Sequences of values: the read-only view `Listed`, the immutable `List`, the
+growable `ListBuilder`, and the double-ended queue `Deque`.
+
+*Listed* is an immutable view of a random-access sequence of values.
+A `Listed<String>` may contain strings, a `Listed<Boolean>` may contain
+booleans, etc.
+
+The backing object might or might not be mutable. During a function call, an
+argument of type `Listed` shouldn't be modified concurrently, although it
+might be modified after the end of the call, so receivers *shouldn't* keep
+any references to a `Listed` parameter for later use, unless accounting for
+possible changes or according to specific contracts defined for particular
+use cases.
+
+If you want to keep a reference to a `Listed` argument, it's often best to
+call `toList` on it and retain that value instead.
+
+Usually, don't return type `Listed`. It's usually best to return type `List`.
+
     export sealed interface Listed<T> {
       /**
        * The *length* of a listed is the number of items it contains.
@@ -110,7 +112,8 @@
     // `listedMap(xs) { … }`: an interface's methods may be overridden, so
     // they can't be generic, in core as in any library.
 
-    /** Maps elements using [transform]. */
+`listedMap` (`listed.map { … }`) maps elements using [transform].
+
     @extension("map")
     @connected
     export let listedMap<T, O>(listed: Listed<T>, transform: fn (T): O): List<O> {
@@ -121,17 +124,17 @@
       result.toList()
     }
 
-    /** Reduce to a single value, starting from the given initial value. */
+`listedReduceFrom` (`listed.reduceFrom(…)`) reduces to a single value, starting from the given initial value.
+
     @extension("reduceFrom")
     @connected
     export let listedReduceFrom<T, O>(listed: Listed<T>, initial: O, accumulate: fn (O, T): O): O {
       listedReduceFromIndex(listed, initial, 0, accumulate)
     }
 
-    /**
-     * Reduce to a single value, starting from the given initial value and
-     * the item at [index].
-     */
+`listedReduceFromIndex` (`listed.reduceFromIndex(…)`) reduces to a single value, starting from the given initial value and
+the item at [index].
+
     @extension("reduceFromIndex")
     export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int, accumulate: fn (O, T): O): O {
       var result = initial;
@@ -141,13 +144,12 @@
       result
     }
 
-    /**
-     * The *List* type is a random-access, immutable sequence of values. List
-     * literals using `[...]` syntax represent immutable `List` instances. For
-     * mutable random-access sequences, see `ListBuilder`.
-     *
-     * See also `Listed` for recommendations on `List` vs `Listed` use.
-     */
+*List* is a random-access, immutable sequence of values. List
+literals using `[...]` syntax represent immutable `List` instances. For
+mutable random-access sequences, see `ListBuilder`.
+
+See also `Listed` for recommendations on `List` vs `Listed` use.
+
     @connected
     @partialImu
     @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
@@ -186,10 +188,9 @@
       }
     }
 
-    /**
-     * The *ListBuilder* type is a random-access, mutable, growable sequence of
-     * values.
-     */
+*ListBuilder* is a random-access, mutable, growable sequence of
+values.
+
     @connected
     @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
     export class ListBuilder<T> extends Listed<T> {
@@ -263,25 +264,24 @@
       public toListBuilder(): ListBuilder<T>;
     }
 
-    /**
-     * A *Deque* or double-ended queue allows for breadth-first processing via
-     * efficient adds at the end and efficient removal from the front.
-     *
-     * ```temper
-     * let deque = new Deque<String>();
-     * deque.add("a");
-     * deque.add("b");
-     *
-     * console.log(deque.removeFirst()); //!outputs "a"
-     *
-     * deque.add("c");
-     * deque.add("d");
-     *
-     * while (!deque.isEmpty) {
-     *   console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
-     * }
-     * ```
-     */
+*Deque* is a double-ended queue that allows for breadth-first processing via
+efficient adds at the end and efficient removal from the front.
+
+```temper inert
+let deque = new Deque<String>();
+deque.add("a");
+deque.add("b");
+
+console.log(deque.removeFirst()); //!outputs "a"
+
+deque.add("c");
+deque.add("d");
+
+while (!deque.isEmpty) {
+  console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
+}
+```
+
     export class Deque<T> {
       private let content: ListBuilder<T>;
 

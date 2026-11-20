@@ -1,9 +1,10 @@
 //! Temper's core, as Kotlin Temper declares it (the repository's
-//! `lib/core/`): builtin types, functions, and values, with
-//! their members and doc comments. Tempest builds core in rather than
+//! `lib/core/`, literate `.temper.md` files): builtin types,
+//! functions, and values, with their members and docs. Tempest builds core in rather than
 //! loading it as a library; typing reads members' signatures from it
 //! (`typing::core_members`), and editors show these files for go to
-//! definition and read their doc comments for hover. Builtin values,
+//! definition and read their docs for hover ([`doc_string`]): prose
+//! before a top-level declaration, or a member's doc comment. Builtin values,
 //! functions, and macros without a Temper body, as `true`, `panic` and
 //! `if`, have bodiless `@connected` declarations, which document them
 //! and, in core, declare nothing, so core's own code still names the
@@ -85,6 +86,15 @@ pub fn code() -> &'static str {
         let blanked = SOURCES.iter().map(|(_, text)| blank_prose(text));
         blanked.collect::<Vec<_>>().join("\n")
     })
+}
+
+/// What documents core's declaration named `name` whose name is at byte
+/// `at` of [`TEXT`]: its doc comment, or the prose before it, by the
+/// rules a library's declarations follow ([`crate::docs`]).
+pub fn doc_string(at: usize, name: &str) -> Option<crate::docs::DocString> {
+    static DOCS: std::sync::OnceLock<crate::docs::DocsByPlace> = std::sync::OnceLock::new();
+    let docs = DOCS.get_or_init(|| crate::docs::DocsByPlace::parse(SOURCES));
+    docs.doc_string(u32::try_from(at).ok()?, name)
 }
 
 /// The source that byte `at` of [`TEXT`] is in, by path and text, and

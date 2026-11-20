@@ -39,11 +39,7 @@ impl Analysis<'_> {
         // The name there: the member's, or an instance extension's
         // function's, as `listedMap` for `map`, or a quoted one,
         // ``nym`true` ``.
-        let rest = &corelib::code()[at..];
-        let len = match rest.strip_prefix("nym`") {
-            Some(quoted) => quoted.find('`').map_or(rest.len(), |end| end + 5),
-            None => (rest.find(|c: char| !c.is_alphanumeric() && c != '_')).unwrap_or(rest.len()),
-        };
+        let len = core_name_len(at);
         let (path, source, at) = corelib::source_at(at)?;
         Some(CoreLocation {
             path,
@@ -242,10 +238,36 @@ fn core_alias(at: usize) -> Option<&'static str> {
         .then_some(aliased)
 }
 
+/// The length of the name at byte `at` of core's text: a word, or a
+/// quoted one, ``nym`true` ``.
+fn core_name_len(at: usize) -> usize {
+    let rest = &corelib::code()[at..];
+    match rest.strip_prefix("nym`") {
+        Some(quoted) => quoted.find('`').map_or(rest.len(), |end| end + 5),
+        None => (rest.find(|c: char| !c.is_alphanumeric() && c != '_')).unwrap_or(rest.len()),
+    }
+}
+
+/// What documents a declaration whose name is at byte `at` of core's
+/// text, as a library's declarations' docs ([`Analysis::doc`]): its doc
+/// comment, `/** … */`, as [`doc_text`] gives it, or else the prose
+/// before it in its `.temper.md` file, from the paragraph that starts
+/// with its name, as [`prose_text`] gives it.
+pub(crate) fn core_doc(at: usize) -> Option<String> {
+    core_comment_doc(at).or_else(|| {
+        let name = &corelib::code()[at..at + core_name_len(at)];
+        let name = name
+            .strip_prefix("nym`")
+            .map_or(name, |n| n.trim_end_matches('`'));
+        let doc = corelib::doc_string(at, name)?;
+        doc.prose.then(|| prose_text(&doc.long)).flatten()
+    })
+}
+
 /// The doc comment, `/** … */`, right before a declaration whose name is
 /// at byte `at` of core's text, past decorations' lines, as
 /// [`doc_text`] gives it.
-pub(crate) fn core_doc(at: usize) -> Option<String> {
+fn core_comment_doc(at: usize) -> Option<String> {
     let text = corelib::code();
     let line_start = text.get(..at)?.rfind('\n').map_or(0, |i| i + 1);
     if text[line_start..at].contains(|c| ";{}()=,".contains(c)) {

@@ -694,7 +694,7 @@ mod tests {
         assert!(
             out[13].starts_with(
                 "{\"from\":7,\"to\":13,\"name\":\"String\",\"kind\":\"builtin\",\
-                 \"type\":\"String\",\"doc\":\"A *String*"
+                 \"type\":\"String\",\"doc\":\"*String* is"
             ),
             "{}",
             out[13]

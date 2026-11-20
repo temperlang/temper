@@ -1,12 +1,13 @@
 # Console
 
-    /**
-     * A *Console* provides logging and diagnostic capabilities. It might be
-     * configured differently depending on the backend and environment. Don't rely
-     * on it being attached to any standard stream.
-     *
-     * Use the builtin instance `console` for default logging needs.
-     */
+Logging, through a `Console`, and the default `console` that code can use.
+
+*Console* provides logging and diagnostic capabilities. It might be
+configured differently depending on the backend and environment. Don't rely
+on it being attached to any standard stream.
+
+Use the builtin instance `console` for default logging needs.
+
     export interface Console {
       /**
        * Log a message at default informational level to this console.
@@ -26,17 +27,15 @@
       private globalLog(message: String): Void;
     }
 
-    /**
-     * The global default `Console` instance. It is designed to integrate with
-     * standard backend logging services. Frontend processing replaces references to
-     * the global console with a call to `getConsole` for the current module.
-     */
+`console` is the global default `Console` instance. It is designed to integrate with
+standard backend logging services. Frontend processing replaces references to
+the global console with a call to `getConsole` for the current module.
+
     export let console: Console = doPure { (): Console => new GlobalConsole() };
 
-    /**
-     * Access or make a console for the given name. If name is unspecified, use the
-     * idiomatic backend library or module name for logging purposes. The default of
-     * empty string is merely a placeholder.
-     */
+`getConsole` accesses or makes a console for the given name. If name is unspecified, use the
+idiomatic backend library or module name for logging purposes. The default of
+empty string is merely a placeholder.
+
     @connected
     export let getConsole(name: String = ""): Console { console }

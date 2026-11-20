@@ -574,15 +574,12 @@ fn definition_and_hover_into_core() {
     assert!(value.contains("\n\nThe *length* of a listed"), "{value}");
     let hover = client.request("textDocument/hover", at(&file, 2, 13));
     let value = str_at(&hover, &["contents", "value"]);
-    assert!(
-        value.contains("The *List* type is a random-access"),
-        "{value}"
-    );
+    assert!(value.contains("*List* is a random-access"), "{value}");
     // A parameter's type and a result type, with core's docs.
     let hover = client.request("textDocument/hover", at(&file, 6, 13));
     let value = str_at(&hover, &["contents", "value"]);
     assert!(
-        value.starts_with("```temper\nbuiltin String\n```\n\nA *String*"),
+        value.starts_with("```temper\nbuiltin String\n```\n\n*String* is"),
         "{value}"
     );
     let hover = client.request("textDocument/hover", at(&file, 6, 22));
@@ -603,12 +600,12 @@ fn definition_and_hover_into_core() {
     );
     let value = hover(7, 13);
     assert!(
-        value.starts_with("```temper\nbuiltin panic\n```\n\nImmediately panics"),
+        value.starts_with("```temper\nbuiltin panic\n```\n\n`panic` immediately panics"),
         "{value}"
     );
     let value = hover(8, 10);
     assert!(
-        value.starts_with("```temper\nbuiltin true: Boolean\n```\n\nThe value `true`"),
+        value.starts_with("```temper\nbuiltin true: Boolean\n```\n\n`true` is the true value"),
         "{value}"
     );
     let value = hover(9, 12);
@@ -726,7 +723,7 @@ fn definition_and_hover_within_core() {
         str_at(&hover, &["contents", "value"]).to_string()
     };
     let value = hover(find(reduce, "(", "Listed"));
-    assert!(value.contains("The *Listed* type is"), "{value}");
+    assert!(value.contains("*Listed* is an immutable view"), "{value}");
     let value = hover(find(append, ".", "fromCodePoint"));
     assert!(value.contains("fromCodePoint(codePoint: Int"), "{value}");
     // Core's own files analyze cleanly.

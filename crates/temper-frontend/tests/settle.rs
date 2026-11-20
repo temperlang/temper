@@ -1342,3 +1342,55 @@ let scale(/** How much bigger. */ factor: Int): Int { factor }
     let factor = lib.doc_string(decl("factor")).unwrap();
     assert_eq!(factor.long, "How much bigger.");
 }
+
+/// Docs found by where a declaration's name is, without settling, as
+/// core's are for hover: by the same rules as [`Library::doc_string`].
+#[test]
+fn doc_strings_by_place() {
+    use temper_frontend::docs::DocsByPlace;
+    let first = "let skipped = 1;\n";
+    let source = "# Points
+
+Some introduction.
+
+`Point` is a place on a plane.
+
+It has two coordinates.
+
+    @connected
+    export class Point(public x: Int, public y: Int) {
+
+Distance is how far a point is from the origin.
+
+      public distance(): Int { x + y }
+      /** Moves it. */
+      public moved(by: Int): Point { new Point(x + by, y + by) }
+    }
+    let origin = new Point(0, 0);
+";
+    let docs = DocsByPlace::parse(&[("a.temper", first), ("b.temper.md", source)]);
+    // Offsets are library-wide: past the first file and a newline.
+    let base = first.len() + 1;
+    let at = |needle: &str| (base + source.find(needle).unwrap()) as u32;
+    let point = docs.doc_string(at("Point("), "Point").unwrap();
+    assert_eq!(
+        (point.long.as_str(), point.prose),
+        (
+            "`Point` is a place on a plane.\n\nIt has two coordinates.",
+            true
+        )
+    );
+    let distance = docs.doc_string(at("distance("), "distance").unwrap();
+    assert_eq!(
+        distance.long,
+        "Distance is how far a point is from the origin."
+    );
+    let moved = docs.doc_string(at("moved("), "moved").unwrap();
+    assert_eq!((moved.long.as_str(), moved.prose), ("Moves it.", false));
+    // A member without docs doesn't take its class's, nor a declaration
+    // the docs before another's.
+    assert_eq!(docs.doc_string(at("x: Int"), "x"), None);
+    assert_eq!(docs.doc_string(at("origin"), "origin"), None);
+    let skipped = first.find("skipped").unwrap() as u32;
+    assert_eq!(docs.doc_string(skipped, "skipped"), None);
+}

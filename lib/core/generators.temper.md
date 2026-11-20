@@ -1,28 +1,29 @@
 # Generators and promises
 
-    /**
-     * One of a sequence of results from a [snippet/type/Generator].
-     */
+Generators, which compute results step by step, and promises, placeholders
+for values that may not be known yet, as `async` and `await` use them.
+
+*GeneratorResult* is one of a sequence of results from a [snippet/type/Generator].
+
     @partialImu
     @connected
     export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
 
-    /**
-     * A multi-step computation that may be scheduled for a step by calling the
-     * [snippet/type/Generator/method/next] method.
-     *
-     * Block lambdas that extend [snippet/type/GeneratorFn] specify factories
-     * for *Generator*s, or if they don't [snippet/type/Bubble], for
-     * [snippet/type/Generator]s.
-     *
-     * Terminology note:
-     * Coroutines may be represented as *Generator*s where
-     * [snippet/type/Generator/method/next]
-     * starts or resumes computation and the coroutine pauses itself
-     * when done with the step.
-     * We avoid the term "coroutine" because many programmers associate it
-     * narrowly with a kind of parallelism.
-     */
+*Generator* is a multi-step computation that may be scheduled for a step by calling the
+[snippet/type/Generator/method/next] method.
+
+Block lambdas that extend [snippet/type/GeneratorFn] specify factories
+for *Generator*s, or if they don't [snippet/type/Bubble], for
+[snippet/type/Generator]s.
+
+Terminology note:
+Coroutines may be represented as *Generator*s where
+[snippet/type/Generator/method/next]
+starts or resumes computation and the coroutine pauses itself
+when done with the step.
+We avoid the term "coroutine" because many programmers associate it
+narrowly with a kind of parallelism.
+
     @connected
     export interface Generator<@out YIELD extends AnyValue> {
       /**
@@ -65,10 +66,9 @@
       public close(): Void;
     }
 
-    /**
-     * A variant of [snippet/type/Generator] that does not bubble
-     * when computing the next result.
-     */
+*SafeGenerator* is a variant of [snippet/type/Generator] that does not bubble
+when computing the next result.
+
     export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YIELD> {
       /**
        * Starts/resumes the computation and runs until it pauses or completes.
@@ -92,10 +92,9 @@
       public nextSafe(): GeneratorResult<YIELD>;
     }
 
-    /**
-     * A result produced from [snippet/type/Generator/method/next] when there is a value to produce and
-     * [snippet/type/Generator/property/done] is [snippet/builtin/false].
-     */
+*ValueResult* is a result produced from [snippet/type/Generator/method/next] when there is a value to produce and
+[snippet/type/Generator/property/done] is [snippet/builtin/false].
+
     @partialImu
     @connected
     export class ValueResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
@@ -106,22 +105,22 @@
       }
     }
 
-    /**
-     * A result produced from [snippet/type/Generator/method/next] when there is no value to produce and
-     * [snippet/type/Generator/property/done] is [snippet/builtin/true].
-     */
+*DoneResult* is a result produced from [snippet/type/Generator/method/next] when there is no value to produce and
+[snippet/type/Generator/property/done] is [snippet/builtin/true].
+
     @imu
     @connected
     export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
       public constructor();
     }
-    /** A [snippet/type/DoneResult], a generator's result once it is done. */
+
+`doneResult` gives a [snippet/type/DoneResult], a generator's result once it is done.
+
     @connected
     export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }
 
-    /**
-     * Wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
-     */
+*GeneratorFnWrapper* wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
+
     class GeneratorFnWrapper<@out YIELD extends AnyValue>
     extends Generator<YIELD> {
       private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
@@ -152,9 +151,8 @@
       }
     }
 
-    /**
-     * Like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
-     */
+*SafeGeneratorFnWrapper* is like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
+
     class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
     extends SafeGenerator<YIELD> {
       private let generatorFn: fn (): GeneratorResult<YIELD>;
@@ -185,29 +183,27 @@
       }
     }
 
-    /**
-     * A promise is a placeholder for a value that may not be known yet.
-     *
-     * This class provides no methods that introspect over whether that
-     * value is available or what it is.
-     * Use [builtin/await] to get at the value asynchronously.
-     */
+*Promise* is a placeholder for a value that may not be known yet.
+
+This class provides no methods that introspect over whether that
+value is available or what it is.
+Use [builtin/await] to get at the value asynchronously.
+
     @connected
     export class Promise<@out R extends AnyValue> {
       private constructor();
     }
 
-    /**
-     * A promise builder contains a promise that may be shared, but the
-     * builder itself may be withheld.
-     *
-     * Security note: in some target languages, there is no distinction between
-     * promises and promise builders.  In those languages, native code that
-     * receives a promise builder's promise might be able to preempt completion
-     * meaning that third-parties that await on promise get the preemptively
-     * provided resolution instead of that provided by the owner of the promise
-     * builder.
-     */
+*PromiseBuilder* contains a promise that may be shared, but the
+builder itself may be withheld.
+
+Security note: in some target languages, there is no distinction between
+promises and promise builders.  In those languages, native code that
+receives a promise builder's promise might be able to preempt completion
+meaning that third-parties that await on promise get the preemptively
+provided resolution instead of that provided by the owner of the promise
+builder.
+
     @connected
     export class PromiseBuilder<R extends AnyValue> {
       private let _promise: Promise<R>;

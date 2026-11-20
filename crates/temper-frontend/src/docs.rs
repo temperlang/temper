@@ -59,6 +59,14 @@ pub struct DocString {
 /// Each run of doc comments, `REM` calls that associate right, before a
 /// statement in a block among `nodes`, by that statement.
 pub(crate) fn collect(lib: &Library, nodes: std::ops::Range<u32>) -> Vec<(NodeId, Vec<Rem>)> {
+    let mut out = statements(lib, nodes);
+    out.retain(|(_, run)| !run.is_empty());
+    out
+}
+
+/// Each statement in a block among `nodes`, other than a `REM` call,
+/// with the run of doc comments before it, maybe none.
+fn statements(lib: &Library, nodes: std::ops::Range<u32>) -> Vec<(NodeId, Vec<Rem>)> {
     let mut out = Vec::new();
     for id in nodes.map(NodeId) {
         if lib.tree.kind(id) != NodeKind::Block {
@@ -70,12 +78,46 @@ pub(crate) fn collect(lib: &Library, nodes: std::ops::Range<u32>) -> Vec<(NodeId
                 Some(Some(rem)) => run.push(rem),
                 // Another comment ends the run, which documents nothing.
                 Some(None) => run.clear(),
-                None if run.is_empty() => {}
                 None => out.push((statement, std::mem::take(&mut run))),
             }
         }
     }
     out
+}
+
+/// Docs found by where a declaration's name is, in files that are only
+/// parsed, not settled, as core's are, which hover reads by place
+/// (`temper_analysis`'s `core_doc`): by the same rules as
+/// [`Library::doc_string`].
+pub struct DocsByPlace {
+    /// Each statement's span, with the run of doc comments before it.
+    statements: Vec<(Span, Vec<Rem>)>,
+}
+
+impl DocsByPlace {
+    /// Parses `files`, by path and text, as one library's, so offsets
+    /// are library-wide, as [`Library::add_file`] has them: each file's
+    /// after the one before and a newline.
+    pub fn parse(files: &[(&str, &str)]) -> DocsByPlace {
+        let mut lib = Library::new();
+        for &(path, text) in files {
+            lib.add_file(path, text, crate::project::source_kind(path));
+        }
+        let all = statements(&lib, 0..lib.tree.len() as u32);
+        let statements = (all.into_iter())
+            .map(|(statement, run)| (lib.tree.span(statement), run))
+            .collect();
+        DocsByPlace { statements }
+    }
+
+    /// What documents the declaration named `name` whose name is at byte
+    /// `at`: the innermost statement around it, by [`pick`].
+    pub fn doc_string(&self, at: u32, name: &str) -> Option<DocString> {
+        let (_, run) = (self.statements.iter())
+            .filter(|(span, _)| span.start <= at && at < span.end)
+            .min_by_key(|(span, _)| span.end - span.start)?;
+        pick(run, name)
+    }
 }
 
 /// What a `REM` call has: `Some(Some(_))` for a doc comment or

@@ -644,7 +644,7 @@ fn hover_core_docs() {
     // Doc lines lose their leading `*`, as user declarations' do.
     let console = doc("console.", 0, 0).unwrap();
     assert!(
-        console.starts_with("The global default `Console` instance."),
+        console.starts_with("`console` is the global default `Console` instance."),
         "{console}"
     );
     assert!(!console.contains("\n*"), "{console}");
@@ -657,7 +657,7 @@ fn hover_core_docs() {
         .doc;
     let string = string.unwrap();
     assert!(
-        string.starts_with("A *String* is a chunk of textual content.\n\nTo"),
+        string.starts_with("*String* is a chunk of textual content.\n\nTo"),
         "{string}"
     );
     assert!(
@@ -679,7 +679,10 @@ fn hover_core_docs() {
     let source = "let e = empty();\nlet f(g: Generator<Int>): Void {}\n";
     let a = analyze(source);
     let doc = |needle| a.hover(MAIN, at(source, needle, 0, 0)).unwrap().doc;
-    assert_eq!(doc("empty").as_deref(), Some("The *Empty* value."));
+    assert_eq!(
+        doc("empty").as_deref(),
+        Some("`empty` gives the *Empty* value.")
+    );
     let generator = doc("Generator").unwrap();
     assert!(
         generator.contains("\n`Generator.next` method."),
@@ -942,6 +945,50 @@ fn every_builtin_has_core_docs() {
         }
     }
     assert_eq!(missing, Vec::<String>::new());
+}
+
+/// Core's declarations documented in prose, as std's are: hover,
+/// signature help, and so the REPL's help show the paragraphs from the
+/// one that starts with the declared name; a member's doc comment still
+/// wins.
+#[test]
+fn core_prose_docs() {
+    let typed = analyze(TYPED);
+    let doc = |source: &str, needle| {
+        let a = analyze(source);
+        a.hover(MAIN, at(source, needle, 0, 0))
+            .unwrap()
+            .doc
+            .unwrap()
+    };
+    let list_builder = doc(BUILTINS, "ListBuilder<String>");
+    assert!(
+        list_builder.starts_with("*ListBuilder* is a random-access, mutable, growable"),
+        "{list_builder}"
+    );
+    // `Int` aliases `Int32`, which documents it.
+    let int = typed
+        .hover(MAIN, at(TYPED, "Int { 1", 0, 0))
+        .unwrap()
+        .doc
+        .unwrap();
+    assert!(int.starts_with("*Int32* is the default"), "{int}");
+    assert_eq!(doc(BUILTINS, "ignore("), "Ignore any value.");
+    // An extension method's, documented by its function's name.
+    let source = "let n = [1, 2].reduceFrom(0, ";
+    let help = analyze(source)
+        .signature_help(MAIN, source.len() as u32)
+        .unwrap();
+    let reduce = help.doc.unwrap();
+    assert!(
+        reduce.starts_with("`listedReduceFrom` (`listed.reduceFrom(…)`) reduces"),
+        "{reduce}"
+    );
+    // A member's doc comment, inside its class's code.
+    assert_eq!(
+        doc(BUILTINS, "isEmpty;"),
+        "True if this contains no elements."
+    );
 }
 
 /// A literate library documented in prose, as Kotlin Temper's

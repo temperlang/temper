@@ -1,26 +1,28 @@
 # Strings
 
-    /**
-     * A *String* is a chunk of textual content.
-     *
-     * ⎀ syntax/StringExpr -heading
-     *
-     * To encourage code with repeatable behavior, strings do not have lengths; the length of a string
-     * depends on the kind of characters, which differ across programming languages.
-     * See the documentation for [string indices][snippet/type/StringIndex] to see how to compare
-     * character counts and understand more about semantic consistency of string operations.
-     *
-     * String values have a syntax similar to JavaScript, but instead of using backticks `` ` `` for
-     * multi-line strings with interpolation, use triple-quotes: `"""` for multi-line strings.
-     *
-     * ⎀ syntax/multi-quoted-strings -heading
-     *
-     * ⎀ syntax/EscapeSequences
-     *
-     * ⎀ syntax/string/incidental-space-removal
-     *
-     * ⎀ syntax/string/interpolation -heading
-     */
+Text: `String`, positions within strings, as `StringIndex`, and
+`StringBuilder` for composing strings.
+
+*String* is a chunk of textual content.
+
+⎀ syntax/StringExpr -heading
+
+To encourage code with repeatable behavior, strings do not have lengths; the length of a string
+depends on the kind of characters, which differ across programming languages.
+See the documentation for [string indices][snippet/type/StringIndex] to see how to compare
+character counts and understand more about semantic consistency of string operations.
+
+String values have a syntax similar to JavaScript, but instead of using backticks `` ` `` for
+multi-line strings with interpolation, use triple-quotes: `"""` for multi-line strings.
+
+⎀ syntax/multi-quoted-strings -heading
+
+⎀ syntax/EscapeSequences
+
+⎀ syntax/string/incidental-space-removal
+
+⎀ syntax/string/interpolation -heading
+
     @connected
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
     export class String extends MapKey<String> {
@@ -290,17 +292,16 @@
       public eq(other: String): Boolean;
     }
 
-    /**
-     * A [string index][snippet/type/StringIndex], or a similar value
-     * that idiomatically represents [no string index][snippet/type/StringIndex/static/none].
-     *
-     * String helpers like *indexOf* in many languages can return an integer
-     * like value which is either a position within the string or an integer
-     * value that represents failure to find a match like -1.
-     *
-     * *StringIndexOption* combines those two options in a type-safe way
-     * that typically translates to an idiomatic integer.
-     */
+*StringIndexOption* is a [string index][snippet/type/StringIndex], or a similar value
+that idiomatically represents [no string index][snippet/type/StringIndex/static/none].
+
+String helpers like *indexOf* in many languages can return an integer
+like value which is either a position within the string or an integer
+value that represents failure to find a match like -1.
+
+*StringIndexOption* combines those two options in a type-safe way
+that typically translates to an idiomatic integer.
+
     @imu
     @connected
     export sealed interface StringIndexOption extends Equatable<StringIndexOption> {
@@ -320,51 +321,49 @@
       public eq(other: StringIndexOption): Boolean;
     }
 
-    /**
-     * The absence to find a string index.
-     *
-     * As noted in [snippet/type/StringIndexOption], this is an integer-like type
-     * that represents the failure to find a valid string index.
-     */
+*NoStringIndex* represents the failure to find a string index.
+
+As noted in [snippet/type/StringIndexOption], this is an integer-like type
+that represents the failure to find a valid string index.
+
     @connected
     export class NoStringIndex extends StringIndexOption {
       @connected
       private constructor() {}
     }
 
-    /**
-     * A string index represents a position within a string, at a character or at its end.
-     *
-     * String indices translate to integral types (usually `int` or `size_t`) but the exact integer
-     * value for any notional index may differ from language to language.
-     *
-     * Strings are similar to arrays of "characters" in many languages, but the kind of character
-     * differs from language to language.
-     *
-     * For example a string like "κόσμε𐆊" can be represented in multiple ways.
-     *
-     * <table border=1><tr><th>↓Encoding/<div style="float:right">Glyph→</div></th><th colspan="2">κ<th colspan="2">ό</th><th colspan="3">σ</th><th colspan="2">μ</th><th colspan="2">ε</th><th colspan="4">𐆊</th></tr>
-     * <tr><th>UTF-8</td><td>ce</td><td>ba</td><td>e1</td><td>bd</td><td>b9</td><td>cf</td><td>83</td><td>ce</td><td>bc</td><td>ce</td><td>b5</td><td>f0</td><td>90</td><td>86</td><td>8a</td></tr>
-     * <tr><th>UTF-16</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="2">d800</td><td colspan="2">dd8a</td></tr>
-     * <tr><th>UTF-32</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="4">1018a</td></tr>
-     * </table>
-     *
-     * Go, and Rust and many C and C++ codebases use UTF-8 which can have between one to four bytes
-     * for a code-point.  The start of the n-th code-point could be anywhere between the n-th byte
-     * and the 4*n-th byte.  Figuring out exactly where involves examining n bytes, an O(n) operation.
-     *
-     * C# and Java use UTF-16 which represent most code-points using one 2-byte code unit, but
-     * may use a pair of "surrogates."
-     *
-     * Python3 presents strings as code-points but uses tricks internally to use fewer than
-     * 3-bytes per code-point of storage for most strings.
-     *
-     * As can be seen above, O(1) random access won't work across languages.  The *StringIndex* type
-     * allows an efficient representation of a position within a string.  Each *StringIndex*
-     * is either the start of a string or is derived from an operation that takes into account the
-     * string content.  This lets Temper provide consistent, efficient string operations regardless
-     * of the native character size.
-     */
+*StringIndex* represents a position within a string, at a character or at its end.
+
+String indices translate to integral types (usually `int` or `size_t`) but the exact integer
+value for any notional index may differ from language to language.
+
+Strings are similar to arrays of "characters" in many languages, but the kind of character
+differs from language to language.
+
+For example a string like "κόσμε𐆊" can be represented in multiple ways.
+
+<table border=1><tr><th>↓Encoding/<div style="float:right">Glyph→</div></th><th colspan="2">κ<th colspan="2">ό</th><th colspan="3">σ</th><th colspan="2">μ</th><th colspan="2">ε</th><th colspan="4">𐆊</th></tr>
+<tr><th>UTF-8</td><td>ce</td><td>ba</td><td>e1</td><td>bd</td><td>b9</td><td>cf</td><td>83</td><td>ce</td><td>bc</td><td>ce</td><td>b5</td><td>f0</td><td>90</td><td>86</td><td>8a</td></tr>
+<tr><th>UTF-16</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="2">d800</td><td colspan="2">dd8a</td></tr>
+<tr><th>UTF-32</th><td colspan="2">3ba</td><td colspan="3">1f79</td><td colspan="2">3c3</td><td colspan="2">3bc</td><td colspan="2">3b5</td><td colspan="4">1018a</td></tr>
+</table>
+
+Go, and Rust and many C and C++ codebases use UTF-8 which can have between one to four bytes
+for a code-point.  The start of the n-th code-point could be anywhere between the n-th byte
+and the 4*n-th byte.  Figuring out exactly where involves examining n bytes, an O(n) operation.
+
+C# and Java use UTF-16 which represent most code-points using one 2-byte code unit, but
+may use a pair of "surrogates."
+
+Python3 presents strings as code-points but uses tricks internally to use fewer than
+3-bytes per code-point of storage for most strings.
+
+As can be seen above, O(1) random access won't work across languages.  The *StringIndex* type
+allows an efficient representation of a position within a string.  Each *StringIndex*
+is either the start of a string or is derived from an operation that takes into account the
+string content.  This lets Temper provide consistent, efficient string operations regardless
+of the native character size.
+
     @connected
     export class StringIndex extends StringIndexOption {
       /** The singleton [snippet/type/NoStringIndex] value */
@@ -375,21 +374,20 @@
       private constructor(offset: Int) { this.offset = offset; }
     }
 
-    /**
-     * A *StringBuilder* allows composing a string by appending substrings at the
-     * end.
-     *
-     * ```temper
-     * let stringBuilder = new StringBuilder();
-     * stringBuilder.append("Hello");
-     * console.log(stringBuilder.toString()); //!outputs "Hello"
-     * stringBuilder.append(", World!");
-     * console.log(stringBuilder.toString()); //!outputs "Hello, World!"
-     * stringBuilder.clear();
-     * stringBuilder.append("Goodbye.");
-     * console.log(stringBuilder.toString()); //!outputs "Goodbye."
-     * ```
-     */
+*StringBuilder* allows composing a string by appending substrings at the
+end.
+
+```temper inert
+let stringBuilder = new StringBuilder();
+stringBuilder.append("Hello");
+console.log(stringBuilder.toString()); //!outputs "Hello"
+stringBuilder.append(", World!");
+console.log(stringBuilder.toString()); //!outputs "Hello, World!"
+stringBuilder.clear();
+stringBuilder.append("Goodbye.");
+console.log(stringBuilder.toString()); //!outputs "Goodbye."
+```
+
     @connected
     export class StringBuilder {
       private let substrings: ListBuilder<String>;

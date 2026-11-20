@@ -1,10 +1,13 @@
 # Numbers
 
-    /**
-     * A *Boolean* is a truth value that may be used in `if` and loop conditions.
-     *
-     * ⎀ syntax/BooleanLiteral -heading
-     */
+Booleans and numbers: `Boolean`, a `DenseBitVector` of them, the integer
+types `Int32`, aliased as `Int`, and `Int64`, and the floating point
+`Float64`.
+
+*Boolean* is a truth value that may be used in `if` and loop conditions.
+
+⎀ syntax/BooleanLiteral -heading
+
     @connected
     @imu
     @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
@@ -26,11 +29,10 @@
       public eq(other: Boolean): Boolean;
     }
 
-    /**
-     * A bit vector where the probability of any bit with index in \[0, capacity\]
-     * is high.  This does not assume that the probability of a bit being set
-     * depends on the probability of an adjacent bit being set.
-     */
+*DenseBitVector* is a bit vector where the probability of any bit with index in \[0, capacity\]
+is high.  This does not assume that the probability of a bit being set
+depends on the probability of an adjacent bit being set.
+
     export class DenseBitVector {
       private let bits: ListBuilder<Boolean>;
 
@@ -88,13 +90,12 @@
 
     export let Int = Int32;
 
-    /**
-     * *Int32* is the default, general-use signed integer value type in Temper.
-     * Because it is so frequently used, the alias *Int* is encouraged in source
-     * code.
-     *
-     * ⎀ syntax/int32/examples
-     */
+*Int32* is the default, general-use signed integer value type in Temper.
+Because it is so frequently used, the alias *Int* is encouraged in source
+code.
+
+⎀ syntax/int32/examples
+
     @connected
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
     export class Int32 extends MapKey<Int32> {
@@ -140,13 +141,12 @@
       public eq(other: Int32): Boolean;
     }
 
-    /**
-     * *Int64* is a double wide, signed integer type.
-     *
-     * Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
-     *
-     * ⎀ syntax/int64/examples
-     */
+*Int64* is a double wide, signed integer type.
+
+Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
+
+⎀ syntax/int64/examples
+
     @connected
     @imu
     @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
@@ -201,16 +201,15 @@
       public eq(other: Int64): Boolean;
     }
 
-    /**
-     * A *Float64* is an [IEEE-754 64-bit (aka double-precision) floating point
-     * number][FP64].
-     *
-     * ⎀ syntax/Float64Literal
-     *
-     * ⎀ syntax/float64/examples
-     *
-     * [FP64]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-     */
+*Float64* is an [IEEE-754 64-bit (aka double-precision) floating point
+number][FP64].
+
+⎀ syntax/Float64Literal
+
+⎀ syntax/float64/examples
+
+[FP64]: https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+
     @connected
     @imu
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends

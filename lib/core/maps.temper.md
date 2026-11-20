@@ -1,6 +1,10 @@
 # Maps
 
-    /** A *Pair* holds a *key* and its *value*, as a map's entries do. */
+Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
+`Map`, and the read-write `MapBuilder`.
+
+*Pair* holds a *key* and its *value*, as a map's entries do.
+
     export class Pair<@out K, @out V> {
       public key: K;
       public value: V;
@@ -12,10 +16,9 @@
       }
     }
 
-    /**
-     * A *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
-     * `MapBuilder`.
-     */
+*Mapped* is a read-only view to key-value mapped data, such as a `Map` or
+`MapBuilder`.
+
     export sealed interface Mapped<@in K extends MapKey<K>, V> {
       /**
        * The number of key value pairs in the [snippet/type/Mapped].
@@ -143,22 +146,20 @@
 
     // Mapped's generic methods are extensions, as Listed's are.
 
-    /**
-     * Similar to [snippet/type/Mapped/method/toListBuilderWith].
-     *
-     * Calls [func] on each key and value in the [snippet/type/Mapped].
-     */
+`mappedToListWith` (`mapped.toListWith(…)`) is similar to [snippet/type/Mapped/method/toListBuilderWith].
+
+Calls [func] on each key and value in the [snippet/type/Mapped].
+
     @extension("toListWith")
     @connected
     export let mappedToListWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, V>, func: fn(K, V): T): List<T> {
       mappedToListBuilderWith(mapped, func).toList()
     }
 
-    /**
-     * Returns a [snippet/type/ListBuilder]<*T*>.
-     *
-     * Calls [func] on each key and value in the [snippet/type/Mapped].
-     */
+`mappedToListBuilderWith` (`mapped.toListBuilderWith(…)`) returns a [snippet/type/ListBuilder]<*T*>.
+
+Calls [func] on each key and value in the [snippet/type/Mapped].
+
     @extension("toListBuilderWith")
     @connected
     export let mappedToListBuilderWith<K extends MapKey<K>, V, T>(mapped: Mapped<K, V>, func: fn(K, V): T): ListBuilder<T> {
@@ -169,9 +170,8 @@
       return builder;
     }
 
-    /**
-     * A *Map* is a read-only key-value collection.
-     */
+*Map* is a read-only key-value collection.
+
     @connected
     @partialImu
     @mayDowncastTo(false) // Just use core.type Mapped.toMap() if immutable wanted.
@@ -186,10 +186,9 @@
       public constructor(entries: List<Pair<K, V>>);
     }
 
-    /**
-     * A *MapBuilder* is a read-write key-value collection for building `Map`
-     * objects. Preserves insertion order when accessed from Temper code.
-     */
+*MapBuilder* is a read-write key-value collection for building `Map`
+objects. Preserves insertion order when accessed from Temper code.
+
     @connected
     @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
     export class MapBuilder<K extends MapKey<K>, V> extends Mapped<K, V> {
