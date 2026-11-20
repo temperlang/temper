@@ -331,8 +331,11 @@ public final class Core {
     public static boolean float64Near(double x, double y, Double relTol, Double absTol) {
         double rel = relTol == null ? 1e-9 : relTol;
         double abs = absTol == null ? 0.0 : absTol;
+        // Equal by Temper's `==`, so NaN is near NaN, or finite and within
+        // the margin, which a NaN margin never is: `Math.max` keeps NaN.
         double margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * rel, abs);
-        return Math.abs(x - y) <= margin;
+        return Double.compare(x, y) == 0
+            || (Double.isFinite(x) && Double.isFinite(y) && Math.abs(x - y) <= margin);
     }
 
     /**

@@ -178,8 +178,20 @@ pub(super) fn float_method(f: f64, name: &str, args: &[Val]) -> Option<R> {
             else {
                 return None;
             };
-            let margin = (f.abs().max(other.abs()) * rel).max(abs);
-            Some(Ok(Val::Bool((f - other).abs() <= margin)))
+            // Equal by Temper's `==`, so NaN is near NaN; else, for finite
+            // values, within a margin by IEEE's `<=`, never NaN's, which
+            // `max` keeps, as Temper's does.
+            let max = |a: f64, b: f64| {
+                if a.is_nan() || b.is_nan() {
+                    f64::NAN
+                } else {
+                    a.max(b)
+                }
+            };
+            let margin = max(max(f.abs(), other.abs()) * rel, abs);
+            let near = float_cmp(f, other) == Ordering::Equal
+                || !f.is_infinite() && !other.is_infinite() && (f - other).abs() <= margin;
+            Some(Ok(Val::Bool(near)))
         }
         ("pred", []) => float(f - 1.0),
         ("succ", []) => float(f + 1.0),

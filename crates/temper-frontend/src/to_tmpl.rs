@@ -3363,6 +3363,11 @@ impl Translator<'_> {
             if let Some(op) = Op::named(key) {
                 return self.op(node, op, Some(object), &args);
             }
+            if args.is_empty() {
+                if let Some(made) = self.core_as_op(node, key, object)? {
+                    return Ok(made);
+                }
+            }
             return self.core_method(node, key, object, &args);
         }
         let Some(member) = self.core_decl(key) else {
@@ -3398,6 +3403,30 @@ impl Translator<'_> {
             }
             _ => self.not_yet(node, format!("core's {key} used so")),
         }
+    }
+
+    /// Core's integer methods that are operators on their receiver, as
+    /// their bodies are, written so: `n.succ()` as `n + 1` and `n.pred()`
+    /// as `n - 1`, which wrap. (Not `signum` as `n <=> 0`: `<=>` gives
+    /// only a sign, and some backends give `n` itself.)
+    fn core_as_op(&mut self, node: FNode, key: &str, object: FNode) -> Tx<Option<NodeId>> {
+        let op = match key {
+            "Int32.succ" | "Int64.succ" => key.replace("succ", "add"),
+            "Int32.pred" | "Int64.pred" => key.replace("pred", "sub"),
+            _ => return Ok(None),
+        };
+        let Some(op) = Op::named(&op) else {
+            return Ok(None);
+        };
+        let receiver = self.expr(object)?;
+        let operand = if key.starts_with("Int64") {
+            self.b.int64(1)
+        } else {
+            self.b.int32(1)
+        };
+        let operand = self.made(operand, node);
+        let made = self.b.op(op, &[receiver, operand]);
+        Ok(Some(self.own(made, node)))
     }
 
     /// `char'a'`, the code point of a single character, as an `Int32`

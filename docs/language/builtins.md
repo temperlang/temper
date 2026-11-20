@@ -833,6 +833,7 @@ Unicode [scalar value]s, which exclude surrogate codes appearing by themselves.
 [*Float64*](types.md#class-float64)s are compared on a modified number line where
 `-0.0` precedes `+0.0` and all `NaN` values sort above +&infin;.
 This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
+[`Float64.near`](types.md#float64near) checks `==` by this order first, so `NaN` is near `NaN`.
 
 ```temper
 -Infinity < -1.0     &&

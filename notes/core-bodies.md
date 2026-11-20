@@ -28,7 +28,7 @@ named. "All" means all seven backends connect it.
 | `StringBuilder`: constructor, `append`, `appendCodePoint`, `appendBetween`, `clear`, `end`, `toString` | `strings::builder_method`, `property` | all |
 | `Listed.isEmpty`, `.toListBuilder`, `.reduce` | `property`, `list_method` | all |
 | `listedMap`, `listedReduceFrom` | `list_method` | all |
-| `listedReduceFromIndex` | none | none: not yet in tmpl |
+| `listedReduceFromIndex` | `list_method` | none: not yet in tmpl |
 | `List.toList` | `list_method` | all |
 | `List.forEach` | `list_method` | none: tmpl inlines a loop |
 | `Mapped.length`, `.get`, `.getOr`, `.has`, `.keys`, `.values`, `.toMap`, `.toMapBuilder`, `.toList` | `maps::map_method`, `property` | all |
@@ -38,7 +38,8 @@ named. "All" means all seven backends connect it.
 | `Boolean.toString` | `method` | all |
 | `DenseBitVector`: constructor, `get`, `set` | `apply`'s `new`, `method` | all |
 | `Int32.min`, `.max`; `Int64.min`, `.max` | `method` | all |
-| `Int32.succ`, `.pred`, `.signum`; `Int64.succ`, `.pred` | none | none: not yet in tmpl |
+| `Int32.succ`, `.pred`; `Int64.succ`, `.pred` | `method` | all: tmpl writes them as `n + 1` and `n - 1` |
+| `Int32.signum` | `property` | none: not yet in tmpl |
 | `Float64.near` | `numbers::float_method` | all |
 | `Float64.succ`, `.pred` | `numbers::float_method` | none: not yet in tmpl |
 | `Empty.eq`, `empty`, `ignore`, `doneResult` | `equal`, `builtin` | `empty` all; `doneResult` C++, Java, Rust, past tmpl's "not yet"; `ignore` is tmpl's own; `==` on `Empty` not yet in tmpl |
@@ -58,21 +59,23 @@ The generator wrappers are left from Kotlin Temper; nothing uses them.
 
 Body against native, in the interpreter:
 
-- `listedReduceFromIndex`, `Int32.succ`/`pred`, `Int64.succ`/`pred`: no
-  native ("No method"); the bodies wrap on overflow.
-- `Int32.signum`: no native getter, so `x.signum` is a method value.
 - `listedMap`, `listedReduceFrom`: when the callback changes the
   builder, the bodies follow its live length; natives snapshot it.
-- `Float64.near`: `NaN.near(NaN)` is true in the body, as the
-  interpreter's `<=` orders NaN as equal to itself, false natively.
+
+Fixed since, as decided: `listedReduceFromIndex` got a native (past the
+end gives the initial value; a negative index panics, as the body
+does); `Int32`'s and `Int64`'s `succ` and `pred` got natives that wrap,
+as `+` and `-` do, and `Int32.signum` a native getter; and `Float64.near`
+is true whenever `==` is, so NaN is near NaN and an infinity near
+itself only, as `math.isclose`'s is, and otherwise compares finite
+values within the margin as IEEE does, never within a NaN margin, in
+the body, the interpreter, and every runtime.
 
 Backends against the bodies (all else agrees):
 
 - Changing a builder during `map` or `reduceFrom`: every backend
   differs somewhere, some throwing; C++'s `reduceFrom` reads storage the
   vector freed when it grew.
-- `Float64.near`: Python gives `inf.near(inf)` true, as `math.isclose`
-  does, which the docs cite; the body and the others give false.
 - `StringBuilder.appendBetween` with begin after end: JS appends the
   whole span, as `substring` swaps its arguments; Rust panics. With an end past the source:
   Rust panics; the others clamp, as the body does.

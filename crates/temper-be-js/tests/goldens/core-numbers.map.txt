@@ -1,0 +1,16 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../core-numbers.temper.md:10:5  const one = 1; <- let one = 1;
+4:1 -> ../core-numbers.temper.md:11:5  const big = Math.imul(214748 <- let big = 0x7fff_ffff * one;
+5:1 -> ../core-numbers.temper.md:12:5  const small = Math.imul(-214 <- let small = -0x8000_0000 * o
+6:1 -> ../core-numbers.temper.md:13:5  console.log(`${(big + 1) | 0 <- console.log("${big.succ()} $
+7:1 -> ../core-numbers.temper.md:14:5  const one64 = BigInt(one); <- let one64 = one.toInt64();
+8:1 -> ../core-numbers.temper.md:15:5  const big64 = clampInt64(922 <- let big64 = 9223372036854775
+9:1 -> ../core-numbers.temper.md:16:5  const small64 = clampInt64(c <- let small64 = -big64 - one64
+10:1 -> ../core-numbers.temper.md:17:5  console.log(`${clampInt64(bi <- console.log("${big64.succ().
+11:1 -> ../core-numbers.temper.md:19:5  const inf = 1e308 * 10.0; <- let inf = 1.0e308 * 10.0;
+12:1 -> ../core-numbers.temper.md:20:5  const nan = inf - inf; <- let nan = inf - inf;
+13:1 -> ../core-numbers.temper.md:21:5  const ninf = 0.0 - inf; <- let ninf = 0.0 - inf;
+14:1 -> ../core-numbers.temper.md:22:5  console.log(`${float64Near(n <- console.log("${nan.near(nan)
+15:1 -> ../core-numbers.temper.md:23:5  console.log(`${float64Near(i <- console.log("${inf.near(1.0)
+16:1 -> ../core-numbers.temper.md:24:5  console.log(`${float64Near(1 <- console.log("${1.0.near(1.5,
+17:1 -> ../core-numbers.temper.md:25:5  console.log(`${float64Near(1 <- console.log("${1.0.near(1.0

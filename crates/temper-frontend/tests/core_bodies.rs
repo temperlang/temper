@@ -153,6 +153,9 @@ listedReduceFromIndex [1, 2, 3].reduceFromIndex(0, 1) { (a: Int, x: Int): Int =>
 listedReduceFromIndex [1, 2, 3].reduceFromIndex(0, 3) { (a: Int, x: Int): Int => a + x }.toString()
 listedReduceFromIndex [1, 2, 3].reduceFromIndex(0, 5) { (a: Int, x: Int): Int => a + x }.toString()
 listedReduceFromIndex [1, 2, 3].reduceFromIndex(0, -1) { (a: Int, x: Int): Int => a + x }.toString()
+listedReduceFromIndex [1, 2, 3].reduceFromIndex(10, 0) { (a: Int, x: Int): Int => a + x }.toString()
+listedReduceFromIndex let xs: List<Int> = []; xs.reduceFromIndex(7, 0) { (a: Int, x: Int): Int => a + x }.toString()
+listedReduceFromIndex let xs: List<Int> = []; xs.reduceFromIndex(7, -1) { (a: Int, x: Int): Int => a + x }.toString()
 List.toList let xs = [1, 2]; showInts(xs.toList())
 List.forEach let out = new ListBuilder<Int>(); [3, 1, 2].forEach { (x: Int): Void => out.add(x) }; showInts(out)
 List.forEach let out = new ListBuilder<Int>(); let xs: List<Int> = []; xs.forEach { (x: Int): Void => out.add(x) }; showInts(out)
@@ -200,6 +203,10 @@ Int32.max 5.max(5).toString()
 Int32.succ 41.succ().toString()
 Int32.succ 2147483647.succ().toString()
 Int32.pred (-2147483647 - 1).pred().toString()
+Int32.pred 0.pred().toString()
+Int32.pred 2147483647.pred().toString()
+Int32.succ (-1).succ().toString()
+Int32.succ (-2147483647 - 1).succ().toString()
 Int32.signum [-2147483647 - 1, -7, -1, 0, 1, 9, 2147483647].map { (x: Int): String => x.signum.toString() }.join(",") { (x: String): String => x }
 # Int64
 Int64.min 3i64.min(-4i64).toString()
@@ -207,6 +214,9 @@ Int64.max (-9223372036854775807i64 - 1i64).max(9223372036854775807i64).toString(
 Int64.succ 9223372036854775807i64.succ().toString()
 Int64.pred (-9223372036854775807i64 - 1i64).pred().toString()
 Int64.pred 0i64.pred().toString()
+Int64.succ 41i64.succ().toString()
+Int64.succ (-9223372036854775807i64 - 1i64).succ().toString()
+Int64.pred 9223372036854775807i64.pred().toString()
 # Float64
 Float64.near showBool(1.0.near(1.0 + 1e-10))
 Float64.near showBool(1.0.near(1.1))
@@ -216,6 +226,22 @@ Float64.near showBool(0.0.near(1e-300, 1e-9, 1e-12))
 Float64.near showBool((0.0 / 1.0 - 0.0).near(-0.0))
 Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(inf))
 Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(nan.near(nan))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(nan.near(nan, 0.0, 0.0))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(nan.near(1.0))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(1.0.near(nan, 1.0, 1.0))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(1.0.near(1.5, nan))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(1.0.near(1.0, nan, nan))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(1.0.near(1.5, nan, 1.0))
+Float64.near let nan = (1.0e308 * 10.0) - (1.0e308 * 10.0); showBool(1.0.near(1.5, 1.0, nan))
+Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(1.0, 0.0, inf))
+Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(1.0, 1.0, inf))
+Float64.near let inf = 1.0e308 * 10.0; let ninf = 0.0 - inf; showBool(1.0.near(ninf, 1.0, inf))
+Float64.near let inf = 1.0e308 * 10.0; let ninf = 0.0 - inf; showBool(ninf.near(ninf))
+Float64.near let inf = 1.0e308 * 10.0; let ninf = 0.0 - inf; showBool(inf.near(ninf))
+Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(1.0))
+Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(inf, 0.0, 0.0))
+Float64.near let inf = 1.0e308 * 10.0; showBool(inf.near(1.0, 0.0, 0.0))
+Float64.near showBool((-0.0).near(0.0, 0.0, 0.0))
 Float64.succ 1.5.succ().toString()
 Float64.succ 1e16.succ().toString()
 Float64.pred (-0.5).pred().toString()
@@ -249,32 +275,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("listedMap#2", "[1,2,3]", "[1,2]"),
     ("listedMap#3", "[1]", "[1,2,3]"),
     ("listedReduceFrom#2", "12", "1299"),
-    // No native: only the body defines it.
-    ("listedReduceFromIndex#0", "bubble", "5"),
-    ("listedReduceFromIndex#1", "bubble", "0"),
-    ("listedReduceFromIndex#2", "bubble", "0"),
-    (
-        "listedReduceFromIndex#3",
-        "bubble",
-        "FAILED Panicked: index -1 out of bounds for length 3",
-    ),
-    // No native.
-    ("Int32.succ#0", "bubble", "42"),
-    ("Int32.succ#1", "bubble", "-2147483648"),
-    ("Int32.pred#0", "bubble", "2147483647"),
-    // No native getter, so the interpreter gives a method value.
-    (
-        "Int32.signum#0",
-        "Function,Function,Function,Function,Function,Function,Function",
-        "-1,-1,-1,0,1,1,1",
-    ),
-    // No native.
-    ("Int64.succ#0", "bubble", "-9223372036854775808"),
-    ("Int64.pred#0", "bubble", "9223372036854775807"),
-    ("Int64.pred#1", "bubble", "-1"),
-    // NaN.near(NaN): true in the body, as the interpreter's `<=` orders
-    // NaN as equal to itself; false natively, as `math.isclose` gives.
-    ("Float64.near#7", "false", "true"),
 ];
 
 /// Core's bodies that no case runs, each with why.

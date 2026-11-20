@@ -1721,7 +1721,10 @@ export class Float64 extends Equatable<Float64> {
   @connected
   public min(other: Float64): Float64;
 
-  /** Matches semantics of Python's *math.isclose*. */
+  /**
+   * Like Python's *math.isclose*, except NaN is near NaN, since Temper's
+   * `==` treats NaN as equal to itself.
+   */
   @connected
   public near(
     other: Float64,
@@ -1729,7 +1732,10 @@ export class Float64 extends Equatable<Float64> {
     absTol: Float64 = 0.0,
   ): Boolean {
     let margin = (content.abs().max(other.abs()) * relTol).max(absTol);
-    (content - other).abs() <= margin
+    // An infinity is near only itself. Temper's `<=` orders NaN above all
+    // else, but a NaN margin admits nothing.
+    content == other || content.abs() != Infinity && other.abs() != Infinity &&
+      margin != NaN && (content - other).abs() <= margin
   }
 
   @connected

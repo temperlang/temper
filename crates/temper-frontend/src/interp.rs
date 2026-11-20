@@ -1136,6 +1136,11 @@ impl Interp<'_> {
             (Val::Int(a), "max", [Val::Int(b)]) => Ok(Val::Int(*a.max(b))),
             (Val::Int64(a), "min", [Val::Int64(b)]) => Ok(Val::Int64(*a.min(b))),
             (Val::Int64(a), "max", [Val::Int64(b)]) => Ok(Val::Int64(*a.max(b))),
+            // Wrapping, as `+` and `-` do.
+            (Val::Int(n), "succ", []) => Ok(Val::Int(n.wrapping_add(1))),
+            (Val::Int(n), "pred", []) => Ok(Val::Int(n.wrapping_sub(1))),
+            (Val::Int64(n), "succ", []) => Ok(Val::Int64(n.wrapping_add(1))),
+            (Val::Int64(n), "pred", []) => Ok(Val::Int64(n.wrapping_sub(1))),
             (Val::PromiseBuilder(promise), _, _) => self
                 .promise_builder_method(promise, name, &args)
                 .unwrap_or_else(|| no_method(object, name)),
@@ -1364,10 +1369,23 @@ impl Interp<'_> {
                 }
                 Ok(Val::Void)
             }
-            "reduce" | "reduceFrom" => {
+            "reduce" | "reduceFrom" | "reduceFromIndex" => {
                 let (mut result, start) = match name {
                     "reduce" => (list_get(&items, 0)?, 1),
-                    _ => (arg()?, 0),
+                    "reduceFrom" => (arg()?, 0),
+                    // Past the end gives the initial value, and a negative
+                    // index fails, as core's body reads `listed[-1]`.
+                    _ => {
+                        let initial = arg()?;
+                        let index = match arg()? {
+                            Val::Int(i) => i,
+                            _ => return Err(fail("reduceFromIndex's index isn't an Int")),
+                        };
+                        if index < 0 {
+                            list_get(&items, index)?;
+                        }
+                        (initial, (index as usize).min(items.len()))
+                    }
                 };
                 let f = arg()?;
                 for item in &items[start..] {
@@ -2031,6 +2049,7 @@ fn property(object: Val, name: NameId, text: &str) -> R {
         (Val::BuiltinType(t), "pi") if TYPES[*t as usize] == "Float64" => {
             Ok(Val::Float(std::f64::consts::PI))
         }
+        (Val::Int(n), "signum") => Ok(Val::Int(n.signum())),
         (Val::List(items), "isEmpty") => Ok(Val::Bool(items.is_empty())),
         (Val::List(items), "length") => Ok(Val::Int(items.len() as i32)),
         (Val::ListBuilder(items), "isEmpty") => Ok(Val::Bool(items.borrow().is_empty())),

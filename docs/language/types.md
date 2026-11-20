@@ -420,7 +420,8 @@ Result is NaN if either is NaN.
 
 `:` `fn(`[*Float64*](#class-float64), [*Float64*](#class-float64), [*Float64*](#class-float64)&#63; \= \.\.\., [*Float64*](#class-float64)&#63; \= \.\.\.`):` [*Boolean*](#class-boolean)
 
-Matches semantics of Python's *math.isclose*.
+Like Python's *math.isclose*, except NaN is near NaN, since Temper's
+`==` treats NaN as equal to itself.
 
 #### `Float64.round`
 

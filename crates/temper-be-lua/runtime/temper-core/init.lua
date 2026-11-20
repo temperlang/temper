@@ -821,8 +821,16 @@ end
 function temper.float64_near(x, y, rel_tol, abs_tol)
     rel_tol = temper.null_to_nil(rel_tol) or 1e-9
     abs_tol = temper.null_to_nil(abs_tol) or 0.0
+    -- Equal by Temper's `==`, so NaN is near NaN, or finite and within the
+    -- margin, which a NaN margin never is: `float64_max` keeps NaN.
     local scale = temper.float64_max(temper.float64_abs(x), temper.float64_abs(y))
     local margin = temper.float64_max(scale * rel_tol, abs_tol)
+    if temper.float_eq(x, y) then
+        return true
+    end
+    if x == math_huge or x == -math_huge or y == math_huge or y == -math_huge then
+        return false
+    end
     return temper.float64_abs(x - y) <= margin
 end
 

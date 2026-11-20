@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
 from logging import getLogger, INFO
-from math import copysign, inf, isclose, isinf, isnan, nan
+from math import copysign, inf, isinf, isnan, nan
 import threading
 from traceback import print_exception
 from typing import (
@@ -552,14 +552,20 @@ def float64_near(
     abs_tol: Optional[float] = Unset,
 ) -> bool:
     "Implements connected method core.type Float64.near()."
-    # This exactly matches isclose behavior, but matching our forwarding our
-    # optionals to python named args is awkward, so duplicate the logic.
-    # TODO We could possibly inline usage of isclose instead of this logic.
+    # As isclose, except equal by Temper's ==, so nan is near nan; else
+    # finite and within the margin, which a nan margin never is (Python's
+    # max may drop nan, so not max).
     if rel_tol is Unset:
         rel_tol = 1e-9
     if abs_tol is Unset:
         abs_tol = 0.0
-    return isclose(x, y, rel_tol=rel_tol, abs_tol=abs_tol)
+    if float_eq(x, y):
+        return True
+    if isinf(x) or isinf(y):
+        return False
+    scale = max(abs(x), abs(y)) * rel_tol
+    margin = scale if isnan(scale) or scale >= abs_tol else abs_tol
+    return abs(x - y) <= margin
 
 
 def float64_sign(x: float) -> float:
