@@ -53,8 +53,34 @@ console.log("Inert code doesn't run.");
 All Temper code blocks start and end on new lines. We might also
 require blocks to begin and end at statement boundaries.
 
-Also, we plan to specify how specific class and function documentation
-can be extracted from Temper Markdown in the future.
+### Documenting declarations in prose
+
+Prose can document the declaration after it. A paragraph whose first
+word is the declared name, ignoring case and any `` ` `` or `*` around
+it, starts the declaration's documentation, which runs through the
+paragraphs after it, up to the declaration:
+
+````tempermd
+Some introduction, which documents nothing.
+
+`area` is the area of a square.
+
+It's side times side.
+
+```temper
+export let area(side: Int): Int { side * side }
+```
+
+**Square** holds a side.
+
+```temper
+export class Square(public side: Int) {}
+```
+````
+
+A doc comment, `/** … */`, right before the declaration wins over
+prose. Editors show the documentation on hover, as does the REPL's
+`help`. Its first paragraph is its brief summary; it stays Markdown.
 
 ## Parts of a Temper source file
 

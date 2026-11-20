@@ -212,7 +212,11 @@ impl Settle {
                 let void = self.lib.add_value(Value::Void, span, call);
                 self.become_node(call, void);
             }
-            (SyntaxBuiltin::DocComment, [target, ..]) => self.become_node(call, *target),
+            (SyntaxBuiltin::DocComment, [target, ..]) => {
+                // The target becomes this node, so its docs are by it.
+                self.lib.add_wrapped_docs(call, call);
+                self.become_node(call, *target)
+            }
             _ => self.error(
                 call,
                 Message::Unsupported(format!("builtin {}", builtin.name())),
@@ -1498,7 +1502,9 @@ impl Settle {
             NodeKind::Call => {
                 let callee = *children.first()?;
                 if let Some(Value::Builtin(SyntaxBuiltin::DocComment)) = self.lib.value(callee) {
-                    return self.lower_param(*children.get(1)?);
+                    let lowered = self.lower_param(*children.get(1)?)?;
+                    self.lib.add_wrapped_docs(param, lowered);
+                    return Some(lowered);
                 }
                 let decorator = self.lib.name(callee).map(|n| self.lib.names.get(n));
                 match (decorator, &children[1..]) {

@@ -1255,3 +1255,82 @@ fn compile_time_allowlist() {
     assert!(!builtin_allowed(Function::Async), "async runs code later");
     assert!(builtin_allowed(Function::Cat));
 }
+
+/// What documents each declaration, as backends will read it: a doc
+/// comment, or in a `.temper.md` file, the paragraphs from the one that
+/// starts with its name, as Kotlin Temper's `@docString` metadata.
+#[test]
+fn doc_strings_from_comments_and_prose() {
+    let source = "# Points
+
+Some introduction.
+
+`Point` is a place on a plane.
+
+It has two coordinates.
+
+```temper
+export class Point(public x: Int, public y: Int) {
+```
+
+Distance is how far a point is from the origin.
+
+```temper
+  public distance(): Int { x + y }
+  /** Moves it. */
+  public moved(by: Int): Point { new Point(x + by, y + by) }
+}
+let origin = new Point(0, 0);
+```
+
+This paragraph doesn't start with `unnamed`.
+
+```temper
+let unnamed = 1;
+let scale(/** How much bigger. */ factor: Int): Int { factor }
+```
+";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let decl = |name: &str| {
+        (0..lib.tree.len() as u32)
+            .map(NodeId)
+            .find(|&n| {
+                matches!(lib.tree.kind(n), NodeKind::Let | NodeKind::Class)
+                    && lib
+                        .name(lib.tree.children(n)[0])
+                        .map(|id| lib.names.get(id))
+                        == Some(name)
+            })
+            .unwrap_or_else(|| panic!("{name}"))
+    };
+    let point = lib.doc_string(decl("Point")).unwrap();
+    assert_eq!(point.brief, "`Point` is a place on a plane.");
+    assert_eq!(
+        point.long,
+        "`Point` is a place on a plane.\n\nIt has two coordinates."
+    );
+    assert!(point.prose);
+    let (start, end) = (point.span.start as usize, point.span.end as usize);
+    assert!(source[start..].starts_with("`Point` is"), "{point:?}");
+    assert!(
+        source[..end].trim_end().ends_with("coordinates."),
+        "{point:?}"
+    );
+    let distance = lib.doc_string(decl("distance")).unwrap();
+    assert_eq!(
+        distance.long,
+        "Distance is how far a point is from the origin."
+    );
+    assert_eq!(distance.brief, distance.long);
+    let moved = lib.doc_string(decl("moved")).unwrap();
+    assert_eq!((moved.long.as_str(), moved.prose), ("Moves it.", false));
+    assert_eq!(lib.doc_string(decl("unnamed")), None);
+    assert_eq!(lib.doc_string(decl("origin")), None);
+    assert_eq!(lib.doc_string(decl("x")), None);
+    // A parameter's doc comment.
+    let factor = lib.doc_string(decl("factor")).unwrap();
+    assert_eq!(factor.long, "How much bigger.");
+}

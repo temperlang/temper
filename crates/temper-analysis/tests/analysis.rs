@@ -940,3 +940,95 @@ fn every_builtin_has_core_docs() {
     }
     assert_eq!(missing, Vec::<String>::new());
 }
+
+/// A literate library documented in prose, as Kotlin Temper's
+/// `.temper.md` convention has it: a paragraph whose first word is a
+/// declaration's name, ignoring case, `` ` `` and `*`, documents it,
+/// with the paragraphs after it, up to the declaration.
+const PROSE: &str = r#"# Squares
+
+Here's how squares work.
+
+`area` is the area of a square.
+
+It's side times side.
+
+```temper
+export let area(side: Int): Int { side * side }
+```
+
+This paragraph mentions perimeter, but doesn't start with its name.
+
+```temper
+export let perimeter(side: Int): Int { side * 4 }
+```
+
+Square holds a side.
+
+```temper
+export class Square(public side: Int) {
+```
+
+**Scaled** makes a bigger square.
+
+```temper
+  public scaled(by: Int): Square { new Square(side * by) }
+```
+
+`rotated` is documented in prose, but a doc comment wins.
+
+```temper
+  /** Turns it. */
+  public rotated(): Square { this }
+}
+let a = area(2);
+let s = new Square(3).scaled(2);
+let r = s.rotated();
+let p = perimeter(1);
+```
+"#;
+
+fn analyze_md(source: &str) -> Analysis {
+    let mut library = Library::new();
+    library.add_file("main.temper.md", source, SourceKind::Markdown);
+    load_imports(&Sources::memory(&[]), &mut library);
+    Analysis::new(settle(library))
+}
+
+#[test]
+fn hover_on_prose_docs() {
+    let a = analyze_md(PROSE);
+    let doc = |needle, nth| {
+        let h = a.hover(MAIN, at(PROSE, needle, nth, 0)).unwrap();
+        assert_eq!(h.name.as_deref(), Some(needle), "{h:?}");
+        h.doc
+    };
+    let area = Some("`area` is the area of a square.\n\nIt's side times side.");
+    // At the declaration and at a use.
+    assert_eq!(doc("area", 2).as_deref(), area);
+    assert_eq!(doc("area", 3).as_deref(), area);
+    // A paragraph that doesn't start with the name isn't its doc.
+    assert_eq!(doc("perimeter", 1), None);
+    assert_eq!(doc("perimeter", 2), None);
+    // A class, and its members, across code blocks.
+    assert_eq!(doc("Square", 2).as_deref(), Some("Square holds a side."));
+    let scaled = Some("**Scaled** makes a bigger square.");
+    assert_eq!(doc("scaled", 0).as_deref(), scaled);
+    assert_eq!(doc("scaled", 1).as_deref(), scaled);
+    // A doc comment wins over prose.
+    assert_eq!(doc("rotated", 1).as_deref(), Some("Turns it."));
+    assert_eq!(doc("rotated", 2).as_deref(), Some("Turns it."));
+}
+
+#[test]
+fn signature_help_shows_prose_docs() {
+    let source = PROSE.replace("let p = perimeter(1);", "let z = area(");
+    let a = analyze_md(&source);
+    let offset = at(&source, "area(\n", 0, 5);
+    let help = a.signature_help(MAIN, offset).unwrap();
+    assert_eq!(help.label, "area(side: Int32): Int32");
+    assert_eq!(
+        help.doc.as_deref(),
+        Some("`area` is the area of a square.\n\nIt's side times side.")
+    );
+}

@@ -371,6 +371,35 @@ fn utf16_positions_and_a_lone_file() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A `.temper.md` file's prose documents what it declares: hover in
+/// another file shows the paragraphs, from the one starting with the
+/// name, as Kotlin Temper's convention has it.
+#[test]
+fn hover_shows_prose_docs() {
+    let prose = "# Shapes\n\n`Area` is a square's area.\n\nSide times side.\n\n\
+```temper\nexport let area(side: Int): Int { side * side }\n```\n";
+    let dir = library(
+        "prose",
+        &[
+            ("shapes.temper.md", prose),
+            ("use.temper", "let a = area(3);\n"),
+        ],
+    );
+    let uses = uri(&dir, "use.temper");
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    client.notify("initialized", json!({}));
+    open(&mut client, &uses, "let a = area(3);\n");
+    let hover = client.request("textDocument/hover", at(&uses, 0, 9));
+    let value = str_at(&hover, &["contents", "value"]);
+    assert!(
+        value.ends_with("`Area` is a square's area.\n\nSide times side."),
+        "{value}"
+    );
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A panic, a bug in tempest, doesn't end the server: one in an analysis
 /// becomes an "internal error" diagnostic, one in a request an error
 /// response, and the next request is answered. The server's hidden hook

@@ -893,9 +893,20 @@ impl Analysis<'_> {
         (params, ret)
     }
 
+    /// A declaration's docs, if any: the doc comment just before it,
+    /// `/** … */`, with nothing but modifiers and decorators between;
+    /// or else, in a `.temper.md` file, the prose that documents it
+    /// ([`temper_frontend::docs`]).
+    fn doc(&self, decl: NodeId) -> Option<String> {
+        self.comment_doc(decl).or_else(|| {
+            let doc = self.settled.library.doc_string(decl)?;
+            doc.prose.then(|| prose_text(&doc.long)).flatten()
+        })
+    }
+
     /// The doc comment just before a declaration, if any: `/** … */`
     /// with nothing but modifiers and decorators between.
-    fn doc(&self, decl: NodeId) -> Option<String> {
+    fn comment_doc(&self, decl: NodeId) -> Option<String> {
         let library = &self.settled.library;
         let tree = &library.tree;
         let name = match tree.kind(decl) {
@@ -967,6 +978,23 @@ pub(crate) fn doc_text(comment: &str) -> Option<String> {
         }
         // One blank line between paragraphs, where a snippet went.
         if line.is_empty() && lines.last().is_some_and(|l| l.is_empty()) {
+            continue;
+        }
+        lines.push(without_snippet_links(line));
+    }
+    let doc = lines.join("\n").trim().to_string();
+    (!doc.is_empty()).then_some(doc)
+}
+
+/// Prose that documents a declaration, as Markdown, with
+/// [`doc_text`]'s docs-site directives gone; None if nothing's left.
+pub(crate) fn prose_text(text: &str) -> Option<String> {
+    let mut lines: Vec<String> = Vec::new();
+    for line in text.lines() {
+        if line.trim_start().starts_with('⎀') {
+            continue;
+        }
+        if line.trim().is_empty() && lines.last().is_some_and(|l| l.trim().is_empty()) {
             continue;
         }
         lines.push(without_snippet_links(line));

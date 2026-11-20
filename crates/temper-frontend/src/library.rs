@@ -647,6 +647,10 @@ pub struct Library {
     /// ([`crate::interp`]): a compiled `Regex` can't change, so each run
     /// of one gives what the first did.
     pub constant_regexes: std::collections::HashSet<NodeId>,
+    /// The doc comments and prose paragraphs right before each statement
+    /// that has any, by the statement, then by the `Let` or `Class` it
+    /// becomes; [`Library::doc_string`] picks what documents it.
+    pub doc_comments: std::collections::HashMap<NodeId, Vec<crate::docs::Rem>>,
     next_base: u32,
     next_origin: u32,
 }
@@ -740,6 +744,8 @@ impl Library {
                 span,
             });
         }
+        let runs = crate::docs::collect(self, node_base..self.tree.len() as u32);
+        self.doc_comments.extend(runs);
         let mut root = NodeId(ast.root().0 + node_base);
         // Code that's one labeled statement is that statement's block;
         // wrap it, so the module's block holds the labeled one.

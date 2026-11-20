@@ -139,7 +139,8 @@ a declaration's name, or a member after `.`. Then:
 - [`hover`](../../../crates/temper-analysis/src/lib.rs) shows a name's
   [`DeclKind`](../../../crates/temper-analysis/src/lib.rs), its type
   or signature with parameter names (a generic class's type arguments
-  filled in), and its doc comment, a builtin's from core; for other
+  filled in), and its doc comment, a builtin's from core, or else the
+  prose that documents it in a `.temper.md` file; for other
   code, the smallest typed expression's type.
 - [`definition`](../../../crates/temper-analysis/src/lib.rs) follows a
   name to its declaration, and through imports to what they import

@@ -114,6 +114,12 @@ impl Settle {
                 let statements = self.lib.tree.children(block).to_vec();
                 for statement in statements {
                     let lowered = self.lower_member(statement, 0, false);
+                    // A member's docs, by the `Let` it becomes.
+                    if let Some(m) = lowered.filter(|&m| m != statement) {
+                        if let Some(rems) = self.lib.doc_comments.remove(&statement) {
+                            self.lib.doc_comments.insert(m, rems);
+                        }
+                    }
                     if let Some(m) = lowered.filter(|&m| self.is_static_accessor(m)) {
                         // Nothing reads `C.p` with a static `get p`, in
                         // Kotlin or backends, so it's rejected and
@@ -456,7 +462,9 @@ impl Settle {
                 match self.lib.value(callee) {
                     Some(Value::Builtin(SyntaxBuiltin::EmbeddedComment)) => return None,
                     Some(Value::Builtin(SyntaxBuiltin::DocComment)) => {
-                        return self.lower_member(*args.first()?, flags, header);
+                        let lowered = self.lower_member(*args.first()?, flags, header)?;
+                        self.lib.add_wrapped_docs(node, lowered);
+                        return Some(lowered);
                     }
                     // `static x = 1` and `private x: T = v` arrive as assignments.
                     Some(Value::Builtin(SyntaxBuiltin::DesugarOperation)) if !header => {

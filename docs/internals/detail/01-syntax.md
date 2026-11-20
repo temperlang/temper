@@ -355,7 +355,9 @@ only past Latin-1, as in Kotlin, which looks accidental.
 
 The lexer calls it, for a [`SourceKind`](../../../crates/temper-syntax/src/lex.rs)
 of `Markdown`, and lexes prose as comments, plus one synthetic doc comment
-per paragraph, so prose next to a declaration can document it.
+per paragraph, so prose next to a declaration can document it: the
+frontend's [`docs`](../../../crates/temper-frontend/src/docs.rs) picks
+what documents each declaration, as Kotlin Temper does.
 
 ### Lexer
 
