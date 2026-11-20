@@ -1,0 +1,427 @@
+# generated line:column -> source:line:column, and the text at each
+8:1 -> ../jump-values.temper.md:11:5  /** <- let step(n: Int): Int {
+12:1 -> ../jump-values.temper.md:11:5  function step(n) { <- let step(n: Int): Int {
+12:10 -> ../jump-values.temper.md:11:9 (step)  step(n) { <- step(n: Int): Int {
+12:14 -> ../jump-values.temper.md:11:5  (n) { <- let step(n: Int): Int {
+13:3 -> ../jump-values.temper.md:12:7  steps = (steps + 1) | 0; <- steps += 1;
+14:3 -> ../jump-values.temper.md:13:7  console.log(`step ${n}`); <- console.log("step ${n}");
+15:3 -> ../jump-values.temper.md:14:7  return n; <- n
+18:1 -> ../jump-values.temper.md:16:5  /** <- let pair(a: Int, b: Int): In
+23:1 -> ../jump-values.temper.md:16:5  function pair(a, b) { <- let pair(a: Int, b: Int): In
+23:10 -> ../jump-values.temper.md:16:9 (pair)  pair(a, b) { <- pair(a: Int, b: Int): Int {
+23:14 -> ../jump-values.temper.md:16:5  (a, b) { <- let pair(a: Int, b: Int): In
+24:3 -> ../jump-values.temper.md:16:37  return (Math.imul(a, 10) + b <- a * 10 + b }
+27:1 -> ../jump-values.temper.md:17:5  /** <- let parse(s: String): Int th
+31:1 -> ../jump-values.temper.md:17:5  function parse(s) { <- let parse(s: String): Int th
+31:10 -> ../jump-values.temper.md:17:9 (parse)  parse(s) { <- parse(s: String): Int throws
+31:15 -> ../jump-values.temper.md:17:5  (s) { <- let parse(s: String): Int th
+32:3 -> ../jump-values.temper.md:17:47  return stringToInt32(s, null <- s.toInt32() }
+35:1 -> ../jump-values.temper.md:19:5  /** <- let next(y: Int?): Int? {
+39:1 -> ../jump-values.temper.md:19:5  function next(y) { <- let next(y: Int?): Int? {
+39:10 -> ../jump-values.temper.md:19:9 (next)  next(y) { <- next(y: Int?): Int? {
+39:14 -> ../jump-values.temper.md:19:5  (y) { <- let next(y: Int?): Int? {
+40:3 -> ../jump-values.temper.md:20:7  /** @type {number} */ <- let x = y ?? return null;
+41:3 -> ../jump-values.temper.md:20:7  let x; <- let x = y ?? return null;
+42:3 -> ../jump-values.temper.md:20:15  if (y == null) { <- y ?? return null;
+43:5 -> ../jump-values.temper.md:20:20  return null; <- return null;
+45:5 -> ../jump-values.temper.md:20:15  x = y; <- y ?? return null;
+47:3 -> ../jump-values.temper.md:21:7  return (x + 1) | 0; <- x + 1
+50:1 -> ../jump-values.temper.md:24:5  /** <- let sumPresent(ys: List<Int?
+54:1 -> ../jump-values.temper.md:24:5  function sumPresent(ys) { <- let sumPresent(ys: List<Int?
+54:10 -> ../jump-values.temper.md:24:9 (sumPresent)  sumPresent(ys) { <- sumPresent(ys: List<Int?>):
+54:20 -> ../jump-values.temper.md:24:5  (ys) { <- let sumPresent(ys: List<Int?
+55:3 -> ../jump-values.temper.md:25:7  let sum = 0; <- var sum = 0;
+56:3 -> ../jump-values.temper.md:26:7  { <- for (var i = 0; i < ys.lengt
+57:5 -> ../jump-values.temper.md:26:12  let i = 0; <- var i = 0; i < ys.length; ++
+58:5 -> ../jump-values.temper.md:26:7  while (i < ys.length) { <- for (var i = 0; i < ys.lengt
+59:7 -> ../jump-values.temper.md:27:9  const t$1 = sum; <- sum += ys[i] ?? continue;
+60:7 -> ../jump-values.temper.md:27:9  /** @type {number} */ <- sum += ys[i] ?? continue;
+61:7 -> ../jump-values.temper.md:27:9  let t$0; <- sum += ys[i] ?? continue;
+62:7 -> ../jump-values.temper.md:27:9  { <- sum += ys[i] ?? continue;
+63:9 -> ../jump-values.temper.md:27:16  /** @type {number} */ <- ys[i] ?? continue;
+64:9 -> ../jump-values.temper.md:27:16  let t; <- ys[i] ?? continue;
+65:9 -> ../jump-values.temper.md:27:16  const subject = listedGet(/* <- ys[i] ?? continue;
+66:9 -> ../jump-values.temper.md:27:16  if (subject == null) { <- ys[i] ?? continue;
+67:11 -> ../jump-values.temper.md:27:25  { <- continue;
+68:13 -> ../jump-values.temper.md:26:38  i = (i + 1) | 0; <- ++i) {
+69:13 -> ../jump-values.temper.md:27:25  continue; <- continue;
+72:11 -> ../jump-values.temper.md:27:16  t = subject; <- ys[i] ?? continue;
+76:7 -> ../jump-values.temper.md:27:9  sum = (t$1 + t$0) | 0; <- sum += ys[i] ?? continue;
+77:7 -> ../jump-values.temper.md:26:38  i = (i + 1) | 0; <- ++i) {
+80:3 -> ../jump-values.temper.md:29:7  return sum; <- sum
+83:1 -> ../jump-values.temper.md:32:5  /** <- let sumUntilBad(words: List<
+87:1 -> ../jump-values.temper.md:32:5  function sumUntilBad(words) <- let sumUntilBad(words: List<
+87:10 -> ../jump-values.temper.md:32:9 (sumUntilBad)  sumUntilBad(words) { <- sumUntilBad(words: List<Stri
+87:21 -> ../jump-values.temper.md:32:5  (words) { <- let sumUntilBad(words: List<
+88:3 -> ../jump-values.temper.md:33:7  let sum = 0; <- var sum = 0;
+89:3 -> ../jump-values.temper.md:34:7  let i = 0; <- var i = 0;
+90:3 -> ../jump-values.temper.md:35:7  while (i < words.length) { <- while (i < words.length) {
+91:5 -> ../jump-values.temper.md:36:9  const t$3 = sum; <- sum += parse(words[i]) orels
+92:5 -> ../jump-values.temper.md:36:9  /** @type {number} */ <- sum += parse(words[i]) orels
+93:5 -> ../jump-values.temper.md:36:9  let t$2; <- sum += parse(words[i]) orels
+94:5 -> ../jump-values.temper.md:36:9  { <- sum += parse(words[i]) orels
+95:7 -> ../jump-values.temper.md:36:16  /** @type {number} */ <- parse(words[i]) orelse break
+96:7 -> ../jump-values.temper.md:36:16  let t; <- parse(words[i]) orelse break
+97:7 -> ../jump-values.temper.md:36:16  /** @type {number | null} */ <- parse(words[i]) orelse break
+98:7 -> ../jump-values.temper.md:36:16  let held = null; <- parse(words[i]) orelse break
+99:7 -> ../jump-values.temper.md:36:16  try { <- parse(words[i]) orelse break
+100:9 -> ../jump-values.temper.md:36:16  held = parse(listedGet(/** @ <- parse(words[i]) orelse break
+104:7 -> ../jump-values.temper.md:36:16  if (held == null) { <- parse(words[i]) orelse break
+105:9 -> ../jump-values.temper.md:36:39  break; <- break;
+107:9 -> ../jump-values.temper.md:36:16  t = held; <- parse(words[i]) orelse break
+111:5 -> ../jump-values.temper.md:36:9  sum = (t$3 + t$2) | 0; <- sum += parse(words[i]) orels
+112:5 -> ../jump-values.temper.md:37:9  i = (i + 1) | 0; <- i += 1;
+114:3 -> ../jump-values.temper.md:39:7  return sum; <- sum
+117:1 -> ../jump-values.temper.md:42:5  /** <- let parsedOr(s: String): Int
+121:1 -> ../jump-values.temper.md:42:5  function parsedOr(s) { <- let parsedOr(s: String): Int
+121:10 -> ../jump-values.temper.md:42:9 (parsedOr)  parsedOr(s) { <- parsedOr(s: String): Int { p
+121:18 -> ../jump-values.temper.md:42:5  (s) { <- let parsedOr(s: String): Int
+122:3 -> ../jump-values.temper.md:42:36  /** @type {number} */ <- parse(s) orelse return -1 }
+123:3 -> ../jump-values.temper.md:42:36  let t$4; <- parse(s) orelse return -1 }
+124:3 -> ../jump-values.temper.md:42:36  { <- parse(s) orelse return -1 }
+125:5 -> ../jump-values.temper.md:42:36  /** @type {number} */ <- parse(s) orelse return -1 }
+126:5 -> ../jump-values.temper.md:42:36  let t; <- parse(s) orelse return -1 }
+127:5 -> ../jump-values.temper.md:42:36  /** @type {number | null} */ <- parse(s) orelse return -1 }
+128:5 -> ../jump-values.temper.md:42:36  let held = null; <- parse(s) orelse return -1 }
+129:5 -> ../jump-values.temper.md:42:36  try { <- parse(s) orelse return -1 }
+130:7 -> ../jump-values.temper.md:42:36  held = parse(s); <- parse(s) orelse return -1 }
+134:5 -> ../jump-values.temper.md:42:36  if (held == null) { <- parse(s) orelse return -1 }
+135:7 -> ../jump-values.temper.md:42:52  return -1; <- return -1 }
+137:7 -> ../jump-values.temper.md:42:36  t = held; <- parse(s) orelse return -1 }
+141:3 -> ../jump-values.temper.md:42:36  return t$4; <- parse(s) orelse return -1 }
+144:1 -> ../jump-values.temper.md:46:5  /** <- let after(i: Int): Int? { if
+148:1 -> ../jump-values.temper.md:46:5  function after(i) { <- let after(i: Int): Int? { if
+148:10 -> ../jump-values.temper.md:46:9 (after)  after(i) { <- after(i: Int): Int? { if (i
+148:15 -> ../jump-values.temper.md:46:5  (i) { <- let after(i: Int): Int? { if
+149:3 -> ../jump-values.temper.md:46:31  if (i < 3) { <- if (i < 3) { i + 1 } else {
+150:5 -> ../jump-values.temper.md:46:44  return (i + 1) | 0; <- i + 1 } else { null } }
+152:5 -> ../jump-values.temper.md:46:59  return null; <- null } }
+156:1 -> ../jump-values.temper.md:47:5  /** @returns {string} */ <- let stepped(): String {
+157:1 -> ../jump-values.temper.md:47:5  function stepped() { <- let stepped(): String {
+157:10 -> ../jump-values.temper.md:47:9 (stepped)  stepped() { <- stepped(): String {
+157:17 -> ../jump-values.temper.md:47:5  () { <- let stepped(): String {
+158:3 -> ../jump-values.temper.md:48:7  let seen = ""; <- var seen = "";
+159:3 -> ../jump-values.temper.md:49:7  { <- for (var i = 0; i < 6; i = a
+160:5 -> ../jump-values.temper.md:49:12  let i = 0; <- var i = 0; i < 6; i = after(
+161:5 -> ../jump-values.temper.md:49:7  while (i < 6) { <- for (var i = 0; i < 6; i = a
+162:7 -> ../jump-values.temper.md:50:9  if (i === 1) { <- if (i == 1) { continue; }
+163:9 -> ../jump-values.temper.md:50:23  { <- continue; }
+164:11 -> ../jump-values.temper.md:49:30  i = after(i) ?? 9; <- i = after(i) ?? 9) {
+165:11 -> ../jump-values.temper.md:50:23  continue; <- continue; }
+168:7 -> ../jump-values.temper.md:51:9  seen = `${seen}${i}`; <- seen = "${seen}${i}";
+169:7 -> ../jump-values.temper.md:49:30  i = after(i) ?? 9; <- i = after(i) ?? 9) {
+172:3 -> ../jump-values.temper.md:53:7  return seen; <- seen
+175:1 -> ../jump-values.temper.md:56:5  /** <- let paired(y: Int?): Int { p
+179:1 -> ../jump-values.temper.md:56:5  function paired(y) { <- let paired(y: Int?): Int { p
+179:10 -> ../jump-values.temper.md:56:9 (paired)  paired(y) { <- paired(y: Int?): Int { pair(
+179:16 -> ../jump-values.temper.md:56:5  (y) { <- let paired(y: Int?): Int { p
+180:3 -> ../jump-values.temper.md:56:32  const t$6 = step(1); <- pair(step(1), y ?? return -2
+181:3 -> ../jump-values.temper.md:56:32  /** @type {number} */ <- pair(step(1), y ?? return -2
+182:3 -> ../jump-values.temper.md:56:32  let t$5; <- pair(step(1), y ?? return -2
+183:3 -> ../jump-values.temper.md:56:32  { <- pair(step(1), y ?? return -2
+184:5 -> ../jump-values.temper.md:56:46  /** @type {number} */ <- y ?? return -2) }
+185:5 -> ../jump-values.temper.md:56:46  let t; <- y ?? return -2) }
+186:5 -> ../jump-values.temper.md:56:46  if (y == null) { <- y ?? return -2) }
+187:7 -> ../jump-values.temper.md:56:51  return -2; <- return -2) }
+189:7 -> ../jump-values.temper.md:56:46  t = y; <- y ?? return -2) }
+193:3 -> ../jump-values.temper.md:56:32  return pair(t$6, t$5); <- pair(step(1), y ?? return -2
+196:1 -> ../jump-values.temper.md:58:5  /** <- let listed(y: Int?, z: Int?)
+201:1 -> ../jump-values.temper.md:58:5  function listed(y, z) { <- let listed(y: Int?, z: Int?)
+201:10 -> ../jump-values.temper.md:58:9 (listed)  listed(y, z) { <- listed(y: Int?, z: Int?): Li
+201:16 -> ../jump-values.temper.md:58:5  (y, z) { <- let listed(y: Int?, z: Int?)
+202:3 -> ../jump-values.temper.md:58:47  /** @type {number} */ <- [1, (y ?? return []), 3, z ?
+203:3 -> ../jump-values.temper.md:58:47  let t$7; <- [1, (y ?? return []), 3, z ?
+204:3 -> ../jump-values.temper.md:58:47  { <- [1, (y ?? return []), 3, z ?
+205:5 -> ../jump-values.temper.md:58:52  /** @type {number} */ <- y ?? return []), 3, z ?? ret
+206:5 -> ../jump-values.temper.md:58:52  let t; <- y ?? return []), 3, z ?? ret
+207:5 -> ../jump-values.temper.md:58:52  if (y == null) { <- y ?? return []), 3, z ?? ret
+208:7 -> ../jump-values.temper.md:58:57  return Object.freeze([]); <- return []), 3, z ?? return [
+210:7 -> ../jump-values.temper.md:58:52  t = y; <- y ?? return []), 3, z ?? ret
+214:3 -> ../jump-values.temper.md:58:47  const t$9 = t$7; <- [1, (y ?? return []), 3, z ?
+215:3 -> ../jump-values.temper.md:58:47  /** @type {number} */ <- [1, (y ?? return []), 3, z ?
+216:3 -> ../jump-values.temper.md:58:47  let t$8; <- [1, (y ?? return []), 3, z ?
+217:3 -> ../jump-values.temper.md:58:47  { <- [1, (y ?? return []), 3, z ?
+218:5 -> ../jump-values.temper.md:58:72  /** @type {number} */ <- z ?? return [9]] }
+219:5 -> ../jump-values.temper.md:58:72  let t2; <- z ?? return [9]] }
+220:5 -> ../jump-values.temper.md:58:72  if (z == null) { <- z ?? return [9]] }
+221:7 -> ../jump-values.temper.md:58:77  return Object.freeze([9]); <- return [9]] }
+223:7 -> ../jump-values.temper.md:58:72  t2 = z; <- z ?? return [9]] }
+227:3 -> ../jump-values.temper.md:58:47  return Object.freeze([1, t$9 <- [1, (y ?? return []), 3, z ?
+230:1 -> ../jump-values.temper.md:60:5  /** <- let shown(y: Int?): String {
+234:1 -> ../jump-values.temper.md:60:5  function shown(y) { <- let shown(y: Int?): String {
+234:10 -> ../jump-values.temper.md:60:9 (shown)  shown(y) { <- shown(y: Int?): String { "y=
+234:15 -> ../jump-values.temper.md:60:5  (y) { <- let shown(y: Int?): String {
+235:3 -> ../jump-values.temper.md:60:34  /** @type {number} */ <- "y=${y ?? return "none"}" }
+236:3 -> ../jump-values.temper.md:60:34  let t$10; <- "y=${y ?? return "none"}" }
+237:3 -> ../jump-values.temper.md:60:34  { <- "y=${y ?? return "none"}" }
+238:5 -> ../jump-values.temper.md:60:39  /** @type {number} */ <- y ?? return "none"}" }
+239:5 -> ../jump-values.temper.md:60:39  let t; <- y ?? return "none"}" }
+240:5 -> ../jump-values.temper.md:60:39  if (y == null) { <- y ?? return "none"}" }
+241:7 -> ../jump-values.temper.md:60:44  return "none"; <- return "none"}" }
+243:7 -> ../jump-values.temper.md:60:39  t = y; <- y ?? return "none"}" }
+247:3 -> ../jump-values.temper.md:60:34  return `y=${t$10}`; <- "y=${y ?? return "none"}" }
+250:1 -> ../jump-values.temper.md:62:5  /** <- let both(t: Boolean, y: Int?
+255:1 -> ../jump-values.temper.md:62:5  function both(t, y) { <- let both(t: Boolean, y: Int?
+255:10 -> ../jump-values.temper.md:62:9 (both)  both(t, y) { <- both(t: Boolean, y: Int?): S
+255:14 -> ../jump-values.temper.md:62:5  (t, y) { <- let both(t: Boolean, y: Int?
+256:3 -> ../jump-values.temper.md:63:7  /** @type {boolean} */ <- let ok = t && y != null || r
+257:3 -> ../jump-values.temper.md:63:7  let ok; <- let ok = t && y != null || r
+258:3 -> ../jump-values.temper.md:63:16  if (t && y != null) { <- t && y != null || return "no
+259:5 -> ../jump-values.temper.md:63:16  ok = true; <- t && y != null || return "no
+261:5 -> ../jump-values.temper.md:63:34  return "no"; <- return "no";
+263:3 -> ../jump-values.temper.md:64:7  return `ok ${ok}`; <- "ok ${ok}"
+266:1 -> ../jump-values.temper.md:67:5  /** <- let sign(n: Int): String {
+270:1 -> ../jump-values.temper.md:67:5  function sign(n) { <- let sign(n: Int): String {
+270:10 -> ../jump-values.temper.md:67:9 (sign)  sign(n) { <- sign(n: Int): String {
+270:14 -> ../jump-values.temper.md:67:5  (n) { <- let sign(n: Int): String {
+271:3 -> ../jump-values.temper.md:68:7  /** @type {number} */ <- pair(0, if (n > 0) { 1 } els
+272:3 -> ../jump-values.temper.md:68:7  let t$11; <- pair(0, if (n > 0) { 1 } els
+273:3 -> ../jump-values.temper.md:68:7  { <- pair(0, if (n > 0) { 1 } els
+274:5 -> ../jump-values.temper.md:68:15  /** @type {number} */ <- if (n > 0) { 1 } else if (n
+275:5 -> ../jump-values.temper.md:68:15  let t; <- if (n > 0) { 1 } else if (n
+276:5 -> ../jump-values.temper.md:68:15  if (n > 0) { <- if (n > 0) { 1 } else if (n
+277:7 -> ../jump-values.temper.md:68:28  t = 1; <- 1 } else if (n < 0) { -1 } e
+278:12 -> ../jump-values.temper.md:68:41  if (n < 0) { <- n < 0) { -1 } else { return
+279:7 -> ../jump-values.temper.md:68:50  t = -1; <- -1 } else { return "zero" })
+281:7 -> ../jump-values.temper.md:68:62  return "zero"; <- return "zero" }).toString()
+285:3 -> ../jump-values.temper.md:68:7  return pair(0, t$11).toStrin <- pair(0, if (n > 0) { 1 } els
+288:1 -> ../jump-values.temper.md:71:5  /** @param {string | null} t <- let firstWord(text: String?)
+289:1 -> ../jump-values.temper.md:71:5  function firstWord(text) { <- let firstWord(text: String?)
+289:10 -> ../jump-values.temper.md:71:9 (firstWord)  firstWord(text) { <- firstWord(text: String?): Vo
+289:19 -> ../jump-values.temper.md:71:5  (text) { <- let firstWord(text: String?)
+290:3 -> ../jump-values.temper.md:72:7  /** @type {string} */ <- let t = text ?? return;
+291:3 -> ../jump-values.temper.md:72:7  let t; <- let t = text ?? return;
+292:3 -> ../jump-values.temper.md:72:15  if (text == null) { <- text ?? return;
+293:5 -> ../jump-values.temper.md:72:23  return; <- return;
+295:5 -> ../jump-values.temper.md:72:15  t = text; <- text ?? return;
+297:3 -> ../jump-values.temper.md:73:7  console.log(`first ${listedG <- console.log("first ${t.split
+300:1 -> ../jump-values.temper.md:76:5  /** @returns {number} */ <- let early(): Int {
+301:1 -> ../jump-values.temper.md:76:5  function early() { <- let early(): Int {
+301:10 -> ../jump-values.temper.md:76:9 (early)  early() { <- early(): Int {
+301:15 -> ../jump-values.temper.md:76:5  () { <- let early(): Int {
+302:3 -> ../jump-values.temper.md:77:23  return 7; <- return 7;
+305:1 -> ../jump-values.temper.md:82:5  /** @returns {number} */ <- let partly(): Int { pair(ste
+306:1 -> ../jump-values.temper.md:82:5  function partly() { <- let partly(): Int { pair(ste
+306:10 -> ../jump-values.temper.md:82:9 (partly)  partly() { <- partly(): Int { pair(step(2)
+306:16 -> ../jump-values.temper.md:82:5  () { <- let partly(): Int { pair(ste
+307:3 -> ../jump-values.temper.md:82:30  step(2); <- step(2), return step(3)) }
+308:3 -> ../jump-values.temper.md:82:39  return step(3); <- return step(3)) }
+311:1 -> ../jump-values.temper.md:87:5  /** <- let doJumps(ys: List<Int?>):
+315:1 -> ../jump-values.temper.md:87:5  function doJumps(ys) { <- let doJumps(ys: List<Int?>):
+315:10 -> ../jump-values.temper.md:87:9 (doJumps)  doJumps(ys) { <- doJumps(ys: List<Int?>): Str
+315:17 -> ../jump-values.temper.md:87:5  (ys) { <- let doJumps(ys: List<Int?>):
+316:3 -> ../jump-values.temper.md:88:7  let seen = ""; <- var seen = "";
+317:3 -> ../jump-values.temper.md:89:7  { <- for (var i = 0; i < ys.lengt
+318:5 -> ../jump-values.temper.md:89:12  let i = 0; <- var i = 0; i < ys.length; ++
+319:5 -> ../jump-values.temper.md:89:7  while (i < ys.length) { <- for (var i = 0; i < ys.lengt
+320:7 -> ../jump-values.temper.md:90:9  /** @type {number} */ <- let v = ys[i] ?? do {
+321:7 -> ../jump-values.temper.md:90:9  let v; <- let v = ys[i] ?? do {
+322:7 -> ../jump-values.temper.md:90:17  const subject = listedGet(/* <- ys[i] ?? do {
+323:7 -> ../jump-values.temper.md:90:17  if (subject == null) { <- ys[i] ?? do {
+324:9 -> ../jump-values.temper.md:91:11  seen = `${seen}a`; <- seen = "${seen}a";
+325:9 -> ../jump-values.temper.md:92:11  if (i === 1) { <- if (i == 1) { continue; }
+326:11 -> ../jump-values.temper.md:92:25  { <- continue; }
+327:13 -> ../jump-values.temper.md:89:38  i = (i + 1) | 0; <- ++i) {
+328:13 -> ../jump-values.temper.md:92:25  continue; <- continue; }
+331:9 -> ../jump-values.temper.md:93:11  seen = `${seen}b`; <- seen = "${seen}b";
+332:9 -> ../jump-values.temper.md:94:11  break; <- break;
+334:9 -> ../jump-values.temper.md:90:17  v = subject; <- ys[i] ?? do {
+336:7 -> ../jump-values.temper.md:96:9  seen = `${seen}${v}`; <- seen = "${seen}${v}";
+337:7 -> ../jump-values.temper.md:89:38  i = (i + 1) | 0; <- ++i) {
+340:3 -> ../jump-values.temper.md:98:7  return seen; <- seen
+343:1 -> ../jump-values.temper.md:101:5  /** <- let doReturn(y: Int?, z: Int
+348:1 -> ../jump-values.temper.md:101:5  function doReturn(y, z) { <- let doReturn(y: Int?, z: Int
+348:10 -> ../jump-values.temper.md:101:9 (doReturn)  doReturn(y, z) { <- doReturn(y: Int?, z: Int): S
+348:18 -> ../jump-values.temper.md:101:5  (y, z) { <- let doReturn(y: Int?, z: Int
+349:3 -> ../jump-values.temper.md:102:7  /** @type {number} */ <- let v = y ?? do {
+350:3 -> ../jump-values.temper.md:102:7  let t$13; <- let v = y ?? do {
+351:3 -> ../jump-values.temper.md:102:7  if (y == null) { <- let v = y ?? do {
+355:7 -> ../jump-values.temper.md:103:9  if (z > 0) { <- if (z > 0) {
+356:9 -> ../jump-values.temper.md:104:11  if (z > 5) { <- if (z > 5) { return "big"; }
+357:11 -> ../jump-values.temper.md:104:24  return "big"; <- return "big"; }
+359:9 -> ../jump-values.temper.md:105:11  return "pos"; <- return "pos";
+367:3 -> ../jump-values.temper.md:102:7  const v = t$13; <- let v = y ?? do {
+368:3 -> ../jump-values.temper.md:109:7  return `v${v}`; <- "v${v}"
+371:1 -> ../jump-values.temper.md:114:5  /** <- let trio(a: Int, b: Int, c:
+377:1 -> ../jump-values.temper.md:114:5  function trio(a, b, c) { <- let trio(a: Int, b: Int, c:
+377:10 -> ../jump-values.temper.md:114:9 (trio)  trio(a, b, c) { <- trio(a: Int, b: Int, c: Int)
+377:14 -> ../jump-values.temper.md:114:5  (a, b, c) { <- let trio(a: Int, b: Int, c:
+378:3 -> ../jump-values.temper.md:114:45  return (((a + b) | 0) + c) | <- a + b + c }
+381:1 -> ../jump-values.temper.md:115:5  /** <- let ordered(ys: List<Int?>):
+385:1 -> ../jump-values.temper.md:115:5  function ordered(ys) { <- let ordered(ys: List<Int?>):
+385:10 -> ../jump-values.temper.md:115:9 (ordered)  ordered(ys) { <- ordered(ys: List<Int?>): Int
+385:17 -> ../jump-values.temper.md:115:5  (ys) { <- let ordered(ys: List<Int?>):
+386:3 -> ../jump-values.temper.md:116:7  let sum = 0; <- var sum = 0;
+387:3 -> ../jump-values.temper.md:117:7  { <- for (var i = 0; i < ys.lengt
+388:5 -> ../jump-values.temper.md:117:12  let i = 0; <- var i = 0; i < ys.length; ++
+389:5 -> ../jump-values.temper.md:117:7  while (i < ys.length) { <- for (var i = 0; i < ys.lengt
+390:7 -> ../jump-values.temper.md:118:9  const t$16 = sum; <- sum += trio(step(10 + i), ys
+391:7 -> ../jump-values.temper.md:118:9  const t$15 = step((10 + i) | <- sum += trio(step(10 + i), ys
+392:7 -> ../jump-values.temper.md:118:9  /** @type {number} */ <- sum += trio(step(10 + i), ys
+393:7 -> ../jump-values.temper.md:118:9  let t$14; <- sum += trio(step(10 + i), ys
+394:7 -> ../jump-values.temper.md:118:9  { <- sum += trio(step(10 + i), ys
+395:9 -> ../jump-values.temper.md:118:35  /** @type {number} */ <- ys[i] ?? do { step(20 + i);
+396:9 -> ../jump-values.temper.md:118:35  let t; <- ys[i] ?? do { step(20 + i);
+397:9 -> ../jump-values.temper.md:118:35  const subject = listedGet(/* <- ys[i] ?? do { step(20 + i);
+398:9 -> ../jump-values.temper.md:118:35  if (subject == null) { <- ys[i] ?? do { step(20 + i);
+399:11 -> ../jump-values.temper.md:118:49  step((20 + i) | 0); <- step(20 + i); continue }, st
+400:11 -> ../jump-values.temper.md:118:63  { <- continue }, step(30 + i));
+401:13 -> ../jump-values.temper.md:117:38  i = (i + 1) | 0; <- ++i) {
+402:13 -> ../jump-values.temper.md:118:63  continue; <- continue }, step(30 + i));
+405:11 -> ../jump-values.temper.md:118:35  t = subject; <- ys[i] ?? do { step(20 + i);
+409:7 -> ../jump-values.temper.md:118:9  sum = (t$16 + trio(t$15, t$1 <- sum += trio(step(10 + i), ys
+410:7 -> ../jump-values.temper.md:117:38  i = (i + 1) | 0; <- ++i) {
+413:3 -> ../jump-values.temper.md:120:7  return sum; <- sum
+416:1 -> ../jump-values.temper.md:124:5  /** <- let nested(xs: List<Int?>, y
+421:1 -> ../jump-values.temper.md:124:5  function nested(xs, ys) { <- let nested(xs: List<Int?>, y
+421:10 -> ../jump-values.temper.md:124:9 (nested)  nested(xs, ys) { <- nested(xs: List<Int?>, ys: L
+421:16 -> ../jump-values.temper.md:124:5  (xs, ys) { <- let nested(xs: List<Int?>, y
+422:3 -> ../jump-values.temper.md:125:7  let seen = ""; <- var seen = "";
+423:3 -> ../jump-values.temper.md:126:7  { <- outer: for (var i = 0; i < x
+424:5 -> ../jump-values.temper.md:126:14  { <- for (var i = 0; i < xs.lengt
+425:7 -> ../jump-values.temper.md:126:19  let i = 0; <- var i = 0; i < xs.length; ++
+426:7 -> ../jump-values.temper.md:126:14  while (i < xs.length) { <- for (var i = 0; i < xs.lengt
+427:9 -> ../jump-values.temper.md:127:9  /** @type {number} */ <- let v = xs[i] ?? do { ys[i]
+428:9 -> ../jump-values.temper.md:127:9  let v; <- let v = xs[i] ?? do { ys[i]
+429:9 -> ../jump-values.temper.md:127:17  const subject = listedGet(/* <- xs[i] ?? do { ys[i] ?? do {
+430:9 -> ../jump-values.temper.md:127:17  if (subject == null) { <- xs[i] ?? do { ys[i] ?? do {
+431:11 -> ../jump-values.temper.md:127:31  const subject2 = listedGet(/ <- ys[i] ?? do { break outer; }
+432:11 -> ../jump-values.temper.md:127:31  if (subject2 == null) { <- ys[i] ?? do { break outer; }
+433:13 -> ../jump-values.temper.md:127:45  break; <- break outer; } };
+435:13 -> ../jump-values.temper.md:127:31  v = subject2; <- ys[i] ?? do { break outer; }
+438:11 -> ../jump-values.temper.md:127:17  v = subject; <- xs[i] ?? do { ys[i] ?? do {
+440:9 -> ../jump-values.temper.md:128:9  seen = `${seen}${v}`; <- seen = "${seen}${v}";
+441:9 -> ../jump-values.temper.md:126:45  i = (i + 1) | 0; <- ++i) {
+445:3 -> ../jump-values.temper.md:130:7  return seen; <- seen
+448:1 -> ../jump-values.temper.md:136:5  /** <- let gridded(rows: List<List<
+452:1 -> ../jump-values.temper.md:136:5  function gridded(rows) { <- let gridded(rows: List<List<
+452:10 -> ../jump-values.temper.md:136:9 (gridded)  gridded(rows) { <- gridded(rows: List<List<Int?
+452:17 -> ../jump-values.temper.md:136:5  (rows) { <- let gridded(rows: List<List<
+453:3 -> ../jump-values.temper.md:137:7  let seen = ""; <- var seen = "";
+454:3 -> ../jump-values.temper.md:138:7  { <- outer: for (var i = 0; i < r
+455:5 -> ../jump-values.temper.md:138:14  { <- for (var i = 0; i < rows.len
+456:7 -> ../jump-values.temper.md:138:19  let i = 0; <- var i = 0; i < rows.length;
+457:7 -> ../jump-values.temper.md:138:14  outer: while (i < rows.lengt <- for (var i = 0; i < rows.len
+458:9 -> ../jump-values.temper.md:139:9  /** @type {readonly (number <- let row = rows[i];
+459:9 -> ../jump-values.temper.md:139:9  const row = listedGet(/** @t <- let row = rows[i];
+460:9 -> ../jump-values.temper.md:140:9  { <- for (var j = 0; j < row.leng
+461:11 -> ../jump-values.temper.md:140:14  let j = 0; <- var j = 0; j < row.length; +
+462:11 -> ../jump-values.temper.md:140:9  while (j < row.length) { <- for (var j = 0; j < row.leng
+463:13 -> ../jump-values.temper.md:141:11  /** @type {number} */ <- let v = row[j] ?? break oute
+464:13 -> ../jump-values.temper.md:141:11  let v; <- let v = row[j] ?? break oute
+465:13 -> ../jump-values.temper.md:141:19  const subject = listedGet(/* <- row[j] ?? break outer;
+466:13 -> ../jump-values.temper.md:141:19  if (subject == null) { <- row[j] ?? break outer;
+467:15 -> ../jump-values.temper.md:141:29  break outer; <- break outer;
+469:15 -> ../jump-values.temper.md:141:19  v = subject; <- row[j] ?? break outer;
+471:13 -> ../jump-values.temper.md:142:11  /** @type {number} */ <- let w = (if (v < 0) { null }
+472:13 -> ../jump-values.temper.md:142:11  let w; <- let w = (if (v < 0) { null }
+473:13 -> ../jump-values.temper.md:142:20  const subject2 = v < 0 ? nul <- if (v < 0) { null } else { v
+474:13 -> ../jump-values.temper.md:142:19  if (subject2 == null) { <- (if (v < 0) { null } else {
+475:15 -> ../jump-values.temper.md:142:60  seen = `${seen}-`; <- seen = "${seen}-"; continue
+476:15 -> ../jump-values.temper.md:142:79  { <- continue outer };
+477:17 -> ../jump-values.temper.md:138:47  i = (i + 1) | 0; <- ++i) {
+478:17 -> ../jump-values.temper.md:142:79  continue outer; <- continue outer };
+481:15 -> ../jump-values.temper.md:142:19  w = subject2; <- (if (v < 0) { null } else {
+483:13 -> ../jump-values.temper.md:143:11  seen = `${seen}${w}`; <- seen = "${seen}${w}";
+484:13 -> ../jump-values.temper.md:140:41  j = (j + 1) | 0; <- ++j) {
+487:9 -> ../jump-values.temper.md:145:9  seen = `${seen}|`; <- seen = "${seen}|";
+488:9 -> ../jump-values.temper.md:138:47  i = (i + 1) | 0; <- ++i) {
+492:3 -> ../jump-values.temper.md:147:7  return seen; <- seen
+495:1 -> ../jump-values.temper.md:150:5  /** <- let firstBig(rows: List<List
+500:1 -> ../jump-values.temper.md:150:5  function firstBig(rows, keys <- let firstBig(rows: List<List
+500:10 -> ../jump-values.temper.md:150:9 (firstBig)  firstBig(rows, keys) { <- firstBig(rows: List<List<Int
+500:18 -> ../jump-values.temper.md:150:5  (rows, keys) { <- let firstBig(rows: List<List
+501:3 -> ../jump-values.temper.md:151:7  let seen = ""; <- var seen = "";
+502:3 -> ../jump-values.temper.md:152:7  { <- outer: for (var i = 0; i < r
+503:5 -> ../jump-values.temper.md:152:14  { <- for (var i = 0; i < rows.len
+504:7 -> ../jump-values.temper.md:152:19  let i = 0; <- var i = 0; i < rows.length;
+505:7 -> ../jump-values.temper.md:152:14  outer: while (i < rows.lengt <- for (var i = 0; i < rows.len
+506:9 -> ../jump-values.temper.md:153:9  /** @type {number} */ <- let k = keys[i] ?? do {
+507:9 -> ../jump-values.temper.md:153:9  let t$18; <- let k = keys[i] ?? do {
+508:9 -> ../jump-values.temper.md:153:9  { <- let k = keys[i] ?? do {
+509:11 -> ../jump-values.temper.md:153:17  const subject = listedGet(/* <- keys[i] ?? do {
+516:15 -> ../jump-values.temper.md:154:11  /** @type {readonly (number <- let row = rows[i];
+517:15 -> ../jump-values.temper.md:154:11  const row = listedGet(/** @t <- let row = rows[i];
+518:15 -> ../jump-values.temper.md:155:11  let first = -1; <- var first = -1;
+519:15 -> ../jump-values.temper.md:156:11  { <- for (var j = 0; j < row.leng
+520:17 -> ../jump-values.temper.md:156:16  let j = 0; <- var j = 0; j < row.length; +
+521:17 -> ../jump-values.temper.md:156:11  while (j < row.length) { <- for (var j = 0; j < row.leng
+522:19 -> ../jump-values.temper.md:157:13  /** @type {number} */ <- let v = row[j] ?? continue o
+523:19 -> ../jump-values.temper.md:157:13  let v; <- let v = row[j] ?? continue o
+524:19 -> ../jump-values.temper.md:157:21  const subject2 = listedGet(/ <- row[j] ?? continue outer;
+525:19 -> ../jump-values.temper.md:157:21  if (subject2 == null) { <- row[j] ?? continue outer;
+526:21 -> ../jump-values.temper.md:157:31  { <- continue outer;
+527:23 -> ../jump-values.temper.md:152:47  i = (i + 1) | 0; <- ++i) {
+528:23 -> ../jump-values.temper.md:157:31  continue outer; <- continue outer;
+531:21 -> ../jump-values.temper.md:157:21  v = subject2; <- row[j] ?? continue outer;
+533:19 -> ../jump-values.temper.md:158:13  if (v > 5) { <- if (v > 5) { break outer; }
+534:21 -> ../jump-values.temper.md:158:26  break outer; <- break outer; }
+536:19 -> ../jump-values.temper.md:159:13  if (v > 2) { <- if (v > 2) { first = v; brea
+537:21 -> ../jump-values.temper.md:159:26  first = v; <- first = v; break; }
+538:21 -> ../jump-values.temper.md:159:37  break; <- break; }
+540:19 -> ../jump-values.temper.md:156:43  j = (j + 1) | 0; <- ++j) {
+551:9 -> ../jump-values.temper.md:153:9  const k = t$18; <- let k = keys[i] ?? do {
+552:9 -> ../jump-values.temper.md:163:9  seen = `${seen}${k},`; <- seen = "${seen}${k},";
+553:9 -> ../jump-values.temper.md:152:47  i = (i + 1) | 0; <- ++i) {
+557:3 -> ../jump-values.temper.md:165:7  return seen; <- seen
+560:1 -> ../jump-values.temper.md:169:5  /** <- let viaOrelse(words: List<St
+564:1 -> ../jump-values.temper.md:169:5  function viaOrelse(words) { <- let viaOrelse(words: List<St
+564:10 -> ../jump-values.temper.md:169:9 (viaOrelse)  viaOrelse(words) { <- viaOrelse(words: List<String
+564:19 -> ../jump-values.temper.md:169:5  (words) { <- let viaOrelse(words: List<St
+565:3 -> ../jump-values.temper.md:170:7  let seen = ""; <- var seen = "";
+566:3 -> ../jump-values.temper.md:171:7  { <- for (var i = 0; i < words.le
+567:5 -> ../jump-values.temper.md:171:12  let i = 0; <- var i = 0; i < words.length;
+568:5 -> ../jump-values.temper.md:171:7  while (i < words.length) { <- for (var i = 0; i < words.le
+569:7 -> ../jump-values.temper.md:172:9  /** @type {number} */ <- let n = parse(words[i]) orel
+570:7 -> ../jump-values.temper.md:172:9  let n; <- let n = parse(words[i]) orel
+571:7 -> ../jump-values.temper.md:172:17  /** @type {number | null} */ <- parse(words[i]) orelse do {
+572:7 -> ../jump-values.temper.md:172:17  let held = null; <- parse(words[i]) orelse do {
+573:7 -> ../jump-values.temper.md:172:17  try { <- parse(words[i]) orelse do {
+574:9 -> ../jump-values.temper.md:172:17  held = parse(listedGet(/** @ <- parse(words[i]) orelse do {
+578:7 -> ../jump-values.temper.md:172:17  if (held == null) { <- parse(words[i]) orelse do {
+579:9 -> ../jump-values.temper.md:173:11  seen = `${seen}!`; <- seen = "${seen}!";
+580:9 -> ../jump-values.temper.md:174:11  if (i > 2) { <- if (i > 2) { break; }
+581:11 -> ../jump-values.temper.md:174:24  break; <- break; }
+583:9 -> ../jump-values.temper.md:175:11  { <- continue;
+584:11 -> ../jump-values.temper.md:171:41  i = (i + 1) | 0; <- ++i) {
+585:11 -> ../jump-values.temper.md:175:11  continue; <- continue;
+588:9 -> ../jump-values.temper.md:172:17  n = held; <- parse(words[i]) orelse do {
+590:7 -> ../jump-values.temper.md:177:9  seen = `${seen}${n}`; <- seen = "${seen}${n}";
+591:7 -> ../jump-values.temper.md:171:41  i = (i + 1) | 0; <- ++i) {
+594:3 -> ../jump-values.temper.md:179:7  return seen; <- seen
+597:1 -> ../jump-values.temper.md:182:5  /** <- let viaIf(n: Int): String {
+601:1 -> ../jump-values.temper.md:182:5  function viaIf(n) { <- let viaIf(n: Int): String {
+601:10 -> ../jump-values.temper.md:182:9 (viaIf)  viaIf(n) { <- viaIf(n: Int): String {
+601:15 -> ../jump-values.temper.md:182:5  (n) { <- let viaIf(n: Int): String {
+602:3 -> ../jump-values.temper.md:183:7  /** @type {string} */ <- let s = if (n > 0) { "pos" }
+603:3 -> ../jump-values.temper.md:183:7  let t$22; <- let s = if (n > 0) { "pos" }
+604:3 -> ../jump-values.temper.md:183:7  if (n > 0) { <- let s = if (n > 0) { "pos" }
+610:7 -> ../jump-values.temper.md:184:9  if (n < -5) { <- if (n < -5) { return "low";
+611:9 -> ../jump-values.temper.md:184:23  return "low"; <- return "low"; }
+617:3 -> ../jump-values.temper.md:183:7  const s = t$22; <- let s = if (n > 0) { "pos" }
+618:3 -> ../jump-values.temper.md:187:7  return `s=${s}`; <- "s=${s}"
+621:1 -> ../jump-values.temper.md:10:5  let steps = 0; <- var steps = 0;
+622:1 -> ../jump-values.temper.md:190:5  /** @type {string} */ <- console.log("${next(1)} ${ne
+623:1 -> ../jump-values.temper.md:190:5  let t$23; <- console.log("${next(1)} ${ne
+624:1 -> ../jump-values.temper.md:190:5  { <- console.log("${next(1)} ${ne
+625:3 -> ../jump-values.temper.md:190:20  const part = next(1); <- next(1)} ${next(null)}");
+628:1 -> ../jump-values.temper.md:190:5  /** @type {string} */ <- console.log("${next(1)} ${ne
+629:1 -> ../jump-values.temper.md:190:5  let t$24; <- console.log("${next(1)} ${ne
+630:1 -> ../jump-values.temper.md:190:5  { <- console.log("${next(1)} ${ne
+631:3 -> ../jump-values.temper.md:190:31  const part2 = next(null); <- next(null)}");
+634:1 -> ../jump-values.temper.md:190:5  console.log(`${t$23} ${t$24} <- console.log("${next(1)} ${ne
+635:1 -> ../jump-values.temper.md:191:5  console.log(`${sumPresent(Ob <- console.log("${sumPresent([1
+636:1 -> ../jump-values.temper.md:192:5  console.log(`${parsedOr("12" <- console.log("${parsedOr("12"
+637:1 -> ../jump-values.temper.md:193:5  console.log(`${paired(3)} ${ <- console.log("${paired(3)} ${
+638:1 -> ../jump-values.temper.md:194:5  console.log(`${listed(2, 4). <- console.log("${listed(2, 4).
+639:1 -> ../jump-values.temper.md:195:5  console.log(`${shown(5)} ${s <- console.log("${shown(5)} ${s
+640:1 -> ../jump-values.temper.md:196:5  console.log(`${both(true, 1) <- console.log("${both(true, 1)
+641:1 -> ../jump-values.temper.md:197:5  console.log(`${sign(4)} ${si <- console.log("${sign(4)} ${si
+642:1 -> ../jump-values.temper.md:198:5  firstWord("hello there"); <- firstWord("hello there");
+643:1 -> ../jump-values.temper.md:199:5  firstWord(null); <- firstWord(null);
+644:1 -> ../jump-values.temper.md:200:5  console.log(`${doJumps(Objec <- console.log("${doJumps([1, n
+645:1 -> ../jump-values.temper.md:201:5  console.log(ordered(Object.f <- console.log(ordered([1, null
+646:1 -> ../jump-values.temper.md:202:5  console.log(`${nested(Object <- console.log("${nested([1, nu
+647:1 -> ../jump-values.temper.md:203:5  console.log(`${gridded(Objec <- console.log("${gridded([[1,
+648:1 -> ../jump-values.temper.md:204:5  console.log(`${viaIf(1)} ${v <- console.log("${viaIf(1)} ${v
+649:1 -> ../jump-values.temper.md:205:5  console.log(`${early()} ${pa <- console.log("${early()} ${pa

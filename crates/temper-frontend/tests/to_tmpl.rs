@@ -662,6 +662,64 @@ fn joins_and_sealed_whens() {
     });
 }
 
+/// A `continue` in a `for` loop with a step (statement or value, as `x
+/// ?? continue`) runs a copy of the step first ([`temper_tmpl::exits`]),
+/// with its own locals (the step's `??`'s): the step appears once per
+/// `continue` plus once at the body's end, also for an inner loop's, so
+/// the output grows linearly with the `continue`s. A `continue` in the
+/// step itself, which runs the step again on the interpreter and is the
+/// one way copies could hold copies, isn't translated.
+#[test]
+fn continue_copies_the_step_once_per_site() {
+    with_stack(|| {
+        let program_for = |n: usize, step: &str| {
+            let mut body = String::new();
+            for k in 0..n {
+                body.push_str(&format!("        let v{k} = ys[i] ?? continue;\n"));
+                body.push_str(&format!("        if (v{k} < 0) {{ continue; }}\n"));
+                body.push_str(&format!("        sum += v{k};\n"));
+            }
+            format!(
+                "
+    let outer(i: Int): Int? {{ if (i < 9) {{ i + 1 }} else {{ null }} }}
+    let inner(j: Int): Int? {{ if (j < 9) {{ j + 1 }} else {{ null }} }}
+    export let f(ys: List<Int?>): Int {{
+      var sum = 0;
+      for (var i = 0; i < ys.length; i = outer(i) ?? {step}) {{
+{body}        for (var j = 0; j < i; j = inner(j) ?? 99) {{
+          let w = ys[j] ?? continue;
+          sum += w;
+        }}
+      }}
+      sum
+    }}
+"
+            )
+        };
+        let mut sizes = Vec::new();
+        for n in [2, 4, 8] {
+            let written = text::write(&translate_source("steps", &program_for(n, "99")));
+            let calls = |f: &str| written.matches(&format!("{f}#")).count() - 1;
+            assert_eq!(calls("outer"), 2 * n + 1, "{written}");
+            assert_eq!(calls("inner"), 2, "{written}");
+            sizes.push(written.len());
+        }
+        // Each doubling of the `continue`s adds about twice as much.
+        let (a, b) = (sizes[1] - sizes[0], sizes[2] - sizes[1]);
+        assert!(b <= 2 * a + a / 4, "{sizes:?}");
+        // A `continue` in the step says it isn't covered.
+        let mut library = Library::new();
+        library.add_file(
+            "steps.temper.md",
+            &program_for(2, "continue"),
+            SourceKind::Markdown,
+        );
+        load_imports(&Sources::standard(), &mut library);
+        let why = to_tmpl(&settle(library), "steps").unwrap_err();
+        assert_eq!(why.what, "continue in a for loop's step");
+    });
+}
+
 /// A module whose only `console.log` is in a test declares its
 /// `~console` too, which the test reads.
 #[test]

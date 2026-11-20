@@ -1045,6 +1045,22 @@ to report those inputs as expected.
   spans all but the last of them (just the start of a lone block) and the
   call and name get odd spans from that. `check_ast.py --module` masks
   those three spans; the declaration's are compared.
+- **`return`, `throw`, and `yield` can be the operand an operator
+  lacks** (`jump-operand`, `tests/parse/edge-cases.cases`): `x ?? return
+  null`, `f() orelse return`, `a || return b`, and `f(a, return b)`
+  parse with the jump as that operand. Kotlin, whose precedence puts
+  them below everything but `;`, closes the operator first and reports
+  too few operands, so only inputs that are errors there differ. The
+  jump's own operand is what it takes anywhere: the rest of the
+  statement or bracket, but for a comma (`jump-comma`): `f(return a,
+  b)`, `return a, b`, and `[y ?? return 0, 1]` are errors in both, but
+  where Kotlin's jump takes the comma list and finds no argument in it,
+  ours ends before the comma, as if in parentheses, and reports the
+  comma (`JumpBeforeComma`), so the rest is still built. With
+  parentheses, as `x ?? (return null)`, both already agreed. `return`, `break`, and
+  `continue` as values type as `Never`, fitting any type; Kotlin has no
+  type for them, weaving them into its control flow before typing, which
+  comes to the same where it translates them.
 - **Operands nested over 1000 deep are an error** (`NestedTooDeeply`),
   where Kotlin overflows its stack, already at about 300 nested calls or
   a 1000-term `a+a+...`.

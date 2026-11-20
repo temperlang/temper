@@ -104,9 +104,15 @@ impl Parsed {
 pub enum ParseErrorKind {
     TooFewOperands,
     TooManyOperands,
+    /// Ours: a comma after the operand of a `return`, `throw`, or `yield`,
+    /// which would make the rest of the list part of that operand. The
+    /// jump ends before the comma instead, as if in parentheses, and the
+    /// span is the comma's.
+    JumpBeforeComma,
 }
 
-/// An operator with the wrong number of operands.
+/// An operator with the wrong number of operands, or a comma after a
+/// jump's operand.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ParseError {
     pub kind: ParseErrorKind,
@@ -128,8 +134,19 @@ impl ParseError {
             ParseErrorKind::TooManyOperands => {
                 format!("Operator {op:?} expects at most {bound} operands but got {got}")
             }
+            ParseErrorKind::JumpBeforeComma => jump_before_comma(op),
         }
     }
+}
+
+/// What [`ParseErrorKind::JumpBeforeComma`] says for a jump.
+pub fn jump_before_comma(op: Operator) -> String {
+    let (word, verb) = match op {
+        Operator::Throw => ("throw", "throws"),
+        Operator::Yield => ("yield", "yields"),
+        _ => ("return", "returns"),
+    };
+    format!("Put this `{word}` in parentheses: a comma here would be part of what it {verb}")
 }
 
 /// Lexes and parses `source`.
@@ -142,6 +159,7 @@ pub fn parse(source: &str, kind: SourceKind) -> Parsed {
             children: Vec::new(),
             span: None,
             open: 0,
+            operand: false,
         }],
         tree: Tree::new(),
         adapted,
@@ -182,6 +200,10 @@ struct Element {
     span: Option<Span>,
     /// Open brackets among its tokens minus close brackets.
     open: i32,
+    /// A `return`, `throw`, or `yield` placed as the missing operand of an
+    /// operator whose precedence is higher ([`Parser::try_operand_jump`]):
+    /// what follows that it could take stays in it.
+    operand: bool,
 }
 
 /// What [`can_nest`] needs to know about a node, built or not.
@@ -353,6 +375,7 @@ impl Parser {
             children: Vec::new(),
             span: Some(span),
             open: 0,
+            operand: false,
         });
     }
 
@@ -390,6 +413,7 @@ impl Parser {
             children,
             span,
             open: 0,
+            operand: false,
         });
     }
 
@@ -406,8 +430,8 @@ impl Parser {
         self.tree.add_op(el.op, span, &children)
     }
 
-    fn check_arity(&mut self, el: &Element) {
-        // Operands are runs of nodes between tokens.
+    /// How many operands an element has: runs of nodes between tokens.
+    fn arity(&self, el: &Element) -> u32 {
         let mut arity = 0;
         let mut after_token = true;
         for &child in &el.children {
@@ -418,6 +442,11 @@ impl Parser {
                 after_token = false;
             }
         }
+        arity
+    }
+
+    fn check_arity(&mut self, el: &Element) {
+        let arity = self.arity(el);
         let info = el.op.info();
         let (kind, bound) = if arity < info.min_arity {
             (ParseErrorKind::TooFewOperands, info.min_arity)
@@ -612,11 +641,30 @@ impl Parser {
             let mut right = None;
             let outer = self.candidate(op, None);
             let inner = self.candidate(op, Some(i));
+            // The outermost jump with an operand that would take the comma.
+            let mut jump: Option<(usize, Operator)> = None;
             for j in (0..self.stack.len()).rev() {
                 if self.stack[j].op == op {
                     // Continue the same separator.
                     self.commit_to(j + 1);
+                    self.report_jump_before(jump, i);
                     return true;
+                }
+                let jump_op = self.stack[j].op;
+                if op == Operator::Comma
+                    && matches!(
+                        jump_op,
+                        Operator::Return | Operator::Throw | Operator::Yield
+                    )
+                    // Its operand is above it, or last on the top.
+                    && (j + 1 < self.stack.len() || !self.needs_operand(j))
+                {
+                    // Not within it: `(...,...)` is reserved for tuples, so
+                    // `return a, b` is an error, and the comma follows the
+                    // jump instead, or what it's an operand of.
+                    jump = Some((j, jump_op));
+                    (left, right) = (None, None);
+                    continue;
                 }
                 let el = self.at(j);
                 let parent = self.at_opt(j.checked_sub(1));
@@ -625,6 +673,10 @@ impl Parser {
                     right = Some(j);
                 }
                 if el.open {
+                    break;
+                }
+                // What a `return` that's an operand could take stays in it.
+                if self.stack[j].operand && can_nest(bracket, parent, el, inner) {
                     break;
                 }
                 // Or el as its left operand.
@@ -637,10 +689,12 @@ impl Parser {
                     }
                 }
             }
-            if let Some(left) = left {
+            // Past a jump, it's the left operand if nothing holding it can be.
+            if let Some(left) = left.or(jump.map(|(j, _)| j)) {
                 self.commit_to(left + 1);
                 let adopt = self.adoptable(op);
                 self.swap_top_into_new(op, adopt);
+                self.report_jump_before(jump, i);
                 return true;
             } else if let Some(right) = right {
                 self.commit_to(right + 1);
@@ -649,6 +703,23 @@ impl Parser {
             }
         }
         false
+    }
+
+    /// For a comma, token `i`, kept out of a jump: `jump` with its place
+    /// on the stack before the comma.
+    fn report_jump_before(&mut self, jump: Option<(usize, Operator)>, i: u32) {
+        let Some((_, op)) = jump else { return };
+        let token = self.token(i);
+        self.errors.push(ParseError {
+            kind: ParseErrorKind::JumpBeforeComma,
+            op,
+            bound: 0,
+            operands: 0,
+            span: Span {
+                start: token.start,
+                end: token.end,
+            },
+        });
     }
 
     /// How many of the operands just before the top a new separator `op`
@@ -712,6 +783,10 @@ impl Parser {
                 {
                     left = Some(j);
                 }
+                // What a `return` that's an operand could take stays in it.
+                if self.stack[j].operand && can_nest(bracket, Some(parent), el, candidate) {
+                    break;
+                }
             }
             if let Some(left) = left {
                 self.commit_to(left + 1);
@@ -730,6 +805,9 @@ impl Parser {
         bracket: Option<Shape>,
     ) -> bool {
         for op in ops {
+            if self.try_operand_jump(i, op, bracket) {
+                return true;
+            }
             let candidate = self.candidate(op, Some(i));
             for j in (0..self.stack.len()).rev() {
                 let el = self.at(j);
@@ -746,6 +824,40 @@ impl Parser {
             }
         }
         false
+    }
+
+    /// `return`, `throw`, or `yield` where the top lacks an operand it
+    /// needs and can't take one of theirs by precedence, as in `x ?? return
+    /// null`, `f() orelse return`, `!throw e`, or `f(a, return b)`: that
+    /// operand, where Kotlin reports too few operands. Its own operand is
+    /// what it takes anywhere else: what follows to the end of the
+    /// statement or bracket, commas included, so `x ?? return a ?? b`
+    /// returns `a ?? b` ([`Element::operand`]).
+    fn try_operand_jump(&mut self, i: u32, op: Operator, bracket: Option<Shape>) -> bool {
+        if !matches!(op, Operator::Return | Operator::Throw | Operator::Yield) {
+            return false;
+        }
+        let top = self.stack.len() - 1;
+        let el = &self.stack[top];
+        let info = el.op.info();
+        let lacks = match info.op_type {
+            OpType::Infix | OpType::Prefix => {
+                !info.closer && self.needs_operand(top) && self.arity(el) < info.min_arity
+            }
+            // A trailing comma is fine, so only where something follows.
+            OpType::Separator => {
+                el.op == Operator::Comma && el.children.last().is_some_and(|&c| self.is_token(c))
+            }
+            OpType::Postfix | OpType::Nullary => false,
+        };
+        let parent = self.at(top);
+        let grand = self.at_opt(top.checked_sub(1));
+        if !lacks || can_nest(bracket, grand, parent, self.candidate(op, Some(i))) {
+            return false;
+        }
+        self.push(op, i);
+        self.stack.last_mut().unwrap().operand = true;
+        true
     }
 
     /// A value token, which starts or continues a leaf.

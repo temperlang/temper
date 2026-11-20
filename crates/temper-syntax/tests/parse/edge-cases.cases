@@ -59,3 +59,114 @@ comment Line 6..9
   "("
   (QuotedGroup ` "\n~" `)
   ")")
+
+=== return, throw, and yield as an operator's missing operand, which Kotlin reports as too few operands
+let x = y ?? return null;
+f(a) orelse return;
+a || return b ?? c;
+x = yield;
+!throw e;
+z ?? return a ?? b;
+w orelse return a orelse b;
+v ?? return a + 1;
+f(a, return b);
+--- tree
+(Semi
+  (Eq [let x] = (Coalesce y ?? (Return return null)))
+  ;
+  (OrElse (Paren f "(" a ")") orelse (Return return))
+  ;
+  (BarBar a || (Return return (Coalesce b ?? c)))
+  ;
+  (Eq x = (Yield yield))
+  ;
+  (Bang ! (Throw throw e))
+  ;
+  (Coalesce z ?? (Return return (Coalesce a ?? b)))
+  ;
+  (OrElse w orelse (Return return (OrElse a orelse b)))
+  ;
+  (Coalesce v ?? (Return return (Plus a + 1)))
+  ;
+  (Paren f "(" (Comma a , (Return return b)) ")")
+  ;)
+
+=== return's operand runs to the end of its statement or bracket, or to a comma, as before
+return x ?? y;
+return return x;
+x in;
+v ?? return a; b;
+--- tree
+(Semi
+  (Return return (Coalesce x ?? y))
+  ;
+  (Return return (Return return x))
+  ;
+  (In x in)
+  ;
+  (Coalesce v ?? (Return return a))
+  ;
+  b
+  ;)
+
+=== a comma after a return, throw, or yield's operand ends it, an error
+return a, b;
+throw a, b;
+yield a, b;
+f(return a, b, c);
+f(a, return b, c);
+g(y ?? return 0, 1);
+[return a, b];
+return return a, b;
+x = return a, b;
+--- tree
+(Semi
+  (Comma (Return return a) , b)
+  ;
+  (Comma (Throw throw a) , b)
+  ;
+  (Comma (Yield yield a) , b)
+  ;
+  (Paren f "(" (Comma (Return return a) , b , c) ")")
+  ;
+  (Paren f "(" (Comma a , (Return return b) , c) ")")
+  ;
+  (Paren g "(" (Comma (Coalesce y ?? (Return return 0)) , 1) ")")
+  ;
+  (SquareGroup "[" (Comma (Return return a) , b) "]")
+  ;
+  (Comma (Return return (Return return a)) , b)
+  ;
+  (Comma (Eq x = (Return return a)) , b)
+  ;)
+error 8..9: Put this `return` in parentheses: a comma here would be part of what it returns
+error 20..21: Put this `throw` in parentheses: a comma here would be part of what it throws
+error 32..33: Put this `yield` in parentheses: a comma here would be part of what it yields
+error 47..48: Put this `return` in parentheses: a comma here would be part of what it returns
+error 69..70: Put this `return` in parentheses: a comma here would be part of what it returns
+error 90..91: Put this `return` in parentheses: a comma here would be part of what it returns
+error 105..106: Put this `return` in parentheses: a comma here would be part of what it returns
+error 126..127: Put this `return` in parentheses: a comma here would be part of what it returns
+error 143..144: Put this `return` in parentheses: a comma here would be part of what it returns
+
+=== commas a return's operand holds in brackets, or outside its parentheses, are as before
+f((return a), b);
+return f(a, b);
+return [a, b];
+return do { a, b };
+f(return, 1);
+f(break, 1);
+--- tree
+(Semi
+  (Paren f "(" (Comma (ParenGroup "(" (Return return a) ")") , b) ")")
+  ;
+  (Return return (Paren f "(" (Comma a , b) ")"))
+  ;
+  (Return return (SquareGroup "[" (Comma a , b) "]"))
+  ;
+  (Return return (Curly do { (Comma a , b) }))
+  ;
+  (Paren f "(" (Return return) (Comma , 1) ")")
+  ;
+  (Paren f "(" (Comma break , 1) ")")
+  ;)

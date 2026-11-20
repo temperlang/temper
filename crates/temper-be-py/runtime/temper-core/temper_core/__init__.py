@@ -340,11 +340,11 @@ class Label(BaseException):
     def __enter__(self) -> "Label":
         return self
 
-    def continue_(self) -> "Label":
+    def continue_(self) -> NoReturn:
         "Continue to this label."
         raise self
 
-    def break_(self) -> "Label":
+    def break_(self) -> NoReturn:
         "Break out of this label."
         raise self
 
@@ -364,11 +364,11 @@ class LabelPair(BaseException):
     def __enter__(self) -> "LabelPair":
         return self
 
-    def break_(self) -> "LabelPair":
+    def break_(self) -> NoReturn:
         "Break out of this label."
         raise self
 
-    def continue_(self) -> "InnerLabel":
+    def continue_(self) -> NoReturn:
         "Continue to this label."
         raise self.continuing
 

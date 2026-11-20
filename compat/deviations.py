@@ -14,6 +14,8 @@ REASONS = {
     "join-spans": "spans of what rewriting a call join makes cover what it wraps",
     "brackets": "brackets that don't balance are recovered from locally",
     "missing-operator": "operands side by side with no operator keep their statement",
+    "jump-operand": "`return`, `throw`, or `yield` is the operand an operator lacks",
+    "jump-comma": "a comma after a jump's operand ends the jump, an error",
 }
 
 # What our parse and grammar step outputs show for bracket recovery.
@@ -30,6 +32,32 @@ def missing_operator(kotlin: list[str], rust: list[str]) -> bool:
     return any(MISSING_OPERATOR.match(line) for line in rust) and any(
         line.startswith("E\t") for line in kotlin
     )
+
+
+# Kotlin's error for an operator short of operands, and our nodes for the
+# jumps that can be that operand.
+TOO_FEW_OPERANDS = re.compile(r"E\tTooFewOperands\t")
+JUMP_NODE = re.compile(r"N\t\d+\t(Return|Throw|Yield)\b")
+
+
+def jump_operand(kotlin: list[str], rust: list[str]) -> bool:
+    """Whether our parse makes a `return`, `throw`, or `yield` the operand
+    an operator lacks, where Kotlin reports too few operands."""
+    return (
+        sum(bool(TOO_FEW_OPERANDS.match(line)) for line in rust)
+        < sum(bool(TOO_FEW_OPERANDS.match(line)) for line in kotlin)
+        and any(JUMP_NODE.match(line) for line in rust)
+    )
+
+
+# Our parse and grammar step errors for a comma after a jump's operand.
+JUMP_BEFORE_COMMA = re.compile(r"E\t(error\t)?JumpBeforeComma\b")
+
+
+def jump_comma(rust: list[str]) -> bool:
+    """Whether our output ends a jump before a comma, where Kotlin's takes
+    the comma list and reports no argument in it."""
+    return any(JUMP_BEFORE_COMMA.match(line) for line in rust)
 
 
 def recovered(rust: list[str]) -> bool:
@@ -50,6 +78,10 @@ KNOWN = {
     "kotlin-token-adapter-tests.cases: stringTemplateWithEmbeddedStatementFragments": ("multi-quoted", "parse"),
     "kotlin-token-adapter-tests.cases: stringsOnStringTemplateLine": "multi-quoted",
     "multi-quoted.cases: *": "multi-quoted",
+    "edge-cases.cases: return, throw, and yield as an operator's missing operand, which Kotlin reports as too few operands": "jump-operand",
+    "edge-cases.cases: a comma after a return, throw, or yield's operand ends it, an error": "jump-comma",
+    "edge-cases.cases: a comma after a return or throw's operand: an error, and the rest still parses": "jump-comma",
+    "edge-cases.cases: return's operand runs to the end of its statement or bracket, or to a comma, as before": "jump-operand",
 }
 
 
@@ -89,6 +121,10 @@ def classify(text: str, markdown: bool, kotlin: list[str], rust: list[str]) -> s
         return "brackets"
     if missing_operator(kotlin, rust):
         return "missing-operator"
+    if jump_operand(kotlin, rust):
+        return "jump-operand"
+    if jump_comma(rust):
+        return "jump-comma"
     if strip_spans(kotlin) == strip_spans(rust):
         return "spans"
     if strip_spans(without_comments(kotlin)) == strip_spans(without_comments(rust)):

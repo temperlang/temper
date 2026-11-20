@@ -1,0 +1,332 @@
+tmpl 1 model 1 library `jump-values` 0.0.0
+
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  class List#8<T#9> extends Listed#10<T#9> {
+    connected get length#50(): Int32;
+    connected method get#53(index: Int32): T#9;
+  }
+  interface Listed#10<T#11> {}
+  interface Console#34 {
+    connected method log#35(message: String): Void;
+  }
+  class Int32#37 {
+    connected method toString#38(radix?: Int32): String;
+  }
+  class String#42 {
+    connected method toInt32#43(radix?: Int32): Int32 throws Bubble;
+    connected method split#86(separator: String): List#8<String>;
+  }
+  class Boolean#80 {
+    connected method toString#81(): String;
+  }
+  connected fn getConsole#147(name?: String): Console#34;
+}
+
+module `jump-values`#0 {
+  let ~console#36: Console#34;
+
+  var steps#1: Int32;
+
+  fn step#2(n#33: Int32): Int32 {
+    steps#1 = %Int32.add(steps#1, 1);
+    ~console#36.log#35(%String.cat("step ", n#33.toString#38(omitted)));
+    return n#33;
+  }
+
+  fn pair#3(a#39: Int32, b#40: Int32): Int32 {
+    return %Int32.add(%Int32.mul(a#39, 10), b#40);
+  }
+
+  fn parse#4(s#41: String): Int32 throws Bubble {
+    return s#41.toInt32#43(omitted)^;
+  }
+
+  fn next#5(y#44: Int32?): Int32? {
+    var x#45: Int32;
+    if (isNull(y#44)) {
+      return (null): Int32?;
+    } else {
+      x#45 = (nonNull(y#44)): Int32;
+    }
+    return (asNullable(%Int32.add(x#45, 1))): Int32?;
+  }
+
+  fn sumPresent#6(ys#46: List#8<Int32?>): Int32 {
+    var sum#47: Int32 = 0;
+    {
+      var i#48: Int32 = 0;
+      ~loop#49: while (%Int32.lt(i#48, ys#46.length#50())) {
+        sum#47 = %Int32.add(sum#47, (value { var ~t#51: Int32; let subject#52: Int32? = ys#46.get#53(i#48); if (isNull(subject#52)) { { i#48 = %Int32.add(i#48, 1); continue ~loop#49; } } else { ~t#51 = (nonNull(subject#52)): Int32; } ~t#51 }): Int32);
+        i#48 = %Int32.add(i#48, 1);
+      }
+    }
+    return sum#47;
+  }
+
+  fn sumUntilBad#12(words#54: List#8<String>): Int32 {
+    var sum#55: Int32 = 0;
+    var i#56: Int32 = 0;
+    ~loop#57: while (%Int32.lt(i#56, words#54.length#50())) {
+      sum#55 = %Int32.add(sum#55, (value { var ~t#58: Int32; var ~held#59: Int32? = (null): Int32?; (orelse((value { ~held#59 = (asNullable(parse#4(words#54.get#53(i#56))^)): Int32?; void }): Void, void)): Void; if (isNull(~held#59)) { break ~loop#57; } else { ~t#58 = (nonNull(~held#59)): Int32; } ~t#58 }): Int32);
+      i#56 = %Int32.add(i#56, 1);
+    }
+    return sum#55;
+  }
+
+  fn parsedOr#13(s#60: String): Int32 {
+    return (value { var ~t#61: Int32; var ~held#62: Int32? = (null): Int32?; (orelse((value { ~held#62 = (asNullable(parse#4(s#60)^)): Int32?; void }): Void, void)): Void; if (isNull(~held#62)) { return %Int32.neg(1); } else { ~t#61 = (nonNull(~held#62)): Int32; } ~t#61 }): Int32;
+  }
+
+  fn after#14(i#63: Int32): Int32? {
+    if (%Int32.lt(i#63, 3)) {
+      return (asNullable(%Int32.add(i#63, 1))): Int32?;
+    } else {
+      return (null): Int32?;
+    }
+  }
+
+  fn stepped#15(): String {
+    var seen#64: String = "";
+    {
+      var i#65: Int32 = 0;
+      ~loop#66: while (%Int32.lt(i#65, 6)) {
+        if (%Int32.eq(i#65, 1)) {
+          {
+            i#65 = (value { let subject#67: Int32? = after#14(i#65); (if (isNull(subject#67)) 9 else (nonNull(subject#67)): Int32): Int32 }): Int32;
+            continue ~loop#66;
+          }
+        }
+        seen#64 = %String.cat(seen#64, i#65.toString#38(omitted));
+        i#65 = (value { let subject#68: Int32? = after#14(i#65); (if (isNull(subject#68)) 9 else (nonNull(subject#68)): Int32): Int32 }): Int32;
+      }
+    }
+    return seen#64;
+  }
+
+  fn paired#16(y#69: Int32?): Int32 {
+    return pair#3(step#2(1), (value { var ~t#70: Int32; if (isNull(y#69)) { return %Int32.neg(2); } else { ~t#70 = (nonNull(y#69)): Int32; } ~t#70 }): Int32);
+  }
+
+  fn listed#17(y#71: Int32?, z#72: Int32?): List#8<Int32> {
+    return (list(1, (value { var ~t#73: Int32; if (isNull(y#71)) { return (list()): List#8<Int32>; } else { ~t#73 = (nonNull(y#71)): Int32; } ~t#73 }): Int32, 3, (value { var ~t#74: Int32; if (isNull(z#72)) { return (list(9)): List#8<Int32>; } else { ~t#74 = (nonNull(z#72)): Int32; } ~t#74 }): Int32)): List#8<Int32>;
+  }
+
+  fn shown#18(y#75: Int32?): String {
+    return %String.cat("y=", ((value { var ~t#76: Int32; if (isNull(y#75)) { return "none"; } else { ~t#76 = (nonNull(y#75)): Int32; } ~t#76 }): Int32).toString#38(omitted));
+  }
+
+  fn both#19(t#77: Boolean, y#78: Int32?): String {
+    var ok#79: Boolean;
+    if (t#77 && %Boolean.not(isNull(y#78))) {
+      ok#79 = true;
+    } else {
+      return "no";
+    }
+    return %String.cat("ok ", ok#79.toString#81());
+  }
+
+  fn sign#20(n#82: Int32): String {
+    return pair#3(0, (value { var ~t#83: Int32; if (%Int32.gt(n#82, 0)) { ~t#83 = 1; } else if (%Int32.lt(n#82, 0)) { ~t#83 = %Int32.neg(1); } else { return "zero"; } ~t#83 }): Int32).toString#38(omitted);
+  }
+
+  fn firstWord#21(text#84: String?): Void {
+    var t#85: String;
+    if (isNull(text#84)) {
+      return;
+    } else {
+      t#85 = (nonNull(text#84)): String;
+    }
+    ~console#36.log#35(%String.cat("first ", t#85.split#86(" ").get#53(0)));
+  }
+
+  fn early#22(): Int32 {
+    return 7;
+  }
+
+  fn partly#23(): Int32 {
+    step#2(2);
+    return step#2(3);
+  }
+
+  fn doJumps#24(ys#87: List#8<Int32?>): String {
+    var seen#88: String = "";
+    {
+      var i#89: Int32 = 0;
+      ~loop#90: while (%Int32.lt(i#89, ys#87.length#50())) {
+        var v#91: Int32;
+        let subject#92: Int32? = ys#87.get#53(i#89);
+        if (isNull(subject#92)) {
+          seen#88 = %String.cat(seen#88, "a");
+          if (%Int32.eq(i#89, 1)) {
+            {
+              i#89 = %Int32.add(i#89, 1);
+              continue ~loop#90;
+            }
+          }
+          seen#88 = %String.cat(seen#88, "b");
+          break ~loop#90;
+        } else {
+          v#91 = (nonNull(subject#92)): Int32;
+        }
+        seen#88 = %String.cat(seen#88, v#91.toString#38(omitted));
+        i#89 = %Int32.add(i#89, 1);
+      }
+    }
+    return seen#88;
+  }
+
+  fn doReturn#25(y#93: Int32?, z#94: Int32): String {
+    let v#95: Int32 = (if (isNull(y#93)) (value { if (%Int32.gt(z#94, 0)) { if (%Int32.gt(z#94, 5)) { return "big"; } return "pos"; } 0 }): Int32 else (nonNull(y#93)): Int32): Int32;
+    return %String.cat("v", v#95.toString#38(omitted));
+  }
+
+  fn trio#26(a#96: Int32, b#97: Int32, c#98: Int32): Int32 {
+    return %Int32.add(%Int32.add(a#96, b#97), c#98);
+  }
+
+  fn ordered#27(ys#99: List#8<Int32?>): Int32 {
+    var sum#100: Int32 = 0;
+    {
+      var i#101: Int32 = 0;
+      ~loop#102: while (%Int32.lt(i#101, ys#99.length#50())) {
+        sum#100 = %Int32.add(sum#100, trio#26(step#2(%Int32.add(10, i#101)), (value { var ~t#103: Int32; let subject#104: Int32? = ys#99.get#53(i#101); if (isNull(subject#104)) { step#2(%Int32.add(20, i#101)); { i#101 = %Int32.add(i#101, 1); continue ~loop#102; } } else { ~t#103 = (nonNull(subject#104)): Int32; } ~t#103 }): Int32, step#2(%Int32.add(30, i#101))));
+        i#101 = %Int32.add(i#101, 1);
+      }
+    }
+    return sum#100;
+  }
+
+  fn nested#28(xs#105: List#8<Int32?>, ys#106: List#8<Int32?>): String {
+    var seen#107: String = "";
+    {
+      {
+        var i#108: Int32 = 0;
+        ~loop#109: while (%Int32.lt(i#108, xs#105.length#50())) {
+          var v#110: Int32;
+          let subject#111: Int32? = xs#105.get#53(i#108);
+          if (isNull(subject#111)) {
+            let subject#112: Int32? = ys#106.get#53(i#108);
+            if (isNull(subject#112)) {
+              break ~loop#109;
+            } else {
+              v#110 = (nonNull(subject#112)): Int32;
+            }
+          } else {
+            v#110 = (nonNull(subject#111)): Int32;
+          }
+          seen#107 = %String.cat(seen#107, v#110.toString#38(omitted));
+          i#108 = %Int32.add(i#108, 1);
+        }
+      }
+    }
+    return seen#107;
+  }
+
+  fn gridded#29(rows#113: List#8<List#8<Int32?>>): String {
+    var seen#114: String = "";
+    {
+      {
+        var i#115: Int32 = 0;
+        ~loop#116: while (%Int32.lt(i#115, rows#113.length#50())) {
+          let row#117: List#8<Int32?> = rows#113.get#53(i#115);
+          {
+            var j#118: Int32 = 0;
+            ~loop#119: while (%Int32.lt(j#118, row#117.length#50())) {
+              var v#120: Int32;
+              let subject#121: Int32? = row#117.get#53(j#118);
+              if (isNull(subject#121)) {
+                break ~loop#116;
+              } else {
+                v#120 = (nonNull(subject#121)): Int32;
+              }
+              var w#122: Int32;
+              let subject#123: Int32? = (if (%Int32.lt(v#120, 0)) (null): Int32? else (asNullable(v#120)): Int32?): Int32?;
+              if (isNull(subject#123)) {
+                seen#114 = %String.cat(seen#114, "-");
+                {
+                  i#115 = %Int32.add(i#115, 1);
+                  continue ~loop#116;
+                }
+              } else {
+                w#122 = (nonNull(subject#123)): Int32;
+              }
+              seen#114 = %String.cat(seen#114, w#122.toString#38(omitted));
+              j#118 = %Int32.add(j#118, 1);
+            }
+          }
+          seen#114 = %String.cat(seen#114, "|");
+          i#115 = %Int32.add(i#115, 1);
+        }
+      }
+    }
+    return seen#114;
+  }
+
+  fn firstBig#30(rows#124: List#8<List#8<Int32?>>, keys#125: List#8<Int32?>): String {
+    var seen#126: String = "";
+    {
+      {
+        var i#127: Int32 = 0;
+        ~loop#128: while (%Int32.lt(i#127, rows#124.length#50())) {
+          let k#129: Int32 = (value { let subject#130: Int32? = keys#125.get#53(i#127); (if (isNull(subject#130)) (value { let row#131: List#8<Int32?> = rows#124.get#53(i#127); var first#132: Int32 = %Int32.neg(1); { var j#133: Int32 = 0; ~loop#134: while (%Int32.lt(j#133, row#131.length#50())) { var v#135: Int32; let subject#136: Int32? = row#131.get#53(j#133); if (isNull(subject#136)) { { i#127 = %Int32.add(i#127, 1); continue ~loop#128; } } else { v#135 = (nonNull(subject#136)): Int32; } if (%Int32.gt(v#135, 5)) { break ~loop#128; } if (%Int32.gt(v#135, 2)) { first#132 = v#135; break ~loop#134; } j#133 = %Int32.add(j#133, 1); } } first#132 }): Int32 else (nonNull(subject#130)): Int32): Int32 }): Int32;
+          seen#126 = %String.cat(%String.cat(seen#126, k#129.toString#38(omitted)), ",");
+          i#127 = %Int32.add(i#127, 1);
+        }
+      }
+    }
+    return seen#126;
+  }
+
+  fn viaOrelse#31(words#137: List#8<String>): String {
+    var seen#138: String = "";
+    {
+      var i#139: Int32 = 0;
+      ~loop#140: while (%Int32.lt(i#139, words#137.length#50())) {
+        var n#141: Int32;
+        var ~held#142: Int32? = (null): Int32?;
+        (orelse((value { ~held#142 = (asNullable(parse#4(words#137.get#53(i#139))^)): Int32?; void }): Void, void)): Void;
+        if (isNull(~held#142)) {
+          seen#138 = %String.cat(seen#138, "!");
+          if (%Int32.gt(i#139, 2)) {
+            break ~loop#140;
+          }
+          {
+            i#139 = %Int32.add(i#139, 1);
+            continue ~loop#140;
+          }
+        } else {
+          n#141 = (nonNull(~held#142)): Int32;
+        }
+        seen#138 = %String.cat(seen#138, n#141.toString#38(omitted));
+        i#139 = %Int32.add(i#139, 1);
+      }
+    }
+    return seen#138;
+  }
+
+  fn viaIf#32(n#143: Int32): String {
+    let s#144: String = (if (%Int32.gt(n#143, 0)) "pos" else (value { if (%Int32.lt(n#143, %Int32.neg(5))) { return "low"; } "neg" }): String): String;
+    return %String.cat("s=", s#144);
+  }
+
+  init {
+    init ~console#36 = getConsole#147(omitted);
+    init steps#1 = 0;
+    ~console#36.log#35(%String.cat(%String.cat((value { let ~part#145: Int32? = next#5((asNullable(1)): Int32?); (if (isNull(~part#145)) "null" else ((nonNull(~part#145)): Int32).toString#38(omitted)): String }): String, " "), (value { let ~part#146: Int32? = next#5((null): Int32?); (if (isNull(~part#146)) "null" else ((nonNull(~part#146)): Int32).toString#38(omitted)): String }): String));
+    ~console#36.log#35(%String.cat(%String.cat(sumPresent#6((list((asNullable(1)): Int32?, (null): Int32?, (asNullable(3)): Int32?)): List#8<Int32?>).toString#38(omitted), " "), sumUntilBad#12((list("1", "2", "x", "4")): List#8<String>).toString#38(omitted)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(parsedOr#13("12").toString#38(omitted), " "), parsedOr#13("x").toString#38(omitted)), " "), stepped#15()));
+    ~console#36.log#35(%String.cat(%String.cat(paired#16((asNullable(3)): Int32?).toString#38(omitted), " "), paired#16((null): Int32?).toString#38(omitted)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(listed#17((asNullable(2)): Int32?, (asNullable(4)): Int32?).length#50().toString#38(omitted), " "), listed#17((null): Int32?, (asNullable(4)): Int32?).length#50().toString#38(omitted)), " "), listed#17((asNullable(2)): Int32?, (null): Int32?).get#53(0).toString#38(omitted)));
+    ~console#36.log#35(%String.cat(%String.cat(shown#18((asNullable(5)): Int32?), " "), shown#18((null): Int32?)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(both#19(true, (asNullable(1)): Int32?), " "), both#19(true, (null): Int32?)), " "), both#19(false, (asNullable(1)): Int32?)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(sign#20(4), " "), sign#20(%Int32.neg(4))), " "), sign#20(0)));
+    firstWord#21((asNullable("hello there")): String?);
+    firstWord#21((null): String?);
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(doJumps#24((list((asNullable(1)): Int32?, (null): Int32?, (asNullable(2)): Int32?, (null): Int32?, (asNullable(3)): Int32?)): List#8<Int32?>), " "), doReturn#25((asNullable(1)): Int32?, 0)), " "), doReturn#25((null): Int32?, 9)), " "), doReturn#25((null): Int32?, 1)), " "), doReturn#25((null): Int32?, 0)));
+    ~console#36.log#35(ordered#27((list((asNullable(1)): Int32?, (null): Int32?)): List#8<Int32?>).toString#38(omitted));
+    ~console#36.log#35(%String.cat(%String.cat(nested#28((list((asNullable(1)): Int32?, (null): Int32?, (null): Int32?, (asNullable(4)): Int32?)): List#8<Int32?>, (list((asNullable(0)): Int32?, (asNullable(7)): Int32?, (null): Int32?, (asNullable(0)): Int32?)): List#8<Int32?>), " "), viaOrelse#31((list("1", "x", "2", "y", "z", "3")): List#8<String>)));
+    ~console#36.log#35(%String.cat(%String.cat(gridded#29((list((list((asNullable(1)): Int32?, (asNullable(2)): Int32?)): List#8<Int32?>, (list((asNullable(3)): Int32?, (asNullable(%Int32.neg(1))): Int32?, (asNullable(4)): Int32?)): List#8<Int32?>, (list((asNullable(5)): Int32?, (null): Int32?, (asNullable(6)): Int32?)): List#8<Int32?>, (list((asNullable(7)): Int32?)): List#8<Int32?>)): List#8<List#8<Int32?>>), " "), firstBig#30((list((list((asNullable(1)): Int32?, (asNullable(3)): Int32?)): List#8<Int32?>, (list((null): Int32?, (asNullable(1)): Int32?)): List#8<Int32?>, (list((asNullable(4)): Int32?)): List#8<Int32?>, (list((asNullable(9)): Int32?)): List#8<Int32?>, (list((asNullable(1)): Int32?)): List#8<Int32?>)): List#8<List#8<Int32?>>, (list((asNullable(7)): Int32?, (null): Int32?, (null): Int32?, (null): Int32?, (null): Int32?)): List#8<Int32?>)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(viaIf#32(1), " "), viaIf#32(%Int32.neg(1))), " "), viaIf#32(%Int32.neg(9))));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(early#22().toString#38(omitted), " "), partly#23().toString#38(omitted)), " "), steps#1.toString#38(omitted)));
+  }
+}

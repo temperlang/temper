@@ -19,7 +19,7 @@ use crate::lex::TokenKind;
 use crate::module::Json;
 use crate::names::{NameId, Names};
 use crate::operator::Operator;
-use crate::parse::Parsed;
+use crate::parse::{ParseErrorKind, Parsed, jump_before_comma};
 use crate::tree::{NodeId, NodeKind, Span, Tree};
 use crate::unpack::{Number, NumberWarning, decode_name, unpack_number, unpack_string};
 
@@ -201,6 +201,9 @@ pub enum Message {
     /// `cents 100`; the text of the first one that's stray, and what else
     /// could have gone before it, `;` or `,`.
     MissingOperator(String, &'static str),
+    /// Ours: a comma after the operand of a `return`, `throw`, or `yield`,
+    /// that jump, which ends before it, where Kotlin finds no argument.
+    JumpBeforeComma(Operator),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -227,6 +230,7 @@ impl Message {
             Message::UnmatchedCloseBracket => "UnmatchedCloseBracket",
             Message::UnclosedAngle(_) => "UnclosedAngle",
             Message::MissingOperator(..) => "MissingOperator",
+            Message::JumpBeforeComma(_) => "JumpBeforeComma",
         }
     }
 
@@ -275,6 +279,7 @@ impl Message {
             Message::MissingOperator(stray, separator) => {
                 format!("Expected an operator or `{separator}` before `{stray}`")
             }
+            Message::JumpBeforeComma(op) => jump_before_comma(*op),
         }
     }
 }
@@ -298,6 +303,15 @@ pub fn build(parsed: &Parsed) -> Ast {
             span: e.span,
         })
         .collect();
+    diagnostics.extend(
+        (parsed.errors().iter())
+            .filter(|e| e.kind == ParseErrorKind::JumpBeforeComma)
+            .map(|e| Diagnostic {
+                level: Level::Error,
+                message: Message::JumpBeforeComma(e.op),
+                span: e.span,
+            }),
+    );
     let top = top(parsed);
     let (code, metadata) = split_metadata(parsed, top, &mut diagnostics);
     let mut lift = Lift {

@@ -375,6 +375,217 @@ console.log(takesI(if (ok8) { new A() } else { new B() }));
 log 0 2 null 4 5 -6 true 11
 log i
 
+=== return, break, and continue as values, typed Never
+// Valid: each is a value of type Never, which fits any type, as an
+// operator's operand without parentheses: `??`, `orelse`, `||`, an if
+// branch, an argument, a list's element, and a `let` of one alone,
+// after which nothing runs. Errors: a return's own value must still fit
+// the function's result, and break and continue need a loop.
+let pair(a: Int, b: Int): Int { a * 10 + b }
+let p(s: String): Int throws Bubble { s.toInt32() }
+let a(y: Int?): Int? { let x: Int = y ?? return null; x + 1 }
+let b(ys: List<Int?>): Int {
+  var sum = 0;
+  for (var i = 0; i < ys.length; ++i) {
+    let v = ys[i] ?? continue;
+    sum += p("1") orelse break;
+    sum += v;
+  }
+  sum
+}
+let c(y: Int?): Int { pair(1, y ?? return -2) }
+let d(s: String): Int { p(s) orelse return -1 }
+let e(t: Boolean, y: Int?): Boolean { t && y != null || return false }
+let f(y: Int?): List<Int> { [1, y ?? return []] }
+let g(n: Int): String { let s: String = if (n > 0) { "pos" } else { return "neg" }; s }
+let h(): Int { let z: String = return 7; console.log(z); 8 }
+let i(y: Int?): Int { pair(1, return 2) }
+let bad1(y: Int?): Int { y ?? return "s" }
+let bad2(y: Int?): Int { y ?? break }
+console.log("${a(1)} ${a(null)} ${b([1, null, 3])} ${c(1)} ${c(null)} ${d("x")}");
+console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}");
+--- settled
+(Block
+  (Let
+    ^pair:0
+    (Fn
+      (Let ^a:13 Int)
+      (Let ^b:14 Int)
+      Int
+      (Block (Call + (Call * a:13 10) b:14))))
+  (Let
+    ^p:1
+    (Fn
+      (Let ^s:15 String)
+      (Call throws Int Bubble)
+      (Block (Call (Call . s:15 \toInt32)))))
+  (Let
+    ^a:2
+    (Fn
+      (Let ^y:16 (Call ? Int))
+      (Call ? Int)
+      (Block
+        (Let
+          ^x:17
+          Int
+          (Block (If (Call == y:16 #null) (Return @439 null) y:16)))
+        (Call + x:17 1))))
+  (Let
+    ^b:3
+    (Fn
+      (Let ^ys:18 (Call <> List (Call ? Int)))
+      Int
+      (Block
+        (Var ^sum:19 0)
+        (Block
+          (Var ^i:20 0)
+          (Loop
+            (If
+              (Call < i:20 (Call . ys:18 \length))
+              (Block
+                (Let
+                  ^v:21
+                  (Block
+                    (Let ^subject#22 (Call [] ys:18 i:20))
+                    (If (Call == subject#22 #null) (Continue @547) subject#22)))
+                (Assign
+                  sum:19
+                  (Call + sum:19 (Orelse (Call p:1 "1") (Break @547))))
+                (Assign sum:19 (Call + sum:19 v:21))
+                #void)
+              (Break @547))
+            (Assign i:20 (Call + i:20 1))))
+        sum:19)))
+  (Let
+    ^c:4
+    (Fn
+      (Let ^y:23 (Call ? Int))
+      Int
+      (Block
+        (Call
+          pair:0
+          1
+          (Block (If (Call == y:23 #null) (Return @674 (Call - 2)) y:23))))))
+  (Let
+    ^d:5
+    (Fn
+      (Let ^s:24 String)
+      Int
+      (Block (Orelse (Call p:1 s:24) (Return @722 (Call - 1))))))
+  (Let
+    ^e:6
+    (Fn
+      (Let ^t:25 Boolean)
+      (Let ^y:26 (Call ? Int))
+      Boolean
+      (Block
+        (If (If t:25 (Call != y:26 null) #false) #true (Return @770 false)))))
+  (Let
+    ^f:7
+    (Fn
+      (Let ^y:27 (Call ? Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          list
+          1
+          (Block (If (Call == y:27 #null) (Return @841 (Call list)) y:27))))))
+  (Let
+    ^g:8
+    (Fn
+      (Let ^n:28 Int)
+      String
+      (Block
+        (Let
+          ^s:29
+          String
+          (If (Call > n:28 0) (Block "pos") (Block (Return @891 "neg"))))
+        s:29)))
+  (Let
+    ^h:9
+    (Fn
+      Int
+      (Block
+        (Let ^z:30 String (Return @979 7))
+        (Call (Call . console \log) z:30)
+        8)))
+  (Let
+    ^i:10
+    (Fn (Let ^y:31 (Call ? Int)) Int (Block (Call pair:0 1 (Return @1040 2)))))
+  (Let
+    ^bad1:11
+    (Fn
+      (Let ^y:32 (Call ? Int))
+      Int
+      (Block (Block (If (Call == y:32 #null) (Return @1082 "s") y:32)))))
+  (Let
+    ^bad2:12
+    (Fn
+      (Let ^y:33 (Call ? Int))
+      Int
+      (Block (Block (If (Call == y:33 #null) (Error) y:33)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call a:2 1)
+      " "
+      (Call a:2 null)
+      " "
+      (Call b:3 (Call list 1 null 3))
+      " "
+      (Call c:4 1)
+      " "
+      (Call c:4 null)
+      " "
+      (Call d:5 "x")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call e:6 true null)
+      " "
+      (Call . (Call f:7 null) \length)
+      " "
+      (Call g:8 1)
+      " "
+      (Call g:8 (Call - 1))
+      " "
+      (Call h:9)
+      " "
+      (Call i:10 1)))
+  #void)
+error 1155..1160: No enclosing loop or label for break
+error 1112..1122: Cannot assign to Int32 from String
+log 2 null 6 11 -2 -1
+log false 0 pos neg 7 2
+
+=== a comma after a return's operand is an error, and the rest still settles and runs
+// Error: a comma would be part of what the `return` returns, so the
+// return ends before it, and the call keeps its second argument.
+let pair(a: Int, b: Int): Int { a * 10 + b }
+let c(y: Int?): Int { pair(y ?? return -2, 1) }
+console.log("${c(3)} ${c(null)}");
+--- settled
+(Block
+  (Let
+    ^pair:0
+    (Fn (Let ^a:2 Int) (Let ^b:3 Int) Int (Block (Call + (Call * a:2 10) b:3))))
+  (Let
+    ^c:1
+    (Fn
+      (Let ^y:4 (Call ? Int))
+      Int
+      (Block
+        (Call
+          pair:0
+          (Block (If (Call == y:4 #null) (Return @180 (Call - 2)) y:4))
+          1))))
+  (Call (Call . console \log) (Call cat (Call c:1 3) " " (Call c:1 null)))
+  #void)
+error 221..222: Put this `return` in parentheses: a comma here would be part of what it returns
+log 31 -2
+
 === calls of known functions
 let f(a: Int, b: String = "b"): Void {}
 f(1);

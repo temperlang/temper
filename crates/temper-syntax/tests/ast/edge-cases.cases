@@ -564,3 +564,29 @@ or(a< 2, a > 0); f(let x y);
 (Block (Error) (Call f (Error)) #void)
 error 0..15: Expected a TopLevel here
 error 19..26: Expected a Argument here
+
+=== a comma after a return or throw's operand: an error, and the rest still parses
+g(y ?? return 0, 1, h(2));
+g(a, return b, c);
+[return a, b];
+return a, b;
+throw a, b;
+x = (return a, b);
+let z = 1;
+--- ast
+(Block
+  (Call g (Call #desugarOperation ?? y (Call return 0)) 1 (Call h 2))
+  (Call g a (Call return b) c)
+  (Call #list (Call return a) b)
+  (Call #, (Call return a) b)
+  (Call #, (Call throw a) b)
+  (Call #desugarOperation = x (Error))
+  (Decl ^z \init 1)
+  #void)
+error 15..16: Put this `return` in parentheses: a comma here would be part of what it returns
+error 40..41: Put this `return` in parentheses: a comma here would be part of what it returns
+error 55..56: Put this `return` in parentheses: a comma here would be part of what it returns
+error 69..70: Put this `return` in parentheses: a comma here would be part of what it returns
+error 81..82: Put this `throw` in parentheses: a comma here would be part of what it throws
+error 99..100: Put this `return` in parentheses: a comma here would be part of what it returns
+error 91..102: `(...,...)` syntax is reserved for tuples.  Use `do {...}` to group statements

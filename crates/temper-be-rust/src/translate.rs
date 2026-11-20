@@ -1355,6 +1355,15 @@ impl<'a> Translator<'a> {
                         i += 2;
                         continue;
                     }
+                    if let Some(&next) = stmts.get(i + 1) {
+                        if self.late_if(stmts[i], next, out)? {
+                            if crate::tree::diverges(out) {
+                                break;
+                            }
+                            i += 2;
+                            continue;
+                        }
+                    }
                     self.stmt(stmts[i], out)?;
                     // What follows a `return` or `panic!()`, as a
                     // connected call may be written, can't run, and rustc
@@ -1394,6 +1403,56 @@ impl<'a> Translator<'a> {
             reads |= matches!(p.nodes.get(n), Node::Local { local: l } if l == local);
         });
         (!reads).then_some(value)
+    }
+
+    /// `let x; if (c) { …; x = a; } else { …; return; }`, as a value that
+    /// may jump becomes in tmpl, as `let x = if c { …; a } else { …;
+    /// return };`, if each branch assigns `x` last, once, or never
+    /// finishes, and nothing assigns it after, as clippy's
+    /// `needless_late_init` wants (`if let` and a `mut` local it leaves
+    /// alone). Whether it wrote the two.
+    fn late_if(&mut self, stmt: NodeId, next: NodeId, out: &mut Vec<Stmt>) -> R<bool> {
+        let p = self.p;
+        let (Node::Let { local, init: None }, Node::If { .. }) =
+            (p.nodes.get(stmt), p.nodes.get(next))
+        else {
+            return Ok(false);
+        };
+        if self.is_cell(local) || self.assigned(next, local) != 1 || self.is_mut(local, false) {
+            return Ok(false);
+        }
+        let mut made = Vec::new();
+        self.stmt(stmt, &mut made)?;
+        self.stmt(next, &mut made)?;
+        let (
+            [
+                Stmt::Let {
+                    name,
+                    mutable,
+                    ty,
+                    value: None,
+                },
+            ],
+            Some(Stmt::If { cond, then, els }),
+        ) = (&made[..1], made.get(1))
+        else {
+            out.extend(made);
+            return Ok(true);
+        };
+        let value = match crate::tree::if_value(name, cond, then, els.as_ref()) {
+            Some(value) => value,
+            None => {
+                out.extend(made);
+                return Ok(true);
+            }
+        };
+        out.push(Stmt::Let {
+            name: name.clone(),
+            mutable: *mutable,
+            ty: ty.clone(),
+            value: Some(value),
+        });
+        Ok(true)
     }
 
     /// A local declared with its late initializer's value

@@ -417,15 +417,19 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                     });
                     // A compiler-made local's type.
                     let local_doc = js.starts_with("/**") && compiler_local(documented, temper);
-                    // A `when`'s arm, `??`, `?.`, an `if` value, or an
-                    // `orelse` whose fallback jumps, each of which may
-                    // become an `if` statement, maps to its value or the
-                    // statement it's in.
+                    // A `when`'s arm, `??`, `?.`, an `if` value, an
+                    // `else if` value with a branch that jumps (spanning
+                    // from its condition), or an `orelse` whose fallback
+                    // jumps, each of which may become an `if` statement,
+                    // maps to its value or the statement it's in.
                     let arm = js.starts_with("if (")
                         && (source_line.contains("->")
                             || temper.contains("??")
                             || temper.contains("?.")
                             || temper.contains("if (")
+                            || ["return", "break", "continue"]
+                                .iter()
+                                .any(|j| temper.contains(j))
                             || temper.contains("orelse"));
                     // A parameter's default, at the parameter.
                     let default = (js.split_once(" ??= ").map(|(n, _)| n))

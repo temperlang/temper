@@ -1835,6 +1835,36 @@ pub fn diverges(stmts: &[Stmt]) -> bool {
     }
 }
 
+/// `if cond { …; name = a; } else { …; return; }` as the value it gives
+/// `name`, `if cond { …; a } else { …; return }`, where each branch
+/// assigns `name` last or never finishes; `None` where one doesn't, for
+/// `else if` chains, which clippy's `needless_late_init` leaves alone, or
+/// for `if let` (as `let Some(x) = x`).
+pub fn if_value(name: &str, cond: &Expr, then: &Block, els: Option<&Block>) -> Option<Expr> {
+    let pattern = matches!(cond, Expr::Path(p) if p.starts_with("let "));
+    if pattern || matches!(cond, Expr::Let(..)) || then.tail.is_some() {
+        return None;
+    }
+    let branch = |b: &Block| -> Option<Block> {
+        if b.tail.is_some() {
+            return None;
+        }
+        match b.stmts.split_last()? {
+            (Stmt::Assign(Expr::Path(target), value), rest) if target == name => {
+                Some(Block::new(rest.to_vec(), Some(value.clone())))
+            }
+            _ if diverges(&b.stmts) => Some(b.clone()),
+            _ => None,
+        }
+    };
+    let (then, els) = (branch(then)?, branch(els?)?);
+    // One that never finishes either way isn't a value.
+    if then.tail.is_none() && els.tail.is_none() {
+        return None;
+    }
+    Some(Expr::If(Box::new(cond.clone()), then, els))
+}
+
 /// `if let Ok(v) = e { v } else { … }`: a `Result`'s value, or `els`,
 /// which jumps or bubbles; `None` if `e` doesn't fit on a line, which the
 /// `let` needs.

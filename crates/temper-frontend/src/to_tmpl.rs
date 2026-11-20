@@ -366,7 +366,8 @@ struct Translator<'a> {
     /// Each `Loop`'s label.
     loops: HashMap<FNode, DeclId>,
     /// The step of each `for` loop with a `continue`, which runs before
-    /// each `continue` of it, as tmpl's `while` has no step.
+    /// each `continue` of it, as tmpl's `while` has no step
+    /// ([`temper_tmpl::exits`]).
     steps: HashMap<FNode, FNode>,
     module: DeclId,
     /// What owns locals and labels: the function being translated, or the
@@ -1715,9 +1716,13 @@ impl Translator<'_> {
             for &child in children.iter() {
                 self.stmt(child, out)?;
                 // What follows a loop that never ends, a call that never
-                // returns, or an error, can't run, and Java and Rust reject
-                // it.
-                if self.never_ends(child) || self.never_returns(child) || self.fails(child) {
+                // returns, a jump, or an error, can't run, and Java and
+                // Rust reject it.
+                if self.never_ends(child)
+                    || self.never_returns(child)
+                    || self.always_jumps(child)
+                    || self.fails(child)
+                {
                     break;
                 }
             }
@@ -1748,6 +1753,11 @@ impl Translator<'_> {
             let stmt = self.b.expr_statement(error);
             out.push(self.own(stmt, node));
             return Ok(());
+        }
+        // One with a part that always jumps, as `f(a, return b)`: what
+        // runs before the jump, then the jump.
+        if self.jumps_from_part(node) {
+            return self.jump_stmts(node, out);
         }
         let children = self.children(node).to_vec();
         let stmt = match self.kind(node) {
@@ -1821,12 +1831,15 @@ impl Translator<'_> {
                 if self.kind(node) == NodeKind::Break {
                     self.b.break_loop(label)
                 } else if let Some(&step) = self.steps.get(&target) {
-                    // `{ step; continue loop; }`.
-                    let mut stmts = Vec::new();
-                    self.stmts(step, &mut stmts)?;
+                    // `{ step; continue loop; }`, a copy of the step with
+                    // its own locals; a step has no `continue` of its own
+                    // ([`Self::loop_stmt`]), so copies hold no copies.
+                    let mut copy = Vec::new();
+                    self.forget_locals(step);
+                    self.stmts(step, &mut copy)?;
                     let jump = self.b.continue_loop(label);
-                    stmts.push(self.own(jump, node));
-                    self.b.block(&stmts)
+                    let jump = self.own(jump, node);
+                    temper_tmpl::exits::Region.leave(&mut self.b, &copy, jump)
                 } else {
                     self.b.continue_loop(label)
                 }
@@ -1989,10 +2002,7 @@ impl Translator<'_> {
     /// `let esc = when (c) { … -> continue; else -> "…" }`.
     fn jumps_in_init(&self, node: FNode) -> bool {
         let init = core::let_parts(&self.s.library.tree, node).2;
-        init.is_some_and(|i| {
-            matches!(self.kind(i), NodeKind::If | NodeKind::Block) && self.branch_jumps(i)
-                || self.or_else_jumps(i)
-        })
+        init.is_some_and(|i| self.value_jumps(i))
     }
 
     /// Whether a node is an `orelse` whose fallback jumps, as `x orelse
@@ -2136,25 +2146,17 @@ impl Translator<'_> {
         Ok(())
     }
 
-    /// Whether a node is a `break`, `continue`, or `return`.
-    fn is_jump(&self, node: FNode) -> bool {
-        matches!(
-            self.kind(node),
-            NodeKind::Break | NodeKind::Continue | NodeKind::Return
-        )
-    }
-
     /// Whether a value ends in a jump (a `break`, `continue`, or
     /// `return`), in any branch of its `if`s.
     fn branch_jumps(&self, node: FNode) -> bool {
+        // `{ continue; void }`, as a `when`'s branch has it.
+        if self.always_jumps(node) {
+            return true;
+        }
         match self.kind(node) {
-            NodeKind::Break | NodeKind::Continue | NodeKind::Return => true,
-            // `{ continue; void }`, as a `when`'s branch has it.
-            NodeKind::Block => {
-                (self.children(node).iter()).any(|&c| self.is_jump(c))
-                    || (self.children(node).last()).is_some_and(|&l| self.branch_jumps(l))
-            }
-            NodeKind::If if self.and_or(node).is_none() => {
+            NodeKind::Block => (self.children(node).last()).is_some_and(|&l| self.branch_jumps(l)),
+            // `&&` and `||` too, as `a || return b`.
+            NodeKind::If => {
                 let children = self.children(node);
                 children.len() == 3 && children[1..].iter().any(|&c| self.branch_jumps(c))
             }
@@ -2175,11 +2177,147 @@ impl Translator<'_> {
         self.decls.insert(node, local);
         let declared = self.b.let_stmt(local, None);
         out.push(self.own(declared, node));
-        let init = init.unwrap();
-        if self.or_else_jumps(init) {
-            return self.or_else_jumping(init, Some((local, ty)), out);
+        self.assign_jumping(init.unwrap(), local, ty, out)
+    }
+
+    /// Assigns a value that may jump ([`Self::value_jumps`]) to `local`
+    /// where it doesn't.
+    fn assign_jumping(
+        &mut self,
+        node: FNode,
+        local: DeclId,
+        ty: TypeId,
+        out: &mut Vec<NodeId>,
+    ) -> Tx<()> {
+        if self.or_else_jumps(node) {
+            return self.or_else_jumping(node, Some((local, ty)), out);
         }
-        self.assign_branches(init, local, ty, out)
+        self.assign_branches(node, local, ty, out)
+    }
+
+    /// Whether a value may jump, so it's statements that assign a local
+    /// where it doesn't ([`Self::jumping_value`]): an `if` (`&&`, `||`,
+    /// and `??` among them) or a block with a branch that jumps
+    /// ([`Self::branch_jumps`]), or an `orelse` whose fallback does.
+    fn value_jumps(&self, node: FNode) -> bool {
+        match self.kind(node) {
+            NodeKind::If | NodeKind::Block => self.branch_jumps(node),
+            NodeKind::Orelse => self.or_else_jumps(node),
+            _ => false,
+        }
+    }
+
+    /// A value that may jump ([`Self::value_jumps`]), as `y ?? return
+    /// null` or `f() orelse break`, where a value goes: tmpl has no jump
+    /// as a value, so a local of its type, assigned in each branch that
+    /// doesn't jump and read after, in a block's value: `{ let t; if (y
+    /// == null) { return null; } else { t = y; } t }`. Backends hoist it
+    /// as they hoist any block's value, keeping the order of what runs.
+    fn jumping_value(&mut self, node: FNode) -> Tx<NodeId> {
+        // Where typing has no type for it, as a function's last value, the
+        // type of its parts' values, as [`Self::or_else_typed`] finds it.
+        let ty = match self.s.typing.expr(node) {
+            Some(t) if t != ft::NEVER && self.s.typing.types.is_known(t) => self.ty(t, node)?,
+            _ => match self.value_type(self.children(node).to_vec().as_slice()) {
+                Some(t) => t,
+                None => self.expr_ty(node)?,
+            },
+        };
+        let local = self.b.declare_made(DeclKind::Local, &["t"], self.owner, ty);
+        self.b.add_facts(local, Facts::VAR);
+        let span = self.span(node);
+        self.b.set_decl_spans(local, span, span);
+        let declared = self.b.let_stmt(local, None);
+        let mut stmts = vec![self.made(declared, node)];
+        self.assign_jumping(node, local, ty, &mut stmts)?;
+        let read = self.b.local(local);
+        let read = self.made(read, node);
+        let made = self.b.block_value(ty, &stmts, read);
+        Ok(self.made(made, node))
+    }
+
+    /// Whether evaluating a node always ends in a jump (a `break`,
+    /// `continue`, or `return`), so what follows never runs, as after
+    /// `panic()`: a jump; a call, `let`, assignment, or `await` with a
+    /// part that always jumps, which runs, as `f(a, return b)`; a block
+    /// with a statement that does; or an `if` whose condition or both
+    /// branches do. Not an `orelse`, whose fallback runs if a part before
+    /// the jump bubbles.
+    fn always_jumps(&self, node: FNode) -> bool {
+        match self.kind(node) {
+            NodeKind::Break | NodeKind::Continue | NodeKind::Return => true,
+            NodeKind::Block if self.is_postfix_step(node) => false,
+            NodeKind::Call
+            | NodeKind::Let
+            | NodeKind::Assign
+            | NodeKind::Await
+            | NodeKind::Block => (self.children(node).iter()).any(|&c| self.always_jumps(c)),
+            NodeKind::If => match self.children(node) {
+                &[cond, then, els] => {
+                    self.always_jumps(cond) || (self.always_jumps(then) && self.always_jumps(els))
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    /// Whether a node always jumps ([`Self::always_jumps`]) for a part
+    /// that runs first, not for being a jump, a block, or an `if` whose
+    /// branches jump, which translate as statements as they are: a
+    /// `return` whose value always jumps, an `if` whose condition does,
+    /// or a call, `let`, assignment, or `await` with such a part.
+    fn jumps_from_part(&self, node: FNode) -> bool {
+        match self.kind(node) {
+            NodeKind::Return
+            | NodeKind::Call
+            | NodeKind::Let
+            | NodeKind::Assign
+            | NodeKind::Await => (self.children(node).iter()).any(|&c| self.always_jumps(c)),
+            NodeKind::If => (self.children(node).first()).is_some_and(|&c| self.always_jumps(c)),
+            _ => false,
+        }
+    }
+
+    /// A node that always jumps ([`Self::always_jumps`]) as statements:
+    /// for a part that runs first ([`Self::jumps_from_part`]), what runs
+    /// before that part, for what it does, then the part's own
+    /// statements; else the node as a statement. Its value is never
+    /// used, as it has none.
+    fn jump_stmts(&mut self, node: FNode, out: &mut Vec<NodeId>) -> Tx<()> {
+        if !self.jumps_from_part(node) {
+            return self.stmt(node, out);
+        }
+        let children = self.children(node).to_vec();
+        match self.kind(node) {
+            NodeKind::Let => {
+                let init = core::let_parts(&self.s.library.tree, node).2;
+                self.jump_stmts(init.unwrap(), out)
+            }
+            NodeKind::If => self.jump_stmts(children[0], out),
+            _ => {
+                for child in children {
+                    if self.always_jumps(child) {
+                        return self.jump_stmts(child, out);
+                    }
+                    self.effects(child, out)?;
+                }
+                unreachable!("a part that jumps")
+            }
+        }
+    }
+
+    /// What a part does whose value isn't used, as one before a jump:
+    /// nothing for a value, a name, or a function, the object's for a
+    /// member, as `o.m` called, else the part as a statement.
+    fn effects(&mut self, node: FNode, out: &mut Vec<NodeId>) -> Tx<()> {
+        match (self.kind(node), self.children(node)) {
+            (NodeKind::Value | NodeKind::RightName | NodeKind::Fn, _) => Ok(()),
+            (NodeKind::Call, &[dot, object, _]) if self.function_of(dot) == Some(Function::Dot) => {
+                self.effects(object, out)
+            }
+            _ => self.stmt(node, out),
+        }
     }
 
     /// Assigns a value to `local`, branch by branch, jumps as they are.
@@ -2191,21 +2329,22 @@ impl Translator<'_> {
         out: &mut Vec<NodeId>,
     ) -> Tx<()> {
         match self.kind(node) {
-            NodeKind::Break | NodeKind::Continue | NodeKind::Return => self.stmt(node, out),
+            NodeKind::Break | NodeKind::Continue | NodeKind::Return => self.jump_stmts(node, out),
+            _ if self.jumps_from_part(node) => self.jump_stmts(node, out),
             NodeKind::Block if !self.children(node).is_empty() => {
                 let children = self.children(node).to_vec();
                 self.predeclare_functions(&children)?;
                 let (&last, rest) = children.split_last().unwrap();
                 for &child in rest {
                     self.stmt(child, out)?;
-                    if self.is_jump(child) || self.never_returns(child) {
+                    if self.always_jumps(child) || self.never_returns(child) {
                         // What follows can't run.
                         return Ok(());
                     }
                 }
                 self.assign_branches(last, local, ty, out)
             }
-            NodeKind::If if self.and_or(node).is_none() && self.branch_jumps(node) => {
+            NodeKind::If if self.branch_jumps(node) => {
                 let [cond, then_node, els_node] = self.children(node).to_vec()[..] else {
                     return self.not_yet(node, "an if's form");
                 };
@@ -2427,9 +2566,23 @@ impl Translator<'_> {
         }
     }
 
+    /// Forgets the tmpl locals of the `let`s under a node, as a `for`
+    /// loop's step's, so translating it again, as each copy of the step
+    /// is, declares its own.
+    fn forget_locals(&mut self, node: FNode) {
+        let mut stack = vec![node];
+        while let Some(n) = stack.pop() {
+            if self.kind(n) == NodeKind::Let {
+                self.decls.remove(&n);
+            }
+            stack.extend_from_slice(self.children(n));
+        }
+    }
+
     /// Whether a `for` loop's step can be translated again before each
     /// `continue`: it has no loops, functions, or classes. Its locals, as
-    /// `i++`'s temporary, are declared again in each copy.
+    /// `i++`'s temporary or `??`'s subject, are declared again in each
+    /// copy ([`Self::forget_locals`]).
     fn copyable_step(&self, node: FNode) -> bool {
         let mut stack = vec![node];
         while let Some(n) = stack.pop() {
@@ -2482,6 +2635,11 @@ impl Translator<'_> {
                 return self.not_yet(node, "a loop's form");
             };
             let continues = self.continues_to(body, node);
+            // A `continue` in the step runs the step again, as the
+            // interpreter has it, which has no shape here yet.
+            if self.continues_to(next, node) {
+                return self.not_yet(node, "continue in a for loop's step");
+            }
             // `do { body } while (cond)`: `next` checks.
             if let Some((cond, then)) = self.while_shape(next, node) {
                 if self.kind(then) == NodeKind::Block && self.children(then).is_empty() {
@@ -2494,7 +2652,8 @@ impl Translator<'_> {
                 }
             }
             // `for (…; cond; next) { body }`, `next` copied before each
-            // `continue`, which a step that declares or loops can't be.
+            // `continue` ([`temper_tmpl::exits`]), which a step that loops
+            // can't be.
             if continues {
                 if !self.copyable_step(next) {
                     return self.not_yet(node, "continue in a for loop whose step loops");
@@ -2517,7 +2676,10 @@ impl Translator<'_> {
             let ends = !(self.kind(body) == NodeKind::Block
                 && self.children(body).iter().any(|&c| self.never_ends(c)));
             if ends {
-                self.stmts(next, &mut stmts)?;
+                let mut step = Vec::new();
+                self.forget_locals(next);
+                self.stmts(next, &mut step)?;
+                stmts = temper_tmpl::exits::Region.close(&stmts, &step);
             }
             let block = self.b.block(&stmts);
             let block = self.own(block, body);
@@ -2557,7 +2719,7 @@ impl Translator<'_> {
     fn never_completes(&self, node: FNode) -> bool {
         match self.kind(node) {
             NodeKind::Fail => true,
-            _ if self.is_jump(node) => true,
+            _ if self.always_jumps(node) => true,
             NodeKind::Block if self.s.typing.is_unreachable(node) => true,
             NodeKind::Block => (self.children(node).iter()).any(|&c| self.never_completes(c)),
             NodeKind::If if self.and_or(node).is_none() => {
@@ -2588,9 +2750,9 @@ impl Translator<'_> {
         if let Some((&last, rest)) = children.split_last() {
             for &child in rest {
                 self.stmt(child, out)?;
-                // Nothing after an error, or a call that never returns,
-                // runs, and Java and Rust reject it.
-                if self.fails(child) || self.never_returns(child) {
+                // Nothing after an error, a call that never returns, or
+                // a jump, runs, and Java and Rust reject it.
+                if self.fails(child) || self.never_returns(child) || self.always_jumps(child) {
                     return Ok(());
                 }
             }
@@ -2644,6 +2806,8 @@ impl Translator<'_> {
             | NodeKind::Continue => self.stmt(node, out),
             // `bubble()` or `panic()`: nothing to return.
             NodeKind::Fail | NodeKind::Call if self.never_completes(node) => self.stmt(node, out),
+            // `f(a, return b)`: nothing to return either.
+            _ if self.jumps_from_part(node) => self.jump_stmts(node, out),
             _ => {
                 let value = self.expr(node)?;
                 let value = self.fit(value, self.result);
@@ -2679,6 +2843,9 @@ impl Translator<'_> {
                 let made = self.b.type_error(TypeId::NONE, &message, value?);
                 return Ok(self.own(made, node));
             }
+        }
+        if self.value_jumps(node) {
+            return self.jumping_value(node);
         }
         let lib = &self.s.library;
         match self.kind(node) {

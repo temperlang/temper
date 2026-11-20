@@ -330,6 +330,25 @@ are not required:
 - `return 42;` is an application of the operator to the arguments
   `(42)` even though there are no explicit parentheses.
 
+`return`, `break`, and `continue` are also values. Like `panic()`, they
+never complete, so they fit wherever a value goes, whatever its type,
+and what follows them never runs. Where an operator still needs its
+right operand, `return` is that operand without parentheses:
+
+```temper
+let x = y ?? return null;
+let n = parse(s) orelse break;
+let v = list[i] ?? continue;
+let sign = if (n > 0) { 1 } else if (n < 0) { -1 } else { return "zero" };
+```
+
+A `return`'s own value is the same wherever it is: everything after it
+to the end of its statement or bracket, so `y ?? return a ?? b` returns
+`a ?? b`. A comma can't follow it, since `(a, b)` is kept for tuples, so
+in an argument list a `return` that isn't last needs parentheses:
+`f((y ?? return 0), 1)`. Without them, `f(y ?? return 0, 1)` is an
+error at the comma. The same goes for `throw` and `yield`.
+
 ### Syntax for *StmtBlock*
 
 ```ebnf

@@ -278,10 +278,11 @@ pub fn without_net(cases: &mut [Case]) {
 /// whose tests' hard failures no `orelse` stops, and
 /// `test-assert-panics`, whose `assertPanics` pass only on a panic;
 /// `panics` `orelse` handling bubbles from everywhere but never a
-/// panic, whose run fails ([`FAILING`]); and `host-errors` builtins whose docs say
+/// panic, whose run fails ([`FAILING`]); `host-errors` builtins whose docs say
 /// they panic (index errors) panicking on every backend, past `orelse`,
-/// one run per section, each saying why on stderr.
-pub const PROGRAMS: [&str; 25] = [
+/// one run per section, each saying why on stderr; and `jump-values`
+/// `return`, `break`, and `continue` as values of type `Never`.
+pub const PROGRAMS: [&str; 26] = [
     "classes",
     "nullables",
     "generics",
@@ -307,6 +308,7 @@ pub const PROGRAMS: [&str; 25] = [
     "test-panics",
     "test-fails",
     "test-assert-panics",
+    "jump-values",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
