@@ -40,7 +40,9 @@ object ZeroValues {
                 WellKnownTypes.booleanTypeDefinition -> TBoolean.valueFalse
                 WellKnownTypes.voidTypeDefinition -> void
                 WellKnownTypes.stringTypeDefinition -> Value("", TString)
-                WellKnownTypes.listTypeDefinition -> Value(listOf(), TList)
+                // No List entry: a constant `List` value carries no element
+                // type, and the java, rust, cpp, csharp and lua translators
+                // cannot write one. A `List` takes the null path below.
                 else -> null
             }
             if (v != null) {
