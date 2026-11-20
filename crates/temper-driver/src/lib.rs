@@ -25,7 +25,7 @@ use std::path::Path;
 use temper_frontend::settle::Settled;
 use temper_frontend::to_tmpl::to_tmpl;
 use temper_tmpl::naming::{Interface, assign};
-use temper_tmpl::{Backend, Profile, Program, validate};
+use temper_tmpl::{Backend, Profile, Program, SourceLinks, validate};
 
 /// Every backend's name, alphabetically, whether or not this build has
 /// it, so a name left out can say so; the playground's wasm numbers
@@ -133,15 +133,14 @@ pub fn with_std<'s>(
 }
 
 /// A program's files from a backend, each a path and its text, or what
-/// isn't covered yet. With `maps`, a prefix that leads from the
-/// library's output directory to its sources, a backend that writes
-/// source maps writes them.
+/// isn't covered yet, pointing back at the sources as `links` allows
+/// (source maps, `#line`).
 pub fn translate(
     p: &Program,
     backend: &Backend,
-    maps: Option<&str>,
+    links: SourceLinks,
 ) -> Result<Vec<(String, String)>, String> {
-    let files = (backend.translate)(p, maps)?;
+    let files = (backend.translate)(p, links)?;
     Ok(files.into_iter().map(|f| (f.path, f.text)).collect())
 }
 

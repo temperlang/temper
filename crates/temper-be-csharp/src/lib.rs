@@ -123,7 +123,9 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     },
     runtime_version: &runtime::VERSION,
     rules: &CSHARP.rules,
-    translate: |p, _| translate(p, &CSHARP).map_err(|e| e.to_string()),
+    translate: |p, links| {
+        translate_with_lines(p, &CSHARP, links.line_prefix()).map_err(|e| e.to_string())
+    },
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -185,6 +187,23 @@ pub const STD_SUPPORT: &[(&str, &str, &str)] = &[
 ];
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
+    translate_with_lines(p, variant, None)
+}
+
+/// [`translate`], and with `lines`, a prefix that leads from the
+/// library's directory to its root, `#line` directives in its classes
+/// (`temper run` and `temper test` only), so compiler errors, debuggers,
+/// and stack traces (a debug build's, with its pdb) point at the Temper
+/// source ([`temper_tmpl::line_directives`]): before each statement that
+/// starts a new line in the source, naming it by its path relative to
+/// the `.cs` file, as C# resolves it, and `#line default` before a
+/// member without one, so errors in generated support code point at the
+/// `.cs`.
+pub fn translate_with_lines(
+    p: &Program,
+    variant: &Variant,
+    lines: Option<&str>,
+) -> Result<Vec<OutFile>, NotYet> {
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
@@ -219,12 +238,21 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let (namespace, base) = translate::module_names(p, module.decl);
         let global = format!("{base}Global");
         let mut translator = translate::Translator::new(p, &names, &namespace, &global);
-        let class = translator.module(module)?;
         let dir = (namespace.strip_prefix(&root).unwrap_or_default().split('.'))
             .filter(|part| !part.is_empty())
             .map(|part| format!("{part}/"))
             .collect::<Vec<_>>()
             .concat();
+        // From `src/DIR` or `tests/DIR` up to the library's directory.
+        // tmpl's files are named within their module's directory.
+        translator.lines = lines.map(|prefix| {
+            let up = "../".repeat(1 + dir.matches('/').count());
+            match module.path.as_str() {
+                "" => format!("{up}{prefix}"),
+                path => format!("{up}{prefix}{path}/"),
+            }
+        });
+        let class = translator.module(module)?;
         sources.push(OutFile {
             path: format!("{library}/src/{dir}{global}.cs"),
             text: tree::class(&class),

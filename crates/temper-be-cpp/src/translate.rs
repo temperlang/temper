@@ -281,6 +281,10 @@ pub struct Translator<'a> {
     /// The names of members that may change their object, which aren't
     /// `const` ([`mutating_members`]).
     pub mutating: HashSet<String>,
+    /// For `temper run` and `temper test`, a prefix for the sources'
+    /// paths in `#line` directives, before each statement
+    /// ([`Stmt::Line`]).
+    pub lines: Option<String>,
     /// The library's namespace.
     namespace: String,
     /// Each class's and interface's node, by its declaration.
@@ -382,6 +386,7 @@ impl<'a> Translator<'a> {
             locals: HashSet::new(),
             test_names: HashMap::new(),
             mutating: HashSet::new(),
+            lines: None,
             namespace: names::namespace(&p.library.name),
             class_nodes,
             class: None,
@@ -1169,6 +1174,7 @@ impl<'a> Translator<'a> {
                 init: String::new(),
                 init_body: init,
                 tests: test_functions,
+                generated: None,
             },
             exported_variables,
             template_storage,
@@ -1208,6 +1214,10 @@ impl<'a> Translator<'a> {
             return self.stmt(block, init);
         };
         for &s in p.nodes.list(stmts) {
+            if matches!(p.nodes.get(s), Node::InitLet { target, .. } if !self.statics.contains(&target))
+            {
+                self.mark(s, init);
+            }
             match p.nodes.get(s) {
                 Node::InitLet { target, value }
                     if !self.statics.contains(&target)
@@ -2034,7 +2044,30 @@ impl<'a> Translator<'a> {
         cond
     }
 
+    /// Where a node's code comes from, as a `#line` directive before it
+    /// says, with [`lines`](Self::lines) on.
+    fn mark(&self, id: NodeId, out: &mut Vec<Stmt>) {
+        let Some(prefix) = &self.lines else {
+            return;
+        };
+        let at = temper_tmpl::line_directives::line_at(self.p, prefix, self.p.nodes.span(id));
+        out.extend(at.map(Stmt::Line));
+    }
+
+    /// Translates a statement, after where it comes from
+    /// ([`mark`](Self::mark)), unless it comes to nothing.
     fn stmt(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
+        let before = out.len();
+        self.mark(id, out);
+        let marked = out.len();
+        self.stmt_unmarked(id, out)?;
+        if out.len() == marked {
+            out.truncate(before);
+        }
+        Ok(())
+    }
+
+    fn stmt_unmarked(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
         let p = self.p;
         let s = match p.nodes.get(id) {
             Node::Block { .. } => Stmt::Block(self.stmts(id)?),
@@ -3407,6 +3440,7 @@ pub(crate) fn completes(s: &Stmt) -> bool {
         | Stmt::Local { .. }
         | Stmt::Assign { .. }
         | Stmt::Set { .. }
+        | Stmt::Line(_)
         | Stmt::Guard { .. }
         | Stmt::LambdaLocal { .. }
         | Stmt::GroupStruct { .. } => true,

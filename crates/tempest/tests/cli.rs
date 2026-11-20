@@ -1515,8 +1515,11 @@ fn js_stack_traces_point_at_temper() {
 /// the trace in its JUnit results, from the panic up to the test, and
 /// `run`'s uncaught bubble or panic prints one from where it was raised
 /// up to the top level, none starting in the runtime. Only those
-/// programs install the handler; the libraries never do. Skipped
-/// without CMake, unless `TEMPER_REQUIRE_CHECKERS` is set.
+/// programs install the handler; the libraries never do. With
+/// `std::stacktrace`, the frames name the Temper files and lines, by
+/// the `#line` directives that `run` and `test` give the generated code
+/// (relative paths), which `build` leaves out. Skipped without CMake,
+/// unless `TEMPER_REQUIRE_CHECKERS` is set.
 #[test]
 #[cfg(feature = "cpp")]
 fn cpp_stack_traces() {
@@ -1560,6 +1563,23 @@ fn cpp_stack_traces() {
         assert_eq!(panics.len(), 2, "{xml}");
         assert!(panics[0].starts_with("a::boom("), "{xml}");
         assert!(panics[1].starts_with("a::panics("), "{xml}");
+        // Files and lines where `std::stacktrace` gives them, not
+        // `backtrace()`'s offsets: the Temper source's.
+        // Paths are relative to the library's directory, where the
+        // programs run.
+        let lines = !panics[0].contains("+0x");
+        let cpp = Path::new(dir).join("temper.out/cpp");
+        let source = |library: &str, frame: &str| -> (PathBuf, String) {
+            let (_, at) = frame.rsplit_once(" (").unwrap();
+            let (file, line) = at.split_once(')').unwrap().0.rsplit_once(':').unwrap();
+            let path = cpp.join(library).join(file);
+            (fs::canonicalize(path).unwrap(), line.to_string())
+        };
+        if lines {
+            let a = fs::canonicalize(Path::new(dir).join("a.temper.md")).unwrap();
+            assert_eq!(source("a", &panics[0]), (a.clone(), "4".into()), "{xml}");
+            assert_eq!(source("a", &panics[1]), (a, "9".into()), "{xml}");
+        }
         for (library, raised, at) in [("b", "uncaught bubble", "b::f("), ("c", "panic", "c::g(")] {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "cpp"]);
             assert_eq!((code, out.trim_end()), (1, library), "{err}");
@@ -1574,10 +1594,30 @@ fn cpp_stack_traces() {
                 frames.last().unwrap().starts_with(&init),
                 "{library}: {err}"
             );
+            if lines {
+                let file = Path::new(dir)
+                    .join(library)
+                    .join(format!("{library}.temper"));
+                let file = fs::canonicalize(file).unwrap();
+                // The call at the top level, in the init's lambda; the
+                // init itself is generated, and says so.
+                let top = &frames[frames.len() - 2];
+                assert_eq!(
+                    source(library, &frames[0]),
+                    (file.clone(), "2".into()),
+                    "{err}"
+                );
+                assert_eq!(source(library, top), (file, "6".into()), "{err}");
+                let init = frames.last().unwrap();
+                let generated = cpp.join(library).join("init.cpp");
+                assert_eq!(
+                    source(library, init).0,
+                    fs::canonicalize(generated).unwrap()
+                );
+            }
         }
         // The programs install the handler, the libraries and what
         // they include (the runtime but its tests' runner) don't.
-        let cpp = Path::new(dir).join("temper.out/cpp");
         for library in ["a", "b", "c"] {
             let main = fs::read_to_string(cpp.join(library).join("main.cpp")).unwrap();
             assert!(main.contains("install_stack_traces()"), "{main}");
@@ -1606,6 +1646,103 @@ fn cpp_stack_traces() {
                 "test_main.hpp",
             ];
             assert!(!named || allowed.contains(&name.as_str()), "{name}");
+        }
+        // `#line`s name the sources by relative paths, never absolute
+        // ones; `build` writes none.
+        let init = fs::read_to_string(cpp.join("a/init.cpp")).unwrap();
+        assert!(
+            init.contains("#line 4 \"../../../a.temper.md\"\n"),
+            "{init}"
+        );
+        assert!(!init.contains(&format!("\"{dir}")), "{init}");
+        let (code, _, err) = tempest(&["build", "-w", dir, "-b", "cpp"]);
+        assert_eq!(code, 0, "{err}");
+        for library in ["a", "b", "c"] {
+            for entry in fs::read_dir(cpp.join(library)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_file() {
+                    let text = fs::read_to_string(&path).unwrap();
+                    assert!(!text.contains("#line"), "{}", path.display());
+                }
+            }
+        }
+    });
+}
+
+/// On C#, `run` and `test` give the generated code `#line` directives,
+/// so an exception's stack trace (a debug build, with its pdb) names
+/// the Temper file and line: a test's panic in its JUnit results, and
+/// `run`'s uncaught panic; the paths are relative to each generated
+/// file. `build` writes none. Skipped without .NET, unless
+/// `TEMPER_REQUIRE_CHECKERS` is set.
+#[test]
+#[cfg(feature = "csharp")]
+fn csharp_stack_traces() {
+    let files = [
+        (
+            "a.temper.md",
+            "# A\n\n    export let boom(n: Int): Int {\n      if (n > 1) { panic() }\n      n\n    }\n\n\
+             \x20   test(\"panics\") {\n      assert(boom(5) == 5)\n    }\n",
+        ),
+        ("c/config.temper.md", "    export let name = \"c\";\n"),
+        (
+            "c/c.temper",
+            "export let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
+             console.log(\"c\");\ng(5);\n",
+        ),
+    ];
+    with_library("csharp-traces", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-w", dir, "--library", "a", "-b", "csharp"]);
+        if tools_missing("csharp", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.ends_with("Tests passed: 0 of 1\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        let csharp = Path::new(dir).join("temper.out/csharp");
+        let xml = fs::read_to_string(csharp.join("a/tests/TestResults/TestResults.xml")).unwrap();
+        // The sources' own paths, as .NET resolves them.
+        let a = Path::new(dir).join("a.temper.md");
+        let a = a.display();
+        assert!(xml.contains(&format!(" in {a}:line 4")), "{xml}");
+        assert!(xml.contains(&format!(" in {a}:line 9")), "{xml}");
+        let (code, out, err) = tempest(&["run", "-w", dir, "--library", "c", "-b", "csharp"]);
+        assert_eq!((code, out.trim_end()), (1, "c"), "{err}");
+        let c = Path::new(dir).join("c/c.temper");
+        let c = c.display();
+        assert!(err.contains(&format!(" in {c}:line 2")), "{err}");
+        assert!(err.contains(&format!(" in {c}:line 6")), "{err}");
+        // Relative paths only, and none from `build`.
+        let mut directives = 0;
+        let each = |library: &str, f: &mut dyn FnMut(&Path, &str)| {
+            let mut dirs = vec![csharp.join(library)];
+            while let Some(d) = dirs.pop() {
+                for entry in fs::read_dir(d).unwrap() {
+                    let path = entry.unwrap().path();
+                    if path.is_dir() {
+                        dirs.push(path);
+                    } else if path.extension().is_some_and(|e| e == "cs") {
+                        f(&path, &fs::read_to_string(&path).unwrap());
+                    }
+                }
+            }
+        };
+        each("a", &mut |path, text| {
+            for line in text.lines().filter(|l| l.starts_with("#line ")) {
+                directives += 1;
+                assert!(
+                    line == "#line default" || line.contains(" \"../"),
+                    "{}: {line}",
+                    path.display()
+                );
+            }
+        });
+        assert!(directives > 0);
+        let (code, _, err) = tempest(&["build", "-w", dir, "-b", "csharp"]);
+        assert_eq!(code, 0, "{err}");
+        for library in ["a", "c"] {
+            each(library, &mut |path, text| {
+                assert!(!text.contains("#line"), "{}", path.display());
+            });
         }
     });
 }

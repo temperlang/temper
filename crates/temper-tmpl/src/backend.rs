@@ -25,17 +25,41 @@ pub struct Backend {
     /// Its naming rules, which also name what other libraries use of a
     /// library ([`crate::naming::Interface`]).
     pub rules: &'static NamingRules,
-    /// A program's files, or what isn't covered yet. Given a prefix that
-    /// leads from the library's output directory to its sources, a
-    /// backend that writes source maps (JS) writes them, naming the
-    /// sources by their paths after it.
-    pub translate: fn(&Program, Option<&str>) -> Result<Vec<OutFile>, String>,
+    /// A program's files, or what isn't covered yet, pointing back at
+    /// their sources as [`SourceLinks`] allows.
+    pub translate: fn(&Program, SourceLinks) -> Result<Vec<OutFile>, String>,
     /// Whether `temper build` builds for it without `-b`, as Kotlin's
     /// defaults: all but C++.
     pub default: bool,
     /// How its language's own tools run built libraries' tests; `None`
     /// in wasm, which runs no tools.
     pub tools: Option<&'static Tools>,
+}
+
+/// How a translation may point back at its sources.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SourceLinks<'a> {
+    /// A prefix that leads from the library's output directory to its
+    /// root, after which a backend names each source by its path: in
+    /// source maps (JS), and, with [`dev`](Self::dev), `#line`
+    /// directives (C++, C#; [`crate::line_directives`]). `None` where
+    /// the sources aren't at hand, as for std.
+    pub prefix: Option<&'a str>,
+    /// For output that only `temper run` and `temper test` build and
+    /// run, not `temper build`'s, which stays as it is, deterministic and
+    /// clean to publish: links that only help while developing, such as
+    /// `#line`.
+    pub dev: bool,
+}
+
+impl SourceLinks<'_> {
+    /// The prefix for `#line` directives, where they go in: in
+    /// [`dev`](Self::dev) output, and where the prefix is a relative
+    /// path, not a `file:` URL (sources on another drive), which they
+    /// can't name.
+    pub fn line_prefix(&self) -> Option<&str> {
+        (self.prefix).filter(|prefix| self.dev && !prefix.starts_with("file:"))
+    }
 }
 
 /// How a backend runs the tests of libraries built in

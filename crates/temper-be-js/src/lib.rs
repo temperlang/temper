@@ -118,7 +118,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     },
     runtime_version: &runtime::VERSION,
     rules: &JS.rules,
-    translate: |p, maps| generate(p, &JS, maps).map_err(|e| e.to_string()),
+    translate: |p, links| generate(p, &JS, links.prefix).map_err(|e| e.to_string()),
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),

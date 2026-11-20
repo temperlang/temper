@@ -226,6 +226,10 @@ pub struct Translator<'a> {
     block_writes: HashSet<DeclId>,
     /// The helpers the module's class needs ([`crate::connected::HELPERS`]).
     helpers: BTreeSet<&'static str>,
+    /// For `temper run` and `temper test`, a prefix for the sources'
+    /// paths in `#line` directives, before each statement
+    /// ([`Stmt::Line`]).
+    pub lines: Option<String>,
 }
 
 /// Where a value given by statements goes ([`Translator::sink`]).
@@ -316,6 +320,7 @@ impl<'a> Translator<'a> {
             hoist: HashSet::new(),
             block_writes: block_writes(p),
             helpers: BTreeSet::new(),
+            lines: None,
         }
     }
 
@@ -1015,6 +1020,7 @@ impl<'a> Translator<'a> {
                         && is_literal(p, value)
                         && !self.is_read(target) => {}
                 Node::InitLet { target, value } if !self.statics.contains(&target) => {
+                    self.mark(s, &mut body);
                     let ty = self.ty(p.decls.get(target).ty)?;
                     let name = self.name(target);
                     if self.needs_statements(value) {
@@ -2007,7 +2013,19 @@ impl<'a> Translator<'a> {
         body
     }
 
-    /// A statement, after the statements its expressions need first.
+    /// Where a node's code comes from, as a `#line` directive before it
+    /// says, with [`lines`](Self::lines) on.
+    fn mark(&self, id: NodeId, out: &mut Vec<Stmt>) {
+        let Some(prefix) = &self.lines else {
+            return;
+        };
+        let at = temper_tmpl::line_directives::line_at(self.p, prefix, self.p.nodes.span(id));
+        out.extend(at.map(Stmt::Line));
+    }
+
+    /// A statement, after the statements its expressions need first, and
+    /// where it comes from ([`mark`](Self::mark)), unless it comes to
+    /// nothing.
     fn stmt(&mut self, id: NodeId, out: &mut Vec<Stmt>) -> R<()> {
         let saved = std::mem::take(&mut self.pre);
         let hoist = self.hoists(id);
@@ -2017,6 +2035,9 @@ impl<'a> Translator<'a> {
         let pre = std::mem::replace(&mut self.pre, saved);
         self.hoist = saved_hoist;
         done?;
+        if !(pre.is_empty() && mine.is_empty()) {
+            self.mark(id, out);
+        }
         out.extend(pre);
         out.extend(mine);
         Ok(())
@@ -3590,6 +3611,7 @@ fn completes(s: &Stmt) -> bool {
         Stmt::Expr(_)
         | Stmt::Local { .. }
         | Stmt::Assign { .. }
+        | Stmt::Line(_)
         | Stmt::Raw(_)
         | Stmt::YieldReturn(_)
         | Stmt::Label(_)

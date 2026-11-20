@@ -9,6 +9,7 @@
 //! `%` inside `+` or `-`. It doesn't break long lines.
 
 use std::fmt::Write;
+use temper_tmpl::line_directives::{LineAt, Presumed, directive, presumed};
 
 /// A binary operator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -346,6 +347,10 @@ pub enum Stmt {
     /// Statements only where `TEMPER_TESTS` is defined, in the same
     /// scope: the init's for what only tests reach.
     TestsOnly(Vec<Stmt>),
+    /// Where the statements after it come from, for `temper run` and
+    /// `temper test` only: a `#line` directive, where the position
+    /// changes ([`temper_tmpl::line_directives`]).
+    Line(LineAt),
 }
 
 /// A loop's labels, for `goto`s from inner loops: one at the end of its
@@ -449,6 +454,10 @@ pub struct Source {
     /// The tests, only where `TEMPER_TESTS` is defined; what only they
     /// include, the header includes there.
     pub tests: Vec<Function>,
+    /// With `#line` directives ([`Stmt::Line`]), the file itself, as a
+    /// directive names it to restore its own positions where generated
+    /// support code follows (C++ has no `#line default`).
+    pub generated: Option<String>,
 }
 
 /// Whether a character is escaped in a literal: controls, and characters
@@ -630,8 +639,7 @@ pub fn expr(e: &Expr, min: u8) -> String {
             for s in body {
                 stmt(&mut text, s, 0);
             }
-            let lines: Vec<&str> = text.lines().map(str::trim).collect();
-            format!("[&]() -> {result} {{ {} }}()", lines.join(" "))
+            format!("[&]() -> {result} {{ {} }}()", one_line(&text))
         }
         Expr::Lambda {
             captures,
@@ -643,11 +651,10 @@ pub fn expr(e: &Expr, min: u8) -> String {
             for s in body {
                 stmt(&mut text, s, 0);
             }
-            let lines: Vec<&str> = text.lines().map(str::trim).collect();
             format!(
                 "{} {{ {} }}",
                 lambda_head(captures, params, result),
-                lines.join(" ")
+                one_line(&text)
             )
         }
     };
@@ -656,6 +663,22 @@ pub fn expr(e: &Expr, min: u8) -> String {
     } else {
         text
     }
+}
+
+/// Statements' text on one line, without `#line` directives, which
+/// need lines of their own.
+fn one_line(text: &str) -> String {
+    let lines: Vec<&str> = (text.lines().map(str::trim))
+        .filter(|l| !l.starts_with("#line "))
+        .collect();
+    lines.join(" ")
+}
+
+/// Text without its `#line` directives.
+fn without_lines(text: &str) -> String {
+    (text.split_inclusive('\n'))
+        .filter(|l| !l.starts_with("#line "))
+        .collect()
 }
 
 fn indent(out: &mut String, depth: usize) {
@@ -715,6 +738,10 @@ fn lambda_head(captures: &str, params: &[(String, String)], result: &str) -> Str
 }
 
 fn stmt(out: &mut String, s: &Stmt, depth: usize) {
+    if let Stmt::Line(at) = s {
+        directive(out, at);
+        return;
+    }
     if let Stmt::TestsOnly(stmts) = s {
         out.push_str("#ifdef TEMPER_TESTS\n");
         for s in stmts {
@@ -896,13 +923,14 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             out.push('\n');
         }
         // Written above, without the indent.
-        Stmt::TestsOnly(_) => {}
+        Stmt::TestsOnly(_) | Stmt::Line(_) => {}
     }
 }
 
 /// Prints a module's `.cpp`.
 /// A function's definition as a header has it, with its template line,
-/// and `temper::core` spelled out.
+/// and `temper::core` spelled out; without `#line` directives, which
+/// would last to the header's end.
 pub fn header_definition(f: &Function) -> String {
     let mut out = String::new();
     if !f.template.is_empty() {
@@ -911,7 +939,33 @@ pub fn header_definition(f: &Function) -> String {
     let _ = write!(out, "{} ", f.definition());
     body(&mut out, &f.body, 0);
     out.push('\n');
-    spell_core(&out)
+    spell_core(&without_lines(&out))
+}
+
+/// Restores the generated file's own positions, `generated` as a
+/// directive names it, where `#line` directives have pointed elsewhere,
+/// before generated support code, so errors there point at it; `counted`
+/// is how many of `out`'s bytes and lines were counted already.
+fn restore(out: &mut String, generated: &Option<String>, counted: &mut (usize, usize)) {
+    let Some(generated) = generated else {
+        return;
+    };
+    match presumed(out) {
+        Presumed::Generated => return,
+        Presumed::At(at) if at.file == *generated => return,
+        _ => {}
+    }
+    counted.1 += out.as_bytes()[counted.0..]
+        .iter()
+        .filter(|&&b| b == b'\n')
+        .count();
+    counted.0 = out.len();
+    // The directive's line is the next, then the line after it.
+    let at = LineAt {
+        file: generated.clone(),
+        line: counted.1 as u32 + 2,
+    };
+    temper_tmpl::line_directives::line(out, &at);
 }
 
 /// `core::`, the alias of `temper::core` in a module's `.cpp`, spelled
@@ -992,6 +1046,7 @@ pub fn source(s: &Source) -> String {
         }
     }
     let mut prev: Option<(bool, &Item)> = None;
+    let mut counted = (0, 0);
     for item in &s.items {
         let (tests, item) = unwrap(item);
         if let Some((prev_tests, prev)) = prev {
@@ -1011,6 +1066,7 @@ pub fn source(s: &Source) -> String {
         if tests && !prev.is_some_and(|(t, _)| t) {
             out.push_str("#ifdef TEMPER_TESTS\n");
         }
+        restore(&mut out, &s.generated, &mut counted);
         item_text(&mut out, item);
         prev = Some((tests, item));
     }
@@ -1025,6 +1081,7 @@ pub fn source(s: &Source) -> String {
     // another thread while it runs waits for it to finish, and one from
     // the same thread, as the init calls the module's entry points,
     // returns at once.
+    restore(&mut out, &s.generated, &mut counted);
     if s.init_body.is_empty() {
         let _ = writeln!(out, "void {}() {{}}", s.init);
     } else {
@@ -1041,6 +1098,7 @@ pub fn source(s: &Source) -> String {
             if i > 0 {
                 out.push('\n');
             }
+            restore(&mut out, &s.generated, &mut counted);
             let _ = write!(out, "{} ", f.definition());
             body(&mut out, &f.body, 0);
             out.push('\n');

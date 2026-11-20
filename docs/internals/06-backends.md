@@ -120,7 +120,10 @@ translator hoists what:
 
 - Each crate's `lib.rs` doc comment says what it covers, and where its
   output deliberately differs from what Temper generated before.
-- JavaScript also writes source maps ([`translate_with_source_maps`](../../crates/temper-be-js/src/lib.rs)).
+- JavaScript also writes source maps ([`translate_with_source_maps`](../../crates/temper-be-js/src/lib.rs)),
+  and C++ and C# write `#line` directives for `temper run` and `temper
+  test` only ([`SourceLinks`](../../crates/temper-tmpl/src/backend.rs),
+  [`line_directives`](../../crates/temper-tmpl/src/line_directives.rs)).
 - [`temper-be-testkit`](../../crates/temper-be-testkit/src/lib.rs): what the
   backends' tests share: test programs, goldens, and finding each
   language's tools. Tests run the generated code with each language's

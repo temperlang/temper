@@ -654,7 +654,14 @@ fn generate_with(program: Program, name: &str) -> Result<Files, String> {
     let backend =
         (registry().get(name)).ok_or_else(|| format!("built without the {name} backend"))?;
     let program = temper_driver::with_std(program, backend, std_program)?;
-    temper_driver::translate(&program, backend, Some("../"))
+    temper_driver::translate(
+        &program,
+        backend,
+        temper_tmpl::SourceLinks {
+            prefix: Some("../"),
+            dev: false,
+        },
+    )
 }
 
 /// Files as `generate`'s JSON.

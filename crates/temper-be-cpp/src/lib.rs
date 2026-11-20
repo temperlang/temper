@@ -158,7 +158,9 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     },
     runtime_version: &runtime::VERSION,
     rules: &CPP.rules,
-    translate: |p, _| translate(p, &CPP).map_err(|e| e.to_string()),
+    translate: |p, links| {
+        translate_with_lines(p, &CPP, links.line_prefix()).map_err(|e| e.to_string())
+    },
     default: false,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -202,6 +204,26 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// are some, and its modules' `.cpp`s define them always, needing std;
 /// here they're defined only for `test.cpp`'s build ([`test_main`]).
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
+    translate_with_lines(p, variant, None)
+}
+
+/// [`translate`], and with `lines`, a prefix that leads from the
+/// library's directory to its root, `#line` directives in the modules'
+/// `.cpp`s (`temper run` and `temper test` only), so compiler errors,
+/// debuggers, and stack traces point at the Temper source
+/// ([`temper_tmpl::line_directives`]): before each statement that
+/// starts a new line in the source, naming it by its path after the
+/// prefix, and, where generated support code follows, the `.cpp`'s own
+/// file and line again, relative to the library's directory (C++ has no
+/// `#line default`). GCC and Clang keep these paths as they are, in
+/// errors and debug info, which reads them from the compiler's working
+/// directory, so the CMake project then maps its build directory to the
+/// library's. Headers' templates have none.
+pub fn translate_with_lines(
+    p: &Program,
+    variant: &Variant,
+    lines: Option<&str>,
+) -> Result<Vec<OutFile>, NotYet> {
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
@@ -247,6 +269,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let mut translator = translate::Translator::new(p, &names, module);
         translator.test_names = test_names.clone();
         translator.mutating = mutating.clone();
+        translator.lines = lines.map(|prefix| module_prefix(prefix, module));
         let mut translated = translator.module(module)?;
         translated.source.includes = vec![format!("<{library}/{stem}.hpp>")];
         if translated.uses_mutex {
@@ -265,6 +288,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         }
         translated.source.namespace = namespace.clone();
         translated.source.init = init.clone();
+        translated.source.generated = lines.map(|_| format!("{stem}.cpp"));
         files.push(OutFile {
             path: format!("{library}/{stem}.hpp"),
             text: header(&namespace, &translated, &init),
@@ -297,7 +321,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     }
     files.push(OutFile {
         path: format!("{library}/CMakeLists.txt"),
-        text: cmake_lists_of(p, &sources, tests.is_some()),
+        text: cmake_lists_of(p, &sources, tests.is_some(), lines.is_some()),
     });
     Ok(files)
 }
@@ -484,7 +508,7 @@ pub fn cmake_lists(p: &Program) -> String {
         .collect();
     sources.extend(host_sources(p));
     let tests = p.modules.iter().any(|m| !m.tests.is_empty());
-    cmake_lists_of(p, &sources, tests)
+    cmake_lists_of(p, &sources, tests, false)
 }
 
 /// The libraries the modules use (`production`), or their tests, other
@@ -535,7 +559,26 @@ if(CURL_FOUND)
 endif()
 ";
 
-fn cmake_lists_of(p: &Program, sources: &[String], tests: bool) -> String {
+/// A module's sources' prefix, from the library's root's: tmpl's files
+/// are named within their module's directory.
+fn module_prefix(prefix: &str, module: &temper_tmpl::Module) -> String {
+    match module.path.as_str() {
+        "" => prefix.to_string(),
+        path => format!("{prefix}{path}/"),
+    }
+}
+
+/// GCC and Clang read `#line`s' relative paths, in debug info, from the
+/// compiler's working directory, the build directory: this has them
+/// read from the library's, as [`translate_with_lines`] writes them.
+const LINES_CMAKE: &str = "
+# #line paths are relative to this directory (temper run and temper test).
+if(CMAKE_CXX_COMPILER_ID MATCHES \"GNU|Clang\")
+  add_compile_options(\"-fdebug-prefix-map=${CMAKE_CURRENT_BINARY_DIR}=${CMAKE_CURRENT_SOURCE_DIR}\")
+endif()
+";
+
+fn cmake_lists_of(p: &Program, sources: &[String], tests: bool, lines: bool) -> String {
     let library = &p.library.name;
     let curl = match uses_net_client(p) {
         true => CURL_CMAKE.replace("{library}", library),
@@ -549,6 +592,9 @@ fn cmake_lists_of(p: &Program, sources: &[String], tests: bool) -> String {
             "if(NOT TARGET {name})\n  add_subdirectory(${{CMAKE_CURRENT_SOURCE_DIR}}/../{name} ${{CMAKE_CURRENT_BINARY_DIR}}/{name})\nendif()\n"
         ));
         links.push_str(&format!(" {name}"));
+    }
+    if lines {
+        uses.push_str(LINES_CMAKE);
     }
     let sources = sources.join(" ");
     let mut test = String::new();

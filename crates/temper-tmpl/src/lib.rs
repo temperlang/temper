@@ -45,6 +45,7 @@ pub mod errors;
 pub mod exits;
 pub mod host;
 mod ids;
+pub mod line_directives;
 pub mod naming;
 pub mod nevers;
 mod nodes;
@@ -65,7 +66,7 @@ mod types;
 pub mod validate;
 pub mod version;
 
-pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools};
+pub use backend::{Backend, OutFile, Run, SourceLinks, TestResults, Tested, Tools};
 pub use builder::Builder;
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};

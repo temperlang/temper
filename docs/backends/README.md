@@ -67,10 +67,18 @@ it happened out to the top level, and a test that panics under
 
 ```
 uncaught bubble: bubble
-  at b::f(int) (temper.out/cpp/b/init.cpp:10)
-  at operator() (temper.out/cpp/b/init.cpp:19)
-  at b::global_init_init() (temper.out/cpp/b/init.cpp:16)
+  at b::f(int) (../../../b/b.temper:2)
+  at operator() (../../../b/b.temper:6)
+  at b::global_init_init() (/work/temper.out/cpp/b/init.cpp:20)
 ```
+
+The frames name the Temper file and line because `temper run` and
+`temper test` give the generated `.cpp`s `#line` directives, with paths
+relative to the library's directory in `temper.out/cpp` (where the
+programs run; the CMake project maps debug info there too, for
+debuggers). Compiler errors point there as well. Generated support code
+gets the `.cpp`'s own lines back. `temper build` writes no `#line`s, so
+published output stays as it was.
 
 Its CMake project finds C++23's `std::stacktrace` where the compiler has
 it (GCC 13 and later; MSVC 2022's should work, but isn't tested yet),
@@ -149,6 +157,13 @@ Microsoft has advice on [choosing a namespace][CsNamespaceSelection].
 Temper [`test` blocks][CsTestBlocks] translate to the
 [MSTest framework][CsMsTest]: a test class per module, and a test
 method per test. Temper provides soft assertions within tests.
+
+`temper run` and `temper test` give the generated code `#line`
+directives, with paths relative to each `.cs` file, so compiler errors,
+debuggers, and exceptions' stack traces (debug builds, with their pdb)
+name the Temper file and line:
+`at A.AGlobal.Boom(Int32 n) in /work/a.temper.md:line 4`. Generated
+support code gets `#line default`. `temper build` writes no `#line`s.
 
 [CsAction]: https://learn.microsoft.com/en-us/dotnet/api/system.action-1
 [CsAssembly]: https://learn.microsoft.com/en-us/dotnet/standard/assembly/

@@ -10,6 +10,7 @@
 //! (`"n=" + (a + b)`). It doesn't break long lines.
 
 use std::fmt::Write;
+use temper_tmpl::line_directives::{LineAt, Presumed, directive, presumed};
 
 /// A binary operator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -328,6 +329,10 @@ pub enum Stmt {
     YieldBreak,
     /// `label: ;`, which a `goto` jumps to.
     Label(String),
+    /// Where the statements after it come from, for `temper run` and
+    /// `temper test` only: a `#line` directive, where the position
+    /// changes ([`temper_tmpl::line_directives`]).
+    Line(LineAt),
 }
 
 /// A loop's labels, for `goto`s from inner loops: one at the end of its
@@ -591,6 +596,15 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
+/// `#line default`, where `#line` directives have pointed elsewhere,
+/// before generated support code (a member without a source position,
+/// a helper's body), so errors there point at the generated file.
+fn restore(out: &mut String) {
+    if let Presumed::At(_) | Presumed::Unknown = presumed(out) {
+        out.push_str("#line default\n");
+    }
+}
+
 /// A block, its braces on their own lines, starting where `out` is (at
 /// the end of a line, or indented).
 fn block(out: &mut String, body: &[Stmt], depth: usize) {
@@ -627,6 +641,11 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
     if let Stmt::Block(body) = s {
         block(out, body, depth);
         return;
+    }
+    match s {
+        Stmt::Line(at) => return directive(out, at),
+        Stmt::Raw(_) => restore(out),
+        _ => {}
     }
     indent(out, depth);
     match s {
@@ -747,6 +766,8 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         Stmt::Label(l) => {
             let _ = writeln!(out, "{l}: ;");
         }
+        // Written above, without the indent.
+        Stmt::Line(_) => {}
     }
 }
 
@@ -771,6 +792,7 @@ pub fn test_class(c: &TestClass) -> String {
             out.push('\n');
         }
         first = false;
+        restore(&mut out);
         let _ = writeln!(out, "    [TestMethod]\n    public void {name}()");
         block(&mut out, body, 1);
     }
@@ -873,6 +895,7 @@ pub fn type_decl(t: &TypeDecl) -> String {
             out.push('\n');
         }
         prev_field = field;
+        restore(&mut out);
         out.push_str("    ");
         match m {
             Member::Field { readonly, ty, name } => {
@@ -1015,6 +1038,7 @@ fn statics(out: &mut String, c: &Class) -> bool {
     }
     for m in &c.methods {
         gap(out);
+        restore(out);
         out.push_str("    ");
         out.push_str(if m.public { "public " } else { "internal " });
         let params: Vec<String> = m.params.iter().map(|(t, n)| format!("{t} {n}")).collect();
@@ -1026,6 +1050,7 @@ fn statics(out: &mut String, c: &Class) -> bool {
     }
     if !c.init.is_empty() {
         gap(out);
+        restore(out);
         let _ = writeln!(out, "    static {}()", c.name);
         block(out, &c.init, 1);
     }

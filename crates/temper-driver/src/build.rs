@@ -57,7 +57,7 @@ use temper_frontend::to_tmpl::gaps;
 use temper_tmpl::Tested;
 use temper_tmpl::host::HostFile;
 use temper_tmpl::naming::Interface;
-use temper_tmpl::{Backend, Program};
+use temper_tmpl::{Backend, Program, SourceLinks};
 
 /// How to build.
 #[derive(Clone, Copy, Debug, Default)]
@@ -77,6 +77,13 @@ pub struct Options<'a> {
     pub log: LogFormat,
     /// Reports hints, not only warnings and errors (`-v`).
     pub hints: bool,
+    /// Output for `temper run` and `temper test` to build and run here,
+    /// not to publish: backends may add what only helps while
+    /// developing, as C++'s and C#'s `#line` directives, which point
+    /// compiler errors, debuggers, and stack traces at the Temper source
+    /// ([`temper_tmpl::SourceLinks::dev`]). `temper build`'s output has
+    /// none, so it stays as it was.
+    pub dev: bool,
 }
 
 impl Options<'_> {
@@ -192,7 +199,7 @@ pub fn build(
         // Kotlin's.
         if let Some(std) = &std {
             let dir = temper_out.join(backend.name);
-            let result = translate(std, backend, None).and_then(|files| {
+            let result = translate(std, backend, SourceLinks::default()).and_then(|files| {
                 let files: Vec<(String, String)> = (files.into_iter())
                     .map(|(path, text)| {
                         let rest = path.split_once('/').map_or(path.as_str(), |(_, r)| r);
@@ -211,12 +218,16 @@ pub fn build(
             program.interfaces = interfaces.clone();
             interfaces.push(interface(program, backend));
             let dir = temper_out.join(backend.name);
-            // Source maps lead back to the sources' directory.
+            // Source maps and `#line`s lead back to the sources' directory.
             let maps = sources_prefix(
                 &dir.join(&program.library.name),
                 &format!("{}/x", library.root),
             );
-            let result = translate(program, backend, Some(&maps))
+            let links = SourceLinks {
+                prefix: Some(&maps),
+                dev: options.dev,
+            };
+            let result = translate(program, backend, links)
                 .and_then(|files| write_library(&dir, name, &files));
             if result.is_ok() && options.verbose {
                 let _ = writeln!(out, "Wrote {}", dir.join(name).display());

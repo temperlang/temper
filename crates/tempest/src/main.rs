@@ -411,6 +411,7 @@ fn build_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        dev: false,
     };
     let mut out = io::BufWriter::new(io::stdout().lock());
     let built = build::build(
@@ -485,6 +486,7 @@ fn test_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        dev: true,
     };
     let json = flags.log == LogFormat::Json;
     let several = chosen.len() > 1;
@@ -624,6 +626,7 @@ fn run_library(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        dev: true,
     };
     let mut out = io::stdout();
     let ok = run::run(

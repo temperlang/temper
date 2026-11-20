@@ -130,7 +130,7 @@ impl temper_frontend::repl::ReplTools for ReplTools {
         if interrupted() {
             return Err(INTERRUPTED.into());
         }
-        let files = translate(&program, backend, None)?;
+        let files = translate(&program, backend, temper_tmpl::SourceLinks::default())?;
         Ok(files
             .into_iter()
             .filter(|(path, _)| own_code(path))

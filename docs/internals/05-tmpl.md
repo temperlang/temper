@@ -129,7 +129,8 @@ Backends also share analyses ([`analysis`](../../crates/temper-tmpl/src/analysis
 what a module imports, what a closure captures, what has effects. Plus
 [`Host`](../../crates/temper-tmpl/src/host.rs) for a library's own
 host code, and [`source_map`](../../crates/temper-tmpl/src/source_map.rs)
-for source maps.
+for source maps, and [`line_directives`](../../crates/temper-tmpl/src/line_directives.rs)
+for `#line`.
 
 ## Where in the code
 
