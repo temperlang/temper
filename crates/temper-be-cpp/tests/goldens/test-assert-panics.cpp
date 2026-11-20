@@ -152,8 +152,10 @@ void passesAfter(std::shared_ptr<temper_std::Test> const & test) {
 
 // main.cpp
 #include "test-assert-panics/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   test_assert_panics::global_init_init();
 }
 
@@ -162,6 +164,7 @@ int main() {
 #include "temper-core/test_main.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   test_assert_panics::global_init_init();
   temper_std::global_init_testing();
   return temper::core::run_tests({
@@ -286,8 +289,11 @@ add_library(test-assert-panics init.cpp)
 target_include_directories(test-assert-panics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(test-assert-panics PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(test-assert-panics-main main.cpp)
 target_link_libraries(test-assert-panics-main PRIVATE test-assert-panics)
+temper_stack_traces(test-assert-panics-main)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   if(NOT TARGET std)
@@ -297,5 +303,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   target_compile_definitions(test-assert-panics-test PRIVATE TEMPER_TESTS)
   target_include_directories(test-assert-panics-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
   target_link_libraries(test-assert-panics-test PRIVATE Threads::Threads std)
+  temper_stack_traces(test-assert-panics-test)
 endif()
 

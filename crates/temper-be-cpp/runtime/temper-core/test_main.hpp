@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "base_types.hpp"
+#include "stack_trace.hpp"
 
 // Test harness for the generated `main`. The generated entry point stays thin: it
 // initializes modules and hands a list of named test closures to `run_tests`, which
@@ -42,9 +43,12 @@ namespace temper {
             return out;
         }
 
-        // A panic in a test fails that test alone, saying why (`run_tests`).
+        // A panic in a test fails that test alone, saying why and where
+        // (`run_tests`).
         [[noreturn]] inline void throw_panic(const std::string& message) {
-            throw TemperPanic(message);
+            TemperPanic panic(message);
+            panic.trace = stack_trace();
+            throw panic;
         }
 
         // Runs each test, capturing uncaught exceptions and panics, writes a JUnit
@@ -74,6 +78,10 @@ namespace temper {
                 } catch (const TemperPanic& e) {
                     threw = true;
                     thrown = std::string("Panicked: ") + e.what();
+                    if (!e.trace.empty()) {
+                        thrown += "\n" + e.trace;
+                        thrown.pop_back();
+                    }
                 } catch (const std::exception& e) {
                     threw = true;
                     thrown = std::string("uncaught exception: ") + e.what();

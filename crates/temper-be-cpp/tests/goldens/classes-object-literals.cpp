@@ -259,8 +259,10 @@ void global_init_init() {
 // main.cpp
 #include "object-literals/extra-class.hpp"
 #include "object-literals/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   object_literals::global_init_extra_class();
   object_literals::global_init_init();
 }
@@ -279,6 +281,9 @@ add_library(object-literals extra-class.cpp init.cpp)
 target_include_directories(object-literals PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(object-literals PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(object-literals-main main.cpp)
 target_link_libraries(object-literals-main PRIVATE object-literals)
+temper_stack_traces(object-literals-main)
 

@@ -22,8 +22,10 @@ namespace temper {
         // A panic, where a test build's runner (`run_tests`) has it throw
         // rather than end the process (`panic_hook`), so a test that panics
         // fails alone. It's no `TemperBubble`, so no `orelse` catches it.
+        // `trace` is where it panicked (`stack_trace.hpp`), for the report.
         struct TemperPanic : std::exception {
             std::string message;
+            std::string trace;
 
             explicit TemperPanic(std::string msg)
                 : message(std::move(msg)) {}

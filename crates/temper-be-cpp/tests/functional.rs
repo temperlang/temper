@@ -512,7 +512,7 @@ fn goldens() {
             assert_eq!(
                 files[2].text,
                 format!(
-                    "#include \"{library}/init.hpp\"\n\nint main() {{\n  {namespace}::global_init_init();\n}}\n"
+                    "#include \"{library}/init.hpp\"\n#include \"temper-core/stack_trace.hpp\"\n\nint main() {{\n  temper::core::install_stack_traces();\n  {namespace}::global_init_init();\n}}\n"
                 ),
                 "{}",
                 case.key
@@ -765,7 +765,8 @@ fn runtime_pch_with(
                 let probe = root.join("probe.cpp");
                 fs::write(
                     &probe,
-                    "#include <temper-core/core.hpp>\n#include <temper-core/net.hpp>\n",
+                    "#include <temper-core/core.hpp>\n#include <temper-core/net.hpp>\n\
+                     #include <temper-core/test_main.hpp>\n",
                 )
                 .unwrap();
                 let mut command = Command::new(gxx);
@@ -1498,7 +1499,7 @@ fn strict() {
             .collect();
         let mut plain = std_sources.clone();
         let mut tested = std_sources;
-        // Every `main.cpp` is the same three lines, which one stands for;
+        // Every `main.cpp` is the same few lines, which one stands for;
         // and each defines `main`, as each `test.cpp` does, so they're
         // compiled alone, not in bulk.
         let mut main = None;

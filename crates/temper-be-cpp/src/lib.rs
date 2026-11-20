@@ -399,9 +399,11 @@ fn test_names(p: &Program, names: &NameMap) -> HashMap<DeclId, String> {
 /// module's init, then each test with a fresh std `Test`, as Kotlin's
 /// `main.cpp` does when there are tests, through the runtime's
 /// `run_tests`, which writes JUnit's XML. It sets the runtime's panic
-/// hook to throw, so a test that panics fails alone, saying why, where
-/// a panic elsewhere ends the process. Built with `TEMPER_TESTS`
-/// defined, which the modules' tests need.
+/// hook to throw, so a test that panics fails alone, saying why and
+/// where (its stack trace), where a panic elsewhere ends the process,
+/// with a trace too (the runtime's `install_stack_traces`, which only
+/// the programs call). Built with `TEMPER_TESTS` defined, which the
+/// modules' tests need.
 pub fn test_main(p: &Program, namespace: &str, names: &HashMap<DeclId, String>) -> Option<String> {
     let mut entries = String::new();
     let mut std_inits: Vec<String> = Vec::new();
@@ -446,7 +448,9 @@ pub fn test_main(p: &Program, namespace: &str, names: &HashMap<DeclId, String>) 
         let stem = translate::module_stem(p, module.decl);
         out.push_str(&format!("#include \"{library}/{stem}.hpp\"\n"));
     }
-    out.push_str("#include \"temper-core/test_main.hpp\"\n\nint main() {\n");
+    out.push_str(
+        "#include \"temper-core/test_main.hpp\"\n\nint main() {\n  temper::core::install_stack_traces();\n",
+    );
     for module in &p.modules {
         out.push_str(&format!(
             "  {namespace}::{}();\n",
@@ -467,7 +471,10 @@ pub fn test_main(p: &Program, namespace: &str, names: &HashMap<DeclId, String>) 
 /// above as an include directory, where the runtime (`temper-core`, header
 /// only) and the libraries it uses are; each library it uses, by the same
 /// file in its directory, unless a project above has added it already;
-/// and `main.cpp` as a program, `NAME-main`; for std `net`, libcurl,
+/// and `main.cpp` as a program, `NAME-main`, and `test.cpp`, `NAME-test`,
+/// both with the runtime's stack traces (`stack_trace.cmake`: C++23's
+/// `std::stacktrace` where the compiler has it, else `-rdynamic` for
+/// `backtrace()`), which the library doesn't get; for std `net`, libcurl,
 /// its default client, where CMake finds it. It builds
 /// alone (`cmake -S NAME -B build`) or as part of a project that adds the
 /// libraries' directories.
@@ -573,6 +580,7 @@ if({condition})
   target_compile_definitions({library}-test PRIVATE TEMPER_TESTS)
   target_include_directories({library}-test PRIVATE ${{CMAKE_CURRENT_SOURCE_DIR}}/..)
   target_link_libraries({library}-test PRIVATE{test_links})
+  temper_stack_traces({library}-test)
 endif()
 "
         );
@@ -606,8 +614,11 @@ add_library({library} {sources})
 target_include_directories({library} PUBLIC ${{CMAKE_CURRENT_SOURCE_DIR}}/..)
 target_link_libraries({library} PUBLIC{links})
 {curl}
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${{CMAKE_CURRENT_SOURCE_DIR}}/../temper-core/stack_trace.cmake)
 add_executable({library}-main main.cpp)
 target_link_libraries({library}-main PRIVATE {library})
+temper_stack_traces({library}-main)
 {test}"
     )
 }
@@ -733,7 +744,9 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
 }
 
 /// The program: runs every module's init, in order, as Kotlin's
-/// `main.cpp` does.
+/// `main.cpp` does, first installing the runtime's stack traces, so a
+/// panic or an uncaught bubble says where it happened, which only a
+/// program does, never a library (`stack_trace.hpp`).
 fn main(p: &Program, namespace: &str) -> String {
     let library = &p.library.name;
     let mut out = String::new();
@@ -741,7 +754,8 @@ fn main(p: &Program, namespace: &str) -> String {
         let stem = translate::module_stem(p, module.decl);
         out.push_str(&format!("#include \"{library}/{stem}.hpp\"\n"));
     }
-    out.push_str("\nint main() {\n");
+    out.push_str("#include \"temper-core/stack_trace.hpp\"\n");
+    out.push_str("\nint main() {\n  temper::core::install_stack_traces();\n");
     for module in &p.modules {
         out.push_str(&format!(
             "  {namespace}::{}();\n",

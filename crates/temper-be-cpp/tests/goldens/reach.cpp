@@ -174,8 +174,10 @@ void testParts(std::shared_ptr<temper_std::Test> const & test) {
 
 // main.cpp
 #include "reach/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   reach::global_init_init();
 }
 
@@ -184,6 +186,7 @@ int main() {
 #include "temper-core/test_main.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   reach::global_init_init();
   temper_std::global_init_testing();
   return temper::core::run_tests({
@@ -212,8 +215,11 @@ add_library(reach init.cpp)
 target_include_directories(reach PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(reach PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(reach-main main.cpp)
 target_link_libraries(reach-main PRIVATE reach)
+temper_stack_traces(reach-main)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   if(NOT TARGET std)
@@ -223,5 +229,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   target_compile_definitions(reach-test PRIVATE TEMPER_TESTS)
   target_include_directories(reach-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
   target_link_libraries(reach-test PRIVATE Threads::Threads std)
+  temper_stack_traces(reach-test)
 endif()
 

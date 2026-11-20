@@ -1508,6 +1508,108 @@ fn js_stack_traces_point_at_temper() {
     });
 }
 
+/// On C++, the programs Temper generates print a stack trace when
+/// something goes wrong, naming the generated functions (by
+/// `std::stacktrace` or, without it, `backtrace()`; `runtime/README.md`
+/// in the C++ backend): a test that panics in a library function has
+/// the trace in its JUnit results, from the panic up to the test, and
+/// `run`'s uncaught bubble or panic prints one from where it was raised
+/// up to the top level, none starting in the runtime. Only those
+/// programs install the handler; the libraries never do. Skipped
+/// without CMake, unless `TEMPER_REQUIRE_CHECKERS` is set.
+#[test]
+#[cfg(feature = "cpp")]
+fn cpp_stack_traces() {
+    let files = [
+        (
+            "a.temper.md",
+            "# A\n\n    export let boom(n: Int): Int {\n      if (n > 1) { panic() }\n      n\n    }\n\n\
+             \x20   test(\"panics\") {\n      assert(boom(5) == 5)\n    }\n",
+        ),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "export let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
+             console.log(\"b\");\nf(5);\n",
+        ),
+        ("c/config.temper.md", "    export let name = \"c\";\n"),
+        (
+            "c/c.temper",
+            "export let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
+             console.log(\"c\");\ng(5);\n",
+        ),
+    ];
+    with_library("cpp-traces", &files, |dir| {
+        // The frames, as `  at NAME (WHERE)`, in order.
+        let frames = |text: &str| -> Vec<String> {
+            (text.lines())
+                .filter_map(|l| l.trim_start().strip_prefix("at "))
+                .map(str::to_string)
+                .collect()
+        };
+        let (code, out, err) = tempest(&["test", "-w", dir, "--library", "a", "-b", "cpp"]);
+        if tools_missing("cpp", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.ends_with("Tests passed: 0 of 1\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        let xml =
+            fs::read_to_string(Path::new(dir).join("temper.out/cpp/a/test-results.xml")).unwrap();
+        let panics = frames(xml.split_once("<![CDATA[").unwrap().1);
+        // `boom`, where it panicked, then the test, and nothing past it.
+        assert_eq!(panics.len(), 2, "{xml}");
+        assert!(panics[0].starts_with("a::boom("), "{xml}");
+        assert!(panics[1].starts_with("a::panics("), "{xml}");
+        for (library, raised, at) in [("b", "uncaught bubble", "b::f("), ("c", "panic", "c::g(")] {
+            let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "cpp"]);
+            assert_eq!((code, out.trim_end()), (1, library), "{err}");
+            assert!(err.contains(raised), "{library}: {err}");
+            // Raised in the function, called from the top level (in
+            // a lambda of the init function's), and nothing past it.
+            let frames = frames(&err);
+            assert!(frames.len() >= 2, "{library}: {err}");
+            assert!(frames[0].starts_with(at), "{library}: {err}");
+            let init = format!("{library}::global_init_init()");
+            assert!(
+                frames.last().unwrap().starts_with(&init),
+                "{library}: {err}"
+            );
+        }
+        // The programs install the handler, the libraries and what
+        // they include (the runtime but its tests' runner) don't.
+        let cpp = Path::new(dir).join("temper.out/cpp");
+        for library in ["a", "b", "c"] {
+            let main = fs::read_to_string(cpp.join(library).join("main.cpp")).unwrap();
+            assert!(main.contains("install_stack_traces()"), "{main}");
+            for entry in fs::read_dir(cpp.join(library)).unwrap() {
+                let path = entry.unwrap().path();
+                let name = path.file_name().unwrap().to_string_lossy().to_string();
+                if !(name.ends_with(".cpp") || name.ends_with(".hpp"))
+                    || ["main.cpp", "test.cpp"].contains(&name.as_str())
+                {
+                    continue;
+                }
+                let text = fs::read_to_string(&path).unwrap();
+                assert!(!text.contains("stack_trace"), "{}", path.display());
+            }
+        }
+        for entry in fs::read_dir(cpp.join("temper-core")).unwrap() {
+            let path = entry.unwrap().path();
+            let text = fs::read_to_string(&path).unwrap();
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            let named = text.contains("set_terminate")
+                || (text.lines()).any(|l| l.starts_with("#include") && l.contains("stack_trace"));
+            let allowed = [
+                "stack_trace.hpp",
+                "stack_trace.cpp",
+                "stack_trace.cmake",
+                "test_main.hpp",
+            ];
+            assert!(!named || allowed.contains(&name.as_str()), "{name}");
+        }
+    });
+}
+
 /// `test`'s flags: `-w`, `--library`, several `-b` (each backend's
 /// summary, then the total, as Kotlin's), and `--ignorefile` and
 /// `.temperignore` beside `.gitignore`.

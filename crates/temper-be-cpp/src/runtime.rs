@@ -97,6 +97,18 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/string.hpp"),
     ),
     (
+        "stack_trace.cmake",
+        include_str!("../runtime/temper-core/stack_trace.cmake"),
+    ),
+    (
+        "stack_trace.cpp",
+        include_str!("../runtime/temper-core/stack_trace.cpp"),
+    ),
+    (
+        "stack_trace.hpp",
+        include_str!("../runtime/temper-core/stack_trace.hpp"),
+    ),
+    (
         "string_builder.hpp",
         include_str!("../runtime/temper-core/string_builder.hpp"),
     ),

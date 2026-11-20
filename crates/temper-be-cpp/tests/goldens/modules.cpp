@@ -511,8 +511,10 @@ void global_init_client() {
 #include "modules/machine.hpp"
 #include "modules/init.hpp"
 #include "modules/client.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   modules::global_init_deep();
   modules::global_init_helpers();
   modules::global_init_core();
@@ -540,6 +542,9 @@ add_library(modules helpers/deep.cpp helpers.cpp core.cpp state.cpp parts/regex.
 target_include_directories(modules PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(modules PUBLIC Threads::Threads std)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(modules-main main.cpp)
 target_link_libraries(modules-main PRIVATE modules)
+temper_stack_traces(modules-main)
 

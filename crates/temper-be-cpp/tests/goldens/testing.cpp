@@ -105,8 +105,10 @@ void localsATestAssigns(std::shared_ptr<temper_std::Test> const &) {
 
 // main.cpp
 #include "testing/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   testing::global_init_init();
 }
 
@@ -115,6 +117,7 @@ int main() {
 #include "temper-core/test_main.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   testing::global_init_init();
   temper_std::global_init_testing();
   return temper::core::run_tests({
@@ -159,8 +162,11 @@ add_library(testing init.cpp)
 target_include_directories(testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(testing PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(testing-main main.cpp)
 target_link_libraries(testing-main PRIVATE testing)
+temper_stack_traces(testing-main)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   if(NOT TARGET std)
@@ -170,5 +176,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../std/CMakeLists.txt)
   target_compile_definitions(testing-test PRIVATE TEMPER_TESTS)
   target_include_directories(testing-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
   target_link_libraries(testing-test PRIVATE Threads::Threads std)
+  temper_stack_traces(testing-test)
 endif()
 

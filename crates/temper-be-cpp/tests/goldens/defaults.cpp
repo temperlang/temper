@@ -329,8 +329,10 @@ void global_init_init() {
 // main.cpp
 #include "defaults/helpers.hpp"
 #include "defaults/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   defaults::global_init_helpers();
   defaults::global_init_init();
 }
@@ -349,6 +351,9 @@ add_library(defaults helpers.cpp init.cpp)
 target_include_directories(defaults PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(defaults PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(defaults-main main.cpp)
 target_link_libraries(defaults-main PRIVATE defaults)
+temper_stack_traces(defaults-main)
 

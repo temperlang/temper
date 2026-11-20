@@ -40,14 +40,21 @@ namespace temper {
             if (state.done.load(std::memory_order_relaxed)) {
                 return;
             }
-            running = true;
-            try {
-                init();
-            } catch (...) {
-                running = false;
-                throw;
-            }
-            running = false;
+            // Unset however `init` ends, by a guard rather than a `catch`,
+            // which would unwind the stack before an uncaught exception
+            // ends the process, losing its trace (`stack_trace.hpp`).
+            struct Running {
+                bool& flag;
+                explicit Running(bool& running_flag) : flag(running_flag) {
+                    flag = true;
+                }
+                ~Running() {
+                    flag = false;
+                }
+                Running(Running const&) = delete;
+                Running& operator=(Running const&) = delete;
+            } guard(running);
+            init();
             state.done.store(true, std::memory_order_release);
         }
 

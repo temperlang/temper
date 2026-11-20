@@ -132,8 +132,10 @@ void global_init_init() {
 // support.hpp: host code, as it is
 // main.cpp
 #include "work/init.hpp"
+#include "temper-core/stack_trace.hpp"
 
 int main() {
+  temper::core::install_stack_traces();
   work::global_init_init();
 }
 
@@ -151,6 +153,9 @@ add_library(work init.cpp _connected.cpp)
 target_include_directories(work PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(work PUBLIC Threads::Threads)
 
+# Stack traces for the programs, not the library (temper-core/stack_trace.hpp).
+include(${CMAKE_CURRENT_SOURCE_DIR}/../temper-core/stack_trace.cmake)
 add_executable(work-main main.cpp)
 target_link_libraries(work-main PRIVATE work)
+temper_stack_traces(work-main)
 

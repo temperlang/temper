@@ -60,6 +60,30 @@ backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise. A Temper failure throws
 `temper::core::TemperBubble`, a `std::exception`.
 
+When a program built by `temper run -b cpp` panics or lets a bubble
+escape, it prints a stack trace of the generated functions, from where
+it happened out to the top level, and a test that panics under
+`temper test -b cpp` has one in its failure:
+
+```
+uncaught bubble: bubble
+  at b::f(int) (temper.out/cpp/b/init.cpp:10)
+  at operator() (temper.out/cpp/b/init.cpp:19)
+  at b::global_init_init() (temper.out/cpp/b/init.cpp:16)
+```
+
+Its CMake project finds C++23's `std::stacktrace` where the compiler has
+it (GCC 13 and later; MSVC 2022's should work, but isn't tested yet),
+giving files and lines in debug builds. Elsewhere (GCC 12, Clang with
+libc++), `backtrace()` names the exported functions, and gives the
+others' offsets for `addr2line`; with neither (musl, MinGW), there's no
+trace. Only the programs Temper
+generates (`main.cpp` and `test.cpp`) install the handler, a
+process-wide `std::set_terminate`; a library never does. An application
+can opt in with `temper::core::install_stack_traces()` from
+`<temper-core/stack_trace.hpp>`, and CMake's `TEMPER_STACK_TRACES=OFF`
+skips the check.
+
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
 > out of this list; the C++ backend passes every functional test
 > ([inconsistencies](../inconsistencies.md#i3-c-support)).
