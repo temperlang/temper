@@ -10,8 +10,10 @@
 //! `temper run -b cpp` builds the `LIBRARY-main` target the same way,
 //! quietly, and runs it. Where that project doesn't configure (a
 //! library using one that didn't build), each library builds alone, in
-//! `LIBRARY/build`, so one library's problem stays its own.
+//! `LIBRARY/build`, so one library's problem stays its own. Both build
+//! through ccache where it's installed ([`ccache`]).
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use temper_tmpl::tools::{junit_file, limit_memory, output, program, tool, tool_output};
@@ -19,6 +21,7 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(workspace),
+    note: Some(note),
     test,
     run,
 };
@@ -66,7 +69,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
                 .arg(&root)
                 .arg("-B")
                 .arg(&tree)
-                .arg("-DCMAKE_BUILD_TYPE=Debug"),
+                .arg("-DCMAKE_BUILD_TYPE=Debug")
+                .args(launcher()),
             "cmake",
         )
         .is_ok_and(|o| o.status.success());
@@ -117,6 +121,7 @@ fn build(dir: &Path, library: &str, target: &str) -> Result<PathBuf, String> {
             let configure = output(
                 Command::new(&cmake)
                     .args(["-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Debug"])
+                    .args(launcher())
                     .current_dir(&here),
                 "cmake",
             )?;
@@ -137,6 +142,49 @@ fn build(dir: &Path, library: &str, target: &str) -> Result<PathBuf, String> {
         return Err(format!("the build failed\n{}", tool_output(&made)));
     }
     Ok(programs.join(format!("{target}{}", std::env::consts::EXE_SUFFIX)))
+}
+
+/// The ccache that C++ builds go through, CMake's compiler launcher:
+/// `ccache` where it's on `PATH`, unless `TEMPER_NO_CCACHE` is set or
+/// `CMAKE_CXX_COMPILER_LAUNCHER` names a launcher of the user's own,
+/// which CMake reads itself.
+fn ccache() -> Option<PathBuf> {
+    let var = |name| std::env::var(name).ok();
+    let path = std::env::var_os("PATH");
+    choose_ccache(
+        var("TEMPER_NO_CCACHE").as_deref(),
+        var("CMAKE_CXX_COMPILER_LAUNCHER").as_deref(),
+        path.as_deref(),
+    )
+}
+
+/// [`ccache`], given `TEMPER_NO_CCACHE`, `CMAKE_CXX_COMPILER_LAUNCHER`,
+/// and `PATH`; each set but empty is unset.
+fn choose_ccache(
+    no_ccache: Option<&str>,
+    launcher: Option<&str>,
+    path: Option<&OsStr>,
+) -> Option<PathBuf> {
+    let set = |v: Option<&str>| v.is_some_and(|v| !v.is_empty());
+    if set(no_ccache) || set(launcher) {
+        return None;
+    }
+    let name = format!("ccache{}", std::env::consts::EXE_SUFFIX);
+    std::env::split_paths(path?)
+        .map(|dir| dir.join(&name))
+        .find(|file| file.is_file())
+}
+
+/// CMake's options for [`ccache`], where it's used.
+fn launcher() -> Vec<String> {
+    (ccache().into_iter())
+        .map(|c| format!("-DCMAKE_CXX_COMPILER_LAUNCHER={}", c.display()))
+        .collect()
+}
+
+/// What `temper test -b cpp` says of [`ccache`], once.
+fn note() -> Option<String> {
+    ccache().map(|_| "C++ builds go through ccache (TEMPER_NO_CCACHE=1 turns it off)".to_string())
 }
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
@@ -162,7 +210,54 @@ fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
 
 #[cfg(test)]
 mod tests {
-    use super::choose_jobs;
+    use super::{choose_ccache, choose_jobs};
+    use std::ffi::OsString;
+    use std::path::PathBuf;
+
+    /// A directory holding an executable `ccache`, and a `PATH` of an
+    /// empty directory and it.
+    fn fake_path(test: &str) -> (PathBuf, OsString) {
+        let root = std::env::temp_dir().join(format!("be-cpp-{}-{test}", std::process::id()));
+        let (empty, bin) = (root.join("empty"), root.join("bin"));
+        std::fs::create_dir_all(&empty).unwrap();
+        std::fs::create_dir_all(&bin).unwrap();
+        let ccache = bin.join(format!("ccache{}", std::env::consts::EXE_SUFFIX));
+        std::fs::write(&ccache, "").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&ccache, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        (ccache, std::env::join_paths([empty, bin]).unwrap())
+    }
+
+    #[test]
+    fn ccache_where_installed() {
+        let (ccache, path) = fake_path("installed");
+        assert_eq!(choose_ccache(None, None, Some(&path)), Some(ccache));
+        // Set but empty is unset.
+        let (ccache, path) = fake_path("empty-vars");
+        assert_eq!(choose_ccache(Some(""), Some(""), Some(&path)), Some(ccache));
+    }
+
+    #[test]
+    fn ccache_not_installed() {
+        let (_, path) = fake_path("missing");
+        let empty = std::env::split_paths(&path).next().unwrap();
+        let path = std::env::join_paths([empty]).unwrap();
+        assert_eq!(choose_ccache(None, None, Some(&path)), None);
+        assert_eq!(choose_ccache(None, None, None), None);
+    }
+
+    #[test]
+    fn ccache_turned_off() {
+        let (_, path) = fake_path("off");
+        // `TEMPER_NO_CCACHE`, whatever it's set to.
+        assert_eq!(choose_ccache(Some("1"), None, Some(&path)), None);
+        assert_eq!(choose_ccache(Some("0"), None, Some(&path)), None);
+        // A launcher of the user's own, which CMake reads itself.
+        assert_eq!(choose_ccache(None, Some("sccache"), Some(&path)), None);
+    }
 
     #[test]
     fn jobs_by_default() {

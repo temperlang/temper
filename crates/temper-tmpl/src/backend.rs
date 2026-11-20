@@ -45,6 +45,9 @@ pub struct Backend {
 pub struct Tools {
     /// Readies `dir` once, before any library's tests run.
     pub prepare: Option<Prepare>,
+    /// What `temper test` says once, before the results, of how the
+    /// tools build (C++'s ccache), if anything.
+    pub note: Option<fn() -> Option<String>>,
     /// Runs a library's tests.
     pub test: fn(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults,
     /// Runs a library's top level, as `temper run` does: building what

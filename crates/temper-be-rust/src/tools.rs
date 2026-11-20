@@ -19,6 +19,7 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(workspace),
+    note: None,
     test,
     run,
 };

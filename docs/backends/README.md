@@ -73,7 +73,17 @@ target_precompile_headers(myapp PRIVATE <ordable/init.hpp>)
 target_precompile_headers(myapp PRIVATE <temper-core/core.hpp>)
 ```
 
-Keep it `PRIVATE`: GCC takes one precompiled header per file.
+Keep it `PRIVATE`: GCC takes one precompiled header per file. With
+ccache, set `sloppiness = pch_defines,time_macros`, or files built
+with a precompiled header never hit. Generated CMake projects don't
+precompile: their targets compile one to five files, mostly code
+rather than headers, so building the header costs more than it saves.
+
+`temper test -b cpp` and `temper run -b cpp` build through ccache
+where it's installed, unless `TEMPER_NO_CCACHE` is set or
+`CMAKE_CXX_COMPILER_LAUNCHER` names another launcher.
+`TEMPER_CXX_JOBS` sets how many files compile at once (one per CPU,
+four at most, by default).
 
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
 > out of this list; the C++ backend passes every functional test

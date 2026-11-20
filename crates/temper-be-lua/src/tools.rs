@@ -14,6 +14,7 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(write_luaunit),
+    note: None,
     test,
     run,
 };

@@ -845,6 +845,14 @@ fn cmake_builds_a_library() {
     });
 }
 
+/// Where `ccache` is on `PATH`, as `temper test -b cpp` looks for it.
+#[cfg(feature = "cpp")]
+fn ccache_installed() -> bool {
+    let name = format!("ccache{}", std::env::consts::EXE_SUFFIX);
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    std::env::split_paths(&path).any(|dir| dir.join(&name).is_file())
+}
+
 /// `temper test -b cpp` builds a library's tests with CMake and runs
 /// them, reading the JUnit XML they write, where CMake is installed
 /// (skipped otherwise; required with `TEMPER_REQUIRE_CHECKERS`). A
@@ -877,7 +885,37 @@ fn test_a_library_in_cpp() {
         ),
     ];
     with_library("cpp-tests", &files, |dir| {
-        let (code, out, err) = tempest(&["test", "-b", "cpp", dir]);
+        // Through ccache, where it's installed and no launcher's set,
+        // saying so once.
+        let tested = Command::new(env!("CARGO_BIN_EXE_temper"))
+            .args(["test", "-b", "cpp", dir])
+            .env_remove("CMAKE_CXX_COMPILER_LAUNCHER")
+            .env_remove("TEMPER_NO_CCACHE")
+            .output()
+            .unwrap();
+        let (code, out, err) = (
+            tested.status.code().unwrap(),
+            String::from_utf8_lossy(&tested.stdout).into_owned(),
+            String::from_utf8_lossy(&tested.stderr).into_owned(),
+        );
+        let cache = Path::new(dir).join("temper.out/cpp/.build/tree/CMakeCache.txt");
+        let launcher = |cache: &Path| {
+            let text = fs::read_to_string(cache).unwrap();
+            (text.lines())
+                .find_map(|l| l.strip_prefix("CMAKE_CXX_COMPILER_LAUNCHER:"))
+                .map(str::to_string)
+        };
+        let said = out.matches("through ccache").count();
+        match ccache_installed() {
+            true => {
+                assert_eq!(said, 1, "{out}");
+                assert!(launcher(&cache).is_some_and(|l| l.contains("ccache")));
+            }
+            false => {
+                assert_eq!(said, 0, "{out}");
+                assert_eq!(launcher(&cache), None);
+            }
+        }
         assert!(out.contains("  failed  b - expected"), "{out}{err}");
         assert!(
             out.to_lowercase().contains(CLASS_ASSERT_FAILED),
@@ -896,16 +934,21 @@ fn test_a_library_in_cpp() {
         }
         assert_eq!((count(&cpp, "a.dir"), count(&cpp, "std.dir")), (1, 1));
         // A `TEMPER_CXX_JOBS` that isn't a number of jobs fails the
-        // build, saying so.
+        // build, saying so; with `TEMPER_NO_CCACHE`, it's configured
+        // without ccache, saying nothing of it.
         let wrong = Command::new(env!("CARGO_BIN_EXE_temper"))
             .args(["test", "-b", "cpp", dir])
             .env("TEMPER_CXX_JOBS", "two")
+            .env_remove("CMAKE_CXX_COMPILER_LAUNCHER")
+            .env("TEMPER_NO_CCACHE", "1")
             .output()
             .unwrap();
         let out = String::from_utf8_lossy(&wrong.stdout);
         let why = "TEMPER_CXX_JOBS must be a whole number above 0, not two";
         assert!(out.contains(why), "{out}");
         assert_eq!(wrong.status.code(), Some(1));
+        assert!(!out.contains("ccache"), "{out}");
+        assert_eq!(launcher(&cache), None);
     });
 }
 
