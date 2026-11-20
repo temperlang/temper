@@ -1796,6 +1796,38 @@ fn co_await_interop() {
     });
 }
 
+/// `tests/host/statics.cpp`, host code against the `classes` program's
+/// headers, checks that a class's static storage, `temper_statics`, is
+/// private, so host code reads static fields only through their
+/// accessors (`Rect::unit()`) and can't reassign them.
+#[test]
+fn statics_private() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    kit::with_stack(move || {
+        let case = cases().into_iter().find(|c| c.key == "classes").unwrap();
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-statics");
+        let src = out.join("src");
+        for file in generate(&case) {
+            let path = src.join(&file.path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, &file.text).unwrap();
+        }
+        let mut command = Command::new(&gxx);
+        command
+            .args(STRICT)
+            .arg("-fsyntax-only")
+            .arg("-isystem")
+            .arg(runtime_dir())
+            .arg("-I")
+            .arg(&src)
+            .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/statics.cpp"));
+        check("g++, host/statics.cpp", command);
+    });
+}
+
 /// `tests/host/net.cpp` plugs a client of its own into std `net` from
 /// host code, answering as the test server does from threads of its own,
 /// then runs the `netresponse` tests' generated libraries, with std's

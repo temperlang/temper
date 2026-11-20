@@ -3,7 +3,7 @@ package classes;
 public final class Rect implements Shape {
     public final int w;
     public final int h;
-    public static final Rect unit = new Rect(1, 1);
+    private static final Rect unit = new Rect(1, 1);
 
     public Rect(int w, int h) {
         this.w = w;
@@ -28,6 +28,10 @@ public final class Rect implements Shape {
 
     public int getH() {
         return this.h;
+    }
+
+    public static Rect getUnit() {
+        return Rect.unit;
     }
 
     public static final class Builder {

@@ -14,9 +14,9 @@ public final class Picker {
             callout.accept("a value in quotes", false);
         }
         if (inQuote) {
-            return new Both(TextEscaper.instance, QuoteEscaper.instance);
+            return new Both(TextEscaper.getInstance(), QuoteEscaper.getInstance());
         } else {
-            return TextEscaper.instance;
+            return TextEscaper.getInstance();
         }
     }
 

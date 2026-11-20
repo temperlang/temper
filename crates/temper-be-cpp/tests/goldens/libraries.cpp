@@ -53,11 +53,15 @@ struct Grid : public std::enable_shared_from_this<Grid> {
 };
 
 struct Casing : public std::enable_shared_from_this<Casing> {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<Casing>> first;
     static temper::core::GlobalSlot<std::shared_ptr<Casing>> last;
     static temper::core::GlobalSlot<temper::core::Str> mark;
   };
+  friend void global_init_init();
+
+ public:
   temper::core::Str name;
   static std::shared_ptr<Casing> const & first();
   static std::shared_ptr<Casing> const & last();
@@ -716,7 +720,7 @@ static core::NullableParam<int32_t> count(int32_t n) {
 
 static std::shared_ptr<Casing> casing(int32_t n) {
   if (n > 0) {
-    return Casing::temper_statics::first.value;
+    return Casing::first();
   } else {
     return nullptr;
   }

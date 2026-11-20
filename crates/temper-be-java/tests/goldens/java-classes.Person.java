@@ -4,9 +4,9 @@ public final class Person implements Polite, Named {
     public final String name;
     public final boolean loud;
     public int level;
-    public static String banner;
-    public static final int count = 3;
-    public static final int twice = Person.count * 2;
+    static String banner;
+    private static final int count = 3;
+    private static final int twice = Person.count * 2;
 
     public Person(String name, boolean loud) {
         this.name = name;
@@ -36,6 +36,18 @@ public final class Person implements Polite, Named {
 
     public void setLevel(int newLevel) {
         this.level = newLevel;
+    }
+
+    public static String getBanner() {
+        return Person.banner;
+    }
+
+    public static int getCount() {
+        return Person.count;
+    }
+
+    public static int getTwice() {
+        return Person.twice;
     }
 
     public String greet(int times) {

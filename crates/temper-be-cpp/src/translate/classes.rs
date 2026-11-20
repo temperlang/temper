@@ -1,6 +1,7 @@
 //! Classes and interfaces, laid out as Kotlin's C++ backend lays them
 //! out: a `struct` each, in the module's header, with every member
-//! public, and its member functions defined in the module's `.cpp`.
+//! public but static fields' storage, and its member functions defined
+//! in the module's `.cpp`.
 //!
 //! - A class is a `struct` deriving `std::enable_shared_from_this` of
 //!   itself, or its interfaces; an interface derives
@@ -12,11 +13,13 @@
 //!   as Kotlin's; a field that implements an interface's property is its
 //!   getter `get_x()`, and setter `set_x(value)` if it's a `var`. Getters
 //!   and setters are `get_x()` and `set_x(value)`. Static fields are
-//!   storage, as Kotlin's (#636): `GlobalSlot`s in a struct of the
-//!   class's, `temper_statics`, which the init function sets where the
-//!   class's source puts them, and a public one's accessor, `static T
-//!   const &x()`, which runs the init first; static functions are static
-//!   member functions.
+//!   storage, as Kotlin's (#636): `GlobalSlot`s in a private struct of
+//!   the class's, `temper_statics`, which the init function, its friend,
+//!   sets where the class's source puts them, and a public one's
+//!   accessor, `static T const &x()`, which runs the init first, and
+//!   which code outside the class and init reads too, as host code must;
+//!   Kotlin's struct is public. Static functions are static member
+//!   functions.
 //! - A constructor is `static std::shared_ptr<C> make(…)`, which makes
 //!   the object (`self`) and runs the constructor's body on it.
 //! - An interface's members are virtual; one without a body is pure
@@ -516,12 +519,19 @@ impl Translator<'_> {
                 }
             }
         }
+        // Private, so only the class's members, and the module's init,
+        // which sets them, reach them; other code reads the accessors.
         if !slots.is_empty() {
+            let module = temper_tmpl::analysis::home(p, decl).unwrap_or(DeclId::NONE);
+            let init = super::init_name(p, module);
             lines.insert(
                 0,
                 (
                     "temper_statics".into(),
-                    format!("  struct temper_statics {{\n{slots}  }};\n"),
+                    format!(
+                        " private:\n  struct temper_statics {{\n{slots}  }};\n  \
+                         friend void {init}();\n\n public:\n"
+                    ),
                 ),
             );
         }

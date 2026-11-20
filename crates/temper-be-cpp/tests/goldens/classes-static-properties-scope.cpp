@@ -13,10 +13,14 @@ void global_init_init();
 struct Simple;
 
 struct Simple : public std::enable_shared_from_this<Simple> {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<temper::core::Str> value;
     static temper::core::GlobalSlot<temper::core::Str> other;
   };
+  friend void global_init_init();
+
+ public:
   static temper::core::Str const & value();
   static temper::core::Str const & other();
   static std::shared_ptr<Simple> make();
@@ -51,11 +55,11 @@ std::shared_ptr<Simple> Simple::make() {
 }
 
 static core::Str readSimpleValue() {
-  return Simple::temper_statics::value.value;
+  return Simple::value();
 }
 
 static core::Str readSimpleOther() {
-  return Simple::temper_statics::other.value;
+  return Simple::other();
 }
 
 void global_init_init() {

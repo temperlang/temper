@@ -21,8 +21,16 @@ export const stringFromCodePoints = (codePoints) => {
     for (const codePoint of codePoints) {
         denySurrogate(codePoint);
     }
-    // TODO Append in batches if codePoints is long?
-    return String.fromCodePoint(...codePoints);
+    // In chunks, as spreading overflows the stack past about 120,000.
+    const chunk = 8192;
+    if (codePoints.length <= chunk) {
+        return String.fromCodePoint(...codePoints);
+    }
+    const parts = [];
+    for (let i = 0; i < codePoints.length; i += chunk) {
+        parts.push(String.fromCodePoint(...codePoints.slice(i, i + chunk)));
+    }
+    return parts.join("");
 };
 
 /**

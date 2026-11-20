@@ -31,8 +31,9 @@
 //! - `runs`: without Maven, `javac` (or `JAVAC`) compiles
 //!   `temper-core` (`crates/temper-be-java/runtime/temper-core`) once, for Java 8
 //!   as its `pom.xml` says, into `CARGO_TARGET_TMPDIR`, reused until its
-//!   sources or the JDK change; then every generated package, and a
-//!   harness that runs `module-state` from 8 threads, in one more `javac`,
+//!   sources or the JDK change; then every generated package, a
+//!   harness that runs `module-state` from 8 threads, and host code
+//!   (`tests/host/`) using `async-turns` and `java-statics`, in one more `javac`,
 //!   for Java 17, with every lint as an error ([`LINTS`]), or one per
 //!   batch where two libraries share a name; then `java` (or
 //!   `JAVA`) runs each program's main class, which logs what the test
@@ -116,7 +117,12 @@ fn cases() -> Vec<Case> {
 
 /// This crate's own programs, in `tests/programs/`: Temper, with what
 /// each logs in a log block.
-const OWN: &[&str] = &["java-classes", "java-nullables", "java-generics"];
+const OWN: &[&str] = &[
+    "java-classes",
+    "java-nullables",
+    "java-generics",
+    "java-statics",
+];
 
 /// The lines of a program's log block.
 fn log_block(text: &str) -> Vec<String> {
@@ -413,6 +419,7 @@ fn runs() {
         let mut batches: Vec<(Vec<String>, Vec<PathBuf>)> = Vec::new();
         let mut mains = Vec::new();
         let mut interop = None;
+        let mut statics = None;
         // std's main sources, for each batch with a case that imports
         // std's modules.
         let mut std_sources = Vec::new();
@@ -455,6 +462,16 @@ fn runs() {
                 fs::copy(source, &host).unwrap();
                 batches[at].1.push(host);
                 interop = Some((case, at));
+            }
+            // Host code that uses `java-statics`' statics from outside.
+            if case.key == "java-statics" {
+                let host = out.join("src/statics/Statics.java");
+                fs::create_dir_all(host.parent().unwrap()).unwrap();
+                let source =
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/Statics.java");
+                fs::copy(source, &host).unwrap();
+                batches[at].1.push(host);
+                statics = Some((case, at));
             }
         }
         let threads = out.join("src/threads/ModuleStateThreads.java");
@@ -514,6 +531,25 @@ fn runs() {
                 )
                 .collect();
             run("host interop", at, "interop.Interop", &expected);
+        }
+        // `tests/host/Statics.java`: loading `Policy` first runs the
+        // module's init, whose logs come first; its statics read right
+        // through getters, and none is a field it reaches.
+        if let Some((case, at)) = statics {
+            let expected: Vec<String> = (case.expected.iter().cloned())
+                .chain(
+                    [
+                        "standard a b",
+                        "default [a b]",
+                        "textOnly []",
+                        "strict false",
+                        "literals 3 policy true",
+                        "public static fields []",
+                    ]
+                    .map(String::from),
+                )
+                .collect();
+            run("host statics", at, "statics.Statics", &expected);
         }
         // Init logs as `module-state` does, then the threads tick.
         run(

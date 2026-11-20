@@ -16,7 +16,8 @@
 //! (`temper_be_testkit::LOOPS_AND_CLASSES`), and of generators, `async`,
 //! and `await`, as `function*`s (`temper_be_testkit::ASYNC`),
 //! and this crate's own programs (`tests/programs/`): `hoisting`, for what JS
-//! writes as statements before the expression they're in.
+//! writes as statements before the expression they're in, and `big-lists`,
+//! list builders taking more values than a call's arguments can hold.
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
 //!   with its root module's `.internal.js` matching the golden in
@@ -85,9 +86,7 @@ fn cases() -> Vec<Case> {
     let mut cases = kit::cases_with("js", &kit::PROGRAMS, &tests);
     // This crate's own programs, in `tests/programs/`.
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
-    // A list, so more may follow.
-    #[allow(clippy::single_element_loop)]
-    for name in ["hoisting"] {
+    for name in ["hoisting", "big-lists"] {
         let path = dir.join(format!("{name}.temper.md"));
         let text = fs::read_to_string(&path).unwrap();
         cases.push(Case {

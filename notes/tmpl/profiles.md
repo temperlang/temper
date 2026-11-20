@@ -417,7 +417,8 @@ choices, made by the translator for now:
   constructors and static functions of exported types, and accessors
   call it first, where it does anything; `main.cpp` calls it too.
   Module values and statics are `GlobalSlot`s (`temper_globals::x`,
-  `Type::temper_statics::x`), constructed first by the init, and users
+  `Type::temper_statics::x`, private to its class), constructed first
+  by the init, and users
   read them through `x()` and `Type::x()`, `const &`s, except an
   exported `var` that functions write, whose accessor gives a copy read
   under the module's lock.

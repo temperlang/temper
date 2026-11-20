@@ -26,7 +26,7 @@ public final class JsonAdaptersGlobal {
     }
 
     static <T> T decode(JsonAdapter<T> adapter, String text) {
-        return adapter.decodeFromJson(JsonGlobal.parseJson(text), NullInterchangeContext.instance);
+        return adapter.decodeFromJson(JsonGlobal.parseJson(text), NullInterchangeContext.getInstance());
     }
 
     static <T> void roundTrip(JsonAdapter<T> adapter, T value) {

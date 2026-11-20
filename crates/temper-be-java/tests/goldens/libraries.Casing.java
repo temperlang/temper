@@ -2,8 +2,8 @@ package libraries;
 
 public final class Casing {
     public final String name;
-    public static final Casing first = new Casing("first");
-    public static final Casing last = named("last");
+    private static final Casing first = new Casing("first");
+    private static final Casing last = named("last");
     private static final String mark = "#";
 
     public boolean eq(Casing other) {
@@ -28,5 +28,13 @@ public final class Casing {
 
     public String getName() {
         return this.name;
+    }
+
+    public static Casing getFirst() {
+        return Casing.first;
+    }
+
+    public static Casing getLast() {
+        return Casing.last;
     }
 }

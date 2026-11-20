@@ -76,18 +76,26 @@ struct Escaper : public virtual temper::core::AnyValueBase {
 };
 
 struct TextEscaper : public virtual Escaper {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<TextEscaper>> instance;
   };
+  friend void global_init_init();
+
+ public:
   static std::shared_ptr<TextEscaper> const & instance();
   static std::shared_ptr<TextEscaper> make();
   temper::core::Str applyString(temper::core::Str const & x) const override;
 };
 
 struct QuoteEscaper : public virtual Escaper {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<QuoteEscaper>> instance;
   };
+  friend void global_init_init();
+
+ public:
   static std::shared_ptr<QuoteEscaper> const & instance();
   static std::shared_ptr<QuoteEscaper> make();
   temper::core::Str applyString(temper::core::Str const & x) const override;
@@ -330,9 +338,9 @@ std::shared_ptr<Escaper> Picker::escaperFor(bool inQuote, std::function<void(cor
     callout(TEMPER_STR("a value in quotes"), false);
   }
   if (inQuote) {
-    return core::to_base<Escaper>(Both::make(core::to_base<Escaper>(TextEscaper::temper_statics::instance.value), core::to_base<Escaper>(QuoteEscaper::temper_statics::instance.value)));
+    return core::to_base<Escaper>(Both::make(core::to_base<Escaper>(TextEscaper::instance()), core::to_base<Escaper>(QuoteEscaper::instance())));
   } else {
-    return core::to_base<Escaper>(TextEscaper::temper_statics::instance.value);
+    return core::to_base<Escaper>(TextEscaper::instance());
   }
 }
 
@@ -430,9 +438,9 @@ static core::Str greet(core::Str const & name, core::Str const & who) {
     std::shared_ptr<Buffer> collector = Quoting::newCollector();
     {
       collector->append(TEMPER_STR("say 'hi "));
-      collector->append(QuoteEscaper::temper_statics::instance.value->applyString(TextEscaper::temper_statics::instance.value->applyString(name)));
+      collector->append(QuoteEscaper::instance()->applyString(TextEscaper::instance()->applyString(name)));
       collector->append(TEMPER_STR("' to "));
-      collector->append(TextEscaper::temper_statics::instance.value->applyString(who));
+      collector->append(TextEscaper::instance()->applyString(who));
       Quoting::enact(Mark::make(TEMPER_STR("bang")), collector);
     }
     return Quoting::fromCollector(collector);
@@ -443,12 +451,12 @@ static core::Str branch(bool c, core::Str const & x) {
   {
     std::shared_ptr<Buffer> collector = Quoting::newCollector();
     {
-      collector->append(TextEscaper::temper_statics::instance.value->applyString(x));
+      collector->append(TextEscaper::instance()->applyString(x));
       if (c) {
         collector->append(TEMPER_STR("''"));
       }
       collector->append(TEMPER_STR(" '"));
-      collector->append(QuoteEscaper::temper_statics::instance.value->applyString(TextEscaper::temper_statics::instance.value->applyString(x)));
+      collector->append(QuoteEscaper::instance()->applyString(TextEscaper::instance()->applyString(x)));
       collector->append(TEMPER_STR("'"));
     }
     return Quoting::fromCollector(collector);
@@ -466,9 +474,9 @@ static core::Str each(std::shared_ptr<std::vector<core::Str>> const & xs) {
           core::Str x = core::List::get<core::Str>(xs, i);
           i = core::Int::add(i, 1);
           collector->append(TEMPER_STR("'"));
-          collector->append(QuoteEscaper::temper_statics::instance.value->applyString(TextEscaper::temper_statics::instance.value->applyString(x)));
+          collector->append(QuoteEscaper::instance()->applyString(TextEscaper::instance()->applyString(x)));
           collector->append(TEMPER_STR("' "));
-          collector->append(TextEscaper::temper_statics::instance.value->applyString(x));
+          collector->append(TextEscaper::instance()->applyString(x));
           collector->append(TEMPER_STR(";"));
         }
       }
@@ -488,12 +496,12 @@ static core::Str counted(int32_t n, core::Str const & x) {
           continue;
         }
         collector->append(TEMPER_STR("'"));
-        collector->append(QuoteEscaper::temper_statics::instance.value->applyString(TextEscaper::temper_statics::instance.value->applyString(x)));
+        collector->append(QuoteEscaper::instance()->applyString(TextEscaper::instance()->applyString(x)));
         collector->append(TEMPER_STR("'"));
         if (i == 4) {
           break;
         }
-        collector->append(TextEscaper::temper_statics::instance.value->applyString(x));
+        collector->append(TextEscaper::instance()->applyString(x));
         collector->append(TEMPER_STR(","));
       }
     }
@@ -509,7 +517,7 @@ static core::Str attribute(bool c, core::Str const & x) {
       if (c) {
         return TEMPER_STR("none");
       }
-      collector->append(QuoteEscaper::temper_statics::instance.value->applyString(TextEscaper::temper_statics::instance.value->applyString(x)));
+      collector->append(QuoteEscaper::instance()->applyString(TextEscaper::instance()->applyString(x)));
       collector->append(TEMPER_STR("'"));
     }
     return Quoting::fromCollector(collector);

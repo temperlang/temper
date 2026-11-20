@@ -37,9 +37,13 @@ struct Shape : public virtual temper::core::AnyValueBase {
 };
 
 struct Rect : public virtual Shape {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<Rect>> unit;
   };
+  friend void global_init_init();
+
+ public:
   int32_t w;
   int32_t h;
   static std::shared_ptr<Rect> const & unit();

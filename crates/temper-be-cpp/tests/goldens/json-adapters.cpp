@@ -618,7 +618,7 @@ static core::Str encode(std::shared_ptr<temper_std::JsonAdapter<T>> const & adap
 
 template <class T>
 static T decode(std::shared_ptr<temper_std::JsonAdapter<T>> const & adapter, core::Str const & text) {
-  return adapter->decodeFromJson(temper_std::parseJson(text), core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
+  return adapter->decodeFromJson(temper_std::parseJson(text), core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
 }
 
 template <class T>

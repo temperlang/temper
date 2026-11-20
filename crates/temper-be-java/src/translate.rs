@@ -1592,9 +1592,16 @@ impl<'a> Translator<'a> {
             {
                 self.connected(target, &[])?
             }
+            // Through its getter where its field is out of reach.
             Node::GetStatic { target } => {
                 let class = self.class_name(p.decls.get(target).owner);
-                Expr::name(class).member(self.name(target))
+                match self.reads_static(target) {
+                    true => Expr::name(class).member(self.name(target)),
+                    false => {
+                        let getter = self.static_getter(target).unwrap_or_default();
+                        Expr::name(class).method(getter, Vec::new())
+                    }
+                }
             }
             Node::New { ctor, args, .. }
                 if is_external(p, ctor) && library_of(p, ctor) == "core"

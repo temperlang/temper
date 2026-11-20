@@ -283,6 +283,8 @@ pub struct Translator<'a> {
     pub mutating: HashSet<String>,
     /// The library's namespace.
     namespace: String,
+    /// The module translated.
+    here: DeclId,
     /// Each class's and interface's node, by its declaration.
     class_nodes: HashMap<DeclId, NodeId>,
     /// The class or interface whose member is being translated.
@@ -383,6 +385,7 @@ impl<'a> Translator<'a> {
             test_names: HashMap::new(),
             mutating: HashSet::new(),
             namespace: names::namespace(&p.library.name),
+            here: DeclId::NONE,
             class_nodes,
             class: None,
             this_expr: None,
@@ -439,6 +442,21 @@ impl<'a> Translator<'a> {
         self.effects.node_with(self.p, id, self.names)
     }
 
+    /// Whether code here may read a static field's storage, private to
+    /// its class ([`classes`]): in the class's members, the module's init
+    /// (its friend), or for a private field, wherever Temper reads it.
+    fn reaches_statics(&self, field: DeclId) -> bool {
+        let p = self.p;
+        let owner = p.decls.get(field).owner;
+        let in_group = self.group.as_ref().is_some_and(|g| g.top);
+        p.decls.get(field).facts.contains(Facts::PRIVATE)
+            || !in_group
+                && (self.class.as_ref().is_some_and(|c| c.decl == owner)
+                    || !self.in_function
+                        && !is_external(p, field)
+                        && temper_tmpl::analysis::home(p, owner) == Some(self.here))
+    }
+
     /// A module-level declaration: its name, or another library's,
     /// qualified by its namespace.
     fn top(&self, decl: DeclId) -> Expr {
@@ -449,7 +467,7 @@ impl<'a> Translator<'a> {
     /// namespace, and a class's static member or constructor with its
     /// class's name (`Rect::make`). Module values kept past the init and
     /// static fields are their storage (`temper_globals::x.value`,
-    /// `Rect::temper_statics::unit.value`). Inside a class's member, a
+    /// `Rect::temper_statics::unit.value`; [`Self::reaches_statics`]). Inside a class's member, a
     /// name that one of its members takes, which would hide it, is
     /// qualified too.
     fn top_name(&self, decl: DeclId) -> String {
@@ -660,6 +678,7 @@ impl<'a> Translator<'a> {
     /// Translates a module.
     pub fn module(&mut self, module: &Module) -> R<Translated> {
         let p = self.p;
+        self.here = module.decl;
         for d in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             let name = self.names.get(d);
             if !is_external(p, d) && names::reserved_for_implementation(name) {
@@ -2790,6 +2809,12 @@ impl<'a> Translator<'a> {
             {
                 self.call = id;
                 return self.connected(target, &[]);
+            }
+            // A class's members, and the module's init, read its storage;
+            // other code, the public accessor, as host code does.
+            Node::GetStatic { target } if !self.reaches_statics(target) => {
+                let class = self.top_name(p.decls.get(target).owner);
+                Expr::name(format!("{class}::{}", self.name(target))).call(Vec::new())
             }
             Node::GetStatic { target } => self.top(target),
             // A class's `shared_ptr` converts to its interfaces' through

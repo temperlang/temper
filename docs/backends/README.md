@@ -51,7 +51,8 @@ Getting started with each language is in the
 Translates Temper to C++14: a header and a source file per module
 (`LIBRARY/init.hpp` and `init.cpp`), a `main.cpp` that runs the
 library, and a CMake project. Objects are `std::shared_ptr`s, and a
-library's namespace is its name.
+library's namespace is its name. A class's static properties are read
+through accessor functions (`Rect::unit()`), read-only.
 
 Generated code compiles without warnings under `-Wall -Wextra
 -Wpedantic -Werror`, and is tested under AddressSanitizer, UBSan, and
@@ -152,7 +153,10 @@ method per test. Temper provides soft assertions within tests.
 Translates Temper to Java 17 source, and a Maven project
 ([Java 17]). A module's top level goes in a `…Global` class, with a
 `…Main` class to run it, and each type gets its own file. Classes also
-get a `Builder`, since Java has no named arguments.
+get a `Builder`, since Java has no named arguments. A class's public
+static properties are read through static getters
+(`Policy.getStandard()`, `isX()` for a `Boolean`), never fields, so host
+code can't reassign them.
 
 Still to write up: how function types translate to single-method
 interfaces, how nullable types translate, primitive and boxed types,

@@ -85,7 +85,7 @@ public final class ClassesGlobal {
         console.log(q.describe());
         console.log(Integer.toString(q.getArea()));
         console.log(Integer.toString(r.scaled(2).scaled(3).getArea()));
-        console.log(Rect.unit.scaled(5).toString());
+        console.log(Rect.getUnit().scaled(5).toString());
         Counter c = Counter.zero();
         c.bump().bump();
         console.log(Integer.toString(c.count));
