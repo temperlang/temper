@@ -88,3 +88,18 @@ fn programs_translate_to_tmpl() {
         goldens.finish();
     });
 }
+
+/// The huge program (`kit::huge`), nightly (`TEMPER_HUGE`), and its
+/// small shape (`kit::split_shape`) log, on the interpreter, what they
+/// expect of every backend, so each backend's split code is checked
+/// against the interpreter.
+#[test]
+fn huge_logs_as_the_interpreter_does() {
+    kit::with_stack(|| {
+        let cases = [Some(kit::split_shape()), kit::huge_on().then(kit::huge)];
+        for case in cases.into_iter().flatten() {
+            let (failure, output) = kit::interpret(&case);
+            assert_eq!((failure, output), (None, case.expected), "{}", case.key);
+        }
+    });
+}

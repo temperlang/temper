@@ -526,6 +526,15 @@ pub fn usize_to_i32(u: usize) -> Result<i32> {
 
 pub fn ignore<T>(_: T) {}
 
+// Parts
+
+/// Runs `part`, a part of a function too big for rustc to compile
+/// quickly in one (a long list literal, or a long run of statements), as
+/// a function of its own, which a closure is.
+pub fn part<T>(part: impl FnOnce() -> T) -> T {
+    part()
+}
+
 // Int
 
 pub fn int_div(a: i32, b: i32) -> Result<i32> {

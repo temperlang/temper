@@ -278,6 +278,8 @@ pub struct Translator<'a> {
     locals: HashSet<String>,
     /// Each test's function's name, by its declaration.
     pub test_names: HashMap<DeclId, String>,
+    /// What code splits under ([`tree::Limits`]): the variant's.
+    pub limits: tree::Limits,
     /// The names of members that may change their object, which aren't
     /// `const` ([`mutating_members`]).
     pub mutating: HashSet<String>,
@@ -381,6 +383,7 @@ impl<'a> Translator<'a> {
             deferred: 0,
             locals: HashSet::new(),
             test_names: HashMap::new(),
+            limits: tree::LIMITS,
             mutating: HashSet::new(),
             namespace: names::namespace(&p.library.name),
             class_nodes,
@@ -1167,7 +1170,7 @@ impl<'a> Translator<'a> {
                 aliases: vec![(CORE.into(), "temper::core".into())],
                 items,
                 init: String::new(),
-                init_body: init,
+                init_body: tree::group_runs(init, &self.limits),
                 tests: test_functions,
             },
             exported_variables,
@@ -2743,11 +2746,27 @@ impl<'a> Translator<'a> {
                 let args = self.program_args(p.nodes.list(args))?;
                 Expr::name(format!("{}{targs}::make", self.top_name(class))).call(args)
             }
-            // `core::List::make<T>(…)`, as Kotlin's.
+            // `core::List::make<T>(…)`, as Kotlin's; a long one in parts
+            // ([`tree::Limits::list_part`]).
             Node::ListLit { items } => {
                 let targs = self.template_args(p.types.args(p.nodes.ty(id)))?;
                 let items = self.program_args(p.nodes.list(items))?;
-                self.core(&format!("List::make{targs}")).call(items)
+                let make = self.core(&format!("List::make{targs}"));
+                if items.len() <= self.limits.list_part {
+                    make.call(items)
+                } else {
+                    let result = self.ty(p.nodes.ty(id))?;
+                    let mut rest = items.into_iter();
+                    let mut parts = Vec::new();
+                    while rest.len() > 0 {
+                        let part: Vec<Expr> = rest.by_ref().take(self.limits.list_part).collect();
+                        parts.push(Expr::Run {
+                            result: result.clone(),
+                            body: vec![Stmt::Return(Some(make.clone().call(part)))],
+                        });
+                    }
+                    self.core(&format!("List::make_parts{targs}")).call(parts)
+                }
             }
             Node::CallMethod {
                 method,

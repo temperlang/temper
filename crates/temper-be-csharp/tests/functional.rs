@@ -744,8 +744,9 @@ fn runs() {
         // (`types/int/basics` and `types/float/basics`) take others.
         // A library with host code names its own namespace (`namespace
         // Work`), so it can't be renamed, and compiles on its own.
-        let (tested, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| c.tests.is_some());
+        let (tested, cases): (Vec<Case>, Vec<Case>) = kit::with_huge(cases())
+            .into_iter()
+            .partition(|c| c.tests.is_some());
         let (hosted, mut cases): (Vec<Case>, Vec<Case>) =
             cases.into_iter().partition(|c| !c.host_files.is_empty());
         // std's `testing` needs MSTest, so std's assembly does, and the

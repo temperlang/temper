@@ -886,6 +886,112 @@ pub fn template_work_growth(
     (c - b) as f64 / (b - a) as f64
 }
 
+/// A program past compilers' limits on one function's or literal's
+/// size, as libraries' generated data is: [`shaped`] at [`HUGE`], a list
+/// literal of 8,500 strings, a map literal of 1,000 entries, a string
+/// literal of over 70,000 bytes in UTF-8 (and in Java's modified UTF-8),
+/// much of it not ASCII, and 6,000 statements. Its output is too big for
+/// goldens; backends split such code (Java's 64 KB methods and
+/// 65,535-byte constants, MSVC's literals, Lua 5.1's constants, and
+/// compile times superlinear in a function's size in g++ and rustc), and
+/// run it as they run the other programs, but only nightly
+/// ([`with_huge`]).
+pub fn huge() -> Case {
+    shaped("huge", HUGE)
+}
+
+/// [`huge`]'s program at [`SHAPE`]'s sizes, small enough for a golden:
+/// backends translate it with their limits set low, so it splits as
+/// [`huge`] does at theirs, on every push.
+pub fn split_shape() -> Case {
+    shaped("split-shape", SHAPE)
+}
+
+/// How big [`shaped`] makes its program's parts.
+#[derive(Clone, Copy, Debug)]
+pub struct Sizes {
+    /// Its list literal's items.
+    pub items: usize,
+    /// Its map literal's entries.
+    pub entries: usize,
+    /// How many times its long string repeats a 21-character text.
+    pub repeats: usize,
+    /// Its top level's statements after its literals.
+    pub statements: usize,
+}
+
+/// [`huge`]'s: its list past Java's 64 KB a method and the 8,192 items a
+/// part in Lua, and its statements past Java's 64 KB a method alone.
+pub const HUGE: Sizes = Sizes {
+    items: 8500,
+    entries: 1000,
+    repeats: 3500,
+    statements: 6000,
+};
+
+/// [`split_shape`]'s.
+pub const SHAPE: Sizes = Sizes {
+    items: 10,
+    entries: 6,
+    repeats: 2,
+    statements: 10,
+};
+
+/// A module whose top level has a list literal, a map literal, a long
+/// string, and many statements, of `sizes`, and logs what it made.
+pub fn shaped(name: &str, sizes: Sizes) -> Case {
+    let item = |i: usize| format!("item {i} é✓𝄞");
+    let mut text = format!("# {name}\n\n    let items: List<String> = [\n");
+    for i in 0..sizes.items {
+        text += &format!("      \"{}\",\n", item(i));
+    }
+    text += "    ];\n    let table = new Map<String, String>([\n";
+    for i in 0..sizes.entries {
+        text += &format!("      new Pair(\"k{i}\", \"{}\"),\n", item(i));
+    }
+    let long = "abcdefghij é✓𝄞 \\u{0} ".repeat(sizes.repeats);
+    let pieces = sizes.repeats + 1;
+    text += &format!("    ]);\n    let long = \"{long}\";\n");
+    text += "    let built = new ListBuilder<String>();\n";
+    for i in 0..sizes.statements {
+        text += &format!("    built.add(\"{}\");\n", item(i));
+    }
+    let last = sizes.items - 1;
+    let last_entry = sizes.entries - 1;
+    let last_built = sizes.statements - 1;
+    text += "    let all = built.toList();\n";
+    text += &format!(
+        "    console.log(\"${{items.length.toString()}} ${{items[{last}]}}\");\n\
+         \x20   console.log(\"${{table.length.toString()}} ${{table[\"k{last_entry}\"] orelse \"none\"}}\");\n\
+         \x20   console.log(long.split(\"✓\").length.toString());\n\
+         \x20   console.log(\"${{all.length.toString()}} ${{all[{last_built}]}}\");\n"
+    );
+    let expected = vec![
+        format!("{} {}", sizes.items, item(last)),
+        format!("{} {}", sizes.entries, item(last_entry)),
+        pieces.to_string(),
+        format!("{} {}", sizes.statements, item(last_built)),
+    ];
+    Case::inline(name, &format!("{name}.temper.md"), text, expected)
+}
+
+/// `cases`, and [`huge`] after them where `TEMPER_HUGE` is set
+/// ([`huge_on`]), for a backend's runs.
+pub fn with_huge(mut cases: Vec<Case>) -> Vec<Case> {
+    if huge_on() {
+        cases.push(huge());
+    }
+    cases
+}
+
+/// Whether to run [`huge`]: `TEMPER_HUGE` set and not empty, as
+/// nightly.yml sets it. It adds up to a minute to a backend's runs,
+/// mostly compiling it, so pushes check [`split_shape`]'s goldens
+/// instead.
+pub fn huge_on() -> bool {
+    env::var_os("TEMPER_HUGE").is_some_and(|v| !v.is_empty())
+}
+
 /// The goldens, beside std's, that show Temper's version as it is rather
 /// than as the sentinel, so each backend's spellings of it in a package
 /// file stay pinned: the `modules` program's, which depends on core and

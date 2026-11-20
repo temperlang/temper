@@ -706,7 +706,7 @@ fn runs() {
         let _ = fs::remove_dir_all(&out);
         let dir = out.join("lua");
         kit::copy_dir(&runtime(), &dir.join("temper-core"), &[]);
-        let mut cases = cases();
+        let mut cases = kit::with_huge(cases());
         // std `net`'s tests, with LuaSocket's client where a Lua loads it,
         // else as Kotlin's suite expects them to fail on Lua.
         let net = net_lua(&lua);
@@ -1189,5 +1189,52 @@ fn template_work_is_linear() {
             |program| drop(translate(program, &LUA).unwrap()),
         );
         assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
+
+/// `kit::split_shape`'s program translated with limits low enough that
+/// its list and map literals go in parts (`translate::Limits`), matching
+/// its golden, `split-shape.lua`, on every push; long lines are `tree`'s
+/// unit tests'. `huge_splits` and `runs` take the huge program at the
+/// real limits, nightly (`TEMPER_HUGE`).
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let variant = temper_be_lua::Variant {
+            name: LUA.name,
+            profile: LUA.profile.clone(),
+            rules: names::RULES,
+            lua_version: LUA.lua_version,
+            limits: temper_be_lua::translate::Limits { list_part: 4 },
+        };
+        let case = kit::split_shape();
+        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let source = (files.iter())
+            .find(|f| f.text.contains("list_of_parts"))
+            .unwrap_or(&files[0]);
+        assert!(
+            source
+                .text
+                .contains("temper.list_of_parts((function() return {")
+        );
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("split-shape.lua", &source.text);
+        goldens.finish();
+    });
+}
+
+/// The huge program (`kit::huge`)'s list literal in parts, each a
+/// function of its own, under Lua 5.1's constants a function; `runs`
+/// runs it. Nightly (`TEMPER_HUGE`).
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        assert!(text.contains("temper.list_of_parts((function() return {"));
     });
 }

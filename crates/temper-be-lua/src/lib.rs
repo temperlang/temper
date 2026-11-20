@@ -81,6 +81,9 @@ pub struct Variant {
     /// The oldest Lua its rockspec accepts, as Kotlin's says (`lua >=
     /// 5.1`), though `goto` needs 5.2 or LuaJIT.
     pub lua_version: &'static str,
+    /// What code splits under ([`translate::Limits`]); tests set them
+    /// low, to see the split shape on small programs.
+    pub limits: translate::Limits,
 }
 
 /// The first variant: Kotlin-compatible API and names, pretty bodies.
@@ -94,6 +97,7 @@ pub static LUA: Variant = Variant {
     },
     rules: names::RULES,
     lua_version: "5.1",
+    limits: translate::LIMITS,
 };
 
 /// Every variant, by name.
@@ -198,6 +202,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let mut tests = Vec::new();
     for module in &p.modules {
         let mut translator = translate::Translator::new(p, &names, module);
+        translator.limits = variant.limits;
         let access = translate::TestAccess::of(p, module);
         let chunk = translator.module(module, &access)?;
         let (file, test) = match module.path.as_str() {

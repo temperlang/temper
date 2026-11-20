@@ -95,6 +95,9 @@ pub struct Variant {
     pub rules: NamingRules,
     /// The C++ standard its output keeps to, as `g++ -std=` names it.
     pub standard: &'static str,
+    /// What code splits under ([`tree::Limits`]); tests set them low, to
+    /// see the split shape on small programs.
+    pub limits: tree::Limits,
 }
 
 /// The first variant: Kotlin-compatible API and names, pretty bodies,
@@ -110,6 +113,7 @@ pub static CPP: Variant = Variant {
     },
     rules: names::RULES,
     standard: "c++14",
+    limits: tree::LIMITS,
 };
 
 /// Every variant, by name.
@@ -247,6 +251,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let mut translator = translate::Translator::new(p, &names, module);
         translator.test_names = test_names.clone();
         translator.mutating = mutating.clone();
+        translator.limits = variant.limits;
         let mut translated = translator.module(module)?;
         translated.source.includes = vec![format!("<{library}/{stem}.hpp>")];
         if translated.uses_mutex {

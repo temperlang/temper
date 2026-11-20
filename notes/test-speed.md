@@ -396,6 +396,37 @@ a load of 4 to 9 (2026-11-19, a scratch cache).
 In CI the first run on `main` after this fills each job's cache; its
 summary shows the hit rate.
 
+## The huge program, nightly (2026-11-20)
+
+The testkit's `huge` program (an 8,500-item list, a 1,000-entry map,
+an 80 KB string, and 6,000 statements) checks that code split under
+compilers' limits compiles and runs on every backend. In every
+backend's `runs` it added about 40 s to C++'s on every push, mostly
+g++ over it, and 7 to 24 s to Lua's and Java's (below). Now only
+`TEMPER_HUGE` (non-empty) adds it, to `runs` and to the
+`huge_splits` checks (4 to 10 s each, translating it in a debug
+build); nightly.yml sets it in `cpp` and in `huge`, a job per other
+backend. Every push instead translates `split_shape`, the same program
+with ten items, six entries, and ten statements, with each backend's
+limits set low (C++ `tree::Limits`, Rust `tree::Limits`, Lua
+`translate::Limits`, as Java's `split::Limits` and its `java-split`
+golden), against a golden, in under a second; long strings' pieces in
+C++ and long lines in Lua, fixed by MSVC and LuaLS, are those
+`tree`s' unit tests.
+
+Locally, with other agents' builds running (load 3 to 7), the
+functional tests' own times, huge off and on:
+
+| Backend | Off | On |
+| --- | --- | --- |
+| Lua (`runs`) | 12 to 21 s | 19 to 41 s |
+| Java (all) | 36 s | 60 s |
+| Rust (all, crates cached) | 32 s | 37 s |
+
+C++ with it on wasn't run here: its sanitized builds can't run under
+the memory cap that compiling the huge program needs locally; its
+`runs` took 133 s off (ccache warm).
+
 ## `tempest test -b`
 
 Built (2026-11-06): `tempest test -b BACKEND` builds the libraries into

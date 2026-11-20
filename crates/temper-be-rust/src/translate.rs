@@ -189,6 +189,8 @@ pub struct Translator<'a> {
     /// The paths of the modules whose items take host code ([`host`]),
     /// so the crate declares their `_connected` modules.
     pub host_dirs: BTreeSet<String>,
+    /// What code splits under ([`crate::tree::Limits`]): the variant's.
+    pub limits: crate::tree::Limits,
     /// The group of local functions whose method is being translated
     /// ([`groups`]).
     group: Option<groups::GroupHere>,
@@ -238,6 +240,7 @@ impl<'a> Translator<'a> {
             cells: temper_tmpl::analysis::assigned_captures(p),
             runs_async: false,
             host_dirs: BTreeSet::new(),
+            limits: crate::tree::LIMITS,
             group: None,
         }
     }
@@ -973,7 +976,10 @@ impl<'a> Translator<'a> {
             },
             _ => None,
         };
-        let run = Expr::Closure(Vec::new(), Block::new(stmts, tail));
+        let run = Expr::Closure(
+            Vec::new(),
+            Block::new(crate::tree::group_runs(stmts, &self.limits), tail),
+        );
         let call = Expr::path("INIT_ONCE")
             .method("get_or_init", vec![run])
             .method("clone", Vec::new());
@@ -2283,13 +2289,31 @@ impl<'a> Translator<'a> {
                 Expr::Return(Some(Box::new(fail())))
             }
             Node::Panic {} => Expr::Macro("panic".into(), Vec::new()),
-            // `Arc::new(vec![…])`, as Kotlin's.
+            // `Arc::new(vec![…])`, as Kotlin's; a long one in parts
+            // ([`crate::tree::Limits::list_part`]).
             Node::ListLit { items } => {
                 let mut xs = Vec::new();
                 for &item in p.nodes.list(items) {
                     xs.push(self.expr(item, Want::Owned)?);
                 }
-                self.arc(Expr::Macro("vec".into(), xs))
+                if xs.len() <= self.limits.list_part || !xs.iter().all(Expr::is_plain) {
+                    return Ok(self.arc(Expr::Macro("vec".into(), xs)));
+                }
+                let mut rest = xs.into_iter();
+                let mut parts = Vec::new();
+                while rest.len() > 0 {
+                    let part = Expr::Macro(
+                        "vec".into(),
+                        rest.by_ref().take(self.limits.list_part).collect(),
+                    );
+                    let made = Expr::Closure(Vec::new(), Block::new(Vec::new(), Some(part)));
+                    parts.push(Expr::path("temper_core::part").call(vec![made]));
+                }
+                let all = Expr::Macro("vec".into(), parts)
+                    .method("into_iter", Vec::new())
+                    .method("flatten", Vec::new())
+                    .method("collect::<Vec<_>>", Vec::new());
+                self.arc(all)
             }
             Node::FunctionLiteral { decl, params, body } => self.literal(id, decl, params, body)?,
             Node::FunctionRef { target } => self.function_ref(target)?,

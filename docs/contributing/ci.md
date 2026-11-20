@@ -98,16 +98,18 @@ they're the cue to fix a platform before release.
 
 A scheduled run skips what an earlier one already tested on the same
 code: a first job, `recent`, reads the date of `main`'s latest commit,
-and the nightly `cpp` and `platforms-quick` jobs run only if it's under
-26 hours old (a day, with room for GitHub's delays in starting
-scheduled runs), and the weekly `platforms` only if it's under 8 days.
+and the nightly `cpp`, `huge`, and `platforms-quick` jobs run only if
+it's under 26 hours old (a day, with room for GitHub's delays in
+starting scheduled runs), and the weekly `platforms` only if it's
+under 8 days.
 `libraries` and `latest-checkers` run every night regardless, since
 they test other repositories' `main` and the checkers' latest
 releases. Run by hand, everything runs.
 
 Besides its Linux jobs (more C++ compilers, `strict` by g++ 12 and 14
-and clang++ at -O2 and g++ 14 at -O3, real libraries, and the checkers'
-latest releases; below), it tests, natively, each other
+and clang++ at -O2 and g++ 14 at -O3, the huge program on every
+backend, real libraries, and the checkers' latest releases; below), it
+tests, natively, each other
 platform [binaries.yml](../../.github/workflows/binaries.yml) releases
 for, one job each from one definition, in two tiers:
 
@@ -307,6 +309,22 @@ tests with one checker at a time at its latest release (TypeScript,
 pyright, mypy, or LuaLS), the rest at their pins. They block nothing: a
 failure, named for its checker and with the versions in its summary,
 is the cue to fix the backend or the tests before bumping that pin.
+
+## The huge program, nightly
+
+Generated data can be past compilers' limits: Java's 64 KB methods and
+65,535-byte constants, MSVC's 16,380-byte literals, Lua 5.1's
+constants a function, and g++'s and rustc's time and memory,
+superlinear in a function's size. Backends split such code under
+limits of their own (each backend's `Limits`), and the testkit's
+`huge` program, an 8,500-item list, a 1,000-entry map, an 80 KB
+string, and 6,000 statements, checks it compiles and runs. That adds
+up to a minute to a backend's tests, so only nightly.yml sets
+`TEMPER_HUGE`, which adds it to every backend's `runs` (`cpp` for C++,
+`huge` for the rest, a job each). Every push checks the same splits
+on a small copy of it (`split_shape`, beside Java's `java-split`), each
+backend's limits set low, against goldens; set `TEMPER_HUGE=1`
+locally to run the huge program too.
 
 ## Real libraries' Python types, nightly
 

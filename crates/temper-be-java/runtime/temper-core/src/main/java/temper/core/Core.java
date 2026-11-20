@@ -703,6 +703,21 @@ public final class Core {
     }
 
     /**
+     * A list literal too big for one method, as its parts in order, each
+     * made by a method of its own.
+     * @return an immutable list of every part's elements
+     * @param <E> the element type
+     */
+    @SafeVarargs
+    public static <E> List<E> listOfParts(List<? extends E> ... parts) {
+        ArrayList<E> all = new ArrayList<>();
+        for (List<? extends E> part : parts) {
+            all.addAll(part);
+        }
+        return listCopyOfTrusted(all);
+    }
+
+    /**
      * Emulates List.copyOf() in Java 9+.
      * @return an immutable list
      * @param <E> the element type

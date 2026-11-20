@@ -370,6 +370,12 @@ function temper.listed_getor(list, index, orvalue) end
 ---@return integer
 function temper.list_length(list) end
 
+---A list literal too long for one function, from its parts.
+---@generic T
+---@param ... T[]
+---@return T[]
+function temper.list_of_parts(...) end
+
 ---A list's length.
 ---@generic T
 ---@param list T[]

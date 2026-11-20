@@ -27,6 +27,13 @@
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
+# And the huge program (temper-be-testkit's `huge`: an 8,500-item list,
+# a 1,000-entry map, an 80 KB string, and 6,000 statements, past
+# compilers' limits) through every backend's tests (`TEMPER_HUGE`): in
+# `cpp` for C++, and in `huge` for the rest, so code split under those
+# limits compiles and runs; per-push CI checks only its small shape's
+# goldens (`split_shape`), with each backend's limits set low.
+#
 # And an early warning for the checkers of generated code: the backends'
 # tests with the latest TypeScript, pyright, mypy, or LuaLS in place of
 # the version ci.yml pins, one job each, so a failure names its checker.
@@ -55,9 +62,9 @@ jobs:
   # Whether main has changed lately, so a scheduled run skips what an
   # earlier one already tested on the same code: `day`, "true" if its
   # latest commit is under 26 hours old (a day, with room for GitHub's
-  # delays in starting scheduled runs), for `cpp` and `platforms-quick`;
-  # and `week`, under 8 days, for `platforms`. The jobs check for
-  # "false", so if this fails they run. `libraries` and
+  # delays in starting scheduled runs), for `cpp`, `huge`, and
+  # `platforms-quick`; and `week`, under 8 days, for `platforms`. The
+  # jobs check for "false", so if this fails they run. `libraries` and
   # `latest-checkers` run every night regardless: they test other
   # repositories' main branches and the checkers' latest releases.
   recent:
@@ -151,11 +158,51 @@ jobs:
           TEMPER_STRICT_CXX: ${{ matrix.strict-cxx }}
           ASAN_OPTIONS: detect_leaks=0
           TEMPER_REQUIRE_CHECKERS: "1"
+          # The huge program in `runs` and `huge_splits`.
+          TEMPER_HUGE: "1"
       - if: ${{ !cancelled() }}
         uses: ./.github/actions/ccache
         with:
           name: cpp-${{ matrix.id }}
           stage: end
+
+  # The huge program through each backend's tests but C++'s, which `cpp`
+  # runs it in: a job each, with that backend's toolchains, as ci.yml's
+  # `backends`, and the interpreter's run of it once, in `py`'s. It adds
+  # up to a minute to a backend's tests, so per-push CI leaves it out.
+  huge:
+    needs: recent
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || (github.event.schedule == '41 3 * * *' && needs.recent.outputs.day != 'false')) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [py, js, lua, java, csharp, rust]
+    name: huge, ${{ matrix.backend }}
+    # Pinned, as ci.yml's, for Ubuntu's lua5.4, which is 5.4.6 on noble.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TEMPER_REQUIRE_CHECKERS: "1"
+      TEMPER_HUGE: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+        # The Rust backend's tests lay out generated crates with
+        # rustfmt and lint them with clippy.
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: huge-${{ matrix.backend }}
+      - uses: ./.github/actions/toolchains
+        with:
+          backends: ${{ matrix.backend }}
+      - name: Tests
+        run: cargo test --locked -p temper-be-${{ matrix.backend }} --test functional
+      - name: The interpreter's run
+        if: ${{ !cancelled() && matrix.backend == 'py' }}
+        run: cargo test --locked -p temper-be-testkit --test programs huge_logs
 
   # The list of libraries, as a matrix. When there are many, this is
   # where to shard or rotate them (a slice per night), keeping each job

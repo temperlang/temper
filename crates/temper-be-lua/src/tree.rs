@@ -5,7 +5,7 @@
 //! rather than tabs. Double quotes unless a string has more of them than
 //! of single quotes, no semicolons, parentheses only where precedence needs
 //! them, and a blank line around each function. It doesn't break long
-//! lines.
+//! lines, but a list's or a string's literal past [`LONG_LINE`].
 //!
 //! Strings are bytes in Lua, so a literal is the string's UTF-8: printable
 //! characters as they are, and control, invisible, and bidirectional
@@ -16,6 +16,13 @@ use std::fmt::Write;
 
 /// The line width past which a returned table takes a line per field.
 pub const WIDTH: usize = 80;
+
+/// The longest line a list or string literal takes as it is: LuaLS
+/// reads a position as its line times 10,000 plus its column, so past
+/// 10,000 columns it loses track of scopes ("Undefined global" for a
+/// local declared after such a line). A longer list takes a line per
+/// item, and a longer string is pieces joined with `..`, a line each.
+pub const LONG_LINE: usize = 8000;
 
 /// A binary operator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -145,6 +152,33 @@ pub enum Expr {
 }
 
 impl Expr {
+    /// Adds the names it uses to `out`: the locals and upvalues a
+    /// function made of it would need.
+    pub fn names_into<'a>(&'a self, out: &mut std::collections::HashSet<&'a str>) {
+        match self {
+            Expr::Name(n) => {
+                out.insert(n);
+            }
+            Expr::Int(_) | Expr::Float(_) | Expr::Str(_) | Expr::Bool(_) | Expr::Nil => {}
+            Expr::Call(f, args) => {
+                f.names_into(out);
+                args.iter().for_each(|a| a.names_into(out));
+            }
+            Expr::Member(x, _) | Expr::Unary(_, x) | Expr::Cast(x, _) => x.names_into(out),
+            Expr::Index(a, b) | Expr::Bin(_, a, b) => {
+                a.names_into(out);
+                b.names_into(out);
+            }
+            Expr::Concat(xs) | Expr::Array(xs) => xs.iter().for_each(|x| x.names_into(out)),
+            Expr::Table(fields) => fields.iter().for_each(|(_, x)| x.names_into(out)),
+            Expr::Invoke(x, _, args) => {
+                x.names_into(out);
+                args.iter().for_each(|a| a.names_into(out));
+            }
+            Expr::Function { body, .. } => body.names_into(out),
+        }
+    }
+
     pub fn name(name: impl Into<String>) -> Expr {
         Expr::Name(name.into())
     }
@@ -406,12 +440,27 @@ pub fn expr(e: &Expr, min: u8) -> String {
         Expr::Name(n) => n.clone(),
         Expr::Int(n) => int_literal(*n),
         Expr::Float(f) => float_literal(*f),
+        Expr::Str(s) if s.len() > LONG_LINE / 4 => {
+            let whole = string_literal(s);
+            if whole.len() <= LONG_LINE {
+                return whole;
+            }
+            // Each piece's bytes escaped take at most four times as many.
+            let pieces = temper_tmpl::chunks::split_text(s, LONG_LINE / 4, char::len_utf8);
+            let pieces: Vec<String> = pieces.into_iter().map(string_literal).collect();
+            format!("({})", pieces.join(" ..\n"))
+        }
         Expr::Str(s) => string_literal(s),
         Expr::Bool(b) => b.to_string(),
         Expr::Nil => "nil".into(),
         Expr::Call(f, args) => {
             let args: Vec<String> = args.iter().map(|a| expr(a, TOP)).collect();
-            format!("{}({})", expr(f, CALL), args.join(", "))
+            // A function called at once, in parentheses, as Lua needs.
+            let f = match &**f {
+                Expr::Function { .. } => format!("({})", expr(f, TOP)),
+                _ => expr(f, CALL),
+            };
+            format!("{f}({})", args.join(", "))
         }
         Expr::Member(obj, name) => {
             let o = prefix(obj);
@@ -489,7 +538,22 @@ pub fn expr(e: &Expr, min: u8) -> String {
         Expr::Array(items) if items.is_empty() => "{}".into(),
         Expr::Array(items) => {
             let items: Vec<String> = items.iter().map(|i| expr(i, TOP)).collect();
-            format!("{{ {} }}", items.join(", "))
+            let size: usize = items.iter().map(|i| i.len() + 2).sum();
+            if size > LONG_LINE {
+                // A line per item, indented a step from the line the
+                // list starts on, its own indent unknown here.
+                let mut out = String::from("{\n");
+                for item in &items {
+                    for line in item.lines() {
+                        let _ = writeln!(out, "  {line}");
+                    }
+                    out.insert(out.len() - 1, ',');
+                }
+                out.push('}');
+                out
+            } else {
+                format!("{{ {} }}", items.join(", "))
+            }
         }
         Expr::Table(entries) => {
             let entries: Vec<String> = (entries.iter())
@@ -807,6 +871,39 @@ mod tests {
 
     fn n(s: &str) -> Expr {
         Expr::name(s)
+    }
+
+    /// Literals past [`LONG_LINE`]: a string in pieces of at most a
+    /// quarter of it, never splitting a character, a line each, and a
+    /// list a line per item; shorter ones as they are.
+    #[test]
+    fn long_lines() {
+        let short = "a".repeat(LONG_LINE / 4 + 1);
+        assert_eq!(expr(&Expr::Str(short.clone()), 0), format!("\"{short}\""));
+        // 8,001 bytes: pieces of 2,000 bytes, but the first, which `é`
+        // would take past it.
+        let q = LONG_LINE / 4;
+        let text = format!("{}é{}", "a".repeat(q - 1), "a".repeat(6000));
+        let pieces = [
+            "a".repeat(q - 1),
+            format!("é{}", "a".repeat(q - 2)),
+            "a".repeat(q),
+            "a".repeat(q),
+            "aa".into(),
+        ];
+        let pieces: Vec<String> = pieces.iter().map(|p| string_literal(p)).collect();
+        let joined = format!("({})", pieces.join(" ..\n"));
+        assert_eq!(expr(&Expr::Str(text), 0), joined);
+        let item = Expr::Str("b".repeat(LONG_LINE / 4));
+        assert_eq!(
+            expr(&Expr::Array(vec![item.clone(); 2]), 0),
+            format!("{{ {0}, {0} }}", expr(&item, 0))
+        );
+        let lines = expr(&Expr::Array(vec![item.clone(); 4]), 0);
+        assert_eq!(
+            lines,
+            format!("{{\n{}}}", format!("  {},\n", expr(&item, 0)).repeat(4))
+        );
     }
 
     #[test]

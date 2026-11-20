@@ -1216,8 +1216,9 @@ fn runs() {
         let _ = fs::remove_dir_all(&out);
         let src = out.join("src");
         // Libraries with host code are each `work`, so each builds alone.
-        let (connected, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| !c.host_files.is_empty());
+        let (connected, cases): (Vec<Case>, Vec<Case>) = kit::with_huge(cases())
+            .into_iter()
+            .partition(|c| !c.host_files.is_empty());
         // Those that run as tests alone, and the rest also as programs.
         let (as_tests, cases): (Vec<Case>, Vec<Case>) =
             cases.into_iter().partition(|c| c.tests.is_some());
@@ -1871,5 +1872,77 @@ fn template_work_is_linear() {
             |program| drop(translate(program, &CPP).unwrap()),
         );
         assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
+
+/// `kit::split_shape`'s program translated with limits low enough that
+/// its list and map literals go in parts and its top level's statements
+/// in groups (`tree::Limits`), matching its golden, `split-shape.cpp`,
+/// on every push; long strings' pieces are `tree`'s unit tests'.
+/// `huge_splits` and `runs` take the huge program at the real limits,
+/// nightly (`TEMPER_HUGE`).
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let variant = temper_be_cpp::Variant {
+            name: CPP.name,
+            profile: CPP.profile.clone(),
+            rules: names::RULES,
+            standard: CPP.standard,
+            limits: temper_be_cpp::tree::Limits {
+                list_part: 4,
+                run: 6,
+                group: 4,
+            },
+        };
+        let case = kit::split_shape();
+        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let source = files.iter().find(|f| f.path.ends_with(".cpp")).unwrap();
+        for part in ["core::List::make_parts<", "[&]() -> void {"] {
+            assert!(source.text.contains(part), "{part}");
+        }
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("split-shape.cpp", &source.text);
+        goldens.finish();
+    });
+}
+
+/// The huge program (`kit::huge`) in parts: its list literals' items in
+/// lambdas (`tree::Limits::list_part`), its long string in pieces under
+/// MSVC's limits, and its top level's long run of statements in groups
+/// (`tree::group_runs`), so g++ takes seconds, not minutes, and MSVC
+/// takes it at all; `runs` runs it. Nightly (`TEMPER_HUGE`).
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        for part in [
+            "core::List::make_parts<",
+            "[&]() -> void {",
+            ".append(\"",
+            "\" \"",
+        ] {
+            assert!(text.contains(part), "{part}");
+        }
+        // No literal longer than MSVC's 16,380 bytes, even as written.
+        let (mut longest, mut at, mut quoted, mut escaped) = (0, 0, false, false);
+        for (i, c) in text.char_indices() {
+            match c {
+                _ if escaped => escaped = false,
+                '\\' if quoted => escaped = true,
+                '"' if quoted => {
+                    longest = longest.max(i - at);
+                    quoted = false;
+                }
+                '"' => (at, quoted) = (i + 1, true),
+                _ => {}
+            }
+        }
+        assert!(longest <= 16_380, "a literal of {longest} bytes");
     });
 }

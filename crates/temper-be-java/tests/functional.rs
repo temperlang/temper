@@ -121,6 +121,7 @@ const OWN: &[&str] = &[
     "java-nullables",
     "java-generics",
     "java-long-literals",
+    "java-split",
 ];
 
 /// The lines of a program's log block.
@@ -137,6 +138,38 @@ fn log_block(text: &str) -> Vec<String> {
 fn generate(case: &Case) -> Vec<OutFile> {
     translate(&kit::program_for(case, &JAVA.rules), &JAVA)
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// `java-split`'s module class translated with limits low enough that
+/// each of its literals and its static initializer split
+/// (`temper_be_java::split`), matching its golden,
+/// `java-split.split.java`; with the JVM's own limits it's as written
+/// (`goldens`).
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let variant = temper_be_java::Variant {
+            name: JAVA.name,
+            profile: JAVA.profile.clone(),
+            rules: temper_be_java::names::RULES,
+            java_release: JAVA.java_release,
+            limits: temper_be_java::split::Limits {
+                method: 40,
+                constants: 1_000_000,
+                list: 10,
+                part: 30,
+                string: 16,
+            },
+        };
+        let case = cases().into_iter().find(|c| c.key == "java-split").unwrap();
+        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let global = (files.iter())
+            .find(|f| f.path.ends_with("JavaSplitGlobal.java"))
+            .unwrap();
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("java-split.split.java", &global.text);
+        goldens.finish();
+    });
 }
 
 /// A library's package and class names' start, as Kotlin makes them.
@@ -411,7 +444,7 @@ fn runs() {
         let runtime = runtime_classes(&javac_tool, &version);
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-java");
         let _ = fs::remove_dir_all(&out);
-        let cases = cases();
+        let cases = kit::with_huge(cases());
         // Libraries of one name (`types/int/basics` and
         // `types/float/basics`) share a package, so each batch of
         // sources has each name once, with its own `javac`.
@@ -581,5 +614,28 @@ fn template_work_is_linear() {
             |program| drop(translate(program, &JAVA).unwrap()),
         );
         assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
+
+/// The huge program (`kit::huge`) under the JVM's limits: its big list
+/// in nested classes' parts, its long string in pieces, and its static
+/// initializer in groups; `runs` compiles and runs it. Nightly
+/// (`TEMPER_HUGE`); `split_shape` checks the shape on every push.
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        for part in [
+            "Core.<String>listOfParts(Part",
+            "String.join(\"\", ",
+            "Init1.run();",
+        ] {
+            assert!(text.contains(part), "{part}");
+        }
     });
 }

@@ -15,7 +15,9 @@ use temper_tmpl::{DeclId, DeclKind, Facts, Module, Node, NodeId, Program, QNames
 /// Core's connected declarations that, in C++, neither write nor read
 /// anything a call could change, beyond [`PURE_CORE`]: strings and string
 /// indices are values, and `Float64`'s functions are math, as Kotlin's
-/// marks them (`.pure()` and `.reads()` of values). Sorted.
+/// marks them (`.pure()` and `.reads()` of values), and a new `Pair`,
+/// which a map literal's entries are, so they needn't each be a local
+/// first. Sorted.
 const PURE_HERE: &[&str] = &[
     "core.empty()",
     "core.type Float64.abs()",
@@ -44,6 +46,7 @@ const PURE_HERE: &[&str] = &[
     "core.type Float64.sqrt()",
     "core.type Float64.tan()",
     "core.type Float64.tanh()",
+    "core.type Pair.constructor()",
     "core.type String.begin",
     "core.type String.countBetween()",
     "core.type String.get end()",

@@ -263,13 +263,7 @@ void global_init_init() {
     std::shared_ptr<High> high2c = core::to_base<High>(Low2::make(TEMPER_STR("to be")));
     std::shared_ptr<High> high3 = core::to_base<High>(Low3::make());
     std::shared_ptr<High> high3b = core::to_base<High>(Low3::make());
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high1b);
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value2 = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1b, high1c);
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value3 = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high2);
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value4 = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high2, high2b);
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value5 = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high2b, high2c);
-    std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>> value6 = core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high3);
-    std::shared_ptr<std::vector<std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>>>> pairs = core::List::make<std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>>>(value, value2, value3, value4, value5, value6, core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high3, high3b));
+    std::shared_ptr<std::vector<std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>>>> pairs = core::List::make<std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>>>(core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high1b), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1b, high1c), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high2), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high2, high2b), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high2b, high2c), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high1, high3), core::PairFactory::make<std::shared_ptr<High>, std::shared_ptr<High>>(high3, high3b));
     {
       int32_t length = core::List::length<std::shared_ptr<core::Pair<std::shared_ptr<High>, std::shared_ptr<High>>>>(pairs);
       int32_t i2 = 0;
