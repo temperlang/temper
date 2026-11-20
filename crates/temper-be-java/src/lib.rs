@@ -96,8 +96,8 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let java = {
-/// class: JavaConfig, … };`, as Kotlin's `JavaConfig`; and std's, as Kotlin's
+/// What a library's config may set for this backend, `export let java:
+/// JavaConfig = { … };`, as Kotlin's `JavaConfig`; and std's, as Kotlin's
 /// backends inject it.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "java",
@@ -106,18 +106,30 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "name",
             doc: "The library's Java name, which the package and the Maven artifact ID default to; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String,
         },
         temper_tmpl::Property {
             name: "package",
             doc: "The Java package, as `com.example.geometry`; else the Java name, as a package.",
+            kind: temper_tmpl::ConfigKind::String,
         },
         temper_tmpl::Property {
             name: "group",
             doc: "The Maven group ID; else the package.",
+            kind: temper_tmpl::ConfigKind::String,
         },
         temper_tmpl::Property {
             name: "artifact",
             doc: "The Maven artifact ID; else the Java name.",
+            kind: temper_tmpl::ConfigKind::String,
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "Maven packages that the library's host code uses, each `\"group:artifact:version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "group:artifact:version",
+                valid: |d| maven_dependency(d).is_some(),
+            },
         },
     ],
     std: &[
@@ -400,6 +412,15 @@ fn coordinates(p: &Program, library: &str) -> (String, String) {
     )
 }
 
+/// A package that a config's `dependencies` lists, as
+/// `"group:artifact:version"`: its group, artifact, and version.
+pub fn maven_dependency(text: &str) -> Option<(&str, &str, &str)> {
+    match temper_tmpl::dependency_parts(text, ":", 3)?.as_slice() {
+        &[group, artifact, version] => Some((group, artifact, version)),
+        _ => None,
+    }
+}
+
 /// The config's metadata, as Kotlin's `pomXml` writes it after the name:
 /// the description, which Maven Central requires, so the library's name
 /// where there's none; then the authors as the developer, the homepage
@@ -468,6 +489,26 @@ fn pom(
         })
         .collect::<Vec<_>>()
         .concat();
+    // The packages its host code uses, as its config lists them.
+    for dependency in CONFIG.strings(p.metadata(), "dependencies") {
+        let Some((group, artifact, version)) = maven_dependency(dependency) else {
+            continue;
+        };
+        let xml = temper_tmpl::xml_text;
+        dependencies.push_str(&format!(
+            r#"
+    <dependency>
+      <groupId>{}</groupId>
+      <artifactId>{}</artifactId>
+      <version>{}</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>"#,
+            xml(group),
+            xml(artifact),
+            xml(version),
+        ));
+    }
     // JUnit for the tests, and for std's `testing` in its code, as std's
     // Java configuration has it.
     let junit = match library {

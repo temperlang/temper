@@ -4,7 +4,7 @@
 //! backend's names for a library, in its package files and in the code
 //! of a library that uses it.
 
-use temper_tmpl::{Metadata, Program, text};
+use temper_tmpl::{ConfigValue, Metadata, Program, text};
 
 /// A library, `app`, at a version, logging nothing.
 #[allow(dead_code)] // Unless every backend is left out.
@@ -308,7 +308,12 @@ fn metadata(configs: &[(&str, &[(&str, &str)])]) -> Metadata {
     Metadata {
         exports: pairs(&FLAT),
         configs: (configs.iter())
-            .map(|(key, values)| (key.to_string(), pairs(values)))
+            .map(|(key, values)| {
+                let values = (values.iter())
+                    .map(|(k, v)| (k.to_string(), ConfigValue::String(v.to_string())))
+                    .collect();
+                (key.to_string(), values)
+            })
             .collect(),
     }
 }

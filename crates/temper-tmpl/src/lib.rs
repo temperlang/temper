@@ -66,7 +66,9 @@ pub mod version;
 
 pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools, clashing_paths};
 pub use builder::Builder;
-pub use config::{ConfigType, Property};
+pub use config::{
+    ConfigType, Kind as ConfigKind, Property, Value as ConfigValue, dependency_parts,
+};
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};
 pub use nodes::{Flags, Kids, Nodes};
@@ -97,15 +99,15 @@ pub fn version_or_default(version: &str) -> &str {
 /// version, for package files: the string values it exports, by key, as
 /// `license`, `description`, `authors`, `homepage`, and `repository`; and
 /// what it sets for each backend in that backend's config class, as
-/// `export let py = { class: PyConfig, name: "geometry-py" };`, which
-/// backends read with [`ConfigType::get`]. Given by the build; not in
+/// `export let py: PyConfig = { name: "geometry-py" };`, which backends
+/// read with [`ConfigType::get`] and [`ConfigType::strings`]. Given by the build; not in
 /// tmpl's text, and not compared.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Metadata {
     pub exports: Vec<(String, String)>,
     /// Each backend's config, by its key (`py`), with the properties set
     /// and their values, as checked against its [`ConfigType`].
-    pub configs: Vec<(String, Vec<(String, String)>)>,
+    pub configs: Vec<(String, Vec<(String, ConfigValue)>)>,
 }
 
 impl Metadata {

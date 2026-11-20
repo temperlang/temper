@@ -1,5 +1,6 @@
 //! How Rust runs built libraries' tests, for `temper test -b rust`:
-//! `cargo test` in each library's crate (`CARGO`), offline, with one
+//! `cargo test` in each library's crate (`CARGO`), offline unless a
+//! library's config lists crates to fetch ([`offline`]), with one
 //! target directory, `temper.out/rust/target`, for them all, reading
 //! what it prints. `temper run -b rust` builds the library's crate the
 //! same way, quietly, then runs its program (`src/main.rs`), as
@@ -16,7 +17,21 @@ pub const TOOLS: Tools = Tools {
     run,
 };
 
-fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
+/// `--offline`, unless a library's config lists crates
+/// (`dependencies`), which cargo fetches, as Kotlin's runs always may.
+fn offline(all: &[Tested]) -> &'static [&'static str] {
+    let listed = |l: &Tested| {
+        !crate::CONFIG
+            .strings(&l.metadata, "dependencies")
+            .is_empty()
+    };
+    match all.iter().any(listed) {
+        true => &[],
+        false => &["--offline"],
+    }
+}
+
+fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
     let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
     // The package's binary, as its config may name it ([`crate::bin_name`]).
     let bin = crate::bin_name(&crate::translate::rust_name(
@@ -25,7 +40,8 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     ));
     step(
         Command::new(tool("CARGO", "cargo"))
-            .args(["build", "--offline", "--bin", &bin])
+            .args(["build", "--bin", &bin])
+            .args(offline(all))
             .env("CARGO_TARGET_DIR", &target)
             .current_dir(dir.join(&library.name)),
         "cargo build",
@@ -36,11 +52,12 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     program(&mut Command::new(exe), &library.name)
 }
 
-fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
+fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
     let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
     let run = output(
         Command::new(tool("CARGO", "cargo"))
-            .args(["test", "--offline"])
+            .arg("test")
+            .args(offline(all))
             .env("CARGO_TARGET_DIR", target)
             .current_dir(dir.join(&library.name)),
         "cargo",

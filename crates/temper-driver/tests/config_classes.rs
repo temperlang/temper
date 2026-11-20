@@ -11,21 +11,26 @@ const START: &str = "<!-- Generated from each backend's config class by \
 const END: &str = "<!-- End of generated table. -->\n";
 
 /// The table: a row per property, under its class, with the backend's
-/// key; a class without properties says so.
+/// key, and its type; a class without properties says so.
 fn table() -> String {
-    let mut out = String::from("| Class | Export | Property | Sets |\n|---|---|---|---|\n");
+    let mut out =
+        String::from("| Class | Export | Property | Type | Sets |\n|---|---|---|---|---|\n");
     for t in Registry::built_in().config_types() {
         let class = format!("`{}`", t.class);
         let key = format!("`{}`", t.key);
         if t.properties.is_empty() {
-            out.push_str(&format!("| {class} | {key} | | Nothing yet |\n"));
+            out.push_str(&format!("| {class} | {key} | | | Nothing yet |\n"));
         }
         for (i, p) in t.properties.iter().enumerate() {
             let (class, key) = match i {
                 0 => (class.as_str(), key.as_str()),
                 _ => ("", ""),
             };
-            out.push_str(&format!("| {class} | {key} | `{}` | {} |\n", p.name, p.doc));
+            let ty = p.kind.type_name();
+            out.push_str(&format!(
+                "| {class} | {key} | `{}` | `{ty}` | {} |\n",
+                p.name, p.doc
+            ));
         }
     }
     out

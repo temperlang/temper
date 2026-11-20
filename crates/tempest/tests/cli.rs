@@ -854,6 +854,10 @@ fn typed_config_errors() {
     export let js = { class: JsConf, name: \"j\" };
     export let rs = { class: RustConfig, name: \"r\" };
     export let csharp = \"Example\";
+    export let lua: CppConfig = {};
+    export let cpp: CppConfig = { class: LuaConfig };
+    export let rust: RustConfig = { dependencies: [\"roaring\"] };
+    export let java: JavaConfg = {};
 ";
     let files = [
         ("config.temper.md", config),
@@ -871,8 +875,18 @@ fn typed_config_errors() {
             format!("{path}:5:16: error: RustConfig goes in `export let rust`, not `rs`\n"),
             format!(
                 "{path}:6:16: error: `csharp` is for CSharpConfig, as \
-                 `export let csharp = {{ class: CSharpConfig, … }}`\n"
+                 `export let csharp: CSharpConfig = {{ … }}`\n"
             ),
+            format!("{path}:7:16: error: CppConfig goes in `export let cpp`, not `lua`\n"),
+            format!(
+                "{path}:8:42: error: `class: LuaConfig` disagrees with the declared type, \
+                 `CppConfig`\n"
+            ),
+            format!(
+                "{path}:9:52: error: RustConfig's `dependencies` are each `name@version`, \
+                 not `roaring`\n"
+            ),
+            format!("{path}:10:22: error: `java` is for JavaConfig, not `JavaConfg`\n"),
         ];
         for command in ["build", "test"] {
             let (code, _, err) = tempest(&[command, "-w", dir]);
@@ -881,6 +895,74 @@ fn typed_config_errors() {
                 assert!(err.contains(line.as_str()), "{command}: {line}{err}");
             }
         }
+    });
+}
+
+/// The annotated form, `export let java: JavaConfig = { … }`, whose
+/// object takes its class from the declared type, and each backend's
+/// `dependencies`, the packages host code uses, in its package files as
+/// Kotlin writes them.
+#[test]
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+fn config_dependencies_in_package_files() {
+    let config = "    export let name = \"deps\";
+    export let csharp: CSharpConfig = { dependencies: [\"Roaring.Net:1.4.1\"] };
+    export let java: JavaConfig = {
+      package: \"com.example.deps\",
+      dependencies: [\"org.roaringbitmap:RoaringBitmap:1.6.20\"],
+    };
+    export let js: JsConfig = { dependencies: [\"roaring-wasm@1.1.0\", \"@scope/x@^2.0.0\"] };
+    export let py: PyConfig = { name: \"deps-py\", dependencies: [\"pyroaring==1.1.0\"] };
+    export let rust: RustConfig = { class: RustConfig, dependencies: [\"roaring@0.11.1\"] };
+";
+    let files = [
+        ("config.temper.md", config),
+        ("d.temper", "export let d = 1;\n"),
+    ];
+    with_library("config-dependencies", &files, |dir| {
+        let (code, out, err) = tempest(&["build", "-w", dir]);
+        assert_eq!((code, out.as_str(), err.as_str()), (0, "", ""));
+        let out = Path::new(dir).join("temper.out");
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        let pyproject = read("py/deps/pyproject.toml");
+        assert!(
+            pyproject.contains("    \"pyroaring==1.1.0\",\n"),
+            "{pyproject}"
+        );
+        let package = read("js/deps/package.json");
+        assert!(
+            package.contains(
+                "        \"@scope/x\": \"^2.0.0\",\n        \"roaring-wasm\": \"1.1.0\"\n"
+            ),
+            "{package}"
+        );
+        let cargo = read("rust/deps/Cargo.toml");
+        assert!(
+            cargo.contains("\nroaring = { version = \"=0.11.1\" }\n"),
+            "{cargo}"
+        );
+        let pom = read("java/deps/pom.xml");
+        let dependency = "    <dependency>
+      <groupId>org.roaringbitmap</groupId>
+      <artifactId>RoaringBitmap</artifactId>
+      <version>1.6.20</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+";
+        assert!(pom.contains(dependency), "{pom}");
+        let csproj = read("csharp/deps/src/Deps.csproj");
+        let reference = "  <ItemGroup>
+    <PackageReference Include=\"Roaring.Net\" Version=\"1.4.1\"/>
+  </ItemGroup>
+";
+        assert!(csproj.contains(reference), "{csproj}");
     });
 }
 
@@ -1073,6 +1155,92 @@ fn test_a_library_on_each_backend() {
             assert_eq!(code, 1, "{backend}");
         });
     }
+}
+
+/// Kotlin's `connecteds` test: a connected class, `Bitset`, whose host
+/// code wraps a package that the config's `dependencies` list for each
+/// backend (a Roaring bitmap), tested with `temper test -b BACKEND`,
+/// which fetches the real package with the language's own tools. A
+/// backend whose tools or package registry can't be reached is skipped,
+/// with a message, unless `TEMPER_REQUIRE_CHECKERS` is set.
+fn connecteds(backend: &str, registry: &str) {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/connecteds");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        files.push((name, fs::read_to_string(&path).unwrap()));
+    }
+    let files: Vec<(&str, &str)> = (files.iter())
+        .map(|(n, t)| (n.as_str(), t.as_str()))
+        .collect();
+    let skip = |why: &str| {
+        assert!(
+            std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+            "connecteds on {backend}: {why} (needed with TEMPER_REQUIRE_CHECKERS)"
+        );
+        eprintln!("skipped connecteds on {backend}: {why}");
+    };
+    if !reachable(registry) {
+        return skip(&format!("{registry} can't be reached"));
+    }
+    with_library(&format!("connecteds-{backend}"), &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", backend, dir]);
+        if out.contains("couldn't run") || err.contains("couldn't run") {
+            return skip(&format!("its tools are missing\n{out}{err}"));
+        }
+        assert!(
+            out.ends_with("Tests passed: 1 of 1\n"),
+            "{backend}:\n{out}{err}"
+        );
+        assert_eq!(code, 0, "{backend}:\n{out}{err}");
+    });
+}
+
+/// Whether a host's HTTPS port answers, or a proxy is set, which the
+/// tools use instead.
+fn reachable(host: &str) -> bool {
+    use std::net::ToSocketAddrs;
+    let proxied = ["HTTPS_PROXY", "https_proxy"]
+        .iter()
+        .any(|v| std::env::var_os(v).is_some());
+    let timeout = std::time::Duration::from_secs(5);
+    proxied
+        || (format!("{host}:443")
+            .to_socket_addrs()
+            .into_iter()
+            .flatten())
+        .any(|a| std::net::TcpStream::connect_timeout(&a, timeout).is_ok())
+}
+
+#[test]
+#[cfg(feature = "csharp")]
+fn connecteds_csharp() {
+    connecteds("csharp", "api.nuget.org");
+}
+
+#[test]
+#[cfg(feature = "java")]
+fn connecteds_java() {
+    connecteds("java", "repo.maven.apache.org");
+}
+
+#[test]
+#[cfg(feature = "js")]
+fn connecteds_js() {
+    connecteds("js", "registry.npmjs.org");
+}
+
+#[test]
+#[cfg(feature = "py")]
+fn connecteds_py() {
+    connecteds("py", "pypi.org");
+}
+
+#[test]
+#[cfg(feature = "rust")]
+fn connecteds_rust() {
+    connecteds("rust", "index.crates.io");
 }
 
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some

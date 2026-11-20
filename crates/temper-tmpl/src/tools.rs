@@ -49,6 +49,37 @@ pub fn program(command: &mut Command, what: &str) -> Result<bool, String> {
     crate::children::program(command, what)
 }
 
+/// Installs the packages that libraries' configs list (`dependencies`)
+/// into `dir`, as `temper.out/py/.deps`, which no library's name can
+/// be, with `install`, once for each list of them: `manifest` says what
+/// to install, as the language's tools spell it, and is written as the
+/// file `manifest_name` there; `install` runs there unless the last
+/// install was of the same manifest, recorded as `.installed` once it
+/// succeeds. Nothing is installed, and `dir` is removed, for an empty
+/// manifest. Whether there are packages.
+pub fn install_once(
+    dir: &Path,
+    manifest_name: &str,
+    manifest: &str,
+    install: impl FnOnce(&Path) -> Result<(), String>,
+) -> Result<bool, String> {
+    let done = dir.join(".installed");
+    if manifest.is_empty() {
+        let _ = std::fs::remove_dir_all(dir);
+        return Ok(false);
+    }
+    if std::fs::read_to_string(&done).is_ok_and(|d| d == manifest) {
+        return Ok(true);
+    }
+    let _ = std::fs::remove_dir_all(dir);
+    let at = |e: std::io::Error| format!("{}: {e}", dir.display());
+    std::fs::create_dir_all(dir).map_err(at)?;
+    std::fs::write(dir.join(manifest_name), manifest).map_err(at)?;
+    install(dir)?;
+    std::fs::write(&done, manifest).map_err(at)?;
+    Ok(true)
+}
+
 /// The end of what a tool printed, which says most, as a traceback's.
 pub fn tool_output(run: &Output) -> String {
     let text = format!(

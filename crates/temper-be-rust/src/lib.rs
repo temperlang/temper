@@ -161,18 +161,42 @@ pub struct StdSupport {
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let rust = {
-/// class: RustConfig, … };`, as Kotlin's `RustConfig`; and std's, as Kotlin's
+/// What a library's config may set for this backend, `export let rust:
+/// RustConfig = { … };`, as Kotlin's `RustConfig`; and std's, as Kotlin's
 /// backends inject it.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "rust",
     class: "RustConfig",
-    properties: &[temper_tmpl::Property {
-        name: "name",
-        doc: "The crate's name, which code that uses the library names with `_` for `-`; else the library's name.",
-    }],
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The crate's name, which code that uses the library names with `_` for `-`; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String,
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "Crates that the library's host code uses, each `\"name@version\"`, for exactly that version.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "name@version",
+                valid: |d| crate_dependency(d).is_some(),
+            },
+        },
+    ],
     std: &[("name", "temper-std")],
 };
+
+/// A crate that a config's `dependencies` lists, as `"name@version"`:
+/// its name, as crates.io names crates, and its version.
+pub fn crate_dependency(text: &str) -> Option<(&str, &str)> {
+    let named = |n: &str| {
+        n.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_".contains(c))
+    };
+    match temper_tmpl::dependency_parts(text, "@", 2)?.as_slice() {
+        &[name, version] if named(name) => Some((name, version)),
+        _ => None,
+    }
+}
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
@@ -431,6 +455,14 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             dependencies.push_str(&dependency(name, version));
         } else {
             dev_dependencies.push_str(&dependency(name, version));
+        }
+    }
+    // The crates its host code uses, as its config lists them, each at
+    // exactly its version, as Kotlin's.
+    for dependency in CONFIG.strings(p.metadata(), "dependencies") {
+        if let Some((name, version)) = crate_dependency(dependency) {
+            let version = temper_tmpl::json_string(&format!("={version}"));
+            dependencies.push_str(&format!("{name} = {{ version = {version} }}\n"));
         }
     }
     // std's support code's optional dependencies, each turning on its

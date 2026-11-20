@@ -103,16 +103,27 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let csharp = {
-/// class: CSharpConfig, … };`, as Kotlin's `CSharpConfig`; and std's, as Kotlin's
-/// backends inject it.
+/// What a library's config may set for this backend, `export let csharp:
+/// CSharpConfig = { … };`, as Kotlin's `CSharpConfig`; and std's, as
+/// Kotlin's backends inject it.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "csharp",
     class: "CSharpConfig",
-    properties: &[temper_tmpl::Property {
-        name: "rootNamespace",
-        doc: "The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case.",
-    }],
+    properties: &[
+        temper_tmpl::Property {
+            name: "rootNamespace",
+            doc: "The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case.",
+            kind: temper_tmpl::ConfigKind::String,
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "NuGet packages that the library's host code uses, each `\"Name:version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "Name:version",
+                valid: |d| nuget_dependency(d).is_some(),
+            },
+        },
+    ],
     std: &[("rootNamespace", "TemperLang.Std")],
 };
 
@@ -344,6 +355,15 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
+/// A package that a config's `dependencies` lists, as `"Name:version"`:
+/// its name and version.
+pub fn nuget_dependency(text: &str) -> Option<(&str, &str)> {
+    match temper_tmpl::dependency_parts(text, ":", 2)?.as_slice() {
+        &[name, version] => Some((name, version)),
+        _ => None,
+    }
+}
+
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
 fn project_reference(p: &Program, name: &str) -> String {
@@ -433,15 +453,32 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
         .collect();
     // std's `testing` throws MSTest's `AssertFailedException`, so std has
     // the packages its C# configuration lists.
-    let packages = match p.library.name.as_str() {
-        "std" => {
-            r#"
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
-    <PackageReference Include="MSTest.TestFramework" Version="3.1.1"/>
-  </ItemGroup>"#
+    let mut packages: Vec<(&str, &str)> = match p.library.name.as_str() {
+        "std" => vec![
+            ("Microsoft.NET.Test.Sdk", "17.8.0"),
+            ("MSTest.TestFramework", "3.1.1"),
+        ],
+        _ => Vec::new(),
+    };
+    // The packages its host code uses, as its config lists them.
+    let listed = CONFIG.strings(p.metadata(), "dependencies");
+    packages.extend(listed.iter().filter_map(|d| nuget_dependency(d)));
+    let packages = match packages.is_empty() {
+        true => String::new(),
+        false => {
+            let xml = temper_tmpl::xml_text;
+            let lines = (packages.iter())
+                .map(|(name, version)| {
+                    format!(
+                        "\n    <PackageReference Include=\"{}\" Version=\"{}\"/>",
+                        xml(name),
+                        xml(version)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .concat();
+            format!("\n  <ItemGroup>{lines}\n  </ItemGroup>")
         }
-        _ => "",
     };
     format!(
         r#"<Project Sdk="Microsoft.NET.Sdk">

@@ -50,30 +50,46 @@ Getting started with each language is in the
 
 Each backend has a config class for its own settings, which a
 library's `config.temper.md` sets in an object of that class, exported
-under the backend's ID:
+under the backend's ID, the object taking its class from the declared
+type:
 
 ```temper
-export let java = { class: JavaConfig, package: "com.example.geometry" };
+export let java: JavaConfig = {
+  package: "com.example.geometry",
+  dependencies: ["org.roaringbitmap:RoaringBitmap:1.6.20"],
+};
 ```
 
-Each setting is a string, and unset by default. A setting the class
-doesn't have, or a value of another type, is a config error.
+`{ class: JavaConfig, … }` names the class too. Each setting is unset by
+default. A setting the class doesn't have, a value of another type, or
+a class that disagrees with the declared type is a config error.
+
+`dependencies` lists packages that the library's host code (its
+`@connected` classes and functions) uses, in the language's own
+registry's spelling. They go in the package files, and `temper test` and
+`temper run` fetch them with the language's tools: pip, npm, Cargo,
+Maven, or NuGet.
 [Library configuration](../guide/tutorial/04-modules-and-libraries.md#library-configuration)
 has a whole config file.
 
 <!-- Generated from each backend's config class by crates/temper-driver/tests/config_classes.rs. -->
-| Class | Export | Property | Sets |
-|---|---|---|---|
-| `CppConfig` | `cpp` | | Nothing yet |
-| `CSharpConfig` | `csharp` | `rootNamespace` | The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case. |
-| `JavaConfig` | `java` | `name` | The library's Java name, which the package and the Maven artifact ID default to; else the library's name. |
-|  |  | `package` | The Java package, as `com.example.geometry`; else the Java name, as a package. |
-|  |  | `group` | The Maven group ID; else the package. |
-|  |  | `artifact` | The Maven artifact ID; else the Java name. |
-| `JsConfig` | `js` | `name` | The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name. |
-| `LuaConfig` | `lua` | | Nothing yet |
-| `PyConfig` | `py` | `name` | The Python project's name, which, as a Python name, also names its package; else the library's name. |
-| `RustConfig` | `rust` | `name` | The crate's name, which code that uses the library names with `_` for `-`; else the library's name. |
+| Class | Export | Property | Type | Sets |
+|---|---|---|---|---|
+| `CppConfig` | `cpp` | | | Nothing yet |
+| `CSharpConfig` | `csharp` | `rootNamespace` | `String` | The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case. |
+|  |  | `dependencies` | `List<String>` | NuGet packages that the library's host code uses, each `"Name:version"`. |
+| `JavaConfig` | `java` | `name` | `String` | The library's Java name, which the package and the Maven artifact ID default to; else the library's name. |
+|  |  | `package` | `String` | The Java package, as `com.example.geometry`; else the Java name, as a package. |
+|  |  | `group` | `String` | The Maven group ID; else the package. |
+|  |  | `artifact` | `String` | The Maven artifact ID; else the Java name. |
+|  |  | `dependencies` | `List<String>` | Maven packages that the library's host code uses, each `"group:artifact:version"`. |
+| `JsConfig` | `js` | `name` | `String` | The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name. |
+|  |  | `dependencies` | `List<String>` | npm packages that the library's host code uses, each `"name@version"`, as `"@scope/name@^1.0.0"`. |
+| `LuaConfig` | `lua` | | | Nothing yet |
+| `PyConfig` | `py` | `name` | `String` | The Python project's name, which, as a Python name, also names its package; else the library's name. |
+|  |  | `dependencies` | `List<String>` | PyPI packages that the library's host code uses, each `"name==version"`. |
+| `RustConfig` | `rust` | `name` | `String` | The crate's name, which code that uses the library names with `_` for `-`; else the library's name. |
+|  |  | `dependencies` | `List<String>` | Crates that the library's host code uses, each `"name@version"`, for exactly that version. |
 <!-- End of generated table. -->
 
 ## C++ (`cpp`)

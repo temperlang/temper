@@ -6,6 +6,9 @@
 //! instead, which needs its network. `temper run -b java` compiles the
 //! runtime, std, and the libraries the same way, quietly, and runs the
 //! library's `…Main` class under `java`, as Kotlin runs it by exec.
+//! Packages that libraries' configs list are found with Maven (`mvn`,
+//! or `MVN`), which fetches them, with what they need, into its local
+//! repository, and their jars join the class path ([`dependency_jars`]).
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
 //! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
@@ -15,7 +18,9 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use temper_tmpl::tools::{files_with, output, program, strict_warnings, tool, tool_output};
+use temper_tmpl::tools::{
+    files_with, install_once, output, program, step, strict_warnings, tool, tool_output,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
@@ -127,6 +132,61 @@ pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsStr
 /// earlier ones by the system's code page.
 pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
 
+/// The jars of the packages that libraries' configs list, and of what
+/// they need, as Maven's dependency plugin resolves them from a POM of
+/// just them in `temper.out/java/.deps`, once for each list of them
+/// ([`install_once`]); none without such packages.
+fn dependency_jars(dir: &Path, all: &[Tested]) -> Result<Vec<PathBuf>, String> {
+    let mut packages: Vec<(&str, &str, &str)> = (all.iter())
+        .flat_map(|l| crate::CONFIG.strings(&l.metadata, "dependencies"))
+        .filter_map(|d| crate::maven_dependency(d))
+        .collect();
+    packages.sort();
+    packages.dedup();
+    let pom = match packages.is_empty() {
+        true => String::new(),
+        false => {
+            let xml = temper_tmpl::xml_text;
+            let dependencies = (packages.iter())
+                .map(|(group, artifact, version)| {
+                    format!(
+                        "    <dependency><groupId>{}</groupId><artifactId>{}</artifactId>\
+                         <version>{}</version></dependency>\n",
+                        xml(group),
+                        xml(artifact),
+                        xml(version)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .concat();
+            format!(
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">\n  \
+                 <modelVersion>4.0.0</modelVersion>\n  <groupId>temper</groupId>\n  \
+                 <artifactId>deps</artifactId>\n  <version>0</version>\n  \
+                 <dependencies>\n{dependencies}  </dependencies>\n</project>\n"
+            )
+        }
+    };
+    let deps = dir.join(".deps");
+    let any = install_once(&deps, "pom.xml", &pom, |deps| {
+        step(
+            Command::new(tool("MVN", "mvn"))
+                .args(["-q", "-B", "-f", "pom.xml"])
+                .arg("org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath")
+                .arg("-Dmdep.outputFile=classpath.txt")
+                .current_dir(deps),
+            "mvn",
+        )
+    })?;
+    if !any {
+        return Ok(Vec::new());
+    }
+    let listed = deps.join("classpath.txt");
+    let text =
+        std::fs::read_to_string(&listed).map_err(|e| format!("{}: {e}", listed.display()))?;
+    Ok(std::env::split_paths(text.trim()).collect())
+}
+
 /// Compiles as [`test`] does, without JUnit, into
 /// `temper.out/java/LIBRARY/target/temper/classes`, and runs the
 /// library's main class, the one its `…Main.java` declares.
@@ -148,11 +208,15 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
     let classes = here.join("target/temper/classes");
     let _ = std::fs::remove_dir_all(&classes);
-    compile_main(dir, all, &classes, &[], std::ffi::OsStr::new(""), false)?;
+    let jars = dependency_jars(dir, all)?;
+    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
+    compile_main(dir, all, &classes, &[], &classpath, false)?;
+    let everything =
+        std::env::join_paths(std::iter::once(classes).chain(jars)).map_err(|e| e.to_string())?;
     program(
         Command::new(tool("JAVA", "java"))
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
-            .arg(&classes)
+            .arg(everything)
             .arg(main),
         "java",
     )
@@ -232,12 +296,13 @@ public final class RunTests {
 /// into `temper.out/java/LIBRARY/target/temper`, and runs them with
 /// `java` (`JAVA`) through JUnit's launcher ([`RUN_TESTS`]).
 fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
-    let jars = junit_jars().map_err(|missing| {
+    let mut jars = junit_jars().map_err(|missing| {
         format!(
             "no {} (JUnit, as the generated pom.xml names it)",
             missing.display()
         )
     })?;
+    jars.extend(dependency_jars(dir, all)?);
     let out = dir.join(&library.name).join("target/temper");
     let _ = std::fs::remove_dir_all(&out);
     let (main, tests) = (out.join("classes"), out.join("test-classes"));

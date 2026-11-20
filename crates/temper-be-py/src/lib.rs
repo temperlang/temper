@@ -99,18 +99,47 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let py = {
-/// class: PyConfig, … };`, as Kotlin's `PyConfig`; and std's, as Kotlin's
+/// What a library's config may set for this backend, `export let py:
+/// PyConfig = { … };`, as Kotlin's `PyConfig`; and std's, as Kotlin's
 /// backends inject it.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "py",
     class: "PyConfig",
-    properties: &[temper_tmpl::Property {
-        name: "name",
-        doc: "The Python project's name, which, as a Python name, also names its package; else the library's name.",
-    }],
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The Python project's name, which, as a Python name, also names its package; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String,
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "PyPI packages that the library's host code uses, each `\"name==version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "name==version",
+                valid: |d| pypi_dependency(d).is_some(),
+            },
+        },
+    ],
     std: &[("name", "temper-std")],
 };
+
+/// A package that a config's `dependencies` lists, as `"name==version"`:
+/// its name and version.
+pub fn pypi_dependency(text: &str) -> Option<(&str, &str)> {
+    match temper_tmpl::dependency_parts(text, "==", 2)?.as_slice() {
+        &[name, version] => Some((name, version)),
+        _ => None,
+    }
+}
+
+/// The packages a library's host code uses, as its config lists them,
+/// each as pip takes it, `name==version`.
+pub fn pypi_dependencies(metadata: &temper_tmpl::Metadata) -> Vec<String> {
+    (CONFIG.strings(metadata, "dependencies").iter())
+        .filter_map(|d| pypi_dependency(d))
+        .map(|(name, version)| format!("{name}=={version}"))
+        .collect()
+}
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
@@ -132,9 +161,10 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     tools: None,
 };
 
-/// `pyproject.toml`'s dependencies, as Kotlin writes them: the runtime
-/// and each library used, by its name, with `==` its version where it
-/// sets one, in PEP 440's spelling, a quoted line each, sorted; with
+/// `pyproject.toml`'s dependencies, as Kotlin writes them: the runtime,
+/// each library used, by its name, with `==` its version where it sets
+/// one, in PEP 440's spelling, and the packages its config lists, a
+/// quoted line each, sorted; with
 /// `tests`, instead those only the tests use
 /// ([`temper_tmpl::analysis::test_only_libraries`]), for the `test`
 /// dependency group, which installing the package skips.
@@ -144,6 +174,7 @@ fn dependencies(p: &Program, tests: bool) -> String {
     if !tests {
         let runtime = version::current().spell(Spelling::Python);
         lines.push(format!("temper-core=={runtime}"));
+        lines.extend(pypi_dependencies(p.metadata()));
     }
     for (name, version) in p.dependencies() {
         if tests_only.iter().any(|t| t == name) != tests {
@@ -157,7 +188,8 @@ fn dependencies(p: &Program, tests: bool) -> String {
         });
     }
     lines.sort();
-    let quoted: Vec<String> = lines.iter().map(|l| format!("    \"{l}\"")).collect();
+    let quoted = (lines.iter()).map(|l| format!("    {}", temper_tmpl::json_string(l)));
+    let quoted: Vec<String> = quoted.collect();
     quoted.join(",\n")
 }
 

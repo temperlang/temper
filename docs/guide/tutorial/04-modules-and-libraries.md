@@ -248,7 +248,8 @@ add these to the config to try them out. These include the following:
   `CSharpConfig`, `JavaConfig`, `JsConfig`, `PyConfig`, and `RustConfig`
   (`CppConfig` and `LuaConfig` have no settings yet). By default, each
   backend names its package after your library's `name`, so you only need
-  these to pick another name. [Backends](../../backends/README.md#configuration)
+  these to pick another name, or to list packages that your `@connected`
+  host code uses (`dependencies`). [Backends](../../backends/README.md#configuration)
   lists every setting.
 
 You need to `export` these values for them to be used. After adding them, your
@@ -276,17 +277,18 @@ A library for geometric shapes and calculations.
 
 Just examples here. You should choose available package names. Each backend's
 settings go in an object of its config class, exported under the backend's
-name.
+name, with the class as its type.
 
-    export let csharp = { class: CSharpConfig, rootNamespace: "GeometryNet" };
-    export let java = { class: JavaConfig, name: "geometry-java" };
-    export let js = { class: JsConfig, name: "geometry-js" };
-    export let py = { class: PyConfig, name: "geometry-py" };
-    export let rust = { class: RustConfig, name: "geometry-rs" };
+    export let csharp: CSharpConfig = { rootNamespace: "GeometryNet" };
+    export let java: JavaConfig = { name: "geometry-java" };
+    export let js: JsConfig = { name: "geometry-js" };
+    export let py: PyConfig = { name: "geometry-py" };
+    export let rust: RustConfig = { name: "geometry-rs" };
 ````
 
-A setting the class doesn't have, or a value that isn't a string, is an error
-when you build, so a typo can't go unnoticed. Temper's earlier releases read
+(`{ class: JavaConfig, name: "geometry-java" }` works too.) A setting the class
+doesn't have, or a value of the wrong type, is an error when you build, so a
+typo can't go unnoticed. Temper's earlier releases read
 flat names such as `javaName` and `pyName` instead; those are now ordinary
 values with no effect.
 

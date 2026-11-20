@@ -115,8 +115,8 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let lua = {
-/// class: LuaConfig, … };`, as Kotlin's `LuaConfig`. It has no properties
+/// What a library's config may set for this backend, `export let lua:
+/// LuaConfig = { … };`, as Kotlin's `LuaConfig`. It has no properties
 /// yet, as Kotlin's had none.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "lua",

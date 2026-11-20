@@ -1295,8 +1295,18 @@ Other differences we won't copy:
   Kotlin's names and properties, and `CppConfig` and `LuaConfig` with
   none, as Kotlin's placeholders. Kotlin runs the config module; tempest
   reads its exports without running it, so values are literals (a
-  string, or `null`), and a computed one is an error. Kotlin's
-  `dependencies` lists aren't supported yet, so they're errors too.
+  string, a list of strings, or `null`), and a computed one is an
+  error. The object may take its class from the declared type
+  (`export let java: JavaConfig = { … }`), as Kotlin's target typing
+  does, or name it (`class:`); a class that disagrees with the type is
+  an error. `dependencies` lists packages for host code, as Kotlin's,
+  in the same spellings, and malformed ones are errors where Kotlin
+  printed one and skipped them; npm names may be scoped
+  (`"@scope/name@1.0.0"`), which Kotlin's split at `@` rejected. Where
+  Kotlin's tools always fetch packages, tempest's fetch only those
+  listed: pip into `temper.out/py/.deps`, npm into `temper.out/js/.deps`
+  linked into `node_modules`, Cargo then not `--offline`, and Maven's
+  dependency plugin for Java's class path (no Maven otherwise).
   Kotlin also read the older flat keys (`pyName`, `javaPackage`, …) where
   a config class didn't set a value; tempest doesn't, so they're
   ordinary values. A class or property that isn't there, a value of
@@ -1305,7 +1315,10 @@ Other differences we won't copy:
   and went on. A config file's code is only its code blocks, as in
   Kotlin; tempest once also read `export let` lines in its prose. Tests:
   crates/temper-frontend/src/config.rs, crates/tempest/tests/cli.rs
-  (`typed_config_*`).
+  (`typed_config_*`, `config_dependencies_in_package_files`, and
+  `connecteds_*`, Kotlin's `connecteds` test with real packages, its
+  Bitset given a Temper implementation, since tempest can't translate
+  a connected class without one yet).
 
 - **Ignore files** (2026-11-06): Kotlin reads one, the nearest
   `.temperignore` or `.gitignore` at or above where it starts (its

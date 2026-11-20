@@ -147,8 +147,8 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let cpp = {
-/// class: CppConfig, … };`, as Kotlin's `CppConfig`. It has no properties
+/// What a library's config may set for this backend, `export let cpp:
+/// CppConfig = { … };`, as Kotlin's `CppConfig`. It has no properties
 /// yet, as Kotlin's had none.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "cpp",

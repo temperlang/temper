@@ -4,25 +4,30 @@
 //!
 //! An export is a string, as `export let license = "MIT";`, or an
 //! instance of a config class, as
-//! `export let KEY = { class: CLASS, PROPERTY: "VALUE", … };`. Each config
-//! class is a [`ConfigType`] that the build gives, one per backend; this
-//! module never names one. Kotlin runs the config module, with those
-//! classes declared in it; we don't run it, so values are literals: a
-//! string, or `null` for none. A class this scope doesn't have, a
-//! property its class doesn't have, a value of another type, or an
-//! instance under another key is a config error, at its place in the file.
-//! Every other export is an ordinary value, which nothing need read.
+//! `export let KEY: CLASS = { PROPERTY: VALUE, … };`, the object taking
+//! its class from the declared type, or as
+//! `export let KEY = { class: CLASS, … };`. Each config class is a
+//! [`ConfigType`] that the build gives, one per backend; this module
+//! never names one. Kotlin runs the config module, with those classes
+//! declared in it; we don't run it, so values are literals: a string, a
+//! list of strings, or `null` for none. A class this scope doesn't have,
+//! a declared type that disagrees with `class:`, a property its class
+//! doesn't have, a value of another type or form, or an instance under
+//! another key is a config error, at its place in the file. Every other
+//! export is an ordinary value, which nothing need read.
 
 use temper_syntax::ast::{Ast, Builtin, Level, Value as Literal};
 use temper_syntax::lex::SourceKind;
 use temper_syntax::tree::{NodeId, NodeKind, Span};
-use temper_tmpl::ConfigType;
+use temper_tmpl::{ConfigKind, ConfigType, ConfigValue};
 
-/// An export: its name, where that is, and its value.
+/// An export: its name, where that is, its declared type's text and
+/// where that is, if it has one, and its value.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Export {
     pub key: String,
     pub span: Span,
+    pub declared: Option<(String, Span)>,
     pub value: Value,
 }
 
@@ -32,12 +37,14 @@ pub enum Value {
     String(String),
     Null,
     /// `{ class: CLASS, … }`, or `new CLASS(…)`: the class's name and
-    /// where it is, and its arguments.
+    /// where it is, unless it's `{ … }`, which takes its class from the
+    /// declared type; and its arguments.
     Instance {
-        class: String,
-        span: Span,
+        class: Option<(String, Span)>,
         args: Vec<Arg>,
     },
+    /// `[…]`: each item, and where it is.
+    List(Vec<(Span, Value)>),
     /// A literal of another type, as `an Int`.
     Other(&'static str),
     /// An expression, which would need running.
@@ -99,13 +106,21 @@ pub fn read(text: &str) -> (Vec<Export>, Vec<Problem>) {
         let Some(key) = name(&ast, *declared) else {
             continue;
         };
-        let init = (rest.chunks(2))
-            .find(|pair| symbol(&ast, pair[0]) == Some("init"))
-            .and_then(|pair| pair.get(1));
-        if let Some(&init) = init {
+        let part = |which: &str| {
+            (rest.chunks(2))
+                .find(|pair| symbol(&ast, pair[0]) == Some(which))
+                .and_then(|pair| pair.get(1).copied())
+        };
+        let declared_type = part("type").map(|t| {
+            let span = tree.span(t);
+            let text = text.get(span.start as usize..span.end as usize);
+            (text.unwrap_or_default().to_string(), span)
+        });
+        if let Some(init) = part("init") {
             exports.push(Export {
                 key: key.to_string(),
                 span: tree.span(*declared),
+                declared: declared_type,
                 value: value(&ast, init),
             });
         }
@@ -167,10 +182,16 @@ fn value(ast: &Ast, id: NodeId) -> Value {
             }
             Value::String(text)
         }
-        [callee, ..] if builtin(*callee) == Some(Builtin::List) => Value::Other("a List"),
+        [callee, items @ ..] if builtin(*callee) == Some(Builtin::List) => Value::List(
+            (items.iter())
+                .map(|&i| (tree.span(i), value(ast, i)))
+                .collect(),
+        ),
         [new, class, args @ ..] if name(ast, *new) == Some("new") => {
-            let Some(class_name) = name(ast, *class) else {
-                return Value::Other("an object without a class");
+            let class = match name(ast, *class) {
+                Some(n) => Some((n.to_string(), tree.span(*class))),
+                None if ast.value(*class) == Some(&Literal::Void) => None,
+                None => return Value::Other("an object of a class that isn't named"),
             };
             let mut found = Vec::new();
             let mut args = args.iter();
@@ -188,11 +209,7 @@ fn value(ast: &Ast, id: NodeId) -> Value {
                     value: value(ast, arg),
                 });
             }
-            Value::Instance {
-                class: class_name.to_string(),
-                span: tree.span(*class),
-                args: found,
-            }
+            Value::Instance { class, args: found }
         }
         _ => Value::Computed,
     }
@@ -202,7 +219,7 @@ fn value(ast: &Ast, id: NodeId) -> Value {
 /// each class's key with the properties set, in order, and the problems.
 #[derive(Debug, Default, PartialEq)]
 pub struct Checked {
-    pub configs: Vec<(String, Vec<(String, String)>)>,
+    pub configs: Vec<(String, Vec<(String, ConfigValue)>)>,
     pub problems: Vec<Problem>,
 }
 
@@ -214,16 +231,44 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
     };
     let mut configs = Vec::new();
     for export in exports {
-        let by_key = types.iter().find(|t| t.key == export.key);
-        let Value::Instance { class, span, args } = &export.value else {
-            if let Some(t) = by_key {
+        let key = export.key.as_str();
+        let by_key = types.iter().find(|t| t.key == key);
+        let declared = export.declared.as_ref();
+        let Value::Instance { class, args } = &export.value else {
+            // A string or the like, which is fine but where a config
+            // class is due, by its key or its declared type.
+            let by_type = declared.and_then(|(d, _)| types.iter().find(|t| t.class == d));
+            if let Some(t) = by_key.or(by_type) {
                 let (key, class) = (t.key, t.class);
-                let message = format!(
-                    "`{key}` is for {class}, as `export let {key} = {{ class: {class}, … }}`"
+                let message = match by_key {
+                    Some(_) => format!("`{key}` is for {class}, as "),
+                    None => format!("A {class} is an object, as "),
+                };
+                problem(
+                    export.span,
+                    message + &format!("`export let {key}: {class} = {{ … }}`"),
                 );
-                problem(export.span, message);
             }
             continue;
+        };
+        // Its class, as `class:` names it, or else its declared type.
+        let (class, span) = match (class, declared) {
+            (Some((class, span)), Some((d, _))) if class != d => {
+                let message = format!("`class: {class}` disagrees with the declared type, `{d}`");
+                problem(*span, message);
+                continue;
+            }
+            (Some((class, span)), _) | (None, Some((class, span))) => (class, span),
+            (None, None) => {
+                if let Some(t) = by_key {
+                    let (key, class) = (t.key, t.class);
+                    let message = format!(
+                        "`{key}` needs its class, as `export let {key}: {class} = {{ … }}`"
+                    );
+                    problem(export.span, message);
+                }
+                continue;
+            }
         };
         let Some(t) = types.iter().find(|t| t.class == class) else {
             let message = match (by_key, suggest(class, types.iter().map(|t| t.class))) {
@@ -242,15 +287,12 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
             problem(*span, message);
             continue;
         };
-        if t.key != export.key {
-            let message = format!(
-                "{} goes in `export let {}`, not `{}`",
-                t.class, t.key, export.key
-            );
+        if t.key != key {
+            let message = format!("{} goes in `export let {}`, not `{key}`", t.class, t.key);
             problem(export.span, message);
             continue;
         }
-        let mut values = Vec::new();
+        let mut values: Vec<(String, ConfigValue)> = Vec::new();
         for Arg {
             property,
             span: at,
@@ -258,14 +300,11 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
         } in args
         {
             let Some((property, name_span)) = property else {
-                let message = format!(
-                    "Name each property of {}, as `{{ class: {}, name: value }}`",
-                    t.class, t.class
-                );
+                let message = format!("Name each property of {}, as `{{ name: value }}`", t.class);
                 problem(*at, message);
                 continue;
             };
-            if !t.properties.iter().any(|p| p.name == property) {
+            let Some(p) = t.properties.iter().find(|p| p.name == property) else {
                 let names = t.properties.iter().map(|p| p.name);
                 let message = match (suggest(property, names.clone()), t.properties) {
                     (Some(meant), _) => format!(
@@ -281,30 +320,42 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
                 };
                 problem(*name_span, message);
                 continue;
-            }
+            };
             if values.iter().any(|(p, _)| p == property) {
                 let message = format!("{}'s `{property}` is set twice", t.class);
                 problem(*name_span, message);
                 continue;
             }
-            match value {
-                Value::String(s) => values.push((property.clone(), s.clone())),
-                Value::Null => {}
-                Value::Other(what) => {
-                    let message = format!("{}'s `{property}` is a String, not {what}", t.class);
-                    problem(*at, message);
+            let whose = format!("{}'s `{property}`", t.class);
+            match (p.kind, value) {
+                (_, Value::Null) => {}
+                (ConfigKind::String, Value::String(s)) => {
+                    values.push((property.clone(), ConfigValue::String(s.clone())))
                 }
-                Value::Instance { .. } => {
-                    let message = format!("{}'s `{property}` is a String, not an object", t.class);
-                    problem(*at, message);
+                (ConfigKind::String, value) => problem(*at, wrong(&whose, value, "a String")),
+                (ConfigKind::Strings { form, valid }, Value::List(items)) => {
+                    let mut strings = Vec::new();
+                    for (span, item) in items {
+                        match item {
+                            Value::String(s) if valid(s.trim()) => {
+                                strings.push(s.trim().to_string())
+                            }
+                            Value::String(s) => {
+                                let message =
+                                    format!("{whose} are each `{form}`, not `{}`", s.trim());
+                                problem(*span, message);
+                            }
+                            Value::Computed => problem(*span, wrong(&whose, item, "a String")),
+                            _ => {
+                                let message = format!("{whose} holds Strings, not {}", what(item));
+                                problem(*span, message);
+                            }
+                        }
+                    }
+                    values.push((property.clone(), ConfigValue::Strings(strings)));
                 }
-                Value::Computed => {
-                    let message = format!(
-                        "{}'s `{property}` needs a String literal: config files aren't run, so \
-                         values aren't computed",
-                        t.class
-                    );
-                    problem(*at, message);
+                (ConfigKind::Strings { .. }, value) => {
+                    problem(*at, wrong(&whose, value, "a List<String>"))
                 }
             }
         }
@@ -312,6 +363,29 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
     }
     checked.configs = configs;
     checked
+}
+
+/// Why a property's value is wrong, where it should be `want`, as `a
+/// String`.
+fn wrong(whose: &str, value: &Value, want: &str) -> String {
+    match value {
+        Value::Computed => format!(
+            "{whose} needs {want} literal: config files aren't run, so values aren't computed"
+        ),
+        _ => format!("{whose} is {want}, not {}", what(value)),
+    }
+}
+
+/// What a value is, as `a List`.
+fn what(value: &Value) -> &'static str {
+    match value {
+        Value::String(_) => "a String",
+        Value::Null => "null",
+        Value::Instance { .. } => "an object",
+        Value::List(_) => "a List",
+        Value::Other(what) => what,
+        Value::Computed => "a computed value",
+    }
 }
 
 /// `a`, `a and b`, or `a, b, and c`.
@@ -374,10 +448,20 @@ mod tests {
             Property {
                 name: "name",
                 doc: "",
+                kind: ConfigKind::String,
             },
             Property {
                 name: "flavor",
                 doc: "",
+                kind: ConfigKind::String,
+            },
+            Property {
+                name: "parts",
+                doc: "",
+                kind: ConfigKind::Strings {
+                    form: "name@version",
+                    valid: |s| s.split_once('@').is_some(),
+                },
             },
         ],
         std: &[],
@@ -391,7 +475,7 @@ mod tests {
     };
 
     /// Each class's key and the properties set.
-    type Configs = Vec<(String, Vec<(String, String)>)>;
+    type Configs = Vec<(String, Vec<(String, ConfigValue)>)>;
 
     fn checked(text: &str) -> (Configs, Vec<String>) {
         let (exports, problems) = read(text);
@@ -409,6 +493,10 @@ mod tests {
         (checked.configs, problems)
     }
 
+    fn string(s: &str) -> ConfigValue {
+        ConfigValue::String(s.into())
+    }
+
     #[test]
     fn instances_across_code_blocks() {
         let text = "# Toy\n\n    export let name = \"t\";\n    export let toy = {\n      \
@@ -416,8 +504,43 @@ mod tests {
                     flavor: null,\n    };\n    export let empty = new EmptyConfig();\n";
         let (configs, problems) = checked(text);
         assert_eq!(problems, Vec::<String>::new());
-        let toy = ("toy".to_string(), vec![("name".into(), "toy-\"t\"".into())]);
+        let toy = (
+            "toy".to_string(),
+            vec![("name".into(), string("toy-\"t\""))],
+        );
         assert_eq!(configs, [toy, ("empty".to_string(), vec![])]);
+    }
+
+    /// The object takes its class from the declared type, or names it
+    /// too, the same; lists hold strings, each trimmed.
+    #[test]
+    fn declared_types_and_lists() {
+        let text = "    export let toy: ToyConfig = {
+      name: \"t\",
+      parts: [\"a@1\", \" b@2 \",],
+    };
+    export let empty: EmptyConfig = { class: EmptyConfig };
+    export let toy: ToyConfig = { parts: [], flavor: null };
+    export let license: String = \"MIT\";
+    export let names: List<String> = [\"x\"];
+";
+        let (configs, problems) = checked(text);
+        assert_eq!(problems, Vec::<String>::new());
+        let parts = |items: &[&str]| {
+            let items = items.iter().map(|s| s.to_string()).collect();
+            ("parts".to_string(), ConfigValue::Strings(items))
+        };
+        assert_eq!(
+            configs,
+            [
+                (
+                    "toy".to_string(),
+                    vec![("name".into(), string("t")), parts(&["a@1", "b@2"])]
+                ),
+                ("empty".to_string(), vec![]),
+                ("toy".to_string(), vec![parts(&[])]),
+            ]
+        );
     }
 
     #[test]
@@ -444,13 +567,49 @@ mod tests {
                 "ToyConfg: No config class `ToyConfg`; did you mean `ToyConfig`?",
                 "Unknown: No config class `Unknown`; those here are `ToyConfig` and \
                  `EmptyConfig`",
-                "empty: `empty` is for EmptyConfig, as `export let empty = { class: \
-                 EmptyConfig, … }`",
+                "empty: `empty` is for EmptyConfig, as `export let empty: EmptyConfig = { … }`",
                 "toy: EmptyConfig goes in `export let empty`, not `toy`",
                 "\"a${b}\": ToyConfig's `name` needs a String literal: config files aren't \
                  run, so values aren't computed",
                 "[\"x\"]: ToyConfig's `flavor` is a String, not a List",
-                "\"a\": Name each property of ToyConfig, as `{ class: ToyConfig, name: value }`",
+                "\"a\": Name each property of ToyConfig, as `{ name: value }`",
+            ]
+        );
+    }
+
+    /// Declared types that name no config class, or disagree with
+    /// `class:`, or aren't objects; objects without classes; and lists
+    /// that aren't, or hold what they shouldn't.
+    #[test]
+    fn declared_type_and_list_mistakes() {
+        let text = "    export let toy: ToyConfg = { name: \"a\" };
+    export let toy: ToyConfig = { class: EmptyConfig };
+    export let toy: Other.Config = { name: \"a\" };
+    export let toys: ToyConfig = { name: \"a\" };
+    export let toy = { name: \"a\" };
+    export let x: ToyConfig = \"a\";
+    export let toy: ToyConfig = { parts: \"a@1\" };
+    export let toy: ToyConfig = { parts: [\"a@1\", \"b\", 3, \"${c}\"] };
+    export let toy: ToyConfig = { name: [\"a\"] };
+    export let thing = { name: \"a\" };
+";
+        let (_, problems) = checked(text);
+        assert_eq!(
+            problems,
+            [
+                "ToyConfg: `toy` is for ToyConfig, not `ToyConfg`",
+                "EmptyConfig: `class: EmptyConfig` disagrees with the declared type, \
+                 `ToyConfig`",
+                "Other.Config: `toy` is for ToyConfig, not `Other.Config`",
+                "toys: ToyConfig goes in `export let toy`, not `toys`",
+                "toy: `toy` needs its class, as `export let toy: ToyConfig = { … }`",
+                "x: A ToyConfig is an object, as `export let toy: ToyConfig = { … }`",
+                "\"a@1\": ToyConfig's `parts` is a List<String>, not a String",
+                "\"b\": ToyConfig's `parts` are each `name@version`, not `b`",
+                "3: ToyConfig's `parts` holds Strings, not an Int",
+                "\"${c}\": ToyConfig's `parts` needs a String literal: config files aren't \
+                 run, so values aren't computed",
+                "[\"a\"]: ToyConfig's `name` is a String, not a List",
             ]
         );
     }

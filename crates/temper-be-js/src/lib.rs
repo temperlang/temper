@@ -102,18 +102,37 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
-/// What a library's config may set for this backend, `export let js = {
-/// class: JsConfig, … };`, as Kotlin's `JsConfig`; and std's, as Kotlin's
+/// What a library's config may set for this backend, `export let js:
+/// JsConfig = { … };`, as Kotlin's `JsConfig`; and std's, as Kotlin's
 /// backends inject it.
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "js",
     class: "JsConfig",
-    properties: &[temper_tmpl::Property {
-        name: "name",
-        doc: "The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name.",
-    }],
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String,
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "npm packages that the library's host code uses, each `\"name@version\"`, as `\"@scope/name@^1.0.0\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "name@version",
+                valid: |d| npm_dependency(d).is_some(),
+            },
+        },
+    ],
     std: &[("name", "@temperlang/std")],
 };
+
+/// A package that a config's `dependencies` lists, as `"name@version"`,
+/// its name maybe scoped (`@scope/name`): its name and version.
+pub fn npm_dependency(text: &str) -> Option<(&str, &str)> {
+    let (name, version) = text.trim().rsplit_once('@')?;
+    let fine = |p: &str| !p.is_empty() && !p.contains(char::is_whitespace);
+    (fine(name) && fine(version)).then_some((name, version))
+}
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
@@ -335,6 +354,15 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
             true => dev.push(line),
             false => dependencies.push(line),
         }
+    }
+    // The packages its host code uses, as its config lists them, sorted.
+    let mut listed: Vec<(&str, &str)> = (CONFIG.strings(p.metadata(), "dependencies").iter())
+        .filter_map(|d| npm_dependency(d))
+        .collect();
+    listed.sort();
+    for (name, version) in listed {
+        let quoted = temper_tmpl::json_string;
+        dependencies.push(format!("        {}: {}", quoted(name), quoted(version)));
     }
     if tested {
         dev.push("        \"mocha\": \"^10.0.0\"".into());
