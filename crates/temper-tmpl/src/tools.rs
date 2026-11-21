@@ -104,18 +104,19 @@ pub fn tool_identity(name: &str) -> String {
 
 /// Removes the build directories under `dir` that `patterns` name, as
 /// [`crate::Tools::build_dirs`] lists them: paths from `dir`, each `*`
-/// any one name there.
+/// any one name there. It follows no symbolic link: one named is
+/// removed as a link, and one on the way leads nowhere.
 pub fn remove_build_dirs(dir: &Path, patterns: &[&str]) {
     fn remove(dir: &Path, parts: &[&str]) {
         match parts {
             [] => {
                 let _ = std::fs::remove_dir_all(dir);
             }
+            // A directory, not a link to one, to look in.
+            _ if !std::fs::symlink_metadata(dir).is_ok_and(|m| m.is_dir()) => {}
             ["*", rest @ ..] => {
                 for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
-                    if entry.file_type().is_ok_and(|t| t.is_dir()) {
-                        remove(&entry.path(), rest);
-                    }
+                    remove(&entry.path(), rest);
                 }
             }
             [name, rest @ ..] => remove(&dir.join(name), rest),
@@ -324,7 +325,83 @@ pub fn unescape_xml(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::junit;
+    use super::{junit, remove_build_dirs, tool_identity};
+    use std::fs;
+    use std::path::PathBuf;
+
+    /// A fresh directory for a test.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("temper-tools-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// A tool, by its path, is told apart by its size (and time), so
+    /// another version of it builds afresh; a missing one is its name.
+    #[test]
+    fn tools_are_told_apart() {
+        let dir = scratch("identity");
+        let tool = dir.join("cxx");
+        fs::write(&tool, "one").unwrap();
+        let first = tool_identity(&tool.to_string_lossy());
+        assert_eq!(tool_identity(&tool.to_string_lossy()), first);
+        fs::write(&tool, "another").unwrap();
+        assert_ne!(tool_identity(&tool.to_string_lossy()), first);
+        let missing = dir.join("missing").to_string_lossy().into_owned();
+        assert_eq!(tool_identity(&missing), missing);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    /// Build directories by their patterns, each `*` any one directory,
+    /// and nothing else.
+    #[test]
+    fn build_dirs_go() {
+        let dir = scratch("build-dirs");
+        for path in [
+            ".build/x",
+            "a/target/temper/x",
+            "a/target/kept",
+            "a/src/x",
+            "b/target/temper",
+        ] {
+            fs::create_dir_all(dir.join(path)).unwrap();
+        }
+        fs::write(dir.join("c"), "a file, not a directory").unwrap();
+        remove_build_dirs(&dir, &[".build", "*/target/temper"]);
+        assert!(!dir.join(".build").exists());
+        assert!(!dir.join("a/target/temper").exists());
+        assert!(!dir.join("b/target/temper").exists());
+        assert!(dir.join("a/target/kept").is_dir());
+        assert!(dir.join("a/src/x").is_dir());
+        assert!(dir.join("c").is_file());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    /// A build directory that's a symbolic link is removed as a link,
+    /// and none is followed on the way to one: what they point to stays.
+    #[test]
+    #[cfg(unix)]
+    fn build_dirs_follow_no_links() {
+        use std::os::unix::fs::symlink;
+        let dir = scratch("build-dir-links");
+        let outside = dir.join("outside");
+        fs::create_dir_all(outside.join("temper")).unwrap();
+        fs::write(outside.join("temper/keep"), "keep").unwrap();
+        let out = dir.join("out");
+        fs::create_dir_all(out.join("a")).unwrap();
+        fs::create_dir_all(out.join("b")).unwrap();
+        symlink(&outside, out.join(".build")).unwrap();
+        symlink(&outside, out.join("a/target")).unwrap();
+        symlink(&outside, out.join("linked")).unwrap();
+        remove_build_dirs(&out, &[".build", "*/target/temper"]);
+        assert!(fs::symlink_metadata(out.join(".build")).is_err());
+        assert_eq!(
+            fs::read_to_string(outside.join("temper/keep")).unwrap(),
+            "keep"
+        );
+        let _ = fs::remove_dir_all(dir);
+    }
 
     fn causes(xml: &str) -> Vec<(String, Option<String>)> {
         junit(xml)

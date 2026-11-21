@@ -457,6 +457,11 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
+      # What `temper build` writes and removes in `temper.out`: on macOS
+      # and Windows, a module renamed only in case; on Unix, links.
+      - name: Generated files
+        if: ${{ !cancelled() }}
+        run: 'bash .github/ci-tools/tests-ran.sh 3 cargo test --locked -p temper-driver --lib manifest::'
       - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features
@@ -580,6 +585,11 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
+      # What `temper build` writes and removes in `temper.out`: on macOS
+      # and Windows, a module renamed only in case; on Unix, links.
+      - name: Generated files
+        if: ${{ !cancelled() }}
+        run: 'bash .github/ci-tools/tests-ran.sh 3 cargo test --locked -p temper-driver --lib manifest::'
       - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features

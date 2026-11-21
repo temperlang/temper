@@ -90,9 +90,9 @@ fn results_file(dir: &Path, library: &str) -> PathBuf {
 /// project's `bin` and `obj` are kept from run to run, so MSBuild
 /// compiles only those whose files `temper build` rewrote; with strict
 /// warnings, everything compiles again, so every warning is seen. It
-/// fails quietly: [`test`] runs a library
-/// whose results aren't there alone, which says what's wrong, reusing
-/// what did build. With nothing to test, as for `temper run`, it does
+/// fails quietly: where the build fails, nothing runs, and [`test`]
+/// runs each library alone, which says what's wrong, reusing what did
+/// build. With nothing to test, as for `temper run`, it does
 /// nothing.
 fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(BUILD);
@@ -124,9 +124,12 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
             .args(strict_warnings().then_some("--no-incremental")),
         "dotnet build",
     );
-    if let Ok(built) = built {
+    if let Ok(built) = &built {
         let _ = std::fs::write(root.join("build.log"), &built.stdout);
-        // Each library's results, or none for those that didn't build.
+    }
+    // Each library's results, only where everything built: after a
+    // failed build, `bin` may still hold the last run's assemblies.
+    if built.is_ok_and(|b| b.status.success()) {
         let _ = output(
             dotnet(&root).args(["test", "Tests.sln", "--no-build", &jobs, "--logger:junit"]),
             "dotnet test",

@@ -172,10 +172,32 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`shape_variant`]'s
+/// low limits, so `runs_and_lints` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &RUST.rules), &RUST)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &RUST.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &shape_variant()),
+        false => translate(&program, &RUST),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// Rust with limits low enough that `kit::split_shape`'s list and map
+/// literals go in parts and its top level's statements in groups
+/// (`tree::Limits`).
+fn shape_variant() -> temper_be_rust::Variant {
+    temper_be_rust::Variant {
+        name: RUST.name,
+        profile: RUST.profile.clone(),
+        rules: temper_be_rust::names::RULES,
+        rust_version: RUST.rust_version,
+        limits: temper_be_rust::tree::Limits {
+            list_part: 4,
+            run: 6,
+            group: 4,
+        },
+    }
 }
 
 /// Whether a tool runs, as `program args… --version`.
@@ -573,7 +595,7 @@ fn runs_and_lints() {
         // `types/float/basics`) is named by its key instead, or where
         // that's taken too (the `functions` program, after
         // `imports/functions`), by its key and `-program`.
-        let mut cases = kit::with_huge(cases());
+        let mut cases = kit::with_split_programs(cases());
         let mut seen = std::collections::HashSet::new();
         for case in &mut cases {
             if !seen.insert(case.library.clone()) {
@@ -754,27 +776,14 @@ fn runs_and_lints() {
     });
 }
 
-/// `kit::split_shape`'s program translated with limits low enough that
-/// its list and map literals go in parts and its top level's statements
-/// in groups (`tree::Limits`), matching its golden, `split-shape.rs`, on
-/// every push; `huge_splits` and `runs_and_lints` take the huge program
-/// at the real limits, nightly (`TEMPER_HUGE`).
+/// `kit::split_shape`'s program at [`shape_variant`]'s low limits,
+/// matching its golden, `split-shape.rs`, on every push, as
+/// `runs_and_lints` runs it; `huge_splits` and `runs_and_lints` take the
+/// huge program at the real limits, nightly (`TEMPER_HUGE`).
 #[test]
 fn split_shape() {
     kit::with_stack(|| {
-        let variant = temper_be_rust::Variant {
-            name: RUST.name,
-            profile: RUST.profile.clone(),
-            rules: temper_be_rust::names::RULES,
-            rust_version: RUST.rust_version,
-            limits: temper_be_rust::tree::Limits {
-                list_part: 4,
-                run: 6,
-                group: 4,
-            },
-        };
-        let case = kit::split_shape();
-        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let files = generate(&kit::split_shape());
         let source = (files.iter())
             .find(|f| f.path.ends_with(".rs") && f.text.contains("INIT_ONCE"))
             .unwrap();

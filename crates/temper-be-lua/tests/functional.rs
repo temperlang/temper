@@ -469,10 +469,27 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`shape_variant`]'s
+/// low limits, so `runs` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &LUA.rules), &LUA)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &LUA.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &shape_variant()),
+        false => translate(&program, &LUA),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// Lua with limits low enough that `kit::split_shape`'s list and map
+/// literals go in parts (`translate::Limits`).
+fn shape_variant() -> temper_be_lua::Variant {
+    temper_be_lua::Variant {
+        name: LUA.name,
+        profile: LUA.profile.clone(),
+        rules: names::RULES,
+        lua_version: LUA.lua_version,
+        limits: temper_be_lua::translate::Limits { list_part: 4 },
+    }
 }
 
 /// The rockspec Kotlin writes for a library without a version.
@@ -706,7 +723,7 @@ fn runs() {
         let _ = fs::remove_dir_all(&out);
         let dir = out.join("lua");
         kit::copy_dir(&runtime(), &dir.join("temper-core"), &[]);
-        let mut cases = kit::with_huge(cases());
+        let mut cases = kit::with_split_programs(cases());
         // std `net`'s tests, with LuaSocket's client where a Lua loads it,
         // else as Kotlin's suite expects them to fail on Lua.
         let net = net_lua(&lua);
@@ -1192,23 +1209,14 @@ fn template_work_is_linear() {
     });
 }
 
-/// `kit::split_shape`'s program translated with limits low enough that
-/// its list and map literals go in parts (`translate::Limits`), matching
-/// its golden, `split-shape.lua`, on every push; long lines are `tree`'s
-/// unit tests'. `huge_splits` and `runs` take the huge program at the
-/// real limits, nightly (`TEMPER_HUGE`).
+/// `kit::split_shape`'s program at [`shape_variant`]'s low limits,
+/// matching its golden, `split-shape.lua`, on every push, as `runs` runs
+/// it; long lines are `tree`'s unit tests'. `huge_splits` and `runs`
+/// take the huge program at the real limits, nightly (`TEMPER_HUGE`).
 #[test]
 fn split_shape() {
     kit::with_stack(|| {
-        let variant = temper_be_lua::Variant {
-            name: LUA.name,
-            profile: LUA.profile.clone(),
-            rules: names::RULES,
-            lua_version: LUA.lua_version,
-            limits: temper_be_lua::translate::Limits { list_part: 4 },
-        };
-        let case = kit::split_shape();
-        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let files = generate(&kit::split_shape());
         let source = (files.iter())
             .find(|f| f.text.contains("list_of_parts"))
             .unwrap_or(&files[0]);

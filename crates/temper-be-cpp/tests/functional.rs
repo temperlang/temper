@@ -454,10 +454,32 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`shape_variant`]'s
+/// low limits, so `runs` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &CPP.rules), &CPP)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &CPP.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &shape_variant()),
+        false => translate(&program, &CPP),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// C++ with limits low enough that `kit::split_shape`'s list and map
+/// literals go in parts and its top level's statements in groups
+/// (`tree::Limits`).
+fn shape_variant() -> temper_be_cpp::Variant {
+    temper_be_cpp::Variant {
+        name: CPP.name,
+        profile: CPP.profile.clone(),
+        rules: names::RULES,
+        standard: CPP.standard,
+        limits: temper_be_cpp::tree::Limits {
+            list_part: 4,
+            run: 6,
+            group: 4,
+        },
+    }
 }
 
 /// A library's generated headers and `.cpp`s include the runtime's
@@ -466,7 +488,8 @@ fn generate(case: &Case) -> Vec<OutFile> {
 /// includes it only for its host code (`_connected.hpp`), which may have
 /// been written against it. `runs` compiles each file so, with no part of
 /// the runtime before it. Every standard name the file spells is one
-/// whose header [`runtime::includes_for`] knows, so it includes that too.
+/// whose header [`runtime::includes_for`] knows, and it includes that
+/// header itself.
 fn light_includes(key: &str, files: &[OutFile], host_files: &[(String, String)]) {
     let ident = |c: char| c == '_' || c.is_ascii_alphanumeric();
     for file in files {
@@ -514,6 +537,24 @@ fn light_includes(key: &str, files: &[OutFile], host_files: &[(String, String)])
                 "{key}: {} spells {name}, which runtime::BARE_STD lacks",
                 file.path
             );
+        }
+        // The standard headers it needs, which compiles here can't
+        // check, as their precompiled header has every one: its own, or
+        // those of a generated header it includes, as a module's `.cpp`
+        // its `.hpp`.
+        let included = |text: &str, line: &str| text.lines().any(|l| l == line);
+        let headers: Vec<&OutFile> = (files.iter())
+            .filter(|h| included(text, &format!("#include <{}>", h.path)))
+            .collect();
+        for header in runtime::includes_for(text) {
+            if !header.starts_with("<temper-core/") {
+                let line = format!("#include {header}");
+                assert!(
+                    included(text, &line) || headers.iter().any(|h| included(&h.text, &line)),
+                    "{key}: {} lacks {line}",
+                    file.path
+                );
+            }
         }
     }
 }
@@ -1335,7 +1376,7 @@ fn runs() {
         let _ = fs::remove_dir_all(&out);
         let src = out.join("src");
         // Libraries with host code are each `work`, so each builds alone.
-        let (connected, cases): (Vec<Case>, Vec<Case>) = kit::with_huge(cases())
+        let (connected, cases): (Vec<Case>, Vec<Case>) = kit::with_split_programs(cases())
             .into_iter()
             .partition(|c| !c.host_files.is_empty());
         // Those that run as tests alone, and the rest also as programs.
@@ -1994,28 +2035,15 @@ fn template_work_is_linear() {
     });
 }
 
-/// `kit::split_shape`'s program translated with limits low enough that
-/// its list and map literals go in parts and its top level's statements
-/// in groups (`tree::Limits`), matching its golden, `split-shape.cpp`,
-/// on every push; long strings' pieces are `tree`'s unit tests'.
-/// `huge_splits` and `runs` take the huge program at the real limits,
-/// nightly (`TEMPER_HUGE`).
+/// `kit::split_shape`'s program at [`shape_variant`]'s low limits,
+/// matching its golden, `split-shape.cpp`, on every push, as `runs` runs
+/// it; long strings' pieces are `tree`'s unit tests'. `huge_splits` and
+/// `runs` take the huge program at the real limits, nightly
+/// (`TEMPER_HUGE`).
 #[test]
 fn split_shape() {
     kit::with_stack(|| {
-        let variant = temper_be_cpp::Variant {
-            name: CPP.name,
-            profile: CPP.profile.clone(),
-            rules: names::RULES,
-            standard: CPP.standard,
-            limits: temper_be_cpp::tree::Limits {
-                list_part: 4,
-                run: 6,
-                group: 4,
-            },
-        };
-        let case = kit::split_shape();
-        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let files = generate(&kit::split_shape());
         let source = files.iter().find(|f| f.path.ends_with(".cpp")).unwrap();
         for part in ["core::List::make_parts<", "[&]() -> void {"] {
             assert!(source.text.contains(part), "{part}");

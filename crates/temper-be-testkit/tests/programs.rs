@@ -49,11 +49,17 @@ fn net_tests_on_the_interpreter() {
 #[test]
 fn net_tests_translate_alike_each_run() {
     kit::with_stack(|| {
+        // One of the fixed few, unless more test processes than that run
+        // at once, or something else holds them, which costs only cache
+        // hits, so it's said, not failed.
         let port = kit::test_server_port();
-        assert!(
-            kit::TEST_SERVER_PORTS.contains(&port),
-            "the test server's port {port}"
-        );
+        assert_eq!(kit::test_server_port(), port);
+        if !kit::TEST_SERVER_PORTS.contains(&port) {
+            eprintln!(
+                "the test server's port is {port}, not one of {:?}: are other tests running?",
+                kit::TEST_SERVER_PORTS
+            );
+        }
         for case in kit::functional_cases("interp", &kit::NET) {
             if !kit::NET.iter().any(|t| t.replace('/', "-") == case.key) {
                 continue;

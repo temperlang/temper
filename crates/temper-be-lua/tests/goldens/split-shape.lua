@@ -9,10 +9,21 @@ temper.listbuilder_add(built, "item 1 é✓𝄞")
 temper.listbuilder_add(built, "item 2 é✓𝄞")
 temper.listbuilder_add(built, "item 3 é✓𝄞")
 temper.listbuilder_add(built, "item 4 é✓𝄞")
+local mid = temper.listbuilder_length(built)
+---@type string
+local missing
+if not temper.pcall(function()
+  missing = temper.mapped_get(table_, "absent")
+end) then
+  missing = "none"
+end
 temper.listbuilder_add(built, "item 5 é✓𝄞")
 temper.listbuilder_add(built, "item 6 é✓𝄞")
 temper.listbuilder_add(built, "item 7 é✓𝄞")
 temper.listbuilder_add(built, "item 8 é✓𝄞")
+if mid < 0 then
+  temper.listbuilder_add(built, missing)
+end
 temper.listbuilder_add(built, "item 9 é✓𝄞")
 local all = temper.listbuilder_tolist(built)
 print(temper.list_length(items) .. " " .. temper.list_get(items, 9))
@@ -27,5 +38,6 @@ end
 print(string_ .. t)
 print(tostring(temper.list_length(temper.string_split(long, "✓"))))
 print(temper.list_length(all) .. " " .. temper.list_get(all, 9))
+print(mid .. " " .. temper.list_get(all, mid) .. " " .. missing)
 
 return {}

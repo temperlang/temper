@@ -81,8 +81,9 @@ pub struct Options<'a> {
     /// Reports hints, not only warnings and errors (`-v`).
     pub hints: bool,
     /// For `temper test` and `temper run`: removes the backend's build
-    /// directories first ([`temper_tmpl::Tools::build_dirs`]), so
-    /// everything builds afresh (`--clean`), not only what changed.
+    /// directories ([`temper_tmpl::Tools::build_dirs`]) before writing
+    /// any code, so everything builds afresh (`--clean`), not only what
+    /// changed.
     pub clean: bool,
 }
 
@@ -198,6 +199,10 @@ pub fn build(
     };
     for &backend in backends {
         let dir = temper_out.join(backend.name);
+        // Before any code's written, so no generated file goes with them.
+        if let (true, Some(tools)) = (options.clean, backend.tools) {
+            temper_tmpl::tools::remove_build_dirs(&dir, tools.build_dirs);
+        }
         let mut writer = Writer::open(&dir);
         let mut interfaces: Vec<Interface> = Vec::new();
         if let Some(std) = &std {
@@ -240,21 +245,18 @@ pub fn build(
         if let Err(why) = write_runtime(&mut writer, backend) {
             results.push(("temper-core".into(), backend.name, Err(why)));
         }
-        for path in &writer.edited {
-            let text = format!("{} was edited; regenerated", path.display());
+        let edited = (writer.edited.iter()).map(|p| (p, "regenerated", "GeneratedFileEdited"));
+        let kept = (writer.kept.iter())
+            .map(|p| (p, "kept, though no longer generated", "GeneratedFileKept"));
+        for (path, what, kind) in edited.chain(kept) {
+            let text = format!("{} was edited; {what}", path.display());
             let path = path.display().to_string();
             let _ = match options.log {
                 LogFormat::Text => writeln!(err, "{text}"),
                 LogFormat::Json => writeln!(
                     err,
                     "{}",
-                    record(
-                        "warning",
-                        "GeneratedFileEdited",
-                        None,
-                        &[path.into()],
-                        &text
-                    )
+                    record("warning", kind, None, &[path.into()], &text)
                 ),
             };
         }

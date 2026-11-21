@@ -86,9 +86,6 @@ pub fn test_backend(
             }
         }
     }
-    if build_options.clean {
-        clean(backend, &dir);
-    }
     for (name, result) in run(backend, &dir, &all) {
         match result {
             Ok(tests) => {
@@ -146,14 +143,6 @@ pub fn test_backend(
         }
     }
     Some((ok && tally.all_passed(), tally))
-}
-
-/// Removes a backend's build directories in `dir` (`temper.out/BACKEND`),
-/// for `--clean`.
-pub fn clean(backend: &Backend, dir: &Path) {
-    if let Some(tools) = backend.tools {
-        temper_tmpl::tools::remove_build_dirs(dir, tools.build_dirs);
-    }
 }
 
 /// Runs the tests of the libraries in `dir` (`temper.out/BACKEND`) with

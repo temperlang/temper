@@ -852,7 +852,7 @@ fn runs() {
         let assert = out.join("assert.d.ts");
         fs::write(&assert, ASSERT_TYPES).unwrap();
         checked.push(assert);
-        for case in kit::with_huge(cases()) {
+        for case in kit::with_split_programs(cases()) {
             let root = out.join(&case.key);
             let package = root.join(&case.library);
             let prefix = relative(&package, &case.dir);

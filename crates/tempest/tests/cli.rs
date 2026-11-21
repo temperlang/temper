@@ -769,14 +769,15 @@ fn stamps(dir: &Path, suffix: &str) -> std::collections::BTreeMap<String, std::t
 /// ones keep their times and the tools' own builds skip them; it puts
 /// back a generated file that was edited, saying so once, and removes
 /// one it no longer generates, by its manifest of what it wrote, but
-/// leaves the user's own files alone, and a broken manifest only means
-/// no warnings or removals.
+/// leaves the user's own files alone, and those edited since, and a
+/// broken manifest only means no warnings or removals.
 #[test]
 #[cfg(feature = "py")]
 fn build_writes_only_what_changed() {
     let files = [
         ("a.temper", "export let x = 1;\n"),
         ("gone/g.temper", "export let y = 2;\n"),
+        ("kept/k.temper", "export let z = 3;\n"),
     ];
     with_library("build-changed", &files, |dir| {
         let build = || {
@@ -802,8 +803,33 @@ fn build_writes_only_what_changed() {
         assert!(err.contains("a.py was edited; regenerated"), "{err}");
         assert_eq!(fs::read_to_string(&generated).unwrap(), text);
         assert_eq!(build(), "");
-        // A module's file goes with the module; the user's stays.
+        // A change to one module rewrites only its file.
+        let before = stamps(&py, "");
+        fs::write(Path::new(dir).join("a.temper"), "export let x = 4;\n").unwrap();
+        assert_eq!(build(), "");
+        let after = stamps(&py, "");
+        let changed: Vec<&String> = (after.iter())
+            .filter(|(p, t)| before.get(*p) != Some(t))
+            .map(|(p, _)| p)
+            .collect();
+        let manifest = py.join(".temper-manifest");
+        let expected = [&manifest, &generated].map(|p| p.to_string_lossy().into_owned());
+        assert_eq!(changed, expected.iter().collect::<Vec<_>>());
+        assert_eq!(after.len(), before.len());
+        let text = fs::read_to_string(&generated).unwrap();
+        // A module's file goes with the module; the user's stays, as
+        // does one edited since, said of once.
+        let kept = py.join("a/a/kept.py");
+        fs::write(&kept, "# mine now\n").unwrap();
         fs::remove_dir_all(Path::new(dir).join("gone")).unwrap();
+        fs::remove_dir_all(Path::new(dir).join("kept")).unwrap();
+        let err = build();
+        assert_eq!(err.matches("was edited").count(), 1, "{err}");
+        assert!(
+            err.contains("kept.py was edited; kept, though no longer generated"),
+            "{err}"
+        );
+        assert_eq!(fs::read_to_string(&kept).unwrap(), "# mine now\n");
         assert_eq!(build(), "");
         assert!(!gone.exists());
         assert!(generated.is_file());
@@ -925,14 +951,6 @@ fn cmake_builds_a_library() {
     });
 }
 
-/// Where `ccache` is on `PATH`, as `temper test -b cpp` looks for it.
-#[cfg(feature = "cpp")]
-fn ccache_installed() -> bool {
-    let name = format!("ccache{}", std::env::consts::EXE_SUFFIX);
-    let path = std::env::var_os("PATH").unwrap_or_default();
-    std::env::split_paths(&path).any(|dir| dir.join(&name).is_file())
-}
-
 /// `temper test -b cpp` builds a library's tests with CMake and runs
 /// them, reading the JUnit XML they write, where CMake is installed
 /// (skipped otherwise; required with `TEMPER_REQUIRE_CHECKERS`). A
@@ -957,12 +975,9 @@ fn test_a_library_in_cpp() {
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
-        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        T_TEMPER,
         ("b/config.temper.md", "    export let name = \"b\";\n"),
-        (
-            "b/b.temper",
-            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
-        ),
+        B_TEMPER,
     ];
     with_library("cpp-tests", &files, |dir| {
         // Through ccache, where it's installed and no launcher's set,
@@ -985,17 +1000,11 @@ fn test_a_library_in_cpp() {
                 .find_map(|l| l.strip_prefix("CMAKE_CXX_COMPILER_LAUNCHER:"))
                 .map(str::to_string)
         };
+        // Whether it's installed here is `choose_ccache`'s unit tests';
+        // here, it's said once where it's used, and only there.
         let said = out.matches("through ccache").count();
-        match ccache_installed() {
-            true => {
-                assert_eq!(said, 1, "{out}");
-                assert!(launcher(&cache).is_some_and(|l| l.contains("ccache")));
-            }
-            false => {
-                assert_eq!(said, 0, "{out}");
-                assert_eq!(launcher(&cache), None);
-            }
-        }
+        let used = launcher(&cache).is_some_and(|l| l.contains("ccache"));
+        assert_eq!(said, usize::from(used), "{out}");
         assert!(out.contains("  failed  b - expected"), "{out}{err}");
         assert!(
             out.to_lowercase().contains(CLASS_ASSERT_FAILED),
@@ -1013,7 +1022,9 @@ fn test_a_library_in_cpp() {
                 .sum()
         }
         assert_eq!((count(&cpp, "a.dir"), count(&cpp, "std.dir")), (1, 1));
-        reuses_its_build("cpp", dir, ".o", "/a.dir/", "/std.dir/", true);
+        // MSVC's objects are `.obj`.
+        let object = if cfg!(windows) { ".obj" } else { ".o" };
+        reuses_its_build("cpp", dir, object, "/a.dir/", "/std.dir/", true, false);
         // A `TEMPER_CXX_JOBS` that isn't a number of jobs fails the
         // build, saying so; with `TEMPER_NO_CCACHE`, it's configured
         // without ccache, saying nothing of it.
@@ -1030,6 +1041,37 @@ fn test_a_library_in_cpp() {
         assert_eq!(wrong.status.code(), Some(1));
         assert!(!out.contains("ccache"), "{out}");
         assert_eq!(launcher(&cache), None);
+        // A `ccache` on `PATH` is used, and said so of, once.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let bin = PathBuf::from(format!("{dir}-fake-bin"));
+            let ccache = bin.join("ccache");
+            fs::create_dir_all(&bin).unwrap();
+            fs::write(&ccache, "#!/bin/sh\nexec \"$@\"\n").unwrap();
+            fs::set_permissions(&ccache, fs::Permissions::from_mode(0o755)).unwrap();
+            let path = std::env::var_os("PATH").unwrap_or_default();
+            let path = std::env::join_paths(
+                std::iter::once(bin.clone()).chain(std::env::split_paths(&path)),
+            )
+            .unwrap();
+            let faked = Command::new(env!("CARGO_BIN_EXE_temper"))
+                .args(["test", "-b", "cpp", dir])
+                .env("TEMPER_CXX_JOBS", "two")
+                .env("PATH", path)
+                .env_remove("CMAKE_CXX_COMPILER_LAUNCHER")
+                .env_remove("TEMPER_NO_CCACHE")
+                .output()
+                .unwrap();
+            let out = String::from_utf8_lossy(&faked.stdout);
+            assert_eq!(out.matches("through ccache").count(), 1, "{out}");
+            let configured = launcher(&cache).unwrap_or_default();
+            assert!(
+                configured.ends_with(&*ccache.to_string_lossy()),
+                "{configured}"
+            );
+            let _ = fs::remove_dir_all(&bin);
+        }
     });
 }
 
@@ -1090,12 +1132,9 @@ fn test_a_library_in_rust() {
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
-        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        T_TEMPER,
         ("b/config.temper.md", "    export let name = \"b\";\n"),
-        (
-            "b/b.temper",
-            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
-        ),
+        B_TEMPER,
     ];
     with_library("rust-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "rust", dir]);
@@ -1118,9 +1157,48 @@ fn test_a_library_in_rust() {
                 .filter(|f| f.starts_with(&format!("lib{name}-")) && f.ends_with(".rlib"))
                 .count()
         };
-        let counts = ["a", "temper_std", "temper_core"].map(count);
-        assert_eq!(counts, [1, 1, 1], "{deps:?}");
-        reuses_its_build("rust", dir, ".rlib", "/liba-", "/libtemper_std-", true);
+        // Where it could link: on Windows, not every user can, and each
+        // library builds alone (`test_a_library_in_rust_alone`).
+        let workspace = Path::new(dir).join("temper.out/rust/.build/Cargo.toml");
+        if cfg!(unix) || workspace.is_file() {
+            let counts = ["a", "temper_std", "temper_core"].map(count);
+            assert_eq!(counts, [1, 1, 1], "{deps:?}");
+        }
+        reuses_its_build(
+            "rust",
+            dir,
+            ".rlib",
+            "/liba-",
+            "/libtemper_std-",
+            true,
+            false,
+        );
+    });
+}
+
+/// `temper test -b rust` where its Cargo workspace can't be made, as on
+/// Windows for a user who can't link: each library builds and tests
+/// alone, with the same results.
+#[test]
+#[cfg(feature = "rust")]
+fn test_a_library_in_rust_alone() {
+    let files = [
+        ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
+        ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
+    ];
+    with_library("rust-alone", &files, |dir| {
+        // A file where the workspace's directory would be.
+        let rust = Path::new(dir).join("temper.out/rust");
+        fs::create_dir_all(&rust).unwrap();
+        fs::write(rust.join(".build"), "not a directory\n").unwrap();
+        let (code, out, err) = tempest(&["test", "-b", "rust", dir]);
+        if tools_missing("rust", &format!("{out}{err}")) {
+            return;
+        }
+        assert!(out.contains("  failed  b - expected"), "{out}{err}");
+        assert!(out.ends_with("Tests passed: 1 of 2\n"), "{out}{err}");
+        assert_eq!(code, 1);
+        assert!(rust.join(".build").is_file());
     });
 }
 
@@ -1136,12 +1214,9 @@ fn test_a_library_in_java() {
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
-        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        T_TEMPER,
         ("b/config.temper.md", "    export let name = \"b\";\n"),
-        (
-            "b/b.temper",
-            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
-        ),
+        B_TEMPER,
     ];
     with_library("java-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "java", dir]);
@@ -1174,22 +1249,15 @@ fn test_a_library_in_java() {
         assert_eq!(paths.map(|p| count(&java, p)), [1, 1, 1], "{java:?}");
         // javac builds each library apart: a change in `a` builds `a`
         // and `b`, which uses it, again, not std.
-        reuses_its_build("java", dir, ".class", "/classes/a/", "/temper/std/", true);
-        let (_, out, err) = tempest(&["test", "-b", "java", dir]);
-        assert!(out.ends_with("Tests passed: 4 of 5\n"), "{out}{err}");
-        let b = |all: &std::collections::BTreeMap<String, std::time::SystemTime>| {
-            (all.iter())
-                .filter(|(p, _)| p.replace('\\', "/").contains("/classes/b/"))
-                .map(|(p, t)| (p.clone(), *t))
-                .collect::<Vec<_>>()
-        };
-        let before = stamps(&java, ".class");
-        assert!(!b(&before).is_empty(), "{before:?}");
-        let source = Path::new(dir).join("t.temper");
-        fs::write(&source, "export let triple(n: Int): Int { n + n + n }\n").unwrap();
-        let (_, out, err) = tempest(&["test", "-b", "java", dir]);
-        assert!(out.ends_with("Tests passed: 4 of 5\n"), "{out}{err}");
-        assert_ne!(b(&stamps(&java, ".class")), b(&before), "b not rebuilt");
+        reuses_its_build(
+            "java",
+            dir,
+            ".class",
+            "/classes/a/",
+            "/temper/std/",
+            true,
+            true,
+        );
     });
 }
 
@@ -1206,12 +1274,9 @@ fn test_a_library_in_csharp() {
         ("a.temper", "test(\"a\") { assert(1 + 1 == 2) }\n"),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
-        ("t.temper", "export let triple(n: Int): Int { n * 3 }\n"),
+        T_TEMPER,
         ("b/config.temper.md", "    export let name = \"b\";\n"),
-        (
-            "b/b.temper",
-            "let { triple } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6) }\n",
-        ),
+        B_TEMPER,
     ];
     with_library("csharp-tests", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", "csharp", dir]);
@@ -1236,10 +1301,21 @@ fn test_a_library_in_csharp() {
         };
         let counts = ["A.dll", "TemperLang.Std.dll", "TemperLang.Core.dll"].map(built);
         assert_eq!(counts, [1, 1, 1], "{log}");
+        // C# that doesn't compile, in host code, fails the run, saying
+        // why, rather than running the last build's assemblies.
+        let broken = Path::new(dir).join("Broken.cs");
+        fs::write(&broken, "class Broken {\n").unwrap();
+        let (code, out, err) = tempest(&["test", "-b", "csharp", dir]);
+        assert!(!out.contains("Tests passed: 3 of 5"), "{out}{err}");
+        assert!(out.contains("error CS"), "{out}{err}");
+        assert_eq!(code, 1);
+        fs::remove_file(&broken).unwrap();
+        let (_, out, err) = tempest(&["test", "-b", "csharp", dir]);
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
         // Each project's own assembly, not the packages' copied beside it.
         let dll = |project: &str, name: &str| format!("{project}/src/bin/Debug/net6.0/{name}.dll");
         let (a, std) = (dll("a", "A"), dll("std", "TemperLang.Std"));
-        reuses_its_build("csharp", dir, ".dll", &a, &std, true);
+        reuses_its_build("csharp", dir, ".dll", &a, &std, true, false);
     });
 }
 
@@ -1892,6 +1968,31 @@ fn all_gone(ids: &[u32], secs: u64) -> bool {
     true
 }
 
+/// `a`'s module that `b` uses in the backends' two-library tests: a
+/// function and a constant, which [`reuses_its_build`] changes.
+#[cfg(any(
+    feature = "cpp",
+    feature = "rust",
+    feature = "java",
+    feature = "csharp"
+))]
+const T_TEMPER: (&str, &str) = (
+    "t.temper",
+    "export let factor = 3;\nexport let triple(n: Int): Int { n * factor }\n",
+);
+
+/// `b`'s test, of [`T_TEMPER`]'s function and constant.
+#[cfg(any(
+    feature = "cpp",
+    feature = "rust",
+    feature = "java",
+    feature = "csharp"
+))]
+const B_TEMPER: (&str, &str) = (
+    "b/b.temper",
+    "let { triple, factor } = import(\"a\");\ntest(\"t\") { assert(triple(2) == 6 && factor == 3) }\n",
+);
+
 /// Whether a backend's tools are missing, by what tempest said; which
 /// fails the test with `TEMPER_REQUIRE_CHECKERS`.
 fn tools_missing(backend: &str, err: &str) -> bool {
@@ -1912,7 +2013,12 @@ fn tools_missing(backend: &str, err: &str) -> bool {
 /// `b.temper`'s failing test is fixed, with a function of `a`'s, and a
 /// run sees it pass (4 of 5),
 /// rebuilding `a`'s files (those whose paths hold `a_part`), and, where
-/// `std_kept`, not std's (`std_part`). `--clean` builds std again.
+/// `std_kept`, not std's (`std_part`). Then a constant of `a`'s that
+/// `b`'s test checks changes, keeping its file's size, which `b`'s
+/// result must see (3 of 5), as a build going by sizes, or one that
+/// copied the constant into `b` (as javac does), might not. Where
+/// `clean`, `--clean` builds std again: that's a full build, so one
+/// backend's test checks it.
 #[cfg(any(
     feature = "cpp",
     feature = "rust",
@@ -1926,6 +2032,7 @@ fn reuses_its_build(
     a_part: &str,
     std_part: &str,
     std_kept: bool,
+    clean: bool,
 ) {
     let test = |extra: &[&str]| {
         let tested = Command::new(env!("CARGO_BIN_EXE_temper"))
@@ -1975,8 +2082,19 @@ fn reuses_its_build(
         std_kept,
         "{backend}: std"
     );
+    let source = Path::new(dir).join("t.temper");
+    let text = fs::read_to_string(&source).unwrap();
+    fs::write(&source, text.replace("factor = 3", "factor = 4")).unwrap();
+    let out = test(&[]);
+    // C#'s method is `T`.
+    let failed = out.to_lowercase().contains("  failed  t - ");
+    assert!(failed, "{backend}: {out}");
+    assert!(out.ends_with("Tests passed: 3 of 5\n"), "{backend}: {out}");
+    if !clean {
+        return;
+    }
     let out = test(&["--clean"]);
-    assert!(out.ends_with("Tests passed: 4 of 5\n"), "{backend}: {out}");
+    assert!(out.ends_with("Tests passed: 3 of 5\n"), "{backend}: {out}");
     let cleaned = pick(&stamps(&out_dir, suffix), std_part);
     assert!(
         cleaned.iter().all(|f| !std_before.contains(f)),

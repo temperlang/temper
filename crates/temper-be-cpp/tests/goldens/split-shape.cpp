@@ -1,10 +1,19 @@
 #include <split-shape/init.hpp>
 
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/pair.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
 #include <temper-core/console.hpp>
 #include <temper-core/string.hpp>
 #include <temper-core/list_builder.hpp>
 #include <temper-core/mapped.hpp>
 #include <temper-core/map.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace split_shape {
 
@@ -25,26 +34,43 @@ void global_init_init() {
     }();
     [&]() -> void {
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 4 é✓𝄞"));
+    }();
+    int32_t mid = core::List::length<core::Str>(built);
+    core::Str missing;
+    [&]() -> void {
+      try {
+        missing = core::Mapped::get<core::Str, core::Str>(table, TEMPER_STR("absent"));
+      } catch (core::TemperBubble const &) {
+        missing = TEMPER_STR("none");
+      }
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 5 é✓𝄞"));
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 6 é✓𝄞"));
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 7 é✓𝄞"));
     }();
     [&]() -> void {
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 8 é✓𝄞"));
+      if (mid < 0) {
+        core::ListBuilder::add<core::Str>(built, missing);
+      }
       core::ListBuilder::add<core::Str>(built, TEMPER_STR("item 9 é✓𝄞"));
     }();
     std::shared_ptr<std::vector<core::Str>> all = core::List::toList<core::Str>(built);
     core::Console::log(console, std::to_string(core::List::length<core::Str>(items)) + " " + core::List::get<core::Str>(items, 9));
     core::Str string = std::to_string(core::Mapped::length<core::Str, core::Str>(table)) + " ";
     core::Str value;
-    try {
-      value = core::Mapped::get<core::Str, core::Str>(table, TEMPER_STR("k5"));
-    } catch (core::TemperBubble const &) {
-      value = TEMPER_STR("none");
-    }
-    core::Console::log(console, string + value);
-    core::Console::log(console, std::to_string(core::List::length<core::Str>(core::String::split(long_, TEMPER_STR("✓")))));
-    core::Console::log(console, std::to_string(core::List::length<core::Str>(all)) + " " + core::List::get<core::Str>(all, 9));
+    [&]() -> void {
+      try {
+        value = core::Mapped::get<core::Str, core::Str>(table, TEMPER_STR("k5"));
+      } catch (core::TemperBubble const &) {
+        value = TEMPER_STR("none");
+      }
+      core::Console::log(console, string + value);
+      core::Console::log(console, std::to_string(core::List::length<core::Str>(core::String::split(long_, TEMPER_STR("✓")))));
+      core::Console::log(console, std::to_string(core::List::length<core::Str>(all)) + " " + core::List::get<core::Str>(all, 9));
+    }();
+    [&]() -> void {
+      core::Console::log(console, std::to_string(mid) + " " + core::List::get<core::Str>(all, mid) + " " + missing);
+    }();
   });
 }
 

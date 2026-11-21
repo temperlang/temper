@@ -82,14 +82,18 @@ pub(crate) fn init() -> temper_core::Result<()> {
             });
             temper_core::part(|| {
                 temper_core::listed::add(&built, Arc::new("item 4 é✓𝄞".to_string()), None);
-                temper_core::listed::add(&built, Arc::new("item 5 é✓𝄞".to_string()), None);
-                temper_core::listed::add(&built, Arc::new("item 6 é✓𝄞".to_string()), None);
-                temper_core::listed::add(&built, Arc::new("item 7 é✓𝄞".to_string()), None);
             });
-            temper_core::part(|| {
-                temper_core::listed::add(&built, Arc::new("item 8 é✓𝄞".to_string()), None);
-                temper_core::listed::add(&built, Arc::new("item 9 é✓𝄞".to_string()), None);
-            });
+            let mid = temper_core::ListedTrait::len(&built);
+            let missing = temper_core::MappedTrait::get(&table, Arc::new("absent".to_string()))
+                .unwrap_or_else(|_| Arc::new("none".to_string()));
+            temper_core::listed::add(&built, Arc::new("item 5 é✓𝄞".to_string()), None);
+            temper_core::listed::add(&built, Arc::new("item 6 é✓𝄞".to_string()), None);
+            temper_core::listed::add(&built, Arc::new("item 7 é✓𝄞".to_string()), None);
+            temper_core::listed::add(&built, Arc::new("item 8 é✓𝄞".to_string()), None);
+            if mid < 0 {
+                temper_core::listed::add(&built, missing.clone(), None);
+            }
+            temper_core::listed::add(&built, Arc::new("item 9 é✓𝄞".to_string()), None);
             let all: temper_core::List<Arc<String>> = temper_core::ListedTrait::to_list(&built);
             println!(
                 "{} {}",
@@ -113,6 +117,10 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 "{} {}",
                 temper_core::ListedTrait::len(&all),
                 temper_core::ListedTrait::get(&all, 9)
+            );
+            println!(
+                "{mid} {} {missing}",
+                temper_core::ListedTrait::get(&all, mid)
             );
             Ok(())
         })

@@ -157,7 +157,8 @@ fn fits<'a>(
     let mut pool = Pool::default();
     let mut check = |e: &'a Expr| {
         walk(e, &mut |e| {
-            long |= matches!(e, Expr::Str(s) if s.len() * 3 / 2 > limits.string && utf8_size(s) > limits.string);
+            // Each UTF-8 byte is at most two of modified UTF-8 (NUL's).
+            long |= matches!(e, Expr::Str(s) if s.len() * 2 > limits.string && utf8_size(s) > limits.string);
         });
         pool.add(e);
     };
@@ -776,4 +777,22 @@ fn walk_ref<'a>(e: &'a Expr, f: &mut impl FnMut(&'a Expr)) {
 fn walk_mut(e: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
     f(e);
     kids_mut(e, &mut |k| walk_mut(k, f));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Expr, LIMITS, Limits, fits};
+
+    /// A string of NULs, each two bytes in modified UTF-8 but one in
+    /// UTF-8, fits only at its modified size.
+    #[test]
+    fn nul_strings_split_at_their_modified_size() {
+        let limits = Limits {
+            string: 16,
+            ..LIMITS
+        };
+        let nuls = Expr::Str("\0".repeat(10));
+        assert!(!fits([], [&nuls], &limits));
+        assert!(fits([], [&Expr::Str("\0".repeat(8))], &limits));
+    }
 }

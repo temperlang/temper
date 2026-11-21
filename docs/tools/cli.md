@@ -93,9 +93,14 @@ It writes only files whose text changed, so the others keep their
 times and each language's build skips them. A generated file edited by
 hand is written again, saying `… was edited; regenerated` once. A file
 it generated before but no longer does, as for a module removed, is
-removed; files it never wrote are left alone. What it wrote is listed
-in `temper.out/BACKEND/.temper-manifest`; without it (or if it doesn't
-read), nothing is removed or warned of. Earlier releases empty each
+removed, unless it was edited since: then it's kept, saying so once.
+Files it never wrote are left alone, and it writes and removes nothing
+through a symbolic link: a link in `temper.out/BACKEND` fails that
+library's build. What it wrote is listed in
+`temper.out/BACKEND/.temper-manifest`; without it (or if it doesn't
+read), nothing is removed or warned of, so a module removed meanwhile
+leaves its files, which Java's and C#'s builds still compile; removing
+`temper.out/BACKEND` starts afresh. Earlier releases empty each
 library's directory first.
 
 Errors don't stop it: each is reported, every backend's code is still
@@ -148,7 +153,7 @@ interpreter with `-b interp`. It prints the tests that failed, or with
   how it's compiled changes. A change of compiler or its settings
   (`CXX`, `CXXFLAGS`, CMake, ccache, `TEMPER_STRICT_WARNINGS`) builds
   afresh. **`--clean`** builds everything afresh: it removes the
-  backend's build directories first (C++'s `.build` and
+  backend's build directories before writing any code (C++'s `.build` and
   `LIBRARY/build`, Rust's `target`, Java's `.build` and
   `LIBRARY/target/temper`, C#'s `bin` and `obj`). Earlier releases
   build afresh each run.

@@ -895,7 +895,7 @@ pub fn template_work_growth(
 /// 65,535-byte constants, MSVC's literals, Lua 5.1's constants, and
 /// compile times superlinear in a function's size in g++ and rustc), and
 /// run it as they run the other programs, but only nightly
-/// ([`with_huge`]).
+/// ([`with_split_programs`]).
 pub fn huge() -> Case {
     shaped("huge", HUGE)
 }
@@ -938,7 +938,9 @@ pub const SHAPE: Sizes = Sizes {
 };
 
 /// A module whose top level has a list literal, a map literal, a long
-/// string, and many statements, of `sizes`, and logs what it made.
+/// string, and many statements, of `sizes`, and logs what it made: its
+/// statements in order, and locals declared among them, one by a lookup
+/// that fails, used after, so split code is checked to keep them.
 pub fn shaped(name: &str, sizes: Sizes) -> Case {
     let item = |i: usize| format!("item {i} é✓𝄞");
     let mut text = format!("# {name}\n\n    let items: List<String> = [\n");
@@ -953,7 +955,17 @@ pub fn shaped(name: &str, sizes: Sizes) -> Case {
     let pieces = sizes.repeats + 1;
     text += &format!("    ]);\n    let long = \"{long}\";\n");
     text += "    let built = new ListBuilder<String>();\n";
+    // Mid-run, locals that later statements, in later groups, use, one
+    // of them by a lookup that fails.
+    let mid = sizes.statements / 2;
     for i in 0..sizes.statements {
+        if i == mid {
+            text += "    let mid = built.length;\n";
+            text += "    let missing = table[\"absent\"] orelse \"none\";\n";
+        }
+        if i == sizes.statements - 1 {
+            text += "    if (mid < 0) { built.add(missing); }\n";
+        }
         text += &format!("    built.add(\"{}\");\n", item(i));
     }
     let last = sizes.items - 1;
@@ -964,20 +976,24 @@ pub fn shaped(name: &str, sizes: Sizes) -> Case {
         "    console.log(\"${{items.length.toString()}} ${{items[{last}]}}\");\n\
          \x20   console.log(\"${{table.length.toString()}} ${{table[\"k{last_entry}\"] orelse \"none\"}}\");\n\
          \x20   console.log(long.split(\"✓\").length.toString());\n\
-         \x20   console.log(\"${{all.length.toString()}} ${{all[{last_built}]}}\");\n"
+         \x20   console.log(\"${{all.length.toString()}} ${{all[{last_built}]}}\");\n\
+         \x20   console.log(\"${{mid.toString()}} ${{all[mid]}} ${{missing}}\");\n"
     );
     let expected = vec![
         format!("{} {}", sizes.items, item(last)),
         format!("{} {}", sizes.entries, item(last_entry)),
         pieces.to_string(),
         format!("{} {}", sizes.statements, item(last_built)),
+        format!("{mid} {} none", item(mid)),
     ];
     Case::inline(name, &format!("{name}.temper.md"), text, expected)
 }
 
-/// `cases`, and [`huge`] after them where `TEMPER_HUGE` is set
-/// ([`huge_on`]), for a backend's runs.
-pub fn with_huge(mut cases: Vec<Case>) -> Vec<Case> {
+/// `cases`, then [`split_shape`], which backends that split code
+/// translate with their limits set low, and [`huge`] where `TEMPER_HUGE`
+/// is set ([`huge_on`]), for a backend's runs.
+pub fn with_split_programs(mut cases: Vec<Case>) -> Vec<Case> {
+    cases.push(split_shape());
     if huge_on() {
         cases.push(huge());
     }

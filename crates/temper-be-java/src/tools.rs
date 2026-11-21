@@ -502,3 +502,36 @@ pub fn results(stdout: &str) -> Vec<(String, Option<String>)> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::compile_key;
+    use std::ffi::OsStr;
+    use std::fs;
+
+    /// Classes compile again when a source changes, even keeping its
+    /// time, or how they compile does: strict warnings, or the
+    /// classpath (javac itself is `tool_identity`'s).
+    #[test]
+    fn keys_change_with_what_compiles() {
+        let dir = std::env::temp_dir().join(format!("temper-java-key-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("A.java");
+        fs::write(&source, "class A {}").unwrap();
+        let files = std::slice::from_ref(&source);
+        let key = compile_key(OsStr::new("x.jar"), files, false);
+        assert_eq!(compile_key(OsStr::new("x.jar"), files, false), key);
+        assert_ne!(compile_key(OsStr::new("x.jar"), files, true), key);
+        assert_ne!(compile_key(OsStr::new("y.jar"), files, false), key);
+        let time = fs::metadata(&source).unwrap().modified().unwrap();
+        fs::write(&source, "class A { }").unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&source)
+            .unwrap()
+            .set_modified(time)
+            .unwrap();
+        assert_ne!(compile_key(OsStr::new("x.jar"), files, false), key);
+        let _ = fs::remove_dir_all(dir);
+    }
+}
