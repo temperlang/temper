@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace write_back_through_field {
 
@@ -37,6 +38,12 @@ struct Pong : public std::enable_shared_from_this<Pong> {
 
 // init.cpp
 #include <write-back-through-field/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <string>
 
 namespace write_back_through_field {
 

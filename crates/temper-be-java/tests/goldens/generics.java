@@ -143,18 +143,18 @@ public final class GenericsGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("generics"));
-        List<Integer> ns = List.of(1, 2, 3);
-        List<Integer> none = List.of();
+        List<Integer> ns = List.<Integer>of(1, 2, 3);
+        List<Integer> none = List.<Integer>of();
         console.log(total(ns) + " " + first(ns, 0) + " " + first(none, -1));
-        console.log(first(List.of("a", "b"), "z"));
+        console.log(first(List.<String>of("a", "b"), "z"));
         Box<String> box = new Box<String>("boxed");
         console.log(held(box));
         Entry<String, Integer> pair = box.pairWith(7);
         console.log(pair.getKey() + " " + pair.getValue());
-        Shelf<Named> shelf = new Shelf<Named>(List.of(new Named("ann"), new Named("bo")));
+        Shelf<Named> shelf = new Shelf<Named>(List.<Named>of(new Named("ann"), new Named("bo")));
         @Nullable String subject = shelf.firstName();
         console.log(subject == null ? "none" : subject);
-        List<Named> noNames = List.of();
+        List<Named> noNames = List.<Named>of();
         Shelf<Named> empty = new Shelf<Named>(noNames);
         @Nullable String subject2 = empty.firstName();
         console.log(subject2 == null ? "none" : subject2);
@@ -167,7 +167,7 @@ public final class GenericsGlobal {
         console.log(builder.size() + " " + Core.listGet(builder, 0) + " " + Core.listRemoveLast(builder));
         List<String> built = List.copyOf(builder);
         console.log(built.size() + " " + Core.listGetOr(built, 5, "?") + " " + Core.listGet(Core.listSlice(built, 1, 2), 0));
-        Map<String, Integer> m = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("a", 1), new SimpleImmutableEntry<>("b", 2)));
+        Map<String, Integer> m = Core.mapConstructor(List.<Entry<String, Integer>>of(new SimpleImmutableEntry<String, Integer>("a", 1), new SimpleImmutableEntry<String, Integer>("b", 2)));
         int t;
         try {
             t = Core.mappedGet(m, "b");
@@ -223,6 +223,6 @@ public final class GenericsGlobal {
             t9 = -1;
         }
         console.log(t8 + t9);
-        console.log(firstSame(List.of(1000), List.of(1000)) + " " + firstSame(List.of(1000), List.of(7)));
+        console.log(firstSame(List.<Integer>of(1000), List.<Integer>of(1000)) + " " + firstSame(List.<Integer>of(1000), List.<Integer>of(7)));
     }
 }

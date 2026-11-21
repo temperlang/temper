@@ -23,7 +23,7 @@ run takes about as long as its slowest job:
 | `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
 | `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
-| `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
+| `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by clang++ (g++ 12 and 14, and 14 at -O3, nightly) |
 | `release, playground` | `temper`'s release build, the VS Code extension (tested in a real VS Code), the docs' examples, and the docs site; the wasm build, the playground, and its smoke test in headless Chromium |
 
 `cli` and `release, playground` check out the whole history and its
@@ -65,10 +65,27 @@ downloads: the workspace's own crates are rebuilt in each job, which is most
 of a job's build, so there are few jobs, each running many checks. A
 newer push to a pull request cancels the older run.
 
-**Rough timings,** to be checked against the first full runs: about 15
-to 25 minutes for each job, so 20 to 25 minutes for a run. A change to
-notes alone takes about 10. GitHub's standard runners are free for
-public repositories, so the job count is about time, not cost.
+**ccache.** The jobs that compile C++ (`cli`, `java, csharp, cpp`, and
+nightly.yml's `cpp`, `libraries`, and `platforms`) compile it through
+ccache, set up by one local action,
+[.github/actions/ccache](../../.github/actions/ccache/action.yml): CMake's
+builds by `CMAKE_CXX_COMPILER_LAUNCHER`, and the C++ backend's own
+tests, which run `g++` and `clang++` themselves, through ccache's links
+named for them, first on `PATH`. Each job keeps its own cache (1 GB at
+most), saved under a key of its own each run on `main`, as rust-cache's,
+and restored from the newest, so it follows the code; pull requests
+read `main`'s. The runtime's precompiled header is cached too, so the
+files that include it hit. Each job's summary shows ccache's stats. Not
+on Windows, where CMake's MSVC builds put debug info in `.pdb` files,
+which ccache can't cache. The `netresponse` tests' generated C++ names
+the port of a server the test starts, so their files miss every run.
+
+**Rough timings:** 3 to 8 minutes a job in November 2026's runs, so a
+run takes about as long as `java, csharp, cpp`, the longest
+(notes/test-speed.md, "C++ in CI"). A change to notes alone runs only
+`lint, core`'s lints and checks, a few minutes. GitHub's standard
+runners are free for public repositories, so the job count is about
+time, not cost.
 
 ### Nightly, weekly, and on demand: the other platforms
 
@@ -81,15 +98,18 @@ they're the cue to fix a platform before release.
 
 A scheduled run skips what an earlier one already tested on the same
 code: a first job, `recent`, reads the date of `main`'s latest commit,
-and the nightly `cpp` and `platforms-quick` jobs run only if it's under
-26 hours old (a day, with room for GitHub's delays in starting
-scheduled runs), and the weekly `platforms` only if it's under 8 days.
+and the nightly `cpp`, `huge`, and `platforms-quick` jobs run only if
+it's under 26 hours old (a day, with room for GitHub's delays in
+starting scheduled runs), and the weekly `platforms` only if it's
+under 8 days.
 `libraries` and `latest-checkers` run every night regardless, since
 they test other repositories' `main` and the checkers' latest
 releases. Run by hand, everything runs.
 
-Besides its Linux jobs (more C++ compilers, real libraries, and the
-checkers' latest releases; below), it tests, natively, each other
+Besides its Linux jobs (more C++ compilers, `strict` by g++ 12 and 14
+and clang++ at -O2 and g++ 14 at -O3, the huge program on every
+backend, real libraries, and the checkers' latest releases; below), it
+tests, natively, each other
 platform [binaries.yml](../../.github/workflows/binaries.yml) releases
 for, one job each from one definition, in two tiers:
 
@@ -261,7 +281,8 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   bump, not a surprise.
 
 Not pinned: the other jobs' runner images, and what the images and
-`apt` install besides Lua; Node, Java, and .NET by major version; and
+`apt` install besides Lua (ccache too, and on macOS, Homebrew's); Node,
+Java, and .NET by major version; and
 Playwright's Chromium (from its own CDN, by the version in the Mermaid
 renderer's lockfile).
 
@@ -288,6 +309,22 @@ tests with one checker at a time at its latest release (TypeScript,
 pyright, mypy, or LuaLS), the rest at their pins. They block nothing: a
 failure, named for its checker and with the versions in its summary,
 is the cue to fix the backend or the tests before bumping that pin.
+
+## The huge program, nightly
+
+Generated data can be past compilers' limits: Java's 64 KB methods and
+65,535-byte constants, MSVC's 16,380-byte literals, Lua 5.1's
+constants a function, and g++'s and rustc's time and memory,
+superlinear in a function's size. Backends split such code under
+limits of their own (each backend's `Limits`), and the testkit's
+`huge` program, an 8,500-item list, a 1,000-entry map, an 80 KB
+string, and 6,000 statements, checks it compiles and runs. That adds
+up to a minute to a backend's tests, so only nightly.yml sets
+`TEMPER_HUGE`, which adds it to every backend's `runs` (`cpp` for C++,
+`huge` for the rest, a job each). Every push checks the same splits
+on a small copy of it (`split_shape`, beside Java's `java-split`), each
+backend's limits set low, against goldens; set `TEMPER_HUGE=1`
+locally to run the huge program too.
 
 ## Real libraries' Python types, nightly
 

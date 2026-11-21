@@ -22,15 +22,19 @@
 //!   for the test's path (`algos-fibonacci.cpp`), and its header and
 //!   `main.cpp` as the test expects; a library of several modules, or
 //!   with tests (`modules`, `imports-library`, and `testing`), has every
-//!   file in its golden. To accept new or changed output, run with
-//!   `UPDATE_SNAPSHOTS=1` and review the diff.
+//!   file in its golden. Its files, and std's, include only the part of
+//!   the runtime they use ([`light_includes`]). To accept new or changed
+//!   output, run with `UPDATE_SNAPSHOTS=1` and review the diff.
 //! - `runs`: without CMake, `g++` (or `CXX`) compiles every generated
 //!   `.cpp` against the runtime (`crates/temper-be-cpp/runtime`), C++14
 //!   as Kotlin's, with every warning [`STRICT`] lists an error, through a
 //!   precompiled header of the runtime, built once per set of options
 //!   and kept under `CARGO_TARGET_TMPDIR` until the runtime, the options,
 //!   or `g++` change (when it's built, the runtime is checked with every
-//!   warning it tolerates, [`RUNTIME_WARNINGS`]). It links one library's
+//!   warning it tolerates, [`RUNTIME_WARNINGS`], and each of its headers
+//!   alone). For this build, that header has none of the runtime, only
+//!   standard headers ([`pch_header`]), so each file is checked to
+//!   include the runtime's headers it uses ([`light_includes`]). It links one library's
 //!   `main.cpp` as Kotlin's program, and a runner of every library, which
 //!   runs a library's init by name, entry points with no init first
 //!   ([`FIRST_USE`]), which run it themselves, and `module-state` from 8
@@ -86,7 +90,7 @@ use std::process::{Command, Output};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{env, fs};
-use temper_be_cpp::{CPP, OutFile, names, translate};
+use temper_be_cpp::{CPP, OutFile, names, runtime, tools, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// A library of names that C++ reserves or the translator prints
@@ -450,10 +454,109 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`shape_variant`]'s
+/// low limits, so `runs` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &CPP.rules), &CPP)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &CPP.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &shape_variant()),
+        false => translate(&program, &CPP),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// C++ with limits low enough that `kit::split_shape`'s list and map
+/// literals go in parts and its top level's statements in groups
+/// (`tree::Limits`).
+fn shape_variant() -> temper_be_cpp::Variant {
+    temper_be_cpp::Variant {
+        name: CPP.name,
+        profile: CPP.profile.clone(),
+        rules: names::RULES,
+        standard: CPP.standard,
+        limits: temper_be_cpp::tree::Limits {
+            list_part: 4,
+            run: 6,
+            group: 4,
+        },
+    }
+}
+
+/// A library's generated headers and `.cpp`s include the runtime's
+/// headers they use, never the whole runtime (`core.hpp`), so a user's
+/// file that includes one parses only what it needs; a module's `.cpp`
+/// includes it only for its host code (`_connected.hpp`), which may have
+/// been written against it. `runs` compiles each file so, with no part of
+/// the runtime before it. Every standard name the file spells is one
+/// whose header [`runtime::includes_for`] knows, and it includes that
+/// header itself.
+fn light_includes(key: &str, files: &[OutFile], host_files: &[(String, String)]) {
+    let ident = |c: char| c == '_' || c.is_ascii_alphanumeric();
+    for file in files {
+        let rest = file.path.split_once('/').map_or("", |(_, r)| r);
+        if host_files.iter().any(|(path, _)| path == rest) || file.path.ends_with(".txt") {
+            continue;
+        }
+        let text = &file.text;
+        let whole = text.contains("#include <temper-core/core.hpp>");
+        let host = text.contains("_connected.hpp\"");
+        assert!(
+            !whole || (host && file.path.ends_with(".cpp")),
+            "{key}: {} includes core.hpp",
+            file.path
+        );
+        assert!(
+            !text.contains("temper-core/base.hpp"),
+            "{key}: {}",
+            file.path
+        );
+        for (i, _) in text.match_indices("std::") {
+            if text[..i].ends_with(ident) {
+                continue;
+            }
+            let after = &text[i + 5..];
+            let name = &after[..after.find(|c| !ident(c)).unwrap_or(after.len())];
+            assert!(
+                runtime::STD.iter().any(|(n, _)| *n == name),
+                "{key}: {} spells std::{name}, which runtime::STD lacks",
+                file.path
+            );
+        }
+        for (i, _) in text.match_indices("_t") {
+            let (before, after) = (&text[..i], &text[i + 2..]);
+            if after.starts_with(ident) || before.ends_with("std::") {
+                continue;
+            }
+            let start = before.rfind(|c| !ident(c)).map_or(0, |j| j + 1);
+            let name = &text[start..i + 2];
+            if name == "_t" || before[..start].ends_with("::") {
+                continue;
+            }
+            assert!(
+                runtime::BARE_STD.iter().any(|(n, _)| *n == name),
+                "{key}: {} spells {name}, which runtime::BARE_STD lacks",
+                file.path
+            );
+        }
+        // The standard headers it needs, which compiles here can't
+        // check, as their precompiled header has every one: its own, or
+        // those of a generated header it includes, as a module's `.cpp`
+        // its `.hpp`.
+        let included = |text: &str, line: &str| text.lines().any(|l| l == line);
+        let headers: Vec<&OutFile> = (files.iter())
+            .filter(|h| included(text, &format!("#include <{}>", h.path)))
+            .collect();
+        for header in runtime::includes_for(text) {
+            if !header.starts_with("<temper-core/") {
+                let line = format!("#include {header}");
+                assert!(
+                    included(text, &line) || headers.iter().any(|h| included(&h.text, &line)),
+                    "{key}: {} lacks {line}",
+                    file.path
+                );
+            }
+        }
+    }
 }
 
 fn runtime_dir() -> PathBuf {
@@ -464,8 +567,11 @@ fn runtime_dir() -> PathBuf {
 fn goldens() {
     kit::with_stack(|| {
         let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        let std = translate(&kit::std_program(), &CPP).unwrap_or_else(|e| panic!("std: {e}"));
+        light_includes("std", &std, &[]);
         for case in cases() {
             let files = generate(&case);
+            light_includes(&case.key, &files, &case.host_files);
             let library = &case.library;
             let namespace = names::namespace(library);
             let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
@@ -503,7 +609,7 @@ fn goldens() {
             );
             let header = &files[0].text;
             assert!(
-                header.starts_with("#pragma once\n\n#include <temper-core/core.hpp>\n")
+                header.starts_with("#pragma once\n\n")
                     && header.contains(&format!("namespace {namespace} {{\n"))
                     && header.contains("void global_init_init();\n"),
                 "{}: {header}",
@@ -723,9 +829,9 @@ fn check(what: &str, mut command: Command) -> Output {
 /// The runtime's precompiled header for a mode, built once and kept
 /// under `CARGO_TARGET_TMPDIR` until the runtime's headers, the options,
 /// or `g++` change: a directory holding `runtime.hpp`, which includes
-/// `<temper-core/core.hpp>`, and its `.gch`, for `-include runtime.hpp`.
+/// [`pch_header`], and its `.gch`, for `-include runtime.hpp`.
 /// The first build also checks the runtime itself with every warning it
-/// tolerates.
+/// tolerates, and, for [`PLAIN`], each of its headers alone.
 fn runtime_pch(gxx: &str, version: &str, mode: &Mode) -> PathBuf {
     runtime_pch_with(
         gxx,
@@ -745,6 +851,7 @@ fn runtime_pch_with(
     warnings: &[&str],
     runtime: Option<&[&str]>,
 ) -> PathBuf {
+    let header = pch_header(mode);
     let compiler = Path::new(gxx).file_name().unwrap().to_string_lossy();
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("be-cpp-runtime-{}-{compiler}", mode.name));
@@ -756,7 +863,7 @@ fn runtime_pch_with(
     let gch = root.join("runtime.hpp.gch");
     kit::cached(
         &root,
-        (version, warnings, mode.flags()),
+        (version, warnings, mode.flags(), &header),
         &headers,
         &gch,
         || {
@@ -777,12 +884,11 @@ fn runtime_pch_with(
                     .args(["-fsyntax-only"])
                     .arg(&probe);
                 check("g++, the runtime with its warnings", command);
+                if mode.name == PLAIN.name {
+                    headers_alone(gxx, runtime, mode, &root, &headers);
+                }
             }
-            fs::write(
-                root.join("runtime.hpp"),
-                "#include <temper-core/core.hpp>\n",
-            )
-            .unwrap();
+            fs::write(root.join("runtime.hpp"), &header).unwrap();
             let mut command = Command::new(gxx);
             command
                 .args(warnings)
@@ -799,15 +905,12 @@ fn runtime_pch_with(
     root
 }
 
-/// How many compilers run at once: four at most, which the sanitizers'
-/// memory allows beside other work, or `TEMPER_CXX_JOBS`, fewer where
-/// memory's short (an `-O3` group's `cc1plus` takes up to a gigabyte).
+/// How many compilers run at once: as many as `temper test -b cpp`
+/// builds with ([`tools::jobs`]): `TEMPER_CXX_JOBS`, which can ask for
+/// fewer where memory's short (an `-O3` group's `cc1plus` takes up to a
+/// gigabyte), else one per CPU, four at most.
 fn jobs() -> usize {
-    let cpus = std::thread::available_parallelism().map_or(1, |n| n.get());
-    let cap = (env::var("TEMPER_CXX_JOBS").ok())
-        .and_then(|j| j.parse().ok())
-        .unwrap_or(4);
-    cpus.min(cap).max(1)
+    tools::jobs().unwrap_or_else(|why| panic!("{why}"))
 }
 
 /// Held by [`runs`] and [`strict`] while they build, so that only one
@@ -889,6 +992,60 @@ fn compile_one(
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     ))
+}
+
+/// What a mode's precompiled header includes: for [`PLAIN`]'s and
+/// [`TESTS`]'s builds, which compile each file alone, only the standard
+/// headers that generated code includes, none of the runtime's, so each
+/// generated header and `.cpp` is checked to include the runtime's
+/// headers it uses ([`light_includes`]); for the rest, which build what
+/// those have checked, the whole runtime. (With no precompiled header,
+/// the plain build took 2.5 times as long.)
+fn pch_header(mode: &Mode) -> String {
+    if mode.name != PLAIN.name && mode.name != TESTS.name {
+        return "#include <temper-core/core.hpp>\n".into();
+    }
+    let mut std: Vec<&str> = (runtime::STD.iter().chain(runtime::BARE_STD))
+        .map(|(_, h)| *h)
+        .collect();
+    std.sort();
+    std.dedup();
+    let mut text = String::new();
+    for h in std {
+        let _ = writeln!(text, "#include {h}");
+    }
+    text
+}
+
+/// Each of the runtime's headers compiles alone, so including only what
+/// a file uses ([`light_includes`]) works whatever it uses; `net.hpp`'s
+/// libcurl client only where `g++` finds libcurl ([`curl`]).
+fn headers_alone(gxx: &str, warnings: &[&str], mode: &Mode, root: &Path, headers: &[PathBuf]) {
+    let errors: Vec<String> = parallel(headers, |header| {
+        let name = header.file_name().unwrap().to_string_lossy();
+        let probe = root.join(format!("alone-{name}.cpp"));
+        fs::write(&probe, format!("#include <temper-core/{name}>\n")).unwrap();
+        let out = Command::new(gxx)
+            .args(warnings)
+            .args(mode.flags())
+            .arg("-I")
+            .arg(runtime_dir())
+            .arg("-fsyntax-only")
+            .arg(&probe)
+            .output()
+            .unwrap();
+        match out.status.success() {
+            true => None,
+            false => Some(format!(
+                "g++, {name} alone:\n{}",
+                String::from_utf8_lossy(&out.stderr)
+            )),
+        }
+    })
+    .into_iter()
+    .flatten()
+    .collect();
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
 
 /// Compiles `.cpp` files to objects beside `out`, each alone, [`jobs`]
@@ -1219,8 +1376,9 @@ fn runs() {
         let _ = fs::remove_dir_all(&out);
         let src = out.join("src");
         // Libraries with host code are each `work`, so each builds alone.
-        let (connected, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| !c.host_files.is_empty());
+        let (connected, cases): (Vec<Case>, Vec<Case>) = kit::with_split_programs(cases())
+            .into_iter()
+            .partition(|c| !c.host_files.is_empty());
         // Those that run as tests alone, and the rest also as programs.
         let (as_tests, cases): (Vec<Case>, Vec<Case>) =
             cases.into_iter().partition(|c| c.tests.is_some());
@@ -1860,5 +2018,78 @@ fn net_client_from_host() {
             run(&mut failures, &name, &exe, &[], &expected);
         }
         kit::assert_none(&failures);
+    });
+}
+
+/// Translating a template's chain of `String.cat`s takes work linear in
+/// its parts, counted, not timed: passes that looked over each operand's
+/// whole subtree at every level of the chain made it quadratic.
+#[test]
+fn template_work_is_linear() {
+    kit::with_stack(|| {
+        let growth = kit::template_work_growth(
+            |case| kit::program_for(case, &CPP.rules),
+            |program| drop(translate(program, &CPP).unwrap()),
+        );
+        assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
+
+/// `kit::split_shape`'s program at [`shape_variant`]'s low limits,
+/// matching its golden, `split-shape.cpp`, on every push, as `runs` runs
+/// it; long strings' pieces are `tree`'s unit tests'. `huge_splits` and
+/// `runs` take the huge program at the real limits, nightly
+/// (`TEMPER_HUGE`).
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let files = generate(&kit::split_shape());
+        let source = files.iter().find(|f| f.path.ends_with(".cpp")).unwrap();
+        for part in ["core::List::make_parts<", "[&]() -> void {"] {
+            assert!(source.text.contains(part), "{part}");
+        }
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("split-shape.cpp", &source.text);
+        goldens.finish();
+    });
+}
+
+/// The huge program (`kit::huge`) in parts: its list literals' items in
+/// lambdas (`tree::Limits::list_part`), its long string in pieces under
+/// MSVC's limits, and its top level's long run of statements in groups
+/// (`tree::group_runs`), so g++ takes seconds, not minutes, and MSVC
+/// takes it at all; `runs` runs it. Nightly (`TEMPER_HUGE`).
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        for part in [
+            "core::List::make_parts<",
+            "[&]() -> void {",
+            ".append(\"",
+            "\" \"",
+        ] {
+            assert!(text.contains(part), "{part}");
+        }
+        // No literal longer than MSVC's 16,380 bytes, even as written.
+        let (mut longest, mut at, mut quoted, mut escaped) = (0, 0, false, false);
+        for (i, c) in text.char_indices() {
+            match c {
+                _ if escaped => escaped = false,
+                '\\' if quoted => escaped = true,
+                '"' if quoted => {
+                    longest = longest.max(i - at);
+                    quoted = false;
+                }
+                '"' => (at, quoted) = (i + 1, true),
+                _ => {}
+            }
+        }
+        assert!(longest <= 16_380, "a literal of {longest} bytes");
     });
 }

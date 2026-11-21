@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace named_args {
 
@@ -48,7 +51,13 @@ struct CalcOptions : public std::enable_shared_from_this<CalcOptions> {
 // init.cpp
 #include <named-args/init.hpp>
 
+#include <temper-core/base_types.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <functional>
 #include <mutex>
+#include <string>
 
 namespace named_args {
 

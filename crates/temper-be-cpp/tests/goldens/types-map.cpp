@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace map {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,21 @@ void global_init_init();
 
 // init.cpp
 #include <map/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/pair.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/mapped.hpp>
+#include <temper-core/map_builder.hpp>
+#include <temper-core/map.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace map {
 
@@ -57,19 +70,17 @@ void global_init_init() {
     temper_globals::messages.construct();
     temper_globals::eightColors.construct();
     temper_globals::console.value = core::Console::get_console();
-    std::shared_ptr<core::Pair<int32_t, core::Str>> pair = core::PairFactory::make<int32_t, core::Str>(200, TEMPER_STR("OK"));
-    std::shared_ptr<core::Pair<int32_t, core::Str>> value2 = core::PairFactory::make<int32_t, core::Str>(404, TEMPER_STR("Not Found"));
-    temper_globals::messages.value = core::Map::make<int32_t, core::Str>(core::List::make<std::shared_ptr<core::Pair<int32_t, core::Str>>>(pair, value2, core::PairFactory::make<int32_t, core::Str>(500, TEMPER_STR("Internal Server Error"))));
+    temper_globals::messages.value = core::Map::make<int32_t, core::Str>(core::List::make<std::shared_ptr<core::Pair<int32_t, core::Str>>>(core::PairFactory::make<int32_t, core::Str>(200, TEMPER_STR("OK")), core::PairFactory::make<int32_t, core::Str>(404, TEMPER_STR("Not Found")), core::PairFactory::make<int32_t, core::Str>(500, TEMPER_STR("Internal Server Error"))));
     core::Str message = core::Mapped::get<int32_t, core::Str>(temper_globals::messages.value, 200);
     core::Console::log(temper_globals::console.value, "Message: " + message);
     core::Console::log(temper_globals::console.value, "Has 200: " + messageDefined(200) + ", 302: " + messageDefined(302));
-    core::Str value3;
+    core::Str value2;
     try {
-      value3 = core::Mapped::get<int32_t, core::Str>(temper_globals::messages.value, 302);
+      value2 = core::Mapped::get<int32_t, core::Str>(temper_globals::messages.value, 302);
     } catch (core::TemperBubble const &) {
-      value3 = TEMPER_STR("Found");
+      value2 = TEMPER_STR("Found");
     }
-    core::Console::log(temper_globals::console.value, "Fallback: " + value3);
+    core::Console::log(temper_globals::console.value, "Fallback: " + value2);
     core::Console::log(temper_globals::console.value, "Codes: " + core::List::join(map::listKeys<int32_t, core::Str>(temper_globals::messages.value), TEMPER_STR(" "), [](int32_t it) -> core::Str { return std::to_string(it); }));
     core::Console::log(temper_globals::console.value, "Again: " + core::List::join(core::Mapped::keys<int32_t, core::Str>(temper_globals::messages.value), TEMPER_STR(" "), [](int32_t it) -> core::Str { return std::to_string(it); }));
     core::Console::log(temper_globals::console.value, "Messages: " + core::List::join(core::Mapped::values<int32_t, core::Str>(temper_globals::messages.value), TEMPER_STR(", "), [](core::Str it) -> core::Str { return it; }));
@@ -88,19 +99,18 @@ void global_init_init() {
     }
     std::shared_ptr<std::vector<core::Str>> was = core::MapBuilder::remove<core::Str, std::shared_ptr<std::vector<core::Str>>>(builder2, TEMPER_STR("El Salvador"));
     core::Console::log(temper_globals::console.value, "Was there: " + core::List::join(was, TEMPER_STR(", "), [](core::Str it) -> core::Str { return it; }));
-    core::Str value4;
+    core::Str value3;
     try {
-      value4 = core::List::get<core::Str>(core::MapBuilder::remove<core::Str, std::shared_ptr<std::vector<core::Str>>>(builder2, TEMPER_STR("El Salvador")), 0);
+      value3 = core::List::get<core::Str>(core::MapBuilder::remove<core::Str, std::shared_ptr<std::vector<core::Str>>>(builder2, TEMPER_STR("El Salvador")), 0);
     } catch (core::TemperBubble const &) {
-      value4 = TEMPER_STR("Gone");
+      value3 = TEMPER_STR("Gone");
     }
-    core::Console::log(temper_globals::console.value, value4);
+    core::Console::log(temper_globals::console.value, value3);
     std::shared_ptr<core::Mapped::Ordered<core::Str, std::shared_ptr<std::vector<core::Str>>>> neighbors = core::Mapped::toMap<core::Str, std::shared_ptr<std::vector<core::Str>>>(builder2);
     core::Console::log(temper_globals::console.value, "From built: " + core::List::join(core::Mapped::get<core::Str, std::shared_ptr<std::vector<core::Str>>>(neighbors, TEMPER_STR("Nicaragua")), TEMPER_STR(", "), [](core::Str it) -> core::Str { return it; }));
     std::shared_ptr<core::Mapped::Ordered<int32_t, int32_t>> mapOfNone = core::Map::make<int32_t, int32_t>(core::List::make<std::shared_ptr<core::Pair<int32_t, int32_t>>>());
     std::shared_ptr<core::Mapped::Ordered<core::Str, core::Str>> mapOfOne = core::Map::make<core::Str, core::Str>(core::List::make<std::shared_ptr<core::Pair<core::Str, core::Str>>>(core::PairFactory::make<core::Str, core::Str>(TEMPER_STR("jack"), TEMPER_STR("all trades"))));
-    std::shared_ptr<core::Pair<int32_t, core::Str>> value5 = core::PairFactory::make<int32_t, core::Str>(1, TEMPER_STR("one"));
-    std::shared_ptr<core::Mapped::Ordered<int32_t, core::Str>> mapOfTwo = core::Map::make<int32_t, core::Str>(core::List::make<std::shared_ptr<core::Pair<int32_t, core::Str>>>(value5, core::PairFactory::make<int32_t, core::Str>(2, TEMPER_STR("electric boogaloo"))));
+    std::shared_ptr<core::Mapped::Ordered<int32_t, core::Str>> mapOfTwo = core::Map::make<int32_t, core::Str>(core::List::make<std::shared_ptr<core::Pair<int32_t, core::Str>>>(core::PairFactory::make<int32_t, core::Str>(1, TEMPER_STR("one")), core::PairFactory::make<int32_t, core::Str>(2, TEMPER_STR("electric boogaloo"))));
     core::Console::log(temper_globals::console.value, "mapOfNone: " + std::to_string(core::Mapped::length<int32_t, int32_t>(mapOfNone)));
     core::Console::log(temper_globals::console.value, "mapOfOne: " + std::to_string(core::Mapped::length<core::Str, core::Str>(mapOfOne)));
     core::Console::log(temper_globals::console.value, "mapOfTwo: " + std::to_string(core::Mapped::length<int32_t, core::Str>(mapOfTwo)));
@@ -126,8 +136,7 @@ void global_init_init() {
       }
     };
     core::Mapped::forEach(temper_globals::eightColors.value, fn9);
-    std::shared_ptr<core::Pair<core::Str, core::Str>> value6 = core::PairFactory::make<core::Str, core::Str>(TEMPER_STR("key"), TEMPER_STR("value"));
-    std::shared_ptr<core::Mapped::Ordered<core::Str, core::Str>> map = core::Map::make<core::Str, core::Str>(core::List::make<std::shared_ptr<core::Pair<core::Str, core::Str>>>(value6, core::PairFactory::make<core::Str, core::Str>(TEMPER_STR("other key"), TEMPER_STR("other value"))));
+    std::shared_ptr<core::Mapped::Ordered<core::Str, core::Str>> map = core::Map::make<core::Str, core::Str>(core::List::make<std::shared_ptr<core::Pair<core::Str, core::Str>>>(core::PairFactory::make<core::Str, core::Str>(TEMPER_STR("key"), TEMPER_STR("value")), core::PairFactory::make<core::Str, core::Str>(TEMPER_STR("other key"), TEMPER_STR("other value"))));
     map::printMap(TEMPER_STR("map"), map);
     std::shared_ptr<core::Mapped::Ordered<core::Str, core::Str>> builder = core::Mapped::toMapBuilder<core::Str, core::Str>(map);
     core::MapBuilder::set<core::Str, core::Str>(builder, TEMPER_STR("added key"), TEMPER_STR("added value"));

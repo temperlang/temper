@@ -4,6 +4,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -49,7 +50,7 @@ public final class MapGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("map"));
-        messages = Core.mapConstructor(List.of(new SimpleImmutableEntry<>(200, "OK"), new SimpleImmutableEntry<>(404, "Not Found"), new SimpleImmutableEntry<>(500, "Internal Server Error")));
+        messages = Core.mapConstructor(List.<Entry<Integer, String>>of(new SimpleImmutableEntry<Integer, String>(200, "OK"), new SimpleImmutableEntry<Integer, String>(404, "Not Found"), new SimpleImmutableEntry<Integer, String>(500, "Internal Server Error")));
         String message = Core.mappedGet(messages, 200);
         console.log("Message: " + message);
         console.log("Has 200: " + messageDefined(200) + ", 302: " + messageDefined(302));
@@ -66,12 +67,12 @@ public final class MapGlobal {
         List<Integer> groups = Core.mappedToListWith(messages, (key, value) -> key / 100);
         console.log("Groups: " + Core.listJoinInt(groups, " ", it -> Integer.toString(it)));
         Map<String, List<String>> builder2 = new LinkedHashMap<>();
-        builder2.put("Honduras", List.of("El Salvador", "Guatemala", "Nicaragua"));
+        builder2.put("Honduras", List.<String>of("El Salvador", "Guatemala", "Nicaragua"));
         console.log("From builder: " + Core.listJoinObj(Core.mappedGet(builder2, "Honduras"), ", ", it -> it));
         console.log("Key so far: " + Core.listGet(listKeys(builder2), 0));
-        builder2.put("El Salvador", List.of("Guatemala", "Honduras"));
-        builder2.put("Nicaragua", List.of("Costa Rica", "Honduras"));
-        builder2.put("Panama", List.of("Colombia", "Costa Rica"));
+        builder2.put("El Salvador", List.<String>of("Guatemala", "Honduras"));
+        builder2.put("Nicaragua", List.<String>of("Costa Rica", "Honduras"));
+        builder2.put("Panama", List.<String>of("Colombia", "Costa Rica"));
         try {
             Core.mapBuilderRemove(builder2, "Honduras");
         } catch (RuntimeException ignored2) {
@@ -87,24 +88,24 @@ public final class MapGlobal {
         console.log(t2);
         Map<String, List<String>> neighbors = Core.mappedToMap(builder2);
         console.log("From built: " + Core.listJoinObj(Core.mappedGet(neighbors, "Nicaragua"), ", ", it -> it));
-        Map<Integer, Integer> mapOfNone = Core.mapConstructor(List.of());
-        Map<String, String> mapOfOne = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("jack", "all trades")));
-        Map<Integer, String> mapOfTwo = Core.mapConstructor(List.of(new SimpleImmutableEntry<>(1, "one"), new SimpleImmutableEntry<>(2, "electric boogaloo")));
+        Map<Integer, Integer> mapOfNone = Core.mapConstructor(List.<Entry<Integer, Integer>>of());
+        Map<String, String> mapOfOne = Core.mapConstructor(List.<Entry<String, String>>of(new SimpleImmutableEntry<String, String>("jack", "all trades")));
+        Map<Integer, String> mapOfTwo = Core.mapConstructor(List.<Entry<Integer, String>>of(new SimpleImmutableEntry<Integer, String>(1, "one"), new SimpleImmutableEntry<Integer, String>(2, "electric boogaloo")));
         console.log("mapOfNone: " + mapOfNone.size());
         console.log("mapOfOne: " + mapOfOne.size());
         console.log("mapOfTwo: " + mapOfTwo.size());
         eightColors = new LinkedHashMap<>();
-        eightColors.put("black", List.of(false, false, false));
-        eightColors.put("red", List.of(true, false, false));
-        eightColors.put("green", List.of(false, true, false));
-        eightColors.put("blue", List.of(false, false, true));
-        eightColors.put("yellow", List.of(true, true, false));
-        eightColors.put("cyan", List.of(false, true, true));
-        eightColors.put("purple", List.of(true, false, true));
-        eightColors.put("white", List.of(true, true, true));
+        eightColors.put("black", List.<Boolean>of(false, false, false));
+        eightColors.put("red", List.<Boolean>of(true, false, false));
+        eightColors.put("green", List.<Boolean>of(false, true, false));
+        eightColors.put("blue", List.<Boolean>of(false, false, true));
+        eightColors.put("yellow", List.<Boolean>of(true, true, false));
+        eightColors.put("cyan", List.<Boolean>of(false, true, true));
+        eightColors.put("purple", List.<Boolean>of(true, false, true));
+        eightColors.put("white", List.<Boolean>of(true, true, true));
         console.log("with 3 bits you can draw " + eightColors.size() + " colors.");
         BiConsumer<String, List<Boolean>> fn9 = (color, bits) -> {
-            List<Boolean> foundByGetOr = eightColors.getOrDefault(color, List.of());
+            List<Boolean> foundByGetOr = eightColors.getOrDefault(color, List.<Boolean>of());
             if (foundByGetOr.size() != 3) {
                 console.log("getOr(\"" + color + "\") failed to find key");
             }
@@ -115,7 +116,7 @@ public final class MapGlobal {
             }
         };
         Core.mappedForEach(eightColors, fn9);
-        Map<String, String> map = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("key", "value"), new SimpleImmutableEntry<>("other key", "other value")));
+        Map<String, String> map = Core.mapConstructor(List.<Entry<String, String>>of(new SimpleImmutableEntry<String, String>("key", "value"), new SimpleImmutableEntry<String, String>("other key", "other value")));
         printMap("map", map);
         Map<String, String> builder = new LinkedHashMap<>(map);
         builder.put("added key", "added value");

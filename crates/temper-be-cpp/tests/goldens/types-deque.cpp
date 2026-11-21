@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace deque {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,13 @@ void global_init_init();
 
 // init.cpp
 #include <deque/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/deque.hpp>
+#include <deque>
+#include <memory>
 
 namespace deque {
 

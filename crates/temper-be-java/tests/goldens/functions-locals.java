@@ -174,15 +174,15 @@ public final class LocalsGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("locals"));
-        constantCapture(List.of(1, 2, 3), 1);
-        constantCaptureNested(List.of(1, 2, 3), 1);
-        mutableCapture(List.of(1, 2, 3));
-        mutableCaptureNested(List.of(1, 2, 3));
-        thresh(List.of(4, 5, 6), 4);
-        thresh2(List.of(4, 5, 6), 4);
-        selfRecursion(List.of(1, 2, 3));
-        selfRecursionNested(List.of(1, 2, 3));
-        mutualRecursion(List.of(1, 2, 3));
+        constantCapture(List.<Integer>of(1, 2, 3), 1);
+        constantCaptureNested(List.<Integer>of(1, 2, 3), 1);
+        mutableCapture(List.<Integer>of(1, 2, 3));
+        mutableCaptureNested(List.<Integer>of(1, 2, 3));
+        thresh(List.<Integer>of(4, 5, 6), 4);
+        thresh2(List.<Integer>of(4, 5, 6), 4);
+        selfRecursion(List.<Integer>of(1, 2, 3));
+        selfRecursionNested(List.<Integer>of(1, 2, 3));
+        mutualRecursion(List.<Integer>of(1, 2, 3));
         Hub<Integer> hub = new Hub<Integer>();
         List<Integer> items = gatherHandlers(hub);
         hub.actionPerformed(1);

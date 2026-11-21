@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace if_return {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,11 @@ void global_init_init();
 
 // init.cpp
 #include <if-return/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
+#include <memory>
 
 namespace if_return {
 

@@ -74,6 +74,18 @@ pub fn test_backend(
             tally.not_run += tests;
         }
     }
+    // How the tools build, said once (C++'s ccache).
+    if let Some(note) = (backend.tools).and_then(|t| t.note).and_then(|note| note()) {
+        match json {
+            true => {
+                let line = record("info", "TestTools", None, &[note.as_str().into()], &note);
+                let _ = writeln!(err, "{line}");
+            }
+            false => {
+                let _ = writeln!(out, "{note}");
+            }
+        }
+    }
     for (name, result) in run(backend, &dir, &all) {
         match result {
             Ok(tests) => {

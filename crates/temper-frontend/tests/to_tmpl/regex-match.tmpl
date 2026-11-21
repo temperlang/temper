@@ -263,7 +263,7 @@ module match#0 {
     init ownFullMatch#49 = ((upcast(new constructor#55((list((upcast(Dot#138)): RegexNode#26, (upcast(new constructor#88("full", (upcast(Dot#138)): RegexNode#26))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().find#93("ab", omitted)^;
     init ownFull#50 = ownFullMatch#49.groups#120.get#116("full")^.value#98;
     ~console#76.log#75(%String.cat(%String.cat(%String.cat("Own full: ", ownFull#50), " vs "), ownFullMatch#49.full#110.value#98));
-    init comboLines#51 = %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("It was the best", "\n"), "of times."), "\r"), "\n"), "\r"), "It was the worst of times.");
+    init comboLines#51 = "It was the best\nof times.\r\n\rIt was the worst of times.";
     {
       let ~list#140: List#7<String> = ((upcast(new constructor#90((list((upcast(new constructor#65("\n"))): RegexNode#26, (upcast(new constructor#55((list((upcast(new constructor#65("\r"))): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#65("\n"))): RegexNode#26, 0, (asNullable(1)): Int32?, (asNullable(false)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().split#139(comboLines#51);
       let ~length#141: Int32 = ~list#140.length#68();

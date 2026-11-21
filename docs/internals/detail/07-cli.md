@@ -491,7 +491,7 @@ library's tests with what that backend's `tools` module says
 | Backend | Runs | Overridden by |
 |---|---|---|
 | C++ | CMake on the generated `CMakeLists.txt`, then the test program | `CMAKE`, `CXX` |
-| C# | `dotnet test --logger:junit`, then `build-server shutdown` | `DOTNET` |
+| C# | `dotnet build` and `dotnet test --logger:junit` over a solution of every library's tests (`prepare`), then `build-server shutdown` | `DOTNET` |
 | Java | `javac` against JUnit 5's jars in `~/.m2`, and a small launcher runner | `JAVAC`, `JAVA` |
 | JS | Mocha with its xunit reporter, packages linked into `node_modules` (`prepare`) | `MOCHA` |
 | Lua | `tests/init-test.lua` with LuaUnit written beside (`prepare`) | `LUA` |

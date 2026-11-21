@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace indices {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,20 @@ void global_init_init();
 
 // init.cpp
 #include <indices/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/compare.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/string_builder.hpp>
+#include <cstdint>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 namespace indices {
 

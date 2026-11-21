@@ -161,8 +161,6 @@ pub struct Translated {
     /// its declaration in `temper_globals`: `temper::core::GlobalSlot<T>
     /// name`.
     pub template_storage: Vec<String>,
-    /// Whether it has a lock, and so includes `<mutex>`.
-    pub uses_mutex: bool,
     /// Exported functions' prototypes, without the `;`.
     pub exported_functions: Vec<String>,
     /// The headers of the modules it imports, as `<lib/helpers.hpp>`.
@@ -187,7 +185,7 @@ pub struct Translated {
     /// Whether it takes a function or class from host code, and so its
     /// `.cpp` includes the module's `_connected.hpp`.
     pub host: bool,
-    /// The runtime's headers beyond `core.hpp` that its `.cpp` includes,
+    /// The runtime's headers outside `core.hpp` that its `.cpp` includes,
     /// as `<temper-core/net.hpp>` ([`crate::connected::BODILESS`]).
     pub runtime_includes: Vec<String>,
 }
@@ -258,7 +256,7 @@ pub struct Translator<'a> {
     in_function: bool,
     /// Whether the module's lock is held where translating.
     locked: bool,
-    /// The runtime's headers the module's `.cpp` needs beyond `core.hpp`.
+    /// The runtime's headers outside `core.hpp` that the module's `.cpp` needs.
     runtime_includes: Vec<String>,
     /// The enclosing loops, innermost last.
     loops: Vec<DeclId>,
@@ -278,6 +276,8 @@ pub struct Translator<'a> {
     locals: HashSet<String>,
     /// Each test's function's name, by its declaration.
     pub test_names: HashMap<DeclId, String>,
+    /// What code splits under ([`tree::Limits`]): the variant's.
+    pub limits: tree::Limits,
     /// The names of members that may change their object, which aren't
     /// `const` ([`mutating_members`]).
     pub mutating: HashSet<String>,
@@ -381,6 +381,7 @@ impl<'a> Translator<'a> {
             deferred: 0,
             locals: HashSet::new(),
             test_names: HashMap::new(),
+            limits: tree::LIMITS,
             mutating: HashSet::new(),
             namespace: names::namespace(&p.library.name),
             class_nodes,
@@ -1152,10 +1153,7 @@ impl<'a> Translator<'a> {
         {
             return not_yet("a template in a header that takes its module's lock");
         }
-        let mut header_includes = includes(p, &imports);
-        if mentions_type(p) {
-            header_includes.push("<typeindex>".into());
-        }
+        let header_includes = includes(p, &imports);
         let test_includes: Vec<String> = includes(p, &test_imports(p, module))
             .into_iter()
             .filter(|i| !header_includes.contains(i))
@@ -1167,12 +1165,11 @@ impl<'a> Translator<'a> {
                 aliases: vec![(CORE.into(), "temper::core".into())],
                 items,
                 init: String::new(),
-                init_body: init,
+                init_body: tree::group_runs(init, &self.limits),
                 tests: test_functions,
             },
             exported_variables,
             template_storage,
-            uses_mutex: self.mutex.is_some(),
             exported_functions,
             header_includes,
             test_includes,
@@ -2743,11 +2740,25 @@ impl<'a> Translator<'a> {
                 let args = self.program_args(p.nodes.list(args))?;
                 Expr::name(format!("{}{targs}::make", self.top_name(class))).call(args)
             }
-            // `core::List::make<T>(…)`, as Kotlin's.
+            // `core::List::make<T>(…)`, as Kotlin's; a long one in parts
+            // ([`tree::Limits::list_part`]).
             Node::ListLit { items } => {
                 let targs = self.template_args(p.types.args(p.nodes.ty(id)))?;
                 let items = self.program_args(p.nodes.list(items))?;
-                self.core(&format!("List::make{targs}")).call(items)
+                let make = self.core(&format!("List::make{targs}"));
+                if items.len() <= self.limits.list_part {
+                    make.call(items)
+                } else {
+                    let result = self.ty(p.nodes.ty(id))?;
+                    let parts = (temper_tmpl::chunks::parts(items, self.limits.list_part)
+                        .into_iter())
+                    .map(|part| Expr::Run {
+                        result: result.clone(),
+                        body: vec![Stmt::Return(Some(make.clone().call(part)))],
+                    })
+                    .collect();
+                    self.core(&format!("List::make_parts{targs}")).call(parts)
+                }
             }
             Node::CallMethod {
                 method,
@@ -3132,11 +3143,15 @@ impl<'a> Translator<'a> {
         let effects: Vec<Effect> = (nodes.iter())
             .map(|n| n.map_or(Effect::default(), |n| self.effect(n)))
             .collect();
+        // Everything each part's later ones do, together: a part
+        // conflicts with one of them just when it conflicts with that.
+        let mut later = vec![Effect::default(); effects.len()];
+        for i in (1..effects.len()).rev() {
+            later[i - 1] = later[i].and(effects[i]);
+        }
         let mut out = Vec::new();
         for (i, part) in parts.into_iter().enumerate() {
-            let hoist = effects[i + 1..]
-                .iter()
-                .any(|&later| effects[i].conflicts(later));
+            let hoist = effects[i].conflicts(later[i]);
             let (n, convert) = match part {
                 Part::Lit(s) => {
                     out.push(Expr::Str(s));
@@ -3307,28 +3322,6 @@ fn depends(p: &Program, t: TypeId) -> bool {
         }
         TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| depends(p, t)),
     }
-}
-
-/// Whether a program has types as values, `std::type_index`es, which
-/// `<typeindex>` declares.
-fn mentions_type(p: &Program) -> bool {
-    fn has(p: &Program, t: TypeId) -> bool {
-        if !p.types.contains(t) {
-            return false;
-        }
-        match p.types.get(t) {
-            TypeData::Never(inner) => has(p, inner),
-            TypeData::Scalar(s) => s == Scalar::Type,
-            TypeData::Nullable(inner) => has(p, inner),
-            TypeData::Function { params, result, .. } => {
-                p.types.list(params).iter().any(|&t| has(p, t)) || has(p, result)
-            }
-            TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| has(p, t)),
-            TypeData::TypeParam { .. } => false,
-        }
-    }
-    (p.decls.ids()).any(|d| p.decls.contains(d) && has(p, p.decls.get(d).ty))
-        || (0..p.nodes.len()).any(|i| p.nodes.ty(NodeId(i as u32)) == TypeId::TYPE)
 }
 
 /// The headers of the modules in `imports`, as `<lib/path.hpp>`.

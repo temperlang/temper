@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace simple_locals {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,14 @@ void global_init_init();
 
 // init.cpp
 #include <simple-locals/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 
 namespace simple_locals {
 

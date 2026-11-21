@@ -9,6 +9,9 @@
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
 //!   (`NET`) log what they expect on the interpreter, against the shared
 //!   test server.
+//! - `net_tests_translate_alike_each_run`: those tests' tmpl, and so
+//!   every backend's code for them, names a port from a fixed few, the
+//!   same each run, so build caches such as ccache hit.
 
 use temper_be_testkit::{self as kit};
 
@@ -43,6 +46,32 @@ fn net_tests_on_the_interpreter() {
     });
 }
 
+#[test]
+fn net_tests_translate_alike_each_run() {
+    kit::with_stack(|| {
+        // One of the fixed few, unless more test processes than that run
+        // at once, or something else holds them, which costs only cache
+        // hits, so it's said, not failed.
+        let port = kit::test_server_port();
+        assert_eq!(kit::test_server_port(), port);
+        if !kit::TEST_SERVER_PORTS.contains(&port) {
+            eprintln!(
+                "the test server's port is {port}, not one of {:?}: are other tests running?",
+                kit::TEST_SERVER_PORTS
+            );
+        }
+        for case in kit::functional_cases("interp", &kit::NET) {
+            if !kit::NET.iter().any(|t| t.replace('/', "-") == case.key) {
+                continue;
+            }
+            let mut program = kit::program(&case);
+            program.has_spans = false;
+            let text = temper_tmpl::text::write(&program);
+            assert!(text.contains(&port.to_string()), "{}:\n{text}", case.key);
+        }
+    });
+}
+
 /// Each Temper program translates to valid tmpl, which matches its golden
 /// (`tests/goldens/NAME.tmpl`, without spans), so what backends start
 /// from shows in review.
@@ -63,5 +92,20 @@ fn programs_translate_to_tmpl() {
             );
         }
         goldens.finish();
+    });
+}
+
+/// The huge program (`kit::huge`), nightly (`TEMPER_HUGE`), and its
+/// small shape (`kit::split_shape`) log, on the interpreter, what they
+/// expect of every backend, so each backend's split code is checked
+/// against the interpreter.
+#[test]
+fn huge_logs_as_the_interpreter_does() {
+    kit::with_stack(|| {
+        let cases = [Some(kit::split_shape()), kit::huge_on().then(kit::huge)];
+        for case in cases.into_iter().flatten() {
+            let (failure, output) = kit::interpret(&case);
+            assert_eq!((failure, output), (None, case.expected), "{}", case.key);
+        }
     });
 }

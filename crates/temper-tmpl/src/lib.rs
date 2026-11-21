@@ -29,6 +29,8 @@
 //! - [`source_map`], Source Map v3 files from spans, for backends;
 //! - shared lowerings that backends pick by their profiles:
 //!   [`coroutines`], [`errors`], [`nevers`], [`spill`], and [`switches`];
+//! - [`chunks`], splitting long strings and many items under a target's
+//!   limits;
 //! - [`version`], Temper's version and its spelling in each ecosystem.
 
 pub mod analysis;
@@ -37,9 +39,11 @@ pub mod builder;
 pub mod cells;
 #[cfg(any(unix, windows))]
 mod children;
+pub mod chunks;
 pub mod coroutines;
 mod decls;
 pub mod errors;
+pub mod files;
 pub mod host;
 mod ids;
 pub mod naming;
@@ -66,6 +70,8 @@ pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools};
 pub use builder::Builder;
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};
+#[cfg(feature = "work-count")]
+pub use nodes::kids_read;
 pub use nodes::{Flags, Kids, Nodes};
 pub use profile::{Features, Profile};
 pub use qname::{QName, QNames};

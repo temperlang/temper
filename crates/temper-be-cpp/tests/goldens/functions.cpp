@@ -1,7 +1,12 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <functional>
+#include <memory>
 
 namespace functions_program {
 
@@ -50,6 +55,19 @@ struct Gate : public std::enable_shared_from_this<Gate> {
 
 // init.cpp
 #include <functions-program/init.hpp>
+
+#include <temper-core/base_types.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/list_builder.hpp>
+#include <temper-core/generator.hpp>
+#include <string>
+#include <vector>
 
 namespace functions_program {
 

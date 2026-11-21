@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/str.hpp>
+#include <memory>
 
 namespace hello_world_object {
 
@@ -25,6 +26,9 @@ struct C : public std::enable_shared_from_this<C> {
 
 // init.cpp
 #include <hello-world-object/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
 
 namespace hello_world_object {
 

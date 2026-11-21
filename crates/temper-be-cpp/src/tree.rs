@@ -476,26 +476,76 @@ fn hidden(c: char) -> bool {
 /// A string literal as a `core::Str`: `TEMPER_STR("…")`, whose
 /// `static` the runtime makes once, on first use, so evaluating it
 /// allocates nothing, with the size after it where the text has a NUL,
-/// and `core::Str()` for the empty string, as Kotlin's.
+/// and `core::Str()` for the empty string, as Kotlin's. A long one is in
+/// pieces ([`pieces`]).
 pub fn str_literal(text: &str) -> String {
     if text.is_empty() {
         return "core::Str()".into();
     }
-    let quoted = quoted(text);
-    if text.contains('\0') {
-        format!("TEMPER_STR({quoted}, {})", text.len())
-    } else {
-        format!("TEMPER_STR({quoted})")
+    let groups = pieces(text);
+    if let [(group, _)] = &groups[..] {
+        if text.contains('\0') {
+            return format!("TEMPER_STR({group}, {})", text.len());
+        }
+        return format!("TEMPER_STR({group})");
     }
+    format!("TEMPER_STR({})", joined(&groups))
 }
 
 /// Prints a string literal as a bare `"…"` (a `const char*`), as a
 /// concatenation's parts are: a string with a NUL in it is a
-/// `std::string` of its length, since a literal would end there.
+/// `std::string` of its length, since a literal would end there. A long
+/// one is in pieces ([`pieces`]).
 pub fn string_literal(text: &str) -> String {
-    let out = quoted(text);
-    if text.contains('\0') {
-        return format!("std::string({out}, {})", text.len());
+    let groups = pieces(text);
+    match &groups[..] {
+        [(group, _)] if text.contains('\0') => format!("std::string({group}, {})", text.len()),
+        [(group, _)] => group.clone(),
+        _ => joined(&groups),
+    }
+}
+
+/// The most bytes of a string literal before adjacent ones join, and
+/// after, under MSVC's limits: 16,380 bytes a literal (C2026), and
+/// 65,535 joined, its NUL included (C1091). Other compilers have none.
+const PIECE: usize = 16_000;
+const PIECES: usize = 4;
+
+/// A string's text as quoted literals: pieces of at most [`PIECE`]
+/// bytes as written, escapes and all ([`written_size`]), so as many or
+/// fewer in the string, never splitting a character, side by side (`"…" "…"`) in groups
+/// of at most [`PIECES`], which C++ joins into one literal each, each
+/// with its size in the string; one group for nearly every string, one
+/// piece.
+fn pieces(text: &str) -> Vec<(String, usize)> {
+    let pieces = temper_tmpl::chunks::split_text(text, PIECE, written_size);
+    (pieces.chunks(PIECES))
+        .map(|group| {
+            let quoted: Vec<String> = group.iter().map(|p| quoted(p)).collect();
+            (quoted.join(" "), group.iter().map(|p| p.len()).sum())
+        })
+        .collect()
+}
+
+/// How many bytes a character takes in a quoted literal ([`quoted`]),
+/// at most: a `?` as if escaped, as one after another `?` is.
+fn written_size(c: char) -> usize {
+    match c {
+        '\\' | '"' | '\n' | '\r' | '\t' | '?' => 2,
+        '\0' => 4,
+        _ if hidden(c) && (c as u32) < 0x10000 => 6,
+        _ if hidden(c) => 10,
+        _ => c.len_utf8(),
+    }
+}
+
+/// Groups of quoted pieces ([`pieces`]) made one `std::string` at run
+/// time, each group with its size, so a NUL in it stays:
+/// `std::string("…" "…", 64000).append("…", 12)`.
+fn joined(groups: &[(String, usize)]) -> String {
+    let mut out = format!("std::string({}, {})", groups[0].0, groups[0].1);
+    for (group, size) in &groups[1..] {
+        let _ = write!(out, ".append({group}, {size})");
     }
     out
 }
@@ -664,6 +714,102 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
+/// What code splits under, so g++, whose time is superlinear in a
+/// function's size, takes seconds, not minutes, over generated data;
+/// tests set them low, to see the split shape on small programs.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    /// The most items a list literal makes in one function; a longer one
+    /// is parts of this many, each a lambda called at once
+    /// (`core::List::make_parts<T>([&]() -> … { return
+    /// core::List::make<T>(…); }(), …)`).
+    pub list_part: usize,
+    /// The most statements in a row a function runs as they are
+    /// ([`group_runs`]).
+    pub run: usize,
+    /// The statements in each group past [`run`](Self::run).
+    pub group: usize,
+}
+
+/// g++'s: minutes over a 20,000-item list in one function, seconds over
+/// it in parts of 256.
+pub const LIMITS: Limits = Limits {
+    list_part: 256,
+    run: 1024,
+    group: 256,
+};
+
+/// `stmts` with runs of statements past [`Limits::run`] in groups of
+/// [`Limits::group`], each a lambda called at once (`[&]() -> void { …
+/// }();`), but statements that a lambda would change: a local's or a
+/// lock's declaration, whose scope would end with it, a jump out, and
+/// what's only for tests.
+pub fn group_runs(stmts: Vec<Stmt>, limits: &Limits) -> Vec<Stmt> {
+    let wrap = |group| {
+        let lambda = Expr::Lambda {
+            captures: "&".into(),
+            params: Vec::new(),
+            result: "void".into(),
+            body: group,
+        };
+        Stmt::Expr(lambda.call(Vec::new()))
+    };
+    temper_tmpl::chunks::group_runs(stmts, limits.run, limits.group, groupable, wrap)
+}
+
+/// Whether a statement runs the same in a lambda of its own: it declares
+/// nothing its block's later statements may use, and neither returns nor
+/// jumps out.
+fn groupable(s: &Stmt) -> bool {
+    match s {
+        Stmt::Expr(_) | Stmt::Assign { .. } | Stmt::Set { .. } | Stmt::Bubble(_) => true,
+        Stmt::Block(b) => b.iter().all(nested_groupable),
+        Stmt::If { .. }
+        | Stmt::While { .. }
+        | Stmt::DoWhile { .. }
+        | Stmt::Switch { .. }
+        | Stmt::Try { .. } => nested_groupable(s),
+        _ => false,
+    }
+}
+
+/// Whether a statement inside a group's runs the same there: anything
+/// but a `return` or `goto`, at any depth but inside lambdas.
+fn nested_groupable(s: &Stmt) -> bool {
+    let mut ok = true;
+    each_nested(s, &mut |s| {
+        if matches!(s, Stmt::Return(_) | Stmt::Goto(_) | Stmt::TestsOnly(_)) {
+            ok = false;
+        }
+    });
+    ok
+}
+
+/// Calls `f` with `s` and each statement in it, but inside lambdas.
+fn each_nested(s: &Stmt, f: &mut impl FnMut(&Stmt)) {
+    f(s);
+    let mut all = |stmts: &[Stmt]| stmts.iter().for_each(|s| each_nested(s, f));
+    match s {
+        Stmt::Block(b) => all(b),
+        Stmt::If { then, els, .. } => {
+            all(then);
+            all(els);
+        }
+        Stmt::While { body, .. } | Stmt::DoWhile { body, .. } => all(body),
+        Stmt::Switch { cases, .. } => {
+            for (_, body) in cases {
+                all(body);
+            }
+        }
+        Stmt::Try { body, fallback } => {
+            all(body);
+            all(fallback);
+        }
+        Stmt::TestsOnly(b) => all(b),
+        _ => {}
+    }
+}
+
 /// Statements inside braces, the `{` already written, and the closing
 /// `}` without a newline.
 fn body(out: &mut String, stmts: &[Stmt], depth: usize) {
@@ -724,6 +870,31 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         return;
     }
     indent(out, depth);
+    // A group of statements as a lambda called at once ([`group_runs`]),
+    // over lines.
+    if let Stmt::Expr(Expr::Call(f, args)) = s {
+        if let (
+            Expr::Lambda {
+                captures,
+                params,
+                result,
+                body: stmts,
+            },
+            [],
+        ) = (&**f, &args[..])
+        {
+            if captures == "&" {
+                out.push_str(&lambda_head(captures, params, result));
+                out.push(' ');
+                body(out, stmts, depth);
+                out.push_str(
+                    "();
+",
+                );
+                return;
+            }
+        }
+    }
     match s {
         Stmt::LambdaLocal {
             name,
@@ -1121,5 +1292,29 @@ mod tests {
         assert_eq!(str_literal("a\u{0}1"), "TEMPER_STR(\"a\\0001\", 3)");
         assert_eq!(str_literal("hi"), "TEMPER_STR(\"hi\")");
         assert_eq!(str_literal(""), "core::Str()");
+    }
+
+    /// Long literals in pieces under MSVC's limits: side by side up to
+    /// 64,000 bytes, joined at run time past that, never splitting a
+    /// character.
+    #[test]
+    fn long_strings() {
+        let a = "a".repeat(PIECE);
+        let text = format!("{a}é{a}");
+        assert_eq!(
+            str_literal(&text),
+            format!("TEMPER_STR(\"{a}\" \"é{}\" \"aa\")", &a[2..])
+        );
+        let text = "b".repeat(PIECE * PIECES + 2);
+        let b = "b".repeat(PIECE);
+        let group = vec![format!("\"{b}\""); PIECES].join(" ");
+        assert_eq!(
+            string_literal(&text),
+            format!("std::string({group}, 64000).append(\"bb\", 2)")
+        );
+        assert_eq!(
+            str_literal(&format!("{text}\0")),
+            format!("TEMPER_STR(std::string({group}, 64000).append(\"bb\\000\", 3))")
+        );
     }
 }

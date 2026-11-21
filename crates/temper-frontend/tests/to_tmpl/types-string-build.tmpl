@@ -78,7 +78,7 @@ module build#0 {
     builder#6.append#16("0");
     (orelse(builder#6.appendCodePoint#17(8364)^, ~console#25.log#24("No euro."))): Void;
     builder#6.append#16("1");
-    ~console#25.log#24(%String.cat("Digits after escapes: ", %String.eq(builder#6.toString#22(), %String.cat(%String.cat(%String.cat(%String.cat("??", "\u{1}"), "0"), "€"), "1")).toString#28()));
+    ~console#25.log#24(%String.cat("Digits after escapes: ", %String.eq(builder#6.toString#22(), "??\u{1}0€1").toString#28()));
     init owner#14 = new constructor#5(new constructor#15());
     owner#14.builder#4.append#16("Hi from inside.");
     ~console#25.log#24(owner#14.builder#4.toString#22());

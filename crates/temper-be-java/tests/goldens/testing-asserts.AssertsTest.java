@@ -55,7 +55,7 @@ public final class AssertsTest {
         try {
             test.assert_(false, () -> "because it's wrong");
             TestHelper helper = new TestHelper(3, 2);
-            assertMoreThings(test, helper, List.of(List.of("bye")));
+            assertMoreThings(test, helper, List.<List<String>>of(List.<String>of("bye")));
         } finally {
             test.softFailToHard();
         }

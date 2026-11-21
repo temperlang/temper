@@ -667,7 +667,7 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
-fn block(out: &mut String, body: &[Stmt], depth: usize) {
+pub(crate) fn block(out: &mut String, body: &[Stmt], depth: usize) {
     out.push_str("{\n");
     for s in body {
         stmt(out, s, depth + 1);

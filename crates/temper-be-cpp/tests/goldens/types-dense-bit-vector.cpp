@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace dense_bit_vector {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,14 @@ void global_init_init();
 
 // init.cpp
 #include <dense-bit-vector/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/dense_bit_vector.hpp>
+#include <memory>
+#include <vector>
 
 namespace dense_bit_vector {
 

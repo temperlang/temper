@@ -148,7 +148,72 @@ pub enum Expr {
     Struct(String, Vec<(String, Option<Expr>)>),
 }
 
+/// What code splits under, as rustc takes time and memory superlinear
+/// in a function's size (1.99 ran out of 3.5 GB over 20,000 statements,
+/// and of memory over a 20,000-entry map's `vec![…]`); tests set them
+/// low, to see the split shape on small programs.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    /// The most items a list literal makes in one closure; a longer one
+    /// is parts of this many, each a closure of its own, flattened:
+    /// `vec![temper_core::part(|| vec![…]), …].into_iter().flatten()
+    /// .collect::<Vec<_>>()`.
+    pub list_part: usize,
+    /// The most statements in a row a function runs as they are
+    /// ([`group_runs`]).
+    pub run: usize,
+    /// The statements in each group past [`run`](Self::run).
+    pub group: usize,
+}
+
+/// rustc's: seconds, within its memory, over generated data.
+pub const LIMITS: Limits = Limits {
+    list_part: 256,
+    run: 1024,
+    group: 256,
+};
+
+/// `stmts` with runs of plain statements past [`Limits::run`] in groups
+/// of [`Limits::group`], each a closure of its own,
+/// `temper_core::part(|| { … });`, but statements a closure would
+/// change: a `let`, whose scope would end with it, an assignment, and
+/// what returns, bubbles, or jumps out.
+pub fn group_runs(stmts: Vec<Stmt>, limits: &Limits) -> Vec<Stmt> {
+    // Not an assignment, which may initialize a `let` declared without a
+    // value, which a closure can't.
+    let plain = |s: &Stmt| matches!(s, Stmt::Expr(e) if e.is_plain());
+    let wrap = |group| {
+        let made = Expr::Closure(Vec::new(), Block::new(group, None));
+        Stmt::Expr(Expr::path("temper_core::part").call(vec![made]))
+    };
+    temper_tmpl::chunks::group_runs(stmts, limits.run, limits.group, plain, wrap)
+}
+
 impl Expr {
+    /// Whether it's plain data, calls and operators on paths and
+    /// literals, that a closure can make as well: nothing that returns or
+    /// bubbles out of the function it's in, nor any block or closure.
+    pub fn is_plain(&self) -> bool {
+        match self {
+            Expr::Path(_) | Expr::Lit(_) | Expr::Str(_) => true,
+            Expr::Call(f, args) => f.is_plain() && args.iter().all(Expr::is_plain),
+            Expr::Method(x, _, args) => x.is_plain() && args.iter().all(Expr::is_plain),
+            Expr::Macro(_, args) => args.iter().all(Expr::is_plain),
+            Expr::Bin(_, a, b) => a.is_plain() && b.is_plain(),
+            Expr::Unary(_, x) | Expr::Cast(x, _) | Expr::Field(x, _) => x.is_plain(),
+            Expr::Struct(_, fields) => fields
+                .iter()
+                .all(|(_, v)| v.as_ref().is_none_or(Expr::is_plain)),
+            Expr::Try(_)
+            | Expr::Return(_)
+            | Expr::If(..)
+            | Expr::Let(..)
+            | Expr::Block(_)
+            | Expr::Closure(..)
+            | Expr::Move(_) => false,
+        }
+    }
+
     /// `(a, b)`: a call of nothing, which prints as a tuple.
     pub fn tuple(items: Vec<Expr>) -> Expr {
         Expr::Call(Box::new(Expr::Path(String::new())), items)

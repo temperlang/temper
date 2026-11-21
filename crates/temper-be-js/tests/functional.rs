@@ -852,7 +852,7 @@ fn runs() {
         let assert = out.join("assert.d.ts");
         fs::write(&assert, ASSERT_TYPES).unwrap();
         checked.push(assert);
-        for case in cases() {
+        for case in kit::with_split_programs(cases()) {
             let root = out.join(&case.key);
             let package = root.join(&case.library);
             let prefix = relative(&package, &case.dir);
@@ -878,7 +878,10 @@ fn runs() {
                         .map(|f| modules.join(&f.path)),
                 );
             }
-            for map in files.iter().filter(|f| f.path.ends_with(".map")) {
+            // A case given as text (`kit::huge`) has no source file for
+            // its map to point to.
+            let maps = files.iter().filter(|_| !case.dir.as_os_str().is_empty());
+            for map in maps.filter(|f| f.path.ends_with(".map")) {
                 let module = root.join(map.path.strip_suffix(".map").unwrap());
                 failures.extend(node_reads_map(&node, &case, &module, &read_map(&map.text)));
             }

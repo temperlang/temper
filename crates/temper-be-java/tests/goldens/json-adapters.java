@@ -44,10 +44,10 @@ public final class JsonAdaptersGlobal {
     static {
         console = Core.getConsole(Logger.getLogger("json_adapters"));
         roundTrip(Point.jsonAdapter(), new Point(1, -2));
-        roundTrip(Record.jsonAdapter(), new Record("Ada", true, 1.5, 123456789012L, null, List.of(new Point(3, 4))));
-        List<Shape> shapes = List.of(new Circle(2), new Rect(3, 4));
+        roundTrip(Record.jsonAdapter(), new Record("Ada", true, 1.5, 123456789012L, null, List.<Point>of(new Point(3, 4))));
+        List<Shape> shapes = List.<Shape>of(new Circle(2), new Rect(3, 4));
         roundTrip(JsonGlobal.listJsonAdapter(Shape.jsonAdapter()), shapes);
-        List<Message> messages = List.of(new Hello("hi"), new Bye("so long"));
+        List<Message> messages = List.<Message>of(new Hello("hi"), new Bye("so long"));
         roundTrip(JsonGlobal.listJsonAdapter(Message.jsonAdapter()), messages);
         roundTrip(Celsius.jsonAdapter(), new Celsius(21));
         Shape shape;

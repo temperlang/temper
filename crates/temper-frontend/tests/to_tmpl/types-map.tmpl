@@ -167,12 +167,12 @@ module map#0 {
     eightColors#29.forEach#98((fn ~fn#99(color#100: String, bits#101: List#10<Boolean>): Void {
       var foundByGetOr#102: List#10<Boolean> = eightColors#29.getOr#103(color#100, (list()): List#10<Boolean>);
       if (%Boolean.not(%Int32.eq(foundByGetOr#102.length#104(), 3))) {
-        ~console#61.log#60(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#100), "\""), ") failed to find key"));
+        ~console#61.log#60(%String.cat(%String.cat("getOr(\"", color#100), "\") failed to find key"));
       }
       var want#105: String = colorToHex#25(bits#101);
       var got#106: String = colorToHex#25(foundByGetOr#102);
       if (%Boolean.not(%String.eq(want#105, got#106))) {
-        ~console#61.log#60(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#100), "\""), ") found "), got#106), " but wanted "), want#105));
+        ~console#61.log#60(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("getOr(\"", color#100), "\") found "), got#106), " but wanted "), want#105));
       }
     }): fn (String, List#10<Boolean>): Void);
     init map#32 = new constructor#52<String, String>((list(new constructor#53<String, String>("key", "value"), new constructor#53<String, String>("other key", "other value"))): List#10<Pair#46<String, String>>);

@@ -19,7 +19,7 @@ public final class LibrariesGlobal {
         if (s.equals("")) {
             throw Core.bubble();
         }
-        return new Grid(1, List.of(Core.stringToFloat64(s)));
+        return new Grid(1, List.<Double>of(Core.stringToFloat64(s)));
     }
 
     static Tagged tagged(@Nullable String label) {
@@ -46,7 +46,7 @@ public final class LibrariesGlobal {
     }
 
     static List<Integer> sizes(Shape s) {
-        List<Integer> found = s instanceof Dot ? List.of(((Dot) s).size, ((Dot) s).size) : List.of();
+        List<Integer> found = s instanceof Dot ? List.<Integer>of(((Dot) s).size, ((Dot) s).size) : List.<Integer>of();
         return found;
     }
 
@@ -124,7 +124,7 @@ public final class LibrariesGlobal {
 
     static @Nullable Grid maybe(int n) {
         if (n > 0) {
-            return new Grid(n, List.of(1.0));
+            return new Grid(n, List.<Double>of(1.0));
         } else {
             return null;
         }
@@ -232,7 +232,7 @@ public final class LibrariesGlobal {
             found_ = null;
         }
         @Nullable Grid found = found_;
-        return Core.listJoinBool(Core.listMapIntToBool(List.of(1, 2), x -> found == null), ",", b -> Boolean.toString(b));
+        return Core.listJoinBool(Core.listMapIntToBool(List.<Integer>of(1, 2), x -> found == null), ",", b -> Boolean.toString(b));
     }
 
     static String bidi() {
@@ -262,9 +262,9 @@ public final class LibrariesGlobal {
 
     public static <T> String effectsOf(String text, T event, T other) {
         List<Effect<T>> into = new ArrayList<>();
-        joinEffects(into, List.of());
-        joinEffects(into, List.of(new Plain<T>(text)));
-        joinEffects(into, List.of(new Happened<T>(event), new Plain<T>("!"), new Happened<T>(other)));
+        joinEffects(into, List.<Effect<T>>of());
+        joinEffects(into, List.<Effect<T>>of(new Plain<T>(text)));
+        joinEffects(into, List.<Effect<T>>of(new Happened<T>(event), new Plain<T>("!"), new Happened<T>(other)));
         String shown = "";
         {
             List<Effect<T>> list = List.copyOf(into);
@@ -379,8 +379,8 @@ public final class LibrariesGlobal {
     static {
         Console console = Core.getConsole(Logger.getLogger("libraries"));
         ticks = 0;
-        extras = List.of(1);
-        Grid grid = new Grid(2, List.of(1.0, 2.0, 3.0, 4.0));
+        extras = List.<Integer>of(1);
+        Grid grid = new Grid(2, List.<Double>of(1.0, 2.0, 3.0, 4.0));
         console.log(rows(grid.values, 2) + " " + Core.float64ToString(half(3.0)) + " " + Core.float64ToString(cube(8.0)));
         console.log(Core.float64ToString(corner(grid)));
         console.log(Core.float64ToString(total(grid.values)));
@@ -409,7 +409,7 @@ public final class LibrariesGlobal {
         console.log(compareCodePoints(word(1), word(2)) + " " + compareCodePoints(word(2), word(1)) + " " + compareCodePoints(word(2), word(3)));
         String named = word(2);
         console.log(Boolean.toString(named.equals(word(3)) && !(named + "!").equals(named)));
-        List<Integer> digits = List.of(1, 2, 4, 3);
+        List<Integer> digits = List.<Integer>of(1, 2, 4, 3);
         console.log(byteAt(digits, true, 1) + " " + byteAt(digits, false, 0) + " " + ascending(digits) + " " + firstDrop(digits) + " " + sizeWith(digits));
         console.log(tickIf(true) + " " + tickIf(false) + " " + ticked() + " " + tickWhile());
         String t5 = shapeName(shapeOf(1)) + " " + shapeName(shapeOf(2)) + " " + sizes(shapeOf(1)).size() + " " + sizes(shapeOf(2)).size() + " ";
@@ -429,9 +429,9 @@ public final class LibrariesGlobal {
         List<Boolean> flags = List.copyOf(b);
         Joiner joiner = new Joiner();
         joiner.addWord(new Word("a"));
-        joiner.addFlags(List.of(true));
-        joiner.addTexts(List.of("x", "y"));
-        List<@Nullable String> maybes = Core.listOf(null, "z");
+        joiner.addFlags(List.<Boolean>of(true));
+        joiner.addTexts(List.<String>of("x", "y"));
+        List<@Nullable String> maybes = Core.<@Nullable String>listOf(null, "z");
         joiner.addMaybes(maybes);
         console.log(joiner.out);
         Held<Tag> held = new Held<Tag>(new Tag("a"), null);
@@ -441,7 +441,7 @@ public final class LibrariesGlobal {
         @Nullable Held<Tag> subject3 = other.next;
         @Nullable Tag subject2 = subject3 == null ? null : subject3.item;
         console.log(t9 + (subject2 == null ? new Tag("none") : subject2).toString() + " " + sameHeld(held, held) + " " + sameHeld(held, other) + " " + sameHeld(nobody, nobody) + " " + sameHeld(nobody, held));
-        console.log(effectsOf("ab", 1, 2) + " " + new Bundle<String>(List.of(), "2").first + " " + flags.size());
+        console.log(effectsOf("ab", 1, 2) + " " + new Bundle<String>(List.<Effect<String>>of(), "2").first + " " + flags.size());
         Ticks counter = new Ticks();
         Counting<String> stepper = counter;
         stepper.step();
@@ -451,6 +451,6 @@ public final class LibrariesGlobal {
         @Nullable String subject5 = message(1);
         String t11 = t10 + (subject5 == null ? "none" : subject5) + " ";
         @Nullable String subject6 = message(2);
-        console.log(t11 + (subject6 == null ? "none" : subject6) + " " + sumParsed(List.of("1", "x", "2")) + " " + backwards(List.of(1, 2, 3)));
+        console.log(t11 + (subject6 == null ? "none" : subject6) + " " + sumParsed(List.<String>of("1", "x", "2")) + " " + backwards(List.<Integer>of(1, 2, 3)));
     }
 }

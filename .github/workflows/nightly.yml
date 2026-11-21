@@ -7,9 +7,11 @@
 # and once more with every build but ThreadSanitizer's also under
 # AddressSanitizer and UndefinedBehaviorSanitizer, through
 # `TEMPER_CXXFLAGS`, so the plain programs and the tests run sanitized
-# too. Not clang++: the tests'
-# warnings (`STRICT`) are GCC's; ci.yml's `strict` compiles generated C++
-# with clang++ too, with clang's.
+# too. Not clang++: the tests' warnings (`STRICT`) are GCC's. And
+# `strict`, which per-push CI (ci.yml) runs by clang++ alone: all
+# generated C++ compiled at -O2 by g++ 12 and 14 and clang++, and by
+# g++ 14 at -O3 too, every warning an error. All through ccache
+# (.github/actions/ccache), as the libraries' and platforms' C++ builds.
 #
 # Also real libraries' tests, as `temper test -b` runs them, on each
 # backend each passes on: the libraries are data, listed in
@@ -21,9 +23,18 @@
 # pyright, strict, at ci.yml's pins), against a ratchet: a count over
 # its allowance in .github/ci-tools/library-py-baseline.json (0 if
 # unlisted) fails the job, and one under it asks for the allowance to
-# be lowered (.github/ci-tools/check_library_py.py); per-push
+# be lowered (.github/ci-tools/check_library_py.py), and each library's
+# generated C++ headers compiled alone, including only the runtime they
+# use (.github/ci-tools/check_library_cpp.py); per-push
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
+#
+# And the huge program (temper-be-testkit's `huge`: an 8,500-item list,
+# a 1,000-entry map, an 80 KB string, and 6,000 statements, past
+# compilers' limits) through every backend's tests (`TEMPER_HUGE`): in
+# `cpp` for C++, and in `huge` for the rest, so code split under those
+# limits compiles and runs; per-push CI checks only its small shape's
+# goldens (`split_shape`), with each backend's limits set low.
 #
 # And an early warning for the checkers of generated code: the backends'
 # tests with the latest TypeScript, pyright, mypy, or LuaLS in place of
@@ -53,9 +64,9 @@ jobs:
   # Whether main has changed lately, so a scheduled run skips what an
   # earlier one already tested on the same code: `day`, "true" if its
   # latest commit is under 26 hours old (a day, with room for GitHub's
-  # delays in starting scheduled runs), for `cpp` and `platforms-quick`;
-  # and `week`, under 8 days, for `platforms`. The jobs check for
-  # "false", so if this fails they run. `libraries` and
+  # delays in starting scheduled runs), for `cpp`, `huge`, and
+  # `platforms-quick`; and `week`, under 8 days, for `platforms`. The
+  # jobs check for "false", so if this fails they run. `libraries` and
   # `latest-checkers` run every night regardless: they test other
   # repositories' main branches and the checkers' latest releases.
   recent:
@@ -85,18 +96,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `id` names each one's ccache, as cache keys can't have commas.
+        # `strict-cxx` is TEMPER_STRICT_CXX, empty (no `strict`) but in
+        # `strict`, which runs that test alone (`test`).
         include:
           - name: g++-12
+            id: g++-12
             cxx: g++-12
           - name: g++-14
+            id: g++-14
             cxx: g++-14
           # As the tests' own ASan build, `maybe-uninitialized` isn't an
           # error: GCC 13 warns of it, wrongly, in libstdc++'s <regex>.
           - name: g++, sanitized
+            id: sanitized
             cxx: g++
             cxxflags: >-
               -fsanitize=address,undefined -fno-sanitize-recover=undefined
               -Wno-error=maybe-uninitialized
+          # What ci.yml's `C++, strict` ran on every push until
+          # 2026-11-19: g++ 12 and 14 at -O2, and 14, the newest GCC
+          # named, at -O3 too, and clang++ at -O2 (which ci.yml still
+          # runs).
+          - name: strict, g++ 12 and 14 and clang++
+            id: strict
+            cxx: g++
+            apt: g++-12 g++-14 clang
+            strict-cxx: g++-12 g++-14 clang++
+            test: --test functional -- --exact strict
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     steps:
@@ -107,25 +134,77 @@ jobs:
       - name: Address randomization for ThreadSanitizer
         run: sudo sysctl vm.mmap_rnd_bits=28
       # As in CI: libcurl's headers, for std `net`'s default client. And
-      # the matrix's g++, which the runner image may not have installed:
-      # Ubuntu's package is named as the command (g++-12, g++-14).
-      - name: libcurl for C++'s std net, and the compiler
+      # the matrix's compilers, which the runner image may not have
+      # installed: Ubuntu's package is named as the command (g++-12,
+      # g++-14), but clang's, `clang`.
+      - name: libcurl for C++'s std net, and the compilers
         run: |
-          bash .github/ci-tools/apt-install.sh libcurl4-openssl-dev "$CXX"
+          bash .github/ci-tools/apt-install.sh libcurl4-openssl-dev "$CXX" $APT
         env:
           CXX: ${{ matrix.cxx }}
+          APT: ${{ matrix.apt }}
+      # The tests run the compilers themselves, so by name.
+      - uses: ./.github/actions/ccache
+        with:
+          name: cpp-${{ matrix.id }}
+          compilers: g++ g++-12 g++-14 clang++
       - name: Tests
         run: |
           "$CXX" --version
-          cargo test --locked -p temper-be-cpp
+          cargo test --locked -p temper-be-cpp $TEST
         env:
           CXX: ${{ matrix.cxx }}
+          TEST: ${{ matrix.test }}
           TEMPER_CXXFLAGS: ${{ matrix.cxxflags }}
-          # Not `strict` again: ci.yml builds with g++ 12 and 14 and
-          # clang++ at -O2 on every push.
-          TEMPER_STRICT_CXX: ""
+          # `strict` only in `strict`.
+          TEMPER_STRICT_CXX: ${{ matrix.strict-cxx }}
           ASAN_OPTIONS: detect_leaks=0
           TEMPER_REQUIRE_CHECKERS: "1"
+          # The huge program in `runs` and `huge_splits`.
+          TEMPER_HUGE: "1"
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/ccache
+        with:
+          name: cpp-${{ matrix.id }}
+          stage: end
+
+  # The huge program through each backend's tests but C++'s, which `cpp`
+  # runs it in: a job each, with that backend's toolchains, as ci.yml's
+  # `backends`, and the interpreter's run of it once, in `py`'s. It adds
+  # up to a minute to a backend's tests, so per-push CI leaves it out.
+  huge:
+    needs: recent
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || (github.event.schedule == '41 3 * * *' && needs.recent.outputs.day != 'false')) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [py, js, lua, java, csharp, rust]
+    name: huge, ${{ matrix.backend }}
+    # Pinned, as ci.yml's, for Ubuntu's lua5.4, which is 5.4.6 on noble.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TEMPER_REQUIRE_CHECKERS: "1"
+      TEMPER_HUGE: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+        # The Rust backend's tests lay out generated crates with
+        # rustfmt and lint them with clippy.
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: huge-${{ matrix.backend }}
+      - uses: ./.github/actions/toolchains
+        with:
+          backends: ${{ matrix.backend }}
+      - name: Tests
+        run: cargo test --locked -p temper-be-${{ matrix.backend }} --test functional
+      - name: The interpreter's run
+        if: ${{ !cancelled() && matrix.backend == 'py' }}
+        run: cargo test --locked -p temper-be-testkit --test programs huge_logs
 
   # The list of libraries, as a matrix. When there are many, this is
   # where to shard or rotate them (a slice per night), keeping each job
@@ -196,6 +275,11 @@ jobs:
           bash .github/ci-tools/apt-install.sh libcurl4-openssl-dev lua5.4
           sudo update-alternatives --set lua-interpreter /usr/bin/lua5.4
           lua -v | grep -F "Lua 5.4.6"
+      # CMake's C++ builds through ccache, a cache per library.
+      - if: contains(format(' {0} ', matrix.library.backends), ' cpp ')
+        uses: ./.github/actions/ccache
+        with:
+          name: library-${{ matrix.library.name }}
       - name: Tests on each backend
         run: |
           cargo build --locked --release -p tempest
@@ -224,6 +308,17 @@ jobs:
       - name: Python type checks
         if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' py ') }}
         run: uv run .github/ci-tools/check_library_py.py library/temper.out/py
+      # The library's generated C++ headers, as `temper test -b cpp` left
+      # them, each compiled alone, including only the runtime it uses
+      # (the headers it names, not `core.hpp`).
+      - name: C++ headers alone
+        if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' cpp ') }}
+        run: uv run .github/ci-tools/check_library_cpp.py library/temper.out/cpp
+      - if: ${{ !cancelled() && contains(format(' {0} ', matrix.library.backends), ' cpp ') }}
+        uses: ./.github/actions/ccache
+        with:
+          name: library-${{ matrix.library.name }}
+          stage: end
 
   # Each checker of generated code at its latest release, the others at
   # ci.yml's pins, on the tests of the backend it checks. A failure here
@@ -362,6 +457,11 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
+      # What `temper build` writes and removes in `temper.out`: on macOS
+      # and Windows, a module renamed only in case; on Unix, links.
+      - name: Generated files
+        if: ${{ !cancelled() }}
+        run: 'bash .github/ci-tools/tests-ran.sh 3 cargo test --locked -p temper-driver --lib manifest::'
       - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features
@@ -392,8 +492,8 @@ jobs:
         # as a bump here. Each is the native runner for one of
         # binaries.yml's targets.
         include:
-          # As ci.yml: generated C++ by g++, sanitized, and `strict` by
-          # g++ 12 and 14 and clang++.
+          # As ci.yml and the nightly `cpp` jobs: generated C++ by g++,
+          # sanitized, and `strict` by g++ 12 and 14 and clang++.
           - os: ubuntu-24.04-arm
             backends: py js lua java csharp cpp rust
             apt: g++-12 g++-14 clang
@@ -485,6 +585,11 @@ jobs:
         if: ${{ !cancelled() }}
         # Quoted: a plain YAML value can't end in a colon.
         run: 'bash .github/ci-tools/tests-ran.sh 2 cargo test --locked -p temper-tmpl --lib children::'
+      # What `temper build` writes and removes in `temper.out`: on macOS
+      # and Windows, a module renamed only in case; on Unix, links.
+      - name: Generated files
+        if: ${{ !cancelled() }}
+        run: 'bash .github/ci-tools/tests-ran.sh 3 cargo test --locked -p temper-driver --lib manifest::'
       - name: All of the CLI's tests, without backends
         if: ${{ !cancelled() }}
         run: cargo test --locked -p tempest --no-default-features
@@ -499,6 +604,17 @@ jobs:
         with:
           backends: ${{ matrix.backends }}
           apt: ${{ matrix.apt }}
+      # C++ through ccache (.github/actions/ccache): the C++ backend's
+      # own builds by name, on Linux, and CMake's, in the CLI's tests'
+      # temporary directories. Not on Windows, where it does nothing.
+      # A weekly run may find its cache gone: GitHub drops caches
+      # unread for 7 days.
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/ccache
+        with:
+          name: ${{ matrix.os }}
+          compilers: g++ g++-12 g++-14 clang++
+          temp-builds: "true"
       # Each backend's tests, a step each, so a failure names its
       # backend, and one failing doesn't stop the rest.
       - name: Python
@@ -537,3 +653,8 @@ jobs:
         env:
           BACKENDS: ${{ matrix.backends }}
           RUSTFLAGS: ""
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/ccache
+        with:
+          name: ${{ matrix.os }}
+          stage: end

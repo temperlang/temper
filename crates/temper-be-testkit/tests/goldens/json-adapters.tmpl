@@ -434,7 +434,7 @@ module `json-adapters`#0 {
     init messages#115 = (list((upcast(new constructor#85("hi"))): Message#16, (upcast(new constructor#93("so long"))): Message#16)): List#46<Message#16>;
     roundTrip#112<List#46<Message#16>>(listJsonAdapter#155<Message#16>(jsonAdapter#99()), messages#115);
     roundTrip#112<Celsius#18>(jsonAdapter#106(), new constructor#107(21));
-    init shape#116 = (orelse(decode#110<Shape#10>(jsonAdapter#77(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "height"), "\""), ": 6, "), "\""), "width"), "\""), ": 5}"))^, (panic()): Shape#10)): Shape#10;
+    init shape#116 = (orelse(decode#110<Shape#10>(jsonAdapter#77(), "{\"height\": 6, \"width\": 5}")^, (panic()): Shape#10)): Shape#10;
     {
       if (is(shape#116, Rect#8)) {
         ~console#276.log#275(%String.cat(%String.cat(%String.cat("rect ", ((downcast(shape#116)): Rect#8).width#66.toString#278(omitted)), "x"), ((downcast(shape#116)): Rect#8).height#67.toString#278(omitted)));
@@ -442,9 +442,9 @@ module `json-adapters`#0 {
         ~console#276.log#275("not a rect");
       }
     }
-    init record#117 = (orelse(decode#110<Record#4>(jsonAdapter#53(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "name"), "\""), ": "), "\""), "Bo"), "\""), ", "), "\""), "is-active"), "\""), ": false, "), "\""), "score"), "\""), ": 2, "), "\""), "big"), "\""), ": 7, "), "\""), "nickname"), "\""), ": "), "\""), "B"), "\""), ", "), "\""), "points"), "\""), ": []}"))^, (panic()): Record#4)): Record#4;
+    init record#117 = (orelse(decode#110<Record#4>(jsonAdapter#53(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}")^, (panic()): Record#4)): Record#4;
     ~console#276.log#275(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(record#117.name#40, " "), record#117.active#41.toString#280()), " "), (value { let subject#281: String? = record#117.nickname#44; (if (isNull(subject#281)) "none" else (nonNull(subject#281)): String): String }): String), " "), record#117.points#50.length#282().toString#278(omitted)));
-    ~console#276.log#275((orelse((value { decode#110<Point#2>(jsonAdapter#35(), %String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "x"), "\""), ": 1}"))^; "decoded" }): String, "no y")): String);
-    ~console#276.log#275((orelse((value { decode#110<Message#16>(jsonAdapter#99(), %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("{", "\""), "kind"), "\""), ": "), "\""), "what"), "\""), ", "), "\""), "text"), "\""), ": "), "\""), "?"), "\""), "}"))^; "decoded" }): String, "no such kind")): String);
+    ~console#276.log#275((orelse((value { decode#110<Point#2>(jsonAdapter#35(), "{\"x\": 1}")^; "decoded" }): String, "no y")): String);
+    ~console#276.log#275((orelse((value { decode#110<Message#16>(jsonAdapter#99(), "{\"kind\": \"what\", \"text\": \"?\"}")^; "decoded" }): String, "no such kind")): String);
   }
 }

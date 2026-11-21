@@ -744,8 +744,9 @@ fn runs() {
         // (`types/int/basics` and `types/float/basics`) take others.
         // A library with host code names its own namespace (`namespace
         // Work`), so it can't be renamed, and compiles on its own.
-        let (tested, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| c.tests.is_some());
+        let (tested, cases): (Vec<Case>, Vec<Case>) = kit::with_split_programs(cases())
+            .into_iter()
+            .partition(|c| c.tests.is_some());
         let (hosted, mut cases): (Vec<Case>, Vec<Case>) =
             cases.into_iter().partition(|c| !c.host_files.is_empty());
         // std's `testing` needs MSTest, so std's assembly does, and the
@@ -1209,4 +1210,18 @@ fn run_tests(
         .unwrap();
     let actual = kit::runner_failures(&String::from_utf8_lossy(&run.stdout));
     kit::check_tests(failures, case, actual, &run, kit::test_name_words);
+}
+
+/// Translating a template's chain of `String.cat`s takes work linear in
+/// its parts, counted, not timed: passes that looked over each operand's
+/// whole subtree at every level of the chain made it quadratic.
+#[test]
+fn template_work_is_linear() {
+    kit::with_stack(|| {
+        let growth = kit::template_work_growth(
+            |case| kit::program_for(case, &CSHARP.rules),
+            |program| drop(translate(program, &CSHARP).unwrap()),
+        );
+        assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
 }

@@ -1,7 +1,8 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <memory>
+#include <sstream>
 
 namespace build {
 
@@ -22,6 +23,15 @@ struct StringBuilderOwner : public std::enable_shared_from_this<StringBuilderOwn
 
 // init.cpp
 #include <build/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/string_builder.hpp>
+#include <cstdint>
 
 namespace build {
 

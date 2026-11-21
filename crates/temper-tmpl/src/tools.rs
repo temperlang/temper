@@ -60,6 +60,86 @@ pub fn tool_output(run: &Output) -> String {
     lines[lines.len().saturating_sub(40)..].join("\n")
 }
 
+/// Whether a build directory was built as `key` says (its tool, flags,
+/// and the like), by the stamp file `stamp` that [`write_stamp`] wrote
+/// there; a missing or unreadable stamp isn't.
+pub fn stamp_matches(stamp: &Path, key: &str) -> bool {
+    std::fs::read_to_string(stamp).is_ok_and(|text| text == key)
+}
+
+/// Notes in `stamp` that a build directory was built as `key` says.
+pub fn write_stamp(stamp: &Path, key: &str) {
+    let _ = crate::files::write_if_changed(stamp, key.as_bytes());
+}
+
+/// Whether a build directory `dir` can be reused, as it was built as
+/// `key` says ([`stamp_matches`]); where it can't, it's removed, with
+/// `stamp`, so it's built afresh, and nothing of an old build stays.
+pub fn reuse_or_clear(dir: &Path, stamp: &Path, key: &str) -> bool {
+    if dir.is_dir() && stamp_matches(stamp, key) {
+        return true;
+    }
+    let _ = std::fs::remove_dir_all(dir);
+    let _ = std::fs::remove_file(stamp);
+    false
+}
+
+/// A tool's file, as [`tool`] names it: itself where it's a path, else
+/// the first of that name on `PATH`.
+pub fn tool_file(name: &str) -> Option<PathBuf> {
+    let given = Path::new(name);
+    if given.components().count() > 1 {
+        return given.is_file().then(|| given.to_path_buf());
+    }
+    let file = format!("{name}{}", std::env::consts::EXE_SUFFIX);
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|dir| dir.join(&file))
+        .find(|f| f.is_file())
+}
+
+/// What tells one version of a tool from another without running it:
+/// its file's path, size, and time, following links, as an upgrade
+/// replaces the file; or its name alone where it isn't found.
+pub fn tool_identity(name: &str) -> String {
+    let Some(file) = tool_file(name) else {
+        return name.to_string();
+    };
+    let meta = std::fs::metadata(&file).ok();
+    let time = (meta.as_ref())
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_nanos());
+    let size = meta.map_or(0, |m| m.len());
+    format!("{} {size} {time}", file.display())
+}
+
+/// Removes the build directories under `dir` that `patterns` name, as
+/// [`crate::Tools::build_dirs`] lists them: paths from `dir`, each `*`
+/// any one name there. It follows no symbolic link: one named is
+/// removed as a link, and one on the way leads nowhere.
+pub fn remove_build_dirs(dir: &Path, patterns: &[&str]) {
+    fn remove(dir: &Path, parts: &[&str]) {
+        match parts {
+            [] => {
+                let _ = std::fs::remove_dir_all(dir);
+            }
+            // A directory, not a link to one, to look in.
+            _ if !std::fs::symlink_metadata(dir).is_ok_and(|m| m.is_dir()) => {}
+            ["*", rest @ ..] => {
+                for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+                    remove(&entry.path(), rest);
+                }
+            }
+            [name, rest @ ..] => remove(&dir.join(name), rest),
+        }
+    }
+    for pattern in patterns {
+        let parts: Vec<&str> = pattern.split('/').collect();
+        remove(dir, &parts);
+    }
+}
+
 /// The tests in a JUnit XML file, each name through `name`, with why
 /// each failed ([`Failed::cause`]); or the tool's output where there's
 /// none.
@@ -257,7 +337,83 @@ pub fn unescape_xml(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::junit;
+    use super::{junit, remove_build_dirs, tool_identity};
+    use std::fs;
+    use std::path::PathBuf;
+
+    /// A fresh directory for a test.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("temper-tools-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// A tool, by its path, is told apart by its size (and time), so
+    /// another version of it builds afresh; a missing one is its name.
+    #[test]
+    fn tools_are_told_apart() {
+        let dir = scratch("identity");
+        let tool = dir.join("cxx");
+        fs::write(&tool, "one").unwrap();
+        let first = tool_identity(&tool.to_string_lossy());
+        assert_eq!(tool_identity(&tool.to_string_lossy()), first);
+        fs::write(&tool, "another").unwrap();
+        assert_ne!(tool_identity(&tool.to_string_lossy()), first);
+        let missing = dir.join("missing").to_string_lossy().into_owned();
+        assert_eq!(tool_identity(&missing), missing);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    /// Build directories by their patterns, each `*` any one directory,
+    /// and nothing else.
+    #[test]
+    fn build_dirs_go() {
+        let dir = scratch("build-dirs");
+        for path in [
+            ".build/x",
+            "a/target/temper/x",
+            "a/target/kept",
+            "a/src/x",
+            "b/target/temper",
+        ] {
+            fs::create_dir_all(dir.join(path)).unwrap();
+        }
+        fs::write(dir.join("c"), "a file, not a directory").unwrap();
+        remove_build_dirs(&dir, &[".build", "*/target/temper"]);
+        assert!(!dir.join(".build").exists());
+        assert!(!dir.join("a/target/temper").exists());
+        assert!(!dir.join("b/target/temper").exists());
+        assert!(dir.join("a/target/kept").is_dir());
+        assert!(dir.join("a/src/x").is_dir());
+        assert!(dir.join("c").is_file());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    /// A build directory that's a symbolic link is removed as a link,
+    /// and none is followed on the way to one: what they point to stays.
+    #[test]
+    #[cfg(unix)]
+    fn build_dirs_follow_no_links() {
+        use std::os::unix::fs::symlink;
+        let dir = scratch("build-dir-links");
+        let outside = dir.join("outside");
+        fs::create_dir_all(outside.join("temper")).unwrap();
+        fs::write(outside.join("temper/keep"), "keep").unwrap();
+        let out = dir.join("out");
+        fs::create_dir_all(out.join("a")).unwrap();
+        fs::create_dir_all(out.join("b")).unwrap();
+        symlink(&outside, out.join(".build")).unwrap();
+        symlink(&outside, out.join("a/target")).unwrap();
+        symlink(&outside, out.join("linked")).unwrap();
+        remove_build_dirs(&out, &[".build", "*/target/temper"]);
+        assert!(fs::symlink_metadata(out.join(".build")).is_err());
+        assert_eq!(
+            fs::read_to_string(outside.join("temper/keep")).unwrap(),
+            "keep"
+        );
+        let _ = fs::remove_dir_all(dir);
+    }
 
     fn causes(xml: &str) -> Vec<(String, Option<String>)> {
         junit(xml)

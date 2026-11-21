@@ -172,10 +172,32 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`shape_variant`]'s
+/// low limits, so `runs_and_lints` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &RUST.rules), &RUST)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &RUST.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &shape_variant()),
+        false => translate(&program, &RUST),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// Rust with limits low enough that `kit::split_shape`'s list and map
+/// literals go in parts and its top level's statements in groups
+/// (`tree::Limits`).
+fn shape_variant() -> temper_be_rust::Variant {
+    temper_be_rust::Variant {
+        name: RUST.name,
+        profile: RUST.profile.clone(),
+        rules: temper_be_rust::names::RULES,
+        rust_version: RUST.rust_version,
+        limits: temper_be_rust::tree::Limits {
+            list_part: 4,
+            run: 6,
+            group: 4,
+        },
+    }
 }
 
 /// Whether a tool runs, as `program args… --version`.
@@ -573,7 +595,7 @@ fn runs_and_lints() {
         // `types/float/basics`) is named by its key instead, or where
         // that's taken too (the `functions` program, after
         // `imports/functions`), by its key and `-program`.
-        let mut cases = cases();
+        let mut cases = kit::with_split_programs(cases());
         let mut seen = std::collections::HashSet::new();
         for case in &mut cases {
             if !seen.insert(case.library.clone()) {
@@ -751,5 +773,44 @@ fn runs_and_lints() {
             kit::missing("no clippy");
         }
         kit::assert_none(&failures);
+    });
+}
+
+/// `kit::split_shape`'s program at [`shape_variant`]'s low limits,
+/// matching its golden, `split-shape.rs`, on every push, as
+/// `runs_and_lints` runs it; `huge_splits` and `runs_and_lints` take the
+/// huge program at the real limits, nightly (`TEMPER_HUGE`).
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let files = generate(&kit::split_shape());
+        let source = (files.iter())
+            .find(|f| f.path.ends_with(".rs") && f.text.contains("INIT_ONCE"))
+            .unwrap();
+        assert!(source.text.contains(".flatten()"));
+        assert!(source.text.contains("temper_core::part(|| {"));
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("split-shape.rs", &source.text);
+        goldens.finish();
+    });
+}
+
+/// The huge program (`kit::huge`) in parts: its list literals' items in
+/// closures, and its top level's long run of statements in groups,
+/// each `temper_core::part(|| …)`, so rustc compiles it in seconds,
+/// within its memory; `runs_and_lints` runs it. Nightly (`TEMPER_HUGE`).
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        assert!(text.contains(".flatten()"));
+        // 34 parts of the list, 4 of the map, and 24 groups of statements.
+        let parts = text.matches("temper_core::part(|| {").count();
+        assert_eq!(parts, 34 + 4 + 24);
     });
 }

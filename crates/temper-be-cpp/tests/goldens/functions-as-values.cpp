@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <functional>
+#include <memory>
 
 namespace as_values {
 
@@ -27,6 +30,12 @@ struct DelayedFunction : public std::enable_shared_from_this<DelayedFunction> {
 
 // init.cpp
 #include <as-values/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <cstdint>
 
 namespace as_values {
 

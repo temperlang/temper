@@ -27,6 +27,48 @@ const BACKENDS: [&str; 7] = ["cpp", "csharp", "java", "js", "lua", "py", "rust"]
 /// Differences on purpose: a backend, a file's end, which side has it,
 /// and why.
 const ALLOWED: &[(&str, &str, Side, &str)] = &[
+    (
+        "cpp",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "csharp",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "java",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "js",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "lua",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "py",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
+    (
+        "rust",
+        ".temper-manifest",
+        Side::Tempest,
+        "what temper build wrote, so it can remove what it no longer generates",
+    ),
     ("py", ".map", Side::Kotlin, "source maps: only JS's so far"),
     (
         "rust",

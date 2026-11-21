@@ -116,7 +116,13 @@ fn cases() -> Vec<Case> {
 
 /// This crate's own programs, in `tests/programs/`: Temper, with what
 /// each logs in a log block.
-const OWN: &[&str] = &["java-classes", "java-nullables", "java-generics"];
+const OWN: &[&str] = &[
+    "java-classes",
+    "java-nullables",
+    "java-generics",
+    "java-long-literals",
+    "java-split",
+];
 
 /// The lines of a program's log block.
 fn log_block(text: &str) -> Vec<String> {
@@ -128,10 +134,52 @@ fn log_block(text: &str) -> Vec<String> {
         .collect()
 }
 
-/// A case's generated files.
+/// A case's generated files; `kit::split_shape`'s at [`low_limits`], so
+/// `runs` runs split code on every push.
 fn generate(case: &Case) -> Vec<OutFile> {
-    translate(&kit::program_for(case, &JAVA.rules), &JAVA)
-        .unwrap_or_else(|e| panic!("{}: {e}", case.key))
+    let program = kit::program_for(case, &JAVA.rules);
+    let files = match case.key == kit::split_shape().key {
+        true => translate(&program, &low_limits()),
+        false => translate(&program, &JAVA),
+    };
+    files.unwrap_or_else(|e| panic!("{}: {e}", case.key))
+}
+
+/// Java with limits low enough that small literals and static
+/// initializers split (`temper_be_java::split`).
+fn low_limits() -> temper_be_java::Variant {
+    temper_be_java::Variant {
+        name: JAVA.name,
+        profile: JAVA.profile.clone(),
+        rules: temper_be_java::names::RULES,
+        java_release: JAVA.java_release,
+        limits: temper_be_java::split::Limits {
+            method: 40,
+            constants: 1_000_000,
+            list: 10,
+            part: 30,
+            string: 16,
+        },
+    }
+}
+
+/// `java-split`'s module class at [`low_limits`], where each of its
+/// literals and its static initializer split, matching its golden,
+/// `java-split.split.java`; with the JVM's own limits it's as written
+/// (`goldens`). `runs` runs `kit::split_shape` at these limits.
+#[test]
+fn split_shape() {
+    kit::with_stack(|| {
+        let variant = low_limits();
+        let case = cases().into_iter().find(|c| c.key == "java-split").unwrap();
+        let files = translate(&kit::program_for(&case, &variant.rules), &variant).unwrap();
+        let global = (files.iter())
+            .find(|f| f.path.ends_with("JavaSplitGlobal.java"))
+            .unwrap();
+        let mut goldens = Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        goldens.check("java-split.split.java", &global.text);
+        goldens.finish();
+    });
 }
 
 /// A library's package and class names' start, as Kotlin makes them.
@@ -406,7 +454,7 @@ fn runs() {
         let runtime = runtime_classes(&javac_tool, &version);
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-java");
         let _ = fs::remove_dir_all(&out);
-        let cases = cases();
+        let cases = kit::with_split_programs(cases());
         // Libraries of one name (`types/int/basics` and
         // `types/float/basics`) share a package, so each batch of
         // sources has each name once, with its own `javac`.
@@ -561,6 +609,43 @@ fn missing_host_code() {
             case.host_files.retain(|(path, _)| path != file);
             let error = translate(&kit::program_for(&case, &JAVA.rules), &JAVA).unwrap_err();
             assert!(error.what.contains(file), "{key}: {error}");
+        }
+    });
+}
+
+/// Translating a template's chain of `String.cat`s takes work linear in
+/// its parts, counted, not timed: passes that looked over each operand's
+/// whole subtree at every level of the chain made it quadratic.
+#[test]
+fn template_work_is_linear() {
+    kit::with_stack(|| {
+        let growth = kit::template_work_growth(
+            |case| kit::program_for(case, &JAVA.rules),
+            |program| drop(translate(program, &JAVA).unwrap()),
+        );
+        assert!(growth < 3.0, "work grew {growth:.2} times per doubling");
+    });
+}
+
+/// The huge program (`kit::huge`) under the JVM's limits: its big list
+/// in nested classes' parts, its long string in pieces, and its static
+/// initializer in groups; `runs` compiles and runs it. Nightly
+/// (`TEMPER_HUGE`); `split_shape` checks the shape on every push.
+#[test]
+fn huge_splits() {
+    kit::with_stack(|| {
+        if !kit::huge_on() {
+            eprintln!("skipped: the huge program, nightly (TEMPER_HUGE)");
+            return;
+        }
+        let files = generate(&kit::huge());
+        let text: String = files.iter().map(|f| f.text.as_str()).collect();
+        for part in [
+            "Core.<String>listOfParts(Part",
+            "String.join(\"\", ",
+            "Init1.run();",
+        ] {
+            assert!(text.contains(part), "{part}");
         }
     });
 }

@@ -854,17 +854,24 @@ fn values(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(Expr::name("Core").method("listCopyOf", vec![m.method("values", Vec::new())]))
 }
 
-/// A pair, `new SimpleImmutableEntry<>(key, value)`, as Kotlin's.
+/// A pair, `new SimpleImmutableEntry<K, V>(key, value)`, as Kotlin's but
+/// with its type arguments, which javac is slow to infer for many pairs
+/// in a literal (`Translator::literal_type_args`); else with a diamond.
 fn new_entry(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [k, v] = args else {
         return Err(NotYet {
             what: "a `Pair` of other than a key and a value".into(),
         });
     };
+    let type_args = t.made_type_args();
     let k = t.expr(*k)?;
     let v = t.expr(*v)?;
     t.import("java.util.AbstractMap.SimpleImmutableEntry");
-    Ok(Expr::New("SimpleImmutableEntry<>".into(), vec![k, v]))
+    let type_args = type_args.as_deref().unwrap_or("<>");
+    Ok(Expr::New(
+        format!("SimpleImmutableEntry{type_args}"),
+        vec![k, v],
+    ))
 }
 
 /// How `Core`'s list helpers name a kind of item or result: `Int`,

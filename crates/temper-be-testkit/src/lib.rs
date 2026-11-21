@@ -28,8 +28,9 @@
 //!   until they change.
 //! - **Test server:** [`test_server_port`] starts, once per process, a
 //!   local server answering as Kotlin's `TestWebServer`, for std `net`'s
-//!   tests ([`NET`]), whose `testServerPort` is its port, any free one,
-//!   as Kotlin's suite picks; goldens show it as [`TEST_SERVER_PORT`].
+//!   tests ([`NET`]), whose `testServerPort` is its port, the first free
+//!   one of a fixed few ([`TEST_SERVER_PORTS`]), so their code is the
+//!   same each run; goldens show it as [`TEST_SERVER_PORT`].
 //! - **Runs:** [`check_log`] compares what a program logged with what's
 //!   expected, its line ends as on Linux ([`printed`]), and
 //!   [`check_case`] also that a run expected to fail does, and
@@ -741,15 +742,22 @@ fn load(case: &Case) -> Library {
 }
 
 /// The port goldens show for the test server's: generated code has
-/// `testServerPort` as a constant, and the server takes any free port,
-/// as Kotlin's `TestWebServer` does, so [`Goldens`] reads that one as
-/// this, keeping goldens stable.
+/// `testServerPort` as a constant, and the server may take another port
+/// ([`test_server_port`]), so [`Goldens`] reads that one as this,
+/// keeping goldens stable.
 pub const TEST_SERVER_PORT: u16 = 28461;
+
+/// The ports the test server tries first, in order: generated code has
+/// `testServerPort` as a constant, so a port that's the same each run
+/// keeps that code the same, and build caches such as ccache hit. A few,
+/// so test processes running at once each get one of them.
+pub const TEST_SERVER_PORTS: std::ops::Range<u16> = TEST_SERVER_PORT..TEST_SERVER_PORT + 4;
 
 static SERVER_PORT: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
 
 /// The port of this process's test server, which it starts the first
-/// time, on any free port. It answers as Kotlin
+/// time, on the first free port of [`TEST_SERVER_PORTS`], or, if none
+/// is, on any free one, as Kotlin's suite picks. It answers as Kotlin
 /// Temper's `TestWebServer`: for any path, 200 and `{"method": "POST",
 /// "json": true}` as JSON, saying the request's method and whether its
 /// `Content-Type`'s media type was JSON; for a path starting `/missing`,
@@ -757,7 +765,9 @@ static SERVER_PORT: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
 pub fn test_server_port() -> u16 {
     *SERVER_PORT.get_or_init(|| {
         use std::net::TcpListener;
-        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("a port for the test server");
+        let listener = (TEST_SERVER_PORTS.chain([0]))
+            .find_map(|port| TcpListener::bind(("127.0.0.1", port)).ok())
+            .expect("a port for the test server");
         let port = listener.local_addr().unwrap().port();
         std::thread::spawn(move || {
             for stream in listener.incoming().flatten() {
@@ -851,6 +861,151 @@ pub fn with_stack(test: impl FnOnce() + Send + 'static) {
         .unwrap()
         .join()
         .unwrap();
+}
+
+/// How a backend's work translating a template grows with its parts:
+/// `"${n}x"` repeated 250, 500, and 1,000 times, each library made by
+/// `program` and translated by `translate`, counting the kids lists read
+/// ([`temper_tmpl::kids_read`]) in `translate` alone. Gives the second
+/// doubling's added work over the first's: 2 where the work is linear in
+/// the parts, 4 where it's quadratic, as it was when a pass looked over
+/// each `String.cat`'s whole left side at every level of the chain.
+pub fn template_work_growth(
+    program: impl Fn(&Case) -> Program,
+    translate: impl Fn(&Program),
+) -> f64 {
+    let work = |n: usize| {
+        let body = "${n}x".repeat(n);
+        let text = format!("    export let f(n: Int): String {{ \"{body}\" }}\n");
+        let program = program(&Case::inline("joins", "joins.temper.md", text, Vec::new()));
+        let before = temper_tmpl::kids_read();
+        translate(&program);
+        temper_tmpl::kids_read() - before
+    };
+    let (a, b, c) = (work(250), work(500), work(1000));
+    (c - b) as f64 / (b - a) as f64
+}
+
+/// A program past compilers' limits on one function's or literal's
+/// size, as libraries' generated data is: [`shaped`] at [`HUGE`], a list
+/// literal of 8,500 strings, a map literal of 1,000 entries, a string
+/// literal of over 70,000 bytes in UTF-8 (and in Java's modified UTF-8),
+/// much of it not ASCII, and 6,000 statements. Its output is too big for
+/// goldens; backends split such code (Java's 64 KB methods and
+/// 65,535-byte constants, MSVC's literals, Lua 5.1's constants, and
+/// compile times superlinear in a function's size in g++ and rustc), and
+/// run it as they run the other programs, but only nightly
+/// ([`with_split_programs`]).
+pub fn huge() -> Case {
+    shaped("huge", HUGE)
+}
+
+/// [`huge`]'s program at [`SHAPE`]'s sizes, small enough for a golden:
+/// backends translate it with their limits set low, so it splits as
+/// [`huge`] does at theirs, on every push.
+pub fn split_shape() -> Case {
+    shaped("split-shape", SHAPE)
+}
+
+/// How big [`shaped`] makes its program's parts.
+#[derive(Clone, Copy, Debug)]
+pub struct Sizes {
+    /// Its list literal's items.
+    pub items: usize,
+    /// Its map literal's entries.
+    pub entries: usize,
+    /// How many times its long string repeats a 21-character text.
+    pub repeats: usize,
+    /// Its top level's statements after its literals.
+    pub statements: usize,
+}
+
+/// [`huge`]'s: its list past Java's 64 KB a method and the 8,192 items a
+/// part in Lua, and its statements past Java's 64 KB a method alone.
+pub const HUGE: Sizes = Sizes {
+    items: 8500,
+    entries: 1000,
+    repeats: 3500,
+    statements: 6000,
+};
+
+/// [`split_shape`]'s.
+pub const SHAPE: Sizes = Sizes {
+    items: 10,
+    entries: 6,
+    repeats: 2,
+    statements: 10,
+};
+
+/// A module whose top level has a list literal, a map literal, a long
+/// string, and many statements, of `sizes`, and logs what it made: its
+/// statements in order, and locals declared among them, one by a lookup
+/// that fails, used after, so split code is checked to keep them.
+pub fn shaped(name: &str, sizes: Sizes) -> Case {
+    let item = |i: usize| format!("item {i} é✓𝄞");
+    let mut text = format!("# {name}\n\n    let items: List<String> = [\n");
+    for i in 0..sizes.items {
+        text += &format!("      \"{}\",\n", item(i));
+    }
+    text += "    ];\n    let table = new Map<String, String>([\n";
+    for i in 0..sizes.entries {
+        text += &format!("      new Pair(\"k{i}\", \"{}\"),\n", item(i));
+    }
+    let long = "abcdefghij é✓𝄞 \\u{0} ".repeat(sizes.repeats);
+    let pieces = sizes.repeats + 1;
+    text += &format!("    ]);\n    let long = \"{long}\";\n");
+    text += "    let built = new ListBuilder<String>();\n";
+    // Mid-run, locals that later statements, in later groups, use, one
+    // of them by a lookup that fails.
+    let mid = sizes.statements / 2;
+    for i in 0..sizes.statements {
+        if i == mid {
+            text += "    let mid = built.length;\n";
+            text += "    let missing = table[\"absent\"] orelse \"none\";\n";
+        }
+        if i == sizes.statements - 1 {
+            text += "    if (mid < 0) { built.add(missing); }\n";
+        }
+        text += &format!("    built.add(\"{}\");\n", item(i));
+    }
+    let last = sizes.items - 1;
+    let last_entry = sizes.entries - 1;
+    let last_built = sizes.statements - 1;
+    text += "    let all = built.toList();\n";
+    text += &format!(
+        "    console.log(\"${{items.length.toString()}} ${{items[{last}]}}\");\n\
+         \x20   console.log(\"${{table.length.toString()}} ${{table[\"k{last_entry}\"] orelse \"none\"}}\");\n\
+         \x20   console.log(long.split(\"✓\").length.toString());\n\
+         \x20   console.log(\"${{all.length.toString()}} ${{all[{last_built}]}}\");\n\
+         \x20   console.log(\"${{mid.toString()}} ${{all[mid]}} ${{missing}}\");\n"
+    );
+    let expected = vec![
+        format!("{} {}", sizes.items, item(last)),
+        format!("{} {}", sizes.entries, item(last_entry)),
+        pieces.to_string(),
+        format!("{} {}", sizes.statements, item(last_built)),
+        format!("{mid} {} none", item(mid)),
+    ];
+    Case::inline(name, &format!("{name}.temper.md"), text, expected)
+}
+
+/// `cases`, then [`split_shape`], which backends that split code
+/// translate with their limits set low, and [`huge`] where `TEMPER_HUGE`
+/// is set ([`huge_on`]), for a backend's runs.
+pub fn with_split_programs(mut cases: Vec<Case>) -> Vec<Case> {
+    cases.push(split_shape());
+    if huge_on() {
+        cases.push(huge());
+    }
+    cases
+}
+
+/// Whether to run [`huge`]: `TEMPER_HUGE` set and not empty, as
+/// nightly.yml sets it. It adds up to a minute to a backend's runs,
+/// mostly compiling it, so pushes check [`split_shape`]'s goldens
+/// instead.
+pub fn huge_on() -> bool {
+    env::var_os("TEMPER_HUGE").is_some_and(|v| !v.is_empty())
 }
 
 /// The goldens, beside std's, that show Temper's version as it is rather

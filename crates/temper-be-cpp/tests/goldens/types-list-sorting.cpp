@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace sorting {
 
@@ -25,6 +27,16 @@ struct Entry : public std::enable_shared_from_this<Entry> {
 
 // init.cpp
 #include <sorting/init.hpp>
+
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
+#include <functional>
+#include <string>
+#include <vector>
 
 namespace sorting {
 

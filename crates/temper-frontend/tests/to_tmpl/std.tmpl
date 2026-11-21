@@ -624,13 +624,13 @@ module regex#1 in "regex" {
         } else if (regex#540.eq#204((upcast(End#469)): RegexNode#22)) {
           this.out#168.append#435("$");
         } else if (regex#540.eq#204((upcast(WordBoundary#470)): RegexNode#22)) {
-          this.out#168.append#435(%String.cat("\\", "b"));
+          this.out#168.append#435("\\b");
         } else if (regex#540.eq#204((upcast(Digit#471)): RegexNode#22)) {
-          this.out#168.append#435(%String.cat("\\", "d"));
+          this.out#168.append#435("\\d");
         } else if (regex#540.eq#204((upcast(Space#472)): RegexNode#22)) {
-          this.out#168.append#435(%String.cat("\\", "s"));
+          this.out#168.append#435("\\s");
         } else if (regex#540.eq#204((upcast(Word#473)): RegexNode#22)) {
-          this.out#168.append#435(%String.cat("\\", "w"));
+          this.out#168.append#435("\\w");
         }
       }
     }
@@ -1172,12 +1172,12 @@ module json#2 in "json" {
     var emitted#719: StringIndex#146 = i#718;
     ~loop#720: while (x#716.hasIndex#557(i#718)) {
       let cp#721: Int32 = x#716.get#429(i#718);
-      let replacement#722: String = (if (%Int32.eq(cp#721, 8)) %String.cat("\\", "b") else (if (%Int32.eq(cp#721, 9)) %String.cat("\\", "t") else (if (%Int32.eq(cp#721, 10)) %String.cat("\\", "n") else (if (%Int32.eq(cp#721, 12)) %String.cat("\\", "f") else (if (%Int32.eq(cp#721, 13)) %String.cat("\\", "r") else (if (%Int32.eq(cp#721, 34)) %String.cat("\\", "\"") else (if (%Int32.eq(cp#721, 92)) %String.cat("\\", "\\") else (if (%Int32.lt(cp#721, 32) || %Int32.le(55296, cp#721) && %Int32.le(cp#721, 57343)) %String.cat("\\", "u") else ""): String): String): String): String): String): String): String): String;
+      let replacement#722: String = (if (%Int32.eq(cp#721, 8)) "\\b" else (if (%Int32.eq(cp#721, 9)) "\\t" else (if (%Int32.eq(cp#721, 10)) "\\n" else (if (%Int32.eq(cp#721, 12)) "\\f" else (if (%Int32.eq(cp#721, 13)) "\\r" else (if (%Int32.eq(cp#721, 34)) "\\\"" else (if (%Int32.eq(cp#721, 92)) "\\\\" else (if (%Int32.lt(cp#721, 32) || %Int32.le(55296, cp#721) && %Int32.le(cp#721, 57343)) "\\u" else ""): String): String): String): String): String): String): String): String;
       let nextI#723: StringIndex#146 = x#716.next#431(i#718);
       if (%Boolean.not(%String.eq(replacement#722, ""))) {
         buffer#717.appendBetween#434(x#716, emitted#719, i#718);
         buffer#717.append#435(replacement#722);
-        if (%String.eq(replacement#722, %String.cat("\\", "u"))) {
+        if (%String.eq(replacement#722, "\\u")) {
           encodeHex4#626(cp#721, buffer#717);
         }
         emitted#719 = nextI#723;

@@ -792,7 +792,7 @@ fn runs() {
         // for `host_interop`.
         let mut interop = None;
         let mut builtin_params = None;
-        for case in cases() {
+        for case in kit::with_split_programs(cases()) {
             let path = &case.key;
             let root = out.join(path);
             let _ = fs::remove_dir_all(&root);

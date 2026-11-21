@@ -123,10 +123,10 @@ public final class ReadGlobal {
             t2 = "no to surrogate";
         }
         console.log(t2);
-        console.log(fromCodesNoInline(List.of(128059, 8205, 10052, 65039)));
+        console.log(fromCodesNoInline(List.<Integer>of(128059, 8205, 10052, 65039)));
         String t3;
         try {
-            t3 = fromCodesNoInline(List.of(55296, 56320));
+            t3 = fromCodesNoInline(List.<Integer>of(55296, 56320));
         } catch (RuntimeException ignored3) {
             t3 = "no to surrogates";
         }

@@ -112,6 +112,24 @@ fn not_yet<T>(what: impl Into<String>) -> R<T> {
 /// (`LUAI_MAXVARS`, 200 in every Lua since 5.1, and in LuaJIT).
 pub const MAX_LOCALS: usize = 200;
 
+/// What code splits under; tests set them low, to see the split shape
+/// on small programs.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    /// The most items a list literal makes in one function; a longer one
+    /// is parts of this many, each a function called at once, joined:
+    /// `temper.list_of_parts((function() return { … } end)(), …)`.
+    pub list_part: usize,
+}
+
+/// Lua 5.1's: it allows a function 262,143 constants ("constant table
+/// overflow").
+pub const LIMITS: Limits = Limits { list_part: 8192 };
+
+/// The most names a list literal's items may use and still go in parts,
+/// under Lua 5.1's 60 upvalues a function.
+const MAX_PART_NAMES: usize = 50;
+
 /// Past this many module-level locals, module-level declarations after
 /// the first [`KEPT_LOCALS`] go into a table, as Kotlin's do
 /// (`MAX_ALLOWABLE_LOCALS`), leaving room in the chunk for the init
@@ -185,6 +203,8 @@ pub struct Translator<'a> {
     pub(crate) effects: Effects,
     /// Whether [`ty`](Self::ty) writes a local's `---@type`.
     local_types: std::cell::Cell<bool>,
+    /// What code splits under ([`Limits`]): the variant's.
+    pub limits: Limits,
     /// Module `let`s of an erased type, which aren't declared.
     pub(crate) erased: HashSet<DeclId>,
     /// Module-level declarations that are fields of a table, by the
@@ -372,6 +392,7 @@ impl<'a> Translator<'a> {
     pub fn new(p: &'a Program, names: &'a NameMap, module: &Module) -> Translator<'a> {
         Translator {
             local_types: std::cell::Cell::new(false),
+            limits: LIMITS,
             p,
             names,
             qnames: QNames::derive(p),
@@ -2348,8 +2369,33 @@ impl<'a> Translator<'a> {
             {
                 self.connected(ctor, p.nodes.list(args))?
             }
-            // `{ a, b }`, as Kotlin's.
-            Node::ListLit { items } => Expr::Array(self.args(p.nodes.list(items))?),
+            // `{ a, b }`, as Kotlin's; a long one in parts
+            // ([`Limits::list_part`]).
+            Node::ListLit { items } => {
+                let items = self.args(p.nodes.list(items))?;
+                let mut names = HashSet::new();
+                if items.len() > self.limits.list_part {
+                    items.iter().for_each(|i| i.names_into(&mut names));
+                }
+                // Each part's names are its upvalues, of which Lua 5.1
+                // allows 60.
+                if items.len() <= self.limits.list_part || names.len() > MAX_PART_NAMES {
+                    Expr::Array(items)
+                } else {
+                    let parts = (temper_tmpl::chunks::parts(items, self.limits.list_part)
+                        .into_iter())
+                    .map(|part| {
+                        let made = Expr::Function {
+                            params: Vec::new(),
+                            body: Box::new(Expr::Array(part)),
+                            returns: true,
+                        };
+                        made.call(Vec::new())
+                    })
+                    .collect();
+                    Expr::name("temper").member("list_of_parts").call(parts)
+                }
+            }
             Node::New { ctor, args, .. } => {
                 let owner = classes::owner_type(p, ctor).unwrap_or(ctor);
                 let args = self.args(p.nodes.list(args))?;

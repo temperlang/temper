@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace type_checked_locals {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,14 @@ void global_init_init();
 
 // init.cpp
 #include <type-checked-locals/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace type_checked_locals {
 

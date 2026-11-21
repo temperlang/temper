@@ -7,7 +7,10 @@ one per target language. Each backend:
 - writes source files, source maps where the language has them, and
   package files (a `.csproj`, a `pom.xml`, a `package.json`, …) under
   `temper.out/BACKEND/LIBRARY/`, and
-- runs the translated tests with the language's own tools.
+- runs the translated tests with the language's own tools, keeping
+  their builds in `temper.out/BACKEND` so the next run rebuilds only
+  what changed (`--clean` for a fresh build;
+  [the command line](../tools/cli.md#test)).
 
 Each backend has an ID, which the `-b` (`--backend`) flag of
 `temper build` and `temper test` takes ([the command line](../tools/cli.md)).
@@ -58,6 +61,32 @@ Generated code compiles without warnings under `-Wall -Wextra
 TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise.
+
+Generated headers and `.cpp` files include only the runtime and standard
+headers they use (`temper-core/str.hpp`, `<vector>`, …); include
+`temper-core/core.hpp` for all of it. The runtime and the standard
+headers it uses are still most of what a file including a library's
+header parses, so where many files include one, a precompiled header
+pays that once per target, not once per file (about 3x faster per
+file in our measurements, with g++ 13 at `-O0`):
+
+```cmake
+target_precompile_headers(myapp PRIVATE <ordable/init.hpp>)
+# or, for every Temper library at once:
+target_precompile_headers(myapp PRIVATE <temper-core/core.hpp>)
+```
+
+Keep it `PRIVATE`: GCC takes one precompiled header per file. With
+ccache, set `sloppiness = pch_defines,time_macros`, or files built
+with a precompiled header never hit. Generated CMake projects don't
+precompile: their targets compile one to five files, mostly code
+rather than headers, so building the header costs more than it saves.
+
+`temper test -b cpp` and `temper run -b cpp` build through ccache
+where it's installed, unless `TEMPER_NO_CCACHE` is set or
+`CMAKE_CXX_COMPILER_LAUNCHER` names another launcher.
+`TEMPER_CXX_JOBS` sets how many files compile at once (one per CPU,
+four at most, by default).
 
 > **Note:** Temper's older docs list C++ as "coming soon", and leave it
 > out of this list; the C++ backend passes every functional test

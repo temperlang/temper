@@ -189,7 +189,7 @@ public final class FunctionsGlobal {
         IntUnaryOperator addTwo = twice(FunctionsGlobal::addOne);
         console.log("twice " + addTwo.applyAsInt(5) + " " + applyTo(FunctionsGlobal::addOne, 1));
         console.log("triple " + applyTo(Scaler::triple, 4) + " " + twice(Scaler::triple).applyAsInt(2));
-        List<Integer> ns = List.of(5, 2, 8, 1, 4);
+        List<Integer> ns = List.<Integer>of(5, 2, 8, 1, 4);
         List<Integer> doubled = Core.listMapIntToInt(ns, n -> n * 2);
         List<Integer> big = Core.listFilterInt(doubled, n -> n > 4);
         console.log(Core.listJoinInt(big, ", ", n -> Integer.toString(n)));
@@ -301,7 +301,7 @@ public final class FunctionsGlobal {
         console.log("gate " + gate.allows(1) + " " + gate.allows(2) + " " + gate.passed(4));
         @Nullable Integer none = gate.allows(0) ? Integer.valueOf(3) : null;
         console.log(stringIsPalindrome("step on no pets") + " " + stringIsPalindrome("steps"));
-        console.log(intOrZero(none) + " " + listFirstOr(List.of(4, 5), 0) + " " + listFirstOr(List.of("x"), "-"));
+        console.log(intOrZero(none) + " " + listFirstOr(List.<Integer>of(4, 5), 0) + " " + listFirstOr(List.<String>of("x"), "-"));
         console.log(stringPadded("ab", 2) + " " + stringPadded("ab", 1, "*"));
         console.log(gate.passed(4) + " " + gatePassed(gate, "gate"));
     }

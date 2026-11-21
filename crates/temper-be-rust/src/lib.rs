@@ -60,6 +60,9 @@ pub struct Variant {
     pub rules: NamingRules,
     /// The `rust-version` its crates declare, as Kotlin's.
     pub rust_version: &'static str,
+    /// What code splits under ([`tree::Limits`]); tests set them low, to
+    /// see the split shape on small programs.
+    pub limits: tree::Limits,
 }
 
 /// The first variant: Kotlin-compatible API and names, pretty bodies.
@@ -73,6 +76,7 @@ pub static RUST: Variant = Variant {
     },
     rules: names::RULES,
     rust_version: "1.71.1",
+    limits: tree::LIMITS,
 };
 
 /// Every variant, by name.
@@ -286,6 +290,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let cargo_name = &translate::rust_name(package, p.metadata());
     let krate = names::crate_name(cargo_name);
     let mut translator = translate::Translator::new(p, &names);
+    translator.limits = variant.limits;
     // Each module's file, by its path; parents without a module of their
     // own get a file declaring their children.
     let mut files: Vec<(String, Vec<tree::Item>)> = Vec::new();

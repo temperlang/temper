@@ -89,12 +89,26 @@ releases also build their `data` backend). With `-o DIR`, it writes
 `DIR/BACKEND/LIBRARY/` instead, leaving `temper.out` alone: to look at
 one language's code, `temper build -b py -o /tmp/py`.
 
+It writes only files whose text changed, so the others keep their
+times and each language's build skips them. A generated file edited by
+hand is written again, saying `… was edited; regenerated` once. A file
+it generated before but no longer does, as for a module removed, is
+removed, unless it was edited since: then it's kept, saying so once.
+Files it never wrote are left alone, and it writes and removes nothing
+through a symbolic link: a link in `temper.out/BACKEND` fails that
+library's build. What it wrote is listed in
+`temper.out/BACKEND/.temper-manifest`; without it (or if it doesn't
+read), nothing is removed or warned of, so a module removed meanwhile
+leaves its files, which Java's and C#'s builds still compile; removing
+`temper.out/BACKEND` starts afresh. Earlier releases empty each
+library's directory first.
+
 Errors don't stop it: each is reported, every backend's code is still
 written, failing where it runs, and the exit status is 1.
 
 ## `test`
 
-    temper test -b BACKEND... [-w DIR] [-ign FILE] [--library NAME] [--no-connected] [-v] [--logformat text|json]
+    temper test -b BACKEND... [-w DIR] [-ign FILE] [--library NAME] [--no-connected] [--clean] [-v] [--logformat text|json]
     temper test [-b BACKEND|interp]... [-w DIR | DIR] [same] [--fuel N|none] [--timeout S|none] [--std DIR]
 
 Builds the libraries and runs their tests with each backend's own tools
@@ -132,10 +146,24 @@ interpreter with `-b interp`. It prints the tests that failed, or with
   the others' results still count. Earlier releases have no limit.
 - **Errors in an imported library** are reported once, under it, not
   again for each library importing it.
+- **Builds are incremental.** C++, Rust, Java, and C# keep their
+  builds in `temper.out/BACKEND` from run to run, so a second run
+  rebuilds only what changed: CMake, Cargo, and MSBuild go by files'
+  times, and javac compiles a library again when its sources, what
+  it uses, or how it's compiled changes. A change of compiler or its
+  settings (`CXX`, `CXXFLAGS`, `CMAKE_GENERATOR` and other CMake
+  variables, `DEVELOPER_DIR`, `JAVA_HOME`, ccache,
+  `TEMPER_STRICT_WARNINGS`) builds afresh. **`--clean`** builds everything afresh: it removes the
+  backend's build directories before writing any code (C++'s `.build` and
+  `LIBRARY/build`, Rust's `target`, Java's `.build` and
+  `LIBRARY/target/temper`, C#'s `bin` and `obj`), not generated files
+  that a missing manifest left behind; removing `temper.out/BACKEND`
+  drops those too. Earlier releases
+  build afresh each run.
 
 ## `run`
 
-    temper run --library NAME -b BACKEND [-w DIR] [--no-connected] [-v] [--logformat text|json]
+    temper run --library NAME -b BACKEND [-w DIR] [--no-connected] [--clean] [-v] [--logformat text|json]
     temper run [same] [-ign FILE] [-o DIR] [--timeout S|none] [--std DIR]
 
 Builds the work root for the backend, then runs the library's top
@@ -143,7 +171,9 @@ level with that language: Python imports its package, Node imports its
 module, Lua runs its `init.lua`, and Rust, C++, Java, and C# build its
 program quietly and run it. What it prints goes to standard output as
 it runs. With `-b interp`, it runs on the interpreter, writing no
-files. Errors fail the run, as in `build`, but don't stop it.
+files. Errors fail the run, as in `build`, but don't stop it. Its
+builds are incremental, and `--clean` builds afresh, as for
+[`test`](#test).
 
 What the program prints streams to standard output, once, as it runs,
 on the interpreter too (earlier releases print it after it finishes, on
@@ -176,6 +206,10 @@ What `test -b` and `run -b` start (`lua`, `python3`, Node and Mocha,
   which counts memory written, not address space reserved, which the
   JVM, .NET, and Node reserve far more of than they use, so they, and
   the compilers, have none.
+- **Parallel C++ compiles.** CMake runs `TEMPER_CXX_JOBS` compiles at
+  once, else one per CPU, four at most, which keeps a small machine's
+  memory free for other work; a value that isn't a whole number above
+  0 fails the build, saying so.
 
 Python runs in UTF-8 mode (`PYTHONUTF8=1`), so what it logs reads the
 same on every system.

@@ -1,11 +1,18 @@
 #pragma once
+// The whole runtime, for host code and users that want it all.
+// Generated headers and `.cpp`s include only the runtime's headers they
+// use.
+
 // The runtime's version, which `temper build` writes in.
 #define TEMPER_CORE_VERSION "0.0.0"
 #include "temper_bubble.hpp"
 #include "any_value.hpp"
 #include "nullable_param.hpp"
 #include "pair.hpp"
+#include "str.hpp"
 #include "base_types.hpp"
+#include "list.hpp"
+#include "module_init.hpp"
 #include "casting.hpp"
 #include "compare.hpp"
 #include "boolean.hpp"
@@ -15,7 +22,6 @@
 #include "console.hpp"
 #include "string.hpp"
 #include "string_builder.hpp"
-#include "list.hpp"
 #include "list_builder.hpp"
 #include "mapped.hpp"
 #include "map_builder.hpp"
@@ -26,7 +32,6 @@
 #include "regex.hpp"
 #include "generator.hpp"
 #include "promise.hpp"
-#include "module_init.hpp"
 
 namespace temper {
     namespace core {

@@ -12,6 +12,6 @@ public interface Counting<T> extends Stepper<T> {
 
     default List<T> step() {
         this.setCount(this.getCount() + 1);
-        return Core.listOf(this.made());
+        return Core.<T>listOf(this.made());
     }
 }

@@ -13,6 +13,8 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(link),
+    build_dirs: &[],
+    note: None,
     test,
     run,
 };

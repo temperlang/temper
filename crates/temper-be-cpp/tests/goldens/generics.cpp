@@ -1,7 +1,15 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/pair.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/int.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace generics {
 
@@ -130,6 +138,17 @@ T first(std::shared_ptr<std::vector<T>> const & items, T fallback) {
 
 // init.cpp
 #include <generics/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
+#include <temper-core/mapped.hpp>
+#include <temper-core/map_builder.hpp>
+#include <temper-core/map.hpp>
+#include <string>
 
 namespace generics {
 
@@ -326,21 +345,20 @@ void global_init_init() {
     int32_t value2 = core::List::length<core::Str>(built);
     core::Str string = core::List::getOr<core::Str>(built, 5, TEMPER_STR("?"));
     core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + string + " " + core::List::get<core::Str>(core::List::slice<core::Str>(built, 1, 2), 0));
-    std::shared_ptr<core::Pair<core::Str, int32_t>> value3 = core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1);
-    std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> m = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(value3, core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
+    std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> m = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1), core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
+    int32_t value3;
+    try {
+      value3 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
+    } catch (core::TemperBubble const &) {
+      value3 = -1;
+    }
     int32_t value4;
     try {
-      value4 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
+      value4 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
     } catch (core::TemperBubble const &) {
       value4 = -1;
     }
-    int32_t value5;
-    try {
-      value5 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
-    } catch (core::TemperBubble const &) {
-      value5 = -1;
-    }
-    core::Console::log(temper_globals::console.value, std::to_string(value4) + " " + std::to_string(value5) + " " + core::Boolean::toString(core::Mapped::has<core::Str, int32_t>(m, TEMPER_STR("a"))) + " " + std::to_string(core::Mapped::length<core::Str, int32_t>(m)));
+    core::Console::log(temper_globals::console.value, std::to_string(value3) + " " + std::to_string(value4) + " " + core::Boolean::toString(core::Mapped::has<core::Str, int32_t>(m, TEMPER_STR("a"))) + " " + std::to_string(core::Mapped::length<core::Str, int32_t>(m)));
     std::shared_ptr<core::Mapped::Ordered<core::Str, core::NullableParam<int32_t>>> mb = core::Map::make<core::Str, core::NullableParam<int32_t>>();
     core::MapBuilder::set<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"), 5);
     core::MapBuilder::set<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"), nullptr);
@@ -360,27 +378,27 @@ void global_init_init() {
     both();
     temper_globals::tally.value = core::Map::make<core::Str, int32_t>();
     core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"), 2);
-    int32_t value6;
+    int32_t value5;
     try {
-      value6 = generics::bump(TEMPER_STR("k"));
+      value5 = generics::bump(TEMPER_STR("k"));
     } catch (core::TemperBubble const &) {
-      value6 = -1;
+      value5 = -1;
     }
-    int32_t value7 = value6;
-    int32_t value8;
+    int32_t value6 = value5;
+    int32_t value7;
     try {
-      value8 = generics::bump(TEMPER_STR("z"));
+      value7 = generics::bump(TEMPER_STR("z"));
     } catch (core::TemperBubble const &) {
-      value8 = -1;
+      value7 = -1;
     }
-    int32_t value9 = value8;
-    int32_t value10;
+    int32_t value8 = value7;
+    int32_t value9;
     try {
-      value10 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
+      value9 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
     } catch (core::TemperBubble const &) {
-      value10 = -1;
+      value9 = -1;
     }
-    core::Console::log(temper_globals::console.value, std::to_string(value7) + " " + std::to_string(value9) + " " + std::to_string(value10));
+    core::Console::log(temper_globals::console.value, std::to_string(value6) + " " + std::to_string(value8) + " " + std::to_string(value9));
     core::Console::log(temper_globals::console.value, core::Boolean::toString(generics::firstSame(core::List::make<int32_t>(1000), core::List::make<int32_t>(1000))) + " " + core::Boolean::toString(generics::firstSame(core::List::make<int32_t>(1000), core::List::make<int32_t>(7))));
   });
 }

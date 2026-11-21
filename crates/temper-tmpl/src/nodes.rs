@@ -7,6 +7,19 @@
 use crate::ids::{NodeId, Span, TypeId};
 use crate::schema::{Arity, Kind, Slot};
 
+#[cfg(feature = "work-count")]
+thread_local! {
+    static KIDS_READ: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many kids lists ([`Nodes::kids`]) this thread has read: a measure
+/// of a pass's work that every walk adds to, for tests that bound it
+/// without timing it.
+#[cfg(feature = "work-count")]
+pub fn kids_read() -> u64 {
+    KIDS_READ.with(std::cell::Cell::get)
+}
+
 /// Per-node flags.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Flags(pub u8);
@@ -98,6 +111,8 @@ impl Nodes {
 
     /// All of the node's children, in evaluation order.
     pub fn kids(&self, id: NodeId) -> &[NodeId] {
+        #[cfg(feature = "work-count")]
+        KIDS_READ.with(|n| n.set(n.get() + 1));
         self.list(self.kids[id.index()])
     }
 

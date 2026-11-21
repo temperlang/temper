@@ -29,7 +29,7 @@ public final class SpecificGlobal {
         console = Core.getConsole(Logger.getLogger("specific"));
         checkB(new BravoClass());
         checkB(new CharlieClass());
-        List<AlphaInterface> items = List.of(new BravoClass(), new CharlieClass());
+        List<AlphaInterface> items = List.<AlphaInterface>of(new BravoClass(), new CharlieClass());
         checkB(Core.listGet(items, 0));
         checkB(Core.listGet(items, 1));
         checkIfB(Core.listGet(items, 0));

@@ -334,7 +334,7 @@ impl Translator<'_> {
     fn unseen(&self, class: DeclId, value: NodeId) -> bool {
         let p = self.p;
         // A field's initializer is one expression, without statements.
-        if super::needs_stmts(p, value) {
+        if self.needs_stmts(value) {
             return false;
         }
         let planned: Vec<DeclId> = (self.class_statics.get(&class))

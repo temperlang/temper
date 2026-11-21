@@ -9,7 +9,7 @@ public final class ExporterGlobal {
     public static final int magicNumber;
 
     static List<Integer> foo() {
-        return List.of(21 + 21, 42);
+        return List.<Integer>of(21 + 21, 42);
     }
 
     static {

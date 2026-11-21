@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace jumps {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,13 @@ void global_init_init();
 
 // init.cpp
 #include <jumps/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace jumps {
 

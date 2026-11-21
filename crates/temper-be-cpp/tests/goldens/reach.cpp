@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <cstdint>
+#include <memory>
 #ifdef TEMPER_TESTS
 #include <std/testing.hpp>
 #endif
@@ -40,7 +42,14 @@ void testParts(std::shared_ptr<temper_std::Test> const & test);
 // init.cpp
 #include <reach/init.hpp>
 
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 #include <mutex>
+#include <string>
+#include <utility>
 
 namespace reach {
 
@@ -182,6 +191,9 @@ int main() {
 // test.cpp
 #include "reach/init.hpp"
 #include "temper-core/test_main.hpp"
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <string>
 
 int main() {
   reach::global_init_init();

@@ -192,7 +192,7 @@ module `myers-diff`#0 {
     init ChangeTypeAddition#23 = "Addition";
     init ChangeTypeDeletion#24 = "Deletion";
     init ChangeTypeUnchanged#26 = "Unchanged";
-    ~console#111.log#110(formatPatch#25(diff#27<String>(%String.cat(%String.cat("Hello,", "\n"), "World!").split#113("\n"), %String.cat(%String.cat("Hello,", "\n"), "Cosmos!").split#113("\n"), (fn ~fn#114(a#115: String, b#116: String): Boolean {
+    ~console#111.log#110(formatPatch#25(diff#27<String>("Hello,\nWorld!".split#113("\n"), "Hello,\nCosmos!".split#113("\n"), (fn ~fn#114(a#115: String, b#116: String): Boolean {
       return %String.eq(a#115, b#116);
     }): fn (String, String): Boolean)^)^);
   }

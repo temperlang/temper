@@ -1,7 +1,7 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/str.hpp>
 #include <std/regex.hpp>
 
 namespace zero_advance {
@@ -17,6 +17,13 @@ temper::core::Str bulletizeList(temper::core::Str const & text);
 
 // init.cpp
 #include <zero-advance/init.hpp>
+
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <memory>
 
 namespace zero_advance {
 

@@ -1,7 +1,9 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace property_order {
 
@@ -24,6 +26,11 @@ struct C : public std::enable_shared_from_this<C> {
 
 // init.cpp
 #include <property-order/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
+#include <string>
 
 namespace property_order {
 

@@ -1,7 +1,14 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/list_builder.hpp>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace locals {
 
@@ -58,6 +65,11 @@ void Hub<T>::actionPerformed(T item) const {
 
 // init.cpp
 #include <locals/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/console.hpp>
+#include <string>
 
 namespace locals {
 

@@ -51,7 +51,7 @@ module indices#0 {
   fn comparePositions#4(s#23: String, a#24: Int32, b#25: Int32): Void {
     let delta#26: Int32 = indexOfChar#1(s#23, a#24).compareTo#27(indexOfChar#1(s#23, b#25));
     let relPos#28: String = (if (%Int32.lt(delta#26, 0)) "before" else (if (%Int32.eq(delta#26, 0)) "at" else "after"): String): String;
-    ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(a#24)^, "?")): String), "' is "), relPos#28), " '"), (orelse(fromCodePoint#32(b#25)^, "?")): String), "' in "), "\""), s#23), "\""), "."));
+    ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(a#24)^, "?")): String), "' is "), relPos#28), " '"), (orelse(fromCodePoint#32(b#25)^, "?")): String), "' in \""), s#23), "\"."));
   }
 
   fn has0#5(s#33: String, c#34: Int32): Boolean {
@@ -96,7 +96,7 @@ module indices#0 {
       ~loop#56: while (%Int32.lt(~i#55, ~length#54)) {
         let c#57: Int32 = ~list#53.get#52(~i#55);
         ~i#55 = %Int32.add(~i#55, 1);
-        ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(c#57)^, "?")): String), "' in "), "\""), s#10), "\""), ": "), (if (has0#5(s#10, c#57)) "y" else "n"): String), ", "), (if (has1#6(s#10, c#57)) "y" else "n"): String), ", "), (if (has2#7(s#10, c#57)) "y" else "n"): String), ", "), (if (has3#8(s#10, c#57)) "y" else "n"): String), ", "), (if (has4#9(s#10, c#57)) "y" else "n"): String));
+        ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(c#57)^, "?")): String), "' in \""), s#10), "\": "), (if (has0#5(s#10, c#57)) "y" else "n"): String), ", "), (if (has1#6(s#10, c#57)) "y" else "n"): String), ", "), (if (has2#7(s#10, c#57)) "y" else "n"): String), ", "), (if (has3#8(s#10, c#57)) "y" else "n"): String), ", "), (if (has4#9(s#10, c#57)) "y" else "n"): String));
       }
     }
     {

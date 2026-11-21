@@ -1,7 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
 #include <std/regex.hpp>
 
 namespace match {
@@ -15,6 +14,21 @@ void global_init_init();
 
 // init.cpp
 #include <match/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <temper-core/mapped.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace match {
 

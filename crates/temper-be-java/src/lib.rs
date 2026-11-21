@@ -28,19 +28,21 @@
 //! and `catch (RuntimeException …)`, `bubble()` as `throw Core.bubble()`,
 //! and `panic()` as an `AssertionError`, which no `orelse` catches; and
 //! generics, with boxed type arguments (`List<Integer>`) and explicit
-//! ones on `new`, core's lists as `java.util.List`s, maps as
-//! `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's, but with two
-//! boxes compared by value; lists that may hold null are made by
-//! `Core.listOf` and `Core.listCopyOf`, since `List.of` and `List.copyOf`
-//! reject null; and a library's own connected functions and classes,
-//! with host code in its own `.java` files ([`translate()`] says how);
-//! anything else is [`NotYet`]. No source maps yet.
+//! ones on `new` and on literals (`List.<Integer>of(…)`), which javac
+//! is slow to infer for long ones, core's lists as `java.util.List`s,
+//! maps as `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's,
+//! but with two boxes compared by value; lists that may hold null are
+//! made by `Core.listOf` and `Core.listCopyOf`, since `List.of` and
+//! `List.copyOf` reject null; and a library's own connected functions
+//! and classes, with host code in its own `.java` files ([`translate()`]
+//! says how); anything else is [`NotYet`]. No source maps yet.
 
 pub mod connected;
 pub mod names;
 pub mod ops;
 pub mod runtime;
 // Not in wasm, which runs no tools.
+pub mod split;
 #[cfg(any(unix, windows))]
 pub mod tools;
 pub mod translate;
@@ -61,6 +63,9 @@ pub struct Variant {
     /// The Java release its output targets, as `javac --release` and
     /// Maven's compiler plugin take it.
     pub java_release: &'static str,
+    /// The JVM's limits that code splits under ([`split`]); tests set
+    /// them low, to see the split shape on small programs.
+    pub limits: split::Limits,
 }
 
 /// The first variant: Kotlin-compatible API and names, pretty bodies,
@@ -75,6 +80,7 @@ pub static JAVA: Variant = Variant {
     },
     rules: names::RULES,
     java_release: "17",
+    limits: split::LIMITS,
 };
 
 /// Every variant, by name.
@@ -199,7 +205,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
         let global = format!("{base}Global");
         let main = format!("{base}Main");
         let mut translator = translate::Translator::new(p, &names, &package, &global);
-        let class = translator.module(module)?;
+        let mut class = translator.module(module)?;
+        split::class(&mut class, &variant.limits);
         let dir = package.replace('.', "/");
         let main_dir = format!("{library}/src/main/java/{dir}");
         let test_dir = format!("{library}/src/test/java/{dir}");
@@ -208,7 +215,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             text: tree::class(&class),
         });
         for (tests, dir) in [(false, &main_dir), (true, &test_dir)] {
-            for t in translator.types(module, tests)? {
+            for mut t in translator.types(module, tests)? {
+                split::type_decl(&mut t, &variant.limits);
                 sources.push(OutFile {
                     path: format!("{dir}/{}.java", t.name),
                     text: tree::type_decl(&t),
@@ -219,7 +227,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             path: format!("{main_dir}/{main}.java"),
             text: main_class(&package, &main, &loads(p, module)),
         });
-        if let Some(class) = translator.tests(module)? {
+        if let Some(mut class) = translator.tests(module)? {
+            split::test_class(&mut class, &variant.limits);
             if !class.tests.is_empty() {
                 tests.push(format!("{package}.{}", class.statics.name));
             }

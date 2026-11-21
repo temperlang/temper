@@ -1,7 +1,14 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <temper-core/generator.hpp>
+#include <temper-core/promise.hpp>
+#include <cstdint>
+#include <functional>
+#include <memory>
 
 namespace async_turns {
 
@@ -33,6 +40,15 @@ std::shared_ptr<temper::core::SafeGenerator<int32_t>> collatz(int32_t start);
 
 // init.cpp
 #include <async-turns/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
+#include <string>
+#include <vector>
 
 namespace async_turns {
 

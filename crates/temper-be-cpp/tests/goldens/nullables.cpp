@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace nullables {
 
@@ -29,6 +32,15 @@ int32_t stops();
 
 // init.cpp
 #include <nullables/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/base_types.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <string>
 
 namespace nullables {
 

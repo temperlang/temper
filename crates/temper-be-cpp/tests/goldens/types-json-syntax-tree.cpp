@@ -1,7 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
 #include <std/json.hpp>
 
 namespace json_syntax_tree {
@@ -15,6 +14,20 @@ void global_init_init();
 
 // init.cpp
 #include <json-syntax-tree/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace json_syntax_tree {
 

@@ -1,8 +1,14 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-#include <typeindex>
+#include <temper-core/any_value.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/base_types.hpp>
+#include <temper-core/module_init.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace classes {
 
@@ -218,6 +224,17 @@ T AnyFailing<T>::fail() const {
 
 // init.cpp
 #include <classes/init.hpp>
+
+#include <temper-core/list.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/compare.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/list_builder.hpp>
+#include <functional>
+#include <string>
+#include <typeindex>
 
 namespace classes {
 

@@ -1701,8 +1701,10 @@ Other differences we won't copy:
     in. Host code plugs in its own with `temper.set_net_client` or
     `temper::core::net::set_client`.
   - **Test server:** one in the testkit, answering as Kotlin's
-    `TestWebServer`, on any free port, as Kotlin's suite picks one;
-    the net tests' goldens read it as 28461.
+    `TestWebServer`, on the first free port of 28461 to 28464, so the
+    generated code is the same each run and build caches hit, or else
+    any free one, as Kotlin's suite picks; the net tests' goldens read
+    it as 28461.
   Test: funtests `types/netresponse` and `netresponse-not-found` on
   every backend (C++'s logs, and Lua's where no Lua loads LuaSocket,
   are what a broken promise gives, as Kotlin's suite expects them to
@@ -2149,18 +2151,22 @@ copied Kotlin's:
   Test: temper-be-lua/tests/goldens/ (`types-int-shifty`),
   functional.rs, `runs` (`locals`, for the table).
 - **Stale files in `temper.out`** after renames break builds; record the
-  files each backend writes and delete only those no longer written. Tempest empties a library's directory before writing it
-  (2026-10-30), which also drops what builds and test runs left there.
-  Test: tempest/tests/cli.rs, `build_writes_temper_out`.
+  files each backend writes and delete only those no longer written.
+  Tempest does just that (2026-11-20; it emptied a library's directory
+  from 2026-10-30): `temper.out/BACKEND/.temper-manifest` lists what it
+  wrote, with hashes, so it removes what it no longer generates, warns
+  of generated files edited by hand (and writes them again), and leaves
+  everything else, such as builds, alone; it writes only files whose
+  text changed, so the tools' incremental builds work.
+  Test: tempest/tests/cli.rs, `build_writes_only_what_changed`.
 - **`tempest build` and `temper.out` (2026-10-30):** the same layout,
   `temper.out/BACKEND/LIBRARY/…`, package files, and runtime copy
   (`temper-core`, without its dotfiles and own tests, Lua's rockspec named
   for the version), checked against Kotlin's for the functional tests
   (`crates/tempest/tests/kotlin_layout.rs`). Intended differences: source
   maps only for JS's modules so far; no zip for LuaRocks; a
-  `CMakeLists.txt` per C++ library (decided 2026-10-30); a library's
-  directory emptied before it's written, so no stale file survives (the
-  bug above); and no `data` backend, so the default backends are
+  `CMakeLists.txt` per C++ library (decided 2026-10-30); a manifest of
+  what it wrote, so no stale file survives (the bug above); and no `data` backend, so the default backends are
   Kotlin's but that one. A library's config is read for its `export let
   KEY = "VALUE";` lines only, where Kotlin runs it as Temper.
   Test: tempest/tests/kotlin_layout.rs.

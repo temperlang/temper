@@ -142,6 +142,7 @@ pub fn parse(source: &str, kind: SourceKind) -> Parsed {
             children: Vec::new(),
             span: None,
             open: 0,
+            tokens: 0,
         }],
         tree: Tree::new(),
         adapted,
@@ -182,6 +183,9 @@ struct Element {
     span: Option<Span>,
     /// Open brackets among its tokens minus close brackets.
     open: i32,
+    /// How many of its children are tokens, so a long list's commas
+    /// needn't count them again each time.
+    tokens: u32,
 }
 
 /// What [`can_nest`] needs to know about a node, built or not.
@@ -339,6 +343,7 @@ impl Parser {
         let top = self.stack.last_mut().expect("root");
         top.children.push(node);
         top.open += count;
+        top.tokens += 1;
         top.span = Some(top.span.map_or(span, |s| s.cover(span)));
     }
 
@@ -353,6 +358,7 @@ impl Parser {
             children: Vec::new(),
             span: Some(span),
             open: 0,
+            tokens: 0,
         });
     }
 
@@ -383,13 +389,16 @@ impl Parser {
             let s = self.tree.span(child);
             span = Some(span.map_or(s, |span| span.cover(s)));
         }
+        // Adopted children are operands, never tokens, so `below.tokens`
+        // still counts its own.
+        debug_assert!(children.iter().all(|&c| !self.is_token(c)));
         children.push(node);
-        // Adopted children are operands, never tokens.
         self.stack.push(Element {
             op,
             children,
             span,
             open: 0,
+            tokens: 0,
         });
     }
 
@@ -553,8 +562,7 @@ impl Parser {
                 continue;
             }
             // Past the operator's own token.
-            let tokens = el.children.iter().filter(|&&c| self.is_token(c)).count();
-            let may_follow = tokens >= 1
+            let may_follow = el.tokens >= 1
                 && token.kind == TokenKind::Punctuation
                 && el.op.info().follower == Some(text);
             if may_follow {
@@ -1087,4 +1095,47 @@ fn can_nest(bracket: Option<Shape>, grand: Option<Shape>, parent: Shape, child: 
     pp < cp
         || (pp == cp
             && (!p.info().right_assoc || (c.op_type() == OpType::Infix && child.count == 0)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tree::kinds_read;
+
+    /// How the parser's work grows with a source's items: `source(n)` for
+    /// 1,000, 2,000, and 4,000 items, counting node kinds read. Gives the
+    /// second doubling's added work over the first's: 2 where the work is
+    /// linear, 4 where it's quadratic.
+    fn work_growth(source: impl Fn(usize) -> String) -> f64 {
+        let work = |n: usize| {
+            let text = source(n);
+            let before = kinds_read();
+            let parsed = parse(&text, SourceKind::Standalone);
+            assert!(parsed.errors().is_empty());
+            kinds_read() - before
+        };
+        let (a, b, c) = (work(1000), work(2000), work(4000));
+        (c - b) as f64 / (b - a) as f64
+    }
+
+    /// Commas in a long list, on one line or one item a line, or between
+    /// a call's arguments, take work linear in the items: each comma
+    /// counted the tokens among all the items before it, which made a
+    /// 300,000-string list take minutes.
+    #[test]
+    fn long_lists_parse_in_linear_work() {
+        let shapes = [
+            ("one line", "let items = [", ", ", "];"),
+            ("a line each", "let items = [\n  ", ",\n  ", "\n];"),
+            ("arguments", "f(", ", ", ");"),
+        ];
+        for (name, open, sep, close) in shapes {
+            let growth = work_growth(|n| {
+                let items: Vec<String> = (0..n).map(|i| format!("\"s{i}\"")).collect();
+                format!("{open}{}{close}", items.join(sep))
+            });
+            let why = format!("{name}: work grew {growth:.2} times per doubling");
+            assert!(growth < 3.0, "{why}");
+        }
+    }
 }

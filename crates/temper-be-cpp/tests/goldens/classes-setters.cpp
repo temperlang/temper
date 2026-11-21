@@ -1,7 +1,10 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace setters {
 
@@ -46,6 +49,11 @@ struct ConcreteWhatever : public virtual Whatever {
 
 // init.cpp
 #include <setters/init.hpp>
+
+#include <temper-core/module_init.hpp>
+#include <temper-core/casting.hpp>
+#include <temper-core/console.hpp>
+#include <string>
 
 namespace setters {
 

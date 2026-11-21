@@ -649,6 +649,35 @@ fn console_first_used_in_a_test() {
     });
 }
 
+/// A string's runs of text and escapes are one literal each, so a
+/// template joins only its interpolations: the backends fold `String.cat`
+/// chains a level at a time, and one link per escape made translating long
+/// escaped literals quadratic. Counts what tmpl holds, not time, so it's
+/// deterministic.
+#[test]
+fn escapes_join_into_one_literal() {
+    with_stack(|| {
+        let long = "ab\\n".repeat(4000);
+        let source = format!(
+            "
+    export let plain(): String {{ \"{long}\" }}
+    export let mixed(n: Int): String {{ \"\\t\\\"${{n}}\\\"\\r\\n${{n}}\\u{{7f}}end\" }}
+    export let empty(): String {{ \"\" }}
+"
+        );
+        let program = translate_source("escapes", &source);
+        let written = text::write(&program);
+        let literal = format!("\"{long}\"");
+        assert!(written.contains(&literal), "{written}");
+        // `mixed`'s two interpolations between three runs of text: four
+        // joins, each run one literal.
+        assert_eq!(written.matches("%String.cat(").count(), 4, "{written}");
+        assert!(written.contains("\"\\t\\\"\""), "{written}");
+        assert!(written.contains("\"\\\"\\r\\n\""), "{written}");
+        assert!(written.contains("\"\\u{7f}end\""), "{written}");
+    });
+}
+
 /// `@keep` and `@keepTest` mark every kind of top-level declaration,
 /// classes and interfaces included, as Kotlin's `ReachabilityTracer`
 /// reads both on any declaration: `KEEP` (kept for host code) and

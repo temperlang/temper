@@ -1,8 +1,6 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace types_float_basics {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -14,6 +12,20 @@ void global_init_init();
 
 // init.cpp
 #include <types-float-basics/init.hpp>
+
+#include <temper-core/temper_bubble.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/boolean.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/int64.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
+#include <temper-core/string.hpp>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <string>
 
 namespace types_float_basics {
 

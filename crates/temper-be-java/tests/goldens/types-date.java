@@ -20,7 +20,7 @@ public final class DateGlobal {
         console.log("ISO 8601 yonks: " + yonksAgo.toString());
         console.log("yonksAgo.year = " + yonksAgo.getYear());
         {
-            List<Integer> list = List.of(1700, 1800, 1900, 2000, 2100, 2400);
+            List<Integer> list = List.<Integer>of(1700, 1800, 1900, 2000, 2100, 2400);
             int length = list.size();
             int i = 0;
             while (i < length) {

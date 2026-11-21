@@ -1,8 +1,6 @@
 // exporter.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
-
 namespace functions {
 
 // Runs the module's top level, once. Exported functions, constructors,
@@ -19,8 +17,6 @@ double normSquared(double x, double y);
 
 namespace functions {
 
-namespace core = temper::core;
-
 double normSquared(double x, double y) {
   return x * x + y * y;
 }
@@ -32,7 +28,8 @@ void global_init_exporter() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <memory>
+#include <vector>
 #include <functions/exporter.hpp>
 
 namespace functions {
@@ -49,6 +46,12 @@ double something(std::shared_ptr<std::vector<double>> const & vals);
 
 // init.cpp
 #include <functions/init.hpp>
+
+#include <temper-core/str.hpp>
+#include <temper-core/list.hpp>
+#include <temper-core/module_init.hpp>
+#include <temper-core/float64.hpp>
+#include <temper-core/console.hpp>
 
 namespace functions {
 

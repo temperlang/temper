@@ -50,12 +50,12 @@ public final class OpsGlobal {
         near("(e - one).log1p()", Math.log1p(e - one), one);
         DoubleFunction<String> fn = x -> {
             DoubleFunction<String> fn2 = y -> {
-                String pair = Core.listJoinDouble(List.of(Math.max(x, y), Math.min(x, y)), ", ", z -> Core.float64ToString(z));
+                String pair = Core.listJoinDouble(List.<Double>of(Math.max(x, y), Math.min(x, y)), ", ", z -> Core.float64ToString(z));
                 return "(" + pair + ")";
             };
-            return Core.listJoinDouble(List.of(Double.NaN, two), ", ", fn2);
+            return Core.listJoinDouble(List.<Double>of(Double.NaN, two), ", ", fn2);
         };
-        String maxMinCombos = Core.listJoinDouble(List.of(Double.NaN, one), ", ", fn);
+        String maxMinCombos = Core.listJoinDouble(List.<Double>of(Double.NaN, one), ", ", fn);
         console.log("maxMinCombos: " + maxMinCombos);
         double quarter = half / two;
         near("2.25 % 2.0", (two + quarter) % two, 0.25);

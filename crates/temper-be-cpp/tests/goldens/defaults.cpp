@@ -1,7 +1,10 @@
 // helpers.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace defaults {
 
@@ -32,6 +35,8 @@ temper::core::Str wrap(temper::core::Str const & text);
 
 // helpers.cpp
 #include <defaults/helpers.hpp>
+
+#include <temper-core/int.hpp>
 
 namespace defaults {
 
@@ -107,7 +112,10 @@ void global_init_helpers() {}
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/nullable_param.hpp>
+#include <temper-core/str.hpp>
+#include <cstdint>
+#include <memory>
 #include <defaults/helpers.hpp>
 
 namespace defaults {
@@ -149,7 +157,11 @@ struct Counter : public std::enable_shared_from_this<Counter> {
 // init.cpp
 #include <defaults/init.hpp>
 
+#include <temper-core/module_init.hpp>
+#include <temper-core/int.hpp>
+#include <temper-core/console.hpp>
 #include <mutex>
+#include <string>
 
 namespace defaults {
 

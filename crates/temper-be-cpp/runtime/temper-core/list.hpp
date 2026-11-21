@@ -55,6 +55,23 @@ namespace temper {
                 return list;
             }
 
+            // A list literal too long for one function, which compilers take
+            // a long time over, as its parts, each made by a lambda of its own.
+            template<class Elem, class... Parts>
+            std::shared_ptr<std::vector<Elem>> make_parts(Parts const &... parts) {
+                std::initializer_list<std::shared_ptr<std::vector<Elem>>> all = {parts...};
+                std::shared_ptr<std::vector<Elem>> list = std::make_shared<std::vector<Elem>>();
+                std::size_t size = 0;
+                for (auto const & part : all) {
+                    size += part->size();
+                }
+                list->reserve(size);
+                for (auto const & part : all) {
+                    list->insert(list->end(), part->begin(), part->end());
+                }
+                return list;
+            }
+
             template<
                 class Base,
                 class Derived,

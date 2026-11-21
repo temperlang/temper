@@ -26,7 +26,7 @@ public final class OperationsGlobal {
     }
 
     static void something(Consumer<List<String>> callback) {
-        callback.accept(List.of("Called", "with", "listed."));
+        callback.accept(List.<String>of("Called", "with", "listed."));
     }
 
     static void runSomething() {
@@ -52,8 +52,8 @@ public final class OperationsGlobal {
 
     static {
         console = Core.getConsole(Logger.getLogger("operations"));
-        reportLength(List.of(4, 5, 6));
-        List<Integer> ls = Core.listSortedInt(List.of(5, 6, 7, 8, 9, 0, 1, 2, 3, 4), (i, j) -> i - j);
+        reportLength(List.<Object>of(4, 5, 6));
+        List<Integer> ls = Core.listSortedInt(List.<Integer>of(5, 6, 7, 8, 9, 0, 1, 2, 3, 4), (i, j) -> i - j);
         console.log("All  " + Core.listJoinInt(ls, ", ", x -> Integer.toString(x)));
         console.log("Even " + Core.listJoinInt(Core.listFilterInt(ls, x -> (x & 1) == 0), ", ", x -> Integer.toString(x)));
         console.log("Odd  " + Core.listJoinInt(Core.listFilterInt(ls, x -> (x & 1) != 0), ", ", x -> Integer.toString(x)));
@@ -83,7 +83,7 @@ public final class OperationsGlobal {
             Core.listSort(builder, (a, b) -> compareCodePoints(a, b));
             return builder;
         };
-        List<List<String>> triangleOfFooBar = new ArrayList<>(Core.listMapObjToObj(List.of(List.of(), List.of("bar"), List.of("bar", "baz"), List.of("bar", "baz", "boo"), List.of("bar", "baz", "boo", "far"), List.of("bar", "baz", "boo", "far", "faz"), List.of("far", "faz", "foo", "bar", "baz", "boo")), fn11));
+        List<List<String>> triangleOfFooBar = new ArrayList<>(Core.listMapObjToObj(List.<List<String>>of(List.<String>of(), List.<String>of("bar"), List.<String>of("bar", "baz"), List.<String>of("bar", "baz", "boo"), List.<String>of("bar", "baz", "boo", "far"), List.<String>of("bar", "baz", "boo", "far", "faz"), List.<String>of("far", "faz", "foo", "bar", "baz", "boo")), fn11));
         {
             int j = 0;
             while (j < triangleOfFooBar.size()) {
@@ -105,10 +105,10 @@ public final class OperationsGlobal {
         List<String> messageBuilder = new ArrayList<>();
         messageBuilder.add("hello");
         messageBuilder.set(0, "hi");
-        Core.listAddAll(messageBuilder, List.of("there", "y'all"));
+        Core.listAddAll(messageBuilder, List.<String>of("there", "y'all"));
         messageBuilder.add(0, "say");
         List<String> copyThat = new ArrayList<>(messageBuilder);
-        Core.listAddAll(messageBuilder, List.of("more", "than"), 1);
+        Core.listAddAll(messageBuilder, List.<String>of("more", "than"), 1);
         Core.listAddAll(copyThat, messageBuilder);
         console.log(Core.listJoinObj(messageBuilder, " ", x -> x));
         console.log(Core.listJoinObj(Core.listSorted(copyThat, (a, b) -> compareCodePoints(b, a)), " ", x -> x));
@@ -118,9 +118,9 @@ public final class OperationsGlobal {
         List<String> nextLast = Core.listSplice(copyThat, copyThat.size() - 1, 1);
         List<String> oldWords = Core.listSplice(copyThat, 4, 3, nextLast);
         Core.listSplice(copyThat, null, 0, oldWords);
-        Core.listSplice(copyThat, copyThat.size(), null, List.of("and", "the", "end"));
+        Core.listSplice(copyThat, copyThat.size(), null, List.<String>of("and", "the", "end"));
         console.log(Core.listJoinObj(copyThat, " ", x -> x));
-        Core.listSplice(copyThat, null, null, List.of("gone"));
+        Core.listSplice(copyThat, null, null, List.<String>of("gone"));
         console.log(Core.listJoinObj(copyThat, " ", x -> x));
         messageBuilder.clear();
         messageBuilder.add("Bye");
@@ -135,7 +135,7 @@ public final class OperationsGlobal {
         console.log("Outside fallback: " + Core.listGetOr(ls, ls.size(), 123));
         {
             Function<Boolean, String> booleanToString = b -> Boolean.toString(b);
-            List<Boolean> ls2 = List.of(true, false);
+            List<Boolean> ls2 = List.<Boolean>of(true, false);
             String joined = Core.listJoinBool(ls2, ", ", booleanToString);
             List<Boolean> inverted = Core.listMapObjToBool(ls2, b -> !b);
             Function<Boolean, String> fn22 = b -> {
@@ -154,7 +154,7 @@ public final class OperationsGlobal {
             console.log("list (== false only) = [" + Core.listJoinBool(onlyFalse, ", ", booleanToString) + "]");
         }
         {
-            List<Double> sizes = List.of(0.25, 3.0);
+            List<Double> sizes = List.<Double>of(0.25, 3.0);
             DoubleFunction<String> fn12 = f -> {
                 if (Double.compare(f, 1.0) < 0) {
                     return "small";

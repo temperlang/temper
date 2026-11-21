@@ -6,10 +6,10 @@
 //!     temper build [-w DIR] [-ign FILE] [-o DIR] [-b BACKEND]... [--no-connected]
 //!                   [-v] [--logformat text|json] [--std DIR]
 //!     temper test [-w DIR | DIR] [-ign FILE] [--library NAME] [-b interp|BACKEND]...
-//!                  [--fuel N|none] [--timeout S|none] [--no-connected] [-v]
+//!                  [--fuel N|none] [--timeout S|none] [--no-connected] [--clean] [-v]
 //!                  [--logformat text|json] [--std DIR]
 //!     temper run --library NAME -b interp|BACKEND [-w DIR] [-ign FILE] [-o DIR]
-//!                 [--timeout S|none] [--no-connected] [-v] [--logformat text|json]
+//!                 [--timeout S|none] [--no-connected] [--clean] [-v] [--logformat text|json]
 //!                 [--std DIR]
 //!     temper repl [-w DIR] [-ign FILE] [-e CODE]... [--separator newline|semisemi|eof]
 //!                  [--prompt normal|hide] [--fuel N|none] [-v] [--std DIR]
@@ -180,6 +180,7 @@ struct Flags {
     backends: Vec<String>,
     library: Option<String>,
     no_connected: bool,
+    clean: bool,
     verbose: bool,
     log: LogFormat,
     port: Option<String>,
@@ -197,7 +198,7 @@ struct Flags {
 
 /// Each option: its long name, its short one if any, and whether it
 /// takes a value.
-const OPTIONS: [(&str, Option<&str>, bool); 19] = [
+const OPTIONS: [(&str, Option<&str>, bool); 20] = [
     ("std", None, true),
     ("workroot", Some("w"), true),
     ("ignorefile", Some("ign"), true),
@@ -205,6 +206,7 @@ const OPTIONS: [(&str, Option<&str>, bool); 19] = [
     ("backend", Some("b"), true),
     ("library", None, true),
     ("no-connected", None, false),
+    ("clean", None, false),
     ("verbose", Some("v"), false),
     ("logformat", None, true),
     ("port", None, true),
@@ -285,6 +287,7 @@ fn parse(command: &str, args: &[String], allowed: &[&str], positional: usize) ->
                 }
             }
             "no-connected" => flags.no_connected = true,
+            "clean" => flags.clean = true,
             "no-history" => flags.no_history = true,
             "no-workroot" => flags.no_workroot = true,
             "verbose" => flags.verbose = true,
@@ -411,6 +414,7 @@ fn build_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        clean: flags.clean,
     };
     let mut out = io::BufWriter::new(io::stdout().lock());
     let built = build::build(
@@ -434,6 +438,7 @@ fn test_command(args: &[String]) -> u8 {
         "library",
         "backend",
         "no-connected",
+        "clean",
         "verbose",
         "logformat",
         "fuel",
@@ -485,6 +490,7 @@ fn test_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        clean: flags.clean,
     };
     let json = flags.log == LogFormat::Json;
     let several = chosen.len() > 1;
@@ -582,6 +588,7 @@ fn run_library(args: &[String]) -> u8 {
         "ignorefile",
         "output-directory",
         "no-connected",
+        "clean",
         "verbose",
         "logformat",
         "timeout",
@@ -624,6 +631,7 @@ fn run_library(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         hints: flags.verbose,
+        clean: flags.clean,
     };
     let mut out = io::stdout();
     let ok = run::run(

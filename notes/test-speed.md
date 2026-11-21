@@ -333,13 +333,99 @@ templates, instantiated again in every file.
   dropping `-g` by 25%, but `-O1` drives warnings like
   `maybe-uninitialized` and `-g` makes ASan's reports readable. The
   plain build stays file by file, as a user's build, which is what
-  makes the warnings per file. ccache isn't installed, and `ld.gold`
-  links the ASan runner only 0.1 s faster.
+  makes the warnings per file. ccache wasn't installed then (CI uses
+  it since 2026-11-19, below), and `ld.gold` links the ASan runner only
+  0.1 s faster.
 
 `TEMPER_CXXFLAGS` adds options to every build but ThreadSanitizer's;
 the nightly workflow (`.github/workflows/nightly.yml`) uses it to
 run everything under ASan and UBSan, and runs the tests under g++ 12
 and 14, by `CXX`.
+
+## C++ in CI (2026-11-19)
+
+GitHub's runs of 2026-11-18 (three, including one on `main`): the
+`java, csharp, cpp` job took 6.2 to 7.8 minutes, the run's longest
+(the others 3.1 to 5.2), of which `C++` (the crate's tests but
+`strict`, g++ 13, plain and sanitized) took 111 to 154 s, and `C++,
+strict` 128 to 175 s: eight compiler-and-mode builds of every
+library, by g++ 12 (-O2, with and without `TEMPER_TESTS`), g++ 14
+(the same, and -O3 both ways), and clang++ (-O2 both ways).
+
+**Strict by tier.** Every push now builds `strict` by clang++ alone,
+-O2 both ways (`TEMPER_STRICT_CXX: clang++` in ci.yml): the one
+compiler nobody checks locally (the container has none), beside the
+`C++` step's g++ 13 builds, every warning an error at -O1. g++ 12 and
+14 at -O2, and 14 at -O3, which see GCC's path-following warnings
+(a null upcast's `-Wnull-dereference`, libstdc++'s `vector<bool>`
+`-Warray-bounds`), run nightly (nightly.yml's `cpp` job, `strict`,
+the full list as ci.yml had it) and weekly on Linux Arm64, and locally
+by default (g++ 12 and 14, whichever are installed). The sanitizers
+stay on every push: they check what the code does, not its warnings,
+and with `strict` trimmed the C++ job is about level with the others,
+so moving them would save runner minutes, not a run's time.
+
+| Variant | Before | After |
+| --- | --- | --- |
+| g++ 13, -O1, every warning an error (`runs`) | push | push |
+| g++ 13, ASan and UBSan; TSan (`runs`, `co_await_interop`, `net_client_from_host`) | push | push |
+| clang++, -O2, both ways (`strict`) | push; weekly Arm64 | push; nightly; weekly Arm64 |
+| g++ 12, -O2, both ways (`strict`) | push; weekly Arm64 | nightly; weekly Arm64 |
+| g++ 14, -O2 and -O3, both ways (`strict`) | push; weekly Arm64 | nightly; weekly Arm64 |
+| the crate's tests by g++ 12, by g++ 14, and sanitized throughout | nightly | nightly |
+
+Estimated, not measured: clang++'s two builds are about a quarter of
+the eight, and clang compiles faster than g++ at -O2, so the strict
+step should go from about 130 to 175 s to about 30 to 45 s, taking
+1.5 to 2 minutes off the C++ job, which then takes about as long as
+`lint, core` and `release, playground`.
+
+**ccache** (`.github/actions/ccache`) in every job that compiles C++:
+CMake's builds by its launcher, and the C++ backend's tests, which run
+compilers by name, by ccache's links named for them, first on `PATH`.
+Locally, `strict` by g++ 12 (four builds, two compiles at once): 185 s
+cold, 60 to 80 s warm, with 45 of 47 compiles hits, after removing the
+precompiled headers as a fresh runner would have none (ccache gives
+them back byte for byte, so what includes them hits). The two misses
+were the bulk groups holding `netresponse` and `netresponse-not-found`,
+whose generated `init.cpp` names the port of the server the test
+starts, then new each run. The server now takes the first free port of
+a fixed few (the testkit's `TEST_SERVER_PORTS`), so that code is the
+same each run and all 47 hit: warm 15 to 23 s, from 120 to 176 s, under
+a load of 4 to 9 (2026-11-19, a scratch cache).
+In CI the first run on `main` after this fills each job's cache; its
+summary shows the hit rate.
+
+## The huge program, nightly (2026-11-20)
+
+The testkit's `huge` program (an 8,500-item list, a 1,000-entry map,
+an 80 KB string, and 6,000 statements) checks that code split under
+compilers' limits compiles and runs on every backend. In every
+backend's `runs` it added about 40 s to C++'s on every push, mostly
+g++ over it, and 7 to 24 s to Lua's and Java's (below). Now only
+`TEMPER_HUGE` (non-empty) adds it, to `runs` and to the
+`huge_splits` checks (4 to 10 s each, translating it in a debug
+build); nightly.yml sets it in `cpp` and in `huge`, a job per other
+backend. Every push instead translates `split_shape`, the same program
+with ten items, six entries, and ten statements, with each backend's
+limits set low (C++ `tree::Limits`, Rust `tree::Limits`, Lua
+`translate::Limits`, as Java's `split::Limits` and its `java-split`
+golden), against a golden, in under a second; long strings' pieces in
+C++ and long lines in Lua, fixed by MSVC and LuaLS, are those
+`tree`s' unit tests.
+
+Locally, with other agents' builds running (load 3 to 7), the
+functional tests' own times, huge off and on:
+
+| Backend | Off | On |
+| --- | --- | --- |
+| Lua (`runs`) | 12 to 21 s | 19 to 41 s |
+| Java (all) | 36 s | 60 s |
+| Rust (all, crates cached) | 32 s | 37 s |
+
+C++ with it on wasn't run here: its sanitized builds can't run under
+the memory cap that compiling the huge program needs locally; its
+`runs` took 133 s off (ccache warm).
 
 ## `tempest test -b`
 
@@ -360,13 +446,54 @@ alike (each backend crate's `src/tools.rs`, run by
 - **Java:** `javac` on everything against JUnit 5's jars in Maven's
   local repository, and a small runner of JUnit's launcher, as the
   backend's own tests do, rather than Maven, which needs its network.
+  Each library's tests compiled the runtime, std, and every library
+  again for themselves, most of a run's time (Kelpto's full run
+  compiled the same 226 files ten times). Since 2026-11-19 they compile
+  once per run into `temper.out/java/.build`, then every tested
+  library's tests at once; each library's tests still run in a JVM of
+  their own, picked by class. Each library's classes are kept between
+  runs, keyed by a hash of its sources, javac, `JAVA_HOME`, and what it
+  uses. A library that doesn't compile fails alone, with those using
+  it. Where the tests don't compile together, each library's compile
+  alone, as before.
 - **C#:** `dotnet test --logger:junit`, as Kotlin's `RunCSharp`.
+  MSBuild already built a shared project once (later libraries found
+  it up to date), but each library paid for its own MSBuild, restore,
+  test run, and compiler server, five to sixteen seconds each in
+  Kelpto. Since 2026-11-19 one solution in `temper.out/csharp/.build`
+  names every tested library's tests project, unchanged: one `dotnet
+  build` restores and builds them all, four projects at once, and one
+  `dotnet test --no-build` runs them, each library's results in its own
+  project, as before. A library without results after it (its tests
+  didn't build or run) runs `dotnet test` alone, as before.
 - **Rust:** `cargo test --offline`, one target directory for all.
+  Since 2026-11-19 one Cargo workspace in `temper.out/rust/.build`
+  links every crate there, unchanged, and builds every tested
+  library's tests at once (`cargo build --tests --keep-going`), then
+  each library's `cargo test -p`, which finds them fresh (Argmas's and
+  Ordable's second runs about as fast as running the test programs
+  directly, 1–2 s). Alone, a library was built again
+  for each library using it (as a dependency it's built with other
+  flags, so another hash); now each crate is built once, and the
+  libraries build side by side. Where the workspace doesn't load (no
+  links, as on Windows without the right to make them), it's `cargo
+  test` in the crate, as before.
 - **C++:** CMake on the `CMakeLists.txt` tempest writes, building the
   library's `LIBRARY-test` target (its tests, std, and the libraries it
-  imports) in `temper.out/cpp/LIBRARY/build`, then running it in the
+  imports), then running it in the
   library's directory, which writes `test-results.xml`, as Kotlin's
-  `RunCpp` runs its `g++` build (2026-11-06).
+  `RunCpp` runs its `g++` build (2026-11-06). Since 2026-11-19 one
+  CMake project in `temper.out/cpp/.build` adds every library, so a
+  library others use builds once per run, not once per dependent
+  (Kelpto's kelpto-core and std were built for each test library);
+  where it doesn't configure, each library builds alone in
+  `LIBRARY/build`, as before.
+  CMake runs `TEMPER_CXX_JOBS` compiles at once (2026-11-19; two
+  before, always), else one per CPU, four at most: GitHub's runners
+  have four, so CI needs no setting, and four debug compiles fit a
+  small machine beside other work. `temper-be-cpp`'s functional tests
+  run as many compilers at once, through the same function
+  (`tools::jobs`).
 
 Still planned: the fast paths below (one process per backend for all
 libraries, cached runtimes), and the package path checked against them.

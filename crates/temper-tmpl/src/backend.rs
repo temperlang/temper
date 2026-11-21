@@ -43,8 +43,17 @@ pub struct Backend {
 /// each test's name and its failure if it failed, or why there are no
 /// results. `all` is every library built there, which tests may import.
 pub struct Tools {
-    /// Readies `dir` once, before any library's tests run.
+    /// Readies `dir` once, before any library's tests run. Builds there
+    /// are kept from run to run, each tool's own incremental build
+    /// redoing only what changed.
     pub prepare: Option<Prepare>,
+    /// Where its builds go, removed for a clean build (`temper test
+    /// --clean`): paths from `temper.out/BACKEND`, each `*` any one name,
+    /// such as a library's ([`crate::tools::remove_build_dirs`]).
+    pub build_dirs: &'static [&'static str],
+    /// What `temper test` says once, before the results, of how the
+    /// tools build (C++'s ccache), if anything.
+    pub note: Option<fn() -> Option<String>>,
     /// Runs a library's tests.
     pub test: fn(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults,
     /// Runs a library's top level, as `temper run` does: building what
@@ -63,11 +72,14 @@ pub type Run = fn(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, 
 pub type Prepare = fn(dir: &Path, all: &[Tested]) -> Result<(), String>;
 
 /// A library that built, with how many tests it has (none, for `run`),
-/// and what its config says, for the names each backend gives it.
+/// what its config says, for the names each backend gives it, and what
+/// it uses.
 pub struct Tested {
     pub name: String,
     pub tests: usize,
     pub metadata: crate::Metadata,
+    /// The libraries it uses, by name: std's and others' in the build.
+    pub uses: Vec<String>,
 }
 
 /// Each test's name and its failure, if it failed; or why there are no

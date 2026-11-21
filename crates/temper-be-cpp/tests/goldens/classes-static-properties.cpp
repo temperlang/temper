@@ -1,7 +1,11 @@
 // init.hpp
 #pragma once
 
-#include <temper-core/core.hpp>
+#include <temper-core/any_value.hpp>
+#include <temper-core/str.hpp>
+#include <temper-core/module_init.hpp>
+#include <cstdint>
+#include <memory>
 
 namespace static_properties {
 
@@ -42,6 +46,9 @@ struct I : public virtual temper::core::AnyValueBase {
 
 // init.cpp
 #include <static-properties/init.hpp>
+
+#include <temper-core/console.hpp>
+#include <string>
 
 namespace static_properties {
 

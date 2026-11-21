@@ -941,6 +941,20 @@ function temper.listof(...)
     return {...}
 end
 
+-- A list literal too long for one function, whose constants Lua 5.1
+-- limits, as its parts, each a list made by a function of its own.
+function temper.list_of_parts(...)
+    local all, n = {}, 0
+    for p = 1, select('#', ...) do
+        local part = select(p, ...)
+        for i = 1, #part do
+            all[n + i] = part[i]
+        end
+        n = n + #part
+    end
+    return all
+end
+
 function temper.listbuilder_constructor(list)
     local ret = {
         [temper.type_tag] = 'ListBuilder'

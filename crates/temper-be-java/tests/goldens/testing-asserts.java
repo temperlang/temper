@@ -12,6 +12,6 @@ public final class AssertsGlobal {
     }
 
     static {
-        unitVecs = List.of(new Vec2(1.0, 0.0), new Vec2(0.0, 1.0));
+        unitVecs = List.<Vec2>of(new Vec2(1.0, 0.0), new Vec2(0.0, 1.0));
     }
 }

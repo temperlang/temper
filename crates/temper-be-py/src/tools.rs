@@ -14,6 +14,8 @@ use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: None,
+    build_dirs: &[],
+    note: None,
     test,
     run,
 };

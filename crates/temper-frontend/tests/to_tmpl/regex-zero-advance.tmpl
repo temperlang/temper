@@ -60,7 +60,7 @@ module `zero-advance`#0 {
 
   export fn bulletizeList#5(text#33: String): String {
     let replaced#34: String = commaItemStartRegex#4.replace#36(text#33, (fn ~fn#37(match#38: Match#35): String {
-      return %String.cat("\n", "- ");
+      return "\n- ";
     }): fn (Match#35): String);
     return replaced#34.slice#40(replaced#34.next#43(begin#44), replaced#34.end#45());
   }
