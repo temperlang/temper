@@ -272,8 +272,10 @@ pub fn without_net(cases: &mut [Case]) {
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
-/// and what nothing does, which runs as tests ([`AS_TESTS`]).
-pub const PROGRAMS: [&str; 20] = [
+/// and what nothing does, which runs as tests ([`AS_TESTS`]); `big-lists`
+/// list builders and functions given 200,000 values at once, more than
+/// JS's arguments or Lua's unpacked values can hold.
+pub const PROGRAMS: [&str; 21] = [
     "classes",
     "nullables",
     "generics",
@@ -294,6 +296,7 @@ pub const PROGRAMS: [&str; 20] = [
     "content-tags",
     "json-adapters",
     "reach",
+    "big-lists",
 ];
 
 /// The shared programs that run as tests, as a functional test with

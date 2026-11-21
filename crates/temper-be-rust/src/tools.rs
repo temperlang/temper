@@ -15,6 +15,7 @@ pub const TOOLS: Tools = Tools {
     prepare: None,
     test,
     run,
+    dirs: &["target"],
 };
 
 /// `--offline`, unless a library's config lists crates
@@ -113,7 +114,7 @@ fn failure(stdout: &str, name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::failure;
+    use super::{failure, offline};
 
     /// A Rust test's failure, from what `cargo test` prints.
     #[test]
@@ -126,5 +127,31 @@ mod tests {
             "expected 1 + 1 == (3) not (2)"
         );
         assert_eq!(failure(out, "r#mod::tests::c"), "failed");
+    }
+    use temper_tmpl::{ConfigValue, Metadata, Tested};
+
+    /// Offline unless a library's config lists crates.
+    #[test]
+    fn offline_unless_crates_are_listed() {
+        let tested = |dependencies: &[&str]| Tested {
+            name: "a".into(),
+            tests: 0,
+            metadata: Metadata {
+                configs: vec![(
+                    "rust".into(),
+                    vec![(
+                        "dependencies".into(),
+                        ConfigValue::Strings(dependencies.iter().map(|d| d.to_string()).collect()),
+                    )],
+                )],
+                ..Metadata::default()
+            },
+        };
+        assert_eq!(offline(&[]), ["--offline"]);
+        assert_eq!(offline(&[tested(&[])]), ["--offline"]);
+        assert_eq!(
+            offline(&[tested(&[]), tested(&["roaring@0.11.1"])]),
+            [] as [&str; 0]
+        );
     }
 }

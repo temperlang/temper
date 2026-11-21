@@ -193,26 +193,32 @@ patches that made them (other docs cite these numbers):
 | C++ | 0021 | `to_base`, an upcast of a never-null `shared_ptr`, so g++'s `-Wnull-dereference` has no null path to follow |
 | C++ | 0022 | Skip `List::make`'s `reserve` for Booleans, so g++'s false `-Warray-bounds` at -O3 in `vector<bool>` doesn't fail `-Werror` builds |
 | C++ | 0023 | `DenseBitVector`, as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
+| C++ | 0027 | A list builder's `splice` of its own values copies them first, where inserting a vector into itself was undefined |
 | C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
 | C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
+| C# | 0028 | A list builder's `splice` of its own values copies them first, where it put back what was left after removing |
 | Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |
 | Java | 0016 | Connect and send std/net requests on the common pool, never in the async step that calls `stdNetSend` |
+| Java | 0029 | A list builder's `splice` of its own values copies them first, where clearing the removed range changed them |
 | JS | 0001 | Fix the JSDoc types of eight helpers, so strict `tsc` takes generated calls without casts |
 | JS | 0002 | Fix `listBuilderSplice`'s JSDoc types, likewise |
 | JS | 0004 | Make `breakPromise`'s reason optional in its JSDoc |
 | JS | 0015 | Type `sendRequest`'s method as any string in its JSDoc, for std/net's generated call |
+| JS | 0030 | List builders' `addAll` and `splice`, `filter`, and `String.fromCodePoints` take more values than a call's arguments can hold (about 120,000); `splice` clamps a negative index to 0, as core says, where JS's own counts from the end |
 | Lua | 0006 | Add promises and async blocks, which Kotlin's Lua calls but its runtime lacks |
 | Lua | 0011 | Queue promise waiters behind one drain loop; make generators callable tables that `for`-`in` steps and a failed step leaves done |
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
 | Lua | 0020 | Let generators yield values and take their factory's arguments |
 | Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
 | Lua | 0025 | List each module in the rockspec's `build.modules`, so `luarocks make` installs what `require` finds; powersort's early returns as `return`s, not `goto`s, so it loads on Lua 5.1 |
+| Lua | 0031 | A list builder's `splice` clamps its index and count, as core says, where it bubbled or removed past the end; `splice` and `addAll` move the values after the change once, not once per value, so 200,000 values take linear time, not quadratic; both copy a builder's own values first |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
 | Python | 0026 | Index a `Pair` as its key and value: `__getitem__`, which was misspelled `__subscript__` |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
 | Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
 | Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
+| Rust | 0032 | A list builder's `addAll` and `splice` take its own values, which deadlocked reading them under its write lock; `splice` clamps an index past the end, which overflowed |
 
 ### Versions: one version, spelled for each ecosystem
 

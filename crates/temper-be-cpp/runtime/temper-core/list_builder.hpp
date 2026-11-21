@@ -84,11 +84,15 @@ namespace temper {
                     list->begin() + start,
                     list->begin() + start + deleteCount
                 );
+                // Copied first if it's the list itself, which erasing changes.
+                std::shared_ptr<std::vector<Elem>> values = items.get() == list.get()
+                    ? std::make_shared<std::vector<Elem>>(*items)
+                    : items;
                 typename std::vector<Elem>::iterator it = list->erase(
                     list->begin() + start,
                     list->begin() + start + deleteCount
                 );
-                list->insert(it, items->begin(), items->end());
+                list->insert(it, values->begin(), values->end());
                 return removed;
             }
 

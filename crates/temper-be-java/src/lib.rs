@@ -106,22 +106,34 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "name",
             doc: "The library's Java name, which the package and the Maven artifact ID default to; else the library's name.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `geometry-java`",
+                valid: maven_id,
+            },
         },
         temper_tmpl::Property {
             name: "package",
             doc: "The Java package, as `com.example.geometry`; else the Java name, as a package.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Java package, as `com.example.geometry`",
+                valid: temper_tmpl::dotted_identifier,
+            },
         },
         temper_tmpl::Property {
             name: "group",
             doc: "The Maven group ID; else the package.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `com.example`",
+                valid: maven_id,
+            },
         },
         temper_tmpl::Property {
             name: "artifact",
             doc: "The Maven artifact ID; else the Java name.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `geometry`",
+                valid: maven_id,
+            },
         },
         temper_tmpl::Property {
             name: "dependencies",
@@ -413,12 +425,24 @@ fn coordinates(p: &Program, library: &str) -> (String, String) {
 }
 
 /// A package that a config's `dependencies` lists, as
-/// `"group:artifact:version"`: its group, artifact, and version.
+/// `"group:artifact:version"`: its group and artifact ([`maven_id`]), and
+/// its version, ASCII letters, digits, `.`, `_`, `+`, and `-`, as
+/// `1.6.20` or `2.0-SNAPSHOT`, but no range or property (`${…}`).
 pub fn maven_dependency(text: &str) -> Option<(&str, &str, &str)> {
     match temper_tmpl::dependency_parts(text, ":", 3)?.as_slice() {
-        &[group, artifact, version] => Some((group, artifact, version)),
+        &[group, artifact, version]
+            if maven_id(group) && maven_id(artifact) && temper_tmpl::spelled(version, "._+-") =>
+        {
+            Some((group, artifact, version))
+        }
         _ => None,
     }
+}
+
+/// Whether a name is a Maven group or artifact ID: ASCII letters, digits,
+/// `.`, `_`, and `-`, starting with a letter or digit, without `..`.
+pub fn maven_id(text: &str) -> bool {
+    temper_tmpl::spelled(text, "._-")
 }
 
 /// The config's metadata, as Kotlin's `pomXml` writes it after the name:
@@ -697,4 +721,46 @@ fn pom(
 </project>
 "#
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maven_spellings() {
+        let good = [
+            (
+                "org.roaringbitmap:RoaringBitmap:1.6.20",
+                ("org.roaringbitmap", "RoaringBitmap", "1.6.20"),
+            ),
+            ("a_b:c-d:2.0-SNAPSHOT", ("a_b", "c-d", "2.0-SNAPSHOT")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(maven_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "g:a",
+            "g:a:1:jar",
+            "g:a:${env.SECRET}",
+            "g:a:[1.0,2.0)",
+            "-Dx=y:a:1",
+            "g:-a:1",
+            "g:a:-1",
+            "../g:a:1",
+            "g/x:a:1",
+            "g:a:1</version><x>",
+            "g:a:1&amp;",
+            "g:a:\"1\"",
+            "g:a b:1",
+            "g;h:a:1",
+            ".g:a:1",
+        ];
+        for text in hostile {
+            assert_eq!(maven_dependency(text), None, "{text}");
+        }
+        for bad in ["", "..", "../x", "/abs", "a/b", "a\\b", "a<b", "a b", "-x"] {
+            assert!(!maven_id(bad), "{bad}");
+        }
+    }
 }

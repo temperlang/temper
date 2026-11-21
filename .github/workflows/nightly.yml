@@ -25,6 +25,9 @@
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
+# And the CLI's tests that fetch packages from registries
+# (`connecteds_*`), which per-push CI leaves out.
+#
 # And an early warning for the checkers of generated code: the backends'
 # tests with the latest TypeScript, pyright, mypy, or LuaLS in place of
 # the version ci.yml pins, one job each, so a failure names its checker.
@@ -125,6 +128,28 @@ jobs:
           # clang++ at -O2 on every push.
           TEMPER_STRICT_CXX: ""
           ASAN_OPTIONS: detect_leaks=0
+          TEMPER_REQUIRE_CHECKERS: "1"
+
+  # The CLI's `connecteds_*` tests, which fetch real packages (a Roaring
+  # bitmap) from NuGet, Maven Central, npm, PyPI, and crates.io with
+  # each language's own tools: nightly, not on every push, so a
+  # registry's hiccup doesn't fail a pull request (`TEMPER_NETWORK_TESTS`).
+  connecteds:
+    needs: recent
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || (github.event.schedule == '41 3 * * *' && needs.recent.outputs.day != 'false')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: ./.github/actions/toolchains
+        with:
+          backends: py js java csharp rust
+      - name: Tests
+        run: cargo test --locked -p tempest --test cli connecteds_
+        env:
+          TEMPER_NETWORK_TESTS: "1"
           TEMPER_REQUIRE_CHECKERS: "1"
 
   # The list of libraries, as a matrix. When there are many, this is

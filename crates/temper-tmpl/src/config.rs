@@ -39,8 +39,15 @@ pub struct Property {
 /// What a [`Property`] holds.
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
-    /// A `String?`.
-    String,
+    /// A `String?`, a name in a form that `valid` checks and that `form`
+    /// says, as "a dotted C# name, as `Example.Geometry`": names reach
+    /// paths and package files, so each backend allows only what its
+    /// language's tools allow, and nothing that leaves a directory or
+    /// breaks out of a file's quoting.
+    String {
+        form: &'static str,
+        valid: fn(&str) -> bool,
+    },
     /// A `List<String>?`, each item in a form that `valid` checks, and
     /// that `form` shows, as `"name==version"`.
     Strings {
@@ -53,19 +60,41 @@ impl Kind {
     /// Its type, as Temper spells it.
     pub fn type_name(&self) -> &'static str {
         match self {
-            Kind::String => "String",
+            Kind::String { .. } => "String",
             Kind::Strings { .. } => "List<String>",
         }
     }
 }
 
 /// A dependency on a package, as a config spells it (`"name==version"`),
-/// split at each `separator` into `count` parts, each trimmed and
-/// neither empty nor holding spaces; `None` if it isn't so.
+/// split at each `separator` into `count` parts, for the backend to
+/// check each with [`spelled`]; `None` without `count` parts.
 pub fn dependency_parts<'a>(text: &'a str, separator: &str, count: usize) -> Option<Vec<&'a str>> {
-    let parts: Vec<&str> = text.trim().split(separator).collect();
-    let fine = |p: &&str| !p.is_empty() && !p.contains(char::is_whitespace);
-    (parts.len() == count && parts.iter().all(fine)).then_some(parts)
+    let parts: Vec<&str> = text.split(separator).collect();
+    (parts.len() == count).then_some(parts)
+}
+
+/// Whether a package's name or version, or the like, is spelled only
+/// with ASCII letters, digits, and the characters in `extra`, starting
+/// with a letter or digit, and without `..`: an allow-list, so nothing
+/// that a tool reads as an option (a leading `-`), a variable (`$`), a
+/// separator (`;`, `:`, `/`), a URL or path, quoting, or markup (`<`,
+/// `&`) gets through, nor whitespace.
+pub fn spelled(text: &str, extra: &str) -> bool {
+    text.starts_with(|c: char| c.is_ascii_alphanumeric())
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || extra.contains(c))
+        && !text.contains("..")
+}
+
+/// Whether a name is ASCII identifiers joined by `.`, as Java packages
+/// and C# namespaces are, `com.example.geo`.
+pub fn dotted_identifier(text: &str) -> bool {
+    text.split('.').all(|part| {
+        part.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+            && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    })
 }
 
 /// A property's value in a library's config, as checked.
@@ -135,7 +164,10 @@ mod tests {
             Property {
                 name: "name",
                 doc: "",
-                kind: Kind::String,
+                kind: Kind::String {
+                    form: "any",
+                    valid: |_| true,
+                },
             },
             Property {
                 name: "parts",
@@ -175,5 +207,52 @@ mod tests {
         assert_eq!(TOY.get("app", &Metadata::default(), "name"), None);
         assert_eq!(TOY.strings(&metadata, "parts"), ["a"]);
         assert_eq!(TOY.strings(&blank, "parts"), [] as [String; 0]);
+    }
+
+    /// What [`spelled`] and [`dotted_identifier`] allow, and hostile
+    /// spellings they don't.
+    #[test]
+    fn spellings() {
+        for good in ["a", "A1", "roaring-wasm", "1.4.1", "Roaring.Net", "a_b"] {
+            assert!(spelled(good, "._-"), "{good}");
+        }
+        let hostile = [
+            "",
+            "-e",
+            "--index-url=x",
+            ".hidden",
+            "_x",
+            "a..b",
+            "a/b",
+            "a\\b",
+            "${X}",
+            "$(X)",
+            "a;b",
+            "a:b",
+            "a b",
+            "a\nb",
+            "a\"b",
+            "a'b",
+            "a<b",
+            "a>b",
+            "a&b",
+            "a%b",
+            "a@b",
+            "a#b",
+            "é",
+            "a,b",
+            "a=b",
+        ];
+        for bad in hostile {
+            assert!(!spelled(bad, "._-"), "{bad}");
+        }
+        for good in ["a", "com.example.geo", "TemperLang.Std", "_x.y2"] {
+            assert!(dotted_identifier(good), "{good}");
+        }
+        for bad in [
+            "", "a.", ".a", "a..b", "1a", "a-b", "../x", "a/b", "a<b", "a$b", "é",
+        ] {
+            assert!(!dotted_identifier(bad), "{bad}");
+        }
     }
 }

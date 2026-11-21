@@ -80,6 +80,24 @@ pub fn install_once(
     Ok(true)
 }
 
+/// Removes `path`, a file, a link, or a directory and all it holds, if
+/// it's there, but only where it's under `root` by plain names (no `..`,
+/// no root of its own, which `Path::join` would take instead of `root`'s),
+/// as names from configs make paths; an error otherwise.
+pub fn remove_within(root: &Path, path: &Path) -> Result<(), String> {
+    use std::path::Component;
+    let inside = (path.strip_prefix(root)).is_ok_and(|rest| {
+        rest.components().next().is_some()
+            && rest.components().all(|c| matches!(c, Component::Normal(_)))
+    });
+    if !inside {
+        return Err(format!("{} isn't in {}", path.display(), root.display()));
+    }
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_dir_all(path);
+    Ok(())
+}
+
 /// The end of what a tool printed, which says most, as a traceback's.
 pub fn tool_output(run: &Output) -> String {
     let text = format!(
@@ -288,7 +306,85 @@ pub fn unescape_xml(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::junit;
+    use super::{install_once, junit, remove_within};
+    use std::cell::Cell;
+    use std::path::Path;
+
+    /// A fresh scratch directory for a test.
+    fn scratch(test: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("tmpl-tools-{}-{test}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Installs once per manifest: not for an empty one, which removes
+    /// the directory; again for a changed one; and again after a failed
+    /// install, which leaves no record that it succeeded.
+    #[test]
+    fn installs_once_per_manifest() {
+        let root = scratch("install-once");
+        let deps = root.join(".deps");
+        let runs = Cell::new(0);
+        let install = |ok: bool| {
+            let runs = &runs;
+            move |dir: &Path| {
+                runs.set(runs.get() + 1);
+                assert!(dir.join("m.txt").is_file());
+                if ok {
+                    Ok(())
+                } else {
+                    Err("failed".to_string())
+                }
+            }
+        };
+        assert_eq!(install_once(&deps, "m.txt", "", install(true)), Ok(false));
+        assert_eq!((runs.get(), deps.exists()), (0, false));
+        assert_eq!(install_once(&deps, "m.txt", "a\n", install(true)), Ok(true));
+        assert_eq!(runs.get(), 1);
+        assert_eq!(std::fs::read_to_string(deps.join("m.txt")).unwrap(), "a\n");
+        assert_eq!(install_once(&deps, "m.txt", "a\n", install(true)), Ok(true));
+        assert_eq!(runs.get(), 1);
+        assert_eq!(install_once(&deps, "m.txt", "b\n", install(true)), Ok(true));
+        assert_eq!(runs.get(), 2);
+        let failed = install_once(&deps, "m.txt", "c\n", install(false));
+        assert_eq!((failed, runs.get()), (Err("failed".to_string()), 3));
+        assert!(!deps.join(".installed").exists());
+        assert_eq!(install_once(&deps, "m.txt", "c\n", install(true)), Ok(true));
+        assert_eq!(runs.get(), 4);
+        assert_eq!(install_once(&deps, "m.txt", "", install(true)), Ok(false));
+        assert_eq!((runs.get(), deps.exists()), (4, false));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Removes only what's under its root by plain names.
+    #[test]
+    fn removes_only_within() {
+        let root = scratch("remove-within");
+        let modules = root.join("node_modules");
+        let kept = root.join("kept");
+        std::fs::create_dir_all(modules.join("@s/x/y")).unwrap();
+        std::fs::create_dir_all(&kept).unwrap();
+        assert_eq!(remove_within(&modules, &modules.join("@s/x")), Ok(()));
+        assert!(!modules.join("@s/x").exists() && modules.join("@s").exists());
+        assert_eq!(remove_within(&modules, &modules.join("absent")), Ok(()));
+        for outside in [
+            modules.join("../kept"),
+            modules.join("@s/../../kept"),
+            modules.join(&kept),
+            modules.clone(),
+            root.clone(),
+            kept.clone(),
+        ] {
+            assert!(
+                remove_within(&modules, &outside).is_err(),
+                "{}",
+                outside.display()
+            );
+        }
+        assert!(kept.exists() && modules.exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
 
     fn causes(xml: &str) -> Vec<(String, Option<String>)> {
         junit(xml)

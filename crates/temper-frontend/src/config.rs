@@ -329,10 +329,18 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
             let whose = format!("{}'s `{property}`", t.class);
             match (p.kind, value) {
                 (_, Value::Null) => {}
-                (ConfigKind::String, Value::String(s)) => {
+                // A blank name is unset, as `null` is.
+                (ConfigKind::String { valid, .. }, Value::String(s))
+                    if s.trim().is_empty() || valid(s) =>
+                {
                     values.push((property.clone(), ConfigValue::String(s.clone())))
                 }
-                (ConfigKind::String, value) => problem(*at, wrong(&whose, value, "a String")),
+                (ConfigKind::String { form, .. }, Value::String(s)) => {
+                    problem(*at, format!("{whose} is {form}, not `{s}`"))
+                }
+                (ConfigKind::String { .. }, value) => {
+                    problem(*at, wrong(&whose, value, "a String"))
+                }
                 (ConfigKind::Strings { form, valid }, Value::List(items)) => {
                     let mut strings = Vec::new();
                     for (span, item) in items {
@@ -358,6 +366,13 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
                     problem(*at, wrong(&whose, value, "a List<String>"))
                 }
             }
+        }
+        // One object per class, as a module declares a name once; a
+        // second would leave which one counts unclear.
+        if configs.iter().any(|(k, _)| k == t.key) {
+            let message = format!("`{}` is set twice; set each config class once", t.key);
+            problem(export.span, message);
+            continue;
         }
         configs.push((t.key.to_string(), values));
     }
@@ -448,12 +463,21 @@ mod tests {
             Property {
                 name: "name",
                 doc: "",
-                kind: ConfigKind::String,
+                kind: ConfigKind::String {
+                    form: "a word, as `toy`",
+                    valid: |s| {
+                        s.chars()
+                            .all(|c| c.is_ascii_alphanumeric() || "-\"".contains(c))
+                    },
+                },
             },
             Property {
                 name: "flavor",
                 doc: "",
-                kind: ConfigKind::String,
+                kind: ConfigKind::String {
+                    form: "anything",
+                    valid: |_| true,
+                },
             },
             Property {
                 name: "parts",
@@ -525,7 +549,11 @@ mod tests {
     export let names: List<String> = [\"x\"];
 ";
         let (configs, problems) = checked(text);
-        assert_eq!(problems, Vec::<String>::new());
+        // The second `toy` is checked, but one class is set once.
+        assert_eq!(
+            problems,
+            ["toy: `toy` is set twice; set each config class once"]
+        );
         let parts = |items: &[&str]| {
             let items = items.iter().map(|s| s.to_string()).collect();
             ("parts".to_string(), ConfigValue::Strings(items))
@@ -538,7 +566,6 @@ mod tests {
                     vec![("name".into(), string("t")), parts(&["a@1", "b@2"])]
                 ),
                 ("empty".to_string(), vec![]),
-                ("toy".to_string(), vec![parts(&[])]),
             ]
         );
     }
@@ -555,6 +582,8 @@ mod tests {
     export let toy = { class: ToyConfig, name: \"a${b}\", flavor: [\"x\"] };
     export let toy = new ToyConfig(\"a\");
     export let other = 1;
+    export let toy = { class: ToyConfig, name: \"../a\" };
+    export let toy = { class: ToyConfig, name: \" \" };
 ";
         let (_, problems) = checked(text);
         assert_eq!(
@@ -572,7 +601,12 @@ mod tests {
                 "\"a${b}\": ToyConfig's `name` needs a String literal: config files aren't \
                  run, so values aren't computed",
                 "[\"x\"]: ToyConfig's `flavor` is a String, not a List",
+                "toy: `toy` is set twice; set each config class once",
                 "\"a\": Name each property of ToyConfig, as `{ name: value }`",
+                "toy: `toy` is set twice; set each config class once",
+                "\"../a\": ToyConfig's `name` is a word, as `toy`, not `../a`",
+                "toy: `toy` is set twice; set each config class once",
+                "toy: `toy` is set twice; set each config class once",
             ]
         );
     }
@@ -609,7 +643,9 @@ mod tests {
                 "3: ToyConfig's `parts` holds Strings, not an Int",
                 "\"${c}\": ToyConfig's `parts` needs a String literal: config files aren't \
                  run, so values aren't computed",
+                "toy: `toy` is set twice; set each config class once",
                 "[\"a\"]: ToyConfig's `name` is a String, not a List",
+                "toy: `toy` is set twice; set each config class once",
             ]
         );
     }

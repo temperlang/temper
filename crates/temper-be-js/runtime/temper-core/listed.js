@@ -283,10 +283,10 @@ export const listBuilderSplice = (ls, index, removeCount, newValues) => {
   if (removeCount == null) {
     removeCount = ls.length;
   }
-  // Where splice starts, which the new values go in at.
-  const { length } = ls;
-  let start = Math.trunc(index ?? 0);
-  start = start < 0 ? Math.max(length + start, 0) : Math.min(start, length);
+  // Where splice starts, which the new values go in at: clamped to the
+  // bounds, as core says, so a negative index is the start, not counted
+  // from the end, as JS's own `splice` takes it.
+  const start = Math.min(Math.max(Math.trunc(index ?? 0), 0), ls.length);
   // Copied first if it's the builder itself, as splice changes it.
   const values = newValues === ls ? ls.slice() : newValues;
   const removed = ls.splice(start, removeCount);

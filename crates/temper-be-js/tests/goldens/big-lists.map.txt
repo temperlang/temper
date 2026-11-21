@@ -1,45 +1,58 @@
 # generated line:column -> source:line:column, and the text at each
-14:1 -> ../big-lists.temper.md:9:5  const n = 200000; <- let n = 200000;
-15:1 -> ../big-lists.temper.md:10:5  /** @type {number[]} */ <- let source = new ListBuilder
-16:1 -> ../big-lists.temper.md:10:5  const source = []; <- let source = new ListBuilder
-17:1 -> ../big-lists.temper.md:11:5  { <- for (var i = 0; i < n; i +=
-18:3 -> ../big-lists.temper.md:11:10  let i = 0; <- var i = 0; i < n; i += 1) {
-19:3 -> ../big-lists.temper.md:11:5  while (i < n) { <- for (var i = 0; i < n; i +=
-20:5 -> ../big-lists.temper.md:11:38  source.push(i); <- source.add(i); }
-21:5 -> ../big-lists.temper.md:11:28  i = (i + 1) | 0; <- i += 1) { source.add(i); }
-24:1 -> ../big-lists.temper.md:12:5  /** @type {readonly number[] <- let values = source.toList()
-25:1 -> ../big-lists.temper.md:12:5  const values = listBuilderTo <- let values = source.toList()
-26:1 -> ../big-lists.temper.md:14:5  /** @type {number[]} */ <- let b = new ListBuilder<Int>
-27:1 -> ../big-lists.temper.md:14:5  const b = []; <- let b = new ListBuilder<Int>
-28:1 -> ../big-lists.temper.md:15:5  listBuilderAddAll(b, /** @ty <- b.addAll(values);
-29:1 -> ../big-lists.temper.md:16:5  listBuilderAddAll(b, /** @ty <- b.addAll(values, 0);
-30:1 -> ../big-lists.temper.md:17:5  listBuilderAdd(b, -1, n); <- b.add(-1, n);
-31:1 -> ../big-lists.temper.md:18:5  listBuilderAddAll(b, /** @ty <- b.addAll(values, n);
-32:1 -> ../big-lists.temper.md:19:5  console.log(`${b.length} ${l <- console.log("${b.length} ${b
-33:1 -> ../big-lists.temper.md:21:5  /** @type {number[]} */ <- let twice = new ListBuilder<
-34:1 -> ../big-lists.temper.md:21:5  const twice = []; <- let twice = new ListBuilder<
-35:1 -> ../big-lists.temper.md:22:5  listBuilderAddAll(twice, /** <- twice.addAll(values);
-36:1 -> ../big-lists.temper.md:23:5  listBuilderAddAll(twice, /** <- twice.addAll(twice, 1);
-37:1 -> ../big-lists.temper.md:24:5  console.log(`${twice.length} <- console.log("${twice.length}
-38:1 -> ../big-lists.temper.md:26:5  /** @type {number[]} */ <- let s = new ListBuilder<Int>
-39:1 -> ../big-lists.temper.md:26:5  const s = []; <- let s = new ListBuilder<Int>
-40:1 -> ../big-lists.temper.md:27:5  s.push(7); <- s.add(7);
-41:1 -> ../big-lists.temper.md:28:5  s.push(8); <- s.add(8);
-42:1 -> ../big-lists.temper.md:29:5  /** @type {readonly number[] <- let removed = s.splice(1, 0,
-43:1 -> ../big-lists.temper.md:29:5  const removed = listBuilderS <- let removed = s.splice(1, 0,
-44:1 -> ../big-lists.temper.md:30:5  console.log(`${s.length} ${r <- console.log("${s.length} ${r
-45:1 -> ../big-lists.temper.md:32:5  /** @type {readonly number[] <- let kept = values.filter(fn
-46:1 -> ../big-lists.temper.md:32:5  const kept = listedFilter(/* <- let kept = values.filter(fn
-47:1 -> ../big-lists.temper.md:33:5  console.log(`${kept.length} <- console.log("${kept.length}
-48:1 -> ../big-lists.temper.md:35:5  /** @type {number[]} */ <- let codes = new ListBuilder<
-49:1 -> ../big-lists.temper.md:35:5  const codes = []; <- let codes = new ListBuilder<
-50:1 -> ../big-lists.temper.md:36:5  { <- for (var i = 0; i < n; i +=
-51:3 -> ../big-lists.temper.md:36:10  let i2 = 0; <- var i = 0; i < n; i += 1) {
-52:3 -> ../big-lists.temper.md:36:5  while (i2 < n) { <- for (var i = 0; i < n; i +=
-53:5 -> ../big-lists.temper.md:36:38  codes.push((97 + modIntInt(i <- codes.add(97 + i % 3); }
-54:5 -> ../big-lists.temper.md:36:28  i2 = (i2 + 1) | 0; <- i += 1) { codes.add(97 + i %
-57:1 -> ../big-lists.temper.md:37:5  /** @type {string} */ <- let text = String.fromCodePo
-58:1 -> ../big-lists.temper.md:37:5  let text; <- let text = String.fromCodePo
-59:1 -> ../big-lists.temper.md:37:5  try { <- let text = String.fromCodePo
-64:1 -> ../big-lists.temper.md:38:5  const four = stringNext(text <- let four = text.next(text.ne
-65:1 -> ../big-lists.temper.md:39:5  console.log(`${stringCountBe <- console.log("${text.countBet
+14:1 -> ../big-lists.temper.md:12:5  const n = 200000; <- let n = 200000;
+15:1 -> ../big-lists.temper.md:13:5  /** @type {number[]} */ <- let source = new ListBuilder
+16:1 -> ../big-lists.temper.md:13:5  const source = []; <- let source = new ListBuilder
+17:1 -> ../big-lists.temper.md:14:5  { <- for (var i = 0; i < n; i +=
+18:3 -> ../big-lists.temper.md:14:10  let i = 0; <- var i = 0; i < n; i += 1) {
+19:3 -> ../big-lists.temper.md:14:5  while (i < n) { <- for (var i = 0; i < n; i +=
+20:5 -> ../big-lists.temper.md:14:38  source.push(i); <- source.add(i); }
+21:5 -> ../big-lists.temper.md:14:28  i = (i + 1) | 0; <- i += 1) { source.add(i); }
+24:1 -> ../big-lists.temper.md:15:5  /** @type {readonly number[] <- let values = source.toList()
+25:1 -> ../big-lists.temper.md:15:5  const values = listBuilderTo <- let values = source.toList()
+26:1 -> ../big-lists.temper.md:17:5  /** @type {number[]} */ <- let b = new ListBuilder<Int>
+27:1 -> ../big-lists.temper.md:17:5  const b = []; <- let b = new ListBuilder<Int>
+28:1 -> ../big-lists.temper.md:18:5  listBuilderAddAll(b, /** @ty <- b.addAll(values);
+29:1 -> ../big-lists.temper.md:19:5  listBuilderAddAll(b, /** @ty <- b.addAll(values, 0);
+30:1 -> ../big-lists.temper.md:20:5  listBuilderAdd(b, -1, n); <- b.add(-1, n);
+31:1 -> ../big-lists.temper.md:21:5  listBuilderAddAll(b, /** @ty <- b.addAll(values, n);
+32:1 -> ../big-lists.temper.md:22:5  console.log(`${b.length} ${l <- console.log("${b.length} ${b
+33:1 -> ../big-lists.temper.md:24:5  /** @type {number[]} */ <- let twice = new ListBuilder<
+34:1 -> ../big-lists.temper.md:24:5  const twice = []; <- let twice = new ListBuilder<
+35:1 -> ../big-lists.temper.md:25:5  listBuilderAddAll(twice, /** <- twice.addAll(values);
+36:1 -> ../big-lists.temper.md:26:5  listBuilderAddAll(twice, /** <- twice.addAll(twice, 1);
+37:1 -> ../big-lists.temper.md:27:5  console.log(`${twice.length} <- console.log("${twice.length}
+38:1 -> ../big-lists.temper.md:29:5  /** @type {number[]} */ <- let s = new ListBuilder<Int>
+39:1 -> ../big-lists.temper.md:29:5  const s = []; <- let s = new ListBuilder<Int>
+40:1 -> ../big-lists.temper.md:30:5  s.push(7); <- s.add(7);
+41:1 -> ../big-lists.temper.md:31:5  s.push(8); <- s.add(8);
+42:1 -> ../big-lists.temper.md:32:5  /** @type {readonly number[] <- let removed = s.splice(1, 0,
+43:1 -> ../big-lists.temper.md:32:5  const removed = listBuilderS <- let removed = s.splice(1, 0,
+44:1 -> ../big-lists.temper.md:33:5  console.log(`${s.length} ${r <- console.log("${s.length} ${r
+45:1 -> ../big-lists.temper.md:35:5  /** @type {number[]} */ <- let c = new ListBuilder<Int>
+46:1 -> ../big-lists.temper.md:35:5  const c = []; <- let c = new ListBuilder<Int>
+47:1 -> ../big-lists.temper.md:36:5  c.push(7); <- c.add(7);
+48:1 -> ../big-lists.temper.md:37:5  c.push(8); <- c.add(8);
+49:1 -> ../big-lists.temper.md:38:5  listBuilderSplice(c, -1, 0, <- c.splice(-1, 0, values);
+50:1 -> ../big-lists.temper.md:39:5  listBuilderSplice(c, Math.im <- c.splice(10 * n, 0, values);
+51:1 -> ../big-lists.temper.md:40:5  console.log(`${c.length} ${l <- console.log("${c.length} ${c
+52:1 -> ../big-lists.temper.md:42:5  /** @type {number[]} */ <- let own = new ListBuilder<In
+53:1 -> ../big-lists.temper.md:42:5  const own = []; <- let own = new ListBuilder<In
+54:1 -> ../big-lists.temper.md:43:5  listBuilderAddAll(own, /** @ <- own.addAll(values);
+55:1 -> ../big-lists.temper.md:44:5  /** @type {readonly number[] <- let gone = own.splice(0, 1,
+56:1 -> ../big-lists.temper.md:44:5  const gone = listBuilderSpli <- let gone = own.splice(0, 1,
+57:1 -> ../big-lists.temper.md:45:5  console.log(`${own.length} $ <- console.log("${own.length} $
+58:1 -> ../big-lists.temper.md:47:5  /** @type {readonly number[] <- let kept = values.filter(fn
+59:1 -> ../big-lists.temper.md:47:5  const kept = listedFilter(/* <- let kept = values.filter(fn
+60:1 -> ../big-lists.temper.md:48:5  console.log(`${kept.length} <- console.log("${kept.length}
+61:1 -> ../big-lists.temper.md:50:5  /** @type {number[]} */ <- let codes = new ListBuilder<
+62:1 -> ../big-lists.temper.md:50:5  const codes = []; <- let codes = new ListBuilder<
+63:1 -> ../big-lists.temper.md:51:5  { <- for (var i = 0; i < n; i +=
+64:3 -> ../big-lists.temper.md:51:10  let i2 = 0; <- var i = 0; i < n; i += 1) {
+65:3 -> ../big-lists.temper.md:51:5  while (i2 < n) { <- for (var i = 0; i < n; i +=
+66:5 -> ../big-lists.temper.md:51:38  codes.push((97 + modIntInt(i <- codes.add(97 + i % 3); }
+67:5 -> ../big-lists.temper.md:51:28  i2 = (i2 + 1) | 0; <- i += 1) { codes.add(97 + i %
+70:1 -> ../big-lists.temper.md:52:5  /** @type {string} */ <- let text = String.fromCodePo
+71:1 -> ../big-lists.temper.md:52:5  let text; <- let text = String.fromCodePo
+72:1 -> ../big-lists.temper.md:52:5  try { <- let text = String.fromCodePo
+77:1 -> ../big-lists.temper.md:53:5  const four = stringNext(text <- let four = text.next(text.ne
+78:1 -> ../big-lists.temper.md:54:5  console.log(`${stringCountBe <- console.log("${text.countBet

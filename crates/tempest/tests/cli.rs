@@ -858,6 +858,11 @@ fn typed_config_errors() {
     export let cpp: CppConfig = { class: LuaConfig };
     export let rust: RustConfig = { dependencies: [\"roaring\"] };
     export let java: JavaConfg = {};
+    export let csharp: CSharpConfig = { dependencies: [\"Foo:$(GITHUB_TOKEN)\"] };
+    export let java: JavaConfig = { dependencies: [\"g:a:1</version>\"] };
+    export let js: JsConfig = { dependencies: [\"x@git+https://evil/x.git\"] };
+    export let py: PyConfig = { dependencies: [\"--index-url=https://evil/simple==1\"] };
+    export let rust: RustConfig = { dependencies: [\"x@1\\\", path = \\\"/x\"] };
 ";
     let files = [
         ("config.temper.md", config),
@@ -887,6 +892,27 @@ fn typed_config_errors() {
                  not `roaring`\n"
             ),
             format!("{path}:10:22: error: `java` is for JavaConfig, not `JavaConfg`\n"),
+            format!(
+                "{path}:11:56: error: CSharpConfig's `dependencies` are each `Name:version`, \
+                 not `Foo:$(GITHUB_TOKEN)`\n"
+            ),
+            format!(
+                "{path}:12:52: error: JavaConfig's `dependencies` are each \
+                 `group:artifact:version`, not `g:a:1</version>`\n"
+            ),
+            format!("{path}:12:16: error: `java` is set twice; set each config class once\n"),
+            format!(
+                "{path}:13:48: error: JsConfig's `dependencies` are each `name@version`, \
+                 not `x@git+https://evil/x.git`\n"
+            ),
+            format!(
+                "{path}:14:48: error: PyConfig's `dependencies` are each `name==version`, \
+                 not `--index-url=https://evil/simple==1`\n"
+            ),
+            format!(
+                "{path}:15:52: error: RustConfig's `dependencies` are each `name@version`, \
+                 not `x@1\", path = \"/x`\n"
+            ),
         ];
         for command in ["build", "test"] {
             let (code, _, err) = tempest(&[command, "-w", dir]);
@@ -896,6 +922,86 @@ fn typed_config_errors() {
             }
         }
     });
+}
+
+/// Config names that would leave `temper.out`, or break out of a package
+/// file's markup, are config errors, and nothing is written or removed:
+/// names reach paths (`ROOT.csproj`, `node_modules/NAME`) and package
+/// files, so each backend allows only its tools' spellings.
+#[test]
+fn hostile_config_names_are_errors() {
+    let config = "    export let name = \"a\";
+    export let csharp: CSharpConfig = { rootNamespace: \"../../../escape\" };
+    export let js: JsConfig = { name: \"/tmp\" };
+    export let java: JavaConfig = { package: \"../p\", group: \"g/h\", artifact: \"a<b>\" };
+    export let py: PyConfig = { name: \"../../escape\" };
+    export let rust: RustConfig = { name: \"..\" };
+    export let csharp: CSharpConfig = { rootNamespace: \"A</RootNamespace><Import Project=x/>\" };
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("hostile-config-names", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            "2:56: error: CSharpConfig's `rootNamespace` is a C# namespace, as \
+             `Example.Geometry`, not `../../../escape`",
+            "3:39: error: JsConfig's `name` is an npm package's name, as `geometry` or \
+             `@example/geometry`, not `/tmp`",
+            "4:46: error: JavaConfig's `package` is a Java package, as \
+             `com.example.geometry`, not `../p`",
+            "4:61: error: JavaConfig's `group` is a Maven ID, as `com.example`, not `g/h`",
+            "4:78: error: JavaConfig's `artifact` is a Maven ID, as `geometry`, not `a<b>`",
+            "5:39: error: PyConfig's `name` is a PyPI project's name, as `geometry-py`, \
+             not `../../escape`",
+            "6:43: error: RustConfig's `name` is a crate's name, as `geometry-rs`, not `..`",
+            "7:56: error: CSharpConfig's `rootNamespace` is a C# namespace, as \
+             `Example.Geometry`, not `A</RootNamespace><Import Project=x/>`",
+        ];
+        let before = |d: &Path| {
+            let mut names: Vec<_> = (fs::read_dir(d).unwrap().flatten())
+                .map(|e| e.file_name())
+                .collect();
+            names.sort();
+            names
+        };
+        let (here, parent) = (Path::new(dir), Path::new(dir).parent().unwrap());
+        let in_dir = before(here);
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                let line = format!("{path}:{line}\n");
+                assert!(err.contains(&line), "{command}: {line}{err}");
+            }
+            let mut now = before(here);
+            now.retain(|n| n != "temper.out");
+            assert_eq!(now, in_dir, "{command}");
+            let escaped =
+                |d: &Path| (before(d).iter()).any(|n| n.to_string_lossy().starts_with("escape"));
+            assert!(!escaped(parent) && !escaped(here), "{command}");
+            let mut written = Vec::new();
+            files_under(&here.join("temper.out"), &mut written);
+            assert!(
+                !written
+                    .iter()
+                    .any(|p| p.contains("escape") || p.contains("RootNamespace")),
+                "{command}: {written:?}"
+            );
+        }
+    });
+}
+
+/// Every file's path under a directory, if it's there.
+fn files_under(dir: &Path, out: &mut Vec<String>) {
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let path = entry.path();
+        match path.is_dir() {
+            true => files_under(&path, out),
+            false => out.push(path.to_string_lossy().into_owned()),
+        }
+    }
 }
 
 /// The annotated form, `export let java: JavaConfig = { … }`, whose
@@ -1014,6 +1120,34 @@ fn generated_name_clashes_are_errors() {
             ]);
             assert_eq!(code, 1, "{backend} {class}: {err}");
             assert!(err.contains(&format!("a: {backend}: {expected}")), "{err}");
+        });
+    }
+}
+
+/// A library named like a directory that a backend's tools make beside
+/// the libraries' (Cargo's `target`, Node's `node_modules`), which
+/// building would empty and the tools would write into, is an error on
+/// that backend.
+#[test]
+fn libraries_named_like_tool_directories_are_errors() {
+    for (backend, name) in [
+        ("rust", "target"),
+        ("js", "node_modules"),
+        ("lua", "luaunit"),
+    ] {
+        if !built_in(backend) {
+            continue;
+        }
+        let config = format!("    export let name = \"{name}\";\n");
+        let files = [
+            ("config.temper.md", config.as_str()),
+            ("a.temper", "export let a = 1;\n"),
+        ];
+        with_library(&format!("tool-dir-{backend}"), &files, |dir| {
+            let (code, _, err) = tempest(&["build", "-w", dir, "-b", backend]);
+            assert_eq!(code, 1, "{backend}: {err}");
+            let said = format!("would be in {name}, which the backend's tools use");
+            assert!(err.contains(&said), "{backend}: {err}");
         });
     }
 }
@@ -1163,10 +1297,12 @@ fn test_a_library_on_each_backend() {
 /// tested with `temper test -b BACKEND`, which fetches the real package
 /// with the language's own tools. The generated code defines `Bitset`
 /// once, `defines` as written in the backend's language, in host code
-/// that uses the package, `uses`. A backend whose tools or package
-/// registry can't be reached is skipped, with a message, unless
+/// that uses the package, `uses`. They fetch from five registries, so
+/// they run only with `TEMPER_NETWORK_TESTS` set, as nightly.yml's
+/// `connecteds` job sets it, not on every push; there, a backend whose
+/// tools are missing is skipped, with a message, unless
 /// `TEMPER_REQUIRE_CHECKERS` is set.
-fn connecteds(backend: &str, registry: &str, defines: &str, uses: &str) {
+fn connecteds(backend: &str, defines: &str, uses: &str) {
     let files = connecteds_files();
     let files: Vec<(&str, &str)> = (files.iter())
         .map(|(n, t)| (n.as_str(), t.as_str()))
@@ -1178,8 +1314,9 @@ fn connecteds(backend: &str, registry: &str, defines: &str, uses: &str) {
         );
         eprintln!("skipped connecteds on {backend}: {why}");
     };
-    if !reachable(registry) {
-        return skip(&format!("{registry} can't be reached"));
+    if std::env::var_os("TEMPER_NETWORK_TESTS").is_none() {
+        eprintln!("skipped connecteds on {backend}: set TEMPER_NETWORK_TESTS to fetch packages");
+        return;
     }
     with_library(&format!("connecteds-{backend}"), &files, |dir| {
         let (code, out, err) = tempest(&["test", "-b", backend, dir]);
@@ -1258,60 +1395,34 @@ fn connecteds_interpreter() {
     });
 }
 
-/// Whether a host's HTTPS port answers, or a proxy is set, which the
-/// tools use instead.
-fn reachable(host: &str) -> bool {
-    use std::net::ToSocketAddrs;
-    let proxied = ["HTTPS_PROXY", "https_proxy"]
-        .iter()
-        .any(|v| std::env::var_os(v).is_some());
-    let timeout = std::time::Duration::from_secs(5);
-    proxied
-        || (format!("{host}:443")
-            .to_socket_addrs()
-            .into_iter()
-            .flatten())
-        .any(|a| std::net::TcpStream::connect_timeout(&a, timeout).is_ok())
-}
-
 #[test]
 #[cfg(feature = "csharp")]
 fn connecteds_csharp() {
-    connecteds("csharp", "api.nuget.org", "class Bitset", "Roaring.Net");
+    connecteds("csharp", "class Bitset", "Roaring.Net");
 }
 
 #[test]
 #[cfg(feature = "java")]
 fn connecteds_java() {
-    connecteds(
-        "java",
-        "repo.maven.apache.org",
-        "class Bitset",
-        "org.roaringbitmap",
-    );
+    connecteds("java", "class Bitset", "org.roaringbitmap");
 }
 
 #[test]
 #[cfg(feature = "js")]
 fn connecteds_js() {
-    connecteds("js", "registry.npmjs.org", "class Bitset", "roaring-wasm");
+    connecteds("js", "class Bitset", "roaring-wasm");
 }
 
 #[test]
 #[cfg(feature = "py")]
 fn connecteds_py() {
-    connecteds("py", "pypi.org", "class Bitset", "pyroaring");
+    connecteds("py", "class Bitset", "pyroaring");
 }
 
 #[test]
 #[cfg(feature = "rust")]
 fn connecteds_rust() {
-    connecteds(
-        "rust",
-        "index.crates.io",
-        "struct Bitset",
-        "roaring::RoaringBitmap",
-    );
+    connecteds("rust", "struct Bitset", "roaring::RoaringBitmap");
 }
 
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some

@@ -22,6 +22,7 @@ pub const TOOLS: Tools = Tools {
     prepare: None,
     test,
     run,
+    dirs: &[],
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {

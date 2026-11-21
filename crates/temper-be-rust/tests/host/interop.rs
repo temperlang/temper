@@ -127,4 +127,15 @@ fn main() {
         thread.join().unwrap();
     }
     println!("tally {}", tally.count());
+
+    // An update that fails under the lock leaves it usable, and one that
+    // reads the same object through another reference doesn't deadlock.
+    let tally = class_edges::Tally::new();
+    tally.add(6);
+    let failed = tally.split(0).is_err();
+    tally.split(2).unwrap();
+    tally.copy_from(tally.clone());
+    tally.copy_into(tally.clone());
+    tally.clamp_add(1);
+    println!("split {failed} {}", tally.count());
 }

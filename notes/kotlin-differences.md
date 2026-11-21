@@ -1323,7 +1323,8 @@ Other differences we won't copy:
   (`typed_config_*`, `config_dependencies_in_package_files`, and
   `connecteds_*`, Kotlin's `connecteds` test with real packages, as
   written, each checking the generated code defines Bitset once, in host
-  code using the package).
+  code using the package; they fetch packages, so they run only with
+  `TEMPER_NETWORK_TESTS` set, as nightly.yml does).
 
 - **Ignore files** (2026-11-06): Kotlin reads one, the nearest
   `.temperignore` or `.gitignore` at or above where it starts (its

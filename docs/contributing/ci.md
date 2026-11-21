@@ -81,15 +81,17 @@ they're the cue to fix a platform before release.
 
 A scheduled run skips what an earlier one already tested on the same
 code: a first job, `recent`, reads the date of `main`'s latest commit,
-and the nightly `cpp` and `platforms-quick` jobs run only if it's under
+and the nightly `cpp`, `connecteds`, and `platforms-quick` jobs run only if it's under
 26 hours old (a day, with room for GitHub's delays in starting
 scheduled runs), and the weekly `platforms` only if it's under 8 days.
 `libraries` and `latest-checkers` run every night regardless, since
 they test other repositories' `main` and the checkers' latest
 releases. Run by hand, everything runs.
 
-Besides its Linux jobs (more C++ compilers, real libraries, and the
-checkers' latest releases; below), it tests, natively, each other
+Besides its Linux jobs (more C++ compilers, real libraries, the CLI's
+tests that fetch real packages from five registries, `connecteds_*`,
+which run only with `TEMPER_NETWORK_TESTS` set, and the checkers'
+latest releases; below), it tests, natively, each other
 platform [binaries.yml](../../.github/workflows/binaries.yml) releases
 for, one job each from one definition, in two tiers:
 

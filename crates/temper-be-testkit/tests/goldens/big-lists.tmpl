@@ -1,0 +1,123 @@
+tmpl 1 model 1 library `big-lists` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  class ListBuilder#3<T#4> extends Listed#5<T#4> {
+    connected constructor constructor#24(): ListBuilder#3<T#4>;
+    connected method add#27(newValue: T#4, at?: Int32): Void;
+    connected method toList#28(): List#8<T#4>;
+    connected method addAll#29(newValues: Listed#5<T#4>, at?: Int32): Void;
+    connected get length#33(): Int32;
+    connected method splice#37(index?: Int32, removeCount?: Int32, newValues?: Listed#5<T#4>): List#8<T#4>;
+  }
+  interface Listed#5<T#6> {
+    connected method get#36(index: Int32): T#6;
+    connected method filter#39(predicate: fn (T#6): Boolean): List#8<T#6>;
+  }
+  class List#8<T#9> extends Listed#5<T#9> {
+    connected get length#38(): Int32;
+    connected method get#42(index: Int32): T#9;
+  }
+  class StringIndex#21 extends StringIndexOption#22 {}
+  interface StringIndexOption#22 {}
+  interface Console#30 {
+    connected method log#31(message: String): Void;
+  }
+  class Int32#34 {
+    connected method toString#35(radix?: Int32): String;
+  }
+  class String#45 {
+    connected static fromCodePoints#46(codePoints: Listed#5<Int32>): String throws Bubble;
+    connected method next#47(index: StringIndex#21): StringIndex#21;
+    connected static let begin#48: StringIndex#21;
+    connected method countBetween#49(begin: StringIndex#21, end: StringIndex#21): Int32;
+    connected get end#50(): StringIndex#21;
+    connected method slice#51(begin: StringIndex#21, end: StringIndex#21): String;
+  }
+  connected fn getConsole#52(name?: String): Console#30;
+}
+
+module `big-lists`#0 {
+  let ~console#32: Console#30;
+
+  let n#1: Int32;
+
+  let source#7: ListBuilder#3<Int32>;
+
+  let values#10: List#8<Int32>;
+
+  let b#11: ListBuilder#3<Int32>;
+
+  let twice#12: ListBuilder#3<Int32>;
+
+  let s#13: ListBuilder#3<Int32>;
+
+  let removed#14: List#8<Int32>;
+
+  let c#15: ListBuilder#3<Int32>;
+
+  let own#16: ListBuilder#3<Int32>;
+
+  let gone#17: List#8<Int32>;
+
+  let kept#18: List#8<Int32>;
+
+  let codes#19: ListBuilder#3<Int32>;
+
+  let text#20: String;
+
+  let four#23: StringIndex#21;
+
+  init {
+    init ~console#32 = getConsole#52(omitted);
+    init n#1 = 200000;
+    init source#7 = new constructor#24<Int32>();
+    {
+      var i#25: Int32 = 0;
+      ~loop#26: while (%Int32.lt(i#25, n#1)) {
+        source#7.add#27(i#25, omitted);
+        i#25 = %Int32.add(i#25, 1);
+      }
+    }
+    init values#10 = source#7.toList#28();
+    init b#11 = new constructor#24<Int32>();
+    b#11.addAll#29((upcast(values#10)): Listed#5<Int32>, omitted);
+    b#11.addAll#29((upcast(values#10)): Listed#5<Int32>, 0);
+    b#11.add#27(%Int32.neg(1), n#1);
+    b#11.addAll#29((upcast(values#10)): Listed#5<Int32>, n#1);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(b#11.length#33().toString#35(omitted), " "), b#11.get#36(0).toString#35(omitted)), " "), b#11.get#36(%Int32.sub(n#1, 1)).toString#35(omitted)), " "), b#11.get#36(n#1).toString#35(omitted)), " "), b#11.get#36(%Int32.mul(2, n#1)).toString#35(omitted)), " "), b#11.get#36(%Int32.add(%Int32.mul(2, n#1), 1)).toString#35(omitted)), " "), b#11.get#36(%Int32.mul(3, n#1)).toString#35(omitted)));
+    init twice#12 = new constructor#24<Int32>();
+    twice#12.addAll#29((upcast(values#10)): Listed#5<Int32>, omitted);
+    twice#12.addAll#29((upcast(twice#12)): Listed#5<Int32>, 1);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(twice#12.length#33().toString#35(omitted), " "), twice#12.get#36(0).toString#35(omitted)), " "), twice#12.get#36(1).toString#35(omitted)), " "), twice#12.get#36(n#1).toString#35(omitted)), " "), twice#12.get#36(%Int32.add(n#1, 1)).toString#35(omitted)));
+    init s#13 = new constructor#24<Int32>();
+    s#13.add#27(7, omitted);
+    s#13.add#27(8, omitted);
+    init removed#14 = s#13.splice#37(1, 0, (upcast(values#10)): Listed#5<Int32>);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(s#13.length#33().toString#35(omitted), " "), removed#14.length#38().toString#35(omitted)), " "), s#13.get#36(0).toString#35(omitted)), " "), s#13.get#36(1).toString#35(omitted)), " "), s#13.get#36(n#1).toString#35(omitted)), " "), s#13.get#36(%Int32.add(n#1, 1)).toString#35(omitted)));
+    init c#15 = new constructor#24<Int32>();
+    c#15.add#27(7, omitted);
+    c#15.add#27(8, omitted);
+    c#15.splice#37(%Int32.neg(1), 0, (upcast(values#10)): Listed#5<Int32>);
+    c#15.splice#37(%Int32.mul(10, n#1), 0, (upcast(values#10)): Listed#5<Int32>);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(c#15.length#33().toString#35(omitted), " "), c#15.get#36(0).toString#35(omitted)), " "), c#15.get#36(%Int32.sub(n#1, 1)).toString#35(omitted)), " "), c#15.get#36(n#1).toString#35(omitted)), " "), c#15.get#36(%Int32.add(n#1, 1)).toString#35(omitted)), " "), c#15.get#36(%Int32.add(n#1, 2)).toString#35(omitted)), " "), c#15.get#36(%Int32.add(%Int32.mul(2, n#1), 1)).toString#35(omitted)));
+    init own#16 = new constructor#24<Int32>();
+    own#16.addAll#29((upcast(values#10)): Listed#5<Int32>, omitted);
+    init gone#17 = own#16.splice#37(0, 1, (upcast(own#16)): Listed#5<Int32>);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(own#16.length#33().toString#35(omitted), " "), gone#17.length#38().toString#35(omitted)), " "), own#16.get#36(0).toString#35(omitted)), " "), own#16.get#36(%Int32.sub(n#1, 1)).toString#35(omitted)), " "), own#16.get#36(n#1).toString#35(omitted)), " "), own#16.get#36(%Int32.sub(%Int32.mul(2, n#1), 2)).toString#35(omitted)));
+    init kept#18 = values#10.filter#39((fn ~fn#40(x#41: Int32): Boolean {
+      return %Boolean.not(%Int32.eq(x#41, 5));
+    }): fn (Int32): Boolean);
+    ~console#32.log#31(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(kept#18.length#38().toString#35(omitted), " "), kept#18.get#42(4).toString#35(omitted)), " "), kept#18.get#42(5).toString#35(omitted)), " "), kept#18.get#42(%Int32.sub(n#1, 2)).toString#35(omitted)));
+    init codes#19 = new constructor#24<Int32>();
+    {
+      var i#43: Int32 = 0;
+      ~loop#44: while (%Int32.lt(i#43, n#1)) {
+        codes#19.add#27(%Int32.add(97, %Int32.modSafe(i#43, 3)), omitted);
+        i#43 = %Int32.add(i#43, 1);
+      }
+    }
+    init text#20 = (orelse(fromCodePoints#46((upcast(codes#19.toList#28())): Listed#5<Int32>)^, "")): String;
+    init four#23 = text#20.next#47(text#20.next#47(text#20.next#47(text#20.next#47(begin#48))));
+    ~console#32.log#31(%String.cat(%String.cat(text#20.countBetween#49(begin#48, text#20.end#50()).toString#35(omitted), " "), text#20.slice#51(begin#48, four#23)));
+  }
+}

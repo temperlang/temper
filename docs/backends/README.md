@@ -61,14 +61,28 @@ export let java: JavaConfig = {
 ```
 
 `{ class: JavaConfig, … }` names the class too. Each setting is unset by
-default. A setting the class doesn't have, a value of another type, or
-a class that disagrees with the declared type is a config error.
+default. A setting the class doesn't have, a value of another type, a
+class that disagrees with the declared type, or a class set twice is a
+config error.
+
+Names are spelled as each language's tools allow, ASCII only: C#
+namespaces and Java packages are identifiers joined by `.`; Maven IDs
+and NuGet IDs are letters, digits, `.`, `_`, and `-`; npm names are
+those and `~`, maybe under an `@scope/`; PyPI names are letters,
+digits, `.`, `_`, and `-`, ending in a letter or digit; and crate names
+are letters, digits, `_`, and `-`, starting with a letter. Each starts
+with a letter or digit and has no `..`, so a name never leaves its
+directory or breaks out of a package file.
 
 `dependencies` lists packages that the library's host code (its
 `@connected` classes and functions) uses, in the language's own
-registry's spelling. They go in the package files, and `temper test` and
-`temper run` fetch them with the language's tools: pip, npm, Cargo,
-Maven, or NuGet.
+registry's spelling, names as above and versions plain: an exact
+version, or for npm, NuGet, and PyPI a simple wildcard or range
+(`^1.2.0`, `~1.2`, `1.*`), but no URLs, paths, ranges with spaces or
+brackets, extras, or tool options. They go in the package files, and
+`temper test` and `temper run` fetch them with the language's tools:
+pip and npm into `temper.out/py/.deps` and `temper.out/js/.deps`, and
+Cargo, Maven, and NuGet into their usual caches in your home directory.
 [Library configuration](../guide/tutorial/04-modules-and-libraries.md#library-configuration)
 has a whole config file.
 

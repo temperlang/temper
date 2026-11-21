@@ -858,9 +858,11 @@ public final class Core {
         int sliceEnd = Math.min(sliceStart + removeClamped, size);
         List<E> slice = target.subList(sliceStart, sliceEnd);
         List<E> result = listCopyOf(slice);
+        // Copied first if it's the builder itself, which clearing changes.
+        List<E> values = newElems == target ? listCopyOf(target) : newElems;
         slice.clear();
-        if (newElems != null) {
-            slice.addAll(newElems);
+        if (values != null) {
+            slice.addAll(values);
         }
         return result;
     }

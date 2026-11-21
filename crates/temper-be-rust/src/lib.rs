@@ -171,7 +171,10 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "name",
             doc: "The crate's name, which code that uses the library names with `_` for `-`; else the library's name.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a crate's name, as `geometry-rs`",
+                valid: crate_name,
+            },
         },
         temper_tmpl::Property {
             name: "dependencies",
@@ -186,16 +189,23 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
 };
 
 /// A crate that a config's `dependencies` lists, as `"name@version"`:
-/// its name, as crates.io names crates, and its version.
+/// its name ([`crate_name`]) and its version, an exact one, as
+/// `0.11.1` or `1.0.0-rc.1`, which the crate pins (`=0.11.1`).
 pub fn crate_dependency(text: &str) -> Option<(&str, &str)> {
-    let named = |n: &str| {
-        n.chars()
-            .all(|c| c.is_ascii_alphanumeric() || "-_".contains(c))
-    };
+    let exact =
+        |v: &str| v.starts_with(|c: char| c.is_ascii_digit()) && temper_tmpl::spelled(v, ".+-");
     match temper_tmpl::dependency_parts(text, "@", 2)?.as_slice() {
-        &[name, version] if named(name) => Some((name, version)),
+        &[name, version] if crate_name(name) && exact(version) => Some((name, version)),
         _ => None,
     }
+}
+
+/// Whether a name is a crate's, as crates.io allows: ASCII letters,
+/// digits, `_`, and `-`, starting with a letter, at most 64 characters.
+pub fn crate_name(text: &str) -> bool {
+    text.starts_with(|c: char| c.is_ascii_alphabetic())
+        && temper_tmpl::spelled(text, "_-")
+        && text.len() <= 64
 }
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
@@ -766,4 +776,41 @@ fn library_decl(p: &Program, from: temper_tmpl::DeclId) -> Option<&str> {
     };
     let name = p.name(library);
     (name != "temper-core").then_some(name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crate_spellings() {
+        let good = [
+            ("roaring@0.11.1", ("roaring", "0.11.1")),
+            ("serde_json@1.0.0-rc.1+b", ("serde_json", "1.0.0-rc.1+b")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(crate_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "roaring",
+            "roaring@^1",
+            "roaring@=1",
+            "roaring@*",
+            "roaring@1\", path = \"/x",
+            "roaring@1 }\n[x]",
+            "-roaring@1",
+            "1roaring@1",
+            "../x@1",
+            "x@${V}",
+            "x@1@2",
+            "x/y@1",
+        ];
+        for text in hostile {
+            assert_eq!(crate_dependency(text), None, "{text}");
+        }
+        assert!(crate_name("geometry-rs") && crate_name("temper_std"));
+        for bad in ["", "-x", "_x", "1x", "a.b", "../x", "/abs", "a b", "a\"b"] {
+            assert!(!crate_name(bad), "{bad}");
+        }
+    }
 }

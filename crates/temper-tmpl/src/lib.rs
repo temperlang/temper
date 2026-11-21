@@ -68,6 +68,7 @@ pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools, clashing_pa
 pub use builder::Builder;
 pub use config::{
     ConfigType, Kind as ConfigKind, Property, Value as ConfigValue, dependency_parts,
+    dotted_identifier, spelled,
 };
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};

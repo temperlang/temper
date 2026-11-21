@@ -16,6 +16,7 @@ pub const TOOLS: Tools = Tools {
     prepare: Some(write_luaunit),
     test,
     run,
+    dirs: &["luaunit"],
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {

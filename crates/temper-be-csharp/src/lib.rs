@@ -113,7 +113,10 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "rootNamespace",
             doc: "The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a C# namespace, as `Example.Geometry`",
+                valid: temper_tmpl::dotted_identifier,
+            },
         },
         temper_tmpl::Property {
             name: "dependencies",
@@ -356,10 +359,16 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
 }
 
 /// A package that a config's `dependencies` lists, as `"Name:version"`:
-/// its name and version.
+/// its ID, ASCII letters, digits, `.`, `_`, and `-`, starting with a
+/// letter or digit, as NuGet allows, and its version, as `1.4.1`,
+/// `1.0.0-beta.2+b`, or `1.*`, but no range or MSBuild property
+/// (`$(…)`).
 pub fn nuget_dependency(text: &str) -> Option<(&str, &str)> {
+    let spelled = temper_tmpl::spelled;
     match temper_tmpl::dependency_parts(text, ":", 2)?.as_slice() {
-        &[name, version] => Some((name, version)),
+        &[name, version] if spelled(name, "._-") && spelled(version, ".*+-") => {
+            Some((name, version))
+        }
         _ => None,
     }
 }
@@ -367,13 +376,15 @@ pub fn nuget_dependency(text: &str) -> Option<(&str, &str)> {
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
 fn project_reference(p: &Program, name: &str) -> String {
-    let project = translate::library_namespace(p, name);
+    let project = temper_tmpl::xml_text(&translate::library_namespace(p, name));
+    let name = temper_tmpl::xml_text(name);
     format!("\n    <ProjectReference Include=\"../../{name}/src/{project}.csproj\"/>")
 }
 
 /// The tests' project, as Kotlin's: on the library's project, MSTest,
 /// and a JUnit logger, and on what only the tests use.
 fn test_project(p: &Program, root: &str, variant: &Variant) -> String {
+    let root = temper_tmpl::xml_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let tests_only = temper_tmpl::analysis::test_only_libraries(p);
@@ -441,6 +452,7 @@ fn package_metadata(p: &Program) -> (String, String) {
 /// internals, and it refers to the runtime's project beside it, which
 /// packing turns into a package reference.
 fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
+    let root = temper_tmpl::xml_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let (about, links) = package_metadata(p);
@@ -501,6 +513,7 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
 
 /// The program's project, as Kotlin's.
 fn program_project(root: &str, version: &str, variant: &Variant) -> String {
+    let root = temper_tmpl::xml_text(root);
     let framework = variant.target_framework;
     let version = version_line(version);
     format!(
@@ -644,4 +657,41 @@ fn logging(root: &str) -> String {
     LOGGING_TEMPLATE
         .replace("RootNamespaceSpot", root)
         .replace("SupportNamespaceSpot", "Support")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nuget_spellings() {
+        let good = [
+            ("Roaring.Net:1.4.1", ("Roaring.Net", "1.4.1")),
+            ("A_b-C:1.0.0-beta.2+b", ("A_b-C", "1.0.0-beta.2+b")),
+            ("X:1.*", ("X", "1.*")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(nuget_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "Roaring.Net",
+            "Foo:$(GITHUB_TOKEN)",
+            "A;B:1",
+            "A:1;B",
+            "@(Items):1",
+            "%(X):1",
+            "A:[1.0,2.0)",
+            "-A:1",
+            "A:-1",
+            "../A:1",
+            "A/B:1",
+            "A:1\"/><Import Project=\"x",
+            "A:1&amp;",
+            "A B:1",
+            "A:1:2",
+        ];
+        for text in hostile {
+            assert_eq!(nuget_dependency(text), None, "{text}");
+        }
+    }
 }

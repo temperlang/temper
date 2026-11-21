@@ -27,6 +27,7 @@ pub const TOOLS: Tools = Tools {
     prepare: None,
     test,
     run,
+    dirs: &[".deps"],
 };
 
 /// Compiles the runtime, std, and the libraries' main sources with
@@ -143,30 +144,7 @@ fn dependency_jars(dir: &Path, all: &[Tested]) -> Result<Vec<PathBuf>, String> {
         .collect();
     packages.sort();
     packages.dedup();
-    let pom = match packages.is_empty() {
-        true => String::new(),
-        false => {
-            let xml = temper_tmpl::xml_text;
-            let dependencies = (packages.iter())
-                .map(|(group, artifact, version)| {
-                    format!(
-                        "    <dependency><groupId>{}</groupId><artifactId>{}</artifactId>\
-                         <version>{}</version></dependency>\n",
-                        xml(group),
-                        xml(artifact),
-                        xml(version)
-                    )
-                })
-                .collect::<Vec<_>>()
-                .concat();
-            format!(
-                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">\n  \
-                 <modelVersion>4.0.0</modelVersion>\n  <groupId>temper</groupId>\n  \
-                 <artifactId>deps</artifactId>\n  <version>0</version>\n  \
-                 <dependencies>\n{dependencies}  </dependencies>\n</project>\n"
-            )
-        }
-    };
+    let pom = deps_pom(&packages);
     let deps = dir.join(".deps");
     let any = install_once(&deps, "pom.xml", &pom, |deps| {
         step(
@@ -185,6 +163,33 @@ fn dependency_jars(dir: &Path, all: &[Tested]) -> Result<Vec<PathBuf>, String> {
     let text =
         std::fs::read_to_string(&listed).map_err(|e| format!("{}: {e}", listed.display()))?;
     Ok(std::env::split_paths(text.trim()).collect())
+}
+
+/// A POM of just the packages that configs list, for Maven's dependency
+/// plugin, each value escaped; none without packages.
+fn deps_pom(packages: &[(&str, &str, &str)]) -> String {
+    if packages.is_empty() {
+        return String::new();
+    }
+    let xml = temper_tmpl::xml_text;
+    let dependencies = (packages.iter())
+        .map(|(group, artifact, version)| {
+            format!(
+                "    <dependency><groupId>{}</groupId><artifactId>{}</artifactId>\
+                 <version>{}</version></dependency>\n",
+                xml(group),
+                xml(artifact),
+                xml(version)
+            )
+        })
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">\n  \
+         <modelVersion>4.0.0</modelVersion>\n  <groupId>temper</groupId>\n  \
+         <artifactId>deps</artifactId>\n  <version>0</version>\n  \
+         <dependencies>\n{dependencies}  </dependencies>\n</project>\n"
+    )
 }
 
 /// Compiles as [`test`] does, without JUnit, into
@@ -359,4 +364,25 @@ pub fn results(stdout: &str) -> Vec<(String, Option<String>)> {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::deps_pom;
+
+    /// The dependencies' POM, for `temper test` and `temper run`, each
+    /// value escaped, though configs' spellings allow no markup.
+    #[test]
+    fn deps_pom_lists_packages() {
+        assert_eq!(deps_pom(&[]), "");
+        let pom = deps_pom(&[("org.x", "y", "1.0"), ("a&b", "<c>", "\"1'")]);
+        assert!(
+            pom.contains(
+                "    <dependency><groupId>org.x</groupId><artifactId>y</artifactId>\
+             <version>1.0</version></dependency>\n    <dependency><groupId>a&amp;b</groupId>\
+             <artifactId>&lt;c&gt;</artifactId><version>&quot;1&apos;</version></dependency>\n"
+            ),
+            "{pom}"
+        );
+    }
 }

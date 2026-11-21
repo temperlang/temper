@@ -532,21 +532,17 @@ fn goldens() {
     });
 }
 
-/// The shared `reach` program's test parts only in its tests file, and
-/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
-/// program; `runs` runs its test, which passes only if they're set.
 /// Every generated file parses on PUC Lua 5.1, which the rockspecs
 /// accept (`lua >= 5.1`): no `goto` or labels, which arrived in 5.2, and
 /// no statement starting with `;`, which 5.1 allows only after one; and
 /// so do the runtime's files that 5.1 loads (not `intnew.lua`, which
 /// only 5.3 and later load, nor the regex engine, which needs 5.3's
-/// `utf8`). Skipped, with a message, without Lua 5.1's `luac`
-/// (`luac5.1`, or `LUAC51`).
+/// `utf8`). Skipped without Lua 5.1's `luac` (`luac5.1`, or `LUAC51`),
+/// unless `TEMPER_REQUIRE_CHECKERS` is set ([`kit::missing`]).
 #[test]
 fn parses_on_lua51() {
     let Some(luac) = tool("LUAC51", "luac5.1", "-v") else {
-        eprintln!("skipped: no Lua 5.1 luac (luac5.1 on PATH, or named by LUAC51)");
-        return;
+        return kit::missing("no Lua 5.1 luac (luac5.1 on PATH, or named by LUAC51)");
     };
     kit::with_stack(move || {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-lua-51");
@@ -592,13 +588,12 @@ fn parses_on_lua51() {
 /// library then logs what its test expects, from outside its directory,
 /// by LuaRocks' paths alone, with std's rock, which it uses; and its
 /// tests (`reach`'s) aren't installed.
-/// Skipped, with a message, without LuaRocks (`luarocks`, or
-/// `LUAROCKS`), whose own Lua runs it.
+/// Skipped without LuaRocks (`luarocks`, or `LUAROCKS`), whose own Lua
+/// runs it, unless `TEMPER_REQUIRE_CHECKERS` is set ([`kit::missing`]).
 #[test]
 fn rockspecs_install() {
     let Some(luarocks) = tool("LUAROCKS", "luarocks", "--version") else {
-        eprintln!("skipped: no LuaRocks (on PATH, or named by LUAROCKS)");
-        return;
+        return kit::missing("no LuaRocks (on PATH, or named by LUAROCKS)");
     };
     kit::with_stack(move || {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-lua-rocks");
@@ -683,6 +678,9 @@ fn rockspecs_install() {
     });
 }
 
+/// The shared `reach` program's test parts only in its tests file, and
+/// what nothing reaches nowhere, as tmpl's `reach::partition` splits the
+/// program; `runs` runs its test, which passes only if they're set.
 #[test]
 fn test_parts_apart() {
     kit::with_stack(|| {

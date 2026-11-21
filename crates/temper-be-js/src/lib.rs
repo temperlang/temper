@@ -112,7 +112,10 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         temper_tmpl::Property {
             name: "name",
             doc: "The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name.",
-            kind: temper_tmpl::ConfigKind::String,
+            kind: temper_tmpl::ConfigKind::String {
+                form: "an npm package's name, as `geometry` or `@example/geometry`",
+                valid: npm_name,
+            },
         },
         temper_tmpl::Property {
             name: "dependencies",
@@ -126,12 +129,30 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     std: &[("name", "@temperlang/std")],
 };
 
-/// A package that a config's `dependencies` lists, as `"name@version"`,
-/// its name maybe scoped (`@scope/name`): its name and version.
+/// A package that a config's `dependencies` lists, as `"name@version"`:
+/// its name ([`npm_name`]) and version, a version or a simple range of
+/// one (`1.2.3`, `^1.2.0`, `~1.2`, `1.x`, `*`) or a tag (`latest`), but
+/// no URL, path, alias, or range with spaces or `<`.
 pub fn npm_dependency(text: &str) -> Option<(&str, &str)> {
-    let (name, version) = text.trim().rsplit_once('@')?;
-    let fine = |p: &str| !p.is_empty() && !p.contains(char::is_whitespace);
-    (fine(name) && fine(version)).then_some((name, version))
+    let (name, version) = text.rsplit_once('@')?;
+    let range = version.strip_prefix(['^', '~', '=']).unwrap_or(version);
+    let version_fine = range == "*" || temper_tmpl::spelled(range, ".*+-");
+    (npm_name(name) && version_fine).then_some((name, version))
+}
+
+/// Whether a name is an npm package's, maybe scoped (`@scope/name`): each
+/// part ASCII letters, digits, `.`, `_`, `~`, and `-`, starting with a
+/// letter or digit, as npm allows, so it's a directory of its own under
+/// `node_modules`.
+pub fn npm_name(text: &str) -> bool {
+    let part = |p: &str| temper_tmpl::spelled(p, "._~-");
+    let fine = match text.strip_prefix('@') {
+        Some(scoped) => scoped
+            .split_once('/')
+            .is_some_and(|(scope, name)| part(scope) && part(name)),
+        None => part(text),
+    };
+    fine && text.len() <= 214
 }
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
@@ -460,4 +481,74 @@ fn package_metadata(p: &Program) -> String {
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn npm_spellings() {
+        let good = [
+            ("roaring-wasm@1.1.0", ("roaring-wasm", "1.1.0")),
+            ("@scope/x@^2.0.0", ("@scope/x", "^2.0.0")),
+            ("lodash.merge@~4.6", ("lodash.merge", "~4.6")),
+            ("x@1.x", ("x", "1.x")),
+            ("x@*", ("x", "*")),
+            ("x@=1.0.0-beta.1+b2", ("x", "=1.0.0-beta.1+b2")),
+            ("x@latest", ("x", "latest")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(npm_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "roaring",
+            "x@",
+            "@x",
+            "-x@1",
+            "x@-1",
+            "x@git+https://evil/x.git",
+            "x@file:../x",
+            "x@http://evil/x.tgz",
+            "x@github:evil/x",
+            "x@npm:evil@1",
+            "x@>=1.0.0 <2",
+            "x@1 || 2",
+            "x@${TOKEN}",
+            "x@$(TOKEN)",
+            "../x@1",
+            "/abs@1",
+            "@scope/../x@1",
+            "@scope/a/b@1",
+            "@scope@1",
+            "x@\"1\"",
+            "x@1\n",
+            "x;y@1",
+            ".x@1",
+            "_x@1",
+        ];
+        for text in hostile {
+            assert_eq!(npm_dependency(text), None, "{text}");
+        }
+        for good in [
+            "geometry",
+            "@example/geometry",
+            "temper-std",
+            "@temperlang/std",
+        ] {
+            assert!(npm_name(good), "{good}");
+        }
+        for bad in [
+            "",
+            "..",
+            "../../escape",
+            "/home/user",
+            "@a/",
+            "@/a",
+            "a\\b",
+            "C:x",
+        ] {
+            assert!(!npm_name(bad), "{bad}");
+        }
+    }
 }

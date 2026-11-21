@@ -12,7 +12,9 @@
 #   again without default features (no backends, no `net`), `tempest`'s
 #   included;
 # - `cli`: `temper`'s tests with every backend, so with every
-#   toolchain: `temper test`, `build`, and `run` on small libraries;
+#   toolchain: `temper test`, `build`, and `run` on small libraries
+#   (but not those that fetch packages from registries, which
+#   nightly.yml runs);
 # - `backends`, two jobs, each with only its backends' toolchains
 #   (.github/actions/toolchains): generated Python run and type checked
 #   by mypy and pyright, strict; generated JS run under Node and type
@@ -251,10 +253,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Lua 5.1 (and its luac) for the Lua 5.1 checks, and LuaRocks
+          # for `rockspecs_install`, which installs rocks by their
+          # rockspecs.
           - id: checked
             name: py, js, lua, rust
             backends: py js lua rust
-            apt: lua5.1
+            apt: lua5.1 luarocks
           - id: compiled
             name: java, csharp, cpp
             backends: java csharp cpp

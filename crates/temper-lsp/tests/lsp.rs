@@ -195,7 +195,10 @@ const TOY_CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     properties: &[temper_tmpl::Property {
         name: "name",
         doc: "The toy's name.",
-        kind: temper_tmpl::ConfigKind::String,
+        kind: temper_tmpl::ConfigKind::String {
+            form: "anything",
+            valid: |_| true,
+        },
     }],
     std: &[],
 };

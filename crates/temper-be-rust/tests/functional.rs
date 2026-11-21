@@ -678,7 +678,8 @@ fn runs_and_lints() {
         // executor, blocks on one inside a turn, which fails clearly, and
         // loops over a generated generator with `for`, which a failed step
         // leaves done; then it builds a generic class with its builder,
-        // and updates a class's `var` from four threads at once.
+        // updates a class's `var` from four threads at once, and fails an
+        // update under the lock, and reads one through another reference.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -693,6 +694,7 @@ fn runs_and_lints() {
                         "builder Ann",
                         "options Ann + Cy",
                         "tally 400000",
+                        "split true 6",
                     ]
                     .map(String::from),
                 )

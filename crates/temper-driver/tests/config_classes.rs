@@ -77,16 +77,19 @@ fn frontend_names_no_backend() {
     }
 }
 
-/// What each backend says std's config sets is one of its properties.
+/// What each backend says std's config sets is one of its properties,
+/// spelled as that property allows.
 #[test]
 fn std_configs_set_properties() {
     for t in Registry::built_in().config_types() {
-        for (property, _) in t.std {
-            assert!(
-                t.properties.iter().any(|p| p.name == *property),
-                "{} has no property {property}",
-                t.class
-            );
+        for (property, value) in t.std {
+            let p = t.properties.iter().find(|p| p.name == *property);
+            let Some(p) = p else {
+                panic!("{} has no property {property}", t.class);
+            };
+            if let temper_tmpl::ConfigKind::String { valid, .. } = p.kind {
+                assert!(valid(value), "{}'s {property}: {value}", t.class);
+            }
         }
     }
 }

@@ -600,3 +600,44 @@ fn missing_host_code() {
         }
     });
 }
+
+/// A static's getter named as a method that takes nothing is `NotYet`,
+/// naming the getter, where it would be a duplicate method in `javac`:
+/// a method `getLimit()` beside a static `limit`, `isStrict()` beside a
+/// `Boolean` static `strict`, and an instance property's getter beside
+/// a static of its name.
+#[test]
+fn static_getters_named_as_methods() {
+    kit::with_stack(|| {
+        let cases = [
+            (
+                "public static limit = 3;\n  public getLimit(): Int { 4 }",
+                "getLimit()",
+            ),
+            (
+                "public static strict = true;\n  public isStrict(): Boolean { false }",
+                "isStrict()",
+            ),
+            (
+                "public static standard = 1;\n  public get standard(): Int { 2 }",
+                "getStandard()",
+            ),
+        ];
+        for (members, getter) in cases {
+            let text = format!("    export class Policy {{\n  {members}\n}}\n");
+            let text = text.replace("\n  ", "\n      ").replace("\n}", "\n    }");
+            let case = Case::inline("clash", "clash.temper.md", text, Vec::new());
+            let program = kit::program_for(&case, &JAVA.rules);
+            let said = match translate(&program, &JAVA) {
+                Ok(_) => "translated".to_string(),
+                Err(e) => e.to_string(),
+            };
+            assert!(
+                said.contains(&format!(
+                    "a static getter, {getter}, that a method's name takes"
+                )),
+                "{getter}: {said}"
+            );
+        }
+    });
+}

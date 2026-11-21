@@ -259,7 +259,10 @@ fn packages_marked_typed() {
     });
 }
 
-/// The runtime's `Pair` indexes as a sequence of its key and value.
+/// The runtime's `Pair` indexes as a sequence of its key and value, so
+/// host code unpacks it and lists it, as Python iterates a class with
+/// `__getitem__`; a negative index is an `IndexError`, not counted from
+/// the end as a tuple's is, by decision (it's only for unpacking).
 #[test]
 fn pairs_index() {
     let Some(python) = python() else {
@@ -272,14 +275,16 @@ fn pairs_index() {
             "-c",
             "from temper_core import Pair\n\
              p = Pair('k', 1)\n\
-             try:\n    p[2]\nexcept IndexError:\n    print(p[0], p[1], 'IndexError')",
+             k, v = p\n\
+             def fails(i):\n    try:\n        p[i]\n    except IndexError:\n        return 'IndexError'\n\
+             print(p[0], p[1], k, v, list(p), fails(2), fails(-1))",
         ])
         .env("PYTHONPATH", runtime())
         .output()
         .unwrap();
     let out = String::from_utf8_lossy(&run.stdout);
     let err = String::from_utf8_lossy(&run.stderr);
-    assert_eq!(out, "k 1 IndexError\n", "{err}");
+    assert_eq!(out, "k 1 k 1 ['k', 1] IndexError IndexError\n", "{err}");
 }
 
 /// Python 3.11 or later, if there is one.

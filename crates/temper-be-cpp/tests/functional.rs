@@ -1796,6 +1796,29 @@ fn co_await_interop() {
     });
 }
 
+/// A static's accessor and an instance method of its name don't clash:
+/// the method takes another name (`unit2()`), as the naming pass gives
+/// it, so the class compiles.
+#[test]
+fn static_accessor_and_method_of_its_name() {
+    kit::with_stack(|| {
+        let text = "    export class Rect {\n      public static unit = 1;\n      \
+                    public unit(): Int { 2 }\n    }\n"
+            .to_string();
+        let case = Case::inline("clash", "clash.temper.md", text, Vec::new());
+        let files = generate(&case);
+        let header = (files.iter())
+            .find(|f| f.path.ends_with("init.hpp"))
+            .map(|f| f.text.as_str())
+            .unwrap_or_default();
+        assert!(
+            header.contains("static int32_t const & unit();"),
+            "{header}"
+        );
+        assert!(header.contains("int32_t unit2() const;"), "{header}");
+    });
+}
+
 /// `tests/host/statics.cpp`, host code against the `classes` program's
 /// headers, checks that a class's static storage, `temper_statics`, is
 /// private, so host code reads static fields only through their

@@ -11,13 +11,14 @@
 
 use std::path::Path;
 use std::process::Command;
-use temper_tmpl::tools::{install_once, junit_file, output, program, step, tool};
+use temper_tmpl::tools::{install_once, junit_file, output, program, remove_within, step, tool};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
     prepare: Some(link),
     test,
     run,
+    dirs: &[".deps", "node_modules"],
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
@@ -94,8 +95,7 @@ fn link(dir: &Path, all: &[Tested]) -> Result<(), String> {
         if let Some(parent) = link.parent() {
             std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
         }
-        let _ = std::fs::remove_file(&link);
-        let _ = std::fs::remove_dir_all(&link);
+        remove_within(&modules, &link)?;
         let target = std::path::absolute(&target).unwrap_or(target);
         link_dir(&target, &link).map_err(|e| format!("{}: {e}", link.display()))?;
     }

@@ -18,6 +18,7 @@ pub const TOOLS: Tools = Tools {
     prepare: Some(install),
     test,
     run,
+    dirs: &[".deps"],
 };
 
 /// Python (`PYTHON`, or `python3`) in UTF-8 mode (`PYTHONUTF8=1`), as

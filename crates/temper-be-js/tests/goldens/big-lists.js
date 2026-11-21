@@ -42,6 +42,19 @@ s.push(8);
 /** @type {readonly number[]} */
 const removed = listBuilderSplice(s, 1, 0, values);
 console.log(`${s.length} ${removed.length} ${listedGet(s, 0)} ${listedGet(s, 1)} ${listedGet(s, n)} ${listedGet(s, (n + 1) | 0)}`);
+/** @type {number[]} */
+const c = [];
+c.push(7);
+c.push(8);
+listBuilderSplice(c, -1, 0, values);
+listBuilderSplice(c, Math.imul(10, n), 0, values);
+console.log(`${c.length} ${listedGet(c, 0)} ${listedGet(c, (n - 1) | 0)} ${listedGet(c, n)} ${listedGet(c, (n + 1) | 0)} ${listedGet(c, (n + 2) | 0)} ${listedGet(c, (Math.imul(2, n) + 1) | 0)}`);
+/** @type {number[]} */
+const own = [];
+listBuilderAddAll(own, /** @type {number[]} */ (values));
+/** @type {readonly number[]} */
+const gone = listBuilderSplice(own, 0, 1, own);
+console.log(`${own.length} ${gone.length} ${listedGet(own, 0)} ${listedGet(own, (n - 1) | 0)} ${listedGet(own, n)} ${listedGet(own, (Math.imul(2, n) - 2) | 0)}`);
 /** @type {readonly number[]} */
 const kept = listedFilter(/** @type {number[]} */ (values), (x) => x !== 5);
 console.log(`${kept.length} ${listedGet(/** @type {number[]} */ (kept), 4)} ${listedGet(/** @type {number[]} */ (kept), 5)} ${listedGet(/** @type {number[]} */ (kept), (n - 2) | 0)}`);

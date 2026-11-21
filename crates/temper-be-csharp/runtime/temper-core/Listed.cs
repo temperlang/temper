@@ -195,7 +195,10 @@ namespace TemperLang.Core
             // Find defaults & bounds.
             int ind = (index ?? 0).Clamp(0, list.Count);
             int count = (removeCount ?? list.Count).Clamp(0, list.Count);
-            var values = newValues ?? Enumerable.Empty<T>();
+            // Copied first if it's the list itself, which removing changes.
+            var values = ReferenceEquals(newValues, list)
+                ? list.ToList()
+                : newValues ?? Enumerable.Empty<T>();
             int endExclusive = (ind + count).Clamp(0, list.Count);
             count = endExclusive - ind;
             // Get result.

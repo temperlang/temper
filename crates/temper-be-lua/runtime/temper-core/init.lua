@@ -1315,17 +1315,37 @@ function temper.import(mod, ent)
     return require(mod)[ent]
 end
 
+-- A list's values in a new table.
+local function copy_list(list)
+    local copy = {}
+    for i = 1, #list do
+        copy[i] = list[i]
+    end
+    return copy
+end
+
+-- Removes `remove` values from `at`, both clamped to the builder's bounds,
+-- as core says, and puts `new` in their place, moving the rest once each
+-- way, so it takes time in proportion to the builder's length and the
+-- new values', where removing and inserting one at a time took time in
+-- proportion to their product.
 function temper.listbuilder_splice(builder, at, remove, new)
     local len = #builder
-    at = temper.null_to_nil(at) or 0
-    remove = temper.null_to_nil(remove) or len
+    at = math.min(math.max(temper.null_to_nil(at) or 0, 0), len)
+    remove = math.min(math.max(temper.null_to_nil(remove) or len, 0), len - at)
     new = temper.null_to_nil(new) or {}
-    if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
+    if new == builder then
+        new = copy_list(new)
     end
     local ret = {}
     for i = 1, remove do
-        ret[i] = table_remove(builder, at + 1)
+        ret[i] = builder[at + i]
+    end
+    for i = at + remove + 1, len do
+        builder[i - remove] = builder[i]
+    end
+    for i = len - remove + 1, len do
+        builder[i] = nil
     end
     temper.listbuilder_addall(builder, new, at)
     return ret
@@ -1334,22 +1354,23 @@ end
 function temper.ignore()
 end
 
+-- Puts `from`'s values in at `at`, copied first if `from` is the builder,
+-- moving the values after it once, not once per value.
 function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
         return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
     end
-    if at == len then
-        for read = 1, #from do
-            at = at + 1
-            builder[at] = from[read]
-        end
-    else
-        for read = 1, #from do
-            at = at + 1
-            table_insert(builder, at, from[read])
-        end
+    if from == builder then
+        from = copy_list(from)
+    end
+    local n = #from
+    for i = len, at + 1, -1 do
+        builder[i + n] = builder[i]
+    end
+    for i = 1, n do
+        builder[at + i] = from[i]
     end
 end
 
