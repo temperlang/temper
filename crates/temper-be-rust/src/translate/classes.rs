@@ -36,7 +36,9 @@ use super::{Params, R, Translator, Want, not_yet};
 use crate::names::static_name;
 use crate::tree::{Bin, Block, Expr, Item, Member, Stmt, Unary};
 use std::collections::{HashMap, HashSet};
-use temper_tmpl::analysis::{ancestors, home, is_plain_to_string, nominal_decl, walk};
+use temper_tmpl::analysis::{
+    ancestors, home, is_plain_to_string, nominal_decl, reads_only_its_field, walk,
+};
 use temper_tmpl::naming::snake_case;
 use temper_tmpl::qname::{is_external, library_of};
 use temper_tmpl::{DeclId, DeclKind, Facts, Kids, Module, Node, NodeId, Program, TypeId};
@@ -217,9 +219,33 @@ impl<'a> Translator<'a> {
                 }
             });
         }
+        // A field's reads in an update under its lock, which read its
+        // guard, not its getter.
+        let mut under_lock = HashSet::new();
+        for &root in &roots {
+            walk(p, root, &mut |id| {
+                if let Node::SetField {
+                    field,
+                    object,
+                    value,
+                } = p.nodes.get(id)
+                {
+                    if self.updated_under_lock(field, object, value) {
+                        walk(p, value, &mut |read| {
+                            if matches!(p.nodes.get(read), Node::GetField { field: f, .. } if f == field)
+                            {
+                                under_lock.insert(read);
+                            }
+                        });
+                    }
+                }
+            });
+        }
         for &root in &roots {
             walk(p, root, &mut |id| match p.nodes.get(id) {
-                Node::GetField { field, .. } if self.facts(field).contains(Facts::VAR) => {
+                Node::GetField { field, .. }
+                    if self.facts(field).contains(Facts::VAR) && !under_lock.contains(&id) =>
+                {
                     self.getters.insert(field);
                 }
                 Node::New { ctor, .. } => {
@@ -1611,6 +1637,15 @@ impl<'a> Translator<'a> {
                 });
             }
         }
+        // The field's guard, in an update under its lock.
+        if let Some((_, guard)) = self.guard.as_ref().filter(|(g, _)| *g == field) {
+            let read = Expr::path(guard.clone());
+            return Ok(if copy {
+                Expr::unary(Unary::Deref, read)
+            } else {
+                read.method("clone", Vec::new())
+            });
+        }
         let obj = self.expr(object, Want::Borrowed)?;
         let name = self.name(field);
         let here = home(p, field) == Some(self.here);
@@ -1626,17 +1661,25 @@ impl<'a> Translator<'a> {
     }
 
     /// Writes an instance field: of a class of this module under its
-    /// lock, else through its setter.
+    /// lock, else through its setter. An update whose value reads only
+    /// that field of the same object, locals, and literals, through
+    /// operators (`count += n`), reads and writes it under one write
+    /// lock, so updates from threads at once aren't lost, as a module
+    /// `var`'s are ([`write_var`](Self::write_var)).
     pub(crate) fn set_field(&mut self, field: DeclId, object: NodeId, value: NodeId) -> R<Stmt> {
         let p = self.p;
-        let value = self.expr(value, Want::Owned)?;
         // A constructor's field set in a branch, its local
         // (`constructor_in_branches`).
         if matches!(p.nodes.get(object), Node::This {}) {
-            if let Some(local) = self.ctor_fields.get(&field) {
-                return Ok(Stmt::Assign(Expr::path(local.clone()), value));
+            if let Some(local) = self.ctor_fields.get(&field).cloned() {
+                let value = self.expr(value, Want::Owned)?;
+                return Ok(Stmt::Assign(Expr::path(local), value));
             }
         }
+        if self.updated_under_lock(field, object, value) {
+            return self.update_field(field, object, value);
+        }
+        let value = self.expr(value, Want::Owned)?;
         let obj = self.expr(object, Want::Borrowed)?;
         if home(p, field) != Some(self.here) {
             return Ok(Stmt::Expr(
@@ -1651,6 +1694,55 @@ impl<'a> Translator<'a> {
             .method("write", Vec::new())
             .method("unwrap", Vec::new());
         Ok(Stmt::Assign(Expr::unary(Unary::Deref, write), value))
+    }
+
+    /// Whether a field's assignment is an update read and written under
+    /// its one lock ([`set_field`](Self::set_field)).
+    pub(crate) fn updated_under_lock(&self, field: DeclId, object: NodeId, value: NodeId) -> bool {
+        home(self.p, field) == Some(self.here)
+            && self.facts(field).contains(Facts::VAR)
+            && reads_only_its_field(self.p, field, object, value)
+    }
+
+    /// `{ let mut count = self.0.count.write().unwrap(); *count =
+    /// (*count).wrapping_add(n); }`: the guard, named for the field
+    /// unless a local the update reads has that name, is the field's
+    /// value in the update ([`get_field`](Self::get_field)).
+    fn update_field(&mut self, field: DeclId, object: NodeId, value: NodeId) -> R<Stmt> {
+        let p = self.p;
+        let name = self.name(field);
+        let mut locals = HashSet::new();
+        for root in [object, value] {
+            walk(p, root, &mut |id| {
+                if let Node::Local { local } = p.nodes.get(id) {
+                    locals.insert(self.name(local));
+                }
+            });
+        }
+        let mut guard = name.clone();
+        while locals.contains(&guard) {
+            guard.push('_');
+        }
+        let obj = self.expr(object, Want::Borrowed)?;
+        self.guard = Some((field, guard.clone()));
+        let value = self.expr(value, Want::Owned);
+        self.guard = None;
+        let write = (obj.field("0").field(name))
+            .method("write", Vec::new())
+            .method("unwrap", Vec::new());
+        let update = Block::new(
+            vec![
+                Stmt::Let {
+                    name: guard.clone(),
+                    mutable: true,
+                    ty: None,
+                    value: Some(write),
+                },
+                Stmt::Assign(Expr::unary(Unary::Deref, Expr::path(guard)), value?),
+            ],
+            None,
+        );
+        Ok(Stmt::Block(update))
     }
 
     /// `RECT__UNIT.set(…)`, in the init block.

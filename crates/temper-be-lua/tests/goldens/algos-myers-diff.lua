@@ -188,7 +188,7 @@ end
 ChangeTypeAddition = "Addition"
 ChangeTypeDeletion = "Deletion"
 ChangeTypeUnchanged = "Unchanged"
-print(formatPatch(diff(temper.string_split("Hello,\nWorld!", "\n"), temper.string_split("Hello,\nCosmos!", "\n"), function(a, b) return a == b end)))
+temper.log(formatPatch(diff(temper.string_split("Hello,\nWorld!", "\n"), temper.string_split("Hello,\nCosmos!", "\n"), function(a, b) return a == b end)))
 
 return {
   Change = Change,

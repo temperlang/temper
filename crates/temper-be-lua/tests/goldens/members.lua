@@ -122,10 +122,10 @@ end
 exports.made = 0
 Box.methods_ = 7
 local b = make(1)
-print(b:bump() .. " " .. b:twice() .. " " .. exports.made)
-print(tostring(order(b)) .. " " .. exports.made .. " " .. Box.methods_)
+temper.log(b:bump() .. " " .. b:twice() .. " " .. exports.made)
+temper.log(tostring(order(b)) .. " " .. exports.made .. " " .. Box.methods_)
 local n = Pet("rex")
-print(n.name)
+temper.log(n.name)
 
 exports.Sized = Sized
 exports.Box = Box

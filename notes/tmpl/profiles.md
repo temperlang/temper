@@ -221,7 +221,11 @@ them, are made by the translator for now, since no pass reads them yet:
   runs 8,000 such updates from 8 threads and gets 8,000). A value that
   calls anything, or reads other module state, is computed first and
   stored under the lock after, as Kotlin's, since holding the lock
-  across a call could deadlock with a call that takes it again.
+  across a call could deadlock with a call that takes it again. A
+  class's `var` field is the same: `count += n`, reading only that
+  field of the same object (`this` or a local), locals, and literals,
+  is one write lock (`analysis::reads_only_its_field`; `class-edges`
+  runs 400,000 updates from 4 host threads).
 
 ### As built: JS
 

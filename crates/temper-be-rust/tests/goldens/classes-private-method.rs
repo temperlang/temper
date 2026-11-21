@@ -99,7 +99,8 @@ impl Money {
     }
 
     pub fn spend_from(&self, other: Money) {
-        *other.0.spent.write().unwrap() = other.spent().wrapping_add(1);
+        let mut spent = other.0.spent.write().unwrap();
+        *spent = (*spent).wrapping_add(1);
     }
 
     pub fn times_spent(&self) -> i32 {

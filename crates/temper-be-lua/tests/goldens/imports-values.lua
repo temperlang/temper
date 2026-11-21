@@ -9,6 +9,6 @@ end
 
 local a = 1
 local c = timesMagic(a)
-print("number = " .. c)
+temper.log("number = " .. c)
 
 return { timesMagic = timesMagic }

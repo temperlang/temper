@@ -77,7 +77,7 @@ The same two lines of Temper, in each language:
 | [C#](../../crates/temper-be-csharp/tests/goldens/triple.cs) | `n * 3` | `console.Log("triple(14) = " + Triple(14).ToString(CultureInfo.InvariantCulture));` |
 | [Java](../../crates/temper-be-java/tests/goldens/triple.java) | `n * 3` | `console.log("triple(14) = " + triple(14));` |
 | [JavaScript](../../crates/temper-be-js/tests/goldens/triple.js) | `Math.imul(n, 3)` | ``console.log(`triple(14) = ${triple(14)}`);`` |
-| [Lua](../../crates/temper-be-lua/tests/goldens/triple.lua) | `temper.int32_mul(n, 3)` | `print("triple(14) = " .. triple(14))` |
+| [Lua](../../crates/temper-be-lua/tests/goldens/triple.lua) | `temper.int32_mul(n, 3)` | `temper.log("triple(14) = " .. triple(14))` |
 | [Python](../../crates/temper-be-py/tests/goldens/triple.py) | `_int_mul(n, 3)` | `_console.log(f'triple(14) = {_triple(14)}')` |
 | [Rust](../../crates/temper-be-rust/tests/goldens/triple.rs) | `n.wrapping_mul(3)` | `println!("triple(14) = {}", triple(14));` |
 

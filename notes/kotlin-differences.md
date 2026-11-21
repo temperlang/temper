@@ -1863,13 +1863,14 @@ copied Kotlin's:
   `n` under one lock and writes it under another, so two threads can
   both write the same value. Safe in Rust's sense, but not what a
   counter wants. Tempest's Rust backend reads and writes such an update
-  under one write lock (done 2026-10-30; [tmpl/profiles.md](tmpl/profiles.md#as-built-rust)).
+  under one write lock (done 2026-10-30; [tmpl/profiles.md](tmpl/profiles.md#as-built-rust)),
+  and a class `var`'s, `count += n` (2026-11-21).
   Kotlin's Rust output also fails clippy's deny-level
   `self_assignment` on `zero = zero` despite its `#![allow(warnings)]`,
   which allows only warn-level lints; tempest's too, being faithful,
   so its test allows that lint.
   Test: temper-be-rust/tests/functional.rs, `runs_and_lints`
-  (`THREADS`).
+  (`THREADS`, and `host-interop`'s tally).
 - **JS source maps that tools don't find:** Kotlin writes a `.js.map`
   beside each module but no `//# sourceMappingURL=` comment, so Node's
   `--enable-source-maps` and browsers never load it; its `sourceRoot`

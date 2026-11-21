@@ -48,7 +48,7 @@ local function checkParse(string_)
   end) then
     converted = "failed"
   end
-  print("Parse " .. string_ .. " -> " .. converted)
+  temper.log("Parse " .. string_ .. " -> " .. converted)
 end
 
 ---@param string_ string
@@ -60,107 +60,107 @@ local function checkTiny(string_)
   end) then
     positive = "failed"
   end
-  print("Parse " .. string_ .. " > 0 -> " .. positive)
+  temper.log("Parse " .. string_ .. " > 0 -> " .. positive)
 end
 
-local negativeZero = -0.0
+local negativeZero = -1 / math.huge
 local zero = 0.0
 local one = 1.0
 local two = 2.0
 local three = 3.0
 if gt(one, zero) then
-  print("greater than")
+  temper.log("greater than")
 end
 if lt(zero, one) then
-  print("less than")
+  temper.log("less than")
 end
 if eq(zero, one) then
-  print("equality is wrong")
+  temper.log("equality is wrong")
 end
 if neq(zero, one) then
-  print("inequality")
+  temper.log("inequality")
 end
-print(temper.float64_tostring(zero))
+temper.log(temper.float64_tostring(zero))
 if neq(negativeZero, zero) then
-  print("zeroes not equal")
+  temper.log("zeroes not equal")
 end
 if lt(negativeZero, zero) then
-  print("negZero < zero")
+  temper.log("negZero < zero")
 end
 if temper.float_eq(zero - zero, zero) then
-  print("zero subtraction")
+  temper.log("zero subtraction")
 end
 if temper.float_eq(zero + zero, zero) then
-  print("zero addition")
+  temper.log("zero addition")
 end
 if temper.float_eq(negativeZero - zero, negativeZero) then
-  print("negative zero minus zero is negative")
+  temper.log("negative zero minus zero is negative")
 end
 if temper.float_eq(negativeZero + zero, zero) then
-  print("negative zero plus zero is positive")
+  temper.log("negative zero plus zero is positive")
 end
 if temper.float_eq(zero - negativeZero, zero) then
-  print("zero minus negative zero is zero")
+  temper.log("zero minus negative zero is zero")
 end
 if temper.float_eq(zero + negativeZero, zero) then
-  print("zero plus negative zero is zero")
+  temper.log("zero plus negative zero is zero")
 end
 if temper.float_eq(negativeZero - negativeZero, zero) then
-  print("negative zero minus negative zero is zero")
+  temper.log("negative zero minus negative zero is zero")
 end
 if temper.float_eq(negativeZero + negativeZero, negativeZero) then
-  print("negative zero plus negative zero is negative zero")
+  temper.log("negative zero plus negative zero is negative zero")
 end
-print(temper.float64_tostring(negativeZero))
+temper.log(temper.float64_tostring(negativeZero))
 local third = one / three
 local half = one / two
 local twoThirds = two / three
 if gt(third, half) then
-  print("oops third > half")
+  temper.log("oops third > half")
 end
 if gt(half, twoThirds) then
-  print("oops half > twoThirds")
+  temper.log("oops half > twoThirds")
 end
 if neq(third * two, twoThirds) then
-  print("misaligned multiplication")
+  temper.log("misaligned multiplication")
 end
 if neq(add(third, twoThirds), one) then
-  print("doesn't add back up")
+  temper.log("doesn't add back up")
 end
-print(temper.float64_tostring(half))
-print(temper.float64_tostring(4.0 ^ -half))
-print(temper.float64_tostring(third))
-print(temper.float64_tostring(twoThirds))
-print(temper.float64_tostring(one))
+temper.log(temper.float64_tostring(half))
+temper.log(temper.float64_tostring(4.0 ^ -half))
+temper.log(temper.float64_tostring(third))
+temper.log(temper.float64_tostring(twoThirds))
+temper.log(temper.float64_tostring(one))
 local almostBig = 1e25 * one
-print(temper.float64_tostring(almostBig))
+temper.log(temper.float64_tostring(almostBig))
 local big = 99999999999999.0 * 999999999999.0
-print(temper.float64_tostring(big))
+temper.log(temper.float64_tostring(big))
 local bigger = big * big * big * big * big * big * big * big
-print(temper.float64_tostring(bigger))
+temper.log(temper.float64_tostring(bigger))
 local middling = -1500.0 * one
-print(temper.float64_tostring(middling) .. " " .. temper.float64_tostring(1000000.0 * one) .. " " .. temper.float64_tostring(9999999.0 * one) .. " " .. temper.float64_tostring(0.001 * one))
-print(temper.float64_tostring(1e21 * one) .. " " .. temper.float64_tostring(1.5e-10 * one) .. " " .. temper.float64_tostring(2e23 * one))
+temper.log(temper.float64_tostring(middling) .. " " .. temper.float64_tostring(1000000.0 * one) .. " " .. temper.float64_tostring(9999999.0 * one) .. " " .. temper.float64_tostring(0.001 * one))
+temper.log(temper.float64_tostring(1e21 * one) .. " " .. temper.float64_tostring(1.5e-10 * one) .. " " .. temper.float64_tostring(2e23 * one))
 local biggest = bigger * bigger * bigger * bigger * bigger * bigger
-print("biggest " .. temper.float64_tostring(biggest))
+temper.log("biggest " .. temper.float64_tostring(biggest))
 local tiniest = one / biggest
-print("tiniest " .. temper.float64_tostring(tiniest))
+temper.log("tiniest " .. temper.float64_tostring(tiniest))
 local negativeInfinity = biggest * -1.0
-print("negative infinity " .. temper.float64_tostring(negativeInfinity))
+temper.log("negative infinity " .. temper.float64_tostring(negativeInfinity))
 local infinity = math.huge
-print(temper.float64_tostring(infinity))
-print("processed an infinity")
+temper.log(temper.float64_tostring(infinity))
+temper.log("processed an infinity")
 local nan = 0.0 / 0.0
-print(temper.float64_tostring(nan))
+temper.log(temper.float64_tostring(nan))
 if temper.float_cmp(nan, infinity) > 0 then
-  print("NaN is biggest")
+  temper.log("NaN is biggest")
 else
-  print("Infinity is biggest")
+  temper.log("Infinity is biggest")
 end
-print("NaN == NaN? " .. tostring(temper.float_eq(nan, 0.0 / 0.0)))
-print("Int to float: " .. temper.float64_tostring(temper.int32_tofloat64(temper.float64_toint32unsafe(two))))
-print("Positive to int: " .. temper.float64_toint32unsafe(4.9 * one))
-print("Negative to int: " .. temper.float64_toint32unsafe(-4.9 * one))
+temper.log("NaN == NaN? " .. tostring(temper.float_eq(nan, 0.0 / 0.0)))
+temper.log("Int to float: " .. temper.float64_tostring(temper.int32_tofloat64(temper.float64_toint32unsafe(two))))
+temper.log("Positive to int: " .. temper.float64_toint32unsafe(4.9 * one))
+temper.log("Negative to int: " .. temper.float64_toint32unsafe(-4.9 * one))
 ---@type string
 local t
 if not temper.pcall(function()
@@ -168,7 +168,7 @@ if not temper.pcall(function()
 end) then
   t = "no"
 end
-print("Infinity to int: " .. t)
+temper.log("Infinity to int: " .. t)
 ---@type string
 local t_1
 if not temper.pcall(function()
@@ -176,7 +176,7 @@ if not temper.pcall(function()
 end) then
   t_1 = "no"
 end
-print("NaN to int: " .. t_1)
+temper.log("NaN to int: " .. t_1)
 local oneInt64 = temper.float64_toint64unsafe(one)
 local notSoBig = int64_2147483647 * oneInt64
 local notSoSmall = int64_neg2147483648 * oneInt64
@@ -185,9 +185,9 @@ local slightlySmaller = temper.float64_toint64unsafe(temper.int64_tofloat64unsaf
 local tooBigForFloat64 = int64_9007199254740992 * temper.float64_toint64(one)
 local okToConvert64 = temper.int64_tofloat64unsafe(tooBigForFloat64 - int64_1)
 local sneakyBig = okToConvert64 + 1.0
-print("Bigger to Int64: " .. temper.int64_tostring(slightlyBigger))
-print("Smaller to Int64: " .. temper.int64_tostring(slightlySmaller))
-print("Barely ok to Int64: " .. temper.int64_tostring(temper.float64_toint64unsafe(okToConvert64)))
+temper.log("Bigger to Int64: " .. temper.int64_tostring(slightlyBigger))
+temper.log("Smaller to Int64: " .. temper.int64_tostring(slightlySmaller))
+temper.log("Barely ok to Int64: " .. temper.int64_tostring(temper.float64_toint64unsafe(okToConvert64)))
 ---@type string
 local t_2
 if not temper.pcall(function()
@@ -195,7 +195,7 @@ if not temper.pcall(function()
 end) then
   t_2 = "no"
 end
-print("Sneaky big to Int64: " .. t_2)
+temper.log("Sneaky big to Int64: " .. t_2)
 ---@type string
 local t_3
 if not temper.pcall(function()
@@ -203,7 +203,7 @@ if not temper.pcall(function()
 end) then
   t_3 = "no"
 end
-print("Too big Int64 to Float64: " .. t_3)
+temper.log("Too big Int64 to Float64: " .. t_3)
 ---@type string
 local t_4
 if not temper.pcall(function()
@@ -211,7 +211,7 @@ if not temper.pcall(function()
 end) then
   t_4 = "no"
 end
-print("Infinity to Int64: " .. t_4)
+temper.log("Infinity to Int64: " .. t_4)
 ---@type string
 local t_5
 if not temper.pcall(function()
@@ -219,7 +219,7 @@ if not temper.pcall(function()
 end) then
   t_5 = "no"
 end
-print("NaN to Int64: " .. t_5)
+temper.log("NaN to Int64: " .. t_5)
 checkParse("-1.5")
 checkParse("-0")
 checkParse("2.0")

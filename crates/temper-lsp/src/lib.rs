@@ -12,7 +12,10 @@
 //! - **Units:** a document belongs to the library around it, found as
 //!   `temper build` finds libraries (the nearest `config.temper.md`
 //!   above it, under its work root), or else stands alone. Each unit is
-//!   settled as one [`Analysis`], which answers for all its files.
+//!   settled as one [`Analysis`], which answers for all its files. A
+//!   library's `config.temper.md` stands alone too, and its problems are
+//!   those `temper build` reports: its exports checked against the config
+//!   classes [`serve`] is given ([`config_diagnostics`]).
 //! - **Staying current:** a change marks the document stale. Stale units
 //!   are analyzed again once typing pauses (a debounce), and their
 //!   diagnostics published; a question about a stale document analyzes
@@ -41,10 +44,13 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 use temper_analysis::{Analysis, DeclKind, Position, byte_offset};
 use temper_frontend::library::{FileId, Level, Library};
-use temper_frontend::project::{find_libraries, library_of, load_imports, load_library, work_root};
+use temper_frontend::project::{
+    CONFIG_FILE, Config, find_libraries, library_of, load_imports, load_library, work_root,
+};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::{corelib, stdlib};
+use temper_tmpl::ConfigType;
 
 /// How long typing must pause before stale documents are analyzed again.
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -88,9 +94,16 @@ pub fn write_message(out: &mut impl Write, body: &Value) -> io::Result<()> {
 
 /// Serves an editor over `input` and `output` until it says `exit`,
 /// returning the exit code: 0 after a `shutdown`, else 1. `std_dir`
-/// reads std from a directory rather than the built-in copy.
-pub fn serve(input: impl Read + Send + 'static, output: impl Write, std_dir: Option<String>) -> u8 {
-    serve_with_hook(input, output, std_dir, None)
+/// reads std from a directory rather than the built-in copy;
+/// `config_types` are the config classes that libraries' configs are
+/// checked against, as `temper build` checks them (each backend's).
+pub fn serve(
+    input: impl Read + Send + 'static,
+    output: impl Write,
+    std_dir: Option<String>,
+    config_types: Vec<&'static ConfigType>,
+) -> u8 {
+    serve_with_hook(input, output, std_dir, config_types, None)
 }
 
 /// [`serve`], for tests, with a hook that makes a panic: an analysis of
@@ -101,6 +114,7 @@ pub fn serve_with_hook(
     input: impl Read + Send + 'static,
     output: impl Write,
     std_dir: Option<String>,
+    config_types: Vec<&'static ConfigType>,
     panic_on: Option<String>,
 ) -> u8 {
     let (send, receive) = mpsc::channel();
@@ -122,6 +136,7 @@ pub fn serve_with_hook(
     let mut server = Server {
         out: output,
         std_dir,
+        config_types,
         docs: Vec::new(),
         units: Vec::new(),
         stale: HashSet::new(),
@@ -182,6 +197,8 @@ struct Unit {
 struct Server<W: Write> {
     out: W,
     std_dir: Option<String>,
+    /// The config classes configs are checked against.
+    config_types: Vec<&'static ConfigType>,
     docs: Vec<Doc>,
     units: Vec<Unit>,
     /// Paths of documents changed since their unit was analyzed.
@@ -370,6 +387,11 @@ impl<W: Write> Server<W> {
         let dir = parent(path);
         let root = work_root(&sources, &dir);
         let libraries = find_libraries(&sources, &root);
+        // A library's config, whose problems are its config's
+        // ([`config_diagnostics`]), not its analysis's.
+        let config = (library_of(&libraries, &dir))
+            .filter(|lib| format!("{}/{CONFIG_FILE}", lib.root) == path)
+            .map(|lib| &lib.config);
         let (key, files, lib) = match library_of(&libraries, &dir) {
             Some(lib) if lib.files.iter().any(|f| f == path) => {
                 (lib.root.clone(), lib.files.clone(), Some(lib))
@@ -398,7 +420,13 @@ impl<W: Write> Server<W> {
                 panic!("test hook: a document contains {marker}");
             }
             let analysis = Analysis::new(settle(load()?));
-            let by_file = diagnostics_by_file(&analysis, &files);
+            let by_file = match config {
+                Some(config) => {
+                    let found = config_diagnostics(config, &self.config_types);
+                    vec![(path.to_string(), found)]
+                }
+                None => diagnostics_by_file(&analysis, &files),
+            };
             Some((analysis, by_file))
         }));
         let (analysis, by_file) = match analyzed {
@@ -699,6 +727,21 @@ fn diagnostics_by_file(
         });
     }
     by_file
+}
+
+/// A library config's problems, as `temper build` reports them: its
+/// syntax errors, and its exports checked against the config classes.
+/// Not its analysis's, as a config is read, not run as code.
+fn config_diagnostics(config: &Config, types: &[&ConfigType]) -> Vec<lsp::Diagnostic> {
+    (config.check(types).problems.into_iter())
+        .map(|problem| lsp::Diagnostic {
+            range: range(&config.text, problem.span.start, problem.span.end),
+            severity: Some(lsp::DiagnosticSeverity::ERROR),
+            source: Some("temper".to_string()),
+            message: problem.message,
+            ..Default::default()
+        })
+        .collect()
 }
 
 /// A document's path and a position in it.

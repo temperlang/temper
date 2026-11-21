@@ -148,7 +148,7 @@ end
 ---@param isError boolean
 local function ignore(problem, isError)
   if isError then
-    print(problem)
+    temper.log(problem)
   end
 end
 
@@ -507,13 +507,13 @@ end
 
 TextEscaper.instance = TextEscaper()
 QuoteEscaper.instance = QuoteEscaper()
-print(greet("Ann", "Bob"))
-print(branch(true, "a"))
-print(branch(false, "b"))
-print(each({ "c", "d" }))
-print(counted(5, "e"))
-print(attribute(false, "f") .. " " .. attribute(true, "f"))
-print(opened({ "g", "h", "i" }))
+temper.log(greet("Ann", "Bob"))
+temper.log(branch(true, "a"))
+temper.log(branch(false, "b"))
+temper.log(each({ "c", "d" }))
+temper.log(counted(5, "e"))
+temper.log(attribute(false, "f") .. " " .. attribute(true, "f"))
+temper.log(opened({ "g", "h", "i" }))
 
 return {
   Mark = Mark,

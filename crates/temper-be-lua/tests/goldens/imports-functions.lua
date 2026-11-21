@@ -17,7 +17,7 @@ end
 local a = 3.0
 local b = a + 1.0
 local values = temper.listed_join({ a, b, norm(a, b) }, ", ", function(it) return temper.float64_tostring(it) end)
-print(values .. " triangle")
-print(temper.float64_tostring(something({ a, b })))
+temper.log(values .. " triangle")
+temper.log(temper.float64_tostring(something({ a, b })))
 
 return { norm = norm, something = something }

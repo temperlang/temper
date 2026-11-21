@@ -88,10 +88,10 @@ local function firstOver(xs, n)
   return -1
 end
 
-print("total " .. total({ 1, 2, 3 }))
-print("forEach " .. totalForEach({ 1, 2, 3 }))
-print("filter " .. totalFiltered({ 1, 2, 3 }))
-print("nested " .. totalNested({ { 1, 2 }, { 3 }, {} }))
-print("firstOver " .. firstOver({ 1, 2, 3 }, 1) .. " " .. firstOver({ 1, 2, 3 }, 5))
+temper.log("total " .. total({ 1, 2, 3 }))
+temper.log("forEach " .. totalForEach({ 1, 2, 3 }))
+temper.log("filter " .. totalFiltered({ 1, 2, 3 }))
+temper.log("nested " .. totalNested({ { 1, 2 }, { 3 }, {} }))
+temper.log("firstOver " .. firstOver({ 1, 2, 3 }, 1) .. " " .. firstOver({ 1, 2, 3 }, 5))
 
 return {}

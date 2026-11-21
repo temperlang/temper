@@ -30,7 +30,8 @@ impl Counter {
     }
 
     pub fn add(&self, i: i32) {
-        *self.0.count.write().unwrap() = self.count().wrapping_add(i);
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(i);
     }
 
     pub fn total(&self) -> i32 {

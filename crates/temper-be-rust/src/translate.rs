@@ -148,7 +148,8 @@ pub struct Translator<'a> {
     /// Labels printed, by loop: each loop's, and a labeled body's.
     labels: HashMap<DeclId, String>,
     body_labels: HashMap<DeclId, String>,
-    /// The `var` read and written under one lock, and its guard's name.
+    /// The module `var` or field read and written under one lock, and
+    /// its guard's name.
     guard: Option<(DeclId, String)>,
     /// The function or init block being translated, which says what's
     /// assigned where.

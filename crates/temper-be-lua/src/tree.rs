@@ -195,8 +195,8 @@ impl Expr {
     fn prec(&self) -> u8 {
         match self {
             Expr::Int(n) if *n < 0 => UNARY,
-            Expr::Float(f) if f.is_sign_negative() && !f.is_nan() => UNARY,
-            Expr::Float(f) if f.is_nan() => MUL,
+            Expr::Float(f) if f.is_nan() || *f == 0.0 && f.is_sign_negative() => MUL,
+            Expr::Float(f) if f.is_sign_negative() => UNARY,
             Expr::Name(_)
             | Expr::Int(_)
             | Expr::Float(_)
@@ -368,6 +368,10 @@ pub fn string_literal(text: &str) -> String {
 fn float_literal(f: f64) -> String {
     if f.is_nan() {
         "0.0 / 0.0".into()
+    } else if f == 0.0 && f.is_sign_negative() {
+        // Not `-0.0`: Lua 5.1 keeps one constant per function for equal
+        // numbers, so `-0.0` and `0.0` there would be the same.
+        "-1 / math.huge".into()
     } else if f.is_infinite() {
         if f > 0.0 {
             "math.huge".into()
@@ -838,6 +842,11 @@ mod tests {
             expr(&Expr::bin(Bin::Div, n("x"), Expr::Float(f64::NAN)), 0),
             "x / (0.0 / 0.0)"
         );
+        assert_eq!(
+            expr(&Expr::bin(Bin::Div, n("x"), Expr::Float(-0.0)), 0),
+            "x / (-1 / math.huge)"
+        );
+        assert_eq!(expr(&Expr::Float(-0.5), 0), "-0.5");
     }
 
     #[test]

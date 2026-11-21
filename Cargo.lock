@@ -485,6 +485,7 @@ dependencies = [
  "temper-analysis",
  "temper-frontend",
  "temper-syntax",
+ "temper-tmpl",
 ]
 
 [[package]]

@@ -18,6 +18,6 @@ function C.get.place(this)
 end
 
 local c = C()
-print("Hello, " .. c.place .. "!")
+temper.log("Hello, " .. c.place .. "!")
 
 return {}

@@ -23,7 +23,7 @@ end
 
 ---@return integer|temper.Null
 local function noInline()
-  print("noInline")
+  temper.log("noInline")
   return temper.null
 end
 
@@ -50,7 +50,7 @@ function Thing.methods.say(this, a, b)
     b = ""
   end
   ---@cast b string
-  print("saying " .. a .. b)
+  temper.log("saying " .. a .. b)
 end
 
 ---@param a string
@@ -60,7 +60,7 @@ function Thing.sayStatic(a, b)
     b = ""
   end
   ---@cast b string
-  print("static " .. a .. b)
+  temper.log("static " .. a .. b)
 end
 
 ---@class defaulting.StringHolder
@@ -122,26 +122,26 @@ local function chainMore(a)
 end
 
 fCalls = 0
-print("fCalls=" .. fCalls)
-print("g(   )=" .. g())
-print("fCalls=" .. fCalls)
-print("g(123)=" .. g(123))
-print("fCalls=" .. fCalls)
-print("g(null)=" .. g(noInline()))
-print("fCalls=" .. fCalls)
+temper.log("fCalls=" .. fCalls)
+temper.log("g(   )=" .. g())
+temper.log("fCalls=" .. fCalls)
+temper.log("g(123)=" .. g(123))
+temper.log("fCalls=" .. fCalls)
+temper.log("g(null)=" .. g(noInline()))
+temper.log("fCalls=" .. fCalls)
 Thing():say("hi")
 Thing():say(temper.null, "there")
 Thing():say("by", "e")
 Thing.sayStatic("yall")
 inked = 0
 local subject = maybeInc()
-print("maybeInc() -> " .. (temper.is_null(subject) and -1 or (subject --[[@as integer]])))
-print("inked: " .. inked)
-print('lengthish "ab": ' .. chainMore("ab"))
-print("lengthish null: " .. chainMore(temper.null))
-print("inked: " .. inked)
-print('maybeEmpty "": ' .. maybeEmpty(StringHolder("")))
-print("maybeEmpty null: " .. maybeEmpty(temper.null))
-print("inked: " .. inked)
+temper.log("maybeInc() -> " .. (temper.is_null(subject) and -1 or (subject --[[@as integer]])))
+temper.log("inked: " .. inked)
+temper.log('lengthish "ab": ' .. chainMore("ab"))
+temper.log("lengthish null: " .. chainMore(temper.null))
+temper.log("inked: " .. inked)
+temper.log('maybeEmpty "": ' .. maybeEmpty(StringHolder("")))
+temper.log("maybeEmpty null: " .. maybeEmpty(temper.null))
+temper.log("inked: " .. inked)
 
 return {}

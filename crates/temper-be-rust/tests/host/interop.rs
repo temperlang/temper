@@ -1,5 +1,6 @@
 //! Host code using the generated `async-turns` crate the standard way,
-//! and `class-edges`' builder for a generic class,
+//! and `class-edges`' builder for a generic class and a class's `var`
+//! updated from threads at once,
 //! for `functional.rs`'s `runs_and_lints`: it prints a line per check,
 //! which the test compares with what it expects. Clippy lints it with the
 //! generated crates.
@@ -107,4 +108,23 @@ fn main() {
         .joiner(Arc::new(" + ".to_string()))
         .build();
     println!("options {}", duo.names());
+
+    // A `var` updated from four threads at once loses no update.
+    let tally = class_edges::Tally::new();
+    let threads: Vec<_> = (0..4)
+        .map(|_| {
+            let tally = tally.clone();
+            std::thread::spawn(move || {
+                for _ in 0..25_000 {
+                    tally.add(1);
+                    tally.bump();
+                    class_edges::bump_twice(tally.clone());
+                }
+            })
+        })
+        .collect();
+    for thread in threads {
+        thread.join().unwrap();
+    }
+    println!("tally {}", tally.count());
 }

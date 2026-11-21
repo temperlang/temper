@@ -34,7 +34,7 @@ local function comparePositions(s, a, b)
   end) then
     t_1 = "?"
   end
-  print("'" .. t .. "' is " .. relPos .. " '" .. t_1 .. "' in \"" .. s .. '".')
+  temper.log("'" .. t .. "' is " .. relPos .. " '" .. t_1 .. "' in \"" .. s .. '".')
 end
 
 ---@param s string
@@ -113,7 +113,7 @@ do
     end) then
       t = "?"
     end
-    print("'" .. t .. "' in \"" .. s .. '": ' .. (has0(s, c) and "y" or "n") .. ", " .. (has1(s, c) and "y" or "n") .. ", " .. (has2(s, c) and "y" or "n") .. ", " .. (has3(s, c) and "y" or "n") .. ", " .. (has4(s, c) and "y" or "n"))
+    temper.log("'" .. t .. "' in \"" .. s .. '": ' .. (has0(s, c) and "y" or "n") .. ", " .. (has1(s, c) and "y" or "n") .. ", " .. (has2(s, c) and "y" or "n") .. ", " .. (has3(s, c) and "y" or "n") .. ", " .. (has4(s, c) and "y" or "n"))
   end
 end
 do
@@ -123,8 +123,8 @@ do
   local afterComma = temper.stringbuilder_end(stringBuilder)
   temper.stringbuilder_append(stringBuilder, " World!")
   local str = temper.stringbuilder_tostring(stringBuilder)
-  print(temper.string_slice(str, 1, afterComma))
-  print(temper.string_slice(str, afterComma, temper.string_end(str)))
+  temper.log(temper.string_slice(str, 1, afterComma))
+  temper.log(temper.string_slice(str, afterComma, temper.string_end(str)))
 end
 
 return {}

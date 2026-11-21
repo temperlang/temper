@@ -4,7 +4,7 @@ local temper = require("temper-core")
 ---@return string
 local function whatever(n)
   if n == 0 then
-    print("0")
+    temper.log("0")
   end
   return "nil"
 end
@@ -69,7 +69,7 @@ whatever(1)
 local someThings = { "a", "b" }
 local first = Classy.first(someThings)
 local second = Classy(1):indexed(someThings)
-print("Some things: " .. first .. ", " .. second)
-print("Picked: " .. Picker():pick(someThings))
+temper.log("Some things: " .. first .. ", " .. second)
+temper.log("Picked: " .. Picker():pick(someThings))
 
 return {}

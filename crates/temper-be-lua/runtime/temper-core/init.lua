@@ -198,6 +198,58 @@ local function utf8len(str, index)
     end
 end
 
+-- Yielding from inside `pcall`, as `await` and a generator's yield do
+-- under `orelse`, works on Lua 5.2 and later and on LuaJIT, but not on
+-- PUC Lua 5.1, whose `pcall` is a C function. There, as coxpcall does,
+-- `pcall` in a coroutine runs its function in a coroutine of its own,
+-- passing on what that yields and what resumes it, and
+-- `blocked_coroutine` finds the coroutine that a yield really parks.
+-- Elsewhere both are Lua's own, so nothing changes.
+local coro_create = coroutine.create
+local coro_resume = coroutine.resume
+local coro_running = coroutine.running
+local coro_status = coroutine.status
+local yieldable_pcall = pcall
+local blocked_coroutine = coro_running
+do
+    local probe = coro_create(function()
+        pcall(coro_yield)
+    end)
+    coro_resume(probe)
+    if coro_status(probe) ~= "suspended" then
+        -- Each pcall's coroutine's caller, weakly held.
+        local caller_of = setmetatable({}, { __mode = "k" })
+
+        local function resumed(co, ok, ...)
+            if not ok then
+                return false, ...
+            elseif coro_status(co) == "dead" then
+                return true, ...
+            end
+            return resumed(co, coro_resume(co, coro_yield(...)))
+        end
+
+        function yieldable_pcall(f, ...)
+            local caller = coro_running()
+            if caller == nil then
+                -- On the main thread, nothing can yield anyway.
+                return pcall(f, ...)
+            end
+            local co = coro_create(f)
+            caller_of[co] = caller
+            return resumed(co, coro_resume(co, ...))
+        end
+
+        function blocked_coroutine()
+            local co = coro_running()
+            while caller_of[co] ~= nil do
+                co = caller_of[co]
+            end
+            return co
+        end
+    end
+end
+
 do
     local bubble_meta = {
         __tostring = function(self)
@@ -211,7 +263,7 @@ do
 
     if TEMPER_LUA_DEBUG_PCALL then
         function temper.pcall(f, ...)
-            local res = {pcall(f, ...)}
+            local res = {yieldable_pcall(f, ...)}
             if res[1] then
                 return table_unpack(res)
             end
@@ -223,7 +275,7 @@ do
             end
         end
     else
-        temper.pcall = pcall
+        temper.pcall = yieldable_pcall
     end
 
     function temper.bubble(msg)
@@ -293,9 +345,6 @@ end
 -- only `temper.async`, `await`, and the promise builders, never the
 -- queue, so the queue stays swappable (one per isolate, say).
 do
-    local coro_resume = coroutine.resume
-    local coro_running = coroutine.running
-
     local promise_methods = {}
     local promise_meta = { __index = promise_methods }
 
@@ -381,7 +430,7 @@ do
     -- The promise's value once it's settled, or a bubble if it's broken.
     function promise_methods:await()
         if self.waiters ~= nil then
-            local co, main = coro_running()
+            local co, main = blocked_coroutine()
             if co == nil or main then
                 error("await outside an async block")
             end
@@ -430,9 +479,21 @@ do
         if not (ok and ok_http and ok_ltn12) then
             return nil
         end
-        local coro_create = coroutine.create
-        local coro_status = coroutine.status
         local table_insert = table.insert
+        -- Whether a request can yield inside `http.request`, through
+        -- `socket.protect`, a C function: not on Lua 5.1 or LuaJIT, where
+        -- each request blocks until it's done instead.
+        local can_yield = false
+        if socket.protect ~= nil then
+            local protected = socket.protect(function()
+                coro_yield()
+            end)
+            local probe = coro_create(function()
+                protected()
+            end)
+            coro_resume(probe)
+            can_yield = coro_status(probe) == "suspended"
+        end
         -- Requests in flight, each a coroutine running `http.request` over
         -- a socket that yields instead of blocking: waiting[co] is the
         -- socket and whether it waits to read ("r") or write ("w").
@@ -558,9 +619,9 @@ do
                     headers = headers,
                     source = body and ltn12.source.string(body) or nil,
                     sink = ltn12.sink.table(chunks),
-                    create = function()
+                    create = can_yield and function()
                         return yielding(socket.tcp())
-                    end,
+                    end or nil,
                 })
                 count = count - 1
                 -- 1, the status, and the headers, or nil and why.
@@ -1336,8 +1397,21 @@ function temper.void(...)
     return nil
 end
 
-function temper.log(msg)
-    print(msg)
+-- Lua's `print`, but on PUC Lua 5.1, whose `print` stops at a NUL, so
+-- a message with one is written whole there.
+if _VERSION == "Lua 5.1" and jit == nil and io ~= nil and io.stdout ~= nil then
+    local stdout = io.stdout
+    function temper.log(msg)
+        if string_find(msg, "\0", 1, true) then
+            stdout:write(msg, "\n")
+        else
+            print(msg)
+        end
+    end
+else
+    function temper.log(msg)
+        print(msg)
+    end
 end
 
 function temper.bool_not(a)
@@ -1820,7 +1894,9 @@ function temper.string_tofloat64(str)
         if dot == "" or frac ~= "" then
             ret = tonumber(str)
             if ret == 0 and sign == "-" then -- and dot == "", but meh
-                ret = -0.0
+                -- Not `-0.0`: Lua 5.1 keeps one constant per function
+                -- for equal numbers, so it would be the `0` above.
+                ret = -1 / math_huge
             end
             if ret then
                 return ret
@@ -1835,8 +1911,15 @@ function temper.string_toint32(str, radix)
         radix = 10
     end
     local ret = tonumber(str, radix)
-    if temper.is_safe_int32(ret) then
+    if ret ~= nil and temper.is_safe_int32(ret) then
         return ret
+    end
+    -- Lua 5.1 reads a negative number in a radix other than 10 as
+    -- unsigned, so too big, and the sign is read here instead.
+    local digits = string_match(str, "^%s*%-(%w.*)$")
+    ret = digits and tonumber(digits, radix)
+    if ret ~= nil and temper.is_safe_int32(-ret) then
+        return -ret
     end
     temper.bubble("core.type String.toInt32() failed")
 end

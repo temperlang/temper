@@ -22,7 +22,7 @@ run takes about as long as its slowest job:
 | --- | --- |
 | `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
-| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
+| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT and on Lua 5.1.5 with LuaSocket; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
 | `release, playground` | `temper`'s release build, the VS Code extension (tested in a real VS Code), the docs' examples, and the docs site; the wasm build, the playground, and its smoke test in headless Chromium |
 
@@ -175,7 +175,7 @@ What's left out, and why:
   there through CMake, as users build it, by `temper`'s tests
   (`temper test -b cpp` and CMake's build of `temper build`'s
   output); the C++ backend's goldens and other tests still run.
-- **LuaJIT** runs on Linux x64 only, in `ci.yml`.
+- **LuaJIT** and **Lua 5.1** run on Linux x64 only, in `ci.yml`.
 
 `TEMPER_ALLOW_MISSING` takes comma-separated words, each matched in a
 missing tool's message; the test still says what it skipped.

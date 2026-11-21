@@ -677,7 +677,8 @@ fn runs_and_lints() {
         // standard way: it `.await`s a generated promise on a std-only
         // executor, blocks on one inside a turn, which fails clearly, and
         // loops over a generated generator with `for`, which a failed step
-        // leaves done; then it builds a generic class with its builder.
+        // leaves done; then it builds a generic class with its builder,
+        // and updates a class's `var` from four threads at once.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -691,6 +692,7 @@ fn runs_and_lints() {
                         "collatz 7,22,11,34,17,52,26,13,40,20,10,5,16,8,4,2,1",
                         "builder Ann",
                         "options Ann + Cy",
+                        "tally 400000",
                     ]
                     .map(String::from),
                 )

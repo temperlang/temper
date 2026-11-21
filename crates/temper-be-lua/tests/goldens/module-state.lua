@@ -31,9 +31,9 @@ exports.total = 10
 exports.ticks = 0
 local local_ = 1
 local_ = temper.int32_add(local_, limit)
-print(report())
-print(report())
-print("local " .. local_)
+temper.log(report())
+temper.log(report())
+temper.log("local " .. local_)
 
 exports.greeting = greeting
 exports.tick = tick

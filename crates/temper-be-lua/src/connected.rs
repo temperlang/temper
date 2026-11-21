@@ -2,8 +2,7 @@
 //! written, by qname, with Kotlin's strings as keys (notes/tmpl/names.md,
 //! "Connected declarations"). Each entry matches what Kotlin's Lua backend
 //! gives for it (its `LuaSupportNetwork.kt`), or a prettier equivalent:
-//! `print(message)` for `temper.log(message)`, which is `print` in the
-//! runtime; `tostring(n)` for `temper.int32_tostring(n)` without a radix,
+//! `tostring(n)` for `temper.int32_tostring(n)` without a radix,
 //! which formats an integer the same way; and `s == ""` for `#s == 0`.
 
 use crate::NotYet;
@@ -472,8 +471,8 @@ pub const TABLE: &[(&str, Connection)] = &[
 pub enum TypeConnection {
     /// Not kept: a module `let` of this type isn't declared, and its
     /// methods ignore it as a receiver. `Console` is, since `Console.log`
-    /// is `print`, as Kotlin's `temper.log` is (Kotlin keeps a `0.0` for
-    /// the console).
+    /// is `temper.log`, as Kotlin's is (Kotlin keeps a `0.0` for the
+    /// console).
     Erased,
 }
 
@@ -517,7 +516,8 @@ pub fn lookup_type(qname: &str) -> Option<TypeConnection> {
         .map(|i| TYPES[i].1)
 }
 
-/// `print(message)`.
+/// `temper.log(message)`, Lua's `print` but on Lua 5.1, whose `print`
+/// stops at a NUL.
 fn console_log(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [console, message] = args else {
         return Err(NotYet {
@@ -530,7 +530,8 @@ fn console_log(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> 
         });
     }
     let message = t.expr(*message)?;
-    Ok(Expr::name("print").call(vec![message]))
+    t.uses_temper = true;
+    Ok(Expr::name("temper").method("log", vec![message]))
 }
 
 /// The receiver and the radix, if given.

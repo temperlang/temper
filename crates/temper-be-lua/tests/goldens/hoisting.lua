@@ -112,7 +112,7 @@ local function firstHalf(ns)
           return half(temper.list_get(ns, i)), "return"
         end)
         if not t then
-          print("odd " .. temper.list_get(ns, i))
+          temper.log("odd " .. temper.list_get(ns, i))
         elseif t_2 == "return" then
           return t_1
         elseif t_1 == "continue" then
@@ -215,9 +215,9 @@ local function pairsUpTo(n)
 end
 
 calls = 0
-print(tostring(pick(true, false, true)) .. " " .. tostring(pick(false, false, true)) .. " " .. calls)
-print(tostring(both(true, 4)) .. " " .. tostring(both(true, 3)) .. " " .. tostring(both(false, 4)))
-print(tostring(either(false, 4)) .. " " .. tostring(either(false, 3)) .. " " .. tostring(either(true, 3)))
+temper.log(tostring(pick(true, false, true)) .. " " .. tostring(pick(false, false, true)) .. " " .. calls)
+temper.log(tostring(both(true, 4)) .. " " .. tostring(both(true, 3)) .. " " .. tostring(both(false, 4)))
+temper.log(tostring(either(false, 4)) .. " " .. tostring(either(false, 3)) .. " " .. tostring(either(true, 3)))
 ---@type integer
 local t
 if not temper.pcall(function()
@@ -232,12 +232,12 @@ if not temper.pcall(function()
 end) then
   t_1 = 100
 end
-print(tostring(sum(t, t_1)))
-print(label(temper.null))
-print(label("x"))
-print(tostring(firstHalf({ 3, -2, 8 })))
-print(tostring(firstHalf({ 5, 0, 8 })))
-print(halfOr(-1) .. " " .. halfOr(4) .. " " .. halfOr(3))
-print(tostring(pairsUpTo(5)))
+temper.log(tostring(sum(t, t_1)))
+temper.log(label(temper.null))
+temper.log(label("x"))
+temper.log(tostring(firstHalf({ 3, -2, 8 })))
+temper.log(tostring(firstHalf({ 5, 0, 8 })))
+temper.log(halfOr(-1) .. " " .. halfOr(4) .. " " .. halfOr(3))
+temper.log(tostring(pairsUpTo(5)))
 
 return {}

@@ -684,7 +684,14 @@ fn serve(name: &str, args: &[String]) -> u8 {
         );
         return NOT_YET_CODE;
     }
-    temper_lsp::serve(io::stdin(), io::stdout().lock(), flags.std_dir)
+    // Configs may use every backend's config class, as `temper build`'s.
+    let config_types = temper_driver::Registry::built_in().config_types();
+    temper_lsp::serve(
+        io::stdin(),
+        io::stdout().lock(),
+        flags.std_dir,
+        config_types,
+    )
 }
 
 /// `temper version`: its version and the commit it was built from, with

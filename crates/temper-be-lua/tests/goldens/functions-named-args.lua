@@ -44,9 +44,9 @@ function Greet.constructor(this, message, repeat_)
     repeat_ = false
   end
   ---@cast repeat_ boolean
-  print(message)
+  temper.log(message)
   if repeat_ then
-    print(message)
+    temper.log(message)
   end
 end
 
@@ -101,7 +101,7 @@ function Person.methods.greet(this, greeting)
     greeting = "Hi"
   end
   ---@cast greeting string
-  print(greeting .. ", " .. this.name)
+  temper.log(greeting .. ", " .. this.name)
 end
 
 with_tostring(Person)
@@ -162,19 +162,19 @@ do
   local arg3 = changeRepeat()
   Greet(arg3, arg2)
 end
-print(Person():toString())
-print(Person("Bob"):toString())
-print(Person("Carrie", 50):toString())
+temper.log(Person():toString())
+temper.log(Person("Bob"):toString())
+temper.log(Person("Carrie", 50):toString())
 Person("Dan"):greet("Hallo")
-print(calc(2, function(n) return tostring(n) end))
-print(calc(2, function(n) return tostring(n) end, CalcOptions(3, 4)))
-print(calc(2, function(n) return tostring(n) end, CalcOptions(3)))
-print(calc(2, function(n) return tostring(n) end, CalcOptions(temper.null, 4)))
+temper.log(calc(2, function(n) return tostring(n) end))
+temper.log(calc(2, function(n) return tostring(n) end, CalcOptions(3, 4)))
+temper.log(calc(2, function(n) return tostring(n) end, CalcOptions(3)))
+temper.log(calc(2, function(n) return tostring(n) end, CalcOptions(temper.null, 4)))
 
 ---@param n integer
 ---@return table
 local function fn5(n)
-  print(tostring(n))
+  temper.log(tostring(n))
   return temper.empty()
 end
 

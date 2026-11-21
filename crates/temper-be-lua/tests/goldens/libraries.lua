@@ -922,42 +922,42 @@ Casing.mark = "#"
 ticks = 0
 extras = { 1 }
 local grid = Grid(2, { 1.0, 2.0, 3.0, 4.0 })
-print(rows(grid.values, 2) .. " " .. temper.float64_tostring(half(3.0)) .. " " .. temper.float64_tostring(cube(8.0)))
-print(temper.float64_tostring(corner(grid)))
-print(temper.float64_tostring(total(grid.values)))
+temper.log(rows(grid.values, 2) .. " " .. temper.float64_tostring(half(3.0)) .. " " .. temper.float64_tostring(cube(8.0)))
+temper.log(temper.float64_tostring(corner(grid)))
+temper.log(temper.float64_tostring(total(grid.values)))
 local none = text(0)
 local some = count(3)
 local part = none
 local part2 = some
 local subject = maybe(0)
 local part3 = temper.is_null(subject) and temper.null or (subject --[[@as libraries.Grid]]).ncols
-print((temper.is_null(part) and "null" or (part --[[@as string]])) .. " " .. (temper.is_null(part2) and "null" or tostring(part2 --[[@as integer]])) .. " " .. (temper.is_null(part3) and "null" or tostring(part3 --[[@as integer]])))
-print(tostring(not temper.is_null(maybe(1))) .. " " .. tostring(not temper.is_null(maybe(0))) .. " " .. tostring(temper.is_null(Grid.parse(""))))
-print(Casing.first:toString())
-print(temper.listed_join(mapped(grid), ",", function(x) return temper.float64_tostring(x) end))
-print(temper.listed_join(cubes(grid), ",", function(x) return temper.float64_tostring(x) end))
+temper.log((temper.is_null(part) and "null" or (part --[[@as string]])) .. " " .. (temper.is_null(part2) and "null" or tostring(part2 --[[@as integer]])) .. " " .. (temper.is_null(part3) and "null" or tostring(part3 --[[@as integer]])))
+temper.log(tostring(not temper.is_null(maybe(1))) .. " " .. tostring(not temper.is_null(maybe(0))) .. " " .. tostring(temper.is_null(Grid.parse(""))))
+temper.log(Casing.first:toString())
+temper.log(temper.listed_join(mapped(grid), ",", function(x) return temper.float64_tostring(x) end))
+temper.log(temper.listed_join(cubes(grid), ",", function(x) return temper.float64_tostring(x) end))
 local left = casing(1)
 local left2 = casing(0)
 local left3 = casing(0)
 local right = casing(0)
-print(tostring(not temper.is_null(left) and (left --[[@as libraries.Casing]]):eq(Casing.first)) .. " " .. tostring(not temper.is_null(left2) and (left2 --[[@as libraries.Casing]]):eq(Casing.first)) .. " " .. tostring(not (temper.is_null(left3) and temper.is_null(right) or not temper.is_null(left3) and (not temper.is_null(right) and (left3 --[[@as libraries.Casing]]):eq(right --[[@as libraries.Casing]])))))
-print(captured("") .. " " .. captured("2.5"))
-print(tostring(bidi() ~= "lookout"))
-print(temper.str_cmp(word(1), word(2)) .. " " .. temper.str_cmp(word(2), word(1)) .. " " .. temper.str_cmp(word(2), word(3)))
+temper.log(tostring(not temper.is_null(left) and (left --[[@as libraries.Casing]]):eq(Casing.first)) .. " " .. tostring(not temper.is_null(left2) and (left2 --[[@as libraries.Casing]]):eq(Casing.first)) .. " " .. tostring(not (temper.is_null(left3) and temper.is_null(right) or not temper.is_null(left3) and (not temper.is_null(right) and (left3 --[[@as libraries.Casing]]):eq(right --[[@as libraries.Casing]])))))
+temper.log(captured("") .. " " .. captured("2.5"))
+temper.log(tostring(bidi() ~= "lookout"))
+temper.log(temper.str_cmp(word(1), word(2)) .. " " .. temper.str_cmp(word(2), word(1)) .. " " .. temper.str_cmp(word(2), word(3)))
 local named = word(2)
-print(tostring(named == word(3) and named .. "!" ~= named))
+temper.log(tostring(named == word(3) and named .. "!" ~= named))
 local digits = { 1, 2, 4, 3 }
-print(byteAt(digits, true, 1) .. " " .. byteAt(digits, false, 0) .. " " .. tostring(ascending(digits)) .. " " .. firstDrop(digits) .. " " .. sizeWith(digits))
-print(tickIf(true) .. " " .. tickIf(false) .. " " .. tostring(ticked()) .. " " .. tickWhile())
+temper.log(byteAt(digits, true, 1) .. " " .. byteAt(digits, false, 0) .. " " .. tostring(ascending(digits)) .. " " .. firstDrop(digits) .. " " .. sizeWith(digits))
+temper.log(tickIf(true) .. " " .. tickIf(false) .. " " .. tostring(ticked()) .. " " .. tickWhile())
 local string_ = shapeName(shapeOf(1)) .. " " .. shapeName(shapeOf(2)) .. " " .. temper.list_length(sizes(shapeOf(1))) .. " " .. temper.list_length(sizes(shapeOf(2))) .. " "
 local part4 = Dot(1).grown
 local part5 = Dot(3).grown
-print(string_ .. (temper.is_null(part4) and "null" or tostring(part4 --[[@as integer]])) .. " " .. (temper.is_null(part5) and "null" or tostring(part5 --[[@as integer]])) .. " " .. Casing.last:toString() .. " " .. Casing.first.marked)
+temper.log(string_ .. (temper.is_null(part4) and "null" or tostring(part4 --[[@as integer]])) .. " " .. (temper.is_null(part5) and "null" or tostring(part5 --[[@as integer]])) .. " " .. Casing.last:toString() .. " " .. Casing.first.marked)
 local carry = Carry(3)
 local value = tostring(carry.carrying) .. " " .. carry.state .. " " .. tostring(Carry(0).carrying) .. " "
 local part6 = tagged().label
 local part7 = tagged("x").label
-print(value .. (temper.is_null(part6) and "null" or (part6 --[[@as string]])) .. " " .. (temper.is_null(part7) and "null" or (part7 --[[@as string]])) .. " " .. weight(42) .. " " .. weight(60))
+temper.log(value .. (temper.is_null(part6) and "null" or (part6 --[[@as string]])) .. " " .. (temper.is_null(part7) and "null" or (part7 --[[@as string]])) .. " " .. weight(42) .. " " .. weight(60))
 local b = temper.listbuilder_constructor()
 temper.listbuilder_add(b, true)
 temper.listbuilder_add(b, false)
@@ -968,23 +968,23 @@ joiner:addFlags({ true })
 joiner:addTexts({ "x", "y" })
 local maybes = { temper.null, "z" }
 joiner:addMaybes(maybes)
-print(joiner.out)
+temper.log(joiner.out)
 local held = Held(Tag("a"), temper.null)
 local other = Held(Tag("b"), held)
 local nobody = temper.null
 local string_2 = held:toString() .. " "
 local subject3 = other.next
 local subject2 = temper.is_null(subject3) and temper.null or (subject3 --[[@as libraries.Held]]).item
-print(string_2 .. (temper.is_null(subject2) and Tag("none") or (subject2 --[[@as libraries.Tag]])):toString() .. " " .. tostring(sameHeld(held, held)) .. " " .. tostring(sameHeld(held, other)) .. " " .. tostring(sameHeld(nobody, nobody)) .. " " .. tostring(sameHeld(nobody, held)))
-print(effectsOf("ab", 1, 2) .. " " .. Bundle({}, "2").first .. " " .. temper.list_length(flags))
+temper.log(string_2 .. (temper.is_null(subject2) and Tag("none") or (subject2 --[[@as libraries.Tag]])):toString() .. " " .. tostring(sameHeld(held, held)) .. " " .. tostring(sameHeld(held, other)) .. " " .. tostring(sameHeld(nobody, nobody)) .. " " .. tostring(sameHeld(nobody, held)))
+temper.log(effectsOf("ab", 1, 2) .. " " .. Bundle({}, "2").first .. " " .. temper.list_length(flags))
 local counter = Ticks()
 local stepper = counter
 stepper:step()
-print(temper.list_get(stepper:step(), 0) .. " " .. counter.count .. " " .. Names():take(Tag("abc")) .. " " .. Quoting():escapeFlag(true))
+temper.log(temper.list_get(stepper:step(), 0) .. " " .. counter.count .. " " .. Names():take(Tag("abc")) .. " " .. Quoting():escapeFlag(true))
 local subject4 = problem(0)
 local subject5 = message(1)
 local subject6 = message(2)
-print((temper.is_null(subject4) and "none" or (subject4 --[[@as string]])) .. " " .. (temper.is_null(subject5) and "none" or (subject5 --[[@as string]])) .. " " .. (temper.is_null(subject6) and "none" or (subject6 --[[@as string]])) .. " " .. sumParsed({ "1", "x", "2" }) .. " " .. backwards({ 1, 2, 3 }))
+temper.log((temper.is_null(subject4) and "none" or (subject4 --[[@as string]])) .. " " .. (temper.is_null(subject5) and "none" or (subject5 --[[@as string]])) .. " " .. (temper.is_null(subject6) and "none" or (subject6 --[[@as string]])) .. " " .. sumParsed({ "1", "x", "2" }) .. " " .. backwards({ 1, 2, 3 }))
 
 return {
   Grid = Grid,

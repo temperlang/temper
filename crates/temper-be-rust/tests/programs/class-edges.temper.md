@@ -8,7 +8,9 @@ setters show; and a constructor that reads fields it has set, then
 changes one and passes `this` on after it makes the instance. Then a
 generic class with a bound and optional constructor parameters, one of
 its type parameter's type, made with and without them, whose builder
-takes its type parameters.
+takes its type parameters. And a `var` that host threads update at
+once, through `this` and through a parameter, each update read and
+written under one lock, so none is lost.
 
     export interface Named {
       public get name(): String;
@@ -67,6 +69,14 @@ takes its type parameters.
     console.log(new Duo<Person>(p).names());
     console.log(new Duo(p, new Person("Cy", "Mr")).names());
     console.log(new Duo<Person>(p, q, " + ").names());
+
+    export class Tally {
+      public var count: Int = 0;
+      public add(n: Int): Void { count += n; }
+      public bump(): Void { count = count + 1; }
+    }
+
+    export let bumpTwice(tally: Tally): Void { tally.count = 2 + tally.count; }
 
 ```log
 Dr Ann

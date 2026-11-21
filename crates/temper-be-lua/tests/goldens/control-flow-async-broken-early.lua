@@ -13,7 +13,7 @@ local function fn()
   end) then
     v = -1
   end
-  print("got " .. v)
+  temper.log("got " .. v)
 end
 
 temper.async(temper.adapt_generator_fn(fn))

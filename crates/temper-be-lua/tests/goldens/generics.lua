@@ -199,7 +199,7 @@ local function indexed()
   local t5 = temper.int32_sub(temper.listed_get(counts, 0), 1)
   temper.listbuilder_set(counts, 0, t5)
   local down = t5
-  print(was .. " " .. pre .. " " .. post .. " " .. down .. " " .. at)
+  temper.log(was .. " " .. pre .. " " .. post .. " " .. down .. " " .. at)
 end
 
 local function both()
@@ -234,7 +234,7 @@ local function both()
   local t8 = temper.listed_get(b, k2)
   temper.listbuilder_set(b, k2, temper.int32_add(t8, 1))
   local items = temper.int32_add(t7, t8)
-  print(locals .. " " .. x .. " " .. y .. " " .. fields .. " " .. same .. " " .. p.n .. " " .. q.n .. " " .. items .. " " .. temper.listed_get(a, 0) .. " " .. temper.listed_get(b, 0))
+  temper.log(locals .. " " .. x .. " " .. y .. " " .. fields .. " " .. same .. " " .. p.n .. " " .. q.n .. " " .. items .. " " .. temper.listed_get(a, 0) .. " " .. temper.listed_get(b, 0))
 end
 
 ---@param key string
@@ -259,28 +259,28 @@ end
 
 local ns = { 1, 2, 3 }
 local none = {}
-print(total(ns) .. " " .. first(ns, 0) .. " " .. first(none, -1))
-print(first({ "a", "b" }, "z"))
+temper.log(total(ns) .. " " .. first(ns, 0) .. " " .. first(none, -1))
+temper.log(first({ "a", "b" }, "z"))
 local box = Box("boxed")
-print(held(box))
+temper.log(held(box))
 local pair = box:pairWith(7)
-print(pair.key .. " " .. pair.value)
+temper.log(pair.key .. " " .. pair.value)
 local shelf = Shelf({ Named("ann"), Named("bo") })
 local subject = shelf:firstName()
-print(temper.is_null(subject) and "none" or (subject --[[@as string]]))
+temper.log(temper.is_null(subject) and "none" or (subject --[[@as string]]))
 local noNames = {}
 local empty = Shelf(noNames)
 local subject2 = empty:firstName()
-print(temper.is_null(subject2) and "none" or (subject2 --[[@as string]]))
+temper.log(temper.is_null(subject2) and "none" or (subject2 --[[@as string]]))
 local n = temper.int32_add(shelf:tally(1), shelf:tally(2))
-print(tagged(4) .. " " .. tagged("t") .. " " .. countOf(3) .. " " .. relayed(5) .. " " .. n)
+temper.log(tagged(4) .. " " .. tagged("t") .. " " .. countOf(3) .. " " .. relayed(5) .. " " .. n)
 local builder = temper.listbuilder_constructor()
 temper.listbuilder_add(builder, "x")
 temper.listbuilder_add(builder, "y")
 temper.listbuilder_add(builder, "w", 0)
-print(temper.listbuilder_length(builder) .. " " .. temper.listed_get(builder, 0) .. " " .. temper.listbuilder_removelast(builder))
+temper.log(temper.listbuilder_length(builder) .. " " .. temper.listed_get(builder, 0) .. " " .. temper.listbuilder_removelast(builder))
 local built = temper.listbuilder_tolist(builder)
-print(temper.list_length(built) .. " " .. temper.listed_getor(built, 5, "?") .. " " .. temper.list_get(temper.listed_slice(built, 1, 2), 0))
+temper.log(temper.list_length(built) .. " " .. temper.listed_getor(built, 5, "?") .. " " .. temper.list_get(temper.listed_slice(built, 1, 2), 0))
 local m = temper.map_constructor({ temper.pair_constructor("a", 1), temper.pair_constructor("b", 2) })
 ---@type integer
 local t_1
@@ -296,13 +296,13 @@ if not temper.pcall(function()
 end) then
   t_2 = -1
 end
-print(t_1 .. " " .. t_2 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. temper.mapped_length(m))
+temper.log(t_1 .. " " .. t_2 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. temper.mapped_length(m))
 local mb = temper.mapbuilder_constructor()
 temper.mapbuilder_set(mb, "q", 5)
 temper.mapbuilder_set(mb, "n", temper.null)
 local subject3 = temper.mapped_getor(mb, "q", 0)
 local subject4 = temper.mapped_getor(mb, "n", 0)
-print((temper.is_null(subject3) and -2 or (subject3 --[[@as integer]])) .. " " .. (temper.is_null(subject4) and -2 or (subject4 --[[@as integer]])) .. " " .. tostring(temper.mapped_has(mb, "n")))
+temper.log((temper.is_null(subject3) and -2 or (subject3 --[[@as integer]])) .. " " .. (temper.is_null(subject4) and -2 or (subject4 --[[@as integer]])) .. " " .. tostring(temper.mapped_has(mb, "n")))
 ---@type integer|temper.Null
 local subject6
 if not temper.pcall(function()
@@ -311,8 +311,8 @@ end) then
   subject6 = 0
 end
 local subject5 = temper.is_null(subject6) and temper.null or tostring(subject6 --[[@as integer]])
-print(temper.is_null(subject5) and "null" or (subject5 --[[@as string]]))
-print(tostring(temper.listed_length(temper.mapped_keys(mb))))
+temper.log(temper.is_null(subject5) and "null" or (subject5 --[[@as string]]))
+temper.log(tostring(temper.listed_length(temper.mapped_keys(mb))))
 indexed()
 both()
 tally = temper.mapbuilder_constructor()
@@ -338,8 +338,8 @@ if not temper.pcall(function()
 end) then
   t_5 = -1
 end
-print(t_3 .. " " .. t_4 .. " " .. t_5)
-print(tostring(firstSame({ 1000 }, { 1000 })) .. " " .. tostring(firstSame({ 1000 }, { 7 })))
+temper.log(t_3 .. " " .. t_4 .. " " .. t_5)
+temper.log(tostring(firstSame({ 1000 }, { 1000 })) .. " " .. tostring(firstSame({ 1000 }, { 7 })))
 
 return {
   Holder = Holder,

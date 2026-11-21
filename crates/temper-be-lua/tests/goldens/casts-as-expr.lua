@@ -44,8 +44,8 @@ do
   ---@type as-expr.Apple|temper.Null
   local x
   x = Fuji()
-  print(temper.cast_to(x, Apple).name)
-  print(temper.cast_to(x, Fuji).name)
+  temper.log(temper.cast_to(x, Apple).name)
+  temper.log(temper.cast_to(x, Fuji).name)
   x = Gala()
   ---@type string
   local t
@@ -54,7 +54,7 @@ do
   end) then
     t = "Cast failed!"
   end
-  print(t)
+  temper.log(t)
   local y = x
   ---@type string
   local t_1
@@ -63,7 +63,7 @@ do
   end) then
     t_1 = "Cast from AnyValue failed!"
   end
-  print(t_1)
+  temper.log(t_1)
   ---@type string
   local t_2
   if not temper.pcall(function()
@@ -71,7 +71,7 @@ do
   end) then
     t_2 = "Cast from AnyValue failed!"
   end
-  print(t_2)
+  temper.log(t_2)
   ---@type string
   local t_3
   if not temper.pcall(function()
@@ -79,7 +79,7 @@ do
   end) then
     t_3 = "Cast from AnyValue failed!"
   end
-  print(t_3)
+  temper.log(t_3)
   x = temper.null
   ---@type string
   local t_4
@@ -89,7 +89,7 @@ do
   end) then
     t_4 = "Was null!"
   end
-  print(t_4)
+  temper.log(t_4)
 end
 local thing0 = false
 local thing1 = 1

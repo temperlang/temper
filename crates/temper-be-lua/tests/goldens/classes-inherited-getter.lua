@@ -23,6 +23,6 @@ function C.constructor(this)
 end
 
 local c = C()
-print("Goodbye, gotta run, " .. c.place .. "!")
+temper.log("Goodbye, gotta run, " .. c.place .. "!")
 
 return {}

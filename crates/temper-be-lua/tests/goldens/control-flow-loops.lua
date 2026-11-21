@@ -8,7 +8,7 @@ do
         i = temper.int32_add(i, 1)
         break
       end
-      print(tostring(i))
+      temper.log(tostring(i))
       i = temper.int32_add(i, 1)
     until true
   end
@@ -19,7 +19,7 @@ do
     if i2 == 3 then
       break
     end
-    print(tostring(i2))
+    temper.log(tostring(i2))
     i2 = temper.int32_add(i2, 1)
   end
 end
@@ -36,7 +36,7 @@ do
         n = temper.int32_add(t, 1)
         str = str .. " " .. t
         if i3 <= j then
-          print(str)
+          temper.log(str)
           i3 = temper.int32_add(i3, 1)
           jump = "continue"
           break
@@ -83,7 +83,7 @@ do
                     k = temper.int32_add(k, 1)
                     break
                   end
-                  print(tostring(prime))
+                  temper.log(tostring(prime))
                   k = temper.int32_add(k, 1)
                 until true
                 if jump2 or jump3 then
@@ -121,12 +121,12 @@ do
         val = temper.int32_add(t2, 1)
         str2 = str2 .. " " .. t2
         if i5 == 4 then
-          print("break")
+          temper.log("break")
           jump4 = "break"
           break
         end
         if i5 <= j3 then
-          print(str2)
+          temper.log(str2)
           i5 = temper.int32_add(i5, 1)
           jump4 = "continue"
           break

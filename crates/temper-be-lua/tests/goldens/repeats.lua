@@ -53,8 +53,8 @@ local function positive(n)
   return n
 end
 
-print(tostring(odds(9)))
-print(tostring(pairs_(4)))
-print(tostring(positive(3)))
+temper.log(tostring(odds(9)))
+temper.log(tostring(pairs_(4)))
+temper.log(tostring(positive(3)))
 
 return {}

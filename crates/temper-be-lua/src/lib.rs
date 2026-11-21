@@ -10,7 +10,7 @@
 //! chunk returns), names, and `temper-core` runtime, required as
 //! `temper-core`, as Kotlin Temper's `lua` backend, with prettier bodies:
 //! no numbered names, local functions and locals declared where they're
-//! first given a value, `..` for concatenation, `print` for logging,
+//! first given a value, `..` for concatenation, `temper.log` for logging,
 //! natural control flow, without `goto`, which Lua 5.1 lacks
 //! ([`translate`], "Jumps"), and blank lines between functions. LuaCATS annotations
 //! (`---@param i integer`) type parameters, results, and locals declared

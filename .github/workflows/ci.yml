@@ -16,13 +16,13 @@
 # - `backends`, two jobs, each with only its backends' toolchains
 #   (.github/actions/toolchains): generated Python run and type checked
 #   by mypy and pyright, strict; generated JS run under Node and type
-#   checked by TypeScript, strict; generated Lua run by Lua 5.4.6 and by
-#   LuaJIT, parsed by luac, and type checked by LuaLS; and generated Rust
-#   built, run, and linted by clippy; then generated Java compiled by
-#   javac with every lint an error, and run; generated C# compiled by csc
-#   with nullable reference types and every warning and .NET analyzer an
-#   error, and run; and generated C++ compiled by g++ with every warning
-#   an error, and run, also under AddressSanitizer,
+#   checked by TypeScript, strict; generated Lua run by Lua 5.4.6, Lua
+#   5.1.5, and LuaJIT, parsed by luac, and type checked by LuaLS; and
+#   generated Rust built, run, and linted by clippy; then generated
+#   Java compiled by javac with every lint an error, and run; generated
+#   C# compiled by csc with nullable reference types and every warning
+#   and .NET analyzer an error, and run; and generated C++ compiled by
+#   g++ with every warning an error, and run, also under AddressSanitizer,
 #   UndefinedBehaviorSanitizer, and ThreadSanitizer, and compiled at -O2
 #   by g++ 12 and 14 (14 at -O3 too) and clang++, every warning an error;
 #   and the version's spellings, sorted by each ecosystem's own
@@ -254,6 +254,7 @@ jobs:
           - id: checked
             name: py, js, lua, rust
             backends: py js lua rust
+            apt: lua5.1
           - id: compiled
             name: java, csharp, cpp
             backends: java csharp cpp
@@ -302,6 +303,15 @@ jobs:
           make -C "$RUNNER_TEMP/luajit-src" -j4 -s PREFIX="$RUNNER_TEMP/luajit"
           make -C "$RUNNER_TEMP/luajit-src" -s install PREFIX="$RUNNER_TEMP/luajit"
           LUA="$RUNNER_TEMP/luajit/bin/luajit" cargo test --locked -p temper-be-lua --test functional runs
+      # And under PUC Lua 5.1, Ubuntu's 5.1.5 (the matrix's `apt`), with
+      # lua-socket's 5.1 build, so std `net`'s client runs on 5.1 too,
+      # where a request can't yield through LuaSocket and so blocks.
+      - name: Lua under Lua 5.1
+        if: ${{ !cancelled() && contains(matrix.backends, 'lua') }}
+        run: |
+          lua5.1 -v 2>&1 | grep -F "Lua 5.1.5"
+          lua5.1 -e "require('socket.http')"
+          LUA=lua5.1 cargo test --locked -p temper-be-lua --test functional runs
       # With the Rust runtime's own unit tests, which the workspace
       # (excluding crates/temper-be-rust/runtime/) leaves out.
       - name: Rust

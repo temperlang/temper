@@ -44,7 +44,7 @@ local function odds(n)
   return sum
 end
 
-print(tostring(search(5)))
-print(tostring(odds(9)))
+temper.log(tostring(search(5)))
+temper.log(tostring(odds(9)))
 
 return {}

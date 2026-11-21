@@ -66,10 +66,10 @@ end
 
 local temper_ = "t"
 calls = 0
-print(end_(1) .. " " .. temper_ .. " " .. tostring(print_(false, true)) .. " " .. tostring(print_(true, false)))
-print(math_(true, false) .. " " .. calls .. " " .. exports_(true) .. " " .. exports_(false))
-print(module_(false, true) .. " " .. require_(false, true) .. " " .. _ENV_(true, false, true))
-print('"it\'s" \\ a\0001 \226\128\174x')
-print(shifts(33))
+temper.log(end_(1) .. " " .. temper_ .. " " .. tostring(print_(false, true)) .. " " .. tostring(print_(true, false)))
+temper.log(math_(true, false) .. " " .. calls .. " " .. exports_(true) .. " " .. exports_(false))
+temper.log(module_(false, true) .. " " .. require_(false, true) .. " " .. _ENV_(true, false, true))
+temper.log('"it\'s" \\ a\0001 \226\128\174x')
+temper.log(shifts(33))
 
 return {}

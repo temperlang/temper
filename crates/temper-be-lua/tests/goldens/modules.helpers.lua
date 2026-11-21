@@ -22,7 +22,7 @@ end
 
 local base = 10
 exports.calls = 0
-print(greet("helpers"))
+temper.log(greet("helpers"))
 
 exports.twice = twice
 exports.intDoubled = intDoubled

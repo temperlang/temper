@@ -1,6 +1,8 @@
+local temper = require("temper-core")
+
 local emptyString = ""
 local foo = "foo"
-print(emptyString == "" and "emptyString is empty" or "emptyString is not empty")
-print(foo == "" and "foo is empty" or "foo is not empty")
+temper.log(emptyString == "" and "emptyString is empty" or "emptyString is not empty")
+temper.log(foo == "" and "foo is empty" or "foo is not empty")
 
 return {}

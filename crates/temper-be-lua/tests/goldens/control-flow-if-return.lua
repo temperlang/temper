@@ -1,3 +1,5 @@
+local temper = require("temper-core")
+
 ---@param b boolean
 ---@return string
 local function explicit(b)
@@ -43,13 +45,13 @@ end
 
 local t = true
 local f = not t
-print("explicit    true  -> " .. explicit(t))
-print("explicit    false -> " .. explicit(f))
-print("halfAndHalf true  -> " .. halfAndHalf(t))
-print("halfAndHalf false -> " .. halfAndHalf(f))
-print("implicit    true  -> " .. implicit(t))
-print("implicit    false -> " .. implicit(f))
-print("nested      true  false -> " .. nested(t, f))
-print("nested      false true  -> " .. nested(f, t))
+temper.log("explicit    true  -> " .. explicit(t))
+temper.log("explicit    false -> " .. explicit(f))
+temper.log("halfAndHalf true  -> " .. halfAndHalf(t))
+temper.log("halfAndHalf false -> " .. halfAndHalf(f))
+temper.log("implicit    true  -> " .. implicit(t))
+temper.log("implicit    false -> " .. implicit(f))
+temper.log("nested      true  false -> " .. nested(t, f))
+temper.log("nested      false true  -> " .. nested(f, t))
 
 return {}

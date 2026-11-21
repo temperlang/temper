@@ -4,7 +4,7 @@ local function fn()
   if not temper.pcall(function()
     local b = temper.promisebuilder_constructor()
     temper.promisebuilder_complete(b, "Completed synchronously")
-    print(temper.promisebuilder_promise(b):await())
+    temper.log(temper.promisebuilder_promise(b):await())
   end) then
     error("panic")
   end
@@ -18,7 +18,7 @@ local function fn()
     end) then
       t = "Broken synchronously"
     end
-    print(t)
+    temper.log(t)
   end
   if not temper.pcall(function()
     local b3 = temper.promisebuilder_constructor()
@@ -26,15 +26,15 @@ local function fn()
       temper.promisebuilder_complete(b3, "Completed asynchronously")
     end
     temper.async(temper.adapt_generator_fn(fn2))
-    print(temper.promisebuilder_promise(b3):await())
+    temper.log(temper.promisebuilder_promise(b3):await())
   end) then
     error("panic")
   end
   if not temper.pcall(function()
     local b4 = temper.promisebuilder_constructor()
     temper.promisebuilder_complete(b4, "Worth doing twice")
-    print(temper.promisebuilder_promise(b4):await())
-    print(temper.promisebuilder_promise(b4):await())
+    temper.log(temper.promisebuilder_promise(b4):await())
+    temper.log(temper.promisebuilder_promise(b4):await())
   end) then
     error("panic")
   end
@@ -47,12 +47,12 @@ local function fn()
       end) then
         error("panic")
       end
-      print("After")
+      temper.log("After")
       temper.promisebuilder_complete(a, temper.empty())
     end
     temper.async(temper.adapt_generator_fn(fn3))
     local function fn4()
-      print("Before")
+      temper.log("Before")
       temper.promisebuilder_complete(b5, temper.empty())
     end
     temper.async(temper.adapt_generator_fn(fn4))
@@ -61,11 +61,11 @@ local function fn()
     error("panic")
   end
   if not temper.pcall(function()
-    print("What is your favourite colour?")
+    temper.log("What is your favourite colour?")
     local b6 = temper.promisebuilder_constructor()
     temper.promisebuilder_complete(b6, "Blue")
     temper.promisebuilder_complete(b6, "No, yell...")
-    print(temper.promisebuilder_promise(b6):await())
+    temper.log(temper.promisebuilder_promise(b6):await())
   end) then
   end
 end

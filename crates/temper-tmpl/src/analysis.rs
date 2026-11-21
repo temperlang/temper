@@ -5,8 +5,9 @@
 //! module, which `let`s and `var`s functions use and which the init block
 //! initializes at its top level ([`module_state`]); and whether a `var`'s
 //! new value reads only itself, so the update may run under one lock
-//! ([`reads_only_itself`]); whether an expression calls nothing, so it may
-//! run under a lock ([`calls_nothing`]); and what evaluating an
+//! ([`reads_only_itself`], and a field's, [`reads_only_its_field`]);
+//! whether an expression calls nothing, so it may run under a lock
+//! ([`calls_nothing`]); and what evaluating an
 //! expression may do that the order of evaluation would show, for
 //! targets that don't evaluate operands left to right ([`Effects`]).
 //! And what a subtree names ([`named`]), and what a module imports: the
@@ -490,6 +491,42 @@ pub fn reads_only_itself(p: &Program, target: DeclId, value: NodeId) -> bool {
     walk(p, value, &mut |id| match p.nodes.get(id) {
         Node::GetModuleLet { target: t } if t == target => reads = true,
         Node::BoolLit { .. }
+        | Node::Int32Lit { .. }
+        | Node::Int64Lit { .. }
+        | Node::Float64Lit { .. }
+        | Node::StringLit { .. }
+        | Node::VoidLit {}
+        | Node::TypeValue { .. }
+        | Node::Local { .. }
+        | Node::Op { .. }
+        | Node::And { .. }
+        | Node::Or { .. }
+        | Node::IfValue { .. } => {}
+        _ => other = true,
+    });
+    reads && !other
+}
+
+/// Whether a `var` field's new value reads that field of the same
+/// object, `this` or one local, and else only locals and literals,
+/// through operators: an update such as `count += n`, which may be
+/// computed and stored under the field's one lock, as
+/// [`reads_only_itself`] for a module `var` (Rust's locked fields).
+pub fn reads_only_its_field(p: &Program, field: DeclId, object: NodeId, value: NodeId) -> bool {
+    let same = |o: NodeId| match (p.nodes.get(o), p.nodes.get(object)) {
+        (Node::This {}, Node::This {}) => true,
+        (Node::Local { local: a }, Node::Local { local: b }) => a == b,
+        _ => false,
+    };
+    let mut reads = false;
+    let mut other = false;
+    walk(p, value, &mut |id| match p.nodes.get(id) {
+        Node::GetField {
+            field: f,
+            object: o,
+        } if f == field && same(o) => reads = true,
+        Node::This {}
+        | Node::BoolLit { .. }
         | Node::Int32Lit { .. }
         | Node::Int64Lit { .. }
         | Node::Float64Lit { .. }

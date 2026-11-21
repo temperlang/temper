@@ -317,6 +317,47 @@ impl<T: NamedTrait + Clone + Send + Sync + 'static> Duo<T> {
 
 temper_core::impl_any_value_trait!(Duo<T>, [] where T: NamedTrait);
 
+struct TallyStruct {
+    count: RwLock<i32>,
+}
+
+#[derive(Clone)]
+pub struct Tally(Arc<TallyStruct>);
+
+impl Tally {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Tally {
+        Tally(Arc::new(TallyStruct {
+            count: RwLock::new(0),
+        }))
+    }
+
+    pub fn add(&self, n: i32) {
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(n);
+    }
+
+    pub fn bump(&self) {
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(1);
+    }
+
+    pub fn count(&self) -> i32 {
+        *self.0.count.read().unwrap()
+    }
+
+    pub fn set_count(&self, value: i32) {
+        *self.0.count.write().unwrap() = value;
+    }
+}
+
+temper_core::impl_any_value_trait!(Tally, []);
+
+pub fn bump_twice(tally: Tally) {
+    let mut count = tally.0.count.write().unwrap();
+    *count = 2i32.wrapping_add(*count);
+}
+
 pub mod builders {
     use super::*;
 

@@ -36,7 +36,7 @@ end
 local function constantCapture(x, a)
   local b = temper.int32_mul(a, 1)
   local out = temper.listed_map(x, function(n) return temper.int32_add(n, b) end)
-  print("constantCapture = " .. show(out))
+  temper.log("constantCapture = " .. show(out))
 end
 
 ---@param x integer[]
@@ -44,7 +44,7 @@ end
 local function constantCaptureNested(x, a)
   local b = temper.int32_mul(a, 1)
   local out = nestBlock(function() return temper.listed_map(x, function(n) return temper.int32_add(n, b) end) end)
-  print("constantCaptureNested = " .. show(out))
+  temper.log("constantCaptureNested = " .. show(out))
 end
 
 ---@param x integer[]
@@ -57,7 +57,7 @@ local function mutableCapture(x)
     return sum
   end
   local out = temper.listed_map(x, fn)
-  print("mutableCapture = " .. show(out) .. "; sum=" .. sum)
+  temper.log("mutableCapture = " .. show(out) .. "; sum=" .. sum)
 end
 
 ---@param x integer[]
@@ -74,7 +74,7 @@ local function mutableCaptureNested(x)
     return temper.listed_map(x, fn2)
   end
   local out = nestBlock(fn)
-  print("mutableCaptureNested = " .. show(out) .. "; sum=" .. sum)
+  temper.log("mutableCaptureNested = " .. show(out) .. "; sum=" .. sum)
 end
 
 ---@param values integer[]
@@ -82,7 +82,7 @@ end
 local function thresh(values, value)
   value = temper.int32_add(value, 1)
   local result = temper.listed_filter(values, function(it) return it > value end)
-  print("thresh length = " .. temper.list_length(result))
+  temper.log("thresh length = " .. temper.list_length(result))
 end
 
 ---@param values integer[]
@@ -91,7 +91,7 @@ local function thresh2(values, value)
   local value2 = value
   value2 = temper.int32_add(value2, 1)
   local result = temper.listed_filter(values, function(it) return it > value2 end)
-  print("thresh2 length = " .. temper.list_length(result))
+  temper.log("thresh2 length = " .. temper.list_length(result))
 end
 
 ---@param x integer[]
@@ -106,7 +106,7 @@ local function selfRecursion(x)
   end
   local out2 = temper.listbuilder_constructor()
   mapper(0, out2)
-  print("selfRecursion = " .. show(out2))
+  temper.log("selfRecursion = " .. show(out2))
 end
 
 ---@param x integer[]
@@ -124,7 +124,7 @@ local function selfRecursionNested(x)
   end
   local out2 = temper.listbuilder_constructor()
   mapper(0, out2)
-  print("selfRecursionNested = " .. show(out2))
+  temper.log("selfRecursionNested = " .. show(out2))
 end
 
 ---@param x integer[]
@@ -146,7 +146,7 @@ local function mutualRecursion(x)
   end
   local out3 = temper.listbuilder_constructor()
   walker(0, out3)
-  print("mutualRecursion = " .. show(out3))
+  temper.log("mutualRecursion = " .. show(out3))
 end
 
 ---@class locals.Handler

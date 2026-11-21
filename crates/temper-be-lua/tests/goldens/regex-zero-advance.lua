@@ -20,6 +20,6 @@ local function bulletizeList(text)
 end
 
 commaItemStartRegex = Sequence({ Or({ Begin, CodePoints(",") }), Repeat(Space, 0, temper.null, false) }):compiled()
-print(bulletizeList("apples, bananas, cherries"))
+temper.log(bulletizeList("apples, bananas, cherries"))
 
 return { bulletizeList = bulletizeList }

@@ -9,7 +9,7 @@ local two
 local function near(label, actual, expected)
   local subject = temper.float64_near(actual, expected)
   local result = subject == true and "✅" or "❌ wanted " .. temper.float64_tostring(expected) .. ", was " .. temper.float64_tostring(actual)
-  print(label .. ": " .. result)
+  temper.log(label .. ": " .. result)
 end
 
 local one = 1.0
@@ -53,7 +53,7 @@ local function fn(x)
 end
 
 local maxMinCombos = temper.listed_join({ 0.0 / 0.0, one }, ", ", fn)
-print("maxMinCombos: " .. maxMinCombos)
+temper.log("maxMinCombos: " .. maxMinCombos)
 local quarter = half / two
 near("2.25 % 2.0", temper.fmod(two + quarter, two), 0.25)
 near("2.25 % -2.0", temper.fmod(two + quarter, -two), 0.25)
@@ -64,18 +64,18 @@ near("(-pi).round()", temper.float64_round(-pi), -three)
 near("pi.sign()", temper.float64_sign(pi), one)
 near("(-pi).sign()", temper.float64_sign(-pi), -one)
 local zero = one - one
-print("zero.sign(): " .. temper.float64_tostring(temper.float64_sign(zero)))
-print("(-zero).sign(): " .. temper.float64_tostring(temper.float64_sign(-zero)))
+temper.log("zero.sign(): " .. temper.float64_tostring(temper.float64_sign(zero)))
+temper.log("(-zero).sign(): " .. temper.float64_tostring(temper.float64_sign(-zero)))
 near("(pi / six).sin()", math.sin(pi / six), half)
 near("one.sinh()", temper.float64_sinh(one), (e - one / e) / two)
 near("(-pi / four).tan()", math.tan(-pi / four), -one)
 near("(three * pi / four).tan()", math.tan(three * pi / four), -one)
 near("one.tanh()", temper.float64_tanh(one), (e ^ 2.0 - 1.0) / (e ^ 2.0 + 1.0))
-print("one.near(one + 0.1): " .. tostring(temper.float64_near(one, one + 0.1)))
-print("one.near(one + 0.25, absTol = 0.25): " .. tostring(temper.float64_near(one, one + 0.25, nil, 0.25)))
-print("one.near(one + 0.1 + 1e-9, absTol = 0.1): " .. tostring(temper.float64_near(one, one + 0.1 + 1e-9, nil, 0.1)))
-print("one.near(one - 0.1, absTol = 0.11): " .. tostring(temper.float64_near(one, one - 0.1, nil, 0.11)))
-print("ten.near(ten + 0.1, absTol = 0.011): " .. tostring(temper.float64_near(ten, ten + 0.1, nil, 0.011)))
-print("ten.near(ten + 0.1, relTol = 0.011): " .. tostring(temper.float64_near(ten, ten + 0.1, 0.011)))
+temper.log("one.near(one + 0.1): " .. tostring(temper.float64_near(one, one + 0.1)))
+temper.log("one.near(one + 0.25, absTol = 0.25): " .. tostring(temper.float64_near(one, one + 0.25, nil, 0.25)))
+temper.log("one.near(one + 0.1 + 1e-9, absTol = 0.1): " .. tostring(temper.float64_near(one, one + 0.1 + 1e-9, nil, 0.1)))
+temper.log("one.near(one - 0.1, absTol = 0.11): " .. tostring(temper.float64_near(one, one - 0.1, nil, 0.11)))
+temper.log("ten.near(ten + 0.1, absTol = 0.011): " .. tostring(temper.float64_near(ten, ten + 0.1, nil, 0.011)))
+temper.log("ten.near(ten + 0.1, relTol = 0.011): " .. tostring(temper.float64_near(ten, ten + 0.1, 0.011)))
 
 return {}

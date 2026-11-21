@@ -33,7 +33,7 @@ local function fn()
     temper.async(temper.adapt_generator_fn(fn4))
     local first = temper.promisebuilder_promise(firstDone):await()
     local second = temper.promisebuilder_promise(secondDone):await()
-    print("after complete: first got " .. first .. ", second got " .. second)
+    temper.log("after complete: first got " .. first .. ", second got " .. second)
   end) then
     error("panic")
   end
@@ -69,7 +69,7 @@ local function fn()
     temper.async(temper.adapt_generator_fn(fn7))
     local first2 = temper.promisebuilder_promise(firstDone2):await()
     local second2 = temper.promisebuilder_promise(secondDone2):await()
-    print("after breakPromise: first got " .. first2 .. ", second got " .. second2)
+    temper.log("after breakPromise: first got " .. first2 .. ", second got " .. second2)
   end) then
     error("panic")
   end

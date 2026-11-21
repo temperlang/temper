@@ -50,8 +50,8 @@ with_tostring(Entry)
 local function mungeInts(ints)
   local builder = temper.list_tolistbuilder(ints)
   temper.listbuilder_sort(builder, function(a, b) return temper.int32_sub(a, b) end)
-  print(temper.listed_join(temper.listed_sorted(ints, function(a2, b2) return temper.int32_sub(a2, b2) end), ", ", function(a3) return tostring(a3) end))
-  print(temper.listed_join(builder, ", ", function(a4) return tostring(a4) end))
+  temper.log(temper.listed_join(temper.listed_sorted(ints, function(a2, b2) return temper.int32_sub(a2, b2) end), ", ", function(a3) return tostring(a3) end))
+  temper.log(temper.listed_join(builder, ", ", function(a4) return tostring(a4) end))
 end
 
 ---@param floats number[]
@@ -64,16 +64,16 @@ local function mungeFloats(floats)
     return temper.float64_toint32unsafe(temper.float64_sign(a - b))
   end
   temper.listbuilder_sort(builder, compareFloats)
-  print(temper.listed_join(temper.listed_sorted(floats, compareFloats), ", ", function(a2) return temper.float64_tostring(a2) end))
-  print(temper.listed_join(builder, ", ", function(a3) return temper.float64_tostring(a3) end))
+  temper.log(temper.listed_join(temper.listed_sorted(floats, compareFloats), ", ", function(a2) return temper.float64_tostring(a2) end))
+  temper.log(temper.listed_join(builder, ", ", function(a3) return temper.float64_tostring(a3) end))
 end
 
 local entries = temper.list_tolistbuilder({ Entry(0, 0), Entry(1, 1), Entry(2, 2), Entry(3, 0), Entry(4, 1), Entry(5, 2), Entry(6, 0), Entry(7, 1), Entry(8, 2) })
 local sortedEntries = temper.listed_sorted(entries, function(a, b) return temper.int32_sub(a.group, b.group) end)
-print(temper.listed_join(sortedEntries, "\n", function(a) return a:toString() end))
-print(temper.listed_get(entries, 1):toString())
+temper.log(temper.listed_join(sortedEntries, "\n", function(a) return a:toString() end))
+temper.log(temper.listed_get(entries, 1):toString())
 temper.listbuilder_sort(entries, function(a, b) return temper.int32_sub(a.group, b.group) end)
-print(temper.listed_join(entries, "\n", function(a) return a:toString() end))
+temper.log(temper.listed_join(entries, "\n", function(a) return a:toString() end))
 mungeInts({ 2, 1 })
 mungeFloats({ 3.4, 1.2 })
 

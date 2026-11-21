@@ -131,7 +131,7 @@ end
 ---@param tag string
 ---@param times integer
 function Counter.methods.bump(this, tag, times)
-  print(tag .. " start")
+  temper.log(tag .. " start")
   do
     local i = 0
     while i < times do
@@ -140,18 +140,18 @@ function Counter.methods.bump(this, tag, times)
       i = temper.int32_add(i, 1)
     end
   end
-  print(tag .. " done n=" .. this.n)
+  temper.log(tag .. " done n=" .. this.n)
 end
 
-local t = ticks(2, function(i) print("tick " .. i) end)
+local t = ticks(2, function(i) temper.log("tick " .. i) end)
 temper.generator_next(t)
 temper.generator_next(t)
 temper.generator_next(t)
-print("fibonacci " .. shown(take(fibonacci(), 10)))
-print("collatz " .. shown(take(collatz(6), 100)))
+temper.log("fibonacci " .. shown(take(fibonacci(), 10)))
+temper.log("collatz " .. shown(take(collatz(6), 100)))
 local fib = fibonacci()
 take(fib, 5)
-print("then " .. shown(take(fib, 3)))
+temper.log("then " .. shown(take(fib, 3)))
 c = Counter()
 gateA = temper.promisebuilder_constructor()
 gateB = temper.promisebuilder_constructor()
@@ -185,10 +185,10 @@ end
 temper.async(temper.adapt_generator_fn(fn3))
 
 local function fn4()
-  print("opener: calling complete")
+  temper.log("opener: calling complete")
   temper.promisebuilder_complete(gateA, 1)
   temper.promisebuilder_complete(gateB, 2)
-  print("opener: complete returned")
+  temper.log("opener: complete returned")
 end
 
 temper.async(temper.adapt_generator_fn(fn4))

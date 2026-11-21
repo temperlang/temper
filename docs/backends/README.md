@@ -247,12 +247,16 @@ makes `npm test` run them.
 ## Lua (`lua`)
 
 Translates Temper to Lua: an `init.lua` per library, a rockspec, and
-LuaCATS type annotations, checked with LuaLS. Generated code is
-declared for Lua 5.1 and later; it's tested on Lua 5.4 and LuaJIT.
+LuaCATS type annotations, checked with LuaLS. Generated code runs on
+Lua 5.1 and later, and on LuaJIT; it's tested on Lua 5.1, 5.4, and
+LuaJIT 2.1.
 
-> **Note:** a few features need Lua 5.3 or later, such as some string
-> and integer operations; Lua 5.1 itself isn't tested
-> ([inconsistencies](../inconsistencies.md#i13-lua-versions)).
+> **Note:** a few features need Lua 5.3 or later: std `regex` (Lua's
+> `utf8`), and on 5.1 and LuaJIT, `String.toInt32()` takes `"2.0"`, and
+> `Float64.max` and `min` miss a NaN first argument
+> ([inconsistencies](../inconsistencies.md#i13-lua-versions)). On 5.1
+> and LuaJIT, std `net`'s LuaSocket client sends one request at a time,
+> each blocking until it's done, as LuaSocket can't yield there.
 
 ## Python (`py`)
 

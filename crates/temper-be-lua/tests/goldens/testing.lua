@@ -6,6 +6,6 @@ local function twice(n)
   return temper.int32_mul(n, 2)
 end
 
-print("init " .. twice(1))
+temper.log("init " .. twice(1))
 
 return { twice = twice, ["$test"] = { twice = twice } }

@@ -10,7 +10,7 @@ end
 ---@param i integer
 local function enclose(i)
   local result = callIt(2, function(j) return temper.int32_add(i, j) end)
-  print(tostring(result))
+  temper.log(tostring(result))
 end
 
 enclose(1)
